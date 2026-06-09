@@ -1,0 +1,130 @@
+<template>
+  <aside class="a-sidebar" :class="{ 'is-collapsed': collapsed }">
+    <div v-if="collapsible" class="a-sidebar-head">
+      <button
+        class="a-sidebar-collapse-btn"
+        type="button"
+        @click="$emit('update:collapsed', !collapsed)"
+      >
+        <NIcon size="24" aria-hidden="true"><MenuOutline /></NIcon>
+      </button>
+    </div>
+    <nav class="paper-sidebar-nav" :aria-label="ariaLabel">
+      <slot />
+    </nav>
+    <div v-if="$slots.bottom" class="paper-sidebar-bottom">
+      <slot name="bottom" />
+    </div>
+  </aside>
+</template>
+
+<script setup lang="ts">
+import { NIcon } from 'naive-ui'
+import { MenuOutline } from '@vicons/ionicons5'
+
+defineProps<{
+  ariaLabel?: string
+  collapsible?: boolean
+  collapsed?: boolean
+}>()
+
+defineEmits<{
+  (e: 'update:collapsed', value: boolean): void
+}>()
+</script>
+
+<style scoped>
+.a-sidebar {
+  transition: width 0.2s ease;
+}
+
+.a-sidebar.is-collapsed {
+  width: var(--a-sidebar-collapsed-width, 4.5rem);
+}
+
+.a-sidebar-head {
+  display: grid;
+  gap: 0.75rem;
+  align-items: start;
+  min-height: 4rem;
+  position: relative;
+}
+
+.a-sidebar.is-collapsed .a-sidebar-head {
+  justify-items: center;
+}
+
+.a-sidebar.is-collapsed .a-sidebar-label,
+.a-sidebar.is-collapsed .a-sidebar-helper {
+  display: none;
+}
+
+.a-sidebar-collapse-btn {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+  z-index: 10;
+}
+
+.a-sidebar-collapse-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.paper-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding-top: 1rem;
+}
+
+.paper-sidebar-bottom {
+  margin-top: auto;
+}
+
+:deep(.a-sidebar-item) {
+  transition: padding 0.2s;
+}
+
+:deep(.paper-sidebar-item-icon) {
+  display: none;
+  width: 1.25rem;
+  flex-shrink: 0;
+  font-family: var(--a-font-meta);
+  text-align: center;
+}
+
+.a-sidebar.is-collapsed :deep(.paper-sidebar-item-icon) {
+  display: block;
+}
+
+.a-sidebar.is-collapsed :deep(.a-sidebar-item-num),
+.a-sidebar.is-collapsed :deep(.paper-sidebar-item-label) {
+  display: none;
+}
+
+.a-sidebar.is-collapsed :deep(.a-sidebar-item) {
+  justify-content: center;
+  gap: 0;
+  padding: 1.25rem 0;
+}
+
+.a-sidebar.is-collapsed .paper-sidebar-nav {
+  padding-top: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .a-sidebar.is-collapsed {
+    width: var(--a-sidebar-collapsed-width, 4.5rem);
+  }
+}
+</style>

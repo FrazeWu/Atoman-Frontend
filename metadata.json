@@ -1,0 +1,7 @@
+{
+  "name": "Atoman",
+  "description": "A minimalist black and white digital archive.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

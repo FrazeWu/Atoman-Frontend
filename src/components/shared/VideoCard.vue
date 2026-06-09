@@ -1,0 +1,234 @@
+<script setup lang="ts">
+import type { Video } from '@/types'
+
+const props = defineProps<{
+  video: Video
+  to?: string
+}>()
+
+function fmtDuration(sec: number): string {
+  if (!sec) return ''
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function fmtViews(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
+  return String(n)
+}
+
+function fmtDate(s: string): string {
+  const d = new Date(s)
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
+
+const avatarLetter = () =>
+  (props.video.channel?.name ?? props.video.user?.username ?? '?')[0].toUpperCase()
+
+const handleWatchLater = (e: Event) => {
+  e.preventDefault()
+  e.stopPropagation()
+  // logic will be implemented later
+  console.log('Watch later:', props.video.id)
+}
+</script>
+
+<template>
+  <RouterLink :to="to || `/watch/${video.id}`" class="vc-card">
+    <!-- Thumbnail -->
+    <div class="vc-thumb">
+      <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />
+      <div v-else class="vc-thumb-placeholder">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      </div>
+      
+      <!-- Overlays -->
+      <div class="vc-overlay-top-right">
+        <button class="vc-watch-later" @click="handleWatchLater">
+          稍后看
+        </button>
+      </div>
+
+      <div class="vc-overlay-bottom-left">
+        <span class="vc-play-count">▶ {{ fmtViews(video.view_count) }}</span>
+      </div>
+
+      <span v-if="video.duration_sec" class="vc-duration">{{ fmtDuration(video.duration_sec) }}</span>
+    </div>
+
+    <!-- Info row: avatar + text -->
+    <div class="vc-info">
+      <div class="vc-avatar" aria-hidden="true">
+        <img v-if="video.channel?.cover_url" :src="video.channel.cover_url" :alt="video.channel.name" />
+        <span v-else>{{ avatarLetter() }}</span>
+      </div>
+      <div class="vc-text">
+        <h3 class="vc-title a-clamp-2">{{ video.title }}</h3>
+        <div class="vc-meta">
+          <span v-if="video.channel" class="vc-channel">《{{ video.channel.name }}》</span>
+          <div class="vc-stats">
+            <span>{{ fmtDate(video.created_at) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </RouterLink>
+</template>
+
+<style scoped>
+.vc-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: none;
+}
+
+/* Thumbnail */
+.vc-thumb {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: var(--a-color-surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.vc-thumb:hover .vc-img { transform: scale(1.02); }
+.vc-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+  display: block;
+}
+.vc-thumb-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-muted);
+}
+
+/* Overlays */
+.vc-overlay-top-right {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+}
+
+.vc-watch-later {
+  opacity: 0;
+  background: var(--a-color-bg);
+  border: 1.5px solid var(--a-color-fg);
+  box-shadow: 3px 3px 0px var(--a-color-fg);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  color: var(--a-color-fg);
+}
+
+.vc-thumb:hover .vc-watch-later {
+  opacity: 1;
+}
+
+.vc-watch-later:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px #000;
+}
+
+.vc-overlay-bottom-left {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+}
+
+.vc-play-count {
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.vc-duration {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 1;
+}
+
+/* Info */
+.vc-info {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0 0;
+}
+.vc-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+}
+.vc-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vc-text { min-width: 0; flex: 1; }
+.vc-title {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--a-color-fg);
+  margin: 0 0 0.35rem 0;
+  transition: color 0.2s;
+}
+
+.vc-card:hover .vc-title {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.vc-meta {
+  font-family: var(--a-font-meta);
+  font-size: 0.725rem;
+  color: var(--a-color-muted-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.vc-channel {
+  color: var(--a-color-muted);
+  font-weight: 700;
+}
+.vc-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.vc-dot { opacity: 0.5; }
+</style>

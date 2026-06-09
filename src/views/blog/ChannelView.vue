@@ -1,0 +1,377 @@
+<template>
+  <div class="a-page-xl">
+    <AToast v-model="toastVisible" :message="toastMessage" />
+    <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
+      <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
+    </div>
+
+    <AEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
+
+    <template v-else>
+      <!-- Channel header -->
+      <APageHeader :title="channel.name" accent :sub="channel.description">
+        <template #action>
+          <div class="paper-actions-row">
+            <PaperClip
+              v-if="authStore.isAuthenticated && !isOwner"
+              :disabled="channelSubscribeLoading"
+              @click="toggleChannelSubscribe"
+            >
+              {{ channelSubscribeLoading ? '处理中...' : (channelSubscribed ? '已订阅' : '订阅') }}
+            </PaperClip>
+            <PaperClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
+            <PaperLink
+              v-if="isOwner"
+              :href="`/channel/${channel.slug || channel.id}/manage?site=blog`"
+              label="管理"
+            />
+            <PaperLink
+              v-if="isOwner"
+              :href="`/post/new?site=blog&channel=${channel.id}`"
+              label="写文章"
+            />
+          </div>
+        </template>
+      </APageHeader>
+
+      <!-- Author info -->
+      <ASurface class="channel-meta-card" :layer="1">
+        <div>
+          <p class="a-label a-muted" style="margin-bottom:.4rem">作者</p>
+          <a
+            :href="userUrl(channel.user?.username || '')"
+            style="font-weight:900;font-size:1rem;text-decoration:none;color:#000"
+          >{{ channel.user?.display_name || channel.user?.username || '未知作者' }}</a>
+        </div>
+        <div>
+          <p class="a-label a-muted" style="margin-bottom:.4rem">更新时间</p>
+          <p style="font-weight:700;margin:0">{{ formatDate(channel.updated_at) }}</p>
+        </div>
+      </ASurface>
+
+      <!-- Two-column layout: left collections, right posts -->
+      <div class="channel-body">
+        <!-- Left: collection list -->
+        <aside class="collection-sidebar">
+          <div class="section-headline">
+            <h2 class="a-subtitle" style="margin:0;font-size:.875rem">合集</h2>
+            <PaperClip v-if="isOwner" label="新建合集" @click="openCollectionModal()" />
+          </div>
+
+          <div class="collection-list">
+            <PaperTab
+              :active="activeCollectionId === null"
+              @click="activeCollectionId = null"
+            >
+              全部内容 <span class="collection-count">{{ channelPosts.length }}</span>
+            </PaperTab>
+            <PaperTab
+              v-for="col in collections"
+              :key="col.id"
+              :active="activeCollectionId === col.id"
+              @click="activeCollectionId = col.id"
+            >
+              <span class="a-clamp-1">{{ col.name }}</span>
+              <span class="collection-count">{{ postCountByCollection(col.id) }}</span>
+            </PaperTab>
+          </div>
+        </aside>
+
+        <!-- Right: posts -->
+        <main class="post-main">
+          <AEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
+          <div v-else class="post-list">
+            <PaperEntry
+              v-for="post in filteredPosts"
+              :key="post.id"
+              :title="post.title"
+              :summary="post.summary || summarize(post.content)"
+              @click="$router.push(`/post/${post.id}?site=blog`)"
+            >
+              <template #meta>
+                <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
+                <span>{{ formatDate(post.updated_at) }}</span>
+              </template>
+              <template #actions>
+                <div style="display:flex;gap:.75rem;align-items:center">
+                  <PaperClip
+                    :active="starredIds.has(post.id)"
+                    :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+                    @click="toggleStar(post.id)"
+                  />
+                  <PaperClip
+                    :active="readingListIds.has(post.id)"
+                    :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+                    @click="toggleReadingList(post.id)"
+                  />
+                  <PaperLink :href="`/post/${post.id}?site=blog`" label="查看" />
+                  <PaperLink
+                    v-if="isOwner"
+                    :href="`/post/${post.id}/edit?site=blog`"
+                    label="编辑"
+                  />
+                </div>
+              </template>
+            </PaperEntry>
+          </div>
+        </main>
+      </div>
+    </template>
+
+    <!-- Collection Modal -->
+    <AModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
+      <h3 class="a-subtitle" style="margin-bottom:1.5rem">{{ editingCollection ? '编辑合集' : '新建合集' }}</h3>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <input v-model="collectionForm.name" placeholder="合集名称*" class="a-input" />
+        <textarea v-model="collectionForm.description" placeholder="合集描述（可选）" rows="3" class="a-textarea" />
+      </div>
+      <div class="modal-actions">
+        <PaperPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
+        <PaperPress :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
+          {{ editingCollection ? '更新' : '创建' }}
+        </PaperPress>
+      </div>
+    </AModal>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import AEmpty from '@/components/ui/AEmpty.vue'
+import APageHeader from '@/components/ui/APageHeader.vue'
+import AModal from '@/components/ui/AModal.vue'
+import type { Channel, Collection, Post } from '@/types'
+import { useApi } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
+import AToast from '@/components/ui/AToast.vue'
+import ACard from '@/components/ui/ACard.vue'
+import ASurface from '@/components/ui/ASurface.vue'
+import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PaperAvatar from '@/components/ui/PaperAvatar.vue'
+import PaperClip from '@/components/ui/PaperClip.vue'
+import PaperLink from '@/components/ui/PaperLink.vue'
+import PaperTab from '@/components/ui/PaperTab.vue'
+import PaperPress from '@/components/ui/PaperPress.vue'
+import { resolveSiteContext } from '@/router/siteContext'
+import { userUrl } from '@/composables/useSubdomainNav'
+
+const route = useRoute()
+const api = useApi()
+const authStore = useAuthStore()
+const feedStore = useFeedStore()
+
+const loading = ref(true)
+const channel = ref<Channel | null>(null)
+const collections = ref<Collection[]>([])
+const channelPosts = ref<Post[]>([])
+const activeCollectionId = ref<string | null>(null)
+
+const collectionModalOpen = ref(false)
+const editingCollection = ref<Collection | null>(null)
+const collectionForm = ref({ name: '', description: '' })
+const collectionSaving = ref(false)
+
+const channelSubscribed = ref(false)
+const channelSubscribeLoading = ref(false)
+const toastVisible = ref(false)
+const toastMessage = ref('')
+
+const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
+const routeParam = computed(() => {
+  if (siteContext.value.type === 'channel') return siteContext.value.slug
+  return typeof route.params.slug === 'string' ? route.params.slug : typeof route.params.id === 'string' ? route.params.id : ''
+})
+const isSlug = computed(() => !/^[0-9a-f-]{36}$/.test(routeParam.value))
+
+const starredIds = computed(() => feedStore.starredItemIds)
+const readingListIds = computed(() => feedStore.readingListItemIds)
+
+const toggleStar = (id: string) => {
+  void feedStore.toggleStar(id)
+}
+
+const toggleReadingList = (id: string) => {
+  void feedStore.toggleReadingListItem(id)
+}
+
+const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
+const isOwner = computed(() => !!channel.value && channel.value.user_id === authStore.user?.uuid)
+const channelRssUrl = computed(() => {
+  if (!channel.value?.slug) return ''
+  const base = import.meta.env.VITE_API_URL || '/api'
+  return `${base}/blog/channels/slug/${channel.value.slug}/rss/article`
+})
+
+const filteredPosts = computed(() => {
+  if (activeCollectionId.value === null) return channelPosts.value
+  return channelPosts.value.filter(p =>
+    (p.collections || []).some(c => c.id === activeCollectionId.value)
+  )
+})
+
+const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
+const summarize = (content: string) =>
+  content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\[\]()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
+const postCountByCollection = (cid: string) =>
+  channelPosts.value.filter(p => (p.collections || []).some(c => c.id === cid)).length
+
+const fetchChannel = async () => {
+  const url = isSlug.value
+    ? api.blog.channelBySlug(routeParam.value)
+    : api.blog.channel(routeParam.value)
+  const res = await fetch(url)
+  if (!res.ok) { channel.value = null; return }
+  const data = await res.json()
+  channel.value = (data.data || null) as Channel | null
+
+  if (authStore.isAuthenticated && channel.value) {
+    channelSubscribeLoading.value = true
+    channelSubscribed.value = await feedStore.isSubscribedToChannel(channel.value.id)
+    channelSubscribeLoading.value = false
+  }
+}
+
+const fetchCollections = async () => {
+  if (!channel.value) return
+  const url = isSlug.value
+    ? api.blog.channelCollectionsBySlug(routeParam.value)
+    : api.blog.channelCollections(channel.value.id)
+  const res = await fetch(url)
+  if (res.ok) collections.value = (await res.json()).data || []
+}
+
+const fetchPosts = async () => {
+  if (!channel.value) return
+  const params = new URLSearchParams({ channel_id: channel.value.id, limit: '100' })
+  const headers: Record<string, string> = {}
+  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+  const res = await fetch(`${api.blog.posts}?${params}`, { headers })
+  if (res.ok) channelPosts.value = (await res.json()).data || []
+}
+
+const openCollectionModal = (collection?: Collection) => {
+  editingCollection.value = collection || null
+  collectionForm.value = { name: collection?.name || '', description: collection?.description || '' }
+  collectionModalOpen.value = true
+}
+
+const saveCollection = async () => {
+  if (!collectionForm.value.name.trim() || !channel.value) return
+  collectionSaving.value = true
+  try {
+    if (editingCollection.value) {
+      await fetch(api.blog.collection(editingCollection.value.id), {
+        method: 'PUT',
+        headers: { ...authHeader.value, 'Content-Type': 'application/json' },
+        body: JSON.stringify(collectionForm.value)
+      })
+    } else {
+      await fetch(api.blog.channelCollections(channel.value.id), {
+        method: 'POST',
+        headers: { ...authHeader.value, 'Content-Type': 'application/json' },
+        body: JSON.stringify(collectionForm.value)
+      })
+    }
+    collectionModalOpen.value = false
+    await fetchCollections()
+  } catch (e) { console.error(e) } finally { collectionSaving.value = false }
+}
+
+const toggleChannelSubscribe = async () => {
+  if (!channel.value) return
+  channelSubscribeLoading.value = true
+  try {
+    const success = channelSubscribed.value
+      ? await feedStore.unsubscribeFromChannel(channel.value.id)
+      : await feedStore.subscribeToChannel(channel.value.id)
+    if (success) channelSubscribed.value = !channelSubscribed.value
+  } finally { channelSubscribeLoading.value = false }
+}
+
+const copyRssLink = async () => {
+  if (!channelRssUrl.value) return
+  await navigator.clipboard.writeText(channelRssUrl.value)
+  toastMessage.value = '已复制 RSS 链接'
+  toastVisible.value = true
+}
+
+onMounted(async () => {
+  try {
+    await fetchChannel()
+    if (!channel.value) return
+    void Promise.all([fetchCollections(), fetchPosts()])
+    if (authStore.isAuthenticated) {
+      void feedStore.fetchStarredIds()
+      void feedStore.fetchReadingListIds()
+    }
+  } finally { loading.value = false }
+})
+</script>
+
+<style scoped>
+.channel-body {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+  align-items: flex-start;
+}
+
+.collection-sidebar {
+  width: 13rem;
+  flex-shrink: 0;
+  position: sticky;
+  top: 5rem;
+}
+
+.post-main { flex: 1; min-width: 0; }
+
+.collection-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .5rem;
+}
+
+.collection-count {
+  margin-left: 0.35rem;
+  opacity: 0.58;
+}
+
+.channel-meta-card {
+  padding: 1rem 1.25rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.section-headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+
+.paper-actions-row,
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .channel-body { flex-direction: column; }
+  .collection-sidebar { width: 100%; position: static; }
+  .collection-list { flex-direction: row; overflow-x: auto; padding-bottom: .5rem; }
+}
+</style>

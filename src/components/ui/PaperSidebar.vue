@@ -72,13 +72,14 @@ defineEmits<{
   background: transparent;
   color: var(--a-color-fg);
   cursor: pointer;
-  border-radius: 50%;
-  transition: background-color 0.2s, color 0.2s;
+  border-radius: 0.875rem;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   z-index: 10;
 }
 
 .a-sidebar-collapse-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
 }
 
 .paper-sidebar-nav {

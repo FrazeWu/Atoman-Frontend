@@ -174,13 +174,13 @@ const fetchPosts = async (append = false) => {
     })
     
     // Use explore endpoint for site-wide recommendations
-    const endpoint = sortBy.value === 'popular' ? api.blog.explore : '/feed/explore/timeline'
+    const endpoint = sortBy.value === 'popular' ? api.blog.explore : `${API_URL}/feed/explore/timeline`
     // /feed/explore/timeline returns { type, post, feed_item }
 
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const res = await fetch(`${API_URL}${endpoint}?${params}`, { headers })
+    const res = await fetch(`${endpoint}?${params}`, { headers })
     if (res.ok) {
       const d = await res.json()
       // /feed/explore returns { type, post, feed_item }

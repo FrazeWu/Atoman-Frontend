@@ -138,6 +138,7 @@ import { tags } from '@lezer/highlight'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { yCollab } from 'y-codemirror.next'
+import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 
@@ -187,6 +188,7 @@ const emit = defineEmits<{
   'collab-ready': [value: string]
 }>()
 
+const api = useApi()
 const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
 const effectiveMode = computed<'normal' | 'split'>(() => (props.enableCollab ? 'split' : props.mode))
@@ -509,7 +511,7 @@ function initCodeMirror() {
     ydoc = new Y.Doc()
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
     provider = new WebsocketProvider(
-      `${proto}//${location.host}/api/collab/ws/${props.collabRoomId}`,
+      `${proto}//${location.host}/api/v1/collab/ws/${props.collabRoomId}`,
       props.collabRoomId,
       ydoc,
       { connect: true },
@@ -697,7 +699,7 @@ async function uploadImage(file: File) {
   try {
     const formData = new FormData()
     formData.append('image', file)
-    const res = await fetch('/api/blog/upload-image', {
+    const res = await fetch(api.blog.uploadImage, {
       method: 'POST',
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
       body: formData,
@@ -802,7 +804,7 @@ async function fetchMentionUsers(q: string) {
   try {
     const headers: Record<string, string> = {}
     if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
-    const res = await fetch(`/api/users/search?scope=mention&q=${encodeURIComponent(q)}&limit=5`, { headers })
+    const res = await fetch(`${api.users.search}?scope=mention&q=${encodeURIComponent(q)}&limit=5`, { headers })
     if (!res.ok) return
     const data = await res.json()
     mention.value.results = data.data || []

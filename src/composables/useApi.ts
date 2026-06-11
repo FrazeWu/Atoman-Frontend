@@ -1,8 +1,11 @@
 export function useApiUrl() {
   const configuredUrl = import.meta.env.VITE_API_URL?.trim()
-  const baseUrl = configuredUrl || '/api'
+  const baseUrl = configuredUrl || '/api/v1'
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '')
 
-  return baseUrl.replace(/\/$/, '')
+  if (normalizedBaseUrl.endsWith('/api/v1')) return normalizedBaseUrl
+  if (normalizedBaseUrl.endsWith('/api')) return `${normalizedBaseUrl}/v1`
+  return `${normalizedBaseUrl}/api/v1`
 }
 
 export function useApi() {
@@ -11,17 +14,22 @@ export function useApi() {
   return {
     url: apiUrl,
     v1: {
-      url: '/api/v1',
-      uploads: '/api/v1/uploads',
+      url: apiUrl,
+      uploads: `${apiUrl}/uploads`,
       music: {
-        artists: '/api/v1/music/artists',
-        artist: (id: string) => `/api/v1/music/artists/${id}`,
-        albums: '/api/v1/music/albums',
-        album: (id: string) => `/api/v1/music/albums/${id}`,
-        songs: '/api/v1/music/songs',
-        song: (id: string) => `/api/v1/music/songs/${id}`,
-        edits: '/api/v1/music/edits',
-        edit: (id: string) => `/api/v1/music/edits/${id}`,
+        artists: `${apiUrl}/music/artists`,
+        artist: (id: string) => `${apiUrl}/music/artists/${id}`,
+        albums: `${apiUrl}/music/albums`,
+        album: (id: string) => `${apiUrl}/music/albums/${id}`,
+        songs: `${apiUrl}/music/songs`,
+        song: (id: string) => `${apiUrl}/music/songs/${id}`,
+        edits: `${apiUrl}/music/edits`,
+        edit: (id: string) => `${apiUrl}/music/edits/${id}`,
+      },
+      forum: {
+        categories: `${apiUrl}/forum/categories`,
+        moderators: `${apiUrl}/forum/moderation/moderators`,
+        moderator: (id: string) => `${apiUrl}/forum/moderation/moderators/${id}`,
       },
     },
     songs: `${apiUrl}/songs`,
@@ -60,6 +68,7 @@ export function useApi() {
       channelCollections: (id: number | string) => `${apiUrl}/blog/channels/${id}/collections`,
       channelBySlug: (slug: string) => `${apiUrl}/blog/channels/slug/${slug}`,
       channelCollectionsBySlug: (slug: string) => `${apiUrl}/blog/channels/slug/${slug}/collections`,
+      channelArticleRssBySlug: (slug: string) => `${apiUrl}/blog/channels/slug/${slug}/rss/article`,
       collections: `${apiUrl}/blog/collections`,
       collection: (id: number | string) => `${apiUrl}/blog/collections/${id}`,
       

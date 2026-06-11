@@ -4,14 +4,14 @@ const ADMIN_EMAIL = 'admin@atoman.com'
 const ADMIN_PASSWORD = 'admin123'
 
 export async function loginViaAPI(request: APIRequestContext): Promise<{ token: string; user: any }> {
-  let response = await request.post('/api/auth/login', {
+  let response = await request.post('/api/v1/auth/login', {
     data: { username: ADMIN_EMAIL, password: ADMIN_PASSWORD },
   })
 
   // If the dev server proxy isn't forwarding /api, try backend directly.
   if (!response.ok()) {
     try {
-      const fallback = await request.post('http://localhost:8080/api/auth/login', {
+      const fallback = await request.post('http://localhost:8080/api/v1/auth/login', {
         data: { username: ADMIN_EMAIL, password: ADMIN_PASSWORD },
       })
       if (fallback.ok()) response = fallback
@@ -22,7 +22,13 @@ export async function loginViaAPI(request: APIRequestContext): Promise<{ token: 
 
   expect(response.ok()).toBeTruthy()
   const body = await response.json()
-  return { token: body.token, user: body.user }
+  return {
+    token: body.token,
+    user: {
+      ...body.user,
+      onboarding_completed_at: body.user?.onboarding_completed_at || new Date().toISOString(),
+    },
+  }
 }
 
 export async function loginViaUI(page: Page, email: string, password: string): Promise<void> {

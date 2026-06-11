@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
 
-const defaultApiUrl = 'http://localhost:8080/api'
+const defaultApiUrl = '/api/v1'
 
 const makeToken = (expSecondsFromNow: number) => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -53,7 +53,7 @@ describe('auth store', () => {
     expect(fetchMock).toHaveBeenCalledWith(`${defaultApiUrl}/auth/logout`, { method: 'POST', credentials: 'include' })
   })
 
-  it('uses non-v1 auth endpoints even when VITE_API_URL is /api', async () => {
+  it('uses v1 auth endpoints when VITE_API_URL is /api', async () => {
     const token = makeToken(3600)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       token,
@@ -64,7 +64,7 @@ describe('auth store', () => {
     await auth.restoreSession()
 
     expect(fetchMock).toHaveBeenCalledWith(`${defaultApiUrl}/auth/session`, { credentials: 'include' })
-    expect(fetchMock).not.toHaveBeenCalledWith(`${defaultApiUrl}/v1/auth/session`, { credentials: 'include' })
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/session', { credentials: 'include' })
   })
 
   it('restores session from shared auth cookie when localStorage is empty', async () => {

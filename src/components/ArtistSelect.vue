@@ -105,7 +105,7 @@ const dedupeArtistsByName = (artists: Artist[]) => {
 
 const fetchArtists = async () => {
   try {
-    const res = await fetch(api.artists || '/api/artists')
+    const res = await fetch(api.artists)
     if (res.ok) {
       const d = await res.json()
       allArtists.value = dedupeArtistsByName(d.data || d || [])

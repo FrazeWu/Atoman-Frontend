@@ -8,8 +8,16 @@
     :exact-active-class="exact ? 'active' : ''"
   >
     <span v-if="index" class="a-sidebar-item-num">{{ formattedIndex }}</span>
-    <span v-if="iconChar" class="paper-sidebar-item-icon" aria-hidden="true">{{ iconChar }}</span>
     <span class="paper-sidebar-item-label"><slot /></span>
+    <span
+      v-if="icon || iconChar"
+      class="paper-sidebar-item-icon"
+      :class="{ 'is-component-icon': icon, 'is-char-icon': !icon && iconChar }"
+      aria-hidden="true"
+    >
+      <component :is="icon" v-if="icon" class="paper-sidebar-item-svg" />
+      <template v-else>{{ iconChar }}</template>
+    </span>
   </RouterLink>
   <button
     v-else
@@ -19,19 +27,28 @@
     @click="$emit('click')"
   >
     <span v-if="index" class="a-sidebar-item-num">{{ formattedIndex }}</span>
-    <span v-if="iconChar" class="paper-sidebar-item-icon" aria-hidden="true">{{ iconChar }}</span>
     <span class="paper-sidebar-item-label"><slot /></span>
+    <span
+      v-if="icon || iconChar"
+      class="paper-sidebar-item-icon"
+      :class="{ 'is-component-icon': icon, 'is-char-icon': !icon && iconChar }"
+      aria-hidden="true"
+    >
+      <component :is="icon" v-if="icon" class="paper-sidebar-item-svg" />
+      <template v-else>{{ iconChar }}</template>
+    </span>
   </button>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 
 const props = defineProps<{
   to?: string | object
   index?: number | string
   active?: boolean
   exact?: boolean
+  icon?: Component
   iconChar?: string
   isFocused?: boolean
 }>()

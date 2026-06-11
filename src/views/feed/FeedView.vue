@@ -24,24 +24,6 @@
         </template>
       </APageHeader>
     </div>
-
-    <!-- Index Trigger fixed to the right edge -->
-    <PaperIndexTrigger 
-      v-if="authStore.isAuthenticated" 
-      :active="showIndex"
-      @click="showIndex = !showIndex"
-    >
-      {{ showIndex ? '收起' : '订阅源' }}
-    </PaperIndexTrigger>
-
-    <SubscriptionIndexSheet
-      :show="showIndex"
-      :subscriptions="subscriptions"
-      :groups="groups"
-      :active-source-id="querySourceId"
-      @close="showIndex = false"
-      @select-source="selectSource"
-    />
     <SubscriptionAddSheet
       :show="showAddModal"
       :top="headerBottom"
@@ -238,9 +220,7 @@ import PaperClip from '@/components/ui/PaperClip.vue'
 import PaperPress from '@/components/ui/PaperPress.vue'
 import PaperEntry from '@/components/ui/PaperEntry.vue'
 import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperIndexTrigger from '@/components/ui/PaperIndexTrigger.vue'
 import ShortcutHints from '@/components/ui/ShortcutHints.vue'
-import SubscriptionIndexSheet from '@/components/feed/SubscriptionIndexSheet.vue'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
@@ -251,7 +231,6 @@ import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { userUrl, modulePathUrl } from '@/composables/useSubdomainNav'
-import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { NIcon } from 'naive-ui'
 import { FilterOutline } from '@vicons/ionicons5'
@@ -261,7 +240,6 @@ import { useApiUrl } from '@/composables/useApi'
 
 const route = useRoute()
 const router = useRouter()
-const { navigateModuleWithShutter } = useAsyncNavigate()
 const authStore = useAuthStore()
 const playerStore = usePlayerStore()
 const feedStore = useFeedStore()
@@ -351,7 +329,6 @@ const allRead = ref(false)
 const showAddModal = ref(false)
 const showManageSheet = ref(false)
 const manageBusy = ref(false)
-const showIndex = ref(false)
 const addSubscriptionError = ref('')
 const addSubscriptionResetKey = ref(0)
 
@@ -393,11 +370,6 @@ const toggleAddModal = () => {
 
   addSubscriptionError.value = ''
   showAddModal.value = true
-}
-
-const selectSource = (sourceId: string) => {
-  void navigateModuleWithShutter(modulePathUrl('feed', `/?source_id=${encodeURIComponent(sourceId)}`))
-  showIndex.value = false
 }
 
 const addSubscription = async (payload: { rss_url: string; title?: string; group_id?: string }) => {
@@ -676,19 +648,21 @@ const toggleAllRead = async () => {
   }
 }
 
-watch(showIndex, (visible) => {
-  if (visible && authStore.isAuthenticated) {
-    if (!subscriptions.value.length || !groups.value.length) {
-      void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
-    }
-  }
-})
-
 watch(showManageSheet, (visible) => {
   if (visible && authStore.isAuthenticated) {
     void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
   }
 })
+
+watch(() => route.query.manage_subscriptions, async (value) => {
+  if (value !== '1') return
+  const query = { ...route.query }
+  delete query.manage_subscriptions
+  await router.replace({ query })
+  if (authStore.isAuthenticated) {
+    showManageSheet.value = true
+  }
+}, { immediate: true })
 
 watch([querySourceId, queryGroupId, queryPage], async () => {
   currentPage.value = queryPage.value
@@ -698,7 +672,6 @@ watch([querySourceId, queryGroupId, queryPage], async () => {
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     showArticleSheet.value = false
-    showIndex.value = false
     showAddModal.value = false
     showManageSheet.value = false
   }

@@ -1,0 +1,109 @@
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import FeedLayout from '@/views/feed/FeedLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
+import type { Subscription, SubscriptionGroup } from '@/types'
+
+const groups: SubscriptionGroup[] = [
+  {
+    id: 'g-tech',
+    user_id: 'user-1',
+    name: '科技生活',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
+]
+
+const subscriptions: Subscription[] = [
+  {
+    id: 'sub-1',
+    user_id: 'user-1',
+    feed_source_id: 'source-1',
+    title: '少数派',
+    subscription_group_id: 'g-tech',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+]
+
+const makeRouter = async (initialPath = '/') => {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', component: { template: '<div />' } },
+      { path: '/explore', component: { template: '<div />' } },
+      { path: '/reading-list', component: { template: '<div />' } },
+      { path: '/starred', component: { template: '<div />' } },
+    ],
+  })
+
+  await router.push(initialPath)
+  await router.isReady()
+  return router
+}
+
+const mountLayout = async (initialPath = '/') => {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
+  const authStore = useAuthStore()
+  authStore.token = 'token'
+  authStore.user = { username: 'fafa', email: 'fafa@example.com' }
+  authStore.isAuthenticated = true
+
+  const feedStore = useFeedStore()
+  feedStore.subscriptions = subscriptions
+  feedStore.groups = groups
+  vi.spyOn(feedStore, 'fetchSubscriptions').mockResolvedValue(undefined)
+  vi.spyOn(feedStore, 'fetchGroups').mockResolvedValue(undefined)
+
+  const router = await makeRouter(initialPath)
+  const pushSpy = vi.spyOn(router, 'push')
+
+  const wrapper = mount(FeedLayout, {
+    global: {
+      plugins: [pinia, router],
+    },
+  })
+
+  await flushPromises()
+  pushSpy.mockClear()
+
+  return { wrapper, router, pushSpy }
+}
+
+describe('FeedLayout', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('renders nav rows with Ionicon SVG icons and sidebar sources', async () => {
+    const { wrapper } = await mountLayout('/?source_id=sub-1')
+
+    expect(wrapper.findAll('.a-sidebar-item')).toHaveLength(4)
+    expect(wrapper.findAll('.paper-sidebar-item-icon svg')).toHaveLength(4)
+    expect(wrapper.text()).toContain('订阅源类别 / SOURCES')
+    expect(wrapper.text()).toContain('少数派')
+    expect(wrapper.get('[data-source-id="sub-1"]').classes()).toContain('is-active')
+  })
+
+  it('routes to the selected source when a sidebar source is clicked', async () => {
+    const { wrapper, pushSpy } = await mountLayout('/')
+
+    await wrapper.get('[data-source-id="sub-1"]').trigger('click')
+
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { source_id: 'sub-1' } })
+  })
+
+  it('opens the manage sheet from the sidebar sources manage button', async () => {
+    const { wrapper, pushSpy } = await mountLayout('/')
+
+    await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger('click')
+
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { manage_subscriptions: '1' } })
+  })
+})

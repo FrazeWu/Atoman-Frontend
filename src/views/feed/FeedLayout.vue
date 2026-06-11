@@ -9,12 +9,24 @@
         :key="item.to"
         :to="item.to"
         :index="index + 1"
-        :icon-char="item.iconChar"
+        :icon="item.icon"
         :is-focused="uiStore.focusedSection === 'sidebar' && focusedSidebarIndex === index"
         :exact="item.exact"
       >
         {{ item.label }}
       </PaperSidebarItem>
+
+      <template #bottom>
+        <FeedSidebarSources
+          v-if="authStore.isAuthenticated"
+          :subscriptions="subscriptions"
+          :groups="groups"
+          :active-source-id="querySourceId"
+          :collapsed="sidebarCollapsed"
+          @select-source="selectSource"
+          @manage="openManageSheet"
+        />
+      </template>
     </PaperSidebar>
     <main class="a-main-content">
       <router-view />
@@ -23,17 +35,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { moduleRooms } from '@/config/moduleRooms'
+import { BookmarkOutline, CompassOutline, LogoRss, StarOutline } from '@vicons/ionicons5'
+import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
 import PaperSidebar from '@/components/ui/PaperSidebar.vue'
 import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
+const feedStore = useFeedStore()
 const uiStore = useUIStore()
 
 // 1. Setup global area switching (H/L)
@@ -42,11 +59,15 @@ useKeyboardLayout()
 const sidebarStorageKey = 'atoman.feed.sidebar.collapsed'
 const sidebarCollapsed = ref(false)
 
+const subscriptions = computed(() => feedStore.subscriptions)
+const groups = computed(() => feedStore.groups)
+const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
+
 const navItems = [
-  { to: '/', label: '订阅', iconChar: '订', exact: true },
-  { to: '/explore', label: '探索', iconChar: '探' },
-  { to: '/reading-list', label: '稍后阅读', iconChar: '读' },
-  { to: '/starred', label: '收藏', iconChar: '藏' }
+  { to: '/', label: '订阅', icon: LogoRss, exact: true },
+  { to: '/explore', label: '探索', icon: CompassOutline },
+  { to: '/reading-list', label: '稍后阅读', icon: BookmarkOutline },
+  { to: '/starred', label: '收藏', icon: StarOutline },
 ]
 
 // 2. Setup sidebar list navigation (J/K)
@@ -56,13 +77,28 @@ const { focusedIndex: focusedSidebarIndex } = useKeyboardList({
 })
 
 const syncSidebarFocus = () => {
-  const currentIndex = navItems.findIndex(item => 
+  const currentIndex = navItems.findIndex(item =>
     item.exact ? route.path === item.to : route.path.startsWith(item.to as string)
   )
   if (currentIndex !== -1) {
     focusedSidebarIndex.value = currentIndex
   }
 }
+
+const ensureSidebarSources = () => {
+  if (!authStore.isAuthenticated) return
+  void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
+}
+
+const selectSource = (sourceId: string) => {
+  void router.push({ path: '/', query: { source_id: sourceId } })
+}
+
+const openManageSheet = () => {
+  void router.push({ path: '/', query: { ...route.query, manage_subscriptions: '1' } })
+}
+
+watch(() => authStore.isAuthenticated, ensureSidebarSources, { immediate: true })
 
 // Sync focus when section switches to sidebar
 watch(() => uiStore.focusedSection, (section) => {

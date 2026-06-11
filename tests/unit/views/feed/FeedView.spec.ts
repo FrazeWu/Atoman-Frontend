@@ -5,14 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FeedView from '@/views/feed/FeedView.vue'
 import { useAuthStore } from '@/stores/auth'
 
-const { navigateModuleWithShutter, routerPush } = vi.hoisted(() => ({
+const { navigateModuleWithShutter, routerPush, routerReplace, routeQuery } = vi.hoisted(() => ({
   navigateModuleWithShutter: vi.fn(),
   routerPush: vi.fn(),
+  routerReplace: vi.fn(),
+  routeQuery: {} as Record<string, string>,
 }))
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: routerPush }),
-  useRoute: () => ({ query: {} }),
+  useRouter: () => ({ push: routerPush, replace: routerReplace }),
+  useRoute: () => ({ query: routeQuery }),
 }))
 
 vi.mock('@/composables/useAsyncNavigate', () => ({
@@ -25,6 +27,8 @@ describe('FeedView', () => {
   beforeEach(() => {
     navigateModuleWithShutter.mockReset()
     routerPush.mockReset()
+    routerReplace.mockReset()
+    Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
     setActivePinia(createPinia())
     window.history.replaceState(null, '', '/?site=feed')
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({
@@ -70,9 +74,8 @@ describe('FeedView', () => {
           PaperClip: true,
           PaperPress: true,
           PaperBadge: true,
-          PaperIndexTrigger: true,
-          SubscriptionIndexSheet: true,
           SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
           FeedArticleSheet: true,
         },
       },
@@ -84,5 +87,102 @@ describe('FeedView', () => {
     expect(routerPush).not.toHaveBeenCalled()
     expect(navigateModuleWithShutter).not.toHaveBeenCalled()
     expect(wrapper.findComponent({ name: 'FeedArticleSheet' }).exists()).toBe(true)
+  })
+
+  it('does not render the old right-edge subscription source drawer', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          ABtn: true,
+          AModal: true,
+          AEmpty: true,
+          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          ASelect: true,
+          PaperField: true,
+          PaperClip: true,
+          PaperPress: true,
+          PaperBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'PaperIndexTrigger' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'SubscriptionIndexSheet' }).exists()).toBe(false)
+  })
+
+  it('opens subscription management from manage_subscriptions query and clears the query flag', async () => {
+    routeQuery.manage_subscriptions = '1'
+    routeQuery.page = '2'
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          ABtn: true,
+          AModal: true,
+          AEmpty: true,
+          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          ASelect: true,
+          PaperField: true,
+          PaperClip: true,
+          PaperPress: true,
+          PaperBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show'],
+            template: '<div data-test="manage-sheet" :data-show="String(show)"></div>',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').attributes('data-show')).toBe('true')
+    expect(routerReplace).toHaveBeenCalledWith({ query: { page: '2' } })
+  })
+
+  it('clears manage_subscriptions query without opening management for unauthenticated users', async () => {
+    routeQuery.manage_subscriptions = '1'
+    routeQuery.page = '2'
+
+    const authStore = useAuthStore()
+    authStore.token = null
+    authStore.user = null
+    authStore.isAuthenticated = false
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          ABtn: true,
+          AModal: true,
+          AEmpty: true,
+          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          ASelect: true,
+          PaperField: true,
+          PaperClip: true,
+          PaperPress: true,
+          PaperBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show'],
+            template: '<div data-test="manage-sheet" :data-show="String(show)"></div>',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').attributes('data-show')).toBe('false')
+    expect(routerReplace).toHaveBeenCalledWith({ query: { page: '2' } })
   })
 })

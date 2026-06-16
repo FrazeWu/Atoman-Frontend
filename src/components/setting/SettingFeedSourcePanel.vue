@@ -5,16 +5,37 @@
         <h3 class="a-subtitle">订阅源管理</h3>
         <p class="a-muted">仅管理 external_rss 订阅源，支持增改查与手工爬取。</p>
       </div>
-      <ABtn
-        variant="secondary"
-        size="sm"
-        :disabled="loading"
-        :loading="loading"
-        loading-text="刷新中..."
-        @click="refresh"
-      >
-        刷新
-      </ABtn>
+      <div class="setting-feed-panel__header-actions">
+        <ABtn
+          variant="secondary"
+          size="sm"
+          :disabled="loading"
+          :loading="loading"
+          loading-text="刷新中..."
+          @click="refresh"
+        >
+          刷新
+        </ABtn>
+      </div>
+    </div>
+
+    <div
+      class="setting-feed-panel__filter-frame"
+      data-testid="feed-source-status-filter-frame"
+      aria-label="订阅源状态筛选"
+    >
+      <div class="setting-feed-panel__filters">
+        <button
+          v-for="option in statusFilterOptions"
+          :key="option.value || 'all'"
+          type="button"
+          class="setting-feed-panel__filter"
+          :class="{ 'is-active': statusFilter === option.value }"
+          @click="setStatusFilter(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
     </div>
 
     <div class="setting-feed-panel__editor">
@@ -125,6 +146,7 @@ const submitting = ref(false)
 const editingId = ref('')
 const message = ref('')
 const error = ref('')
+const statusFilter = ref<'healthy' | 'degraded' | 'failing' | ''>('')
 const pendingSourceIds = ref(new Set<string>())
 const syncingSourceIds = ref(new Set<string>())
 const draft = ref({
@@ -134,6 +156,18 @@ const draft = ref({
 
 const sources = computed(() => adminFeedFulltextStore.sources as FeedSource[])
 const canSubmit = computed(() => draft.value.rssUrl.trim().length > 0)
+const statusFilterOptions = [
+  { label: '全部', value: '' },
+  { label: '正常', value: 'healthy' },
+  { label: '降级', value: 'degraded' },
+  { label: '无效', value: 'failing' },
+] as const
+
+function sourceFetchOptions() {
+  return statusFilter.value
+    ? { limit: 100, status: statusFilter.value }
+    : { limit: 100 }
+}
 
 function resetForm() {
   editingId.value = ''
@@ -148,12 +182,18 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    await adminFeedFulltextStore.fetchSources(authStore.token, { limit: 100 })
+    await adminFeedFulltextStore.fetchSources(authStore.token, sourceFetchOptions())
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载订阅源失败'
   } finally {
     loading.value = false
   }
+}
+
+async function setStatusFilter(nextStatus: typeof statusFilter.value) {
+  if (statusFilter.value === nextStatus) return
+  statusFilter.value = nextStatus
+  await refresh()
 }
 
 async function submitSource() {
@@ -258,6 +298,51 @@ onMounted(() => {
   align-items: start;
 }
 
+.setting-feed-panel__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.setting-feed-panel__filter-frame {
+  max-width: 100%;
+  border: 1px solid var(--a-color-line-soft);
+  padding: 0.4rem 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--a-color-paper);
+  -webkit-overflow-scrolling: touch;
+}
+
+.setting-feed-panel__filters {
+  display: flex;
+  flex-wrap: nowrap;
+  width: fit-content;
+  gap: 0.35rem;
+}
+
+.setting-feed-panel__filter {
+  flex: 0 0 auto;
+  border: 1px solid var(--a-color-line-soft);
+  padding: 0.34rem 0.6rem;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink-muted);
+  cursor: pointer;
+  font-family: var(--a-font-meta);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.setting-feed-panel__filter.is-active {
+  border-color: var(--a-color-ink);
+  color: var(--a-color-ink);
+  box-shadow: var(--a-shadow-paper-sm);
+}
+
 .setting-feed-panel__header h3,
 .setting-feed-panel__header p {
   margin: 0;
@@ -333,6 +418,7 @@ onMounted(() => {
     align-items: stretch;
   }
 
+  .setting-feed-panel__header-actions,
   .setting-feed-panel__actions,
   .setting-feed-panel__row-actions {
     justify-content: flex-start;

@@ -68,7 +68,7 @@ describe('SettingAccessView section sync', () => {
     expect(resolveActiveSectionByScroll(positions, 0, 120)).toBe('feed')
   })
 
-  it('feed 模块只保留策略设置，不再渲染订阅源管理面板', () => {
+  it('feed 模块复用统一的全局订阅源管理面板', () => {
     const wrapper = mount(SettingAccessView, {
       global: {
         stubs: {
@@ -76,16 +76,20 @@ describe('SettingAccessView section sync', () => {
           ASurface: defineComponent({ template: '<section><slot /></section>' }),
           ASectionHeader: defineComponent({ template: '<header><slot /></header>' }),
           SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
-          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({
+            props: {
+              fullTextMode: { type: String, required: true },
+            },
+            template: '<div data-testid="feed-source-panel">订阅源管理功能面板 / {{ fullTextMode }}</div>',
+          }),
         },
       },
     })
 
     const text = wrapper.text()
-    expect(text).not.toContain('控制管理员是否保留订阅源配置入口')
-    expect(text).not.toContain('允许管理员手动录入新的 RSS 订阅源')
-    expect(text).not.toContain('订阅源管理功能面板')
     expect(text).toContain('全文抓取策略')
+    expect(text).toContain('订阅源管理功能面板 / per_source')
+    expect(wrapper.find('[data-testid="feed-source-panel"]').exists()).toBe(true)
   })
 
   it('保存时会带上 kanbo 模块可见性', async () => {

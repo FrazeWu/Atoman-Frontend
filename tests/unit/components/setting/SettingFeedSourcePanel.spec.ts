@@ -93,6 +93,68 @@ describe('SettingFeedSourcePanel', () => {
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
   })
 
+  it('将状态筛选放在独立滚动框而不是标题操作区内', async () => {
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+
+    const filterFrame = wrapper.get('[data-testid="feed-source-status-filter-frame"]')
+    expect(filterFrame.text()).toContain('全部')
+    expect(filterFrame.text()).toContain('正常')
+    expect(filterFrame.text()).toContain('降级')
+    expect(filterFrame.text()).toContain('无效')
+    expect(wrapper.get('.setting-feed-panel__header-actions').text()).toBe('刷新')
+  })
+
+  it('按状态筛选订阅源并在刷新时沿用当前筛选', async () => {
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+    fetchSources.mockClear()
+
+    const degradedButton = wrapper.findAll('button').find((button) => button.text() === '降级')
+    expect(degradedButton).toBeTruthy()
+    await degradedButton!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100, status: 'degraded' })
+
+    fetchSources.mockClear()
+    const refreshButton = wrapper.findAll('button').find((button) => button.text() === '刷新')
+    expect(refreshButton).toBeTruthy()
+    await refreshButton!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100, status: 'degraded' })
+
+    const invalidButton = wrapper.findAll('button').find((button) => button.text() === '无效')
+    expect(invalidButton).toBeTruthy()
+    await invalidButton!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100, status: 'failing' })
+
+    const healthyButton = wrapper.findAll('button').find((button) => button.text() === '正常')
+    expect(healthyButton).toBeTruthy()
+    await healthyButton!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100, status: 'healthy' })
+
+    const allButton = wrapper.findAll('button').find((button) => button.text() === '全部')
+    expect(allButton).toBeTruthy()
+    await allButton!.trigger('click')
+    await flushPromises()
+
+    expect(fetchSources).toHaveBeenLastCalledWith('admin-token', { limit: 100 })
+  })
+
   it('新增订阅源时调用 admin feed source 创建接口', async () => {
     const wrapper = mount(SettingFeedSourcePanel, {
       props: { fullTextMode: 'per_source' },

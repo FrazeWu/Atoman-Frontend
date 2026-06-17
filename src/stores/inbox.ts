@@ -49,7 +49,7 @@ export const useInboxStore = defineStore('inbox', () => {
 
   const connect = async () => {
     if (!authStore.token || socket) return
-    const apiBase = api.url.replace(/\/api$/, '')
+    const apiBase = api.url.replace(/\/api\/v1$/, '')
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = apiBase.startsWith('http')
       ? apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')

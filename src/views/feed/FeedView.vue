@@ -4,17 +4,17 @@
       ref="headerRef"
       :class="{ 'feed-header-sticky': showAddModal }"
     >
-      <APageHeader accent :title="feedCopy.name" :sub="feedCopy.homepageSub">
+      <PPageHeader accent :title="feedCopy.name" :sub="feedCopy.homepageSub">
         <template #action>
           <div style="display:flex;gap:0.75rem;align-items:center">
-            <PaperPress
+            <PPress
               v-if="authStore.isAuthenticated"
               data-onboarding-anchor="feed-subscribe-trigger"
               @click="toggleAddModal"
               :label="showAddModal ? '取消添加' : '+ 订阅'"
               :variant="showAddModal ? 'secondary' : 'primary'"
             />
-            <PaperPress
+            <PPress
               v-if="authStore.isAuthenticated"
               variant="secondary"
               label="订阅源管理"
@@ -22,7 +22,7 @@
             />
           </div>
         </template>
-      </APageHeader>
+      </PPageHeader>
     </div>
     <SubscriptionAddSheet
       :show="showAddModal"
@@ -49,9 +49,9 @@
     />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
 
-    <ShortcutHints :hints="shortcutHints" />
+    <PShortcutHints :hints="shortcutHints" />
 
-    <template>
+    <section class="feed-content">
       <div class="feed-actions">
         <button
           v-if="authStore.isAuthenticated"
@@ -63,7 +63,7 @@
           <Filter :size="20" aria-hidden="true" />
         </button>
         <div v-if="authStore.isAuthenticated" style="width: 2rem"></div>
-        <PaperPress
+        <PPress
           v-if="authStore.isAuthenticated"
           variant="secondary"
           :loading="markingAllRead"
@@ -77,11 +77,11 @@
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
 
-      <AEmpty v-else-if="!timeline.length" :text="emptyTimelineText" />
+      <PEmpty v-else-if="!timeline.length" :text="emptyTimelineText" />
 
       <div v-else class="feed-timeline">
         <template v-for="(item, index) in timeline" :key="itemKey(item)">
-          <PaperEntry
+          <PEntry
             v-if="item.type === 'post' && item.post"
             :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
             :is-read="item.is_read"
@@ -92,8 +92,8 @@
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PaperBadge type="internal" fill>内部</PaperBadge>
-                <PaperBadge type="blog">博客</PaperBadge>
+                <PBadge type="internal" fill>内部</PBadge>
+                <PBadge type="blog">博客</PBadge>
               </div>
             </template>
             <template #meta>
@@ -118,23 +118,9 @@
               <span v-if="item.is_read" class="a-label" style="color:var(--a-color-success)">已读</span>
             </template>
 
-            <template #actions>
-              <PaperClip
-                v-if="authStore.isAuthenticated"
-                :active="starredIds.has(item.post.id)"
-                :label="starredIds.has(item.post.id) ? '退藏' : '收藏'"
-                @click="toggleStar(item.post.id)"
-              />
-              <PaperClip
-                v-if="authStore.isAuthenticated"
-                :active="readingListIds.has(item.post.id)"
-                :label="readingListIds.has(item.post.id) ? '移除' : '稍后阅读'"
-                @click="toggleReadingList(item.post.id)"
-              />
-            </template>
-          </PaperEntry>
+          </PEntry>
 
-          <PaperEntry
+          <PEntry
             v-else-if="item.type === 'feed_item' && item.feed_item"
             :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
             :is-read="item.is_read"
@@ -145,8 +131,8 @@
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PaperBadge type="external" fill>外部</PaperBadge>
-                <PaperBadge type="external">{{ getExternalBadge(item.feed_item) }}</PaperBadge>
+                <PBadge type="external" fill>外部</PBadge>
+                <PBadge type="external">{{ getExternalBadge(item.feed_item) }}</PBadge>
               </div>
             </template>
 
@@ -170,18 +156,18 @@
             </template>
 
             <template #actions>
-              <PaperClip
+              <PClip
                 v-if="item.feed_item.enclosure_url"
                 :label="isPodcastPlaying(item.feed_item) ? '■ 播放中' : '▶ 播放播客'"
                 @click="playPodcast(item.feed_item, $event)"
               />
-              <PaperClip
+              <PClip
                 v-if="authStore.isAuthenticated"
                 :active="starredIds.has(item.feed_item.id)"
                 :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
                 @click="toggleStar(item.feed_item.id)"
               />
-              <PaperClip
+              <PClip
                 v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.feed_item.id)"
                 :label="readingListIds.has(item.feed_item.id) ? '移除' : '稍后阅读'"
@@ -192,7 +178,7 @@
                 ↗ 原文
               </a>
             </template>
-          </PaperEntry>
+          </PEntry>
         </template>
 
         <FeedTimelineFooter
@@ -203,24 +189,24 @@
           @change-page="changePage"
         />
       </div>
-    </template>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import PaperField from '@/components/ui/PaperField.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import ShortcutHints from '@/components/ui/ShortcutHints.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PField from '@/components/ui/PField.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
@@ -290,13 +276,14 @@ const { focusedIndex, scrollToFocused } = useKeyboardList({
   section: 'content',
   onEnter: (item, index) => openArticleSheet(item, index),
   onAction: (key, item) => {
-    const id = item.post?.id || item.feed_item?.id
-    if (!id) return
-    
     switch (key) {
       case 'm': toggleRead(item); break
-      case 's': toggleStar(id); break
-      case 'l': toggleReadingList(id); break
+      case 's':
+        if (item.type === 'feed_item' && item.feed_item) toggleStar(item.feed_item.id)
+        break
+      case 'l':
+        if (item.type === 'feed_item' && item.feed_item) toggleReadingList(item.feed_item.id)
+        break
       case 'v': window.open(item.feed_item?.link || '#', '_blank'); break
     }
   },
@@ -345,14 +332,13 @@ const headerBottom = computed(() => {
 
 const openArticleSheet = (item: TimelineItem, index?: number) => {
   if (index !== undefined) focusedIndex.value = index
-  const id = item.post?.id || item.feed_item?.id
-  if (!id) return
+  if (!item.post && !item.feed_item) return
 
   selectedArticle.value = item
   showArticleSheet.value = true
-  if (authStore.isAuthenticated && !item.is_read) {
+  if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
     item.is_read = true
-    void feedStore.markItemsRead([id])
+    void feedStore.markItemsRead([item.feed_item.id])
   }
 }
 
@@ -504,12 +490,13 @@ const toggleReadingList = async (feedItemId: string) => {
 }
 
 const toggleRead = (item: TimelineItem) => {
-  if (!authStore.isAuthenticated) return
-  const id = item.post?.id || item.feed_item?.id
-  if (!id) return
+  if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item) return
+  const id = item.feed_item.id
   item.is_read = !item.is_read
   if (item.is_read) {
     void feedStore.markItemsRead([id])
+  } else {
+    void feedStore.markItemsUnread([id])
   }
 }
 

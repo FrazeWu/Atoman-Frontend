@@ -1,16 +1,16 @@
 <template>
   <div class="music-edit-review-shell">
-    <APageHeader title="音乐审核" sub="统一展示 Music edit 队列，并提供 approve / reject / cancel / revert 操作。" kicker="Music Review" accent />
+    <PPageHeader title="音乐审核" sub="统一展示 Music edit 队列，并提供 approve / reject / cancel / revert 操作。" kicker="Music Review" accent />
 
     <div class="music-edit-review-shell__filters">
-      <ASelect v-model="statusModel" label="状态" :options="statusOptions" />
-      <ASelect v-model="entityTypeModel" label="实体类型" :options="entityTypeOptions" />
+      <PSelect v-model="statusModel" label="状态" :options="statusOptions" />
+      <PSelect v-model="entityTypeModel" label="实体类型" :options="entityTypeOptions" />
     </div>
 
-    <AEmpty v-if="!items.length" description="当前没有待审核的 music edits" />
+    <PEmpty v-if="!items.length" description="当前没有待审核的 music edits" />
 
     <div v-else class="music-edit-review-shell__list">
-      <PaperEntry
+      <PEntry
         v-for="item in items"
         :key="item.id"
         :title="item.targetTitle"
@@ -23,23 +23,23 @@
         </template>
         <template #summary>{{ item.reason || '暂无说明' }}</template>
         <template #actions>
-          <ABtn type="button" variant="primary" size="sm" @click="$emit('approve', item.id)">通过</ABtn>
-          <ABtn type="button" variant="secondary" size="sm" @click="$emit('reject', item.id)">驳回</ABtn>
-          <ABtn type="button" variant="ghost" size="sm" @click="$emit('cancel', item.id)">取消</ABtn>
-          <ABtn type="button" variant="ghost" size="sm" @click="$emit('revert', item.id)">回滚</ABtn>
+          <PButton type="button" variant="primary" size="sm" @click="$emit('approve', item.id)">通过</PButton>
+          <PButton type="button" variant="secondary" size="sm" @click="$emit('reject', item.id)">驳回</PButton>
+          <PButton type="button" variant="ghost" size="sm" @click="$emit('cancel', item.id)">取消</PButton>
+          <PButton type="button" variant="ghost" size="sm" @click="$emit('revert', item.id)">回滚</PButton>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 import type { MusicEditStatus, MusicEntityType, MusicEditType } from '@/api/musicV1'
 
 export type MusicEditReviewItem = {

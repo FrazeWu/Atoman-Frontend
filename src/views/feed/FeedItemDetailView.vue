@@ -9,10 +9,10 @@
 
     <!-- Error state -->
     <div v-else-if="!item" class="feed-error">
-      <AEmpty text="内容不存在或已被删除" />
+      <PEmpty text="内容不存在或已被删除" />
       <div style="text-align:center;margin-top:3rem">
         <RouterLink to="/" style="text-decoration:none">
-          <PaperPress variant="secondary" label="← 返回订阅" />
+          <PPress variant="secondary" label="← 返回订阅" />
         </RouterLink>
       </div>
     </div>
@@ -23,7 +23,7 @@
         <RouterLink to="/" class="back-link">← BACK TO FEED</RouterLink>
         <h1 class="article-title">{{ item.title }}</h1>
         <div class="article-meta">
-          <PaperBadge type="external">{{ item.feed_source?.title || 'RSS' }}</PaperBadge>
+          <PBadge type="external">{{ item.feed_source?.title || 'RSS' }}</PBadge>
           <span v-if="item.author" class="author-tag">/ {{ item.author }}</span>
           <span class="date-tag">{{ formatDate(item.published_at) }}</span>
         </div>
@@ -42,7 +42,7 @@
       >
         <div class="player-label">AUDIO_ENCLOSURE</div>
         <div style="display:flex;align-items:center;gap:1.5rem">
-          <PaperPress
+          <PPress
             @click="togglePlay"
             :label="isPlaying ? '⏸ PAUSE' : '▶ PLAY AUDIO'"
             :variant="isPlaying ? 'secondary' : 'primary'"
@@ -59,9 +59,9 @@
       </div>
 
       <div class="article-body-wrap">
-        <PaperBadge v-if="item.content_source" :type="item.content_source === 'full_text' ? 'internal' : 'external'">
+        <PBadge v-if="item.content_source" :type="item.content_source === 'full_text' ? 'internal' : 'external'">
           {{ item.content_source === 'full_text' ? 'FULL TEXT' : 'SUMMARY' }}
-        </PaperBadge>
+        </PBadge>
         <div class="prose-blog article-body" v-html="renderContent(item.content_html || item.content || item.summary || '')"></div>
       </div>
 
@@ -82,9 +82,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
 
-import AEmpty from '@/components/ui/AEmpty.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PBadge from '@/components/ui/PBadge.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { FeedItem } from '@/types'

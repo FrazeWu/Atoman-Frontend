@@ -1,0 +1,80 @@
+<template>
+  <RouterLink
+    v-if="to"
+    :to="to"
+    class="p-sidebar-item"
+    :class="{ 'is-focused': isFocused }"
+    active-class="active"
+    :exact-active-class="exact ? 'active' : ''"
+  >
+    <span v-if="index" class="p-sidebar-item-num">{{ formattedIndex }}</span>
+    <span class="p-sidebar-item-label"><slot /></span>
+    <span
+      v-if="icon || iconChar"
+      class="p-sidebar-item-icon"
+      :class="{ 'is-component-icon': icon, 'is-char-icon': !icon && iconChar }"
+      aria-hidden="true"
+    >
+      <component :is="icon" v-if="icon" class="p-sidebar-item-svg" />
+      <template v-else>{{ iconChar }}</template>
+    </span>
+  </RouterLink>
+  <button
+    v-else
+    type="button"
+    class="p-sidebar-item"
+    :class="{ active, 'is-focused': isFocused }"
+    @click="$emit('click')"
+  >
+    <span v-if="index" class="p-sidebar-item-num">{{ formattedIndex }}</span>
+    <span class="p-sidebar-item-label"><slot /></span>
+    <span
+      v-if="icon || iconChar"
+      class="p-sidebar-item-icon"
+      :class="{ 'is-component-icon': icon, 'is-char-icon': !icon && iconChar }"
+      aria-hidden="true"
+    >
+      <component :is="icon" v-if="icon" class="p-sidebar-item-svg" />
+      <template v-else>{{ iconChar }}</template>
+    </span>
+  </button>
+</template>
+
+<script setup lang="ts">
+import { computed, type Component } from 'vue'
+
+const props = defineProps<{
+  to?: string | object
+  index?: number | string
+  active?: boolean
+  exact?: boolean
+  icon?: Component
+  iconChar?: string
+  isFocused?: boolean
+}>()
+
+defineEmits(['click'])
+
+const formattedIndex = computed(() => {
+  if (typeof props.index === 'number') {
+    return String(props.index).padStart(2, '0') + '/'
+  }
+  return props.index
+})
+</script>
+
+<style scoped>
+.p-sidebar-item {
+  outline: none;
+  border-radius: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.p-sidebar-item:hover,
+.p-sidebar-item.is-focused {
+  background: var(--a-color-paper-wash);
+}
+.p-sidebar-item.active {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
+}
+</style>

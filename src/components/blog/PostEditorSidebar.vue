@@ -3,7 +3,7 @@
     <section class="left-section publish-section">
       <span class="a-label">发布</span>
       <div class="publish-actions">
-        <ABtn
+        <PButton
           variant="secondary"
           block
           :loading="saving === 'draft'"
@@ -12,8 +12,8 @@
           @click="$emit('save-draft')"
         >
           存草稿
-        </ABtn>
-        <ABtn
+        </PButton>
+        <PButton
           variant="primary"
           block
           :loading="saving === 'published'"
@@ -22,9 +22,9 @@
           @click="$emit('save-published')"
         >
           发布文章
-        </ABtn>
+        </PButton>
       </div>
-      <ABtn v-if="hasDraftManagerAccess" type="button" variant="ghost" size="sm" block @click="$emit('open-draft-manager')">草稿管理</ABtn>
+      <PButton v-if="hasDraftManagerAccess" type="button" variant="ghost" size="sm" block @click="$emit('open-draft-manager')">草稿管理</PButton>
     </section>
 
     <section class="left-section">
@@ -115,7 +115,7 @@ import { ref } from 'vue'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 type BlogVisibility = 'public' | 'followers' | 'private'
 type SaveTarget = 'draft' | 'published'
@@ -395,7 +395,7 @@ details[open] > .settings-summary::before {
 }
 
 @media (max-width: 640px) {
-  .publish-actions :deep(.a-btn) {
+  .publish-actions :deep(.p-button) {
     width: 100%;
     justify-content: center;
   }

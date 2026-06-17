@@ -1,6 +1,6 @@
 <template>
   <section class="setting-access">
-    <ASectionHeader
+    <PSectionHeader
       title="模块设置中心"
       kicker="SITE ACCESS"
       description="先统一决定哪些模块开放，再逐个模块配置已确认的设置项。左侧目录会跟随右侧滚动位置同步切换。"
@@ -9,7 +9,7 @@
     <p v-if="error" class="setting-access__message setting-access__message--error">{{ error }}</p>
     <p v-else-if="saved" class="setting-access__message">已保存</p>
 
-    <ASurface class="setting-access__module-toggle-bar" :layer="1">
+    <PSurface class="setting-access__module-toggle-bar" :layer="1">
       <div class="setting-access__bar-head">
         <div>
           <h2 class="a-title-sm">启用模块</h2>
@@ -30,7 +30,7 @@
           <input v-model="draft.modules[key].enabled" type="checkbox" />
         </label>
       </div>
-    </ASurface>
+    </PSurface>
 
     <div class="setting-access__shell">
       <aside class="setting-access__module-nav" aria-label="模块目录">
@@ -56,7 +56,7 @@
           :ref="(el) => registerSection(key, el)"
           class="setting-access__section"
         >
-          <ASurface :layer="1" class="setting-access__section-card">
+          <PSurface :layer="1" class="setting-access__section-card">
             <div class="setting-access__section-head">
               <div>
                 <p class="setting-access__section-kicker">{{ moduleKeyLabel(key) }}</p>
@@ -144,23 +144,23 @@
                 </div>
               </div>
             </div>
-          </ASurface>
+          </PSurface>
         </section>
       </div>
     </div>
 
     <div class="setting-access__actions">
-      <ABtn variant="secondary" to="/">返回首页</ABtn>
-      <ABtn :loading="saving" loading-text="保存中..." @click="save">保存设置</ABtn>
+      <PButton variant="secondary" to="/">返回首页</PButton>
+      <PButton :loading="saving" loading-text="保存中..." @click="save">保存设置</PButton>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import ASectionHeader from '@/components/ui/ASectionHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'

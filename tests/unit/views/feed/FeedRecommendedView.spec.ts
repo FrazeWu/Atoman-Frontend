@@ -62,14 +62,14 @@ describe('FeedRecommendedView', () => {
     const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PaperTab: true,
-          PaperEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
-          PaperBadge: true,
-          PaperClip: true,
-          ShortcutHints: true,
+          PButton: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PTab: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PShortcutHints: true,
           FeedArticleSheet: true,
         },
       },

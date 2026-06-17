@@ -7,7 +7,7 @@
     </header>
 
     <div class="empty-paper" role="status">
-      <span class="paper-tab a-font-meta">STARRED</span>
+      <span class="p-tab a-font-meta">STARRED</span>
       <p class="a-font-meta empty-label">NO CLIPS YET</p>
       <h2>还没有收藏的音乐档案</h2>
       <p>在艺术家或专辑页面点击收藏后，它们会像纸夹一样出现在这里。</p>
@@ -59,7 +59,7 @@
   box-shadow: 14px 14px 0 rgba(0, 0, 0, 0.08);
 }
 
-.paper-tab {
+.p-tab {
   position: absolute;
   top: -2px;
   right: 2rem;

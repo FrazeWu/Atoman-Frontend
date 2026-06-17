@@ -35,23 +35,23 @@ describe('SubscriptionAddSheet', () => {
       },
       global: {
         stubs: {
-          PaperSheet: {
+          PSheet: {
             template: '<div><slot /></div>',
           },
-          PaperField: {
+          PField: {
             template: '<label><slot /></label>',
           },
-          PaperPress: {
+          PPress: {
             props: ['label'],
             emits: ['click'],
             template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PaperClip: {
+          PClip: {
             props: ['label', 'active'],
             emits: ['click'],
             template: '<button type="button" :data-active="active" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          ASelect: {
+          PSelect: {
             props: ['modelValue', 'options'],
             emits: ['update:modelValue'],
             template: '<select />',
@@ -93,23 +93,23 @@ describe('SubscriptionAddSheet', () => {
       },
       global: {
         stubs: {
-          PaperSheet: {
+          PSheet: {
             template: '<div><slot /></div>',
           },
-          PaperField: {
+          PField: {
             template: '<label><slot /></label>',
           },
-          PaperPress: {
+          PPress: {
             props: ['label'],
             emits: ['click'],
             template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PaperClip: {
+          PClip: {
             props: ['label', 'active'],
             emits: ['click'],
             template: '<button type="button" :data-active="active" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          ASelect: {
+          PSelect: {
             props: ['modelValue', 'options'],
             emits: ['update:modelValue'],
             template: '<select />',
@@ -147,23 +147,23 @@ describe('SubscriptionAddSheet', () => {
       },
       global: {
         stubs: {
-          PaperSheet: {
+          PSheet: {
             template: '<div><slot /></div>',
           },
-          PaperField: {
+          PField: {
             template: '<label><slot /></label>',
           },
-          PaperPress: {
+          PPress: {
             props: ['label'],
             emits: ['click'],
             template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PaperClip: {
+          PClip: {
             props: ['label', 'active'],
             emits: ['click'],
             template: '<button type="button" :data-active="active" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          ASelect: {
+          PSelect: {
             props: ['modelValue', 'options'],
             emits: ['update:modelValue'],
             template: `

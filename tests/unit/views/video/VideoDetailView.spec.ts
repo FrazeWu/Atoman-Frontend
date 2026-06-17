@@ -20,16 +20,16 @@ describe('VideoDetailView', () => {
     })
     await router.push('/videos/test-id')
 
-    // Just test that VideoPlayerShell is defined and importable
-    const { default: VideoPlayerShell } = await import('@/components/shared/VideoPlayerShell.vue')
-    expect(VideoPlayerShell).toBeDefined()
+    // Just test that PVideoPlayerShell is defined and importable
+    const { default: PVideoPlayerShell } = await import('@/components/shared/PVideoPlayerShell.vue')
+    expect(PVideoPlayerShell).toBeDefined()
   })
 })
 
 describe('VideoDetailView layout', () => {
-  it('VideoPlayerShell component is importable', async () => {
-    const { default: VideoPlayerShell } = await import('@/components/shared/VideoPlayerShell.vue')
-    expect(VideoPlayerShell).toBeDefined()
+  it('PVideoPlayerShell component is importable', async () => {
+    const { default: PVideoPlayerShell } = await import('@/components/shared/PVideoPlayerShell.vue')
+    expect(PVideoPlayerShell).toBeDefined()
   })
 
   it('VideoCommentSection component is importable', async () => {

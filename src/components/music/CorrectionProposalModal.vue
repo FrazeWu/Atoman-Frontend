@@ -1,5 +1,5 @@
 <template>
-  <AModal
+  <PModal
     :model-value="show"
     title="提交修改建议"
     size="md"
@@ -36,12 +36,12 @@
         </button>
       </div>
     </form>
-  </AModal>
+  </PModal>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import AModal from '@/components/ui/AModal.vue'
+import PModal from '@/components/ui/PModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 

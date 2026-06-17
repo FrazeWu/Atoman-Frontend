@@ -1,0 +1,17 @@
+.git
+.github
+.claude
+
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+coverage
+.playwright
+.playwright-mcp
+
+*.log
+nvim.log
+output.txt

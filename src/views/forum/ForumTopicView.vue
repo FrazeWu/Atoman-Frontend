@@ -44,40 +44,40 @@
           <span>{{ forumStore.currentTopic.reply_count }} 回复</span>
 
           <!-- Like button -->
-          <ABtn
+          <PButton
             v-if="authStore.isAuthenticated"
             @click="forumStore.toggleTopicLike(forumStore.currentTopic!.id)"
             outline
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_liked }"
-          >{{ forumStore.currentTopic.is_liked ? '已赞' : '点赞' }} {{ forumStore.currentTopic.like_count }}</ABtn>
+          >{{ forumStore.currentTopic.is_liked ? '已赞' : '点赞' }} {{ forumStore.currentTopic.like_count }}</PButton>
           <span v-else>{{ forumStore.currentTopic.like_count }} 赞</span>
 
           <!-- Bookmark button -->
-          <ABtn
+          <PButton
             v-if="authStore.isAuthenticated"
             @click="forumStore.toggleTopicBookmark(forumStore.currentTopic!.id)"
             outline
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
-          >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</ABtn>
+          >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</PButton>
 
           <!-- Report button (non-owner, authenticated) -->
-          <ABtn
+          <PButton
             v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
             @click="openReportModal('topic', forumStore.currentTopic!.id)"
             outline
             size="sm"
-          >举报</ABtn>
+          >举报</PButton>
 
           <!-- Admin: feature/unfeature -->
-          <ABtn
+          <PButton
             v-if="isAdminRole(authStore.user?.role)"
             @click="toggleFeatured"
             outline
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.featured }"
-          >{{ forumStore.currentTopic.featured ? '取消精华' : '设为精华' }}</ABtn>
+          >{{ forumStore.currentTopic.featured ? '取消精华' : '设为精华' }}</PButton>
         </div>
       </div>
 
@@ -94,7 +94,7 @@
               {{ forumStore.currentTopic.reply_count }} 条回复
             </h2>
             <div class="reply-sort-tabs">
-              <ABtn
+              <PButton
                 v-for="(label, s) in replySortOptions"
                 :key="s"
                 outline
@@ -102,12 +102,12 @@
                 class="reply-sort-tab"
                 :class="{ 'reply-sort-tab-active': replySort === s }"
                 @click="setReplySort(s as 'oldest' | 'best')"
-              >{{ label }}</ABtn>
+              >{{ label }}</PButton>
             </div>
           </div>
 
           <!-- Replies -->
-          <AEmpty v-if="forumStore.replies.length === 0" text="还没有回复，来说第一句" />
+          <PEmpty v-if="forumStore.replies.length === 0" text="还没有回复，来说第一句" />
           <div class="reply-scroll-list">
             <template
               v-for="reply in topLevelReplies"
@@ -149,20 +149,20 @@
                   @solve="handleSolveReply"
                   @unsolve="handleUnsolveReply"
                 />
-                <ABtn
+                <PButton
                   v-if="subRepliesMap[reply.id].length > 2 && !expandedReplies.has(reply.id)"
                   outline
                   size="sm"
                   class="expand-replies-btn"
                   @click="expandedReplies.add(reply.id)"
-                >展开 {{ subRepliesMap[reply.id].length - 2 }} 条回复</ABtn>
-                <ABtn
+                >展开 {{ subRepliesMap[reply.id].length - 2 }} 条回复</PButton>
+                <PButton
                   v-if="expandedReplies.has(reply.id) && subRepliesMap[reply.id].length > 2"
                   outline
                   size="sm"
                   class="expand-replies-btn"
                   @click="expandedReplies.delete(reply.id)"
-                >收起回复</ABtn>
+                >收起回复</PButton>
               </div>
             </template>
           </div>
@@ -175,7 +175,7 @@
 
             <div v-else-if="!authStore.isAuthenticated" class="reply-login-notice">
               <p class="reply-login-text">登录后即可参与讨论</p>
-              <ABtn to="/login">登录</ABtn>
+              <PButton to="/login">登录</PButton>
             </div>
 
             <div v-else class="reply-form-wrap">
@@ -191,18 +191,18 @@
                     {{ getReplyPreview(quotedReply.content) }}
                   </div>
                 </div>
-                <ABtn outline size="sm" @click="clearQuote">取消引用</ABtn>
+                <PButton outline size="sm" @click="clearQuote">取消引用</PButton>
               </div>
 
               <!-- Draft restore notice -->
               <div v-if="draftRestored" class="draft-restored">
                 <span>已恢复草稿</span>
-                <ABtn outline size="sm" @click="clearReplyDraft">清除</ABtn>
+                <PButton outline size="sm" @click="clearReplyDraft">清除</PButton>
               </div>
 
-              <!-- AEditor for reply -->
+              <!-- PEditor for reply -->
               <div class="reply-editor-wrap">
-                <AEditor
+                <PEditor
                   v-model="replyContent"
                   mode="normal"
                   :rendering-level="'comment'"
@@ -214,8 +214,8 @@
               </div>
 
               <div class="reply-actions">
-                <ABtn v-if="replyContent" outline size="sm" @click="clearReplyDraft">清除草稿</ABtn>
-                <ABtn @click="submitReply" :loading="submitting" :disabled="!replyContent.trim()">提交回复</ABtn>
+                <PButton v-if="replyContent" outline size="sm" @click="clearReplyDraft">清除草稿</PButton>
+                <PButton @click="submitReply" :loading="submitting" :disabled="!replyContent.trim()">提交回复</PButton>
               </div>
             </div>
           </div>
@@ -227,17 +227,17 @@
     </div>
 
     <!-- Back to top button -->
-    <ABtn
+    <PButton
       v-if="showBackTop"
       outline
       size="sm"
       class="back-to-top"
       @click="scrollToTop"
-    >顶部</ABtn>
+    >顶部</PButton>
   </div>
 
   <!-- Report Modal -->
-  <AModal v-if="reportModal.show" @close="reportModal.show = false" size="sm">
+  <PModal v-if="reportModal.show" @close="reportModal.show = false" size="sm">
     <h3 class="a-subtitle" style="margin-bottom:1.25rem">举报内容</h3>
     <div style="display:flex;flex-direction:column;gap:1rem">
       <div class="a-field">
@@ -246,20 +246,20 @@
       </div>
       <div class="a-field">
         <label class="a-field-label">举报原因 *</label>
-        <ASelect
+        <PSelect
           v-model="reportForm.reason"
           :options="reportReasonOptions"
           placeholder="请选择原因"
         />
       </div>
-      <ATextarea v-model="reportForm.note" label="补充说明" :rows="3" placeholder="可选：详细说明" />
+      <PTextarea v-model="reportForm.note" label="补充说明" :rows="3" placeholder="可选：详细说明" />
     </div>
     <div v-if="reportFeedback" class="report-feedback">{{ reportFeedback }}</div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <ABtn outline @click="reportModal.show = false">取消</ABtn>
-      <ABtn @click="submitReport">提交举报</ABtn>
+      <PButton outline @click="reportModal.show = false">取消</PButton>
+      <PButton @click="submitReport">提交举报</PButton>
     </div>
-  </AModal>
+  </PModal>
 </template>
 
 <script setup lang="ts">
@@ -270,15 +270,15 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import type { ForumReply } from '@/types'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import AModal from '@/components/ui/AModal.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PModal from '@/components/ui/PModal.vue'
 import ForumReplyNode from '@/components/forum/ForumReplyNode.vue'
 import { useApi } from '@/composables/useApi'
 
-const AEditor = defineAsyncComponent(() => import('@/components/shared/AEditor.vue'))
+const PEditor = defineAsyncComponent(() => import('@/components/shared/PEditor.vue'))
 
 const route = useRoute()
 const router = useRouter()

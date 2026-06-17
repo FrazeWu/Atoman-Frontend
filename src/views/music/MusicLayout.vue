@@ -1,19 +1,19 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PaperSidebar
+    <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
     >
-      <PaperSidebarItem to="/explore" :index="1" icon-char="探">
+      <PSidebarItem to="/explore" :index="1" icon-char="探">
         探索
-      </PaperSidebarItem>
-      <PaperSidebarItem to="/" :index="2" icon-char="艺" exact>
+      </PSidebarItem>
+      <PSidebarItem to="/" :index="2" icon-char="艺" exact>
         艺术家
-      </PaperSidebarItem>
-      <PaperSidebarItem to="/starred" :index="3" icon-char="藏">
+      </PSidebarItem>
+      <PSidebarItem to="/starred" :index="3" icon-char="藏">
         我的收藏
-      </PaperSidebarItem>
-    </PaperSidebar>
+      </PSidebarItem>
+    </PSidebar>
     <main class="a-main-content">
       <router-view />
     </main>
@@ -23,8 +23,8 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { moduleRooms } from '@/config/moduleRooms'
-import PaperSidebar from '@/components/ui/PaperSidebar.vue'
-import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
+import PSidebar from '@/components/ui/PSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 
 const sidebarStorageKey = 'atoman.music.sidebar.collapsed'
 const sidebarCollapsed = ref(false)

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
-import VideoPlayerShell from '@/components/shared/VideoPlayerShell.vue'
+import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
 import VideoCommentSection from '@/components/video/VideoCommentSection.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
@@ -192,7 +192,7 @@ function handleSeekToTimestamp(value: number) {
       <!-- Main: player + info -->
       <div class="vd-main">
         <!-- Player Shell -->
-        <VideoPlayerShell
+        <PVideoPlayerShell
           :video="video"
           :current-time="currentPlaybackTime"
           :theater-mode="theaterMode"
@@ -234,7 +234,7 @@ function handleSeekToTimestamp(value: number) {
               @toggle-theater="toggleTheaterMode"
             />
           </template>
-        </VideoPlayerShell>
+        </PVideoPlayerShell>
 
         <!-- Title -->
         <h1 class="vd-title">{{ video.title }}</h1>

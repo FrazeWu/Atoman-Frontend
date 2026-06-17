@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <APageHeader title="法堂广场" accent sub="浏览所有人的公开文章" style="margin-bottom:2.5rem" />
+    <PPageHeader title="法堂广场" accent sub="浏览所有人的公开文章" style="margin-bottom:2.5rem" />
 
     <!-- Loading -->
     <div v-if="loading" class="a-grid-3">
@@ -11,12 +11,12 @@
     <div v-else-if="!posts.length" style="text-align:center;padding:6rem 0">
       <p class="a-title a-muted" style="margin-bottom:1rem">还没有文章</p>
       <p class="a-muted" style="margin-bottom:1.5rem">成为第一个发布的人吧</p>
-      <ABtn v-if="authStore.isAuthenticated" to="/">去选合集写文章</ABtn>
+      <PButton v-if="authStore.isAuthenticated" to="/">去选合集写文章</PButton>
     </div>
 
     <!-- Post Grid -->
     <div v-else class="a-grid-3">
-      <PaperEntry
+      <PEntry
         v-for="post in posts"
         :key="post.id"
         :title="post.title"
@@ -26,15 +26,15 @@
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PaperBadge type="internal" fill>内部</PaperBadge>
-            <PaperBadge type="blog">博客</PaperBadge>
+            <PBadge type="internal" fill>内部</PBadge>
+            <PBadge type="blog">博客</PBadge>
             <img
               v-if="post.cover_url"
               :src="post.cover_url"
               class="blog-entry-cover"
               style="margin-top:0.25rem"
             />
-            <PaperAvatar
+            <PAvatar
               v-else
               :src="post.user?.avatar_url"
               :name="post.user?.display_name || post.user?.username"
@@ -56,19 +56,19 @@
               <span>♥ {{ post.likes_count || 0 }}</span>
               <span>💬 {{ post.comments_count || 0 }}</span>
             </div>
-            <PaperClip
+            <PClip
               :active="starredIds.has(post.id)"
               :label="starredIds.has(post.id) ? '退藏' : '收藏'"
               @click="toggleStar(post.id)"
             />
-            <PaperClip
+            <PClip
               :active="readingListIds.has(post.id)"
               :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
               @click="toggleReadingList(post.id)"
             />
           </div>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
 
     <!-- Pagination -->
@@ -90,10 +90,10 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperAvatar from '@/components/ui/PaperAvatar.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'

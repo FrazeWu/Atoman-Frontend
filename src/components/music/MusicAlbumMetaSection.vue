@@ -1,5 +1,5 @@
 <template>
-  <ASurface class="album-meta-card" tone="soft" :layer="0">
+  <PSurface class="album-meta-card" tone="soft" :layer="0">
     <div class="album-meta-card__grid">
       <div class="album-meta-card__field album-meta-card__field--artists">
         <label class="a-label">艺人</label>
@@ -8,26 +8,26 @@
 
       <div class="album-meta-card__field">
         <label class="a-label">专辑名</label>
-        <AInput v-model="albumModel" placeholder="输入专辑名" />
+        <PInput v-model="albumModel" placeholder="输入专辑名" />
       </div>
 
       <div class="album-meta-card__field">
         <label class="a-label">发行日期</label>
-        <AInput v-model="releaseDateModel" type="date" />
+        <PInput v-model="releaseDateModel" type="date" />
       </div>
 
       <div class="album-meta-card__field">
-        <ASelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
+        <PSelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
       </div>
     </div>
-  </ASurface>
+  </PSurface>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ASelect from '@/components/ui/ASelect.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import ArtistSelect from './ArtistSelect.vue'
 import type { Artist } from '@/types'
 

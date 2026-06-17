@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 import { useApi } from '@/composables/useApi'
 import { modulePathUrl } from '@/router/siteUrls'
 import type { PodcastEpisode } from '@/types'
@@ -52,17 +52,17 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
 
 <template>
   <div class="a-page-xl kanbo-explore-page">
-    <APageHeader title="播客" sub="探索本网站发布的全部播客单集。" accent>
+    <PPageHeader title="播客" sub="探索本网站发布的全部播客单集。" accent>
       <template #action>
         <div class="kanbo-explore-actions">
-          <ABtn to="/create" outline size="sm">返回创作</ABtn>
+          <PButton to="/create" outline size="sm">返回创作</PButton>
         </div>
       </template>
-    </APageHeader>
+    </PPageHeader>
     <div v-if="loading" class="a-skeleton kanbo-list-skeleton" />
-    <AEmpty v-else-if="episodes.length === 0" text="暂无播客" />
+    <PEmpty v-else-if="episodes.length === 0" text="暂无播客" />
     <div v-else class="kanbo-podcast-list">
-      <PaperEntry
+      <PEntry
         v-for="episode in episodes"
         :key="episode.id"
         :title="episode.post?.title || '未命名单集'"
@@ -71,8 +71,8 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
       >
         <template #visual>
           <div class="kanbo-podcast-visual">
-            <PaperBadge type="internal" fill>内部</PaperBadge>
-            <PaperBadge type="podcast">播客</PaperBadge>
+            <PBadge type="internal" fill>内部</PBadge>
+            <PBadge type="podcast">播客</PBadge>
             <img
               v-if="episodeCover(episode)"
               :src="episodeCover(episode)"
@@ -86,7 +86,7 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
           <span v-if="episode.duration_sec" class="a-muted">时长: {{ fmtDuration(episode.duration_sec) }}</span>
           <span class="a-muted">{{ new Date(episode.created_at).toLocaleDateString() }}</span>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
   </div>
 </template>

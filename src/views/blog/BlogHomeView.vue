@@ -1,16 +1,16 @@
 <template>
   <div class="a-page">
-    <APageHeader title="文章" sub="查看当前频道下的文章内容。" accent>
+    <PPageHeader title="文章" sub="查看当前频道下的文章内容。" accent>
       <template #action>
-        <ABtn v-if="authStore.isAuthenticated && canCreatePost" to="/post/new">+ 写文章</ABtn>
-        <ABtn v-else to="/login" outline>登录</ABtn>
+        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/post/new">+ 写文章</PButton>
+        <PButton v-else to="/login" outline>登录</PButton>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <!-- Filters -->
     <div class="blog-home__filters" aria-label="文章筛选">
       <div class="blog-home__filter-group">
-        <PaperTab
+        <PTab
           v-for="t in typeOptions"
           :key="t.value"
           :label="t.label"
@@ -19,7 +19,7 @@
         />
       </div>
       <div class="blog-home__filter-group blog-home__filter-group--end">
-        <PaperTab
+        <PTab
           v-for="s in sortOptions"
           :key="s.value"
           :label="s.label"
@@ -33,9 +33,9 @@
     <div v-if="loading" class="a-grid-2">
       <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
     </div>
-    <AEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
+    <PEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
     <div v-else>
-      <PaperEntry
+      <PEntry
         v-for="post in posts"
         :key="post.id"
         :title="post.title"
@@ -44,15 +44,15 @@
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PaperBadge type="internal" fill>内部</PaperBadge>
-            <PaperBadge type="blog">文章</PaperBadge>
+            <PBadge type="internal" fill>内部</PBadge>
+            <PBadge type="blog">文章</PBadge>
             <img
               v-if="post.cover_url"
               :src="post.cover_url"
               class="blog-entry-cover"
               style="margin-top:0.25rem"
             />
-            <PaperAvatar
+            <PAvatar
               v-else
               :src="post.user?.avatar_url"
               :name="post.user?.display_name || post.user?.username"
@@ -74,38 +74,38 @@
               <span>♥ {{ post.likes_count || 0 }}</span>
               <span>💬 {{ post.comments_count || 0 }}</span>
             </div>
-            <PaperClip
+            <PClip
               :active="starredIds.has(post.id)"
               :label="starredIds.has(post.id) ? '退藏' : '收藏'"
               @click="toggleStar(post.id)"
             />
-            <PaperClip
+            <PClip
               :active="readingListIds.has(post.id)"
               :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
               @click="toggleReadingList(post.id)"
             />
           </div>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
 
     <!-- Load more -->
     <div v-if="hasMore && !loading" style="display:flex;justify-content:center;margin-top:2rem">
-      <ABtn outline @click="loadMore">加载更多</ABtn>
+      <PButton outline @click="loadMore">加载更多</PButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperAvatar from '@/components/ui/PaperAvatar.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperTab from '@/components/ui/PaperTab.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PTab from '@/components/ui/PTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'

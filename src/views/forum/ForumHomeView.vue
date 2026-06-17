@@ -2,7 +2,7 @@
   <div class="forum-page">
     <!-- ── Main content ──────────────────────────────────────────────────── -->
     <main class="forum-main">
-      <APageHeader title="论坛" accent sub="坐下来发帖、回复、搜索和闲谈。" mb="1.5rem" />
+      <PPageHeader title="论坛" accent sub="坐下来发帖、回复、搜索和闲谈。" mb="1.5rem" />
 
       <ForumTopicFilters
         :active-tab="activeTab"
@@ -29,11 +29,11 @@
       </div>
 
       <!-- Empty state -->
-      <AEmpty v-else-if="forumStore.topics.length === 0" text="暂无话题，来发第一个吧" />
+      <PEmpty v-else-if="forumStore.topics.length === 0" text="暂无话题，来发第一个吧" />
 
       <!-- Topic rows -->
       <div v-else ref="topicListRef" class="topic-list">
-        <PaperEntry
+        <PEntry
           v-for="(topic, index) in forumStore.topics"
           :key="topic.id"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
@@ -82,29 +82,29 @@
               </span>
             </div>
           </template>
-        </PaperEntry>
+        </PEntry>
       </div>
 
       <!-- Load more -->
       <div v-if="forumStore.topics.length < forumStore.topicsTotal && !forumStore.loading" class="load-more-wrap">
-        <ABtn outline @click="loadMore" :loading="loadingMore">加载更多</ABtn>
+        <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </main>
   </div>
 
   <!-- Category Request Modal -->
-  <AModal v-if="catReqModalOpen" @close="catReqModalOpen = false" size="md">
+  <PModal v-if="catReqModalOpen" @close="catReqModalOpen = false" size="md">
     <h3 class="a-subtitle" style="margin-bottom:1.25rem">申请新分类</h3>
     <div style="display:flex;flex-direction:column;gap:1rem">
-      <AInput v-model="catReqForm.name" label="分类名称 *" placeholder="分类名称" />
-      <ATextarea v-model="catReqForm.description" label="描述" :rows="3" placeholder="分类用途说明" />
-      <ATextarea v-model="catReqForm.reason" label="申请理由 *" :rows="4" placeholder="说明为什么需要此分区" />
+      <PInput v-model="catReqForm.name" label="分类名称 *" placeholder="分类名称" />
+      <PTextarea v-model="catReqForm.description" label="描述" :rows="3" placeholder="分类用途说明" />
+      <PTextarea v-model="catReqForm.reason" label="申请理由 *" :rows="4" placeholder="说明为什么需要此分区" />
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <ABtn outline @click="catReqModalOpen = false">取消</ABtn>
-      <ABtn @click="submitCategoryRequest">提交申请</ABtn>
+      <PButton outline @click="catReqModalOpen = false">取消</PButton>
+      <PButton @click="submitCategoryRequest">提交申请</PButton>
     </div>
-  </AModal>
+  </PModal>
 </template>
 
 <script setup lang="ts">
@@ -114,14 +114,14 @@ import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import ForumTopicFilters from '@/components/forum/ForumTopicFilters.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import AModal from '@/components/ui/AModal.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useUIStore } from '@/stores/ui'
@@ -156,7 +156,7 @@ const { focusedIndex } = useKeyboardList({
     router.push(`/topic/${topic.id}`)
   },
   section: 'content',
-  scrollSelector: '.paper-entry.is-focused'
+  scrollSelector: '.p-entry.is-focused'
 })
 const searchQuery = ref('')
 const topicListRef = ref<HTMLElement | null>(null)
@@ -618,11 +618,11 @@ kbd {
   min-width: 12rem;
 }
 
-.forum-category-select :deep(.a-field) {
+.forum-category-select :deep(.p-field) {
   gap: 0;
 }
 
-.forum-category-select :deep(.a-select-trigger) {
+.forum-category-select :deep(.p-select-trigger) {
   min-height: 2.5rem;
   font-size: 0.8rem;
   font-weight: var(--a-font-weight-black);
@@ -656,7 +656,7 @@ kbd {
   position: relative;
 }
 
-.search-wrap :deep(.a-field) {
+.search-wrap :deep(.p-field) {
   gap: 0;
 }
 
@@ -664,7 +664,7 @@ kbd {
   width: 200px;
 }
 
-.search-input :deep(.a-input) {
+.search-input :deep(.p-input) {
   padding-right: 2rem;
   font-size: 0.8rem;
 }

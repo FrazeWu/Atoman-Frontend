@@ -58,13 +58,13 @@ describe('FeedReadingListView', () => {
     const wrapper = mount(FeedReadingListView, {
       global: {
         stubs: {
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          AEmpty: true,
-          PaperEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
-          PaperBadge: true,
-          PaperClip: true,
-          PaperPress: true,
-          ShortcutHints: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
           FeedArticleSheet: true,
         },
       },
@@ -73,6 +73,48 @@ describe('FeedReadingListView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('稍后读条目')
+    expect(wrapper.text()).not.toContain('阅读列表为空')
+  })
+
+  it('renders entries from unified reading-list response data', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        feed_item_id: 'feed-item-1',
+        created_at: '2026-06-16T00:00:00Z',
+        feed_item: {
+          id: 'feed-item-1',
+          feed_source_id: 'source-1',
+          feed_source: { id: 'source-1', title: '来源' },
+          guid: 'feed-item-1',
+          title: '统一分页待读条目',
+          link: 'https://example.com/item',
+          summary: '摘要',
+          author: '作者',
+          published_at: '2026-06-16T00:00:00Z',
+          fetched_at: '2026-06-16T00:00:00Z',
+        },
+      }],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const wrapper = mount(FeedReadingListView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('统一分页待读条目')
     expect(wrapper.text()).not.toContain('阅读列表为空')
   })
 })

@@ -44,6 +44,8 @@ describe('API endpoint construction contract', () => {
     expect(api.v1.uploads).toBe('http://localhost:8080/api/v1/uploads')
     expect(api.v1.music.albums).toBe('http://localhost:8080/api/v1/music/albums')
     expect(api.v1.forum.categories).toBe('http://localhost:8080/api/v1/forum/categories')
+    expect(api.admin.feed.opmlImport).toBe('http://localhost:8080/api/v1/feed/sources/opml/import')
+    expect(api.admin.feed.opmlExport).toBe('http://localhost:8080/api/v1/feed/sources/opml/export')
 
     env.VITE_API_URL = undefined as unknown as string
   })

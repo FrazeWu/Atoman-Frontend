@@ -1,15 +1,15 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:6rem">
-    <APageHeader title="历史人物" accent sub="人物地图轨迹">
+    <PPageHeader title="历史人物" accent sub="人物地图轨迹">
       <template #action>
-        <ABtn v-if="authStore.isAuthenticated" @click="showForm = true">新建人物</ABtn>
+        <PButton v-if="authStore.isAuthenticated" @click="showForm = true">新建人物</PButton>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <!-- Search -->
     <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
-      <AInput v-model="searchText" placeholder="搜索人物姓名…" style="max-width:320px" @keyup.enter="doSearch" />
-      <ABtn outline @click="doSearch">搜索</ABtn>
+      <PInput v-model="searchText" placeholder="搜索人物姓名…" style="max-width:320px" @keyup.enter="doSearch" />
+      <PButton outline @click="doSearch">搜索</PButton>
     </div>
 
     <!-- Loading -->
@@ -18,11 +18,11 @@
     </div>
 
     <!-- Empty -->
-    <AEmpty v-else-if="persons.length === 0" text="暂无历史人物" />
+    <PEmpty v-else-if="persons.length === 0" text="暂无历史人物" />
 
     <!-- List -->
     <div v-else class="person-list">
-      <PaperEntry
+      <PEntry
         v-for="person in persons"
         :key="person.id"
         @click="router.push(`/person/${person.id}`)"
@@ -57,43 +57,43 @@
             </template>
           </div>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
 
     <!-- Create/Edit Person Modal -->
-    <AModal v-if="showForm" size="md" :title="editingPerson ? '编辑人物' : '新建人物'" @close="closeForm">
+    <PModal v-if="showForm" size="md" :title="editingPerson ? '编辑人物' : '新建人物'" @close="closeForm">
       <div class="form-group">
         <label class="form-label">姓名 *</label>
-        <AInput v-model="form.name" placeholder="历史人物姓名" />
+        <PInput v-model="form.name" placeholder="历史人物姓名" />
       </div>
       <div class="form-row">
         <div class="form-group" style="flex:1">
           <label class="form-label">出生日期</label>
-          <AInput v-model="form.birth_date" placeholder="YYYY-MM-DD" />
+          <PInput v-model="form.birth_date" placeholder="YYYY-MM-DD" />
         </div>
         <div class="form-group" style="flex:1">
           <label class="form-label">去世日期</label>
-          <AInput v-model="form.death_date" placeholder="YYYY-MM-DD" />
+          <PInput v-model="form.death_date" placeholder="YYYY-MM-DD" />
         </div>
       </div>
       <div class="form-group">
         <label class="form-label">简介</label>
-        <ATextarea v-model="form.bio" :rows="4" placeholder="人物生平简介" />
+        <PTextarea v-model="form.bio" :rows="4" placeholder="人物生平简介" />
       </div>
       <div class="form-group">
         <label class="form-label">标签 (逗号分隔)</label>
-        <AInput v-model="tagsInput" placeholder="政治家, 军事家, 哲学家" />
+        <PInput v-model="tagsInput" placeholder="政治家, 军事家, 哲学家" />
       </div>
       <template #footer>
-        <ABtn outline @click="closeForm">取消</ABtn>
-        <ABtn :disabled="submitting" @click="submitForm">
+        <PButton outline @click="closeForm">取消</PButton>
+        <PButton :disabled="submitting" @click="submitForm">
           {{ submitting ? '保存中...' : (editingPerson ? '保存' : '创建') }}
-        </ABtn>
+        </PButton>
       </template>
-    </AModal>
+    </PModal>
 
     <!-- Confirm Delete -->
-    <AConfirm
+    <PConfirm
       :show="!!deletingPerson"
       title="删除人物"
       :message="deletingPerson ? `确定要删除「${deletingPerson.name}」及其所有地点记录吗？此操作不可撤销。` : ''"
@@ -110,15 +110,15 @@ import { useRouter } from 'vue-router'
 import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import type { TimelinePerson } from '@/types'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 
 const store = useTimelineStore()
 const authStore = useAuthStore()

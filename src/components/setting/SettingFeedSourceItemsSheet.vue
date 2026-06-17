@@ -1,5 +1,5 @@
 <template>
-  <PaperSheet
+  <PSheet
     :show="show"
     title="FEED_SOURCE_ITEMS"
     close-type="header"
@@ -14,9 +14,9 @@
           <a :href="source.rss_url" target="_blank" rel="noreferrer">{{ source.rss_url }}</a>
         </div>
         <div class="setting-feed-sheet__summary-stats">
-          <PaperBadge :type="sourceStatusBadgeType" :fill="source.status === 'failing' || source.status === 'disabled'">
+          <PBadge :type="sourceStatusBadgeType" :fill="source.status === 'failing' || source.status === 'disabled'">
             {{ sourceStatusLabel }}
-          </PaperBadge>
+          </PBadge>
           <p>同步连续失败 {{ source.consecutive_sync_failures ?? 0 }}</p>
           <p>最近同步失败 {{ formatDateTime(source.last_sync_failed_at) }}</p>
         </div>
@@ -39,9 +39,9 @@
               <h3>{{ item.title }}</h3>
               <a :href="item.link" target="_blank" rel="noreferrer">{{ item.link }}</a>
             </div>
-            <PaperBadge :type="badgeTypeForItem(item.full_text_status)" :fill="item.full_text_status === 'failed'">
+            <PBadge :type="badgeTypeForItem(item.full_text_status)" :fill="item.full_text_status === 'failed'">
               {{ item.full_text_status }}
-            </PaperBadge>
+            </PBadge>
           </div>
 
           <div class="setting-feed-sheet__item-meta">
@@ -54,7 +54,7 @@
 
           <div class="setting-feed-sheet__item-actions">
             <a :href="item.link" target="_blank" rel="noreferrer">打开原文</a>
-            <ABtn
+            <PButton
               v-if="item.full_text_status === 'failed'"
               variant="secondary"
               size="sm"
@@ -63,22 +63,22 @@
               @click="$emit('retry', item.id)"
             >
               手动重试
-            </ABtn>
+            </PButton>
           </div>
         </article>
 
         <p v-if="sortedItems.length === 0" class="setting-feed-sheet__empty">当前源暂无条目。</p>
       </div>
     </div>
-  </PaperSheet>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import ABtn from '@/components/ui/ABtn.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperSheet from '@/components/ui/PaperSheet.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import type { AdminFeedFulltextItemRow, AdminFeedFulltextItemStatus, AdminFeedFulltextSourceRow } from '@/stores/adminFeedFulltext'
 
 const props = withDefaults(defineProps<{

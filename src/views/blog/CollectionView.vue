@@ -5,55 +5,55 @@
       <div class="a-skeleton" style="height:2rem;width:50%" />
     </div>
 
-    <AEmpty v-else-if="!collection" text="合集不存在或已被删除" />
+    <PEmpty v-else-if="!collection" text="合集不存在或已被删除" />
 
     <template v-else>
-      <APageHeader :title="collection.name" accent :sub="collection.description || '合集详情'" style="margin-bottom:2.5rem">
+      <PPageHeader :title="collection.name" accent :sub="collection.description || '合集详情'" style="margin-bottom:2.5rem">
         <template #action>
           <div class="paper-actions-row">
-            <PaperClip
+            <PClip
               v-if="authStore.isAuthenticated && !isOwner"
               :disabled="collectionSubscribeLoading"
               @click="toggleCollectionSubscribe"
             >
               {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
-            </PaperClip>
-            <PaperLink :href="`/channel/${channelId}?site=blog`" label="返回频道" />
-            <PaperLink
+            </PClip>
+            <PLink :href="`/channel/${channelId}?site=blog`" label="返回频道" />
+            <PLink
               v-if="isOwner"
               :href="`/post/new?site=blog&channel=${channelId}&collection=${collection.id}`"
               label="写文章"
             />
           </div>
         </template>
-      </APageHeader>
+      </PPageHeader>
 
-      <ACard class="collection-meta-card">
+      <PCard class="collection-meta-card">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">所属频道</p>
-          <PaperLink :href="`/channel/${channelId}?site=blog`">
+          <PLink :href="`/channel/${channelId}?site=blog`">
             {{ channel?.name || '加载中...' }}
-          </PaperLink>
+          </PLink>
         </div>
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">文章数量</p>
           <p style="font-weight:900;margin:0">{{ posts.length }}篇</p>
         </div>
         <div v-if="isOwner" class="paper-actions-row">
-          <PaperClip label="编辑" @click="openEditModal" />
-          <PaperReject label="删除" @click="confirmDelete" />
+          <PClip label="编辑" @click="openEditModal" />
+          <PReject label="删除" @click="confirmDelete" />
         </div>
-      </ACard>
+      </PCard>
 
       <section>
         <div class="section-headline">
-          <ASectionHeader title="收录文章" rule />
+          <PSectionHeader title="收录文章" rule />
           <span class="a-muted" style="font-size:.875rem">{{ posts.length }} 篇</span>
         </div>
 
-        <AEmpty v-if="!posts.length" text="当前合集暂无文章" />
+        <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
         <div v-else class="post-list">
-          <PaperEntry
+          <PEntry
             v-for="post in posts"
             :key="post.id"
             :title="post.title"
@@ -66,52 +66,52 @@
             </template>
             <template #actions>
               <div style="display:flex;gap:.75rem;align-items:center">
-                <PaperClip
+                <PClip
                   :active="starredIds.has(post.id)"
                   :label="starredIds.has(post.id) ? '退藏' : '收藏'"
                   @click="toggleStar(post.id)"
                 />
-                <PaperClip
+                <PClip
                   :active="readingListIds.has(post.id)"
                   :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
                   @click="toggleReadingList(post.id)"
                 />
-                <PaperLink :href="`/post/${post.id}?site=blog`" label="查看" />
-                <PaperLink
+                <PLink :href="`/post/${post.id}?site=blog`" label="查看" />
+                <PLink
                   v-if="isOwner"
                   :href="`/post/${post.id}/edit?site=blog&channel=${channelId}`"
                   label="编辑"
                 />
               </div>
             </template>
-          </PaperEntry>
+          </PEntry>
         </div>
       </section>
 
       <!-- Edit Collection Modal -->
-      <AModal v-model="editModalOpen" title="编辑合集">
+      <PModal v-model="editModalOpen" title="编辑合集">
         <div style="display:flex;flex-direction:column;gap:1rem">
-          <AInput v-model="form.name" label="合集名称" placeholder="输入合集名称" />
-          <ATextarea v-model="form.description" label="合集描述" placeholder="简短介绍这个合集" :rows="3" />
+          <PInput v-model="form.name" label="合集名称" placeholder="输入合集名称" />
+          <PTextarea v-model="form.description" label="合集描述" placeholder="简短介绍这个合集" :rows="3" />
           <div class="modal-actions">
-            <PaperPress label="取消" variant="secondary" @click="editModalOpen = false" />
-            <PaperPress :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
+            <PPress label="取消" variant="secondary" @click="editModalOpen = false" />
+            <PPress :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
               更新
-            </PaperPress>
+            </PPress>
           </div>
         </div>
-      </AModal>
+      </PModal>
 
       <!-- Delete Confirmation Modal -->
-      <AModal v-model="deleteModalOpen" title="确认删除合集">
+      <PModal v-model="deleteModalOpen" title="确认删除合集">
         <div style="display:flex;flex-direction:column;gap:1rem">
           <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？此操作不可恢复，但不会删除其中的文章。</p>
           <div class="modal-actions">
-            <PaperPress label="取消" variant="secondary" @click="deleteModalOpen = false" />
-            <PaperReject label="删除" @click="deleteCollection" />
+            <PPress label="取消" variant="secondary" @click="deleteModalOpen = false" />
+            <PReject label="删除" @click="deleteCollection" />
           </div>
         </div>
-      </AModal>
+      </PModal>
     </template>
   </div>
 </template>
@@ -119,18 +119,18 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AModal from '@/components/ui/AModal.vue'
-import ACard from '@/components/ui/ACard.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import ASectionHeader from '@/components/ui/ASectionHeader.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperLink from '@/components/ui/PaperLink.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import PaperReject from '@/components/ui/PaperReject.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PCard from '@/components/ui/PCard.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PLink from '@/components/ui/PLink.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PReject from '@/components/ui/PReject.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import type { Collection, Post, Channel } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'

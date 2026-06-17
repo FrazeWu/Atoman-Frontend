@@ -1,13 +1,13 @@
 <template>
   <div class="a-module-layout">
-    <PaperSidebar :label="moduleRooms.kanbo.name" :helper="moduleRooms.kanbo.helper" aria-label="刊播导航">
-      <PaperSidebarItem to="/create" :index="1">创作</PaperSidebarItem>
-      <PaperSidebarItem to="/articles" :index="2">文章</PaperSidebarItem>
-      <PaperSidebarItem to="/videos" :index="3">视频</PaperSidebarItem>
-      <PaperSidebarItem to="/podcasts" :index="4">播客</PaperSidebarItem>
-      <PaperSidebarItem to="/subscriptions" :index="5">订阅</PaperSidebarItem>
-      <PaperSidebarItem to="/bookmarks" :index="6">收藏</PaperSidebarItem>
-    </PaperSidebar>
+    <PSidebar :label="moduleRooms.kanbo.name" :helper="moduleRooms.kanbo.helper" aria-label="内容导航">
+      <PSidebarItem to="/create" :index="1">创作</PSidebarItem>
+      <PSidebarItem to="/articles" :index="2">文章</PSidebarItem>
+      <PSidebarItem to="/videos" :index="3">视频</PSidebarItem>
+      <PSidebarItem to="/podcasts" :index="4">播客</PSidebarItem>
+      <PSidebarItem to="/subscriptions" :index="5">订阅</PSidebarItem>
+      <PSidebarItem to="/bookmarks" :index="6">收藏</PSidebarItem>
+    </PSidebar>
 
     <main class="a-main-content">
       <router-view />
@@ -17,6 +17,6 @@
 
 <script setup lang="ts">
 import { moduleRooms } from '@/config/moduleRooms'
-import PaperSidebar from '@/components/ui/PaperSidebar.vue'
-import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
+import PSidebar from '@/components/ui/PSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 </script>

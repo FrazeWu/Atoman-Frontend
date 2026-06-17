@@ -24,12 +24,22 @@ export function useKanboChannel() {
     setCurrentKanboChannel(channelId)
   }
 
+  const clearChannels = () => {
+    channels.value = []
+    setCurrentKanboChannel(null)
+  }
+
   const loadChannels = async (token?: string | null, userId?: string | number | null) => {
+    if (!userId) {
+      clearChannels()
+      return
+    }
+
     loadingChannels.value = true
     try {
       const api = useApi()
       const url = new URL(api.blog.channels, window.location.origin)
-      if (userId) url.searchParams.set('user_id', String(userId))
+      url.searchParams.set('user_id', String(userId))
 
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined
       const res = await fetch(url.toString(), headers ? { headers } : undefined)
@@ -51,6 +61,7 @@ export function useKanboChannel() {
     currentKanboChannelId,
     setCurrentKanboChannel,
     switchChannel,
+    clearChannels,
     loadChannels,
   }
 }

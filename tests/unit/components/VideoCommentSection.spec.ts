@@ -42,7 +42,7 @@ describe('VideoCommentSection', () => {
       global: {
         stubs: {
           RouterLink: true,
-          AConfirm: true,
+          PConfirm: true,
         },
       },
     })
@@ -61,7 +61,7 @@ describe('VideoCommentSection', () => {
       global: {
         stubs: {
           RouterLink: true,
-          AConfirm: true,
+          PConfirm: true,
         },
       },
     })
@@ -93,7 +93,7 @@ describe('VideoCommentSection', () => {
       global: {
         stubs: {
           RouterLink: true,
-          AConfirm: true,
+          PConfirm: true,
         },
       },
     })

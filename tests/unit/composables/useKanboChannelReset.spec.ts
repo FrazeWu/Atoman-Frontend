@@ -32,4 +32,16 @@ describe('kanbo channel reset behavior', () => {
       { headers: { Authorization: 'Bearer token-1' } },
     )
   })
+
+  it('does not load global channels without a current user id', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id: 'channel-1', name: '全站频道' }] }),
+    } as Response)
+
+    const { loadChannels } = useKanboChannel()
+    await loadChannels('token-1', null)
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })

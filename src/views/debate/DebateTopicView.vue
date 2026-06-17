@@ -81,13 +81,13 @@
       <div class="p-6">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-2xl font-black tracking-tight">论点列表</h2>
-          <ABtn
+          <PButton
             v-if="debate.status === 'open' && authStore.isAuthenticated"
             variant="primary"
             @click="showAddArgumentModal = true"
           >
             添加论点
-          </ABtn>
+          </PButton>
         </div>
 
         <!-- Argument Tree -->
@@ -107,12 +107,12 @@
           />
         </div>
 
-        <AEmpty v-else message="暂无论点，快来添加第一个论点吧！" />
+        <PEmpty v-else message="暂无论点，快来添加第一个论点吧！" />
       </div>
     </template>
 
     <!-- Edit Debate Modal -->
-    <AModal v-if="showEditModal" @close="showEditModal = false">
+    <PModal v-if="showEditModal" @close="showEditModal = false">
       <div class="p-6">
         <h3 class="a-title-sm mb-6">编辑辩论</h3>
         <form @submit.prevent="handleUpdate" class="space-y-4">
@@ -148,15 +148,15 @@
             />
           </div>
           <div class="flex justify-end gap-4 mt-6">
-            <ABtn outline type="button" @click="showEditModal = false">取消</ABtn>
-            <ABtn type="submit">保存</ABtn>
+            <PButton outline type="button" @click="showEditModal = false">取消</PButton>
+            <PButton type="submit">保存</PButton>
           </div>
         </form>
       </div>
-    </AModal>
+    </PModal>
 
     <!-- Add Argument Modal -->
-    <AModal v-if="showAddArgumentModal" @close="handleCloseArgumentModal">
+    <PModal v-if="showAddArgumentModal" @close="handleCloseArgumentModal">
       <div class="p-6">
         <h3 class="a-title-sm mb-6">
           {{ selectedParentId ? '引用论点' : '添加论点' }}
@@ -171,14 +171,14 @@
         <form @submit.prevent="handleCreateArgument" class="space-y-4">
           <div class="a-field">
             <label class="a-field-label">论点类型</label>
-            <ASelect
+            <PSelect
               v-model="newArgument.argument_type"
               :options="argumentTypeOptions"
             />
           </div>
           <div class="a-field">
             <label class="a-field-label">论点内容</label>
-            <AEditor
+            <PEditor
               v-model="newArgument.content"
               mode="normal"
               :rendering-level="'comment'"
@@ -203,25 +203,25 @@
             </div>
           </template>
           <div class="flex justify-end gap-4 mt-6">
-            <ABtn outline type="button" @click="handleCloseArgumentModal">取消</ABtn>
-            <ABtn type="submit">添加</ABtn>
+            <PButton outline type="button" @click="handleCloseArgumentModal">取消</PButton>
+            <PButton type="submit">添加</PButton>
           </div>
         </form>
       </div>
-    </AModal>
+    </PModal>
 
     <!-- Edit Argument Modal -->
-    <AModal v-if="showEditArgumentModal" @close="showEditArgumentModal = false">
+    <PModal v-if="showEditArgumentModal" @close="showEditArgumentModal = false">
       <div class="p-6">
         <h3 class="a-title-sm mb-6">编辑论点</h3>
         <form @submit.prevent="handleEditArgumentSubmit" class="space-y-4">
           <div class="a-field">
             <label class="a-field-label">论点类型</label>
-            <ASelect v-model="editArgumentForm.argument_type" :options="argumentTypeOptions" />
+            <PSelect v-model="editArgumentForm.argument_type" :options="argumentTypeOptions" />
           </div>
           <div class="a-field">
             <label class="a-field-label">论点内容</label>
-            <AEditor
+            <PEditor
               v-model="editArgumentForm.content"
               mode="normal"
               :rendering-level="'comment'"
@@ -246,14 +246,14 @@
             </div>
           </template>
           <div class="flex justify-end gap-4 mt-6">
-            <ABtn outline type="button" @click="showEditArgumentModal = false">取消</ABtn>
-            <ABtn type="submit" :disabled="editArgumentSaving">
+            <PButton outline type="button" @click="showEditArgumentModal = false">取消</PButton>
+            <PButton type="submit" :disabled="editArgumentSaving">
               {{ editArgumentSaving ? '保存中...' : '保存' }}
-            </ABtn>
+            </PButton>
           </div>
         </form>
       </div>
-    </AModal>
+    </PModal>
 
     <DebateConcludeModal
       :show="showConcludeModal"
@@ -266,7 +266,7 @@
     />
 
     <!-- Reference Debate Modal -->
-    <AModal v-if="showReferenceModal" @close="showReferenceModal = false">
+    <PModal v-if="showReferenceModal" @close="showReferenceModal = false">
       <div class="p-6">
         <h3 class="a-title-sm mb-6">引用辩题</h3>
         <div class="mb-4">
@@ -279,9 +279,9 @@
                 placeholder="输入辩题标题..."
                 @keyup.enter="searchForDebates"
               />
-              <ABtn outline @click="searchForDebates" :disabled="referenceSearching">
+              <PButton outline @click="searchForDebates" :disabled="referenceSearching">
                 {{ referenceSearching ? '搜索中...' : '搜索' }}
-              </ABtn>
+              </PButton>
             </div>
           </div>
         </div>
@@ -316,16 +316,16 @@
         </div>
 
         <div class="flex justify-end gap-4 mt-6">
-          <ABtn outline type="button" @click="showReferenceModal = false">取消</ABtn>
-          <ABtn
+          <PButton outline type="button" @click="showReferenceModal = false">取消</PButton>
+          <PButton
             @click="handleAddDebateReference"
             :disabled="!referenceSelectedDebateId || referenceAdding"
           >
             {{ referenceAdding ? '添加中...' : '添加引用' }}
-          </ABtn>
+          </PButton>
         </div>
       </div>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
@@ -336,16 +336,16 @@ import { useDebateStore } from '@/stores/debate'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import type { Debate, Argument, ArgumentType } from '@/types'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import ArgumentNode from '@/components/debate/ArgumentNode.vue'
 import DebateConcludeModal from '@/components/debate/DebateConcludeModal.vue'
 import DebateHeaderActions from '@/components/debate/DebateHeaderActions.vue'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
-import ASelect from '@/components/ui/ASelect.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
-const AEditor = defineAsyncComponent(() => import('@/components/shared/AEditor.vue'))
+const PEditor = defineAsyncComponent(() => import('@/components/shared/PEditor.vue'))
 
 const router = useRouter()
 const route = useRoute()

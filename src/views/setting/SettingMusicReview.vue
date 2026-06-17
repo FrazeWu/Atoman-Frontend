@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { isAdminRole } from '@/utils/roles'
-import ASelect from '@/components/ui/ASelect.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import {
   listMusicEdits,
   approveMusicEdit,
@@ -147,8 +147,8 @@ onMounted(async () => {
 
     <div v-if="activeTab === 'entries'">
       <div class="entries-filters">
-        <ASelect v-model="entriesTypeFilter" :options="entriesTypeOptions" class="filter-select" />
-        <ASelect v-model="entriesStatusFilter" :options="entriesStatusOptions" class="filter-select" />
+        <PSelect v-model="entriesTypeFilter" :options="entriesTypeOptions" class="filter-select" />
+        <PSelect v-model="entriesStatusFilter" :options="entriesStatusOptions" class="filter-select" />
         <span class="entries-total">共 {{ entriesTotal }} 条</span>
       </div>
 

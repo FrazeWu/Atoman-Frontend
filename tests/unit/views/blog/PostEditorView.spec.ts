@@ -19,9 +19,9 @@ const editorControl = {
   },
 }
 
-vi.mock('@/components/shared/AEditor.vue', () => ({
+vi.mock('@/components/shared/PEditor.vue', () => ({
   default: defineComponent({
-    name: 'AEditor',
+    name: 'PEditor',
     props: {
       modelValue: {
         type: String,
@@ -129,8 +129,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -221,8 +221,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -300,8 +300,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -386,8 +386,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -460,8 +460,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -540,8 +540,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -605,8 +605,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -665,8 +665,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -743,8 +743,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -823,8 +823,8 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
         },
       },
     })
@@ -888,11 +888,11 @@ describe('PostEditorView', () => {
       global: {
         plugins: [router],
         stubs: {
-          ABtn: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
-          AModal: { template: '<div><slot /><slot name="footer" /></div>' },
-          PaperSheet: { template: '<div><slot /></div>' },
-          PaperPress: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
-          AEditor: { template: '<div class="editor-stub"></div>' },
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PSheet: { template: '<div><slot /></div>' },
+          PPress: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PEditor: { template: '<div class="editor-stub"></div>' },
         },
       },
     })

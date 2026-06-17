@@ -12,12 +12,12 @@ describe('MusicLayout.vue', () => {
         plugins: [router], 
         stubs: {
           'router-view': true,
-          'PaperSidebar': { template: '<div><slot /></div>' },
-          'PaperSidebarItem': { template: '<paper-sidebar-item-stub><slot /></paper-sidebar-item-stub>' }
+          'PSidebar': { template: '<div><slot /></div>' },
+          'PSidebarItem': { template: '<p-sidebar-item-stub><slot /></p-sidebar-item-stub>' }
         }
       }
     })
-    const items = wrapper.findAll('paper-sidebar-item-stub')
+    const items = wrapper.findAll('p-sidebar-item-stub')
     expect(items.length).toBe(3)
     expect(items[0].text()).toContain('探索')
     expect(items[1].text()).toContain('艺术家')

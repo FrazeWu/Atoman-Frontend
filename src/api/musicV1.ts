@@ -1,4 +1,4 @@
-import { apiGetEnvelope, apiPostJson, apiPostMultipart } from './client'
+import { apiGet, apiGetEnvelope, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 
 export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
@@ -57,13 +57,32 @@ export type MusicEditSummary = {
   created_at: string
 }
 
+export type MusicArtistListItem = {
+  id: string
+  name: string
+  bio?: string
+  image_url?: string
+  nationality?: string
+  birth_date?: string
+  birth_year?: number
+  death_year?: number
+  members?: string
+  entry_status: MusicEntryStatus
+  created_at?: string
+  updated_at?: string
+}
+
 export type MusicAlbumListItem = {
   id: string
   title: string
   artists?: Array<{ id: string; name: string }>
+  year?: number
   release_date?: string
   cover_url?: string
   description?: string
+  album_type?: string
+  hot_score?: number
+  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string }>
   entry_status: MusicEntryStatus
 }
 
@@ -96,6 +115,19 @@ export type AlbumEditDraft = {
   release_date?: string
   cover?: UploadAsset | null
   description?: string
+  album_type?: string
+  reason: string
+  sources: MusicSource[]
+}
+
+export type ArtistEditDraft = {
+  name?: string
+  bio?: string
+  image_url?: string
+  nationality?: string
+  birth_date?: string
+  birth_year?: number
+  death_year?: number
   reason: string
   sources: MusicSource[]
 }
@@ -135,6 +167,42 @@ function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
     ...(draft.release_date !== undefined ? { release_date: draft.release_date } : {}),
     ...(draft.cover ? { cover_url: draft.cover.url, cover_key: draft.cover.key } : {}),
     ...(draft.description !== undefined ? { description: draft.description } : {}),
+    ...(draft.album_type !== undefined ? { album_type: draft.album_type } : {}),
+  }
+}
+
+function artistPayloadFromDraft(draft: ArtistEditDraft): Record<string, unknown> {
+  return {
+    ...(draft.name !== undefined ? { name: draft.name } : {}),
+    ...(draft.bio !== undefined ? { bio: draft.bio } : {}),
+    ...(draft.image_url !== undefined ? { image_url: draft.image_url } : {}),
+    ...(draft.nationality !== undefined ? { nationality: draft.nationality } : {}),
+    ...(draft.birth_date !== undefined ? { birth_date: draft.birth_date } : {}),
+    ...(draft.birth_year !== undefined ? { birth_year: draft.birth_year } : {}),
+    ...(draft.death_year !== undefined ? { death_year: draft.death_year } : {}),
+  }
+}
+
+export function buildCreateArtistEdit(draft: ArtistEditDraft): MusicEditRequest {
+  return {
+    type: 'create_artist',
+    entity_type: 'artist',
+    payload: artistPayloadFromDraft(draft),
+    changes: {},
+    reason: draft.reason,
+    sources: draft.sources,
+  }
+}
+
+export function buildUpdateArtistEdit(artistId: string, draft: ArtistEditDraft): MusicEditRequest {
+  return {
+    type: 'update_artist',
+    entity_type: 'artist',
+    entity_id: artistId,
+    payload: {},
+    changes: artistPayloadFromDraft(draft),
+    reason: draft.reason,
+    sources: draft.sources,
   }
 }
 
@@ -194,6 +262,27 @@ export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<M
       has_more: false,
     },
   }
+}
+
+export async function getMusicAlbum(albumId: string): Promise<MusicAlbumListItem> {
+  return apiGet<MusicAlbumListItem>(musicV1Endpoints.album(albumId))
+}
+
+export async function listMusicArtists(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicArtistListItem>> {
+  const response = await apiGetEnvelope<MusicArtistListItem[], PaginationMeta>(`${musicV1Endpoints.artists()}${queryString(filters)}`)
+  return {
+    data: response.data,
+    meta: response.meta ?? {
+      page: filters.page ?? 1,
+      page_size: filters.page_size ?? response.data.length,
+      total: response.data.length,
+      has_more: false,
+    },
+  }
+}
+
+export async function getMusicArtist(artistId: string): Promise<MusicArtistListItem & { albums?: MusicAlbumListItem[] }> {
+  return apiGet<MusicArtistListItem & { albums?: MusicAlbumListItem[] }>(musicV1Endpoints.artist(artistId))
 }
 
 export async function submitMusicEdit(request: MusicEditRequest): Promise<MusicEditSummary> {

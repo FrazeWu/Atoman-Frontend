@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <APageHeader title="合集管理" subtitle="创建和管理您的文章合集" />
+    <PPageHeader title="合集管理" subtitle="创建和管理您的文章合集" />
 
     <!-- Loading -->
     <div v-if="loadingCollections" style="display:flex;flex-direction:column;gap:1.5rem">
@@ -10,7 +10,7 @@
     </div>
 
     <!-- Empty State -->
-    <AEmpty v-else-if="collections.length === 0" title="暂无合集" description="点击下方按钮创建第一个合集" />
+    <PEmpty v-else-if="collections.length === 0" title="暂无合集" description="点击下方按钮创建第一个合集" />
 
     <!-- Collections List -->
     <div v-else style="display:flex;flex-direction:column;gap:1.5rem">
@@ -31,8 +31,8 @@
             </div>
           </div>
           <div style="display:flex;gap:0.5rem" @click.stop>
-            <ABtn variant="secondary" size="sm" @click="showEditModal(collection)">编辑</ABtn>
-            <ABtn variant="danger" size="sm" @click="showDeleteModal(collection)">删除</ABtn>
+            <PButton variant="secondary" size="sm" @click="showEditModal(collection)">编辑</PButton>
+            <PButton variant="danger" size="sm" @click="showDeleteModal(collection)">删除</PButton>
           </div>
         </div>
       </div>
@@ -42,53 +42,53 @@
     <button class="a-fab" @click="showCreateModal">+</button>
 
     <!-- Create/Edit Modal -->
-    <AModal v-if="modalVisible" @close="closeModal" size="md">
+    <PModal v-if="modalVisible" @close="closeModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">合集名称 *</label>
-          <AInput v-model="formData.name" placeholder="输入合集名称" />
+          <PInput v-model="formData.name" placeholder="输入合集名称" />
         </div>
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">所属合集 *</label>
-          <ASelect v-model="formData.channel_id" :options="channelOptions" placeholder="选择合集" />
+          <PSelect v-model="formData.channel_id" :options="channelOptions" placeholder="选择合集" />
         </div>
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">描述</label>
-          <ATextarea v-model="formData.description" placeholder="合集描述（可选）" :rows="3" />
+          <PTextarea v-model="formData.description" placeholder="合集描述（可选）" :rows="3" />
         </div>
       </div>
       <template #footer>
         <div style="display:flex;gap:1rem;justify-content:flex-end">
-          <ABtn variant="secondary" @click="closeModal">取消</ABtn>
-          <ABtn variant="primary" @click="handleSubmit" :disabled="submitting">{{ submitting ? '提交中...' : '确定' }}</ABtn>
+          <PButton variant="secondary" @click="closeModal">取消</PButton>
+          <PButton variant="primary" @click="handleSubmit" :disabled="submitting">{{ submitting ? '提交中...' : '确定' }}</PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
     <!-- Delete Confirmation Modal -->
-    <AModal v-if="deleteModalVisible" @close="closeDeleteModal" size="sm">
+    <PModal v-if="deleteModalVisible" @close="closeDeleteModal" size="sm">
       <p style="margin-bottom:1rem">确定要删除合集 <strong>{{ collectionToDelete?.name }}</strong>吗？</p>
       <p style="color:#666;font-size:0.875rem">删除后该合集下的文章将移至默认合集。</p>
       <template #footer>
         <div style="display:flex;gap:1rem;justify-content:flex-end">
-          <ABtn variant="secondary" @click="closeDeleteModal">取消</ABtn>
-          <ABtn variant="danger" @click="executeDelete" :disabled="deleting">{{ deleting ? '删除中...' : '确认删除' }}</ABtn>
+          <PButton variant="secondary" @click="closeDeleteModal">取消</PButton>
+          <PButton variant="danger" @click="executeDelete" :disabled="deleting">{{ deleting ? '删除中...' : '确认删除' }}</PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import ASelect from '@/components/ui/ASelect.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 

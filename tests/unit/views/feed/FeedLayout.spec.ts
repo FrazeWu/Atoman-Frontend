@@ -84,8 +84,8 @@ describe('FeedLayout', () => {
   it('renders nav rows with Ionicon SVG icons and sidebar sources', async () => {
     const { wrapper } = await mountLayout('/?source_id=sub-1')
 
-    expect(wrapper.findAll('.a-sidebar-item')).toHaveLength(4)
-    expect(wrapper.findAll('.paper-sidebar-item-icon svg')).toHaveLength(4)
+    expect(wrapper.findAll('.p-sidebar-item')).toHaveLength(4)
+    expect(wrapper.findAll('.p-sidebar-item-icon svg')).toHaveLength(4)
     expect(wrapper.text()).toContain('订阅源类别 / SOURCES')
     expect(wrapper.text()).toContain('少数派')
     expect(wrapper.get('[data-source-id="sub-1"]').classes()).toContain('is-active')

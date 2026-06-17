@@ -2,7 +2,7 @@
   <div class="a-page-xl" style="padding-bottom:12rem">
     <div class="a-section-header" style="margin-bottom:2rem">
       <h1 class="a-title a-accent-l">我的收藏</h1>
-      <ABtn size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</ABtn>
+      <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
     </div>
 
     <div style="display:flex;border:2px solid #000;min-height:60vh">
@@ -38,9 +38,9 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
-        <AEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
+        <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
         <div v-else class="a-grid-2">
-          <PaperEntry
+          <PEntry
             v-for="bm in filteredBookmarks"
             :key="bm.id"
             :title="bm.post?.title"
@@ -54,7 +54,7 @@
                 :src="bm.post?.cover_url"
                 class="blog-entry-cover"
               />
-              <PaperAvatar
+              <PAvatar
                 v-else
                 :src="bm.post?.user?.avatar_url"
                 :name="bm.post?.user?.display_name || bm.post?.user?.username"
@@ -75,13 +75,13 @@
                 </div>
               </div>
             </template>
-          </PaperEntry>
+          </PEntry>
         </div>
       </div>
     </div>
 
     <!-- New folder modal -->
-    <AModal v-if="showNewFolder" @close="showNewFolder = false" size="sm">
+    <PModal v-if="showNewFolder" @close="showNewFolder = false" size="sm">
       <h3 class="a-subtitle" style="margin-bottom:1.25rem">新建收藏夹</h3>
       <input
         v-model="newFolderName"
@@ -91,12 +91,12 @@
         @keyup.enter="createFolder"
       />
       <div style="display:flex;gap:.5rem">
-        <ABtn style="flex:1" @click="createFolder">创建</ABtn>
-        <ABtn outline @click="showNewFolder = false">取消</ABtn>
+        <PButton style="flex:1" @click="createFolder">创建</PButton>
+        <PButton outline @click="showNewFolder = false">取消</PButton>
       </div>
-    </AModal>
+    </PModal>
 
-    <AConfirm
+    <PConfirm
       :show="showDeleteConfirm"
       title="删除收藏夹"
       message="确定删除这个收藏夹吗？"
@@ -112,12 +112,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperAvatar from '@/components/ui/PaperAvatar.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { userUrl } from '@/composables/useSubdomainNav'

@@ -1,5 +1,5 @@
 <template>
-  <PaperSheet
+  <PSheet
     :show="show"
     :title="sheetTitle"
     close-type="bookmark"
@@ -43,21 +43,22 @@
       </div>
       
       <div class="article-body-wrap">
-        <PaperBadge v-if="article.feed_item.full_text_status" :type="article.feed_item.full_text_status === 'success' ? 'internal' : 'external'">
+        <PBadge v-if="article.feed_item.full_text_status" :type="article.feed_item.full_text_status === 'success' ? 'internal' : 'external'">
           {{ article.feed_item.full_text_status === 'success' ? 'FULL TEXT' : 'SUMMARY' }}
-        </PaperBadge>
-        <div class="prose-blog article-body" v-html="article.feed_item.full_text_html || article.feed_item.summary"></div>
+        </PBadge>
+        <div class="prose-blog article-body" v-html="renderFeedHTML(article.feed_item.full_text_html || article.feed_item.summary || '')"></div>
       </div>
       
     </template>
-  </PaperSheet>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TimelineItem } from '@/types'
-import PaperSheet from '@/components/ui/PaperSheet.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
+import DOMPurify from 'dompurify'
+import PSheet from '@/components/ui/PSheet.vue'
+import PBadge from '@/components/ui/PBadge.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -94,6 +95,12 @@ const formatDate = (date?: string) => {
   if (!date) return ''
   return new Date(date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 }
+
+const renderFeedHTML = (html: string) =>
+  DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    ADD_ATTR: ['target', 'rel'],
+  })
 
 const handleReadMore = (post: any) => {
   void navigateWithShutter(

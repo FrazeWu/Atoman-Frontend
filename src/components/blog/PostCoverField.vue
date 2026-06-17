@@ -8,7 +8,7 @@
       <p class="a-muted">上传后会自动填入文章封面地址</p>
     </div>
     <div class="cover-upload-actions">
-      <ABtn
+      <PButton
         type="button"
         variant="secondary"
         size="sm"
@@ -18,8 +18,8 @@
         @click="$emit('trigger-upload')"
       >
         {{ coverUrl ? '更换封面' : '上传封面' }}
-      </ABtn>
-      <ABtn
+      </PButton>
+      <PButton
         v-if="coverUrl"
         type="button"
         variant="ghost"
@@ -28,7 +28,7 @@
         @click="$emit('remove-cover')"
       >
         移除封面
-      </ABtn>
+      </PButton>
     </div>
     <p class="cover-upload-hint a-muted">支持 JPEG、PNG、GIF、WebP，最大 5MB。</p>
     <p v-if="error" class="cover-upload-error">{{ error }}</p>
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 defineProps<{
   coverUrl: string

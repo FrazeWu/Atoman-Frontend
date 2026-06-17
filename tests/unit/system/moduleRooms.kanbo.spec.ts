@@ -6,10 +6,10 @@ describe('moduleRooms kanbo integration', () => {
     expect(moduleRooms.feed.name).toBe('订阅')
     expect(moduleRooms.music.name).toBe('音乐')
     expect(moduleRooms.forum.name).toBe('论坛')
-    expect(moduleRooms.kanbo.name).toBe('刊播')
+    expect(moduleRooms.kanbo.name).toBe('内容')
   })
 
-  it('orders topbar rooms as 订阅 -> 刊播 -> 音乐 -> 论坛', () => {
+  it('orders topbar rooms as 订阅 -> 内容 -> 音乐 -> 论坛', () => {
     expect(moduleNavOrder.slice(0, 4)).toEqual(['feed', 'kanbo', 'music', 'forum'])
   })
 })

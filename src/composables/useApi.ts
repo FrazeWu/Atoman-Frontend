@@ -115,6 +115,8 @@ export function useApi() {
       feed: {
         sources: `${apiUrl}/admin/feed/sources`,
         source: (sourceId: number | string) => `${apiUrl}/admin/feed/sources/${sourceId}`,
+        opmlImport: `${apiUrl}/feed/sources/opml/import`,
+        opmlExport: `${apiUrl}/feed/sources/opml/export`,
       },
       feedFulltext: {
         health: `${apiUrl}/admin/feed/fulltext/health`,
@@ -147,6 +149,7 @@ export function useApi() {
 
     site: {
       access: `${apiUrl}/site/access`,
+      resolve: (handle: string) => `${apiUrl}/site/resolve/${encodeURIComponent(handle)}`,
     },
     
     users: {

@@ -33,7 +33,7 @@ function mountCommentSection(commentMode: 'all' | 'authenticated' | 'disabled') 
         RouterLink: {
           template: '<a><slot /></a>',
         },
-        AConfirm: true,
+        PConfirm: true,
       },
     },
   })

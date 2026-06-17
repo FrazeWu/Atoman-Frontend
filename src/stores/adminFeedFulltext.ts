@@ -26,6 +26,13 @@ export interface AdminFeedFulltextSettings {
   auto_sync_interval_minutes: number
 }
 
+export interface AdminFeedOPMLImportResult {
+  message: string
+  imported: number
+  reused: number
+  failed: number
+}
+
 export interface AdminFeedFulltextSourceRow {
   id: string
   title: string
@@ -252,6 +259,35 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     return response.json()
   }
 
+  async function importGlobalOPML(file: File, token: string | null): Promise<AdminFeedOPMLImportResult> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(api.admin.feed.opmlImport, {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error(await parseError(response, '导入 OPML 失败'))
+    }
+
+    return response.json()
+  }
+
+  async function exportGlobalOPML(token: string | null): Promise<Blob> {
+    const response = await fetch(api.admin.feed.opmlExport, {
+      headers: buildHeaders(token),
+    })
+
+    if (!response.ok) {
+      throw new Error(await parseError(response, '导出 OPML 失败'))
+    }
+
+    return response.blob()
+  }
+
   async function syncSource(sourceId: string, token: string | null) {
     const response = await fetch(api.admin.feedFulltext.syncSource(sourceId), {
       method: 'POST',
@@ -316,6 +352,8 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     fetchItems,
     createSource,
     updateSource,
+    importGlobalOPML,
+    exportGlobalOPML,
     syncSource,
     updateSourceEnabled,
     retryItem,

@@ -1,28 +1,28 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:6rem">
-    <APageHeader :title="moduleRooms.debate.name" accent :sub="moduleRooms.debate.homepageSub">
+    <PPageHeader :title="moduleRooms.debate.name" accent :sub="moduleRooms.debate.homepageSub">
       <template #action>
-        <ABtn v-if="authStore.isAuthenticated" @click="showCreateModal = true">发起辩论</ABtn>
+        <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">发起辩论</PButton>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <!-- Filters -->
     <div class="debate-filters">
-      <ASelect
+      <PSelect
         v-model="filterStatus"
         :options="filterStatusOptions"
         placeholder="全部状态"
         class="debate-filter-status"
       />
 
-      <AInput
+      <PInput
         v-model="filterTag"
         @keyup.enter="loadDebates"
         placeholder="标签筛选"
         class="debate-filter-tag"
       />
 
-      <ABtn outline @click="loadDebates">筛选</ABtn>
+      <PButton outline @click="loadDebates">筛选</PButton>
     </div>
 
     <!-- Loading -->
@@ -31,11 +31,11 @@
     </div>
 
     <!-- Empty State -->
-    <AEmpty v-else-if="debates.length === 0" text="暂无辩论" />
+    <PEmpty v-else-if="debates.length === 0" text="暂无辩论" />
 
     <!-- Debate List -->
     <div v-else class="debate-list">
-      <PaperEntry
+      <PEntry
         v-for="debate in debates"
         :key="debate.id"
         @click="goToDebate(debate.id)"
@@ -87,34 +87,34 @@
             <span>浏览 {{ debate.view_count || 0 }}</span>
           </div>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
 
     <!-- Load More -->
     <div v-if="debates.length > 0 && debates.length < debatesTotal" class="mt-6 text-center">
-      <ABtn outline @click="loadMore">加载更多</ABtn>
+      <PButton outline @click="loadMore">加载更多</PButton>
     </div>
 
     <!-- Create Modal -->
-    <AModal v-if="showCreateModal" @close="showCreateModal = false">
+    <PModal v-if="showCreateModal" @close="showCreateModal = false">
       <div class="p-6">
         <h3 class="a-title-sm mb-6">发起辩论</h3>
 
         <form @submit.prevent="handleCreate" class="space-y-4">
-          <AInput v-model="createForm.title" label="标题" placeholder="辩论主题" />
-          <AInput v-model="createForm.description" label="描述" placeholder="简短描述" />
-          <ATextarea v-model="createForm.content" label="背景内容" :rows="4" placeholder="详细说明..." />
-          <AInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="例如：科技，社会，哲学" />
+          <PInput v-model="createForm.title" label="标题" placeholder="辩论主题" />
+          <PInput v-model="createForm.description" label="描述" placeholder="简短描述" />
+          <PTextarea v-model="createForm.content" label="背景内容" :rows="4" placeholder="详细说明..." />
+          <PInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="例如：科技，社会，哲学" />
 
           <div class="debate-modal-actions">
-            <ABtn outline type="button" @click="showCreateModal = false">取消</ABtn>
-            <ABtn type="submit" :disabled="creating">
+            <PButton outline type="button" @click="showCreateModal = false">取消</PButton>
+            <PButton type="submit" :disabled="creating">
               {{ creating ? '创建中...' : '创建' }}
-            </ABtn>
+            </PButton>
           </div>
         </form>
       </div>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
@@ -124,15 +124,15 @@ import { useRouter } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
 import { useAuthStore } from '@/stores/auth'
 import type { Debate } from '@/types'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { moduleRooms } from '@/config/moduleRooms'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 
 const router = useRouter()
 const debateStore = useDebateStore()

@@ -1,10 +1,10 @@
 <template>
   <div class="a-page">
-    <APageHeader title="发布话题">
+    <PPageHeader title="发布话题">
       <template #action>
-        <ABtn outline @click="router.back()">取消</ABtn>
+        <PButton outline @click="router.back()">取消</PButton>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div class="form-wrap">
       <!-- Category picker -->
@@ -17,7 +17,7 @@
           暂无分类，请联系管理员创建分类后再发帖
         </div>
         <div v-else class="category-grid">
-          <ABtn
+          <PButton
             v-for="cat in forumStore.categories"
             :key="cat.id"
             outline
@@ -28,7 +28,7 @@
           >
             <span class="category-dot" :style="{ background: cat.color || 'var(--a-color-fg)' }" />
             <span>{{ cat.name }}</span>
-          </ABtn>
+          </PButton>
         </div>
         <p v-if="errors.category" class="a-field-error">{{ errors.category }}</p>
       </div>
@@ -70,7 +70,7 @@
           </span>
         </label>
         <div class="editor-wrap" :class="{ 'editor-error': !!errors.editor }">
-          <AEditor
+          <PEditor
             v-model="editorValue"
             :mode="editorMode"
             :enable-mentions="true"
@@ -87,11 +87,11 @@
 
       <!-- Submit -->
       <div class="form-actions">
-        <ABtn :disabled="submitting" @click="submit">
+        <PButton :disabled="submitting" @click="submit">
           {{ submitting ? '发布中...' : '发布话题' }}
-        </ABtn>
-        <ABtn outline @click="router.back()">取消</ABtn>
-        <ABtn v-if="hasDraft" outline size="sm" @click="clearDraft">清除草稿</ABtn>
+        </PButton>
+        <PButton outline @click="router.back()">取消</PButton>
+        <PButton v-if="hasDraft" outline size="sm" @click="clearDraft">清除草稿</PButton>
       </div>
     </div>
   </div>
@@ -100,9 +100,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import ABtn from '@/components/ui/ABtn.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AEditor from '@/components/shared/AEditor.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEditor from '@/components/shared/PEditor.vue'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 

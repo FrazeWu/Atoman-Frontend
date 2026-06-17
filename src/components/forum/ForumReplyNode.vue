@@ -11,14 +11,14 @@
         <span class="reply-time">{{ formatTime(reply.created_at) }}</span>
       </div>
       <div class="reply-actions">
-        <ABtn
+        <PButton
           v-if="isAuthenticated"
           outline
           size="sm"
           class="reply-btn"
           @click="$emit('quote', reply)"
-        >引用</ABtn>
-        <ABtn
+        >引用</PButton>
+        <PButton
           v-if="isAuthenticated"
           outline
           size="sm"
@@ -27,35 +27,35 @@
           @click="$emit('toggle-like', reply.id)"
         >
           赞 {{ reply.like_count }}
-        </ABtn>
-        <ABtn
+        </PButton>
+        <PButton
           v-if="isOwn"
           danger
           size="sm"
           class="reply-btn"
           @click="$emit('delete', reply.id)"
-        >删除</ABtn>
-        <ABtn
+        >删除</PButton>
+        <PButton
           v-if="isAuthenticated && !isOwn"
           outline
           size="sm"
           class="reply-btn"
           @click="$emit('report', reply.id)"
-        >举报</ABtn>
-        <ABtn
+        >举报</PButton>
+        <PButton
           v-if="isTopicOwner && isSolution"
           outline
           size="sm"
           class="reply-btn"
           @click="$emit('unsolve', reply.id)"
-        >取消采纳</ABtn>
-        <ABtn
+        >取消采纳</PButton>
+        <PButton
           v-if="isTopicOwner && !topicIsSolved && !isSolution"
           outline
           size="sm"
           class="reply-btn"
           @click="$emit('solve', reply.id)"
-        >采纳</ABtn>
+        >采纳</PButton>
       </div>
     </div>
 
@@ -79,7 +79,7 @@
 import { computed } from 'vue'
 import type { ForumReply } from '@/types'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const props = defineProps<{
   reply: ForumReply

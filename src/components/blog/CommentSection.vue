@@ -71,7 +71,7 @@
       </div>
     </template>
 
-    <AConfirm
+    <PConfirm
       :show="showDeleteConfirm"
       title="删除评论"
       message="确定删除这条评论吗？"
@@ -87,7 +87,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import AConfirm from '@/components/ui/AConfirm.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { useApi } from '@/composables/useApi'

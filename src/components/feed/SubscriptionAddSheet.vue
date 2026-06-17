@@ -1,5 +1,5 @@
 <template>
-  <PaperSheet
+  <PSheet
     :show="show"
     title="ADD_SUBSCRIPTION"
     close-type="header"
@@ -10,17 +10,17 @@
       <h2 class="a-title-sm mb-8">添加订阅</h2>
 
       <div class="mode-switches mb-6">
-        <PaperClip
+        <PClip
           :active="mode === 'discover'"
           label="发现"
           @click="switchMode('discover')"
         />
-        <PaperClip
+        <PClip
           :active="mode === 'rss'"
           label="RSS"
           @click="switchMode('rss')"
         />
-        <PaperClip
+        <PClip
           :active="mode === 'rsshub'"
           label="RSSHub"
           @click="switchMode('rsshub')"
@@ -29,12 +29,12 @@
 
       <div class="form-fields">
         <template v-if="mode === 'discover'">
-          <PaperField label="网站地址" required>
+          <PField label="网站地址" required>
             <input v-model="websiteUrl" placeholder="https://example.com" class="a-input" />
-          </PaperField>
+          </PField>
 
           <div class="discover-actions">
-            <PaperPress
+            <PPress
               variant="secondary"
               :loading="discovering"
               loading-text="查找中..."
@@ -65,61 +65,61 @@
         </template>
 
         <template v-else-if="mode === 'rss'">
-          <PaperField label="RSS 地址" required>
+          <PField label="RSS 地址" required>
             <input v-model="newRssUrl" placeholder="https://example.com/feed.xml" class="a-input" />
-          </PaperField>
+          </PField>
         </template>
 
         <template v-else>
-          <PaperField label="模板" required>
-            <ASelect
+          <PField label="模板" required>
+            <PSelect
               v-model="rsshubTemplate"
               :options="[{ label: 'GitHub 仓库', value: 'github/repo' }]"
             />
-          </PaperField>
+          </PField>
 
-          <PaperField label="仓库所有者" required>
+          <PField label="仓库所有者" required>
             <input v-model="rsshubOwner" placeholder="例如：DIYgod" class="a-input" />
-          </PaperField>
+          </PField>
 
-          <PaperField label="仓库名称" required>
+          <PField label="仓库名称" required>
             <input v-model="rsshubRepo" placeholder="例如：RSSHub" class="a-input" />
-          </PaperField>
+          </PField>
         </template>
 
-        <PaperField label="自定义名称（可选）">
+        <PField label="自定义名称（可选）">
           <input v-model="newRssTitle" placeholder="例如：GitHub Blog" class="a-input" />
-        </PaperField>
+        </PField>
 
-        <PaperField v-if="groups.length" label="添加到分组（可选）">
-          <ASelect
+        <PField v-if="groups.length" label="添加到分组（可选）">
+          <PSelect
             v-model="newRssGroupId"
             :options="[
               { label: '默认分组', value: defaultGroupId || '' },
               ...nonDefaultGroups.map(group => ({ label: group.name, value: group.id }))
             ]"
           />
-        </PaperField>
+        </PField>
       </div>
 
       <div v-if="addError" class="a-error mb-6">{{ addError }}</div>
 
       <div class="form-actions">
-        <PaperPress variant="secondary" label="取消" @click="$emit('close')" />
-        <PaperPress :loading="submitting" loading-text="处理中..." label="确认订阅" @click="submitSubscription" />
+        <PPress variant="secondary" label="取消" @click="$emit('close')" />
+        <PPress :loading="submitting" loading-text="处理中..." label="确认订阅" @click="submitSubscription" />
       </div>
     </div>
-  </PaperSheet>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { FeedDiscoveryCandidate, SubscriptionGroup } from '@/types'
-import PaperSheet from '@/components/ui/PaperSheet.vue'
-import PaperField from '@/components/ui/PaperField.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import ASelect from '@/components/ui/ASelect.vue'
+import PSheet from '@/components/ui/PSheet.vue'
+import PField from '@/components/ui/PField.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useFeedStore } from '@/stores/feed'
 
 const props = defineProps<{

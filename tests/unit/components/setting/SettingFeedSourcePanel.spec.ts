@@ -7,6 +7,8 @@ const createSource = vi.fn().mockResolvedValue(null)
 const updateSource = vi.fn().mockResolvedValue(null)
 const updateSourceEnabled = vi.fn().mockResolvedValue(null)
 const syncSource = vi.fn().mockResolvedValue(null)
+const importGlobalOPML = vi.fn().mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
+const exportGlobalOPML = vi.fn().mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
 
 const storeState = reactive({
   sources: [] as Array<Record<string, any>>,
@@ -16,6 +18,8 @@ const storeState = reactive({
   updateSource,
   updateSourceEnabled,
   syncSource,
+  importGlobalOPML,
+  exportGlobalOPML,
 })
 
 vi.mock('@/stores/auth', () => ({
@@ -31,15 +35,15 @@ vi.mock('@/stores/adminFeedFulltext', () => ({
 import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 
 const stubs = {
-  ABtn: defineComponent({
+  PButton: defineComponent({
     props: {
       disabled: { type: Boolean, default: false },
     },
     emits: ['click'],
     template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
   }),
-  ASurface: defineComponent({ template: '<section><slot /></section>' }),
-  AInput: defineComponent({
+  PSurface: defineComponent({ template: '<section><slot /></section>' }),
+  PInput: defineComponent({
     props: {
       modelValue: { type: String, default: '' },
       label: { type: String, default: '' },
@@ -70,6 +74,10 @@ function createSourceRow(overrides: Record<string, any> = {}) {
   }
 }
 
+function findTextInputs(wrapper: ReturnType<typeof mount>) {
+  return wrapper.findAll('input').filter((input) => input.attributes('type') !== 'file')
+}
+
 describe('SettingFeedSourcePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -80,6 +88,8 @@ describe('SettingFeedSourcePanel', () => {
     updateSource.mockResolvedValue(null)
     updateSourceEnabled.mockResolvedValue(null)
     syncSource.mockResolvedValue(null)
+    importGlobalOPML.mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
+    exportGlobalOPML.mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
   })
 
   it('mounted 后直接加载 feed source 列表', async () => {
@@ -164,7 +174,7 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
     fetchSources.mockClear()
 
-    const inputs = wrapper.findAll('input')
+    const inputs = findTextInputs(wrapper)
     await inputs[0].setValue('新的源')
     await inputs[1].setValue('https://example.com/new.xml')
 
@@ -196,7 +206,7 @@ describe('SettingFeedSourcePanel', () => {
     await editButton!.trigger('click')
     await nextTick()
 
-    const inputs = wrapper.findAll('input')
+    const inputs = findTextInputs(wrapper)
     await inputs[0].setValue('更新后的源')
     await inputs[1].setValue('https://example.com/updated.xml')
 
@@ -218,5 +228,62 @@ describe('SettingFeedSourcePanel', () => {
 
     expect(syncSource).toHaveBeenCalledWith('source-1', 'admin-token')
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+  })
+
+  it('导入 OPML 后刷新订阅源列表并显示统计', async () => {
+    const file = new File(['<opml version="2.0"><body /></opml>'], 'feeds.opml', { type: 'text/xml' })
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+    fetchSources.mockClear()
+
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(importGlobalOPML).toHaveBeenCalledWith(file, 'admin-token')
+    expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(wrapper.text()).toContain('导入 1，复用 2，失败 0')
+  })
+
+  it('点击导出 OPML 时下载后端返回的文件', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:opml')
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    const originalCreateElement = document.createElement.bind(document)
+    const click = vi.fn()
+    const anchor = originalCreateElement('a')
+    vi.spyOn(anchor, 'click').mockImplementation(click)
+    const createElement = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'a') return anchor
+      return originalCreateElement(tagName)
+    })
+
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+    const exportButton = wrapper.findAll('button').find((button) => button.text() === '导出 OPML')
+    expect(exportButton).toBeTruthy()
+    await exportButton!.trigger('click')
+    await flushPromises()
+
+    expect(exportGlobalOPML).toHaveBeenCalledWith('admin-token')
+    expect(createObjectURL).toHaveBeenCalled()
+    expect(anchor.download).toBe('atoman-feed-sources.opml')
+    expect(click).toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:opml')
+
+    createElement.mockRestore()
+    createObjectURL.mockRestore()
+    revokeObjectURL.mockRestore()
   })
 })

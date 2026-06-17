@@ -2,7 +2,7 @@
   <section class="kanbo-section">
     <div class="kanbo-section-head">
       <h2>文章与播客</h2>
-      <ABtn
+      <PButton
         v-if="normalizedItems.length > 5"
         data-testid="kanbo-expand-mixed"
         variant="ghost"
@@ -10,7 +10,7 @@
         @click="expanded = !expanded"
       >
         {{ expanded ? '收起' : '展开更多' }}
-      </ABtn>
+      </PButton>
     </div>
 
     <div
@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 import type { KanboMixedItem } from '@/composables/useKanboOverview'
 
 const props = withDefaults(defineProps<{

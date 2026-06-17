@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PPress from '@/components/ui/PPress.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { PodcastEpisode } from '@/types'
@@ -45,11 +45,11 @@ function episodeCover(ep: PodcastEpisode) {
 
 <template>
   <div class="a-page-md">
-    <APageHeader title="播客" accent sub="查看当前频道下的播客内容。">
+    <PPageHeader title="播客" accent sub="查看当前频道下的播客内容。">
       <template #action>
-        <PaperPress v-if="authStore.isAuthenticated && canPublishPodcast" @click="router.push('/editor')" label="+ 发布节目" />
+        <PPress v-if="authStore.isAuthenticated && canPublishPodcast" @click="router.push('/editor')" label="+ 发布节目" />
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div v-if="loading" class="ph-state">
       <div v-for="i in 3" :key="i" class="a-skeleton" style="height: 10rem; margin-bottom: 1.5rem" />
@@ -57,7 +57,7 @@ function episodeCover(ep: PodcastEpisode) {
     <div v-else-if="episodes.length === 0" class="ph-state">暂无节目</div>
 
     <div v-else class="ph-list">
-      <PaperEntry
+      <PEntry
         v-for="ep in episodes"
         :key="ep.id"
         :title="ep.post?.title || '未命名单集'"
@@ -66,8 +66,8 @@ function episodeCover(ep: PodcastEpisode) {
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PaperBadge type="internal" fill>内部</PaperBadge>
-            <PaperBadge type="podcast">播客</PaperBadge>
+            <PBadge type="internal" fill>内部</PBadge>
+            <PBadge type="podcast">播客</PBadge>
             <img
               v-if="episodeCover(ep)"
               :src="episodeCover(ep)"
@@ -83,7 +83,7 @@ function episodeCover(ep: PodcastEpisode) {
           </span>
           <span style="color:var(--a-color-muted-soft)">{{ new Date(ep.created_at).toLocaleDateString() }}</span>
         </template>
-      </PaperEntry>
+      </PEntry>
     </div>
   </div>
 </template>

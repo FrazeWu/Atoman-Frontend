@@ -1,5 +1,5 @@
 <template>
-  <PaperSheet
+  <PSheet
     :show="show"
     title="SUBSCRIPTION_INDEX"
     close-type="header"
@@ -37,13 +37,13 @@
         </div>
       </div>
     </div>
-  </PaperSheet>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Subscription, SubscriptionGroup } from '@/types'
-import PaperSheet from '@/components/ui/PaperSheet.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 
 const props = defineProps<{
   show?: boolean

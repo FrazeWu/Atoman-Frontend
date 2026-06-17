@@ -1,26 +1,26 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PaperSidebar
+    <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
     >
-      <PaperSidebarItem
+      <PSidebarItem
         to="/"
         :index="1"
         icon-char="播"
         exact
       >
         播客大厅
-      </PaperSidebarItem>
-      <PaperSidebarItem
+      </PSidebarItem>
+      <PSidebarItem
         v-if="canPublishPodcast"
         to="/editor"
         :index="2"
         icon-char="发"
       >
         发布单集
-      </PaperSidebarItem>
-    </PaperSidebar>
+      </PSidebarItem>
+    </PSidebar>
     <main class="a-main-content">
       <router-view />
     </main>
@@ -31,8 +31,8 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import PaperSidebar from '@/components/ui/PaperSidebar.vue'
-import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
+import PSidebar from '@/components/ui/PSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 
 const siteAccessStore = useSiteAccessStore()
 const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish'))

@@ -18,7 +18,7 @@
             <span v-for="tag in currentPerson.tags" :key="tag" class="a-badge" style="margin-right:4px">{{ tag }}</span>
           </div>
           <div v-if="canEdit" class="person-actions">
-            <ABtn size="sm" outline @click="openEditPerson">编辑人物</ABtn>
+            <PButton size="sm" outline @click="openEditPerson">编辑人物</PButton>
             <button class="danger-btn" @click="confirmDeletePerson">删除</button>
           </div>
         </template>
@@ -28,7 +28,7 @@
       <div class="locations-section">
         <div class="locations-header">
           <span class="locations-title">地点轨迹</span>
-          <ABtn v-if="canEdit" size="sm" @click="openAddLocation">+ 添加地点</ABtn>
+          <PButton v-if="canEdit" size="sm" @click="openAddLocation">+ 添加地点</PButton>
         </div>
 
         <div v-if="!currentPerson?.locations?.length" class="locations-empty">
@@ -78,7 +78,7 @@
     </main>
 
     <!-- Add/Edit Location Modal -->
-    <AModal v-if="showLocationForm" size="md" @close="closeLocationForm">
+    <PModal v-if="showLocationForm" size="md" @close="closeLocationForm">
       <div class="a-modal-header">
         <h2 class="a-modal-title">{{ editingLocation ? '编辑地点' : '添加地点' }}</h2>
         <button class="a-modal-close" @click="closeLocationForm">✕</button>
@@ -86,19 +86,19 @@
       <div class="a-modal-body">
         <div class="form-group">
           <label class="form-label">时间 *</label>
-          <DatetimePicker v-model="locForm.date" placeholder="选择时间" />
+          <PDatetimePicker v-model="locForm.date" placeholder="选择时间" />
         </div>
         <div class="form-group">
           <label class="form-label">结束时间（可选）</label>
-          <DatetimePicker v-model="locForm.end_date" placeholder="离开时间（可选）" />
+          <PDatetimePicker v-model="locForm.end_date" placeholder="离开时间（可选）" />
         </div>
         <div class="form-group">
           <label class="form-label">地名 *</label>
-          <AInput v-model="locForm.place_name" placeholder="如 巴黎, 法国" />
+          <PInput v-model="locForm.place_name" placeholder="如 巴黎, 法国" />
         </div>
         <div class="form-group">
           <label class="form-label">来源 *</label>
-          <AInput v-model="locForm.source" placeholder="史料来源，如《史记》卷一" />
+          <PInput v-model="locForm.source" placeholder="史料来源，如《史记》卷一" />
         </div>
 
         <!-- Coordinates -->
@@ -145,21 +145,21 @@
 
         <div class="form-group" style="margin-top:1rem">
           <label class="form-label">备注</label>
-          <ATextarea v-model="locForm.note" :rows="3" placeholder="在此地的活动说明" />
+          <PTextarea v-model="locForm.note" :rows="3" placeholder="在此地的活动说明" />
         </div>
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <ABtn outline @click="closeLocationForm">取消</ABtn>
-          <ABtn :disabled="locSubmitting" @click="submitLocation">
+          <PButton outline @click="closeLocationForm">取消</PButton>
+          <PButton :disabled="locSubmitting" @click="submitLocation">
             {{ locSubmitting ? '保存中...' : (editingLocation ? '保存' : '添加') }}
-          </ABtn>
+          </PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
     <!-- Edit Person Modal -->
-    <AModal v-if="showPersonForm" size="md" @close="showPersonForm = false">
+    <PModal v-if="showPersonForm" size="md" @close="showPersonForm = false">
       <div class="a-modal-header">
         <h2 class="a-modal-title">编辑人物</h2>
         <button class="a-modal-close" @click="showPersonForm = false">✕</button>
@@ -167,39 +167,39 @@
       <div class="a-modal-body">
         <div class="form-group">
           <label class="form-label">姓名 *</label>
-          <AInput v-model="personForm.name" placeholder="历史人物姓名" />
+          <PInput v-model="personForm.name" placeholder="历史人物姓名" />
         </div>
         <div class="form-row">
           <div class="form-group" style="flex:1">
             <label class="form-label">出生日期</label>
-            <DatetimePicker v-model="personForm.birth_date" placeholder="出生日期" :show-time="false" />
+            <PDatetimePicker v-model="personForm.birth_date" placeholder="出生日期" :show-time="false" />
           </div>
           <div class="form-group" style="flex:1">
             <label class="form-label">去世日期</label>
-            <DatetimePicker v-model="personForm.death_date" placeholder="去世日期" :show-time="false" />
+            <PDatetimePicker v-model="personForm.death_date" placeholder="去世日期" :show-time="false" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">简介</label>
-          <ATextarea v-model="personForm.bio" :rows="4" placeholder="人物生平简介" />
+          <PTextarea v-model="personForm.bio" :rows="4" placeholder="人物生平简介" />
         </div>
         <div class="form-group">
           <label class="form-label">标签（逗号分隔）</label>
-          <AInput v-model="personTagsInput" placeholder="政治家, 军事家" />
+          <PInput v-model="personTagsInput" placeholder="政治家, 军事家" />
         </div>
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <ABtn outline @click="showPersonForm = false">取消</ABtn>
-          <ABtn :disabled="personSubmitting" @click="submitEditPerson">
+          <PButton outline @click="showPersonForm = false">取消</PButton>
+          <PButton :disabled="personSubmitting" @click="submitEditPerson">
             {{ personSubmitting ? '保存中...' : '保存' }}
-          </ABtn>
+          </PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
     <!-- Confirm Delete Location -->
-    <AConfirm
+    <PConfirm
       :show="!!deletingLocation"
       title="删除地点记录"
       :message="deletingLocation ? `确定要删除「${deletingLocation.place_name}」的地点记录吗？` : ''"
@@ -208,7 +208,7 @@
     />
 
     <!-- Confirm Delete Person -->
-    <AConfirm
+    <PConfirm
       :show="confirmPersonDelete"
       title="删除人物"
       :message="`确定要删除「${currentPerson?.name}」及其所有地点记录吗？此操作不可撤销。`"
@@ -237,12 +237,12 @@ import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import type { PersonLocation } from '@/types'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
-import DatetimePicker from '@/components/ui/DatetimePicker.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 
 const route = useRoute()
 const router = useRouter()

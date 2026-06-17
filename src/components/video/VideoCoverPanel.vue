@@ -5,7 +5,7 @@
     <div v-if="generatedCoverReady && !thumbnailUrl" class="ve-auto-cover-card">
       <img :src="generatedCoverPreview" alt="自动抽帧封面预览" class="ve-auto-cover-preview" />
       <div class="ve-auto-cover-actions">
-        <ABtn
+        <PButton
           variant="secondary"
           size="sm"
           :disabled="coverUploading"
@@ -14,7 +14,7 @@
           @click="$emit('use-generated-cover')"
         >
           使用视频首帧
-        </ABtn>
+        </PButton>
         <span class="ve-auto-cover-tip">或手动上传封面</span>
       </div>
     </div>
@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const props = defineProps<{
   generatedCoverReady: boolean

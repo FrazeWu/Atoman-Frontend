@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
-import VideoCard from '@/components/shared/VideoCard.vue'
+import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApiUrl } from '@/composables/useApi'
 
 const API_URL = useApiUrl()
@@ -32,7 +32,7 @@ watch(sort, fetchVideos)
 
 <template>
   <div class="vh-wrap">
-    <APageHeader title="视频" accent sub="查看当前频道下的视频内容。" mb="1.5rem" />
+    <PPageHeader title="视频" accent sub="查看当前频道下的视频内容。" mb="1.5rem" />
 
     <!-- Sticky filter bar (YouTube style) -->
     <div class="vh-bar">
@@ -46,7 +46,7 @@ watch(sort, fetchVideos)
         >{{ s.label }}</button>
       </div>
       <div class="vh-bar-action">
-        <ABtn v-if="authStore.isAuthenticated && canPublishVideo" to="/upload" variant="primary" size="sm">+ 上传</ABtn>
+        <PButton v-if="authStore.isAuthenticated && canPublishVideo" to="/upload" variant="primary" size="sm">+ 上传</PButton>
       </div>
     </div>
 
@@ -68,7 +68,7 @@ watch(sort, fetchVideos)
     <div v-else-if="videos.length === 0" class="vh-empty">暂无视频</div>
 
     <div v-else class="vh-grid">
-      <VideoCard v-for="v in videos" :key="v.id" :video="v" />
+      <PVideoCard v-for="v in videos" :key="v.id" :video="v" />
     </div>
   </div>
 </template>

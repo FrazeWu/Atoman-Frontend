@@ -2,12 +2,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Channel, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -383,7 +383,7 @@ async function doPublish() {
 
 <template>
   <div class="ve-wrap">
-    <APageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent />
+    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent />
 
     <div class="ve-layout">
       <!-- 左栏 -->
@@ -391,20 +391,20 @@ async function doPublish() {
         <!-- 基本信息 -->
         <section class="ve-section">
           <h2 class="ve-section-title">基本信息</h2>
-          <AInput
+          <PInput
             v-model="form.title"
             label="标题 *"
             placeholder="为视频起一个吸引人的标题"
             :error="titleError"
             @input="titleError = ''"
           />
-          <ATextarea
+          <PTextarea
             v-model="form.description"
             label="简介"
             placeholder="介绍视频内容、背景或注意事项…"
             :rows="5"
           />
-          <AInput
+          <PInput
             v-model="form.tags"
             label="标签"
             placeholder="music, tutorial, vlog（逗号分隔）"
@@ -416,7 +416,7 @@ async function doPublish() {
         <section class="ve-section">
           <h2 class="ve-section-title">视频来源</h2>
 
-          <ASelect
+          <PSelect
             label="来源类型"
             :model-value="form.storage_type"
             :options="storageOptions"
@@ -424,7 +424,7 @@ async function doPublish() {
           />
 
           <!-- 外部链接 -->
-          <AInput
+          <PInput
             v-if="form.storage_type === 'external'"
             v-model="form.video_url"
             label="视频链接 *"
@@ -478,7 +478,7 @@ async function doPublish() {
         <!-- 频道 -->
         <section class="ve-section">
           <h2 class="ve-section-title">关联频道</h2>
-          <ASelect
+          <PSelect
             label="频道"
             :model-value="form.channel_id"
             :options="channelOptions"
@@ -515,7 +515,7 @@ async function doPublish() {
         />
 
         <!-- 可见范围 -->
-        <ASelect
+        <PSelect
           label="可见范围"
           :model-value="form.visibility"
           :options="visibilityOptions"
@@ -528,7 +528,7 @@ async function doPublish() {
 
         <!-- 操作按钮 -->
         <div class="ve-panel-actions">
-          <ABtn
+          <PButton
             variant="secondary"
             block
             :loading="savingDraft"
@@ -537,8 +537,8 @@ async function doPublish() {
             @click="saveDraft"
           >
             保存草稿
-          </ABtn>
-          <ABtn
+          </PButton>
+          <PButton
             variant="primary"
             block
             size="lg"
@@ -548,13 +548,13 @@ async function doPublish() {
             @click="requestPublish"
           >
             立即发布
-          </ABtn>
+          </PButton>
         </div>
       </aside>
     </div>
 
     <!-- 发布确认弹窗 -->
-    <AConfirm
+    <PConfirm
       :show="showPublishConfirm"
       title="确认发布视频"
       :message="`《${form.title || '未命名视频'}》将对${
@@ -605,7 +605,7 @@ async function doPublish() {
   margin: 0 0 0.25rem 0;
 }
 
-/* Field label (matches AInput label style) */
+/* Field label (matches PInput label style) */
 .ve-field-label {
   display: block;
   font-size: 0.8125rem;

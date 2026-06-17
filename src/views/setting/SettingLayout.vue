@@ -1,6 +1,6 @@
 <template>
   <main class="setting-layout a-page-xl">
-    <ASectionHeader
+    <PSectionHeader
       title="设置"
       kicker="SETTING"
       description="管理站点模块开放状态与抓取策略。关闭模块后，对应模块入口与功能会在站内完全隐藏。"
@@ -13,7 +13,7 @@
 
     <div v-else class="setting-layout__shell">
       <aside class="setting-layout__sidebar" aria-label="设置导航">
-        <ACard>
+        <PCard>
           <nav class="setting-layout__nav">
             <RouterLink
               v-for="item in navItems"
@@ -27,7 +27,7 @@
               <small>{{ item.description }}</small>
             </RouterLink>
           </nav>
-        </ACard>
+        </PCard>
       </aside>
 
       <section class="setting-layout__content" aria-label="设置内容">
@@ -41,8 +41,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { RouterLink, RouterView } from 'vue-router'
-import ACard from '@/components/ui/ACard.vue'
-import ASectionHeader from '@/components/ui/ASectionHeader.vue'
+import PCard from '@/components/ui/PCard.vue'
+import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isOwnerRole } from '@/utils/roles'
 

@@ -16,7 +16,7 @@ function baseDomain(hostname: string) {
 
 function siteUrl(label: string, protocol: string, hostname: string) {
   if (isLocalHost(hostname)) return `/?site=${label}`
-  return `${protocol}//${baseDomain(hostname)}/?site=${label}`
+  return `${protocol}//${label}.${baseDomain(hostname)}/`
 }
 
 export function moduleUrl(
@@ -50,7 +50,7 @@ export function userUrl(
   protocol = currentProtocol(),
   hostname = currentHostname(),
 ) {
-  return siteUrl(`u-${username}`, protocol, hostname)
+  return siteUrl(username, protocol, hostname)
 }
 
 export function channelUrl(
@@ -58,5 +58,5 @@ export function channelUrl(
   protocol = currentProtocol(),
   hostname = currentHostname(),
 ) {
-  return siteUrl(`c-${slug}`, protocol, hostname)
+  return siteUrl(slug, protocol, hostname)
 }

@@ -3,25 +3,25 @@ import { subdomainDefaultPath, channelUrl, moduleUrl, userUrl } from '@/composab
 import { modulePathUrl } from '@/router/siteUrls'
 
 describe('site URL builders', () => {
-  it('builds module URLs on the base domain without requiring subdomain DNS', () => {
-    expect(moduleUrl('blog', 'https:', 'music.atoman.org')).toBe('https://atoman.org/?site=blog')
-    expect(moduleUrl('feed', 'https:', 'u-alice.atoman.org')).toBe('https://atoman.org/?site=feed')
+  it('builds module URLs on production subdomains', () => {
+    expect(moduleUrl('blog', 'https:', 'music.atoman.org')).toBe('https://blog.atoman.org/')
+    expect(moduleUrl('feed', 'https:', 'u-alice.atoman.org')).toBe('https://feed.atoman.org/')
   })
 
-  it('builds user and channel profile URLs', () => {
-    expect(userUrl('alice', 'https:', 'blog.atoman.org')).toBe('https://atoman.org/?site=u-alice')
-    expect(channelUrl('design', 'https:', 'blog.atoman.org')).toBe('https://atoman.org/?site=c-design')
+  it('builds user and channel profile subdomain URLs in production', () => {
+    expect(userUrl('alice', 'https:', 'blog.atoman.org')).toBe('https://alice.atoman.org/')
+    expect(channelUrl('design', 'https:', 'blog.atoman.org')).toBe('https://design.atoman.org/')
   })
 
   it('uses path-only URLs in local development', () => {
     expect(moduleUrl('blog', 'http:', 'localhost')).toBe('/?site=blog')
     expect(modulePathUrl('music', '/album/123', 'http:', 'localhost')).toBe('/album/123?site=music')
-    expect(userUrl('alice', 'http:', 'localhost')).toBe('/?site=u-alice')
-    expect(channelUrl('design', 'http:', 'localhost')).toBe('/?site=c-design')
+    expect(userUrl('alice', 'http:', 'localhost')).toBe('/?site=alice')
+    expect(channelUrl('design', 'http:', 'localhost')).toBe('/?site=design')
   })
 
-  it('builds module URLs with canonical query context on the base domain', () => {
-    expect(modulePathUrl('music', '/album/123', 'https:', 'blog.atoman.org')).toBe('https://atoman.org/album/123?site=music')
+  it('builds module path URLs on production subdomains', () => {
+    expect(modulePathUrl('music', '/album/123', 'https:', 'blog.atoman.org')).toBe('https://music.atoman.org/album/123')
   })
 
   it('keeps module subdomain roots compatible with the current prefixed route table', () => {

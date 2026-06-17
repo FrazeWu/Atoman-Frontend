@@ -3,7 +3,7 @@
     <select
       class="channel-select"
       :value="currentKanboChannelId || ''"
-      title="切换刊播频道"
+      title="切换内容频道"
       @change="onKanboChannelChange"
     >
       <option value="">频道</option>
@@ -50,9 +50,10 @@ const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const router = useRouter()
 const route = useRoute()
-const { channels, currentKanboChannelId, switchChannel, loadChannels } = useKanboChannel()
+const { channels, currentKanboChannelId, switchChannel, clearChannels, loadChannels } = useKanboChannel()
 
 const activeDropdown = ref<string | null>(null)
+const lastLoadedKanboChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
@@ -75,12 +76,24 @@ const handleClickOutside = (e: MouseEvent) => {
   if (!target.closest('[data-dropdown]')) closeDropdown()
 }
 
+const ensureKanboChannels = () => {
+  const userId = authUserId.value
+  if (!showKanboChannelSwitch.value) return
+  if (!userId) {
+    lastLoadedKanboChannelUserId.value = null
+    clearChannels()
+    return
+  }
+  if (lastLoadedKanboChannelUserId.value === userId && channels.value.length > 0) return
+
+  lastLoadedKanboChannelUserId.value = userId
+  void loadChannels(authStore.token, userId)
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
-  if (showKanboChannelSwitch.value) {
-    void loadChannels(authStore.token, authUserId.value)
-  }
+  ensureKanboChannels()
 })
 
 onBeforeUnmount(() => {
@@ -100,11 +113,8 @@ const onKanboChannelChange = (event: Event) => {
   void switchChannel(channelId, authStore.token)
 }
 
-watch(showKanboChannelSwitch, (visible) => {
-  if (visible && channels.value.length === 0) {
-    void loadChannels(authStore.token, authUserId.value)
-  }
-})
+watch(showKanboChannelSwitch, ensureKanboChannels)
+watch(authUserId, ensureKanboChannels)
 </script>
 
 <style scoped>

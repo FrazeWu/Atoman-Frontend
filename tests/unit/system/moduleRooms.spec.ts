@@ -4,14 +4,14 @@ import { footbarLinks, moduleNavOrder, moduleRooms, notificationRoom } from '@/c
 describe('module room naming config', () => {
   it('contains the approved room names and helper labels', () => {
     expect(moduleRooms.feed).toMatchObject({ name: '订阅', helper: 'RSS 与更新流' })
-    expect(moduleRooms.kanbo).toMatchObject({ name: '刊播', helper: '文章、播客、视频' })
+    expect(moduleRooms.kanbo).toMatchObject({ name: '内容', helper: '文章、播客、视频' })
     expect(moduleRooms.music).toMatchObject({ name: '音乐', helper: '音乐档案' })
-    expect(moduleRooms.blog).toMatchObject({ name: '文章', helper: '刊播内容视图' })
+    expect(moduleRooms.blog).toMatchObject({ name: '文章', helper: '内容视图' })
     expect(moduleRooms.forum).toMatchObject({ name: '论坛', helper: '讨论与发帖' })
     expect(moduleRooms.debate).toMatchObject({ name: '辩论', helper: '辩题讨论' })
     expect(moduleRooms.timeline).toMatchObject({ name: '时间线', helper: '人物时间线' })
-    expect(moduleRooms.podcast).toMatchObject({ name: '播客', helper: '刊播内容视图' })
-    expect(moduleRooms.video).toMatchObject({ name: '视频', helper: '刊播内容视图' })
+    expect(moduleRooms.podcast).toMatchObject({ name: '播客', helper: '内容视图' })
+    expect(moduleRooms.video).toMatchObject({ name: '视频', helper: '内容视图' })
   })
 
   it('keeps module navigation order stable', () => {

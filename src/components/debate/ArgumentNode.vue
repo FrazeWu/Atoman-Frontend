@@ -42,25 +42,25 @@
 
     <!-- Actions -->
     <div class="flex items-center gap-2 ml-auto">
-      <ABtn v-if="canEdit" size="sm" outline @click="$emit('edit', argument)">
+      <PButton v-if="canEdit" size="sm" outline @click="$emit('edit', argument)">
         编辑
-      </ABtn>
-      <ABtn v-if="canReply" size="sm" outline @click="$emit('reply', argument)">
+      </PButton>
+      <PButton v-if="canReply" size="sm" outline @click="$emit('reply', argument)">
         引用
-      </ABtn>
-      <ABtn v-if="canReply" size="sm" outline @click="$emit('reference', argument.id, '')">
+      </PButton>
+      <PButton v-if="canReply" size="sm" outline @click="$emit('reference', argument.id, '')">
         引用辩题
-      </ABtn>
+      </PButton>
       <!-- Admin fold/unfold -->
-      <ABtn v-if="isAdminRole(authStore.user?.role) && !localIsFolded" size="sm" outline @click="foldArgument">
+      <PButton v-if="isAdminRole(authStore.user?.role) && !localIsFolded" size="sm" outline @click="foldArgument">
         折叠
-      </ABtn>
-      <ABtn v-if="isAdminRole(authStore.user?.role) && localIsFolded" size="sm" outline @click="unfoldArgument">
+      </PButton>
+      <PButton v-if="isAdminRole(authStore.user?.role) && localIsFolded" size="sm" outline @click="unfoldArgument">
         展开
-      </ABtn>
-      <ABtn v-if="canDelete" size="sm" variant="danger" @click="$emit('delete', argument)">
+      </PButton>
+      <PButton v-if="canDelete" size="sm" variant="danger" @click="$emit('delete', argument)">
         删除
-      </ABtn>
+      </PButton>
     </div>
   </div>
 
@@ -158,7 +158,7 @@ import { computed, ref } from 'vue'
 import type { Argument, Debate } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
 
 const props = defineProps<{

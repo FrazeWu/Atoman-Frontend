@@ -18,11 +18,30 @@ const RouterLinkStub = defineComponent({
     return () => h('a', { href: String(props.to) }, slots.default?.())
   },
 })
+const FeedArticleSheetStub = {
+  name: 'FeedArticleSheet',
+  props: ['show', 'article'],
+  template: '<aside data-test="article-sheet" :data-show="String(show)" :data-article-id="article?.post?.id || \'\'"></aside>',
+}
+const articleGlobal = {
+  stubs: {
+    RouterLink: true,
+    FeedArticleSheet: FeedArticleSheetStub,
+  },
+}
 
 vi.mock('@/composables/useKanboChannel', () => ({
   useKanboChannel: () => ({
     currentKanboChannelId: { value: 'channel-should-not-be-used' },
   }),
+}))
+
+vi.mock('@/components/feed/FeedArticleSheet.vue', () => ({
+  default: {
+    name: 'FeedArticleSheet',
+    props: ['show', 'article'],
+    template: '<aside data-test="article-sheet" :data-show="String(show)" :data-article-id="article?.post?.id || \'\'"></aside>',
+  },
 }))
 
 vi.mock('vue-router', async importOriginal => {
@@ -45,14 +64,14 @@ describe('Kanbo content view shells', () => {
 
   it('renders functional page titles', () => {
     const global = { stubs: ['RouterLink'] }
-    expect(mount(KanboArticlesView, { global }).text()).toContain('文章')
+    expect(mount(KanboArticlesView, { global: articleGlobal }).text()).toContain('文章')
     expect(mount(KanboPodcastsView, { global }).text()).toContain('播客')
     expect(mount(KanboVideosView, { global }).text()).toContain('视频')
   })
 
   it('treats article podcast and video pages as site-wide explore pages', async () => {
     const global = { stubs: ['RouterLink'] }
-    mount(KanboArticlesView, { global })
+    mount(KanboArticlesView, { global: articleGlobal })
     mount(KanboPodcastsView, { global })
     mount(KanboVideosView, { global })
 
@@ -65,10 +84,10 @@ describe('Kanbo content view shells', () => {
     expect(urls.some(url => url.includes('/blog/explore'))).toBe(true)
     expect(urls.some(url => url.includes('/podcast/episodes'))).toBe(true)
     expect(urls.some(url => url.includes('/videos?sort='))).toBe(true)
-    expect(mount(KanboArticlesView, { global }).text()).toContain('探索本网站发布的全部文章')
+    expect(mount(KanboArticlesView, { global: articleGlobal }).text()).toContain('探索本网站发布的全部文章')
   })
 
-  it('renders videos with VideoCard links to the legacy video module watch route', async () => {
+  it('renders videos with PVideoCard links to the legacy video module watch route', async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
       id: 'video-1',
       title: '旧详情可达的视频',
@@ -81,12 +100,12 @@ describe('Kanbo content view shells', () => {
     const wrapper = mount(KanboVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
 
     await vi.waitFor(() => {
-      expect(wrapper.findComponent({ name: 'VideoCard' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PVideoCard' }).exists()).toBe(true)
     })
     expect(wrapper.find('a[href="/watch/video-1?site=video"]').exists()).toBe(true)
   })
 
-  it('renders podcast episodes as PaperEntry rows and opens legacy podcast module episode route', async () => {
+  it('renders podcast episodes as PEntry rows and opens legacy podcast module episode route', async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
       id: 'episode-1',
       duration_sec: 125,
@@ -98,14 +117,91 @@ describe('Kanbo content view shells', () => {
     const wrapper = mount(KanboPodcastsView, { global: { stubs: ['RouterLink'] } })
 
     await vi.waitFor(() => {
-      expect(wrapper.find('.paper-entry').exists()).toBe(true)
+      expect(wrapper.find('.p-entry').exists()).toBe(true)
     })
-    await wrapper.find('.paper-entry').trigger('click')
+    await wrapper.find('.p-entry').trigger('click')
     expect(routerPushMock).toHaveBeenCalledWith('/episode/episode-1?site=podcast')
   })
 
+  it('opens articles in the subscription-style right sheet instead of navigating', async () => {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
+      post: {
+        id: 'post-1',
+        title: '旧文章详情可达',
+        summary: '文章摘要',
+        created_at: '2026-01-02T00:00:00Z',
+        channel: { name: '专栏' },
+        user: { username: 'writer', display_name: '作者' },
+      },
+    }]), { status: 200 }))
+
+    const wrapper = mount(KanboArticlesView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+          FeedArticleSheet: FeedArticleSheetStub,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.p-entry').exists()).toBe(true)
+    })
+    expect(wrapper.find('a[href*="/post/post-1"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('false')
+    await wrapper.find('.p-entry').trigger('click')
+    expect(routerPushMock).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('true')
+    expect(wrapper.get('[data-test="article-sheet"]').attributes('data-article-id')).toBe('post-1')
+  })
+
+  it('keeps article clicks in the right sheet on production kanbo subdomains', async () => {
+    const originalLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        protocol: 'https:',
+        hostname: 'kanbo.atoman.org',
+        search: '',
+      },
+    })
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
+      post: {
+        id: 'post-1',
+        title: '生产链接',
+        summary: '文章摘要',
+        created_at: '2026-01-02T00:00:00Z',
+      },
+    }]), { status: 200 }))
+
+    try {
+      const wrapper = mount(KanboArticlesView, {
+        global: {
+          stubs: {
+            RouterLink: true,
+            FeedArticleSheet: FeedArticleSheetStub,
+          },
+        },
+      })
+
+      await vi.waitFor(() => {
+        expect(wrapper.find('.p-entry').exists()).toBe(true)
+      })
+      expect(wrapper.find('a[href*="blog.atoman.org/post/post-1"]').exists()).toBe(false)
+      await wrapper.find('.p-entry').trigger('click')
+      expect(routerPushMock).not.toHaveBeenCalled()
+      expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('true')
+      expect(wrapper.get('[data-test="article-sheet"]').attributes('data-article-id')).toBe('post-1')
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      })
+    }
+  })
+
   it('does not show unsupported popular sorting on articles', () => {
-    const wrapper = mount(KanboArticlesView, { global: { stubs: ['RouterLink'] } })
+    const wrapper = mount(KanboArticlesView, { global: articleGlobal })
 
     expect(wrapper.text()).not.toContain('热门')
   })

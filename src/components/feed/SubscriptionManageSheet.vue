@@ -1,5 +1,5 @@
 <template>
-  <PaperSheet
+  <PSheet
     :show="show"
     title="SUBSCRIPTION_MANAGE"
     close-type="header"
@@ -13,12 +13,12 @@
       </div>
 
       <form class="create-group-form" @submit.prevent="submitGroup">
-        <PaperField label="新建分组">
+        <PField label="新建分组">
           <div class="inline-form">
             <input v-model="newGroupName" placeholder="例如：技术观察" class="a-input" :disabled="busy" />
-            <PaperPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
+            <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
           </div>
-        </PaperField>
+        </PField>
       </form>
 
       <div v-if="!subscriptions.length" class="empty-state a-muted">
@@ -52,29 +52,29 @@
               </div>
 
               <div class="subscription-actions">
-                <ASelect
+                <PSelect
                   :model-value="sub.subscription_group_id || ''"
                   :options="groupOptions"
                   :disabled="busy"
                   @update:model-value="moveSubscription(sub.id, String($event))"
                 />
-                <PaperPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
+                <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
               </div>
             </div>
           </div>
         </section>
       </div>
     </div>
-  </PaperSheet>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Subscription, SubscriptionGroup } from '@/types'
-import PaperSheet from '@/components/ui/PaperSheet.vue'
-import PaperField from '@/components/ui/PaperField.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import ASelect from '@/components/ui/ASelect.vue'
+import PSheet from '@/components/ui/PSheet.vue'
+import PField from '@/components/ui/PField.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 const props = defineProps<{
   show: boolean

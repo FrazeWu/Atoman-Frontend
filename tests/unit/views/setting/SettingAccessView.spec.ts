@@ -72,9 +72,9 @@ describe('SettingAccessView section sync', () => {
     const wrapper = mount(SettingAccessView, {
       global: {
         stubs: {
-          ABtn: defineComponent({ template: '<button><slot /></button>' }),
-          ASurface: defineComponent({ template: '<section><slot /></section>' }),
-          ASectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
           SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
           SettingFeedSourcePanel: defineComponent({
             props: {
@@ -99,13 +99,13 @@ describe('SettingAccessView section sync', () => {
     const wrapper = mount(SettingAccessView, {
       global: {
         stubs: {
-          ABtn: defineComponent({
+          PButton: defineComponent({
             props: ['loading', 'loadingText', 'to'],
             emits: ['click'],
             template: '<button @click="$emit(\'click\')"><slot /></button>',
           }),
-          ASurface: defineComponent({ template: '<section><slot /></section>' }),
-          ASectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
           SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
           SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
         },
@@ -114,7 +114,7 @@ describe('SettingAccessView section sync', () => {
 
     const kanboToggle = wrapper
       .findAll('label.setting-access__module-toggle-item')
-      .find((item) => item.text().includes('刊播'))
+      .find((item) => item.text().includes('内容'))
       ?.find('input[type="checkbox"]')
     expect(kanboToggle.exists()).toBe(true)
 

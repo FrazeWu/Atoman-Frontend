@@ -1,6 +1,6 @@
 <template>
   <section class="setting-roles">
-    <ASectionHeader
+    <PSectionHeader
       title="用户权限"
       kicker="ROLE MANAGEMENT"
       description="站长可以授予或撤销管理员权限。新注册用户默认都是普通用户。"
@@ -14,18 +14,18 @@
         placeholder="搜索用户名、邮箱、显示名"
         @keydown.enter.prevent="loadUsers"
       />
-      <ABtn :loading="loading" loading-text="搜索中..." @click="loadUsers">搜索</ABtn>
+      <PButton :loading="loading" loading-text="搜索中..." @click="loadUsers">搜索</PButton>
     </div>
 
     <p v-if="error" class="setting-roles__message setting-roles__message--error">{{ error }}</p>
     <p v-else-if="message" class="setting-roles__message">{{ message }}</p>
 
-    <ACard v-if="users.length === 0 && !loading">
+    <PCard v-if="users.length === 0 && !loading">
       <p class="setting-roles__empty">没有找到可管理的用户。</p>
-    </ACard>
+    </PCard>
 
     <div v-else class="setting-roles__list">
-      <ACard v-for="user in users" :key="user.uuid">
+      <PCard v-for="user in users" :key="user.uuid">
         <div class="setting-roles__row">
           <div class="setting-roles__meta">
             <strong>{{ user.display_name || user.username }}</strong>
@@ -34,33 +34,33 @@
             <small>当前角色：{{ roleLabel(user.role) }}</small>
           </div>
           <div class="setting-roles__actions">
-            <ABtn
+            <PButton
               v-if="user.role !== 'admin'"
               size="sm"
               :loading="pendingUserId === user.uuid"
               loading-text="处理中..."
               @click="updateRole(user.uuid, 'admin')"
-            >设为管理员</ABtn>
-            <ABtn
+            >设为管理员</PButton>
+            <PButton
               v-else
               size="sm"
               variant="secondary"
               :loading="pendingUserId === user.uuid"
               loading-text="处理中..."
               @click="updateRole(user.uuid, 'user')"
-            >取消管理员</ABtn>
+            >取消管理员</PButton>
           </div>
         </div>
-      </ACard>
+      </PCard>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import ACard from '@/components/ui/ACard.vue'
-import ASectionHeader from '@/components/ui/ASectionHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PCard from '@/components/ui/PCard.vue'
+import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 

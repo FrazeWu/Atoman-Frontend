@@ -1,12 +1,12 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PaperSidebar
+    <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
       storage-key="atoman.forum.sidebar.collapsed"
     >
       <!-- All topics -->
-      <PaperSidebarItem
+      <PSidebarItem
         to="/"
         index="1"
         icon-char="全"
@@ -14,13 +14,13 @@
         exact
       >
         所有话题
-      </PaperSidebarItem>
+      </PSidebarItem>
 
-      <div v-if="!sidebarCollapsed" class="a-sidebar-divider" />
+      <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
 
       <!-- Categories section -->
-      <div class="a-sidebar-label">/ CATEGORIES</div>
-      <PaperSidebarItem
+      <div class="p-sidebar-label">/ CATEGORIES</div>
+      <PSidebarItem
         v-for="cat in forumStore.categories"
         :key="cat.id"
         :icon-char="cat.name.charAt(0)"
@@ -33,13 +33,13 @@
         />
         <span style="flex:1">{{ cat.name }}</span>
         <span class="a-label" style="font-size:0.7rem">{{ cat.topic_count || 0 }}</span>
-      </PaperSidebarItem>
+      </PSidebarItem>
 
-      <div v-if="!sidebarCollapsed" class="a-sidebar-divider" />
+      <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
 
       <!-- Tags section -->
       <template v-if="!sidebarCollapsed">
-        <div class="a-sidebar-label">/ TAGS</div>
+        <div class="p-sidebar-label">/ TAGS</div>
         <div style="padding:0.5rem 2rem;display:flex;flex-wrap:wrap;gap:0.35rem">
           <button
             v-for="tag in popularTags"
@@ -62,7 +62,7 @@
           <div><kbd>/</kbd> 搜索</div>
         </div>
       </template>
-    </PaperSidebar>
+    </PSidebar>
     <main class="a-main-content">
       <router-view />
     </main>
@@ -74,8 +74,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useForumStore } from '@/stores/forum'
-import PaperSidebar from '@/components/ui/PaperSidebar.vue'
-import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
+import PSidebar from '@/components/ui/PSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 
 const route = useRoute()
 const router = useRouter()

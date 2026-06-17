@@ -1,13 +1,13 @@
 <template>
-  <ASurface class="music-cover" tone="soft" :layer="0">
+  <PSurface class="music-cover" tone="soft" :layer="0">
     <div class="music-cover__header">
       <div>
         <h3 class="music-cover__title">封面</h3>
         <p class="music-cover__hint">可选。未提供时保留旧封面或使用默认封面。</p>
       </div>
       <div class="music-cover__actions">
-        <ABtn type="button" variant="ghost" @click="triggerInput">{{ cover.previewUrl ? '更换封面' : '上传封面' }}</ABtn>
-        <ABtn v-if="cover.previewUrl" type="button" variant="ghost" @click="clearCover">移除封面</ABtn>
+        <PButton type="button" variant="ghost" @click="triggerInput">{{ cover.previewUrl ? '更换封面' : '上传封面' }}</PButton>
+        <PButton v-if="cover.previewUrl" type="button" variant="ghost" @click="clearCover">移除封面</PButton>
       </div>
     </div>
 
@@ -16,15 +16,15 @@
     <div v-if="cover.previewUrl" class="music-cover__preview-wrap">
       <img :src="cover.previewUrl" alt="封面预览" class="music-cover__preview" />
     </div>
-    <AEmpty v-else description="尚未选择封面" />
-  </ASurface>
+    <PEmpty v-else description="尚未选择封面" />
+  </PSurface>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import type { MusicCoverDraft } from './types'
 
 const props = defineProps<{

@@ -1,14 +1,14 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <APageHeader title="视频管理" sub="管理你的视频频道、合集与视频">
+    <PPageHeader title="视频管理" sub="管理你的视频频道、合集与视频">
       <template #action>
         <div class="paper-actions-row">
-          <PaperPress label="新建频道" @click="showCreateChannelModal" />
-          <PaperPress label="新建合集" variant="secondary" @click="showCreateCollectionModal" />
-          <PaperPress label="上传视频" @click="router.push('/upload?site=video')" />
+          <PPress label="新建频道" @click="showCreateChannelModal" />
+          <PPress label="新建合集" variant="secondary" @click="showCreateCollectionModal" />
+          <PPress label="上传视频" @click="router.push('/upload?site=video')" />
         </div>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <!-- Loading -->
     <div v-if="loadingChannels" style="display:flex;flex-direction:column;gap:1.5rem">
@@ -17,11 +17,11 @@
     </div>
 
     <!-- Empty state -->
-    <AEmpty v-else-if="channels.length === 0" title="还没有创建频道" description="先创建一个频道，再用合集整理视频">
+    <PEmpty v-else-if="channels.length === 0" title="还没有创建频道" description="先创建一个频道，再用合集整理视频">
       <template #action>
-        <PaperPress label="创建频道" @click="showCreateChannelModal" />
+        <PPress label="创建频道" @click="showCreateChannelModal" />
       </template>
-    </AEmpty>
+    </PEmpty>
 
     <!-- Two-stage linkage layout -->
     <div v-else style="display:flex;flex-direction:column;gap:2rem">
@@ -29,7 +29,7 @@
       <section>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
           <h2 style="font-size:1.25rem;font-weight:900;margin:0">所有合集</h2>
-          <PaperPress label="+ 新建合集" variant="secondary" size="sm" @click="showCreateCollectionModal" />
+          <PPress label="+ 新建合集" variant="secondary" size="sm" @click="showCreateCollectionModal" />
         </div>
         
         <div class="collection-pills">
@@ -48,7 +48,7 @@
 
       <!-- Detail: Video Flow -->
       <section v-if="selectedCollection" class="video-section">
-        <ACard>
+        <PCard>
           <div style="display:flex;flex-direction:column;gap:1.5rem">
             <!-- Collection Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:1rem;border-bottom:2px solid var(--a-color-line)">
@@ -60,7 +60,7 @@
                 <p v-if="selectedCollection.description" class="a-muted" style="margin:.5rem 0 0 0">{{ selectedCollection.description }}</p>
               </div>
               <div style="display:flex;gap:.75rem">
-                <PaperPress label="上传视频" @click="router.push(`/upload?site=video&channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+                <PPress label="上传视频" @click="router.push(`/upload?site=video&channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
               </div>
             </div>
 
@@ -71,7 +71,7 @@
             </div>
             <div v-else-if="videos.length === 0" style="padding:4rem 0;text-align:center">
               <p class="a-muted">该合集下还没有视频</p>
-              <PaperPress label="立即上传" variant="secondary" size="sm" @click="router.push(`/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+              <PPress label="立即上传" variant="secondary" size="sm" @click="router.push(`/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
             </div>
             <div v-else class="video-list">
               <div v-for="video in videos" :key="video.id" class="video-item">
@@ -93,77 +93,77 @@
               </div>
             </div>
           </div>
-        </ACard>
+        </PCard>
       </section>
     </div>
 
     <!-- Create Collection Modal -->
-    <AModal v-if="createCollectionModalVisible" @close="closeCreateCollectionModal" size="md">
+    <PModal v-if="createCollectionModalVisible" @close="closeCreateCollectionModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
           <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">创建合集</h3>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">合集名称 *</label>
-              <AInput v-model="collectionFormData.name" placeholder="输入合集名称" />
+              <PInput v-model="collectionFormData.name" placeholder="输入合集名称" />
             </div>
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">所属频道 *</label>
-              <ASelect v-model="collectionFormData.channel_id" :options="channelOptions" placeholder="选择频道" />
+              <PSelect v-model="collectionFormData.channel_id" :options="channelOptions" placeholder="选择频道" />
             </div>
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">描述</label>
-              <ATextarea v-model="collectionFormData.description" placeholder="合集描述（可选）" :rows="3" />
+              <PTextarea v-model="collectionFormData.description" placeholder="合集描述（可选）" :rows="3" />
             </div>
           </div>
         </div>
         <div class="modal-actions">
-          <PaperPress label="取消" variant="secondary" @click="closeCreateCollectionModal" />
-          <PaperPress :disabled="submitting" :loading="submitting" loading-text="创建中..." @click="handleCreateCollection">
+          <PPress label="取消" variant="secondary" @click="closeCreateCollectionModal" />
+          <PPress :disabled="submitting" :loading="submitting" loading-text="创建中..." @click="handleCreateCollection">
             创建
-          </PaperPress>
+          </PPress>
         </div>
       </div>
-    </AModal>
+    </PModal>
 
     <!-- Create Channel Modal -->
-    <AModal v-if="createModalVisible" @close="closeCreateModal" size="md">
+    <PModal v-if="createModalVisible" @close="closeCreateModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
           <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">创建频道</h3>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">频道名称 *</label>
-              <AInput v-model="formData.name" placeholder="输入频道名称" />
+              <PInput v-model="formData.name" placeholder="输入频道名称" />
             </div>
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">描述</label>
-              <ATextarea v-model="formData.description" placeholder="频道描述（可选）" :rows="3" />
+              <PTextarea v-model="formData.description" placeholder="频道描述（可选）" :rows="3" />
             </div>
           </div>
         </div>
         <div class="modal-actions">
-          <PaperPress label="取消" variant="secondary" @click="closeCreateModal" />
-          <PaperPress :disabled="submitting" :loading="submitting" loading-text="创建中..." @click="handleCreateChannel">
+          <PPress label="取消" variant="secondary" @click="closeCreateModal" />
+          <PPress :disabled="submitting" :loading="submitting" loading-text="创建中..." @click="handleCreateChannel">
             创建
-          </PaperPress>
+          </PPress>
         </div>
       </div>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import ACard from '@/components/ui/ACard.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PCard from '@/components/ui/PCard.vue'
+import PPress from '@/components/ui/PPress.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 

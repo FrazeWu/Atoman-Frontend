@@ -249,6 +249,20 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
+  const markItemsUnread = async (feedItemIds: string[]) => {
+    const authStore = useAuthStore()
+    if (!feedItemIds.length) return
+    try {
+      await fetch(`${api.url}/feed/timeline/mark-unread`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify({ feed_item_ids: feedItemIds }),
+      })
+    } catch (e) {
+      console.error('Failed to mark items unread', e)
+    }
+  }
+
   const markAllRead = async () => {
     const authStore = useAuthStore()
     try {
@@ -514,6 +528,25 @@ export const useFeedStore = defineStore('feed', () => {
         return false
       }
 
+      const data = await res.json().catch(() => ({}))
+      const subscriptionId = data.data?.id
+
+      if (payload.group_id && subscriptionId) {
+        const moveRes = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/group`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify({ group_id: payload.group_id }),
+        })
+        if (!moveRes.ok) {
+          error.value = '订阅已创建，但移动分组失败'
+          await fetchSubscriptions()
+          return false
+        }
+      }
+
       await fetchSubscriptions()
       return true
     } catch (e) {
@@ -630,10 +663,111 @@ export const useFeedStore = defineStore('feed', () => {
   const starredItemIds = ref<Set<string>>(new Set())
   const bookmarkedPostIds = ref<Set<string>>(new Set())
   const readingListItemIds = ref<Set<string>>(new Set())
+  type PendingMembershipToggle = {
+    confirmed: boolean
+    desired: boolean
+    inFlight: boolean
+    waiters: Array<(value: boolean | null) => void>
+  }
+  const starToggleStates = new Map<string, PendingMembershipToggle>()
+  const readingListToggleStates = new Map<string, PendingMembershipToggle>()
 
-  const toggleStar = async (feedItemId: string): Promise<boolean | null> => {
+  const setMembership = (ids: typeof starredItemIds, id: string, shouldInclude: boolean) => {
+    const next = new Set(ids.value)
+    if (shouldInclude) {
+      next.add(id)
+    } else {
+      next.delete(id)
+    }
+    ids.value = next
+  }
+
+  const mergePendingMembership = (
+    ids: Set<string>,
+    states: Map<string, PendingMembershipToggle>,
+  ) => {
+    const next = new Set(ids)
+    states.forEach((state, id) => {
+      if (state.desired) {
+        next.add(id)
+      } else {
+        next.delete(id)
+      }
+    })
+    return next
+  }
+
+  const enqueueMembershipToggle = (
+    states: Map<string, PendingMembershipToggle>,
+    ids: typeof starredItemIds,
+    id: string,
+    requestToggle: (fallback: boolean) => Promise<boolean | null>,
+  ): Promise<boolean | null> => {
+    const currentLocal = ids.value.has(id)
+    let state = states.get(id)
+    if (!state) {
+      state = {
+        confirmed: currentLocal,
+        desired: currentLocal,
+        inFlight: false,
+        waiters: [],
+      }
+      states.set(id, state)
+    }
+
+    state.desired = !currentLocal
+    setMembership(ids, id, state.desired)
+
+    const result = new Promise<boolean | null>((resolve) => {
+      state?.waiters.push(resolve)
+    })
+    if (!state.inFlight) {
+      void drainMembershipToggle(states, ids, id, state, requestToggle)
+    }
+    return result
+  }
+
+  const drainMembershipToggle = async (
+    states: Map<string, PendingMembershipToggle>,
+    ids: typeof starredItemIds,
+    id: string,
+    state: PendingMembershipToggle,
+    requestToggle: (fallback: boolean) => Promise<boolean | null>,
+  ) => {
+    state.inFlight = true
+    let finalState: boolean | null = state.confirmed
+
+    while (state.desired !== state.confirmed) {
+      const fallback = !state.confirmed
+      const serverState = await requestToggle(fallback)
+      if (serverState === null) {
+        finalState = null
+        state.desired = state.confirmed
+        setMembership(ids, id, state.confirmed)
+        break
+      }
+
+      state.confirmed = serverState
+      finalState = serverState
+      if (state.desired !== state.confirmed) {
+        setMembership(ids, id, state.desired)
+      }
+    }
+
+    if (finalState !== null) {
+      setMembership(ids, id, state.confirmed)
+      finalState = state.confirmed
+    }
+    state.inFlight = false
+    const waiters = state.waiters.splice(0)
+    waiters.forEach((resolve) => resolve(finalState))
+    if (state.desired === state.confirmed && state.waiters.length === 0) {
+      states.delete(id)
+    }
+  }
+
+  const requestStarToggle = async (feedItemId: string, fallback: boolean): Promise<boolean | null> => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return null
     try {
       const res = await fetch(`${api.url}/feed/timeline/star`, {
         method: 'POST',
@@ -642,22 +776,24 @@ export const useFeedStore = defineStore('feed', () => {
       })
       if (res.ok) {
         const data = await res.json()
-        const starred = data.data?.starred ?? data.starred
-        if (starred) {
-          const newSet = new Set(starredItemIds.value)
-          newSet.add(feedItemId)
-          starredItemIds.value = newSet
-        } else {
-          const newSet = new Set(starredItemIds.value)
-          newSet.delete(feedItemId)
-          starredItemIds.value = newSet
-        }
-        return starred
+        const starred = data.data?.starred ?? data.starred ?? fallback
+        return Boolean(starred)
       }
     } catch (e) {
       console.error('Failed to toggle star', e)
     }
     return null
+  }
+
+  const toggleStar = async (feedItemId: string): Promise<boolean | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return null
+    return enqueueMembershipToggle(
+      starToggleStates,
+      starredItemIds,
+      feedItemId,
+      (fallback) => requestStarToggle(feedItemId, fallback),
+    )
   }
 
   const fetchStarredIds = async () => {
@@ -670,7 +806,7 @@ export const useFeedStore = defineStore('feed', () => {
       if (res.ok) {
         const data = await res.json()
         const ids = (data.items || []).map((item: any) => item.id as string)
-        starredItemIds.value = new Set(ids)
+        starredItemIds.value = mergePendingMembership(new Set(ids), starToggleStates)
       }
     } catch (e) {
       console.error('Failed to fetch starred ids', e)
@@ -753,9 +889,28 @@ export const useFeedStore = defineStore('feed', () => {
     return false
   }
 
-  const toggleReadingListItem = async (feedItemId: string): Promise<boolean | null> => {
+  const syncStarredPageIds = (previousIds: string[], nextIds: string[]) => {
+    const next = new Set(starredItemIds.value)
+    previousIds.forEach((id) => next.delete(id))
+    nextIds.forEach((id) => next.add(id))
+    starredItemIds.value = mergePendingMembership(
+      next,
+      starToggleStates,
+    )
+  }
+
+  const syncReadingListPageIds = (previousIds: string[], nextIds: string[]) => {
+    const next = new Set(readingListItemIds.value)
+    previousIds.forEach((id) => next.delete(id))
+    nextIds.forEach((id) => next.add(id))
+    readingListItemIds.value = mergePendingMembership(
+      next,
+      readingListToggleStates,
+    )
+  }
+
+  const requestReadingListToggle = async (feedItemId: string, fallback: boolean): Promise<boolean | null> => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return null
     try {
       const res = await fetch(`${api.url}/feed/reading-list`, {
         method: 'POST',
@@ -764,22 +919,24 @@ export const useFeedStore = defineStore('feed', () => {
       })
       if (res.ok) {
         const data = await res.json()
-        const saved = data.data?.saved ?? data.saved
-        if (saved) {
-          const newSet = new Set(readingListItemIds.value)
-          newSet.add(feedItemId)
-          readingListItemIds.value = newSet
-        } else {
-          const newSet = new Set(readingListItemIds.value)
-          newSet.delete(feedItemId)
-          readingListItemIds.value = newSet
-        }
-        return saved
+        const saved = data.data?.saved ?? data.saved ?? fallback
+        return Boolean(saved)
       }
     } catch (e) {
       console.error('Failed to toggle reading list item', e)
     }
     return null
+  }
+
+  const toggleReadingListItem = async (feedItemId: string): Promise<boolean | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return null
+    return enqueueMembershipToggle(
+      readingListToggleStates,
+      readingListItemIds,
+      feedItemId,
+      (fallback) => requestReadingListToggle(feedItemId, fallback),
+    )
   }
 
   const fetchReadingListIds = async () => {
@@ -791,10 +948,10 @@ export const useFeedStore = defineStore('feed', () => {
       })
       if (res.ok) {
         const data = await res.json()
-        const ids = (data.items || [])
+        const ids = (data.data || data.items || [])
           .map((item: any) => item.feed_item_id as string)
           .filter(Boolean)
-        readingListItemIds.value = new Set(ids)
+        readingListItemIds.value = mergePendingMembership(new Set(ids), readingListToggleStates)
       }
     } catch (e) {
       console.error('Failed to fetch reading list ids', e)
@@ -822,6 +979,7 @@ export const useFeedStore = defineStore('feed', () => {
     subscribe,
     unsubscribe,
     markItemsRead,
+    markItemsUnread,
     markAllFeedRead: markAllRead,
     markAllFeedUnread: markAllUnread,
     // Health check
@@ -836,9 +994,11 @@ export const useFeedStore = defineStore('feed', () => {
     fetchBookmarkedPostIds,
     togglePostBookmark,
     moveStarToGroup,
+    syncStarredPageIds,
     readingListItemIds,
     toggleReadingListItem,
     fetchReadingListIds,
+    syncReadingListPageIds,
     // Channel/Collection subscriptions
     subscribeToChannel,
     unsubscribeFromChannel,

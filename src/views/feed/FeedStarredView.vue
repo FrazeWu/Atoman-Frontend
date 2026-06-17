@@ -1,12 +1,12 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <APageHeader title="收藏" accent sub="你保存的文章合集">
+    <PPageHeader title="收藏" accent sub="你保存的文章合集">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
-          <PaperPress variant="secondary" label="← 返回订阅" @click="$router.push('/')" />
+          <PPress variant="secondary" label="← 返回订阅" @click="$router.push('/')" />
         </div>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div v-if="loading" class="feed-loading">
       <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
@@ -24,11 +24,11 @@
       </button>
     </div>
 
-    <AEmpty v-else-if="!items.length" text="还没有收藏任何文章" sub="在订阅时间线中点击「收藏」保存" />
+    <PEmpty v-else-if="!items.length" text="还没有收藏任何文章" sub="在订阅时间线中点击「收藏」保存" />
 
     <div v-else class="feed-timeline">
       <template v-for="(item, index) in items" :key="item.id">
-        <PaperEntry
+        <PEntry
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle?.feed_item?.id === item.id"
           :is-read="false"
@@ -39,8 +39,8 @@
         >
           <template #visual>
             <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PaperBadge type="external" fill>外部</PaperBadge>
-              <PaperBadge type="external">{{ getExternalBadge(item) }}</PaperBadge>
+              <PBadge type="external" fill>外部</PBadge>
+              <PBadge type="external">{{ getExternalBadge(item) }}</PBadge>
             </div>
           </template>
 
@@ -61,7 +61,7 @@
           </template>
 
           <template #actions>
-            <PaperClip
+            <PClip
               active
               label="退藏"
               @click="unstar(item.id)"
@@ -89,7 +89,7 @@
               ↗ 原文
             </a>
           </template>
-        </PaperEntry>
+        </PEntry>
       </template>
 
       <FeedTimelineFooter
@@ -101,7 +101,7 @@
       />
     </div>
 
-    <ShortcutHints :hints="shortcutHints" />
+    <PShortcutHints :hints="shortcutHints" />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
   </div>
 </template>
@@ -109,13 +109,13 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import ShortcutHints from '@/components/ui/ShortcutHints.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -256,7 +256,10 @@ const fetchStarred = async () => {
         return
       }
 
+      const previousIds = items.value.map((item) => item.id)
+      const nextIds = newItems.map((item) => item.id)
       items.value = newItems
+      feedStore.syncStarredPageIds(previousIds, nextIds)
       totalItems.value = total
     }
   } catch (e) {

@@ -1,12 +1,12 @@
 <template>
-  <ASurface class="setting-feed-panel" :layer="1">
+  <PSurface class="setting-feed-panel" :layer="1">
     <div class="setting-feed-panel__header">
       <div>
         <h3 class="a-subtitle">订阅源管理</h3>
         <p class="a-muted">仅管理 external_rss 订阅源，支持增改查与手工爬取。</p>
       </div>
       <div class="setting-feed-panel__header-actions">
-        <ABtn
+        <PButton
           variant="secondary"
           size="sm"
           :disabled="loading"
@@ -15,7 +15,7 @@
           @click="refresh"
         >
           刷新
-        </ABtn>
+        </PButton>
       </div>
     </div>
 
@@ -38,14 +38,44 @@
       </div>
     </div>
 
+    <div class="setting-feed-panel__opml">
+      <input
+        ref="opmlInput"
+        class="setting-feed-panel__file-input"
+        type="file"
+        accept=".opml,.xml"
+        @change="importOPML"
+      />
+      <PButton
+        size="sm"
+        variant="secondary"
+        :disabled="importingOPML"
+        :loading="importingOPML"
+        loading-text="导入中..."
+        @click="openOPMLPicker"
+      >
+        导入 OPML
+      </PButton>
+      <PButton
+        size="sm"
+        variant="secondary"
+        :disabled="exportingOPML"
+        :loading="exportingOPML"
+        loading-text="导出中..."
+        @click="exportOPML"
+      >
+        导出 OPML
+      </PButton>
+    </div>
+
     <div class="setting-feed-panel__editor">
       <div class="setting-feed-panel__editor-grid">
-        <AInput
+        <PInput
           v-model="draft.title"
           label="订阅源名称"
           placeholder="可选，方便后台识别"
         />
-        <AInput
+        <PInput
           v-model="draft.rssUrl"
           label="RSS 地址"
           placeholder="https://example.com/feed.xml"
@@ -53,7 +83,7 @@
       </div>
 
       <div class="setting-feed-panel__actions">
-        <ABtn
+        <PButton
           size="sm"
           :disabled="submitting || !canSubmit"
           :loading="submitting"
@@ -61,15 +91,15 @@
           @click="submitSource"
         >
           {{ editingId ? '保存修改' : '添加订阅源' }}
-        </ABtn>
-        <ABtn
+        </PButton>
+        <PButton
           v-if="editingId"
           size="sm"
           variant="secondary"
           @click="resetForm"
         >
           取消编辑
-        </ABtn>
+        </PButton>
       </div>
     </div>
 
@@ -77,7 +107,7 @@
     <p v-if="error" class="setting-feed-panel__message setting-feed-panel__message--error">{{ error }}</p>
 
     <div v-if="sources.length" class="setting-feed-panel__list">
-      <ASurface
+      <PSurface
         v-for="source in sources"
         :key="source.id"
         class="setting-feed-panel__row"
@@ -104,8 +134,8 @@
               @click.prevent="toggleSource(source)"
             />
           </label>
-          <ABtn size="sm" variant="secondary" @click="startEdit(source)">编辑</ABtn>
-          <ABtn
+          <PButton size="sm" variant="secondary" @click="startEdit(source)">编辑</PButton>
+          <PButton
             size="sm"
             variant="secondary"
             :disabled="syncingSourceIds.has(source.id)"
@@ -114,21 +144,21 @@
             @click="runSync(source.id)"
           >
             手工爬取
-          </ABtn>
+          </PButton>
         </div>
-      </ASurface>
+      </PSurface>
     </div>
 
     <p v-else class="setting-feed-panel__empty">暂无外部 RSS 订阅源。</p>
-  </ASurface>
+  </PSurface>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import ABtn from '@/components/ui/ABtn.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ASurface from '@/components/ui/ASurface.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSurface from '@/components/ui/PSurface.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminFeedFulltextStore } from '@/stores/adminFeedFulltext'
 import type { FeedSource } from '@/types'
@@ -143,12 +173,15 @@ const adminFeedFulltextStore = useAdminFeedFulltextStore()
 
 const loading = ref(false)
 const submitting = ref(false)
+const importingOPML = ref(false)
+const exportingOPML = ref(false)
 const editingId = ref('')
 const message = ref('')
 const error = ref('')
 const statusFilter = ref<'healthy' | 'degraded' | 'failing' | ''>('')
 const pendingSourceIds = ref(new Set<string>())
 const syncingSourceIds = ref(new Set<string>())
+const opmlInput = ref<HTMLInputElement | null>(null)
 const draft = ref({
   title: '',
   rssUrl: '',
@@ -222,6 +255,52 @@ async function submitSource() {
     error.value = err instanceof Error ? err.message : '保存订阅源失败'
   } finally {
     submitting.value = false
+  }
+}
+
+function openOPMLPicker() {
+  opmlInput.value?.click()
+}
+
+async function importOPML(event: Event) {
+  if (!authStore.token) return
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  importingOPML.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    const result = await adminFeedFulltextStore.importGlobalOPML(file, authStore.token)
+    message.value = `导入 ${result.imported || 0}，复用 ${result.reused || 0}，失败 ${result.failed || 0}`
+    await refresh()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '导入 OPML 失败'
+  } finally {
+    importingOPML.value = false
+    input.value = ''
+  }
+}
+
+async function exportOPML() {
+  if (!authStore.token) return
+
+  exportingOPML.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    const blob = await adminFeedFulltextStore.exportGlobalOPML(authStore.token)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'atoman-feed-sources.opml'
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '导出 OPML 失败'
+  } finally {
+    exportingOPML.value = false
   }
 }
 
@@ -367,6 +446,17 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
+.setting-feed-panel__opml {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.setting-feed-panel__file-input {
+  display: none;
+}
+
 .setting-feed-panel__row {
   padding: 0.9rem 1rem;
 }
@@ -420,6 +510,7 @@ onMounted(() => {
 
   .setting-feed-panel__header-actions,
   .setting-feed-panel__actions,
+  .setting-feed-panel__opml,
   .setting-feed-panel__row-actions {
     justify-content: flex-start;
   }

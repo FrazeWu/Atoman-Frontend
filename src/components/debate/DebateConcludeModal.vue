@@ -1,5 +1,5 @@
 <template>
-  <AModal v-if="show" @close="$emit('close')">
+  <PModal v-if="show" @close="$emit('close')">
     <div class="p-6">
       <h3 class="a-title-sm mb-6">结题</h3>
       <form @submit.prevent="$emit('submit')" class="space-y-4">
@@ -38,19 +38,19 @@
           ></textarea>
         </div>
         <div class="flex justify-end gap-4 mt-6">
-          <ABtn outline type="button" @click="$emit('close')">取消</ABtn>
-          <ABtn type="submit" :disabled="concluding || !modelValue.conclusion_type">
+          <PButton outline type="button" @click="$emit('close')">取消</PButton>
+          <PButton type="submit" :disabled="concluding || !modelValue.conclusion_type">
             {{ concluding ? '结题中...' : '确认结题' }}
-          </ABtn>
+          </PButton>
         </div>
       </form>
     </div>
-  </AModal>
+  </PModal>
 </template>
 
 <script setup lang="ts">
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
 
 const props = defineProps<{
   show: boolean

@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperTab from '@/components/ui/PaperTab.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PTab from '@/components/ui/PTab.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useApi } from '@/composables/useApi'
-import { modulePathUrl } from '@/router/siteUrls'
-import type { Post } from '@/types'
+import type { Post, TimelineItem } from '@/types'
 
 const api = useApi()
 const posts = ref<Post[]>([])
 const loading = ref(false)
+const showArticleSheet = ref(false)
+const selectedArticle = ref<TimelineItem | null>(null)
 
 const loadArticles = async () => {
   loading.value = true
@@ -31,9 +36,16 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-const goToPost = (id: string) => {
-  const url = modulePathUrl('blog', `/post/${id}`)
-  window.location.assign(url)
+const postAuthorName = (post: Post) => post.user?.display_name || post.user?.username || ''
+
+const openArticleSheet = (post: Post) => {
+  selectedArticle.value = {
+    type: 'post',
+    post,
+    published_at: post.created_at,
+    is_read: false,
+  }
+  showArticleSheet.value = true
 }
 
 onMounted(loadArticles)
@@ -41,31 +53,52 @@ onMounted(loadArticles)
 
 <template>
   <div class="a-page-xl kanbo-explore-page">
-    <APageHeader title="文章" sub="探索本网站发布的全部文章。" accent>
+    <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
+
+    <PPageHeader title="文章" sub="探索本网站发布的全部文章。" accent>
       <template #action>
         <div class="kanbo-explore-actions">
-          <PaperTab label="最新" active />
-          <ABtn to="/create" outline size="sm">返回创作</ABtn>
+          <PTab label="最新" active />
+          <PButton to="/create" outline size="sm">返回创作</PButton>
         </div>
       </template>
-    </APageHeader>
+    </PPageHeader>
     <div v-if="loading" class="a-skeleton kanbo-list-skeleton" />
-    <AEmpty v-else-if="posts.length === 0" text="暂无文章" />
-    <div v-else class="kanbo-posts-list">
-      <article 
-        v-for="post in posts" 
-        :key="post.id" 
-        class="a-card-sm kanbo-list-item a-cursor-pointer"
-        @click="goToPost(post.id)"
+    <PEmpty v-else-if="posts.length === 0" text="暂无文章" />
+    <div v-else class="kanbo-article-list">
+      <PEntry
+        v-for="post in posts"
+        :key="post.id"
+        :title="post.title"
+        :summary="post.summary"
+        :is-open="showArticleSheet && selectedArticle?.post?.id === post.id"
+        @click="openArticleSheet(post)"
       >
-        <div class="post-item-meta">
-          <span class="post-item-author">{{ post.user?.display_name || post.user?.username || '作者' }}</span>
-          <span class="post-item-sep">•</span>
-          <span class="post-item-date">{{ formatDate(post.created_at) }}</span>
-        </div>
-        <strong class="post-item-title">{{ post.title }}</strong>
-        <p class="a-muted post-item-summary">{{ post.summary }}</p>
-      </article>
+        <template #visual>
+          <div class="kanbo-article-visual">
+            <PBadge type="internal" fill>内部</PBadge>
+            <PBadge type="blog">文章</PBadge>
+            <img
+              v-if="post.cover_url"
+              :src="post.cover_url"
+              class="kanbo-article-cover"
+              :alt="post.title"
+            >
+            <PAvatar
+              v-else
+              :src="post.user?.avatar_url"
+              :name="postAuthorName(post)"
+              size="sm"
+              grayscale
+            />
+          </div>
+        </template>
+        <template #meta>
+          <span v-if="post.channel?.name" class="a-label a-muted">《{{ post.channel.name }}》</span>
+          <span v-if="postAuthorName(post)" class="a-muted">{{ postAuthorName(post) }}</span>
+          <span v-if="post.created_at" class="a-muted">{{ formatDate(post.created_at) }}</span>
+        </template>
+      </PEntry>
     </div>
   </div>
 </template>
@@ -75,56 +108,33 @@ onMounted(loadArticles)
   height: 8rem;
 }
 
-.kanbo-posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.kanbo-list-item {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  border-radius: 4px;
-}
-
-.kanbo-list-item:hover {
-  border-color: var(--a-color-fg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.post-item-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  color: var(--a-color-muted-soft);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  margin-bottom: 0.35rem;
-}
-
-.post-item-author {
-  color: var(--a-color-fg);
-}
-
-.post-item-title {
-  display: block;
-  font-size: 1.15rem;
-  font-weight: 800;
-  line-height: 1.3;
-  margin-bottom: 0.4rem;
-  color: var(--a-color-fg);
-}
-
-.post-item-summary {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
 .kanbo-explore-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.kanbo-article-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.kanbo-article-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.kanbo-article-cover {
+  width: 5rem;
+  height: 5rem;
+  object-fit: cover;
+  border: 1px solid var(--a-color-line-soft);
+  filter: grayscale(100%);
+  flex-shrink: 0;
+  border-radius: 4px;
+  margin-top: 0.25rem;
 }
 </style>

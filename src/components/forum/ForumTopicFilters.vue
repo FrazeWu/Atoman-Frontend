@@ -2,7 +2,7 @@
   <section class="forum-topic-filters">
     <div class="tab-bar">
       <div class="tab-bar-left">
-        <ABtn
+        <PButton
           v-for="(label, key) in tabOptions"
           :key="key"
           outline
@@ -12,18 +12,18 @@
           @click="$emit('update:activeTab', key as string)"
         >
           {{ label }}
-        </ABtn>
+        </PButton>
       </div>
       <div class="tab-bar-right">
-        <ABtn v-if="canCreateTopic" outline size="sm" @click="$emit('create-topic')">发新话题</ABtn>
-        <ABtn v-if="canRequestCategory" outline size="sm" @click="$emit('request-category')">申请分类</ABtn>
+        <PButton v-if="canCreateTopic" outline size="sm" @click="$emit('create-topic')">发新话题</PButton>
+        <PButton v-if="canRequestCategory" outline size="sm" @click="$emit('request-category')">申请分类</PButton>
       </div>
     </div>
 
     <div class="filter-bar">
       <div class="filter-left">
         <div class="forum-category-select">
-          <ASelect :model-value="selectedCategoryValue" :options="categoryOptions" placeholder="全部分类" @update:model-value="(value) => $emit('update:selectedCategoryValue', String(value))" />
+          <PSelect :model-value="selectedCategoryValue" :options="categoryOptions" placeholder="全部分类" @update:model-value="(value) => $emit('update:selectedCategoryValue', String(value))" />
         </div>
 
         <div v-if="activeTag" class="active-tag-chip a-badge a-badge-fill">
@@ -34,7 +34,7 @@
 
       <div class="filter-right">
         <div class="search-wrap">
-          <AInput
+          <PInput
             :model-value="searchQuery"
             placeholder="搜索话题..."
             class="search-input"
@@ -49,9 +49,9 @@
 </template>
 
 <script setup lang="ts">
-import ABtn from '@/components/ui/ABtn.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ASelect from '@/components/ui/ASelect.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 defineProps<{
   activeTab: string

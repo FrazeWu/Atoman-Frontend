@@ -1,10 +1,10 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <APageHeader title="频道管理" sub="创建和管理你的频道">
+    <PPageHeader title="频道管理" sub="创建和管理你的频道">
       <template #action>
-        <PaperPress label="新建频道" @click="showCreateModal" />
+        <PPress label="新建频道" @click="showCreateModal" />
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <!-- Loading -->
     <div v-if="loadingChannels" style="display:flex;flex-direction:column;gap:1.5rem">
@@ -14,15 +14,15 @@
     </div>
 
     <!-- Empty State -->
-    <AEmpty v-else-if="channels.length === 0" title="暂无频道" description="创建第一个频道，系统会为频道准备默认合集">
+    <PEmpty v-else-if="channels.length === 0" title="暂无频道" description="创建第一个频道，系统会为频道准备默认合集">
       <template #action>
-        <PaperPress label="创建频道" @click="showCreateModal" />
+        <PPress label="创建频道" @click="showCreateModal" />
       </template>
-    </AEmpty>
+    </PEmpty>
 
     <!-- Channels List -->
     <div v-else style="display:flex;flex-direction:column;gap:1.5rem">
-      <ACard
+      <PCard
         v-for="channel in channels"
         :key="channel.id"
       >
@@ -36,73 +36,73 @@
             </div>
           </div>
           <div class="paper-actions-row">
-            <PaperClip label="编辑" @click="showEditModal(channel)" />
-            <PaperReject v-if="!channel.is_default" label="删除" @click="showDeleteModal(channel)" />
+            <PClip label="编辑" @click="showEditModal(channel)" />
+            <PReject v-if="!channel.is_default" label="删除" @click="showDeleteModal(channel)" />
           </div>
         </div>
-      </ACard>
+      </PCard>
     </div>
 
     <!-- Create/Edit Modal -->
-    <AModal v-if="modalVisible" @close="closeModal" size="md">
+    <PModal v-if="modalVisible" @close="closeModal" size="md">
       <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">
         {{ modalMode === 'create' ? '创建频道' : '编辑频道' }}
       </h3>
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">频道名称 *</label>
-          <AInput v-model="formData.name" placeholder="输入频道名称" />
+          <PInput v-model="formData.name" placeholder="输入频道名称" />
         </div>
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">描述</label>
-          <ATextarea v-model="formData.description" placeholder="频道描述（可选）" :rows="3" />
+          <PTextarea v-model="formData.description" placeholder="频道描述（可选）" :rows="3" />
         </div>
       </div>
       <template #footer>
         <div class="modal-actions">
-          <PaperPress label="取消" variant="secondary" @click="closeModal" />
-          <PaperPress :disabled="submitting" :loading="submitting" loading-text="提交中..." @click="handleSubmit">
+          <PPress label="取消" variant="secondary" @click="closeModal" />
+          <PPress :disabled="submitting" :loading="submitting" loading-text="提交中..." @click="handleSubmit">
             确定
-          </PaperPress>
+          </PPress>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
     <!-- Delete Confirmation Modal -->
-    <AModal v-if="deleteModalVisible" @close="closeDeleteModal" size="sm">
+    <PModal v-if="deleteModalVisible" @close="closeDeleteModal" size="sm">
       <h3 style="font-size:1.125rem;font-weight:900;margin:0 0 1rem 0">确认删除频道</h3>
       <p style="margin-bottom:1rem">确定要删除频道 <strong>{{ channelToDelete?.name }}</strong> 吗？</p>
       <p style="color:#666;font-size:0.875rem;margin-bottom:1rem">删除后该频道下的内容会按后端规则处理。</p>
       <div>
         <label style="display:block;font-weight:bold;margin-bottom:0.5rem">请输入密码确认</label>
-        <AInput v-model="deletePassword" type="password" placeholder="输入您的密码" />
+        <PInput v-model="deletePassword" type="password" placeholder="输入您的密码" />
       </div>
       <template #footer>
         <div class="modal-actions">
-          <PaperPress label="取消" variant="secondary" @click="closeDeleteModal" />
-          <PaperReject :disabled="deleting || !deletePassword" @click="executeDelete">
+          <PPress label="取消" variant="secondary" @click="closeDeleteModal" />
+          <PReject :disabled="deleting || !deletePassword" @click="executeDelete">
             {{ deleting ? '删除中...' : '确认删除' }}
-          </PaperReject>
+          </PReject>
         </div>
       </template>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import ACard from '@/components/ui/ACard.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import PaperReject from '@/components/ui/PaperReject.vue'
+import PCard from '@/components/ui/PCard.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PReject from '@/components/ui/PReject.vue'
 
 interface Channel {
   id: string

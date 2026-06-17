@@ -27,7 +27,7 @@ describe('kanbo routes', () => {
   it('supports kanbo site context and URL helpers', () => {
     expect(resolveSiteContext('kanbo.atoman.org')).toEqual({ type: 'module', module: 'kanbo' })
     expect(resolveSiteContext('localhost', 'site=kanbo')).toEqual({ type: 'module', module: 'kanbo' })
-    expect(moduleUrl('kanbo', 'https:', 'blog.atoman.org')).toBe('https://atoman.org/?site=kanbo')
+    expect(moduleUrl('kanbo', 'https:', 'blog.atoman.org')).toBe('https://kanbo.atoman.org/')
     expect(modulePathUrl('kanbo', '/create', 'http:', 'localhost')).toBe('/create?site=kanbo')
   })
 

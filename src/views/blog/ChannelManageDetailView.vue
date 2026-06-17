@@ -5,14 +5,14 @@
       <div class="a-skeleton" style="height:20rem" />
     </div>
 
-    <AEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或您没有权限管理" />
+    <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或您没有权限管理" />
 
     <template v-else>
-      <APageHeader :title="`管理：${channel.name}`" accent>
+      <PPageHeader :title="`管理：${channel.name}`" accent>
         <template #action>
           <RouterLink :to="`/channel/${channel.slug || channel.id}`" class="a-btn-outline-sm">← 查看频道</RouterLink>
         </template>
-      </APageHeader>
+      </PPageHeader>
 
       <!-- Nav tabs -->
       <div class="manage-tabs">
@@ -39,7 +39,7 @@
             <textarea v-model="infoForm.description" class="a-textarea" rows="3" placeholder="频道简介" />
           </div>
           <div style="display:flex;gap:.75rem">
-            <ABtn :disabled="infoSaving" @click="saveInfo">{{ infoSaving ? '保存中...' : '保存' }}</ABtn>
+            <PButton :disabled="infoSaving" @click="saveInfo">{{ infoSaving ? '保存中...' : '保存' }}</PButton>
           </div>
         </div>
       </section>
@@ -48,9 +48,9 @@
       <section v-if="activeTab === 'collections'" class="manage-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
           <h3 class="a-subtitle" style="margin:0">合集管理</h3>
-          <ABtn size="sm" @click="openCollectionModal()">+ 新建合集</ABtn>
+          <PButton size="sm" @click="openCollectionModal()">+ 新建合集</PButton>
         </div>
-        <AEmpty v-if="!collections.length" title="暂无合集" />
+        <PEmpty v-if="!collections.length" title="暂无合集" />
         <div v-else style="display:flex;flex-direction:column;gap:1rem">
           <div v-for="col in collections" :key="col.id" class="a-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
             <div>
@@ -74,7 +74,7 @@
         <div v-if="loadingPosts" style="display:flex;flex-direction:column;gap:1rem">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:4rem" />
         </div>
-        <AEmpty v-else-if="!posts.length" title="暂无内容" />
+        <PEmpty v-else-if="!posts.length" title="暂无内容" />
         <div v-else style="display:flex;flex-direction:column;gap:.75rem">
           <div v-for="post in posts" :key="post.id" class="a-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
             <div style="flex:1;min-width:0">
@@ -100,50 +100,50 @@
         <div class="a-card" style="border-color:var(--a-color-danger)">
           <h4 style="font-weight:900;margin-bottom:.5rem">删除频道</h4>
           <p class="a-muted" style="margin-bottom:1rem;font-size:.875rem">删除后所有内容将被永久删除，此操作不可恢复。</p>
-          <ABtn variant="danger" @click="showDeleteChannel = true">删除频道</ABtn>
+          <PButton variant="danger" @click="showDeleteChannel = true">删除频道</PButton>
         </div>
       </section>
     </template>
 
     <!-- Collection Modal -->
-    <AModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
+    <PModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
       <h3 class="a-subtitle" style="margin-bottom:1.5rem">{{ editingCollection ? '编辑合集' : '新建合集' }}</h3>
       <div style="display:flex;flex-direction:column;gap:1rem">
         <input v-model="collectionForm.name" placeholder="合集名称*" class="a-input" />
         <textarea v-model="collectionForm.description" placeholder="合集描述（可选）" rows="3" class="a-textarea" />
       </div>
       <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end">
-        <ABtn outline @click="collectionModalOpen = false">取消</ABtn>
-        <ABtn :disabled="!collectionForm.name.trim() || collectionSaving" @click="saveCollection">
+        <PButton outline @click="collectionModalOpen = false">取消</PButton>
+        <PButton :disabled="!collectionForm.name.trim() || collectionSaving" @click="saveCollection">
           {{ collectionSaving ? '保存中...' : (editingCollection ? '更新' : '创建') }}
-        </ABtn>
+        </PButton>
       </div>
-    </AModal>
+    </PModal>
 
     <!-- Delete channel confirm -->
-    <AModal v-if="showDeleteChannel" @close="showDeleteChannel = false">
+    <PModal v-if="showDeleteChannel" @close="showDeleteChannel = false">
       <h3 class="a-subtitle" style="margin-bottom:1rem">确认删除频道</h3>
       <p class="a-muted" style="margin-bottom:1rem">请输入频道名称 <strong>{{ channel?.name }}</strong> 以确认删除：</p>
       <input v-model="deleteConfirmName" class="a-input" placeholder="输入频道名称" style="margin-bottom:1.5rem" />
       <div style="display:flex;gap:.75rem;justify-content:flex-end">
-        <ABtn outline @click="showDeleteChannel = false">取消</ABtn>
-        <ABtn
+        <PButton outline @click="showDeleteChannel = false">取消</PButton>
+        <PButton
           :disabled="deleteConfirmName !== channel?.name || deleting"
           @click="deleteChannel"
           style="background:var(--a-color-danger);border-color:var(--a-color-danger);color:#fff"
-        >{{ deleting ? '删除中...' : '确认删除' }}</ABtn>
+        >{{ deleting ? '删除中...' : '确认删除' }}</PButton>
       </div>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AModal from '@/components/ui/AModal.vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PButton from '@/components/ui/PButton.vue'
 import type { Channel, Collection, Post } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'

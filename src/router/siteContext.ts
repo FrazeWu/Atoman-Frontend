@@ -3,8 +3,7 @@ import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 export type SiteContext =
   | { type: 'portal' }
   | { type: 'module'; module: ModuleRoomKey }
-  | { type: 'user'; username: string }
-  | { type: 'channel'; slug: string }
+  | { type: 'entity'; handle: string; legacyType?: 'user' | 'channel' }
   | { type: 'unknown'; subdomain: string }
 
 export const moduleSubdomains = Object.keys(moduleRooms) as ModuleRoomKey[]
@@ -17,17 +16,21 @@ function contextFromLabel(label: string): SiteContext {
   }
 
   if (label.startsWith('u-')) {
-    const username = label.slice(2)
-    return slugPattern.test(username)
-      ? { type: 'user', username }
+    const handle = label.slice(2)
+    return slugPattern.test(handle)
+      ? { type: 'entity', handle, legacyType: 'user' }
       : { type: 'unknown', subdomain: label }
   }
 
   if (label.startsWith('c-')) {
-    const slug = label.slice(2)
-    return slugPattern.test(slug)
-      ? { type: 'channel', slug }
+    const handle = label.slice(2)
+    return slugPattern.test(handle)
+      ? { type: 'entity', handle, legacyType: 'channel' }
       : { type: 'unknown', subdomain: label }
+  }
+
+  if (slugPattern.test(label)) {
+    return { type: 'entity', handle: label }
   }
 
   return { type: 'unknown', subdomain: label }
@@ -50,12 +53,20 @@ export function isLocalHost(hostname: string) {
   )
 }
 
+function isIPv4Host(hostname: string) {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)
+}
+
 export function resolveSiteContext(hostname: string, search = ''): SiteContext {
   const explicitContext = localDevContext(search)
   if (explicitContext) return explicitContext
 
   if (isLocalHost(hostname)) {
     return { type: 'module', module: 'feed' }
+  }
+
+  if (isIPv4Host(hostname)) {
+    return { type: 'unknown', subdomain: hostname.split('.')[0] }
   }
 
   const parts = hostname.split('.')

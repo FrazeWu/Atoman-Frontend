@@ -62,18 +62,19 @@ describe('FeedView', () => {
   })
 
   it('opens internal posts in the feed article sheet', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch)
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: true,
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: true,
           FeedArticleSheet: true,
@@ -82,10 +83,11 @@ describe('FeedView', () => {
     })
 
     await flushPromises()
-    await wrapper.get('.paper-entry').trigger('click')
+    await wrapper.get('.p-entry').trigger('click')
 
     expect(routerPush).not.toHaveBeenCalled()
     expect(navigateModuleWithShutter).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/feed/timeline/mark-read'))).toBe(false)
     expect(wrapper.findComponent({ name: 'FeedArticleSheet' }).exists()).toBe(true)
   })
 
@@ -116,15 +118,15 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: true,
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: true,
           FeedArticleSheet: true,
@@ -142,15 +144,15 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: { name: 'PaperClip', props: ['label'], template: '<button>{{ label }}</button>' },
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: { name: 'PClip', props: ['label'], template: '<button>{{ label }}</button>' },
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: true,
           FeedArticleSheet: true,
@@ -169,15 +171,15 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: true,
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: true,
           FeedArticleSheet: true,
@@ -187,7 +189,7 @@ describe('FeedView', () => {
 
     await flushPromises()
 
-    expect(wrapper.findComponent({ name: 'PaperIndexTrigger' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'PIndexTrigger' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'SubscriptionIndexSheet' }).exists()).toBe(false)
   })
 
@@ -198,15 +200,15 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: true,
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: {
             name: 'SubscriptionManageSheet',
@@ -236,15 +238,15 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: true,
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: {
             name: 'SubscriptionManageSheet',
@@ -290,15 +292,15 @@ describe('FeedView', () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
-          ABtn: true,
-          AModal: true,
-          AEmpty: true,
-          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          ASelect: true,
-          PaperField: true,
-          PaperClip: true,
-          PaperPress: true,
-          PaperBadge: true,
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
           SubscriptionAddSheet: true,
           SubscriptionManageSheet: true,
           FeedArticleSheet: true,
@@ -315,5 +317,34 @@ describe('FeedView', () => {
 
     expect(wrapper.text()).toContain('公开 RSS 条目')
     expect(wrapper.get('[data-test="feed-footer"]').attributes('data-total')).toBe('1')
+  })
+
+  it('renders timeline entries inside a real layout element', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedTimelineFooter: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const timeline = wrapper.get('.feed-timeline')
+    expect(timeline.element.tagName).not.toBe('TEMPLATE')
+    expect(timeline.element.closest('template')).toBeNull()
+    expect(wrapper.get('.p-entry').text()).toContain('内部文章')
   })
 })

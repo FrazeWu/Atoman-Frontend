@@ -8,7 +8,7 @@
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">
-        <AInput
+        <PInput
           v-if="isRegister"
           v-model="username"
           label="用户名"
@@ -16,7 +16,7 @@
           :error="fieldErrors.username"
         />
 
-        <AInput
+        <PInput
           v-if="!isRegister"
           v-model="email"
           label="用户名或邮箱"
@@ -34,7 +34,7 @@
               class="a-input"
               placeholder="请输入邮箱地址"
             />
-            <ABtn
+            <PButton
               type="button"
               variant="secondary"
               size="sm"
@@ -43,11 +43,11 @@
               @click="sendVerificationCode"
             >
               {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-            </ABtn>
+            </PButton>
           </div>
         </div>
 
-        <AInput
+        <PInput
           v-if="isRegister"
           v-model="verificationCode"
           label="验证码"
@@ -56,7 +56,7 @@
           :error="fieldErrors.code"
         />
 
-        <AInput
+        <PInput
           v-model="password"
           label="通行密码"
           type="password"
@@ -64,7 +64,7 @@
           :error="fieldErrors.password"
         />
 
-        <AInput
+        <PInput
           v-if="isRegister"
           v-model="passwordConfirm"
           label="确认密码"
@@ -84,7 +84,7 @@
           @error="handleTurnstileError"
         />
 
-        <ABtn
+        <PButton
           type="submit"
           variant="primary"
           size="lg"
@@ -94,7 +94,7 @@
           loading-text="请稍候..."
         >
           {{ isRegister ? '注册账号' : '登 录' }}
-        </ABtn>
+        </PButton>
       </form>
 
       <div class="auth-footer">
@@ -114,8 +114,8 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
-import AInput from '@/components/ui/AInput.vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PButton from '@/components/ui/PButton.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
 
 const email = ref('')
@@ -296,7 +296,7 @@ const handleSubmit = async () => {
   gap: 0.9rem;
 }
 
-.auth-form :deep(.a-field) {
+.auth-form :deep(.p-field) {
   gap: 0.38rem;
 }
 
@@ -306,7 +306,7 @@ const handleSubmit = async () => {
   letter-spacing: 0.18em;
 }
 
-.auth-form :deep(.a-input) {
+.auth-form :deep(.p-input) {
   border: 1px solid #d8d1c6;
   padding: 0.88rem 0.95rem;
   box-shadow: none;
@@ -314,11 +314,11 @@ const handleSubmit = async () => {
   font-size: 0.98rem;
 }
 
-.auth-form :deep(.a-input::placeholder) {
+.auth-form :deep(.p-input::placeholder) {
   color: #b2b8c3;
 }
 
-.auth-form :deep(.a-input:focus) {
+.auth-form :deep(.p-input:focus) {
   border-color: #b7ab9a;
   box-shadow: inset 0 0 0 1px #b7ab9a;
 }
@@ -334,7 +334,7 @@ const handleSubmit = async () => {
   align-self: end;
 }
 
-.auth-code-btn:deep(.a-btn),
+.auth-code-btn:deep(.p-button),
 .auth-code-btn.a-btn {
   min-height: 2.95rem;
   border: 1px solid #d8d1c6;
@@ -344,8 +344,8 @@ const handleSubmit = async () => {
   letter-spacing: 0.12em;
 }
 
-.auth-code-btn:deep(.a-btn:hover:not(:disabled)),
-.auth-code-btn.a-btn:hover:not(:disabled) {
+.auth-code-btn:deep(.p-button:hover:not(:disabled)),
+.auth-code-btn.p-button:hover:not(:disabled) {
   text-decoration: none;
   background: #f6f3ed;
 }
@@ -354,7 +354,7 @@ const handleSubmit = async () => {
   margin-top: 0.35rem;
 }
 
-.auth-submit:deep(.a-btn),
+.auth-submit:deep(.p-button),
 .auth-submit.a-btn {
   min-height: 3.05rem;
   border: 1px solid #111827;
@@ -366,16 +366,16 @@ const handleSubmit = async () => {
   text-decoration: none;
 }
 
-.auth-submit:deep(.a-btn:hover:not(:disabled)),
-.auth-submit.a-btn:hover:not(:disabled) {
+.auth-submit:deep(.p-button:hover:not(:disabled)),
+.auth-submit.p-button:hover:not(:disabled) {
   text-decoration: none;
   transform: none;
   box-shadow: none;
   opacity: 0.94;
 }
 
-.auth-submit:deep(.a-btn:active:not(:disabled)),
-.auth-submit.a-btn:active:not(:disabled) {
+.auth-submit:deep(.p-button:active:not(:disabled)),
+.auth-submit.p-button:active:not(:disabled) {
   transform: none;
   box-shadow: none;
   opacity: 1;

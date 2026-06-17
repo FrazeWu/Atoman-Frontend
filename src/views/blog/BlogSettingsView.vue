@@ -40,7 +40,7 @@
       </div>
       <div class="a-field">
         <label class="a-field-label">私信权限</label>
-        <ASelect v-model="form.dm_permission" :options="dmPermissionOptions" />
+        <PSelect v-model="form.dm_permission" :options="dmPermissionOptions" />
       </div>
 
       <div style="border-top:2px solid #000;padding-top:1.5rem">
@@ -60,7 +60,7 @@
       <div v-if="error" class="a-error">{{ error }}</div>
       <div v-if="success" class="a-success">✓ 保存成功</div>
 
-      <ABtn block type="submit" :loading="saving" loadingText="保存中...">保存更改</ABtn>
+      <PButton block type="submit" :loading="saving" loadingText="保存中...">保存更改</PButton>
     </form>
   </div>
 </template>
@@ -68,8 +68,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import ABtn from '@/components/ui/ABtn.vue'
-import ASelect from '@/components/ui/ASelect.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'

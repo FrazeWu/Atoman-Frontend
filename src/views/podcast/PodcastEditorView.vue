@@ -2,13 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
 import type { PodcastEpisode, Channel, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -413,9 +413,9 @@ async function doPublish() {
 
 <template>
   <div class="pe-wrap">
-    <APageHeader :title="isEdit ? '编辑单集' : '发布新单集'" accent />
+    <PPageHeader :title="isEdit ? '编辑单集' : '发布新单集'" accent />
 
-    <ASurface v-if="!canEditMetadata" tone="paper" :layer="1" class="pe-gate">
+    <PSurface v-if="!canEditMetadata" tone="paper" :layer="1" class="pe-gate">
       <h2 class="pe-section-title">上传节目音频</h2>
       <label class="pe-drop-zone pe-source-card">
         <input
@@ -429,13 +429,13 @@ async function doPublish() {
         <span class="pe-drop-sub">支持音频 MP3、AAC、M4A、OGG、WAV、FLAC、WebM，也支持上传 MP4、MOV、WebM 视频提取音频</span>
       </label>
       <p v-if="audioError" class="pe-field-error">{{ audioError }}</p>
-    </ASurface>
+    </PSurface>
 
     <div v-else class="pe-layout">
       <!-- 左栏 -->
       <div class="pe-main">
         <!-- 音频文件 -->
-        <ASurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="paper" :layer="1" class="pe-section">
           <h2 class="pe-section-title">音频文件</h2>
 
           <!-- 已上传 -->
@@ -476,13 +476,13 @@ async function doPublish() {
           <div v-if="form.audio_url && !audioUploading" class="pe-audio-preview">
             <audio :src="form.audio_url" controls preload="none" style="width:100%" />
           </div>
-        </ASurface>
+        </PSurface>
 
         <!-- 基本信息 -->
-        <ASurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="paper" :layer="1" class="pe-section">
           <h2 class="pe-section-title">基本信息</h2>
           <div class="a-field--line">
-            <AInput
+            <PInput
               v-model="form.title"
               label="单集标题 *"
               placeholder="上传音频后自动填充，可手动修改"
@@ -491,20 +491,20 @@ async function doPublish() {
             />
           </div>
           <div class="a-field--line">
-            <ATextarea
+            <PTextarea
               v-model="form.shownotes"
               label="节目说明（Shownotes）"
               placeholder="节目内容简介、时间轴、嘉宾介绍、相关链接…"
               :rows="7"
             />
           </div>
-        </ASurface>
+        </PSurface>
 
         <!-- 归档位置 -->
-        <ASurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="paper" :layer="1" class="pe-section">
           <h2 class="pe-section-title">归档位置</h2>
           <div class="a-field--line">
-            <ASelect
+            <PSelect
               label="节目频道 *"
               :model-value="form.channel_id"
               :options="channelOptions"
@@ -528,14 +528,14 @@ async function doPublish() {
               </label>
             </div>
           </div>
-        </ASurface>
+        </PSurface>
 
         <!-- 单集编号 -->
-        <ASurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="paper" :layer="1" class="pe-section">
           <h2 class="pe-section-title">单集编号</h2>
           <div class="pe-row">
             <div class="a-field--line">
-              <AInput
+              <PInput
                 v-model.number="form.season_number"
                 label="季"
                 type="number"
@@ -543,7 +543,7 @@ async function doPublish() {
               />
             </div>
             <div class="a-field--line">
-              <AInput
+              <PInput
                 v-model.number="form.episode_number"
                 label="集"
                 type="number"
@@ -551,11 +551,11 @@ async function doPublish() {
               />
             </div>
           </div>
-        </ASurface>
+        </PSurface>
       </div>
 
       <!-- 右栏：发布面板 -->
-      <ASurface tone="paper" :layer="1" class="pe-panel">
+      <PSurface tone="paper" :layer="1" class="pe-panel">
         <PodcastCoverPanel
           :effective-cover-u-r-l="effectiveCoverURL"
           :effective-cover-label="effectiveCoverLabel"
@@ -569,7 +569,7 @@ async function doPublish() {
 
         <!-- 操作按钮 -->
         <div class="pe-panel-actions">
-          <PaperPress
+          <PPress
             variant="secondary"
             class="w-full"
             :loading="savingDraft"
@@ -578,8 +578,8 @@ async function doPublish() {
             @click="saveDraft"
           >
             保存草稿
-          </PaperPress>
-          <PaperPress
+          </PPress>
+          <PPress
             class="w-full"
             :loading="publishing"
             loading-text="发布中…"
@@ -587,13 +587,13 @@ async function doPublish() {
             @click="requestPublish"
           >
             立即发布
-          </PaperPress>
+          </PPress>
         </div>
-      </ASurface>
+      </PSurface>
     </div>
 
     <!-- 发布确认弹窗 -->
-    <AConfirm
+    <PConfirm
       :show="showPublishConfirm"
       title="确认发布单集"
       :message="`《${form.title || '未命名单集'}》将立即对听众公开，发布后可继续编辑。`"

@@ -3,16 +3,18 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { channelUrl, userUrl } from '@/router/siteUrls'
 
 describe('entity subdomain routing helpers', () => {
-  it('parses usernames from u-prefixed hosts', () => {
-    expect(resolveSiteContext('u-alice.atoman.org')).toEqual({ type: 'user', username: 'alice' })
+  it('parses unified and legacy user hosts as entity handles', () => {
+    expect(resolveSiteContext('alice.atoman.org')).toEqual({ type: 'entity', handle: 'alice' })
+    expect(resolveSiteContext('u-alice.atoman.org')).toEqual({ type: 'entity', handle: 'alice', legacyType: 'user' })
   })
 
-  it('parses channel slugs from c-prefixed hosts', () => {
-    expect(resolveSiteContext('c-design.atoman.org')).toEqual({ type: 'channel', slug: 'design' })
+  it('parses unified and legacy channel hosts as entity handles', () => {
+    expect(resolveSiteContext('design.atoman.org')).toEqual({ type: 'entity', handle: 'design' })
+    expect(resolveSiteContext('c-design.atoman.org')).toEqual({ type: 'entity', handle: 'design', legacyType: 'channel' })
   })
 
-  it('builds entity profile URLs without requiring subdomain DNS', () => {
-    expect(userUrl('alice', 'https:', 'blog.atoman.org')).toBe('https://atoman.org/?site=u-alice')
-    expect(channelUrl('design', 'https:', 'blog.atoman.org')).toBe('https://atoman.org/?site=c-design')
+  it('builds unified entity profile URLs', () => {
+    expect(userUrl('alice', 'https:', 'blog.atoman.org')).toBe('https://alice.atoman.org/')
+    expect(channelUrl('design', 'https:', 'blog.atoman.org')).toBe('https://design.atoman.org/')
   })
 })

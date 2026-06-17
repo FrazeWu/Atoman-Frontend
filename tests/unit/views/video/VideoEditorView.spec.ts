@@ -90,7 +90,7 @@ describe('VideoEditorView', () => {
 
     await flushPromises()
 
-    const storageSelect = wrapper.findComponent({ name: 'ASelect' })
+    const storageSelect = wrapper.findComponent({ name: 'PSelect' })
     await storageSelect.vm.$emit('update:modelValue', 'local')
     await flushPromises()
 

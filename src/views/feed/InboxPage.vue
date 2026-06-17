@@ -10,7 +10,7 @@
     <div class="inbox-layout">
       <aside class="inbox-sidebar">
         <div class="inbox-tabs">
-          <PaperTab
+          <PTab
             v-for="tab in tabs"
             :key="tab.key"
             :active="activeTab === tab.key"
@@ -20,7 +20,7 @@
         </div>
 
         <div v-if="activeTab !== 'dm'" class="sidebar-list">
-          <PaperPress variant="secondary" @click="markCurrentNotificationsRead" label="当前全部已读" />
+          <PPress variant="secondary" @click="markCurrentNotificationsRead" label="当前全部已读" />
           <button
             v-for="item in notificationStore.notifications"
             :key="item.id"
@@ -32,11 +32,11 @@
             <div class="sidebar-item-body a-muted">{{ formatNotificationBody(item) }}</div>
             <div class="sidebar-item-time">{{ formatTime(item.created_at) }}</div>
           </button>
-          <AEmpty v-if="!notificationStore.loading && notificationStore.notifications.length === 0" title="暂无通知" />
+          <PEmpty v-if="!notificationStore.loading && notificationStore.notifications.length === 0" title="暂无通知" />
         </div>
 
         <div v-else class="sidebar-list">
-          <PaperPress variant="secondary" @click="dmStore.fetchConversations" label="刷新会话" />
+          <PPress variant="secondary" @click="dmStore.fetchConversations" label="刷新会话" />
           <button
             v-for="conversation in dmStore.conversations"
             :key="conversation.conversation_id"
@@ -46,12 +46,12 @@
           >
             <div class="sidebar-item-title">
               <span>{{ conversation.other_username }}</span>
-              <PaperBadge v-if="conversation.unread_count > 0" type="internal" fill>{{ conversation.unread_count }}</PaperBadge>
+              <PBadge v-if="conversation.unread_count > 0" type="internal" fill>{{ conversation.unread_count }}</PBadge>
             </div>
             <div class="sidebar-item-body a-muted">{{ conversation.preview }}</div>
             <div class="sidebar-item-time">{{ formatTime(conversation.last_message_at) }}</div>
           </button>
-          <AEmpty v-if="!dmStore.loading && dmStore.conversations.length === 0" title="暂无私信" />
+          <PEmpty v-if="!dmStore.loading && dmStore.conversations.length === 0" title="暂无私信" />
         </div>
       </aside>
 
@@ -61,9 +61,9 @@
             <h2 class="a-subtitle">{{ formatNotificationTitle(selectedNotification) }}</h2>
             <p class="detail-body a-muted">{{ formatNotificationBody(selectedNotification) }}</p>
             <p class="detail-time">{{ formatTime(selectedNotification.created_at) }}</p>
-            <ABtn @click="jumpToNotification(selectedNotification)">前往来源内容</ABtn>
+            <PButton @click="jumpToNotification(selectedNotification)">前往来源内容</PButton>
           </div>
-          <AEmpty v-else title="选择一条通知" description="点击左侧通知查看详情。" />
+          <PEmpty v-else title="选择一条通知" description="点击左侧通知查看详情。" />
         </template>
 
         <template v-else>
@@ -87,18 +87,18 @@
             </div>
 
             <form class="dm-composer" @submit.prevent="submitDM">
-              <ATextarea v-model="dmContent" label="消息内容" :rows="3" placeholder="输入私信内容" :error="dmError || undefined" />
+              <PTextarea v-model="dmContent" label="消息内容" :rows="3" placeholder="输入私信内容" :error="dmError || undefined" />
               <div v-if="dmImageUrl" class="dm-upload-preview">
                 <img :src="dmImageUrl" alt="preview" class="dm-image" />
               </div>
               <div class="dm-actions">
                 <input ref="fileInput" type="file" accept="image/*" class="dm-file-input" @change="uploadDMImage" />
-                <ABtn variant="secondary" type="button" @click="fileInput?.click()">上传图片</ABtn>
-                <ABtn type="submit" :loading="dmSending" loadingText="发送中...">发送</ABtn>
+                <PButton variant="secondary" type="button" @click="fileInput?.click()">上传图片</PButton>
+                <PButton type="submit" :loading="dmSending" loadingText="发送中...">发送</PButton>
               </div>
             </form>
           </div>
-          <AEmpty v-else :title="dmOpenError ? '无法打开会话' : '选择一个会话'" :description="dmOpenError || '点击左侧私信会话开始聊天。'" />
+          <PEmpty v-else :title="dmOpenError ? '无法打开会话' : '选择一个会话'" :description="dmOpenError || '点击左侧私信会话开始聊天。'" />
         </template>
       </section>
     </div>
@@ -108,9 +108,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
 import { useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'

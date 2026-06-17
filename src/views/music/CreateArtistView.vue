@@ -1,11 +1,11 @@
 <template>
   <div class="a-page">
-    <APageHeader title="添加/补全艺术家" sub="向音乐档案库添加新的艺术家资料。" accent />
+    <PPageHeader title="添加/补全艺术家" sub="向音乐档案库添加新的艺术家资料。" accent />
 
-    <ASurface class="form-surface" tone="soft" :layer="1">
+    <PSurface class="form-surface" tone="soft" :layer="1">
       <form @submit.prevent="handleSubmit" class="manuscript-form">
         <div class="form-section">
-          <AInput
+          <PInput
             v-model="name"
             label="艺术家名称"
             placeholder="例如：kanye_west"
@@ -13,7 +13,7 @@
             :error="errors.name"
           />
 
-          <ATextarea
+          <PTextarea
             v-model="bio"
             label="个人简介 / 履历"
             placeholder="输入艺术家的详细生平、音乐风格和主要成就..."
@@ -23,23 +23,23 @@
         </div>
 
         <div class="form-actions">
-          <ABtn type="submit" class="submit-btn" :disabled="submitting">
+          <PButton type="submit" class="submit-btn" :disabled="submitting">
             {{ submitting ? '正在创建...' : '创建艺术家' }}
-          </ABtn>
+          </PButton>
         </div>
       </form>
-    </ASurface>
+    </PSurface>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 

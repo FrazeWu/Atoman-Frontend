@@ -4,10 +4,13 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiPostJson, apiPostMultipart } from '@/api/client'
 import {
   buildCreateAlbumEdit,
+  buildCreateArtistEdit,
   buildDeleteAlbumEdit,
   buildUpdateAlbumEdit,
+  listMusicArtists,
   listMusicAlbums,
   listMusicEdits,
+  type MusicAlbumListItem,
   musicV1Endpoints,
   uploadMusicAsset,
 } from '@/api/musicV1'
@@ -65,7 +68,7 @@ describe('api v1 client', () => {
 
   it('posts multipart upload without setting a manual Content-Type header', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { url: '/uploads/cover.png', key: 'music/covers/cover.png', content_type: 'image/png', size: 123 } }),
+      JSON.stringify({ data: { url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/cover.png', key: 'music/covers/uploads/users/user-1/2026/06/cover.png', content_type: 'image/png', size: 123 } }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
 
@@ -74,7 +77,7 @@ describe('api v1 client', () => {
 
     const result = await apiPostMultipart<{ url: string; key: string; content_type: string; size: number }>('/api/v1/uploads', form)
 
-    expect(result.url).toBe('/uploads/cover.png')
+    expect(result.url).toBe('https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/cover.png')
     const [, init] = vi.mocked(fetch).mock.calls[0]
     expect(init).toMatchObject({ method: 'POST', credentials: 'include' })
     expect((init as RequestInit).headers).toEqual({ Accept: 'application/json' })
@@ -149,17 +152,54 @@ describe('music v1 adapter', () => {
     })
   })
 
+  it('keeps album hot_score available to discovery views', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({
+        data: [{ id: 'album_uuid', title: 'Album', entry_status: 'open', hot_score: 12.5, year: 2026 }],
+        meta: { page: 1, page_size: 20, total: 1, has_more: false },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await listMusicAlbums({ sort: 'hot', page: 1, page_size: 20 })
+    const first: MusicAlbumListItem = result.data[0]
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/albums?sort=hot&page=1&page_size=20', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(first.hot_score).toBe(12.5)
+    expect(first.year).toBe(2026)
+  })
+
+  it('lists artists through the music v1 namespace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: [{ id: 'artist_uuid', name: 'Artist', entry_status: 'open' }], meta: { page: 1, page_size: 20, total: 1, has_more: false } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await listMusicArtists({ q: 'artist', page: 1, page_size: 20 })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists?q=artist&page=1&page_size=20', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(result.data).toEqual([{ id: 'artist_uuid', name: 'Artist', entry_status: 'open' }])
+  })
+
   it('uploads music cover assets with the correct purpose', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { url: '/uploads/c.png', key: 'music/covers/c.png', content_type: 'image/png', size: 1 } }),
+      JSON.stringify({ data: { url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/c.png', key: 'music/covers/uploads/users/user-1/2026/06/c.png', content_type: 'image/png', size: 1 } }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
     const file = new File(['x'], 'cover.png', { type: 'image/png' })
 
-    await uploadMusicAsset(file, 'music.cover')
+    const result = await uploadMusicAsset(file, 'music.cover')
 
     const [, init] = vi.mocked(fetch).mock.calls[0]
     const body = (init as RequestInit).body as FormData
+    expect(result.url).toMatch(/^https:\/\/cdn\.example\.com\/assets\/music\/covers\/uploads\//)
+    expect(result.url).not.toMatch(/^\/uploads\//)
     expect(body.get('purpose')).toBe('music.cover')
     expect(body.get('file')).toBe(file)
   })
@@ -169,7 +209,7 @@ describe('music v1 adapter', () => {
       title: 'Album',
       artist_ids: ['artist_uuid'],
       release_date: '2026-05-29',
-      cover: { url: '/uploads/c.png', key: 'music/covers/c.png', content_type: 'image/png', size: 1 },
+      cover: { url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/c.png', key: 'music/covers/uploads/users/user-1/2026/06/c.png', content_type: 'image/png', size: 1 },
       description: 'Description',
       reason: 'official release information',
       sources: [{ type: 'url', url: 'https://example.com', title: 'Official' }],
@@ -182,13 +222,42 @@ describe('music v1 adapter', () => {
         title: 'Album',
         artist_ids: ['artist_uuid'],
         release_date: '2026-05-29',
-        cover_url: '/uploads/c.png',
-        cover_key: 'music/covers/c.png',
+        cover_url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/c.png',
+        cover_key: 'music/covers/uploads/users/user-1/2026/06/c.png',
         description: 'Description',
       },
       changes: {},
       reason: 'official release information',
       sources: [{ type: 'url', url: 'https://example.com', title: 'Official' }],
+    })
+  })
+
+  it('builds create artist edit payloads instead of direct CRUD payloads', () => {
+    const edit = buildCreateArtistEdit({
+      name: 'New Artist',
+      bio: 'artist biography',
+      image_url: 'https://example.com/artist.jpg',
+      nationality: 'JP',
+      birth_date: '1990-05-21',
+      birth_year: 1990,
+      reason: 'official profile',
+      sources: [{ type: 'url', url: 'https://example.com/profile', title: 'Official profile' }],
+    })
+
+    expect(edit).toEqual({
+      type: 'create_artist',
+      entity_type: 'artist',
+      payload: {
+        name: 'New Artist',
+        bio: 'artist biography',
+        image_url: 'https://example.com/artist.jpg',
+        nationality: 'JP',
+        birth_date: '1990-05-21',
+        birth_year: 1990,
+      },
+      changes: {},
+      reason: 'official profile',
+      sources: [{ type: 'url', url: 'https://example.com/profile', title: 'Official profile' }],
     })
   })
 

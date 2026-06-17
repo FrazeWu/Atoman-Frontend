@@ -1,22 +1,22 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <APageHeader title="稍后阅读" sub="你保存的 RSS 阅读队列">
+    <PPageHeader title="稍后阅读" sub="你保存的 RSS 阅读队列">
       <template #action>
         <RouterLink to="/" style="text-decoration:none">
-          <PaperPress variant="secondary" label="← 返回订阅" />
+          <PPress variant="secondary" label="← 返回订阅" />
         </RouterLink>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div v-if="loading" class="feed-loading">
       <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
     </div>
 
-    <AEmpty v-else-if="!items.length" text="阅读列表为空" sub="在订阅时间线中点击「稍后阅读」保存" />
+    <PEmpty v-else-if="!items.length" text="阅读列表为空" sub="在订阅时间线中点击「稍后阅读」保存" />
 
     <div v-else class="feed-timeline">
       <template v-for="(entry, index) in items" :key="entry.feed_item_id">
-        <PaperEntry
+        <PEntry
           v-if="entry.feed_item"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle?.feed_item?.id === entry.feed_item_id"
@@ -27,8 +27,8 @@
         >
           <template #visual>
             <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PaperBadge type="external" fill>外部</PaperBadge>
-              <PaperBadge type="external">{{ getExternalBadge(entry.feed_item) }}</PaperBadge>
+              <PBadge type="external" fill>外部</PBadge>
+              <PBadge type="external">{{ getExternalBadge(entry.feed_item) }}</PBadge>
               <img
                 v-if="entry.feed_item.image_url"
                 :src="entry.feed_item.image_url"
@@ -57,7 +57,7 @@
           </template>
 
           <template #actions>
-            <PaperClip
+            <PClip
               active
               label="移除"
               @click="remove(entry.feed_item_id)"
@@ -67,7 +67,7 @@
               ↗ 原文
             </a>
           </template>
-        </PaperEntry>
+        </PEntry>
       </template>
 
       <FeedTimelineFooter
@@ -79,7 +79,7 @@
       />
     </div>
 
-    <ShortcutHints :hints="shortcutHints" />
+    <PShortcutHints :hints="shortcutHints" />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
   </div>
 </template>
@@ -87,13 +87,13 @@
 <script setup lang="ts">
 import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
-import ShortcutHints from '@/components/ui/ShortcutHints.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PPress from '@/components/ui/PPress.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -253,9 +253,10 @@ const fetchItems = async () => {
   }
 
   const data = await res.json()
-  const payload = data.data || data
-  const nextItems: ReadingListEntry[] = payload.items || []
-  const total = payload.total || data.meta?.total || data.total || 0
+  const nextItems: ReadingListEntry[] = Array.isArray(data.data)
+    ? data.data
+    : data.data?.items || data.items || []
+  const total = data.meta?.total ?? data.data?.total ?? data.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageLimit))
 
   if (total > 0 && page.value > totalPages) {
@@ -263,7 +264,10 @@ const fetchItems = async () => {
     return
   }
 
+  const previousIds = items.value.map((item) => item.feed_item_id)
+  const nextIds = nextItems.map((item) => item.feed_item_id)
   items.value = nextItems
+  feedStore.syncReadingListPageIds(previousIds, nextIds)
   totalItems.value = total
   loading.value = false
 }
@@ -275,7 +279,9 @@ const remove = async (feedItemId: string) => {
   })
   if (!res.ok) return
 
-  feedStore.readingListItemIds.delete(feedItemId)
+  const nextIds = new Set(feedStore.readingListItemIds)
+  nextIds.delete(feedItemId)
+  feedStore.readingListItemIds = nextIds
   if (items.value.length === 1 && page.value > 1) {
     await setRoutePage(page.value - 1)
     return

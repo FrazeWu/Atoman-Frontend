@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import ABtn from '@/components/ui/ABtn.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { extractTimestampFromComment, formatTimestampLabel, serializeTimestampComment } from '@/composables/useVideoTimestamp'
@@ -123,12 +123,12 @@ watch(() => props.videoId, fetchComments)
     </h3>
 
     <div v-if="authStore.isAuthenticated" class="vcs-form">
-      <ATextarea
+      <PTextarea
         v-model="newComment"
         placeholder="写下你的评论... 可输入 12:34 或 01:12:34 标记时间点"
         :rows="3"
       />
-      <ABtn
+      <PButton
         variant="primary"
         size="sm"
         :disabled="!newComment.trim() || submitting"
@@ -136,7 +136,7 @@ watch(() => props.videoId, fetchComments)
         @click="submitComment"
       >
         {{ submitting ? '发送中...' : '发表评论' }}
-      </ABtn>
+      </PButton>
     </div>
     <div v-else class="vcs-login-prompt">
       <RouterLink to="/login" class="vcs-login-link">登录</RouterLink> 后发表评论
@@ -154,7 +154,7 @@ watch(() => props.videoId, fetchComments)
           </div>
           <span class="vcs-author">{{ comment.user?.display_name || comment.user?.username }}</span>
           <span class="vcs-time">{{ formatDate(comment.created_at) }}</span>
-          <ABtn
+          <PButton
             v-if="canDelete(comment)"
             variant="danger"
             size="sm"
@@ -162,7 +162,7 @@ watch(() => props.videoId, fetchComments)
             @click="requestDelete(comment.id)"
           >
             删除
-          </ABtn>
+          </PButton>
         </div>
         <p class="vcs-content">
           <button
@@ -181,7 +181,7 @@ watch(() => props.videoId, fetchComments)
       </div>
     </div>
 
-    <AConfirm
+    <PConfirm
       :show="showDeleteConfirm"
       title="删除评论"
       message="确定删除这条评论吗？"

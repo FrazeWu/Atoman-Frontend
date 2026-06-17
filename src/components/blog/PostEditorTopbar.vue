@@ -9,15 +9,15 @@
       <span class="draft-status" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
 
       <div v-if="contentSource !== 'manual'" class="import-actions">
-        <ABtn v-if="contentSource === 'empty'" tag="label" variant="secondary" size="sm">
+        <PButton v-if="contentSource === 'empty'" tag="label" variant="secondary" size="sm">
           <input type="file" accept=".md,.markdown,.txt" @change="$emit('import-file', $event)" class="hidden-file-input" />
           导入 Markdown
-        </ABtn>
+        </PButton>
         <template v-else-if="contentSource === 'imported'">
-          <ABtn type="button" variant="secondary" size="sm" @click="$emit('trigger-reimport')">
+          <PButton type="button" variant="secondary" size="sm" @click="$emit('trigger-reimport')">
             <input ref="fileInput" type="file" accept=".md,.markdown,.txt" @change="$emit('import-file', $event)" class="hidden-file-input" />
             重新导入
-          </ABtn>
+          </PButton>
         </template>
         <span v-if="uploading" class="a-muted">读取中…</span>
       </div>
@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const props = defineProps<{
   isEdit: boolean

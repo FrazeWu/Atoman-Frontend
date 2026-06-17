@@ -8,7 +8,7 @@
     </div>
 
     <div class="debate-header-actions__buttons">
-      <ABtn
+      <PButton
         v-if="showVoteToConclude"
         variant="secondary"
         outline
@@ -16,25 +16,25 @@
         :disabled="concludeVoting"
       >
         投票结题 ({{ concludeVoteCount }}/{{ concludeThreshold }})
-      </ABtn>
+      </PButton>
 
-      <ABtn v-if="showConclude" variant="secondary" @click="$emit('conclude')">
+      <PButton v-if="showConclude" variant="secondary" @click="$emit('conclude')">
         结题
-      </ABtn>
+      </PButton>
 
-      <ABtn v-if="showReopen" outline @click="$emit('reopen')" :disabled="reopening">
+      <PButton v-if="showReopen" outline @click="$emit('reopen')" :disabled="reopening">
         重开辩论
-      </ABtn>
+      </PButton>
 
-      <ABtn v-if="showEdit" variant="secondary" @click="$emit('edit')">
+      <PButton v-if="showEdit" variant="secondary" @click="$emit('edit')">
         编辑
-      </ABtn>
+      </PButton>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 defineProps<{
   argumentCount: number

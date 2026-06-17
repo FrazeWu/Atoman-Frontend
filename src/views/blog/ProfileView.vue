@@ -1,6 +1,7 @@
 <template>
-  <div class="a-page" style="padding-bottom:12rem">
-    <AToast v-model="toastVisible" :message="toastMessage" />
+  <ChannelView v-if="resolvedChannelSlug" :entity-handle="resolvedChannelSlug" />
+  <div v-else class="a-page" style="padding-bottom:12rem">
+    <PToast v-model="toastVisible" :message="toastMessage" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />
       <div class="a-skeleton" style="height:2rem;width:50%" />
@@ -52,7 +53,7 @@
       <!-- Channels list -->
       <section style="margin-bottom:3rem">
         <h2 class="a-subtitle" style="margin-bottom:1.25rem">频道</h2>
-        <AEmpty v-if="!channels.length" title="暂无频道" description="该用户还没有创建频道" />
+        <PEmpty v-if="!channels.length" title="暂无频道" description="该用户还没有创建频道" />
         <div v-else class="a-grid-2">
           <div v-for="ch in channels" :key="ch.id" class="a-card a-card-hover channel-card">
             <div style="flex:1">
@@ -72,9 +73,9 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
         </div>
-        <AEmpty v-else-if="!posts.length" title="暂无内容" description="该用户还没有发布内容" />
+        <PEmpty v-else-if="!posts.length" title="暂无内容" description="该用户还没有发布内容" />
         <div v-else class="a-grid-2">
-          <PaperEntry
+          <PEntry
             v-for="post in posts"
             :key="post.id"
             :title="post.title"
@@ -84,15 +85,15 @@
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PaperBadge type="internal" fill>内部</PaperBadge>
-                <PaperBadge type="blog">博客</PaperBadge>
+                <PBadge type="internal" fill>内部</PBadge>
+                <PBadge type="blog">博客</PBadge>
                 <img
                   v-if="post.cover_url"
                   :src="post.cover_url"
                   class="blog-entry-cover"
                   style="margin-top:0.25rem"
                 />
-                <PaperAvatar
+                <PAvatar
                   v-else
                   :src="post.user?.avatar_url"
                   :name="post.user?.display_name || post.user?.username"
@@ -118,19 +119,19 @@
                   <span>♥ {{ post.likes_count || 0 }}</span>
                   <span>💬 {{ post.comments_count || 0 }}</span>
                 </div>
-                <PaperClip
+                <PClip
                   :active="starredIds.has(post.id)"
                   :label="starredIds.has(post.id) ? '退藏' : '收藏'"
                   @click="toggleStar(post.id)"
                 />
-                <PaperClip
+                <PClip
                   :active="readingListIds.has(post.id)"
                   :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
                   @click="toggleReadingList(post.id)"
                 />
               </div>
             </template>
-          </PaperEntry>
+          </PEntry>
         </div>
       </section>
     </template>
@@ -140,15 +141,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperAvatar from '@/components/ui/PaperAvatar.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
-import AToast from '@/components/ui/AToast.vue'
+import PToast from '@/components/ui/PToast.vue'
 import { useApi } from '@/composables/useApi'
-import { resolveSiteContext } from '@/router/siteContext'
+import { isLocalHost, resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel } from '@/types'
 
 const route = useRoute()
@@ -176,6 +178,7 @@ const loadingPosts = ref(true)
 const following = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const resolvedChannelSlug = ref('')
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
@@ -184,13 +187,43 @@ const formatDate = (dateStr: string) => {
 }
 
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
-const username = computed(() => {
-  if (siteContext.value.type === 'user') return siteContext.value.username
-  return route.params.username as string
-})
+const resolvedUsername = ref('')
+const username = computed(() => resolvedUsername.value || (route.params.username as string) || '')
 const isSelf = computed(() => authStore.user?.username === username.value)
 
+const redirectLegacyEntity = () => {
+  if (siteContext.value.type !== 'entity' || !siteContext.value.legacyType) return false
+  if (isLocalHost(window.location.hostname)) return false
+  const target = `${window.location.protocol}//${siteContext.value.handle}.${window.location.hostname.split('.').slice(-2).join('.')}${window.location.pathname}${window.location.search}`
+  window.location.replace(target)
+  return true
+}
+
+const resolveEntityContext = async () => {
+  if (siteContext.value.type !== 'entity') return
+  const res = await fetch(api.site.resolve(siteContext.value.handle))
+  if (!res.ok) {
+    resolvedUsername.value = siteContext.value.handle
+    return
+  }
+  const payload = await res.json()
+  const data = payload.data || {}
+  if (data.type === 'channel' && data.slug) {
+    resolvedChannelSlug.value = data.slug
+    return
+  }
+  if (data.type === 'user' && data.username) {
+    resolvedUsername.value = data.username
+    return
+  }
+  resolvedUsername.value = siteContext.value.handle
+}
+
 const fetchProfile = async () => {
+  if (!username.value) {
+    loading.value = false
+    return
+  }
   try {
     const res = await fetch(api.users.profile(username.value))
     if (res.ok) profile.value = (await res.json()).data || null
@@ -248,6 +281,9 @@ const openDM = () => {
 }
 
 onMounted(async () => {
+  if (redirectLegacyEntity()) return
+  await resolveEntityContext()
+  if (resolvedChannelSlug.value) return
   await fetchProfile()
   if (!profile.value) return
   void Promise.all([fetchFollowingState(), fetchChannels(), fetchPosts()])

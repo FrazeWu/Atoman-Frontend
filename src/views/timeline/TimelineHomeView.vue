@@ -1,13 +1,13 @@
 <template>
   <div class="a-page-xl tl-page">
-    <APageHeader :title="moduleRooms.timeline.name" accent :sub="moduleRooms.timeline.homepageSub">
+    <PPageHeader :title="moduleRooms.timeline.name" accent :sub="moduleRooms.timeline.homepageSub">
       <template #action>
         <div class="tl-page-actions">
-          <ABtn v-if="authStore.isAuthenticated" outline @click="showPersonForm = true">新建人物</ABtn>
-          <ABtn v-if="authStore.isAuthenticated" @click="openCreate">新建事件</ABtn>
+          <PButton v-if="authStore.isAuthenticated" outline @click="showPersonForm = true">新建人物</PButton>
+          <PButton v-if="authStore.isAuthenticated" @click="openCreate">新建事件</PButton>
         </div>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div class="tl-toolbar">
       <div class="tl-filter-group">
@@ -22,8 +22,8 @@
         <label class="filter-label">分类</label>
         <input v-model="filterCategory" type="text" placeholder="政治 / 文化 / 科技…" class="a-input" style="width:160px" />
       </div>
-      <ABtn outline @click="applyFilter">筛选</ABtn>
-      <ABtn outline @click="resetFilter">重置</ABtn>
+      <PButton outline @click="applyFilter">筛选</PButton>
+      <PButton outline @click="resetFilter">重置</PButton>
 
       <div v-if="batchSelectedIds.length" class="tl-toolbar-batch">
         <span class="tl-toolbar-batch-count">已勾选 {{ batchSelectedIds.length }} 条</span>
@@ -49,7 +49,7 @@
       <p class="font-bold">加载中...</p>
     </div>
 
-    <AEmpty v-else-if="!loading && events.length === 0 && compareIds.length === 0" text="暂无历史事件" />
+    <PEmpty v-else-if="!loading && events.length === 0 && compareIds.length === 0" text="暂无历史事件" />
 
     <div v-else class="tl-shell">
       <aside class="tl-source-panel">
@@ -256,7 +256,7 @@
       </main>
     </div>
 
-    <AModal v-if="detailEvent" size="lg" @close="detailEvent = null">
+    <PModal v-if="detailEvent" size="lg" @close="detailEvent = null">
       <div class="a-modal-header">
         <h2 class="a-modal-title">{{ detailEvent.title }}</h2>
         <button class="a-modal-close" @click="detailEvent = null">✕</button>
@@ -283,14 +283,14 @@
       </div>
       <template #footer>
         <div class="a-modal-footer" v-if="canEdit(detailEvent)">
-          <ABtn outline @click="openEdit(detailEvent)">编辑</ABtn>
-          <ABtn outline @click="openHistory(detailEvent)">历史版本</ABtn>
-          <ABtn variant="danger" @click="confirmDelete(detailEvent)">删除</ABtn>
+          <PButton outline @click="openEdit(detailEvent)">编辑</PButton>
+          <PButton outline @click="openHistory(detailEvent)">历史版本</PButton>
+          <PButton variant="danger" @click="confirmDelete(detailEvent)">删除</PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
-    <AModal v-if="showForm" size="lg" @close="closeForm">
+    <PModal v-if="showForm" size="lg" @close="closeForm">
       <div class="a-modal-header">
         <h2 class="a-modal-title">{{ editingEvent ? '编辑事件' : '新建事件' }}</h2>
         <button class="a-modal-close" @click="closeForm">✕</button>
@@ -302,15 +302,15 @@
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <ABtn outline @click="closeForm">取消</ABtn>
-          <ABtn :disabled="submitting" @click="submitForm">
+          <PButton outline @click="closeForm">取消</PButton>
+          <PButton :disabled="submitting" @click="submitForm">
             {{ submitting ? '保存中...' : (editingEvent ? '保存' : '创建') }}
-          </ABtn>
+          </PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
-    <AModal v-if="showPersonForm" size="md" @close="showPersonForm = false">
+    <PModal v-if="showPersonForm" size="md" @close="showPersonForm = false">
       <div class="a-modal-header">
         <h2 class="a-modal-title">新建人物</h2>
         <button class="a-modal-close" @click="showPersonForm = false">✕</button>
@@ -318,38 +318,38 @@
       <div class="a-modal-body">
         <div class="form-group">
           <label class="form-label">姓名 *</label>
-          <AInput v-model="personForm.name" placeholder="历史人物姓名" />
+          <PInput v-model="personForm.name" placeholder="历史人物姓名" />
         </div>
         <div class="form-row">
           <div class="form-group" style="flex:1">
             <label class="form-label">出生年份</label>
-            <AInput v-model="personForm.birth_date" placeholder="YYYY-MM-DD" />
+            <PInput v-model="personForm.birth_date" placeholder="YYYY-MM-DD" />
           </div>
           <div class="form-group" style="flex:1">
             <label class="form-label">去世年份</label>
-            <AInput v-model="personForm.death_date" placeholder="YYYY-MM-DD" />
+            <PInput v-model="personForm.death_date" placeholder="YYYY-MM-DD" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">简介</label>
-          <ATextarea v-model="personForm.bio" :rows="3" placeholder="人物生平简介" />
+          <PTextarea v-model="personForm.bio" :rows="3" placeholder="人物生平简介" />
         </div>
         <div class="form-group">
           <label class="form-label">标签 (逗号分隔)</label>
-          <AInput v-model="personTagsInput" placeholder="政治家, 军事家" />
+          <PInput v-model="personTagsInput" placeholder="政治家, 军事家" />
         </div>
       </div>
       <template #footer>
         <div class="a-modal-footer">
-          <ABtn outline @click="showPersonForm = false">取消</ABtn>
-          <ABtn :disabled="personSubmitting" @click="submitPerson">
+          <PButton outline @click="showPersonForm = false">取消</PButton>
+          <PButton :disabled="personSubmitting" @click="submitPerson">
             {{ personSubmitting ? '创建中...' : '创建并添加轨迹' }}
-          </ABtn>
+          </PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
-    <AConfirm
+    <PConfirm
       :show="!!deletingEvent"
       title="删除事件"
       :message="deletingEvent ? `确定要删除「${deletingEvent.title}」吗？此操作不可撤销。` : ''"
@@ -358,7 +358,7 @@
     />
 
     <!-- History Modal -->
-    <AModal v-if="historyEvent" @close="historyEvent = null">
+    <PModal v-if="historyEvent" @close="historyEvent = null">
       <div class="a-modal-header">
         <h2 class="a-modal-title">历史版本 — {{ historyEvent.title }}</h2>
         <button class="a-modal-close" @click="historyEvent = null">✕</button>
@@ -381,7 +381,7 @@
           </div>
         </div>
       </div>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
@@ -393,14 +393,14 @@ import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import type { TimelineEvent, TimelineRevision } from '@/types'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import AConfirm from '@/components/ui/AConfirm.vue'
-import DatetimePicker from '@/components/ui/DatetimePicker.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 import TimelineEventFormSection from '@/components/timeline/TimelineEventFormSection.vue'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useApi } from '@/composables/useApi'

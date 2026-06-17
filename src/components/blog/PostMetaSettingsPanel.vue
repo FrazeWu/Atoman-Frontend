@@ -22,7 +22,7 @@
         <span class="a-label">可见范围</span>
       </summary>
       <div class="settings-body">
-        <ASelect
+        <PSelect
           :model-value="visibility"
           label="谁可以查看这篇文章"
           :options="visibilityOptions"
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import ASelect from '@/components/ui/ASelect.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 defineProps<{
   summary: string

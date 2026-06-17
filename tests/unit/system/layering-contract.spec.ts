@@ -10,6 +10,8 @@ describe('frontend layering contract docs', () => {
 
     expect(spec).toContain('views')
     expect(spec).toContain('components')
+    expect(spec).toContain('UI Primitive Layer')
+    expect(spec).toContain('Route Layer')
   })
 
   it.skipIf(!existsSync(guidePath))('documents the layer model in the UI guide when present', () => {

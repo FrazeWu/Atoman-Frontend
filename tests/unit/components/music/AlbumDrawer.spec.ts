@@ -14,7 +14,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 
 describe('AlbumDrawer.vue', () => {
   it('renders correctly', () => {
-    const wrapper = mount(AlbumDrawer, { global: { stubs: ['PaperSheet', 'PaperDiscussionFAB'] } })
-    expect(wrapper.findComponent({ name: 'PaperSheet' }).exists()).toBe(true)
+    const wrapper = mount(AlbumDrawer, { global: { stubs: ['PSheet', 'PDiscussionFAB'] } })
+    expect(wrapper.findComponent({ name: 'PSheet' }).exists()).toBe(true)
   })
 })

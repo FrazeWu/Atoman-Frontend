@@ -1,11 +1,11 @@
 <template>
-  <ASurface class="setting-forum-moderator" :layer="1">
+  <PSurface class="setting-forum-moderator" :layer="1">
     <div class="setting-forum-moderator__header">
       <div>
         <h3 class="a-subtitle">版主管理</h3>
         <p class="a-muted">为版主分配负责分类，并独立控制审核分类、置顶、锁帖权限。</p>
       </div>
-      <ABtn
+      <PButton
         variant="secondary"
         size="sm"
         :disabled="loading"
@@ -14,12 +14,12 @@
         @click="refresh"
       >
         刷新
-      </ABtn>
+      </PButton>
     </div>
 
     <div class="setting-forum-moderator__form">
-      <AInput v-model="query" label="搜索版主用户" placeholder="输入用户名或显示名" />
-      <ABtn
+      <PInput v-model="query" label="搜索版主用户" placeholder="输入用户名或显示名" />
+      <PButton
         variant="secondary"
         size="sm"
         :disabled="searching || !query.trim()"
@@ -28,15 +28,15 @@
         @click="searchUsers"
       >
         搜索用户
-      </ABtn>
+      </PButton>
 
-      <ASelect
+      <PSelect
         v-model="selectedUserId"
         label="选择版主"
         :options="userOptions"
         placeholder="先搜索再选择"
       />
-      <ASelect
+      <PSelect
         v-model="selectedCategoryValue"
         label="负责分类"
         :options="categoryOptions"
@@ -59,7 +59,7 @@
       </div>
 
       <div class="setting-forum-moderator__actions">
-        <ABtn
+        <PButton
           size="sm"
           :disabled="saving || !selectedUserId"
           :loading="saving"
@@ -67,15 +67,15 @@
           @click="saveAssignment"
         >
           {{ editingId ? '更新分配' : '新增分配' }}
-        </ABtn>
-        <ABtn
+        </PButton>
+        <PButton
           v-if="editingId"
           size="sm"
           variant="secondary"
           @click="resetForm"
         >
           取消编辑
-        </ABtn>
+        </PButton>
       </div>
     </div>
 
@@ -83,7 +83,7 @@
     <p v-if="error" class="setting-forum-moderator__message setting-forum-moderator__message--error">{{ error }}</p>
 
     <div v-if="assignments.length" class="setting-forum-moderator__list">
-      <ASurface
+      <PSurface
         v-for="assignment in assignments"
         :key="assignment.id"
         class="setting-forum-moderator__row"
@@ -101,8 +101,8 @@
         </div>
 
         <div class="setting-forum-moderator__row-actions">
-          <ABtn size="sm" variant="secondary" @click="startEdit(assignment)">编辑</ABtn>
-          <ABtn
+          <PButton size="sm" variant="secondary" @click="startEdit(assignment)">编辑</PButton>
+          <PButton
             size="sm"
             variant="danger"
             :disabled="deletingId === assignment.id"
@@ -111,22 +111,22 @@
             @click="removeAssignment(assignment.id)"
           >
             删除
-          </ABtn>
+          </PButton>
         </div>
-      </ASurface>
+      </PSurface>
     </div>
 
     <p v-else class="setting-forum-moderator__empty">暂未分配任何版主。</p>
-  </ASurface>
+  </PSurface>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import ABtn from '@/components/ui/ABtn.vue'
-import AInput from '@/components/ui/AInput.vue'
-import ASelect from '@/components/ui/ASelect.vue'
-import ASurface from '@/components/ui/ASurface.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PSurface from '@/components/ui/PSurface.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 

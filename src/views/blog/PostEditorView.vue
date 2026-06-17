@@ -34,8 +34,8 @@
         <!-- 主编辑区 -->
         <main class="col-center a-card-sm">
           <div class="editor-mobile-actions">
-            <ABtn type="button" variant="secondary" size="sm" @click="mobilePanel = mobilePanel === 'outline' ? null : 'outline'">目录</ABtn>
-            <ABtn type="button" variant="secondary" size="sm" @click="mobilePanel = mobilePanel === 'settings' ? null : 'settings'">设置</ABtn>
+            <PButton type="button" variant="secondary" size="sm" @click="mobilePanel = mobilePanel === 'outline' ? null : 'outline'">目录</PButton>
+            <PButton type="button" variant="secondary" size="sm" @click="mobilePanel = mobilePanel === 'settings' ? null : 'settings'">设置</PButton>
           </div>
 
           <div v-if="contentReady" class="editor-workspace">
@@ -55,7 +55,7 @@
                 <p class="collab-mode-banner__text">协作编辑请使用专业模式</p>
               </div>
               <div class="editor-body">
-                <AEditor
+                <PEditor
                   ref="editorRef"
                   v-model="editorBody"
                   :mode="editorMode"
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <AModal v-if="recoveryModalVisible && pendingDraftCandidate" :title="recoveryModalTitle" size="md" @close="keepCurrentContent">
+    <PModal v-if="recoveryModalVisible && pendingDraftCandidate" :title="recoveryModalTitle" size="md" @close="keepCurrentContent">
       <div class="draft-recovery-body">
         <span class="a-label">{{ recoveryModalLabel }}</span>
         <p class="draft-recovery-text">
@@ -97,14 +97,14 @@
 
       <template #footer>
         <div class="draft-recovery-actions">
-          <ABtn type="button" variant="secondary" @click="keepCurrentContent">{{ keepCurrentContentLabel }}</ABtn>
-          <ABtn v-if="!isCollabConflict" type="button" variant="ghost" @click="discardPendingDraft">丢弃草稿</ABtn>
-          <ABtn type="button" variant="primary" @click="restorePendingDraft">恢复草稿</ABtn>
+          <PButton type="button" variant="secondary" @click="keepCurrentContent">{{ keepCurrentContentLabel }}</PButton>
+          <PButton v-if="!isCollabConflict" type="button" variant="ghost" @click="discardPendingDraft">丢弃草稿</PButton>
+          <PButton type="button" variant="primary" @click="restorePendingDraft">恢复草稿</PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
-    <AModal v-if="draftManagerVisible" title="草稿管理" size="md" @close="closeDraftManager">
+    <PModal v-if="draftManagerVisible" title="草稿管理" size="md" @close="closeDraftManager">
       <div class="draft-manager-body">
         <div class="draft-manager-grid">
           <div class="draft-manager-card a-card-sm">
@@ -134,36 +134,36 @@
 
       <template #footer>
         <div class="draft-recovery-actions">
-          <ABtn type="button" variant="secondary" @click="closeDraftManager">关闭</ABtn>
-          <ABtn
+          <PButton type="button" variant="secondary" @click="closeDraftManager">关闭</PButton>
+          <PButton
             v-if="authStore.token && hasMeaningfulDraft(draftPayload)"
             type="button"
             variant="secondary"
             @click="syncDraftNow"
           >
             立即同步
-          </ABtn>
-          <ABtn
+          </PButton>
+          <PButton
             v-if="hasDraftManagerAccess"
             type="button"
             variant="ghost"
             @click="clearSavedDrafts"
           >
             清除已保存草稿
-          </ABtn>
-          <ABtn
+          </PButton>
+          <PButton
             v-if="deferredDraftCandidate"
             type="button"
             variant="primary"
             @click="restoreDeferredFromManager"
           >
             恢复最新草稿
-          </ABtn>
+          </PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
 
-    <AModal v-if="leaveConfirmVisible" title="草稿仍在同步" size="sm" @close="cancelLeave">
+    <PModal v-if="leaveConfirmVisible" title="草稿仍在同步" size="sm" @close="cancelLeave">
       <div class="leave-confirm-body">
         <p class="leave-confirm-text">{{ leaveConfirmText }}</p>
         <p class="a-muted">继续离开会中断当前这次保存或同步，最新改动可能无法写入草稿。</p>
@@ -171,11 +171,11 @@
 
       <template #footer>
         <div class="draft-recovery-actions">
-          <ABtn type="button" variant="secondary" @click="cancelLeave">留在此页</ABtn>
-          <ABtn type="button" variant="primary" @click="confirmLeave">继续离开</ABtn>
+          <PButton type="button" variant="secondary" @click="cancelLeave">留在此页</PButton>
+          <PButton type="button" variant="primary" @click="confirmLeave">继续离开</PButton>
         </div>
       </template>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
@@ -183,12 +183,12 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
-import AEditor from '@/components/shared/AEditor.vue'
+import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import { useAutoSave } from '@/composables/useAutoSave'
-import ABtn from '@/components/ui/ABtn.vue'
-import AModal from '@/components/ui/AModal.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { BlogDraft, Collection } from '@/types'
@@ -236,7 +236,7 @@ type DraftCandidate = {
 }
 type EditorSessionState = 'awaiting-collab' | 'collab-conflict' | 'collab-active' | 'local-edit'
 
-const editorRef = ref<InstanceType<typeof AEditor> | null>(null)
+const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
 const activeHeadingLine = ref<number | null>(null)
 const mobilePanel = ref<'outline' | 'settings' | null>(null)
 const editorMode = ref<'normal' | 'split'>('normal')
@@ -1780,7 +1780,7 @@ onBeforeUnmount(() => {
   }
 
   .draft-status,
-  .editor-meta-actions :deep(.a-btn) {
+  .editor-meta-actions :deep(.p-button) {
     width: 100%;
     justify-content: center;
   }

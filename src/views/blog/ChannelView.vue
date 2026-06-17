@@ -1,41 +1,41 @@
 <template>
   <div class="a-page-xl">
-    <AToast v-model="toastVisible" :message="toastMessage" />
+    <PToast v-model="toastVisible" :message="toastMessage" />
     <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
       <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
     </div>
 
-    <AEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
+    <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
 
     <template v-else>
       <!-- Channel header -->
-      <APageHeader :title="channel.name" accent :sub="channel.description">
+      <PPageHeader :title="channel.name" accent :sub="channel.description">
         <template #action>
           <div class="paper-actions-row">
-            <PaperClip
+            <PClip
               v-if="authStore.isAuthenticated && !isOwner"
               :disabled="channelSubscribeLoading"
               @click="toggleChannelSubscribe"
             >
               {{ channelSubscribeLoading ? '处理中...' : (channelSubscribed ? '已订阅' : '订阅') }}
-            </PaperClip>
-            <PaperClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
-            <PaperLink
+            </PClip>
+            <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
+            <PLink
               v-if="isOwner"
               :href="`/channel/${channel.slug || channel.id}/manage?site=blog`"
               label="管理"
             />
-            <PaperLink
+            <PLink
               v-if="isOwner"
               :href="`/post/new?site=blog&channel=${channel.id}`"
               label="写文章"
             />
           </div>
         </template>
-      </APageHeader>
+      </PPageHeader>
 
       <!-- Author info -->
-      <ASurface class="channel-meta-card" :layer="1">
+      <PSurface class="channel-meta-card" :layer="1">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">作者</p>
           <a
@@ -47,7 +47,7 @@
           <p class="a-label a-muted" style="margin-bottom:.4rem">更新时间</p>
           <p style="font-weight:700;margin:0">{{ formatDate(channel.updated_at) }}</p>
         </div>
-      </ASurface>
+      </PSurface>
 
       <!-- Two-column layout: left collections, right posts -->
       <div class="channel-body">
@@ -55,17 +55,17 @@
         <aside class="collection-sidebar">
           <div class="section-headline">
             <h2 class="a-subtitle" style="margin:0;font-size:.875rem">合集</h2>
-            <PaperClip v-if="isOwner" label="新建合集" @click="openCollectionModal()" />
+            <PClip v-if="isOwner" label="新建合集" @click="openCollectionModal()" />
           </div>
 
           <div class="collection-list">
-            <PaperTab
+            <PTab
               :active="activeCollectionId === null"
               @click="activeCollectionId = null"
             >
               全部内容 <span class="collection-count">{{ channelPosts.length }}</span>
-            </PaperTab>
-            <PaperTab
+            </PTab>
+            <PTab
               v-for="col in collections"
               :key="col.id"
               :active="activeCollectionId === col.id"
@@ -73,15 +73,15 @@
             >
               <span class="a-clamp-1">{{ col.name }}</span>
               <span class="collection-count">{{ postCountByCollection(col.id) }}</span>
-            </PaperTab>
+            </PTab>
           </div>
         </aside>
 
         <!-- Right: posts -->
         <main class="post-main">
-          <AEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
+          <PEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
           <div v-else class="post-list">
-            <PaperEntry
+            <PEntry
               v-for="post in filteredPosts"
               :key="post.id"
               :title="post.title"
@@ -94,69 +94,70 @@
               </template>
               <template #actions>
                 <div style="display:flex;gap:.75rem;align-items:center">
-                  <PaperClip
+                  <PClip
                     :active="starredIds.has(post.id)"
                     :label="starredIds.has(post.id) ? '退藏' : '收藏'"
                     @click="toggleStar(post.id)"
                   />
-                  <PaperClip
+                  <PClip
                     :active="readingListIds.has(post.id)"
                     :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
                     @click="toggleReadingList(post.id)"
                   />
-                  <PaperLink :href="`/post/${post.id}?site=blog`" label="查看" />
-                  <PaperLink
+                  <PLink :href="`/post/${post.id}?site=blog`" label="查看" />
+                  <PLink
                     v-if="isOwner"
                     :href="`/post/${post.id}/edit?site=blog`"
                     label="编辑"
                   />
                 </div>
               </template>
-            </PaperEntry>
+            </PEntry>
           </div>
         </main>
       </div>
     </template>
 
     <!-- Collection Modal -->
-    <AModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
+    <PModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
       <h3 class="a-subtitle" style="margin-bottom:1.5rem">{{ editingCollection ? '编辑合集' : '新建合集' }}</h3>
       <div style="display:flex;flex-direction:column;gap:1rem">
         <input v-model="collectionForm.name" placeholder="合集名称*" class="a-input" />
         <textarea v-model="collectionForm.description" placeholder="合集描述（可选）" rows="3" class="a-textarea" />
       </div>
       <div class="modal-actions">
-        <PaperPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
-        <PaperPress :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
+        <PPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
+        <PPress :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
           {{ editingCollection ? '更新' : '创建' }}
-        </PaperPress>
+        </PPress>
       </div>
-    </AModal>
+    </PModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import AModal from '@/components/ui/AModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PModal from '@/components/ui/PModal.vue'
 import type { Channel, Collection, Post } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
-import AToast from '@/components/ui/AToast.vue'
-import ACard from '@/components/ui/ACard.vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperAvatar from '@/components/ui/PaperAvatar.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperLink from '@/components/ui/PaperLink.vue'
-import PaperTab from '@/components/ui/PaperTab.vue'
-import PaperPress from '@/components/ui/PaperPress.vue'
+import PToast from '@/components/ui/PToast.vue'
+import PCard from '@/components/ui/PCard.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PLink from '@/components/ui/PLink.vue'
+import PTab from '@/components/ui/PTab.vue'
+import PPress from '@/components/ui/PPress.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
 
+const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()
 const api = useApi()
 const authStore = useAuthStore()
@@ -180,7 +181,8 @@ const toastMessage = ref('')
 
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
 const routeParam = computed(() => {
-  if (siteContext.value.type === 'channel') return siteContext.value.slug
+  if (props.entityHandle) return props.entityHandle
+  if (siteContext.value.type === 'entity') return siteContext.value.handle
   return typeof route.params.slug === 'string' ? route.params.slug : typeof route.params.id === 'string' ? route.params.id : ''
 })
 const isSlug = computed(() => !/^[0-9a-f-]{36}$/.test(routeParam.value))

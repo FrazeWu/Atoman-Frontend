@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Video } from '@/types'
-import VideoCard from '@/components/shared/VideoCard.vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PVideoCard from '@/components/shared/PVideoCard.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 defineProps<{
   videos: Video[]
@@ -17,10 +17,10 @@ const emit = defineEmits<{
   <aside class="vcl">
     <div class="vcl-header">
       <h2 class="vcl-title">同频道继续看</h2>
-      <ABtn v-if="showNextPrompt && videos.length" size="sm" @click="emit('playNext')">播放下一条</ABtn>
+      <PButton v-if="showNextPrompt && videos.length" size="sm" @click="emit('playNext')">播放下一条</PButton>
     </div>
     <div v-if="videos.length" class="vcl-list">
-      <VideoCard v-for="video in videos" :key="video.id" :video="video" />
+      <PVideoCard v-for="video in videos" :key="video.id" :video="video" />
     </div>
     <p v-else class="vcl-empty">暂无同频道视频</p>
   </aside>

@@ -1,31 +1,31 @@
 <template>
-  <ASurface class="music-sources" tone="soft" :layer="0">
+  <PSurface class="music-sources" tone="soft" :layer="0">
     <div class="music-sources__header">
       <div>
         <h3 class="music-sources__title">来源</h3>
         <p class="music-sources__hint">为每条变更保留可核查链接。</p>
       </div>
-      <ABtn type="button" kind="ghost" @click="addSource">添加来源</ABtn>
+      <PButton type="button" kind="ghost" @click="addSource">添加来源</PButton>
     </div>
 
     <div v-if="sources.length" class="music-sources__list">
       <div v-for="source in sources" :key="source.id" class="music-sources__item">
-        <AInput :model-value="source.title" label="来源标题" placeholder="来源标题" @update:model-value="(value) => updateSource(source.id, 'title', value)" />
-        <AInput :model-value="source.url" label="来源链接" placeholder="https://..." @update:model-value="(value) => updateSource(source.id, 'url', value)" />
-        <ABtn type="button" variant="ghost" @click="removeSource(source.id)">移除</ABtn>
+        <PInput :model-value="source.title" label="来源标题" placeholder="来源标题" @update:model-value="(value) => updateSource(source.id, 'title', value)" />
+        <PInput :model-value="source.url" label="来源链接" placeholder="https://..." @update:model-value="(value) => updateSource(source.id, 'url', value)" />
+        <PButton type="button" variant="ghost" @click="removeSource(source.id)">移除</PButton>
       </div>
     </div>
 
-    <AEmpty v-else description="尚未添加来源" />
-  </ASurface>
+    <PEmpty v-else description="尚未添加来源" />
+  </PSurface>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AInput from '@/components/ui/AInput.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import type { MusicSourceDraft } from './types'
 
 const props = defineProps<{

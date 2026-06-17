@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { installRouteGuards } from '@/router/guards'
 import { resolveSiteContext } from '@/router/siteContext'
-import { channelRoutes, userRoutes } from '@/router/routes/entities'
+import { userRoutes } from '@/router/routes/entities'
 import { moduleRoutes } from '@/router/routes/modules'
 import { unknownRoutes } from '@/router/routes/unknown'
 import { portalRoutes } from '@/router/routes/portal'
@@ -11,8 +11,7 @@ function routesForCurrentSite(): RouteRecordRaw[] {
 
   if (context.type === 'portal') return portalRoutes
   if (context.type === 'module') return moduleRoutes[context.module]
-  if (context.type === 'user') return userRoutes
-  if (context.type === 'channel') return channelRoutes
+  if (context.type === 'entity') return userRoutes
   return unknownRoutes
 }
 

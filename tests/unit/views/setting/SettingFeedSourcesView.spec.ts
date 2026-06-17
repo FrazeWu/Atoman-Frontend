@@ -24,11 +24,11 @@ vi.mock('@/stores/adminFeedSources', () => ({
 import SettingFeedSourcesView from '@/views/setting/SettingFeedSourcesView.vue'
 
 const stubs = {
-  AEmpty: defineComponent({ template: '<section><slot />{{ title }}{{ description }}</section>', props: ['title', 'description'] }),
-  APageHeader: defineComponent({ template: '<header>{{ title }}{{ sub }}</header>', props: ['title', 'sub'] }),
-  PaperClip: defineComponent({ template: '<button><slot /></button>' }),
-  PaperEntry: defineComponent({ template: '<article><slot /><slot name="meta" /><slot name="actions" /></article>' }),
-  PaperReject: defineComponent({ template: '<button><slot /></button>' }),
+  PEmpty: defineComponent({ template: '<section><slot />{{ title }}{{ description }}</section>', props: ['title', 'description'] }),
+  PPageHeader: defineComponent({ template: '<header>{{ title }}{{ sub }}</header>', props: ['title', 'sub'] }),
+  PClip: defineComponent({ template: '<button><slot /></button>' }),
+  PEntry: defineComponent({ template: '<article><slot /><slot name="meta" /><slot name="actions" /></article>' }),
+  PReject: defineComponent({ template: '<button><slot /></button>' }),
   SettingFeedSourcePanel: defineComponent({
     props: {
       fullTextMode: { type: String, required: true },

@@ -1,25 +1,25 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <APageHeader title="探索" accent sub="发现更多有趣的订阅内容">
+    <PPageHeader title="探索" accent sub="发现更多有趣的订阅内容">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
-          <PaperTab label="随机" :active="sort === 'random'" @click="changeSort('random')" />
-          <PaperTab label="热门" :active="sort === 'popular'" @click="changeSort('popular')" />
+          <PTab label="随机" :active="sort === 'random'" @click="changeSort('random')" />
+          <PTab label="热门" :active="sort === 'popular'" @click="changeSort('popular')" />
           <div style="width:1.5rem"></div>
-          <ABtn to="/" outline size="sm">返回订阅</ABtn>
+          <PButton to="/" outline size="sm">返回订阅</PButton>
         </div>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div v-if="loading" class="feed-loading">
       <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
     </div>
 
-    <AEmpty v-else-if="!items.length" text="暂无发现内容" />
+    <PEmpty v-else-if="!items.length" text="暂无发现内容" />
 
     <div v-else class="feed-timeline">
       <template v-for="(item, index) in items" :key="itemKey(item)">
-        <PaperEntry
+        <PEntry
           v-if="item.type === 'feed_item' && item.feed_item"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
@@ -29,8 +29,8 @@
         >
           <template #visual>
             <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PaperBadge type="external" fill>外部</PaperBadge>
-              <PaperBadge type="external">{{ getExternalBadge(item.feed_item) }}</PaperBadge>
+              <PBadge type="external" fill>外部</PBadge>
+              <PBadge type="external">{{ getExternalBadge(item.feed_item) }}</PBadge>
             </div>
           </template>
 
@@ -40,19 +40,19 @@
           </template>
 
           <template #actions>
-            <PaperClip
+            <PClip
               v-if="authStore.isAuthenticated"
               :active="starredIds.has(item.feed_item.id)"
               :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
               @click="toggleStar(item.feed_item.id)"
             />
-            <PaperClip
+            <PClip
               v-if="authStore.isAuthenticated"
               :active="readingListIds.has(item.feed_item.id)"
               :label="readingListIds.has(item.feed_item.id) ? '移除' : '稍后阅读'"
               @click="toggleReadingList(item.feed_item.id)"
             />
-            <PaperClip
+            <PClip
               v-if="item.feed_item.enclosure_url"
               :label="isPodcastPlaying(item.feed_item) ? '■ 播放中' : '▶ 播放播客'"
               @click.stop="playPodcast(item.feed_item)"
@@ -62,7 +62,7 @@
               ↗ 原文
             </a>
           </template>
-        </PaperEntry>
+        </PEntry>
       </template>
 
       <FeedTimelineFooter
@@ -74,7 +74,7 @@
       />
     </div>
 
-    <ShortcutHints :hints="shortcutHints" />
+    <PShortcutHints :hints="shortcutHints" />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
   </div>
 </template>
@@ -82,14 +82,14 @@
 <script setup lang="ts">
 import { nextTick, ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import PaperTab from '@/components/ui/PaperTab.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
-import PaperBadge from '@/components/ui/PaperBadge.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import ShortcutHints from '@/components/ui/ShortcutHints.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PTab from '@/components/ui/PTab.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'

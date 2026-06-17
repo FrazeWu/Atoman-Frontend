@@ -27,7 +27,7 @@ describe('FirstLoginOnboarding', () => {
       global: {
         plugins: [router],
         stubs: {
-          PaperPress: { template: '<button>{{ label }}</button>', props: ['label'] },
+          PPress: { template: '<button>{{ label }}</button>', props: ['label'] },
         },
       },
     })

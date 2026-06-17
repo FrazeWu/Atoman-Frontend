@@ -1,6 +1,6 @@
 <template>
   <div class="album-editor-shell">
-    <APageHeader :title="title" :sub="subtitle" kicker="Music Edit" accent />
+    <PPageHeader :title="title" :sub="subtitle" kicker="Music Edit" accent />
 
     <MusicSection>
       <template #title>
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import MusicAlbumMetaSection from './MusicAlbumMetaSection.vue'
 import MusicCoverSection from './MusicCoverSection.vue'
 import MusicReviewNotesSection from './MusicReviewNotesSection.vue'

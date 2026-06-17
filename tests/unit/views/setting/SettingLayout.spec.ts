@@ -30,8 +30,8 @@ describe('SettingLayout', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          ACard: { template: '<div><slot /></div>' },
-          ASectionHeader: { template: '<div><slot /></div>' },
+          PCard: { template: '<div><slot /></div>' },
+          PSectionHeader: { template: '<div><slot /></div>' },
         },
       },
     })
@@ -53,8 +53,8 @@ describe('SettingLayout', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          ACard: { template: '<div><slot /></div>' },
-          ASectionHeader: { template: '<div><slot /></div>' },
+          PCard: { template: '<div><slot /></div>' },
+          PSectionHeader: { template: '<div><slot /></div>' },
         },
       },
     })
@@ -76,8 +76,8 @@ describe('SettingLayout', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          ACard: { template: '<div><slot /></div>' },
-          ASectionHeader: { template: '<div><slot /></div>' },
+          PCard: { template: '<div><slot /></div>' },
+          PSectionHeader: { template: '<div><slot /></div>' },
         },
       },
     })
@@ -103,8 +103,8 @@ describe('SettingLayout', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          ACard: { template: '<div><slot /></div>' },
-          ASectionHeader: { template: '<div><slot /></div>' },
+          PCard: { template: '<div><slot /></div>' },
+          PSectionHeader: { template: '<div><slot /></div>' },
         },
       },
     })

@@ -1,14 +1,14 @@
 <template>
-  <ASurface class="music-tracks" tone="soft" :layer="0">
+  <PSurface class="music-tracks" tone="soft" :layer="0">
     <div class="music-tracks__header">
       <div>
         <h3 class="music-tracks__title">曲目</h3>
         <p class="music-tracks__hint">支持标题编辑、顺序调整和移除。</p>
       </div>
-      <ABtn v-if="tracks.length" type="button" variant="ghost" @click="clearTracks">清空</ABtn>
+      <PButton v-if="tracks.length" type="button" variant="ghost" @click="clearTracks">清空</PButton>
     </div>
 
-    <AEmpty v-if="!tracks.length" description="尚未添加曲目" />
+    <PEmpty v-if="!tracks.length" description="尚未添加曲目" />
 
     <div v-else class="music-tracks__list">
       <div v-for="(track, index) in tracks" :key="track.id" class="music-tracks__item">
@@ -18,28 +18,28 @@
         </div>
 
         <div class="music-tracks__fields">
-          <AInput :model-value="track.title" label="曲目名" placeholder="输入曲目名" @update:model-value="(value) => updateTrack(track.id, 'title', value)" />
-          <AInput :model-value="track.trackNumber" label="曲序" placeholder="1" @update:model-value="(value) => updateTrack(track.id, 'trackNumber', value)" />
+          <PInput :model-value="track.title" label="曲目名" placeholder="输入曲目名" @update:model-value="(value) => updateTrack(track.id, 'title', value)" />
+          <PInput :model-value="track.trackNumber" label="曲序" placeholder="1" @update:model-value="(value) => updateTrack(track.id, 'trackNumber', value)" />
         </div>
 
         <div class="music-tracks__actions">
-          <PaperClip type="button" :disabled="index === 0" @click="moveTrack(index, -1)">上移</PaperClip>
-          <PaperClip type="button" :disabled="index === tracks.length - 1" @click="moveTrack(index, 1)">下移</PaperClip>
-          <PaperReject type="button" @click="removeTrack(track.id)">移除</PaperReject>
+          <PClip type="button" :disabled="index === 0" @click="moveTrack(index, -1)">上移</PClip>
+          <PClip type="button" :disabled="index === tracks.length - 1" @click="moveTrack(index, 1)">下移</PClip>
+          <PReject type="button" @click="removeTrack(track.id)">移除</PReject>
         </div>
       </div>
     </div>
-  </ASurface>
+  </PSurface>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import ASurface from '@/components/ui/ASurface.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import AInput from '@/components/ui/AInput.vue'
-import PaperClip from '@/components/ui/PaperClip.vue'
-import PaperReject from '@/components/ui/PaperReject.vue'
+import PSurface from '@/components/ui/PSurface.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PClip from '@/components/ui/PClip.vue'
+import PReject from '@/components/ui/PReject.vue'
 import type { MusicTrackDraft } from './types'
 
 const props = defineProps<{

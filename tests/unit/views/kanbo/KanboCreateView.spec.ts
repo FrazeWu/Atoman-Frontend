@@ -111,6 +111,6 @@ describe('KanboCreateView', () => {
       },
     })
 
-    expect(wrapper.getComponent({ name: 'ABtn' }).props('to')).toContain('site=blog')
+    expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('site=blog')
   })
 })

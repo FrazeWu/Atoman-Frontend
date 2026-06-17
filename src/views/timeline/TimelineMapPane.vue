@@ -25,10 +25,10 @@
           <div v-if="mapPopupEvent.location" class="tl-popup-location">{{ mapPopupEvent.location }}</div>
           <div v-if="mapPopupEvent.category" class="tl-popup-category">{{ mapPopupEvent.category }}</div>
           <div class="tl-popup-actions">
-            <ABtn size="sm" @click.stop="emit('toggleCompare', mapPopupEvent)">
+            <PButton size="sm" @click.stop="emit('toggleCompare', mapPopupEvent)">
               {{ isCompared(mapPopupEvent.id) ? '移出对比' : '加入对比' }}
-            </ABtn>
-            <ABtn size="sm" variant="secondary" @click.stop="emit('openDetail', mapPopupEvent)">展开详情</ABtn>
+            </PButton>
+            <PButton size="sm" variant="secondary" @click.stop="emit('openDetail', mapPopupEvent)">展开详情</PButton>
           </div>
         </template>
       </div>
@@ -50,7 +50,7 @@ import { fromLonLat } from 'ol/proj'
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style'
 import Overlay from 'ol/Overlay'
 import type { TimelineEvent } from '@/types'
-import ABtn from '@/components/ui/ABtn.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const props = defineProps<{
   mapRenderableEvents: TimelineEvent[]

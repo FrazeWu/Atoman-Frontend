@@ -2,60 +2,60 @@
   <section class="timeline-event-form">
     <div class="form-group">
       <label class="form-label">标题 *</label>
-      <AInput :model-value="form.title" placeholder="事件标题" @update:model-value="(value) => updateField('title', value)" />
+      <PInput :model-value="form.title" placeholder="事件标题" @update:model-value="(value) => updateField('title', value)" />
     </div>
 
     <div class="form-row">
       <div class="form-group form-group-grow">
         <label class="form-label">事件时间 *</label>
-        <DatetimePicker :model-value="form.event_date" placeholder="选择事件时间" @update:model-value="(value) => updateField('event_date', value)" />
+        <PDatetimePicker :model-value="form.event_date" placeholder="选择事件时间" @update:model-value="(value) => updateField('event_date', value)" />
       </div>
       <div class="form-group form-group-grow">
         <label class="form-label">结束时间 (可选)</label>
-        <DatetimePicker :model-value="form.end_date" placeholder="选择结束时间" @update:model-value="(value) => updateField('end_date', value)" />
+        <PDatetimePicker :model-value="form.end_date" placeholder="选择结束时间" @update:model-value="(value) => updateField('end_date', value)" />
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group form-group-grow">
         <label class="form-label">所在位置 *</label>
-        <AInput :model-value="form.location" placeholder="如 巴黎, 法国" @update:model-value="(value) => updateField('location', value)" />
+        <PInput :model-value="form.location" placeholder="如 巴黎, 法国" @update:model-value="(value) => updateField('location', value)" />
       </div>
       <div class="form-group form-group-grow">
         <label class="form-label">分类</label>
-        <AInput :model-value="form.category" placeholder="如 政治、科技、文化" @update:model-value="(value) => updateField('category', value)" />
+        <PInput :model-value="form.category" placeholder="如 政治、科技、文化" @update:model-value="(value) => updateField('category', value)" />
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group form-group-grow">
         <label class="form-label">纬度</label>
-        <AInput :model-value="displayLatitude" type="number" placeholder="48.8566" @update:model-value="(value) => updateNumberField('latitude', value)" />
+        <PInput :model-value="displayLatitude" type="number" placeholder="48.8566" @update:model-value="(value) => updateNumberField('latitude', value)" />
       </div>
       <div class="form-group form-group-grow">
         <label class="form-label">经度</label>
-        <AInput :model-value="displayLongitude" type="number" placeholder="2.3522" @update:model-value="(value) => updateNumberField('longitude', value)" />
+        <PInput :model-value="displayLongitude" type="number" placeholder="2.3522" @update:model-value="(value) => updateNumberField('longitude', value)" />
       </div>
     </div>
 
     <div class="form-group">
       <label class="form-label">来源 *</label>
-      <AInput :model-value="form.source" placeholder="如 《法国大革命史》第3章 / https://..." @update:model-value="(value) => updateField('source', value)" />
+      <PInput :model-value="form.source" placeholder="如 《法国大革命史》第3章 / https://..." @update:model-value="(value) => updateField('source', value)" />
     </div>
 
     <div class="form-group">
       <label class="form-label">摘要</label>
-      <ATextarea :model-value="form.description" :rows="2" placeholder="一句话简介" @update:model-value="(value) => updateField('description', value)" />
+      <PTextarea :model-value="form.description" :rows="2" placeholder="一句话简介" @update:model-value="(value) => updateField('description', value)" />
     </div>
 
     <div class="form-group">
       <label class="form-label">内容</label>
-      <ATextarea :model-value="form.content" :rows="5" placeholder="详细描述（支持 Markdown）" @update:model-value="(value) => updateField('content', value)" />
+      <PTextarea :model-value="form.content" :rows="5" placeholder="详细描述（支持 Markdown）" @update:model-value="(value) => updateField('content', value)" />
     </div>
 
     <div class="form-group">
       <label class="form-label">标签</label>
-      <AInput :model-value="tagsInput" placeholder="战争, 革命, 法国" @update:model-value="(value) => $emit('update:tagsInput', value)" />
+      <PInput :model-value="tagsInput" placeholder="战争, 革命, 法国" @update:model-value="(value) => $emit('update:tagsInput', value)" />
     </div>
 
     <label class="timeline-event-form__public-toggle">
@@ -67,9 +67,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import AInput from '@/components/ui/AInput.vue'
-import ATextarea from '@/components/ui/ATextarea.vue'
-import DatetimePicker from '@/components/ui/DatetimePicker.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 
 type TimelineEventFormDraft = {
   title: string

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import ABtn from '@/components/ui/ABtn.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
 import KanboCollectionRail from '@/components/kanbo/KanboCollectionRail.vue'
 import KanboCollectionWorkspace from '@/components/kanbo/KanboCollectionWorkspace.vue'
 import KanboMixedFeedSection from '@/components/kanbo/KanboMixedFeedSection.vue'
@@ -56,17 +56,17 @@ watch(currentKanboChannelId, channelId => {
 
 <template>
   <div class="a-page">
-    <APageHeader title="创作" sub="在当前频道内统一管理文章、播客与视频。" accent>
+    <PPageHeader title="创作" sub="在当前频道内统一管理文章、播客与视频。" accent>
       <template #action>
-        <ABtn
+        <PButton
           data-testid="kanbo-publish-button"
           :to="publishPath || undefined"
           :disabled="!selectedCollectionId"
         >
           发布
-        </ABtn>
+        </PButton>
       </template>
-    </APageHeader>
+    </PPageHeader>
 
     <div class="kanbo-toolbar">
       <label class="kanbo-label" for="kanbo-channel">频道</label>

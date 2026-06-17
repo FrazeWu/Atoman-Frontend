@@ -69,21 +69,21 @@ describe('ChannelView', () => {
     const wrapper = mount(ChannelView, {
       global: {
         stubs: {
-          AEmpty: true,
-          APageHeader: true,
-          AModal: true,
-          AToast: true,
-          ACard: true,
-          ASurface: { template: '<section><slot /></section>' },
-          PaperAvatar: true,
-          PaperTab: true,
-          PaperPress: true,
-          PaperLink: true,
-          PaperEntry: {
+          PEmpty: true,
+          PPageHeader: true,
+          PModal: true,
+          PToast: true,
+          PCard: true,
+          PSurface: { template: '<section><slot /></section>' },
+          PAvatar: true,
+          PTab: true,
+          PPress: true,
+          PLink: true,
+          PEntry: {
             props: ['title', 'summary'],
             template: '<article><h3>{{ title }}</h3><div @click.stop><slot name="actions" /></div></article>',
           },
-          PaperClip: {
+          PClip: {
             props: ['label', 'active'],
             emits: ['click'],
             template: '<button type="button" :data-active="active" @click="$emit(\'click\', $event)">{{ label }}</button>',

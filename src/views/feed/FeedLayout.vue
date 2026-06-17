@@ -1,11 +1,11 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PaperSidebar
+    <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
       storage-key="atoman.feed.sidebar.collapsed"
     >
-      <PaperSidebarItem
+      <PSidebarItem
         v-for="(item, index) in navItems"
         :key="item.to"
         :to="item.to"
@@ -15,7 +15,7 @@
         :exact="item.exact"
       >
         {{ item.label }}
-      </PaperSidebarItem>
+      </PSidebarItem>
 
       <template #bottom>
         <FeedSidebarSources
@@ -28,7 +28,7 @@
           @manage="openManageSheet"
         />
       </template>
-    </PaperSidebar>
+    </PSidebar>
     <main class="a-main-content">
       <router-view />
     </main>
@@ -40,8 +40,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Bookmark, Compass, Rss, Star } from 'lucide-vue-next'
 import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
-import PaperSidebar from '@/components/ui/PaperSidebar.vue'
-import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
+import PSidebar from '@/components/ui/PSidebar.vue'
+import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'

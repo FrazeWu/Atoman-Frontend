@@ -6,7 +6,7 @@ const layoutSource = readFileSync(resolve(__dirname, '../../../../src/views/kanb
 
 describe('KanboLayout', () => {
   it('renders the six kanbo sidebar entries in order', () => {
-    const labels = [...layoutSource.matchAll(/<PaperSidebarItem[^>]*>([^<]+)<\/PaperSidebarItem>/g)].map((match) => match[1])
+    const labels = [...layoutSource.matchAll(/<PSidebarItem[^>]*>([^<]+)<\/PSidebarItem>/g)].map((match) => match[1])
     expect(labels).toEqual(['创作', '文章', '视频', '播客', '订阅', '收藏'])
   })
 })

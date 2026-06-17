@@ -26,9 +26,11 @@ describe('resolveSiteContext', () => {
     expect(resolveSiteContext('feed.atoman.org')).toEqual({ type: 'module', module: 'feed' })
   })
 
-  it('resolves user and channel entity subdomains', () => {
-    expect(resolveSiteContext('u-alice.atoman.org')).toEqual({ type: 'user', username: 'alice' })
-    expect(resolveSiteContext('c-design.atoman.org')).toEqual({ type: 'channel', slug: 'design' })
+  it('resolves unified entity subdomains', () => {
+    expect(resolveSiteContext('alice.atoman.org')).toEqual({ type: 'entity', handle: 'alice' })
+    expect(resolveSiteContext('design.atoman.org')).toEqual({ type: 'entity', handle: 'design' })
+    expect(resolveSiteContext('u-alice.atoman.org')).toEqual({ type: 'entity', handle: 'alice', legacyType: 'user' })
+    expect(resolveSiteContext('c-design.atoman.org')).toEqual({ type: 'entity', handle: 'design', legacyType: 'channel' })
   })
 
   it('rejects malformed entity subdomains as unknown', () => {
@@ -38,8 +40,10 @@ describe('resolveSiteContext', () => {
 
   it('supports explicit site override query values', () => {
     expect(resolveSiteContext('localhost', 'site=blog')).toEqual({ type: 'module', module: 'blog' })
-    expect(resolveSiteContext('localhost', 'site=u-alice')).toEqual({ type: 'user', username: 'alice' })
-    expect(resolveSiteContext('localhost', 'site=c-design')).toEqual({ type: 'channel', slug: 'design' })
+    expect(resolveSiteContext('localhost', 'site=alice')).toEqual({ type: 'entity', handle: 'alice' })
+    expect(resolveSiteContext('localhost', 'site=design')).toEqual({ type: 'entity', handle: 'design' })
+    expect(resolveSiteContext('localhost', 'site=u-alice')).toEqual({ type: 'entity', handle: 'alice', legacyType: 'user' })
+    expect(resolveSiteContext('localhost', 'site=c-design')).toEqual({ type: 'entity', handle: 'design', legacyType: 'channel' })
     expect(resolveSiteContext('127.9.8.7', 'site=forum')).toEqual({ type: 'module', module: 'forum' })
     expect(resolveSiteContext('0.0.0.0', 'site=music')).toEqual({ type: 'module', module: 'music' })
     expect(resolveSiteContext('atoman.org', 'site=music')).toEqual({ type: 'module', module: 'music' })
@@ -52,28 +56,29 @@ describe('resolveSiteContext', () => {
 
   it('supports IPv6 localhost dev override', () => {
     expect(resolveSiteContext('[::1]', 'site=blog')).toEqual({ type: 'module', module: 'blog' })
-    expect(resolveSiteContext('::1', 'site=c-design')).toEqual({ type: 'channel', slug: 'design' })
+    expect(resolveSiteContext('::1', 'site=design')).toEqual({ type: 'entity', handle: 'design' })
   })
 
   it('enforces slug boundary rules for entity labels', () => {
     const validThirtyChars = 'a'.repeat(30)
     const invalidThirtyOneChars = 'a'.repeat(31)
 
-    expect(resolveSiteContext('u-a.atoman.org')).toEqual({ type: 'unknown', subdomain: 'u-a' })
-    expect(resolveSiteContext('u-ab.atoman.org')).toEqual({ type: 'user', username: 'ab' })
+    expect(resolveSiteContext('a.atoman.org')).toEqual({ type: 'unknown', subdomain: 'a' })
+    expect(resolveSiteContext('ab.atoman.org')).toEqual({ type: 'entity', handle: 'ab' })
     expect(resolveSiteContext(`u-${validThirtyChars}.atoman.org`)).toEqual({
-      type: 'user',
-      username: validThirtyChars,
+      type: 'entity',
+      handle: validThirtyChars,
+      legacyType: 'user',
     })
     expect(resolveSiteContext(`u-${invalidThirtyOneChars}.atoman.org`)).toEqual({
       type: 'unknown',
       subdomain: `u-${invalidThirtyOneChars}`,
     })
-    expect(resolveSiteContext('c--start.atoman.org')).toEqual({ type: 'unknown', subdomain: 'c--start' })
-    expect(resolveSiteContext('c-end-.atoman.org')).toEqual({ type: 'unknown', subdomain: 'c-end-' })
-    expect(resolveSiteContext('c-under_score.atoman.org')).toEqual({
+    expect(resolveSiteContext('-start.atoman.org')).toEqual({ type: 'unknown', subdomain: '-start' })
+    expect(resolveSiteContext('end-.atoman.org')).toEqual({ type: 'unknown', subdomain: 'end-' })
+    expect(resolveSiteContext('under_score.atoman.org')).toEqual({
       type: 'unknown',
-      subdomain: 'c-under_score',
+      subdomain: 'under_score',
     })
   })
 })

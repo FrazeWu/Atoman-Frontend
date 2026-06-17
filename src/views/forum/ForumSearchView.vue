@@ -1,6 +1,6 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:6rem">
-    <APageHeader title="搜索结果" :sub="searchQuery ? `「${searchQuery}」的搜索结果` : ''"
+    <PPageHeader title="搜索结果" :sub="searchQuery ? `「${searchQuery}」的搜索结果` : ''"
       @back="router.push('/')" />
 
     <!-- Search bar -->
@@ -13,7 +13,7 @@
           class="search-input"
           @keydown.enter="doSearch"
         />
-        <ABtn @click="doSearch">搜索</ABtn>
+        <PButton @click="doSearch">搜索</PButton>
       </div>
     </div>
 
@@ -27,10 +27,10 @@
         找到 {{ forumStore.searchTotal }} 条结果
       </p>
 
-      <AEmpty v-if="forumStore.searchResults.length === 0 && searchQuery" text="没有找到匹配的话题" />
+      <PEmpty v-if="forumStore.searchResults.length === 0 && searchQuery" text="没有找到匹配的话题" />
 
       <div v-if="forumStore.searchResults.length > 0" class="search-results-list">
-        <PaperEntry
+        <PEntry
           v-for="topic in forumStore.searchResults"
           :key="topic.id"
           @click="router.push(`/topic/${topic.id}`)"
@@ -65,12 +65,12 @@
               <span>点赞 {{ topic.like_count }}</span>
             </div>
           </template>
-        </PaperEntry>
+        </PEntry>
       </div>
 
       <!-- Load more -->
       <div v-if="forumStore.searchResults.length < forumStore.searchTotal" style="margin-top:1.5rem;text-align:center">
-        <ABtn outline @click="loadMore" :loading="loadingMore">加载更多</ABtn>
+        <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </template>
   </div>
@@ -80,10 +80,10 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
-import APageHeader from '@/components/ui/APageHeader.vue'
-import ABtn from '@/components/ui/ABtn.vue'
-import AEmpty from '@/components/ui/AEmpty.vue'
-import PaperEntry from '@/components/ui/PaperEntry.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 
 const route = useRoute()
 const router = useRouter()

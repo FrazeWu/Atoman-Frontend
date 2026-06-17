@@ -30,7 +30,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   kanbo: {
     key: 'kanbo',
     homePath: '/',
-    name: '刊播',
+    name: '内容',
     helper: '文章、播客、视频',
     homepageSub: '统一管理频道内的文章、播客与视频创作。',
   },
@@ -45,7 +45,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     key: 'blog',
     homePath: '/',
     name: '文章',
-    helper: '刊播内容视图',
+    helper: '内容视图',
     homepageSub: '查看当前频道下的文章内容。',
   },
   forum: {
@@ -73,14 +73,14 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     key: 'podcast',
     homePath: '/',
     name: '播客',
-    helper: '刊播内容视图',
+    helper: '内容视图',
     homepageSub: '查看当前频道下的播客内容。',
   },
   video: {
     key: 'video',
     homePath: '/',
     name: '视频',
-    helper: '刊播内容视图',
+    helper: '内容视图',
     homepageSub: '查看当前频道下的视频内容。',
   },
 }

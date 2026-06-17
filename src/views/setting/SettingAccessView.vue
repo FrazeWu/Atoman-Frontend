@@ -94,6 +94,7 @@
                 </div>
               </div>
 
+              <SettingFeedSourcePanel :full-text-mode="draft.settings.feed.full_text_mode" />
             </div>
 
             <div v-else-if="key === 'blog'" class="setting-access__module-body">
@@ -160,6 +161,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import ABtn from '@/components/ui/ABtn.vue'
 import ASurface from '@/components/ui/ASurface.vue'
 import ASectionHeader from '@/components/ui/ASectionHeader.vue'
+import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { mergeSiteAccess, type SiteAccess } from '@/config/siteAccess'

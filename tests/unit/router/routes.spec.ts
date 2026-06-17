@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { moduleRoutes } from '@/router/routes/modules'
 import { channelRoutes, userRoutes } from '@/router/routes/entities'
 import { portalRoutes } from '@/router/routes/portal'
+import { settingRoutes } from '@/router/routes/settings'
 
 type TestRoute = { path: string; children?: readonly TestRoute[] }
 
@@ -66,5 +67,13 @@ describe('host-scoped route tables', () => {
     expect(paths(moduleRoutes.feed)).not.toContain('/reading-list')
     expect(paths(moduleRoutes.feed)).not.toContain('/inbox')
     expect(paths(moduleRoutes.forum)).not.toContain('/topic/:id')
+  })
+
+  it('redirects legacy feed setting pages to the unified access settings page', () => {
+    const settingRoot = settingRoutes.find((route) => route.path === '/setting')
+    const children = settingRoot?.children || []
+
+    expect(children.find((route) => route.path === 'feed-fulltext')?.redirect).toBe('/setting/access')
+    expect(children.find((route) => route.path === 'feed-sources')?.redirect).toBe('/setting/access')
   })
 })

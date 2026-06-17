@@ -11,7 +11,7 @@ const routes = [
     component: SettingLayout,
     children: [
       { path: 'access', component: { template: '<div class="child-access">Access</div>' } },
-      { path: 'feed-fulltext', component: { template: '<div class="child-feed">Feed</div>' } },
+      { path: 'music-review', component: { template: '<div class="child-music">Music</div>' } },
     ],
   },
 ]
@@ -40,13 +40,13 @@ describe('SettingLayout', () => {
     expect(wrapper.find('.setting-layout__sidebar').exists()).toBe(false)
   })
 
-  it('keeps shell navigation for other setting routes', async () => {
+  it('keeps shell navigation for non-access setting routes', async () => {
     const pinia = createPinia()
     const router = createRouter({
       history: createMemoryHistory(),
       routes,
     })
-    await router.push('/setting/feed-fulltext')
+    await router.push('/setting/music-review')
     await router.isReady()
 
     const wrapper = mount(SettingLayout, {
@@ -63,6 +63,30 @@ describe('SettingLayout', () => {
     expect(wrapper.find('.setting-layout__sidebar').exists()).toBe(true)
   })
 
+  it('does not expose separate feed setting nav entries', async () => {
+    const pinia = createPinia()
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes,
+    })
+    await router.push('/setting/music-review')
+    await router.isReady()
+
+    const wrapper = mount(SettingLayout, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          ACard: { template: '<div><slot /></div>' },
+          ASectionHeader: { template: '<div><slot /></div>' },
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('全文抓取')
+    expect(wrapper.text()).not.toContain('全局订阅源')
+    expect(wrapper.text()).not.toContain('新增、编辑 external_rss')
+  })
+
   it('shows role management nav only for owner', async () => {
     const pinia = createPinia()
     const router = createRouter({
@@ -72,7 +96,7 @@ describe('SettingLayout', () => {
     const authStore = useAuthStore(pinia)
     authStore.user = { id: 1, username: 'owner', email: 'owner@example.com', role: 'owner' }
 
-    await router.push('/setting/feed-fulltext')
+    await router.push('/setting/music-review')
     await router.isReady()
 
     const wrapper = mount(SettingLayout, {

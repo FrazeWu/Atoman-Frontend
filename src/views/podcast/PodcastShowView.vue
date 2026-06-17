@@ -2,8 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode, Channel } from '@/types'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const route = useRoute()
 const channel = ref<Channel | null>(null)
 const episodes = ref<PodcastEpisode[]>([])
@@ -12,7 +13,7 @@ const loading = ref(true)
 onMounted(async () => {
   const slug = route.params.channelSlug as string
   try {
-    const res = await fetch(`${API_URL}/podcast/shows/${slug}/episodes`)
+    const res = await fetch(`${api.url}/podcast/shows/${slug}/episodes`)
     if (res.ok) {
       const data = await res.json()
       channel.value = data.channel
@@ -37,7 +38,7 @@ function episodeCover(ep: PodcastEpisode) {
       <div>
         <h1 class="ps-name">{{ channel.name }}</h1>
         <p v-if="channel.description" class="ps-desc">{{ channel.description }}</p>
-        <a :href="`${API_URL}/channels/${channel.slug}/rss/podcast`" class="ps-rss" target="_blank">RSS 订阅</a>
+        <a :href="`${api.url}/channels/${channel.slug}/rss/podcast`" class="ps-rss" target="_blank">RSS 订阅</a>
       </div>
     </header>
 

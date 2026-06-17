@@ -43,6 +43,7 @@
 import { ref } from 'vue'
 import AModal from '@/components/ui/AModal.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 
 const props = defineProps<{
   show: boolean
@@ -55,7 +56,7 @@ const emit = defineEmits<{
   (e: 'submitted'): void
 }>()
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const authStore = useAuthStore()
 
 const description = ref('')
@@ -75,8 +76,8 @@ async function submit() {
     }
     const endpoint =
       props.type === 'album'
-        ? `${API_URL}/corrections/album`
-        : `${API_URL}/corrections/artist`
+        ? `${api.url}/corrections/album`
+        : `${api.url}/corrections/artist`
 
     if (props.type === 'album') {
       payload['album_id'] = props.targetId

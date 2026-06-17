@@ -39,7 +39,7 @@ withDefaults(defineProps<{
 }
 
 .a-page-header--accent {
-  border-bottom: 4px solid var(--a-color-ink);
+  border-bottom: 1px solid var(--a-color-line);
 }
 
 .a-page-header__kicker,
@@ -50,19 +50,19 @@ withDefaults(defineProps<{
 
 .a-page-header__kicker {
   color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.28em;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .a-page-header__title {
   color: var(--a-color-ink);
-  font-size: clamp(36px, 6vw, 86px);
-  font-weight: 950;
-  letter-spacing: -0.07em;
-  line-height: 0.86;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
 
 .a-page-header__sub {

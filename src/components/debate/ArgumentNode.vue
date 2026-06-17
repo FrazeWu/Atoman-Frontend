@@ -159,6 +159,7 @@ import type { Argument, Debate } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import ABtn from '@/components/ui/ABtn.vue'
+import { useApi } from '@/composables/useApi'
 
 const props = defineProps<{
   argument: Argument
@@ -177,7 +178,7 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore()
 
-const apiBase = import.meta.env.VITE_API_URL || '/api'
+const apiBase = useApi().url
 const localIsFolded = ref(props.argument.is_folded ?? false)
 
 const foldArgument = async () => {

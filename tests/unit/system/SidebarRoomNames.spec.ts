@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { moduleRooms } from '@/config/moduleRooms'
 
 const files = {
-  kanbo: '../../src/views/kanbo/KanboLayout.vue',
+  kanbo: '../../../src/views/kanbo/KanboLayout.vue',
 } as const
 
 const oldLabels = {

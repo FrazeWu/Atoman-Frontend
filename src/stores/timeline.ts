@@ -2,8 +2,9 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { TimelineEvent, TimelinePerson, PersonLocation } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 
 export const useTimelineStore = defineStore('timeline', () => {
   const events = ref<TimelineEvent[]>([])
@@ -41,7 +42,7 @@ export const useTimelineStore = defineStore('timeline', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('limit', String(params.limit))
 
-      const res = await fetch(`${API_URL}/timeline/events?${query}`)
+      const res = await fetch(`${api.url}/timeline/events?${query}`)
       if (res.ok) {
         const data = await res.json()
         events.value = data.data || []
@@ -59,7 +60,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`${API_URL}/timeline/events/${id}`)
+      const res = await fetch(`${api.url}/timeline/events/${id}`)
       if (res.ok) {
         const data = await res.json()
         currentEvent.value = data.data
@@ -87,7 +88,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public?: boolean
   }) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/events`, {
+      const res = await fetch(`${api.url}/timeline/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -119,7 +120,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public: boolean
   }>) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/events/${id}`, {
+      const res = await fetch(`${api.url}/timeline/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -140,7 +141,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deleteEvent = async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/events/${id}`, {
+      const res = await fetch(`${api.url}/timeline/events/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -170,7 +171,7 @@ export const useTimelineStore = defineStore('timeline', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('limit', String(params.limit))
 
-      const res = await fetch(`${API_URL}/timeline/persons?${query}`)
+      const res = await fetch(`${api.url}/timeline/persons?${query}`)
       if (res.ok) {
         const data = await res.json()
         persons.value = data.data || []
@@ -188,7 +189,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`${API_URL}/timeline/persons/${id}`)
+      const res = await fetch(`${api.url}/timeline/persons/${id}`)
       if (res.ok) {
         const data = await res.json()
         currentPerson.value = data.data
@@ -210,7 +211,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public?: boolean
   }) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/persons`, {
+      const res = await fetch(`${api.url}/timeline/persons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -236,7 +237,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public: boolean
   }>) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/persons/${id}`, {
+      const res = await fetch(`${api.url}/timeline/persons/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -257,7 +258,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deletePerson = async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/persons/${id}`, {
+      const res = await fetch(`${api.url}/timeline/persons/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -276,7 +277,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const fetchPersonLocations = async (personId: string) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/persons/${personId}/locations`)
+      const res = await fetch(`${api.url}/timeline/persons/${personId}/locations`)
       if (res.ok) {
         const data = await res.json()
         return data.data as PersonLocation[]
@@ -297,7 +298,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     note?: string
   }) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/persons/${personId}/locations`, {
+      const res = await fetch(`${api.url}/timeline/persons/${personId}/locations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -329,7 +330,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     note?: string
   }) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/locations/${locationId}`, {
+      const res = await fetch(`${api.url}/timeline/locations/${locationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -356,7 +357,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deleteLocation = async (locationId: string) => {
     try {
-      const res = await fetch(`${API_URL}/timeline/locations/${locationId}`, {
+      const res = await fetch(`${api.url}/timeline/locations/${locationId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })

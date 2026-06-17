@@ -185,11 +185,11 @@ const routeParam = computed(() => {
 })
 const isSlug = computed(() => !/^[0-9a-f-]{36}$/.test(routeParam.value))
 
-const starredIds = computed(() => feedStore.starredItemIds)
+const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.toggleStar(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
@@ -200,8 +200,7 @@ const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` 
 const isOwner = computed(() => !!channel.value && channel.value.user_id === authStore.user?.uuid)
 const channelRssUrl = computed(() => {
   if (!channel.value?.slug) return ''
-  const base = import.meta.env.VITE_API_URL || '/api'
-  return `${base}/blog/channels/slug/${channel.value.slug}/rss/article`
+  return api.blog.channelArticleRssBySlug(channel.value.slug)
 })
 
 const filteredPosts = computed(() => {
@@ -303,7 +302,7 @@ onMounted(async () => {
     if (!channel.value) return
     void Promise.all([fetchCollections(), fetchPosts()])
     if (authStore.isAuthenticated) {
-      void feedStore.fetchStarredIds()
+      void feedStore.fetchBookmarkedPostIds()
       void feedStore.fetchReadingListIds()
     }
   } finally { loading.value = false }

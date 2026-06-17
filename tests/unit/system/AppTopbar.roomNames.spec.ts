@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { isRoomRouteActive, moduleNavOrder, moduleRooms, notificationRoom } from '@/config/moduleRooms'
 import type { SiteContext } from '@/router/siteContext'
 
-const topbarSource = readFileSync(resolve(__dirname, '../../src/components/AppTopbar.vue'), 'utf8')
+const topbarSource = readFileSync(resolve(__dirname, '../../../src/components/system/AppTopbar.vue'), 'utf8')
 
 describe('AppTopbar room names', () => {
   it('renders room navigation from the shared config', () => {
@@ -27,6 +27,11 @@ describe('AppTopbar room names', () => {
     expect(isRoomRouteActive('blog', musicContext)).toBe(false)
     expect(isRoomRouteActive('blog', blogContext)).toBe(true)
     expect(isRoomRouteActive('feed', portalContext)).toBe(false)
+  })
+
+  it('does not replace auth-layout topbar with ACCESS label', () => {
+    expect(topbarSource).not.toContain('ACCESS')
+    expect(topbarSource).not.toContain('auth-kicker')
   })
 
   it('renames inbox notifications to 门房 with helper title', () => {

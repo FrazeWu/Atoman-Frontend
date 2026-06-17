@@ -20,37 +20,44 @@
     <!-- Empty -->
     <AEmpty v-else-if="persons.length === 0" text="暂无历史人物" />
 
-    <!-- Grid -->
-    <div v-else class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <div
+    <!-- List -->
+    <div v-else class="person-list">
+      <PaperEntry
         v-for="person in persons"
         :key="person.id"
-        class="a-card a-card-hover cursor-pointer"
         @click="router.push(`/person/${person.id}`)"
       >
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.75rem">
-          <h3 class="text-xl font-black tracking-tight">{{ person.name }}</h3>
-          <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-            <span v-if="person.tags?.length" class="a-badge">{{ person.tags[0] }}</span>
+        <!-- Meta -->
+        <template #meta>
+          <span v-if="person.tags?.length" class="a-badge">{{ person.tags[0] }}</span>
+          <span v-if="person.birth_date || person.death_date" class="person-dates" style="margin-left:0.5rem">
+            {{ formatYear(person.birth_date) }}
+            <span v-if="person.birth_date && person.death_date"> — </span>
+            {{ formatYear(person.death_date) }}
+          </span>
+        </template>
+
+        <!-- Name -->
+        <template #title>
+          {{ person.name }}
+        </template>
+
+        <!-- Biography -->
+        <template #summary>
+          {{ person.bio }}
+        </template>
+
+        <!-- Actions -->
+        <template #actions>
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            <span class="person-link">查看地图轨迹 →</span>
             <template v-if="canManage(person)">
-              <button class="card-action-btn" @click.stop="startEdit(person)" title="编辑">✎</button>
-              <button class="card-action-btn card-action-danger" @click.stop="startDelete(person)" title="删除">✕</button>
+              <button class="card-action-btn" @click.stop="startEdit(person)" title="编辑">✎ 编辑</button>
+              <button class="card-action-btn card-action-danger" @click.stop="startDelete(person)" title="删除">✕ 删除</button>
             </template>
           </div>
-        </div>
-
-        <div v-if="person.birth_date || person.death_date" class="person-dates">
-          {{ formatYear(person.birth_date) }}
-          <span v-if="person.birth_date && person.death_date"> — </span>
-          {{ formatYear(person.death_date) }}
-        </div>
-
-        <p v-if="person.bio" class="person-bio">{{ person.bio }}</p>
-
-        <div class="person-footer">
-          <span class="person-link">查看地图轨迹 →</span>
-        </div>
-      </div>
+        </template>
+      </PaperEntry>
     </div>
 
     <!-- Create/Edit Person Modal -->
@@ -111,6 +118,7 @@ import AInput from '@/components/ui/AInput.vue'
 import ATextarea from '@/components/ui/ATextarea.vue'
 import AConfirm from '@/components/ui/AConfirm.vue'
 import type { TimelinePerson } from '@/types'
+import PaperEntry from '@/components/ui/PaperEntry.vue'
 
 const store = useTimelineStore()
 const authStore = useAuthStore()
@@ -210,7 +218,7 @@ onMounted(() => {
   line-height: 1;
 }
 .card-action-btn:hover { color: var(--a-color-fg); }
-.card-action-danger:hover { color: #ef4444; }
+.card-action-danger:hover { color: var(--a-color-danger); }
 
 .person-dates {
   font-size: 0.75rem;
@@ -218,30 +226,12 @@ onMounted(() => {
   color: var(--a-color-muted);
   margin-bottom: 0.5rem;
 }
-.person-bio {
-  font-size: 0.8rem;
-  color: var(--a-color-muted);
-  line-height: 1.5;
-  margin-bottom: 0.75rem;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-.person-footer {
-  border-top: 1px solid #f3f4f6;
-  padding-top: 0.75rem;
-  margin-top: auto;
-}
 .person-link {
   font-size: 0.75rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--a-color-muted);
-}
-.a-card:hover .person-link {
-  color: var(--a-color-fg);
 }
 
 .form-group { margin-bottom: 1rem; }

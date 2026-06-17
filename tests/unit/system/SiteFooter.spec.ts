@@ -5,7 +5,7 @@ import { appVersion } from '@/config/appVersion'
 import { footbarLinks } from '@/config/moduleRooms'
 import router from '@/router'
 
-const footerSource = readFileSync(resolve(__dirname, '../../src/components/SiteFooter.vue'), 'utf8')
+const footerSource = readFileSync(resolve(__dirname, '../../../src/components/system/SiteFooter.vue'), 'utf8')
 
 describe('SiteFooter', () => {
   it('renders the brand and all footbar links from config', () => {

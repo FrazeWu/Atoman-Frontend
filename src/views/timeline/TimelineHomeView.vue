@@ -403,12 +403,13 @@ import AConfirm from '@/components/ui/AConfirm.vue'
 import DatetimePicker from '@/components/ui/DatetimePicker.vue'
 import TimelineEventFormSection from '@/components/timeline/TimelineEventFormSection.vue'
 import { moduleRooms } from '@/config/moduleRooms'
+import { useApi } from '@/composables/useApi'
 
 const TimelineMapPane = defineAsyncComponent(() => import('@/views/timeline/TimelineMapPane.vue'))
 
 type TimelineViewMode = 'lanes' | 'map'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const DAY_MS = 24 * 60 * 60 * 1000
 
 const store = useTimelineStore()
@@ -705,7 +706,7 @@ const clearComparePool = () => {
 
 const fetchEventById = async (id: string) => {
   try {
-    const response = await fetch(`${API_URL}/timeline/events/${id}`)
+    const response = await fetch(`${api.url}/timeline/events/${id}`)
     if (!response.ok) return null
     const data = await response.json()
     return data.data as TimelineEvent
@@ -844,7 +845,7 @@ const openHistory = async (event: TimelineEvent) => {
   historyRevisions.value = []
   loadingHistory.value = true
   try {
-    const res = await fetch(`${API_URL}/timeline/events/${event.id}/history`, {
+    const res = await fetch(`${api.url}/timeline/events/${event.id}/history`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (res.ok) {

@@ -114,29 +114,18 @@ const handleClick = (event: MouseEvent) => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 2px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-ink);
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   cursor: pointer;
-  font-family: var(--a-font-meta);
-  font-weight: 950;
-  letter-spacing: 0.12em;
+  font-family: inherit;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0.08em;
   line-height: 1;
   text-decoration: none;
   text-transform: uppercase;
-  transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.14s ease;
+  transition: transform 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
   white-space: nowrap;
-}
-
-.a-btn::after {
-  position: absolute;
-  right: 7px;
-  bottom: -7px;
-  left: 7px;
-  height: 7px;
-  background: rgba(0, 0, 0, 0.16);
-  content: '';
-  filter: blur(0.4px);
 }
 
 .a-btn--sm {
@@ -160,28 +149,35 @@ const handleClick = (event: MouseEvent) => {
 .a-btn--primary {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
+  border-color: var(--a-color-ink);
 }
 
 .a-btn--secondary {
   background: var(--a-color-paper);
   color: var(--a-color-ink);
+  border-color: var(--a-color-line);
+}
+
+.a-btn--secondary:hover:not(.a-btn--disabled) {
+  background: var(--a-color-paper-wash);
+  border-color: var(--a-color-line-soft);
 }
 
 .a-btn--ghost {
   border-color: transparent;
-  background: var(--a-color-paper);
+  background: transparent;
   color: var(--a-color-ink);
-}
-
-.a-btn--ghost::after {
-  display: none;
 }
 
 .a-btn--danger {
   border-color: var(--a-color-danger-line);
   background: var(--a-color-paper);
   color: var(--a-color-danger-ink);
-  transform: rotate(-1deg);
+}
+
+.a-btn--danger:hover:not(.a-btn--disabled) {
+  background: var(--a-color-danger-bg);
+  border-color: var(--a-color-danger-line);
 }
 
 .a-btn--block {
@@ -189,7 +185,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .a-btn:not(.a-btn--disabled):active {
-  transform: translateY(3px);
+  transform: translateY(1px);
 }
 
 .a-btn--disabled {

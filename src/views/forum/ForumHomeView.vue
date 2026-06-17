@@ -1,73 +1,5 @@
 <template>
   <div class="forum-page">
-    <!-- ── Left sidebar ──────────────────────────────────────────────────── -->
-    <aside class="forum-sidebar">
-      <!-- Nav section -->
-      <div class="sidebar-section">
-        <div
-          class="sidebar-item sidebar-item-active"
-          @click="selectCategory(null)"
-          :class="{ 'sidebar-item-active': !activeCategoryId && activeTab === 'latest' }"
-        >
-          <span class="sidebar-item-icon">☰</span>
-          <span>话题</span>
-        </div>
-        <div class="sidebar-item sidebar-sub" @click="router.push('/new')" v-if="authStore.isAuthenticated && canCreateTopic">
-          <span class="sidebar-item-icon">✦</span>
-          <span>发新话题</span>
-        </div>
-        <div class="sidebar-item sidebar-sub">
-          <span class="sidebar-item-icon">◎</span>
-          <span>更多</span>
-        </div>
-      </div>
-
-      <div class="sidebar-divider" />
-
-      <!-- Develop section -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-label">分类</div>
-        <div
-          v-for="cat in forumStore.categories"
-          :key="cat.id"
-          class="sidebar-item"
-          :class="{ 'sidebar-item-active': activeCategoryId === cat.id }"
-          @click="selectCategory(cat.id)"
-        >
-          <span
-            class="sidebar-cat-dot"
-            :style="{ background: cat.color || 'var(--a-color-fg)' }"
-          />
-          <span class="sidebar-item-text">{{ cat.name }}</span>
-          <span class="sidebar-item-count">{{ cat.topic_count || 0 }}</span>
-        </div>
-      </div>
-
-      <div class="sidebar-divider" />
-
-      <!-- Tags section -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-label">标签</div>
-        <div
-          v-for="tag in popularTags"
-          :key="tag"
-          class="sidebar-tag"
-          :class="{ 'sidebar-tag-active': activeTag === tag }"
-          @click="filterByTag(tag)"
-        >
-          {{ tag }}
-        </div>
-      </div>
-
-      <!-- Keyboard shortcuts hint -->
-      <div class="sidebar-shortcuts">
-        <div><kbd>J</kbd><kbd>K</kbd> 上下选择</div>
-        <div><kbd>Enter</kbd> 打开话题</div>
-        <div><kbd>N</kbd> 发新话题</div>
-        <div><kbd>/</kbd> 搜索</div>
-      </div>
-    </aside>
-
     <!-- ── Main content ──────────────────────────────────────────────────── -->
     <main class="forum-main">
       <APageHeader title="论坛" accent sub="坐下来发帖、回复、搜索和闲谈。" mb="1.5rem" />
@@ -91,16 +23,6 @@
         @clear-search="clearSearch"
       />
 
-      <!-- Topic list header row -->
-      <div class="topic-list-header">
-        <span class="th-title a-label">话题</span>
-        <span class="th-stats a-label">
-          <span>回复</span>
-          <span>浏览</span>
-          <span>活跃</span>
-        </span>
-      </div>
-
       <!-- Loading state -->
       <div v-if="forumStore.loading" class="topic-list">
         <div v-for="i in 8" :key="i" class="topic-row-skeleton a-skeleton" />
@@ -111,74 +33,56 @@
 
       <!-- Topic rows -->
       <div v-else ref="topicListRef" class="topic-list">
-        <div
+        <PaperEntry
           v-for="(topic, index) in forumStore.topics"
           :key="topic.id"
-          class="topic-row a-card"
-          :class="{
-            'topic-row-pinned': topic.pinned,
-            'topic-row-focused': focusedIndex === index,
-          }"
+          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
           @click="router.push(`/topic/${topic.id}`)"
         >
-          <!-- Left: category dot + title column -->
-          <div class="tr-left">
-            <!-- Category badge -->
-            <div class="tr-tags">
-              <span v-if="topic.pinned" class="tr-badge a-badge tr-badge-pin">置顶</span>
-              <span v-if="topic.closed" class="tr-badge a-badge tr-badge-closed">已关闭</span>
-              <span
-                v-if="topic.category"
-                class="tr-badge a-badge tr-badge-cat"
-                :style="{ borderColor: topic.category.color, color: topic.category.color }"
-                @click.stop="selectCategory(topic.category!.id)"
-              >{{ topic.category.name }}</span>
-              <span
-                v-for="tag in (topic.tags || []).slice(0, 2)"
-                :key="tag"
-                class="tr-badge a-badge tr-badge-tag"
-                @click.stop="filterByTag(tag)"
-              ># {{ tag }}</span>
-            </div>
+          <!-- Tags / Category badge -->
+          <template #meta>
+            <span v-if="topic.pinned" class="tr-badge a-badge tr-badge-pin">置顶</span>
+            <span v-if="topic.closed" class="tr-badge a-badge tr-badge-closed">已关闭</span>
+            <span
+              v-if="topic.category"
+              class="tr-badge a-badge tr-badge-cat"
+              :style="{ borderColor: topic.category.color, color: topic.category.color }"
+              @click.stop="selectCategory(topic.category!.id)"
+            >{{ topic.category.name }}</span>
+            <span
+              v-for="tag in (topic.tags || []).slice(0, 2)"
+              :key="tag"
+              class="tr-badge a-badge tr-badge-tag"
+              @click.stop="filterByTag(tag)"
+            ># {{ tag }}</span>
+            <span class="tr-sep">·</span>
+            <span class="tr-author">{{ topic.user?.display_name || topic.user?.username || '匿名' }}</span>
+            <span class="tr-sep">·</span>
+            <span>{{ formatTime(topic.created_at) }}</span>
+          </template>
 
-            <!-- Title -->
-            <p class="tr-title">{{ topic.title }}</p>
+          <!-- Title -->
+          <template #title>
+            {{ topic.title }}
+          </template>
 
-            <!-- Author + time on mobile -->
-            <p class="tr-meta">
-              <span class="tr-author">{{ topic.user?.display_name || topic.user?.username || '匿名' }}</span>
-              <span class="tr-sep">·</span>
-              <span>{{ formatTime(topic.created_at) }}</span>
-              <template v-if="topic.is_bookmarked">
-                <span class="tr-sep">·</span>
-                <span class="tr-bookmarked">收藏</span>
-              </template>
-            </p>
-          </div>
-
-          <!-- Right: participant avatars + stats -->
-          <div class="tr-right">
-            <!-- Participant avatars -->
-            <div class="tr-avatars">
-              <div class="tr-avatar tr-avatar-op" :title="topic.user?.display_name || topic.user?.username">
-                {{ avatarInitial(topic.user?.display_name || topic.user?.username) }}
+          <!-- Participant avatars & reply/view stats -->
+          <template #actions>
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+              <div class="tr-avatars">
+                <div class="tr-avatar tr-avatar-op" :title="topic.user?.display_name || topic.user?.username">
+                  {{ avatarInitial(topic.user?.display_name || topic.user?.username) }}
+                </div>
               </div>
-            </div>
-
-            <!-- Stats -->
-            <div class="tr-stats">
-              <span class="tr-stat">
-                <span class="tr-stat-val">{{ topic.reply_count }}</span>
+              <span style="font-size:0.72rem;color:var(--a-color-muted);font-weight:700">
+                回复 {{ topic.reply_count }} · 浏览 {{ formatCount(topic.view_count) }}
               </span>
-              <span class="tr-stat">
-                <span class="tr-stat-val">{{ formatCount(topic.view_count) }}</span>
-              </span>
-              <span class="tr-stat tr-stat-time">
-                {{ formatTimeShort(topic.last_reply_at || topic.created_at) }}
+              <span v-if="topic.last_reply_at" style="font-size:0.72rem;color:var(--a-color-muted-soft)">
+                最后回复: {{ formatTime(topic.last_reply_at) }}
               </span>
             </div>
-          </div>
-        </div>
+          </template>
+        </PaperEntry>
       </div>
 
       <!-- Load more -->
@@ -204,8 +108,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -217,23 +121,43 @@ import ASelect from '@/components/ui/ASelect.vue'
 import ATextarea from '@/components/ui/ATextarea.vue'
 import AModal from '@/components/ui/AModal.vue'
 import APageHeader from '@/components/ui/APageHeader.vue'
+import PaperEntry from '@/components/ui/PaperEntry.vue'
 import { useApiUrl } from '@/composables/useApi'
+import { useKeyboardList } from '@/composables/useKeyboardList'
+import { useUIStore } from '@/stores/ui'
 
 type TabKey = 'latest' | 'top' | 'active' | 'new' | 'bookmarked' | 'featured'
 
 const router = useRouter()
+const route = useRoute()
 const forumStore = useForumStore()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const canCreateTopic = computed(() => siteAccessStore.isFeatureEnabled('forum', 'topic.create'))
 const canRequestCategory = computed(() => siteAccessStore.isFeatureEnabled('forum', 'category.request'))
 
-const activeCategoryId = ref<string | null>(null)
+const activeCategoryId = computed(() => {
+  const cid = route.query.category_id
+  return typeof cid === 'string' ? cid : null
+})
 const activeTab = ref<TabKey>('latest')
-const activeTag = ref('')
+const activeTag = computed(() => {
+  const t = route.query.tag
+  return typeof t === 'string' ? t : ''
+})
 const page = ref(1)
 const loadingMore = ref(false)
-const focusedIndex = ref(-1)
+
+const uiStore = useUIStore()
+
+const { focusedIndex } = useKeyboardList({
+  items: computed(() => forumStore.topics),
+  onEnter: (topic) => {
+    router.push(`/topic/${topic.id}`)
+  },
+  section: 'content',
+  scrollSelector: '.paper-entry.is-focused'
+})
 const searchQuery = ref('')
 const topicListRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
@@ -339,9 +263,14 @@ const loadTopics = async (resetPage = true) => {
   })
 }
 
-const selectCategory = async (id: string | null) => {
-  activeCategoryId.value = id
-  await loadTopics()
+const selectCategory = (id: string | null) => {
+  const query = { ...route.query }
+  if (id === null) {
+    delete query.category_id
+  } else {
+    query.category_id = String(id)
+  }
+  void router.push({ path: '/', query })
 }
 
 const setTab = async (tab: TabKey) => {
@@ -349,15 +278,25 @@ const setTab = async (tab: TabKey) => {
   await loadTopics()
 }
 
-const filterByTag = async (tag: string) => {
-  activeTag.value = tag
-  await loadTopics()
+const filterByTag = (tag: string) => {
+  const query = { ...route.query }
+  query.tag = tag
+  void router.push({ path: '/', query })
 }
 
-const clearTag = async () => {
-  activeTag.value = ''
-  await loadTopics()
+const clearTag = () => {
+  const query = { ...route.query }
+  delete query.tag
+  void router.push({ path: '/', query })
 }
+
+watch(
+  () => route.query,
+  () => {
+    void loadTopics(true)
+  },
+  { deep: true }
+)
 
 const loadMore = async () => {
   loadingMore.value = true
@@ -405,45 +344,19 @@ const clearSearch = () => {
 
 const handleKeydown = (e: KeyboardEvent) => {
   const target = e.target as HTMLElement
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
-  const topics = forumStore.topics
-  switch (e.key) {
-    case 'j':
-      e.preventDefault()
-      focusedIndex.value = Math.min(focusedIndex.value + 1, topics.length - 1)
-      scrollToFocused()
-      break
-    case 'k':
-      e.preventDefault()
-      focusedIndex.value = Math.max(focusedIndex.value - 1, 0)
-      scrollToFocused()
-      break
-    case 'Enter':
-      if (focusedIndex.value >= 0 && topics[focusedIndex.value]) {
-        router.push(`/topic/${topics[focusedIndex.value].id}`)
-      }
-      break
-    case 'n':
-      if (authStore.isAuthenticated) router.push('/new')
-      break
-    case '/':
-      e.preventDefault()
-      searchInputRef.value?.focus()
-      break
+  if (e.key === 'n') {
+    if (authStore.isAuthenticated) router.push('/new')
+  } else if (e.key === '/') {
+    e.preventDefault()
+    searchInputRef.value?.focus()
   }
-}
-
-const scrollToFocused = () => {
-  if (!topicListRef.value) return
-  const rows = topicListRef.value.querySelectorAll('.topic-row')
-  const el = rows[focusedIndex.value] as HTMLElement
-  el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 }
 
 onMounted(async () => {
   await forumStore.fetchCategories()
-  await forumStore.fetchTopics({ sort: 'latest', page: 1 })
+  await loadTopics(true)
   window.addEventListener('keydown', handleKeydown)
 })
 

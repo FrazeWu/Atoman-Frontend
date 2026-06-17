@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useMusicDrawers } from './useMusicDrawers'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 describe('useMusicDrawers', () => {
   beforeEach(() => {

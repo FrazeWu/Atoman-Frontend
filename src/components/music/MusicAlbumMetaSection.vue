@@ -28,7 +28,7 @@ import { computed } from 'vue'
 import ASurface from '@/components/ui/ASurface.vue'
 import AInput from '@/components/ui/AInput.vue'
 import ASelect from '@/components/ui/ASelect.vue'
-import ArtistSelect from '@/components/ArtistSelect.vue'
+import ArtistSelect from './ArtistSelect.vue'
 import type { Artist } from '@/types'
 
 const props = defineProps<{

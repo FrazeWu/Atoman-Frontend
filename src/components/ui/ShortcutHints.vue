@@ -1,7 +1,7 @@
 <template>
   <div class="shortcut-info-wrap">
     <div class="shortcut-trigger">
-      <NIcon size="18"><HelpCircleOutline /></NIcon>
+      <HelpCircle :size="18" />
     </div>
     <div class="shortcut-content">
       <div class="shortcut-header">键盘快捷键</div>
@@ -15,8 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { NIcon } from 'naive-ui'
-import { HelpCircleOutline } from '@vicons/ionicons5'
+import { HelpCircle } from 'lucide-vue-next'
 
 export interface ShortcutHint {
   key: string
@@ -38,29 +37,30 @@ defineProps<{
 .shortcut-trigger {
   width: 2.5rem;
   height: 2.5rem;
-  background: #fff;
-  border: 1.5px solid #000;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: help;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 .shortcut-trigger:hover {
-  background: #000;
-  color: #fff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
+  border-color: var(--a-color-ink);
 }
 .shortcut-content {
   position: absolute;
   bottom: 100%;
   right: 0;
   margin-bottom: 1rem;
-  background: #fff;
-  border: 1.5px solid #000;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line);
   padding: 1.25rem;
   width: 14rem;
-  box-shadow: 10px 10px 0 rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   opacity: 0;
   visibility: hidden;
   transform: translateY(10px);
@@ -72,12 +72,13 @@ defineProps<{
   transform: translateY(0);
 }
 .shortcut-header {
-  font-family: var(--a-font-meta);
-  font-weight: 900;
+  font-family: inherit;
+  font-weight: var(--a-font-weight-strong, 700);
   font-size: 0.85rem;
   margin-bottom: 0.75rem;
-  border-bottom: 1.5px solid #eee;
+  border-bottom: 1px solid var(--a-color-line-soft);
   padding-bottom: 0.5rem;
+  color: var(--a-color-fg);
 }
 .shortcut-grid {
   display: flex;
@@ -88,17 +89,19 @@ defineProps<{
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 0.72rem;
   font-weight: 500;
+  color: var(--a-color-ink-muted);
 }
 .shortcut-item kbd {
-  font-family: var(--a-font-mono);
-  background: #eee;
+  font-family: var(--a-font-meta);
+  background: var(--a-color-paper-wash);
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--a-color-line-soft);
   min-width: 1.2rem;
   text-align: center;
+  color: var(--a-color-fg);
 }
 </style>

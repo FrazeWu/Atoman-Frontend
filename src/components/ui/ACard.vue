@@ -20,11 +20,11 @@ withDefaults(defineProps<{
 }
 
 .a-card--interactive {
-  transition: box-shadow 0.18s ease, transform 0.18s ease;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
 }
 
 .a-card--interactive:hover {
-  box-shadow: var(--a-shadow-paper-md);
-  transform: translate(-2px, -2px);
+  border-color: var(--a-color-muted-soft);
+  background-color: var(--a-color-paper-soft);
 }
 </style>

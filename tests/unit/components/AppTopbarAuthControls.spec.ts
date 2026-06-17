@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import AppTopbarAuthControls from '@/components/AppTopbarAuthControls.vue'
+import AppTopbarAuthControls from '@/components/system/AppTopbarAuthControls.vue'
 import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
 

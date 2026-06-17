@@ -164,11 +164,11 @@ const collectionId = computed(() => props.id || (typeof route.params.id === 'str
 const channelId = computed(() => collection.value?.channel_id || '')
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
 
-const starredIds = computed(() => feedStore.starredItemIds)
+const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.toggleStar(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
@@ -334,7 +334,7 @@ const toggleCollectionSubscribe = async () => {
 onMounted(() => {
   void fetchCollection()
   if (authStore.isAuthenticated) {
-    void feedStore.fetchStarredIds()
+    void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
 })

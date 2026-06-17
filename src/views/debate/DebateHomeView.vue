@@ -34,68 +34,60 @@
     <AEmpty v-else-if="debates.length === 0" text="暂无辩论" />
 
     <!-- Debate List -->
-    <div v-else class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <div
+    <div v-else class="debate-list">
+      <PaperEntry
         v-for="debate in debates"
         :key="debate.id"
-        class="a-card a-card-hover cursor-pointer"
         @click="goToDebate(debate.id)"
       >
-        <div class="flex items-start justify-between mb-4">
-          <h3 class="text-xl font-black tracking-tight flex-1">{{ debate.title }}</h3>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span
-              v-if="debate.conclusion_type"
-              class="text-xs font-black px-2 py-1 border-2"
-              :style="conclusionBadgeStyles[debate.conclusion_type]"
-            >
-              {{ conclusionLabels[debate.conclusion_type] }}
-            </span>
-            <span
-              class="a-badge"
-              :class="{
-                'a-badge-fill': debate.status === 'open',
-              }"
-              :style="{
-                backgroundColor: debate.status === 'open' ? 'var(--a-color-success)' : undefined,
-                borderColor: debate.status === 'open' ? 'var(--a-color-success)' : undefined,
-                color: debate.status === 'open' ? 'var(--a-color-bg)' : undefined,
-              }"
-            >
-              {{ statusLabels[debate.status] }}
-            </span>
-          </div>
-        </div>
-
-        <p class="text-sm font-medium text-gray-700 mb-4 line-clamp-2">
-          {{ debate.description }}
-        </p>
-
-        <!-- Tags -->
-        <div class="flex flex-wrap gap-2 mb-4">
+        <!-- Tags / Status badge -->
+        <template #meta>
           <span
-            v-for="tag in debate.tags"
-            :key="tag"
-            class="text-xs font-bold px-2 py-1 bg-gray-100 border border-black"
+            v-if="debate.conclusion_type"
+            class="text-xs font-black px-2 py-1 border-2"
+            :style="conclusionBadgeStyles[debate.conclusion_type]"
           >
-            #{{ tag }}
+            {{ conclusionLabels[debate.conclusion_type] }}
           </span>
-        </div>
-
-        <!-- Stats -->
-        <div class="flex items-center gap-4 text-xs font-bold text-gray-600">
-          <span>{{ debate.argument_count }} 论点</span>
-          <span>{{ debate.vote_count }} 投票</span>
-          <span>{{ debate.view_count }}浏览</span>
-        </div>
-
-        <!-- Creator & Date -->
-        <div class="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-          <span>{{ debate.user.username }}</span>
+          <span
+            class="a-badge"
+            :class="{
+              'a-badge-fill': debate.status === 'open',
+            }"
+            :style="{
+              backgroundColor: debate.status === 'open' ? 'var(--a-color-success)' : undefined,
+              borderColor: debate.status === 'open' ? 'var(--a-color-success)' : undefined,
+              color: debate.status === 'open' ? 'var(--a-color-bg)' : undefined,
+            }"
+          >
+            {{ statusLabels[debate.status] }}
+          </span>
+          <span v-for="tag in debate.tags" :key="tag" class="a-badge">#{{ tag }}</span>
+          <span class="mx-2">·</span>
+          <span>由 {{ debate.user.username }} 发起</span>
           <span class="mx-2">·</span>
           <span>{{ formatDate(debate.created_at) }}</span>
-        </div>
-      </div>
+        </template>
+
+        <!-- Title -->
+        <template #title>
+          {{ debate.title }}
+        </template>
+
+        <!-- Description -->
+        <template #summary>
+          {{ debate.description }}
+        </template>
+
+        <!-- Stats -->
+        <template #actions>
+          <div style="display:flex;align-items:center;gap:1rem;font-size:0.72rem;color:var(--a-color-muted);font-weight:700">
+            <span>论点 {{ debate.argument_count || 0 }}</span>
+            <span>投票 {{ debate.vote_count || 0 }}</span>
+            <span>浏览 {{ debate.view_count || 0 }}</span>
+          </div>
+        </template>
+      </PaperEntry>
     </div>
 
     <!-- Load More -->
@@ -140,6 +132,7 @@ import ATextarea from '@/components/ui/ATextarea.vue'
 import ASelect from '@/components/ui/ASelect.vue'
 import APageHeader from '@/components/ui/APageHeader.vue'
 import { moduleRooms } from '@/config/moduleRooms'
+import PaperEntry from '@/components/ui/PaperEntry.vue'
 
 const router = useRouter()
 const debateStore = useDebateStore()

@@ -16,6 +16,123 @@ describe('SubscriptionAddSheet', () => {
     discoverFeedCandidates.mockReset()
   })
 
+  it('uses selected discovered feed title when custom title is empty', async () => {
+    discoverFeedCandidates.mockResolvedValue([
+      {
+        feed_url: 'https://example.com/feed.xml',
+        title: 'Example Blog',
+        kind: 'rss',
+        is_default: true,
+      },
+    ])
+
+    const wrapper = mount(SubscriptionAddSheet, {
+      props: {
+        show: true,
+        groups: [],
+        submitting: false,
+        error: '',
+      },
+      global: {
+        stubs: {
+          PaperSheet: {
+            template: '<div><slot /></div>',
+          },
+          PaperField: {
+            template: '<label><slot /></label>',
+          },
+          PaperPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PaperClip: {
+            props: ['label', 'active'],
+            emits: ['click'],
+            template: '<button type="button" :data-active="active" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          ASelect: {
+            props: ['modelValue', 'options'],
+            emits: ['update:modelValue'],
+            template: '<select />',
+          },
+        },
+      },
+    })
+
+    await wrapper.get('input[placeholder="https://example.com"]').setValue('https://example.com')
+    await wrapper.findAll('button').find((button) => button.text() === '查找订阅源')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find((button) => button.text() === '确认订阅')!.trigger('click')
+
+    expect(wrapper.emitted('submit-discovered')).toEqual([[
+      {
+        feed_url: 'https://example.com/feed.xml',
+        title: 'Example Blog',
+        group_id: '',
+      },
+    ]])
+  })
+
+  it('keeps custom title when subscribing to a discovered feed', async () => {
+    discoverFeedCandidates.mockResolvedValue([
+      {
+        feed_url: 'https://example.com/feed.xml',
+        title: 'Example Blog',
+        kind: 'rss',
+        is_default: true,
+      },
+    ])
+
+    const wrapper = mount(SubscriptionAddSheet, {
+      props: {
+        show: true,
+        groups: [],
+        submitting: false,
+        error: '',
+      },
+      global: {
+        stubs: {
+          PaperSheet: {
+            template: '<div><slot /></div>',
+          },
+          PaperField: {
+            template: '<label><slot /></label>',
+          },
+          PaperPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PaperClip: {
+            props: ['label', 'active'],
+            emits: ['click'],
+            template: '<button type="button" :data-active="active" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          ASelect: {
+            props: ['modelValue', 'options'],
+            emits: ['update:modelValue'],
+            template: '<select />',
+          },
+        },
+      },
+    })
+
+    await wrapper.get('input[placeholder="https://example.com"]').setValue('https://example.com')
+    await wrapper.get('input[placeholder="例如：GitHub Blog"]').setValue('Custom Blog')
+    await wrapper.findAll('button').find((button) => button.text() === '查找订阅源')!.trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find((button) => button.text() === '确认订阅')!.trigger('click')
+
+    expect(wrapper.emitted('submit-discovered')).toEqual([[
+      {
+        feed_url: 'https://example.com/feed.xml',
+        title: 'Custom Blog',
+        group_id: '',
+      },
+    ]])
+  })
+
   it('resets mode and selected group to default semantics when resetKey changes', async () => {
     const wrapper = mount(SubscriptionAddSheet, {
       props: {
@@ -38,10 +155,12 @@ describe('SubscriptionAddSheet', () => {
           },
           PaperPress: {
             props: ['label'],
+            emits: ['click'],
             template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
           },
           PaperClip: {
             props: ['label', 'active'],
+            emits: ['click'],
             template: '<button type="button" :data-active="active" @click="$emit(\'click\')">{{ label }}</button>',
           },
           ASelect: {

@@ -1,7 +1,7 @@
 :root {
   --a-color-bg: #fff;
   --a-color-fg: #000;
-  --a-color-border: #000;
+  --a-color-border: var(--a-color-line);
   --a-color-surface: #f5f5f5;
   --a-color-muted: #6b7280;
   --a-color-muted-soft: #9ca3af;
@@ -24,20 +24,20 @@
   --a-color-danger-ink: #7f1d1d;
   --a-color-danger-line: #b91c1c;
 
-  --a-border-width: 2px;
+  --a-border-width: 1px;
   --a-border-style: solid;
   --a-border-color: var(--a-color-border);
   --a-border: var(--a-border-width) var(--a-border-style) var(--a-border-color);
 
   --a-radius-none: 0px;
 
-  --a-shadow-button: 4px 4px 0 0 #000;
-  --a-shadow-dropdown: 6px 6px 0 0 #000;
-  --a-shadow-modal: 10px 10px 0 0 #000;
-  --a-shadow-pressed: 0 0 0 0 #000;
-  --a-shadow-paper-sm: 4px 4px 0 rgba(15, 23, 42, 0.08);
-  --a-shadow-paper-md: 7px 7px 0 rgba(0, 0, 0, 0.14);
-  --a-shadow-paper-lg: 0 22px 60px rgba(15, 23, 42, 0.08);
+  --a-shadow-button: none;
+  --a-shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.04);
+  --a-shadow-modal: 0 12px 36px rgba(0, 0, 0, 0.08);
+  --a-shadow-pressed: none;
+  --a-shadow-paper-sm: none;
+  --a-shadow-paper-md: none;
+  --a-shadow-paper-lg: none;
 
   --a-space-1: 0.25rem;
   --a-space-2: 0.5rem;
@@ -55,7 +55,7 @@
   --a-font-weight-strong: 700;
   --a-font-weight-black: 900;
   --a-font-meta: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --a-font-serif: Georgia, "Times New Roman", Times, serif;
+  --a-font-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   --a-letter-spacing-tight: -0.03em;
   --a-letter-spacing-wide: 0.08em;
@@ -152,7 +152,7 @@ body {
 }
 .a-btn:active:not(:disabled),
 .a-btn.a-btn--active {
-  transform: translate(4px, 4px);
+  transform: translateY(1px);
   box-shadow: var(--a-shadow-pressed);
 }
 .a-btn:disabled,
@@ -262,8 +262,8 @@ body {
 .a-input:focus,
 .a-textarea:focus,
 .a-select:focus {
-  border-color: var(--a-color-border);
-  box-shadow: inset 0 0 0 1px var(--a-color-border);
+  border-color: var(--a-color-fg);
+  box-shadow: inset 0 0 0 1px var(--a-color-fg);
 }
 .a-input--error,
 .a-textarea--error,
@@ -394,7 +394,9 @@ body {
   align-items: center;
   justify-content: center;
   padding: var(--a-space-4);
-  background: rgba(0,0,0,0.55);
+  background: rgba(9, 9, 11, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 .a-modal {
   width: 100%;
@@ -413,7 +415,7 @@ body {
   gap: var(--a-space-3);
   padding: var(--a-space-4) var(--a-space-5);
   border-bottom: var(--a-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
 }
 .a-modal-title {
   font-size: var(--a-text-lg);
@@ -421,18 +423,21 @@ body {
   letter-spacing: var(--a-letter-spacing-tight);
 }
 .a-modal-close {
-  border: var(--a-border);
-  border-radius: var(--a-radius-none);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
+  border: none;
+  background: transparent;
+  color: var(--a-color-muted);
   cursor: pointer;
-  font-size: var(--a-text-sm);
-  font-weight: var(--a-font-weight-black);
+  font-size: var(--a-text-lg);
   line-height: 1;
-  padding: 0.375rem 0.625rem;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
 }
 .a-modal-close:hover {
-  text-decoration: underline;
+  color: var(--a-color-fg);
+  text-decoration: none;
 }
 .a-modal-body {
   padding: var(--a-space-5);
@@ -659,6 +664,7 @@ body {
   width: 100%;
   text-align: left;
   position: relative;
+  overflow: hidden;
 }
 
 .a-sidebar-item svg {
@@ -684,14 +690,13 @@ body {
 }
 
 .a-sidebar-item:hover {
-  background: none;
+  background-color: var(--a-color-paper-wash);
   color: var(--a-color-fg);
 }
 
 .a-sidebar-item.active {
-  background-color: white;
-  color: black;
-  box-shadow: -20px 0 30px -10px rgba(0,0,0,0.05);
+  background-color: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
 }
 
 .a-sidebar-item.active::before {
@@ -701,18 +706,11 @@ body {
   top: 0;
   bottom: 0;
   width: 4px;
-  background-color: black;
+  background-color: var(--a-color-fg);
 }
 
 .a-sidebar-item.active::after {
-  content: '';
-  position: absolute;
-  right: -1px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background-color: white;
-  z-index: 30;
+  content: none;
 }
 
 .a-sidebar-divider {

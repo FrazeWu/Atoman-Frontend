@@ -33,25 +33,13 @@ const onClick = (event: MouseEvent) => {
   padding: 9px 13px;
   border: 1px solid var(--a-color-danger-line);
   background: var(--a-color-paper);
-  box-shadow: 0 8px 18px rgba(127, 29, 29, 0.08);
   color: var(--a-color-danger-ink);
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 10px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  transform: rotate(-2deg);
-}
-
-.paper-reject::before {
-  position: absolute;
-  top: -7px;
-  right: 8px;
-  left: 8px;
-  height: 10px;
-  background: var(--a-color-tape);
-  content: '';
-  transform: rotate(-4deg);
+  transition: opacity 0.12s ease, background-color 0.12s ease;
 }
 
 .paper-reject::after {
@@ -59,11 +47,11 @@ const onClick = (event: MouseEvent) => {
   top: 50%;
   right: 9px;
   left: 9px;
-  height: 2px;
+  height: 1px;
   background: var(--a-color-danger-line);
   content: '';
   opacity: 0.72;
-  transform: rotate(-8deg);
+  transform: translateY(-50%);
 }
 
 .paper-reject:not(:disabled) {

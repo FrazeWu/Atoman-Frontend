@@ -213,20 +213,20 @@ onMounted(fetchComments)
 .comment-section {
   margin-top: 3rem;
   padding-top: 2rem;
-  border-top: 2px solid #000;
+  border-top: 1px solid var(--a-color-line-soft);
 }
 .section-title {
   font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: -0.025em;
   margin: 0 0 1.5rem;
 }
-.comment-count { color: #9ca3af; font-weight: 500; font-size: 1.125rem; }
+.comment-count { color: var(--a-color-muted); font-weight: 500; font-size: 1.125rem; }
 .closed-notice {
-  border: 2px dashed #d1d5db;
+  border: 1px dashed var(--a-color-line-soft);
   padding: 2rem;
   text-align: center;
-  color: #9ca3af;
+  color: var(--a-color-muted);
   font-weight: 500;
 }
 .comment-form { margin-bottom: 2rem; }
@@ -235,55 +235,57 @@ onMounted(fetchComments)
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .text-input,
 .comment-input {
   width: 100%;
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line);
   padding: 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   outline: none;
-  transition: box-shadow 0.2s;
+  transition: border-color 0.15s ease;
   box-sizing: border-box;
   font-family: inherit;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 .comment-input { resize: none; }
 .text-input:focus,
-.comment-input:focus { box-shadow: 5px 5px 0px 0px rgba(0,0,0,1); }
+.comment-input:focus { border-color: var(--a-color-fg); }
 .submit-btn {
   margin-top: 0.5rem;
-  background: #000;
-  color: #fff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
   padding: 0.5rem 1.5rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border: 2px solid #000;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--a-color-ink);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
-.submit-btn:hover:not(:disabled) { background: #fff; color: #000; }
+.submit-btn:hover:not(:disabled) { background: var(--a-color-paper); color: var(--a-color-ink); }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .login-prompt {
   margin-bottom: 2rem;
-  border: 2px dashed #d1d5db;
+  border: 1px dashed var(--a-color-line-soft);
   padding: 1.5rem;
   text-align: center;
-  color: #9ca3af;
+  color: var(--a-color-muted);
   font-weight: 500;
 }
-.login-link { font-weight: 900; text-decoration: underline; color: #000; }
+.login-link { font-weight: var(--a-font-weight-strong, 700); text-decoration: underline; color: var(--a-color-fg); }
 .login-link:hover { opacity: 0.7; }
 .loading-list { display: flex; flex-direction: column; gap: 1rem; }
 .loading-item {
   height: 80px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: var(--a-color-disabled-bg);
+  border: 1px solid var(--a-color-line-soft);
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
@@ -292,7 +294,7 @@ onMounted(fetchComments)
 }
 .comment-list { display: flex; flex-direction: column; gap: 1rem; }
 .comment-item {
-  border-left: 4px solid #000;
+  border-left: 2px solid var(--a-color-line);
   padding: 0.75rem 0 0.75rem 1.5rem;
 }
 .comment-header {
@@ -306,17 +308,17 @@ onMounted(fetchComments)
   width: 28px;
   height: 28px;
   border-radius: 9999px;
-  background: #000;
-  color: #fff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.comment-author { font-size: 0.875rem; font-weight: 900; }
-.comment-time { font-size: 0.75rem; color: #9ca3af; font-weight: 500; }
+.comment-author { font-size: 0.875rem; font-weight: var(--a-font-weight-strong, 700); }
+.comment-time { font-size: 0.75rem; color: var(--a-color-muted); font-weight: 500; }
 .delete-btn {
   margin-left: auto;
   background: none;

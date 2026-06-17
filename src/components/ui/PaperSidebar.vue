@@ -1,12 +1,12 @@
 <template>
-  <aside class="a-sidebar" :class="{ 'is-collapsed': collapsed }">
+  <aside class="a-sidebar" :class="{ 'is-collapsed': isCollapsed }">
     <div v-if="collapsible" class="a-sidebar-head">
       <button
         class="a-sidebar-collapse-btn"
         type="button"
-        @click="$emit('update:collapsed', !collapsed)"
+        @click="isCollapsed = !isCollapsed"
       >
-        <NIcon size="24" aria-hidden="true"><MenuOutline /></NIcon>
+        <Menu :size="24" aria-hidden="true" />
       </button>
     </div>
     <nav class="paper-sidebar-nav" :aria-label="ariaLabel">
@@ -19,18 +19,40 @@
 </template>
 
 <script setup lang="ts">
-import { NIcon } from 'naive-ui'
-import { MenuOutline } from '@vicons/ionicons5'
+import { ref, computed, onMounted } from 'vue'
+import { Menu } from 'lucide-vue-next'
 
-defineProps<{
+const props = defineProps<{
   ariaLabel?: string
   collapsible?: boolean
   collapsed?: boolean
+  storageKey?: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:collapsed', value: boolean): void
 }>()
+
+const localCollapsed = ref(false)
+
+const isCollapsed = computed({
+  get: () => props.storageKey ? localCollapsed.value : (props.collapsed ?? false),
+  set: (val) => {
+    if (props.storageKey) {
+      localCollapsed.value = val
+      localStorage.setItem(props.storageKey, String(val))
+    }
+    emit('update:collapsed', val)
+  }
+})
+
+onMounted(() => {
+  if (props.storageKey) {
+    const cached = localStorage.getItem(props.storageKey)
+    localCollapsed.value = cached === 'true'
+    emit('update:collapsed', localCollapsed.value)
+  }
+})
 </script>
 
 <style scoped>
@@ -102,7 +124,7 @@ defineEmits<{
   align-items: center;
   min-height: 3.75rem;
   padding: 0 1.35rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
   transition: padding 0.2s;
 }
 

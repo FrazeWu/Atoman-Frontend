@@ -21,15 +21,15 @@
 import { computed, defineAsyncComponent, onMounted } from 'vue'
 import { NConfigProvider } from 'naive-ui'
 import { useRoute } from 'vue-router'
-import AppTopbar from '@/components/AppTopbar.vue'
+import AppTopbar from '@/components/system/AppTopbar.vue'
 import FirstLoginOnboarding from '@/components/onboarding/FirstLoginOnboarding.vue'
-import SiteFooter from '@/components/SiteFooter.vue'
+import SiteFooter from '@/components/system/SiteFooter.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
 
-const AudioPlayer = defineAsyncComponent(() => import('@/components/AudioPlayer.vue'))
+const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
 
 const themeOverrides = {
   common: {

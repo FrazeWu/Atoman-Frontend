@@ -3,11 +3,13 @@ import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
+import { useApi } from '@/composables/useApi'
 
 export const useInboxStore = defineStore('inbox', () => {
   const authStore = useAuthStore()
   const notificationStore = useNotificationStore()
   const dmStore = useDMStore()
+  const api = useApi()
 
   const connected = ref(false)
   const polling = ref(false)
@@ -47,7 +49,7 @@ export const useInboxStore = defineStore('inbox', () => {
 
   const connect = async () => {
     if (!authStore.token || socket) return
-    const apiBase = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '')
+    const apiBase = api.url.replace(/\/api$/, '')
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = apiBase.startsWith('http')
       ? apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')

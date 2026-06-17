@@ -3,6 +3,7 @@
     <PaperSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
+      storage-key="atoman.feed.sidebar.collapsed"
     >
       <PaperSidebarItem
         v-for="(item, index) in navItems"
@@ -37,7 +38,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { BookmarkOutline, CompassOutline, LogoRss, StarOutline } from '@vicons/ionicons5'
+import { Bookmark, Compass, Rss, Star } from 'lucide-vue-next'
 import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
 import PaperSidebar from '@/components/ui/PaperSidebar.vue'
 import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
@@ -56,7 +57,6 @@ const uiStore = useUIStore()
 // 1. Setup global area switching (H/L)
 useKeyboardLayout()
 
-const sidebarStorageKey = 'atoman.feed.sidebar.collapsed'
 const sidebarCollapsed = ref(false)
 
 const subscriptions = computed(() => feedStore.subscriptions)
@@ -64,10 +64,10 @@ const groups = computed(() => feedStore.groups)
 const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
 
 const navItems = [
-  { to: '/', label: '订阅', icon: LogoRss, exact: true },
-  { to: '/explore', label: '探索', icon: CompassOutline },
-  { to: '/reading-list', label: '稍后阅读', icon: BookmarkOutline },
-  { to: '/starred', label: '收藏', icon: StarOutline },
+  { to: '/', label: '订阅', icon: Rss, exact: true },
+  { to: '/explore', label: '探索', icon: Compass },
+  { to: '/reading-list', label: '稍后阅读', icon: Bookmark },
+  { to: '/starred', label: '收藏', icon: Star },
 ]
 
 // 2. Setup sidebar list navigation (J/K)
@@ -119,13 +119,6 @@ watch(focusedSidebarIndex, (newIndex) => {
   }
 })
 
-onMounted(() => {
-  sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
-})
-
-watch(sidebarCollapsed, (collapsed) => {
-  localStorage.setItem(sidebarStorageKey, String(collapsed))
-})
 </script>
 
 <style scoped>

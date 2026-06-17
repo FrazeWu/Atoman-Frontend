@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import type { Song, RepeatMode, TimelineItem } from '@/types';
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const api = useApi();
 
 export type PlaybackMode = 'loop' | 'single' | 'random';
 
@@ -154,7 +155,7 @@ export const usePlayerStore = defineStore('player', () => {
     songLibraryLoading.value = true;
     songsRequest = (async () => {
       try {
-        const response = await fetch(`${API_URL}/songs`);
+        const response = await fetch(`${api.url}/songs`);
         if (!response.ok) {
           songLibraryLoaded.value = false;
           return;

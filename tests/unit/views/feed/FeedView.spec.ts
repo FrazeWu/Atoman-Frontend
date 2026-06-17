@@ -52,7 +52,7 @@ describe('FeedView', () => {
           is_read: false,
         },
       ],
-      total: 1,
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
     }), { status: 200 }))
 
     const authStore = useAuthStore()
@@ -87,6 +87,82 @@ describe('FeedView', () => {
     expect(routerPush).not.toHaveBeenCalled()
     expect(navigateModuleWithShutter).not.toHaveBeenCalled()
     expect(wrapper.findComponent({ name: 'FeedArticleSheet' }).exists()).toBe(true)
+  })
+
+  it('shows pagination from timeline meta total', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-1',
+            feed_source_id: 'source-1',
+            feed_source: { id: 'source-1', title: '来源' },
+            guid: 'feed-item-1',
+            title: '订阅条目',
+            link: 'https://example.com/item',
+            summary: '摘要',
+            author: '作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 40, has_more: true },
+    }), { status: 200 }))
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          ABtn: true,
+          AModal: true,
+          AEmpty: true,
+          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          ASelect: true,
+          PaperField: true,
+          PaperClip: true,
+          PaperPress: true,
+          PaperBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const pageButtons = wrapper.findAll('.feed-page-number').map((button) => button.text())
+    expect(pageButtons).toContain('2')
+  })
+
+  it('does not render feed-item-only actions for internal posts', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          ABtn: true,
+          AModal: true,
+          AEmpty: true,
+          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          ASelect: true,
+          PaperField: true,
+          PaperClip: { name: 'PaperClip', props: ['label'], template: '<button>{{ label }}</button>' },
+          PaperPress: true,
+          PaperBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const actionLabels = wrapper.findAll('button').map((button) => button.text())
+    expect(actionLabels).not.toContain('收藏')
+    expect(actionLabels).not.toContain('稍后阅读')
   })
 
   it('does not render the old right-edge subscription source drawer', async () => {

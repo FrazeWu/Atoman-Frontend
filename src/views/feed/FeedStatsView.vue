@@ -99,6 +99,7 @@ import APageHeader from '@/components/ui/APageHeader.vue'
 import PaperPress from '@/components/ui/PaperPress.vue'
 import PaperTab from '@/components/ui/PaperTab.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 
 type FeedStatsPeriod = 'day' | 'week' | 'month'
 
@@ -120,7 +121,7 @@ interface FeedStatsData {
   source_breakdown: FeedSourceStat[]
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 
 const authStore = useAuthStore()
 
@@ -162,7 +163,7 @@ const fetchStats = async () => {
   loading.value = true
   try {
     const params = new URLSearchParams({ period: period.value })
-    const res = await fetch(`${API_URL}/feed/stats?${params}`, { headers: authHeaders() })
+    const res = await fetch(`${api.url}/feed/stats?${params}`, { headers: authHeaders() })
     if (res.ok) {
       const data = await res.json()
       stats.value = data.data || null

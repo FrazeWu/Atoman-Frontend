@@ -60,7 +60,7 @@
           @click="toggleUnreadOnly"
           :title="unreadOnly ? '显示全部' : '只看未读'"
         >
-          <NIcon size="20" aria-hidden="true"><FilterOutline /></NIcon>
+          <Filter :size="20" aria-hidden="true" />
         </button>
         <div v-if="authStore.isAuthenticated" style="width: 2rem"></div>
         <PaperPress
@@ -232,8 +232,7 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { userUrl, modulePathUrl } from '@/composables/useSubdomainNav'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import { NIcon } from 'naive-ui'
-import { FilterOutline } from '@vicons/ionicons5'
+import { Filter } from 'lucide-vue-next'
 import type { FeedItem, FeedSourceProvider, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 import { useApiUrl } from '@/composables/useApi'

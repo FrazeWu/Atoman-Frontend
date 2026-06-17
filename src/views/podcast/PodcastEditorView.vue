@@ -11,8 +11,9 @@ import ASelect from '@/components/ui/ASelect.vue'
 import AConfirm from '@/components/ui/AConfirm.vue'
 import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
 import type { PodcastEpisode, Channel, Collection } from '@/types'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -104,7 +105,7 @@ async function uploadAudioFile(file: File, sourceName: string) {
     const fd = new FormData()
     fd.append('audio', file)
     const result = await uploadWithProgress(
-      `${API_URL}/podcast/upload-audio`,
+      `${api.url}/podcast/upload-audio`,
       fd,
       (pct) => { audioUploadProgress.value = pct },
     )
@@ -251,7 +252,7 @@ async function onCoverFileChange(e: Event) {
   try {
     const fd = new FormData()
     fd.append('cover', file)
-    const res = await fetch(`${API_URL}/podcast/upload-cover`, {
+    const res = await fetch(`${api.url}/podcast/upload-cover`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: fd,
@@ -291,13 +292,13 @@ function buildPayload(status: 'draft' | 'published') {
 async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<PodcastEpisode> {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }
   if (isEdit.value) {
-    const res = await fetch(`${API_URL}/podcast/episodes/${route.params.id}`, {
+    const res = await fetch(`${api.url}/podcast/episodes/${route.params.id}`, {
       method: 'PUT', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
     return res.json()
   } else {
-    const res = await fetch(`${API_URL}/podcast/episodes`, {
+    const res = await fetch(`${api.url}/podcast/episodes`, {
       method: 'POST', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
@@ -309,7 +310,7 @@ async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
 
-  const res = await fetch(`${API_URL}/blog/channels/${channelID}/collections`, {
+  const res = await fetch(`${api.url}/blog/channels/${channelID}/collections`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) return
@@ -330,7 +331,7 @@ function onChannelChange(value: string) {
 async function loadChannels() {
   if (!authStore.user) return
   const res = await fetch(
-    `${API_URL}/blog/channels?user_id=${authStore.user.id}`,
+    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } },
   )
   if (res.ok) {
@@ -347,7 +348,7 @@ async function loadChannels() {
 
 async function loadEpisode() {
   const id = route.params.id as string
-  const res = await fetch(`${API_URL}/podcast/episodes/${id}`, {
+  const res = await fetch(`${api.url}/podcast/episodes/${id}`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) return

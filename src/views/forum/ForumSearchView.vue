@@ -18,53 +18,54 @@
     </div>
 
     <div v-if="forumStore.loading" style="display:flex;flex-direction:column;gap:1rem">
-      <div v-for="i in 5" :key="i" style="height:5rem;border:2px solid #000;background:#f9fafb" />
+      <div v-for="i in 5" :key="i" style="height:5rem;border:2px solid var(--a-color-border);background:var(--a-color-paper-soft)" />
     </div>
 
     <template v-else>
       <!-- Result count -->
-      <p v-if="searchQuery" style="font-size:.8rem;font-weight:700;color:#6b7280;margin:0 0 1.25rem">
+      <p v-if="searchQuery" style="font-size:.8rem;font-weight:700;color:var(--a-color-muted);margin:0 0 1.25rem">
         找到 {{ forumStore.searchTotal }} 条结果
       </p>
 
       <AEmpty v-if="forumStore.searchResults.length === 0 && searchQuery" text="没有找到匹配的话题" />
 
-      <div v-if="forumStore.searchResults.length > 0" style="border:2px solid #000">
-        <div
+      <div v-if="forumStore.searchResults.length > 0" class="search-results-list">
+        <PaperEntry
           v-for="topic in forumStore.searchResults"
           :key="topic.id"
-          class="topic-row"
           @click="router.push(`/topic/${topic.id}`)"
         >
-          <div style="display:flex;align-items:flex-start;gap:1rem">
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap">
-                <span
-                  v-if="topic.category"
-                  style="font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;padding:.1rem .5rem;border:1.5px solid"
-                  :style="{ borderColor: topic.category.color, color: topic.category.color }"
-                >{{ topic.category.name }}</span>
-                <span
-                  v-for="tag in (topic.tags || []).slice(0, 3)"
-                  :key="tag"
-                  style="font-size:.6rem;font-weight:700;padding:.1rem .4rem;border:1.5px solid #d1d5db;color:#6b7280"
-                >{{ tag }}</span>
-              </div>
-              <p class="topic-title" style="font-weight:700;font-size:.95rem;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                {{ topic.title }}
-              </p>
-              <p style="font-size:.75rem;font-weight:500;color:#6b7280;margin:.3rem 0 0">
-                {{ topic.user?.display_name || topic.user?.username || '匿名' }}
-                &nbsp;·&nbsp;
-                {{ formatTime(topic.created_at) }}
-              </p>
+          <!-- Tags / Category badge -->
+          <template #meta>
+            <span
+              v-if="topic.category"
+              class="tr-badge a-badge tr-badge-cat"
+              :style="{ borderColor: topic.category.color, color: topic.category.color }"
+            >{{ topic.category.name }}</span>
+            <span
+              v-for="tag in (topic.tags || []).slice(0, 3)"
+              :key="tag"
+              class="tr-badge a-badge tr-badge-tag"
+            ># {{ tag }}</span>
+            <span class="tr-sep">·</span>
+            <span class="tr-author">{{ topic.user?.display_name || topic.user?.username || '匿名' }}</span>
+            <span class="tr-sep">·</span>
+            <span>{{ formatTime(topic.created_at) }}</span>
+          </template>
+
+          <!-- Title -->
+          <template #title>
+            {{ topic.title }}
+          </template>
+
+          <!-- Stats -->
+          <template #actions>
+            <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.72rem;color:var(--a-color-muted);font-weight:700">
+              <span>回复 {{ topic.reply_count }}</span>
+              <span>点赞 {{ topic.like_count }}</span>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem;flex-shrink:0">
-              <span style="font-size:.75rem;font-weight:700">{{ topic.reply_count }} 回复</span>
-              <span style="font-size:.75rem;font-weight:700;color:#6b7280">{{ topic.like_count }} 赞</span>
-            </div>
-          </div>
-        </div>
+          </template>
+        </PaperEntry>
       </div>
 
       <!-- Load more -->
@@ -82,6 +83,7 @@ import { useForumStore } from '@/stores/forum'
 import APageHeader from '@/components/ui/APageHeader.vue'
 import ABtn from '@/components/ui/ABtn.vue'
 import AEmpty from '@/components/ui/AEmpty.vue'
+import PaperEntry from '@/components/ui/PaperEntry.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,8 +144,8 @@ watch(() => route.query.q, async (q) => {
 .search-input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 2px solid #000;
-  background: #fff;
+  border: 2px solid var(--a-color-border);
+  background: var(--a-color-bg);
   font-size: 0.9rem;
   font-weight: 500;
   font-family: inherit;
@@ -151,24 +153,6 @@ watch(() => route.query.q, async (q) => {
   transition: box-shadow 0.2s;
 }
 .search-input:focus {
-  box-shadow: 5px 5px 0px 0px rgba(0,0,0,1);
-}
-
-.topic-row {
-  display: block;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  color: #000;
-  background: #fff;
-  transition: box-shadow 0.25s;
-  cursor: pointer;
-}
-.topic-row:hover {
-  box-shadow: 10px 10px 0px 0px rgba(0,0,0,1);
-  position: relative;
-  z-index: 1;
-}
-.topic-row:hover .topic-title {
-  text-decoration: underline;
+  box-shadow: 5px 5px 0px 0px var(--a-color-border);
 }
 </style>

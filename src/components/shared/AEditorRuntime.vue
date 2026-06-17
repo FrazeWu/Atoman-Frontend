@@ -932,7 +932,7 @@ onBeforeUnmount(() => {
 }
 
 .a-editor:not(.no-border) {
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line);
 }
 
 .a-editor-presence {
@@ -940,8 +940,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.4rem 1.25rem;
-  border-bottom: 2px solid #000;
-  background: #f9f9f9;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-soft);
   flex-shrink: 0;
 }
 
@@ -958,9 +958,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-weight: 900;
+  font-weight: 700;
   font-size: 0.65rem;
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-ink);
   flex-shrink: 0;
 }
 
@@ -978,19 +978,19 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.8rem;
   min-width: 8.5rem;
-  border: 2px solid #000;
-  background: #fff;
+  border: 1px solid var(--a-color-line);
+  background: var(--a-color-paper);
   padding: 0.55rem 0.75rem;
   cursor: pointer;
-  color: #000;
+  color: var(--a-color-ink);
   font: inherit;
-  font-weight: 800;
+  font-weight: var(--a-font-weight-strong, 700);
   line-height: 1;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .mode-switch:hover {
-  background: #f3f3f3;
+  background: var(--a-color-paper-wash);
 }
 
 .mode-switch-label {
@@ -1001,14 +1001,14 @@ onBeforeUnmount(() => {
 .mode-switch-state {
   min-width: 2.2rem;
   padding: 0.22rem 0.45rem;
-  border: 2px solid #000;
-  background: #fff;
-  color: #000;
+  border: 1px solid var(--a-color-ink);
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   letter-spacing: 0.08em;
 }
 
@@ -1025,8 +1025,8 @@ onBeforeUnmount(() => {
 .a-editor-toolbar {
   display: flex;
   flex-direction: column;
-  border-bottom: 2px solid #000;
-  background: #fff;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
   flex-shrink: 0;
   position: sticky;
   top: 0;
@@ -1042,15 +1042,15 @@ onBeforeUnmount(() => {
 }
 
 .tb-row + .tb-row {
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--a-color-line-soft);
 }
 
 .tb-row-label {
   font-size: 0.58rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: var(--a-color-muted);
   margin-right: 0.2rem;
   flex-shrink: 0;
 }
@@ -1060,17 +1060,17 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 0.35rem 0.6rem;
-  border: 2px solid #000;
-  background: #fff;
-  color: #000;
+  border: 1px solid var(--a-color-line);
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   font-family: inherit;
   cursor: pointer;
   letter-spacing: 0.02em;
   line-height: 1;
   white-space: nowrap;
-  transition: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .tb-btn:hover,
@@ -1139,7 +1139,7 @@ onBeforeUnmount(() => {
 }
 
 .sv-source {
-  border-right: 2px solid #000;
+  border-right: 1px solid var(--a-color-line-soft);
   display: flex;
   flex-direction: column;
 }
@@ -1172,10 +1172,10 @@ onBeforeUnmount(() => {
 .a-mention-dropdown {
   position: fixed;
   z-index: 9999;
-  background: #fff;
-  border: 2px solid #000;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line);
   min-width: 200px;
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -1220,7 +1220,7 @@ onBeforeUnmount(() => {
 
   .sv-source {
     border-right: none;
-    border-bottom: 2px solid #000;
+    border-bottom: 1px solid var(--a-color-line-soft);
   }
 
   .cm-container {
@@ -1233,8 +1233,8 @@ onBeforeUnmount(() => {
   padding-top: 2.5rem;
   overflow: hidden;
   background: #1e1e2e;
-  border: 2px solid #000;
-  box-shadow: 4px 4px 0 0 #000;
+  border: 1px solid var(--a-color-line-soft);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   color: #cdd6f4;
 }
 

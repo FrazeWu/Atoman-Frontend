@@ -41,26 +41,13 @@ const onClick = (event: MouseEvent) => {
   padding: 8px 12px;
   border: 1px solid var(--a-color-line);
   background: var(--a-color-paper);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
   color: var(--a-color-ink);
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 10px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  transform: rotate(2deg);
-  transition: box-shadow 0.16s ease, transform 0.16s ease;
-}
-
-.paper-clip::before {
-  position: absolute;
-  top: -7px;
-  right: 8px;
-  left: 8px;
-  height: 10px;
-  background: var(--a-color-tape);
-  content: '';
-  transform: rotate(-4deg);
+  transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
 .paper-clip:not(:disabled) {
@@ -70,16 +57,10 @@ const onClick = (event: MouseEvent) => {
 .paper-clip:not(:disabled):hover,
 .paper-clip:not(:disabled):focus-visible,
 .paper-clip.is-active:not(:disabled) {
-  box-shadow: 0 11px 22px rgba(15, 23, 42, 0.12);
   outline: none;
-  transform: translateY(-2px) rotate(1deg);
+  transform: translateY(-1px);
   background: var(--a-color-ink);
   color: var(--a-color-paper);
-}
-
-.paper-clip.is-active:not(:disabled):hover {
-  transform: translateY(-3px) rotate(2deg);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
 }
 
 .paper-clip:disabled {

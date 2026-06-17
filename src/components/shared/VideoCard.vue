@@ -124,8 +124,8 @@ const handleWatchLater = (e: Event) => {
 .vc-watch-later {
   opacity: 0;
   background: var(--a-color-bg);
-  border: 1.5px solid var(--a-color-fg);
-  box-shadow: 3px 3px 0px var(--a-color-fg);
+  border: 1px solid var(--a-color-line);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   padding: 4px 8px;
   font-size: 12px;
   font-weight: 700;
@@ -139,8 +139,8 @@ const handleWatchLater = (e: Event) => {
 }
 
 .vc-watch-later:active {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0px #000;
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .vc-overlay-bottom-left {

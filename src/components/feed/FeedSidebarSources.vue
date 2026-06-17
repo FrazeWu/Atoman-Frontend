@@ -179,10 +179,16 @@ function sourceBadge(sub: Subscription): string {
   width: 100%;
   border: 0;
   padding: 0.5rem 0.55rem;
-  background: #f8fafc;
+  background: transparent;
   color: #0f172a;
   text-align: left;
   cursor: pointer;
+  border-radius: 0;
+  transition: all 0.2s;
+}
+
+.feed-sidebar-sources__item:hover {
+  background-color: var(--a-color-paper-wash);
 }
 
 .feed-sidebar-sources__item:hover .feed-sidebar-sources__name {
@@ -191,8 +197,8 @@ function sourceBadge(sub: Subscription): string {
 }
 
 .feed-sidebar-sources__item.is-active {
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgb(15 23 42 / 10%);
+  background-color: var(--a-color-paper-wash);
+  box-shadow: none;
   font-weight: 800;
 }
 

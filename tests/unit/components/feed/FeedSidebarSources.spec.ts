@@ -75,6 +75,33 @@ describe('FeedSidebarSources', () => {
     expect(wrapper.find('.feed-sidebar-sources__count').exists()).toBe(false)
   })
 
+  it('falls back to feed source title when subscription title is missing', () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions: [
+          {
+            id: 'sub-with-source-title',
+            user_id: 'user-1',
+            feed_source_id: 'source-with-title',
+            feed_source: {
+              id: 'source-with-title',
+              source_type: 'external_rss',
+              rss_url: 'https://example.com/feed.xml',
+              hash: 'source-with-title-hash',
+              title: '源标题',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        groups: [],
+      },
+    })
+
+    expect(wrapper.text()).toContain('源标题')
+    expect(wrapper.text()).not.toContain('未命名订阅')
+  })
+
   it('renders subscriptions with missing groups under unassigned group', () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {

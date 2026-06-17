@@ -6,11 +6,11 @@
       "localStorage": [
         {
           "name": "token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODM0MjY5OTAsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIwMTljZjFhOS0yNTYxLTdjNmItOGY0Yy1hZjA1NjBiMmRlMzkiLCJ1c2VybmFtZSI6ImFkbWluIn0.zXfPXe2MwuolhJskqgKvxQtw15ZsNC3-s5lOmZYLgyI"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODM2NjMzMTIsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOiIwMTljZjFhOS0yNTYxLTdjNmItOGY0Yy1hZjA1NjBiMmRlMzkiLCJ1c2VybmFtZSI6ImFkbWluIn0.BSZ5gJjImAPpWSCxZSJxt-CYnu_gvVwq13kMlIEnEpQ"
         },
         {
           "name": "user",
-          "value": "{\"avatar_url\":\"\",\"display_name\":\"\",\"email\":\"admin@atoman.com\",\"id\":2,\"is_active\":true,\"onboarding_completed_at\":\"2026-06-07T12:23:10.738Z\",\"role\":\"admin\",\"username\":\"admin\",\"uuid\":\"019cf1a9-2561-7c6b-8f4c-af0560b2de39\"}"
+          "value": "{\"avatar_url\":\"\",\"display_name\":\"\",\"email\":\"admin@atoman.com\",\"id\":2,\"is_active\":true,\"onboarding_completed_at\":\"2026-06-10T06:01:52.967Z\",\"role\":\"admin\",\"username\":\"admin\",\"uuid\":\"019cf1a9-2561-7c6b-8f4c-af0560b2de39\"}"
         }
       ]
     }

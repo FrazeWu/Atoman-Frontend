@@ -4,8 +4,9 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const { isMainShifted, openArtist, openNestedAction } = useMusicDrawers()
 
 const artists = ref<any[]>([])
@@ -13,7 +14,7 @@ const searchQuery = ref('')
 
 async function fetchArtists() {
   try {
-    const res = await fetch(`${API_URL}/artists`)
+    const res = await fetch(`${api.url}/artists`)
     if (res.ok) {
       artists.value = await res.json()
     }

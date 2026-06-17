@@ -164,24 +164,25 @@ watch(query, (v) => { if (v) open.value = true })
 .input-wrap { position: relative; }
 .field-input {
   width: 100%;
-  background: #fff;
-  border: 2px solid #000;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  border: 1px solid var(--a-color-line);
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   outline: none;
-  transition: box-shadow 0.2s;
+  transition: border-color 0.15s ease;
   box-sizing: border-box;
 }
-.field-input:focus { box-shadow: 5px 5px 0px 0px rgba(0,0,0,1); }
+.field-input:focus { border-color: var(--a-color-fg); }
 .dropdown {
   position: absolute;
   left: 0;
   right: 0;
   top: calc(100% + 2px);
-  background: #fff;
-  border: 2px solid #000;
-  box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   z-index: 50;
   max-height: 240px;
   overflow-y: auto;
@@ -193,22 +194,22 @@ watch(query, (v) => { if (v) open.value = true })
   cursor: pointer;
   transition: background 0.1s;
 }
-.dropdown-item:hover { background: #f3f4f6; }
-.dropdown-empty { padding: 1rem; color: #9ca3af; font-size: 0.875rem; text-align: center; }
+.dropdown-item:hover { background: var(--a-color-paper-wash); }
+.dropdown-empty { padding: 1rem; color: var(--a-color-muted); font-size: 0.875rem; text-align: center; }
 .dropdown-section { padding: 0.5rem; }
-.dropdown-divider { height: 1px; background: #e5e7eb; margin: 0.25rem 0; }
+.dropdown-divider { height: 1px; background: var(--a-color-line-soft); margin: 0.25rem 0; }
 .add-artist-link {
   display: inline-block;
-  background: #000;
-  color: #fff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
   text-decoration: none;
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-ink);
   padding: 0.45rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
 }
-.add-artist-link:hover { background: #fff; color: #000; }
+.add-artist-link:hover { background: var(--a-color-paper); color: var(--a-color-ink); }
 </style>

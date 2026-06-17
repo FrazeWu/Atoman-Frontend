@@ -1,16 +1,18 @@
 <template>
-  <select
-    v-if="showKanboChannelSwitch"
-    class="channel-select"
-    :value="currentKanboChannelId || ''"
-    title="切换刊播频道"
-    @change="onKanboChannelChange"
-  >
-    <option value="">频道</option>
-    <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-      {{ channel.name }}
-    </option>
-  </select>
+  <div v-if="showKanboChannelSwitch" class="channel-select-wrap">
+    <select
+      class="channel-select"
+      :value="currentKanboChannelId || ''"
+      title="切换刊播频道"
+      @change="onKanboChannelChange"
+    >
+      <option value="">频道</option>
+      <option v-for="channel in channels" :key="channel.id" :value="channel.id">
+        {{ channel.name }}
+      </option>
+    </select>
+    <ChevronDown class="channel-select-icon" :size="14" />
+  </div>
 
   <RouterLink to="/inbox" class="notif-btn" :title="notificationRoom.helper">
     {{ notificationRoom.name }}
@@ -42,6 +44,7 @@ import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { useKanboChannel } from '@/composables/useKanboChannel'
+import { ChevronDown } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
@@ -105,17 +108,32 @@ watch(showKanboChannelSwitch, (visible) => {
 </script>
 
 <style scoped>
+.channel-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .channel-select {
   min-width: 8rem;
   max-width: 12rem;
   border: var(--a-border);
   border-radius: var(--a-radius-none);
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 2rem 0.35rem 0.6rem;
   background: var(--a-color-bg);
+  color: var(--a-color-fg);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   appearance: none;
   -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.channel-select-icon {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  color: var(--a-color-ink-soft);
 }
 
 .notif-btn {
@@ -142,7 +160,7 @@ watch(showKanboChannelSwitch, (visible) => {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   font-size: 0.6rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   border-radius: 0;
   border: 1px solid var(--a-color-ink);
   padding: 1px 5px;
@@ -165,11 +183,11 @@ watch(showKanboChannelSwitch, (visible) => {
   padding: 0.375rem 0.75rem;
   font-weight: 700;
   font-size: 0.875rem;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .user-btn:hover {
-  text-decoration: underline;
+  background: var(--a-color-paper-wash);
 }
 
 .user-avatar {
@@ -178,7 +196,7 @@ watch(showKanboChannelSwitch, (visible) => {
   border-radius: 9999px;
   background: var(--a-color-ink);
   color: var(--a-color-paper);
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   font-size: 0.75rem;
   display: flex;
   align-items: center;

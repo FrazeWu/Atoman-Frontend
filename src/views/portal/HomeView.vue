@@ -3,8 +3,9 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 player.fetchSongs()
@@ -30,7 +31,7 @@ watch(searchQuery, (q) => {
 async function fetchArtists(q = '') {
   try {
     const params = q ? `?q=${encodeURIComponent(q)}` : ''
-    const res = await fetch(`${API_URL}/artists${params}`)
+    const res = await fetch(`${api.url}/artists${params}`)
     if (res.ok) artists.value = await res.json()
   } catch (e) {
     console.error('Failed to fetch artists:', e)
@@ -219,50 +220,52 @@ const shouldShowYear = (index: number) =>
 .header-top-row { display: flex; align-items: flex-start; justify-content: space-between; }
 .btn-upload {
   margin-top: 0.5rem;
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-ink);
   padding: 0.5rem 1.25rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  background: #000;
-  color: #fff;
+  letter-spacing: 0.08em;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
   flex-shrink: 0;
 }
-.btn-upload:hover { background: #fff; color: #000; }
+.btn-upload:hover { background: var(--a-color-paper); color: var(--a-color-ink); }
 .home-title {
-  font-size: 3rem;
-  font-weight: 900;
+  font-size: 2.5rem;
+  font-weight: var(--a-font-weight-black, 900);
   font-style: italic;
-  letter-spacing: -0.05em;
-  border-left: 8px solid #000;
-  padding-left: 1.5rem;
+  letter-spacing: -0.03em;
+  border-left: 4px solid var(--a-color-ink);
+  padding-left: 1.25rem;
   line-height: 1.1;
   margin: 0 0 0.75rem;
 }
-.home-subtitle { color: #6b7280; max-width: 32rem; font-size: 0.875rem; margin: 0 0 1.5rem; }
+.home-subtitle { color: var(--a-color-muted); max-width: 32rem; font-size: 0.875rem; margin: 0 0 1.5rem; }
 .search-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .search-wrap { position: relative; }
 .search-input {
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line);
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   outline: none;
-  transition: box-shadow 0.2s;
+  transition: border-color 0.15s ease;
   width: 240px;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
-.search-input:focus { box-shadow: 5px 5px 0px 0px rgba(0,0,0,1); }
+.search-input:focus { border-color: var(--a-color-fg); }
 .search-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
   z-index: 50;
   width: 240px;
-  background: #fff;
-  border: 2px solid #000;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line);
   border-top: none;
   max-height: 208px;
   overflow-y: auto;
@@ -274,25 +277,27 @@ const shouldShowYear = (index: number) =>
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  background: #fff;
+  background: var(--a-color-paper);
+  color: var(--a-color-fg);
   border: none;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: all 0.1s ease;
 }
-.search-item:hover, .search-item.active { background: #000; color: #fff; }
+.search-item:hover, .search-item.active { background: var(--a-color-ink); color: var(--a-color-paper); }
 .btn-random, .btn-all {
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line);
   padding: 0.5rem 1rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  background: #fff;
+  letter-spacing: 0.08em;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
-.btn-random:hover, .btn-all:hover { background: #000; color: #fff; }
-.btn-all { border-width: 1px; color: #6b7280; }
+.btn-random:hover, .btn-all:hover { background: var(--a-color-paper-wash); }
+.btn-all { border-color: var(--a-color-line-soft); color: var(--a-color-muted); }
 
 /* Timeline */
 .timeline-wrap {
@@ -306,8 +311,8 @@ const shouldShowYear = (index: number) =>
   left: calc(33.333% + 2rem);
   top: 0;
   bottom: 0;
-  width: 4px;
-  background: #000;
+  width: 1px;
+  background: var(--a-color-line-soft);
   z-index: 0;
 }
 .timeline-empty {
@@ -315,7 +320,7 @@ const shouldShowYear = (index: number) =>
   z-index: 10;
   margin-left: calc(33.333% + 2rem);
   padding-top: 4rem;
-  color: #9ca3af;
+  color: var(--a-color-disabled-fg);
   font-weight: 500;
 }
 .albums-list { display: flex; flex-direction: column; gap: 6rem; position: relative; z-index: 10; }
@@ -328,71 +333,72 @@ const shouldShowYear = (index: number) =>
   z-index: 20;
 }
 .year-badge {
-  background: #000;
-  color: #fff;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink-muted);
+  border: 1px solid var(--a-color-line-soft);
   padding: 0.25rem 1rem;
   font-size: 0.875rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
 }
 .timeline-node {
   position: absolute;
   left: 33.333%;
   transform: translateX(-50%);
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   border-radius: 9999px;
-  border: 4px solid #fff;
-  background: #000;
+  border: 2px solid var(--a-color-line);
+  background: var(--a-color-bg);
   z-index: 20;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
-.timeline-node.playing { transform: translateX(-50%) scale(1.5); }
+.timeline-node.playing { transform: translateX(-50%) scale(1.3); border-color: var(--a-color-ink); background: var(--a-color-ink); }
 .album-card-wrap {
   margin-left: calc(33.333% + 2rem);
   width: calc(66.666% - 2rem);
 }
 .album-card {
-  background: #fff;
-  border: 2px solid #000;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line-soft);
   padding: 1.5rem;
-  transition: box-shadow 0.3s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.album-card:hover { box-shadow: 10px 10px 0px 0px rgba(0,0,0,1); }
+.album-card:hover { border-color: var(--a-color-line); box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
 .album-card-inner { display: flex; gap: 1.5rem; }
 .album-cover {
   width: 128px;
   height: 128px;
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line-soft);
   object-fit: cover;
   flex-shrink: 0;
   filter: grayscale(1);
 }
 .album-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
 .album-title {
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-size: 1.35rem;
+  font-weight: var(--a-font-weight-black, 900);
+  letter-spacing: -0.025em;
   line-height: 1.2;
   margin: 0 0 0.25rem;
 }
-.album-artist { font-size: 0.875rem; font-weight: 700; color: #4b5563; margin: 0 0 0.25rem; }
-.album-date { font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem; }
-.album-tracks { font-size: 0.75rem; color: #9ca3af; margin: 0; }
+.album-artist { font-size: 0.875rem; font-weight: 700; color: var(--a-color-ink-muted); margin: 0 0 0.25rem; }
+.album-date { font-size: 0.75rem; color: var(--a-color-muted); margin: 0 0 0.25rem; }
+.album-tracks { font-size: 0.75rem; color: var(--a-color-muted-soft); margin: 0; }
 .album-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
 .btn-play, .btn-detail {
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line);
   padding: 0.5rem 1rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  background: #fff;
+  letter-spacing: 0.08em;
+  background: var(--a-color-paper);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
   text-decoration: none;
-  color: #000;
+  color: var(--a-color-ink);
   display: inline-block;
 }
-.btn-play:hover, .btn-detail:hover { background: #000; color: #fff; }
+.btn-play:hover, .btn-detail:hover { background: var(--a-color-ink); color: var(--a-color-paper); border-color: var(--a-color-ink); }
 </style>

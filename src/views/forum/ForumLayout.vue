@@ -3,6 +3,7 @@
     <PaperSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
+      storage-key="atoman.forum.sidebar.collapsed"
     >
       <!-- All topics -->
       <PaperSidebarItem
@@ -15,7 +16,7 @@
         所有话题
       </PaperSidebarItem>
 
-      <div class="a-sidebar-divider" />
+      <div v-if="!sidebarCollapsed" class="a-sidebar-divider" />
 
       <!-- Categories section -->
       <div class="a-sidebar-label">/ CATEGORIES</div>
@@ -34,21 +35,23 @@
         <span class="a-label" style="font-size:0.7rem">{{ cat.topic_count || 0 }}</span>
       </PaperSidebarItem>
 
-      <div class="a-sidebar-divider" />
+      <div v-if="!sidebarCollapsed" class="a-sidebar-divider" />
 
       <!-- Tags section -->
-      <div class="a-sidebar-label">/ TAGS</div>
-      <div style="padding:0.5rem 2rem;display:flex;flex-wrap:wrap;gap:0.35rem">
-        <button
-          v-for="tag in popularTags"
-          :key="tag"
-          class="forum-sidebar-tag"
-          :class="{ active: $route.query.tag === tag }"
-          @click="selectTag(tag)"
-        >
-          {{ tag }}
-        </button>
-      </div>
+      <template v-if="!sidebarCollapsed">
+        <div class="a-sidebar-label">/ TAGS</div>
+        <div style="padding:0.5rem 2rem;display:flex;flex-wrap:wrap;gap:0.35rem">
+          <button
+            v-for="tag in popularTags"
+            :key="tag"
+            class="forum-sidebar-tag"
+            :class="{ active: $route.query.tag === tag }"
+            @click="selectTag(tag)"
+          >
+            {{ tag }}
+          </button>
+        </div>
+      </template>
 
       <template #bottom>
         <!-- Keyboard shortcuts hint -->
@@ -78,7 +81,6 @@ const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 
-const sidebarStorageKey = 'atoman.forum.sidebar.collapsed'
 const sidebarCollapsed = ref(false)
 
 // Popular tags - computed from forumStore topics
@@ -108,14 +110,9 @@ const selectTag = (tag: string) => {
 }
 
 onMounted(async () => {
-  sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
   if (forumStore.categories.length === 0) {
     await forumStore.fetchCategories()
   }
-})
-
-watch(sidebarCollapsed, (collapsed) => {
-  localStorage.setItem(sidebarStorageKey, String(collapsed))
 })
 </script>
 

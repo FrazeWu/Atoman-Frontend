@@ -208,6 +208,12 @@ const runDiscover = async () => {
   }
 }
 
+const selectedCandidate = computed(() => candidates.value.find(
+  (candidate) => candidate.feed_url === selectedCandidateUrl.value,
+))
+
+const discoveredTitle = computed(() => newRssTitle.value.trim() || selectedCandidate.value?.title || '')
+
 const buildGithubRepoFeedPayload = () => ({
   provider: 'rsshub' as const,
   template_key: rsshubTemplate.value,
@@ -229,7 +235,7 @@ const submitSubscription = () => {
     localError.value = ''
     emit('submit-discovered', {
       feed_url: selectedCandidateUrl.value,
-      title: newRssTitle.value.trim(),
+      title: discoveredTitle.value,
       group_id: newRssGroupId.value,
     })
     return

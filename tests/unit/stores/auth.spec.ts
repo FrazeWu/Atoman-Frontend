@@ -57,7 +57,7 @@ describe('auth store', () => {
     const token = makeToken(3600)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       token,
-      user: { username: 'cookie-user', role: 'user' },
+      user: { username: 'cookie-user', email: 'cookie@example.com', role: 'user' },
     }), { status: 200 }))
 
     const auth = useAuthStore()
@@ -71,7 +71,7 @@ describe('auth store', () => {
     const token = makeToken(3600)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       token,
-      user: { username: 'cookie-user', role: 'user' },
+      user: { username: 'cookie-user', email: 'cookie@example.com', role: 'user' },
     }), { status: 200 }))
 
     const auth = useAuthStore()
@@ -97,5 +97,98 @@ describe('auth store', () => {
     const auth = useAuthStore()
 
     expect(auth.user?.onboarding_completed_at).toBe('2026-06-02T08:00:00Z')
+  })
+
+  it('throws clear login reason from backend auth code', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      code: 'auth.password_mismatch',
+      error: '密码不正确',
+    }), { status: 401 }))
+
+    const auth = useAuthStore()
+
+    await expect(auth.loginWithPassword('alice@example.com', 'wrong')).rejects.toThrow('密码不正确')
+    expect(auth.lastAuthError).toBe('密码不正确')
+  })
+
+  it('clears local session and stores reason when shared cookie user is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      code: 'auth.user_not_found',
+      error: '账号不存在或已被移除，请重新登录',
+      token: makeToken(3600),
+      user: { username: 'ghost', email: 'ghost@example.com', role: 'user' },
+    }), { status: 401 }))
+
+    const auth = useAuthStore()
+    localStorage.setItem('token', makeToken(3600))
+    localStorage.setItem('user', JSON.stringify({ username: 'ghost', email: 'ghost@example.com', role: 'user' }))
+
+    const restored = await auth.restoreSession()
+
+    expect(restored).toBe(false)
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.token).toBeNull()
+    expect(auth.user).toBeNull()
+    expect(auth.lastAuthError).toBe('账号不存在或已被移除，请重新登录')
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
+  it('uses a network-specific reason when login request cannot reach server', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+
+    const auth = useAuthStore()
+
+    await expect(auth.loginWithPassword('alice@example.com', 'secret')).rejects.toThrow('无法连接服务器，请检查网络后重试')
+    expect(auth.lastAuthError).toBe('无法连接服务器，请检查网络后重试')
+  })
+
+  it('uses a network-specific reason when register request cannot reach server', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+
+    const auth = useAuthStore()
+
+    await expect(auth.register('alice', 'alice@example.com', 'secret')).rejects.toThrow('无法连接服务器，请检查网络后重试')
+    expect(auth.lastAuthError).toBe('无法连接服务器，请检查网络后重试')
+  })
+
+  it('rejects login when successful response contains null user and keeps logged out state', async () => {
+    const token = makeToken(3600)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      token,
+      user: null,
+    }), { status: 200 }))
+
+    const auth = useAuthStore()
+
+    await expect(auth.loginWithPassword('alice@example.com', 'secret')).rejects.toThrow('服务返回异常，请稍后重试')
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.token).toBeNull()
+    expect(auth.user).toBeNull()
+    expect(auth.lastAuthError).toBe('服务返回异常，请稍后重试')
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
+  it('clears stored session when restored session response contains null user', async () => {
+    const token = makeToken(3600)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      token,
+      user: null,
+    }), { status: 200 }))
+
+    const auth = useAuthStore()
+    localStorage.setItem('token', makeToken(3600))
+    localStorage.setItem('user', JSON.stringify({ username: 'demo', email: 'demo@example.com' }))
+
+    const restored = await auth.restoreSession()
+
+    expect(restored).toBe(false)
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.token).toBeNull()
+    expect(auth.user).toBeNull()
+    expect(auth.lastAuthError).toBe('服务返回异常，请稍后重试')
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
   })
 })

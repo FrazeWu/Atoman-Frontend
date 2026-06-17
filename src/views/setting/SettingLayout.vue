@@ -60,20 +60,8 @@ const navItems = computed(() => {
       description: '模块可见性与主要操作权限。',
     },
     {
-      to: '/setting/feed-fulltext',
-      kicker: '02 / FEED',
-      label: '全文抓取',
-      description: '管理 RSS 全文抓取状态与异常处理。',
-    },
-    {
-      to: '/setting/feed-sources',
-      kicker: '03 / SOURCES',
-      label: '来源管理',
-      description: '查看来源 provider、健康状态与隐藏/删除骨架。',
-    },
-    {
       to: '/setting/music-review',
-      kicker: '04 / MUSIC',
+      kicker: '02 / MUSIC',
       label: '音乐管理',
       description: '审核音乐库编辑请求与条目管理。',
     },

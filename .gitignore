@@ -5,6 +5,12 @@
 node_modules/
 dist/
 coverage/
+playwright-report/
+test-results/
 .playwright/
 .playwright-mcp/
+.codegraph/
+.superpowers/
+$TMPDIR/
 .claude/
+.gstack/

@@ -2,8 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const route = useRoute()
 const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
@@ -12,7 +13,7 @@ const error = ref('')
 onMounted(async () => {
   const id = route.params.id as string
   try {
-    const res = await fetch(`${API_URL}/podcast/episodes/${id}`)
+    const res = await fetch(`${api.url}/podcast/episodes/${id}`)
     if (res.ok) {
       ep.value = await res.json()
     } else {

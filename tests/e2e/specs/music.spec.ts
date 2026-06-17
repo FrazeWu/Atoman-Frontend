@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures/base'
 test.describe('Music', () => {
   test('browse music timeline', async ({ page }) => {
     await page.goto('/music')
-    await expect(page.getByText('TIMELINE')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '艺术家' })).toBeVisible()
   })
 
   test('music shows search input', async ({ page }) => {
@@ -11,9 +11,9 @@ test.describe('Music', () => {
     await expect(page.getByPlaceholder('搜索艺术家...')).toBeVisible()
   })
 
-  test('music shows random button', async ({ page }) => {
+  test('music shows add artist button', async ({ page }) => {
     await page.goto('/music')
-    await expect(page.getByRole('button', { name: '随机' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '找不到？添加艺术家' })).toBeVisible()
   })
 
   test('search for artist', async ({ page }) => {
@@ -52,25 +52,17 @@ test.describe('Music', () => {
   })
 
   test('music contribute requires login', async ({ page }) => {
-    // contribute entry maps to album creation — navigate to album new route
-    await page.goto('/album/new')
-    // unauthenticated should be redirected to login or see login link
-    const isLogin = await page.url().then(u => /\/login/.test(u) || /login/.test(u))
-    expect(isLogin || page.getByRole('link', { name: '登录' }).isVisible()).toBeTruthy()
+    await page.goto('/artist/new')
+    await expect(page).toHaveURL(/\/login/)
+    await expect(page.getByRole('heading', { name: '欢迎回来' })).toBeVisible()
   })
 
   test('authenticated user can access contribute page', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/album/new')
-    await expect(authenticatedPage).toHaveURL(/\/album\/new/)
+    await authenticatedPage.goto('/artist/new')
+    await expect(authenticatedPage).toHaveURL(/\/artist\/new\?site=music/)
   })
 
   test('music form pages render core controls', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/album/new')
-    await expect(authenticatedPage.getByText('贡献新档案')).toBeVisible()
-    await expect(authenticatedPage.getByText('艺术家')).toBeVisible()
-    await expect(authenticatedPage.getByText('专辑名称')).toBeVisible()
-    await expect(authenticatedPage.getByRole('button', { name: /直接上传/i })).toBeVisible()
-
     await authenticatedPage.goto('/artist/new?name=test_artist')
     await expect(authenticatedPage.getByText('添加/补全艺术家')).toBeVisible()
     await expect(authenticatedPage.getByPlaceholder('例如：kanye_west')).toHaveValue('test_artist')

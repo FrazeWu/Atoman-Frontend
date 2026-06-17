@@ -50,13 +50,13 @@
         
         <div class="feature-toggle" @click="player.cyclePlaybackMode()">
           <div v-if="player.playbackMode === 'single'" class="repeat-one-wrapper">
-            <NIcon size="20"><RepeatOutline /></NIcon>
+            <Repeat :size="20" />
             <span class="one-badge">1</span>
           </div>
-          <NIcon v-else size="20">
-            <RepeatOutline v-if="player.playbackMode === 'loop'" />
-            <ShuffleOutline v-else-if="player.playbackMode === 'random'" />
-          </NIcon>
+          <span v-else style="display:flex;align-items:center">
+            <Repeat v-if="player.playbackMode === 'loop'" :size="20" />
+            <Shuffle v-else-if="player.playbackMode === 'random'" :size="20" />
+          </span>
         </div>
 
         <div class="volume-container">
@@ -73,12 +73,12 @@
             />
           </div>
           <div class="vol-trigger">
-            <NIcon size="20" class="vol-icon" @click="player.setVolume(player.volume > 0 ? 0 : 0.5)">
-              <VolumeHighOutline v-if="player.volume > 0.6" />
-              <VolumeMediumOutline v-else-if="player.volume > 0.2" />
-              <VolumeLowOutline v-else-if="player.volume > 0" />
-              <VolumeMuteOutline v-else />
-            </NIcon>
+            <span class="vol-icon" style="display:flex;align-items:center" @click="player.setVolume(player.volume > 0 ? 0 : 0.5)">
+              <Volume2 v-if="player.volume > 0.6" :size="20" />
+              <Volume1 v-else-if="player.volume > 0.2" :size="20" />
+              <Volume v-else-if="player.volume > 0" :size="20" />
+              <VolumeX v-else :size="20" />
+            </span>
             <span class="vol-info-pct">{{ Math.round(player.volume * 100) }}%</span>
           </div>
         </div>
@@ -89,9 +89,7 @@
           type="button" 
           @click="player.toggleQueue()"
         >
-          <NIcon size="22">
-            <ListOutline />
-          </NIcon>
+          <List :size="22" />
           <span class="queue-count">{{ player.queue.length || 0 }}</span>
         </button>
       </div>
@@ -139,16 +137,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { usePlayerStore } from '@/stores/player'
-import { NIcon } from 'naive-ui'
 import { 
-  RepeatOutline, 
-  ShuffleOutline, 
-  ListOutline, 
-  VolumeHighOutline,
-  VolumeMediumOutline,
-  VolumeLowOutline,
-  VolumeMuteOutline
-} from '@vicons/ionicons5'
+  Repeat, 
+  Shuffle, 
+  List, 
+  Volume2, 
+  Volume1, 
+  Volume, 
+  VolumeX 
+} from 'lucide-vue-next'
 
 const player = usePlayerStore()
 
@@ -191,8 +188,8 @@ const seek = (e: MouseEvent) => {
   bottom: 0;
   width: 100%;
   z-index: 2001;
-  background: #ffffff;
-  border-top: 1.5px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+  border-top: 1px solid var(--a-color-line-soft);
   height: 84px; /* Slightly taller for more air */
   transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -220,7 +217,7 @@ const seek = (e: MouseEvent) => {
   position: relative;
   width: 52px;
   height: 52px;
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-line-soft);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -235,11 +232,11 @@ const seek = (e: MouseEvent) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--a-font-serif);
+  font-family: inherit;
   font-size: 1.4rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   color: var(--a-color-ink);
-  background: linear-gradient(135deg, #f6f6f6 0%, #ebebeb 100%);
+  background: var(--a-color-paper-soft);
   text-transform: uppercase;
 }
 .cover-overlay {
@@ -573,8 +570,8 @@ const seek = (e: MouseEvent) => {
 .lyrics-panel {
   position: fixed; top: 56px; bottom: 84px; left: 0; right: 0;
   width: 100%;
-  height: calc(100vh - 84px - 56px); background: #ffffff;
-  border-top: 1.5px solid #000;
+  height: calc(100vh - 84px - 56px); background: var(--a-color-paper);
+  border-top: 1px solid var(--a-color-line-soft);
   z-index: 2000; padding: 3rem;
   display: flex; flex-direction: column;
 }
@@ -582,38 +579,38 @@ const seek = (e: MouseEvent) => {
   display: flex; justify-content: flex-end; margin-bottom: 2rem;
 }
 .close-btn {
-  font-family: var(--a-font-meta); font-weight: 950; font-size: 10px;
-  letter-spacing: 0.2em; cursor: pointer; border-bottom: 1px solid #000;
+  font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 10px;
+  letter-spacing: 0.1em; cursor: pointer; border-bottom: 1px solid var(--a-color-line);
 }
 .lyrics-content {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center;
 }
 .placeholder-text {
-  font-family: var(--a-font-serif, serif); font-size: 2.5rem; font-weight: 900;
-  margin-bottom: 1rem; color: #000;
+  font-family: inherit; font-size: 2rem; font-weight: var(--a-font-weight-black, 900);
+  margin-bottom: 1rem; color: var(--a-color-fg);
 }
 .song-meta {
-  font-family: var(--a-font-meta); font-weight: 800; font-size: 0.75rem;
-  text-transform: uppercase; letter-spacing: 0.15em; color: #666;
+  font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--a-color-muted);
 }
 
 .queue-panel {
   position: fixed; top: 56px; bottom: 84px; right: 0;
   width: 420px;
-  height: calc(100vh - 84px - 56px); background: #ffffff;
-  border-left: 1.5px solid #000;
-  border-top: 1.5px solid #000;
+  height: calc(100vh - 84px - 56px); background: var(--a-color-paper);
+  border-left: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-line-soft);
   z-index: 2000; padding: 2rem 3rem;
   display: flex; flex-direction: column;
-  box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.04);
 }
 .queue-header {
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;
 }
 .queue-title {
-  font-family: var(--a-font-meta); font-weight: 950; font-size: 1.2rem;
-  margin: 0; text-transform: uppercase; letter-spacing: 0.1em;
+  font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 1.1rem;
+  margin: 0; text-transform: uppercase; letter-spacing: 0.08em;
 }
 .queue-content {
   flex: 1; overflow-y: auto;
@@ -624,13 +621,13 @@ const seek = (e: MouseEvent) => {
 .queue-item {
   display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem;
   cursor: pointer; transition: all 0.15s;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--a-color-line-soft);
 }
-.queue-item:hover { background: #f9f9f9; }
-.queue-item.active { background: #000; color: #fff; }
-.q-idx { font-family: var(--a-font-mono); font-size: 0.7rem; opacity: 0.5; }
-.q-title { font-family: var(--a-font-serif); font-weight: 900; flex: 1; }
-.q-artist { font-family: var(--a-font-meta); font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; }
+.queue-item:hover { background: var(--a-color-paper-wash); }
+.queue-item.active { background: var(--a-color-ink); color: var(--a-color-paper); }
+.q-idx { font-family: var(--a-font-meta); font-size: 0.7rem; opacity: 0.5; }
+.q-title { font-family: inherit; font-weight: var(--a-font-weight-strong, 700); flex: 1; }
+.q-artist { font-family: inherit; font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; }
 
 .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.5s cubic-bezier(0.2, 0, 0, 1); }
 .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); }

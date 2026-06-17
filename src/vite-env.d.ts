@@ -2,13 +2,18 @@
 
 export {};
 
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
-  readonly VITE_TURNSTILE_SITE_KEY?: string;
-}
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_API_URL: string;
+    readonly VITE_TURNSTILE_SITE_KEY?: string;
+    readonly VITE_APP_VERSION?: string;
+  }
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+
+  const __APP_VERSION__: string;
 }
 
 declare module 'vue-router' {

@@ -134,9 +134,7 @@ const fetchItem = async () => {
   loading.value = true
   try {
     const res = await fetch(`${api.url}/feed/items/${route.params.id}`, {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
+      headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
 
     if (res.ok) {

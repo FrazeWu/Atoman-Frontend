@@ -11,6 +11,7 @@
           class="site-footer-link"
         >{{ link.label }}</a>
       </nav>
+      <span class="site-footer-version" aria-label="当前版本">{{ appVersion }}</span>
     </div>
   </footer>
 </template>
@@ -18,6 +19,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { appVersion } from '@/config/appVersion'
 import { footbarLinks } from '@/config/moduleRooms'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
@@ -71,5 +73,11 @@ const isAdmin = computed(() => isAdminRole(authStore.user?.role))
 .site-footer-link:hover {
   color: var(--a-color-fg);
   text-decoration: underline;
+}
+.site-footer-version {
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+  font-weight: var(--a-font-weight-strong);
+  white-space: nowrap;
 }
 </style>

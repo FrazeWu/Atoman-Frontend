@@ -41,11 +41,13 @@
 
           <template #actions>
             <PaperClip
+              v-if="authStore.isAuthenticated"
               :active="starredIds.has(item.feed_item.id)"
               :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
               @click="toggleStar(item.feed_item.id)"
             />
             <PaperClip
+              v-if="authStore.isAuthenticated"
               :active="readingListIds.has(item.feed_item.id)"
               :label="readingListIds.has(item.feed_item.id) ? '移除' : '稍后阅读'"
               @click="toggleReadingList(item.feed_item.id)"
@@ -181,10 +183,12 @@ const getExternalBadge = (item: FeedItem) => {
 }
 
 const toggleStar = async (id: string) => {
+  if (!authStore.isAuthenticated) return
   await feedStore.toggleStar(id)
 }
 
 const toggleReadingList = async (id: string) => {
+  if (!authStore.isAuthenticated) return
   await feedStore.toggleReadingListItem(id)
 }
 
@@ -216,13 +220,14 @@ const fetchExplore = async () => {
   loading.value = true
   try {
     const params = new URLSearchParams({ sort: sort.value, page: String(page.value), limit: String(pageLimit) })
+    const headers = authStore.isAuthenticated ? authHeaders() : {}
     const res = await fetch(`${api.feed.explore}?${params.toString()}`, {
-      headers: authHeaders()
+      headers
     })
     if (res.ok) {
       const d = await res.json()
       items.value = d.data || []
-      totalItems.value = d.total || 0
+      totalItems.value = d.total ?? d.meta?.total ?? 0
     }
   } catch (e) {
     console.error(e)
@@ -271,8 +276,10 @@ watch(
 )
 
 onMounted(() => {
-  feedStore.fetchStarredIds()
-  feedStore.fetchReadingListIds()
+  if (authStore.isAuthenticated) {
+    feedStore.fetchStarredIds()
+    feedStore.fetchReadingListIds()
+  }
   window.addEventListener('keydown', handleKeyDownGlobal)
 })
 

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { appVersion } from '@/config/appVersion'
 import { footbarLinks } from '@/config/moduleRooms'
 import router from '@/router'
 
@@ -25,5 +26,11 @@ describe('SiteFooter', () => {
   it('registers top-level terms and privacy routes', () => {
     expect(router.resolve('/terms').matched.length).toBeGreaterThan(0)
     expect(router.resolve('/privacy').matched.length).toBeGreaterThan(0)
+  })
+
+  it('renders a build version in the footer', () => {
+    expect(appVersion).toMatch(/^v\d+\.\d+\.\d+/)
+    expect(footerSource).toContain('appVersion')
+    expect(footerSource).toContain('site-footer-version')
   })
 })

@@ -185,4 +185,59 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="manage-sheet"]').attributes('data-show')).toBe('false')
     expect(routerReplace).toHaveBeenCalledWith({ query: { page: '2' } })
   })
+
+  it('renders anonymous public feed items from the paged v1 response', async () => {
+    const authStore = useAuthStore()
+    authStore.token = null
+    authStore.user = null
+    authStore.isAuthenticated = false
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-1',
+            title: '公开 RSS 条目',
+            summary: '公开摘要',
+            link: 'https://example.com/article',
+            published_at: '2026-05-31T00:00:00Z',
+            feed_source: { title: 'Example Feed' },
+          },
+          published_at: '2026-05-31T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { total: 1, page: 1, page_size: 20, has_more: false },
+    }), { status: 200 }))
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          ABtn: true,
+          AModal: true,
+          AEmpty: true,
+          APageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          ASelect: true,
+          PaperField: true,
+          PaperClip: true,
+          PaperPress: true,
+          PaperBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedTimelineFooter: {
+            name: 'FeedTimelineFooter',
+            props: ['total'],
+            template: '<div data-test="feed-footer" :data-total="String(total)"></div>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('公开 RSS 条目')
+    expect(wrapper.get('[data-test="feed-footer"]').attributes('data-total')).toBe('1')
+  })
 })

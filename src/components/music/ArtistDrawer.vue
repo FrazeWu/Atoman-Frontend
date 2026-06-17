@@ -38,10 +38,10 @@ const dummyAlbums = [
         <h3>专辑列表</h3>
       </div>
 
-      <div 
-        v-for="album in dummyAlbums" 
-        :key="album.id" 
-        class="album-row" 
+      <div
+        v-for="album in dummyAlbums"
+        :key="album.id"
+        class="album-row"
         @click="openAlbum(album.id)"
       >
         <div class="album-row-left">

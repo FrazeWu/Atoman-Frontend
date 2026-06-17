@@ -8,14 +8,12 @@ import type {
   SubscriptionGroup,
 } from '@/types'
 import { useAuthStore } from '@/stores/auth'
-import { useApi } from '@/composables/useApi'
+import { useApiUrl } from '@/composables/useApi'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = useApiUrl()
 
 export const useFeedStore = defineStore('feed', () => {
-  const api = useApi()
-
   // Feed state
   const subscriptions = ref<Subscription[]>([])
   const groups = ref<SubscriptionGroup[]>([])
@@ -185,7 +183,6 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchTimeline = async (sourceType?: string, sourceId?: number, unreadOnly = false) => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
     try {
       const params = buildFeedTimelineQuery({
         sourceType,
@@ -195,7 +192,7 @@ export const useFeedStore = defineStore('feed', () => {
       const query = params.toString()
       const url = query ? `${API_URL}/feed/timeline?${query}` : `${API_URL}/feed/timeline`
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
+        headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
       })
       if (res.ok) {
         const data = await res.json()

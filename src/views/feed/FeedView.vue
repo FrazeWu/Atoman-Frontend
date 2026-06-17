@@ -51,15 +51,10 @@
 
     <ShortcutHints :hints="shortcutHints" />
 
-    <div v-if="!authStore.isAuthenticated" class="feed-login-state">
-      <p class="a-title-xl a-muted feed-login-title">{{ feedCopy.name }}</p>
-      <p class="a-muted feed-login-copy">{{ feedCopy.homepageSub }}</p>
-      <ABtn to="/login" size="lg">登录</ABtn>
-    </div>
-
-    <template v-else>
+    <template>
       <div class="feed-actions">
         <button
+          v-if="authStore.isAuthenticated"
           class="filter-toggle-btn"
           :class="{ active: unreadOnly }"
           @click="toggleUnreadOnly"
@@ -67,8 +62,9 @@
         >
           <NIcon size="20" aria-hidden="true"><FilterOutline /></NIcon>
         </button>
-        <div style="width: 2rem"></div>
+        <div v-if="authStore.isAuthenticated" style="width: 2rem"></div>
         <PaperPress
+          v-if="authStore.isAuthenticated"
           variant="secondary"
           :loading="markingAllRead"
           loading-text="处理中..."
@@ -124,11 +120,13 @@
 
             <template #actions>
               <PaperClip
+                v-if="authStore.isAuthenticated"
                 :active="starredIds.has(item.post.id)"
                 :label="starredIds.has(item.post.id) ? '退藏' : '收藏'"
                 @click="toggleStar(item.post.id)"
               />
               <PaperClip
+                v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.post.id)"
                 :label="readingListIds.has(item.post.id) ? '移除' : '稍后阅读'"
                 @click="toggleReadingList(item.post.id)"
@@ -178,11 +176,13 @@
                 @click="playPodcast(item.feed_item, $event)"
               />
               <PaperClip
+                v-if="authStore.isAuthenticated"
                 :active="starredIds.has(item.feed_item.id)"
                 :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
                 @click="toggleStar(item.feed_item.id)"
               />
               <PaperClip
+                v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.feed_item.id)"
                 :label="readingListIds.has(item.feed_item.id) ? '移除' : '稍后阅读'"
                 @click="toggleReadingList(item.feed_item.id)"
@@ -351,7 +351,7 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
 
   selectedArticle.value = item
   showArticleSheet.value = true
-  if (!item.is_read) {
+  if (authStore.isAuthenticated && !item.is_read) {
     item.is_read = true
     void feedStore.markItemsRead([id])
   }
@@ -495,14 +495,17 @@ const getFeedSourceHomeUrl = (item: FeedItem) => {
 }
 
 const toggleStar = async (feedItemId: string) => {
+  if (!authStore.isAuthenticated) return
   await feedStore.toggleStar(feedItemId)
 }
 
 const toggleReadingList = async (feedItemId: string) => {
+  if (!authStore.isAuthenticated) return
   await feedStore.toggleReadingListItem(feedItemId)
 }
 
 const toggleRead = (item: TimelineItem) => {
+  if (!authStore.isAuthenticated) return
   const id = item.post?.id || item.feed_item?.id
   if (!id) return
   item.is_read = !item.is_read
@@ -559,7 +562,6 @@ const changePage = async (page: number) => {
 }
 
 const fetchTimeline = async () => {
-  if (!authStore.isAuthenticated) return
   loadingTimeline.value = true
 
   try {
@@ -571,11 +573,12 @@ const fetchTimeline = async () => {
       unreadOnly: unreadOnly.value,
     })
 
-    const response = await fetch(`${API_URL}/feed/timeline?${params}`, { headers: authHeaders() })
+    const headers = authStore.isAuthenticated ? authHeaders() : {}
+    const response = await fetch(`${API_URL}/feed/timeline?${params}`, { headers })
     if (response.ok) {
       const data = await response.json()
       const items: TimelineItem[] = data.data || []
-      const total = data.total || 0
+      const total = data.total ?? data.meta?.total ?? 0
       const totalPages = Math.max(1, Math.ceil(total / pageLimit))
 
       if (total > 0 && currentPage.value > totalPages) {
@@ -594,13 +597,14 @@ const fetchTimeline = async () => {
 }
 
 const toggleUnreadOnly = () => {
+  if (!authStore.isAuthenticated) return
   unreadOnly.value = !unreadOnly.value
   currentPage.value = 1
   void fetchTimeline()
 }
 
 const onItemClick = (item: TimelineItem) => {
-  if (item.type !== 'feed_item' || !item.feed_item || item.is_read) return
+  if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
   item.is_read = true
   void feedStore.markItemsRead([item.feed_item.id])
 }
@@ -615,7 +619,7 @@ const playPodcast = (feedItem: FeedItem, event: Event) => {
   const timelineItem = timeline.value.find(
     (entry) => entry.type === 'feed_item' && entry.feed_item?.id === feedItem.id,
   )
-  if (timelineItem && !timelineItem.is_read) {
+  if (authStore.isAuthenticated && timelineItem && !timelineItem.is_read) {
     timelineItem.is_read = true
     void feedStore.markItemsRead([feedItem.id])
   }
@@ -678,9 +682,10 @@ const handleKeyDownGlobal = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
-  if (!authStore.isAuthenticated) return
-  void feedStore.fetchStarredIds()
-  void feedStore.fetchReadingListIds()
+  if (authStore.isAuthenticated) {
+    void feedStore.fetchStarredIds()
+    void feedStore.fetchReadingListIds()
+  }
   window.addEventListener('keydown', handleKeyDownGlobal)
 })
 

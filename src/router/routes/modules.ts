@@ -12,10 +12,10 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       children: [
         { path: '', redirect: '/create' },
         { path: 'create', component: () => import('@/views/kanbo/KanboCreateView.vue'), meta: { requiresAuth: true } },
-        { path: 'articles', component: () => import('@/views/kanbo/KanboArticlesView.vue'), meta: { requiresAuth: true } },
-        { path: 'videos', component: () => import('@/views/kanbo/KanboVideosView.vue'), meta: { requiresAuth: true } },
-        { path: 'podcasts', component: () => import('@/views/kanbo/KanboPodcastsView.vue'), meta: { requiresAuth: true } },
-        { path: 'subscriptions', component: () => import('@/views/kanbo/KanboSubscriptionsView.vue'), meta: { requiresAuth: true } },
+        { path: 'articles', component: () => import('@/views/kanbo/KanboArticlesView.vue') },
+        { path: 'videos', component: () => import('@/views/kanbo/KanboVideosView.vue') },
+        { path: 'podcasts', component: () => import('@/views/kanbo/KanboPodcastsView.vue') },
+        { path: 'subscriptions', component: () => import('@/views/kanbo/KanboSubscriptionsView.vue') },
         { path: 'bookmarks', component: () => import('@/views/kanbo/KanboBookmarksView.vue'), meta: { requiresAuth: true } },
       ],
     },
@@ -74,11 +74,11 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       children: [
         // allow guest view on feed home (tests expect public landing), auth required for subpages
         { path: '', component: () => import('@/views/feed/FeedView.vue') },
-        { path: 'explore', component: () => import('@/views/feed/FeedRecommendedView.vue'), meta: { requiresAuth: true } },
+        { path: 'explore', component: () => import('@/views/feed/FeedRecommendedView.vue') },
         { path: 'settings', component: () => import('@/views/feed/FeedSettingsView.vue'), meta: { requiresAuth: true, featureGate: { module: 'feed', feature: 'subscription.manage' } } },
 
         { path: 'stats', component: () => import('@/views/feed/FeedStatsView.vue'), meta: { requiresAuth: true } },
-        { path: 'item/:id', component: () => import('@/views/feed/FeedItemDetailView.vue'), meta: { requiresAuth: true } },
+        { path: 'item/:id', component: () => import('@/views/feed/FeedItemDetailView.vue') },
         { path: 'starred', component: () => import('@/views/feed/FeedStarredView.vue'), meta: { requiresAuth: true } },
         { path: 'reading-list', component: () => import('@/views/feed/FeedReadingListView.vue'), meta: { requiresAuth: true } },
         { path: 'inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },

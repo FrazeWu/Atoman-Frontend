@@ -1,8 +1,25 @@
 import { createPinia, setActivePinia } from 'pinia'
-import type { Router } from 'vue-router'
+import { createMemoryHistory, createRouter, type RouteRecordRaw, type Router } from 'vue-router'
 import { vi } from 'vitest'
+import type { ModuleRoomKey } from '@/config/moduleRooms'
+import { installRouteGuards } from '@/router/guards'
+import { moduleRoutes } from '@/router/routes/modules'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
+
+const RouteStub = { template: '<main data-test-route-stub />' }
+
+function stubRouteComponents(routes: RouteRecordRaw[]): RouteRecordRaw[] {
+  return routes.map((route) => {
+    const stubbed: RouteRecordRaw = { ...route }
+    if (route.component) stubbed.component = RouteStub
+    if (route.components) {
+      stubbed.components = Object.fromEntries(Object.keys(route.components).map((name) => [name, RouteStub]))
+    }
+    if (route.children) stubbed.children = stubRouteComponents(route.children)
+    return stubbed
+  })
+}
 
 const makeToken = (expSecondsFromNow: number) => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -10,10 +27,13 @@ const makeToken = (expSecondsFromNow: number) => {
   return `${header}.${payload}.signature`
 }
 
-async function importRouter(site: string) {
-  vi.resetModules()
+async function createGuardRouter(site: ModuleRoomKey) {
   window.history.replaceState(null, '', `/?site=${site}`)
-  const { default: router } = await import('@/router')
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: stubRouteComponents(moduleRoutes[site]),
+  })
+  installRouteGuards(router)
   await router.replace('/')
   return router as Router
 }
@@ -27,7 +47,7 @@ describe('router auth guards', () => {
   })
 
   it('redirects unauthenticated user to login for protected short routes', async () => {
-    const router = await importRouter('blog')
+    const router = await createGuardRouter('blog')
     const auth = useAuthStore()
     auth.logout()
 
@@ -37,8 +57,30 @@ describe('router auth guards', () => {
     expect(router.currentRoute.value.query.redirect).toBe('/post/new?site=blog')
   })
 
+  it('allows unauthenticated users to open public content reading routes', async () => {
+    const router = await createGuardRouter('feed')
+    const auth = useAuthStore()
+    auth.logout()
+
+    await router.push('/explore')
+    expect(router.currentRoute.value.path).toBe('/explore')
+
+    await router.push('/item/feed-item-1')
+    expect(router.currentRoute.value.path).toBe('/item/feed-item-1')
+
+    const kanboRouter = await createGuardRouter('kanbo')
+    await kanboRouter.push('/articles')
+    expect(kanboRouter.currentRoute.value.path).toBe('/articles')
+
+    await kanboRouter.push('/videos')
+    expect(kanboRouter.currentRoute.value.path).toBe('/videos')
+
+    await kanboRouter.push('/podcasts')
+    expect(kanboRouter.currentRoute.value.path).toBe('/podcasts')
+  })
+
   it('redirects non-admin user away from setting admin routes', async () => {
-    const router = await importRouter('music')
+    const router = await createGuardRouter('music')
     const auth = useAuthStore()
     auth.token = makeToken(3600)
     auth.user = { username: 'member', role: 'user' } as never
@@ -50,7 +92,7 @@ describe('router auth guards', () => {
   })
 
   it('redirects admin away from owner-only setting routes', async () => {
-    const router = await importRouter('music')
+    const router = await createGuardRouter('music')
     const auth = useAuthStore()
     auth.token = makeToken(3600)
     auth.user = { username: 'admin', role: 'admin' } as never
@@ -62,7 +104,7 @@ describe('router auth guards', () => {
   })
 
   it('preserves explicit site context on short internal route pushes', async () => {
-    const router = await importRouter('blog')
+    const router = await createGuardRouter('blog')
 
     await router.push('/post/123')
 
@@ -74,7 +116,7 @@ describe('router auth guards', () => {
     const auth = useAuthStore()
     const onboarding = useOnboardingStore()
     const initializeSpy = vi.spyOn(onboarding, 'initialize')
-    const router = await importRouter('feed')
+    const router = await createGuardRouter('feed')
 
     auth.token = makeToken(3600)
     auth.user = {

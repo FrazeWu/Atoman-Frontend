@@ -43,13 +43,12 @@ const onClick = (event: MouseEvent) => {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  transform: rotate(-1deg);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
+  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
 .paper-tab:not(:disabled) {
@@ -60,15 +59,13 @@ const onClick = (event: MouseEvent) => {
   border-color: var(--a-color-ink);
   background: var(--a-color-paper);
   color: var(--a-color-ink);
-  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.05);
-  transform: translateY(-4px) rotate(0.6deg);
 }
 
 .paper-tab--active::before {
   position: absolute;
-  right: 12px;
-  bottom: -5px;
-  left: 12px;
+  right: 16px;
+  bottom: 0;
+  left: 16px;
   height: 2px;
   background: var(--a-color-ink);
   content: '';

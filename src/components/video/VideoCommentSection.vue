@@ -8,8 +8,9 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { extractTimestampFromComment, formatTimestampLabel, serializeTimestampComment } from '@/composables/useVideoTimestamp'
 import type { Comment } from '@/types'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 
 const props = defineProps<{
   videoId: string
@@ -44,7 +45,7 @@ function canDelete(c: Comment) {
 async function fetchComments() {
   loading.value = true
   try {
-    const res = await fetch(`${API_URL}/videos/${props.videoId}/comments`)
+    const res = await fetch(`${api.url}/videos/${props.videoId}/comments`)
     if (res.ok) {
       const d = await res.json()
       comments.value = d.data || []
@@ -64,7 +65,7 @@ async function submitComment() {
       content: newComment.value,
       ...serializeTimestampComment(extractTimestampFromComment(newComment.value)),
     }
-    const res = await fetch(`${API_URL}/videos/${props.videoId}/comments`, {
+    const res = await fetch(`${api.url}/videos/${props.videoId}/comments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -85,7 +86,7 @@ async function submitComment() {
 
 async function deleteComment(id: string) {
   try {
-    const res = await fetch(`${API_URL}/videos/comments/${id}`, {
+    const res = await fetch(`${api.url}/videos/comments/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` },
     })

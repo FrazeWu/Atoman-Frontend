@@ -73,7 +73,7 @@
           :error="fieldErrors.passwordConfirm"
         />
 
-        <div v-if="errorMsg" class="a-error auth-error">{{ errorMsg }}</div>
+        <p v-if="visibleError" class="a-error auth-error" role="alert">{{ visibleError }}</p>
 
         <TurnstileWidget
           v-if="turnstileEnabled"
@@ -138,6 +138,7 @@ const api = useApi()
 const isRegister = computed(() => route.path === '/register')
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 const turnstileEnabled = computed(() => isRegister.value && import.meta.env.PROD && !!turnstileSiteKey)
+const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
 
 const requireTurnstileToken = () => {
   if (!turnstileEnabled.value) return true
@@ -192,6 +193,7 @@ const sendVerificationCode = async () => {
 }
 
 const handleSubmit = async () => {
+  authStore.lastAuthError = null
   errorMsg.value = ''
   fieldErrors.value = {}
   loading.value = true

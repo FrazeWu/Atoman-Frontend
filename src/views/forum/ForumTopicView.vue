@@ -276,6 +276,7 @@ import ASelect from '@/components/ui/ASelect.vue'
 import ATextarea from '@/components/ui/ATextarea.vue'
 import AModal from '@/components/ui/AModal.vue'
 import ForumReplyNode from '@/components/forum/ForumReplyNode.vue'
+import { useApi } from '@/composables/useApi'
 
 const AEditor = defineAsyncComponent(() => import('@/components/shared/AEditor.vue'))
 
@@ -431,7 +432,7 @@ onBeforeUnmount(() => {
 })
 
 // Report & Featured
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const reportModal = ref<{ show: boolean; targetType: 'topic' | 'reply'; targetId: string }>(
   { show: false, targetType: 'topic', targetId: '' },
 )
@@ -452,7 +453,7 @@ const openReportModal = (targetType: 'topic' | 'reply', targetId: string) => {
 
 const submitReport = async () => {
   if (!reportForm.value.reason.trim()) { alert('请选择举报原因'); return }
-  const res = await fetch(`${API_URL}/forum/report`, {
+  const res = await fetch(`${api.url}/forum/report`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -479,7 +480,7 @@ const submitReport = async () => {
 const toggleFeatured = async () => {
   const topic = forumStore.currentTopic!
   const method = topic.featured ? 'DELETE' : 'POST'
-  const res = await fetch(`${API_URL}/forum/topics/${topic.id}/feature`, {
+  const res = await fetch(`${api.url}/forum/topics/${topic.id}/feature`, {
     method,
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
@@ -489,7 +490,7 @@ const toggleFeatured = async () => {
 }
 
 const handleSolveReply = async (replyId: string) => {
-  const res = await fetch(`${API_URL}/forum/replies/${replyId}/solve`, {
+  const res = await fetch(`${api.url}/forum/replies/${replyId}/solve`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
@@ -500,7 +501,7 @@ const handleSolveReply = async (replyId: string) => {
 }
 
 const handleUnsolveReply = async (replyId: string) => {
-  const res = await fetch(`${API_URL}/forum/replies/${replyId}/solve`, {
+  const res = await fetch(`${api.url}/forum/replies/${replyId}/solve`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${authStore.token}` },
   })

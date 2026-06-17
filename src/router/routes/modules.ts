@@ -21,7 +21,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   blog: [
     ...settingRoutes,
@@ -47,7 +47,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     { path: '/post/:id', component: () => import('@/views/blog/PostDetailView.vue') },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   music: [
     ...settingRoutes,
@@ -57,13 +57,14 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/music/HomeView.vue') },
-        { path: 'explore', component: () => import('@/views/music/HomeView.vue') }, // temporarily point explore to home
-        { path: 'starred', component: () => import('@/views/music/HomeView.vue') }, // temporarily point starred to home
+        { path: 'explore', component: () => import('@/views/music/ExploreView.vue') },
+        { path: 'starred', component: () => import('@/views/music/StarredView.vue') },
+        { path: 'artist/new', component: () => import('@/views/music/CreateArtistView.vue'), meta: { requiresAuth: true } },
       ],
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   feed: [
     ...settingRoutes,
@@ -86,7 +87,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   forum: [
     ...settingRoutes,
@@ -103,7 +104,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   debate: [
     ...settingRoutes,
@@ -118,7 +119,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   timeline: [
     ...settingRoutes,
@@ -134,7 +135,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   podcast: [
     ...settingRoutes,
@@ -151,7 +152,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   video: [
     ...settingRoutes,
@@ -170,6 +171,6 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     { path: '/watch/:id', component: () => import('@/views/video/VideoDetailView.vue') },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
 }

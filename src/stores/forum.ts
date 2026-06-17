@@ -2,8 +2,9 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { ForumCategory, ForumTopic, ForumReply, ForumDraft } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 
 const DRAFT_KEY_PREFIX = 'forum_draft_'
 
@@ -28,7 +29,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_URL}/forum/categories`)
+      const res = await fetch(`${api.url}/forum/categories`)
       if (res.ok) {
         const data = await res.json()
         categories.value = data.data || []
@@ -61,7 +62,7 @@ export const useForumStore = defineStore('forum', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('limit', String(params.limit))
       const authStore = useAuthStore()
-      const res = await fetch(`${API_URL}/forum/topics?${query}`, {
+      const res = await fetch(`${api.url}/forum/topics?${query}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -81,7 +82,7 @@ export const useForumStore = defineStore('forum', () => {
     error.value = null
     try {
       const authStore = useAuthStore()
-      const res = await fetch(`${API_URL}/forum/topics/${id}`, {
+      const res = await fetch(`${api.url}/forum/topics/${id}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -104,7 +105,7 @@ export const useForumStore = defineStore('forum', () => {
     tags?: string[]
   }): Promise<ForumTopic | null> => {
     try {
-      const res = await fetch(`${API_URL}/forum/topics`, {
+      const res = await fetch(`${api.url}/forum/topics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ ...payload, tags: payload.tags ?? [] }),
@@ -125,7 +126,7 @@ export const useForumStore = defineStore('forum', () => {
     tags?: string[]
   }): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/forum/topics/${id}`, {
+      const res = await fetch(`${api.url}/forum/topics/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
@@ -139,7 +140,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const deleteTopic = async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/forum/topics/${id}`, {
+      const res = await fetch(`${api.url}/forum/topics/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -153,7 +154,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const toggleTopicLike = async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/forum/topics/${id}/like`, {
+      const res = await fetch(`${api.url}/forum/topics/${id}/like`, {
         method: 'POST',
         headers: authHeaders(),
       })
@@ -176,7 +177,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const toggleTopicBookmark = async (id: string) => {
     try {
-      const res = await fetch(`${API_URL}/forum/topics/${id}/bookmark`, {
+      const res = await fetch(`${api.url}/forum/topics/${id}/bookmark`, {
         method: 'POST',
         headers: authHeaders(),
       })
@@ -199,7 +200,7 @@ export const useForumStore = defineStore('forum', () => {
   const fetchReplies = async (topicId: string, sort: 'oldest' | 'best' = 'oldest') => {
     try {
       const authStore = useAuthStore()
-      const res = await fetch(`${API_URL}/forum/topics/${topicId}/replies?sort=${sort}`, {
+      const res = await fetch(`${api.url}/forum/topics/${topicId}/replies?sort=${sort}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -219,7 +220,7 @@ export const useForumStore = defineStore('forum', () => {
     try {
       const body: Record<string, unknown> = { content }
       if (parentReplyId) body.parent_reply_id = parentReplyId
-      const res = await fetch(`${API_URL}/forum/topics/${topicId}/replies`, {
+      const res = await fetch(`${api.url}/forum/topics/${topicId}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(body),
@@ -236,7 +237,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const deleteReply = async (replyId: string) => {
     try {
-      await fetch(`${API_URL}/forum/replies/${replyId}`, {
+      await fetch(`${api.url}/forum/replies/${replyId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -247,7 +248,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const toggleReplyLike = async (replyId: string) => {
     try {
-      const res = await fetch(`${API_URL}/forum/replies/${replyId}/like`, {
+      const res = await fetch(`${api.url}/forum/replies/${replyId}/like`, {
         method: 'POST',
         headers: authHeaders(),
       })
@@ -273,7 +274,7 @@ export const useForumStore = defineStore('forum', () => {
     try {
       const authStore = useAuthStore()
       const query = new URLSearchParams({ q, page: String(page), limit: String(limit) })
-      const res = await fetch(`${API_URL}/forum/search?${query}`, {
+      const res = await fetch(`${api.url}/forum/search?${query}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -314,7 +315,7 @@ export const useForumStore = defineStore('forum', () => {
   // Backend draft API (cross-device persistence)
   const fetchDraft = async (contextKey: string): Promise<ForumDraft | null> => {
     try {
-      const res = await fetch(`${API_URL}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
+      const res = await fetch(`${api.url}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
         headers: authHeaders(),
       })
       if (res.ok) {
@@ -329,7 +330,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const putDraft = async (draft: ForumDraft): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/forum/drafts`, {
+      const res = await fetch(`${api.url}/forum/drafts`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(draft),
@@ -343,7 +344,7 @@ export const useForumStore = defineStore('forum', () => {
 
   const deleteDraft = async (contextKey: string): Promise<void> => {
     try {
-      await fetch(`${API_URL}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
+      await fetch(`${api.url}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })

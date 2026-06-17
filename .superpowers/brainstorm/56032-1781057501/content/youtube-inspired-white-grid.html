@@ -1,0 +1,128 @@
+<h2>完整网页 Mockup：YouTube 式无分割线白底布局</h2>
+<p class="subtitle">参考你给的截图：不加分割线，靠导航高亮、胶囊筛选、内容网格、hover 阴影块区分层级。</p>
+
+<div class="mockup">
+  <div class="mockup-header">Atoman / YouTube-inspired White Grid</div>
+  <div class="mockup-body">
+    <div style="height:780px;background:#fff;color:#050505;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;box-shadow:0 34px 90px rgba(15,23,42,.10)">
+      <style>
+        .yt-top-pill{background:#f2f2f2;border:0;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:850;color:#050505;white-space:nowrap;transition:background .16s ease,box-shadow .16s ease,transform .16s ease;}
+        .yt-top-pill:hover{background:#e8e8e8;box-shadow:0 6px 18px rgba(15,23,42,.10);transform:translateY(-1px);}
+        .yt-top-pill.is-active{background:#050505;color:#fff;}
+        .yt-nav-item{height:42px;border-radius:12px;display:flex;align-items:center;gap:18px;padding:0 14px;background:#fff;font-size:13px;font-weight:760;color:#050505;transition:background .16s ease,box-shadow .16s ease,transform .16s ease;}
+        .yt-nav-item:hover{background:#f5f5f5;box-shadow:0 8px 20px rgba(15,23,42,.08);transform:translateY(-1px);}
+        .yt-nav-item.is-active{background:#f2f2f2;font-weight:900;}
+        .yt-icon{width:22px;height:22px;display:grid;place-items:center;font-size:16px;font-weight:950;}
+        .yt-section-title{font-size:14px;font-weight:900;margin:26px 0 10px;padding:0 14px;}
+        .yt-sub{display:flex;align-items:center;gap:12px;height:34px;border-radius:10px;padding:0 14px;background:#fff;font-size:12px;color:#050505;}
+        .yt-sub:hover{background:#f5f5f5;}
+        .yt-dot{margin-left:auto;width:4px;height:4px;background:#0b57d0;border-radius:50%;}
+        .yt-card{min-width:0;position:relative;transition:transform .16s ease,filter .16s ease;}
+        .yt-card:hover{transform:translateY(-3px);filter:drop-shadow(0 14px 24px rgba(15,23,42,.14));}
+        .yt-thumb{height:186px;border-radius:14px;background:#111;overflow:hidden;position:relative;display:grid;place-items:center;color:#fff;font-weight:950;letter-spacing:-.04em;font-size:28px;}
+        .yt-thumb::after{content:attr(data-time);position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.82);color:#fff;border-radius:5px;padding:3px 5px;font-size:11px;font-weight:850;letter-spacing:0;}
+        .yt-thumb.a{background:linear-gradient(135deg,#050505,#3b4250 45%,#111827);}
+        .yt-thumb.b{background:linear-gradient(135deg,#2f1420,#9f6b7c 45%,#171717);}
+        .yt-thumb.c{background:linear-gradient(135deg,#0f172a,#475569 48%,#050505);}
+        .yt-thumb.d{background:linear-gradient(135deg,#22160d,#b78b5d 45%,#191008);}
+        .yt-thumb.e{background:linear-gradient(135deg,#16151f,#7f1d1d 45%,#0b0b0f);}
+        .yt-thumb.f{background:linear-gradient(135deg,#253226,#536b4e 45%,#111827);}
+        .yt-card-row{display:grid;grid-template-columns:38px 1fr 20px;gap:12px;margin-top:12px;align-items:start;}
+        .yt-avatar{width:36px;height:36px;border-radius:50%;background:#f2f2f2;display:grid;place-items:center;font-size:12px;font-weight:950;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);}
+        .yt-title{font-size:14px;font-weight:850;line-height:1.3;margin:0 0 5px;letter-spacing:-.015em;}
+        .yt-meta{font-size:12px;color:#606060;line-height:1.4;}
+        .yt-more{font-size:20px;line-height:1;color:#050505;opacity:.7;}
+        .yt-search{height:40px;border-radius:22px;border:1px solid #d9d9d9;background:#fff;display:grid;grid-template-columns:1fr 54px;overflow:hidden;min-width:420px;box-shadow:inset 0 1px 2px rgba(0,0,0,.03);}
+        .yt-search span:first-child{display:flex;align-items:center;padding:0 18px;color:#606060;font-size:14px;}
+        .yt-search span:last-child{display:grid;place-items:center;background:#f8f8f8;border-left:1px solid #d9d9d9;font-size:18px;}
+      </style>
+
+      <header style="height:58px;background:#fff;display:grid;grid-template-columns:214px 1fr 250px;align-items:center;padding:0 22px;gap:18px;">
+        <div style="display:flex;align-items:center;gap:18px;">
+          <div style="font-size:22px;font-weight:900">☰</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:32px;height:22px;border-radius:7px;background:#050505;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:950">A</div>
+            <div style="font-size:20px;font-weight:950;letter-spacing:-.055em">Atoman</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;align-items:center;gap:14px;">
+          <div class="yt-search"><span>Search</span><span>⌕</span></div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#f2f2f2;display:grid;place-items:center;font-size:17px">⌘</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:18px;">
+          <button class="yt-top-pill" style="border-radius:18px;font-weight:900">＋ Create</button>
+          <div style="font-size:21px">○</div>
+          <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#111,#777);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:950">FW</div>
+        </div>
+      </header>
+
+      <div style="display:grid;grid-template-columns:214px 1fr;height:722px;background:#fff;">
+        <aside style="background:#fff;padding:8px 12px 28px 12px;overflow:hidden;">
+          <div class="yt-nav-item is-active"><span class="yt-icon">⌂</span><span>Home</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">↯</span><span>Shorts</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">▣</span><span>Subscriptions</span></div>
+
+          <div class="yt-section-title">You ›</div>
+          <div class="yt-nav-item"><span class="yt-icon">◴</span><span>History</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">≡</span><span>Playlists</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">◷</span><span>Watch later</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">♡</span><span>Liked entries</span></div>
+
+          <div class="yt-section-title">Subscriptions</div>
+          <div class="yt-sub"><span class="yt-avatar" style="width:24px;height:24px">王</span><span>王志安</span><span class="yt-dot"></span></div>
+          <div class="yt-sub"><span class="yt-avatar" style="width:24px;height:24px">科</span><span>科技档案</span><span class="yt-dot"></span></div>
+          <div class="yt-sub"><span class="yt-avatar" style="width:24px;height:24px">音</span><span>音乐频道</span></div>
+          <div class="yt-sub"><span class="yt-avatar" style="width:24px;height:24px">读</span><span>阅读清单</span></div>
+
+          <div class="yt-section-title">Explore</div>
+          <div class="yt-nav-item"><span class="yt-icon">♪</span><span>Music</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">☷</span><span>Forum</span></div>
+          <div class="yt-nav-item"><span class="yt-icon">◉</span><span>Live</span></div>
+        </aside>
+
+        <main style="background:#fff;overflow:hidden;padding:0 26px 50px 22px;">
+          <div style="height:56px;display:flex;align-items:center;gap:12px;overflow:hidden;background:#fff;">
+            <button class="yt-top-pill is-active">All</button>
+            <button class="yt-top-pill">Feed</button>
+            <button class="yt-top-pill">Forum</button>
+            <button class="yt-top-pill">Debate</button>
+            <button class="yt-top-pill">Music</button>
+            <button class="yt-top-pill">Podcasts</button>
+            <button class="yt-top-pill">Recently updated</button>
+            <button class="yt-top-pill">Watched</button>
+            <button class="yt-top-pill">New to you</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 22px;padding-top:8px;">
+            <article class="yt-card">
+              <div class="yt-thumb a" data-time="12:48">THE NATIONAL</div>
+              <div class="yt-card-row"><div class="yt-avatar">FN</div><div><h3 class="yt-title">U.S. strikes Iran after helicopter downed</h3><div class="yt-meta">CBC News · The National ✓<br/>2.1K views · 19 minutes ago</div></div><div class="yt-more">⋮</div></div>
+            </article>
+            <article class="yt-card">
+              <div class="yt-thumb b" data-time="8:10">HANOMANSING</div>
+              <div class="yt-card-row"><div class="yt-avatar">HC</div><div><h3 class="yt-title">Launches new attack on Iran after downing</h3><div class="yt-meta">Hanomansing Tonight ✓<br/>8.1K views · 2 hours ago</div></div><div class="yt-more">⋮</div></div>
+            </article>
+            <article class="yt-card">
+              <div class="yt-thumb c" data-time="5:57">GLOBAL NEWS</div>
+              <div class="yt-card-row"><div class="yt-avatar">GN</div><div><h3 class="yt-title">Is ceasefire in jeopardy after downed helicopter?</h3><div class="yt-meta">Global News ✓<br/>42K views · 3 hours ago</div></div><div class="yt-more">⋮</div></div>
+            </article>
+            <article class="yt-card">
+              <div class="yt-thumb d" data-time="4:15">FAYE WONG</div>
+              <div class="yt-card-row"><div class="yt-avatar">音</div><div><h3 class="yt-title">Faye Wong - Zhi Mi Bu Hui Live 1993</h3><div class="yt-meta">MusicReliqueOz<br/>207K views · 3 years ago</div></div><div class="yt-more">⋮</div></div>
+            </article>
+            <article class="yt-card">
+              <div class="yt-thumb e" data-time="Mix">BLACK DIAMOND</div>
+              <div class="yt-card-row"><div class="yt-avatar">M</div><div><h3 class="yt-title">Mix - Yoon Mi Rae - Black Diamond</h3><div class="yt-meta">YOON MIRAE, DAVICHI, Beyoncé, and more</div></div><div class="yt-more">⋮</div></div>
+            </article>
+            <article class="yt-card">
+              <div class="yt-thumb f" data-time="1:39:46">TOKYO, 1964</div>
+              <div class="yt-card-row"><div class="yt-avatar">JZ</div><div><h3 class="yt-title">The Oscar Peterson Trio — In Tokyo, 1964</h3><div class="yt-meta">histemister668<br/>1.1M views · 3 years ago</div></div><div class="yt-more">⋮</div></div>
+            </article>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">这版完全取消分割线：结构靠白底留白、左栏选中灰底、顶部 chips、卡片缩略图和 hover 阴影来区分。</p>

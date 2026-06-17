@@ -66,17 +66,15 @@ const formattedIndex = computed(() => {
 <style scoped>
 .a-sidebar-item {
   outline: none;
-  border-radius: 0.875rem;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  border-radius: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 .a-sidebar-item:hover,
 .a-sidebar-item.is-focused {
   background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
 }
 .a-sidebar-item.active {
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
 }
 </style>

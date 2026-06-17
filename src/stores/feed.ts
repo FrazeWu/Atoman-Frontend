@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 
 export const useFeedStore = defineStore('feed', () => {
   const api = useApi()
@@ -33,7 +33,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions`, {
+      const res = await fetch(`${api.url}/feed/subscriptions`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -49,7 +49,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return
     try {
-      const res = await fetch(`${API_URL}/feed/groups`, {
+      const res = await fetch(`${api.url}/feed/groups`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -64,7 +64,7 @@ export const useFeedStore = defineStore('feed', () => {
   const createGroup = async (name: string) => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/groups`, {
+      const res = await fetch(`${api.url}/feed/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ name }),
@@ -83,7 +83,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return
     try {
-      const res = await fetch(`${API_URL}/feed/star-groups`, {
+      const res = await fetch(`${api.url}/feed/star-groups`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -99,7 +99,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
-      const res = await fetch(`${API_URL}/feed/star-groups`, {
+      const res = await fetch(`${api.url}/feed/star-groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ name }),
@@ -122,7 +122,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions/${id}`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify(payload),
@@ -140,7 +140,7 @@ export const useFeedStore = defineStore('feed', () => {
   const updateGroup = async (id: string, name: string) => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/groups/${id}`, {
+      const res = await fetch(`${api.url}/feed/groups/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ name }),
@@ -158,7 +158,7 @@ export const useFeedStore = defineStore('feed', () => {
   const deleteGroup = async (id: string) => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${API_URL}/feed/groups/${id}`, {
+      await fetch(`${api.url}/feed/groups/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -172,7 +172,7 @@ export const useFeedStore = defineStore('feed', () => {
   const setSubscriptionGroup = async (subId: string, groupId: string | null) => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${API_URL}/feed/subscriptions/${subId}/group`, {
+      await fetch(`${api.url}/feed/subscriptions/${subId}/group`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ group_id: groupId }),
@@ -193,7 +193,7 @@ export const useFeedStore = defineStore('feed', () => {
         unreadOnly,
       })
       const query = params.toString()
-      const url = query ? `${API_URL}/feed/timeline?${query}` : `${API_URL}/feed/timeline`
+      const url = query ? `${api.url}/feed/timeline?${query}` : `${api.url}/feed/timeline`
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -209,7 +209,7 @@ export const useFeedStore = defineStore('feed', () => {
   const subscribe = async (targetType: string, targetId: string, title?: string) => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions`, {
+      const res = await fetch(`${api.url}/feed/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -228,7 +228,7 @@ export const useFeedStore = defineStore('feed', () => {
   const unsubscribe = async (subscriptionId: string) => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${API_URL}/feed/subscriptions/${subscriptionId}`, {
+      await fetch(`${api.url}/feed/subscriptions/${subscriptionId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -242,7 +242,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!feedItemIds.length) return
     try {
-      await fetch(`${API_URL}/feed/timeline/mark-read`, {
+      await fetch(`${api.url}/feed/timeline/mark-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
@@ -255,7 +255,7 @@ export const useFeedStore = defineStore('feed', () => {
   const markAllRead = async () => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${API_URL}/feed/timeline/mark-all-read`, {
+      await fetch(`${api.url}/feed/timeline/mark-all-read`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -267,7 +267,7 @@ export const useFeedStore = defineStore('feed', () => {
   const markAllUnread = async () => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${API_URL}/feed/timeline/mark-all-unread`, {
+      await fetch(`${api.url}/feed/timeline/mark-all-unread`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -279,7 +279,7 @@ export const useFeedStore = defineStore('feed', () => {
   const subscribeToChannel = async (channelId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscribe/channel/${channelId}`, {
+      const res = await fetch(`${api.url}/feed/subscribe/channel/${channelId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -293,7 +293,7 @@ export const useFeedStore = defineStore('feed', () => {
   const unsubscribeFromChannel = async (channelId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscribe/channel/${channelId}`, {
+      const res = await fetch(`${api.url}/feed/subscribe/channel/${channelId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -307,7 +307,7 @@ export const useFeedStore = defineStore('feed', () => {
   const subscribeToCollection = async (collectionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscribe/collection/${collectionId}`, {
+      const res = await fetch(`${api.url}/feed/subscribe/collection/${collectionId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -321,7 +321,7 @@ export const useFeedStore = defineStore('feed', () => {
   const unsubscribeFromCollection = async (collectionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscribe/collection/${collectionId}`, {
+      const res = await fetch(`${api.url}/feed/subscribe/collection/${collectionId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -335,7 +335,7 @@ export const useFeedStore = defineStore('feed', () => {
   const isSubscribedToChannel = async (channelId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscribe/channel/${channelId}/status`, {
+      const res = await fetch(`${api.url}/feed/subscribe/channel/${channelId}/status`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -351,7 +351,7 @@ export const useFeedStore = defineStore('feed', () => {
   const isSubscribedToCollection = async (collectionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      const res = await fetch(`${API_URL}/feed/subscribe/collection/${collectionId}/status`, {
+      const res = await fetch(`${api.url}/feed/subscribe/collection/${collectionId}/status`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -375,7 +375,7 @@ export const useFeedStore = defineStore('feed', () => {
     if (!normalized) return false
 
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions`, {
+      const res = await fetch(`${api.url}/feed/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -413,7 +413,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     error.value = null
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions`, {
+      const res = await fetch(`${api.url}/feed/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -436,7 +436,7 @@ export const useFeedStore = defineStore('feed', () => {
       const subscriptionId = data.data?.id
 
       if (payload.group_id && subscriptionId) {
-        const moveRes = await fetch(`${API_URL}/feed/subscriptions/${subscriptionId}/group`, {
+        const moveRes = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/group`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -466,7 +466,7 @@ export const useFeedStore = defineStore('feed', () => {
 
     error.value = null
     try {
-      const res = await fetch(`${API_URL}/feed/discover`, {
+      const res = await fetch(`${api.url}/feed/discover`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -502,7 +502,7 @@ export const useFeedStore = defineStore('feed', () => {
 
     error.value = null
     try {
-      const res = await fetch(`${API_URL}/feed/sources/create-from-provider`, {
+      const res = await fetch(`${api.url}/feed/sources/create-from-provider`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -548,7 +548,7 @@ export const useFeedStore = defineStore('feed', () => {
         if (!sub) return true
       }
 
-      const res = await fetch(`${API_URL}/feed/subscriptions/${sub.id}`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${sub.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -592,7 +592,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions/${subscriptionId}/health`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/health`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -611,7 +611,7 @@ export const useFeedStore = defineStore('feed', () => {
     if (!authStore.isAuthenticated) return false
     healthChecking.value = true
     try {
-      const res = await fetch(`${API_URL}/feed/subscriptions/health/check-all`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/health/check-all`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
@@ -631,20 +631,22 @@ export const useFeedStore = defineStore('feed', () => {
   // --- Star Actions ---
 
   const starredItemIds = ref<Set<string>>(new Set())
+  const bookmarkedPostIds = ref<Set<string>>(new Set())
   const readingListItemIds = ref<Set<string>>(new Set())
 
   const toggleStar = async (feedItemId: string): Promise<boolean | null> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return null
     try {
-      const res = await fetch(`${API_URL}/feed/timeline/star`, {
+      const res = await fetch(`${api.url}/feed/timeline/star`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_id: feedItemId }),
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.starred) {
+        const starred = data.data?.starred ?? data.starred
+        if (starred) {
           const newSet = new Set(starredItemIds.value)
           newSet.add(feedItemId)
           starredItemIds.value = newSet
@@ -653,7 +655,7 @@ export const useFeedStore = defineStore('feed', () => {
           newSet.delete(feedItemId)
           starredItemIds.value = newSet
         }
-        return data.starred
+        return starred
       }
     } catch (e) {
       console.error('Failed to toggle star', e)
@@ -665,7 +667,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return
     try {
-      const res = await fetch(`${API_URL}/feed/stars?limit=500`, {
+      const res = await fetch(`${api.url}/feed/stars?limit=500`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -678,12 +680,71 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
+  const fetchBookmarkedPostIds = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return
+    try {
+      const res = await fetch(`${api.url}/blog/bookmarks`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const ids = (data.data || [])
+          .map((bookmark: any) => bookmark.post_id as string)
+          .filter(Boolean)
+        bookmarkedPostIds.value = new Set(ids)
+      }
+    } catch (e) {
+      console.error('Failed to fetch bookmarked post ids', e)
+    }
+  }
+
+  const togglePostBookmark = async (postId: string): Promise<boolean | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return null
+    try {
+      if (bookmarkedPostIds.value.has(postId)) {
+        const res = await fetch(`${api.url}/blog/bookmarks`, {
+          headers: { Authorization: `Bearer ${authStore.token}` },
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        const bookmark = (data.data || []).find((item: any) => item.post_id === postId)
+        if (!bookmark?.id) return null
+        const deleteRes = await fetch(`${api.url}/blog/bookmarks/${bookmark.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authStore.token}` },
+        })
+        if (!deleteRes.ok) return null
+        const newSet = new Set(bookmarkedPostIds.value)
+        newSet.delete(postId)
+        bookmarkedPostIds.value = newSet
+        return false
+      }
+
+      const res = await fetch(`${api.url}/blog/bookmarks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify({ post_id: postId }),
+      })
+      if (res.ok) {
+        const newSet = new Set(bookmarkedPostIds.value)
+        newSet.add(postId)
+        bookmarkedPostIds.value = newSet
+        return true
+      }
+    } catch (e) {
+      console.error('Failed to toggle post bookmark', e)
+    }
+    return null
+  }
+
   // Store does not own paged starred lists; callers should update local lists or refetch after success.
   const moveStarToGroup = async (feedItemId: string, groupId: string | null): Promise<boolean> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
-      const res = await fetch(`${API_URL}/feed/stars/${feedItemId}/group`, {
+      const res = await fetch(`${api.url}/feed/stars/${feedItemId}/group`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ group_id: groupId }),
@@ -699,14 +760,15 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return null
     try {
-      const res = await fetch(`${API_URL}/feed/reading-list`, {
+      const res = await fetch(`${api.url}/feed/reading-list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_id: feedItemId }),
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.saved) {
+        const saved = data.data?.saved ?? data.saved
+        if (saved) {
           const newSet = new Set(readingListItemIds.value)
           newSet.add(feedItemId)
           readingListItemIds.value = newSet
@@ -715,7 +777,7 @@ export const useFeedStore = defineStore('feed', () => {
           newSet.delete(feedItemId)
           readingListItemIds.value = newSet
         }
-        return data.saved
+        return saved
       }
     } catch (e) {
       console.error('Failed to toggle reading list item', e)
@@ -727,7 +789,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return
     try {
-      const res = await fetch(`${API_URL}/feed/reading-list?limit=500`, {
+      const res = await fetch(`${api.url}/feed/reading-list?limit=500`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
       if (res.ok) {
@@ -771,8 +833,11 @@ export const useFeedStore = defineStore('feed', () => {
     checkAllSubscriptionsHealth,
     // Star
     starredItemIds,
+    bookmarkedPostIds,
     toggleStar,
     fetchStarredIds,
+    fetchBookmarkedPostIds,
+    togglePostBookmark,
     moveStarToGroup,
     readingListItemIds,
     toggleReadingListItem,

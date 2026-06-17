@@ -5,16 +5,17 @@ test.describe('Navigation', () => {
     await page.goto('/')
 
     const navLinks = [
-      { name: '订阅', expectedUrl: /\/feed|^\// },
-      { name: '音乐', expectedUrl: /\/music/ },
-      { name: '法堂', expectedUrl: /\/blog/ },
-      { name: '论坛', expectedUrl: /\/forum/ },
-      { name: '辩论', expectedUrl: /\/debate/ },
+      { name: '订阅', expectedUrl: /\/?\?site=feed|\/$/ },
+      { name: '刊播', expectedUrl: /\?site=kanbo/ },
+      { name: '音乐', expectedUrl: /\?site=music/ },
+      { name: '论坛', expectedUrl: /\?site=forum/ },
+      { name: '辩论', expectedUrl: /\?site=debate/ },
+      { name: '时间线', expectedUrl: /\?site=timeline/ },
     ]
 
     for (const link of navLinks) {
       await page.goto('/')
-      const navLink = page.getByRole('link', { name: link.name })
+      const navLink = page.locator('header nav').getByRole('link', { name: link.name, exact: true })
       if (await navLink.isVisible().catch(() => false)) {
         await navLink.click()
         await page.waitForTimeout(1000)
@@ -39,7 +40,12 @@ test.describe('Navigation', () => {
 
   test('login button visible when not authenticated', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('link', { name: '登录' })).toBeVisible()
+    await page.evaluate(() => {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    })
+    await page.reload()
+    await expect(page.locator('header').getByRole('link', { name: '登录', exact: true })).toBeVisible()
   })
 
   test('user menu visible when authenticated', async ({ authenticatedPage }) => {

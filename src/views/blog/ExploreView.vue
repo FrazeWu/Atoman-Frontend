@@ -105,11 +105,11 @@ const feedStore = useFeedStore()
 const api = useApi()
 const router = useRouter()
 
-const starredIds = computed(() => feedStore.starredItemIds)
+const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.toggleStar(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
@@ -147,7 +147,7 @@ const loadPage = async (page: number) => {
 onMounted(() => {
   void loadPage(1)
   if (authStore.isAuthenticated) {
-    void feedStore.fetchStarredIds()
+    void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
 })

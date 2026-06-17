@@ -34,11 +34,29 @@ function loadStoredUser(): User | null {
   }
 }
 
+type AuthApiPayload = {
+  token?: unknown
+  user?: unknown
+  code?: unknown
+  error?: unknown
+  message?: unknown
+}
+
+type AuthApiError = {
+  code?: string
+  error?: string
+  message?: string
+}
+
+function clearStoredSession() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+}
+
 function checkAndClearExpiredToken() {
   const storedToken = localStorage.getItem('token')
   if (storedToken && isTokenExpired(storedToken)) {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    clearStoredSession()
     return false
   }
   return true
@@ -58,7 +76,31 @@ function persistUser(user: User | null) {
   localStorage.setItem('user', JSON.stringify(user))
 }
 
-async function parseApiResponse(response: Response) {
+function toAuthApiError(payload: AuthApiPayload): AuthApiError {
+  return {
+    code: typeof payload.code === 'string' ? payload.code : undefined,
+    error: typeof payload.error === 'string' ? payload.error : undefined,
+    message: typeof payload.message === 'string' ? payload.message : undefined,
+  }
+}
+
+function isUserLike(value: unknown): value is User {
+  if (value === null || typeof value !== 'object') return false
+
+  const candidate = value as Record<string, unknown>
+  return typeof candidate.username === 'string' && typeof candidate.email === 'string'
+}
+
+function extractSessionPayload(data: AuthApiPayload): { token: string; user: User } | null {
+  if (typeof data.token !== 'string') return null
+
+  const rawUser = data.user
+  if (!isUserLike(rawUser)) return null
+
+  return { token: data.token, user: rawUser }
+}
+
+async function parseApiResponse(response: Response): Promise<AuthApiPayload> {
   const text = await response.text()
 
   if (!text) {
@@ -66,10 +108,46 @@ async function parseApiResponse(response: Response) {
   }
 
   try {
-    return JSON.parse(text)
+    const parsed: unknown = JSON.parse(text)
+    if (parsed !== null && typeof parsed === 'object') {
+      return parsed as AuthApiPayload
+    }
+    return { error: `服务返回异常，请稍后重试 (${response.status})` }
   } catch {
-    return { error: `服务返回非 JSON 响应 (${response.status})` }
+    return { error: `服务返回异常，请稍后重试 (${response.status})` }
   }
+}
+
+function authErrorMessage(payload: AuthApiError, fallback: string) {
+  if (payload.error) return payload.error
+  if (payload.message) return payload.message
+
+  switch (payload.code) {
+    case 'auth.required':
+      return '请先登录'
+    case 'auth.invalid_token':
+      return '登录状态已失效，请重新登录'
+    case 'auth.invalid_claims':
+      return '登录信息异常，请重新登录'
+    case 'auth.user_not_found':
+      return '账号不存在或已被移除，请重新登录'
+    case 'auth.account_not_found':
+      return '账号不存在'
+    case 'auth.password_mismatch':
+      return '密码不正确'
+    case 'auth.token_generation_failed':
+      return '登录服务暂时不可用，请稍后重试'
+    default:
+      return fallback
+  }
+}
+
+function isAuthInvalidationCode(code: unknown) {
+  return code === 'auth.invalid_token' || code === 'auth.invalid_claims' || code === 'auth.user_not_found'
+}
+
+function networkAuthError() {
+  return new Error('无法连接服务器，请检查网络后重试')
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -79,25 +157,51 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(tokenNotExpired ? storedToken : null)
   const user = ref<User | null>(tokenNotExpired ? loadStoredUser() : null)
   const isAuthenticated = ref(!!token.value)
+  const lastAuthError = ref<string | null>(null)
 
   const loginWithPassword = async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ username: email, password }),
-    })
+    lastAuthError.value = null
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: email, password }),
+      })
 
-    const data = await parseApiResponse(response)
+      const data = await parseApiResponse(response)
+      const authError = toAuthApiError(data)
 
-    if (!response.ok) {
-      throw new Error(data.error || `登录失败 (${response.status})`)
+      if (!response.ok) {
+        const message = authErrorMessage(authError, `登录失败 (${response.status})`)
+        lastAuthError.value = message
+        throw new Error(message)
+      }
+
+      const session = extractSessionPayload(data)
+      if (!session) {
+        const message = '服务返回异常，请稍后重试'
+        token.value = null
+        user.value = null
+        isAuthenticated.value = false
+        clearStoredSession()
+        lastAuthError.value = message
+        throw new Error(message)
+      }
+
+      token.value = session.token
+      user.value = session.user
+      isAuthenticated.value = true
+      lastAuthError.value = null
+      storeSession(session)
+    } catch (error) {
+      if (error instanceof TypeError) {
+        const mapped = networkAuthError()
+        lastAuthError.value = mapped.message
+        throw mapped
+      }
+      throw error
     }
-
-    token.value = data.token
-    user.value = data.user
-    isAuthenticated.value = true
-    storeSession(data)
   }
 
   const register = async (
@@ -108,64 +212,123 @@ export const useAuthStore = defineStore('auth', () => {
     verificationCode?: string,
     turnstileToken?: string
   ) => {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        username, 
-        email, 
-        password, 
-        password_confirm: passwordConfirm,
-        verification_code: verificationCode,
-        turnstile_token: turnstileToken,
-      }),
-    })
+    lastAuthError.value = null
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+          password_confirm: passwordConfirm,
+          verification_code: verificationCode,
+          turnstile_token: turnstileToken,
+        }),
+      })
 
-    const data = await parseApiResponse(response)
+      const data = await parseApiResponse(response)
+      const authError = toAuthApiError(data)
 
-    if (!response.ok) {
-      throw new Error(data.error || `注册失败 (${response.status})`)
+      if (!response.ok) {
+        const message = authErrorMessage(authError, `注册失败 (${response.status})`)
+        lastAuthError.value = message
+        throw new Error(message)
+      }
+
+      const session = extractSessionPayload(data)
+      if (!session) {
+        const message = '服务返回异常，请稍后重试'
+        token.value = null
+        user.value = null
+        isAuthenticated.value = false
+        clearStoredSession()
+        lastAuthError.value = message
+        throw new Error(message)
+      }
+
+      token.value = session.token
+      user.value = session.user
+      isAuthenticated.value = true
+      lastAuthError.value = null
+      storeSession(session)
+    } catch (error) {
+      if (error instanceof TypeError) {
+        const mapped = networkAuthError()
+        lastAuthError.value = mapped.message
+        throw mapped
+      }
+      throw error
     }
-
-    token.value = data.token
-    user.value = data.user
-    isAuthenticated.value = true
-    storeSession(data)
   }
 
   const logout = async () => {
-    token.value = null;
-    user.value = null;
-    isAuthenticated.value = false;
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    token.value = null
+    user.value = null
+    isAuthenticated.value = false
+    lastAuthError.value = null
+    clearStoredSession()
     await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
-  };
+  }
 
   const restoreSession = async () => {
     if (validateSession()) return true
 
     try {
       const response = await fetch(`${API_URL}/auth/session`, { credentials: 'include' })
-      if (!response.ok) return false
-
       const data = await parseApiResponse(response)
-      if (!data.token || !data.user || isTokenExpired(data.token)) return false
+      const authError = toAuthApiError(data)
 
-      token.value = data.token
-      user.value = data.user
+      if (!response.ok) {
+        if (isAuthInvalidationCode(authError.code)) {
+          token.value = null
+          user.value = null
+          isAuthenticated.value = false
+          clearStoredSession()
+          lastAuthError.value = authErrorMessage(authError, '登录状态已失效，请重新登录')
+        }
+        return false
+      }
+
+      const session = extractSessionPayload(data)
+      if (!session) {
+        token.value = null
+        user.value = null
+        isAuthenticated.value = false
+        clearStoredSession()
+        lastAuthError.value = '服务返回异常，请稍后重试'
+        return false
+      }
+
+      if (isTokenExpired(session.token)) {
+        token.value = null
+        user.value = null
+        isAuthenticated.value = false
+        clearStoredSession()
+        lastAuthError.value = '登录状态已失效，请重新登录'
+        return false
+      }
+
+      token.value = session.token
+      user.value = session.user
       isAuthenticated.value = true
-      storeSession(data)
+      lastAuthError.value = null
+      storeSession(session)
       return true
     } catch {
+      lastAuthError.value = '无法连接服务器，请检查网络后重试'
       return false
     }
   }
 
   const validateSession = () => {
     if (token.value && isTokenExpired(token.value)) {
-      logout()
+      token.value = null
+      user.value = null
+      isAuthenticated.value = false
+      clearStoredSession()
+      lastAuthError.value = '登录状态已失效，请重新登录'
       return false
     }
     return !!token.value
@@ -181,11 +344,12 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     isAuthenticated,
+    lastAuthError,
     loginWithPassword,
     register,
     restoreSession,
     validateSession,
     updateUser,
-    logout
-  };
-});
+    logout,
+  }
+})

@@ -8,8 +8,9 @@ import VideoPlayerShell from '@/components/shared/VideoPlayerShell.vue'
 import VideoCommentSection from '@/components/video/VideoCommentSection.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const route = useRoute()
 const router = useRouter()
 
@@ -75,14 +76,14 @@ async function load(id: string) {
   lastProgressSave = 0
   try {
     const [vRes, rRes] = await Promise.all([
-      fetch(`${API_URL}/videos/${id}`),
-      fetch(`${API_URL}/videos/${id}/recommended`),
+      fetch(`${api.url}/videos/${id}`),
+      fetch(`${api.url}/videos/${id}/recommended`),
     ])
     if (!vRes.ok) { error.value = '视频不存在'; return }
     video.value = await vRes.json()
     if (rRes.ok) recommended.value = await rRes.json()
     // Fire-and-forget view count increment
-    fetch(`${API_URL}/videos/${id}/view`, { method: 'POST' })
+    fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
   } catch {
     error.value = '加载失败，请重试'
   } finally {

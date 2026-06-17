@@ -222,7 +222,7 @@ const fetchExplore = async () => {
     if (res.ok) {
       const d = await res.json()
       items.value = d.data || []
-      totalItems.value = d.total || 0
+      totalItems.value = d.meta?.total || d.total || 0
     }
   } catch (e) {
     console.error(e)

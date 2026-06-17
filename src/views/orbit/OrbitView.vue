@@ -212,11 +212,12 @@ import { useFeedStore } from '@/stores/feed'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import { modulePathUrl } from '@/composables/useSubdomainNav'
 import type { FeedSourceProvider, Subscription, OrbitItem, TimelineItem } from '@/types'
+import { useApi } from '@/composables/useApi'
 
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
@@ -294,7 +295,7 @@ const fetchSubscriptions = async () => {
   if (!authStore.isAuthenticated) return
   loadingSubscriptions.value = true
   try {
-    const res = await fetch(`${API_URL}/feed/subscriptions`, { headers: authHeaders() })
+    const res = await fetch(`${api.url}/feed/subscriptions`, { headers: authHeaders() })
     if (res.ok) {
       const d = await res.json()
       subscriptions.value = d.data || []
@@ -310,7 +311,7 @@ const fetchTimeline = async () => {
   if (!authStore.isAuthenticated) return
   loadingTimeline.value = true
   try {
-    let url = `${API_URL}/feed/timeline`
+    let url = `${api.url}/feed/timeline`
     if (activeSourceId.value !== null) {
       url += `?source_id=${activeSourceId.value}`
     }
@@ -328,7 +329,7 @@ const fetchTimeline = async () => {
 
 const unsubscribeSource = async (id: string) => {
   try {
-    await fetch(`${API_URL}/feed/subscriptions/${id}`, {
+    await fetch(`${api.url}/feed/subscriptions/${id}`, {
       method: 'DELETE',
       headers: authHeaders()
     })

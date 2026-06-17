@@ -1,0 +1,67 @@
+<h2>订阅侧边栏：扁平化方向</h2>
+<p class="subtitle">当前问题像是侧栏条目有圆角、浅底和阴影，导致看起来像浮在页面上。下面是 3 个可能方向。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fff;border:1px solid #e5e7eb;width:100%;max-width:420px;margin:0 auto;padding:18px 0;font-family:Inter,Arial,sans-serif;color:#111;">
+        <div style="font-size:11px;font-weight:900;letter-spacing:.12em;padding:0 18px 12px;border-bottom:1px solid #111;">/ ARCHIVE.SUBSCRIPTIONS</div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:13px 18px;border-bottom:1px solid #e5e7eb;background:#fff;">
+          <span style="font-size:11px;font-weight:900;color:#6b7280;">01/</span><span style="font-size:13px;font-weight:850;letter-spacing:.02em;">ALL FEEDS</span>
+        </div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:13px 18px;border-bottom:1px solid #111;background:#f8fafc;">
+          <span style="font-size:11px;font-weight:900;color:#111;">02/</span><span style="font-size:13px;font-weight:950;letter-spacing:.02em;">TECH</span>
+        </div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:13px 18px;border-bottom:1px solid #e5e7eb;background:#fff;">
+          <span style="font-size:11px;font-weight:900;color:#6b7280;">03/</span><span style="font-size:13px;font-weight:850;letter-spacing:.02em;">DESIGN</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 表格线分割（推荐）</h3>
+      <p>去掉圆角和阴影，用整宽行、细分割线和 active 底线表达层级。最“扁平”，也最像目录索引。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fff;border-left:3px solid #111;width:100%;max-width:420px;margin:0 auto;padding:18px 0;font-family:Inter,Arial,sans-serif;color:#111;">
+        <div style="font-size:11px;font-weight:900;letter-spacing:.12em;padding:0 18px 14px;">/ ARCHIVE.SUBSCRIPTIONS</div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:12px 18px;background:#fff;">
+          <span style="font-size:11px;font-weight:900;color:#6b7280;">01/</span><span style="font-size:13px;font-weight:850;">ALL FEEDS</span>
+        </div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:12px 18px;background:#fff;border-left:5px solid #111;margin-left:-3px;">
+          <span style="font-size:11px;font-weight:900;color:#111;">02/</span><span style="font-size:13px;font-weight:950;">TECH</span>
+        </div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:12px 18px;background:#fff;">
+          <span style="font-size:11px;font-weight:900;color:#6b7280;">03/</span><span style="font-size:13px;font-weight:850;">DESIGN</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 左轨索引</h3>
+      <p>仍然无阴影无卡片，但用左侧黑轨标记 active。更强识别度，稍微更“导航控件”。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#fff;width:100%;max-width:420px;margin:0 auto;padding:18px 0;font-family:Inter,Arial,sans-serif;color:#111;">
+        <div style="font-size:11px;font-weight:900;letter-spacing:.12em;padding:0 18px 14px;">/ ARCHIVE.SUBSCRIPTIONS</div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:11px 18px;background:#fff;">
+          <span style="font-size:11px;font-weight:900;color:#9ca3af;">01/</span><span style="font-size:13px;font-weight:760;color:#4b5563;">ALL FEEDS</span>
+        </div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:11px 18px;background:#111;color:#fff;">
+          <span style="font-size:11px;font-weight:900;">02/</span><span style="font-size:13px;font-weight:950;">TECH</span>
+        </div>
+        <div style="display:grid;grid-template-columns:46px 1fr;align-items:center;padding:11px 18px;background:#fff;">
+          <span style="font-size:11px;font-weight:900;color:#9ca3af;">03/</span><span style="font-size:13px;font-weight:760;color:#4b5563;">DESIGN</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 纯色条 active</h3>
+      <p>无边框、无阴影，用整行黑底表达当前位置。最清晰，但视觉重量更重。</p>
+    </div>
+  </div>
+</div>

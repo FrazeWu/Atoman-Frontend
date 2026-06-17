@@ -10,8 +10,9 @@ import ASelect from '@/components/ui/ASelect.vue'
 import AConfirm from '@/components/ui/AConfirm.vue'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Channel, Collection } from '@/types'
+import { useApi } from '@/composables/useApi'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -148,7 +149,7 @@ async function uploadCoverBlob(blob: Blob) {
   try {
     const fd = new FormData()
     fd.append('cover', new File([blob], `auto-cover-${Date.now()}.jpg`, { type: 'image/jpeg' }))
-    const res = await fetch(`${API_URL}/videos/upload-cover`, {
+    const res = await fetch(`${api.url}/videos/upload-cover`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: fd,
@@ -179,7 +180,7 @@ async function onVideoFileChange(e: Event) {
     const fd = new FormData()
     fd.append('video', file)
     const result = await uploadWithProgress(
-      `${API_URL}/videos/upload-video`,
+      `${api.url}/videos/upload-video`,
       fd,
       (pct) => { videoUploadProgress.value = pct },
     )
@@ -209,7 +210,7 @@ async function onCoverFileChange(e: Event) {
   try {
     const fd = new FormData()
     fd.append('cover', file)
-    const res = await fetch(`${API_URL}/videos/upload-cover`, {
+    const res = await fetch(`${api.url}/videos/upload-cover`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: fd,
@@ -252,13 +253,13 @@ function buildPayload(status: 'draft' | 'published') {
 async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video> {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }
   if (isEdit.value) {
-    const res = await fetch(`${API_URL}/videos/${route.params.id}`, {
+    const res = await fetch(`${api.url}/videos/${route.params.id}`, {
       method: 'PUT', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
     return res.json()
   } else {
-    const res = await fetch(`${API_URL}/videos`, {
+    const res = await fetch(`${api.url}/videos`, {
       method: 'POST', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
@@ -269,7 +270,7 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 async function loadChannels() {
   if (!authStore.user) return
   const res = await fetch(
-    `${API_URL}/blog/channels?user_id=${authStore.user.id}`,
+    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } }
   )
   if (res.ok) {
@@ -293,7 +294,7 @@ async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
 
-  const res = await fetch(`${API_URL}/blog/channels/${channelID}/collections`, {
+  const res = await fetch(`${api.url}/blog/channels/${channelID}/collections`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) return
@@ -320,7 +321,7 @@ function toggleCollection(id: string, checked: boolean) {
 
 async function loadVideo() {
   const id = route.params.id as string
-  const res = await fetch(`${API_URL}/videos/${id}`, {
+  const res = await fetch(`${api.url}/videos/${id}`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) return

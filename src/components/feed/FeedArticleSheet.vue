@@ -1,7 +1,7 @@
 <template>
   <PaperSheet
     :show="show"
-    title="ARTICLE_VIEW"
+    :title="sheetTitle"
     close-type="bookmark"
     reading-mode
     :width="'calc(100vw - var(--a-sidebar-width))'"
@@ -21,10 +21,8 @@
         </a>
       </div>
       
-      <div class="prose max-w-none article-body">
-        <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
-      </div>
-      
+      <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
+      <div class="prose-blog article-body" v-html="renderedContent"></div>
     </template>
     
     <template v-else-if="article && article.type === 'feed_item' && article.feed_item">
@@ -56,18 +54,39 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { TimelineItem } from '@/types'
 import PaperSheet from '@/components/ui/PaperSheet.vue'
 import PaperBadge from '@/components/ui/PaperBadge.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
+import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   article: TimelineItem | null
 }>()
 
+const { renderMarkdown } = useMarkdownRenderer()
+const renderedContent = computed(() => {
+  if (props.article?.type === 'post' && props.article.post?.content) {
+    return renderMarkdown(props.article.post.content)
+  }
+  return ''
+})
+
 defineEmits(['close'])
+
+const sheetTitle = computed(() => {
+  if (!props.article) return '文章'
+  if (props.article.type === 'post' && props.article.post) {
+    return props.article.post.title
+  }
+  if (props.article.type === 'feed_item' && props.article.feed_item) {
+    return props.article.feed_item.title
+  }
+  return '文章'
+})
 
 const { navigateWithShutter } = useAsyncNavigate()
 
@@ -103,13 +122,13 @@ const handleReadMore = (post: any) => {
 }
 
 .article-title {
-  font-family: var(--a-font-serif);
-  font-size: 3rem;
-  font-weight: 900;
+  font-family: inherit;
+  font-size: 2.25rem;
+  font-weight: 800;
   line-height: 1.15;
   margin-bottom: 1rem;
   color: var(--a-color-fg);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .article-subtitle-meta {
@@ -118,15 +137,15 @@ const handleReadMore = (post: any) => {
 
 .read-original-link {
   display: inline-block;
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: var(--a-font-weight-strong, 700);
   color: var(--a-color-muted);
   text-decoration: none;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--a-color-line-soft);
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .read-original-link:hover {

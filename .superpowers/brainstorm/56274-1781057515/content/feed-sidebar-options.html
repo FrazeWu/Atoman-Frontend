@@ -1,0 +1,52 @@
+<h2>订阅侧边栏布局方案</h2>
+<p class="subtitle">目标：顶部导航常驻，订阅源移到导航下方；折叠后只显示 4 个线框图标，不显示订阅源。</p>
+
+<div class="cards" style="grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 24px; align-items: stretch;">
+  <div class="card" data-choice="recommended" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8fafc; padding:20px; min-height:520px; display:flex; justify-content:center;">
+      <div style="width:260px; background:#fff; border-radius:8px; padding:18px 12px; box-shadow:0 20px 55px rgba(0,0,0,.08); font-family:Inter, system-ui, sans-serif; color:#1f1f1f;">
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; gap:14px; height:58px; padding:0 18px; background:#f3f3f3; border-radius:12px; font-weight:900;">
+            <span style="color:#aaa; font-family:monospace; letter-spacing:.08em;">01/</span><span style="font-size:22px; flex:1;">订阅</span><span style="font-size:24px;">◜))</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; height:58px; padding:0 18px; color:#8b8784; font-weight:900;">
+            <span style="color:#aaa; font-family:monospace; letter-spacing:.08em;">02/</span><span style="font-size:22px; flex:1;">探索</span><span style="font-size:22px;">◎</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; height:58px; padding:0 18px; color:#8b8784; font-weight:900;">
+            <span style="color:#aaa; font-family:monospace; letter-spacing:.08em;">03/</span><span style="font-size:22px; flex:1;">稍后阅读</span><span style="font-size:22px;">▱</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; height:58px; padding:0 18px; background:#fdfdfd; border-radius:12px; font-weight:900; box-shadow:0 12px 30px rgba(0,0,0,.03);">
+            <span style="color:#aaa; font-family:monospace; letter-spacing:.08em;">04/</span><span style="font-size:22px; flex:1;">收藏</span><span style="font-size:22px;">☆</span>
+          </div>
+        </div>
+        <div style="margin-top:42px; display:flex; align-items:center; justify-content:space-between; color:#aaa; font-weight:900; letter-spacing:.14em; font-size:13px;">
+          <span>订阅源类别 / SOURCES</span><span style="color:#555; letter-spacing:.08em;">管理</span>
+        </div>
+        <div style="margin-top:28px; display:flex; flex-direction:column; gap:25px;">
+          <div><div style="color:#b8b8b8; font-weight:900; margin-bottom:12px;">▱ 科技生活</div><div style="display:flex; align-items:center; gap:12px; padding-left:10px;"><span style="background:#f6f7f8; padding:5px 9px; border-radius:6px; font-weight:800;">博客</span><strong style="font-size:17px; flex:1;">少数派</strong><span style="background:#111; color:#fff; border-radius:50%; width:24px; height:24px; display:grid; place-items:center; font-size:12px;">1</span></div></div>
+          <div><div style="color:#b8b8b8; font-weight:900; margin-bottom:12px;">▱ 深度访谈</div><div style="display:flex; align-items:center; gap:12px; padding-left:10px;"><span style="background:#fff1c2; color:#a86200; padding:5px 9px; border-radius:6px; font-weight:800;">播客</span><strong style="font-size:17px; flex:1;">不明白播客</strong><span style="background:#111; color:#fff; border-radius:50%; width:24px; height:24px; display:grid; place-items:center; font-size:12px;">1</span></div></div>
+          <div><div style="color:#b8b8b8; font-weight:900; margin-bottom:12px;">▱ 文化生活</div><div style="display:flex; align-items:center; gap:12px; padding-left:10px;"><span style="background:#bff4d9; color:#097a4b; padding:5px 9px; border-radius:6px; font-weight:800;">周报</span><strong style="font-size:17px; flex:1;">英格兰周报</strong></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A. 推荐：内嵌订阅源索引</h3><p>把订阅源列表作为侧边栏导航下方的常驻区域。折叠时整块隐藏，只保留导航图标。</p></div>
+  </div>
+
+  <div class="card" data-choice="drawer-plus-sidebar" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8fafc; padding:20px; min-height:520px; display:flex; justify-content:center; gap:12px;">
+      <div style="width:86px; background:#fff; border-radius:8px; padding:16px 10px; box-shadow:0 20px 55px rgba(0,0,0,.08); display:flex; flex-direction:column; align-items:center; gap:24px; color:#555;">
+        <div style="background:#f3f3f3; width:58px; height:58px; border-radius:14px; display:grid; place-items:center; font-size:24px;">◜))</div>
+        <div style="font-size:24px;">◎</div>
+        <div style="font-size:24px;">▱</div>
+        <div style="font-size:24px;">☆</div>
+      </div>
+      <div style="width:190px; background:#fff; border-radius:8px; padding:18px; box-shadow:0 20px 55px rgba(0,0,0,.06); color:#777;">
+        <div style="font-weight:900; letter-spacing:.14em; color:#aaa; font-size:12px;">SOURCES DRAWER</div>
+        <div style="margin-top:24px; line-height:2.2; font-weight:800;">科技生活<br>少数派<br><br>深度访谈<br>不明白播客<br><br>文化生活<br>英格兰周报</div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B. 保留抽屉入口</h3><p>导航图标按参考图改造，但订阅源仍通过右侧/侧边抽屉打开。空间更干净，但不符合“换到导航下方”的直觉。</p></div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:24px;">我的建议是 A：更贴近参考图，信息层级清楚，也满足常驻与折叠隐藏的要求。</p>

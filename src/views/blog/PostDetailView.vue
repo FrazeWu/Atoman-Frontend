@@ -29,27 +29,68 @@
         <img :src="post.cover_url" :alt="post.title" style="width:100%;object-fit:cover;max-height:20rem" />
       </div>
 
-      <div class="a-page-md" style="padding-top:3rem">
+      <div :class="isAcademic ? 'a-page' : 'a-page-md'" style="padding-top:3rem; transition: max-width 0.3s ease;">
         <!-- Breadcrumb -->
         <RouterLink to="/" class="a-link">← 法堂广场</RouterLink>
 
         <!-- Title -->
-        <h1 class="a-title" style="margin-top:1.5rem;margin-bottom:1rem">{{ post.title }}</h1>
+        <h1 
+          :class="isAcademic ? 'academic-title' : 'a-title'" 
+          :style="!isAcademic ? 'margin-top:1.5rem;margin-bottom:1rem' : ''"
+        >
+          {{ post.title }}
+        </h1>
 
         <!-- Meta -->
-        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:1rem;padding-bottom:1.5rem;border-bottom:var(--a-border);margin-bottom:2.5rem">
-          <a :href="userUrl(post.user?.username || '')" style="display:flex;align-items:center;gap:.5rem;text-decoration:none">
-            <div style="width:2rem;height:2rem;border-radius:9999px;background:var(--a-color-fg);display:flex;align-items:center;justify-content:center;color:var(--a-color-bg);font-weight:900;font-size:.75rem">
-              {{ (post.user?.display_name || post.user?.username || '?').charAt(0).toUpperCase() }}
+        <div :class="isAcademic ? 'academic-meta' : 'normal-meta'">
+          <template v-if="isAcademic">
+            <span class="academic-author">{{ post.user?.display_name || post.user?.username }}</span>
+            <span class="academic-date">{{ formatDate(post.created_at) }}</span>
+            <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem">
+              <button 
+                @click="isAcademic = false" 
+                class="a-btn a-btn--sm a-btn--secondary"
+                style="border-radius: 4px; font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
+              >
+                📖 极简单栏
+              </button>
+              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: 4px; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
             </div>
-            <span style="font-weight:900;font-size:.875rem">{{ post.user?.display_name || post.user?.username }}</span>
-          </a>
-          <span class="a-label a-muted">{{ formatDate(post.created_at) }}</span>
-          <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn-outline-sm" style="margin-left:auto">编辑</RouterLink>
+          </template>
+          <template v-else>
+            <a :href="userUrl(post.user?.username || '')" style="display:flex;align-items:center;gap:.5rem;text-decoration:none">
+              <div style="width:2rem;height:2rem;border-radius:9999px;background:var(--a-color-fg);display:flex;align-items:center;justify-content:center;color:var(--a-color-bg);font-weight:900;font-size:.75rem">
+                {{ (post.user?.display_name || post.user?.username || '?').charAt(0).toUpperCase() }}
+              </div>
+              <span style="font-weight:900;font-size:.875rem">{{ post.user?.display_name || post.user?.username }}</span>
+            </a>
+            <span class="a-label a-muted">{{ formatDate(post.created_at) }}</span>
+            <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
+              <button 
+                @click="isAcademic = true" 
+                class="a-btn a-btn--sm a-btn--secondary"
+                style="border-radius: 4px; font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
+              >
+                🔬 学术双栏
+              </button>
+              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: 4px; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
+            </div>
+          </template>
+        </div>
+
+        <!-- Abstract -->
+        <div v-if="isAcademic && post.summary" class="academic-abstract">
+          <h3 class="abstract-title">Abstract</h3>
+          <p class="abstract-content">{{ post.summary }}</p>
         </div>
 
         <!-- Markdown content -->
-        <div class="prose-blog" style="margin-bottom:3rem" v-html="renderedContent" />
+        <div 
+          class="prose-blog" 
+          :class="{ 'prose-blog-academic': isAcademic }" 
+          style="margin-bottom:3rem" 
+          v-html="renderedContent" 
+        />
 
         <!-- Interaction bar -->
         <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 0;border-top:var(--a-border);border-bottom:var(--a-border);margin-bottom:3rem">
@@ -119,6 +160,7 @@ const api = useApi()
 const { renderMarkdown } = useMarkdownRenderer()
 
 const post = ref<Post | null>(null)
+const isAcademic = ref(false)
 const loading = ref(true)
 const errorStatus = ref<number | null>(null)
 const liked = ref(false)
@@ -360,17 +402,17 @@ onMounted(() => {
 .prose-blog :deep(h2),
 .prose-blog :deep(h3),
 .prose-blog :deep(h4) {
-  font-weight: 900;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 2rem 0 1rem;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .prose-blog :deep(h1) { font-size: 2rem; }
-.prose-blog :deep(h2) { font-size: 1.5rem; border-left: 6px solid var(--a-color-fg); padding-left: 1rem; }
+.prose-blog :deep(h2) { font-size: 1.5rem; border-left: 2px solid var(--a-color-fg); padding-left: 0.75rem; }
 .prose-blog :deep(h3) { font-size: 1.2rem; }
 .prose-blog :deep(p) { margin: 1rem 0; line-height: 1.8; font-size: 1.05rem; color: var(--a-color-fg); }
 .prose-blog :deep(a) { font-weight: 700; text-decoration: underline; }
-.prose-blog :deep(a:hover) { opacity: 0.6; }
+.prose-blog :deep(a:hover) { opacity: 0.7; }
 .prose-blog :deep(code) {
   background: var(--a-color-disabled-bg);
   border: 1px solid var(--a-color-disabled-border);
@@ -379,21 +421,21 @@ onMounted(() => {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 .prose-blog :deep(pre) {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  padding: 1.5rem;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 1.25rem;
   border: var(--a-border);
   overflow-x: auto;
   margin: 1.5rem 0;
 }
 .prose-blog :deep(pre code) { background: none; border: none; padding: 0; color: inherit; }
 .prose-blog :deep(blockquote) {
-  border-left: 4px solid var(--a-color-fg);
-  padding: 0.5rem 1.5rem;
+  border-left: 2px solid var(--a-color-fg);
+  padding: 0.5rem 1.25rem;
   margin: 1.5rem 0;
   font-style: italic;
   color: var(--a-color-muted);
-  background: var(--a-color-surface);
+  background: var(--a-color-paper-soft);
 }
 .prose-blog :deep(ul), .prose-blog :deep(ol) {
   padding-left: 1.5rem;
@@ -405,7 +447,7 @@ onMounted(() => {
 .prose-blog :deep(hr) { border: 0; border-top: var(--a-border); margin: 2rem 0; }
 .prose-blog :deep(table) { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
 .prose-blog :deep(th), .prose-blog :deep(td) { border: var(--a-border); padding: 0.6rem 1rem; }
-.prose-blog :deep(th) { background: var(--a-color-fg); color: var(--a-color-bg); font-weight: 900; text-align: left; }
+.prose-blog :deep(th) { background: var(--a-color-fg); color: var(--a-color-bg); font-weight: 700; text-align: left; }
 
 /* KaTeX math rendering */
 .prose-blog :deep(.katex-display) { margin: 1.5rem 0; overflow-x: auto; }
@@ -439,7 +481,7 @@ onMounted(() => {
 }
 .prose-blog :deep(.atoman-post-embed__label) {
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--a-color-muted);
@@ -447,7 +489,7 @@ onMounted(() => {
 }
 .prose-blog :deep(.atoman-post-embed__title) {
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.3;
   margin-bottom: 0.4rem;
 }
@@ -466,7 +508,7 @@ onMounted(() => {
 /* Like / toggle button */
 .a-toggle-btn {
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: var(--a-letter-spacing-wide);
   padding: 0.4rem 0.875rem;
@@ -495,5 +537,220 @@ onMounted(() => {
 @media (max-width: 639px) {
   .prose-blog :deep(pre) { padding: 1rem; font-size: 0.8rem; }
   .prose-blog :deep(h2) { font-size: 1.25rem; }
+}
+
+/* ─── Academic Header Styles ───────────────────────────────────────────── */
+.academic-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 2.25rem;
+  font-weight: 800;
+  text-align: center;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.03em;
+  color: var(--a-color-fg);
+  line-height: 1.2;
+}
+
+.normal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: var(--a-border);
+  margin-bottom: 2.5rem;
+}
+
+.academic-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+.academic-author {
+  font-family: "Times New Roman", Times, Georgia, "Liberation Serif", serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--a-color-fg);
+}
+
+.academic-date {
+  font-family: "Times New Roman", Times, Georgia, "Liberation Serif", serif;
+  font-size: 0.85rem;
+  color: var(--a-color-muted);
+}
+
+.academic-abstract {
+  max-width: 80%;
+  margin: 0 auto 3rem auto;
+  text-align: justify;
+  font-family: "Times New Roman", Times, Georgia, "Liberation Serif", serif;
+  line-height: 1.62;
+  padding: 1.25rem 1.75rem;
+  background: var(--a-color-paper-soft);
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 4px;
+}
+
+.abstract-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.08em;
+}
+
+.abstract-content {
+  font-size: 0.9rem;
+  color: var(--a-color-fg);
+  margin: 0;
+}
+
+/* ─── Academic Two-Column (NIPS/NeurIPS style) ───────────────────────────── */
+.prose-blog-academic {
+  column-count: 2;
+  column-gap: 3rem;
+  column-rule: 1px solid var(--a-color-line-soft);
+  text-align: justify;
+  text-justify: inter-word;
+  font-family: "Times New Roman", Times, Georgia, "Liberation Serif", serif !important;
+  font-size: 0.95rem !important;
+  line-height: 1.65 !important;
+}
+
+/* Adjust heading styles in academic mode */
+.prose-blog-academic :deep(h1),
+.prose-blog-academic :deep(h2),
+.prose-blog-academic :deep(h3),
+.prose-blog-academic :deep(h4) {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  break-after: avoid;
+  break-inside: avoid;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.prose-blog-academic :deep(h1) {
+  font-size: 1.4rem !important;
+  text-align: center;
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+  column-span: all;
+}
+
+.prose-blog-academic :deep(h2) {
+  font-size: 1.15rem !important;
+  border-left: none !important;
+  padding-left: 0 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--a-color-fg) !important;
+  padding-bottom: 0.15rem !important;
+}
+
+.prose-blog-academic :deep(h3) {
+  font-size: 1.02rem !important;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.prose-blog-academic :deep(p) {
+  font-size: 0.95rem !important;
+  margin: 0 0 1rem 0 !important;
+  text-indent: 1.5rem;
+  line-height: 1.65 !important;
+}
+
+/* Do not indent the very first paragraph after a heading or blockquotes/pre/table */
+.prose-blog-academic :deep(h2) + :deep(p),
+.prose-blog-academic :deep(h3) + :deep(p),
+.prose-blog-academic :deep(h4) + :deep(p),
+.prose-blog-academic :deep(p):first-of-type,
+.prose-blog-academic :deep(blockquote) + :deep(p),
+.prose-blog-academic :deep(pre) + :deep(p) {
+  text-indent: 0 !important;
+}
+
+/* Block elements break prevention */
+.prose-blog-academic :deep(blockquote) {
+  break-inside: avoid;
+  border-left: 3px double var(--a-color-fg) !important;
+  background: var(--a-color-paper-soft) !important;
+  padding: 0.75rem 1rem !important;
+  margin: 1.25rem 0 !important;
+  font-family: inherit !important;
+  font-style: italic;
+  text-indent: 0 !important;
+}
+
+.prose-blog-academic :deep(pre) {
+  break-inside: avoid;
+  margin: 1.25rem 0 !important;
+  font-size: 0.82rem !important;
+  text-indent: 0 !important;
+}
+
+.prose-blog-academic :deep(table) {
+  break-inside: avoid;
+  margin: 1.5rem 0 !important;
+  font-size: 0.82rem !important;
+  border-top: 2px solid var(--a-color-fg) !important;
+  border-bottom: 2px solid var(--a-color-fg) !important;
+  border-collapse: collapse;
+}
+
+.prose-blog-academic :deep(th) {
+  border: none !important;
+  border-bottom: 1px solid var(--a-color-fg) !important;
+  background: none !important;
+  color: var(--a-color-fg) !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  padding: 0.4rem 0.5rem !important;
+}
+
+.prose-blog-academic :deep(td) {
+  border: none !important;
+  border-bottom: 1px solid var(--a-color-line-soft) !important;
+  padding: 0.4rem 0.5rem !important;
+}
+
+.prose-blog-academic :deep(tr):last-child :deep(td) {
+  border-bottom: none !important;
+}
+
+.prose-blog-academic :deep(img) {
+  break-inside: avoid;
+  max-width: 100%;
+  border: 1px solid var(--a-color-line-soft) !important;
+}
+
+.prose-blog-academic :deep(hr) {
+  column-span: all;
+  border: none;
+  border-top: 1px solid var(--a-color-fg);
+  margin: 2rem 0;
+}
+
+@media (max-width: 768px) {
+  .prose-blog-academic {
+    column-count: 1 !important;
+    column-gap: 0;
+  }
+  .academic-abstract {
+    max-width: 100%;
+  }
 }
 </style>

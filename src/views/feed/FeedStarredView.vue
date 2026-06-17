@@ -123,13 +123,14 @@ import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import type { StarredFeedItem, TimelineItem, FeedStarGroup } from '@/types'
+import { useApi } from '@/composables/useApi'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const uiStore = useUIStore()
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
 const normalizePage = (value: unknown) => {
@@ -240,7 +241,7 @@ const fetchStarred = async () => {
     const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
     if (groupId) params.set('group_id', groupId)
 
-    const res = await fetch(`${API_URL}/feed/stars?${params.toString()}`, {
+    const res = await fetch(`${api.url}/feed/stars?${params.toString()}`, {
       headers: authHeaders(),
     })
     if (res.ok) {

@@ -4,13 +4,12 @@ import { ADMIN_EMAIL, ADMIN_PASSWORD } from '../helpers/auth'
 test.describe('Blog', () => {
   test('browse blog home page', async ({ page }) => {
     await page.goto('/blog')
-    await expect(page.getByText('法堂')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '文章' })).toBeVisible()
   })
 
   test('public post accessible without login', async ({ page }) => {
     await page.goto('/blog')
-    // assert blog module title is visible
-    await expect(page.getByRole('heading', { name: '法堂' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '文章' })).toBeVisible()
   })
 
   test('create new post as authenticated user', async ({ authenticatedPage }) => {
@@ -42,12 +41,12 @@ test.describe('Blog', () => {
 
   test('bookmark page accessible as authenticated user', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/blog/bookmarks')
-    await expect(authenticatedPage).toHaveURL(/\/blog\/bookmarks/)
+    await expect(authenticatedPage).toHaveURL(/\/bookmarks\?site=blog/)
   })
 
   test('visit blog settings page', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/blog/settings')
-    await expect(authenticatedPage).toHaveURL(/\/blog\/settings/)
+    await expect(authenticatedPage).toHaveURL(/\/settings\?site=blog/)
   })
 
   test('editor uses the workbench compose workflow', async ({ authenticatedPage }) => {

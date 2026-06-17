@@ -3,8 +3,7 @@ import { test, expect } from '../fixtures/base'
 test.describe('Debate', () => {
   test('browse debates home page', async ({ page }) => {
     await page.goto('/debate')
-    // module title updated to 经堂 in moduleRooms — assert current header
-    await expect(page.getByRole('heading', { name: '经堂' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '辩论' })).toBeVisible()
   })
 
   test('debate page shows filter controls', async ({ page }) => {

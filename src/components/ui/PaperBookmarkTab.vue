@@ -31,34 +31,20 @@ const emit = defineEmits<{
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 10px;
-  padding: 9px 18px 9px 10px;
+  padding: 9px 14px 9px 10px;
   border: 1px solid var(--a-color-line);
   background: var(--a-color-paper);
-  box-shadow: 6px 6px 0 rgba(15, 23, 42, 0.08);
   color: var(--a-color-ink);
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 11px;
-  font-weight: 950;
+  font-weight: var(--a-font-weight-strong, 700);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.paper-bookmark-tab::after {
-  position: absolute;
-  top: 50%;
-  right: -13px;
-  width: 28px;
-  height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: var(--a-color-tape);
-  backdrop-filter: blur(4px);
-  content: '';
-  transform: translateY(-50%) rotate(-3deg);
+  transition: border-color 0.12s ease;
 }
 
 .paper-bookmark-tab--active {
   border-color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-md);
 }
 
 .paper-bookmark-tab__close,

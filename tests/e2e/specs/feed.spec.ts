@@ -12,7 +12,7 @@ test.describe('Feed', () => {
     await authenticatedPage.goto('/feed')
     // wait for either timeline, empty state or loading skeleton to render before asserting
     await authenticatedPage.waitForSelector('.feed-timeline, .a-empty, .feed-loading', { timeout: 5000 })
-    await expect(authenticatedPage.getByRole('button', { name: '+ 添加订阅' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: '+ 订阅' })).toBeVisible()
   })
 
   test('authenticated user can open add subscription modal', async ({ authenticatedPage }) => {

@@ -60,7 +60,7 @@ defineEmits(['close'])
 
 const sheetStyle = computed(() => ({
   width: props.width,
-  'max-width': props.maxWidth,
+  'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
   top: props.top,
   [props.side === 'left' ? 'left' : 'right']: 0
 }))
@@ -89,13 +89,13 @@ const sheetStyle = computed(() => ({
 .paper-sheet-layer.is-right {
   right: 0;
   border-left: 1px solid var(--a-color-line-soft);
-  box-shadow: -40px 0 80px rgba(0,0,0,0.1);
+  box-shadow: none;
 }
 
 .paper-sheet-layer.is-left {
   left: 0;
   border-right: 1px solid var(--a-color-line-soft);
-  box-shadow: 40px 0 80px rgba(0,0,0,0.1);
+  box-shadow: none;
 }
 
 .paper-sheet-backdrop {

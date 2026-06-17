@@ -14,3 +14,6 @@ vi.stubGlobal('localStorage', {
 		storage.clear()
 	},
 })
+
+vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })))
+vi.stubGlobal('scrollTo', vi.fn())

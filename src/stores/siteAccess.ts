@@ -22,7 +22,7 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
 
     try {
       const api = useApi()
-      const response = await fetch(api.settings.publicSiteAccess)
+      const response = await fetch(api.site.access)
       if (response.ok) {
         const data = await response.json()
         access.value = mergeSiteAccess(data)

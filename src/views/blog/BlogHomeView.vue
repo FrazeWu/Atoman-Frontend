@@ -117,11 +117,11 @@ const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const api = useApi()
 
-const starredIds = computed(() => feedStore.starredItemIds)
+const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.toggleStar(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
@@ -214,7 +214,7 @@ const loadMore = () => {
 onMounted(() => {
   void fetchPosts()
   if (authStore.isAuthenticated) {
-    void feedStore.fetchStarredIds()
+    void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
 })

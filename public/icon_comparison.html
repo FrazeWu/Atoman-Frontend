@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atoman 图标系统选型比对 - 现代极简风 (Sleek Minimal)</title>
+  
+  <!-- Typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Remix Icon CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <!-- Ionicons CDN -->
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+
+  <style>
+    :root {
+      --color-paper: #ffffff;
+      --color-paper-wash: #fafafa;
+      --color-ink: #18181b;
+      --color-ink-muted: #52525b;
+      --color-ink-soft: #a1a1aa;
+      --color-line: #e4e4e7;
+      --color-line-soft: #f4f4f5;
+      
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    /* Dark Mode (Ink Mode) Toggle */
+    body.ink-mode {
+      --color-paper: #09090b;
+      --color-paper-wash: #121214;
+      --color-ink: #f4f4f5;
+      --color-ink-muted: #a1a1aa;
+      --color-ink-soft: #52525b;
+      --color-line: #27272a;
+      --color-line-soft: #18181b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--color-paper);
+      color: var(--color-ink);
+      font-family: var(--font-sans);
+      transition: background-color 0.2s, color 0.2s;
+      padding-bottom: 8rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header & Editorial Layout */
+    .header {
+      background-color: var(--color-paper);
+      border-bottom: 1px solid var(--color-line);
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+
+    .kicker {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--color-ink-soft);
+      margin-bottom: 1.25rem;
+    }
+
+    .title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    .subtitle {
+      max-width: 44rem;
+      margin: 0 auto 2.5rem;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--color-ink-muted);
+      font-weight: 400;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    button.btn {
+      background-color: var(--color-paper);
+      color: var(--color-ink);
+      border: 1px solid var(--color-line);
+      padding: 0.5rem 1.2rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 0;
+      transition: all 0.2s ease;
+    }
+
+    button.btn:hover {
+      background-color: var(--color-line-soft);
+      border-color: var(--color-ink-soft);
+    }
+
+    /* Grid Layout */
+    .container {
+      max-width: 80rem;
+      margin: 4rem auto 0;
+      padding: 0 2rem;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 3rem;
+    }
+
+    .column-card {
+      background-color: var(--color-paper);
+      border: 1px solid var(--color-line);
+      padding: 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+      border-radius: 0;
+    }
+
+    .column-header {
+      border-bottom: 1px solid var(--color-line);
+      padding-bottom: 1.75rem;
+    }
+
+    .column-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      font-weight: 700;
+      border: 1px solid var(--color-line);
+      color: var(--color-ink-muted);
+      padding: 0.15rem 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .lib-title {
+      font-size: 1.75rem;
+      font-weight: 900;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    .lib-desc {
+      font-size: 0.85rem;
+      color: var(--color-ink-muted);
+      line-height: 1.6;
+    }
+
+    /* Mock Components */
+    .mock-section {
+      border: 1px solid var(--color-line);
+      padding: 2rem;
+    }
+
+    .mock-title {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--color-ink-soft);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--color-line-soft);
+      padding-bottom: 0.5rem;
+    }
+
+    /* Mock Sidebar */
+    .mock-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--color-ink-muted);
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .sidebar-item:hover {
+      color: var(--color-ink);
+      background-color: var(--color-line-soft);
+    }
+
+    .sidebar-item.active {
+      color: var(--color-ink);
+      background-color: var(--color-line-soft);
+      border-left: 2px solid var(--color-ink);
+      padding-left: calc(1rem - 2px);
+    }
+
+    .sidebar-item svg,
+    .sidebar-item i,
+    .sidebar-item ion-icon {
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+      color: inherit;
+    }
+
+    /* Mock Article Card Actions */
+    .article-card {
+      border: 1px solid var(--color-line-soft);
+      padding: 1.5rem;
+    }
+    
+    .article-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .article-actions {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--color-line-soft);
+      padding-top: 1rem;
+    }
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--color-ink-soft);
+      cursor: pointer;
+      background: none;
+      border: none;
+      transition: color 0.15s;
+    }
+
+    .action-btn:hover {
+      color: var(--color-ink);
+    }
+
+    .action-btn svg,
+    .action-btn i,
+    .action-btn ion-icon {
+      font-size: 1.05rem;
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+
+    /* Evaluation Table */
+    .specs-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5rem;
+      font-size: 0.85rem;
+      background-color: var(--color-paper);
+      border: 1px solid var(--color-line);
+    }
+
+    .specs-table th, 
+    .specs-table td {
+      border: 1px solid var(--color-line);
+      padding: 1.2rem 1.5rem;
+      text-align: left;
+    }
+
+    .specs-table th {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background-color: var(--color-line-soft);
+      color: var(--color-ink);
+      border-color: var(--color-line);
+    }
+
+    .specs-table td strong {
+      font-family: var(--font-mono);
+      color: var(--color-ink);
+    }
+
+    .recommendation-banner {
+      background-color: var(--color-paper);
+      border: 1px solid var(--color-ink);
+      margin-top: 5rem;
+      padding: 3rem;
+      position: relative;
+    }
+
+    .rec-badge {
+      position: absolute;
+      top: -10px;
+      left: 32px;
+      background-color: var(--color-ink);
+      color: var(--color-paper);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+    }
+
+    .rec-title {
+      font-size: 1.5rem;
+      font-weight: 950;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+    }
+
+    .rec-desc {
+      line-height: 1.6;
+      color: var(--color-ink-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Editorial Header -->
+  <header class="header">
+    <div class="kicker">Atoman Design System / Interactive Spec</div>
+    <h1 class="title">现代极简风格对比页面 (Sleek Minimal)</h1>
+    <p class="subtitle">
+      根据我们的协商，该页面已重构为“现代极简风”：去除了所有厚重的纯黑硬阴影（无投影），全站统一使用干净清爽的无衬线体（去除了衬线体），边框减弱为极细的浅灰线，增加大量呼吸感留白，完全依靠字重和文字排版来传递杂志感。
+    </p>
+    <div class="controls">
+      <button class="btn" onclick="toggleInkMode()">反转色温 (Toggle Ink Mode)</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="comparison-grid">
+
+      <!-- Column 1: Lucide Icons -->
+      <section class="column-card">
+        <div class="column-header">
+          <span class="column-badge">OPTION A / SELECTED</span>
+          <h2 class="lib-title">Lucide Icons</h2>
+          <p class="lib-desc">基于 Feather 构建，秉承极高几何一致性。统一 2px 线宽，在现代极简风大留白版面下，表现极其轻盈和现代。</p>
+        </div>
+
+        <!-- Sidebar Mockup -->
+        <div class="mock-section">
+          <div class="mock-title">侧栏菜单 (Sidebar Nav)</div>
+          <div class="mock-sidebar">
+            <a href="#" class="sidebar-item active">
+              <i data-lucide="layout-grid"></i>
+              <span>首页广场</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i data-lucide="rss"></i>
+              <span>我的订阅</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i data-lucide="bookmark"></i>
+              <span>稍后阅读</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i data-lucide="star"></i>
+              <span>精选收藏</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i data-lucide="pen-tool"></i>
+              <span>创作工坊</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i data-lucide="settings"></i>
+              <span>控制台</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Article Card Mockup -->
+        <div class="mock-section">
+          <div class="mock-title">卡片动作区 (Card Actions)</div>
+          <div class="article-card">
+            <h3 class="article-title">极简纸页设计的交互语义与留白</h3>
+            <div class="article-actions">
+              <button class="action-btn"><i data-lucide="heart"></i><span>62 喜欢</span></button>
+              <button class="action-btn"><i data-lucide="message-square"></i><span>12 评论</span></button>
+              <button class="action-btn"><i data-lucide="share-2"></i><span>分享</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Column 2: Remix Icon -->
+      <section class="column-card">
+        <div class="column-header">
+          <span class="column-badge">OPTION B / EDITORIAL</span>
+          <h2 class="lib-title">Remix Icon</h2>
+          <p class="lib-desc">专注于文字阅读与排版。线条粗细在 1.5px 左右，由于线宽略细，在极细浅灰线边框烘托下，多了一分娟秀。</p>
+        </div>
+
+        <!-- Sidebar Mockup -->
+        <div class="mock-section">
+          <div class="mock-title">侧栏菜单 (Sidebar Nav)</div>
+          <div class="mock-sidebar">
+            <a href="#" class="sidebar-item active">
+              <i class="ri-dashboard-3-line"></i>
+              <span>首页广场</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i class="ri-rss-line"></i>
+              <span>我的订阅</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i class="ri-bookmark-3-line"></i>
+              <span>稍后阅读</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i class="ri-star-line"></i>
+              <span>精选收藏</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i class="ri-quill-pen-line"></i>
+              <span>创作工坊</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <i class="ri-settings-4-line"></i>
+              <span>控制台</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Article Card Mockup -->
+        <div class="mock-section">
+          <div class="mock-title">卡片动作区 (Card Actions)</div>
+          <div class="article-card">
+            <h3 class="article-title">极简纸页设计的交互语义与留白</h3>
+            <div class="article-actions">
+              <button class="action-btn"><i class="ri-heart-line"></i><span>62 喜欢</span></button>
+              <button class="action-btn"><i class="ri-chat-3-line"></i><span>12 评论</span></button>
+              <button class="action-btn"><i class="ri-share-forward-line"></i><span>分享</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Column 3: Ionicons 5 -->
+      <section class="column-card">
+        <div class="column-header">
+          <span class="column-badge">OPTION C / REPLACED</span>
+          <h2 class="lib-title">Ionicons 5</h2>
+          <p class="lib-desc">已被替换的旧依赖库。其 Outline 变体线条清爽，但某些图标风格偏向移动端 App 交互，在纯文字排版下略显生硬。</p>
+        </div>
+
+        <!-- Sidebar Mockup -->
+        <div class="mock-section">
+          <div class="mock-title">侧栏菜单 (Sidebar Nav)</div>
+          <div class="mock-sidebar">
+            <a href="#" class="sidebar-item active">
+              <ion-icon name="grid-outline"></ion-icon>
+              <span>首页广场</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <ion-icon name="logo-rss"></ion-icon>
+              <span>我的订阅</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <ion-icon name="bookmark-outline"></ion-icon>
+              <span>稍后阅读</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <ion-icon name="star-outline"></ion-icon>
+              <span>精选收藏</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <ion-icon name="create-outline"></ion-icon>
+              <span>创作工坊</span>
+            </a>
+            <a href="#" class="sidebar-item">
+              <ion-icon name="settings-outline"></ion-icon>
+              <span>控制台</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Article Card Mockup -->
+        <div class="mock-section">
+          <div class="mock-title">卡片动作区 (Card Actions)</div>
+          <div class="article-card">
+            <h3 class="article-title">极简纸页设计的交互语义与留白</h3>
+            <div class="article-actions">
+              <button class="action-btn"><ion-icon name="heart-outline"></ion-icon><span>62 喜欢</span></button>
+              <button class="action-btn"><ion-icon name="chatbubble-outline"></ion-icon><span>12 评论</span></button>
+              <button class="action-btn"><ion-icon name="share-social-outline"></ion-icon><span>分享</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Specifications Table -->
+    <table class="specs-table">
+      <thead>
+        <tr>
+          <th>指标项</th>
+          <th>Lucide Icons</th>
+          <th>Remix Icon</th>
+          <th>Ionicons 5</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>默认线宽 (Stroke Weight)</strong></td>
+          <td>统一 2px (极其规范)</td>
+          <td>约 1.5px (清秀纤细)</td>
+          <td>随图标动态变化 (通常约 2px)</td>
+        </tr>
+        <tr>
+          <td><strong>极简适配度 (Sleek Minimal Match)</strong></td>
+          <td>⭐⭐⭐⭐⭐ (完美配合几何留白)</td>
+          <td>⭐⭐⭐⭐ (偏向典雅排版)</td>
+          <td>⭐⭐⭐ (偏数码控件感)</td>
+        </tr>
+        <tr>
+          <td><strong>视觉干扰度 (Visual Noise)</strong></td>
+          <td>极低 (线条绝对规整)</td>
+          <td>低 (细节较多，偏写实)</td>
+          <td>中 (圆角处理和粗细不够统一)</td>
+        </tr>
+        <tr>
+          <td><strong>Vue 3 整合包体积 (Tree-shaking)</strong></td>
+          <td>极佳 (原生按需引入组件化)</td>
+          <td>较好 (支持 ES modules 引用)</td>
+          <td>良好 (已被完全替换并移除)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Recommendation Banner -->
+    <section class="recommendation-banner">
+      <div class="rec-badge">Sleek Minimal Rules</div>
+      <h3 class="rec-title">为什么 Lucide 在极简风中表现最佳？</h3>
+      <p class="rec-desc">
+        在您选择的“现代极简风”下，由于**完全取消了阴影，并将边框淡化为极细线**，页面需要通过大量的空白和高对比排版来呈现精致感。此时，图标必须像极细签字笔落笔一样纤细、标准且高度对称。Lucide 的统一 2px 描边能产生最纯粹的几何共鸣，让页面感觉极为透气、整洁且高级。
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Lucide Script -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Toggle Dark Mode
+    function toggleInkMode() {
+      document.body.classList.toggle('ink-mode');
+    }
+  </script>
+</body>
+</html>

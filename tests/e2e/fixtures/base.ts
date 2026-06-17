@@ -8,87 +8,69 @@ type Fixtures = {
   adminPage: Page
 }
 
+function routeForCurrentModule(url: string) {
+  if (!url.startsWith('/')) return url
+
+  const [path, query = ''] = url.split('?')
+  const legacyPrefixes: Array<[string, string]> = [
+    ['/blog', 'blog'],
+    ['/feed', 'feed'],
+    ['/music', 'music'],
+    ['/forum', 'forum'],
+    ['/debate', 'debate'],
+    ['/timeline', 'timeline'],
+    ['/podcast', 'podcast'],
+    ['/video', 'video'],
+  ]
+
+  for (const [prefix, site] of legacyPrefixes) {
+    if (path === prefix || path.startsWith(`${prefix}/`)) {
+      const modulePath = path === prefix ? '/' : path.slice(prefix.length)
+      const params = new URLSearchParams(query)
+      params.set('site', site)
+      return `${modulePath || '/'}?${params.toString()}`
+    }
+  }
+
+  const modulePaths: Array<[string, string]> = [
+    ['/post', 'blog'], ['/editor', 'blog'], ['/channel', 'blog'], ['/collection', 'blog'],
+    ['/inbox', 'feed'], ['/reading-list', 'feed'],
+    ['/album', 'music'], ['/artist', 'music'], ['/song', 'music'],
+  ]
+
+  for (const [prefix, site] of modulePaths) {
+    if (path === prefix || path.startsWith(`${prefix}/`)) {
+      const params = new URLSearchParams(query)
+      params.set('site', site)
+      return `${path}?${params.toString()}`
+    }
+  }
+
+  return url
+}
+
+function patchGoto(page: Page) {
+  const originalGoto = page.goto.bind(page)
+  page.goto = async (url: string, options?: any) => originalGoto(routeForCurrentModule(url), options)
+}
+
 export const test = base.extend<Fixtures>({
   page: async ({ page }, use) => {
-    // patch page.goto for anonymous pages as well
-    const originalGoto = page.goto.bind(page)
-    page.goto = async (url: string, options?: any) => {
-      if (typeof url === 'string' && url.startsWith('/')) {
-        const prefixToModule: Record<string, string> = {
-          '/blog': 'blog', '/post': 'blog', '/editor': 'blog', '/channel': 'blog', '/collection': 'blog',
-          '/feed': 'feed', '/inbox': 'feed', '/reading-list': 'feed',
-          '/music': 'music', '/music/': 'music',
-          '/forum': 'forum', '/debate': 'debate', '/timeline': 'timeline', '/podcast': 'podcast', '/video': 'video',
-        }
-
-        for (const p of Object.keys(prefixToModule)) {
-          if (url === p || url.startsWith(p + '/')) {
-            const site = prefixToModule[p]
-            await originalGoto(`/?site=${site}`)
-            const sep = url.includes('?') ? '&' : '?'
-            return originalGoto(`${url}${sep}site=${site}`)
-          }
-        }
-      }
-      return originalGoto(url, options)
-    }
+    patchGoto(page)
 
     await use(page)
   },
   authenticatedPage: async ({ browser }, use) => {
     const context = await browser.newContext({ storageState: AUTH_FILE_ADMIN })
     const page = await context.newPage()
-    // Patch page.goto to support host-scoped module routing in local dev
-    const originalGoto = page.goto.bind(page)
-    page.goto = async (url: string, options?: any) => {
-      if (typeof url === 'string' && url.startsWith('/')) {
-        const prefixToModule: Record<string, string> = {
-          '/blog': 'blog', '/post': 'blog', '/editor': 'blog', '/channel': 'blog', '/collection': 'blog',
-          '/feed': 'feed', '/inbox': 'feed', '/reading-list': 'feed',
-          '/music': 'music', '/music/': 'music',
-          '/forum': 'forum', '/debate': 'debate', '/timeline': 'timeline', '/podcast': 'podcast', '/video': 'video',
-        }
-
-        for (const p of Object.keys(prefixToModule)) {
-          if (url === p || url.startsWith(p + '/')) {
-            const site = prefixToModule[p]
-            // ensure site query is set first, then navigate to target path under that module
-            await originalGoto(`/?site=${site}`)
-            const sep = url.includes('?') ? '&' : '?'
-            return originalGoto(`${url}${sep}site=${site}`)
-          }
-        }
-      }
-      return originalGoto(url, options)
-    }
+    patchGoto(page)
     await use(page)
     await context.close()
   },
   adminPage: async ({ browser }, use) => {
     const context = await browser.newContext({ storageState: AUTH_FILE_ADMIN })
     const page = await context.newPage()
-    // same patch for adminPage
-    const originalGotoAdmin = page.goto.bind(page)
-    page.goto = async (url: string, options?: any) => {
-      if (typeof url === 'string' && url.startsWith('/')) {
-        const prefixToModule: Record<string, string> = {
-          '/blog': 'blog', '/post': 'blog', '/editor': 'blog', '/channel': 'blog', '/collection': 'blog',
-          '/feed': 'feed', '/inbox': 'feed', '/reading-list': 'feed',
-          '/music': 'music', '/music/': 'music',
-          '/forum': 'forum', '/debate': 'debate', '/timeline': 'timeline', '/podcast': 'podcast', '/video': 'video',
-        }
-
-        for (const p of Object.keys(prefixToModule)) {
-          if (url === p || url.startsWith(p + '/')) {
-            const site = prefixToModule[p]
-            await originalGotoAdmin(`/?site=${site}`)
-            const sep = url.includes('?') ? '&' : '?'
-            return originalGotoAdmin(`${url}${sep}site=${site}`)
-          }
-        }
-      }
-      return originalGotoAdmin(url, options)
-    }
+    patchGoto(page)
     await use(page)
     await context.close()
   },

@@ -223,8 +223,8 @@ async function refresh() {
   error.value = ''
   try {
     const [categoryRes, assignmentRes] = await Promise.all([
-      fetch('/api/v1/forum/categories'),
-      fetch('/api/v1/forum/moderation/moderators', {
+      fetch(api.v1.forum.categories),
+      fetch(api.v1.forum.moderators, {
         headers: authHeaders(),
       }),
     ])
@@ -289,8 +289,8 @@ async function saveAssignment() {
     }
 
     const url = editingId.value
-      ? `/api/v1/forum/moderation/moderators/${editingId.value}`
-      : '/api/v1/forum/moderation/moderators'
+      ? api.v1.forum.moderator(editingId.value)
+      : api.v1.forum.moderators
     const method = editingId.value ? 'PUT' : 'POST'
 
     const response = await fetch(url, {
@@ -341,7 +341,7 @@ async function removeAssignment(id: string) {
   error.value = ''
   message.value = ''
   try {
-    const response = await fetch(`/api/v1/forum/moderation/moderators/${id}`, {
+    const response = await fetch(api.v1.forum.moderator(id), {
       method: 'DELETE',
       headers: authHeaders(),
     })

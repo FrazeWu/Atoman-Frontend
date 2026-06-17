@@ -101,6 +101,7 @@ import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import type { FeedItem, TimelineItem } from '@/types'
+import { useApi } from '@/composables/useApi'
 
 interface ReadingListEntry {
   feed_item_id: string
@@ -113,7 +114,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const uiStore = useUIStore()
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const api = useApi()
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
 const normalizePage = (value: unknown) => {
@@ -243,7 +244,7 @@ const changePage = async (nextPage: number) => {
 const fetchItems = async () => {
   if (!authStore.isAuthenticated) return
   loading.value = true
-  const res = await fetch(`${API_URL}/feed/reading-list?page=${page.value}&limit=${pageLimit}`, {
+  const res = await fetch(`${api.url}/feed/reading-list?page=${page.value}&limit=${pageLimit}`, {
     headers: authHeaders(),
   })
   if (!res.ok) {
@@ -252,8 +253,9 @@ const fetchItems = async () => {
   }
 
   const data = await res.json()
-  const nextItems: ReadingListEntry[] = data.items || []
-  const total = data.total || 0
+  const payload = data.data || data
+  const nextItems: ReadingListEntry[] = payload.items || []
+  const total = payload.total || data.meta?.total || data.total || 0
   const totalPages = Math.max(1, Math.ceil(total / pageLimit))
 
   if (total > 0 && page.value > totalPages) {
@@ -267,7 +269,7 @@ const fetchItems = async () => {
 }
 
 const remove = async (feedItemId: string) => {
-  const res = await fetch(`${API_URL}/feed/reading-list/${feedItemId}`, {
+  const res = await fetch(`${api.url}/feed/reading-list/${feedItemId}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })

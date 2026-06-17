@@ -9,6 +9,8 @@ playwright-report/
 test-results/
 .playwright/
 .playwright-mcp/
-# .codegraph/
+.codegraph/
+.superpowers/
+$TMPDIR/
 .claude/
 .gstack/

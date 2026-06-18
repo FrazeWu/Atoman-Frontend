@@ -409,7 +409,7 @@ body {
   transition: box-shadow 0.2s ease;
 }
 .a-card-hover:hover {
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: var(--a-shadow-paper-sm);
 }
 .a-card-sm {
   border: var(--a-border);

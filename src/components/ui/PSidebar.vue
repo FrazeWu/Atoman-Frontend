@@ -82,6 +82,7 @@ onMounted(() => {
 }
 
 .p-sidebar-collapse-btn {
+  /* Redesign: borderless collapse button */
   position: absolute;
   top: 1.25rem;
   left: 1.25rem;
@@ -124,7 +125,6 @@ onMounted(() => {
   align-items: center;
   min-height: 3.75rem;
   padding: 0 1.35rem;
-  border-radius: 0;
   transition: padding 0.2s;
 }
 

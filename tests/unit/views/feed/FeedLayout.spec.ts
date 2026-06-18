@@ -106,4 +106,35 @@ describe('FeedLayout', () => {
 
     expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { manage_subscriptions: '1' } })
   })
+
+  it('refetches sidebar sources when an auth token becomes available after mount', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const authStore = useAuthStore()
+    authStore.user = { username: 'fafa', email: 'fafa@example.com' }
+    authStore.token = null
+    authStore.isAuthenticated = true
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = []
+    feedStore.groups = groups
+    const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions').mockResolvedValue(undefined)
+    vi.spyOn(feedStore, 'fetchGroups').mockResolvedValue(undefined)
+
+    const router = await makeRouter('/')
+    mount(FeedLayout, {
+      global: {
+        plugins: [pinia, router],
+      },
+    })
+
+    await flushPromises()
+    expect(fetchSubscriptions).toHaveBeenCalledTimes(1)
+
+    authStore.token = 'token'
+    await flushPromises()
+
+    expect(fetchSubscriptions).toHaveBeenCalledTimes(2)
+  })
 })

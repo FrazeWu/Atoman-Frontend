@@ -98,7 +98,16 @@ const openManageSheet = () => {
   void router.push({ path: '/', query: { ...route.query, manage_subscriptions: '1' } })
 }
 
-watch(() => authStore.isAuthenticated, ensureSidebarSources, { immediate: true })
+watch(
+  [() => authStore.isAuthenticated, () => authStore.token],
+  ([isAuthenticated, token], [previousAuthenticated, previousToken]) => {
+    if (!isAuthenticated) return
+    if (previousAuthenticated !== isAuthenticated || previousToken !== token) {
+      ensureSidebarSources()
+    }
+  },
+  { immediate: true },
+)
 
 // Sync focus when section switches to sidebar
 watch(() => uiStore.focusedSection, (section) => {

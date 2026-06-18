@@ -117,9 +117,11 @@
               <button
                 v-if="postSource(item)"
                 type="button"
-                class="a-label a-muted feed-source-link feed-source-trigger"
+                class="a-label feed-source-link feed-source-trigger"
                 data-test="feed-source-trigger"
-                @click.stop="openSourceSheet(postSource(item)!)"
+                :title="sourceTriggerLabel(postSource(item)!)"
+                :aria-label="sourceTriggerLabel(postSource(item)!)"
+                @click.stop="openPostSourceSheet(item)"
               >
                 {{ postSource(item)!.title }}
               </button>
@@ -150,9 +152,11 @@
               <button
                 v-if="feedItemSource(item.feed_item)"
                 type="button"
-                class="a-label a-muted feed-source-link feed-source-trigger"
+                class="a-label feed-source-link feed-source-trigger"
                 data-test="feed-source-trigger"
-                @click.stop="openSourceSheet(feedItemSource(item.feed_item)!)"
+                :title="sourceTriggerLabel(feedItemSource(item.feed_item)!)"
+                :aria-label="sourceTriggerLabel(feedItemSource(item.feed_item)!)"
+                @click.stop="openFeedItemSourceSheet(item.feed_item)"
               >
                 {{ feedItemSource(item.feed_item)!.title }}
               </button>
@@ -413,6 +417,20 @@ const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
     rssUrl: item.feed_source?.rss_url,
     subscribed: false,
   })
+}
+
+const sourceTriggerLabel = (source: FeedArticleSource) => `查看 ${source.title} 的所有文章`
+
+const openPostSourceSheet = async (item: TimelineItem) => {
+  const source = postSource(item)
+  if (!source) return
+  await openSourceSheet(source)
+}
+
+const openFeedItemSourceSheet = async (item: FeedItem) => {
+  const source = feedItemSource(item)
+  if (!source) return
+  await openSourceSheet(source)
 }
 
 const fetchSourceArticles = async (source: FeedArticleSource) => {
@@ -939,8 +957,23 @@ onUnmounted(() => {
   padding: 0;
   border: 0;
   background: transparent;
+  color: var(--a-color-fg);
   cursor: pointer;
   font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.feed-source-trigger:hover {
+  color: var(--a-color-ink);
+  text-decoration-thickness: 2px;
+}
+
+.feed-source-trigger:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: 2px;
 }
 
 </style>

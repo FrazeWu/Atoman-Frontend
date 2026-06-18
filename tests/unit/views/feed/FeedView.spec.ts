@@ -244,7 +244,13 @@ describe('FeedView', () => {
     expect(wrapper.find('.feed-entry-meta').text()).toContain('思想频道')
     expect(wrapper.find('.feed-entry-meta').text()).not.toContain('Alice')
 
-    await wrapper.get('[data-test="feed-source-trigger"]').trigger('click')
+    const trigger = wrapper.get('[data-test="feed-source-trigger"]')
+    expect(trigger.element.tagName).toBe('BUTTON')
+    expect(trigger.classes()).not.toContain('a-muted')
+    expect(trigger.attributes('title')).toBe('查看 思想频道 的所有文章')
+    expect(trigger.attributes('aria-label')).toBe('查看 思想频道 的所有文章')
+
+    await trigger.trigger('click')
     await flushPromises()
 
     expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
@@ -329,7 +335,13 @@ describe('FeedView', () => {
     expect(wrapper.find('.feed-entry-meta').text()).toContain('Example RSS')
     expect(wrapper.find('.feed-entry-meta').text()).not.toContain('外部作者')
 
-    await wrapper.get('[data-test="feed-source-trigger"]').trigger('click')
+    const trigger = wrapper.get('[data-test="feed-source-trigger"]')
+    expect(trigger.element.tagName).toBe('BUTTON')
+    expect(trigger.classes()).not.toContain('a-muted')
+    expect(trigger.attributes('title')).toBe('查看 Example RSS 的所有文章')
+    expect(trigger.attributes('aria-label')).toBe('查看 Example RSS 的所有文章')
+
+    await trigger.trigger('click')
     await flushPromises()
 
     expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')

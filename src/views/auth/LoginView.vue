@@ -253,9 +253,9 @@ const handleSubmit = async () => {
 
 .auth-paper {
   width: min(100%, 22.5rem);
-  background: #fff;
-  border: 1px solid #e7dfd3;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.04);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-line-soft);
+  box-shadow: none;
   padding: 2.25rem 2rem;
 }
 
@@ -272,12 +272,12 @@ const handleSubmit = async () => {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.28em;
-  color: #938571;
+  color: var(--a-color-muted);
 }
 
 .auth-title {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--a-font-serif);
   font-size: clamp(2.2rem, 6vw, 3.55rem);
   font-weight: 900;
   line-height: 0.95;
@@ -286,7 +286,7 @@ const handleSubmit = async () => {
 
 .auth-sub {
   margin: 0.85rem 0 0;
-  color: #6f665a;
+  color: var(--a-color-muted);
   line-height: 1.65;
 }
 
@@ -302,12 +302,12 @@ const handleSubmit = async () => {
 
 .auth-form :deep(.a-field-label) {
   font-size: 0.72rem;
-  color: #7f7465;
+  color: var(--a-color-muted);
   letter-spacing: 0.18em;
 }
 
 .auth-form :deep(.p-input) {
-  border: 1px solid #d8d1c6;
+  border: 1px solid var(--a-color-line-soft);
   padding: 0.88rem 0.95rem;
   box-shadow: none;
   background: #fff;
@@ -315,12 +315,12 @@ const handleSubmit = async () => {
 }
 
 .auth-form :deep(.p-input::placeholder) {
-  color: #b2b8c3;
+  color: var(--a-color-muted-soft);
 }
 
 .auth-form :deep(.p-input:focus) {
-  border-color: #b7ab9a;
-  box-shadow: inset 0 0 0 1px #b7ab9a;
+  border-color: var(--a-color-fg);
+  box-shadow: inset 0 0 0 1px var(--a-color-fg);
 }
 
 .auth-code-row {
@@ -337,17 +337,18 @@ const handleSubmit = async () => {
 .auth-code-btn:deep(.p-button),
 .auth-code-btn.a-btn {
   min-height: 2.95rem;
-  border: 1px solid #d8d1c6;
+  border: 1px solid var(--a-color-line-soft);
   box-shadow: none;
-  color: #5f564a;
-  background: #fbfaf7;
+  color: var(--a-color-fg);
+  background: var(--a-color-paper-wash);
   letter-spacing: 0.12em;
 }
 
 .auth-code-btn:deep(.p-button:hover:not(:disabled)),
 .auth-code-btn.p-button:hover:not(:disabled) {
   text-decoration: none;
-  background: #f6f3ed;
+  background: var(--a-color-paper-wash);
+  border-color: var(--a-color-line-soft);
 }
 
 .auth-submit {
@@ -357,10 +358,10 @@ const handleSubmit = async () => {
 .auth-submit:deep(.p-button),
 .auth-submit.a-btn {
   min-height: 3.05rem;
-  border: 1px solid #111827;
+  border: 1px solid var(--a-color-fg);
   border-radius: 0;
-  background: #111827;
-  color: #fff;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
   box-shadow: none;
   letter-spacing: 0.16em;
   text-decoration: none;
@@ -388,9 +389,9 @@ const handleSubmit = async () => {
 .auth-footer {
   margin-top: 1.55rem;
   padding-top: 1.2rem;
-  border-top: 1px solid #ece4d9;
+  border-top: 1px solid var(--a-color-line-soft);
   font-size: var(--a-text-sm);
-  color: #6c6256;
+  color: var(--a-color-muted);
 }
 
 .toggle-link {

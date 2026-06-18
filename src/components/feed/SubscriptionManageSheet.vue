@@ -10,6 +10,33 @@
       <div class="manage-heading">
         <h2 class="a-title-sm">订阅源管理</h2>
         <p class="a-muted manage-copy">整理已有订阅源的名称和分组。</p>
+        <div class="manage-toolbar">
+          <input
+            ref="opmlInputRef"
+            class="opml-input"
+            type="file"
+            accept=".opml,.xml"
+            @change="handleOPMLSelected"
+          />
+          <PPress
+            variant="secondary"
+            label="导入 OPML"
+            :disabled="busy || healthChecking"
+            @click="openOPMLPicker"
+          />
+          <PPress
+            variant="secondary"
+            label="导出 OPML"
+            :disabled="busy || healthChecking || !subscriptions.length"
+            @click="exportOPML"
+          />
+          <PPress
+            variant="secondary"
+            :label="healthChecking ? '检查中...' : '全部检查'"
+            :disabled="busy || healthChecking || !subscriptions.length"
+            @click="checkAllSubscriptionsHealth"
+          />
+        </div>
       </div>
 
       <form class="create-group-form" @submit.prevent="submitGroup">
@@ -27,8 +54,25 @@
 
       <div v-else class="group-list">
         <section v-for="group in displayGroups" :key="group.id" class="group-section">
-          <div class="group-title a-font-meta">
-            / {{ group.name }}
+          <div class="group-title">
+            <input
+              v-if="!group.virtual"
+              :value="draftGroupNames[group.id] ?? group.name"
+              data-test="group-name-input"
+              class="a-input group-name-input"
+              :disabled="busy"
+              @input="updateDraftGroupName(group.id, $event)"
+              @blur="submitGroupRename(group)"
+              @keydown.enter.prevent="submitGroupRename(group)"
+            />
+            <span v-else class="a-font-meta">/ {{ group.name }}</span>
+            <PPress
+              v-if="!group.virtual"
+              variant="secondary"
+              label="删除分组"
+              :disabled="busy"
+              @click="confirmDeleteGroup(group.id)"
+            />
           </div>
 
           <div v-if="!group.subscriptions.length" class="group-empty a-muted">
@@ -49,6 +93,16 @@
                 <p class="source-url a-muted">
                   {{ sub.feed_source?.rss_url || 'RSS' }}
                 </p>
+                <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
+                  <span class="health-dot" aria-hidden="true"></span>
+                  <span>{{ subscriptionHealthLabel(sub) }}</span>
+                  <span v-if="sub.last_checked" class="a-muted">
+                    {{ formatCheckedAt(sub.last_checked) }}
+                  </span>
+                </div>
+                <p v-if="sub.error_message" class="health-error">
+                  {{ sub.error_message }}
+                </p>
               </div>
 
               <div class="subscription-actions">
@@ -57,6 +111,12 @@
                   :options="groupOptions"
                   :disabled="busy"
                   @update:model-value="moveSubscription(sub.id, String($event))"
+                />
+                <PPress
+                  variant="secondary"
+                  label="检查"
+                  :disabled="busy || healthChecking"
+                  @click="checkSubscriptionHealth(sub.id)"
                 />
                 <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
               </div>
@@ -81,6 +141,7 @@ const props = defineProps<{
   subscriptions: Subscription[]
   groups: SubscriptionGroup[]
   busy?: boolean
+  healthChecking?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -89,10 +150,18 @@ const emit = defineEmits<{
   (e: 'rename-subscription', id: string, title: string): void
   (e: 'move-subscription', id: string, groupId: string): void
   (e: 'delete-subscription', id: string): void
+  (e: 'rename-group', id: string, name: string): void
+  (e: 'delete-group', id: string): void
+  (e: 'check-subscription-health', id: string): void
+  (e: 'check-all-subscriptions-health'): void
+  (e: 'import-opml', file: File): void
+  (e: 'export-opml'): void
 }>()
 
 const newGroupName = ref('')
 const draftTitles = ref<Record<string, string>>({})
+const draftGroupNames = ref<Record<string, string>>({})
+const opmlInputRef = ref<HTMLInputElement | null>(null)
 
 const groupOptions = computed(() =>
   props.groups.map(group => ({ label: group.name, value: group.id })),
@@ -102,11 +171,13 @@ const displayGroups = computed(() => [
   ...props.groups.map(group => ({
     id: group.id,
     name: group.name,
+    virtual: false,
     subscriptions: props.subscriptions.filter(sub => sub.subscription_group_id === group.id),
   })),
   {
     id: 'unassigned',
     name: '未分类',
+    virtual: true,
     subscriptions: props.subscriptions.filter(sub => !sub.subscription_group_id),
   },
 ])
@@ -116,6 +187,10 @@ const subscriptionTitle = (sub: Subscription) =>
 
 const updateDraftTitle = (id: string, event: Event) => {
   draftTitles.value[id] = (event.target as HTMLInputElement).value
+}
+
+const updateDraftGroupName = (id: string, event: Event) => {
+  draftGroupNames.value[id] = (event.target as HTMLInputElement).value
 }
 
 const submitGroup = () => {
@@ -133,10 +208,45 @@ const submitRename = (sub: Subscription) => {
   emit('rename-subscription', sub.id, title)
 }
 
+const submitGroupRename = (group: { id: string; name: string; virtual?: boolean }) => {
+  if (props.busy || group.virtual) return
+  const name = (draftGroupNames.value[group.id] ?? group.name).trim()
+  if (!name || name === group.name) return
+  emit('rename-group', group.id, name)
+}
+
 const moveSubscription = (id: string, groupId: string) => {
   if (props.busy) return
   if (!groupId) return
   emit('move-subscription', id, groupId)
+}
+
+const checkSubscriptionHealth = (id: string) => {
+  if (props.busy || props.healthChecking) return
+  emit('check-subscription-health', id)
+}
+
+const checkAllSubscriptionsHealth = () => {
+  if (props.busy || props.healthChecking || !props.subscriptions.length) return
+  emit('check-all-subscriptions-health')
+}
+
+const openOPMLPicker = () => {
+  if (props.busy || props.healthChecking) return
+  opmlInputRef.value?.click()
+}
+
+const handleOPMLSelected = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  emit('import-opml', file)
+  input.value = ''
+}
+
+const exportOPML = () => {
+  if (props.busy || props.healthChecking || !props.subscriptions.length) return
+  emit('export-opml')
 }
 
 const confirmDelete = (id: string) => {
@@ -145,11 +255,38 @@ const confirmDelete = (id: string) => {
   emit('delete-subscription', id)
 }
 
+const confirmDeleteGroup = (id: string) => {
+  if (props.busy) return
+  if (!window.confirm('确定删除这个分组吗？分组内订阅源会移动到默认分组。')) return
+  emit('delete-group', id)
+}
+
+const subscriptionHealthStatus = (sub: Subscription) => sub.health_status || 'healthy'
+
+const subscriptionHealthLabel = (sub: Subscription) => {
+  const labels: Record<string, string> = {
+    healthy: '正常',
+    warning: '警告',
+    error: '异常',
+  }
+  return labels[subscriptionHealthStatus(sub)] || '未知'
+}
+
+const formatCheckedAt = (value: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const pad = (unit: number) => String(unit).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 watch(() => props.show, (visible) => {
   if (!visible) return
   newGroupName.value = ''
   draftTitles.value = Object.fromEntries(
     props.subscriptions.map(sub => [sub.id, subscriptionTitle(sub)]),
+  )
+  draftGroupNames.value = Object.fromEntries(
+    props.groups.map(group => [group.id, group.name]),
   )
 })
 
@@ -162,6 +299,17 @@ watch(() => props.subscriptions, (subscriptions) => {
     }
   })
   draftTitles.value = nextDrafts
+})
+
+watch(() => props.groups, (groups) => {
+  if (!props.show) return
+  const nextDrafts = { ...draftGroupNames.value }
+  groups.forEach((group) => {
+    if (!(group.id in nextDrafts)) {
+      nextDrafts[group.id] = group.name
+    }
+  })
+  draftGroupNames.value = nextDrafts
 })
 </script>
 
@@ -176,6 +324,17 @@ watch(() => props.subscriptions, (subscriptions) => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.manage-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-start;
+}
+
+.opml-input {
+  display: none;
 }
 
 .manage-copy {
@@ -215,13 +374,17 @@ watch(() => props.subscriptions, (subscriptions) => {
 }
 
 .group-title {
-  font-weight: 900;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  color: var(--a-color-muted);
-  text-transform: uppercase;
   border-bottom: 1px dashed var(--a-color-line-soft);
   padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.group-name-input {
+  max-width: 18rem;
+  font-weight: 900;
+  font-size: 0.8rem;
 }
 
 .subscription-list {
@@ -255,6 +418,40 @@ watch(() => props.subscriptions, (subscriptions) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.health-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.health-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--a-color-muted);
+}
+
+.health-healthy .health-dot {
+  background: #15803d;
+}
+
+.health-warning .health-dot {
+  background: #b45309;
+}
+
+.health-error .health-dot {
+  background: #b91c1c;
+}
+
+.health-error {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: #b91c1c;
 }
 
 .subscription-actions {

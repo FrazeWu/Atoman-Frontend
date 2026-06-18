@@ -192,21 +192,21 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.admin-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--a-color-fg); margin-bottom: 1.5rem; }
+.admin-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--a-color-line-soft); margin-bottom: 1.5rem; }
 .admin-tab {
   padding: 0.5rem 1.5rem;
   font-size: 0.75rem;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   border-bottom: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
 }
-.admin-tab:hover { background: #f3f4f6; }
-.admin-tab-active { border-color: var(--a-color-fg); border-bottom-color: var(--a-color-bg); background: var(--a-color-bg); margin-bottom: -2px; }
+.admin-tab:hover { background: var(--a-color-paper-wash); }
+.admin-tab-active { border-color: var(--a-color-line-soft); border-bottom-color: var(--a-color-bg); background: var(--a-color-bg); margin-bottom: -1px; }
 .entries-filters { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
 .filter-select {
   border: 2px solid var(--a-color-fg);

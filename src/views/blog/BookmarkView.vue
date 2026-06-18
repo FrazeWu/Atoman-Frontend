@@ -5,14 +5,13 @@
       <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
     </div>
 
-    <div style="display:flex;border:2px solid #000;min-height:60vh">
+    <div style="display:flex;min-height:60vh;gap:2rem">
       <!-- Left: Folder list -->
-      <div style="width:14rem;flex-shrink:0;border-right:2px solid #000">
+      <div style="width:14rem;flex-shrink:0;display:flex;flex-direction:column;gap:0.5rem">
         <button
           @click="activeFolder = null"
           class="sidebar-item"
           :class="{ 'sidebar-item-active': activeFolder === null }"
-          style="width:100%;text-align:left;padding:1rem 1.25rem;font-weight:900;font-size:.875rem;border-bottom:2px solid #000;cursor:pointer;transition:all .2s;border-right:none;border-left:none;border-top:none"
         >
           <span class="sidebar-item-label">全部收藏</span>
         </button>
@@ -22,13 +21,12 @@
           @click="activeFolder = folder.id"
           class="sidebar-item"
           :class="{ 'sidebar-item-active': activeFolder === folder.id }"
-          style="width:100%;text-align:left;padding:1rem 1.25rem;font-size:.875rem;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between;border-right:none;border-left:none;border-top:none;font-weight:500"
         >
           <span class="sidebar-item-label">{{ folder.name }}</span>
           <span
             @click.stop="requestDeleteFolder(folder.id)"
-            style="font-size:.75rem;font-weight:900;background:none;border:none;cursor:pointer;opacity:0.4;transition:opacity .2s"
-            :style="activeFolder === folder.id ? 'color:#d1d5db' : 'color:#ef4444'"
+            class="delete-btn"
+            :style="activeFolder === folder.id ? 'color:#9ca3af' : 'color:#ef4444'"
           >✕</span>
         </button>
       </div>
@@ -224,9 +222,42 @@ onMounted(fetchAll)
   flex-shrink: 0;
   border-radius: 4px;
 }
+.sidebar-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-radius: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+.sidebar-item:hover {
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
+}
 .sidebar-item-active {
-  background: #000;
-  color: #fff;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
+  font-weight: 900;
+  box-shadow: var(--a-shadow-paper-sm);
+}
+.delete-btn {
+  font-size: 0.75rem;
+  font-weight: 900;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.delete-btn:hover {
+  opacity: 1;
 }
 .a-cursor-pointer {
   cursor: pointer;

@@ -470,7 +470,7 @@ async function submitEdit() {
 </template>
 
 <style scoped>
-.drawer-header { padding: 1.5rem 2rem; border-bottom: 2px solid var(--a-color-ink); background: var(--a-color-paper); }
+.drawer-header { padding: 1.5rem 2rem; border-bottom: none; background: var(--a-color-paper); }
 .title { font-family: var(--a-font-serif); font-size: 1.5rem; margin: 0; }
 .drawer-body { padding: 2rem; }
 

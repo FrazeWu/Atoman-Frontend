@@ -39,9 +39,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { modulePathUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import PPress from '@/components/ui/PPress.vue'
+import { resolveSiteContext } from '@/router/siteContext'
 import { useOnboardingStore, type OnboardingStep } from '@/stores/onboarding'
 
 type StepContent = {
@@ -52,6 +54,7 @@ type StepContent = {
 }
 
 const onboarding = useOnboardingStore()
+const router = useRouter()
 const { navigateModuleWithShutter } = useAsyncNavigate()
 const busy = ref(false)
 
@@ -96,12 +99,32 @@ const onSkip = async () => {
   await onboarding.skip()
 }
 
+const isInFeedModule = () => {
+  const context = resolveSiteContext(window.location.hostname, window.location.search)
+  return context.type === 'module' && context.module === 'feed'
+}
+
+const withOnboardingStep = (targetUrl: string, step: OnboardingStep) => {
+  const url = new URL(targetUrl, window.location.origin)
+  url.searchParams.set('onboarding_step', step)
+  return targetUrl.startsWith('/') ? `${url.pathname}${url.search}${url.hash}` : url.toString()
+}
+
+const navigateToFeedSubscribe = async () => {
+  if (isInFeedModule()) {
+    await router.push('/')
+    return
+  }
+
+  await navigateModuleWithShutter(withOnboardingStep(modulePathUrl('feed', '/'), 'feed-subscribe'))
+}
+
 const onPrimaryAction = async () => {
   if (onboarding.currentStep === 'feed-entry') {
     onboarding.nextStep()
     busy.value = true
     try {
-      await navigateModuleWithShutter(modulePathUrl('feed', '/'))
+      await navigateToFeedSubscribe()
     } finally {
       busy.value = false
     }
@@ -111,7 +134,7 @@ const onPrimaryAction = async () => {
   if (onboarding.currentStep === 'feed-subscribe') {
     busy.value = true
     try {
-      await navigateModuleWithShutter(modulePathUrl('feed', '/'))
+      await navigateToFeedSubscribe()
     } finally {
       busy.value = false
     }

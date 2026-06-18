@@ -39,7 +39,7 @@ withDefaults(defineProps<{
 }
 
 .p-page-header--accent {
-  border-bottom: 1px solid var(--a-color-line);
+  border-bottom: none;
 }
 
 .p-page-header__kicker,

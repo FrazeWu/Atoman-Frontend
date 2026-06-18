@@ -31,9 +31,9 @@ describe('module room naming config', () => {
     }
   })
 
-  it('names notifications as 门房', () => {
+  it('names notifications as 通知', () => {
     expect(notificationRoom).toMatchObject({
-      name: '门房',
+      name: '通知',
       helper: '通知与提醒',
       homepageSub: '通知与私信统一收纳在这里。',
     })

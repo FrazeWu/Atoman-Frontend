@@ -15,7 +15,7 @@
     <template v-else>
       <!-- Profile header -->
       <div class="a-card" style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;margin-bottom:2rem">
-        <div style="width:5rem;height:5rem;border-radius:9999px;background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight:900;flex-shrink:0">
+        <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight:900;flex-shrink:0">
           {{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}
         </div>
 

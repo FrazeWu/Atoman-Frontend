@@ -99,7 +99,7 @@ export const isRoomRouteActive = (key: ModuleRoomKey, context: SiteContext) => (
 )
 
 export const notificationRoom = {
-  name: '门房',
+  name: '通知',
   helper: '通知与提醒',
   homepageSub: '通知与私信统一收纳在这里。',
 } as const

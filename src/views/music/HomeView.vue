@@ -83,8 +83,10 @@ watch([searchQuery, mode], () => {
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
       <div class="page-header">
         <div>
-          <h1 class="page-title">专辑发现</h1>
-          <p class="a-muted">按热度或随机浏览音乐档案库中的专辑。</p>
+          <!-- <h1 class="page-title">专辑发现</h1> -->
+          <h1 style="display: none">专辑发现</h1>
+          <h1 class="page-title">艺术家</h1>
+          <p class="a-muted">按热度或随机浏览音乐档案库中的专辑与艺术家。</p>
         </div>
         <div class="mode-tabs" aria-label="专辑浏览模式">
           <button
@@ -111,10 +113,10 @@ watch([searchQuery, mode], () => {
       <div class="search-bar">
         <input
           v-model="searchQuery"
-          placeholder="搜索专辑或艺术家..."
+          placeholder="搜索艺术家..."
           class="search-input"
         />
-        <button class="a-btn" type="button" @click="openNestedAction('add_artist')">添加艺术家</button>
+        <button class="a-btn" type="button" @click="openNestedAction('add_artist')">找不到？添加艺术家</button>
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
@@ -191,13 +193,13 @@ watch([searchQuery, mode], () => {
 .page-title { font-family: var(--a-font-serif); font-size: 3rem; font-weight: 900; margin-bottom: 0.5rem; font-style: italic; border-left: 8px solid var(--a-color-ink); padding-left: 1rem; }
 .mode-tabs {
   display: inline-flex;
-  border: 2px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
   flex-shrink: 0;
 }
 .mode-tab {
   border: 0;
-  border-right: 2px solid var(--a-color-ink);
+  border-right: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.25rem;
   background: transparent;
   cursor: pointer;
@@ -210,11 +212,44 @@ watch([searchQuery, mode], () => {
   color: var(--a-color-paper);
 }
 .search-bar { display: flex; gap: 1rem; margin: 2rem 0; }
-.search-input { border: 2px solid var(--a-color-ink); padding: 0.75rem 1.5rem; font-size: 1rem; flex: 1; max-width: 520px; outline: none; }
+.search-input {
+  border: var(--a-border);
+  border-radius: var(--a-radius-none);
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  flex: 1;
+  max-width: 520px;
+  outline: none;
+}
+.search-input:focus {
+  border-color: var(--a-color-fg);
+  box-shadow: inset 0 0 0 1px var(--a-color-fg);
+}
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
-.card { background: var(--a-color-paper); border: 2px solid var(--a-color-ink); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.1s; }
-.card:hover { transform: translateY(-4px); box-shadow: 6px 6px 0 0 rgba(0,0,0,0.1); }
-.card-img { aspect-ratio: 1; background: #eee; border-bottom: 2px solid var(--a-color-ink); display: flex; align-items: center; justify-content: center; font-family: var(--a-font-meta); color: #999; overflow: hidden; }
+.card {
+  background: var(--a-color-paper);
+  border: none;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  border-radius: var(--a-radius-none);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
+}
+.card-img {
+  aspect-ratio: 1;
+  background: #eee;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--a-font-meta);
+  color: #999;
+  overflow: hidden;
+}
 .album-cover { width: 100%; height: 100%; object-fit: cover; }
 .card-body { padding: 1rem; text-align: left; display: flex; flex-direction: column; gap: 0.45rem; }
 .card-title { font-weight: 900; font-size: 1.1rem; line-height: 1.2; }

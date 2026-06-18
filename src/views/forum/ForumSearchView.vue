@@ -18,7 +18,7 @@
     </div>
 
     <div v-if="forumStore.loading" style="display:flex;flex-direction:column;gap:1rem">
-      <div v-for="i in 5" :key="i" style="height:5rem;border:2px solid var(--a-color-border);background:var(--a-color-paper-soft)" />
+      <div v-for="i in 5" :key="i" style="height:5rem;border:1px solid var(--a-color-line-soft);background:var(--a-color-paper-soft)" />
     </div>
 
     <template v-else>
@@ -144,15 +144,16 @@ watch(() => route.query.q, async (q) => {
 .search-input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 2px solid var(--a-color-border);
+  border: var(--a-border);
+  border-radius: var(--a-radius-none);
   background: var(--a-color-bg);
   font-size: 0.9rem;
   font-weight: 500;
   font-family: inherit;
   outline: none;
-  transition: box-shadow 0.2s;
 }
 .search-input:focus {
-  box-shadow: 5px 5px 0px 0px var(--a-color-border);
+  border-color: var(--a-color-fg);
+  box-shadow: inset 0 0 0 1px var(--a-color-fg);
 }
 </style>

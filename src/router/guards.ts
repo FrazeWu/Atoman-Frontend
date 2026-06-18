@@ -1,11 +1,17 @@
 import type { Router } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useOnboardingStore } from '@/stores/onboarding'
+import { onboardingSteps, useOnboardingStore, type OnboardingStep } from '@/stores/onboarding'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole, isOwnerRole } from '@/utils/roles'
 
 const disabledTarget = { path: '/__disabled__' }
+
+function parseOnboardingStep(value: unknown): OnboardingStep | null {
+  return typeof value === 'string' && onboardingSteps.includes(value as OnboardingStep)
+    ? value as OnboardingStep
+    : null
+}
 
 export function installRouteGuards(router: Router) {
   router.beforeEach(async (to, from) => {
@@ -20,11 +26,18 @@ export function installRouteGuards(router: Router) {
     const onboardingStore = useOnboardingStore()
     const siteAccessStore = useSiteAccessStore()
     const hasValidSession = authStore.validateSession() || await authStore.restoreSession()
+    const onboardingStep = parseOnboardingStep(to.query.onboarding_step)
 
     if (hasValidSession) {
-      onboardingStore.initialize(authStore.user)
+      onboardingStore.initialize(authStore.user, onboardingStep)
     } else {
       onboardingStore.reset()
+    }
+
+    if (onboardingStep) {
+      const query = { ...to.query }
+      delete query.onboarding_step
+      return { path: to.path, query, hash: to.hash, replace: true }
     }
 
     if (!siteAccessStore.loaded && !siteAccessStore.loading) {

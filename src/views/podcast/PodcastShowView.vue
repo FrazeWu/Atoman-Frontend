@@ -66,7 +66,7 @@ function episodeCover(ep: PodcastEpisode) {
 .ps-rss:hover { text-decoration: underline; }
 .ps-empty { color: #9ca3af; padding: 2rem 0; }
 .ps-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
-.ps-ep { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; }
+.ps-ep { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: none; }
 .ps-ep-cover { width: 2.5rem; height: 2.5rem; border-radius: 0.25rem; object-fit: cover; flex-shrink: 0; }
 .ps-ep-num { font-size: 0.75rem; color: #9ca3af; width: 3rem; flex-shrink: 0; }
 .ps-ep-title { font-size: 0.875rem; text-decoration: none; color: inherit; }

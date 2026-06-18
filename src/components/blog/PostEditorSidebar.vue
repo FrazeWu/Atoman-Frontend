@@ -192,7 +192,7 @@ const triggerCoverUpload = () => {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.25rem;
-  border-bottom: var(--a-border);
+  border-bottom: none;
 }
 
 .left-section:last-child {
@@ -215,7 +215,7 @@ const triggerCoverUpload = () => {
 }
 
 .settings-details {
-  border-bottom: var(--a-border);
+  border-bottom: none;
 }
 
 .settings-details:last-child {

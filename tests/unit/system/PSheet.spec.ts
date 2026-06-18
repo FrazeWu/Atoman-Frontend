@@ -3,12 +3,27 @@ import { describe, it, expect } from 'vitest'
 import PSheet from '@/components/ui/PSheet.vue'
 
 describe('PSheet.vue', () => {
-  it('renders content when show prop is true', () => {
+  it('renders content and title when show prop is true', () => {
     const wrapper = mount(PSheet, {
-      props: { show: true, title: 'TEST TITLE' }
+      props: { show: true, title: 'TEST TITLE' },
+      slots: {
+        default: '<p>Sheet body</p>'
+      }
     })
     expect(wrapper.find('.p-sheet-panel').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Sheet body')
     expect(wrapper.text()).toContain('TEST TITLE')
+    expect(wrapper.find('.sheet-header').exists()).toBe(true)
+  })
+
+  it('renders custom header content', () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true },
+      slots: {
+        header: '<strong>Custom header</strong>'
+      }
+    })
+    expect(wrapper.text()).toContain('Custom header')
   })
 
   it('applies shifted class when isShifted prop is true', () => {

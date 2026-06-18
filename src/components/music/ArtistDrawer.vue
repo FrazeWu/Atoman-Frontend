@@ -114,12 +114,12 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
 
 .album-list-header { margin-bottom: 2rem; border-bottom: 1px dashed var(--a-color-line-soft); padding-bottom: 1rem; }
 .album-list-header h3 { font-size: 1.2rem; font-weight: 900; margin: 0; }
-.album-row { display: flex; gap: 2rem; margin-bottom: 2rem; position: relative; cursor: pointer; transition: transform 0.1s; }
-.album-row:hover { transform: translateX(4px); }
+.album-row { display: flex; gap: 2rem; margin-bottom: 2rem; position: relative; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.album-row:hover { }
 .album-row-left { width: 100px; flex-shrink: 0; text-align: right; padding-top: 0.5rem; }
 .album-year { font-family: var(--a-font-meta); font-size: 1.5rem; font-weight: 900; color: var(--a-color-ink); }
-.album-row-right { flex: 1; display: flex; background: var(--a-color-paper); border: 2px solid var(--a-color-ink); padding: 1rem; gap: 1.5rem; }
-.album-row-right:hover { box-shadow: 4px 4px 0 0 rgba(0,0,0,0.1); }
+.album-row-right { flex: 1; display: flex; background: var(--a-color-paper); border: none; padding: 1rem; gap: 1.5rem; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.album-row-right:hover { background: var(--a-color-paper-wash); box-shadow: var(--a-shadow-paper-sm); }
 .album-row-cover { width: 100px; height: 100px; background: var(--a-color-paper-wash); border: 1px solid var(--a-color-ink); display: flex; align-items: center; justify-content: center; font-family: var(--a-font-meta); font-size: 0.7rem; color: var(--a-color-ink-soft); flex-shrink: 0; }
 .album-row-img { width: 100%; height: 100%; object-fit: cover; }
 .album-row-info { display: flex; flex-direction: column; justify-content: center; }

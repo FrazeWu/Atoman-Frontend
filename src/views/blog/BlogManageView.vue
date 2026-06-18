@@ -51,7 +51,7 @@
         <PCard>
           <div style="display:flex;flex-direction:column;gap:1.5rem">
             <!-- Collection Header -->
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:1rem;border-bottom:2px solid var(--a-color-line)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:1rem">
               <div>
                 <div style="display:flex;align-items:center;gap:.75rem">
                   <h3 style="font-size:1.5rem;font-weight:900;margin:0">{{ selectedCollection.name }}</h3>
@@ -482,34 +482,33 @@ onMounted(() => {
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: var(--a-color-paper);
-  border: 2px solid var(--a-color-line);
-  box-shadow: 2px 2px 0 var(--a-color-line);
+  border: 1px solid var(--a-color-line-soft);
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: background-color 0.1s ease, color 0.1s ease;
   font-weight: bold;
 }
 
 .collection-pill:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--a-color-line);
+  background-color: var(--a-color-paper-wash);
 }
 
 .collection-pill.active {
-  background: var(--a-color-line);
-  color: var(--a-color-paper);
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 var(--a-color-line);
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
+  border-color: var(--a-color-line);
 }
 
 .col-count {
   font-size: 0.75rem;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-line-soft);
   padding: 0.125rem 0.375rem;
-  border-radius: 99px;
+  border-radius: var(--a-radius-none);
 }
 
 .collection-pill.active .col-count {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--a-color-paper);
+  border-color: var(--a-color-line-soft);
 }
 
 .article-list {

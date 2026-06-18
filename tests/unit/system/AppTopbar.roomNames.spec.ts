@@ -34,7 +34,7 @@ describe('AppTopbar room names', () => {
     expect(topbarSource).not.toContain('auth-kicker')
   })
 
-  it('renames inbox notifications to 门房 with helper title', () => {
-    expect(notificationRoom).toMatchObject({ name: '门房', helper: '通知与提醒' })
+  it('renames inbox notifications to 通知 with helper title', () => {
+    expect(notificationRoom).toMatchObject({ name: '通知', helper: '通知与提醒' })
   })
 })

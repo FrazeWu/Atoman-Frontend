@@ -44,6 +44,62 @@ describe('onboarding store', () => {
     expect(store.isVisible).toBe(false)
   })
 
+  it('resumes the feed subscription step after a cross-module handoff', () => {
+    const auth = useAuthStore()
+    auth.isAuthenticated = true
+    auth.user = {
+      id: 1,
+      username: 'alice',
+      email: 'alice@example.com',
+      onboarding_completed_at: null,
+    }
+
+    const store = useOnboardingStore()
+    store.initialize(auth.user, 'feed-subscribe')
+
+    expect(store.isVisible).toBe(true)
+    expect(store.currentStep).toBe('feed-subscribe')
+  })
+
+  it('keeps onboarding closed locally when completion request fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.isAuthenticated = true
+    auth.user = {
+      uuid: '7f9c8c54-2e8c-42b0-b61c-e4f52ce4d71f',
+      id: 1,
+      username: 'alice',
+      email: 'alice@example.com',
+      onboarding_completed_at: null,
+    }
+
+    const store = useOnboardingStore()
+    store.initialize(auth.user)
+    await store.complete()
+
+    expect(store.isVisible).toBe(false)
+    expect(auth.user?.onboarding_completed_at).toBeTruthy()
+
+    setActivePinia(createPinia())
+    const restoredAuth = useAuthStore()
+    restoredAuth.isAuthenticated = true
+    restoredAuth.user = {
+      uuid: '7f9c8c54-2e8c-42b0-b61c-e4f52ce4d71f',
+      id: 1,
+      username: 'alice',
+      email: 'alice@example.com',
+      onboarding_completed_at: null,
+    }
+
+    const restoredStore = useOnboardingStore()
+    restoredStore.initialize(restoredAuth.user)
+
+    expect(restoredStore.isVisible).toBe(false)
+    expect(restoredAuth.user?.onboarding_completed_at).toBeTruthy()
+  })
+
   it('marks completion and persists user state', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       onboarding_completed_at: '2026-06-02T12:00:00Z',

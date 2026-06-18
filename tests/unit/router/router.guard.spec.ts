@@ -130,4 +130,23 @@ describe('router auth guards', () => {
 
     expect(initializeSpy).toHaveBeenCalled()
   })
+
+  it('resumes onboarding from a route handoff step', async () => {
+    const router = await createGuardRouter('feed')
+    const auth = useAuthStore()
+    const onboarding = useOnboardingStore()
+
+    auth.token = makeToken(3600)
+    auth.user = {
+      username: 'alice',
+      email: 'alice@example.com',
+      onboarding_completed_at: null,
+    } as never
+    auth.isAuthenticated = true
+
+    await router.push({ path: '/', query: { onboarding_step: 'feed-subscribe' } })
+
+    expect(onboarding.isVisible).toBe(true)
+    expect(onboarding.currentStep).toBe('feed-subscribe')
+  })
 })

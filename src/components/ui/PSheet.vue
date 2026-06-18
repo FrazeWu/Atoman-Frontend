@@ -15,9 +15,9 @@
           @click="$emit('close')" 
         />
 
-        <div class="sheet-header">
+        <div v-if="hasHeader" class="sheet-header">
           <slot name="header">
-            <span class="a-font-meta sheet-header-label">{{ title.toUpperCase() }}</span>
+            <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
           </slot>
           <button v-if="closeType === 'header' || closeType === 'both'" class="header-close-btn a-font-meta" @click="$emit('close')">CLOSE</button>
         </div>
@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import PSheetTab from './PSheetTab.vue'
 
 const props = withDefaults(defineProps<{
@@ -57,6 +57,9 @@ const props = withDefaults(defineProps<{
 })
 
 defineEmits(['close'])
+
+const slots = useSlots()
+const hasHeader = computed(() => Boolean(slots.header) || props.closeType === 'header' || props.closeType === 'both' || Boolean(props.title))
 
 const sheetStyle = computed(() => ({
   width: props.width,

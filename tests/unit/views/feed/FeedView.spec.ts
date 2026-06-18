@@ -168,7 +168,6 @@ describe('FeedView', () => {
     expect(actionLabels).not.toContain('稍后阅读')
   })
 
-
   it('shows channel source names for internal subscription posts and opens the source article sheet', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
       data: [
@@ -397,6 +396,57 @@ describe('FeedView', () => {
     expect(routerReplace).toHaveBeenCalledWith({ query: { page: '2' } })
   })
 
+  it('closes add subscription sheet when opening subscription management', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            name: 'PPress',
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: {
+            name: 'SubscriptionAddSheet',
+            props: ['show'],
+            template: '<div data-test="add-sheet" :data-show="String(show)"></div>',
+          },
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show'],
+            template: '<div data-test="manage-sheet" :data-show="String(show)"></div>',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    const buttonByText = (label: string) => {
+      const button = wrapper.findAll('button').find((item) => item.text() === label)
+      if (!button) throw new Error(`Missing button: ${label}`)
+      return button
+    }
+
+    await buttonByText('+ 订阅').trigger('click')
+    expect(wrapper.get('[data-test="add-sheet"]').attributes('data-show')).toBe('true')
+    expect(wrapper.find('[data-test="manage-sheet"]').exists()).toBe(false)
+
+    await buttonByText('订阅源管理').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="add-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="manage-sheet"]').attributes('data-show')).toBe('true')
+  })
+
   it('clears manage_subscriptions query without opening management for unauthenticated users', async () => {
     routeQuery.manage_subscriptions = '1'
     routeQuery.page = '2'
@@ -490,35 +540,6 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="feed-footer"]').attributes('data-total')).toBe('1')
   })
 
-  it('renders timeline entries inside a real layout element', async () => {
-    const wrapper = mount(FeedView, {
-      global: {
-        stubs: {
-          PButton: true,
-          PModal: true,
-          PEmpty: true,
-          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PSelect: true,
-          PField: true,
-          PClip: true,
-          PPress: true,
-          PBadge: true,
-          SubscriptionAddSheet: true,
-          SubscriptionManageSheet: true,
-          FeedArticleSheet: true,
-          FeedTimelineFooter: true,
-        },
-      },
-    })
-
-    await flushPromises()
-
-    const timeline = wrapper.get('.feed-timeline')
-    expect(timeline.element.tagName).not.toBe('TEMPLATE')
-    expect(timeline.element.closest('template')).toBeNull()
-    expect(wrapper.get('.p-entry').text()).toContain('内部文章')
-  })
-
   it('auto-adds subscriptions from the unified add sheet submit event', async () => {
     const wrapper = mount(FeedView, {
       global: {
@@ -555,5 +576,34 @@ describe('FeedView', () => {
       input: 'https://github.com/DIYgod/RSSHub',
       title: 'RSSHub Repo',
     })
+  })
+
+  it('renders timeline entries inside a real layout element', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedTimelineFooter: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const timeline = wrapper.get('.feed-timeline')
+    expect(timeline.element.tagName).not.toBe('TEMPLATE')
+    expect(timeline.element.closest('template')).toBeNull()
+    expect(wrapper.get('.p-entry').text()).toContain('内部文章')
   })
 })

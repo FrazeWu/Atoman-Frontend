@@ -1101,14 +1101,13 @@ onMounted(() => {
 
 .tl-mode-switch {
   display: inline-flex;
-  border: 2px solid var(--a-color-fg);
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);
-  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
 }
 
 .tl-mode-btn {
   border: none;
-  border-right: 2px solid var(--a-color-fg);
+  border-right: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   cursor: pointer;

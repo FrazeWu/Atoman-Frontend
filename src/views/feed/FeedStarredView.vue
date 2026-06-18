@@ -359,7 +359,7 @@ onUnmounted(() => {
   gap: 0.5rem;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1.5px solid #000;
+  border-bottom: none;
 }
 
 .star-group-button {

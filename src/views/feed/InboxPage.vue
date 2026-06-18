@@ -395,7 +395,8 @@ onMounted(async () => {
   max-width: 70%;
   padding: 0.75rem 1.25rem;
   background: var(--a-color-paper-wash);
-  border-radius: 12px;
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: var(--a-radius-none);
   font-size: 0.95rem;
   line-height: 1.5;
 }
@@ -403,6 +404,7 @@ onMounted(async () => {
 .dm-message.self .dm-bubble {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
+  border-color: var(--a-color-ink);
 }
 
 .dm-composer {

@@ -92,7 +92,7 @@ watch(() => state.value.albumId, loadAlbum, { immediate: true })
 </template>
 
 <style scoped>
-.drawer-header { padding: 2rem 3rem; border-bottom: 2px solid var(--a-color-ink); display: flex; justify-content: space-between; align-items: flex-start; background: #fafafa; }
+.drawer-header { padding: 2rem 3rem; border-bottom: none; display: flex; justify-content: space-between; align-items: flex-start; background: #fafafa; }
 .kicker { font-family: var(--a-font-meta); font-size: 0.75rem; font-weight: bold; letter-spacing: 0.1em; color: var(--a-color-ink-soft); margin-bottom: 0.5rem; }
 .title { font-family: var(--a-font-serif); font-size: 2rem; margin: 0; }
 .drawer-body { padding: 2rem 3rem; }

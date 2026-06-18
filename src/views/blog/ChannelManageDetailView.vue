@@ -291,7 +291,7 @@ onMounted(async () => {
 .manage-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--a-color-fg);
+  border-bottom: 1px solid var(--a-color-line-soft);
   margin-bottom: 2rem;
   overflow-x: auto;
 }

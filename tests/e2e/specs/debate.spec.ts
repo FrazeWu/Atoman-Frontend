@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures/base'
 test.describe('Debate', () => {
   test('browse debates home page', async ({ page }) => {
     await page.goto('/debate')
-    await expect(page.getByRole('heading', { name: '辩论' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '辩论', exact: true })).toBeVisible()
   })
 
   test('debate page shows filter controls', async ({ page }) => {

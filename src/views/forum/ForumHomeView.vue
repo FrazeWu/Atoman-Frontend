@@ -409,7 +409,7 @@ const submitCategoryRequest = async () => {
   width: 220px;
   flex-shrink: 0;
   padding: 1.5rem 0 2rem;
-  border-right: var(--a-border);
+  border-right: none;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -430,7 +430,7 @@ const submitCategoryRequest = async () => {
 }
 
 .sidebar-divider {
-  border-bottom: 1px solid var(--a-color-disabled-border);
+  border-bottom: none;
   margin: 0.5rem 0;
 }
 
@@ -562,7 +562,7 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: var(--a-border);
+  border-bottom: none;
   padding: 0 1.5rem;
   position: sticky;
   top: 0;
@@ -599,7 +599,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--a-color-disabled-border);
+  border-bottom: none;
   gap: 1rem;
 }
 
@@ -689,7 +689,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1.5rem;
-  border-bottom: var(--a-border);
+  border-bottom: none;
   background: var(--a-color-surface);
 }
 

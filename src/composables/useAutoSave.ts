@@ -26,22 +26,25 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>) {
     autoSaveState.value = 'saving'
     timer = setTimeout(() => {
       const payload = options.getPayload()
-      if (shouldPersist(payload)) {
-        const savedAt = Date.now()
-        localStorage.setItem(
-          getDraftKey(),
-          JSON.stringify({ payload, saved_at: savedAt }),
-        )
-        lastSavedAt.value = savedAt
-      } else {
-        localStorage.removeItem(getDraftKey())
-        lastSavedAt.value = null
+      if (typeof localStorage !== 'undefined') {
+        if (shouldPersist(payload)) {
+          const savedAt = Date.now()
+          localStorage.setItem(
+            getDraftKey(),
+            JSON.stringify({ payload, saved_at: savedAt }),
+          )
+          lastSavedAt.value = savedAt
+        } else {
+          localStorage.removeItem(getDraftKey())
+          lastSavedAt.value = null
+        }
       }
       autoSaveState.value = 'saved'
     }, 500)
   }
 
   function loadDraft(): StoredDraft<T> | null {
+    if (typeof localStorage === 'undefined') return null
     const saved = localStorage.getItem(getDraftKey())
     if (!saved) return null
     try {
@@ -60,7 +63,9 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>) {
       clearTimeout(timer)
       timer = null
     }
-    localStorage.removeItem(getDraftKey())
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(getDraftKey())
+    }
     lastSavedAt.value = null
     autoSaveState.value = 'idle'
   }

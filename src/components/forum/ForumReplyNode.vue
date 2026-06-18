@@ -139,10 +139,15 @@ const formatTime = (iso: string) => {
 
 <style scoped>
 .reply-node {
-  border: var(--a-border);
+  border: none;
   background: var(--a-color-bg);
   padding: 1.25rem 1.5rem;
   margin-bottom: 0.75rem;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.reply-node:hover {
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
 }
 
 .reply-node-solution {

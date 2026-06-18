@@ -27,7 +27,7 @@ withDefaults(defineProps<{
 
 .p-section-header--rule {
   padding-bottom: 18px;
-  border-bottom: 2px solid var(--a-color-ink);
+  border-bottom: none;
 }
 
 .p-section-header__kicker {

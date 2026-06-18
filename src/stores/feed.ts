@@ -28,6 +28,26 @@ const apiErrorMessage = (payload: unknown, fallback: string) => {
   return fallback
 }
 
+const isAlreadySubscribedPayload = (payload: unknown) => {
+  const message = apiErrorMessage(payload, '').toLowerCase()
+  if (message.includes('already subscribed')) return true
+  if (payload && typeof payload === 'object') {
+    const errorPayload = (payload as { error?: unknown }).error
+    if (errorPayload && typeof errorPayload === 'object') {
+      const code = (errorPayload as { code?: unknown }).code
+      return code === 'subscription.already_exists'
+    }
+  }
+  return false
+}
+
+export interface FeedOPMLImportResult {
+  message: string
+  imported: number
+  reused: number
+  failed: number
+}
+
 export const useFeedStore = defineStore('feed', () => {
   // Feed state
   const subscriptions = ref<Subscription[]>([])
@@ -422,8 +442,7 @@ export const useFeedStore = defineStore('feed', () => {
       // Treat "already subscribed" as success for idempotent UX.
       if (res.status === 400 || res.status === 409) {
         const data = await res.json().catch(() => ({}))
-        const message = String(data?.error || '').toLowerCase()
-        if (message.includes('already subscribed')) {
+        if (isAlreadySubscribedPayload(data)) {
           await fetchSubscriptions()
           return true
         }
@@ -453,8 +472,8 @@ export const useFeedStore = defineStore('feed', () => {
       })
 
       if (!res.ok) {
-        const err = await res.json()
-        error.value = err.error || '添加失败'
+        const err = await res.json().catch(() => ({}))
+        error.value = apiErrorMessage(err, '添加失败')
         return false
       }
 
@@ -503,7 +522,7 @@ export const useFeedStore = defineStore('feed', () => {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        error.value = err.error || '发现订阅源失败'
+        error.value = apiErrorMessage(err, '发现订阅源失败')
         return []
       }
 
@@ -575,6 +594,49 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
+  const importOPML = async (file: File): Promise<FeedOPMLImportResult | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return null
+
+    error.value = null
+    const form = new FormData()
+    form.append('file', file)
+    try {
+      const res = await fetch(`${api.url}/feed/opml/import`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+        body: form,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        error.value = apiErrorMessage(err, '导入 OPML 失败')
+        return null
+      }
+      const result = await res.json()
+      await Promise.all([fetchGroups(), fetchSubscriptions()])
+      return result
+    } catch (e) {
+      console.error('Failed to import OPML', e)
+      error.value = '网络错误'
+      return null
+    }
+  }
+
+  const exportOPML = async (): Promise<Blob> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      throw new Error('Login required')
+    }
+    const res = await fetch(`${api.url}/feed/opml/export`, {
+      headers: { Authorization: `Bearer ${authStore.token}` },
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(apiErrorMessage(err, '导出 OPML 失败'))
+    }
+    return res.blob()
+  }
+
   const createSubscriptionFromProvider = async (payload: {
     provider: Extract<FeedSourceProvider, 'rsshub'>
     template_key: string
@@ -598,7 +660,7 @@ export const useFeedStore = defineStore('feed', () => {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        error.value = err.error || '创建来源失败'
+        error.value = apiErrorMessage(err, '创建来源失败')
         return false
       }
 
@@ -1085,6 +1147,8 @@ export const useFeedStore = defineStore('feed', () => {
     discoverFeedCandidates,
     resolveSubscriptionInput,
     autoAddSubscription,
+    importOPML,
+    exportOPML,
     createSubscriptionFromProvider,
     unsubscribeFromRSS,
     isSubscribedToRSS,

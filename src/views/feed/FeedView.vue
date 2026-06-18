@@ -18,13 +18,14 @@
               v-if="authStore.isAuthenticated"
               variant="secondary"
               label="订阅源管理"
-              @click="showManageSheet = true"
+              @click="openManageSheet"
             />
           </div>
         </template>
       </PPageHeader>
     </div>
     <SubscriptionAddSheet
+      v-if="!showManageSheet"
       :show="showAddModal"
       :top="headerBottom"
       :groups="groups"
@@ -35,15 +36,23 @@
       @submit="autoAddSubscription"
     />
     <SubscriptionManageSheet
+      v-if="!showAddModal"
       :show="showManageSheet"
       :subscriptions="subscriptions"
       :groups="groups"
       :busy="manageBusy"
+      :health-checking="feedStore.healthChecking"
       @close="showManageSheet = false"
       @create-group="createSubscriptionGroup"
       @rename-subscription="renameSubscription"
       @move-subscription="moveSubscription"
       @delete-subscription="deleteSubscription"
+      @rename-group="renameGroup"
+      @delete-group="deleteGroup"
+      @check-subscription-health="checkSubscriptionHealth"
+      @check-all-subscriptions-health="checkAllSubscriptionsHealth"
+      @import-opml="importOPML"
+      @export-opml="exportOPML"
     />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
     <FeedSourceArticlesSheet
@@ -85,7 +94,7 @@
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
 
-      <PEmpty v-else-if="!timeline.length" :text="emptyTimelineText" />
+      <PEmpty v-else-if="!timeline.length" class="a-empty" :text="emptyTimelineText" />
 
       <div v-else class="feed-timeline">
         <template v-for="(item, index) in timeline" :key="itemKey(item)">
@@ -472,8 +481,15 @@ const toggleAddModal = () => {
     return
   }
 
+  showManageSheet.value = false
   addSubscriptionError.value = ''
   showAddModal.value = true
+}
+
+const openManageSheet = () => {
+  showAddModal.value = false
+  addSubscriptionError.value = ''
+  showManageSheet.value = true
 }
 
 const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
@@ -534,6 +550,74 @@ const deleteSubscription = async (id: string) => {
     await feedStore.unsubscribe(id)
     currentPage.value = 1
     await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const renameGroup = async (id: string, name: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.updateGroup(id, name)
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const deleteGroup = async (id: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.deleteGroup(id)
+    currentPage.value = 1
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const checkSubscriptionHealth = async (id: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.checkSubscriptionHealth(id)
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const checkAllSubscriptionsHealth = async () => {
+  manageBusy.value = true
+  try {
+    await feedStore.checkAllSubscriptionsHealth()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const importOPML = async (file: File) => {
+  manageBusy.value = true
+  try {
+    const result = await feedStore.importOPML(file)
+    if (result) {
+      currentPage.value = 1
+      await fetchTimeline()
+    }
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const exportOPML = async () => {
+  manageBusy.value = true
+  try {
+    const blob = await feedStore.exportOPML()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'atoman-subscriptions.opml'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
   } finally {
     manageBusy.value = false
   }

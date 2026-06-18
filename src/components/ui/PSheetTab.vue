@@ -1,5 +1,5 @@
 <template>
-  <button class="sheet-tab" @click="$emit('click')">
+  <button class="sheet-tab" aria-label="Close sheet" @click="$emit('click')">
     <span class="close-icon">✕</span>
     <span class="tab-label">{{ title }}</span>
   </button>
@@ -48,7 +48,7 @@ defineEmits(['click'])
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px; /* Kept clean and readable */
+  max-width: 120px;
 }
 
 .sheet-tab:hover {
@@ -56,4 +56,3 @@ defineEmits(['click'])
   border-color: var(--a-color-line);
 }
 </style>
-

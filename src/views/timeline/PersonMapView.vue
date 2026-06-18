@@ -587,7 +587,7 @@ onUnmounted(() => {
 .person-panel {
   width: 320px;
   flex-shrink: 0;
-  border-right: 2px solid var(--a-color-fg);
+  border-right: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -595,7 +595,7 @@ onUnmounted(() => {
 
 .panel-header {
   padding: 1.25rem;
-  border-bottom: 2px solid var(--a-color-fg);
+  border-bottom: none;
   flex-shrink: 0;
 }
 
@@ -673,7 +673,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: none;
   flex-shrink: 0;
 }
 
@@ -697,7 +697,7 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: none;
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -926,7 +926,7 @@ onUnmounted(() => {
 /* Mobile: stack layout */
 @media (max-width: 767px) {
   .person-map-page { flex-direction: column; height: auto; overflow: auto; }
-  .person-panel { width: 100%; border-right: none; border-bottom: 2px solid var(--a-color-fg); max-height: 50vh; overflow-y: auto; }
+  .person-panel { width: 100%; border-right: none; border-bottom: none; max-height: 50vh; overflow-y: auto; }
   .map-container { height: 60vw; min-height: 300px; }
 }
 </style>

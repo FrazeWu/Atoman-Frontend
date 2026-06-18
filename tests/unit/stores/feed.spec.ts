@@ -82,6 +82,40 @@ describe('feed store', () => {
     expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/feed/subscriptions/sub-1/group', expect.anything())
   })
 
+  it('shows nested API error messages when adding RSS subscriptions fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      error: {
+        code: 'validation.invalid_request',
+        message: 'rss_url must be an absolute http/https URL',
+      },
+    }), { status: 400 }))
+
+    const feed = useFeedStore()
+    const result = await feed.addSubscription({ rss_url: 'not-a-url' })
+
+    expect(result).toBe(false)
+    expect(feed.error).toBe('rss_url must be an absolute http/https URL')
+  })
+
+  it('treats nested already-subscribed API errors as successful RSS subscription attempts', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: {
+          code: 'subscription.already_exists',
+          message: 'Already subscribed to this source',
+        },
+      }), { status: 409 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const result = await feed.subscribeToRSS('https://example.com/feed.xml')
+
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/feed/subscriptions', expect.objectContaining({
+      headers: { Authorization: 'Bearer token' },
+    }))
+  })
+
   it('discovers feed candidates through the v1 feed endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       candidates: [{ feed_url: 'http://www.ruanyifeng.com/blog/atom.xml', title: '阮一峰的网络日志' }],
@@ -94,6 +128,50 @@ describe('feed store', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/discover', expect.objectContaining({
       method: 'POST',
     }))
+  })
+
+  it('imports user OPML through multipart upload', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      message: 'OPML import completed',
+      imported: 2,
+      reused: 1,
+      failed: 0,
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const file = new File(['<opml version="2.0"><body /></opml>'], 'feeds.opml', { type: 'text/xml' })
+    const result = await feed.importOPML(file)
+
+    expect(result).toEqual({
+      message: 'OPML import completed',
+      imported: 2,
+      reused: 1,
+      failed: 0,
+    })
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/opml/import', expect.objectContaining({
+      method: 'POST',
+      headers: { Authorization: 'Bearer token' },
+    }))
+    const body = fetchMock.mock.calls[0][1]?.body
+    expect(body).toBeInstanceOf(FormData)
+    expect((body as FormData).get('file')).toBe(file)
+  })
+
+  it('exports user OPML as a blob download payload', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('opml', {
+      status: 200,
+      headers: { 'Content-Type': 'application/x-opml+xml' },
+    }))
+
+    const feed = useFeedStore()
+    const result = await feed.exportOPML()
+
+    expect(result.size).toBe(4)
+    expect(result.type).toBe('application/x-opml+xml')
+    expect(await result.text()).toBe('opml')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/opml/export', {
+      headers: { Authorization: 'Bearer token' },
+    })
   })
 
   it('loads the authenticated feed timeline through the v1 feed endpoint', async () => {

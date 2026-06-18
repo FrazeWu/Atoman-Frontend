@@ -627,7 +627,7 @@ const handleUnsolveReply = async (replyId: string) => {
 }
 
 .reply-form-wrap {
-  border: var(--a-border);
+  border: none;
   padding: 1.5rem;
 }
 
@@ -667,7 +667,7 @@ const handleUnsolveReply = async (replyId: string) => {
 }
 
 .topic-content-card {
-  border: var(--a-border);
+  border: none;
   padding: 2rem;
   margin-bottom: 2.5rem;
   background: var(--a-color-bg);
@@ -687,7 +687,7 @@ const handleUnsolveReply = async (replyId: string) => {
   letter-spacing: 0.15em;
   margin: 0;
   padding-bottom: 0.75rem;
-  border-bottom: var(--a-border);
+  border-bottom: none;
   flex: 1;
 }
 

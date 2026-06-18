@@ -203,7 +203,7 @@ watch(authUserId, ensureKanboChannels)
 .user-avatar {
   width: 24px;
   height: 24px;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-none);
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   font-weight: var(--a-font-weight-strong, 700);

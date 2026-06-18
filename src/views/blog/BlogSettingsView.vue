@@ -7,7 +7,7 @@
 
     <!-- Avatar preview -->
     <div class="a-card" style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem">
-      <div style="width:5rem;height:5rem;border-radius:9999px;background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.875rem;font-weight:900;flex-shrink:0;overflow:hidden">
+      <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.875rem;font-weight:900;flex-shrink:0;overflow:hidden">
         <img v-if="form.avatar_url" :src="form.avatar_url" alt="avatar" style="width:100%;height:100%;object-fit:cover" />
         <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
       </div>

@@ -25,7 +25,7 @@
     <!-- Post content -->
     <article v-else-if="post">
       <!-- Cover image -->
-      <div v-if="post.cover_url" style="width:100%;max-height:20rem;overflow:hidden;border-bottom:var(--a-border)">
+      <div v-if="post.cover_url" style="width:100%;max-height:20rem;overflow:hidden">
         <img :src="post.cover_url" :alt="post.title" style="width:100%;object-fit:cover;max-height:20rem" />
       </div>
 
@@ -50,16 +50,16 @@
               <button 
                 @click="isAcademic = false" 
                 class="a-btn a-btn--sm a-btn--secondary"
-                style="border-radius: 4px; font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
+                style="border-radius: var(--a-radius-none); font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
               >
                 📖 极简单栏
               </button>
-              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: 4px; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
+              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
             </div>
           </template>
           <template v-else>
             <a :href="userUrl(post.user?.username || '')" style="display:flex;align-items:center;gap:.5rem;text-decoration:none">
-              <div style="width:2rem;height:2rem;border-radius:9999px;background:var(--a-color-fg);display:flex;align-items:center;justify-content:center;color:var(--a-color-bg);font-weight:900;font-size:.75rem">
+              <div style="width:2rem;height:2rem;border-radius:var(--a-radius-none);background:var(--a-color-fg);display:flex;align-items:center;justify-content:center;color:var(--a-color-bg);font-weight:900;font-size:.75rem">
                 {{ (post.user?.display_name || post.user?.username || '?').charAt(0).toUpperCase() }}
               </div>
               <span style="font-weight:900;font-size:.875rem">{{ post.user?.display_name || post.user?.username }}</span>
@@ -69,11 +69,11 @@
               <button 
                 @click="isAcademic = true" 
                 class="a-btn a-btn--sm a-btn--secondary"
-                style="border-radius: 4px; font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
+                style="border-radius: var(--a-radius-none); font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
               >
                 🔬 学术双栏
               </button>
-              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: 4px; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
+              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
             </div>
           </template>
         </div>
@@ -93,7 +93,7 @@
         />
 
         <!-- Interaction bar -->
-        <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 0;border-top:var(--a-border);border-bottom:var(--a-border);margin-bottom:3rem">
+        <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 0;margin-bottom:3rem">
           <button
             @click="toggleLike"
             class="a-toggle-btn"
@@ -558,7 +558,7 @@ onMounted(() => {
   align-items: center;
   gap: 1rem;
   padding-bottom: 1.5rem;
-  border-bottom: var(--a-border);
+  border-bottom: none;
   margin-bottom: 2.5rem;
 }
 
@@ -569,7 +569,7 @@ onMounted(() => {
   justify-content: center;
   gap: 0.35rem;
   padding-bottom: 2rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: none;
   margin-bottom: 2.5rem;
   text-align: center;
 }

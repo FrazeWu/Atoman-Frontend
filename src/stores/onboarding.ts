@@ -8,9 +8,32 @@ export const onboardingSteps = ['overview', 'modules', 'feed-entry', 'feed-subsc
 
 export type OnboardingStep = typeof onboardingSteps[number]
 
+const completedStoragePrefix = 'atoman_onboarding_completed_at:'
+
 function resolveUserKey(user: User | null) {
   if (!user) return null
   return user.uuid || user.id?.toString() || user.username
+}
+
+function resolveCompletedStorageKey(user: User | null) {
+  const userKey = resolveUserKey(user)
+  return userKey ? `${completedStoragePrefix}${userKey}` : null
+}
+
+function readLocalCompletedAt(user: User | null) {
+  const key = resolveCompletedStorageKey(user)
+  if (!key) return null
+  return localStorage.getItem(key)
+}
+
+function rememberLocalCompletedAt(user: User | null, completedAt: string) {
+  const key = resolveCompletedStorageKey(user)
+  if (!key) return
+  localStorage.setItem(key, completedAt)
+}
+
+function isOnboardingStep(value: unknown): value is OnboardingStep {
+  return typeof value === 'string' && onboardingSteps.includes(value as OnboardingStep)
 }
 
 export const useOnboardingStore = defineStore('onboarding', () => {
@@ -34,21 +57,42 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     completing.value = false
   }
 
-  const initialize = (user = authStore.user) => {
+  const applyLocalCompletion = (user: User) => {
+    const completedAt = user.onboarding_completed_at || readLocalCompletedAt(user)
+    if (!completedAt) return null
+
+    rememberLocalCompletedAt(user, completedAt)
+    if (!user.onboarding_completed_at) {
+      authStore.updateUser({ onboarding_completed_at: completedAt })
+    }
+    return completedAt
+  }
+
+  const initialize = (user = authStore.user, handoffStep?: OnboardingStep | null) => {
     const userKey = resolveUserKey(user)
     if (!userKey) {
       reset()
       return
     }
 
-    if (initialized.value && initializedForUserKey.value === userKey) {
+    const completedAt = applyLocalCompletion(user)
+    if (completedAt) {
+      initialized.value = true
+      initializedForUserKey.value = userKey
+      isVisible.value = false
+      currentStep.value = 'overview'
+      return
+    }
+
+    const hasHandoffStep = isOnboardingStep(handoffStep)
+    if (initialized.value && initializedForUserKey.value === userKey && !hasHandoffStep) {
       return
     }
 
     initialized.value = true
     initializedForUserKey.value = userKey
-    currentStep.value = 'overview'
-    isVisible.value = !user?.onboarding_completed_at
+    currentStep.value = hasHandoffStep ? handoffStep : 'overview'
+    isVisible.value = true
   }
 
   const nextStep = () => {
@@ -68,29 +112,35 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       return
     }
 
-    if (authStore.user.onboarding_completed_at) {
+    const existingCompletedAt = authStore.user.onboarding_completed_at || readLocalCompletedAt(authStore.user)
+    if (existingCompletedAt) {
+      rememberLocalCompletedAt(authStore.user, existingCompletedAt)
+      authStore.updateUser({ onboarding_completed_at: existingCompletedAt })
       isVisible.value = false
       return
     }
 
     completing.value = true
+    let completedAt = new Date().toISOString()
+    rememberLocalCompletedAt(authStore.user, completedAt)
+    authStore.updateUser({ onboarding_completed_at: completedAt })
+    isVisible.value = false
     try {
       const response = await fetch(api.auth.onboardingComplete, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
+        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         credentials: 'include',
       })
 
-      let completedAt = new Date().toISOString()
       if (response.ok) {
         const data = await response.json().catch(() => ({}))
         completedAt = data.onboarding_completed_at || data.data?.onboarding_completed_at || completedAt
+        rememberLocalCompletedAt(authStore.user, completedAt)
+        authStore.updateUser({ onboarding_completed_at: completedAt })
       }
-
-      authStore.updateUser({ onboarding_completed_at: completedAt })
-      isVisible.value = false
+    } catch {
+      // The user already completed or skipped the guide. Keep this browser session
+      // closed even if the server write cannot be confirmed.
     } finally {
       completing.value = false
     }

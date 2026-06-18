@@ -46,6 +46,16 @@
       @delete-subscription="deleteSubscription"
     />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
+    <FeedSourceArticlesSheet
+      :show="showSourceSheet"
+      :source="selectedSource"
+      :items="sourceArticles"
+      :loading="sourceArticlesLoading"
+      :subscribe-busy="sourceSubscribeBusy"
+      @close="showSourceSheet = false"
+      @subscribe="subscribeSelectedSource"
+      @open-article="openSourceArticle"
+    />
 
     <PShortcutHints :hints="shortcutHints" />
 
@@ -95,23 +105,16 @@
               </div>
             </template>
             <template #meta>
-              <!-- Cross-context links must use absolute URLs with ?site= to ensure routes swap -->
-              <a
-                v-if="item.post.collections && item.post.collections.length > 0"
-                :href="modulePathUrl('blog', `/collection/${item.post.collections[0].id}`)"
-                class="a-label a-muted feed-source-link"
-                @click.stop
+              <button
+                v-if="postSource(item)"
+                type="button"
+                class="a-label a-muted feed-source-link feed-source-trigger"
+                data-test="feed-source-trigger"
+                @click.stop="openSourceSheet(postSource(item)!)"
               >
-                《{{ item.post.collections[0].name || '未知合集' }}》
-              </a>
-              <a
-                v-else
-                :href="userUrl(item.post.user?.username || '')" 
-                class="a-label a-muted feed-source-link"
-                @click.stop
-              >
-                {{ item.post.user?.display_name || item.post.user?.username || '未知作者' }}
-              </a>
+                {{ postSource(item)!.title }}
+              </button>
+              <span v-else class="a-label a-muted">未知频道</span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
               <span v-if="item.is_read" class="a-label" style="color:var(--a-color-success)">已读</span>
             </template>
@@ -135,17 +138,16 @@
             </template>
 
             <template #meta>
-              <a 
-                v-if="getFeedSourceHomeUrl(item.feed_item)"
-                :href="getFeedSourceHomeUrl(item.feed_item)"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="a-label a-muted feed-source-link"
-                @click.stop
+              <button
+                v-if="feedItemSource(item.feed_item)"
+                type="button"
+                class="a-label a-muted feed-source-link feed-source-trigger"
+                data-test="feed-source-trigger"
+                @click.stop="openSourceSheet(feedItemSource(item.feed_item)!)"
               >
-                {{ item.feed_item.feed_source?.title || item.feed_item.author || 'RSS' }} ↗
-              </a>
-              <span v-else class="a-label a-muted">{{ item.feed_item.author || item.feed_item.feed_source?.title || 'RSS' }}</span>
+                {{ feedItemSource(item.feed_item)!.title }}
+              </button>
+              <span v-else class="a-label a-muted">RSS</span>
               <span v-if="item.feed_item.duration" style="color:var(--a-color-muted-soft);font-weight:700">
                 时长: {{ item.feed_item.duration }}
               </span>
@@ -208,16 +210,16 @@ import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
+import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
-import { userUrl, modulePathUrl } from '@/composables/useSubdomainNav'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { Filter } from 'lucide-vue-next'
-import type { AutoAddSubscriptionPayload, FeedItem, TimelineItem } from '@/types'
+import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedItem, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -318,6 +320,11 @@ const addSubscriptionResetKey = ref(0)
 
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
+const showSourceSheet = ref(false)
+const selectedSource = ref<FeedArticleSource | null>(null)
+const sourceArticles = ref<TimelineItem[]>([])
+const sourceArticlesLoading = ref(false)
+const sourceSubscribeBusy = ref(false)
 
 const headerRef = ref<HTMLElement | null>(null)
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -337,6 +344,120 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
     item.is_read = true
     void feedStore.markItemsRead([item.feed_item.id])
+  }
+}
+
+const openSourceArticle = (item: TimelineItem) => {
+  selectedArticle.value = item
+  showArticleSheet.value = true
+  if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
+    item.is_read = true
+    void feedStore.markItemsRead([item.feed_item.id])
+  }
+}
+
+const findSubscriptionForSource = (source: FeedArticleSource) => {
+  if (source.type === 'internal_channel') {
+    return subscriptions.value.find((sub) => (
+      sub.feed_source?.source_type === 'internal_channel'
+      && sub.feed_source.source_id === source.id
+    ))
+  }
+  if (source.type === 'external_rss') {
+    return subscriptions.value.find((sub) => (
+      sub.feed_source_id === source.id
+      || sub.feed_source?.id === source.id
+      || (!!source.rssUrl && sub.feed_source?.rss_url === source.rssUrl)
+    ))
+  }
+  return undefined
+}
+
+const withSubscriptionState = (source: FeedArticleSource): FeedArticleSource => {
+  const subscription = findSubscriptionForSource(source)
+  return {
+    ...source,
+    subscriptionId: subscription?.id || source.subscriptionId,
+    subscribed: Boolean(subscription || source.subscribed),
+  }
+}
+
+const postSource = (item: TimelineItem): FeedArticleSource | null => {
+  if (item.type !== 'post' || !item.post) return null
+  const channelId = item.post.channel_id || item.post.channel?.id
+  if (!channelId) return null
+  return withSubscriptionState({
+    type: 'internal_channel',
+    id: channelId,
+    title: item.post.channel?.name || '未命名频道',
+    subscribed: false,
+  })
+}
+
+const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
+  const sourceId = item.feed_source?.id || item.feed_source_id
+  if (!sourceId) return null
+  return withSubscriptionState({
+    type: 'external_rss',
+    id: sourceId,
+    title: item.feed_source?.title || 'RSS',
+    rssUrl: item.feed_source?.rss_url,
+    subscribed: false,
+  })
+}
+
+const fetchSourceArticles = async (source: FeedArticleSource) => {
+  if (!source.subscriptionId) {
+    sourceArticles.value = []
+    return
+  }
+
+  sourceArticlesLoading.value = true
+  try {
+    const params = buildFeedTimelineQuery({
+      limit: 100,
+      sourceId: source.subscriptionId,
+    })
+    const headers = authStore.isAuthenticated ? authHeaders() : {}
+    const response = await fetch(`${API_URL}/feed/timeline?${params}`, { headers })
+    if (response.ok) {
+      const data = await response.json()
+      sourceArticles.value = data.data || []
+    }
+  } catch (error) {
+    console.error(error)
+    sourceArticles.value = []
+  } finally {
+    sourceArticlesLoading.value = false
+  }
+}
+
+const openSourceSheet = async (source: FeedArticleSource) => {
+  selectedSource.value = withSubscriptionState(source)
+  sourceArticles.value = []
+  showSourceSheet.value = true
+  showArticleSheet.value = false
+  await fetchSourceArticles(selectedSource.value)
+}
+
+const subscribeSelectedSource = async () => {
+  if (!selectedSource.value || selectedSource.value.subscribed || !authStore.isAuthenticated) return
+
+  sourceSubscribeBusy.value = true
+  try {
+    let success = false
+    if (selectedSource.value.type === 'internal_channel') {
+      success = await feedStore.subscribeToChannel(selectedSource.value.id)
+    } else if (selectedSource.value.type === 'external_rss' && selectedSource.value.rssUrl) {
+      success = await feedStore.subscribeToRSS(selectedSource.value.rssUrl, selectedSource.value.title)
+    }
+    if (!success) return
+
+    await feedStore.fetchSubscriptions()
+    selectedSource.value = withSubscriptionState(selectedSource.value)
+    await fetchSourceArticles(selectedSource.value)
+  } finally {
+    sourceSubscribeBusy.value = false
   }
 }
 
@@ -425,23 +546,6 @@ const getExternalBadge = (item: FeedItem) => {
   }
   // Check common RSS feed type indicators or categories if available in the future
   return '博客'
-}
-
-const getFeedSourceHomeUrl = (item: FeedItem) => {
-  const rssUrl = item.feed_source?.rss_url
-  if (rssUrl) {
-    try {
-      return new URL(rssUrl).origin
-    } catch {
-      // Fall through to article link when rss_url is malformed.
-    }
-  }
-  if (!item.link) return ''
-  try {
-    return new URL(item.link).origin
-  } catch {
-    return item.link
-  }
 }
 
 const toggleStar = async (feedItemId: string) => {
@@ -744,6 +848,15 @@ onUnmounted(() => {
   border-color: var(--a-color-ink);
   transform: translateY(-2px);
   box-shadow: var(--a-shadow-paper-sm);
+}
+
+.feed-source-trigger {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
 }
 
 </style>

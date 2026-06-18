@@ -168,6 +168,176 @@ describe('FeedView', () => {
     expect(actionLabels).not.toContain('稍后阅读')
   })
 
+
+  it('shows channel source names for internal subscription posts and opens the source article sheet', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
+      data: [
+        {
+          type: 'post',
+          post: {
+            id: 'post-1',
+            user_id: 'user-1',
+            channel_id: 'channel-1',
+            channel: { id: 'channel-1', name: '思想频道', slug: 'think' },
+            user: { username: 'alice', email: 'alice@example.com', display_name: 'Alice' },
+            title: '内部文章',
+            content: '正文',
+            summary: '摘要',
+            status: 'published',
+            visibility: 'public',
+            allow_comments: true,
+            pinned: false,
+            created_at: '2026-05-31T00:00:00Z',
+            updated_at: '2026-05-31T00:00:00Z',
+          },
+          published_at: '2026-05-31T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-channel-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-channel-1',
+        title: '思想频道',
+        feed_source: {
+          id: 'source-channel-1',
+          source_type: 'internal_channel',
+          source_id: 'channel-1',
+          hash: 'internal-channel:channel-1',
+          title: '思想频道',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: {
+            name: 'FeedSourceArticlesSheet',
+            props: ['show', 'source', 'items'],
+            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><article v-for="item in items" :key="item.post?.id || item.feed_item?.id">{{ item.post?.title || item.feed_item?.title }}</article></section>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.find('.feed-entry-meta').text()).toContain('思想频道')
+    expect(wrapper.find('.feed-entry-meta').text()).not.toContain('Alice')
+
+    await wrapper.get('[data-test="feed-source-trigger"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
+    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('思想频道')
+    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('内部文章')
+  })
+
+  it('shows RSS source names for external subscription items and opens the source article sheet', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-1',
+            feed_source_id: 'source-rss-1',
+            feed_source: {
+              id: 'source-rss-1',
+              source_type: 'external_rss',
+              title: 'Example RSS',
+              rss_url: 'https://example.com/feed.xml',
+            },
+            guid: 'feed-item-1',
+            title: '外部条目',
+            link: 'https://example.com/item',
+            summary: '摘要',
+            author: '外部作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-rss-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-rss-1',
+        title: 'Example RSS',
+        feed_source: {
+          id: 'source-rss-1',
+          source_type: 'external_rss',
+          rss_url: 'https://example.com/feed.xml',
+          hash: 'external-rss:example',
+          title: 'Example RSS',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: {
+            name: 'FeedSourceArticlesSheet',
+            props: ['show', 'source', 'items'],
+            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><article v-for="item in items" :key="item.post?.id || item.feed_item?.id">{{ item.post?.title || item.feed_item?.title }}</article></section>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.find('.feed-entry-meta').text()).toContain('Example RSS')
+    expect(wrapper.find('.feed-entry-meta').text()).not.toContain('外部作者')
+
+    await wrapper.get('[data-test="feed-source-trigger"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
+    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('Example RSS')
+    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('外部条目')
+  })
+
   it('does not render the old right-edge subscription source drawer', async () => {
     const wrapper = mount(FeedView, {
       global: {

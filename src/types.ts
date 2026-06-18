@@ -425,6 +425,15 @@ export interface TimelineItem {
   is_read: boolean
 }
 
+export interface FeedArticleSource {
+  type: 'internal_channel' | 'external_rss'
+  id: string
+  title: string
+  rssUrl?: string
+  subscriptionId?: string
+  subscribed: boolean
+}
+
 // ===== Bookmark Types =====
 
 export interface BookmarkFolder {

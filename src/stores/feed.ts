@@ -1,9 +1,11 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type {
+  AutoAddSubscriptionPayload,
   FeedDiscoveryCandidate,
   FeedSourceProvider,
   FeedStarGroup,
+  ResolvedSubscriptionInput,
   Subscription,
   SubscriptionGroup,
 } from '@/types'
@@ -12,6 +14,19 @@ import { useApi } from '@/composables/useApi'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
 const api = useApi()
+
+const apiErrorMessage = (payload: unknown, fallback: string) => {
+  if (!payload || typeof payload !== 'object') return fallback
+  const errorPayload = (payload as { error?: unknown }).error
+  if (typeof errorPayload === 'string' && errorPayload.trim()) return errorPayload
+  if (errorPayload && typeof errorPayload === 'object') {
+    const message = (errorPayload as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) return message
+  }
+  const message = (payload as { message?: unknown }).message
+  if (typeof message === 'string' && message.trim()) return message
+  return fallback
+}
 
 export const useFeedStore = defineStore('feed', () => {
   // Feed state
@@ -498,6 +513,65 @@ export const useFeedStore = defineStore('feed', () => {
       console.error('Failed to discover feed candidates', e)
       error.value = '网络错误'
       return []
+    }
+  }
+
+  const resolveSubscriptionInput = async (input: string): Promise<ResolvedSubscriptionInput | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return null
+
+    error.value = null
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authStore.token}`,
+        },
+        body: JSON.stringify({ input }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        error.value = apiErrorMessage(data, '检测订阅源失败')
+        return null
+      }
+
+      return data as ResolvedSubscriptionInput
+    } catch (e) {
+      console.error('Failed to resolve subscription input', e)
+      error.value = '网络错误'
+      return null
+    }
+  }
+
+  const autoAddSubscription = async (payload: AutoAddSubscriptionPayload): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+
+    error.value = null
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/auto-add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authStore.token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        error.value = apiErrorMessage(data, '添加失败')
+        return false
+      }
+
+      await fetchSubscriptions()
+      return true
+    } catch (e) {
+      console.error('Failed to auto add subscription', e)
+      error.value = '网络错误'
+      return false
     }
   }
 
@@ -1009,6 +1083,8 @@ export const useFeedStore = defineStore('feed', () => {
     subscribeToRSS,
     addSubscription,
     discoverFeedCandidates,
+    resolveSubscriptionInput,
+    autoAddSubscription,
     createSubscriptionFromProvider,
     unsubscribeFromRSS,
     isSubscribedToRSS,

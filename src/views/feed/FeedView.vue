@@ -32,9 +32,7 @@
       :error="addSubscriptionError"
       :reset-key="addSubscriptionResetKey"
       @close="closeAddModal"
-      @submit="addSubscription"
-      @submit-discovered="handleDiscoveredSubscription"
-      @submit-provider="handleProviderSubscription"
+      @submit="autoAddSubscription"
     />
     <SubscriptionManageSheet
       :show="showManageSheet"
@@ -219,7 +217,7 @@ import { useUIStore } from '@/stores/ui'
 import { userUrl, modulePathUrl } from '@/composables/useSubdomainNav'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { Filter } from 'lucide-vue-next'
-import type { FeedItem, FeedSourceProvider, TimelineItem } from '@/types'
+import type { AutoAddSubscriptionPayload, FeedItem, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -357,11 +355,11 @@ const toggleAddModal = () => {
   showAddModal.value = true
 }
 
-const addSubscription = async (payload: { rss_url: string; title?: string; group_id?: string }) => {
+const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
   addSubscriptionError.value = ''
   addingSubscription.value = true
   try {
-    const success = await feedStore.addSubscription(payload)
+    const success = await feedStore.autoAddSubscription(payload)
     if (success) {
       addSubscriptionResetKey.value += 1
       showAddModal.value = false
@@ -372,39 +370,6 @@ const addSubscription = async (payload: { rss_url: string; title?: string; group
     }
   } catch (error) {
     addSubscriptionError.value = error instanceof Error ? error.message : '添加失败'
-  } finally {
-    addingSubscription.value = false
-  }
-}
-
-const handleDiscoveredSubscription = async (payload: { feed_url: string; title?: string; group_id?: string }) => {
-  await addSubscription({
-    rss_url: payload.feed_url,
-    title: payload.title,
-    group_id: payload.group_id,
-  })
-}
-
-const handleProviderSubscription = async (payload: {
-  provider: Extract<FeedSourceProvider, 'rsshub'>
-  template_key: string
-  params: Record<string, string>
-  title?: string
-  group_id?: string
-}) => {
-  addSubscriptionError.value = ''
-  addingSubscription.value = true
-  try {
-    const success = await feedStore.createSubscriptionFromProvider(payload)
-    if (success) {
-      addSubscriptionResetKey.value += 1
-      showAddModal.value = false
-      await Promise.all([fetchTimeline(), onboardingStore.handleSubscriptionSuccess()])
-    } else {
-      addSubscriptionError.value = feedStore.error || '创建来源失败'
-    }
-  } catch (error) {
-    addSubscriptionError.value = error instanceof Error ? error.message : '创建来源失败'
   } finally {
     addingSubscription.value = false
   }

@@ -33,6 +33,55 @@ describe('feed store', () => {
     }))
   })
 
+  it('resolves subscription input through the unified resolve endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      status: 'existing_source',
+      source: {
+        id: 'source-1',
+        provider: 'rss',
+        source_type: 'external_rss',
+        title: 'Example Feed',
+        rss_url: 'https://example.com/feed.xml',
+        canonical_url: 'https://example.com/feed.xml',
+      },
+      candidates: [],
+      message: '来源已存在，可添加到你的订阅',
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const result = await feed.resolveSubscriptionInput('https://example.com/feed.xml')
+
+    expect(result?.status).toBe('existing_source')
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/subscriptions/resolve', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ input: 'https://example.com/feed.xml' }),
+    }))
+  })
+
+  it('auto-adds subscriptions through the unified endpoint and moves selected group server-side', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'sub-1' } }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const result = await feed.autoAddSubscription({
+      input: 'https://github.com/DIYgod/RSSHub',
+      title: 'RSSHub Repo',
+      group_id: 'group-1',
+    })
+
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscriptions/auto-add', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        input: 'https://github.com/DIYgod/RSSHub',
+        title: 'RSSHub Repo',
+        group_id: 'group-1',
+      }),
+    }))
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/feed/subscriptions/sub-1/group', expect.anything())
+  })
+
   it('discovers feed candidates through the v1 feed endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       candidates: [{ feed_url: 'http://www.ruanyifeng.com/blog/atom.xml', title: '阮一峰的网络日志' }],

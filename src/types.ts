@@ -246,6 +246,45 @@ export interface FeedDiscoveryCandidate {
 
 export type FeedSourceProvider = 'rss' | 'rsshub' | 'internal'
 
+export type ResolvedSubscriptionStatus =
+  | 'already_subscribed'
+  | 'existing_source'
+  | 'new_source'
+  | 'multiple_candidates'
+  | 'not_found'
+  | 'invalid'
+
+export interface ResolvedSubscriptionSource {
+  id?: string
+  provider: FeedSourceProvider
+  source_type: 'external_rss' | 'internal_user' | 'internal_channel' | 'internal_collection'
+  title: string
+  rss_url: string
+  site_url?: string
+  canonical_url: string
+}
+
+export interface ResolvedSubscriptionCandidate extends FeedDiscoveryCandidate {
+  status: ResolvedSubscriptionStatus
+  source?: ResolvedSubscriptionSource | null
+  subscription?: Subscription
+}
+
+export interface ResolvedSubscriptionInput {
+  status: ResolvedSubscriptionStatus
+  source?: ResolvedSubscriptionSource | null
+  subscription?: Subscription | null
+  candidates: ResolvedSubscriptionCandidate[]
+  message: string
+}
+
+export interface AutoAddSubscriptionPayload {
+  input: string
+  candidate_feed_url?: string
+  title?: string
+  group_id?: string
+}
+
 export interface AdminFeedSourceRow {
   id: string
   source_type: 'external_rss' | 'internal_user' | 'internal_channel' | 'internal_collection'

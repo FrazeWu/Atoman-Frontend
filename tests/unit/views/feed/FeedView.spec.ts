@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedView from '@/views/feed/FeedView.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 
 const { navigateModuleWithShutter, routerPush, routerReplace, routeQuery } = vi.hoisted(() => ({
   navigateModuleWithShutter: vi.fn(),
@@ -346,5 +347,43 @@ describe('FeedView', () => {
     expect(timeline.element.tagName).not.toBe('TEMPLATE')
     expect(timeline.element.closest('template')).toBeNull()
     expect(wrapper.get('.p-entry').text()).toContain('内部文章')
+  })
+
+  it('auto-adds subscriptions from the unified add sheet submit event', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: {
+            name: 'SubscriptionAddSheet',
+            emits: ['submit', 'close'],
+            props: ['show'],
+            template: '<div data-test="add-sheet" @click="$emit(\'submit\', { input: \'https://github.com/DIYgod/RSSHub\', title: \'RSSHub Repo\' })"></div>',
+          },
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    const feedStore = useFeedStore()
+    const autoAddSpy = vi.spyOn(feedStore, 'autoAddSubscription').mockResolvedValue(true)
+
+    await wrapper.get('[data-test="add-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(autoAddSpy).toHaveBeenCalledWith({
+      input: 'https://github.com/DIYgod/RSSHub',
+      title: 'RSSHub Repo',
+    })
   })
 })

@@ -38,4 +38,17 @@ describe('borderless white UI contract', () => {
     expect(cardHoverBlock).toContain('box-shadow: var(--a-shadow-paper-sm)')
     expect(cardHoverBlock).not.toMatch(/transform\s*:/)
   })
+
+  it('enforces borderless sidebar containers, active indicator removal, and borderless dividers', () => {
+    const css = read('src/style.css')
+    const sidebarBlock = cssBlock(css, '.a-sidebar,\n.p-sidebar')
+    expect(sidebarBlock).toContain('background-color: var(--a-color-bg)')
+    expect(sidebarBlock).not.toMatch(/border-right\s*:/)
+
+    const activeIndicatorBlock = cssBlock(css, '.a-sidebar-item.active::before,\n.p-sidebar-item.active::before')
+    expect(activeIndicatorBlock).toContain('display: none')
+
+    const dividerBlock = cssBlock(css, '.a-sidebar-divider,\n.p-sidebar-divider')
+    expect(dividerBlock).not.toMatch(/border-bottom\s*:/)
+  })
 })

@@ -5,14 +5,14 @@ import { moduleRooms } from '@/config/moduleRooms';
 </script>
 
 <template>
-  <div class="video-subscriptions-view">
+  <div class="a-page-xl video-subscriptions-view">
     <PPageHeader
-      :title="moduleRooms.video.name"
+      title="订阅"
       sub="查看你关注的频道更新"
       accent
     />
     
-    <div class="p-4">
+    <div style="margin-top: 1.5rem">
       <PEmpty
         title="订阅功能即将上线"
         description="我们将在这里展示你关注的视频动态"

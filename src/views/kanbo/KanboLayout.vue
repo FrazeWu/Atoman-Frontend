@@ -1,12 +1,20 @@
 <template>
-  <div class="a-module-layout">
-    <PSidebar :label="moduleRooms.kanbo.name" :helper="moduleRooms.kanbo.helper" aria-label="内容导航">
-      <PSidebarItem to="/create" :index="1">创作</PSidebarItem>
-      <PSidebarItem to="/articles" :index="2">文章</PSidebarItem>
-      <PSidebarItem to="/videos" :index="3">视频</PSidebarItem>
-      <PSidebarItem to="/podcasts" :index="4">播客</PSidebarItem>
-      <PSidebarItem to="/subscriptions" :index="5">订阅</PSidebarItem>
-      <PSidebarItem to="/bookmarks" :index="6">收藏</PSidebarItem>
+  <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
+    <PSidebar
+      collapsible
+      v-model:collapsed="sidebarCollapsed"
+      storage-key="atoman.kanbo.sidebar.collapsed"
+      aria-label="内容导航"
+    >
+      <div v-if="!sidebarCollapsed" class="p-sidebar-label">{{ moduleRooms.kanbo.name }}</div>
+      <div v-if="!sidebarCollapsed" class="p-sidebar-helper">{{ moduleRooms.kanbo.helper }}</div>
+
+      <PSidebarItem to="/create" :index="1" :icon="PenTool">创作</PSidebarItem>
+      <PSidebarItem to="/articles" :index="2" :icon="FileText">文章</PSidebarItem>
+      <PSidebarItem to="/videos" :index="3" :icon="Video">视频</PSidebarItem>
+      <PSidebarItem to="/podcasts" :index="4" :icon="Mic">播客</PSidebarItem>
+      <PSidebarItem to="/subscriptions" :index="5" :icon="Rss">订阅</PSidebarItem>
+      <PSidebarItem to="/bookmarks" :index="6" :icon="Bookmark">收藏</PSidebarItem>
     </PSidebar>
 
     <main class="a-main-content">
@@ -16,7 +24,20 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+import { PenTool, FileText, Video, Mic, Rss, Bookmark } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+
+const sidebarStorageKey = 'atoman.kanbo.sidebar.collapsed'
+const sidebarCollapsed = ref(false)
+
+onMounted(() => {
+  sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
+})
+
+watch(sidebarCollapsed, (collapsed) => {
+  localStorage.setItem(sidebarStorageKey, String(collapsed))
+})
 </script>

@@ -1,6 +1,6 @@
 <template>
-  <div class="a-page">
-    <PPageHeader :title="moduleRooms.blog.name" sub="查看你关注的创作者与频道更新" accent>
+  <div class="a-page-xl blog-subscriptions-page">
+    <PPageHeader title="订阅" sub="查看你关注的创作者与频道更新" accent>
       <template #action>
         <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/post/new">+ 写文章</PButton>
         <PButton v-else-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
@@ -24,11 +24,12 @@
 
     <div v-else>
       <PEntry
-        v-for="post in posts"
+        v-for="(post, index) in posts"
         :key="post.id"
         :title="post.title"
         :summary="post.summary"
-        @click="$router.push('/post/' + post.id)"
+        :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+        @click="router.push('/post/' + post.id)"
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
@@ -84,11 +85,14 @@
     <div v-else-if="loading && posts.length" style="display:flex;justify-content:center;margin-top:2rem">
       <p class="a-muted">加载中...</p>
     </div>
+
+    <PShortcutHints :hints="shortcutHints" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -97,10 +101,13 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTab from '@/components/ui/PTab.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
+import { useUIStore } from '@/stores/ui'
 import { useApi } from '@/composables/useApi'
+import { useKeyboardList } from '@/composables/useKeyboardList'
 import { moduleRooms } from '@/config/moduleRooms'
 import type { Post, TimelineItem } from '@/types'
 
@@ -108,9 +115,11 @@ import type { Post, TimelineItem } from '@/types'
 // to maintain consistency and fulfill requirement
 const _components = { PBadge, PTab }
 
+const router = useRouter()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
+const uiStore = useUIStore()
 const api = useApi()
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
@@ -130,6 +139,44 @@ const posts = ref<Post[]>([])
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
+
+const shortcutHints = [
+  { key: 'H', label: '聚焦侧边栏' },
+  { key: 'L', label: '聚焦内容区' },
+  { key: 'J / K', label: '上下切换项目' },
+  { key: 'Enter', label: '打开当前项' },
+  { key: 'S', label: '收藏/退藏' },
+  { key: 'L', label: '稍后阅读' }
+]
+
+const { focusedIndex, scrollToFocused } = useKeyboardList({
+  items: posts,
+  section: 'content',
+  onEnter: (post) => {
+    router.push('/post/' + post.id)
+  },
+  onAction: (key, post) => {
+    switch (key) {
+      case 's': toggleStar(post.id); break
+      case 'l': toggleReadingList(post.id); break
+    }
+  },
+})
+
+// Auto-focus first item when switching to content area
+watch(() => uiStore.focusedSection, (section) => {
+  if (section === 'content' && focusedIndex.value === -1 && posts.value.length > 0) {
+    focusedIndex.value = 0
+    scrollToFocused()
+  }
+})
+
+// Reset focus when posts change
+watch(posts, () => {
+  if (focusedIndex.value >= posts.value.length) {
+    focusedIndex.value = posts.value.length > 0 ? 0 : -1
+  }
+})
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''

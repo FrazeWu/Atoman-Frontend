@@ -4,13 +4,13 @@
       collapsible
       v-model:collapsed="sidebarCollapsed"
     >
-      <PSidebarItem to="/" :index="1" icon-char="探" exact>
+      <PSidebarItem to="/" :index="1" :icon="Compass" exact>
         探索
       </PSidebarItem>
-      <PSidebarItem to="/subscriptions" :index="2" icon-char="订">
+      <PSidebarItem to="/subscriptions" :index="2" :icon="Rss">
         订阅
       </PSidebarItem>
-      <PSidebarItem to="/manage" :index="3" icon-char="管">
+      <PSidebarItem to="/manage" :index="3" :icon="Settings">
         管理
       </PSidebarItem>
     </PSidebar>
@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { Compass, Rss, Settings } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'

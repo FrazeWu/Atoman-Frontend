@@ -17,19 +17,14 @@ test.describe('Feed', () => {
 
   test('authenticated user can open add subscription modal', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/feed')
-    await authenticatedPage.waitForTimeout(2000)
 
-    const addBtn = authenticatedPage.getByRole('button', { name: '+ 添加订阅' })
-    if (await addBtn.isVisible().catch(() => false)) {
-      await addBtn.click()
-      await expect(authenticatedPage.getByRole('heading', { name: '添加订阅' })).toBeVisible()
-      await expect(authenticatedPage.getByPlaceholder('https://example.com/feed.xml')).toBeVisible()
+    await authenticatedPage.getByRole('button', { name: '+ 订阅' }).click()
+    await expect(authenticatedPage.getByRole('heading', { name: '添加订阅' })).toBeVisible()
+    await expect(authenticatedPage.getByPlaceholder('输入网站、RSS 或 GitHub 仓库地址')).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: '确认订阅' })).toBeVisible()
 
-      const cancelBtn = authenticatedPage.getByRole('button', { name: '取消' })
-      if (await cancelBtn.isVisible().catch(() => false)) {
-        await cancelBtn.click()
-      }
-    }
+    await authenticatedPage.locator('.add-sub-form').getByRole('button', { name: '取消', exact: true }).click()
+    await expect(authenticatedPage.getByRole('heading', { name: '添加订阅' })).toBeHidden()
   })
 
   test('authenticated user sees mark all read button', async ({ authenticatedPage }) => {
@@ -45,23 +40,21 @@ test.describe('Feed', () => {
 
   test('authenticated user can create new group', async ({ authenticatedPage }) => {
     await authenticatedPage.goto('/feed')
-    await authenticatedPage.waitForTimeout(2000)
 
-    const newGroupBtn = authenticatedPage.getByRole('button', { name: '+ 新建分组' })
-    if (await newGroupBtn.isVisible().catch(() => false)) {
-      await newGroupBtn.click()
-      await authenticatedPage.waitForTimeout(500)
+    await authenticatedPage.getByRole('button', { name: '订阅源管理' }).click()
+    await expect(authenticatedPage.getByRole('heading', { name: '订阅源管理' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: '导入 OPML' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: '导出 OPML' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('button', { name: '全部检查' })).toBeVisible()
 
-      const groupInput = authenticatedPage.locator('input[placeholder="分组名称"]')
-      if (await groupInput.isVisible().catch(() => false)) {
-        await groupInput.fill(`E2E Group ${Date.now()}`)
-        const confirmBtn = authenticatedPage.getByRole('button', { name: '确认' })
-        if (await confirmBtn.isVisible().catch(() => false)) {
-          await confirmBtn.click()
-          await authenticatedPage.waitForTimeout(1000)
-        }
-      }
-    }
+    const groupName = `E2E Group ${Date.now()}`
+    await authenticatedPage.getByPlaceholder('例如：技术观察').fill(groupName)
+    await authenticatedPage.getByRole('button', { name: '创建' }).click()
+    
+    await expect(async () => {
+      const values = await authenticatedPage.locator('input.group-name-input').evaluateAll(inputs => inputs.map(i => (i as HTMLInputElement).value))
+      expect(values).toContain(groupName)
+    }).toPass()
   })
 
   test('feed shows load more when items exceed page', async ({ authenticatedPage }) => {

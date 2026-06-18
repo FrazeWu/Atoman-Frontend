@@ -7,7 +7,7 @@
       <PSidebarItem
         to="/"
         :index="1"
-        icon-char="播"
+        :icon="Mic"
         exact
       >
         播客大厅
@@ -16,7 +16,7 @@
         v-if="canPublishPodcast"
         to="/editor"
         :index="2"
-        icon-char="发"
+        :icon="PlusCircle"
       >
         发布单集
       </PSidebarItem>
@@ -29,6 +29,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { Mic, PlusCircle } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import PSidebar from '@/components/ui/PSidebar.vue'

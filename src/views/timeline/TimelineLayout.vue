@@ -8,7 +8,7 @@
       <PSidebarItem
         to="/"
         :index="1"
-        icon-char="轴"
+        :icon="Clock"
         exact
       >
         时间轴首页
@@ -16,7 +16,7 @@
       <PSidebarItem
         to="/persons"
         :index="2"
-        icon-char="人"
+        :icon="Users"
       >
         人物志
       </PSidebarItem>
@@ -29,6 +29,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Clock, Users } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'

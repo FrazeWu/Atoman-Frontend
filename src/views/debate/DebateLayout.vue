@@ -8,7 +8,7 @@
       <PSidebarItem
         to="/"
         :index="1"
-        icon-char="全"
+        :icon="MessageSquare"
         :active="!$route.query.status"
         exact
       >
@@ -17,7 +17,7 @@
       <PSidebarItem
         to="/?status=open"
         :index="2"
-        icon-char="行"
+        :icon="Play"
         :active="$route.query.status === 'open'"
       >
         进行中
@@ -25,7 +25,7 @@
       <PSidebarItem
         to="/?status=concluded"
         :index="3"
-        icon-char="结"
+        :icon="CheckCircle"
         :active="$route.query.status === 'concluded'"
       >
         已结题
@@ -33,7 +33,7 @@
       <PSidebarItem
         to="/?status=archived"
         :index="4"
-        icon-char="档"
+        :icon="Archive"
         :active="$route.query.status === 'archived'"
       >
         已归档
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { MessageSquare, Play, CheckCircle, Archive } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'

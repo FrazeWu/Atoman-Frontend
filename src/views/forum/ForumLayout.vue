@@ -1,6 +1,7 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <PSidebar
+      class="forum-sidebar"
       collapsible
       v-model:collapsed="sidebarCollapsed"
       storage-key="atoman.forum.sidebar.collapsed"
@@ -9,7 +10,7 @@
       <PSidebarItem
         to="/"
         index="1"
-        icon-char="全"
+        :icon="MessageSquare"
         :active="!$route.query.category_id && !$route.query.tag"
         exact
       >
@@ -23,7 +24,7 @@
       <PSidebarItem
         v-for="cat in forumStore.categories"
         :key="cat.id"
-        :icon-char="cat.name.charAt(0)"
+        :icon="Folder"
         :active="$route.query.category_id === String(cat.id)"
         @click="selectCategory(cat.id)"
       >
@@ -72,6 +73,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { MessageSquare, Folder } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useForumStore } from '@/stores/forum'
 import PSidebar from '@/components/ui/PSidebar.vue'

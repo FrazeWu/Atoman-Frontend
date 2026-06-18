@@ -1,6 +1,6 @@
 <template>
-  <header class="topbar">
-    <div class="topbar-inner">
+  <header class="topbar" :class="{ 'topbar--auth': isAuthRoute }">
+    <div class="topbar-inner" :class="{ 'topbar-inner--auth': isAuthRoute }">
       <a href="/" class="brand-link" @click.prevent="handleBrandClick">
         <div class="logo-box">
           <div class="logo-inner"></div>
@@ -11,7 +11,7 @@
         </span>
       </a>
 
-      <nav class="nav" data-onboarding-anchor="modules-nav">
+      <nav v-if="!isAuthRoute" class="nav" data-onboarding-anchor="modules-nav">
         <a
           v-for="room in navRooms"
           :key="room.key"
@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -44,6 +44,9 @@ import { isRoomRouteActive, moduleNavOrder, moduleRooms, type ModuleRoomKey } fr
 import { resolveSiteContext } from '@/router/siteContext'
 
 const router = useRouter()
+const route = useRoute()
+
+const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
 const { navigateTo } = useModuleNav()
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
@@ -72,9 +75,11 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--a-color-paper);
-  border-bottom: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
   height: 56px;
+}
+.topbar--auth {
+  background: var(--a-color-bg);
 }
 .topbar-inner {
   padding: 0 24px;
@@ -83,37 +88,44 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   align-items: center;
   gap: 2rem;
 }
+.topbar-inner--auth {
+  flex: 1;
+  max-width: 1120px;
+  margin: 0 auto;
+  justify-content: space-between;
+}
 .brand-link {
   display: flex;
   align-items: center;
   gap: 12px;
   text-decoration: none;
-  color: #000;
+  color: var(--a-color-fg);
   flex-shrink: 0;
 }
 .logo-box {
   width: 32px;
   height: 32px;
-  background-color: black;
+  background-color: var(--a-color-fg);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--a-shadow-paper-sm);
 }
 .logo-inner {
   width: 16px;
   height: 16px;
-  border: 2px solid white;
+  border: 2px solid var(--a-color-bg);
   transform: rotate(45deg);
-}
-.logo-copy {
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
 }
 .logo-text {
   font-weight: 900;
   font-size: 1.2rem;
   letter-spacing: -0.02em;
+}
+.logo-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
 }
 .logo-version {
   align-self: flex-end;
@@ -121,57 +133,59 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.1em;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted-soft);
   text-transform: uppercase;
 }
 .nav {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.5rem;
   flex: 1;
 }
 .nav-link {
   display: flex;
   align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   text-decoration: none;
-  transition: color 0.25s ease;
-  position: relative;
-  padding: 0.25rem 0;
+  background: transparent;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
-.nav-link-name { font-weight: var(--a-font-weight-strong, 700); }
-.nav-link:hover { color: var(--a-color-ink); }
-.nav-link.active { color: var(--a-color-ink); }
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 1.5px;
-  background-color: var(--a-color-ink);
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+.nav-link-name { font-weight: 900; }
+.nav-link:hover {
+  color: var(--a-color-fg);
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
+  text-decoration: none;
 }
-
-.nav-link:hover::after,
-.nav-link.active::after {
-  transform: scaleX(1);
-  transform-origin: left;
+.nav-link.active {
+  color: var(--a-color-fg);
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
 }
-.nav-sep { color: #d1d5db; }
+.nav-sep { color: var(--a-color-line); }
 .nav-link-sm {
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.625rem;
+  border-radius: 0.625rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #9ca3af;
+  color: var(--a-color-muted-soft);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
-.nav-link-sm:hover { color: #000; text-decoration: underline; }
+.nav-link-sm:hover {
+  color: var(--a-color-fg);
+  background: var(--a-color-paper-wash);
+  box-shadow: var(--a-shadow-paper-sm);
+  text-decoration: none;
+}
 .nav-right {
   display: flex;
   align-items: center;
@@ -186,9 +200,12 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   }
 
   .nav {
-    gap: 1rem;
+    gap: 0.25rem;
     overflow-x: auto;
   }
 
+  .nav-link {
+    padding: 0 0.625rem;
+  }
 }
 </style>

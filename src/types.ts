@@ -328,6 +328,16 @@ export interface FeedSource {
   created_at: string
 }
 
+export interface FeedExploreSource {
+  id: string
+  title: string
+  rssUrl?: string
+  subscriptionCount: number
+  recentItemCount: number
+  lastPublishedAt?: string
+  subscribed: boolean
+}
+
 export interface SubscriptionGroup {
   id: string
   user_id: string

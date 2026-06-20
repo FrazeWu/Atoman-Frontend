@@ -4,11 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 
-const { routeQuery, routerPush } = vi.hoisted(() => ({
-  routeQuery: {} as Record<string, string | undefined>,
-  routerPush: vi.fn(),
-}))
+const routeQuery = {} as Record<string, string | undefined>
+const routerPush = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: routeQuery }),
@@ -79,5 +78,36 @@ describe('FeedRecommendedView', () => {
 
     const pageButtons = wrapper.findAll('.feed-page-number').map((button) => button.text())
     expect(pageButtons).toContain('2')
+  })
+
+  it('fetches channel explore data when mode=channels', async () => {
+    Object.assign(routeQuery, { mode: 'channels' })
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = []
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/explore/sources')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'source-1',
+            title: 'Source One',
+            rss_url: 'https://example.com/rss.xml',
+            subscription_count: 3,
+            recent_item_count: 8,
+            last_published_at: '2026-06-19T00:00:00Z',
+            subscribed: false,
+          }],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } }), { status: 200 })
+    })
+
+    mount(FeedRecommendedView, { global: { stubs: { PButton: true, PEmpty: true, PPageHeader: { template: '<header><slot /><slot name="action" /></header>' }, PTab: true, PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' }, PBadge: true, PClip: true, PShortcutHints: true, FeedArticleSheet: true, FeedSourceArticlesSheet: true } } })
+    await flushPromises()
+
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
   })
 })

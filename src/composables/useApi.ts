@@ -169,7 +169,9 @@ export function useApi() {
       subscriptions: `${apiUrl}/feed/subscriptions`,
       subscription: (id: number) => `${apiUrl}/feed/subscriptions/${id}`,
       timeline: `${apiUrl}/feed/timeline`,
+      sourceTimeline: `${apiUrl}/feed/timeline`,
       explore: `${apiUrl}/feed/explore`,
+      exploreSources: `${apiUrl}/feed/explore/sources`,
       rss: (username: string) => `${apiUrl}/feed/rss/${username}`,
     },
 

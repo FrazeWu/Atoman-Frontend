@@ -244,23 +244,36 @@ const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
   subscribed: Boolean(source.subscribed),
 })
 
+const mapExploreSourceToArticleSource = (source: FeedExploreSource): FeedArticleSource => withSubscriptionState({
+  type: 'external_rss',
+  id: source.id,
+  title: source.title,
+  rssUrl: source.rssUrl,
+  subscribed: source.subscribed,
+})
+
 const openSourceArticle = (item: TimelineItem) => {
   selectedArticle.value = item
   showArticleSheet.value = true
 }
 
 const fetchSourceArticles = async (source: FeedArticleSource) => {
-  if (!source.subscriptionId) {
+  if (!source.id && !source.subscriptionId) {
     sourceArticles.value = []
     return
   }
 
   sourceArticlesLoading.value = true
   try {
-    const params = buildFeedTimelineQuery({
-      limit: 100,
-      sourceId: source.subscriptionId,
-    })
+    const params = source.id
+      ? new URLSearchParams({
+        limit: '100',
+        feed_source_id: source.id,
+      })
+      : buildFeedTimelineQuery({
+        limit: 100,
+        sourceId: source.subscriptionId,
+      })
     const headers = authStore.isAuthenticated ? authHeaders() : {}
     const response = await fetch(`${api.url}/feed/timeline?${params.toString()}`, { headers })
     if (response.ok) {
@@ -284,13 +297,11 @@ const openSourceSheet = async (source: FeedArticleSource) => {
 }
 
 const openExploreSource = async (source: FeedExploreSource) => {
-  await openSourceSheet({
-    type: 'external_rss',
-    id: source.id,
-    title: source.title,
-    rssUrl: source.rssUrl,
-    subscribed: source.subscribed,
-  })
+  await openChannelSourceSheet(source)
+}
+
+const openChannelSourceSheet = async (source: FeedExploreSource) => {
+  await openSourceSheet(mapExploreSourceToArticleSource(source))
 }
 
 const openFeedItemSourceSheet = async (item: FeedItem) => {

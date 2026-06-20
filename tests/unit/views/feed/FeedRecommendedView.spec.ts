@@ -244,7 +244,7 @@ describe('FeedRecommendedView', () => {
 
     expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('来源文章')
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('source_id=sub-1'))).toBe(true)
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('feed_source_id=source-1'))).toBe(true)
   })
 
   it('fetches channel explore data when mode=channels', async () => {
@@ -297,6 +297,88 @@ describe('FeedRecommendedView', () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
     expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Source One')
+  })
+
+  it('opens the source drawer for unsubscribed channel cards using feed_source_id', async () => {
+    Object.assign(routeQuery, { mode: 'channels' })
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/explore/sources')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'source-1',
+            title: 'Source One',
+            rss_url: 'https://example.com/rss.xml',
+            subscription_count: 3,
+            recent_item_count: 8,
+            last_published_at: '2026-06-19T00:00:00Z',
+            subscribed: false,
+          }],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/timeline?')) {
+        return new Response(JSON.stringify({
+          data: [{
+            type: 'feed_item',
+            feed_item: {
+              id: 'feed-item-1',
+              feed_source_id: 'source-1',
+              feed_source: { id: 'source-1', title: 'Source One', rss_url: 'https://example.com/rss.xml' },
+              guid: 'feed-item-1',
+              title: 'Channel Drawer Article',
+              link: 'https://example.com/source-item',
+              summary: 'Drawer summary',
+              author: 'Author',
+              published_at: '2026-06-15T00:00:00Z',
+              fetched_at: '2026-06-15T00:00:00Z',
+            },
+            published_at: '2026-06-15T00:00:00Z',
+            is_read: false,
+          }],
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [],
+        meta: { page: 1, page_size: 20, total: 0, has_more: false },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PPress: {
+            props: ['label'],
+            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+          PTab: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: {
+            name: 'FeedSourceArticlesSheet',
+            props: ['show', 'source', 'items', 'loading', 'subscribeBusy'],
+            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><div data-test="source-subscription-id">{{ source?.subscriptionId || \"\" }}</div><article v-for="item in items" :key="item.feed_item?.id">{{ item.feed_item?.title }}</article></section>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-test="channel-card"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('feed_source_id=source-1'))).toBe(true)
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('source_id=sub-1'))).toBe(false)
+    expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
+    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('Channel Drawer Article')
+    expect(wrapper.get('[data-test="source-subscription-id"]').text()).toBe('')
   })
 
   it('switching to channel mode syncs the query string', async () => {

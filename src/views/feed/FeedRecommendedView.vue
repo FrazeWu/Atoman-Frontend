@@ -1,78 +1,60 @@
 <template>
-  <div ref="pageRootRef" class="a-page-xl feed-subpage">
+  <div ref="pageRootRef" class="a-page-xl feed-page">
     <PPageHeader title="探索" accent sub="发现更多有趣的订阅内容">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
-          <PTab label="随机" :active="sort === 'random'" @click="changeSort('random')" />
-          <PTab label="热门" :active="sort === 'popular'" @click="changeSort('popular')" />
-          <div style="width:1.5rem"></div>
-          <PButton to="/" outline size="sm">返回订阅</PButton>
+          <PPress
+            label="随机"
+            :variant="sort === 'random' ? 'primary' : 'secondary'"
+            @click="changeSort('random')"
+          />
+          <PPress
+            label="热门"
+            :variant="sort === 'popular' ? 'primary' : 'secondary'"
+            @click="changeSort('popular')"
+          />
+          <PPress to="/" variant="secondary" label="返回订阅" />
         </div>
       </template>
     </PPageHeader>
 
-    <div v-if="loading" class="feed-loading">
-      <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
-    </div>
+    <FeedSourceArticlesSheet
+      :show="showSourceSheet"
+      :source="selectedSource"
+      :items="sourceArticles"
+      :loading="sourceArticlesLoading"
+      :subscribe-busy="sourceSubscribeBusy"
+      @close="showSourceSheet = false"
+      @subscribe="subscribeSelectedSource"
+      @open-article="openSourceArticle"
+    />
 
-    <PEmpty v-else-if="!items.length" text="暂无发现内容" />
+    <section class="feed-content">
+      <div class="feed-actions">
+        <div style="width:100%"></div>
+      </div>
 
-    <div v-else class="feed-timeline">
-      <template v-for="(item, index) in items" :key="itemKey(item)">
-        <PEntry
-          v-if="item.type === 'feed_item' && item.feed_item"
-          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-          :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
-          @click="openArticleSheet(item, index)"
-          :title="item.feed_item.title"
-          :summary="stripHtml(item.feed_item.summary || '')"
-        >
-          <template #visual>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PBadge type="external" fill>外部</PBadge>
-              <PBadge type="external">{{ getExternalBadge(item.feed_item) }}</PBadge>
-            </div>
-          </template>
-
-          <template #meta>
-            <span class="a-label a-muted">{{ item.feed_item.feed_source?.title || item.feed_item.author || 'RSS' }}</span>
-            <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.feed_item.published_at) }}</span>
-          </template>
-
-          <template #actions>
-            <PClip
-              v-if="authStore.isAuthenticated"
-              :active="starredIds.has(item.feed_item.id)"
-              :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
-              @click="toggleStar(item.feed_item.id)"
-            />
-            <PClip
-              v-if="authStore.isAuthenticated"
-              :active="readingListIds.has(item.feed_item.id)"
-              :label="readingListIds.has(item.feed_item.id) ? '移除' : '稍后阅读'"
-              @click="toggleReadingList(item.feed_item.id)"
-            />
-            <PClip
-              v-if="item.feed_item.enclosure_url"
-              :label="isPodcastPlaying(item.feed_item) ? '■ 播放中' : '▶ 播放播客'"
-              @click.stop="playPodcast(item.feed_item)"
-            />
-            <div style="flex:1"></div>
-            <a :href="item.feed_item.link" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
-              ↗ 原文
-            </a>
-          </template>
-        </PEntry>
-      </template>
-
-      <FeedTimelineFooter
+      <ArticleExplorePanel
+        :items="items"
+        :loading="loading"
+        :total-items="totalItems"
         :page="page"
         :page-size="pageLimit"
-        :total="totalItems"
-        :loading="loading"
+        :selected-article="selectedArticle"
+        :show-article-sheet="showArticleSheet"
+        :focused-index="focusedIndex"
+        :starred-ids="starredIds"
+        :reading-list-ids="readingListIds"
+        :feed-item-source="feedItemSource"
+        :source-trigger-label="sourceTriggerLabel"
+        @open-article="openArticleSheet"
+        @open-source="openFeedItemSourceSheet"
+        @toggle-star="toggleStar"
+        @toggle-reading-list="toggleReadingList"
         @change-page="changePage"
+        @play-podcast="playPodcast"
       />
-    </div>
+    </section>
 
     <PShortcutHints :hints="shortcutHints" />
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
@@ -82,23 +64,20 @@
 <script setup lang="ts">
 import { nextTick, ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PButton from '@/components/ui/PButton.vue'
-import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PTab from '@/components/ui/PTab.vue'
-import PEntry from '@/components/ui/PEntry.vue'
-import PBadge from '@/components/ui/PBadge.vue'
-import PClip from '@/components/ui/PClip.vue'
+import PPress from '@/components/ui/PPress.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
+import ArticleExplorePanel from '@/components/feed/ArticleExplorePanel.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
-import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
+import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import type { TimelineItem, FeedItem } from '@/types'
+import type { FeedArticleSource, FeedItem, TimelineItem } from '@/types'
+import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
 const route = useRoute()
 const router = useRouter()
@@ -120,12 +99,18 @@ const sort = ref<'random' | 'popular'>('random')
 const page = ref(1)
 const totalItems = ref(0)
 const pageLimit = 20
+const subscriptions = computed(() => feedStore.subscriptions)
 const pageRootRef = ref<HTMLElement | null>(null)
 const starredIds = computed(() => feedStore.starredItemIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
+const showSourceSheet = ref(false)
+const selectedSource = ref<FeedArticleSource | null>(null)
+const sourceArticles = ref<TimelineItem[]>([])
+const sourceArticlesLoading = ref(false)
+const sourceSubscribeBusy = ref(false)
 
 const shortcutHints = [
   { key: 'H', label: '聚焦侧边栏' },
@@ -174,12 +159,110 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
   showArticleSheet.value = true
 }
 
-const getExternalBadge = (item: FeedItem) => {
-  if (item.enclosure_url) {
-    if (item.enclosure_type?.startsWith('audio/')) return '播客'
-    if (item.enclosure_type?.startsWith('video/')) return '视频'
+const findSubscriptionForSource = (source: FeedArticleSource) => {
+  if (source.type === 'internal_channel') {
+    return subscriptions.value.find((sub) => (
+      sub.feed_source?.source_type === 'internal_channel'
+      && sub.feed_source.source_id === source.id
+    ))
   }
-  return '博客'
+
+  if (source.type === 'external_rss') {
+    return subscriptions.value.find((sub) => (
+      sub.feed_source_id === source.id
+      || sub.feed_source?.id === source.id
+      || (!!source.rssUrl && sub.feed_source?.rss_url === source.rssUrl)
+    ))
+  }
+
+  return undefined
+}
+
+const withSubscriptionState = (source: FeedArticleSource): FeedArticleSource => {
+  const subscription = findSubscriptionForSource(source)
+  return {
+    ...source,
+    subscriptionId: subscription?.id || source.subscriptionId,
+    subscribed: Boolean(subscription || source.subscribed),
+  }
+}
+
+const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
+  const sourceId = item.feed_source?.id || item.feed_source_id
+  if (!sourceId) return null
+  return withSubscriptionState({
+    type: 'external_rss',
+    id: sourceId,
+    title: item.feed_source?.title || 'RSS',
+    rssUrl: item.feed_source?.rss_url,
+    subscribed: false,
+  })
+}
+
+const sourceTriggerLabel = (source: FeedArticleSource) => `查看 ${source.title} 的所有文章`
+
+const openSourceArticle = (item: TimelineItem) => {
+  selectedArticle.value = item
+  showArticleSheet.value = true
+}
+
+const fetchSourceArticles = async (source: FeedArticleSource) => {
+  if (!source.subscriptionId) {
+    sourceArticles.value = []
+    return
+  }
+
+  sourceArticlesLoading.value = true
+  try {
+    const params = buildFeedTimelineQuery({
+      limit: 100,
+      sourceId: source.subscriptionId,
+    })
+    const headers = authStore.isAuthenticated ? authHeaders() : {}
+    const response = await fetch(`${api.url}/feed/timeline?${params.toString()}`, { headers })
+    if (response.ok) {
+      const data = await response.json()
+      sourceArticles.value = data.data || []
+    }
+  } catch (error) {
+    console.error(error)
+    sourceArticles.value = []
+  } finally {
+    sourceArticlesLoading.value = false
+  }
+}
+
+const openSourceSheet = async (source: FeedArticleSource) => {
+  selectedSource.value = withSubscriptionState(source)
+  sourceArticles.value = []
+  showSourceSheet.value = true
+  showArticleSheet.value = false
+  await fetchSourceArticles(selectedSource.value)
+}
+
+const openFeedItemSourceSheet = async (item: FeedItem) => {
+  const source = feedItemSource(item)
+  if (!source) return
+  await openSourceSheet(source)
+}
+
+const subscribeSelectedSource = async () => {
+  if (!selectedSource.value || selectedSource.value.subscribed || !authStore.isAuthenticated) return
+
+  sourceSubscribeBusy.value = true
+  try {
+    let success = false
+    if (selectedSource.value.type === 'external_rss' && selectedSource.value.rssUrl) {
+      success = await feedStore.subscribeToRSS(selectedSource.value.rssUrl, selectedSource.value.title)
+    }
+    if (!success) return
+
+    await feedStore.fetchSubscriptions()
+    selectedSource.value = withSubscriptionState(selectedSource.value)
+    await fetchSourceArticles(selectedSource.value)
+  } finally {
+    sourceSubscribeBusy.value = false
+  }
 }
 
 const toggleStar = async (id: string) => {
@@ -203,18 +286,6 @@ const playPodcast = (feedItem: FeedItem) => {
 
 const isPodcastPlaying = (feedItem: FeedItem) =>
   playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
-
-const itemKey = (item: TimelineItem) => {
-  return `explore-${item.feed_item?.id}`
-}
-
-const formatDate = (date?: string) => {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
-}
-
-const stripHtml = (html: string) =>
-  html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
 
 const fetchExplore = async () => {
   loading.value = true
@@ -279,9 +350,21 @@ onMounted(() => {
   if (authStore.isAuthenticated) {
     feedStore.fetchStarredIds()
     feedStore.fetchReadingListIds()
+    void feedStore.fetchSubscriptions()
   }
   window.addEventListener('keydown', handleKeyDownGlobal)
 })
+
+watch(
+  [() => authStore.isAuthenticated, () => authStore.token],
+  ([isAuthenticated, token], [previousAuthenticated, previousToken]) => {
+    if (!isAuthenticated) return
+    if (previousAuthenticated !== isAuthenticated || previousToken !== token) {
+      void feedStore.fetchSubscriptions()
+    }
+  },
+  { immediate: true },
+)
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDownGlobal)
@@ -289,40 +372,20 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.feed-subpage {
+.feed-page {
   padding-bottom: 12rem;
 }
 
-.feed-loading,
-.feed-timeline {
-  display: flex;
-  flex-direction: column;
+.feed-content {
+  display: grid;
   gap: 1rem;
 }
 
-.feed-skeleton {
-  height: 7rem;
+.feed-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 2.5rem;
 }
 
-.feed-item-external-link {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  font-family: var(--a-font-meta);
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: var(--a-color-fg);
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-line-soft);
-  text-decoration: none;
-  transition: all 0.15s;
-}
-
-.feed-item-external-link:hover {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
-  transform: translateY(-2px);
-  box-shadow: var(--a-shadow-paper-sm);
-}
 </style>

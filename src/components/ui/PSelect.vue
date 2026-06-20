@@ -1,6 +1,9 @@
 <template>
   <div class="p-field">
-    <label v-if="label" class="p-field-label">{{ label }}</label>
+    <label v-if="label" class="p-field-label">
+      <span class="p-field-dot" aria-hidden="true" />
+      {{ label }}
+    </label>
     <div ref="rootRef" class="p-select-root">
       <button
         type="button"
@@ -99,3 +102,117 @@ const handleClickOutside = (event: MouseEvent) => {
 onMounted(() => document.addEventListener('click', handleClickOutside))
 onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 </script>
+
+<style scoped>
+.p-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.p-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.p-field-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  flex-shrink: 0;
+}
+
+.p-select-root {
+  position: relative;
+}
+
+.p-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0 0.72rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  background: transparent;
+  color: var(--a-color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.p-select-trigger:focus-visible,
+.p-select-trigger--open {
+  outline: none;
+  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 58%, transparent);
+}
+
+.p-select-trigger--error {
+  border-bottom-color: var(--a-color-danger, #ef4444);
+}
+
+.p-select-value--placeholder,
+.p-select-chevron {
+  color: var(--a-color-ink-soft);
+}
+
+.p-select-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.65rem 1rem;
+  border-radius: 0px; /* Straight corner */
+  background: #ffffff; /* Pure white */
+  border: 1px solid var(--a-color-line-soft); /* 1px border */
+  box-shadow: none; /* No shadow */
+}
+
+.p-select-option {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0.45rem;
+  padding: 0.65rem 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+  background: transparent;
+  color: var(--a-color-ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.p-select-option:last-child {
+  border-bottom: 0;
+}
+
+.p-select-marker {
+  color: color-mix(in srgb, var(--a-color-ink) 75%, #8b5e3c 25%);
+}
+
+.p-select-empty,
+.p-field-error,
+.p-field-hint {
+  font-size: 0.75rem;
+}
+
+.p-field-error {
+  color: var(--a-color-danger, #ef4444);
+}
+
+.p-field-hint,
+.p-select-empty {
+  color: var(--a-color-ink-soft);
+}
+</style>

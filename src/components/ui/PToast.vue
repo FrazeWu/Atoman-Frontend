@@ -3,6 +3,7 @@
     <div
       v-if="visible"
       class="p-toast"
+      :class="type ? `p-toast--${type}` : 'p-toast--info'"
       :style="{ top: `${resolvedTop}px` }"
       role="status"
       @mouseenter="clearTimer"
@@ -24,12 +25,14 @@ const props = withDefaults(defineProps<{
   message: string
   duration?: number
   top?: number
+  type?: 'success' | 'danger' | 'error' | 'info'
 }>(), {
   modelValue: undefined,
   show: undefined,
   title: '',
   duration: 1800,
   top: 32,
+  type: 'info',
 })
 
 const emit = defineEmits<{
@@ -78,12 +81,29 @@ onUnmounted(clearTimer)
   min-width: 120px;
   max-width: 80vw;
   transform: translateX(-50%);
-  border: 1px solid var(--a-color-line);
-  background: var(--a-color-paper);
-  box-shadow: var(--a-shadow-paper-sm);
-  color: var(--a-color-ink);
-  padding: 12px 14px;
+  border-radius: 0px; /* Straight corner */
+  padding: 10px 18px;
   text-align: center;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.12); /* Hard shadow */
+}
+
+.p-toast--info {
+  background: #ffffff;
+  color: var(--a-color-ink);
+  border: 1px solid var(--a-color-line);
+}
+
+.p-toast--success {
+  background: #f0fdf4; /* Morandi pale green */
+  color: #166534; /* Dark green */
+  border: 1px solid #166534;
+}
+
+.p-toast--danger,
+.p-toast--error {
+  background: #fef2f2; /* Morandi pale red */
+  color: #991b1b; /* Dark red */
+  border: 1px solid #991b1b;
 }
 
 .fade-enter-active,

@@ -440,6 +440,7 @@ body {
   border: var(--a-border);
   box-shadow: var(--a-shadow-modal);
   z-index: var(--a-z-modal);
+  border-radius: 0px; /* Straight corner */
 }
 .a-modal-sm,
 .p-modal-sm { max-width: 24rem; }
@@ -515,6 +516,7 @@ body {
   border: var(--a-border);
   box-shadow: var(--a-shadow-dropdown);
   z-index: var(--a-z-dropdown);
+  border-radius: 0px; /* Straight corner */
 }
 .a-dropdown-panel--left,
 .a-popover-panel--left,
@@ -657,6 +659,7 @@ body {
 /* ─── Sidebar Page Layout ─────────────────────────────── */
 .has-sidebar {
   --a-sidebar-width: 16rem;
+  --a-mobile-nav-offset: 0px;
 }
 
 .a-module-layout {
@@ -790,7 +793,11 @@ body {
   min-width: 0;
   max-width: 80rem;
   margin: 0 auto;
-  padding: 2.5rem 2rem 12rem;
+  padding: 2.5rem 2rem calc(12rem + var(--a-mobile-nav-offset));
+}
+
+.mobile-bottom-nav {
+  display: none;
 }
 
 /* Reset direct child views layout inside sidebar pages */
@@ -807,9 +814,9 @@ body {
   min-height: auto !important;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
   .has-sidebar {
-    --a-sidebar-width: 14rem;
+    --a-sidebar-width: 4.5rem;
   }
   .a-module-layout {
     gap: 1.5rem;
@@ -817,18 +824,31 @@ body {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .has-sidebar {
     --a-sidebar-width: 0px;
+    --a-mobile-nav-offset: 5.5rem;
   }
   .a-module-layout {
     display: block;
+    min-height: auto;
     padding: 0;
   }
+  .p-sidebar,
   .a-sidebar {
     display: none;
   }
   .a-main-content {
-    padding: 1.5rem 1rem 8rem;
+    max-width: none;
+    padding: 1.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  }
+  .mobile-bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
   }
 }

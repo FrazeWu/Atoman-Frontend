@@ -31,15 +31,16 @@
 
   --a-radius-none: 0px;
 
+  /* Hard paper stack shadows */
   --a-shadow-button: none;
-  --a-shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.04);
-  --a-shadow-modal: 0 12px 36px rgba(0, 0, 0, 0.08);
+  --a-shadow-dropdown: 3px 3px 0px rgba(0, 0, 0, 0.15);
+  --a-shadow-modal: 4px 4px 0px rgba(0, 0, 0, 0.15);
   --a-shadow-pressed: none;
   --a-shadow-paper-sm: none;
   --a-shadow-paper-md: none;
   --a-shadow-paper-lg: none;
-  --a-shadow-hover: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --a-shadow-active: 4px 4px 0 rgba(15, 23, 42, 0.14);
+  --a-shadow-hover: none;
+  --a-shadow-active: none;
 
   --a-space-1: 0.25rem;
   --a-space-2: 0.5rem;

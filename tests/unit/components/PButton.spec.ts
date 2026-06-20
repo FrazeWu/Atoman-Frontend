@@ -50,4 +50,27 @@ describe('PButton', () => {
     expect(wrapper.text()).toContain('写文章')
     expect(wrapper.findComponent({ name: 'RouterLink' }).exists()).toBe(true)
   })
+
+  it('renders paper button styling hooks', () => {
+    const wrapper = mount(PButton, {
+      props: {
+        label: '保存',
+        variant: 'secondary',
+      },
+    })
+
+    expect(wrapper.find('.p-button-dot').exists()).toBe(false)
+    expect(wrapper.get('.p-button').classes()).toContain('p-button--secondary')
+  })
+
+  it('renders dot when dot prop is true', () => {
+    const wrapper = mount(PButton, {
+      props: {
+        label: '保存',
+        dot: true,
+      },
+    })
+
+    expect(wrapper.find('.p-button-dot').exists()).toBe(true)
+  })
 })

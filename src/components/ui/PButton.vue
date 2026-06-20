@@ -6,6 +6,7 @@
     v-bind="componentAttrs"
     @click="handleClick"
   >
+    <span v-if="dot" class="p-button-dot" aria-hidden="true" />
     <slot>{{ computedLabel }}</slot>
   </component>
 </template>
@@ -29,6 +30,7 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   loading?: boolean
   loadingText?: string
+  dot?: boolean
 }>(), {
   tag: 'button',
   to: undefined,
@@ -44,6 +46,7 @@ const props = withDefaults(defineProps<{
   disabled: false,
   loading: false,
   loadingText: '处理中...',
+  dot: false,
 })
 
 const emit = defineEmits<{
@@ -115,6 +118,7 @@ const handleClick = (event: MouseEvent) => {
   justify-content: center;
   gap: 0.5rem;
   border: 1px solid var(--a-color-ink);
+  border-radius: var(--a-radius-none, 0px);
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   cursor: pointer;
@@ -126,6 +130,14 @@ const handleClick = (event: MouseEvent) => {
   text-transform: uppercase;
   transition: transform 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
   white-space: nowrap;
+}
+
+.p-button-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  flex-shrink: 0;
 }
 
 .p-button--sm {
@@ -153,14 +165,16 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button--secondary {
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
-  border-color: var(--a-color-line);
+  border: 0;
+  border-bottom: 2px solid var(--a-color-line);
+  background: transparent;
+  color: var(--a-color-ink-soft);
 }
 
 .p-button--secondary:hover:not(.p-button--disabled) {
-  background: var(--a-color-paper-wash);
-  border-color: var(--a-color-line-soft);
+  background: #f4ece1;
+  color: #6b4f3a;
+  border-bottom-color: #6b4f3a;
 }
 
 .p-button--ghost {
@@ -191,5 +205,6 @@ const handleClick = (event: MouseEvent) => {
 .p-button--disabled {
   cursor: not-allowed;
   opacity: 0.5;
+  text-decoration: line-through;
 }
 </style>

@@ -21,9 +21,8 @@ defineEmits(['click'])
   background: var(--a-color-ink);
   border: 1px solid var(--a-color-ink);
   border-right: none;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-  box-shadow: -4px 4px 15px rgba(0, 0, 0, 0.12);
+  border-radius: 0px; /* Straight corner */
+  box-shadow: -2px 2px 0px rgba(0, 0, 0, 0.15); /* Hard shadow */
   z-index: 1005;
   cursor: pointer;
   display: flex;
@@ -32,8 +31,9 @@ defineEmits(['click'])
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 .discussion-fab:hover {
-  transform: translate(-4px, -50%);
-  box-shadow: -10px 10px 30px rgba(0, 0, 0, 0.2);
+  transform: translate(-4px, -50%); /* Displaces left */
+  background: #6b4f3a; /* Walnut brown hover */
+  border-color: #6b4f3a;
 }
 .fab-label {
   writing-mode: vertical-rl;

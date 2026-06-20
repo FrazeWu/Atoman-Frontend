@@ -147,25 +147,20 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   align-items: center;
   min-height: 2.25rem;
   padding: 0 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0px; /* Straight corner block */
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--a-color-muted);
   text-decoration: none;
   background: transparent;
-  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 .nav-link-name { font-weight: 900; }
-.nav-link:hover {
-  color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
-  text-decoration: none;
-}
+.nav-link:hover,
 .nav-link.active {
   color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
+  background: var(--a-color-paper-wash); /* Flat wash block */
+  text-decoration: none;
 }
 .nav-sep { color: var(--a-color-line); }
 .nav-link-sm {
@@ -173,17 +168,16 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   display: inline-flex;
   align-items: center;
   padding: 0 0.625rem;
-  border-radius: 0.625rem;
+  border-radius: 0px; /* Straight corner */
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--a-color-muted-soft);
   text-decoration: none;
-  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 .nav-link-sm:hover {
   color: var(--a-color-fg);
   background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
   text-decoration: none;
 }
 .nav-right {

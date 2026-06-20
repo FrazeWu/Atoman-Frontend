@@ -82,7 +82,6 @@ onMounted(() => {
 }
 
 .p-sidebar-collapse-btn {
-  /* Redesign: borderless collapse button */
   position: absolute;
   top: 1.25rem;
   left: 1.25rem;
@@ -95,14 +94,13 @@ onMounted(() => {
   background: transparent;
   color: var(--a-color-fg);
   cursor: pointer;
-  border-radius: 0.875rem;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 0px; /* Straight corner */
+  transition: background-color 0.2s ease;
   z-index: 10;
 }
 
 .p-sidebar-collapse-btn:hover {
   background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
 }
 
 .p-sidebar-nav {

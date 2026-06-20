@@ -12,7 +12,7 @@ const cssBlock = (css: string, selector: string) => {
 }
 
 describe('borderless white UI contract', () => {
-  it('keeps the app topbar borderless and uses non-moving nav feedback', () => {
+  it('keeps the app topbar borderless and uses non-moving nav feedback with straight corners', () => {
     const source = read('src/components/system/AppTopbar.vue')
 
     expect(source).not.toMatch(/border-bottom:\s*1px/)
@@ -20,15 +20,26 @@ describe('borderless white UI contract', () => {
     expect(source).not.toMatch(/transform:\s*translate/)
     expect(source).toContain('box-shadow')
     expect(source).toContain('background: var(--a-color-paper-wash)')
+    expect(source).toContain('border-radius: 0px')
   })
 
-  it('keeps sidebar focus visible without an inset divider line', () => {
+  it('keeps sidebar focus visible with a flat wash background and left ink border line', () => {
     const source = read('src/components/ui/PSidebarItem.vue')
 
     expect(source).not.toContain('box-shadow: inset 4px 0 0')
-    expect(source).not.toMatch(/border-left/)
+    expect(source).toContain('border-left: 3px solid transparent')
+    expect(source).toContain('border-left-color: var(--a-color-ink)')
     expect(source).toContain('background: var(--a-color-paper-wash)')
-    expect(source).toContain('box-shadow: var(--a-shadow-paper-sm)')
+    expect(source).not.toContain('box-shadow: var(--a-shadow-paper-sm)')
+  })
+
+  it('enforces borderless/bottom-border-only tabs and removes the old active indicator block', () => {
+    const source = read('src/components/ui/PTab.vue')
+
+    expect(source).toContain('border: none')
+    expect(source).toContain('border-bottom: 2px solid transparent')
+    expect(source).toContain('border-bottom-color: var(--a-color-ink)')
+    expect(source).toContain('display: none')
   })
 
   it('uses shadows for global card hover without hover movement', () => {

@@ -51,4 +51,25 @@ describe('borderless white UI contract', () => {
     const dividerBlock = cssBlock(css, '.a-sidebar-divider,\n.p-sidebar-divider')
     expect(dividerBlock).not.toMatch(/border-bottom\s*:/)
   })
+
+  it('enforces flat white UI card and surface styling rules', () => {
+    const pCardSource = read('src/components/ui/PCard.vue')
+    const pSurfaceSource = read('src/components/ui/PSurface.vue')
+    const pVideoCardSource = read('src/components/shared/PVideoCard.vue')
+
+    // PCard contract
+    expect(pCardSource).toContain('border: none;')
+    expect(pCardSource).toContain('border-bottom: 1.5px dashed var(--a-color-line-soft);')
+    expect(pCardSource).toContain('border-left: 3px solid transparent;')
+    expect(pCardSource).toContain('border-radius: 8px;')
+    expect(pCardSource).toContain('border-left-color: var(--a-color-ink);')
+    expect(pCardSource).toContain('text-decoration: underline !important;')
+
+    // PSurface contract
+    expect(pSurfaceSource).toContain('border-radius: 8px;')
+
+    // PVideoCard contract
+    expect(pVideoCardSource).toContain('border-radius: 8px;') // for vc-thumb
+    expect(pVideoCardSource).toContain('border-radius: 0px;') // for vc-play-count and vc-duration
+  })
 })

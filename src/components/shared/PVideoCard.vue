@@ -93,7 +93,7 @@ const handleWatchLater = (e: Event) => {
   position: relative;
   aspect-ratio: 16/9;
   background: var(--a-color-surface);
-  border-radius: 12px;
+  border-radius: 8px; /* 8px rounded thumbnail */
   overflow: hidden;
 }
 .vc-thumb:hover .vc-img { transform: scale(1.02); }
@@ -156,7 +156,7 @@ const handleWatchLater = (e: Event) => {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0px; /* Straight corner */
 }
 
 .vc-duration {
@@ -168,7 +168,7 @@ const handleWatchLater = (e: Event) => {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0px; /* Straight corner */
   z-index: 1;
 }
 

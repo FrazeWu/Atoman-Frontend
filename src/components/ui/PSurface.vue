@@ -18,6 +18,7 @@ withDefaults(defineProps<{
 .p-surface {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
+  border-radius: 8px; /* 8px roundness */
 }
 
 .p-surface--soft {

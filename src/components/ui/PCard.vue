@@ -14,17 +14,28 @@ withDefaults(defineProps<{
 
 <style scoped>
 .p-card {
-  border: 1px solid var(--a-color-line-soft);
+  border: none;
+  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border-left: 3px solid transparent; /* Reserve left border */
   background: var(--a-color-paper);
   padding: 24px;
+  border-radius: 8px; /* 8px roundness */
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .p-card--interactive {
-  transition: border-color 0.18s ease, background-color 0.18s ease;
+  cursor: pointer;
 }
 
 .p-card--interactive:hover {
-  border-color: var(--a-color-muted-soft);
-  background-color: var(--a-color-paper-soft);
+  background-color: var(--a-color-paper-wash); /* #f3f4f6 */
+  border-left-color: var(--a-color-ink); /* Left ink line */
+}
+
+/* Link underline hover linkage */
+.p-card--interactive:hover :deep(a),
+.p-card--interactive:hover :deep(.p-link-label) {
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px;
 }
 </style>

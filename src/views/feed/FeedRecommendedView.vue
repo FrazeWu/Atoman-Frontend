@@ -31,10 +31,24 @@
 
     <section class="feed-content">
       <div class="feed-actions">
-        <div style="width:100%"></div>
+        <div class="explore-mode-switch">
+          <PPress
+            data-test="explore-mode-articles"
+            label="文章浏览"
+            :variant="mode === 'articles' ? 'primary' : 'secondary'"
+            @click="changeMode('articles')"
+          />
+          <PPress
+            data-test="explore-mode-channels"
+            label="频道浏览"
+            :variant="mode === 'channels' ? 'primary' : 'secondary'"
+            @click="changeMode('channels')"
+          />
+        </div>
       </div>
 
       <ArticleExplorePanel
+        v-if="mode === 'articles'"
         :items="items"
         :loading="loading"
         :total-items="totalItems"
@@ -54,6 +68,19 @@
         @change-page="changePage"
         @play-podcast="playPodcast"
       />
+
+      <ChannelExplorePanel
+        v-else
+        :items="channelItems"
+        :loading="channelLoading"
+        :error="channelError"
+        :total-items="channelTotalItems"
+        :page="page"
+        :page-size="pageLimit"
+        @open-source="openExploreSource"
+        @retry="retryChannels"
+        @change-page="changePage"
+      />
     </section>
 
     <PShortcutHints :hints="shortcutHints" />
@@ -68,6 +95,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import ArticleExplorePanel from '@/components/feed/ArticleExplorePanel.vue'
+import ChannelExplorePanel from '@/components/feed/ChannelExplorePanel.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import { useApi } from '@/composables/useApi'
@@ -76,7 +104,7 @@ import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import type { FeedArticleSource, FeedItem, TimelineItem } from '@/types'
+import type { FeedArticleSource, FeedExploreSource, FeedItem, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
 const route = useRoute()
@@ -95,9 +123,14 @@ const normalizePage = (value: unknown) => {
 
 const items = ref<TimelineItem[]>([])
 const loading = ref(true)
+const mode = ref<'articles' | 'channels'>('articles')
 const sort = ref<'random' | 'popular'>('random')
 const page = ref(1)
 const totalItems = ref(0)
+const channelItems = ref<FeedExploreSource[]>([])
+const channelLoading = ref(false)
+const channelError = ref('')
+const channelTotalItems = ref(0)
 const pageLimit = 20
 const subscriptions = computed(() => feedStore.subscriptions)
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -201,6 +234,16 @@ const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
 
 const sourceTriggerLabel = (source: FeedArticleSource) => `查看 ${source.title} 的所有文章`
 
+const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
+  id: source.id,
+  title: source.title || '未命名来源',
+  rssUrl: source.rss_url || source.rssUrl,
+  subscriptionCount: Number(source.subscription_count ?? source.subscriptionCount ?? 0),
+  recentItemCount: Number(source.recent_item_count ?? source.recentItemCount ?? 0),
+  lastPublishedAt: source.last_published_at || source.lastPublishedAt || source.last_fetched_at || source.lastFetchedAt,
+  subscribed: Boolean(source.subscribed),
+})
+
 const openSourceArticle = (item: TimelineItem) => {
   selectedArticle.value = item
   showArticleSheet.value = true
@@ -238,6 +281,16 @@ const openSourceSheet = async (source: FeedArticleSource) => {
   showSourceSheet.value = true
   showArticleSheet.value = false
   await fetchSourceArticles(selectedSource.value)
+}
+
+const openExploreSource = async (source: FeedExploreSource) => {
+  await openSourceSheet({
+    type: 'external_rss',
+    id: source.id,
+    title: source.title,
+    rssUrl: source.rssUrl,
+    subscribed: source.subscribed,
+  })
 }
 
 const openFeedItemSourceSheet = async (item: FeedItem) => {
@@ -307,6 +360,29 @@ const fetchExplore = async () => {
   }
 }
 
+const fetchExploreSources = async () => {
+  channelLoading.value = true
+  channelError.value = ''
+  try {
+    const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
+    const headers = authStore.isAuthenticated ? authHeaders() : {}
+    const res = await fetch(`${api.feed.exploreSources}?${params.toString()}`, { headers })
+    if (!res.ok) {
+      throw new Error(`频道探索加载失败: ${res.status}`)
+    }
+    const d = await res.json()
+    channelItems.value = Array.isArray(d.data) ? d.data.map(mapExploreSource) : []
+    channelTotalItems.value = d.total ?? d.meta?.total ?? 0
+  } catch (error) {
+    console.error(error)
+    channelItems.value = []
+    channelTotalItems.value = 0
+    channelError.value = '频道探索加载失败，请稍后重试。'
+  } finally {
+    channelLoading.value = false
+  }
+}
+
 const scrollToTop = async () => {
   await nextTick()
   pageRootRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -323,10 +399,25 @@ const changePage = async (nextPage: number) => {
   await scrollToTop()
 }
 
+const changeMode = async (nextMode: 'articles' | 'channels') => {
+  if (nextMode === mode.value) return
+  const query = {
+    ...route.query,
+    mode: nextMode === 'channels' ? 'channels' : undefined,
+    page: undefined,
+    sort: nextMode === 'articles' && sort.value !== 'random' ? sort.value : undefined,
+  }
+  await router.push({ query })
+}
+
 const changeSort = (newSort: 'random' | 'popular') => {
   sort.value = newSort
   const query = { ...route.query, page: undefined, sort: newSort !== 'random' ? newSort : undefined }
   router.push({ query })
+}
+
+const retryChannels = async () => {
+  await fetchExploreSources()
 }
 
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
@@ -339,8 +430,13 @@ watch(
   () => route.query,
   async (query) => {
     page.value = normalizePage(query.page)
+    mode.value = query.mode === 'channels' ? 'channels' : 'articles'
     const queriedSort = query.sort === 'popular' ? 'popular' : 'random'
     sort.value = queriedSort
+    if (mode.value === 'channels') {
+      await fetchExploreSources()
+      return
+    }
     await fetchExplore()
   },
   { immediate: true },
@@ -384,8 +480,13 @@ onUnmounted(() => {
 .feed-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   min-height: 2.5rem;
 }
 
+.explore-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
 </style>

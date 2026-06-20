@@ -1,12 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 
-const routeQuery = {} as Record<string, string | undefined>
+const routeQuery = reactive({} as Record<string, string | undefined>)
 const routerPush = vi.fn()
 
 vi.mock('vue-router', () => ({
@@ -150,6 +151,9 @@ describe('FeedRecommendedView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('探索条目')
+    expect(wrapper.find('[data-test="explore-mode-articles"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="explore-mode-channels"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="channel-card"]').exists()).toBe(false)
   })
 
   it('opens source articles and lets an authenticated user subscribe from explore', async () => {
@@ -268,12 +272,16 @@ describe('FeedRecommendedView', () => {
       }), { status: 200 })
     })
 
-    mount(FeedRecommendedView, {
+    const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
           PButton: true,
           PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PPress: {
+            props: ['label'],
+            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
           PTab: true,
           PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
           PBadge: true,
@@ -287,6 +295,56 @@ describe('FeedRecommendedView', () => {
     await flushPromises()
 
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
+    expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Source One')
+  })
+
+  it('switching to channel mode syncs the query string', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/explore')) {
+        return new Response(JSON.stringify({
+          data: [],
+          meta: { page: 1, page_size: 20, total: 0, has_more: false },
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PPress: {
+            props: ['label'],
+            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+          PTab: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-test="explore-mode-channels"]').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith({
+      query: {
+        mode: 'channels',
+        page: undefined,
+        sort: undefined,
+      },
+    })
   })
 
   it('refetches subscriptions when auth token becomes available after mount', async () => {

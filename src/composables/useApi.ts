@@ -82,6 +82,7 @@ export function useApi() {
       drafts: `${apiUrl}/blog/posts/drafts`,
       postCollections: (id: number | string) => `${apiUrl}/blog/posts/${id}/collections`,
       postCollection: (id: number | string, collectionId: number | string) => `${apiUrl}/blog/posts/${id}/collections/${collectionId}`,
+      collectionPostOrder: (id: number | string) => `${apiUrl}/blog/collections/${id}/posts/order`,
       uploadImage: `${apiUrl}/blog/upload-image`,
       
       comments: `${apiUrl}/blog/comments`,

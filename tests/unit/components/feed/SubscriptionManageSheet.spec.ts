@@ -58,6 +58,12 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
 })
 
 describe('SubscriptionManageSheet', () => {
+  it('shows the source name instead of the raw rss url in subscription cards', () => {
+    const wrapper = mountSheet()
+
+    expect(wrapper.text()).not.toContain('https://example.com/feed.xml')
+  })
+
   it('shows subscription health details and emits health check actions', async () => {
     const wrapper = mountSheet()
 

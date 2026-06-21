@@ -84,7 +84,13 @@
     </section>
 
     <PShortcutHints :hints="shortcutHints" />
-    <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
+    <FeedArticleSheet
+      :show="showArticleSheet"
+      :article="selectedArticle"
+      :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
+      @close="showArticleSheet = false"
+      @play-podcast="playPodcast"
+    />
   </div>
 </template>
 

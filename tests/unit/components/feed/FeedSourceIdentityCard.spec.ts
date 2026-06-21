@@ -59,4 +59,26 @@ describe('FeedSourceIdentityCard', () => {
     expect(wrapper.get('[data-test="channel-card"]').attributes('aria-label')).toBe('打开少数派频道')
     expect(wrapper.get('[data-test="channel-card"]').attributes('data-parent-hook')).toBe('source-card')
   })
+
+  it('keeps the source title and URL out of uppercase button chrome', () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source: {
+          ...source,
+          title: 'XXXCLUB',
+          rssUrl: 'https://example.com/NodeSeek',
+        },
+        color: 'hsl(12 70% 52%)',
+        avatarLabel: 'X',
+        displayUrl: 'example.com/NodeSeek',
+      },
+    })
+
+    const titleStyle = getComputedStyle(wrapper.get('[data-test="feed-source-title"]').element)
+    const urlStyle = getComputedStyle(wrapper.get('[data-test="feed-source-url"]').element)
+
+    expect(titleStyle.textTransform).toBe('none')
+    expect(urlStyle.textTransform).toBe('none')
+    expect(titleStyle.letterSpacing).toBe('normal')
+  })
 })

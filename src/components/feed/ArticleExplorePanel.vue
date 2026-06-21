@@ -171,4 +171,30 @@ const getExternalBadge = (item: FeedItem) => {
   transform: translateY(-2px);
   box-shadow: var(--a-shadow-paper-sm);
 }
+
+.feed-source-trigger {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.feed-source-trigger:hover {
+  color: var(--a-color-ink);
+  text-decoration-thickness: 2px;
+}
+
+.feed-source-trigger:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: 2px;
+}
 </style>

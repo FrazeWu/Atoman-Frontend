@@ -91,7 +91,7 @@
                   @keydown.enter.prevent="submitRename(sub)"
                 />
                 <p class="source-url a-muted">
-                  {{ sub.feed_source?.rss_url || 'RSS' }}
+                  {{ subscriptionSourceLabel(sub) }}
                 </p>
                 <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
                   <span class="health-dot" aria-hidden="true"></span>
@@ -184,6 +184,9 @@ const displayGroups = computed(() => [
 
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
+
+const subscriptionSourceLabel = (sub: Subscription) =>
+  sub.feed_source?.title || sub.title || sub.feed_source?.rss_url || 'RSS'
 
 const updateDraftTitle = (id: string, event: Event) => {
   draftTitles.value[id] = (event.target as HTMLInputElement).value

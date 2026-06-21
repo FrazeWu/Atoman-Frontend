@@ -102,6 +102,34 @@ describe('FeedSidebarSources', () => {
     expect(wrapper.text()).not.toContain('未命名订阅')
   })
 
+  it('falls back to feed source title when subscription title is just the rss url', () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions: [
+          {
+            id: 'sub-with-url-title',
+            user_id: 'user-1',
+            feed_source_id: 'source-with-url-title',
+            title: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+            feed_source: {
+              id: 'source-with-url-title',
+              source_type: 'external_rss',
+              rss_url: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+              hash: 'source-with-url-title-hash',
+              title: 'Acast Show Name',
+              created_at: '2026-01-01T00:00:00Z',
+            },
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        groups: [],
+      },
+    })
+
+    expect(wrapper.text()).toContain('Acast Show Name')
+    expect(wrapper.text()).not.toContain('https://feeds.acast.com/public/shows/68004395b4ef799a7a410371')
+  })
+
   it('renders subscriptions with missing groups under unassigned group', () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {

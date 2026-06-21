@@ -102,7 +102,13 @@
     </div>
 
     <PShortcutHints :hints="shortcutHints" />
-    <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
+    <FeedArticleSheet
+      :show="showArticleSheet"
+      :article="selectedArticle"
+      :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
+      @close="showArticleSheet = false"
+      @play-podcast="playFeedItemFromSheet"
+    />
   </div>
 </template>
 
@@ -120,15 +126,17 @@ import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import type { StarredFeedItem, TimelineItem, FeedStarGroup } from '@/types'
+import type { FeedItem, StarredFeedItem, TimelineItem, FeedStarGroup } from '@/types'
 import { useApi } from '@/composables/useApi'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
+const playerStore = usePlayerStore()
 const uiStore = useUIStore()
 const api = useApi()
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
@@ -231,6 +239,29 @@ const getFeedSourceHomeUrl = (item: StarredFeedItem) => {
 
 const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
+
+const isPodcastPlaying = (feedItem: FeedItem) =>
+  playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
+
+const playFeedItemFromSheet = (feedItem: FeedItem) => {
+  const queueItems: TimelineItem[] = items.value.map((item) => ({
+    type: 'feed_item',
+    feed_item: {
+      ...item,
+      id: item.id,
+      feed_source_id: item.feed_source_id || '',
+      guid: item.guid || '',
+      fetched_at: item.fetched_at || '',
+      content_html: item.full_text_html,
+    } as FeedItem,
+    published_at: item.published_at,
+    is_read: true,
+  }))
+  playerStore.setQueueFromCurrentItems(queueItems)
+  const tempSong = playerStore.createPodcastSong(feedItem)
+  if (!tempSong) return
+  playerStore.playSong(tempSong)
+}
 
 const fetchStarred = async () => {
   if (!authStore.isAuthenticated) return

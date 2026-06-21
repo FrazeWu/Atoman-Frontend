@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FeedStarredView from '@/views/feed/FeedStarredView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { usePlayerStore } from '@/stores/player'
 
 const { routeQuery, routerPush, routerReplace } = vi.hoisted(() => ({
   routeQuery: {} as Record<string, string | undefined>,
@@ -81,5 +82,60 @@ describe('FeedStarredView', () => {
       method: 'POST',
     }))
     await vi.waitFor(() => expect(feedStore.starredItemIds.has('feed-item-1')).toBe(false))
+  })
+
+  it('plays a podcast from the starred article sheet', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        items: [{
+          id: 'feed-item-1',
+          feed_source_id: 'source-1',
+          guid: 'feed-item-1',
+          title: '收藏播客',
+          link: 'https://example.com/item',
+          summary: '摘要',
+          author: '作者',
+          source_title: '收藏来源',
+          enclosure_url: 'https://cdn.example.com/audio.mp3',
+          enclosure_type: 'audio/mpeg',
+          published_at: '2026-06-16T00:00:00Z',
+          fetched_at: '2026-06-16T00:00:00Z',
+        }],
+        total: 1,
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const wrapper = mount(FeedStarredView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: {
+            name: 'FeedArticleSheet',
+            emits: ['play-podcast', 'close'],
+            template: '<button data-test="sheet-play" @click="$emit(\'play-podcast\', { id: \'feed-item-1\', title: \'收藏播客\', enclosure_url: \'https://cdn.example.com/audio.mp3\', published_at: \'2026-06-16T00:00:00Z\', author: \'作者\', feed_source: { title: \'收藏来源\' } })">play</button>',
+          },
+          FeedTimelineFooter: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const playerStore = usePlayerStore()
+    const setQueueSpy = vi.spyOn(playerStore, 'setQueueFromCurrentItems')
+    const createPodcastSongSpy = vi.spyOn(playerStore, 'createPodcastSong')
+    const playSongSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(() => {})
+
+    await wrapper.get('[data-test="sheet-play"]').trigger('click')
+
+    expect(setQueueSpy).toHaveBeenCalled()
+    expect(createPodcastSongSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed-item-1' }))
+    expect(playSongSpy).toHaveBeenCalled()
   })
 })

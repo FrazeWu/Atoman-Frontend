@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FeedView from '@/views/feed/FeedView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { usePlayerStore } from '@/stores/player'
 
 const { navigateModuleWithShutter, routerPush, routerReplace, routeQuery } = vi.hoisted(() => ({
   navigateModuleWithShutter: vi.fn(),
@@ -349,6 +350,173 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('外部条目')
   })
 
+  it('prefers the custom subscription title over the raw rss url in external feed items', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-custom-title-1',
+            feed_source_id: 'source-rss-custom-1',
+            feed_source: {
+              id: 'source-rss-custom-1',
+              source_type: 'external_rss',
+              title: 'Acast Show Name',
+              rss_url: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+            },
+            guid: 'feed-item-custom-title-1',
+            title: '播客条目',
+            link: 'https://example.com/podcast-episode',
+            summary: '摘要',
+            author: '播客作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-rss-custom-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-rss-custom-1',
+        title: '我的播客名字',
+        feed_source: {
+          id: 'source-rss-custom-1',
+          source_type: 'external_rss',
+          rss_url: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+          hash: 'external-rss:acast-show',
+          title: 'Acast Show Name',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: {
+            name: 'FeedSourceArticlesSheet',
+            props: ['show', 'source', 'items'],
+            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2></section>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.find('.feed-entry-meta').text()).toContain('我的播客名字')
+    expect(wrapper.find('.feed-entry-meta').text()).not.toContain('https://feeds.acast.com/public/shows/68004395b4ef799a7a410371')
+
+    const trigger = wrapper.get('[data-test="feed-source-trigger"]')
+    expect(trigger.attributes('title')).toBe('查看 我的播客名字 的所有文章')
+
+    await trigger.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('我的播客名字')
+  })
+
+  it('falls back to the feed source name when the subscription title is just the rss url', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-url-title-1',
+            feed_source_id: 'source-rss-url-title-1',
+            feed_source: {
+              id: 'source-rss-url-title-1',
+              source_type: 'external_rss',
+              title: 'Acast Show Name',
+              rss_url: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+            },
+            guid: 'feed-item-url-title-1',
+            title: '播客条目',
+            link: 'https://example.com/podcast-episode',
+            summary: '摘要',
+            author: '播客作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-rss-url-title-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-rss-url-title-1',
+        title: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+        feed_source: {
+          id: 'source-rss-url-title-1',
+          source_type: 'external_rss',
+          rss_url: 'https://feeds.acast.com/public/shows/68004395b4ef799a7a410371',
+          hash: 'external-rss:acast-show-url-title',
+          title: 'Acast Show Name',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: {
+            name: 'FeedSourceArticlesSheet',
+            props: ['show', 'source', 'items'],
+            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2></section>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.find('.feed-entry-meta').text()).toContain('Acast Show Name')
+    expect(wrapper.find('.feed-entry-meta').text()).not.toContain('https://feeds.acast.com/public/shows/68004395b4ef799a7a410371')
+
+    const trigger = wrapper.get('[data-test="feed-source-trigger"]')
+    expect(trigger.attributes('title')).toBe('查看 Acast Show Name 的所有文章')
+  })
+
   it('does not render the old right-edge subscription source drawer', async () => {
     const wrapper = mount(FeedView, {
       global: {
@@ -617,5 +785,78 @@ describe('FeedView', () => {
     expect(timeline.element.tagName).not.toBe('TEMPLATE')
     expect(timeline.element.closest('template')).toBeNull()
     expect(wrapper.get('.p-entry').text()).toContain('内部文章')
+  })
+
+  it('plays the selected podcast from the article sheet', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch)
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [
+          {
+            type: 'feed_item',
+            feed_item: {
+              id: 'feed-item-play-1',
+              feed_source_id: 'source-play-1',
+              feed_source: {
+                id: 'source-play-1',
+                source_type: 'external_rss',
+                title: 'Podcast Feed',
+                rss_url: 'https://example.com/feed.xml',
+              },
+              guid: 'feed-item-play-1',
+              title: '可播放播客',
+              link: 'https://example.com/item',
+              summary: '摘要',
+              author: '主播',
+              enclosure_url: 'https://cdn.example.com/audio.mp3',
+              enclosure_type: 'audio/mpeg',
+              published_at: '2026-06-16T00:00:00Z',
+              fetched_at: '2026-06-16T00:00:00Z',
+            },
+            published_at: '2026-06-16T00:00:00Z',
+            is_read: false,
+          },
+        ],
+        meta: { page: 1, page_size: 20, total: 1, has_more: false },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: {
+            name: 'FeedArticleSheet',
+            emits: ['play-podcast', 'close'],
+            template: '<button data-test="sheet-play" @click="$emit(\'play-podcast\', { id: \'feed-item-play-1\', title: \'可播放播客\', enclosure_url: \'https://cdn.example.com/audio.mp3\', published_at: \'2026-06-16T00:00:00Z\', author: \'主播\', feed_source: { title: \'Podcast Feed\' } })">play</button>',
+          },
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const playerStore = usePlayerStore()
+    const setQueueSpy = vi.spyOn(playerStore, 'setQueueFromCurrentItems')
+    const playSongSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(() => {})
+    const createPodcastSongSpy = vi.spyOn(playerStore, 'createPodcastSong')
+
+    await wrapper.get('[data-test="sheet-play"]').trigger('click')
+
+    expect(setQueueSpy).toHaveBeenCalled()
+    expect(createPodcastSongSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed-item-play-1' }))
+    expect(playSongSpy).toHaveBeenCalled()
   })
 })

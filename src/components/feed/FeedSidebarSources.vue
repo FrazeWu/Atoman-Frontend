@@ -42,6 +42,7 @@
 import { computed } from 'vue'
 
 import type { Subscription, SubscriptionGroup } from '@/types'
+import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const props = withDefaults(
   defineProps<{
@@ -92,7 +93,7 @@ const visibleGroups = computed<VisibleGroup[]>(() => {
 })
 
 function sourceTitle(sub: Subscription): string {
-  return sub.title || sub.feed_source?.title || '未命名订阅'
+  return subscriptionDisplayTitle(sub)
 }
 
 function sourceBadge(sub: Subscription): string {

@@ -251,6 +251,70 @@ export async function uploadMusicAsset(
   return apiPostMultipart<UploadAsset>(musicV1Endpoints.uploads(), form)
 }
 
+export async function uploadMusicAudioBatch(files: File[]): Promise<UploadAsset[]> {
+  return Promise.all(files.map((file) => uploadMusicAsset(file, 'music.audio')))
+}
+
+function buildSources(source?: string): MusicSource[] {
+  const value = source?.trim()
+  return value ? [{ type: 'url', url: value }] : []
+}
+
+function buildSharedCreationReason() {
+  return 'Create artist and debut album from music creation flow'
+}
+
+export function buildArtistEditFromCreationFlow(artist: {
+  avatarUrl?: string
+  name?: string
+  country?: string
+  birthday?: string
+  bio?: string
+  source?: string
+}): MusicEditRequest {
+  return buildCreateArtistEdit({
+    name: artist.name?.trim() || undefined,
+    bio: artist.bio?.trim() || undefined,
+    image_url: artist.avatarUrl?.trim() || undefined,
+    nationality: artist.country?.trim() || undefined,
+    birth_date: artist.birthday?.trim() || undefined,
+    reason: buildSharedCreationReason(),
+    sources: buildSources(artist.source),
+  })
+}
+
+export function buildAlbumEditFromCreationFlow(
+  album: {
+    coverUrl?: string
+    coverAsset?: UploadAsset | null
+    title?: string
+    releaseDate?: string
+    type?: string
+    bio?: string
+    source?: string
+  },
+  artistId: string,
+): MusicEditRequest {
+  const coverUrl = album.coverUrl?.trim()
+  return buildCreateAlbumEdit({
+    title: album.title?.trim() || undefined,
+    artist_ids: [artistId],
+    release_date: album.releaseDate?.trim() || undefined,
+    cover: album.coverAsset || (coverUrl
+      ? {
+          url: coverUrl,
+          key: '',
+          content_type: '',
+          size: 0,
+        }
+      : null),
+    description: album.bio?.trim() || undefined,
+    album_type: album.type?.trim() || undefined,
+    reason: buildSharedCreationReason(),
+    sources: buildSources(album.source),
+  })
+}
+
 export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicAlbumListItem>> {
   const response = await apiGetEnvelope<MusicAlbumListItem[], PaginationMeta>(`${musicV1Endpoints.albums()}${queryString(filters)}`)
   return {

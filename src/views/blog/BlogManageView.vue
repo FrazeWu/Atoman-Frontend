@@ -63,6 +63,8 @@
                 <PPress
                   :label="isSorting ? '完成排序' : '排序'"
                   :variant="isSorting ? 'primary' : 'secondary'"
+                  :loading="savingOrder"
+                  loading-text="保存中..."
                   @click="toggleSorting"
                 />
                 <PLink :to="`/collection/${selectedCollection.id}?site=blog`" label="管理合集" variant="secondary" />
@@ -95,12 +97,12 @@
                   <template v-if="isSorting">
                     <button
                       class="action-btn"
-                      :disabled="index === 0"
+                      :disabled="index === 0 || savingOrder"
                       @click="moveArticle(index, 'up')"
                     >↑</button>
                     <button
                       class="action-btn"
-                      :disabled="index === articles.length - 1"
+                      :disabled="index === articles.length - 1 || savingOrder"
                       @click="moveArticle(index, 'down')"
                     >↓</button>
                   </template>
@@ -186,6 +188,7 @@ import { useApi } from '@/composables/useApi'
 import PCard from '@/components/ui/PCard.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PPress from '@/components/ui/PPress.vue'
+import type { Post } from '@/types'
 
 interface Collection {
   id: string
@@ -215,18 +218,7 @@ const selectedCollectionId = ref<string | null>(null)
 const articles = ref<any[]>([])
 const loadingArticles = ref(false)
 const isSorting = ref(false)
-
-const toggleSorting = () => {
-  isSorting.value = !isSorting.value
-}
-
-const moveArticle = (index: number, direction: 'up' | 'down') => {
-  const newIndex = direction === 'up' ? index - 1 : index + 1
-  if (newIndex < 0 || newIndex >= articles.value.length) return
-
-  const item = articles.value.splice(index, 1)[0]
-  articles.value.splice(newIndex, 0, item)
-}
+const savingOrder = ref(false)
 
 const allCollections = computed(() => {
   const list: (Collection & { channelName: string, channelId: string })[] = []
@@ -243,6 +235,14 @@ const allCollections = computed(() => {
 const selectedCollection = computed(() => {
   return allCollections.value.find(c => c.id === selectedCollectionId.value) || null
 })
+
+const moveArticle = (index: number, direction: 'up' | 'down') => {
+  const newIndex = direction === 'up' ? index - 1 : index + 1
+  if (newIndex < 0 || newIndex >= articles.value.length) return
+
+  const item = articles.value.splice(index, 1)[0]
+  articles.value.splice(newIndex, 0, item)
+}
 
 // Create channel modal state
 const createModalVisible = ref(false)
@@ -261,13 +261,28 @@ const fetchArticles = async () => {
 
   loadingArticles.value = true
   try {
-    const res = await fetch(`${api.blog.posts}?collection_id=${selectedCollectionId.value}`, {
-      headers: { Authorization: `Bearer ${authStore.token}` }
+    const headers = { Authorization: `Bearer ${authStore.token}` }
+    const [publishedRes, draftsRes] = await Promise.all([
+      fetch(`${api.blog.posts}?collection_id=${selectedCollectionId.value}`, { headers }),
+      fetch(api.blog.drafts, { headers }),
+    ])
+
+    const publishedArticles: Post[] = publishedRes.ok
+      ? ((await publishedRes.json()).data || [])
+      : []
+    const draftArticles: Post[] = draftsRes.ok
+      ? (((await draftsRes.json()).data || []) as Post[]).filter((post) =>
+          (post.collections || []).some((collection) => collection.id === selectedCollectionId.value))
+      : []
+
+    const merged = [...publishedArticles, ...draftArticles]
+    const deduped = Array.from(new Map(merged.map((article) => [article.id, article])).values())
+    deduped.sort((left, right) => {
+      const leftTime = Date.parse(left.updated_at || left.created_at || '')
+      const rightTime = Date.parse(right.updated_at || right.created_at || '')
+      return rightTime - leftTime
     })
-    if (res.ok) {
-      const data = await res.json()
-      articles.value = data.data || []
-    }
+    articles.value = deduped
   } catch (e) {
     console.error('Failed to fetch articles', e)
   } finally {
@@ -334,6 +349,46 @@ const handleArticleAction = async (action: 'edit' | 'delete', article: any) => {
         console.error('Delete article failed', e)
       }
     }
+  }
+}
+
+const persistCollectionOrder = async () => {
+  if (!selectedCollectionId.value) return
+
+  savingOrder.value = true
+  try {
+    const res = await fetch(api.blog.collectionPostOrder(selectedCollectionId.value), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({
+        post_ids: articles.value.map((article) => article.id),
+      }),
+    })
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => null)
+      throw new Error(error?.error || '排序保存失败')
+    }
+  } finally {
+    savingOrder.value = false
+  }
+}
+
+const toggleSorting = async () => {
+  if (!isSorting.value) {
+    isSorting.value = true
+    return
+  }
+
+  try {
+    await persistCollectionOrder()
+    isSorting.value = false
+  } catch (error) {
+    console.error('Failed to save collection order', error)
+    alert(error instanceof Error ? error.message : '排序保存失败，请重试')
   }
 }
 

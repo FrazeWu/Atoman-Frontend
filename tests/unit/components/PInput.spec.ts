@@ -22,4 +22,16 @@ describe('PInput', () => {
     expect(inputId).toBeTruthy()
     expect(label.attributes('for')).toBe(inputId)
   })
+
+  it('renders paper field affordances', () => {
+    const wrapper = mount(PInput, {
+      props: {
+        modelValue: 'value',
+        label: '标题',
+      },
+    })
+
+    expect(wrapper.find('.p-field-dot').exists()).toBe(true)
+    expect(wrapper.find('input').classes()).toContain('p-input')
+  })
 })

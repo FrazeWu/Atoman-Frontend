@@ -1,6 +1,9 @@
 <template>
   <div class="p-field">
-    <label v-if="label" class="p-field-label" :for="inputId">{{ label }}</label>
+    <label v-if="label" class="p-field-label" :for="inputId">
+      <span class="p-field-dot" aria-hidden="true" />
+      {{ label }}
+    </label>
     <input
       :id="inputId"
       class="p-input"
@@ -49,3 +52,60 @@ const handleInput = (event: Event) => {
   emit('input', event)
 }
 </script>
+
+<style scoped>
+.p-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.p-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.p-field-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  flex-shrink: 0;
+}
+
+.p-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  background: transparent;
+  color: var(--a-color-ink);
+  padding: 0 0 0.72rem;
+  font-size: 1rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.p-input:focus {
+  outline: none;
+  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 58%, transparent);
+}
+
+.p-input--error {
+  border-bottom-color: var(--a-color-danger, #ef4444);
+}
+
+.p-field-error {
+  color: var(--a-color-danger, #ef4444);
+  font-size: 0.75rem;
+}
+
+.p-field-hint {
+  color: var(--a-color-ink-soft);
+  font-size: 0.75rem;
+}
+</style>

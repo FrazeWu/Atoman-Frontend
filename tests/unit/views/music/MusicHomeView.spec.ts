@@ -1,5 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
 import HomeView from '@/views/music/HomeView.vue'
@@ -10,6 +10,13 @@ const mocks = vi.hoisted(() => ({
   openArtist: vi.fn(),
   openNestedAction: vi.fn(),
   openMusicCreationFlow: vi.fn(),
+  drawerStateValue: {
+    artistId: null as string | null,
+    albumId: null as string | null,
+    nestedAction: null as string | null,
+    nestedPayload: null as unknown,
+    creationFlow: null as unknown,
+  },
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -18,11 +25,15 @@ vi.mock('@/api/musicV1', () => ({
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
+    state: ref(mocks.drawerStateValue),
     isMainShifted: computed(() => false),
     openAlbum: mocks.openAlbum,
     openArtist: mocks.openArtist,
     openNestedAction: mocks.openNestedAction,
     openMusicCreationFlow: mocks.openMusicCreationFlow,
+    closeMusicCreationFlow: vi.fn(),
+    setMusicCreationStep: vi.fn(),
+    isCreationFlowOpen: computed(() => false),
   }),
 }))
 
@@ -32,6 +43,14 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openNestedAction.mockReset()
+    mocks.openMusicCreationFlow.mockReset()
+    mocks.drawerStateValue = {
+      artistId: null,
+      albumId: null,
+      nestedAction: null,
+      nestedPayload: null,
+      creationFlow: null,
+    }
     mocks.listMusicAlbums.mockResolvedValue({
       data: [
         {
@@ -53,7 +72,16 @@ describe('Music HomeView.vue (Album Discovery)', () => {
   it('loads hot albums by default and renders an album grid', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {
-      global: { plugins: [pinia], stubs: ['RouterLink', 'ArtistDrawer', 'AlbumDrawer', 'NestedActionDrawer', 'MusicCreationFlowDrawer'] }
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+        },
+      },
     })
     await flushPromises()
 
@@ -69,7 +97,16 @@ describe('Music HomeView.vue (Album Discovery)', () => {
   it('reloads albums in random mode when the random tab is selected', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {
-      global: { plugins: [pinia], stubs: ['RouterLink', 'ArtistDrawer', 'AlbumDrawer', 'NestedActionDrawer', 'MusicCreationFlowDrawer'] }
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+        },
+      },
     })
     await flushPromises()
 
@@ -82,7 +119,16 @@ describe('Music HomeView.vue (Album Discovery)', () => {
   it('opens album and artist drawers from album cards', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {
-      global: { plugins: [pinia], stubs: ['RouterLink', 'ArtistDrawer', 'AlbumDrawer', 'NestedActionDrawer', 'MusicCreationFlowDrawer'] }
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+        },
+      },
     })
     await flushPromises()
 
@@ -100,7 +146,16 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     })
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {
-      global: { plugins: [pinia], stubs: ['RouterLink', 'ArtistDrawer', 'AlbumDrawer', 'NestedActionDrawer', 'MusicCreationFlowDrawer'] }
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+        },
+      },
     })
     await flushPromises()
 

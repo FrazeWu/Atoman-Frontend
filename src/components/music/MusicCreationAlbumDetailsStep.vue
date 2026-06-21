@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
@@ -7,6 +8,8 @@ const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers(
 const creationFlow = computed(() => state.value.creationFlow)
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
+const coverUploading = ref(false)
+const coverErrorMessage = ref('')
 
 const orderedTracks = computed(() => tracksDraft.value)
 
@@ -40,6 +43,28 @@ function removeTrack(trackId: string) {
   renumberTracks()
 }
 
+async function onCoverChange(event: Event) {
+  if (!creationFlow.value || !albumDetailsDraft.value) return
+
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  coverUploading.value = true
+  coverErrorMessage.value = ''
+
+  try {
+    const asset = await uploadMusicAsset(file, 'music.cover')
+    albumDetailsDraft.value.coverAsset = asset
+    albumDetailsDraft.value.coverUrl = asset.url
+  } catch (error) {
+    coverErrorMessage.value = error instanceof Error ? error.message : '封面上传失败'
+  } finally {
+    coverUploading.value = false
+    input.value = ''
+  }
+}
+
 function goBack() {
   setMusicCreationStep('albumSeed')
 }
@@ -70,8 +95,19 @@ function goBack() {
           data-testid="album-details-cover-input"
           class="field-input field-input--file"
           type="file"
-          disabled
+          accept="image/*"
+          :disabled="coverUploading"
+          @change="onCoverChange"
         />
+        <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
+        <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+        <div v-else-if="albumDetailsDraft.coverUrl" class="cover-preview">
+          <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
+          <div class="cover-preview__meta">
+            <p class="cover-preview__title">已选择封面</p>
+            <p class="cover-preview__sub">最终提交时会携带真实封面资源。</p>
+          </div>
+        </div>
       </label>
 
       <label class="field-group" data-testid="album-details-field" data-field="name">
@@ -220,9 +256,13 @@ function goBack() {
 
 .progress-card,
 .track-adjustment {
-  padding: 1.15rem 1.2rem;
+  padding: 1.35rem 1.45rem;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  border: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.72)),
+    color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .progress-card {
@@ -299,32 +339,89 @@ function goBack() {
 
 .field-stack {
   display: grid;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 
 .field-group {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .field-input {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
-  border-radius: 0px;
-  padding: 0.85rem 0.95rem;
-  background: rgba(255, 255, 255, 0.92);
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 24%, transparent);
+  border-radius: 0;
+  padding: 0.25rem 0 0.72rem;
+  background: transparent;
   color: var(--a-color-ink);
   font: inherit;
+}
+
+.field-input:focus {
+  outline: none;
+  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 52%, #8b5e3c 18%);
 }
 
 .field-input--textarea {
   resize: vertical;
   min-height: 6rem;
+  line-height: 1.6;
 }
 
 .field-input--file {
-  padding-block: 0.65rem;
+  border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
+  padding: 0.85rem 0.95rem;
   color: var(--a-color-ink-soft);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.state-line {
+  margin: 0;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.state-line--error {
+  color: #b42318;
+}
+
+.cover-preview {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.cover-preview__image {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.cover-preview__title,
+.cover-preview__sub {
+  margin: 0;
+}
+
+.cover-preview__title {
+  font-family: var(--a-font-meta);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.cover-preview__sub {
+  margin-top: 0.25rem;
+  color: var(--a-color-ink-soft);
+  line-height: 1.5;
+  font-size: 0.9rem;
 }
 
 .track-adjustment {
@@ -357,6 +454,7 @@ function goBack() {
   align-items: center;
   padding: 0.85rem;
   border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
   background: rgba(255, 255, 255, 0.78);
 }
 

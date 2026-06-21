@@ -59,9 +59,14 @@ function goNext() {
 <template>
   <div v-if="albumSeedDraft" class="album-seed-step" data-testid="album-seed-step">
     <div class="album-seed-card">
-      <p class="step-kicker">Album Seed</p>
-      <h4>上传音频</h4>
-      <p class="step-copy">先写专辑标题并批量上传首批音频，下一步再补全专辑细节。</p>
+      <div class="section-heading">
+        <span class="section-dot" aria-hidden="true" />
+        <div>
+          <p class="step-kicker">Album Seed</p>
+          <h4>上传音频</h4>
+          <p class="step-copy">先写专辑标题并批量上传首批音频，下一步再补全专辑细节。</p>
+        </div>
+      </div>
 
       <div class="field-stack">
         <label class="field-group">
@@ -120,10 +125,29 @@ function goNext() {
 .album-seed-step { display: flex; flex: 1; flex-direction: column; gap: 1rem; }
 .album-seed-card {
   display: grid;
-  gap: 0.75rem;
-  padding: 1.15rem 1.2rem;
+  gap: 1.2rem;
+  padding: 1.4rem 1.5rem 1.35rem;
+  border: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.72)),
+    color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+}
+.section-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, #8b5e3c 28%);
+  margin-top: 0.35rem;
+  flex-shrink: 0;
 }
 .step-kicker {
   margin: 0;
@@ -134,10 +158,10 @@ function goNext() {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.album-seed-card h4 { margin: 0; font-family: var(--a-font-serif); font-size: 1.25rem; }
-.step-copy { margin: 0; color: var(--a-color-ink-soft); line-height: 1.6; }
-.field-stack { display: grid; gap: 0.9rem; }
-.field-group { display: grid; gap: 0.4rem; }
+.album-seed-card h4 { margin: 0; font-family: var(--a-font-serif); font-size: 1.45rem; line-height: 1.1; }
+.step-copy { margin: 0.4rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 38rem; }
+.field-stack { display: grid; gap: 1rem; }
+.field-group { display: grid; gap: 0.45rem; }
 .field-label {
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
@@ -148,16 +172,23 @@ function goNext() {
 }
 .field-input {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
-  border-radius: 0px;
-  padding: 0.85rem 0.95rem;
-  background: rgba(255, 255, 255, 0.92);
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 24%, transparent);
+  border-radius: 0;
+  padding: 0.25rem 0 0.72rem;
+  background: transparent;
   color: var(--a-color-ink);
   font: inherit;
 }
+.field-input:focus {
+  outline: none;
+  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 52%, #8b5e3c 18%);
+}
 .field-input--file {
-  padding-block: 0.65rem;
+  border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
+  padding: 0.85rem 0.95rem;
   color: var(--a-color-ink-soft);
+  background: rgba(255, 255, 255, 0.7);
 }
 .state-line {
   margin: 0;
@@ -172,6 +203,7 @@ function goNext() {
   gap: 0.6rem;
   padding: 0.9rem 1rem;
   border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
   background: rgba(255, 255, 255, 0.72);
 }
 .track-row {
@@ -179,6 +211,12 @@ function goNext() {
   align-items: center;
   gap: 0.75rem;
   font-family: var(--a-font-meta);
+  padding-bottom: 0.45rem;
+  border-bottom: 1px dashed color-mix(in srgb, var(--a-color-ink) 12%, transparent);
+}
+.track-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 .track-seq {
   min-width: 2rem;
@@ -187,7 +225,7 @@ function goNext() {
   font-weight: 800;
 }
 .track-title { color: var(--a-color-ink); font-size: 0.92rem; font-weight: 800; }
-.step-actions { display: flex; justify-content: flex-end; }
+.step-actions { display: flex; justify-content: flex-end; padding-top: 0.25rem; }
 .paper-submit {
   border: 0;
   border-radius: 0px;

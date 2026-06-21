@@ -1,3 +1,5 @@
+import type { UploadAsset } from '@/api/types'
+
 export type MusicCreationFlowStep = 'artist' | 'albumSeed' | 'albumDetails'
 
 export interface MusicCreationUploadedAssetDraft {
@@ -29,6 +31,7 @@ export interface MusicCreationAlbumSeedDraft {
 
 export interface MusicCreationAlbumDetailsDraft {
   coverUrl: string
+  coverAsset?: UploadAsset | null
   title: string
   releaseDate: string
   type: 'album'

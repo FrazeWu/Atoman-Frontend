@@ -58,7 +58,7 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
   >
     <template #header>
       <div class="drawer-header-content">
-        <div class="kicker">Artist Notes</div>
+        <div class="kicker">ARTIST ENTRY</div>
         <h2 class="title">{{ artist?.name || `Artist ${state.artistId}` }}</h2>
         <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>
       </div>

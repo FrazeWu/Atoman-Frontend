@@ -66,22 +66,23 @@ const formattedLastUpdated = computed(() => {
 <style scoped>
 .feed-source-card {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--feed-source-color, var(--a-color-line-soft)) 38%, var(--a-color-line-soft));
+  border: none;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--feed-source-color, var(--a-color-line-soft)) 38%, var(--a-color-line-soft));
+  border-left: 3px solid transparent;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--feed-source-color, var(--a-color-bg)) 7%, white) 0%, var(--a-color-bg) 48%),
     var(--a-color-bg);
-  box-shadow: var(--a-shadow-paper-sm);
   color: inherit;
   text-align: left;
   overflow: hidden;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .feed-source-card:hover,
 .feed-source-card:focus-visible {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--feed-source-color, var(--a-color-ink)) 68%, var(--a-color-line-soft));
-  box-shadow: var(--a-shadow-paper);
+  border-left-color: color-mix(in srgb, var(--feed-source-color, var(--a-color-ink)) 68%, var(--a-color-ink));
+  transform: translateX(2px);
 }
 
 .feed-source-card__hero {

@@ -103,8 +103,7 @@ watch([searchQuery, mode], () => {
       <div class="page-header">
         <div>
           <p class="page-kicker">Music Archive</p>
-          <!-- <h1 class="page-title">专辑发现</h1> -->
-          <h1 class="page-title">档案库</h1>
+          <h1 class="page-title">专辑发现</h1>
           <p class="a-muted">按热度或随机浏览音乐档案库中的专辑与艺术家。</p>
         </div>
         <div class="mode-tabs" aria-label="专辑浏览模式">
@@ -302,15 +301,19 @@ watch([searchQuery, mode], () => {
 .card {
   background: var(--a-color-paper);
   border: none;
+  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border-left: 3px solid transparent;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  border-radius: var(--a-radius-none);
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 .card:hover {
   background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
+  border-left-color: var(--a-color-ink);
+  transform: translateX(2px);
 }
 .card-img {
   aspect-ratio: 1;

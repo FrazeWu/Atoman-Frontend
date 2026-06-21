@@ -1,0 +1,62 @@
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+
+import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
+import type { FeedExploreSource } from '@/types'
+
+const source: FeedExploreSource = {
+  id: 'source-1',
+  title: '少数派',
+  rssUrl: 'https://sspai.com/feed',
+  subscriptionCount: 128,
+  recentItemCount: 6,
+  lastPublishedAt: '2026-06-20T08:30:00Z',
+  subscribed: false,
+}
+
+describe('FeedSourceIdentityCard', () => {
+  it('renders feed source identity details, keeps its default test hook, and emits select on click', async () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source,
+        color: 'hsl(12 70% 52%)',
+        avatarLabel: '少',
+        displayUrl: 'sspai.com/feed',
+      },
+    })
+
+    expect(wrapper.get('[data-test="feed-source-card"]').element.tagName).toBe('BUTTON')
+    expect((wrapper.vm as any).$options.inheritAttrs).toBe(false)
+    expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('少')
+    expect(wrapper.get('[data-test="feed-source-title"]').text()).toBe('少数派')
+    expect(wrapper.get('[data-test="feed-source-url"]').text()).toBe('sspai.com/feed')
+    expect(wrapper.get('[data-test="feed-source-count"]').text()).toContain('128 订阅')
+    expect(wrapper.text()).toContain('6 篇近期内容')
+    expect(wrapper.text()).toMatch(/6.*20/)
+    expect(wrapper.get('[data-test="feed-source-hero"]').attributes('style')).toContain('hsl(12 70% 52%)')
+
+    await wrapper.get('[data-test="feed-source-card"]').trigger('click')
+
+    expect(wrapper.emitted('select')).toEqual([[source]])
+  })
+
+  it('lets a parent override the root data-test hook while forwarding other attrs', async () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source,
+        color: 'hsl(12 70% 52%)',
+        avatarLabel: '少',
+        displayUrl: 'sspai.com/feed',
+      },
+      attrs: {
+        'data-test': 'channel-card',
+        'data-parent-hook': 'source-card',
+        'aria-label': '打开少数派频道',
+      },
+    })
+
+    expect(wrapper.find('[data-test="feed-source-card"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="channel-card"]').attributes('aria-label')).toBe('打开少数派频道')
+    expect(wrapper.get('[data-test="channel-card"]').attributes('data-parent-hook')).toBe('source-card')
+  })
+})

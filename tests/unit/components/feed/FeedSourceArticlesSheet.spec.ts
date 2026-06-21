@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 
 describe('FeedSourceArticlesSheet', () => {
-  it('renders source articles and emits subscribe for unsubscribed sources', async () => {
+  it('renders a branded source header and emits subscribe for unsubscribed sources', async () => {
     const wrapper = mount(FeedSourceArticlesSheet, {
       props: {
         show: true,
@@ -47,6 +47,9 @@ describe('FeedSourceArticlesSheet', () => {
       },
     })
 
+    expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('E')
+    expect(wrapper.get('[data-test="feed-source-title"]').text()).toContain('Example RSS')
+    expect(wrapper.get('[data-test="feed-source-url"]').text()).toContain('https://example.com/feed.xml')
     expect(wrapper.text()).toContain('Example RSS')
     expect(wrapper.text()).toContain('外部文章')
 

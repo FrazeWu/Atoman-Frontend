@@ -297,9 +297,10 @@ describe('FeedRecommendedView', () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
     expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Source One')
+    expect(wrapper.text()).not.toContain('https://example.com/rss.xml')
   })
 
-  it('opens the source drawer for unsubscribed channel cards using feed_source_id', async () => {
+  it('reuses the source drawer article flow from channel mode', async () => {
     Object.assign(routeQuery, { mode: 'channels' })
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -360,17 +361,25 @@ describe('FeedRecommendedView', () => {
           PBadge: true,
           PClip: true,
           PShortcutHints: true,
-          FeedArticleSheet: true,
+          FeedArticleSheet: {
+            name: 'FeedArticleSheet',
+            props: ['show', 'article'],
+            template: '<section data-test="article-sheet" :data-show="String(show)">{{ article?.feed_item?.title }}</section>',
+          },
           FeedSourceArticlesSheet: {
             name: 'FeedSourceArticlesSheet',
             props: ['show', 'source', 'items', 'loading', 'subscribeBusy'],
-            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><div data-test="source-subscription-id">{{ source?.subscriptionId || \"\" }}</div><article v-for="item in items" :key="item.feed_item?.id">{{ item.feed_item?.title }}</article></section>',
+            emits: ['open-article'],
+            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><div data-test="source-subscription-id">{{ source?.subscriptionId || \"\" }}</div><button v-for="item in items" :key="item.feed_item?.id" type="button" data-test="source-article-row" @click="$emit(\'open-article\', item)">{{ item.feed_item?.title }}</button></section>',
           },
         },
       },
     })
 
     await flushPromises()
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
+    expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
+
     await wrapper.get('[data-test="channel-card"]').trigger('click')
     await flushPromises()
 
@@ -379,6 +388,12 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('Channel Drawer Article')
     expect(wrapper.get('[data-test="source-subscription-id"]').text()).toBe('')
+
+    await wrapper.get('[data-test="source-article-row"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('true')
+    expect(wrapper.get('[data-test="article-sheet"]').text()).toContain('Channel Drawer Article')
   })
 
   it('switching to channel mode syncs the query string', async () => {

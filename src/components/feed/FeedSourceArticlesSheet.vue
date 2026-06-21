@@ -7,11 +7,29 @@
     @close="$emit('close')"
   >
     <template #header>
-      <div class="source-sheet-header">
-        <div class="source-sheet-heading">
+      <div
+        class="source-sheet-header"
+        :style="{ '--feed-source-color': sourceColor }"
+      >
+        <div class="source-sheet-hero">
           <span class="source-sheet-kicker">{{ sourceTypeLabel }}</span>
-          <h2>{{ source?.title || '来源' }}</h2>
+          <span class="source-sheet-url" data-test="feed-source-url">{{ sourceUrl }}</span>
         </div>
+
+        <div class="source-sheet-heading">
+          <div
+            class="source-sheet-avatar"
+            data-test="feed-source-avatar"
+            :style="{ '--feed-source-color': sourceColor }"
+          >
+            {{ sourceAvatarLabel }}
+          </div>
+
+          <div class="source-sheet-copy">
+            <h2 data-test="feed-source-title">{{ sourceTitle }}</h2>
+          </div>
+        </div>
+
         <PPress
           v-if="source"
           :label="source.subscribed ? '已订阅' : '订阅'"
@@ -60,6 +78,11 @@ import type { FeedArticleSource, TimelineItem } from '@/types'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import {
+  buildSourceAvatarLabel,
+  buildSourceColor,
+  normalizeSourceUrlForCard,
+} from '@/utils/feedSourcePresentation'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -83,6 +106,17 @@ const sourceTypeLabel = computed(() => {
   if (props.source?.type === 'external_rss') return 'RSS 源'
   return '来源'
 })
+
+const sourceTitle = computed(() => props.source?.title?.trim() || '来源')
+
+const sourceUrl = computed(() => {
+  if (props.source?.rssUrl) return props.source.rssUrl
+  return normalizeSourceUrlForCard(undefined, sourceTitle.value)
+})
+
+const sourceAvatarLabel = computed(() => buildSourceAvatarLabel(sourceTitle.value))
+
+const sourceColor = computed(() => buildSourceColor(props.source?.rssUrl || sourceTitle.value))
 
 function itemKey(item: TimelineItem): string {
   if (item.type === 'post' && item.post) return `post-${item.post.id}`
@@ -122,28 +156,77 @@ function formatDate(date?: string): string {
 
 <style scoped>
 .source-sheet-header {
-  display: flex;
+  display: grid;
   width: 100%;
+  gap: 1rem;
+  padding: 0.35rem 0 0.25rem;
+}
+
+.source-sheet-hero {
+  --hero-wash: color-mix(in srgb, var(--feed-source-color) 14%, white);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-line-soft));
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--feed-source-color) 34%, white) 0%, transparent 46%),
+    linear-gradient(135deg, color-mix(in srgb, var(--feed-source-color) 16%, white) 0%, var(--hero-wash) 100%);
 }
 
 .source-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   min-width: 0;
 }
 
+.source-sheet-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.source-sheet-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 1.15rem;
+  background: color-mix(in srgb, var(--feed-source-color) 18%, white);
+  color: color-mix(in srgb, var(--feed-source-color) 74%, black);
+  font-size: 1.2rem;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 24%, white);
+}
+
 .source-sheet-kicker {
-  display: block;
-  margin-bottom: 0.35rem;
-  color: var(--a-color-muted);
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: color-mix(in srgb, var(--feed-source-color) 72%, black);
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.14em;
 }
 
-.source-sheet-heading h2 {
+.source-sheet-url {
+  color: var(--a-color-fg);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.source-sheet-copy h2 {
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.25rem;
@@ -211,8 +294,19 @@ function formatDate(date?: string): string {
 
 @media (max-width: 720px) {
   .source-sheet-header {
+    gap: 0.85rem;
+  }
+
+  .source-sheet-hero,
+  .source-sheet-heading {
     align-items: flex-start;
+    justify-content: flex-start;
     flex-direction: column;
+  }
+
+  .source-sheet-avatar {
+    width: 3rem;
+    height: 3rem;
   }
 
   .source-sheet-body {

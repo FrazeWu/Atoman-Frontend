@@ -54,7 +54,14 @@
       @import-opml="importOPML"
       @export-opml="exportOPML"
     />
-    <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
+    <FeedArticleSheet
+      :show="showArticleSheet"
+      :article="selectedArticle"
+      :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
+      :index="showSourceSheet ? 1 : 0"
+      @close="showArticleSheet = false"
+      @play-podcast="playFeedItemFromSheet"
+    />
     <FeedSourceArticlesSheet
       :show="showSourceSheet"
       :source="selectedSource"
@@ -234,6 +241,7 @@ import { useKeyboardList } from '@/composables/useKeyboardList'
 import { Filter } from 'lucide-vue-next'
 import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedItem, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
+import { looksLikeUrl } from '@/utils/feedTitles'
 import { useApiUrl } from '@/composables/useApi'
 
 const route = useRoute()
@@ -395,14 +403,45 @@ const withSubscriptionState = (source: FeedArticleSource): FeedArticleSource => 
   }
 }
 
+const sourceDisplayTitle = (source: FeedArticleSource, subscriptionTitle?: string) => {
+  const customTitle = subscriptionTitle?.trim()
+  if (customTitle && !looksLikeUrl(customTitle)) return customTitle
+
+  const normalizedTitle = source.title?.trim()
+  if (normalizedTitle) return normalizedTitle
+
+  if (customTitle) return customTitle
+
+  if (source.type === 'external_rss') {
+    const rssUrl = source.rssUrl?.trim()
+    if (rssUrl) return rssUrl
+  }
+
+  return source.type === 'external_rss' ? 'RSS' : '未命名频道'
+}
+
 const postSource = (item: TimelineItem): FeedArticleSource | null => {
   if (item.type !== 'post' || !item.post) return null
   const channelId = item.post.channel_id || item.post.channel?.id
   if (!channelId) return null
+  const subscription = findSubscriptionForSource({
+    type: 'internal_channel',
+    id: channelId,
+    title: item.post.channel?.name || '',
+    subscribed: false,
+  })
   return withSubscriptionState({
     type: 'internal_channel',
     id: channelId,
-    title: item.post.channel?.name || '未命名频道',
+    title: sourceDisplayTitle(
+      {
+        type: 'internal_channel',
+        id: channelId,
+        title: item.post.channel?.name || '',
+        subscribed: false,
+      },
+      subscription?.title,
+    ),
     subscribed: false,
   })
 }
@@ -410,10 +449,26 @@ const postSource = (item: TimelineItem): FeedArticleSource | null => {
 const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
   const sourceId = item.feed_source?.id || item.feed_source_id
   if (!sourceId) return null
+  const subscription = findSubscriptionForSource({
+    type: 'external_rss',
+    id: sourceId,
+    title: item.feed_source?.title || '',
+    rssUrl: item.feed_source?.rss_url,
+    subscribed: false,
+  })
   return withSubscriptionState({
     type: 'external_rss',
     id: sourceId,
-    title: item.feed_source?.title || 'RSS',
+    title: sourceDisplayTitle(
+      {
+        type: 'external_rss',
+        id: sourceId,
+        title: item.feed_source?.title || '',
+        rssUrl: item.feed_source?.rss_url,
+        subscribed: false,
+      },
+      subscription?.title,
+    ),
     rssUrl: item.feed_source?.rss_url,
     subscribed: false,
   })
@@ -769,10 +824,15 @@ const onItemClick = (item: TimelineItem) => {
 const playPodcast = (feedItem: FeedItem, event: Event) => {
   event.preventDefault()
   event.stopPropagation()
-  
-  // Set the queue from current timeline items
+  playFeedItemFromSheet(feedItem)
+}
+
+const isPodcastPlaying = (feedItem: FeedItem) =>
+  playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
+
+const playFeedItemFromSheet = (feedItem: FeedItem) => {
   playerStore.setQueueFromCurrentItems(timeline.value)
-  
+
   const timelineItem = timeline.value.find(
     (entry) => entry.type === 'feed_item' && entry.feed_item?.id === feedItem.id,
   )
@@ -784,9 +844,6 @@ const playPodcast = (feedItem: FeedItem, event: Event) => {
   if (!tempSong) return
   playerStore.playSong(tempSong)
 }
-
-const isPodcastPlaying = (feedItem: FeedItem) =>
-  playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
 
 const toggleAllRead = async () => {
   markingAllRead.value = true

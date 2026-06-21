@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { listMusicAlbums, type MusicAlbumListItem } from '@/api/musicV1'
+import { listMusicAlbums, listMusicArtists, type MusicAlbumListItem, type MusicArtistListItem } from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
+import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 
 type DiscoveryMode = 'hot' | 'random'
 
-const { isMainShifted, openAlbum, openArtist, openNestedAction } = useMusicDrawers()
+const { isMainShifted, openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
 
 const albums = ref<MusicAlbumListItem[]>([])
+const artists = ref<MusicArtistListItem[]>([])
 const searchQuery = ref('')
 const mode = ref<DiscoveryMode>('hot')
 const loading = ref(false)
@@ -41,19 +43,36 @@ async function fetchAlbums() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const response = await listMusicAlbums({
-      q: searchQuery.value.trim() || undefined,
-      page: 1,
-      page_size: 48,
-      sort: mode.value,
-    })
-    albums.value = response.data
+    const query = searchQuery.value.trim() || undefined
+    const [albumsResponse, artistsResponse] = await Promise.all([
+      listMusicAlbums({
+        q: query,
+        page: 1,
+        page_size: 48,
+        sort: mode.value,
+      }),
+      query
+        ? listMusicArtists({
+            q: query,
+            page: 1,
+            page_size: 12,
+          })
+        : Promise.resolve({ data: [], meta: { page: 1, page_size: 12, total: 0, has_more: false } }),
+    ])
+    albums.value = albumsResponse.data
+    artists.value = artistsResponse.data
   } catch (e) {
-    console.error('Failed to fetch albums:', e)
+    console.error('Failed to fetch music discovery data:', e)
     errorMessage.value = '专辑列表加载失败'
   } finally {
     loading.value = false
   }
+}
+
+const showArtistResults = computed(() => !!searchQuery.value.trim() && artists.value.length > 0)
+
+function openArtistCard(artistId: string) {
+  openArtist(String(artistId))
 }
 
 function changeMode(nextMode: DiscoveryMode) {
@@ -83,9 +102,9 @@ watch([searchQuery, mode], () => {
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
       <div class="page-header">
         <div>
+          <p class="page-kicker">Music Archive</p>
           <!-- <h1 class="page-title">专辑发现</h1> -->
-          <h1 style="display: none">专辑发现</h1>
-          <h1 class="page-title">艺术家</h1>
+          <h1 class="page-title">档案库</h1>
           <p class="a-muted">按热度或随机浏览音乐档案库中的专辑与艺术家。</p>
         </div>
         <div class="mode-tabs" aria-label="专辑浏览模式">
@@ -111,12 +130,16 @@ watch([searchQuery, mode], () => {
       </div>
 
       <div class="search-bar">
+        <span class="search-bar-dot" aria-hidden="true" />
         <input
           v-model="searchQuery"
           placeholder="搜索艺术家..."
           class="search-input"
         />
-        <button class="a-btn" type="button" @click="openNestedAction('add_artist')">找不到？添加艺术家</button>
+        <button class="paper-action" type="button" @click="openMusicCreationFlow()">
+          <span class="paper-action-dot" aria-hidden="true" />
+          找不到？添加艺术家
+        </button>
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
@@ -125,8 +148,14 @@ watch([searchQuery, mode], () => {
       <div v-else-if="!albums.length" class="empty-state">
         <p class="state-line">没有匹配的专辑，可以提交新的 wiki 编辑。</p>
         <div class="empty-actions">
-          <button class="a-btn" type="button" data-testid="empty-add-artist" @click="openNestedAction('add_artist')">添加艺术家</button>
-          <button class="a-btn" type="button" data-testid="empty-add-album" @click="openNestedAction('add_album')">提交专辑</button>
+          <button class="paper-action" type="button" data-testid="empty-add-artist" @click="openMusicCreationFlow()">
+            <span class="paper-action-dot" aria-hidden="true" />
+            添加艺术家
+          </button>
+          <button class="paper-action" type="button" data-testid="empty-add-album" @click="openMusicCreationFlow()">
+            <span class="paper-action-dot" aria-hidden="true" />
+            提交专辑
+          </button>
         </div>
       </div>
 
@@ -166,10 +195,30 @@ watch([searchQuery, mode], () => {
           </div>
         </article>
       </div>
+
+      <section v-if="showArtistResults" class="artist-results-panel">
+        <div class="artist-results-header">
+          <span class="artist-results-dot" aria-hidden="true" />
+          <h2>匹配艺术家</h2>
+        </div>
+        <div class="artist-results-grid">
+          <article
+            v-for="artist in artists"
+            :key="artist.id"
+            class="artist-card"
+            data-testid="artist-card"
+            @click="openArtistCard(artist.id)"
+          >
+            <div class="artist-card-title">{{ artist.name }}</div>
+            <p class="artist-card-sub">{{ artist.nationality || artist.bio || '新建艺术家，暂未关联专辑' }}</p>
+          </article>
+        </div>
+      </section>
     </div>
 
     <ArtistDrawer />
     <AlbumDrawer />
+    <MusicCreationFlowDrawer />
     <NestedActionDrawer />
   </div>
 </template>
@@ -190,40 +239,64 @@ watch([searchQuery, mode], () => {
   align-items: flex-start;
   gap: 1.5rem;
 }
-.page-title { font-family: var(--a-font-serif); font-size: 3rem; font-weight: 900; margin-bottom: 0.5rem; font-style: italic; border-left: 8px solid var(--a-color-ink); padding-left: 1rem; }
+.page-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.page-title { font-family: var(--a-font-serif); font-size: 3rem; font-weight: 900; margin: 0 0 0.5rem; font-style: italic; }
 .mode-tabs {
   display: inline-flex;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
   flex-shrink: 0;
 }
 .mode-tab {
   border: 0;
-  border-right: 1px solid var(--a-color-line-soft);
-  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.1rem;
   background: transparent;
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-weight: 900;
 }
-.mode-tab:last-child { border-right: 0; }
 .mode-tab.is-active {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: color-mix(in srgb, var(--a-color-ink) 92%, #6b4f3a 8%);
+  color: white;
 }
-.search-bar { display: flex; gap: 1rem; margin: 2rem 0; }
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 0.85rem 0 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 18%, transparent);
+}
+.search-bar-dot,
+.paper-action-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  flex-shrink: 0;
+}
 .search-input {
-  border: var(--a-border);
-  border-radius: var(--a-radius-none);
-  padding: 0.75rem 1.5rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
   font-size: 1rem;
   flex: 1;
   max-width: 520px;
   outline: none;
 }
 .search-input:focus {
-  border-color: var(--a-color-fg);
-  box-shadow: inset 0 0 0 1px var(--a-color-fg);
+  box-shadow: none;
 }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
 .card {
@@ -281,8 +354,72 @@ watch([searchQuery, mode], () => {
 .state-line--error { color: #b42318; }
 .empty-state { margin-top: 1.5rem; }
 .empty-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-.a-btn { border: 2px solid var(--a-color-ink); padding: 0.75rem 1.5rem; font-weight: bold; background: var(--a-color-paper); cursor: pointer; font-family: var(--a-font-meta); transition: all 0.1s; }
-.p-button:hover { background: var(--a-color-paper-soft); }
+.paper-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 0px;
+  padding: 0.8rem 1rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, white);
+  cursor: pointer;
+  font-family: var(--a-font-meta);
+  transition: background-color 0.15s ease;
+}
+.artist-results-panel {
+  margin-top: 2rem;
+  display: grid;
+  gap: 1rem;
+}
+.artist-results-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.artist-results-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+}
+.artist-results-header h2 {
+  margin: 0;
+  font-family: var(--a-font-serif);
+  font-size: 1.25rem;
+}
+.artist-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.artist-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem 1.05rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  cursor: pointer;
+  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border-left: 3px solid transparent;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+.artist-card:hover {
+  background: var(--a-color-paper-wash);
+  border-left-color: var(--a-color-ink);
+  transform: translateX(2px);
+}
+.artist-card-title {
+  font-family: var(--a-font-serif);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+.artist-card-sub {
+  margin: 0;
+  color: var(--a-color-ink-soft);
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
 
 @media (max-width: 720px) {
   .page-header,

@@ -10,7 +10,7 @@ import {
   type MusicArtistListItem,
 } from '@/api/musicV1'
 
-const { state, closeArtist, isArtistShifted, openAlbum, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, isArtistShifted, openAlbum, openNestedAction, openMusicCreationFlow } = useMusicDrawers()
 const isOpen = computed(() => state.value.artistId !== null)
 const artist = ref<MusicArtistListItem | null>(null)
 const albums = ref<MusicAlbumListItem[]>([])
@@ -54,10 +54,11 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
     @close="closeArtist"
     width="900px"
     :is-shifted="isArtistShifted"
+    :index="0"
   >
     <template #header>
       <div class="drawer-header-content">
-        <div class="kicker">ARTIST ENTRY</div>
+        <div class="kicker">Artist Notes</div>
         <h2 class="title">{{ artist?.name || `Artist ${state.artistId}` }}</h2>
         <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>
       </div>
@@ -65,11 +66,18 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
 
     <div class="drawer-body">
       <div class="actions">
-        <button class="a-btn-dashed" @click="openNestedAction('revise_artist')">✍ 修订艺术家信息</button>
-        <button class="a-btn-dashed" @click="openNestedAction('add_album')">+ 添加新专辑</button>
+        <button class="paper-action" @click="openNestedAction('revise_artist')">
+          <span class="paper-action-dot" aria-hidden="true" />
+          <span>修订艺术家信息</span>
+        </button>
+        <button class="paper-action" @click="openMusicCreationFlow({ artistId: state.artistId || null })">
+          <span class="paper-action-dot" aria-hidden="true" />
+          <span>添加新专辑</span>
+        </button>
       </div>
 
       <div class="album-list-header">
+        <p class="album-list-kicker">Discography</p>
         <h3>专辑列表</h3>
       </div>
 
@@ -108,19 +116,36 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
-.actions { display: flex; gap: 1rem; margin-bottom: 2rem; }
-.a-btn-dashed { border: 1.5px dashed var(--a-color-ink); padding: 0.75rem 1.5rem; font-weight: bold; background: transparent; cursor: pointer; font-family: var(--a-font-meta); }
-.a-btn-dashed:hover { background: var(--a-color-paper-soft); }
+.actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 2rem; }
+.paper-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 0px;
+  padding: 0.8rem 1.05rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  cursor: pointer;
+  font-family: var(--a-font-meta);
+  color: var(--a-color-ink);
+}
+.paper-action-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+}
 
-.album-list-header { margin-bottom: 2rem; border-bottom: 1px dashed var(--a-color-line-soft); padding-bottom: 1rem; }
+.album-list-header { margin-bottom: 1.5rem; padding-bottom: 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent); }
+.album-list-kicker { margin: 0 0 0.35rem; font-family: var(--a-font-meta); font-size: 0.73rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--a-color-ink-soft); }
 .album-list-header h3 { font-size: 1.2rem; font-weight: 900; margin: 0; }
-.album-row { display: flex; gap: 2rem; margin-bottom: 2rem; position: relative; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
-.album-row:hover { }
+.album-row { display: flex; gap: 1.4rem; margin-bottom: 1rem; position: relative; cursor: pointer; padding: 1rem 1.05rem; border-radius: 8px; border: none; border-bottom: 1.5px dashed var(--a-color-line-soft); border-left: 3px solid transparent; transition: background-color 0.2s ease, transform 0.2s ease; }
+.album-row:hover { background: var(--a-color-paper-wash); border-left-color: var(--a-color-ink); transform: translateX(2px); }
 .album-row-left { width: 100px; flex-shrink: 0; text-align: right; padding-top: 0.5rem; }
 .album-year { font-family: var(--a-font-meta); font-size: 1.5rem; font-weight: 900; color: var(--a-color-ink); }
-.album-row-right { flex: 1; display: flex; background: var(--a-color-paper); border: none; padding: 1rem; gap: 1.5rem; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
-.album-row-right:hover { background: var(--a-color-paper-wash); box-shadow: var(--a-shadow-paper-sm); }
-.album-row-cover { width: 100px; height: 100px; background: var(--a-color-paper-wash); border: 1px solid var(--a-color-ink); display: flex; align-items: center; justify-content: center; font-family: var(--a-font-meta); font-size: 0.7rem; color: var(--a-color-ink-soft); flex-shrink: 0; }
+.album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; }
+.album-row-cover { width: 92px; height: 92px; background: var(--a-color-paper-wash); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--a-font-meta); font-size: 0.7rem; color: var(--a-color-ink-soft); flex-shrink: 0; overflow: hidden; }
 .album-row-img { width: 100%; height: 100%; object-fit: cover; }
 .album-row-info { display: flex; flex-direction: column; justify-content: center; }
 .album-row-title { font-family: var(--a-font-serif); font-size: 1.5rem; font-weight: 900; margin-bottom: 0.25rem; }

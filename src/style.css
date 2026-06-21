@@ -852,3 +852,9 @@ body {
     z-index: 80;
   }
 }
+
+/* Secondary button paper-action hover styles */
+.paper-action:hover:not(.paper-action--primary):not(:disabled) {
+  background: #f4ece1 !important;
+  color: #6b4f3a !important;
+}

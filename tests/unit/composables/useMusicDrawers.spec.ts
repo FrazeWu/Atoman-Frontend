@@ -75,3 +75,36 @@ describe('useMusicDrawers', () => {
     expect(isArtistShifted.value).toBe(true)
   })
 })
+
+describe('useMusicDrawers music creation flow', () => {
+  beforeEach(() => {
+    const { closeAll } = useMusicDrawers()
+    closeAll()
+  })
+
+  it('opens the creation flow with artist step and preserves seeded artist context', () => {
+    const drawers = useMusicDrawers()
+
+    expect(drawers.isMainShifted.value).toBe(false)
+    expect(drawers.isArtistShifted.value).toBe(false)
+
+    drawers.openMusicCreationFlow({ artistId: 'artist-7' })
+
+    expect(drawers.state.value.creationFlow?.step).toBe('artist')
+    expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-7')
+    expect(drawers.state.value.creationFlow?.draft.albumSeed.title).toBe('')
+
+    expect(drawers.isMainShifted.value).toBe(true)
+    expect(drawers.isArtistShifted.value).toBe(true)
+  })
+
+  it('clears the creation flow draft when closeMusicCreationFlow is called', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicCreationFlow()
+    drawers.state.value.creationFlow!.draft.artist.name = 'Kanye West'
+    drawers.closeMusicCreationFlow()
+
+    expect(drawers.state.value.creationFlow).toBeNull()
+  })
+})

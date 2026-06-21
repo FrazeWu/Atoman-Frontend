@@ -5,6 +5,7 @@
     close-type="bookmark"
     reading-mode
     :width="'calc(100vw - var(--a-sidebar-width))'"
+    :index="index"
     @close="$emit('close')"
   >
     <template v-if="article && article.type === 'post' && article.post">
@@ -40,6 +41,15 @@
         <a :href="article.feed_item.link" target="_blank" rel="noopener noreferrer" class="read-original-link">
           ↗ 阅读原文
         </a>
+        <button
+          v-if="isPlayablePodcast"
+          type="button"
+          class="read-original-link article-play-link"
+          data-test="feed-article-play"
+          @click="emitPlayPodcast"
+        >
+          {{ isPodcastPlaying ? '■ 播放中' : '▶ 播放播客' }}
+        </button>
       </div>
       
       <div class="article-body-wrap">
@@ -55,7 +65,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TimelineItem } from '@/types'
+import type { FeedItem, TimelineItem } from '@/types'
 import DOMPurify from 'dompurify'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -66,6 +76,8 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 const props = defineProps<{
   show: boolean
   article: TimelineItem | null
+  isPodcastPlaying?: boolean
+  index?: number
 }>()
 
 const { renderMarkdown } = useMarkdownRenderer()
@@ -76,7 +88,10 @@ const renderedContent = computed(() => {
   return ''
 })
 
-defineEmits(['close'])
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'play-podcast', feedItem: FeedItem): void
+}>()
 
 const sheetTitle = computed(() => {
   if (!props.article) return '文章'
@@ -87,6 +102,11 @@ const sheetTitle = computed(() => {
     return props.article.feed_item.title
   }
   return '文章'
+})
+
+const isPlayablePodcast = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return false
+  return Boolean(props.article.feed_item.enclosure_url)
 })
 
 const { navigateWithShutter } = useAsyncNavigate()
@@ -108,6 +128,11 @@ const handleReadMore = (post: any) => {
     modulePathUrl('blog', `/post/${post.id}`),
     'post'
   )
+}
+
+const emitPlayPodcast = () => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return
+  emit('play-podcast', props.article.feed_item)
 }
 </script>
 
@@ -139,6 +164,9 @@ const handleReadMore = (post: any) => {
 }
 
 .article-subtitle-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-bottom: 2.5rem;
 }
 
@@ -159,6 +187,11 @@ const handleReadMore = (post: any) => {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   border-color: var(--a-color-ink);
+}
+
+.article-play-link {
+  cursor: pointer;
+  background: var(--a-color-bg);
 }
 
 .article-summary {

@@ -38,7 +38,7 @@ defineEmits(['click'])
 .close-icon {
   font-size: 0.9rem;
   font-weight: 900;
-  color: var(--a-color-fg);
+  color: currentColor;
   line-height: 1;
 }
 
@@ -52,7 +52,8 @@ defineEmits(['click'])
 }
 
 .sheet-tab:hover {
-  background-color: var(--a-color-disabled-bg);
-  border-color: var(--a-color-line);
+  background-color: #f4ece1;
+  color: #6b4f3a;
+  border-color: #6b4f3a;
 }
 </style>

@@ -45,14 +45,14 @@ const makeRouter = async (initialPath = '/') => {
   return router
 }
 
-const mountLayout = async (initialPath = '/') => {
+const mountLayout = async (initialPath = '/', authenticated = true) => {
   const pinia = createPinia()
   setActivePinia(pinia)
 
   const authStore = useAuthStore()
-  authStore.token = 'token'
-  authStore.user = { username: 'fafa', email: 'fafa@example.com' }
-  authStore.isAuthenticated = true
+  authStore.token = authenticated ? 'token' : null
+  authStore.user = authenticated ? { username: 'fafa', email: 'fafa@example.com' } : null
+  authStore.isAuthenticated = authenticated
 
   const feedStore = useFeedStore()
   feedStore.subscriptions = subscriptions
@@ -105,6 +105,47 @@ describe('FeedLayout', () => {
     await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger('click')
 
     expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { manage_subscriptions: '1' } })
+  })
+
+  it('opens the feed mobile sources sheet from the header action and reuses source actions', async () => {
+    const { wrapper, pushSpy } = await mountLayout('/')
+
+    expect(wrapper.find('[data-testid="feed-mobile-sources-trigger"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="feed-mobile-sources-trigger"]').trigger('click')
+    await flushPromises()
+
+    const sheet = wrapper.get('[data-testid="feed-mobile-sources-sheet"]')
+    expect(sheet.text()).toContain('订阅源类别 / SOURCES')
+    expect(sheet.text()).toContain('少数派')
+
+    await sheet.get('[data-source-id="sub-1"]').trigger('click')
+    await flushPromises()
+
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { source_id: 'sub-1' } })
+    expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
+
+    pushSpy.mockClear()
+
+    await wrapper.get('[data-testid="feed-mobile-sources-trigger"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="feed-mobile-sources-sheet"]').get('[data-testid="feed-sidebar-manage"]').trigger('click')
+    await flushPromises()
+
+    expect(pushSpy).toHaveBeenCalledWith({
+      path: '/',
+      query: { source_id: 'sub-1', manage_subscriptions: '1' },
+    })
+    expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
+  })
+
+  it('does not expose the mobile sources entry point when signed out', async () => {
+    const { wrapper } = await mountLayout('/', false)
+
+    expect(wrapper.find('[data-testid="feed-mobile-sources-trigger"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
   })
 
   it('refetches sidebar sources when an auth token becomes available after mount', async () => {

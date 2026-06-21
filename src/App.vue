@@ -11,6 +11,7 @@
       ]">
         <router-view />
       </main>
+      <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter />
       <AudioPlayer v-if="hasActiveTrack" />
     </div>
@@ -22,6 +23,7 @@ import { computed, defineAsyncComponent, onMounted } from 'vue'
 import { NConfigProvider } from 'naive-ui'
 import { useRoute } from 'vue-router'
 import AppTopbar from '@/components/system/AppTopbar.vue'
+import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import FirstLoginOnboarding from '@/components/onboarding/FirstLoginOnboarding.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -49,6 +51,7 @@ const { checkRelay } = useTransitionRelay()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => Boolean(player.currentSong))
+const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
 
 onMounted(() => {
   if (localStorage.getItem('atoman_transition_relay')) {

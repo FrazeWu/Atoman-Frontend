@@ -74,7 +74,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessageSquare, Folder } from 'lucide-vue-next'
-import { moduleRooms } from '@/config/moduleRooms'
 import { useForumStore } from '@/stores/forum'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'

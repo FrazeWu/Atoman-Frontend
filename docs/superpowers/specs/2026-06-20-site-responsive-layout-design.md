@@ -257,3 +257,11 @@ Verify at minimum:
 3. Tablet widths preserve access to sidebar navigation without stealing too much content width.
 4. Page-local actions remain discoverable through headers and sheets after sidebar removal on mobile.
 5. Shared shell changes are adopted across `PSidebar`-based modules rather than only fixing feed in isolation.
+
+## Implementation Notes
+
+1. The first rollout implements the shared three-band shell, the shared mobile bottom navigation, and the `更多` bottom sheet at the application shell level.
+2. Feed is the first module with a completed mobile sidebar migration. Its mobile `来源` action now opens a dedicated bottom sheet that reuses the existing source list behavior, source selection, and manage action.
+3. Other `PSidebar`-based module layouts now inherit the shared mobile shell and responsive breakpoints, but they do not yet have module-specific mobile action sheets comparable to feed.
+4. `FeedSidebarSources` is still reused directly inside the mobile sheet. If mobile-specific presentation requirements expand later, a dedicated presentation prop or a smaller shared source-list primitive may be cleaner than additional wrapper styling.
+5. Heavy editor-style pages were intentionally left out of this rollout beyond inheriting the shared breakpoint shell. They may still need targeted header and tool-density adjustments in a follow-up pass.

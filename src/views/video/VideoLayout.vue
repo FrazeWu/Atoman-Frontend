@@ -3,6 +3,7 @@
     <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
+      storage-key="atoman.video.sidebar.collapsed"
     >
       <PSidebarItem to="/" :index="1" :icon="Compass" exact>
         探索
@@ -21,20 +22,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { ref } from 'vue'
 import { Compass, Rss, Settings } from 'lucide-vue-next'
-import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 
-const sidebarStorageKey = 'atoman.video.sidebar.collapsed'
 const sidebarCollapsed = ref(false)
-
-onMounted(() => {
-  sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
-})
-
-watch(sidebarCollapsed, (collapsed) => {
-  localStorage.setItem(sidebarStorageKey, String(collapsed))
-})
 </script>

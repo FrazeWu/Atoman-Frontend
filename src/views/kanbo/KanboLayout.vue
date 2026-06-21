@@ -24,20 +24,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref } from 'vue'
 import { PenTool, FileText, Video, Mic, Rss, Bookmark } from 'lucide-vue-next'
 import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 
-const sidebarStorageKey = 'atoman.kanbo.sidebar.collapsed'
 const sidebarCollapsed = ref(false)
-
-onMounted(() => {
-  sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
-})
-
-watch(sidebarCollapsed, (collapsed) => {
-  localStorage.setItem(sidebarStorageKey, String(collapsed))
-})
 </script>

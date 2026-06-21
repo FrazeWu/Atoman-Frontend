@@ -48,7 +48,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { MessageSquare, Play, CheckCircle, Archive } from 'lucide-vue-next'
-import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 

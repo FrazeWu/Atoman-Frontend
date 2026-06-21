@@ -30,8 +30,30 @@
       </template>
     </PSidebar>
     <main class="a-main-content">
+      <header class="module-mobile-header">
+        <h1 class="module-mobile-header__title">订阅</h1>
+        <button
+          v-if="authStore.isAuthenticated"
+          type="button"
+          class="module-mobile-header__action a-font-meta"
+          data-testid="feed-mobile-sources-trigger"
+          @click="mobileSourcesOpen = true"
+        >
+          来源
+        </button>
+      </header>
       <router-view />
     </main>
+    <FeedMobileSourcesSheet
+      v-if="authStore.isAuthenticated"
+      :show="mobileSourcesOpen"
+      :subscriptions="subscriptions"
+      :groups="groups"
+      :active-source-id="querySourceId"
+      @close="mobileSourcesOpen = false"
+      @select-source="selectSource"
+      @manage="openManageSheet"
+    />
   </div>
 </template>
 
@@ -39,6 +61,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Bookmark, Compass, Rss, Star } from 'lucide-vue-next'
+import FeedMobileSourcesSheet from '@/components/feed/FeedMobileSourcesSheet.vue'
 import FeedSidebarSources from '@/components/feed/FeedSidebarSources.vue'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
@@ -58,6 +81,7 @@ const uiStore = useUIStore()
 useKeyboardLayout()
 
 const sidebarCollapsed = ref(false)
+const mobileSourcesOpen = ref(false)
 
 const subscriptions = computed(() => feedStore.subscriptions)
 const groups = computed(() => feedStore.groups)
@@ -91,16 +115,22 @@ const ensureSidebarSources = () => {
 }
 
 const selectSource = (sourceId: string) => {
+  mobileSourcesOpen.value = false
   void router.push({ path: '/', query: { source_id: sourceId } })
 }
 
 const openManageSheet = () => {
+  mobileSourcesOpen.value = false
   void router.push({ path: '/', query: { ...route.query, manage_subscriptions: '1' } })
 }
 
 watch(
   [() => authStore.isAuthenticated, () => authStore.token],
   ([isAuthenticated, token], [previousAuthenticated, previousToken]) => {
+    if (!isAuthenticated) {
+      mobileSourcesOpen.value = false
+      return
+    }
     if (!isAuthenticated) return
     if (previousAuthenticated !== isAuthenticated || previousToken !== token) {
       ensureSidebarSources()
@@ -131,6 +161,37 @@ watch(focusedSidebarIndex, (newIndex) => {
 </script>
 
 <style scoped>
+.module-mobile-header {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .module-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .module-mobile-header__title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .module-mobile-header__action {
+    border: 1px solid var(--a-color-line-soft);
+    padding: 0.45rem 0.75rem;
+    background: var(--a-color-bg);
+    color: var(--a-color-fg);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+  }
+}
+
 kbd {
   font-family: inherit;
   background: #fff;

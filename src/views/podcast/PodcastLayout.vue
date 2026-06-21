@@ -3,6 +3,7 @@
     <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
+      storage-key="atoman.podcast.sidebar.collapsed"
     >
       <PSidebarItem
         to="/"
@@ -28,9 +29,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { Mic, PlusCircle } from 'lucide-vue-next'
-import { moduleRooms } from '@/config/moduleRooms'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
@@ -38,14 +38,5 @@ import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 const siteAccessStore = useSiteAccessStore()
 const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish'))
 
-const sidebarStorageKey = 'atoman.podcast.sidebar.collapsed'
 const sidebarCollapsed = ref(false)
-
-onMounted(() => {
-  sidebarCollapsed.value = localStorage.getItem(sidebarStorageKey) === 'true'
-})
-
-watch(sidebarCollapsed, (collapsed) => {
-  localStorage.setItem(sidebarStorageKey, String(collapsed))
-})
 </script>

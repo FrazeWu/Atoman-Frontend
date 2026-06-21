@@ -30,7 +30,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Clock, Users } from 'lucide-vue-next'
-import { moduleRooms } from '@/config/moduleRooms'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 

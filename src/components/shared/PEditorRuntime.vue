@@ -932,7 +932,7 @@ onBeforeUnmount(() => {
 }
 
 .p-editor:not(.no-border) {
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-line-soft);
 }
 
 .p-editor-presence {
@@ -978,7 +978,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.8rem;
   min-width: 8.5rem;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
   padding: 0.55rem 0.75rem;
   cursor: pointer;
@@ -1060,7 +1060,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 0.35rem 0.6rem;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
   color: var(--a-color-ink);
   font-size: 0.72rem;
@@ -1117,7 +1117,7 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.08);
-  border: 3px dashed #000;
+  border: 3px dashed var(--a-color-line-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1173,7 +1173,7 @@ onBeforeUnmount(() => {
   position: fixed;
   z-index: 9999;
   background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-line-soft);
   min-width: 200px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   max-height: 200px;

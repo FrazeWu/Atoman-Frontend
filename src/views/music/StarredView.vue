@@ -24,7 +24,7 @@
 
 .page-header {
   max-width: 760px;
-  border-left: 8px solid var(--a-color-ink);
+  border-left: 4px solid var(--a-color-line-soft);
   padding-left: 1.25rem;
 }
 
@@ -54,17 +54,17 @@
   max-width: 680px;
   min-height: 260px;
   padding: 3rem 2rem 2rem;
-  border: 2px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
-  box-shadow: 14px 14px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.15);
 }
 
 .p-tab {
   position: absolute;
-  top: -2px;
+  top: -1px;
   right: 2rem;
   padding: 0.65rem 1rem;
-  border: 2px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-line-soft);
   border-top: 0;
   background: var(--a-color-paper);
 }

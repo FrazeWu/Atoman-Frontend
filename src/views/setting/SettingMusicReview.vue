@@ -209,7 +209,7 @@ onMounted(async () => {
 .admin-tab-active { border-color: var(--a-color-line-soft); border-bottom-color: var(--a-color-bg); background: var(--a-color-bg); margin-bottom: -1px; }
 .entries-filters { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
 .filter-select {
-  border: 2px solid var(--a-color-fg);
+  border: 1px solid var(--a-color-line-soft);
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 700;
@@ -223,11 +223,11 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0.875rem 1rem;
-  border: 2px solid var(--a-color-fg);
+  border: 1px solid var(--a-color-line-soft);
   border-bottom-width: 0;
   transition: background 0.1s;
 }
-.entry-row:last-child { border-bottom-width: 2px; }
+.entry-row:last-child { border-bottom-width: 1px; }
 .entry-row:hover { background: #f9fafb; }
 .entry-info { display: flex; align-items: center; gap: 0.75rem; }
 .entry-name {

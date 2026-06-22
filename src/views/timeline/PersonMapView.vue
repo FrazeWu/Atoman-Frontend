@@ -708,7 +708,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  border: 2px solid var(--a-color-fg);
+  border: 1px solid var(--a-color-line-soft);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -830,8 +830,8 @@ onUnmounted(() => {
 
 .popup-content {
   background: var(--a-color-bg);
-  border: 2px solid var(--a-color-fg);
-  box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+  border: 1px solid var(--a-color-line-soft);
+  box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.15);
   padding: 0.75rem 1rem;
   min-width: 160px;
   max-width: 240px;
@@ -888,7 +888,7 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   background: none;
-  border: 2px solid var(--a-color-fg);
+  border: 1px solid var(--a-color-line-soft);
   cursor: pointer;
   padding: 3px 10px;
   transition: background 0.1s, color 0.1s;
@@ -910,7 +910,7 @@ onUnmounted(() => {
 
 .a-modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1.25rem 1.5rem; border-bottom: 2px solid var(--a-color-fg);
+  padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--a-color-line-soft);
 }
 .a-modal-title { font-size: 1.25rem; font-weight: 900; letter-spacing: -0.03em; }
 .a-modal-close {
@@ -920,7 +920,7 @@ onUnmounted(() => {
 .a-modal-body { padding: 1.5rem; overflow-y: auto; max-height: 65vh; }
 .a-modal-footer {
   display: flex; justify-content: flex-end; gap: 0.75rem;
-  padding: 1rem 1.5rem; border-top: 2px solid var(--a-color-fg);
+  padding: 1rem 1.5rem; border-top: 1px solid var(--a-color-line-soft);
 }
 
 /* Mobile: stack layout */

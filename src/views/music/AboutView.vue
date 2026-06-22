@@ -118,7 +118,7 @@ const techStack = [
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  border-bottom: 2px solid #000;
+  border-bottom: 1px solid var(--a-color-line-soft);
   text-decoration: none;
   color: #000;
   transition: opacity 0.2s;
@@ -135,7 +135,7 @@ const techStack = [
   font-size: 3rem;
   font-weight: 900;
   letter-spacing: -0.05em;
-  border-left: 8px solid #000;
+  border-left: 4px solid var(--a-color-line-soft);
   padding-left: 1.5rem;
   margin: 0;
 }
@@ -160,14 +160,14 @@ const techStack = [
 
 .feature-card {
   display: block;
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line-soft);
   padding: 1.5rem;
   text-decoration: none;
   color: #000;
   transition: all 0.3s;
 }
 .feature-card:hover {
-  box-shadow: 10px 10px 0px 0px rgba(0,0,0,1);
+  box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.15);
 }
 
 .card-label {
@@ -195,7 +195,7 @@ const techStack = [
 }
 
 .section {
-  border-top: 2px solid #000;
+  border-top: 1px solid var(--a-color-line-soft);
   padding-top: 2rem;
 }
 
@@ -216,7 +216,7 @@ const techStack = [
 }
 
 .tech-card {
-  border: 1px solid #000;
+  border: 1px solid var(--a-color-line-soft);
   padding: 1rem;
 }
 
@@ -260,14 +260,14 @@ const techStack = [
 }
 
 .links-row {
-  border-top: 2px solid #000;
+  border-top: 1px solid var(--a-color-line-soft);
   padding-top: 2rem;
   display: flex;
   gap: 1rem;
 }
 
 .link-btn {
-  border: 2px solid #000;
+  border: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.5rem;
   font-weight: 900;
   font-size: 0.75rem;
@@ -283,7 +283,7 @@ const techStack = [
 }
 
 .license-badge {
-  border: 1px solid #000;
+  border: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.5rem;
   font-size: 0.75rem;
   font-weight: 900;

@@ -40,7 +40,7 @@
 
 .page-header {
   max-width: 760px;
-  border-left: 8px solid var(--a-color-ink);
+  border-left: 4px solid var(--a-color-line-soft);
   padding-left: 1.25rem;
 }
 
@@ -75,9 +75,9 @@
   position: relative;
   min-height: 220px;
   padding: 1.5rem;
-  border: 2px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
-  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.15);
 }
 
 .feature-card {

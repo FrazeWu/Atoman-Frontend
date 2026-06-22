@@ -356,7 +356,7 @@ const seek = (e: MouseEvent) => {
 
 .main-play-btn {
   background: #000; color: #fff;
-  border: 1px solid #000;
+  border: 1px solid var(--a-color-line-soft);
   padding: 6px 20px; font-weight: 950;
   font-size: 11px;
   cursor: pointer; letter-spacing: 0.1em;

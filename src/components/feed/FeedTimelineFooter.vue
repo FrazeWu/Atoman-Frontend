@@ -34,7 +34,7 @@
 
     <form class="feed-jump" @submit.prevent="submitJump">
       <label class="feed-jump-label a-font-meta" for="feed-page-jump">跳至</label>
-      <PInput
+      <input
         id="feed-page-jump"
         v-model="jumpPage"
         class="feed-jump-input"
@@ -50,7 +50,6 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import PInput from '@/components/ui/PInput.vue'
 
 const props = defineProps<{
   page: number
@@ -215,11 +214,14 @@ const submitJump = () => {
 .feed-jump-input {
   display: inline-grid;
   width: 3.75rem;
-}
-
-.feed-jump-input :deep(.p-input) {
   text-align: center;
   padding: 0.2rem 0.1rem 0.3rem;
   font-size: 0.875rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: transparent;
+  color: var(--a-color-ink);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
 }
 </style>

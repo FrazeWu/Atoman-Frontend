@@ -7,7 +7,7 @@
     />
 
     <div class="setting-roles__toolbar">
-      <PInput
+      <input
         v-model.trim="query"
         class="setting-roles__search"
         type="search"
@@ -61,7 +61,6 @@ import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
-import PInput from '@/components/ui/PInput.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -170,15 +169,15 @@ onMounted(() => {
 
 .setting-roles__search {
   width: min(100%, 420px);
-}
-
-.setting-roles__search :deep(.p-input) {
   min-height: 44px;
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
   color: var(--a-color-ink);
+  font-family: inherit;
+  font-size: 1rem;
   box-sizing: border-box;
+  outline: none;
 }
 
 .setting-roles__list {

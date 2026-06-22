@@ -6,7 +6,7 @@
     <!-- Search bar -->
     <div style="margin-bottom:2rem">
       <div style="position:relative;max-width:600px;display:flex;gap:.75rem">
-        <PInput
+        <input
           v-model="localQuery"
           type="text"
           placeholder="搜索话题..."
@@ -84,7 +84,6 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
-import PInput from '@/components/ui/PInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -145,7 +144,7 @@ watch(() => route.query.q, async (q) => {
 .search-input-wrap {
   flex: 1;
 }
-.search-input-wrap :deep(.p-input) {
+.search-input-wrap {
   padding: 0.75rem 1rem;
   border: var(--a-border);
   border-radius: var(--a-radius-none);
@@ -154,8 +153,9 @@ watch(() => route.query.q, async (q) => {
   font-weight: 500;
   font-family: inherit;
   outline: none;
+  color: var(--a-color-ink);
 }
-.search-input-wrap :deep(.p-input:focus) {
+.search-input-wrap:focus {
   border-color: var(--a-color-fg);
   box-shadow: inset 0 0 0 1px var(--a-color-fg);
 }

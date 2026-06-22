@@ -2,17 +2,16 @@
   <div ref="pageRootRef" class="a-page-xl feed-page">
     <PPageHeader title="探索" accent sub="发现更多有趣的订阅内容">
       <template #action>
-        <div style="display:flex;gap:0.75rem;align-items:center">
-          <PPress
-            label="随机"
-            :variant="sort === 'random' ? 'primary' : 'secondary'"
-            @click="changeSort('random')"
-          />
-          <PPress
-            label="热门"
-            :variant="sort === 'popular' ? 'primary' : 'secondary'"
-            @click="changeSort('popular')"
-          />
+        <div class="explore-header-actions">
+          <div class="explore-sort-tabs">
+            <PTab
+              v-for="option in sortOptions"
+              :key="option.value"
+              :label="option.label"
+              :active="sort === option.value"
+              @click="changeSort(option.value)"
+            />
+          </div>
           <PPress to="/" variant="secondary" label="返回订阅" />
         </div>
       </template>
@@ -99,6 +98,7 @@ import { nextTick, ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
+import PTab from '@/components/ui/PTab.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import ArticleExplorePanel from '@/components/feed/ArticleExplorePanel.vue'
 import ChannelExplorePanel from '@/components/feed/ChannelExplorePanel.vue'
@@ -131,6 +131,10 @@ const items = ref<TimelineItem[]>([])
 const loading = ref(true)
 const mode = ref<'articles' | 'channels'>('articles')
 const sort = ref<'random' | 'popular'>('random')
+const sortOptions: Array<{ label: string; value: 'random' | 'popular' }> = [
+  { label: '随机', value: 'random' },
+  { label: '热门', value: 'popular' },
+]
 const page = ref(1)
 const totalItems = ref(0)
 const channelItems = ref<FeedExploreSource[]>([])
@@ -492,6 +496,20 @@ onUnmounted(() => {
 .feed-content {
   display: grid;
   gap: 1rem;
+}
+
+.explore-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.explore-sort-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
 }
 
 .feed-actions {

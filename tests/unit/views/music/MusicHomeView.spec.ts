@@ -116,6 +116,29 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({ q: undefined, page: 1, page_size: 48, sort: 'random' })
   })
 
+  it('renders hot and random discovery mode controls as shared tabs', async () => {
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(HomeView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const tabs = wrapper.findAll('.p-tab')
+
+    expect(tabs).toHaveLength(2)
+    expect(tabs.map((tab) => tab.text())).toEqual(['热门', '随机'])
+    expect(tabs[0]?.classes()).toContain('p-tab--active')
+  })
+
   it('opens album and artist drawers from album cards', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {

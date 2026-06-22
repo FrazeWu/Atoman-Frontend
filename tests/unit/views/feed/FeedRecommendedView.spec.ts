@@ -156,6 +156,75 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.find('[data-test="channel-card"]').exists()).toBe(false)
   })
 
+  it('renders 热门 / 随机 as tabs while keeping 返回订阅 as a separate action', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/explore')) {
+        return new Response(JSON.stringify({
+          data: [],
+          meta: { page: 1, page_size: 20, total: 0, has_more: false },
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PEmpty: true,
+          PPageHeader: {
+            name: 'PPageHeader',
+            template: '<header><slot /><slot name="action" /></header>',
+          },
+          PPress: {
+            name: 'PPress',
+            props: ['label', 'to'],
+            template: '<button type="button" v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+          PTab: {
+            name: 'PTab',
+            props: ['label', 'active'],
+            template: '<button type="button" :aria-pressed="String(active)" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const header = wrapper.get('header')
+    const sortTabs = header.findAllComponents({ name: 'PTab' })
+    const headerActions = header.findAllComponents({ name: 'PPress' })
+
+    expect(sortTabs).toHaveLength(2)
+    expect(sortTabs.map((tab) => tab.props('label'))).toEqual(['随机', '热门'])
+    expect(sortTabs.map((tab) => tab.props('active'))).toEqual([true, false])
+    expect(sortTabs.map((tab) => tab.attributes('aria-pressed'))).toEqual(['true', 'false'])
+
+    await sortTabs[1].trigger('click')
+
+    expect(routerPush).toHaveBeenLastCalledWith({
+      query: {
+        page: undefined,
+        sort: 'popular',
+      },
+    })
+
+    expect(headerActions).toHaveLength(1)
+    expect(headerActions[0].props('label')).toBe('返回订阅')
+    expect(headerActions[0].props('to')).toBe('/')
+  })
+
   it('opens source articles and lets an authenticated user subscribe from explore', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)

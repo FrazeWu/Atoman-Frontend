@@ -17,6 +17,7 @@ export interface MusicCreationTrackDraft {
 export interface MusicCreationArtistDraft {
   id: string | null
   avatarUrl: string
+  avatarAsset?: UploadAsset | null
   name: string
   country: string
   birthday: string

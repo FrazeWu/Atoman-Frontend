@@ -405,7 +405,7 @@ watch(() => props.groups, (groups) => {
   padding: 1rem;
   background: var(--a-color-paper-wash);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .subscription-main {

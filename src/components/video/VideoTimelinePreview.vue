@@ -53,7 +53,7 @@ function updateHover(event: MouseEvent) {
   height: 4px;
   content: '';
   background: rgba(255, 255, 255, 0.54);
-  border-radius: 999px;
+  border-radius: 0px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
@@ -65,7 +65,7 @@ function updateHover(event: MouseEvent) {
   padding: 0.35rem;
   background: rgba(0, 0, 0, 0.82);
   color: #fff;
-  border-radius: 4px;
+  border-radius: 0px;
   pointer-events: none;
   text-align: center;
 }

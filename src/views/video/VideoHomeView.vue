@@ -108,7 +108,7 @@ watch(sort, fetchVideos)
   font-size: 0.85rem;
   font-weight: 600;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 0px;
   background: var(--a-color-surface);
   cursor: pointer;
   color: var(--a-color-fg);
@@ -146,7 +146,7 @@ watch(sort, fetchVideos)
   width: 100%;
   aspect-ratio: 16/9;
   background: var(--a-color-surface);
-  border-radius: 0.75rem;
+  border-radius: 8px;
   animation: pulse 1.4s ease-in-out infinite;
 }
 .vh-skel-info {
@@ -172,7 +172,7 @@ watch(sort, fetchVideos)
 .vh-skel-line {
   height: 0.75rem;
   background: var(--a-color-surface);
-  border-radius: 0.25rem;
+  border-radius: 0px;
   animation: pulse 1.4s ease-in-out infinite;
 }
 

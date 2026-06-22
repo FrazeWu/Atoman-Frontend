@@ -309,7 +309,7 @@ function goBack() {
 
 .progress-track {
   height: 0.5rem;
-  border-radius: 999px;
+  border-radius: 0px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.72);
 }
@@ -403,7 +403,7 @@ function goBack() {
   width: 84px;
   height: 84px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .cover-preview__title,

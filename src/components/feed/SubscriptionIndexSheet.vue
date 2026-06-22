@@ -98,7 +98,7 @@ const unassignedSubscriptions = computed(() => {
   gap: 0.75rem;
   transition: all 0.2s;
   color: var(--a-color-muted);
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 .sub-link:hover {

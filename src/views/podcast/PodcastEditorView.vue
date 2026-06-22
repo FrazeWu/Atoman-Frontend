@@ -661,7 +661,7 @@ async function doPublish() {
   padding: 0.6rem 0.75rem;
   background: var(--a-color-paper-soft);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   font-size: 0.8rem;
 }
 .pe-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
@@ -780,7 +780,7 @@ async function doPublish() {
   position: relative;
   width: 100%;
   aspect-ratio: 1/1;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--a-color-paper-soft);
 }

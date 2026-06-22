@@ -33,7 +33,7 @@
                 :class="{ 'a-toggle-btn-active': following }"
               >{{ following ? '已关注' : '关注' }}</button>
               <button v-if="authStore.isAuthenticated && !isSelf" @click="openDM" class="a-toggle-btn">发私信</button>
-              <a v-if="isSelf" :href="modulePathUrl('blog', '/settings')" class="a-btn-outline-sm">编辑资料</a>
+              <PButton v-if="isSelf" :href="modulePathUrl('blog', '/settings')" size="sm" variant="secondary">编辑资料</PButton>
             </div>
           </div>
 
@@ -61,7 +61,7 @@
               <p v-if="ch.description" class="a-muted a-clamp-2" style="font-size:.875rem">{{ ch.description }}</p>
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
-              <RouterLink :to="`/channel/${ch.slug || ch.id}`" class="a-btn-outline-sm">查看</RouterLink>
+              <PButton :to="`/channel/${ch.slug || ch.id}`" size="sm" variant="secondary">查看</PButton>
             </div>
           </div>
         </div>
@@ -144,6 +144,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
@@ -306,7 +307,7 @@ onMounted(async () => {
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 .a-cursor-pointer {
   cursor: pointer;

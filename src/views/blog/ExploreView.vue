@@ -73,16 +73,15 @@
 
     <!-- Pagination -->
     <div v-if="totalPages > 1" style="display:flex;justify-content:center;gap:.5rem;margin-top:3rem">
-      <button
+      <PButton
         v-for="p in totalPages"
         :key="p"
         @click="loadPage(p)"
-        class="a-tab-btn"
-        :class="{ 'a-tab-btn-active': p === currentPage }"
-        style="width:2.5rem;height:2.5rem;border:2px solid #000"
+        :outline="p !== currentPage"
+        style="min-width:2.5rem;height:2.5rem;padding:0"
       >
         {{ p }}
-      </button>
+      </PButton>
     </div>
   </div>
 </template>
@@ -161,6 +160,6 @@ onMounted(() => {
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 </style>

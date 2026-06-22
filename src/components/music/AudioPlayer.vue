@@ -469,7 +469,7 @@ const seek = (e: MouseEvent) => {
   gap: 10px;
   z-index: 100;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  border-radius: 4px;
+  border-radius: 0px;
 }
 .volume-control::after {
   content: '';
@@ -536,7 +536,7 @@ const seek = (e: MouseEvent) => {
   color: #666;
   transition: all 0.2s;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 0px;
   background: transparent;
   border: none;
 }

@@ -134,7 +134,7 @@ onMounted(loadArticles)
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-top: 0.25rem;
 }
 </style>

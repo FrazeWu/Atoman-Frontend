@@ -593,7 +593,7 @@ async function doPublish() {
   padding: 1.25rem 1.5rem;
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 0.75rem;
+  border-radius: 8px;
 }
 
 .ve-section-title {
@@ -624,7 +624,7 @@ async function doPublish() {
   padding: 0.6rem 0.75rem;
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   font-size: 0.8rem;
 }
 .ve-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
@@ -647,7 +647,7 @@ async function doPublish() {
   gap: 0.35rem;
   padding: 2rem 1rem;
   border: 2px dashed var(--a-color-border, #e5e7eb);
-  border-radius: 0.625rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   text-align: center;
@@ -664,13 +664,13 @@ async function doPublish() {
 .ve-progress-track {
   height: 4px;
   background: var(--a-color-border, #e5e7eb);
-  border-radius: 9999px;
+  border-radius: 0px;
   overflow: hidden;
 }
 .ve-progress-bar {
   height: 100%;
   background: var(--a-color-accent, #6366f1);
-  border-radius: 9999px;
+  border-radius: 0px;
   transition: width 0.2s ease;
 }
 
@@ -686,7 +686,7 @@ async function doPublish() {
   padding: 1.25rem;
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 0.75rem;
+  border-radius: 8px;
 }
 
 /* Cover */
@@ -703,7 +703,7 @@ async function doPublish() {
   width: 100%;
   aspect-ratio: 16/9;
   object-fit: cover;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   border: 1px solid var(--a-color-border, #e5e7eb);
 }
 
@@ -732,7 +732,7 @@ async function doPublish() {
   overflow: auto;
   padding: 0.25rem;
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   background: var(--a-color-bg, #fff);
 }
 
@@ -753,7 +753,7 @@ async function doPublish() {
   position: relative;
   width: 100%;
   aspect-ratio: 16/9;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--a-color-border, #f3f4f6);
 }
@@ -783,7 +783,7 @@ async function doPublish() {
   width: 100%;
   aspect-ratio: 16/9;
   border: 2px dashed var(--a-color-border, #e5e7eb);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }

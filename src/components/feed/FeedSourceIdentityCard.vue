@@ -111,7 +111,7 @@ const formattedLastUpdated = computed(() => {
   align-items: center;
   min-height: 2rem;
   padding: 0.2rem 0.7rem;
-  border-radius: 999px;
+  border-radius: 0px;
   background: rgba(255, 255, 255, 0.8);
 }
 
@@ -133,7 +133,7 @@ const formattedLastUpdated = computed(() => {
   place-items: center;
   width: 3rem;
   height: 3rem;
-  border-radius: 1rem;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--feed-source-color) 18%, white);
   color: color-mix(in srgb, var(--feed-source-color) 72%, black);
   font-size: 1.15rem;

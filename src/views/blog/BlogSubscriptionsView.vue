@@ -245,6 +245,6 @@ onMounted(() => {
   height: 4.5rem;
   object-fit: cover;
   filter: grayscale(100%);
-  border-radius: 4px;
+  border-radius: 8px;
 }
 </style>

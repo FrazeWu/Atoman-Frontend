@@ -596,7 +596,7 @@ onMounted(() => {
   padding: 1.25rem 1.75rem;
   background: var(--a-color-paper-soft);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .abstract-title {

@@ -487,7 +487,7 @@ const submitCategoryRequest = async () => {
   color: var(--a-color-muted-soft);
   background: var(--a-color-disabled-bg);
   padding: 0.1rem 0.4rem;
-  border-radius: 2px;
+  border-radius: 0px;
 }
 
 .sidebar-item-active .sidebar-item-count {

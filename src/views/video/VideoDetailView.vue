@@ -297,14 +297,14 @@ function handleSeekToTimestamp(value: number) {
   width: 100%;
   aspect-ratio: 16/9;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 .vd-loading-info { display: flex; flex-direction: column; gap: 0.5rem; }
 .vd-loading-line {
   height: 1rem;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 0.25rem;
+  border-radius: 0px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 .vd-loading-line--lg { width: 60%; }
@@ -340,7 +340,7 @@ function handleSeekToTimestamp(value: number) {
 .vd-player-wrap {
   width: 100%;
   background: #000;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   overflow: hidden;
   margin-bottom: 1rem;
 }
@@ -409,7 +409,7 @@ function handleSeekToTimestamp(value: number) {
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 9999px;
+  border-radius: 0px;
   color: var(--a-color-muted, #6b7280);
   cursor: pointer;
 }
@@ -419,7 +419,7 @@ function handleSeekToTimestamp(value: number) {
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
   background: var(--a-color-surface, #f9fafb);
-  border-radius: 0.5rem;
+  border-radius: 8px;
 }
 .vd-desc-text {
   font-size: 0.875rem;
@@ -480,7 +480,7 @@ function handleSeekToTimestamp(value: number) {
   color: var(--a-color-muted, #6b7280);
   padding: 0.5rem 0.75rem;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 0.375rem;
+  border-radius: 8px;
   margin-bottom: 0.5rem;
 }
 </style>

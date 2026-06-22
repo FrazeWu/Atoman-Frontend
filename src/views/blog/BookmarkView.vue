@@ -220,7 +220,7 @@ onMounted(fetchAll)
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 .sidebar-item {
   width: 100%;
@@ -231,7 +231,7 @@ onMounted(fetchAll)
   cursor: pointer;
   border: none;
   background: transparent;
-  border-radius: 0.875rem;
+  border-radius: 0px;
   display: flex;
   align-items: center;
   justify-content: space-between;

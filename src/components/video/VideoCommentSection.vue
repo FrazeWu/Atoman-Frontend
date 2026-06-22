@@ -246,7 +246,7 @@ watch(() => props.videoId, fetchComments)
 .vcs-loading-item {
   height: 3.5rem;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 0.5rem;
+  border-radius: 8px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -264,7 +264,7 @@ watch(() => props.videoId, fetchComments)
 .vcs-item {
   padding: 0.75rem;
   background: var(--a-color-surface, #f9fafb);
-  border-radius: 0.5rem;
+  border-radius: 8px;
 }
 
 .vcs-header {
@@ -323,7 +323,7 @@ watch(() => props.videoId, fetchComments)
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.0625rem 0.375rem;
-  border-radius: 999px;
+  border-radius: 0px;
   cursor: pointer;
   flex-shrink: 0;
 }

@@ -171,7 +171,7 @@ function formatDate(date?: string): string {
   gap: 0.75rem;
   padding: 1rem 1.1rem;
   border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-line-soft));
-  border-radius: 1.35rem;
+  border-radius: 8px;
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--feed-source-color) 34%, white) 0%, transparent 46%),
     linear-gradient(135deg, color-mix(in srgb, var(--feed-source-color) 16%, white) 0%, var(--hero-wash) 100%);
@@ -196,7 +196,7 @@ function formatDate(date?: string): string {
   place-items: center;
   width: 3.35rem;
   height: 3.35rem;
-  border-radius: 1.15rem;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--feed-source-color) 18%, white);
   color: color-mix(in srgb, var(--feed-source-color) 74%, black);
   font-size: 1.2rem;
@@ -209,7 +209,7 @@ function formatDate(date?: string): string {
   align-items: center;
   min-height: 2rem;
   padding: 0.2rem 0.72rem;
-  border-radius: 999px;
+  border-radius: 0px;
   background: rgba(255, 255, 255, 0.72);
   color: color-mix(in srgb, var(--feed-source-color) 72%, black);
   font-family: var(--a-font-meta);

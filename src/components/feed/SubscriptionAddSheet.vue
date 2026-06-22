@@ -11,10 +11,9 @@
 
       <div class="form-fields">
         <PField label="来源地址" required>
-          <input
+          <PInput
             v-model="sourceInput"
             placeholder="输入网站、RSS 或 GitHub 仓库地址"
-            class="a-input"
           />
         </PField>
 
@@ -49,7 +48,7 @@
         </div>
 
         <PField label="自定义名称（可选）">
-          <input v-model="customTitle" placeholder="例如：GitHub Blog" class="a-input" />
+          <PInput v-model="customTitle" placeholder="例如：GitHub Blog" />
         </PField>
 
         <PField v-if="groups.length" label="添加到分组（可选）">
@@ -89,6 +88,7 @@ import type {
 } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
+import PInput from '@/components/ui/PInput.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useFeedStore } from '@/stores/feed'

@@ -11,23 +11,21 @@
     <template v-else>
       <div v-if="authStore.isAuthenticated || commentMode === 'all'" class="comment-form">
         <div v-if="!authStore.isAuthenticated" class="form-field">
-          <label class="field-label" for="guest-name">名字</label>
-          <input
+          <PInput
             id="guest-name"
             v-model="guestName"
             type="text"
             maxlength="80"
-            class="text-input"
+            label="名字"
           />
         </div>
         <div class="form-field">
-          <label class="field-label" for="comment-content">评论</label>
-          <textarea
+          <PTextarea
             id="comment-content"
             v-model="newComment"
             :placeholder="authStore.isAuthenticated ? '写下你的评论...' : '以匿名身份写下你的评论...'"
-            rows="3"
-            class="comment-input"
+            :rows="3"
+            label="评论"
           />
         </div>
         <button
@@ -88,6 +86,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { useApi } from '@/composables/useApi'

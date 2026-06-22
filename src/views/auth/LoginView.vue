@@ -27,11 +27,10 @@
         <div v-else class="a-field">
           <label class="a-field-label">邮箱地址</label>
           <div class="auth-code-row">
-            <input
+            <PInput
               v-model="email"
               type="email"
               required
-              class="a-input"
               placeholder="请输入邮箱地址"
             />
             <PButton

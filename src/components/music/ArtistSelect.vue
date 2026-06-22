@@ -1,7 +1,5 @@
 <template>
   <div class="artist-select" ref="wrapRef">
-    <label v-if="label" class="field-label">{{ label }}</label>
-
     <!-- Selected tags -->
     <div v-if="selected.length" class="tags">
       <span v-for="a in selected" :key="a.id" class="tag">
@@ -12,11 +10,10 @@
 
     <!-- Input -->
     <div class="input-wrap">
-      <input
-        ref="inputRef"
+      <PInput
         v-model="query"
         :placeholder="placeholder || '搜索艺术家'"
-        class="field-input"
+        :label="label"
         :disabled="disabled"
         @focus="open = true"
         @keydown.esc="open = false"
@@ -50,6 +47,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import PInput from '@/components/ui/PInput.vue'
 import { useApi } from '@/composables/useApi'
 import type { Artist } from '@/types'
 
@@ -67,7 +65,6 @@ const emit = defineEmits<{
 const api = useApi()
 
 const wrapRef = ref<HTMLElement | null>(null)
-const inputRef = ref<HTMLInputElement | null>(null)
 const query = ref('')
 const open = ref(false)
 const allArtists = ref<Artist[]>([])

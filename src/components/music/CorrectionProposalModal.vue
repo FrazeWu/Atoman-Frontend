@@ -8,22 +8,20 @@
   >
     <form @submit.prevent="submit">
       <div class="a-field">
-        <label class="a-label">修改说明 <span style="color: var(--a-color-danger, #ef4444)">*</span></label>
-        <textarea
+        <PTextarea
           v-model="description"
-          class="a-textarea"
           placeholder="描述你希望修改的内容……"
-          rows="4"
+          :rows="4"
           required
+          label="修改说明"
         />
       </div>
       <div class="a-field" style="margin-top: 0.75rem">
-        <label class="a-label">修改理由（可选）</label>
-        <textarea
+        <PTextarea
           v-model="reason"
-          class="a-textarea"
           placeholder="为什么需要这个修改？"
-          rows="2"
+          :rows="2"
+          label="修改理由（可选）"
         />
       </div>
       <p v-if="errorMsg" style="color: var(--a-color-danger, #ef4444); font-size: 0.75rem; margin-top: 0.5rem">
@@ -42,6 +40,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import PModal from '@/components/ui/PModal.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 

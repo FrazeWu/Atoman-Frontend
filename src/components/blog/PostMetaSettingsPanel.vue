@@ -5,13 +5,12 @@
         <span class="a-label">文章摘要</span>
       </summary>
       <div class="settings-body">
-        <textarea
-          :value="summary"
+        <PTextarea
+          :model-value="summary"
           placeholder="留空自动截取…"
-          rows="2"
+          :rows="2"
           maxlength="50"
-          class="a-textarea settings-textarea"
-          @input="$emit('update:summary', ($event.target as HTMLTextAreaElement).value)"
+          @update:model-value="$emit('update:summary', $event)"
         />
         <div class="summary-counter">{{ summary.length }}/50</div>
       </div>
@@ -47,6 +46,7 @@
 
 <script setup lang="ts">
 import PSelect from '@/components/ui/PSelect.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 
 defineProps<{
   summary: string

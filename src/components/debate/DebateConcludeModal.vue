@@ -28,14 +28,13 @@
           </div>
         </div>
         <div class="a-field">
-          <label class="a-field-label">结论说明（可选）</label>
-          <textarea
-            :value="modelValue.conclusion_summary"
-            rows="3"
-            class="a-textarea"
+          <PTextarea
+            :model-value="modelValue.conclusion_summary"
+            :rows="3"
             placeholder="详细说明结论..."
-            @input="$emit('update:modelValue', { ...modelValue, conclusion_summary: ($event.target as HTMLTextAreaElement).value })"
-          ></textarea>
+            label="结论说明（可选）"
+            @update:model-value="$emit('update:modelValue', { ...modelValue, conclusion_summary: $event })"
+          />
         </div>
         <div class="flex justify-end gap-4 mt-6">
           <PButton outline type="button" @click="$emit('close')">取消</PButton>
@@ -51,6 +50,7 @@
 <script setup lang="ts">
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 
 const props = defineProps<{
   show: boolean

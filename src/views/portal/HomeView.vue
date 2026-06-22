@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
+import PInput from '@/components/ui/PInput.vue'
 
 const api = useApi()
 const player = usePlayerStore()
@@ -121,7 +122,7 @@ const shouldShowYear = (index: number) =>
       <!-- Artist search -->
       <div class="search-row">
         <div class="search-wrap">
-          <input
+          <PInput
             v-model="searchQuery"
             @focus="showDropdown = true"
             @blur="showDropdown = false"

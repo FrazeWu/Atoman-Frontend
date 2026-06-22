@@ -1,11 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
+import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const { state } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
 const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
+const avatarUploading = ref(false)
+const avatarErrorMessage = ref('')
+
+async function onAvatarChange(event: Event) {
+  if (!artistDraft.value) return
+
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  avatarUploading.value = true
+  avatarErrorMessage.value = ''
+
+  try {
+    const asset = await uploadMusicAsset(file, 'music.cover')
+    artistDraft.value.avatarAsset = asset
+    artistDraft.value.avatarUrl = asset.url
+  } catch (error) {
+    avatarErrorMessage.value = error instanceof Error ? error.message : '头像上传失败'
+  } finally {
+    avatarUploading.value = false
+    input.value = ''
+  }
+}
 </script>
 
 <template>
@@ -21,69 +50,80 @@ const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
       </div>
 
       <div class="field-stack">
-        <label class="field-group">
+        <div class="field-group">
           <span class="field-label">头像</span>
-          <input
-            data-testid="artist-avatar-input"
-            class="field-input field-input--file"
-            type="file"
-            disabled
-          />
-        </label>
+          <div class="avatar-upload">
+            <PAvatar
+              :src="artistDraft.avatarUrl || undefined"
+              :name="artistDraft.name || 'Artist'"
+              size="lg"
+            />
+            <div class="avatar-upload__controls">
+              <PInput
+                data-testid="artist-avatar-input"
+                type="file"
+                accept="image/*"
+                :disabled="avatarUploading"
+                @change="onAvatarChange"
+              />
+              <p v-if="avatarErrorMessage" class="state-line state-line--error">{{ avatarErrorMessage }}</p>
+              <p v-else-if="avatarUploading" class="state-line">正在上传头像...</p>
+              <p v-else-if="artistDraft.avatarUrl" class="state-line">已选择头像，提交时会携带该资源。</p>
+              <p v-else class="state-line">支持图片上传，使用现有音乐封面资源通道。</p>
+            </div>
+          </div>
+        </div>
 
-        <label class="field-group">
-          <span class="field-label">名字</span>
-          <input
+        <div class="field-group">
+          <PInput
             v-model="artistDraft.name"
             data-testid="artist-name-input"
-            class="field-input"
             type="text"
             placeholder="例如 kanye_west"
+            label="名字"
           />
-        </label>
+        </div>
 
-        <label class="field-group">
+        <div class="field-group">
           <span class="field-label">国家</span>
-          <input
+          <PCountryRegionField
             v-model="artistDraft.country"
-            data-testid="artist-country-input"
-            class="field-input"
-            type="text"
-            placeholder="United States"
+            label="国家"
+            placeholder="选择国家或地区"
+            trigger-test-id="artist-country-trigger"
+            search-test-id="artist-country-search"
+            option-prefix="artist-country-option-"
           />
-        </label>
+        </div>
 
-        <label class="field-group">
-          <span class="field-label">生日</span>
-          <input
+        <div class="field-group">
+          <PInput
             v-model="artistDraft.birthday"
             data-testid="artist-birthday-input"
-            class="field-input"
             type="date"
+            label="生日"
           />
-        </label>
+        </div>
 
-        <label class="field-group">
-          <span class="field-label">简介</span>
-          <textarea
+        <div class="field-group">
+          <PTextarea
             v-model="artistDraft.bio"
             data-testid="artist-bio-input"
-            class="field-input field-input--textarea"
-            rows="4"
+            :rows="4"
             placeholder="简要描述艺术家背景"
+            label="简介"
           />
-        </label>
+        </div>
 
-        <label class="field-group">
-          <span class="field-label">来源</span>
-          <textarea
+        <div class="field-group">
+          <PTextarea
             v-model="artistDraft.source"
             data-testid="artist-source-input"
-            class="field-input field-input--textarea"
-            rows="3"
+            :rows="3"
             placeholder="记录资料来源"
+            label="来源"
           />
-        </label>
+        </div>
       </div>
     </div>
   </div>
@@ -130,6 +170,16 @@ const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
 .step-copy { margin: 0.4rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 36rem; }
 .field-stack { display: grid; gap: 1rem; }
 .field-group { display: grid; gap: 0.45rem; }
+.avatar-upload {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.avatar-upload__controls {
+  flex: 1;
+  display: grid;
+  gap: 0.45rem;
+}
 .field-label {
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
@@ -162,5 +212,14 @@ const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
   padding: 0.85rem 0.95rem;
   color: var(--a-color-ink-soft);
   background: rgba(255, 255, 255, 0.7);
+}
+.state-line {
+  margin: 0;
+  color: var(--a-color-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.state-line--error {
+  color: #b42318;
 }
 </style>

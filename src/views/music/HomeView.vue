@@ -6,6 +6,8 @@ import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
+import PTab from '@/components/ui/PTab.vue'
+import PInput from '@/components/ui/PInput.vue'
 
 type DiscoveryMode = 'hot' | 'random'
 
@@ -107,30 +109,24 @@ watch([searchQuery, mode], () => {
           <p class="a-muted">按热度或随机浏览音乐档案库中的专辑与艺术家。</p>
         </div>
         <div class="mode-tabs" aria-label="专辑浏览模式">
-          <button
-            class="mode-tab"
-            :class="{ 'is-active': mode === 'hot' }"
-            type="button"
+          <PTab
+            label="热门"
+            :active="mode === 'hot'"
             data-testid="mode-hot"
             @click="changeMode('hot')"
-          >
-            热门
-          </button>
-          <button
-            class="mode-tab"
-            :class="{ 'is-active': mode === 'random' }"
-            type="button"
+          />
+          <PTab
+            label="随机"
+            :active="mode === 'random'"
             data-testid="mode-random"
             @click="changeMode('random')"
-          >
-            随机
-          </button>
+          />
         </div>
       </div>
 
       <div class="search-bar">
         <span class="search-bar-dot" aria-hidden="true" />
-        <input
+        <PInput
           v-model="searchQuery"
           placeholder="搜索艺术家..."
           class="search-input"
@@ -251,23 +247,7 @@ watch([searchQuery, mode], () => {
 .mode-tabs {
   display: inline-flex;
   gap: 0.35rem;
-  padding: 0.35rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
   flex-shrink: 0;
-}
-.mode-tab {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.7rem 1.1rem;
-  background: transparent;
-  cursor: pointer;
-  font-family: var(--a-font-meta);
-  font-weight: 900;
-}
-.mode-tab.is-active {
-  background: color-mix(in srgb, var(--a-color-ink) 92%, #6b4f3a 8%);
-  color: white;
 }
 .search-bar {
   display: flex;
@@ -308,12 +288,11 @@ watch([searchQuery, mode], () => {
   cursor: pointer;
   border-radius: 8px;
   overflow: hidden;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 .card:hover {
   background: var(--a-color-paper-wash);
   border-left-color: var(--a-color-ink);
-  transform: translateX(2px);
 }
 .card-img {
   aspect-ratio: 1;
@@ -405,12 +384,11 @@ watch([searchQuery, mode], () => {
   cursor: pointer;
   border-bottom: 1.5px dashed var(--a-color-line-soft);
   border-left: 3px solid transparent;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 .artist-card:hover {
   background: var(--a-color-paper-wash);
   border-left-color: var(--a-color-ink);
-  transform: translateX(2px);
 }
 .artist-card-title {
   font-family: var(--a-font-serif);

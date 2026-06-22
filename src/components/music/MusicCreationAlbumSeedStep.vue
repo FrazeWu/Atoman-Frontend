@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { uploadMusicAudioBatch } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import PInput from '@/components/ui/PInput.vue'
 
 const { state, setMusicCreationStep } = useMusicDrawers()
 
@@ -69,29 +70,27 @@ function goNext() {
       </div>
 
       <div class="field-stack">
-        <label class="field-group">
-          <span class="field-label">专辑标题</span>
-          <input
+        <div class="field-group">
+          <PInput
             v-model="albumSeedDraft.title"
             data-testid="album-seed-title-input"
-            class="field-input"
             type="text"
             placeholder="例如 Late Registration"
+            label="专辑标题"
           />
-        </label>
+        </div>
 
-        <label class="field-group">
-          <span class="field-label">批量音频</span>
-          <input
+        <div class="field-group">
+          <PInput
             data-testid="album-seed-batch-upload"
-            class="field-input field-input--file"
             type="file"
             accept="audio/*"
             multiple
             :disabled="uploading"
+            label="批量音频"
             @change="handleBatchUpload"
           />
-        </label>
+        </div>
 
         <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
         <p v-else-if="uploading" class="state-line">正在上传音频...</p>

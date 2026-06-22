@@ -2,6 +2,9 @@
 import { computed, ref } from 'vue'
 import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 
@@ -89,14 +92,13 @@ function goBack() {
     </section>
 
     <div class="field-stack">
-      <label class="field-group" data-testid="album-details-field" data-field="cover">
-        <span class="field-label">封面</span>
-        <input
+      <div class="field-group" data-testid="album-details-field" data-field="cover">
+        <PInput
           data-testid="album-details-cover-input"
-          class="field-input field-input--file"
           type="file"
           accept="image/*"
           :disabled="coverUploading"
+          label="封面"
           @change="onCoverChange"
         />
         <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
@@ -108,50 +110,49 @@ function goBack() {
             <p class="cover-preview__sub">最终提交时会携带真实封面资源。</p>
           </div>
         </div>
-      </label>
+      </div>
 
-      <label class="field-group" data-testid="album-details-field" data-field="name">
-        <span class="field-label">名字</span>
-        <input
+      <div class="field-group" data-testid="album-details-field" data-field="name">
+        <PInput
           v-model="albumDetailsDraft.title"
           data-testid="album-details-title-input"
-          class="field-input"
           type="text"
           placeholder="例如 Late Registration"
+          label="名字"
         />
-      </label>
+      </div>
 
-      <label class="field-group" data-testid="album-details-field" data-field="date">
-        <span class="field-label">日期</span>
-        <input
+      <div class="field-group" data-testid="album-details-field" data-field="date">
+        <PInput
           v-model="albumDetailsDraft.releaseDate"
           data-testid="album-details-date-input"
-          class="field-input"
           type="date"
+          label="日期"
         />
-      </label>
+      </div>
 
-      <label class="field-group" data-testid="album-details-field" data-field="type">
-        <span class="field-label">类型</span>
-        <select
+      <div class="field-group" data-testid="album-details-field" data-field="type">
+        <PSelect
+          v-model="albumDetailsDraft.type"
+          label="类型"
+          :options="[{ label: 'album', value: 'album' }]"
+        />
+        <input
           v-model="albumDetailsDraft.type"
           data-testid="album-details-type-input"
-          class="field-input"
-        >
-          <option value="album">album</option>
-        </select>
-      </label>
+          type="hidden"
+        />
+      </div>
 
-      <label class="field-group" data-testid="album-details-field" data-field="bio">
-        <span class="field-label">简介</span>
-        <textarea
+      <div class="field-group" data-testid="album-details-field" data-field="bio">
+        <PTextarea
           v-model="albumDetailsDraft.bio"
           data-testid="album-details-bio-input"
-          class="field-input field-input--textarea"
-          rows="4"
+          :rows="4"
           placeholder="补充专辑简介"
+          label="简介"
         />
-      </label>
+      </div>
 
       <section class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
         <div class="track-adjustment__header">
@@ -165,10 +166,10 @@ function goBack() {
         <div v-if="orderedTracks.length" class="track-list">
           <div v-for="(track, index) in orderedTracks" :key="track.id" class="track-row">
             <span class="track-sequence" data-testid="album-track-sequence">{{ formatSequence(track.sequence) }}</span>
-            <input
-              :value="track.title"
+            <PInput
+              :model-value="track.title"
               data-testid="album-track-title-input"
-              class="field-input track-row__input"
+              class="track-row__input"
               type="text"
               readonly
             />
@@ -204,16 +205,15 @@ function goBack() {
         </div>
       </section>
 
-      <label class="field-group" data-testid="album-details-field" data-field="source">
-        <span class="field-label">来源</span>
-        <textarea
+      <div class="field-group" data-testid="album-details-field" data-field="source">
+        <PTextarea
           v-model="albumDetailsDraft.source"
           data-testid="album-details-source-input"
-          class="field-input field-input--textarea"
-          rows="3"
+          :rows="3"
           placeholder="记录资料来源"
+          label="来源"
         />
-      </label>
+      </div>
     </div>
 
     <div class="footer-actions" data-testid="album-details-footer">

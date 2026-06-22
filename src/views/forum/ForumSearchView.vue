@@ -6,11 +6,11 @@
     <!-- Search bar -->
     <div style="margin-bottom:2rem">
       <div style="position:relative;max-width:600px;display:flex;gap:.75rem">
-        <input
+        <PInput
           v-model="localQuery"
           type="text"
           placeholder="搜索话题..."
-          class="search-input"
+          class="search-input-wrap"
           @keydown.enter="doSearch"
         />
         <PButton @click="doSearch">搜索</PButton>
@@ -84,6 +84,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
+import PInput from '@/components/ui/PInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -141,8 +142,10 @@ watch(() => route.query.q, async (q) => {
 </script>
 
 <style scoped>
-.search-input {
+.search-input-wrap {
   flex: 1;
+}
+.search-input-wrap :deep(.p-input) {
   padding: 0.75rem 1rem;
   border: var(--a-border);
   border-radius: var(--a-radius-none);
@@ -152,7 +155,7 @@ watch(() => route.query.q, async (q) => {
   font-family: inherit;
   outline: none;
 }
-.search-input:focus {
+.search-input-wrap :deep(.p-input:focus) {
   border-color: var(--a-color-fg);
   box-shadow: inset 0 0 0 1px var(--a-color-fg);
 }

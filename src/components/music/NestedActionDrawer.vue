@@ -2,6 +2,8 @@
 import { computed, reactive, ref, watch } from 'vue'
 import PChoiceField from '@/components/ui/PChoiceField.vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   buildUpdateAlbumEdit,
@@ -187,19 +189,24 @@ async function submitEdit() {
 
           <div class="paper-form-grid">
             <div class="paper-input-group">
-              <label class="paper-label" for="music-artist-name">
-                <span class="paper-label-dot" aria-hidden="true" />
-                名字
-              </label>
-              <input id="music-artist-name" v-model="artistDraft.name" data-test="artist-name-input" type="text" class="paper-input">
+              <PInput
+                id="music-artist-name"
+                v-slot
+                v-model="artistDraft.name"
+                data-test="artist-name-input"
+                type="text"
+                label="名字"
+              />
             </div>
 
             <div class="paper-input-group paper-input-group--wide">
-              <label class="paper-label" for="music-artist-bio">
-                <span class="paper-label-dot" aria-hidden="true" />
-                个人简介
-              </label>
-              <textarea id="music-artist-bio" v-model="artistDraft.bio" data-test="artist-bio-input" class="paper-input paper-textarea" rows="5" />
+              <PTextarea
+                id="music-artist-bio"
+                v-model="artistDraft.bio"
+                data-test="artist-bio-input"
+                :rows="5"
+                label="个人简介"
+              />
             </div>
           </div>
         </section>
@@ -214,11 +221,12 @@ async function submitEdit() {
           </div>
 
           <div class="paper-input-group">
-            <label class="paper-label" for="music-artist-image">
-              <span class="paper-label-dot" aria-hidden="true" />
-              头像链接
-            </label>
-            <input id="music-artist-image" v-model="artistDraft.imageUrl" type="url" class="paper-input">
+            <PInput
+              id="music-artist-image"
+              v-model="artistDraft.imageUrl"
+              type="url"
+              label="头像链接"
+            />
           </div>
         </section>
 
@@ -233,19 +241,21 @@ async function submitEdit() {
 
           <div class="paper-form-grid">
             <div class="paper-input-group">
-              <label class="paper-label" for="music-artist-nationality">
-                <span class="paper-label-dot" aria-hidden="true" />
-                地区
-              </label>
-              <input id="music-artist-nationality" v-model="artistDraft.nationality" type="text" class="paper-input">
+              <PInput
+                id="music-artist-nationality"
+                v-model="artistDraft.nationality"
+                type="text"
+                label="地区"
+              />
             </div>
 
             <div class="paper-input-group">
-              <label class="paper-label" for="music-artist-birth-year">
-                <span class="paper-label-dot" aria-hidden="true" />
-                出生年月日
-              </label>
-              <input id="music-artist-birth-year" v-model="artistDraft.birthYear" type="number" class="paper-input">
+              <PInput
+                id="music-artist-birth-year"
+                v-model="artistDraft.birthYear"
+                type="number"
+                label="出生年月日"
+              />
             </div>
           </div>
         </section>
@@ -261,28 +271,34 @@ async function submitEdit() {
 
           <div class="source-row">
             <div class="paper-input-group">
-              <label class="paper-label">
-                <span class="paper-label-dot" aria-hidden="true" />
-                来源标题
-              </label>
-              <input v-model="sourceDraft.title" type="text" class="paper-input" placeholder="来源标题">
+              <PInput
+                v-model="sourceDraft.title"
+                type="text"
+                placeholder="来源标题"
+                label="来源标题"
+              />
             </div>
             <div class="paper-input-group">
-              <label class="paper-label">
-                <span class="paper-label-dot" aria-hidden="true" />
-                来源链接
-              </label>
-              <input v-model="sourceDraft.url" type="url" class="paper-input" placeholder="https://...">
+              <PInput
+                v-model="sourceDraft.url"
+                type="url"
+                placeholder="https://..."
+                label="来源链接"
+              />
             </div>
           </div>
         </section>
 
         <div class="paper-input-group">
-          <label class="paper-label" for="music-edit-reason">
-            <span class="paper-label-dot" aria-hidden="true" />
-            编辑摘要
-          </label>
-          <textarea id="music-edit-reason" v-model="artistDraft.reason" data-test="edit-reason-input" class="paper-input paper-textarea" rows="3" required />
+          <PTextarea
+            id="music-edit-reason"
+            v-slot
+            v-model="artistDraft.reason"
+            data-test="edit-reason-input"
+            :rows="3"
+            required
+            label="编辑摘要"
+          />
         </div>
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -302,18 +318,21 @@ async function submitEdit() {
 
           <div class="paper-form-grid">
             <div class="paper-input-group">
-              <label class="paper-label" for="music-album-title">
-                <span class="paper-label-dot" aria-hidden="true" />
-                名字
-              </label>
-              <input id="music-album-title" v-model="albumDraft.title" data-test="album-title-input" type="text" class="paper-input">
+              <PInput
+                id="music-album-title"
+                v-model="albumDraft.title"
+                data-test="album-title-input"
+                type="text"
+                label="名字"
+              />
             </div>
             <div class="paper-input-group paper-input-group--wide">
-              <label class="paper-label" for="music-album-description">
-                <span class="paper-label-dot" aria-hidden="true" />
-                专辑简介
-              </label>
-              <textarea id="music-album-description" v-model="albumDraft.description" class="paper-input paper-textarea" rows="5" />
+              <PTextarea
+                id="music-album-description"
+                v-model="albumDraft.description"
+                :rows="5"
+                label="专辑简介"
+              />
             </div>
           </div>
         </section>
@@ -329,11 +348,13 @@ async function submitEdit() {
 
           <div class="paper-form-grid">
             <div class="paper-input-group">
-              <label class="paper-label" for="music-album-release-date">
-                <span class="paper-label-dot" aria-hidden="true" />
-                发行时间
-              </label>
-              <input id="music-album-release-date" v-model="albumDraft.releaseDate" data-test="album-release-date-input" type="date" class="paper-input">
+              <PInput
+                id="music-album-release-date"
+                v-model="albumDraft.releaseDate"
+                data-test="album-release-date-input"
+                type="date"
+                label="发行时间"
+              />
             </div>
             <PChoiceField
               v-model="albumDraft.albumType"
@@ -356,28 +377,34 @@ async function submitEdit() {
 
           <div class="source-row">
             <div class="paper-input-group">
-              <label class="paper-label">
-                <span class="paper-label-dot" aria-hidden="true" />
-                来源标题
-              </label>
-              <input v-model="sourceDraft.title" type="text" class="paper-input" placeholder="来源标题">
+              <PInput
+                v-model="sourceDraft.title"
+                type="text"
+                placeholder="来源标题"
+                label="来源标题"
+              />
             </div>
             <div class="paper-input-group">
-              <label class="paper-label">
-                <span class="paper-label-dot" aria-hidden="true" />
-                来源链接
-              </label>
-              <input v-model="sourceDraft.url" type="url" class="paper-input" placeholder="https://...">
+              <PInput
+                v-model="sourceDraft.url"
+                type="url"
+                placeholder="https://..."
+                label="来源链接"
+              />
             </div>
           </div>
         </section>
 
         <div class="paper-input-group">
-          <label class="paper-label" for="music-album-reason">
-            <span class="paper-label-dot" aria-hidden="true" />
-            编辑摘要
-          </label>
-          <textarea id="music-album-reason" v-model="albumDraft.reason" data-test="edit-reason-input" class="paper-input paper-textarea" rows="3" required />
+          <PTextarea
+            id="music-album-reason"
+            v-slot
+            v-model="albumDraft.reason"
+            data-test="edit-reason-input"
+            :rows="3"
+            required
+            label="编辑摘要"
+          />
         </div>
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>

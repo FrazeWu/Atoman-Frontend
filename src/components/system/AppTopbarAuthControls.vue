@@ -1,17 +1,13 @@
 <template>
   <div v-if="showKanboChannelSwitch" class="channel-select-wrap">
-    <select
-      class="channel-select"
-      :value="currentKanboChannelId || ''"
-      title="切换内容频道"
-      @change="onKanboChannelChange"
-    >
-      <option value="">频道</option>
-      <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-        {{ channel.name }}
-      </option>
-    </select>
-    <ChevronDown class="channel-select-icon" :size="14" />
+    <PSelect
+      :model-value="currentKanboChannelId || ''"
+      :options="[
+        { label: '频道', value: '' },
+        ...channels.map(channel => ({ label: channel.name, value: channel.id }))
+      ]"
+      @update:model-value="onKanboChannelChange"
+    />
   </div>
 
   <RouterLink to="/inbox" class="notif-btn" :title="notificationRoom.helper">
@@ -42,9 +38,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
+import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole } from '@/utils/roles'
 import { useKanboChannel } from '@/composables/useKanboChannel'
-import { ChevronDown } from 'lucide-vue-next'
+import PSelect from '@/components/ui/PSelect.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
@@ -60,7 +57,8 @@ const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
 const showKanboChannelSwitch = computed(() => {
   if (route.query.site === 'kanbo') return true
   if (typeof window === 'undefined') return false
-  return window.location.hostname.split('.')[0] === 'kanbo'
+  const siteContext = resolveSiteContext(window.location.hostname, window.location.search)
+  return siteContext.type === 'module' && siteContext.module === 'kanbo'
 })
 
 const toggleDropdown = (name: string) => {
@@ -108,8 +106,8 @@ const logout = () => {
   router.push('/login')
 }
 
-const onKanboChannelChange = (event: Event) => {
-  const channelId = (event.target as HTMLSelectElement).value || null
+const onKanboChannelChange = (value: string | number) => {
+  const channelId = String(value) || null
   void switchChannel(channelId, authStore.token)
 }
 

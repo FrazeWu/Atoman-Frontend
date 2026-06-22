@@ -42,7 +42,7 @@
       <form class="create-group-form" @submit.prevent="submitGroup">
         <PField label="新建分组">
           <div class="inline-form">
-            <input v-model="newGroupName" placeholder="例如：技术观察" class="a-input" :disabled="busy" />
+            <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
             <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
           </div>
         </PField>
@@ -55,11 +55,11 @@
       <div v-else class="group-list">
         <section v-for="group in displayGroups" :key="group.id" class="group-section">
           <div class="group-title">
-            <input
+            <PInput
               v-if="!group.virtual"
-              :value="draftGroupNames[group.id] ?? group.name"
+              :model-value="draftGroupNames[group.id] ?? group.name"
               data-test="group-name-input"
-              class="a-input group-name-input"
+              class="group-name-input"
               :disabled="busy"
               @input="updateDraftGroupName(group.id, $event)"
               @blur="submitGroupRename(group)"
@@ -82,9 +82,9 @@
           <div v-else class="subscription-list">
             <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
               <div class="subscription-main">
-                <input
-                  :value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
-                  class="a-input title-input"
+                <PInput
+                  :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
+                  class="title-input"
                   :disabled="busy"
                   @input="updateDraftTitle(sub.id, $event)"
                   @blur="submitRename(sub)"
@@ -133,6 +133,7 @@ import { computed, ref, watch } from 'vue'
 import type { Subscription, SubscriptionGroup } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
+import PInput from '@/components/ui/PInput.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 

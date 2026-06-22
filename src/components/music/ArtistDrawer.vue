@@ -140,8 +140,8 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
 .album-list-header { margin-bottom: 1.5rem; padding-bottom: 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent); }
 .album-list-kicker { margin: 0 0 0.35rem; font-family: var(--a-font-meta); font-size: 0.73rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--a-color-ink-soft); }
 .album-list-header h3 { font-size: 1.2rem; font-weight: 900; margin: 0; }
-.album-row { display: flex; gap: 1.4rem; margin-bottom: 1rem; position: relative; cursor: pointer; padding: 1rem 1.05rem; border-radius: 8px; border: none; border-bottom: 1.5px dashed var(--a-color-line-soft); border-left: 3px solid transparent; transition: background-color 0.2s ease, transform 0.2s ease; }
-.album-row:hover { background: var(--a-color-paper-wash); border-left-color: var(--a-color-ink); transform: translateX(2px); }
+.album-row { display: flex; gap: 1.4rem; margin-bottom: 1rem; position: relative; cursor: pointer; padding: 1rem 1.05rem; border-radius: 8px; border: none; border-bottom: 1.5px dashed var(--a-color-line-soft); border-left: 3px solid transparent; transition: background-color 0.2s ease; }
+.album-row:hover { background: var(--a-color-paper-wash); border-left-color: var(--a-color-ink); }
 .album-row-left { width: 100px; flex-shrink: 0; text-align: right; padding-top: 0.5rem; }
 .album-year { font-family: var(--a-font-meta); font-size: 1.5rem; font-weight: 900; color: var(--a-color-ink); }
 .album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; }

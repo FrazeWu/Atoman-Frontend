@@ -82,7 +82,6 @@ const formattedLastUpdated = computed(() => {
 .feed-source-card:hover,
 .feed-source-card:focus-visible {
   border-left-color: color-mix(in srgb, var(--feed-source-color, var(--a-color-ink)) 68%, var(--a-color-ink));
-  transform: translateX(2px);
 }
 
 .feed-source-card__hero {

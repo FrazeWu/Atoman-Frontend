@@ -452,7 +452,6 @@ onUnmounted(() => {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   border-color: var(--a-color-ink);
-  transform: translateY(-2px);
   box-shadow: var(--a-shadow-paper-sm);
 }
 </style>

@@ -18,7 +18,7 @@
         v-for="collection in collections"
         :key="collection.id"
         class="a-card"
-        style="cursor:pointer;transition:transform 0.2s"
+        style="cursor:pointer"
         @click="$router.push(`/collection/${collection.id}`)"
       >
         <div style="display:flex;justify-content:space-between;align-items:start">
@@ -267,7 +267,6 @@ onMounted(() => {
   box-shadow: var(--a-shadow-dropdown);
 }
 .a-fab:hover {
-  transform: scale(1.05);
   box-shadow: 7px 7px 0 var(--a-color-fg);
 }
 </style>

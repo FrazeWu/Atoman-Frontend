@@ -1282,7 +1282,6 @@ onMounted(() => {
 
 .tl-compare-item:hover,
 .tl-source-item:hover {
-  transform: translate(-3px, -3px);
   box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.15);
 }
 

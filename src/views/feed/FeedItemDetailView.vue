@@ -277,12 +277,11 @@ onUnmounted(() => {
   font-size: 0.85rem;
   font-weight: 950;
   letter-spacing: 0.15em;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: box-shadow 0.2s;
   box-shadow: 8px 8px 0 rgba(0,0,0,0.1);
 }
 
 .external-btn:hover {
-  transform: translate(-2px, -2px);
   box-shadow: 12px 12px 0 rgba(0,0,0,0.15);
 }
 

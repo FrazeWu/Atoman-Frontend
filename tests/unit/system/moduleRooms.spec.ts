@@ -4,7 +4,7 @@ import { footbarLinks, moduleNavOrder, moduleRooms, notificationRoom } from '@/c
 describe('module room naming config', () => {
   it('contains the approved room names and helper labels', () => {
     expect(moduleRooms.feed).toMatchObject({ name: '订阅', helper: 'RSS 与更新流' })
-    expect(moduleRooms.kanbo).toMatchObject({ name: '内容', helper: '文章、播客、视频' })
+    expect(moduleRooms.media).toMatchObject({ name: '内容', helper: '文章、播客、视频' })
     expect(moduleRooms.music).toMatchObject({ name: '音乐', helper: '音乐档案' })
     expect(moduleRooms.blog).toMatchObject({ name: '文章', helper: '内容视图' })
     expect(moduleRooms.forum).toMatchObject({ name: '论坛', helper: '讨论与发帖' })
@@ -15,7 +15,7 @@ describe('module room naming config', () => {
   })
 
   it('keeps module navigation order stable', () => {
-    expect(moduleNavOrder).toEqual(['feed', 'kanbo', 'music', 'forum', 'debate', 'timeline'])
+    expect(moduleNavOrder).toEqual(['feed', 'media', 'music', 'forum', 'debate', 'timeline'])
   })
 
   it('uses root home paths for subdomain-scoped modules', () => {

@@ -37,36 +37,36 @@ const videoPath = (videoId: string) => modulePathUrl('video', `/watch/${videoId}
 </script>
 
 <template>
-  <div class="a-page-xl kanbo-explore-page">
+  <div class="a-page-xl media-explore-page">
     <PPageHeader title="视频" sub="探索本网站发布的全部视频。" accent>
       <template #action>
-        <div class="kanbo-explore-actions">
+        <div class="media-explore-actions">
           <PTab label="最新" :active="sort === 'latest'" @click="changeSort('latest')" />
           <PTab label="热门" :active="sort === 'popular'" @click="changeSort('popular')" />
           <PButton to="/create" outline size="sm">返回创作</PButton>
         </div>
       </template>
     </PPageHeader>
-    <div v-if="loading" class="a-skeleton kanbo-list-skeleton" />
+    <div v-if="loading" class="a-skeleton media-list-skeleton" />
     <PEmpty v-else-if="videos.length === 0" text="暂无视频" />
-    <div v-else class="kanbo-video-grid">
+    <div v-else class="media-video-grid">
       <PVideoCard v-for="video in videos" :key="video.id" :video="video" :to="videoPath(video.id)" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.kanbo-list-skeleton {
+.media-list-skeleton {
   height: 8rem;
 }
 
-.kanbo-video-grid {
+.media-video-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 1rem;
 }
 
-.kanbo-explore-actions {
+.media-explore-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;

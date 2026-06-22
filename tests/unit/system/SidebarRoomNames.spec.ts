@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest'
 import { moduleRooms } from '@/config/moduleRooms'
 
 const files = {
-  kanbo: '../../../src/views/kanbo/KanboLayout.vue',
+  media: '../../../src/views/media/MediaLayout.vue',
 } as const
 
 const oldLabels = {
-  kanbo: 'Studio',
+  media: 'Studio',
 } as const
 
 describe('module sidebars room names', () => {

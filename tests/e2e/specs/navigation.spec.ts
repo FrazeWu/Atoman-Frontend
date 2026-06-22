@@ -6,7 +6,7 @@ test.describe('Navigation', () => {
 
     const navLinks = [
       { name: '订阅', expectedUrl: /\/?\?site=feed|\/$/ },
-      { name: '内容', expectedUrl: /\?site=kanbo/ },
+      { name: '内容', expectedUrl: /(\?site=media|https?:\/\/media\.)/ },
       { name: '音乐', expectedUrl: /\?site=music/ },
       { name: '论坛', expectedUrl: /\?site=forum/ },
       { name: '辩论', expectedUrl: /\?site=debate/ },

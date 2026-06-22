@@ -10,10 +10,10 @@ const loadChannelsMock = vi.fn()
 const clearChannelsMock = vi.fn()
 const channelsMock = ref<Array<{ id: string; name: string }>>([])
 
-vi.mock('@/composables/useKanboChannel', () => ({
-  useKanboChannel: () => ({
+vi.mock('@/composables/useMediaChannel', () => ({
+  useMediaChannel: () => ({
     channels: channelsMock,
-    currentKanboChannelId: ref(null),
+    currentMediaChannelId: ref(null),
     switchChannel: vi.fn(),
     clearChannels: clearChannelsMock,
     loadChannels: loadChannelsMock,
@@ -74,7 +74,7 @@ describe('AppTopbarAuthControls', () => {
     expect(wrapper.find('a[href="/setting"]').exists()).toBe(true)
   })
 
-  it('loads kanbo channels with current user uuid when switch is visible', async () => {
+  it('loads media channels with current user uuid when switch is visible', async () => {
     const authStore = useAuthStore()
     authStore.token = 'token-1'
     authStore.user = {
@@ -85,7 +85,7 @@ describe('AppTopbarAuthControls', () => {
       role: 'user',
     }
 
-    await router.push('/?site=kanbo')
+    await router.push('/?site=media')
 
     mount(AppTopbarAuthControls, {
       global: {
@@ -96,7 +96,7 @@ describe('AppTopbarAuthControls', () => {
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
   })
 
-  it('does not load kanbo channels without current user id', async () => {
+  it('does not load media channels without current user id', async () => {
     const authStore = useAuthStore()
     authStore.token = 'token-1'
     authStore.user = {
@@ -105,7 +105,7 @@ describe('AppTopbarAuthControls', () => {
       role: 'user',
     }
 
-    await router.push('/?site=kanbo')
+    await router.push('/?site=media')
 
     mount(AppTopbarAuthControls, {
       global: {
@@ -116,7 +116,7 @@ describe('AppTopbarAuthControls', () => {
     expect(loadChannelsMock).not.toHaveBeenCalled()
   })
 
-  it('reloads kanbo channels when the current user changes', async () => {
+  it('reloads media channels when the current user changes', async () => {
     const authStore = useAuthStore()
     authStore.token = 'token-1'
     authStore.user = {
@@ -128,7 +128,7 @@ describe('AppTopbarAuthControls', () => {
     }
     channelsMock.value = [{ id: 'old-channel', name: '旧频道' }]
 
-    await router.push('/?site=kanbo')
+    await router.push('/?site=media')
 
     mount(AppTopbarAuthControls, {
       global: {
@@ -147,5 +147,38 @@ describe('AppTopbarAuthControls', () => {
     await nextTick()
 
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-2')
+  })
+
+  it('treats media subdomain as the media module context', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'token-1'
+    authStore.user = {
+      id: 1,
+      uuid: 'user-uuid-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'user',
+    }
+
+    const originalLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, hostname: 'media.atoman.org' },
+    })
+
+    try {
+      mount(AppTopbarAuthControls, {
+        global: {
+          plugins: [router],
+        },
+      })
+
+      expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      })
+    }
   })
 })

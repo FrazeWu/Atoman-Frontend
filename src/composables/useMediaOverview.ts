@@ -1,24 +1,25 @@
 import { computed, ref } from 'vue'
+import { apiGetRaw } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import type { PodcastEpisode, Post, Video } from '@/types'
 
-export type KanboMixedItem = {
+export type MediaMixedItem = {
   id: string
   type: 'article' | 'podcast'
   title: string
   updated_at: string
 }
 
-export type KanboVideoItem = {
+export type MediaVideoItem = {
   id: string
   title: string
   cover_url?: string
   updated_at: string
 }
 
-export function useKanboOverview() {
-  const mixedItems = ref<KanboMixedItem[]>([])
-  const videoItems = ref<KanboVideoItem[]>([])
+export function useMediaOverview() {
+  const mixedItems = ref<MediaMixedItem[]>([])
+  const videoItems = ref<MediaVideoItem[]>([])
   const expandedMixed = ref(false)
   const loadingOverview = ref(false)
 
@@ -35,16 +36,10 @@ export function useKanboOverview() {
       const podcastUrl = `${api.podcast.episodes}?${[channelQuery, 'limit=5'].filter(Boolean).join('&')}`
       const videoUrl = `${api.videos.list}?${[channelQuery, 'limit=6'].filter(Boolean).join('&')}`
 
-      const [articleRes, podcastRes, videoRes] = await Promise.all([
-        fetch(articleUrl),
-        fetch(podcastUrl),
-        fetch(videoUrl),
-      ])
-
       const [articleData, podcastData, videoData] = await Promise.all([
-        articleRes.ok ? articleRes.json() : [],
-        podcastRes.ok ? podcastRes.json() : [],
-        videoRes.ok ? videoRes.json() : [],
+        apiGetRaw<Post[] | { data?: Post[] }>(articleUrl),
+        apiGetRaw<PodcastEpisode[] | { data?: PodcastEpisode[]; episodes?: PodcastEpisode[] }>(podcastUrl),
+        apiGetRaw<Video[] | { data?: Video[] }>(videoUrl),
       ])
 
       const articles: Post[] = Array.isArray(articleData) ? articleData : (articleData.data || [])

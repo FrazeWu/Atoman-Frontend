@@ -475,7 +475,7 @@ git commit -m "feat: add three-band responsive shell styles"
 
 **Files:**
 - Modify: `src/views/feed/FeedLayout.vue`
-- Modify: `src/views/kanbo/KanboLayout.vue`
+- Modify: `src/views/media/MediaLayout.vue`
 - Modify: `src/views/blog/BlogLayout.vue`
 - Modify: `src/views/forum/ForumLayout.vue`
 - Modify: `src/views/debate/DebateLayout.vue`
@@ -547,7 +547,7 @@ Expected: PASS for the mobile trigger and no regressions in existing sidebar beh
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/views/feed/FeedLayout.vue src/views/kanbo/KanboLayout.vue src/views/blog/BlogLayout.vue src/views/forum/ForumLayout.vue src/views/debate/DebateLayout.vue src/views/music/MusicLayout.vue src/views/video/VideoLayout.vue src/views/podcast/PodcastLayout.vue src/views/timeline/TimelineLayout.vue tests/unit/views/feed/FeedLayout.spec.ts
+git add src/views/feed/FeedLayout.vue src/views/media/MediaLayout.vue src/views/blog/BlogLayout.vue src/views/forum/ForumLayout.vue src/views/debate/DebateLayout.vue src/views/music/MusicLayout.vue src/views/video/VideoLayout.vue src/views/podcast/PodcastLayout.vue src/views/timeline/TimelineLayout.vue tests/unit/views/feed/FeedLayout.spec.ts
 git commit -m "feat: adapt module layouts to responsive shell"
 ```
 
@@ -655,7 +655,7 @@ bun dev
 Check in browser:
 
 1. Feed at `1280px`, `900px`, and `390px`
-2. Kanbo at `1280px`, `900px`, and `390px`
+2. Media at `1280px`, `900px`, and `390px`
 3. Blog or forum at `390px`
 4. `更多` sheet opening and closing
 5. Feed mobile source sheet opening, source selection, and manage action

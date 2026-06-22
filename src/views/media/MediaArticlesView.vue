@@ -52,20 +52,20 @@ onMounted(loadArticles)
 </script>
 
 <template>
-  <div class="a-page-xl kanbo-explore-page">
+  <div class="a-page-xl media-explore-page">
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
 
     <PPageHeader title="文章" sub="探索本网站发布的全部文章。" accent>
       <template #action>
-        <div class="kanbo-explore-actions">
+        <div class="media-explore-actions">
           <PTab label="最新" active />
           <PButton to="/create" outline size="sm">返回创作</PButton>
         </div>
       </template>
     </PPageHeader>
-    <div v-if="loading" class="a-skeleton kanbo-list-skeleton" />
+    <div v-if="loading" class="a-skeleton media-list-skeleton" />
     <PEmpty v-else-if="posts.length === 0" text="暂无文章" />
-    <div v-else class="kanbo-article-list">
+    <div v-else class="media-article-list">
       <PEntry
         v-for="post in posts"
         :key="post.id"
@@ -75,13 +75,13 @@ onMounted(loadArticles)
         @click="openArticleSheet(post)"
       >
         <template #visual>
-          <div class="kanbo-article-visual">
+          <div class="media-article-visual">
             <PBadge type="internal" fill>内部</PBadge>
             <PBadge type="blog">文章</PBadge>
             <img
               v-if="post.cover_url"
               :src="post.cover_url"
-              class="kanbo-article-cover"
+              class="media-article-cover"
               :alt="post.title"
             >
             <PAvatar
@@ -104,22 +104,22 @@ onMounted(loadArticles)
 </template>
 
 <style scoped>
-.kanbo-list-skeleton {
+.media-list-skeleton {
   height: 8rem;
 }
 
-.kanbo-explore-actions {
+.media-explore-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.kanbo-article-list {
+.media-article-list {
   display: flex;
   flex-direction: column;
 }
 
-.kanbo-article-visual {
+.media-article-visual {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -127,7 +127,7 @@ onMounted(loadArticles)
   flex-shrink: 0;
 }
 
-.kanbo-article-cover {
+.media-article-cover {
   width: 5rem;
   height: 5rem;
   object-fit: cover;

@@ -1,5 +1,5 @@
 <template>
-  <section class="kanbo-workspace a-card-sm">
+  <section class="media-workspace a-card-sm">
     <div v-if="activeCollection?.type === 'article'">
       <h2>文章工作区</h2>
       <p class="a-muted">当前合集：{{ activeCollection.name }}</p>
@@ -17,8 +17,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-const { selectedCollection } = useKanboCollections()
+const { selectedCollection } = useMediaCollections()
 const activeCollection = computed(() => selectedCollection.value)
 </script>

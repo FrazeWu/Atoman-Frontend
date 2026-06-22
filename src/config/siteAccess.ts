@@ -71,6 +71,7 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
   feed: [
     { key: 'subscription.manage', label: '订阅管理' },
   ],
+  media: [],
   music: [
     { key: 'music.submit', label: '提交音乐资料' },
     { key: 'music.review', label: '音乐审核' },

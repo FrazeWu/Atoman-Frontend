@@ -3,11 +3,11 @@
     <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
-      storage-key="atoman.kanbo.sidebar.collapsed"
+      storage-key="atoman.media.sidebar.collapsed"
       aria-label="内容导航"
     >
-      <div v-if="!sidebarCollapsed" class="p-sidebar-label">{{ moduleRooms.kanbo.name }}</div>
-      <div v-if="!sidebarCollapsed" class="p-sidebar-helper">{{ moduleRooms.kanbo.helper }}</div>
+      <div v-if="!sidebarCollapsed" class="p-sidebar-label">{{ moduleRooms.media.name }}</div>
+      <div v-if="!sidebarCollapsed" class="p-sidebar-helper">{{ moduleRooms.media.helper }}</div>
 
       <PSidebarItem to="/create" :index="1" :icon="PenTool">创作</PSidebarItem>
       <PSidebarItem to="/articles" :index="2" :icon="FileText">文章</PSidebarItem>

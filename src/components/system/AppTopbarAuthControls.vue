@@ -1,12 +1,12 @@
 <template>
-  <div v-if="showKanboChannelSwitch" class="channel-select-wrap">
+  <div v-if="showMediaChannelSwitch" class="channel-select-wrap">
     <PSelect
-      :model-value="currentKanboChannelId || ''"
+      :model-value="currentMediaChannelId || ''"
       :options="[
         { label: '频道', value: '' },
         ...channels.map(channel => ({ label: channel.name, value: channel.id }))
       ]"
-      @update:model-value="onKanboChannelChange"
+      @update:model-value="onMediaChannelChange"
     />
   </div>
 
@@ -40,25 +40,25 @@ import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole } from '@/utils/roles'
-import { useKanboChannel } from '@/composables/useKanboChannel'
+import { useMediaChannel } from '@/composables/useMediaChannel'
 import PSelect from '@/components/ui/PSelect.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const router = useRouter()
 const route = useRoute()
-const { channels, currentKanboChannelId, switchChannel, clearChannels, loadChannels } = useKanboChannel()
+const { channels, currentMediaChannelId, switchChannel, clearChannels, loadChannels } = useMediaChannel()
 
 const activeDropdown = ref<string | null>(null)
-const lastLoadedKanboChannelUserId = ref<string | number | null>(null)
+const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
-const showKanboChannelSwitch = computed(() => {
-  if (route.query.site === 'kanbo') return true
+const showMediaChannelSwitch = computed(() => {
+  if (route.query.site === 'media') return true
   if (typeof window === 'undefined') return false
   const siteContext = resolveSiteContext(window.location.hostname, window.location.search)
-  return siteContext.type === 'module' && siteContext.module === 'kanbo'
+  return siteContext.type === 'module' && siteContext.module === 'media'
 })
 
 const toggleDropdown = (name: string) => {
@@ -74,24 +74,24 @@ const handleClickOutside = (e: MouseEvent) => {
   if (!target.closest('[data-dropdown]')) closeDropdown()
 }
 
-const ensureKanboChannels = () => {
+const ensureMediaChannels = () => {
   const userId = authUserId.value
-  if (!showKanboChannelSwitch.value) return
+  if (!showMediaChannelSwitch.value) return
   if (!userId) {
-    lastLoadedKanboChannelUserId.value = null
+    lastLoadedMediaChannelUserId.value = null
     clearChannels()
     return
   }
-  if (lastLoadedKanboChannelUserId.value === userId && channels.value.length > 0) return
+  if (lastLoadedMediaChannelUserId.value === userId && channels.value.length > 0) return
 
-  lastLoadedKanboChannelUserId.value = userId
+  lastLoadedMediaChannelUserId.value = userId
   void loadChannels(authStore.token, userId)
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
-  ensureKanboChannels()
+  ensureMediaChannels()
 })
 
 onBeforeUnmount(() => {
@@ -106,13 +106,13 @@ const logout = () => {
   router.push('/login')
 }
 
-const onKanboChannelChange = (value: string | number) => {
+const onMediaChannelChange = (value: string | number) => {
   const channelId = String(value) || null
   void switchChannel(channelId, authStore.token)
 }
 
-watch(showKanboChannelSwitch, ensureKanboChannels)
-watch(authUserId, ensureKanboChannels)
+watch(showMediaChannelSwitch, ensureMediaChannels)
+watch(authUserId, ensureMediaChannels)
 </script>
 
 <style scoped>

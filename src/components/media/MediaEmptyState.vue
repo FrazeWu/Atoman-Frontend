@@ -1,5 +1,5 @@
 <template>
-  <div class="a-empty kanbo-empty-state">
+  <div class="a-empty media-empty-state">
     <h3>{{ title }}</h3>
     <p>{{ description }}</p>
   </div>

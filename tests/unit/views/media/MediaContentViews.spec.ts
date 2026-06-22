@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import KanboArticlesView from '@/views/kanbo/KanboArticlesView.vue'
-import KanboPodcastsView from '@/views/kanbo/KanboPodcastsView.vue'
-import KanboVideosView from '@/views/kanbo/KanboVideosView.vue'
+import MediaArticlesView from '@/views/media/MediaArticlesView.vue'
+import MediaPodcastsView from '@/views/media/MediaPodcastsView.vue'
+import MediaVideosView from '@/views/media/MediaVideosView.vue'
 
 const fetchMock = vi.fn()
 const routerPushMock = vi.fn()
@@ -30,9 +30,9 @@ const articleGlobal = {
   },
 }
 
-vi.mock('@/composables/useKanboChannel', () => ({
-  useKanboChannel: () => ({
-    currentKanboChannelId: { value: 'channel-should-not-be-used' },
+vi.mock('@/composables/useMediaChannel', () => ({
+  useMediaChannel: () => ({
+    currentMediaChannelId: { value: 'channel-should-not-be-used' },
   }),
 }))
 
@@ -54,7 +54,7 @@ vi.mock('vue-router', async importOriginal => {
   }
 })
 
-describe('Kanbo content view shells', () => {
+describe('Media content view shells', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     routerPushMock.mockReset()
@@ -64,16 +64,16 @@ describe('Kanbo content view shells', () => {
 
   it('renders functional page titles', () => {
     const global = { stubs: ['RouterLink'] }
-    expect(mount(KanboArticlesView, { global: articleGlobal }).text()).toContain('文章')
-    expect(mount(KanboPodcastsView, { global }).text()).toContain('播客')
-    expect(mount(KanboVideosView, { global }).text()).toContain('视频')
+    expect(mount(MediaArticlesView, { global: articleGlobal }).text()).toContain('文章')
+    expect(mount(MediaPodcastsView, { global }).text()).toContain('播客')
+    expect(mount(MediaVideosView, { global }).text()).toContain('视频')
   })
 
   it('treats article podcast and video pages as site-wide explore pages', async () => {
     const global = { stubs: ['RouterLink'] }
-    mount(KanboArticlesView, { global: articleGlobal })
-    mount(KanboPodcastsView, { global })
-    mount(KanboVideosView, { global })
+    mount(MediaArticlesView, { global: articleGlobal })
+    mount(MediaPodcastsView, { global })
+    mount(MediaVideosView, { global })
 
     await vi.waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(3)
@@ -84,7 +84,7 @@ describe('Kanbo content view shells', () => {
     expect(urls.some(url => url.includes('/blog/explore'))).toBe(true)
     expect(urls.some(url => url.includes('/podcast/episodes'))).toBe(true)
     expect(urls.some(url => url.includes('/videos?sort='))).toBe(true)
-    expect(mount(KanboArticlesView, { global: articleGlobal }).text()).toContain('探索本网站发布的全部文章')
+    expect(mount(MediaArticlesView, { global: articleGlobal }).text()).toContain('探索本网站发布的全部文章')
   })
 
   it('renders videos with PVideoCard links to the legacy video module watch route', async () => {
@@ -97,7 +97,7 @@ describe('Kanbo content view shells', () => {
       created_at: '2026-01-02T00:00:00Z',
     }]), { status: 200 }))
 
-    const wrapper = mount(KanboVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
 
     await vi.waitFor(() => {
       expect(wrapper.findComponent({ name: 'PVideoCard' }).exists()).toBe(true)
@@ -114,7 +114,7 @@ describe('Kanbo content view shells', () => {
       channel: { name: '节目' },
     }]), { status: 200 }))
 
-    const wrapper = mount(KanboPodcastsView, { global: { stubs: ['RouterLink'] } })
+    const wrapper = mount(MediaPodcastsView, { global: { stubs: ['RouterLink'] } })
 
     await vi.waitFor(() => {
       expect(wrapper.find('.p-entry').exists()).toBe(true)
@@ -135,7 +135,7 @@ describe('Kanbo content view shells', () => {
       },
     }]), { status: 200 }))
 
-    const wrapper = mount(KanboArticlesView, {
+    const wrapper = mount(MediaArticlesView, {
       global: {
         stubs: {
           RouterLink: true,
@@ -155,13 +155,13 @@ describe('Kanbo content view shells', () => {
     expect(wrapper.get('[data-test="article-sheet"]').attributes('data-article-id')).toBe('post-1')
   })
 
-  it('keeps article clicks in the right sheet on production kanbo subdomains', async () => {
+  it('keeps article clicks in the right sheet on production media subdomains', async () => {
     const originalLocation = window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: {
         protocol: 'https:',
-        hostname: 'kanbo.atoman.org',
+        hostname: 'media.atoman.org',
         search: '',
       },
     })
@@ -175,7 +175,7 @@ describe('Kanbo content view shells', () => {
     }]), { status: 200 }))
 
     try {
-      const wrapper = mount(KanboArticlesView, {
+      const wrapper = mount(MediaArticlesView, {
         global: {
           stubs: {
             RouterLink: true,
@@ -201,7 +201,7 @@ describe('Kanbo content view shells', () => {
   })
 
   it('does not show unsupported popular sorting on articles', () => {
-    const wrapper = mount(KanboArticlesView, { global: articleGlobal })
+    const wrapper = mount(MediaArticlesView, { global: articleGlobal })
 
     expect(wrapper.text()).not.toContain('热门')
   })

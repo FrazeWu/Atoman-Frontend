@@ -482,7 +482,7 @@ Do not add `transform`, `translate`, or layout-changing hover styles.
 Run the test files that correspond to any touched modules. If the sweep touches feed, music, or kanbo pages, run these examples as applicable:
 
 ```bash
-bun run test:unit -- tests/unit/feed-layering.spec.ts tests/unit/MusicLayout.spec.ts tests/unit/KanboLayout.spec.ts
+bun run test:unit -- tests/unit/feed-layering.spec.ts tests/unit/MusicLayout.spec.ts tests/unit/MediaLayout.spec.ts
 ```
 
 Expected: PASS for every touched area. If a touched area has no specific test, note that it will be covered by browser verification in Task 6.

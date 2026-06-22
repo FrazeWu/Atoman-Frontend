@@ -51,17 +51,17 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
 </script>
 
 <template>
-  <div class="a-page-xl kanbo-explore-page">
+  <div class="a-page-xl media-explore-page">
     <PPageHeader title="播客" sub="探索本网站发布的全部播客单集。" accent>
       <template #action>
-        <div class="kanbo-explore-actions">
+        <div class="media-explore-actions">
           <PButton to="/create" outline size="sm">返回创作</PButton>
         </div>
       </template>
     </PPageHeader>
-    <div v-if="loading" class="a-skeleton kanbo-list-skeleton" />
+    <div v-if="loading" class="a-skeleton media-list-skeleton" />
     <PEmpty v-else-if="episodes.length === 0" text="暂无播客" />
-    <div v-else class="kanbo-podcast-list">
+    <div v-else class="media-podcast-list">
       <PEntry
         v-for="episode in episodes"
         :key="episode.id"
@@ -70,13 +70,13 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
         @click="router.push(episodePath(episode.id))"
       >
         <template #visual>
-          <div class="kanbo-podcast-visual">
+          <div class="media-podcast-visual">
             <PBadge type="internal" fill>内部</PBadge>
             <PBadge type="podcast">播客</PBadge>
             <img
               v-if="episodeCover(episode)"
               :src="episodeCover(episode)"
-              class="kanbo-podcast-cover"
+              class="media-podcast-cover"
               :alt="episode.post?.title || '播客封面'"
             >
           </div>
@@ -92,22 +92,22 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
 </template>
 
 <style scoped>
-.kanbo-list-skeleton {
+.media-list-skeleton {
   height: 8rem;
 }
 
-.kanbo-explore-actions {
+.media-explore-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.kanbo-podcast-list {
+.media-podcast-list {
   display: flex;
   flex-direction: column;
 }
 
-.kanbo-podcast-visual {
+.media-podcast-visual {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -115,7 +115,7 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
   flex-shrink: 0;
 }
 
-.kanbo-podcast-cover {
+.media-podcast-cover {
   width: 5rem;
   height: 5rem;
   object-fit: cover;

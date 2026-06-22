@@ -27,9 +27,9 @@ describe('useResponsiveShell', () => {
 
     expect(tabs.map((tab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
     expect(tabs.map((tab) => tab.label)).toEqual(['首页/发现', '订阅', '创作/内容', '更多'])
-    expect(tabs[0]?.href).toBe(moduleUrl('kanbo'))
+    expect(tabs[0]?.href).toBe(moduleUrl('media'))
     expect(tabs[1]?.href).toBe(moduleUrl('feed'))
-    expect(tabs[2]?.href).toBe(modulePathUrl('kanbo', '/create'))
+    expect(tabs[2]?.href).toBe(modulePathUrl('media', '/create'))
     expect(tabs[3]?.href).toBeUndefined()
   })
 
@@ -134,6 +134,6 @@ describe('useResponsiveShell', () => {
     await wrapper.get('[data-tab-key="create"]').trigger('click')
 
     expect(navigateModuleWithShutter).toHaveBeenCalledTimes(1)
-    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('kanbo', '/create'))
+    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('media', '/create'))
   })
 })

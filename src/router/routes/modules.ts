@@ -3,20 +3,20 @@ import type { ModuleRoomKey } from '@/config/moduleRooms'
 import { settingRoutes } from '@/router/routes/settings'
 
 export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
-  kanbo: [
+  media: [
     ...settingRoutes,
     {
       path: '/',
-      component: () => import('@/views/kanbo/KanboLayout.vue'),
+      component: () => import('@/views/media/MediaLayout.vue'),
       meta: { hasSidebar: true },
       children: [
-        { path: '', redirect: '/create' },
-        { path: 'create', component: () => import('@/views/kanbo/KanboCreateView.vue'), meta: { requiresAuth: true } },
-        { path: 'articles', component: () => import('@/views/kanbo/KanboArticlesView.vue') },
-        { path: 'videos', component: () => import('@/views/kanbo/KanboVideosView.vue') },
-        { path: 'podcasts', component: () => import('@/views/kanbo/KanboPodcastsView.vue') },
-        { path: 'subscriptions', component: () => import('@/views/kanbo/KanboSubscriptionsView.vue') },
-        { path: 'bookmarks', component: () => import('@/views/kanbo/KanboBookmarksView.vue'), meta: { requiresAuth: true } },
+        { path: '', component: () => import('@/views/media/MediaHomeView.vue') },
+        { path: 'create', component: () => import('@/views/media/MediaCreateView.vue'), meta: { requiresAuth: true } },
+        { path: 'articles', component: () => import('@/views/media/MediaArticlesView.vue') },
+        { path: 'videos', component: () => import('@/views/media/MediaVideosView.vue') },
+        { path: 'podcasts', component: () => import('@/views/media/MediaPodcastsView.vue') },
+        { path: 'subscriptions', component: () => import('@/views/media/MediaSubscriptionsView.vue') },
+        { path: 'bookmarks', component: () => import('@/views/media/MediaBookmarksView.vue'), meta: { requiresAuth: true } },
       ],
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
@@ -60,6 +60,22 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'explore', component: () => import('@/views/music/ExploreView.vue') },
         { path: 'starred', component: () => import('@/views/music/StarredView.vue') },
         { path: 'artist/new', component: () => import('@/views/music/CreateArtistView.vue'), meta: { requiresAuth: true } },
+      ],
+    },
+    {
+      path: '/artist/:artistId',
+      component: () => import('@/views/music/MusicLayout.vue'),
+      meta: { hasSidebar: true },
+      children: [
+        { path: '', component: () => import('@/views/music/MusicArtistRouteView.vue') },
+      ],
+    },
+    {
+      path: '/album/:albumId',
+      component: () => import('@/views/music/MusicLayout.vue'),
+      meta: { hasSidebar: true },
+      children: [
+        { path: '', component: () => import('@/views/music/MusicAlbumRouteView.vue') },
       ],
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },

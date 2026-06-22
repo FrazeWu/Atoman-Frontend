@@ -1,10 +1,10 @@
 <template>
-  <section class="kanbo-section">
-    <div class="kanbo-section-head">
+  <section class="media-section">
+    <div class="media-section-head">
       <h2>文章与播客</h2>
       <PButton
         v-if="normalizedItems.length > 5"
-        data-testid="kanbo-expand-mixed"
+        data-testid="media-expand-mixed"
         variant="ghost"
         size="sm"
         @click="expanded = !expanded"
@@ -16,8 +16,8 @@
     <div
       v-for="item in visibleItems"
       :key="item.id"
-      data-testid="kanbo-mixed-item"
-      class="a-card-sm kanbo-mixed-item"
+      data-testid="media-mixed-item"
+      class="a-card-sm media-mixed-item"
     >
       <div class="a-label a-muted">{{ item.type === 'article' ? '文章' : '播客' }}</div>
       <h3>{{ item.title }}</h3>
@@ -29,10 +29,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
-import type { KanboMixedItem } from '@/composables/useKanboOverview'
+import type { MediaMixedItem } from '@/composables/useMediaOverview'
 
 const props = withDefaults(defineProps<{
-  items?: KanboMixedItem[]
+  items?: MediaMixedItem[]
 }>(), {
   items: () => [],
 })

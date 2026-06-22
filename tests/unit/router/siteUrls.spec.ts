@@ -6,6 +6,7 @@ describe('site URL builders', () => {
   it('builds module URLs on production subdomains', () => {
     expect(moduleUrl('blog', 'https:', 'music.atoman.org')).toBe('https://blog.atoman.org/')
     expect(moduleUrl('feed', 'https:', 'u-alice.atoman.org')).toBe('https://feed.atoman.org/')
+    expect(moduleUrl('media', 'https:', 'blog.atoman.org')).toBe('https://media.atoman.org/')
   })
 
   it('builds user and channel profile subdomain URLs in production', () => {

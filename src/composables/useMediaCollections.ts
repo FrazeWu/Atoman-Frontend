@@ -1,24 +1,25 @@
 import { ref } from 'vue'
+import { apiGetRaw } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import type { Collection } from '@/types'
 
-export type KanboCollectionType = 'article' | 'podcast' | 'video'
+export type MediaCollectionType = 'article' | 'podcast' | 'video'
 
-export type KanboCollection = {
+export type MediaCollection = {
   id: string
-  type: KanboCollectionType
+  type: MediaCollectionType
   name: string
   count?: number
 }
 
 const selectedChannelId = ref<string | null>(null)
 const selectedCollectionId = ref<string | null>(null)
-const selectedCollection = ref<KanboCollection | null>(null)
-const collections = ref<KanboCollection[]>([])
+const selectedCollection = ref<MediaCollection | null>(null)
+const collections = ref<MediaCollection[]>([])
 const loadingCollections = ref(false)
 
-export function useKanboCollections() {
-  const selectCollection = (id: string, type: KanboCollectionType = 'article', name = '') => {
+export function useMediaCollections() {
+  const selectCollection = (id: string, type: MediaCollectionType = 'article', name = '') => {
     selectedCollectionId.value = id
     selectedCollection.value = { id, type, name }
   }
@@ -38,9 +39,7 @@ export function useKanboCollections() {
     loadingCollections.value = true
     try {
       const api = useApi()
-      const res = await fetch(api.blog.channelCollections(channelId))
-      if (!res.ok) return
-      const data = await res.json()
+      const data = await apiGetRaw<Collection[] | { data?: Collection[] }>(api.blog.channelCollections(channelId))
       const rows: Collection[] = Array.isArray(data) ? data : (data.data || [])
       collections.value = rows.map(collection => ({
         id: collection.id,

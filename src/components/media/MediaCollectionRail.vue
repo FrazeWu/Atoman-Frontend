@@ -1,16 +1,16 @@
 <template>
-  <section class="kanbo-section">
-    <div class="kanbo-section-head">
+  <section class="media-section">
+    <div class="media-section-head">
       <h2>合集</h2>
     </div>
-    <div v-if="loading" class="a-skeleton kanbo-collection-skeleton" />
+    <div v-if="loading" class="a-skeleton media-collection-skeleton" />
     <div v-else-if="items.length === 0" class="a-card-sm a-muted">当前频道还没有合集。</div>
-    <div v-else class="kanbo-collection-grid">
+    <div v-else class="media-collection-grid">
       <button
         v-for="collection in items"
         :key="collection.id"
-        class="a-card-sm kanbo-collection-card"
-        :class="{ 'kanbo-collection-card--active': selectedCollectionId === collection.id }"
+        class="a-card-sm media-collection-card"
+        :class="{ 'media-collection-card--active': selectedCollectionId === collection.id }"
         type="button"
         @click="selectCollection(collection.id, collection.type, collection.name)"
       >
@@ -23,19 +23,19 @@
 </template>
 
 <script setup lang="ts">
-import { useKanboCollections, type KanboCollection } from '@/composables/useKanboCollections'
+import { useMediaCollections, type MediaCollection } from '@/composables/useMediaCollections'
 
 withDefaults(defineProps<{
-  items?: KanboCollection[]
+  items?: MediaCollection[]
   loading?: boolean
 }>(), {
   items: () => [],
   loading: false,
 })
 
-const { selectedCollectionId, selectCollection } = useKanboCollections()
+const { selectedCollectionId, selectCollection } = useMediaCollections()
 
-const typeLabel = (type: KanboCollection['type']) => {
+const typeLabel = (type: MediaCollection['type']) => {
   if (type === 'podcast') return '播客'
   if (type === 'video') return '视频'
   return '文章'
@@ -43,11 +43,11 @@ const typeLabel = (type: KanboCollection['type']) => {
 </script>
 
 <style scoped>
-.kanbo-collection-skeleton {
+.media-collection-skeleton {
   height: 5rem;
 }
 
-.kanbo-collection-card--active {
+.media-collection-card--active {
   outline: 2px solid var(--a-color-fg);
 }
 </style>

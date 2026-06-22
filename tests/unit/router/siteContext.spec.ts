@@ -24,6 +24,11 @@ describe('resolveSiteContext', () => {
     expect(resolveSiteContext('blog.atoman.org')).toEqual({ type: 'module', module: 'blog' })
     expect(resolveSiteContext('music.atoman.org')).toEqual({ type: 'module', module: 'music' })
     expect(resolveSiteContext('feed.atoman.org')).toEqual({ type: 'module', module: 'feed' })
+    expect(resolveSiteContext('media.atoman.org')).toEqual({ type: 'module', module: 'media' })
+  })
+
+  it('no longer treats kanbo as a module subdomain', () => {
+    expect(resolveSiteContext('kanbo.atoman.org')).toEqual({ type: 'entity', handle: 'kanbo' })
   })
 
   it('resolves unified entity subdomains', () => {
@@ -40,6 +45,7 @@ describe('resolveSiteContext', () => {
 
   it('supports explicit site override query values', () => {
     expect(resolveSiteContext('localhost', 'site=blog')).toEqual({ type: 'module', module: 'blog' })
+    expect(resolveSiteContext('localhost', 'site=media')).toEqual({ type: 'module', module: 'media' })
     expect(resolveSiteContext('localhost', 'site=alice')).toEqual({ type: 'entity', handle: 'alice' })
     expect(resolveSiteContext('localhost', 'site=design')).toEqual({ type: 'entity', handle: 'design' })
     expect(resolveSiteContext('localhost', 'site=u-alice')).toEqual({ type: 'entity', handle: 'alice', legacyType: 'user' })

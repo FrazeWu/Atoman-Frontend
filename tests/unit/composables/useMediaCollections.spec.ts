@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-describe('useKanboCollections', () => {
+describe('useMediaCollections', () => {
   beforeEach(() => {
-    const { clearSelectionForTest } = useKanboCollections()
+    const { clearSelectionForTest } = useMediaCollections()
     clearSelectionForTest()
   })
 
   it('tracks selected collection id', () => {
-    const { selectedCollectionId, selectCollection } = useKanboCollections()
+    const { selectedCollectionId, selectCollection } = useMediaCollections()
     expect(selectedCollectionId.value).toBeNull()
     selectCollection('collection-1')
     expect(selectedCollectionId.value).toBe('collection-1')
   })
 
   it('clears selected collection when channel changes', () => {
-    const { selectedCollectionId, selectCollection, resetForChannel } = useKanboCollections()
+    const { selectedCollectionId, selectCollection, resetForChannel } = useMediaCollections()
     selectCollection('collection-1')
     resetForChannel('channel-2')
     expect(selectedCollectionId.value).toBeNull()

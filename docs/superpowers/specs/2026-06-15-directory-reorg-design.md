@@ -58,7 +58,7 @@ src/components/blog/
 src/components/debate/
 src/components/feed/
 src/components/forum/
-src/components/kanbo/
+src/components/media/
 src/components/music/
 src/components/onboarding/
 src/components/podcast/
@@ -105,7 +105,7 @@ src/views/blog/
 src/views/debate/
 src/views/feed/
 src/views/forum/
-src/views/kanbo/
+src/views/media/
 src/views/music/
 src/views/orbit/
 src/views/podcast/
@@ -136,14 +136,14 @@ Suggested root-level test moves:
 ```text
 tests/unit/AppTopbar.kanbo.spec.ts              -> tests/unit/system/AppTopbar.kanbo.spec.ts
 tests/unit/AppTopbar.roomNames.spec.ts          -> tests/unit/system/AppTopbar.roomNames.spec.ts
-tests/unit/FirstLoginOnboarding.kanbo.spec.ts   -> tests/unit/system/FirstLoginOnboarding.kanbo.spec.ts
+tests/unit/FirstLoginOnboarding.media.spec.ts   -> tests/unit/system/FirstLoginOnboarding.media.spec.ts
 tests/unit/MusicHomeRoomName.spec.ts            -> tests/unit/system/MusicHomeRoomName.spec.ts
 tests/unit/SidebarRoomNames.spec.ts             -> tests/unit/system/SidebarRoomNames.spec.ts
 tests/unit/blog-layering.spec.ts                -> tests/unit/system/blog-layering.spec.ts
 tests/unit/feed-layering.spec.ts                -> tests/unit/system/feed-layering.spec.ts
 tests/unit/layering-contract.spec.ts            -> tests/unit/system/layering-contract.spec.ts
 tests/unit/layering-imports.spec.ts             -> tests/unit/system/layering-imports.spec.ts
-tests/unit/moduleRooms.kanbo.spec.ts            -> tests/unit/system/moduleRooms.kanbo.spec.ts
+tests/unit/moduleRooms.media.spec.ts            -> tests/unit/system/moduleRooms.media.spec.ts
 tests/unit/moduleRooms.spec.ts                  -> tests/unit/system/moduleRooms.spec.ts
 tests/unit/NestedActionDrawer.spec.ts           -> tests/unit/system/NestedActionDrawer.spec.ts
 tests/unit/PaperSheet.spec.ts                   -> tests/unit/system/PaperSheet.spec.ts
@@ -153,8 +153,8 @@ tests/unit/SiteFooter.spec.ts                   -> tests/unit/system/SiteFooter.
 Suggested business/component test moves should follow the actual imported subject in each spec:
 
 - Music drawer, music layout, and music home tests move under `tests/unit/views/music/` or `tests/unit/components/music/` depending on the imported file.
-- Kanbo view/component tests move under `tests/unit/views/kanbo/` or `tests/unit/components/kanbo/` depending on the imported file.
-- `useKanbo*` tests move under `tests/unit/composables/`.
+- Media view/component tests move under `tests/unit/views/kanbo/` or `tests/unit/components/kanbo/` depending on the imported file.
+- `useMedia*` tests move under `tests/unit/composables/`.
 - Store, router, config, API, utility, and composable tests already under matching directories remain there.
 
 ## Migration Rules

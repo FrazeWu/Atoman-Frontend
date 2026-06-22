@@ -149,7 +149,7 @@ Responsibilities:
 
 ### Layout ownership
 
-Existing module layouts such as `FeedLayout`, `KanboLayout`, `BlogLayout`, `ForumLayout`, `DebateLayout`, `MusicLayout`, and other `PSidebar`-based shells should continue to define module navigation for desktop and tablet.
+Existing module layouts such as `FeedLayout`, `MediaLayout`, `BlogLayout`, `ForumLayout`, `DebateLayout`, `MusicLayout`, and other `PSidebar`-based shells should continue to define module navigation for desktop and tablet.
 
 On mobile, these layouts should stop occupying left-column space. They should render the content area without sidebar layout pressure.
 
@@ -196,7 +196,7 @@ Mobile migration rules for feed:
 
 ### Other module-shell pages
 
-Kanbo, blog, forum, debate, music, video, podcast, and timeline should follow the same shell rules:
+Media, blog, forum, debate, music, video, podcast, and timeline should follow the same shell rules:
 
 1. Do not invent module-specific mobile primary nav bars
 2. Do not preserve hidden left-column occupancy on mobile

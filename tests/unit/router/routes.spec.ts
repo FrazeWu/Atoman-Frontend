@@ -39,6 +39,14 @@ describe('host-scoped route tables', () => {
     expect(forumPaths).not.toContain('/forum')
   })
 
+  it('renders a dedicated public homepage at the content root instead of redirecting to a leaf page', () => {
+    const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
+    const children = contentRoot?.children || []
+
+    expect(children.find((route) => route.path === '')?.component).toBeTruthy()
+    expect(children.find((route) => route.path === '')?.redirect).toBeUndefined()
+  })
+
   it('defines entity profile routes as aggregation spaces', () => {
     expect(paths(userRoutes)).toEqual(['/', '/posts', '/channels', '/:pathMatch(.*)*'])
     expect(paths(channelRoutes)).toEqual(['/', '/posts', '/about', '/:pathMatch(.*)*'])
@@ -62,8 +70,8 @@ describe('host-scoped route tables', () => {
 
   it('does not register duplicate top-level routes already handled by layout children', () => {
     expect(paths(moduleRoutes.music)).not.toContain('/album/new')
-    expect(paths(moduleRoutes.music)).not.toContain('/album/:albumId')
-    expect(paths(moduleRoutes.music)).not.toContain('/artist/:artistId')
+    expect(paths(moduleRoutes.music)).toContain('/album/:albumId')
+    expect(paths(moduleRoutes.music)).toContain('/artist/:artistId')
     expect(paths(moduleRoutes.feed)).not.toContain('/reading-list')
     expect(paths(moduleRoutes.feed)).not.toContain('/inbox')
     expect(paths(moduleRoutes.forum)).not.toContain('/topic/:id')

@@ -13,7 +13,7 @@ Current state:
 
 1. `src/views/feed/FeedRecommendedView.vue` uses `PPress` button-style controls for `热门 / 随机`
 2. `src/views/music/HomeView.vue` uses a page-local custom `mode-tab` implementation
-3. `src/views/kanbo/KanboVideosView.vue` already uses `PTab`, which matches the desired direction
+3. `src/views/media/MediaVideosView.vue` already uses `PTab`, which matches the desired direction
 
 The user wants all explore-page `热门 / 随机` controls to be one unified straight-corner tab style.
 

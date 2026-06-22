@@ -19,7 +19,7 @@
 - `src/views/system/` — non-module static, fallback, and system views.
 - `tests/unit/system/` — cross-module shell, room-name, layering, and contract tests.
 - `tests/unit/components/music/` — music component unit tests currently flat at `tests/unit`.
-- `tests/unit/views/kanbo/` — Kanbo view unit tests currently flat at `tests/unit`.
+- `tests/unit/views/kanbo/` — Media view unit tests currently flat at `tests/unit`.
 - `tests/unit/views/music/` — music view unit tests currently flat at `tests/unit`.
 
 ### Move Source Files
@@ -42,32 +42,32 @@
 
 - `tests/unit/AppTopbar.kanbo.spec.ts` -> `tests/unit/system/AppTopbar.kanbo.spec.ts`
 - `tests/unit/AppTopbar.roomNames.spec.ts` -> `tests/unit/system/AppTopbar.roomNames.spec.ts`
-- `tests/unit/FirstLoginOnboarding.kanbo.spec.ts` -> `tests/unit/system/FirstLoginOnboarding.kanbo.spec.ts`
+- `tests/unit/FirstLoginOnboarding.media.spec.ts` -> `tests/unit/system/FirstLoginOnboarding.media.spec.ts`
 - `tests/unit/MusicHomeRoomName.spec.ts` -> `tests/unit/system/MusicHomeRoomName.spec.ts`
 - `tests/unit/SidebarRoomNames.spec.ts` -> `tests/unit/system/SidebarRoomNames.spec.ts`
 - `tests/unit/blog-layering.spec.ts` -> `tests/unit/system/blog-layering.spec.ts`
 - `tests/unit/feed-layering.spec.ts` -> `tests/unit/system/feed-layering.spec.ts`
 - `tests/unit/layering-contract.spec.ts` -> `tests/unit/system/layering-contract.spec.ts`
 - `tests/unit/layering-imports.spec.ts` -> `tests/unit/system/layering-imports.spec.ts`
-- `tests/unit/moduleRooms.kanbo.spec.ts` -> `tests/unit/system/moduleRooms.kanbo.spec.ts`
+- `tests/unit/moduleRooms.media.spec.ts` -> `tests/unit/system/moduleRooms.media.spec.ts`
 - `tests/unit/moduleRooms.spec.ts` -> `tests/unit/system/moduleRooms.spec.ts`
 - `tests/unit/NestedActionDrawer.spec.ts` -> `tests/unit/components/music/NestedActionDrawer.spec.ts`
 - `tests/unit/PaperSheet.spec.ts` -> `tests/unit/system/PaperSheet.spec.ts`
 - `tests/unit/SiteFooter.spec.ts` -> `tests/unit/system/SiteFooter.spec.ts`
 - `tests/unit/AlbumDrawer.spec.ts` -> `tests/unit/components/music/AlbumDrawer.spec.ts`
 - `tests/unit/ArtistDrawer.spec.ts` -> `tests/unit/components/music/ArtistDrawer.spec.ts`
-- `tests/unit/KanboCollectionWorkspace.spec.ts` -> `tests/unit/views/kanbo/KanboCollectionWorkspace.spec.ts`
-- `tests/unit/KanboContentViews.spec.ts` -> `tests/unit/views/kanbo/KanboContentViews.spec.ts`
-- `tests/unit/KanboCreateView.spec.ts` -> `tests/unit/views/kanbo/KanboCreateView.spec.ts`
-- `tests/unit/KanboGlobalViews.spec.ts` -> `tests/unit/views/kanbo/KanboGlobalViews.spec.ts`
-- `tests/unit/KanboLayout.spec.ts` -> `tests/unit/views/kanbo/KanboLayout.spec.ts`
-- `tests/unit/KanboOverviewSections.spec.ts` -> `tests/unit/views/kanbo/KanboOverviewSections.spec.ts`
+- `tests/unit/MediaCollectionWorkspace.spec.ts` -> `tests/unit/views/kanbo/MediaCollectionWorkspace.spec.ts`
+- `tests/unit/MediaContentViews.spec.ts` -> `tests/unit/views/kanbo/MediaContentViews.spec.ts`
+- `tests/unit/MediaCreateView.spec.ts` -> `tests/unit/views/kanbo/MediaCreateView.spec.ts`
+- `tests/unit/MediaGlobalViews.spec.ts` -> `tests/unit/views/kanbo/MediaGlobalViews.spec.ts`
+- `tests/unit/MediaLayout.spec.ts` -> `tests/unit/views/kanbo/MediaLayout.spec.ts`
+- `tests/unit/MediaOverviewSections.spec.ts` -> `tests/unit/views/kanbo/MediaOverviewSections.spec.ts`
 - `tests/unit/MusicHomeView.spec.ts` -> `tests/unit/views/music/MusicHomeView.spec.ts`
 - `tests/unit/MusicLayout.spec.ts` -> `tests/unit/views/music/MusicLayout.spec.ts`
-- `tests/unit/useKanboChannelReset.spec.ts` -> `tests/unit/composables/useKanboChannelReset.spec.ts`
-- `tests/unit/useKanboCollections.spec.ts` -> `tests/unit/composables/useKanboCollections.spec.ts`
-- `tests/unit/useKanboOverview.api.spec.ts` -> `tests/unit/composables/useKanboOverview.api.spec.ts`
-- `tests/unit/kanbo-routing.spec.ts` -> `tests/unit/router/kanbo-routing.spec.ts`
+- `tests/unit/useMediaChannelReset.spec.ts` -> `tests/unit/composables/useMediaChannelReset.spec.ts`
+- `tests/unit/useMediaCollections.spec.ts` -> `tests/unit/composables/useMediaCollections.spec.ts`
+- `tests/unit/useMediaOverview.api.spec.ts` -> `tests/unit/composables/useMediaOverview.api.spec.ts`
+- `tests/unit/media-routing.spec.ts` -> `tests/unit/router/media-routing.spec.ts`
 - `tests/unit/musicRoutes.spec.ts` -> `tests/unit/router/musicRoutes.spec.ts`
 
 ## Task 1: Capture Baseline and Protect Existing Work
@@ -119,13 +119,13 @@ for file in \
   tests/unit/AppTopbar.kanbo.spec.ts \
   tests/unit/AppTopbar.roomNames.spec.ts \
   tests/unit/ArtistDrawer.spec.ts \
-  tests/unit/FirstLoginOnboarding.kanbo.spec.ts \
-  tests/unit/KanboCollectionWorkspace.spec.ts \
-  tests/unit/KanboContentViews.spec.ts \
-  tests/unit/KanboCreateView.spec.ts \
-  tests/unit/KanboGlobalViews.spec.ts \
-  tests/unit/KanboLayout.spec.ts \
-  tests/unit/KanboOverviewSections.spec.ts \
+  tests/unit/FirstLoginOnboarding.media.spec.ts \
+  tests/unit/MediaCollectionWorkspace.spec.ts \
+  tests/unit/MediaContentViews.spec.ts \
+  tests/unit/MediaCreateView.spec.ts \
+  tests/unit/MediaGlobalViews.spec.ts \
+  tests/unit/MediaLayout.spec.ts \
+  tests/unit/MediaOverviewSections.spec.ts \
   tests/unit/MusicHomeRoomName.spec.ts \
   tests/unit/MusicHomeView.spec.ts \
   tests/unit/MusicLayout.spec.ts \
@@ -135,14 +135,14 @@ for file in \
   tests/unit/SiteFooter.spec.ts \
   tests/unit/blog-layering.spec.ts \
   tests/unit/feed-layering.spec.ts \
-  tests/unit/kanbo-routing.spec.ts \
+  tests/unit/media-routing.spec.ts \
   tests/unit/layering-contract.spec.ts \
   tests/unit/layering-imports.spec.ts \
-  tests/unit/moduleRooms.kanbo.spec.ts \
+  tests/unit/moduleRooms.media.spec.ts \
   tests/unit/moduleRooms.spec.ts \
-  tests/unit/useKanboChannelReset.spec.ts \
-  tests/unit/useKanboCollections.spec.ts \
-  tests/unit/useKanboOverview.api.spec.ts; do \
+  tests/unit/useMediaChannelReset.spec.ts \
+  tests/unit/useMediaCollections.spec.ts \
+  tests/unit/useMediaOverview.api.spec.ts; do \
   test -f "$file" && printf 'OK %s\n' "$file" || printf 'MISSING %s\n' "$file"; \
 done
 ```
@@ -299,14 +299,14 @@ Run:
 ```bash
 mv tests/unit/AppTopbar.kanbo.spec.ts tests/unit/system/AppTopbar.kanbo.spec.ts
 mv tests/unit/AppTopbar.roomNames.spec.ts tests/unit/system/AppTopbar.roomNames.spec.ts
-mv tests/unit/FirstLoginOnboarding.kanbo.spec.ts tests/unit/system/FirstLoginOnboarding.kanbo.spec.ts
+mv tests/unit/FirstLoginOnboarding.media.spec.ts tests/unit/system/FirstLoginOnboarding.media.spec.ts
 mv tests/unit/MusicHomeRoomName.spec.ts tests/unit/system/MusicHomeRoomName.spec.ts
 mv tests/unit/SidebarRoomNames.spec.ts tests/unit/system/SidebarRoomNames.spec.ts
 mv tests/unit/blog-layering.spec.ts tests/unit/system/blog-layering.spec.ts
 mv tests/unit/feed-layering.spec.ts tests/unit/system/feed-layering.spec.ts
 mv tests/unit/layering-contract.spec.ts tests/unit/system/layering-contract.spec.ts
 mv tests/unit/layering-imports.spec.ts tests/unit/system/layering-imports.spec.ts
-mv tests/unit/moduleRooms.kanbo.spec.ts tests/unit/system/moduleRooms.kanbo.spec.ts
+mv tests/unit/moduleRooms.media.spec.ts tests/unit/system/moduleRooms.media.spec.ts
 mv tests/unit/moduleRooms.spec.ts tests/unit/system/moduleRooms.spec.ts
 mv tests/unit/PaperSheet.spec.ts tests/unit/system/PaperSheet.spec.ts
 mv tests/unit/SiteFooter.spec.ts tests/unit/system/SiteFooter.spec.ts
@@ -326,17 +326,17 @@ mv tests/unit/NestedActionDrawer.spec.ts tests/unit/components/music/NestedActio
 
 Expected: these tests exist under `tests/unit/components/music/`.
 
-- [ ] **Step 4: Move Kanbo view tests**
+- [ ] **Step 4: Move Media view tests**
 
 Run:
 
 ```bash
-mv tests/unit/KanboCollectionWorkspace.spec.ts tests/unit/views/kanbo/KanboCollectionWorkspace.spec.ts
-mv tests/unit/KanboContentViews.spec.ts tests/unit/views/kanbo/KanboContentViews.spec.ts
-mv tests/unit/KanboCreateView.spec.ts tests/unit/views/kanbo/KanboCreateView.spec.ts
-mv tests/unit/KanboGlobalViews.spec.ts tests/unit/views/kanbo/KanboGlobalViews.spec.ts
-mv tests/unit/KanboLayout.spec.ts tests/unit/views/kanbo/KanboLayout.spec.ts
-mv tests/unit/KanboOverviewSections.spec.ts tests/unit/views/kanbo/KanboOverviewSections.spec.ts
+mv tests/unit/MediaCollectionWorkspace.spec.ts tests/unit/views/kanbo/MediaCollectionWorkspace.spec.ts
+mv tests/unit/MediaContentViews.spec.ts tests/unit/views/kanbo/MediaContentViews.spec.ts
+mv tests/unit/MediaCreateView.spec.ts tests/unit/views/kanbo/MediaCreateView.spec.ts
+mv tests/unit/MediaGlobalViews.spec.ts tests/unit/views/kanbo/MediaGlobalViews.spec.ts
+mv tests/unit/MediaLayout.spec.ts tests/unit/views/kanbo/MediaLayout.spec.ts
+mv tests/unit/MediaOverviewSections.spec.ts tests/unit/views/kanbo/MediaOverviewSections.spec.ts
 ```
 
 Expected: these tests exist under `tests/unit/views/kanbo/`.
@@ -357,10 +357,10 @@ Expected: these tests exist under `tests/unit/views/music/`.
 Run:
 
 ```bash
-mv tests/unit/useKanboChannelReset.spec.ts tests/unit/composables/useKanboChannelReset.spec.ts
-mv tests/unit/useKanboCollections.spec.ts tests/unit/composables/useKanboCollections.spec.ts
-mv tests/unit/useKanboOverview.api.spec.ts tests/unit/composables/useKanboOverview.api.spec.ts
-mv tests/unit/kanbo-routing.spec.ts tests/unit/router/kanbo-routing.spec.ts
+mv tests/unit/useMediaChannelReset.spec.ts tests/unit/composables/useMediaChannelReset.spec.ts
+mv tests/unit/useMediaCollections.spec.ts tests/unit/composables/useMediaCollections.spec.ts
+mv tests/unit/useMediaOverview.api.spec.ts tests/unit/composables/useMediaOverview.api.spec.ts
+mv tests/unit/media-routing.spec.ts tests/unit/router/media-routing.spec.ts
 ```
 
 Expected: these tests exist in their target directories.
@@ -393,16 +393,16 @@ From tests/unit/composables/*.spec.ts to src/...       use ../../../src/...
 From tests/unit/router/*.spec.ts to src/...            use ../../../src/...
 ```
 
-Example before moving `tests/unit/KanboLayout.spec.ts`:
+Example before moving `tests/unit/MediaLayout.spec.ts`:
 
 ```ts
-const layoutSource = readFileSync(resolve(__dirname, '../../src/views/kanbo/KanboLayout.vue'), 'utf8')
+const layoutSource = readFileSync(resolve(__dirname, '../../src/views/media/MediaLayout.vue'), 'utf8')
 ```
 
-After moving to `tests/unit/views/kanbo/KanboLayout.spec.ts`:
+After moving to `tests/unit/views/kanbo/MediaLayout.spec.ts`:
 
 ```ts
-const layoutSource = readFileSync(resolve(__dirname, '../../../../src/views/kanbo/KanboLayout.vue'), 'utf8')
+const layoutSource = readFileSync(resolve(__dirname, '../../../../src/views/media/MediaLayout.vue'), 'utf8')
 ```
 
 Expected: every filesystem path from a moved test points to the same source file as before the move.
@@ -414,7 +414,7 @@ Alias imports such as this should remain unchanged when the target file did not 
 ```ts
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import HomeView from '@/views/music/HomeView.vue'
-import { useKanboOverview } from '@/composables/useKanboOverview'
+import { useMediaOverview } from '@/composables/useMediaOverview'
 ```
 
 Alias imports to moved files must use the new paths from Task 3.

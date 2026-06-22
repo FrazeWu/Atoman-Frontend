@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
-import KanboMixedFeedSection from '@/components/kanbo/KanboMixedFeedSection.vue'
+import MediaMixedFeedSection from '@/components/media/MediaMixedFeedSection.vue'
 
-describe('KanboMixedFeedSection', () => {
+describe('MediaMixedFeedSection', () => {
   it('shows exactly five items by default and an expand button', () => {
-    const wrapper = mount(KanboMixedFeedSection, {
+    const wrapper = mount(MediaMixedFeedSection, {
       props: {
         items: Array.from({ length: 8 }).map((_, index) => ({
           id: `item-${index}`,
@@ -14,7 +14,7 @@ describe('KanboMixedFeedSection', () => {
         })),
       },
     })
-    expect(wrapper.findAll('[data-testid="kanbo-mixed-item"]')).toHaveLength(5)
-    expect(wrapper.get('[data-testid="kanbo-expand-mixed"]').text()).toContain('展开')
+    expect(wrapper.findAll('[data-testid="media-mixed-item"]')).toHaveLength(5)
+    expect(wrapper.get('[data-testid="media-expand-mixed"]').text()).toContain('展开')
   })
 })

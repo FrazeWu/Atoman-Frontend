@@ -33,26 +33,26 @@
 - `doc/api-v1.md`: 只有当前端需要新的聚合接口时才更新；若纯复用现有接口且不改契约，可不动。
 
 **New Files:**
-- `web/src/views/kanbo/KanboLayout.vue`: 刊播模块统一布局与侧边栏。
-- `web/src/views/kanbo/KanboCreateView.vue`: 创作工作台主页（频道总览态 + 合集工作态）。
-- `web/src/views/kanbo/KanboArticlesView.vue`: 全站文章探索视角页。
-- `web/src/views/kanbo/KanboPodcastsView.vue`: 全站播客探索视角页。
-- `web/src/views/kanbo/KanboVideosView.vue`: 全站视频探索视角页。
-- `web/src/views/kanbo/KanboSubscriptionsView.vue`: 刊播内的全局订阅页壳（可复用现有订阅内容）。
-- `web/src/views/kanbo/KanboBookmarksView.vue`: 刊播内的全局收藏页壳。
-- `web/src/components/kanbo/KanboChannelSwitcher.vue`: topbar 右侧频道切换控件，只展示当前登录用户可经营频道。
-- `web/src/components/kanbo/KanboCollectionRail.vue`: 创作页上方合集层。
-- `web/src/components/kanbo/KanboMixedFeedSection.vue`: 文章 + 播客总览区（默认 5 条，可展开）。
-- `web/src/components/kanbo/KanboVideoCardSection.vue`: 视频总览卡片区。
-- `web/src/components/kanbo/KanboCollectionWorkspace.vue`: 选中合集后的工作态壳，根据类型切换子视图。
-- `web/src/components/kanbo/KanboEmptyState.vue`: 无频道 / 无合集等统一空状态。
-- `web/src/composables/useKanboChannel.ts`: 当前频道上下文读取与切换。
-- `web/src/composables/useKanboCollections.ts`: 拉取当前频道合集，并维持选中合集状态。
-- `web/src/composables/useKanboOverview.ts`: 聚合拉取文章、播客、视频总览数据。
-- `web/tests/unit/moduleRooms.kanbo.spec.ts`: 模块命名与排序测试。
-- `web/tests/unit/KanboLayout.spec.ts`: 刊播侧边栏与默认入口测试。
-- `web/tests/unit/KanboCreateView.spec.ts`: 创作页总览态 / 工作态测试。
-- `web/tests/unit/useKanboCollections.spec.ts`: 选中合集、切频道清空状态测试。
+- `web/src/views/media/MediaLayout.vue`: 刊播模块统一布局与侧边栏。
+- `web/src/views/media/MediaCreateView.vue`: 创作工作台主页（频道总览态 + 合集工作态）。
+- `web/src/views/media/MediaArticlesView.vue`: 全站文章探索视角页。
+- `web/src/views/media/MediaPodcastsView.vue`: 全站播客探索视角页。
+- `web/src/views/media/MediaVideosView.vue`: 全站视频探索视角页。
+- `web/src/views/media/MediaSubscriptionsView.vue`: 刊播内的全局订阅页壳（可复用现有订阅内容）。
+- `web/src/views/media/MediaBookmarksView.vue`: 刊播内的全局收藏页壳。
+- `web/src/components/media/MediaChannelSwitcher.vue`: topbar 右侧频道切换控件，只展示当前登录用户可经营频道。
+- `web/src/components/media/MediaCollectionRail.vue`: 创作页上方合集层。
+- `web/src/components/media/MediaMixedFeedSection.vue`: 文章 + 播客总览区（默认 5 条，可展开）。
+- `web/src/components/media/MediaVideoCardSection.vue`: 视频总览卡片区。
+- `web/src/components/media/MediaCollectionWorkspace.vue`: 选中合集后的工作态壳，根据类型切换子视图。
+- `web/src/components/media/MediaEmptyState.vue`: 无频道 / 无合集等统一空状态。
+- `web/src/composables/useMediaChannel.ts`: 当前频道上下文读取与切换。
+- `web/src/composables/useMediaCollections.ts`: 拉取当前频道合集，并维持选中合集状态。
+- `web/src/composables/useMediaOverview.ts`: 聚合拉取文章、播客、视频总览数据。
+- `web/tests/unit/moduleRooms.media.spec.ts`: 模块命名与排序测试。
+- `web/tests/unit/MediaLayout.spec.ts`: 刊播侧边栏与默认入口测试。
+- `web/tests/unit/MediaCreateView.spec.ts`: 创作页总览态 / 工作态测试。
+- `web/tests/unit/useMediaCollections.spec.ts`: 选中合集、切频道清空状态测试。
 
 **Notes:**
 - 不要求新建后端聚合路由。优先在前端组合现有 `blog` / `podcast` / `video` 数据。
@@ -64,12 +64,12 @@
 
 **Files:**
 - Modify: `web/src/config/moduleRooms.ts`
-- Test: `web/tests/unit/moduleRooms.kanbo.spec.ts`
+- Test: `web/tests/unit/moduleRooms.media.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/moduleRooms.kanbo.spec.ts
+// web/tests/unit/moduleRooms.media.spec.ts
 import { describe, it, expect } from 'vitest'
 import { moduleNavOrder, moduleRooms } from '@/config/moduleRooms'
 
@@ -89,7 +89,7 @@ describe('moduleRooms kanbo integration', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/moduleRooms.kanbo.spec.ts`
+Run: `cd web && npx vitest run tests/unit/moduleRooms.media.spec.ts`
 Expected: FAIL with TypeScript error or assertion error because `kanbo` does not exist and names are still room-style labels.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -186,13 +186,13 @@ export const moduleNavOrder: ModuleRoomKey[] = [
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/moduleRooms.kanbo.spec.ts`
+Run: `cd web && npx vitest run tests/unit/moduleRooms.media.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/config/moduleRooms.ts web/tests/unit/moduleRooms.kanbo.spec.ts
+git add web/src/config/moduleRooms.ts web/tests/unit/moduleRooms.media.spec.ts
 git commit -m "feat(kanbo): rename topbar modules and add kanbo module entry"
 ```
 
@@ -203,12 +203,12 @@ git commit -m "feat(kanbo): rename topbar modules and add kanbo module entry"
 - Modify: `web/src/composables/useSubdomainNav.ts`
 - Modify: `web/src/router/siteUrls.ts`
 - Modify: `web/src/router/siteContext.ts`
-- Test: `web/tests/unit/kanbo-routing.spec.ts`
+- Test: `web/tests/unit/media-routing.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/kanbo-routing.spec.ts
+// web/tests/unit/media-routing.spec.ts
 import { describe, it, expect } from 'vitest'
 import { moduleRoutes } from '@/router/routes/modules'
 
@@ -234,7 +234,7 @@ describe('kanbo routes', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/kanbo-routing.spec.ts`
+Run: `cd web && npx vitest run tests/unit/media-routing.spec.ts`
 Expected: FAIL because `moduleRoutes.kanbo` is undefined.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -246,16 +246,16 @@ kanbo: [
   ...settingRoutes,
   {
     path: '/',
-    component: () => import('@/views/kanbo/KanboLayout.vue'),
+    component: () => import('@/views/kanbo/MediaLayout.vue'),
     meta: { hasSidebar: true },
     children: [
-      { path: '', redirect: '/create' },
-      { path: 'create', component: () => import('@/views/kanbo/KanboCreateView.vue'), meta: { requiresAuth: true } },
-      { path: 'articles', component: () => import('@/views/kanbo/KanboArticlesView.vue'), meta: { requiresAuth: true } },
-      { path: 'videos', component: () => import('@/views/kanbo/KanboVideosView.vue'), meta: { requiresAuth: true } },
-      { path: 'podcasts', component: () => import('@/views/kanbo/KanboPodcastsView.vue'), meta: { requiresAuth: true } },
-      { path: 'subscriptions', component: () => import('@/views/kanbo/KanboSubscriptionsView.vue'), meta: { requiresAuth: true } },
-      { path: 'bookmarks', component: () => import('@/views/kanbo/KanboBookmarksView.vue'), meta: { requiresAuth: true } },
+      { path: '', redirect: '/articles' },
+      { path: 'create', component: () => import('@/views/kanbo/MediaCreateView.vue'), meta: { requiresAuth: true } },
+      { path: 'articles', component: () => import('@/views/kanbo/MediaArticlesView.vue'), meta: { requiresAuth: true } },
+      { path: 'videos', component: () => import('@/views/kanbo/MediaVideosView.vue'), meta: { requiresAuth: true } },
+      { path: 'podcasts', component: () => import('@/views/kanbo/MediaPodcastsView.vue'), meta: { requiresAuth: true } },
+      { path: 'subscriptions', component: () => import('@/views/kanbo/MediaSubscriptionsView.vue'), meta: { requiresAuth: true } },
+      { path: 'bookmarks', component: () => import('@/views/kanbo/MediaBookmarksView.vue'), meta: { requiresAuth: true } },
     ],
   },
   { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
@@ -270,13 +270,13 @@ Edit `web/src/composables/useSubdomainNav.ts` only if TypeScript needs help afte
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/kanbo-routing.spec.ts`
+Run: `cd web && npx vitest run tests/unit/media-routing.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/router/routes/modules.ts web/src/router/siteUrls.ts web/src/router/siteContext.ts web/src/composables/useSubdomainNav.ts web/tests/unit/kanbo-routing.spec.ts
+git add web/src/router/routes/modules.ts web/src/router/siteUrls.ts web/src/router/siteContext.ts web/src/composables/useSubdomainNav.ts web/tests/unit/media-routing.spec.ts
 git commit -m "feat(kanbo): add unified kanbo route tree and navigation support"
 ```
 
@@ -326,13 +326,13 @@ Expected: FAIL because current labels still use room names and blog-only helper 
 Edit `web/src/components/AppTopbar.vue`.
 
 ```ts
-const isKanboContext = computed(() => siteContext.value.type === 'module' && siteContext.value.module === 'kanbo')
+const isMediaContext = computed(() => siteContext.value.type === 'module' && siteContext.value.module === 'kanbo')
 ```
 
 Remove the old blog-only quick links block entirely:
 
 ```vue
-<template v-if="isKanboContext">
+<template v-if="isMediaContext">
   <span class="nav-sep">|</span>
   <RouterLink to="/create" class="nav-link-sm">创作</RouterLink>
   <RouterLink to="/articles" class="nav-link-sm">文章</RouterLink>
@@ -360,23 +360,23 @@ git add web/src/components/AppTopbar.vue web/tests/unit/AppTopbar.kanbo.spec.ts
 git commit -m "refactor(nav): switch topbar to functional kanbo naming"
 ```
 
-### Task 4: Create the Kanbo module layout and sidebar shell
+### Task 4: Create the Media module layout and sidebar shell
 
 **Files:**
-- Create: `web/src/views/kanbo/KanboLayout.vue`
-- Test: `web/tests/unit/KanboLayout.spec.ts`
+- Create: `web/src/views/media/MediaLayout.vue`
+- Test: `web/tests/unit/MediaLayout.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/KanboLayout.spec.ts
+// web/tests/unit/MediaLayout.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
-import KanboLayout from '@/views/kanbo/KanboLayout.vue'
+import MediaLayout from '@/views/kanbo/MediaLayout.vue'
 
-describe('KanboLayout', () => {
+describe('MediaLayout', () => {
   it('renders the six kanbo sidebar entries in order', () => {
-    const wrapper = mount(KanboLayout, {
+    const wrapper = mount(MediaLayout, {
       global: {
         stubs: ['router-view', 'PaperSidebar', 'PaperSidebarItem'],
       },
@@ -389,13 +389,13 @@ describe('KanboLayout', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/KanboLayout.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaLayout.spec.ts`
 Expected: FAIL because the file does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```vue
-<!-- web/src/views/kanbo/KanboLayout.vue -->
+<!-- web/src/views/media/MediaLayout.vue -->
 <template>
   <div class="a-module-layout">
     <PaperSidebar :label="moduleRooms.kanbo.name" :helper="moduleRooms.kanbo.helper">
@@ -421,45 +421,45 @@ import PaperSidebarItem from '@/components/ui/PaperSidebarItem.vue'
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/KanboLayout.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaLayout.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/views/kanbo/KanboLayout.vue web/tests/unit/KanboLayout.spec.ts
+git add web/src/views/media/MediaLayout.vue web/tests/unit/MediaLayout.spec.ts
  git commit -m "feat(kanbo): add unified kanbo layout and sidebar shell"
 ```
 
 ### Task 5: Add current-channel and collection selection composables
 
 **Files:**
-- Create: `web/src/composables/useKanboChannel.ts`
-- Create: `web/src/composables/useKanboCollections.ts`
-- Test: `web/tests/unit/useKanboCollections.spec.ts`
+- Create: `web/src/composables/useMediaChannel.ts`
+- Create: `web/src/composables/useMediaCollections.ts`
+- Test: `web/tests/unit/useMediaCollections.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/useKanboCollections.spec.ts
+// web/tests/unit/useMediaCollections.spec.ts
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-describe('useKanboCollections', () => {
+describe('useMediaCollections', () => {
   beforeEach(() => {
-    const { clearSelectionForTest } = useKanboCollections()
+    const { clearSelectionForTest } = useMediaCollections()
     clearSelectionForTest()
   })
 
   it('tracks selected collection id', () => {
-    const { selectedCollectionId, selectCollection } = useKanboCollections()
+    const { selectedCollectionId, selectCollection } = useMediaCollections()
     expect(selectedCollectionId.value).toBeNull()
     selectCollection('collection-1')
     expect(selectedCollectionId.value).toBe('collection-1')
   })
 
   it('clears selected collection when channel changes', () => {
-    const { selectedCollectionId, selectCollection, resetForChannel } = useKanboCollections()
+    const { selectedCollectionId, selectCollection, resetForChannel } = useMediaCollections()
     selectCollection('collection-1')
     resetForChannel('channel-2')
     expect(selectedCollectionId.value).toBeNull()
@@ -469,19 +469,19 @@ describe('useKanboCollections', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/useKanboCollections.spec.ts`
+Run: `cd web && npx vitest run tests/unit/useMediaCollections.spec.ts`
 Expected: FAIL because the composable does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```typescript
-// web/src/composables/useKanboCollections.ts
+// web/src/composables/useMediaCollections.ts
 import { ref } from 'vue'
 
 const selectedChannelId = ref<string | null>(null)
 const selectedCollectionId = ref<string | null>(null)
 
-export function useKanboCollections() {
+export function useMediaCollections() {
   const selectCollection = (id: string) => {
     selectedCollectionId.value = id
   }
@@ -507,65 +507,65 @@ export function useKanboCollections() {
 ```
 
 ```typescript
-// web/src/composables/useKanboChannel.ts
+// web/src/composables/useMediaChannel.ts
 import { ref } from 'vue'
 
-const currentKanboChannelId = ref<string | null>(null)
+const currentMediaChannelId = ref<string | null>(null)
 
-export function useKanboChannel() {
-  const setCurrentKanboChannel = (channelId: string | null) => {
-    currentKanboChannelId.value = channelId
+export function useMediaChannel() {
+  const setCurrentMediaChannel = (channelId: string | null) => {
+    currentMediaChannelId.value = channelId
   }
 
   return {
-    currentKanboChannelId,
-    setCurrentKanboChannel,
+    currentMediaChannelId,
+    setCurrentMediaChannel,
   }
 }
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/useKanboCollections.spec.ts`
+Run: `cd web && npx vitest run tests/unit/useMediaCollections.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/composables/useKanboChannel.ts web/src/composables/useKanboCollections.ts web/tests/unit/useKanboCollections.spec.ts
+git add web/src/composables/useMediaChannel.ts web/src/composables/useMediaCollections.ts web/tests/unit/useMediaCollections.spec.ts
 git commit -m "feat(kanbo): add channel and collection selection composables"
 ```
 
-### Task 6: Build Kanbo create page skeleton with empty states and disabled publish state
+### Task 6: Build Media create page skeleton with empty states and disabled publish state
 
 **Files:**
-- Create: `web/src/views/kanbo/KanboCreateView.vue`
-- Create: `web/src/components/kanbo/KanboEmptyState.vue`
-- Test: `web/tests/unit/KanboCreateView.spec.ts`
+- Create: `web/src/views/media/MediaCreateView.vue`
+- Create: `web/src/components/media/MediaEmptyState.vue`
+- Test: `web/tests/unit/MediaCreateView.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/KanboCreateView.spec.ts
+// web/tests/unit/MediaCreateView.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
-import KanboCreateView from '@/views/kanbo/KanboCreateView.vue'
+import MediaCreateView from '@/views/kanbo/MediaCreateView.vue'
 
-vi.mock('@/composables/useKanboCollections', () => ({
-  useKanboCollections: () => ({
+vi.mock('@/composables/useMediaCollections', () => ({
+  useMediaCollections: () => ({
     selectedCollectionId: { value: null },
     selectCollection: vi.fn(),
   }),
 }))
 
-describe('KanboCreateView', () => {
+describe('MediaCreateView', () => {
   it('disables publish button before a collection is selected', () => {
-    const wrapper = mount(KanboCreateView, {
+    const wrapper = mount(MediaCreateView, {
       global: {
-        stubs: ['KanboCollectionRail', 'KanboMixedFeedSection', 'KanboVideoCardSection', 'KanboCollectionWorkspace'],
+        stubs: ['MediaCollectionRail', 'MediaMixedFeedSection', 'MediaVideoCardSection', 'MediaCollectionWorkspace'],
       },
     })
-    const button = wrapper.get('[data-testid="kanbo-publish-button"]')
+    const button = wrapper.get('[data-testid="media-publish-button"]')
     expect(button.attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('请先选择一个合集')
   })
@@ -574,15 +574,15 @@ describe('KanboCreateView', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/KanboCreateView.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaCreateView.spec.ts`
 Expected: FAIL because the view file does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```vue
-<!-- web/src/components/kanbo/KanboEmptyState.vue -->
+<!-- web/src/components/media/MediaEmptyState.vue -->
 <template>
-  <div class="a-empty kanbo-empty-state">
+  <div class="a-empty media-empty-state">
     <h3>{{ title }}</h3>
     <p>{{ description }}</p>
   </div>
@@ -597,12 +597,12 @@ defineProps<{
 ```
 
 ```vue
-<!-- web/src/views/kanbo/KanboCreateView.vue -->
+<!-- web/src/views/media/MediaCreateView.vue -->
 <template>
-  <div class="a-page kanbo-create-view">
+  <div class="a-page media-create-view">
     <APageHeader title="创作" sub="当前频道的内容工作台，先选择合集再开始发布或整理内容。" accent>
       <template #action>
-        <ABtn data-testid="kanbo-publish-button" :disabled="!selectedCollectionId" variant="primary">
+        <ABtn data-testid="media-publish-button" :disabled="!selectedCollectionId" variant="primary">
           发布内容
         </ABtn>
       </template>
@@ -610,14 +610,14 @@ defineProps<{
 
     <p v-if="!selectedCollectionId" class="a-muted">请先选择一个合集</p>
 
-    <KanboCollectionRail />
+    <MediaCollectionRail />
 
     <section v-if="selectedCollectionId">
-      <KanboCollectionWorkspace />
+      <MediaCollectionWorkspace />
     </section>
     <template v-else>
-      <KanboMixedFeedSection />
-      <KanboVideoCardSection />
+      <MediaMixedFeedSection />
+      <MediaVideoCardSection />
     </template>
   </div>
 </template>
@@ -625,48 +625,48 @@ defineProps<{
 <script setup lang="ts">
 import ABtn from '@/components/ui/ABtn.vue'
 import APageHeader from '@/components/ui/APageHeader.vue'
-import KanboCollectionRail from '@/components/kanbo/KanboCollectionRail.vue'
-import KanboMixedFeedSection from '@/components/kanbo/KanboMixedFeedSection.vue'
-import KanboVideoCardSection from '@/components/kanbo/KanboVideoCardSection.vue'
-import KanboCollectionWorkspace from '@/components/kanbo/KanboCollectionWorkspace.vue'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import MediaCollectionRail from '@/components/kanbo/MediaCollectionRail.vue'
+import MediaMixedFeedSection from '@/components/kanbo/MediaMixedFeedSection.vue'
+import MediaVideoCardSection from '@/components/kanbo/MediaVideoCardSection.vue'
+import MediaCollectionWorkspace from '@/components/kanbo/MediaCollectionWorkspace.vue'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-const { selectedCollectionId } = useKanboCollections()
+const { selectedCollectionId } = useMediaCollections()
 </script>
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/KanboCreateView.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaCreateView.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/views/kanbo/KanboCreateView.vue web/src/components/kanbo/KanboEmptyState.vue web/tests/unit/KanboCreateView.spec.ts
+git add web/src/views/media/MediaCreateView.vue web/src/components/media/MediaEmptyState.vue web/tests/unit/MediaCreateView.spec.ts
 git commit -m "feat(kanbo): add create workspace shell with disabled publish state"
 ```
 
 ### Task 7: Implement collection rail and channel-overview sections
 
 **Files:**
-- Create: `web/src/components/kanbo/KanboCollectionRail.vue`
-- Create: `web/src/components/kanbo/KanboMixedFeedSection.vue`
-- Create: `web/src/components/kanbo/KanboVideoCardSection.vue`
-- Create: `web/src/composables/useKanboOverview.ts`
-- Test: `web/tests/unit/KanboOverviewSections.spec.ts`
+- Create: `web/src/components/media/MediaCollectionRail.vue`
+- Create: `web/src/components/media/MediaMixedFeedSection.vue`
+- Create: `web/src/components/media/MediaVideoCardSection.vue`
+- Create: `web/src/composables/useMediaOverview.ts`
+- Test: `web/tests/unit/MediaOverviewSections.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/KanboOverviewSections.spec.ts
+// web/tests/unit/MediaOverviewSections.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
-import KanboMixedFeedSection from '@/components/kanbo/KanboMixedFeedSection.vue'
+import MediaMixedFeedSection from '@/components/kanbo/MediaMixedFeedSection.vue'
 
-describe('KanboMixedFeedSection', () => {
+describe('MediaMixedFeedSection', () => {
   it('shows exactly five items by default and a expand button', () => {
-    const wrapper = mount(KanboMixedFeedSection, {
+    const wrapper = mount(MediaMixedFeedSection, {
       props: {
         items: Array.from({ length: 8 }).map((_, index) => ({
           id: `item-${index}`,
@@ -676,40 +676,40 @@ describe('KanboMixedFeedSection', () => {
         })),
       },
     })
-    expect(wrapper.findAll('[data-testid="kanbo-mixed-item"]')).toHaveLength(5)
-    expect(wrapper.get('[data-testid="kanbo-expand-mixed"]').text()).toContain('展开')
+    expect(wrapper.findAll('[data-testid="media-mixed-item"]')).toHaveLength(5)
+    expect(wrapper.get('[data-testid="media-expand-mixed"]').text()).toContain('展开')
   })
 })
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/KanboOverviewSections.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaOverviewSections.spec.ts`
 Expected: FAIL because the component does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```typescript
-// web/src/composables/useKanboOverview.ts
+// web/src/composables/useMediaOverview.ts
 import { ref } from 'vue'
 
-export type KanboMixedItem = {
+export type MediaMixedItem = {
   id: string
   type: 'article' | 'podcast'
   title: string
   updated_at: string
 }
 
-export type KanboVideoItem = {
+export type MediaVideoItem = {
   id: string
   title: string
   cover_url?: string
   updated_at: string
 }
 
-export function useKanboOverview() {
-  const mixedItems = ref<KanboMixedItem[]>([])
-  const videoItems = ref<KanboVideoItem[]>([])
+export function useMediaOverview() {
+  const mixedItems = ref<MediaMixedItem[]>([])
+  const videoItems = ref<MediaVideoItem[]>([])
   const expandedMixed = ref(false)
 
   const visibleMixedItems = () => expandedMixed.value ? mixedItems.value : mixedItems.value.slice(0, 5)
@@ -724,17 +724,17 @@ export function useKanboOverview() {
 ```
 
 ```vue
-<!-- web/src/components/kanbo/KanboMixedFeedSection.vue -->
+<!-- web/src/components/media/MediaMixedFeedSection.vue -->
 <template>
-  <section class="kanbo-section">
-    <div class="kanbo-section-head">
+  <section class="media-section">
+    <div class="media-section-head">
       <h2>文章与播客</h2>
-      <ABtn v-if="items.length > 5" data-testid="kanbo-expand-mixed" variant="ghost" size="sm" @click="expanded = !expanded">
+      <ABtn v-if="items.length > 5" data-testid="media-expand-mixed" variant="ghost" size="sm" @click="expanded = !expanded">
         {{ expanded ? '收起' : '展开更多' }}
       </ABtn>
     </div>
 
-    <div v-for="item in visibleItems" :key="item.id" data-testid="kanbo-mixed-item" class="a-card-sm kanbo-mixed-item">
+    <div v-for="item in visibleItems" :key="item.id" data-testid="media-mixed-item" class="a-card-sm media-mixed-item">
       <div class="a-label a-muted">{{ item.type === 'article' ? '文章' : '播客' }}</div>
       <h3>{{ item.title }}</h3>
       <p class="a-muted">{{ item.updated_at }}</p>
@@ -745,10 +745,10 @@ export function useKanboOverview() {
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import ABtn from '@/components/ui/ABtn.vue'
-import type { KanboMixedItem } from '@/composables/useKanboOverview'
+import type { MediaMixedItem } from '@/composables/useMediaOverview'
 
 const props = defineProps<{
-  items?: KanboMixedItem[]
+  items?: MediaMixedItem[]
 }>()
 
 const expanded = ref(false)
@@ -757,15 +757,15 @@ const visibleItems = computed(() => expanded.value ? (props.items || []) : (prop
 ```
 
 ```vue
-<!-- web/src/components/kanbo/KanboVideoCardSection.vue -->
+<!-- web/src/components/media/MediaVideoCardSection.vue -->
 <template>
-  <section class="kanbo-section">
-    <div class="kanbo-section-head">
+  <section class="media-section">
+    <div class="media-section-head">
       <h2>视频</h2>
     </div>
-    <div class="kanbo-video-grid">
-      <article v-for="video in items" :key="video.id" class="a-card-sm kanbo-video-card">
-        <div class="kanbo-video-cover">{{ video.cover_url ? '封面' : 'VIDEO' }}</div>
+    <div class="media-video-grid">
+      <article v-for="video in items" :key="video.id" class="a-card-sm media-video-card">
+        <div class="media-video-cover">{{ video.cover_url ? '封面' : 'VIDEO' }}</div>
         <h3>{{ video.title }}</h3>
         <p class="a-muted">{{ video.updated_at }}</p>
       </article>
@@ -774,26 +774,26 @@ const visibleItems = computed(() => expanded.value ? (props.items || []) : (prop
 </template>
 
 <script setup lang="ts">
-import type { KanboVideoItem } from '@/composables/useKanboOverview'
+import type { MediaVideoItem } from '@/composables/useMediaOverview'
 
 defineProps<{
-  items?: KanboVideoItem[]
+  items?: MediaVideoItem[]
 }>()
 </script>
 ```
 
 ```vue
-<!-- web/src/components/kanbo/KanboCollectionRail.vue -->
+<!-- web/src/components/media/MediaCollectionRail.vue -->
 <template>
-  <section class="kanbo-section">
-    <div class="kanbo-section-head">
+  <section class="media-section">
+    <div class="media-section-head">
       <h2>合集</h2>
     </div>
-    <div class="kanbo-collection-grid">
+    <div class="media-collection-grid">
       <button
         v-for="collection in collections"
         :key="collection.id"
-        class="a-card-sm kanbo-collection-card"
+        class="a-card-sm media-collection-card"
         @click="selectCollection(collection.id)"
       >
         <div class="a-label a-muted">{{ collection.type }}</div>
@@ -805,9 +805,9 @@ defineProps<{
 </template>
 
 <script setup lang="ts">
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-const { selectCollection } = useKanboCollections()
+const { selectCollection } = useMediaCollections()
 const collections = [
   { id: 'col-1', name: '长文合集', type: '文章', count: 8 },
   { id: 'col-2', name: '访谈播客', type: '播客', count: 5 },
@@ -818,40 +818,40 @@ const collections = [
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/KanboOverviewSections.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaOverviewSections.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/composables/useKanboOverview.ts web/src/components/kanbo/KanboCollectionRail.vue web/src/components/kanbo/KanboMixedFeedSection.vue web/src/components/kanbo/KanboVideoCardSection.vue web/tests/unit/KanboOverviewSections.spec.ts
+git add web/src/composables/useMediaOverview.ts web/src/components/media/MediaCollectionRail.vue web/src/components/media/MediaMixedFeedSection.vue web/src/components/media/MediaVideoCardSection.vue web/tests/unit/MediaOverviewSections.spec.ts
 git commit -m "feat(kanbo): add channel overview sections for collections, mixed feed, and videos"
 ```
 
 ### Task 8: Add collection workspace switching by collection type
 
 **Files:**
-- Create: `web/src/components/kanbo/KanboCollectionWorkspace.vue`
-- Test: `web/tests/unit/KanboCollectionWorkspace.spec.ts`
+- Create: `web/src/components/media/MediaCollectionWorkspace.vue`
+- Test: `web/tests/unit/MediaCollectionWorkspace.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/KanboCollectionWorkspace.spec.ts
+// web/tests/unit/MediaCollectionWorkspace.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
-import KanboCollectionWorkspace from '@/components/kanbo/KanboCollectionWorkspace.vue'
+import MediaCollectionWorkspace from '@/components/kanbo/MediaCollectionWorkspace.vue'
 
-vi.mock('@/composables/useKanboCollections', () => ({
-  useKanboCollections: () => ({
+vi.mock('@/composables/useMediaCollections', () => ({
+  useMediaCollections: () => ({
     selectedCollectionId: { value: 'col-2' },
     selectedCollection: { value: { id: 'col-2', type: 'podcast', name: '访谈播客' } },
   }),
 }))
 
-describe('KanboCollectionWorkspace', () => {
+describe('MediaCollectionWorkspace', () => {
   it('renders podcast workspace when selected collection type is podcast', () => {
-    const wrapper = mount(KanboCollectionWorkspace)
+    const wrapper = mount(MediaCollectionWorkspace)
     expect(wrapper.text()).toContain('播客工作区')
   })
 })
@@ -859,12 +859,12 @@ describe('KanboCollectionWorkspace', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/KanboCollectionWorkspace.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaCollectionWorkspace.spec.ts`
 Expected: FAIL because the component does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
-First extend `useKanboCollections.ts` with a selected collection ref:
+First extend `useMediaCollections.ts` with a selected collection ref:
 
 ```typescript
 const selectedCollection = ref<{ id: string; type: 'article' | 'podcast' | 'video'; name: string } | null>(null)
@@ -884,9 +884,9 @@ const resetForChannel = (channelId: string | null) => {
 Then add the component:
 
 ```vue
-<!-- web/src/components/kanbo/KanboCollectionWorkspace.vue -->
+<!-- web/src/components/media/MediaCollectionWorkspace.vue -->
 <template>
-  <section class="kanbo-workspace a-card-sm">
+  <section class="media-workspace a-card-sm">
     <div v-if="selectedCollection?.type === 'article'">
       <h2>文章工作区</h2>
       <p class="a-muted">当前合集：{{ selectedCollection.name }}</p>
@@ -903,13 +903,13 @@ Then add the component:
 </template>
 
 <script setup lang="ts">
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-const { selectedCollection } = useKanboCollections()
+const { selectedCollection } = useMediaCollections()
 </script>
 ```
 
-Update `KanboCollectionRail.vue` to pass type/name when selecting:
+Update `MediaCollectionRail.vue` to pass type/name when selecting:
 
 ```vue
 @click="selectCollection(collection.id, collection.typeKey, collection.name)"
@@ -927,52 +927,52 @@ const collections = [
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/KanboCollectionWorkspace.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaCollectionWorkspace.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/composables/useKanboCollections.ts web/src/components/kanbo/KanboCollectionRail.vue web/src/components/kanbo/KanboCollectionWorkspace.vue web/tests/unit/KanboCollectionWorkspace.spec.ts
+git add web/src/composables/useMediaCollections.ts web/src/components/media/MediaCollectionRail.vue web/src/components/media/MediaCollectionWorkspace.vue web/tests/unit/MediaCollectionWorkspace.spec.ts
 git commit -m "feat(kanbo): switch create workspace by selected collection type"
 ```
 
 ### Task 9: Create article / podcast / video view shells under kanbo
 
 **Files:**
-- Create: `web/src/views/kanbo/KanboArticlesView.vue`
-- Create: `web/src/views/kanbo/KanboPodcastsView.vue`
-- Create: `web/src/views/kanbo/KanboVideosView.vue`
-- Test: `web/tests/unit/KanboContentViews.spec.ts`
+- Create: `web/src/views/media/MediaArticlesView.vue`
+- Create: `web/src/views/media/MediaPodcastsView.vue`
+- Create: `web/src/views/media/MediaVideosView.vue`
+- Test: `web/tests/unit/MediaContentViews.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/KanboContentViews.spec.ts
+// web/tests/unit/MediaContentViews.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
-import KanboArticlesView from '@/views/kanbo/KanboArticlesView.vue'
-import KanboPodcastsView from '@/views/kanbo/KanboPodcastsView.vue'
-import KanboVideosView from '@/views/kanbo/KanboVideosView.vue'
+import MediaArticlesView from '@/views/kanbo/MediaArticlesView.vue'
+import MediaPodcastsView from '@/views/kanbo/MediaPodcastsView.vue'
+import MediaVideosView from '@/views/kanbo/MediaVideosView.vue'
 
-describe('Kanbo content view shells', () => {
+describe('Media content view shells', () => {
   it('renders functional page titles', () => {
-    expect(mount(KanboArticlesView).text()).toContain('文章')
-    expect(mount(KanboPodcastsView).text()).toContain('播客')
-    expect(mount(KanboVideosView).text()).toContain('视频')
+    expect(mount(MediaArticlesView).text()).toContain('文章')
+    expect(mount(MediaPodcastsView).text()).toContain('播客')
+    expect(mount(MediaVideosView).text()).toContain('视频')
   })
 })
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/KanboContentViews.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaContentViews.spec.ts`
 Expected: FAIL because the view files do not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```vue
-<!-- web/src/views/kanbo/KanboArticlesView.vue -->
+<!-- web/src/views/media/MediaArticlesView.vue -->
 <template>
   <div class="a-page">
     <APageHeader title="文章" sub="探索本网站发布的全部文章。" accent />
@@ -986,7 +986,7 @@ import APageHeader from '@/components/ui/APageHeader.vue'
 ```
 
 ```vue
-<!-- web/src/views/kanbo/KanboPodcastsView.vue -->
+<!-- web/src/views/media/MediaPodcastsView.vue -->
 <template>
   <div class="a-page">
     <APageHeader title="播客" sub="探索本网站发布的全部播客单集。" accent />
@@ -1000,7 +1000,7 @@ import APageHeader from '@/components/ui/APageHeader.vue'
 ```
 
 ```vue
-<!-- web/src/views/kanbo/KanboVideosView.vue -->
+<!-- web/src/views/media/MediaVideosView.vue -->
 <template>
   <div class="a-page">
     <APageHeader title="视频" sub="探索本网站发布的全部视频。" accent />
@@ -1015,49 +1015,49 @@ import APageHeader from '@/components/ui/APageHeader.vue'
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/KanboContentViews.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaContentViews.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/views/kanbo/KanboArticlesView.vue web/src/views/kanbo/KanboPodcastsView.vue web/src/views/kanbo/KanboVideosView.vue web/tests/unit/KanboContentViews.spec.ts
+git add web/src/views/media/MediaArticlesView.vue web/src/views/media/MediaPodcastsView.vue web/src/views/media/MediaVideosView.vue web/tests/unit/MediaContentViews.spec.ts
 git commit -m "feat(kanbo): add functional content view shells"
 ```
 
 ### Task 10: Create global subscriptions and bookmarks view shells inside kanbo
 
 **Files:**
-- Create: `web/src/views/kanbo/KanboSubscriptionsView.vue`
-- Create: `web/src/views/kanbo/KanboBookmarksView.vue`
-- Test: `web/tests/unit/KanboGlobalViews.spec.ts`
+- Create: `web/src/views/media/MediaSubscriptionsView.vue`
+- Create: `web/src/views/media/MediaBookmarksView.vue`
+- Test: `web/tests/unit/MediaGlobalViews.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/KanboGlobalViews.spec.ts
+// web/tests/unit/MediaGlobalViews.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
-import KanboSubscriptionsView from '@/views/kanbo/KanboSubscriptionsView.vue'
-import KanboBookmarksView from '@/views/kanbo/KanboBookmarksView.vue'
+import MediaSubscriptionsView from '@/views/kanbo/MediaSubscriptionsView.vue'
+import MediaBookmarksView from '@/views/kanbo/MediaBookmarksView.vue'
 
-describe('Kanbo global views', () => {
+describe('Media global views', () => {
   it('marks subscriptions and bookmarks as global pages', () => {
-    expect(mount(KanboSubscriptionsView).text()).toContain('不限定当前频道')
-    expect(mount(KanboBookmarksView).text()).toContain('不限定当前频道')
+    expect(mount(MediaSubscriptionsView).text()).toContain('不限定当前频道')
+    expect(mount(MediaBookmarksView).text()).toContain('不限定当前频道')
   })
 })
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/KanboGlobalViews.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaGlobalViews.spec.ts`
 Expected: FAIL because the view files do not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```vue
-<!-- web/src/views/kanbo/KanboSubscriptionsView.vue -->
+<!-- web/src/views/media/MediaSubscriptionsView.vue -->
 <template>
   <div class="a-page">
     <APageHeader title="订阅" sub="查看你在全站范围内关注的内容更新，不限定当前频道。" accent />
@@ -1071,7 +1071,7 @@ import APageHeader from '@/components/ui/APageHeader.vue'
 ```
 
 ```vue
-<!-- web/src/views/kanbo/KanboBookmarksView.vue -->
+<!-- web/src/views/media/MediaBookmarksView.vue -->
 <template>
   <div class="a-page">
     <APageHeader title="收藏" sub="查看你在全站范围内保存的内容，不限定当前频道。" accent />
@@ -1086,13 +1086,13 @@ import APageHeader from '@/components/ui/APageHeader.vue'
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/KanboGlobalViews.spec.ts`
+Run: `cd web && npx vitest run tests/unit/MediaGlobalViews.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/views/kanbo/KanboSubscriptionsView.vue web/src/views/kanbo/KanboBookmarksView.vue web/tests/unit/KanboGlobalViews.spec.ts
+git add web/src/views/media/MediaSubscriptionsView.vue web/src/views/media/MediaBookmarksView.vue web/tests/unit/MediaGlobalViews.spec.ts
 git commit -m "feat(kanbo): add global subscriptions and bookmarks views"
 ```
 
@@ -1100,29 +1100,29 @@ git commit -m "feat(kanbo): add global subscriptions and bookmarks views"
 
 **Files:**
 - Modify: `web/src/components/AppTopbarAuthControls.vue`
-- Modify: `web/src/components/kanbo/KanboCollectionRail.vue`
-- Modify: `web/src/views/kanbo/KanboCreateView.vue`
-- Modify: `web/src/composables/useKanboChannel.ts`
-- Modify: `web/src/composables/useKanboCollections.ts`
-- Test: `web/tests/unit/useKanboChannelReset.spec.ts`
+- Modify: `web/src/components/media/MediaCollectionRail.vue`
+- Modify: `web/src/views/media/MediaCreateView.vue`
+- Modify: `web/src/composables/useMediaChannel.ts`
+- Modify: `web/src/composables/useMediaCollections.ts`
+- Test: `web/tests/unit/useMediaChannelReset.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/useKanboChannelReset.spec.ts
+// web/tests/unit/useMediaChannelReset.spec.ts
 import { describe, it, expect } from 'vitest'
-import { useKanboChannel } from '@/composables/useKanboChannel'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaChannel } from '@/composables/useMediaChannel'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-describe('kanbo channel reset behavior', () => {
-  it('clears selected collection after switching current kanbo channel', () => {
-    const { setCurrentKanboChannel } = useKanboChannel()
-    const { selectCollection, selectedCollectionId } = useKanboCollections()
+describe('media channel reset behavior', () => {
+  it('clears selected collection after switching current media channel', () => {
+    const { setCurrentMediaChannel } = useMediaChannel()
+    const { selectCollection, selectedCollectionId } = useMediaCollections()
 
     selectCollection('collection-1', 'article', '长文合集')
     expect(selectedCollectionId.value).toBe('collection-1')
 
-    setCurrentKanboChannel('channel-2')
+    setCurrentMediaChannel('channel-2')
     expect(selectedCollectionId.value).toBeNull()
   })
 })
@@ -1130,30 +1130,30 @@ describe('kanbo channel reset behavior', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/useKanboChannelReset.spec.ts`
+Run: `cd web && npx vitest run tests/unit/useMediaChannelReset.spec.ts`
 Expected: FAIL because the channel setter does not reset collection selection.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Update `web/src/composables/useKanboChannel.ts` to coordinate with `useKanboCollections`.
+Update `web/src/composables/useMediaChannel.ts` to coordinate with `useMediaCollections`.
 
 ```typescript
 import { ref } from 'vue'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
-const currentKanboChannelId = ref<string | null>(null)
+const currentMediaChannelId = ref<string | null>(null)
 
-export function useKanboChannel() {
-  const { resetForChannel } = useKanboCollections()
+export function useMediaChannel() {
+  const { resetForChannel } = useMediaCollections()
 
-  const setCurrentKanboChannel = (channelId: string | null) => {
-    currentKanboChannelId.value = channelId
+  const setCurrentMediaChannel = (channelId: string | null) => {
+    currentMediaChannelId.value = channelId
     resetForChannel(channelId)
   }
 
   return {
-    currentKanboChannelId,
-    setCurrentKanboChannel,
+    currentMediaChannelId,
+    setCurrentMediaChannel,
   }
 }
 ```
@@ -1162,13 +1162,13 @@ In `AppTopbarAuthControls.vue`, keep the channel switcher in the topbar when in 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/useKanboChannelReset.spec.ts`
+Run: `cd web && npx vitest run tests/unit/useMediaChannelReset.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/composables/useKanboChannel.ts web/src/composables/useKanboCollections.ts web/src/components/AppTopbarAuthControls.vue web/tests/unit/useKanboChannelReset.spec.ts
+git add web/src/composables/useMediaChannel.ts web/src/composables/useMediaCollections.ts web/src/components/AppTopbarAuthControls.vue web/tests/unit/useMediaChannelReset.spec.ts
 git commit -m "feat(kanbo): clear selected collection when current channel changes"
 ```
 
@@ -1176,22 +1176,22 @@ git commit -m "feat(kanbo): clear selected collection when current channel chang
 
 **Files:**
 - Modify: `web/src/composables/useApi.ts`
-- Modify: `web/src/composables/useKanboOverview.ts`
-- Modify: `web/src/views/kanbo/KanboArticlesView.vue`
-- Modify: `web/src/views/kanbo/KanboPodcastsView.vue`
-- Modify: `web/src/views/kanbo/KanboVideosView.vue`
-- Modify: `web/src/views/kanbo/KanboCreateView.vue`
-- Test: `web/tests/unit/useKanboOverview.api.spec.ts`
+- Modify: `web/src/composables/useMediaOverview.ts`
+- Modify: `web/src/views/media/MediaArticlesView.vue`
+- Modify: `web/src/views/media/MediaPodcastsView.vue`
+- Modify: `web/src/views/media/MediaVideosView.vue`
+- Modify: `web/src/views/media/MediaCreateView.vue`
+- Test: `web/tests/unit/useMediaOverview.api.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/useKanboOverview.api.spec.ts
+// web/tests/unit/useMediaOverview.api.spec.ts
 import { describe, it, expect } from 'vitest'
 import { useApi } from '@/composables/useApi'
 
-describe('useApi kanbo integration', () => {
-  it('exposes existing typed backend endpoints needed by kanbo overview', () => {
+describe('useApi media integration', () => {
+  it('exposes existing typed backend endpoints needed by media overview', () => {
     const api = useApi()
     expect(api.blog.posts).toBeTruthy()
     expect(api.blog.channels).toBeTruthy()
@@ -1203,7 +1203,7 @@ describe('useApi kanbo integration', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/useKanboOverview.api.spec.ts`
+Run: `cd web && npx vitest run tests/unit/useMediaOverview.api.spec.ts`
 Expected: FAIL if `api.podcast` or any required typed endpoint is missing.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1218,7 +1218,7 @@ podcast: {
 },
 ```
 
-Then update `useKanboOverview.ts` to fetch from the existing per-type endpoints instead of inventing `/kanbo/*` APIs. For the first pass, keep fetching parallel and normalize into the shared view model. Do not assume unsupported query parameters are effective; either add backend support or remove the misleading parameter.
+Then update `useMediaOverview.ts` to fetch from the existing per-type endpoints instead of inventing `/kanbo/*` APIs. For the first pass, keep fetching parallel and normalize into the shared view model. Do not assume unsupported query parameters are effective; either add backend support or remove the misleading parameter.
 
 ```typescript
 const loadOverview = async (channelId: string, api: ReturnType<typeof useApi>) => {
@@ -1231,11 +1231,11 @@ const loadOverview = async (channelId: string, api: ReturnType<typeof useApi>) =
 }
 ```
 
-Update `KanboArticlesView.vue`, `KanboPodcastsView.vue`, and `KanboVideosView.vue` to load site-wide explore data via existing endpoints. Do not pass `channel_id` from the current kanbo channel into these type pages; current-channel filtering belongs to the 创作 workbench only. Keep implementation minimal and typed.
+Update `MediaArticlesView.vue`, `MediaPodcastsView.vue`, and `MediaVideosView.vue` to load site-wide explore data via existing endpoints. Do not pass `channel_id` from the current media channel into these type pages; current-channel filtering belongs to the 创作 workbench only. Keep implementation minimal and typed.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/useKanboOverview.api.spec.ts`
+Run: `cd web && npx vitest run tests/unit/useMediaOverview.api.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Run focused verification**
@@ -1246,7 +1246,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add web/src/composables/useApi.ts web/src/composables/useKanboOverview.ts web/src/views/kanbo/KanboArticlesView.vue web/src/views/kanbo/KanboPodcastsView.vue web/src/views/kanbo/KanboVideosView.vue web/src/views/kanbo/KanboCreateView.vue web/tests/unit/useKanboOverview.api.spec.ts
+git add web/src/composables/useApi.ts web/src/composables/useMediaOverview.ts web/src/views/media/MediaArticlesView.vue web/src/views/media/MediaPodcastsView.vue web/src/views/media/MediaVideosView.vue web/src/views/media/MediaCreateView.vue web/tests/unit/useMediaOverview.api.spec.ts
 git commit -m "feat(kanbo): compose unified frontend views from existing typed backend routes"
 ```
 
@@ -1263,7 +1263,7 @@ git commit -m "feat(kanbo): compose unified frontend views from existing typed b
 - [ ] **Step 1: Write the failing test**
 
 ```typescript
-// web/tests/unit/FirstLoginOnboarding.kanbo.spec.ts
+// web/tests/unit/FirstLoginOnboarding.media.spec.ts
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import FirstLoginOnboarding from '@/components/onboarding/FirstLoginOnboarding.vue'
@@ -1279,7 +1279,7 @@ describe('FirstLoginOnboarding kanbo terminology', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd web && npx vitest run tests/unit/FirstLoginOnboarding.kanbo.spec.ts`
+Run: `cd web && npx vitest run tests/unit/FirstLoginOnboarding.media.spec.ts`
 Expected: FAIL because the current onboarding still references Studio and old module phrasing.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1300,25 +1300,25 @@ for the old blog home view if it remains visible as a compatibility page.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd web && npx vitest run tests/unit/FirstLoginOnboarding.kanbo.spec.ts`
+Run: `cd web && npx vitest run tests/unit/FirstLoginOnboarding.media.spec.ts`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/components/onboarding/FirstLoginOnboarding.vue web/src/views/feed/FeedView.vue web/src/views/forum/ForumHomeView.vue web/src/views/blog/BlogHomeView.vue web/src/views/video/VideoHomeView.vue web/src/views/podcast/PodcastHomeView.vue web/tests/unit/FirstLoginOnboarding.kanbo.spec.ts
+git add web/src/components/onboarding/FirstLoginOnboarding.vue web/src/views/feed/FeedView.vue web/src/views/forum/ForumHomeView.vue web/src/views/blog/BlogHomeView.vue web/src/views/video/VideoHomeView.vue web/src/views/podcast/PodcastHomeView.vue web/tests/unit/FirstLoginOnboarding.media.spec.ts
 git commit -m "refactor(copy): switch onboarding and page titles to kanbo functional naming"
 ```
 
 ### Task 14: Verify routing, topbar order, and core kanbo workflows end-to-end
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-06-03-kanbo-module-unification.md` (mark completed during execution only)
+- Modify: `docs/superpowers/plans/2026-06-03-media-module-unification.md` (mark completed during execution only)
 - Test: existing app via browser/manual verification
 
 - [ ] **Step 1: Run unit test suite for the new kanbo artifacts**
 
-Run: `cd web && npx vitest run tests/unit/moduleRooms.kanbo.spec.ts tests/unit/kanbo-routing.spec.ts tests/unit/AppTopbar.kanbo.spec.ts tests/unit/KanboLayout.spec.ts tests/unit/useKanboCollections.spec.ts tests/unit/KanboCreateView.spec.ts tests/unit/KanboOverviewSections.spec.ts tests/unit/KanboCollectionWorkspace.spec.ts tests/unit/KanboContentViews.spec.ts tests/unit/KanboGlobalViews.spec.ts tests/unit/useKanboChannelReset.spec.ts tests/unit/useKanboOverview.api.spec.ts tests/unit/FirstLoginOnboarding.kanbo.spec.ts`
+Run: `cd web && npx vitest run tests/unit/moduleRooms.media.spec.ts tests/unit/media-routing.spec.ts tests/unit/AppTopbar.kanbo.spec.ts tests/unit/MediaLayout.spec.ts tests/unit/useMediaCollections.spec.ts tests/unit/MediaCreateView.spec.ts tests/unit/MediaOverviewSections.spec.ts tests/unit/MediaCollectionWorkspace.spec.ts tests/unit/MediaContentViews.spec.ts tests/unit/MediaGlobalViews.spec.ts tests/unit/useMediaChannelReset.spec.ts tests/unit/useMediaOverview.api.spec.ts tests/unit/FirstLoginOnboarding.media.spec.ts`
 Expected: PASS
 
 - [ ] **Step 2: Run full frontend type-check**
@@ -1348,7 +1348,7 @@ Verify manually:
 - [ ] **Step 5: Commit verification-safe final integration**
 
 ```bash
-git add web/src/config/moduleRooms.ts web/src/components/AppTopbar.vue web/src/router/routes/modules.ts web/src/router/siteUrls.ts web/src/router/siteContext.ts web/src/composables/useSubdomainNav.ts web/src/views/kanbo web/src/components/kanbo web/src/composables/useKanboChannel.ts web/src/composables/useKanboCollections.ts web/src/composables/useKanboOverview.ts web/src/components/onboarding/FirstLoginOnboarding.vue web/tests/unit/*.kanbo.spec.ts web/tests/unit/Kanbo*.spec.ts web/tests/unit/useKanbo*.spec.ts
+git add web/src/config/moduleRooms.ts web/src/components/AppTopbar.vue web/src/router/routes/modules.ts web/src/router/siteUrls.ts web/src/router/siteContext.ts web/src/composables/useSubdomainNav.ts web/src/views/kanbo web/src/components/kanbo web/src/composables/useMediaChannel.ts web/src/composables/useMediaCollections.ts web/src/composables/useMediaOverview.ts web/src/components/onboarding/FirstLoginOnboarding.vue web/tests/unit/*.kanbo.spec.ts web/tests/unit/Media*.spec.ts web/tests/unit/useMedia*.spec.ts
 git commit -m "feat(kanbo): unify blog podcast and video under kanbo workspace"
 ```
 

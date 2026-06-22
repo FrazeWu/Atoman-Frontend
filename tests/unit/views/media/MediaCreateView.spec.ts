@@ -2,55 +2,55 @@ import { mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import KanboCreateView from '@/views/kanbo/KanboCreateView.vue'
-import { useKanboCollections } from '@/composables/useKanboCollections'
+import MediaCreateView from '@/views/media/MediaCreateView.vue'
+import { useMediaCollections } from '@/composables/useMediaCollections'
 
 const loadChannelsMock = vi.fn()
-const currentKanboChannelIdMock = ref('channel-1')
+const currentMediaChannelIdMock = ref('channel-1')
 
-vi.mock('@/composables/useKanboChannel', () => ({
-  useKanboChannel: () => ({
+vi.mock('@/composables/useMediaChannel', () => ({
+  useMediaChannel: () => ({
     channels: { value: [{ id: 'channel-1', name: '我的频道' }] },
-    currentKanboChannelId: currentKanboChannelIdMock,
+    currentMediaChannelId: currentMediaChannelIdMock,
     switchChannel: vi.fn(),
     loadChannels: loadChannelsMock,
   }),
 }))
 
-describe('KanboCreateView', () => {
+describe('MediaCreateView', () => {
   beforeEach(() => {
     loadChannelsMock.mockReset()
-    currentKanboChannelIdMock.value = 'channel-1'
-    const { clearSelectionForTest } = useKanboCollections()
+    currentMediaChannelIdMock.value = 'channel-1'
+    const { clearSelectionForTest } = useMediaCollections()
     clearSelectionForTest()
   })
 
   it('disables publish button before a collection is selected', () => {
-    const wrapper = mount(KanboCreateView, {
+    const wrapper = mount(MediaCreateView, {
       global: {
         plugins: [createTestingPinia({ createSpy: vi.fn })],
         stubs: [
-          'KanboCollectionRail',
-          'KanboMixedFeedSection',
-          'KanboVideoCardSection',
-          'KanboCollectionWorkspace',
+          'MediaCollectionRail',
+          'MediaMixedFeedSection',
+          'MediaVideoCardSection',
+          'MediaCollectionWorkspace',
         ],
       },
     })
-    const button = wrapper.get('[data-testid="kanbo-publish-button"]')
+    const button = wrapper.get('[data-testid="media-publish-button"]')
     expect(button.attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('请先选择一个合集')
   })
 
-  it('composes the kanbo overview sections instead of rendering duplicate inline blocks', () => {
-    const wrapper = mount(KanboCreateView, {
+  it('composes the media overview sections instead of rendering duplicate inline blocks', () => {
+    const wrapper = mount(MediaCreateView, {
       global: {
         plugins: [createTestingPinia({ createSpy: vi.fn })],
         stubs: {
-          KanboCollectionRail: { template: '<section data-testid="collection-rail" />' },
-          KanboMixedFeedSection: { template: '<section data-testid="mixed-feed" />' },
-          KanboVideoCardSection: { template: '<section data-testid="video-section" />' },
-          KanboCollectionWorkspace: { template: '<section data-testid="collection-workspace" />' },
+          MediaCollectionRail: { template: '<section data-testid="collection-rail" />' },
+          MediaMixedFeedSection: { template: '<section data-testid="mixed-feed" />' },
+          MediaVideoCardSection: { template: '<section data-testid="video-section" />' },
+          MediaCollectionWorkspace: { template: '<section data-testid="collection-workspace" />' },
         },
       },
     })
@@ -61,7 +61,7 @@ describe('KanboCreateView', () => {
   })
 
   it('loads only the current user channels for the create workspace', () => {
-    mount(KanboCreateView, {
+    mount(MediaCreateView, {
       global: {
         plugins: [createTestingPinia({
           createSpy: vi.fn,
@@ -74,10 +74,10 @@ describe('KanboCreateView', () => {
           },
         })],
         stubs: [
-          'KanboCollectionRail',
-          'KanboMixedFeedSection',
-          'KanboVideoCardSection',
-          'KanboCollectionWorkspace',
+          'MediaCollectionRail',
+          'MediaMixedFeedSection',
+          'MediaVideoCardSection',
+          'MediaCollectionWorkspace',
         ],
       },
     })
@@ -85,11 +85,11 @@ describe('KanboCreateView', () => {
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
   })
 
-  it('publishes through the legacy content module route instead of the kanbo route table', () => {
-    const { selectCollection } = useKanboCollections()
+  it('publishes through the legacy content publishing route instead of a module-specific leaf route', () => {
+    const { selectCollection } = useMediaCollections()
     selectCollection('collection-1', 'article', '长文合集')
 
-    const wrapper = mount(KanboCreateView, {
+    const wrapper = mount(MediaCreateView, {
       global: {
         plugins: [createTestingPinia({
           createSpy: vi.fn,
@@ -103,10 +103,10 @@ describe('KanboCreateView', () => {
         })],
         stubs: [
           'RouterLink',
-          'KanboCollectionRail',
-          'KanboMixedFeedSection',
-          'KanboVideoCardSection',
-          'KanboCollectionWorkspace',
+          'MediaCollectionRail',
+          'MediaMixedFeedSection',
+          'MediaVideoCardSection',
+          'MediaCollectionWorkspace',
         ],
       },
     })

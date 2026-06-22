@@ -1,6 +1,6 @@
 export type ModuleRoomKey =
   | 'feed'
-  | 'kanbo'
+  | 'media'
   | 'music'
   | 'blog'
   | 'forum'
@@ -27,8 +27,8 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     helper: 'RSS 与更新流',
     homepageSub: '聚合你感兴趣的 RSS 订阅源与内容更新。',
   },
-  kanbo: {
-    key: 'kanbo',
+  media: {
+    key: 'media',
     homePath: '/',
     name: '内容',
     helper: '文章、播客、视频',
@@ -87,7 +87,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 
 export const moduleNavOrder: ModuleRoomKey[] = [
   'feed',
-  'kanbo',
+  'media',
   'music',
   'forum',
   'debate',

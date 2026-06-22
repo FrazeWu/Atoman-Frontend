@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useApi } from '@/composables/useApi'
-import { useKanboOverview } from '@/composables/useKanboOverview'
+import { useMediaOverview } from '@/composables/useMediaOverview'
 
-describe('useApi kanbo integration', () => {
+describe('useApi media integration', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('exposes existing typed backend endpoints needed by kanbo overview', () => {
+  it('exposes existing typed backend endpoints needed by media overview', () => {
     const api = useApi()
 
     expect(api.blog.posts).toBeTruthy()
@@ -31,7 +31,7 @@ describe('useApi kanbo integration', () => {
       return new Response('[]', { status: 200 })
     })
 
-    const { mixedItems, videoItems, loadOverview } = useKanboOverview()
+    const { mixedItems, videoItems, loadOverview } = useMediaOverview()
     await loadOverview('channel-1')
 
     expect(mixedItems.value.map(item => item.title)).toEqual(['文章', '播客'])

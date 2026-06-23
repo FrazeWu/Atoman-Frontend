@@ -861,6 +861,6 @@ body {
 
 /* Secondary button paper-action hover styles */
 .paper-action:hover:not(.paper-action--primary):not(:disabled) {
-  background: var(--a-color-fg) !important;
-  color: var(--a-color-bg) !important;
+  background: var(--a-color-accent-confirm) !important;
+  color: var(--a-color-paper) !important;
 }

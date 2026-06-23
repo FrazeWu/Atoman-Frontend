@@ -24,6 +24,12 @@
   --a-color-danger-ink: #7f1d1d;
   --a-color-danger-line: #b91c1c;
 
+  --a-color-accent-confirm: #0d9488;
+  --a-color-accent-confirm-hover: #0f766e;
+  --a-color-accent-destructive: #ea580c;
+  --a-color-accent-destructive-hover: #c2410c;
+
+
   --a-border-width: 1px;
   --a-border-style: solid;
   --a-border-color: var(--a-color-border);
@@ -855,6 +861,6 @@ body {
 
 /* Secondary button paper-action hover styles */
 .paper-action:hover:not(.paper-action--primary):not(:disabled) {
-  background: #f4ece1 !important;
-  color: #6b4f3a !important;
+  background: var(--a-color-fg) !important;
+  color: var(--a-color-bg) !important;
 }

@@ -135,25 +135,22 @@ async function onAvatarChange(event: Event) {
   display: grid;
   gap: 1.2rem;
   padding: 1.4rem 1.5rem 1.35rem;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.72)),
-    color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 0;
+  background: var(--a-color-paper-soft);
 }
 .section-heading {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
   padding-bottom: 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+  border-bottom: 1px solid var(--a-color-line-soft);
 }
 .section-dot {
   width: 0.48rem;
   height: 0.48rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, #8b5e3c 28%);
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
   margin-top: 0.35rem;
   flex-shrink: 0;
 }
@@ -198,9 +195,9 @@ async function onAvatarChange(event: Event) {
   color: var(--a-color-ink);
   font: inherit;
 }
-.field-input:focus {
-  outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 52%, #8b5e3c 18%);
+:deep(.p-input:focus),
+:deep(.p-textarea:focus) {
+  border-bottom-color: var(--a-color-accent-confirm);
 }
 .field-input--textarea {
   resize: vertical;
@@ -211,7 +208,7 @@ async function onAvatarChange(event: Event) {
   border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
   padding: 0.85rem 0.95rem;
   color: var(--a-color-ink-soft);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--a-color-bg);
 }
 .state-line {
   margin: 0;
@@ -220,6 +217,6 @@ async function onAvatarChange(event: Event) {
   line-height: 1.5;
 }
 .state-line--error {
-  color: #b42318;
+  color: var(--a-color-accent-destructive);
 }
 </style>

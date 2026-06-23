@@ -5,14 +5,14 @@
         <h3 class="music-sources__title">来源</h3>
         <p class="music-sources__hint">为每条变更保留可核查链接。</p>
       </div>
-      <PButton type="button" kind="ghost" @click="addSource">添加来源</PButton>
+      <PButton type="button" variant="ghost" @click="addSource">添加来源</PButton>
     </div>
 
     <div v-if="sources.length" class="music-sources__list">
       <div v-for="source in sources" :key="source.id" class="music-sources__item">
         <PInput :model-value="source.title" label="来源标题" placeholder="来源标题" @update:model-value="(value) => updateSource(source.id, 'title', value)" />
         <PInput :model-value="source.url" label="来源链接" placeholder="https://..." @update:model-value="(value) => updateSource(source.id, 'url', value)" />
-        <PButton type="button" variant="ghost" @click="removeSource(source.id)">移除</PButton>
+        <PButton class="music-sources__remove" type="button" variant="ghost" @click="removeSource(source.id)">移除</PButton>
       </div>
     </div>
 
@@ -76,7 +76,7 @@ function removeSource(id: string) {
 
 .music-sources__hint {
   margin: 0.25rem 0 0;
-  color: var(--a-color-text-muted);
+  color: var(--a-color-muted-soft);
   font-size: 0.875rem;
 }
 
@@ -90,6 +90,19 @@ function removeSource(id: string) {
   grid-template-columns: 1fr 1.5fr auto;
   gap: 0.5rem;
   align-items: start;
+}
+
+:deep(.p-input:focus) {
+  border-bottom-color: var(--a-color-accent-confirm);
+}
+
+:deep(.music-sources__remove) {
+  color: var(--a-color-accent-destructive);
+}
+
+:deep(.music-sources__remove:hover) {
+  background-color: var(--a-color-accent-destructive);
+  color: var(--a-color-paper);
 }
 
 @media (max-width: 720px) {

@@ -24,7 +24,7 @@
           label="修改理由（可选）"
         />
       </div>
-      <p v-if="errorMsg" style="color: var(--a-color-danger, #ef4444); font-size: 0.75rem; margin-top: 0.5rem">
+      <p v-if="errorMsg" style="color: var(--a-color-accent-destructive); font-size: 0.75rem; margin-top: 0.5rem">
         {{ errorMsg }}
       </p>
       <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem; justify-content: flex-end">

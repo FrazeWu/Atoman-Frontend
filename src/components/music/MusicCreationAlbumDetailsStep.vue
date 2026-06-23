@@ -257,12 +257,8 @@ function goBack() {
 .progress-card,
 .track-adjustment {
   padding: 1.35rem 1.45rem;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.72)),
-    color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-soft);
 }
 
 .progress-card {
@@ -309,9 +305,8 @@ function goBack() {
 
 .progress-track {
   height: 0.5rem;
-  border-radius: 0px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--a-color-paper-wash);
 }
 
 .progress-steps {
@@ -358,9 +353,9 @@ function goBack() {
   font: inherit;
 }
 
-.field-input:focus {
-  outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 52%, #8b5e3c 18%);
+:deep(.p-input:focus),
+:deep(.p-textarea:focus) {
+  border-bottom-color: var(--a-color-accent-confirm);
 }
 
 .field-input--textarea {
@@ -373,7 +368,7 @@ function goBack() {
   border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
   padding: 0.85rem 0.95rem;
   color: var(--a-color-ink-soft);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--a-color-bg);
 }
 
 .state-line {
@@ -385,7 +380,7 @@ function goBack() {
 }
 
 .state-line--error {
-  color: #b42318;
+  color: var(--a-color-accent-destructive);
 }
 
 .cover-preview {
@@ -394,16 +389,14 @@ function goBack() {
   gap: 0.85rem;
   align-items: center;
   padding: 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
 }
 
 .cover-preview__image {
   width: 84px;
   height: 84px;
   object-fit: cover;
-  border-radius: 8px;
 }
 
 .cover-preview__title,
@@ -453,9 +446,8 @@ function goBack() {
   gap: 0.75rem;
   align-items: center;
   padding: 0.85rem;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
-  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
 }
 
 .track-sequence {
@@ -492,7 +484,7 @@ function goBack() {
 }
 
 .track-action--danger {
-  color: #b42318;
+  color: var(--a-color-accent-destructive);
 }
 
 .footer-actions,
@@ -523,8 +515,13 @@ function goBack() {
 }
 
 .paper-submit {
-  background: color-mix(in srgb, var(--a-color-ink) 92%, #6b4f3a 8%);
+  background: var(--a-color-accent-confirm);
   color: white;
+  transition: background-color 0.15s ease;
+}
+
+.paper-submit:hover {
+  background: var(--a-color-accent-confirm-hover);
 }
 
 @media (max-width: 720px) {

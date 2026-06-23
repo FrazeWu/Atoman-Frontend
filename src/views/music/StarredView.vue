@@ -56,7 +56,7 @@
   padding: 3rem 2rem 2rem;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.15);
+  box-shadow: var(--a-shadow-modal);
 }
 
 .p-tab {

@@ -120,7 +120,7 @@ const techStack = [
   letter-spacing: 0.1em;
   border-bottom: 1px solid var(--a-color-line-soft);
   text-decoration: none;
-  color: #000;
+  color: var(--a-color-ink);
   transition: opacity 0.2s;
 }
 .back-link:hover { opacity: 0.6; }
@@ -142,7 +142,7 @@ const techStack = [
 
 .page-desc {
   margin-top: 1rem;
-  color: #4b5563;
+  color: var(--a-color-ink-muted);
   font-size: 1.125rem;
   font-weight: 500;
   line-height: 1.75;
@@ -163,11 +163,11 @@ const techStack = [
   border: 1px solid var(--a-color-line-soft);
   padding: 1.5rem;
   text-decoration: none;
-  color: #000;
+  color: var(--a-color-ink);
   transition: all 0.3s;
 }
 .feature-card:hover {
-  box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.15);
+  box-shadow: var(--a-shadow-modal);
 }
 
 .card-label {
@@ -175,7 +175,7 @@ const techStack = [
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #9ca3af;
+  color: var(--a-color-muted-soft);
   margin-bottom: 0.75rem;
 }
 
@@ -188,7 +188,7 @@ const techStack = [
 
 .card-desc {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: var(--a-color-ink-muted);
   font-weight: 500;
   line-height: 1.6;
   margin: 0;
@@ -225,7 +225,7 @@ const techStack = [
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #9ca3af;
+  color: var(--a-color-muted-soft);
   margin-bottom: 0.25rem;
 }
 
@@ -250,13 +250,13 @@ const techStack = [
 
 .contrib-num {
   font-weight: 900;
-  color: #000;
+  color: var(--a-color-ink);
   flex-shrink: 0;
 }
 
 .contrib-text {
   font-weight: 500;
-  color: #374151;
+  color: var(--a-color-ink-muted);
 }
 
 .links-row {
@@ -274,12 +274,12 @@ const techStack = [
   text-transform: uppercase;
   letter-spacing: 0.1em;
   text-decoration: none;
-  color: #000;
+  color: var(--a-color-ink);
   transition: all 0.2s;
 }
 .link-btn:hover {
-  background: #000;
-  color: #fff;
+  background: var(--a-color-ink);
+  color: var(--a-color-bg);
 }
 
 .license-badge {
@@ -289,6 +289,6 @@ const techStack = [
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #9ca3af;
+  color: var(--a-color-muted-soft);
 }
 </style>

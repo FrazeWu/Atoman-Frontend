@@ -1,8 +1,12 @@
 <template>
   <div v-if="player.currentSong" class="player">
-    <div class="player-inner">
+    <div ref="playerInnerRef" class="player-inner" :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }">
       <!-- Left: Identity -->
-      <div class="player-info">
+      <div
+        ref="playerInfoRef"
+        class="player-info"
+        :class="{ 'player-info--collapsed': isMetaCollapsed }"
+      >
         <div class="cover-wrap" @click="player.toggleLyrics">
           <img
             v-if="player.currentSong.cover_url"
@@ -12,7 +16,11 @@
           <div v-else class="player-cover-fallback">{{ coverFallback }}</div>
           <div class="cover-overlay">↑</div>
         </div>
-        <div class="player-meta">
+        <div
+          ref="playerMetaRef"
+          class="player-meta"
+          :class="{ 'player-meta--collapsed': isMetaCollapsed }"
+        >
           <div class="player-tooltip-wrap">
             <h3 class="player-title">{{ player.currentSong.title }}</h3>
             <div class="player-tooltip">{{ player.currentSong.title }}</div>
@@ -25,7 +33,7 @@
       </div>
 
       <!-- Center: Controls -->
-      <div class="player-controls-hub">
+      <div ref="playerControlsRef" class="player-controls-hub">
         <div class="ctrl-row">
           <span class="skip-btn" @click="player.skip(-5)">-5S</span>
           <span class="nav-btn" @click="player.playPrevious()">上一首</span>
@@ -135,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { 
   Repeat, 
@@ -148,6 +156,14 @@ import {
 } from 'lucide-vue-next'
 
 const player = usePlayerStore()
+const playerInnerRef = ref<HTMLElement | null>(null)
+const playerInfoRef = ref<HTMLElement | null>(null)
+const playerMetaRef = ref<HTMLElement | null>(null)
+const playerControlsRef = ref<HTMLElement | null>(null)
+const isMetaCollapsed = ref(false)
+
+let resizeObserver: ResizeObserver | null = null
+const META_COLLAPSE_GAP = 12
 
 const progressPct = computed(() => {
   if (!player.duration) return 0
@@ -168,6 +184,26 @@ const coverFallback = computed(() => {
   return firstChar || 'P'
 })
 
+const updateMetaCollapse = () => {
+  const playerInner = playerInnerRef.value
+  const playerInfo = playerInfoRef.value
+  const playerControls = playerControlsRef.value
+  if (!playerInner || !playerInfo || !playerControls) return
+
+  const infoRect = playerInfo.getBoundingClientRect()
+  const controlsRect = playerControls.getBoundingClientRect()
+  const innerRect = playerInner.getBoundingClientRect()
+  const nextCollapsed =
+    infoRect.right + META_COLLAPSE_GAP >= controlsRect.left ||
+    innerRect.width <= 760
+
+  isMetaCollapsed.value = nextCollapsed
+
+  if (nextCollapsed) {
+    return
+  }
+}
+
 const formatTime = (s: number) => {
   if (!s || isNaN(s)) return '0:00'
   const m = Math.floor(s / 60)
@@ -180,6 +216,33 @@ const seek = (e: MouseEvent) => {
   const pct = e.offsetX / bar.offsetWidth
   player.seek(pct * player.duration)
 }
+
+watch(
+  () => player.currentSong?.id,
+  async () => {
+    await nextTick()
+    updateMetaCollapse()
+  },
+)
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver(() => {
+    updateMetaCollapse()
+  })
+
+  if (playerInnerRef.value) {
+    resizeObserver.observe(playerInnerRef.value)
+  }
+
+  void nextTick(() => {
+    updateMetaCollapse()
+  })
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+})
 </script>
 
 <style scoped>
@@ -212,6 +275,15 @@ const seek = (e: MouseEvent) => {
   gap: 15px;
   flex: 0 0 460px;
   min-width: 0;
+  transition:
+    flex-basis 0.22s ease,
+    width 0.22s ease,
+    gap 0.22s ease;
+}
+.player-info--collapsed {
+  flex-basis: 52px;
+  width: 52px;
+  gap: 0;
 }
 .cover-wrap {
   position: relative;
@@ -241,8 +313,8 @@ const seek = (e: MouseEvent) => {
 }
 .cover-overlay {
   position: absolute; inset: 0;
-  background: rgba(0,0,0,0.4);
-  color: #fff;
+  background: color-mix(in srgb, var(--a-color-ink) 40%, transparent);
+  color: var(--a-color-paper);
   display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity 0.2s;
   font-size: 20px;
@@ -255,6 +327,20 @@ const seek = (e: MouseEvent) => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  overflow: hidden;
+  transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease,
+    transform 0.22s ease,
+    margin 0.22s ease;
+}
+.player-meta--collapsed {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateX(-6px);
 }
 .player-tooltip-wrap {
   position: relative;
@@ -276,7 +362,7 @@ const seek = (e: MouseEvent) => {
   text-transform: uppercase;
   letter-spacing: 0.15em;
   margin: 0;
-  color: #666;
+  color: var(--a-color-muted);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -288,8 +374,8 @@ const seek = (e: MouseEvent) => {
   bottom: calc(100% + 10px);
   max-width: min(36rem, 80vw);
   padding: 0.5rem 0.7rem;
-  background: rgba(0, 0, 0, 0.94);
-  color: #fff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
   font-weight: 800;
@@ -314,7 +400,7 @@ const seek = (e: MouseEvent) => {
   left: 18px;
   top: 100%;
   border: 6px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.94);
+  border-top-color: var(--a-color-ink);
 }
 .player-tooltip-wrap:hover .player-tooltip {
   opacity: 1;
@@ -345,7 +431,7 @@ const seek = (e: MouseEvent) => {
   font-weight: 950;
   font-size: 10px;
   letter-spacing: 0.15em;
-  color: #000;
+  color: var(--a-color-ink);
 }
 .skip-btn, .nav-btn {
   cursor: pointer;
@@ -355,7 +441,7 @@ const seek = (e: MouseEvent) => {
 .skip-btn:hover, .nav-btn:hover { opacity: 1; }
 
 .main-play-btn {
-  background: #000; color: #fff;
+  background: var(--a-color-ink); color: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);
   padding: 6px 20px; font-weight: 950;
   font-size: 11px;
@@ -374,19 +460,19 @@ const seek = (e: MouseEvent) => {
 .time-stamp {
   font-family: var(--a-font-mono, monospace);
   font-size: 9px;
-  color: #999;
+  color: var(--a-color-muted);
   min-width: 32px;
 }
 .progress-bar {
   flex: 1;
   height: 1px;
-  background: #eee;
+  background: var(--a-color-line-soft);
   cursor: pointer;
   position: relative;
 }
 .progress-fill {
   height: 100%;
-  background: #000;
+  background: var(--a-color-accent-confirm);
   position: relative;
 }
 .progress-fill::after {
@@ -396,7 +482,7 @@ const seek = (e: MouseEvent) => {
   top: -3px;
   width: 7px;
   height: 7px;
-  background: #000;
+  background: var(--a-color-accent-confirm);
   border-radius: 50%;
   opacity: 0;
   transition: opacity 0.2s;
@@ -409,6 +495,7 @@ const seek = (e: MouseEvent) => {
   display: flex; align-items: center; gap: 20px;
   font-family: var(--a-font-meta);
   font-weight: 950; font-size: 10px; letter-spacing: 0.1em;
+  flex-shrink: 0;
 }
 .feature-link {
   cursor: pointer;
@@ -416,16 +503,16 @@ const seek = (e: MouseEvent) => {
   font-size: 0.9rem;
   padding: 0 4px;
 }
-.feature-link:hover { border-bottom-color: #000; }
+.feature-link:hover { border-bottom-color: var(--a-color-ink); }
 
 .feature-toggle {
   cursor: pointer;
   display: flex;
   align-items: center;
-  color: #666;
+  color: var(--a-color-muted);
   transition: color 0.2s;
 }
-.feature-toggle:hover { color: #000; }
+.feature-toggle:hover { color: var(--a-color-ink); }
 
 .repeat-one-wrapper {
   position: relative;
@@ -463,12 +550,12 @@ const seek = (e: MouseEvent) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-line-soft);
   padding: 12px 0;
   gap: 10px;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: var(--a-shadow-dropdown);
   border-radius: 0px;
 }
 .volume-control::after {
@@ -478,7 +565,7 @@ const seek = (e: MouseEvent) => {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: #fff;
+  border-top-color: var(--a-color-bg);
 }
 .volume-container:hover .volume-control {
   height: 140px;
@@ -488,7 +575,7 @@ const seek = (e: MouseEvent) => {
   font-family: var(--a-font-mono);
   font-size: 10px;
   font-weight: 900;
-  color: #000;
+  color: var(--a-color-ink);
 }
 .vol-trigger {
   display: flex;
@@ -499,22 +586,22 @@ const seek = (e: MouseEvent) => {
   font-family: var(--a-font-mono);
   font-size: 9px;
   font-weight: 800;
-  color: #666;
+  color: var(--a-color-muted);
   min-width: 28px;
 }
 .vol-icon {
   cursor: pointer;
-  color: #666;
+  color: var(--a-color-muted);
   transition: color 0.2s;
   flex-shrink: 0;
 }
-.vol-icon:hover { color: #000; }
+.vol-icon:hover { color: var(--a-color-ink); }
 
 .vol-slider {
   height: 80px;
   width: 2px;
   appearance: none;
-  background: #eee;
+  background: var(--a-color-line-soft);
   cursor: pointer;
   writing-mode: bt-lr; /* IE/Edge */
   -webkit-appearance: slider-vertical; /* Webkit */
@@ -524,7 +611,7 @@ const seek = (e: MouseEvent) => {
   appearance: none;
   width: 10px;
   height: 10px;
-  background: #000;
+  background: var(--a-color-accent-confirm);
   border-radius: 50%;
 }
 
@@ -533,7 +620,7 @@ const seek = (e: MouseEvent) => {
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  color: #666;
+  color: var(--a-color-muted);
   transition: all 0.2s;
   padding: 4px 8px;
   border-radius: 0px;
@@ -541,12 +628,12 @@ const seek = (e: MouseEvent) => {
   border: none;
 }
 .queue-trigger:hover { 
-  color: #000;
-  background: rgba(0, 0, 0, 0.05);
+  color: var(--a-color-ink);
+  background: var(--a-color-tape);
 }
 .queue-trigger.active {
-  color: #000;
-  background: rgba(0, 0, 0, 0.05);
+  color: var(--a-color-ink);
+  background: var(--a-color-tape);
 }
 .queue-count {
   font-family: var(--a-font-mono, monospace);
@@ -554,6 +641,31 @@ const seek = (e: MouseEvent) => {
   font-weight: 900;
   min-width: 14px;
   text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .player-inner {
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  .player-info {
+    flex: 0 0 auto;
+    max-width: 18rem;
+  }
+
+  .player-controls-hub {
+    width: min(440px, calc(100% - 420px));
+    min-width: 240px;
+  }
+
+  .ctrl-row {
+    gap: 14px;
+  }
+
+  .player-features {
+    gap: 12px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -603,7 +715,6 @@ const seek = (e: MouseEvent) => {
   border-top: 1px solid var(--a-color-line-soft);
   z-index: 2000; padding: 2rem 3rem;
   display: flex; flex-direction: column;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.04);
 }
 .queue-header {
   display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;

@@ -9,6 +9,7 @@ import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import PTab from '@/components/ui/PTab.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 
 type DiscoveryMode = 'hot' | 'random'
 
@@ -120,25 +121,29 @@ watch(
   <div class="music-base-view">
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
       <div class="page-header">
-        <div>
-          <p class="page-kicker">Music Archive</p>
-          <h1 class="page-title">专辑发现</h1>
-          <p class="a-muted">按热度或随机浏览音乐档案库中的专辑与艺术家。</p>
-        </div>
-        <div class="mode-tabs" aria-label="专辑浏览模式">
-          <PTab
-            label="热门"
-            :active="mode === 'hot'"
-            data-testid="mode-hot"
-            @click="changeMode('hot')"
-          />
-          <PTab
-            label="随机"
-            :active="mode === 'random'"
-            data-testid="mode-random"
-            @click="changeMode('random')"
-          />
-        </div>
+        <PPageHeader
+          kicker="Music Archive"
+          title="专辑发现"
+          sub="按热度或随机浏览音乐档案库中的专辑与艺术家。"
+          mb="0"
+        >
+          <template #action>
+            <div class="mode-tabs" aria-label="专辑浏览模式">
+              <PTab
+                label="热门"
+                :active="mode === 'hot'"
+                data-testid="mode-hot"
+                @click="changeMode('hot')"
+              />
+              <PTab
+                label="随机"
+                :active="mode === 'random'"
+                data-testid="mode-random"
+                @click="changeMode('random')"
+              />
+            </div>
+          </template>
+        </PPageHeader>
       </div>
 
       <div class="artist-section-heading">
@@ -250,27 +255,20 @@ watch(
   opacity: 0.4;
   pointer-events: none;
 }
+
+/* Use PPageHeader, wrap it in a container with a border-bottom separator */
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--a-color-line-soft);
 }
-.page-kicker {
-  margin: 0 0 0.35rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.page-title { font-family: var(--a-font-serif); font-size: 3rem; font-weight: 900; margin: 0 0 0.5rem; font-style: italic; }
 .mode-tabs {
   display: inline-flex;
-  gap: 0.35rem;
+  gap: 0;
   flex-shrink: 0;
+  border: 1px solid var(--a-color-line-soft);
 }
+
 .artist-section-heading {
   margin-top: 1.5rem;
   display: grid;
@@ -285,11 +283,12 @@ watch(
 .artist-section-heading p {
   margin: 0;
 }
+
 .search-bar {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin: 2rem 0;
+  margin: 1.5rem 0 2rem;
   padding: 0.85rem 0 1rem;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 18%, transparent);
 }
@@ -313,37 +312,41 @@ watch(
 .search-input:focus {
   box-shadow: none;
 }
+
+/* ─── Album Grid ─────────────────── */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
 .card {
   background: var(--a-color-paper);
-  border: none;
-  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-line-soft);
   border-left: 3px solid transparent;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  border-radius: 8px;
   overflow: hidden;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .card:hover {
-  background: var(--a-color-paper-wash);
-  border-left-color: var(--a-color-ink);
+  background: var(--a-color-paper-soft);
+  border-left-color: var(--a-color-accent-confirm);
+  box-shadow: var(--a-shadow-dropdown);
 }
 .card-img {
   aspect-ratio: 1;
-  background: #eee;
-  border-bottom: none;
+  background: var(--a-color-paper-wash);
+  border-bottom: 1px solid var(--a-color-line-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--a-font-meta);
-  color: #999;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--a-color-muted-soft);
   overflow: hidden;
 }
 .album-cover { width: 100%; height: 100%; object-fit: cover; }
 .card-body { padding: 1rem; text-align: left; display: flex; flex-direction: column; gap: 0.45rem; }
-.card-title { font-weight: 900; font-size: 1.1rem; line-height: 1.2; }
+.card-title { font-weight: 900; font-size: 1rem; line-height: 1.2; letter-spacing: -0.01em; }
 .artist-row { display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 1.4rem; }
 .artist-link {
   border: 0;
@@ -352,39 +355,61 @@ watch(
   color: var(--a-color-ink);
   cursor: pointer;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 800;
   text-decoration: underline;
   text-underline-offset: 3px;
+  text-decoration-color: var(--a-color-line);
+  transition: text-decoration-color 0.15s ease;
+}
+.artist-link:hover {
+  text-decoration-color: var(--a-color-ink);
 }
 .meta-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-family: var(--a-font-meta);
   color: var(--a-color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.meta-row span::after { content: '·'; margin-left: 0.4rem; }
+.meta-row span::after { content: '·'; margin-left: 0.4rem; opacity: 0.5; }
 .meta-row span:last-child::after { content: ''; margin-left: 0; }
-.card-sub { font-size: 0.8rem; color: var(--a-color-muted); }
+.card-sub { font-size: 0.78rem; color: var(--a-color-muted); font-family: var(--a-font-meta); }
+
+/* ─── State / Empty ──────────────── */
 .state-line { margin: 1.5rem 0; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
-.state-line--error { color: #b42318; }
+.state-line--error { color: var(--a-color-accent-destructive); }
 .empty-state { margin-top: 1.5rem; }
 .empty-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+/* ─── Paper Action Button ─────────── */
 .paper-action {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  border: 0;
-  border-radius: 0px;
-  padding: 0.8rem 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 0;
+  padding: 0.7rem 1rem;
   font-weight: 800;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, white);
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
   cursor: pointer;
   font-family: var(--a-font-meta);
-  transition: background-color 0.15s ease;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
+.paper-action:hover {
+  background: var(--a-color-accent-confirm);
+  color: var(--a-color-paper);
+  box-shadow: var(--a-shadow-dropdown);
+}
+
+/* ─── Artist Search Results ──────── */
 .artist-results-panel {
   margin-top: 2rem;
   display: grid;
@@ -403,46 +428,51 @@ watch(
 }
 .artist-results-header h2 {
   margin: 0;
-  font-family: var(--a-font-serif);
-  font-size: 1.25rem;
+  font-family: var(--a-font-meta);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--a-color-ink-soft);
 }
 .artist-results-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  gap: 0;
 }
 .artist-card {
   display: grid;
-  gap: 0.45rem;
-  padding: 1rem 1.05rem;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  background: var(--a-color-paper);
   cursor: pointer;
-  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-line-soft);
   border-left: 3px solid transparent;
-  transition: background-color 0.2s ease;
+  margin-top: -1px;
+  margin-left: -1px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 .artist-card:hover {
-  background: var(--a-color-paper-wash);
-  border-left-color: var(--a-color-ink);
+  background: var(--a-color-paper-soft);
+  border-left-color: var(--a-color-accent-confirm);
+  z-index: 1;
+  position: relative;
 }
 .artist-card-title {
-  font-family: var(--a-font-serif);
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 .artist-card-sub {
   margin: 0;
   color: var(--a-color-ink-soft);
   line-height: 1.5;
-  font-size: 0.9rem;
+  font-size: 0.83rem;
 }
 
 @media (max-width: 720px) {
-  .page-header,
-  .search-bar { flex-direction: column; }
+  .search-bar { flex-direction: column; align-items: flex-start; }
   .mode-tabs,
   .search-input { width: 100%; max-width: none; }
-  .mode-tab { flex: 1; }
 }
 </style>

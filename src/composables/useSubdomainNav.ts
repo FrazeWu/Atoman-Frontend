@@ -7,7 +7,7 @@ import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 export { moduleUrl, userUrl, channelUrl, modulePathUrl } from '@/router/siteUrls'
 
 export function subdomainDefaultPath() {
-  const context = resolveSiteContext(window.location.hostname, window.location.search)
+  const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
   return context.type === 'module' ? `/${context.module}` : null
 }
 
@@ -16,7 +16,7 @@ export function useModuleNav() {
   const { navigateModuleWithShutter } = useAsyncNavigate()
 
   function navigateTo(module: ModuleRoomKey) {
-    const context = resolveSiteContext(window.location.hostname, window.location.search)
+    const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
     if (context.type === 'module' && context.module === module) {
       router.push('/')
       return

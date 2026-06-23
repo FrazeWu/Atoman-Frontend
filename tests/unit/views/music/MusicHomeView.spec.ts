@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
     nestedPayload: null as unknown,
     creationFlow: null as unknown,
   },
+  routeQuery: {} as Record<string, string>,
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -37,6 +38,12 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   }),
 }))
 
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    query: mocks.routeQuery,
+  }),
+}))
+
 describe('Music HomeView.vue (Album Discovery)', () => {
   beforeEach(() => {
     mocks.listMusicAlbums.mockReset()
@@ -51,6 +58,7 @@ describe('Music HomeView.vue (Album Discovery)', () => {
       nestedPayload: null,
       creationFlow: null,
     }
+    mocks.routeQuery = {}
     mocks.listMusicAlbums.mockResolvedValue({
       data: [
         {
@@ -160,6 +168,27 @@ describe('Music HomeView.vue (Album Discovery)', () => {
 
     await wrapper.find('[data-testid="album-artist"]').trigger('click')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+  })
+
+  it('opens drawers from music query parameters on first load', async () => {
+    mocks.routeQuery = { artist: 'artist-99', album: 'album-42' }
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    mount(HomeView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-99')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-42')
   })
 
   it('offers wiki edit actions when no albums match', async () => {

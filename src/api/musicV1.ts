@@ -1,4 +1,4 @@
-import { apiGet, apiGetEnvelope, apiPostJson, apiPostMultipart } from './client'
+import { apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 
 export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
@@ -86,6 +86,29 @@ export type MusicAlbumListItem = {
   entry_status: MusicEntryStatus
 }
 
+export type MusicArtistInput = {
+  name: string
+  bio?: string
+  image_url?: string
+  nationality?: string
+  birth_date?: string
+  birth_year?: number
+  death_year?: number
+}
+
+export type MusicAlbumInput = {
+  title: string
+  artist_ids?: string[]
+  release_date?: string
+  cover_url?: string
+  cover_key?: string
+  description?: string
+  album_type?: string
+}
+
+export type MusicArtistUpdateInput = Partial<MusicArtistInput>
+export type MusicAlbumUpdateInput = Partial<MusicAlbumInput>
+
 export type MusicListResponse<T> = ApiList<T>
 
 export type MusicListFilters = {
@@ -149,8 +172,6 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
   albums: () => `${API_V1_BASE}/music/albums`,
   album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
-  songs: () => `${API_V1_BASE}/music/songs`,
-  song: (songId: string) => `${API_V1_BASE}/music/songs/${songId}`,
   edits: () => `${API_V1_BASE}/music/edits`,
   edit: (editId: string) => `${API_V1_BASE}/music/edits/${editId}`,
   editVotes: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/votes`,

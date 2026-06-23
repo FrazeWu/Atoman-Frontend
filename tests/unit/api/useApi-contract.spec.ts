@@ -50,6 +50,23 @@ describe('API endpoint construction contract', () => {
     env.VITE_API_URL = undefined as unknown as string
   })
 
+  it('does not expose legacy top-level music CRUD endpoints', () => {
+    const api = useApi()
+
+    expect(api).not.toHaveProperty('songs')
+    expect(api).not.toHaveProperty('song')
+    expect(api).not.toHaveProperty('albums')
+    expect(api).not.toHaveProperty('album')
+    expect(api).not.toHaveProperty('artists')
+    expect(api).not.toHaveProperty('corrections')
+    expect(api).not.toHaveProperty('music.albums')
+    expect(api).not.toHaveProperty('music.album')
+    expect(api).not.toHaveProperty('music.artists')
+    expect(api).not.toHaveProperty('music.artistRevisions')
+    expect(api).not.toHaveProperty('music.artistAliases')
+    expect(api).not.toHaveProperty('music.songAnnotations')
+  })
+
   it('keeps VITE_API_URL access centralized in useApi helpers', () => {
     const offenders = globSync('src/**/*.{ts,vue}', { cwd: projectRoot })
       .filter((file) => !allowedApiFiles.has(file))

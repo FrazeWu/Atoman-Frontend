@@ -62,22 +62,6 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'artist/new', component: () => import('@/views/music/CreateArtistView.vue'), meta: { requiresAuth: true } },
       ],
     },
-    {
-      path: '/artist/:artistId',
-      component: () => import('@/views/music/MusicLayout.vue'),
-      meta: { hasSidebar: true },
-      children: [
-        { path: '', component: () => import('@/views/music/MusicArtistRouteView.vue') },
-      ],
-    },
-    {
-      path: '/album/:albumId',
-      component: () => import('@/views/music/MusicLayout.vue'),
-      meta: { hasSidebar: true },
-      children: [
-        { path: '', component: () => import('@/views/music/MusicAlbumRouteView.vue') },
-      ],
-    },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },

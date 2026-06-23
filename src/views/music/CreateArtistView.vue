@@ -41,7 +41,7 @@ async function handleSubmit(value: MusicArtistUpdateInput) {
       sources: [],
     }))
     if (result.entity_id) {
-      await router.push(`/artist/${result.entity_id}`)
+      await router.push(`/music?artist=${result.entity_id}`)
       return
     }
     await router.push('/')

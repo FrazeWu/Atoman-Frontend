@@ -1,12 +1,14 @@
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiPostJson, apiPostMultipart } from '@/api/client'
+import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from '@/api/client'
 import {
   buildCreateAlbumEdit,
   buildCreateArtistEdit,
   buildDeleteAlbumEdit,
   buildUpdateAlbumEdit,
+  getMusicAlbum,
+  getMusicArtist,
   listMusicArtists,
   listMusicAlbums,
   listMusicEdits,
@@ -118,6 +120,23 @@ describe('api v1 client', () => {
     expect(error.code).toBe('music.invalid_source')
     expect(error.details).toEqual({ field: 'sources' })
   })
+
+  it('sends PATCH JSON requests with credentials and Accept headers', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'artist_uuid', name: 'Updated' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await apiPatchJson<{ id: string; name: string }>('/api/v1/music/artists/artist_uuid', { name: 'Updated' })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists/artist_uuid', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name: 'Updated' }),
+    })
+    expect(result.name).toBe('Updated')
+  })
 })
 
 describe('music v1 adapter', () => {
@@ -185,6 +204,36 @@ describe('music v1 adapter', () => {
       headers: { Accept: 'application/json' },
     })
     expect(result.data).toEqual([{ id: 'artist_uuid', name: 'Artist', entry_status: 'open' }])
+  })
+
+  it('gets artist details through the direct wiki endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await getMusicArtist('artist_uuid')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists/artist_uuid', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(result).toEqual({ id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' })
+  })
+
+  it('gets album details through the direct wiki endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'album_uuid', title: 'Graduation', entry_status: 'open' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await getMusicAlbum('album_uuid')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/albums/album_uuid', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(result).toEqual({ id: 'album_uuid', title: 'Graduation', entry_status: 'open' })
   })
 
   it('uploads music cover assets with the correct purpose', async () => {

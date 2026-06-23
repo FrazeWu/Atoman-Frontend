@@ -30,12 +30,11 @@ test.describe('Music', () => {
     await page.goto('/music')
     await page.waitForTimeout(3000)
 
-    const detailLink = page.getByRole('link', { name: '详情' }).first()
-    if (await detailLink.isVisible().catch(() => false)) {
-      await detailLink.click()
+    const card = page.locator('[data-testid="album-card"]').first()
+    if (await card.isVisible().catch(() => false)) {
+      await card.click()
       await page.waitForTimeout(2000)
-      // app may route to /album/:id or /music/album/:id — accept either
-      await expect(page).toHaveURL(/(?:\/album\/|\/music\/(?:album|albums)\/)/)
+      await expect(page).toHaveURL(/\/music(?:\?|\?.*&)album=/)
     }
   })
 

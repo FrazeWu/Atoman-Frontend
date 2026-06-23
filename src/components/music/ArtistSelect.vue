@@ -48,7 +48,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PInput from '@/components/ui/PInput.vue'
-import { useApi } from '@/composables/useApi'
+import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
 import type { Artist } from '@/types'
 
 const props = defineProps<{
@@ -61,8 +61,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', v: Artist[]): void
 }>()
-
-const api = useApi()
 
 const wrapRef = ref<HTMLElement | null>(null)
 const query = ref('')
@@ -100,13 +98,30 @@ const dedupeArtistsByName = (artists: Artist[]) => {
   })
 }
 
+const toArtistOption = (artist: MusicArtistListItem): Artist => ({
+  id: Number.parseInt(artist.id, 10),
+  name: artist.name,
+  bio: artist.bio,
+  image_url: artist.image_url,
+  nationality: artist.nationality,
+  birth_year: artist.birth_year,
+  death_year: artist.death_year,
+  members: artist.members,
+  entry_status: artist.entry_status === 'closed' || artist.entry_status === 'protected'
+    ? 'disputed'
+    : artist.entry_status,
+  created_at: artist.created_at,
+  updated_at: artist.updated_at,
+})
+
 const fetchArtists = async () => {
   try {
-    const res = await fetch(api.artists)
-    if (res.ok) {
-      const d = await res.json()
-      allArtists.value = dedupeArtistsByName(d.data || d || [])
-    }
+    const result = await listMusicArtists({ page: 1, page_size: 100 })
+    allArtists.value = dedupeArtistsByName(
+      result.data
+        .map(toArtistOption)
+        .filter((artist) => Number.isFinite(artist.id)),
+    )
   } catch (e) { console.error(e) }
 }
 

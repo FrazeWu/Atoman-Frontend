@@ -48,8 +48,8 @@ describe('host-scoped route tables', () => {
   })
 
   it('defines entity profile routes as aggregation spaces', () => {
-    expect(paths(userRoutes)).toEqual(['/', '/posts', '/channels', '/:pathMatch(.*)*'])
-    expect(paths(channelRoutes)).toEqual(['/', '/posts', '/about', '/:pathMatch(.*)*'])
+    expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels'])
+    expect(paths(channelRoutes)).toEqual(['/channels/:slug', '/channels/:slug/posts', '/channels/:slug/about'])
   })
 
   it('keeps portal routes separate from module routes', () => {
@@ -70,8 +70,8 @@ describe('host-scoped route tables', () => {
 
   it('does not register duplicate top-level routes already handled by layout children', () => {
     expect(paths(moduleRoutes.music)).not.toContain('/album/new')
-    expect(paths(moduleRoutes.music)).toContain('/album/:albumId')
-    expect(paths(moduleRoutes.music)).toContain('/artist/:artistId')
+    expect(paths(moduleRoutes.music)).not.toContain('/album/:albumId')
+    expect(paths(moduleRoutes.music)).not.toContain('/artist/:artistId')
     expect(paths(moduleRoutes.feed)).not.toContain('/reading-list')
     expect(paths(moduleRoutes.feed)).not.toContain('/inbox')
     expect(paths(moduleRoutes.forum)).not.toContain('/topic/:id')

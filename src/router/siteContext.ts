@@ -3,10 +3,13 @@ import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 export type SiteContext =
   | { type: 'portal' }
   | { type: 'module'; module: ModuleRoomKey }
-  | { type: 'entity'; handle: string; legacyType?: 'user' | 'channel' }
+  | { type: 'entity'; handle: string }
   | { type: 'unknown'; subdomain: string }
 
 export const moduleSubdomains = Object.keys(moduleRooms) as ModuleRoomKey[]
+const modulePathSegments = Object.fromEntries(
+  moduleSubdomains.map((key) => [moduleRooms[key].publicPathSegment, key]),
+) as Record<string, ModuleRoomKey>
 
 const slugPattern = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
 
@@ -43,6 +46,28 @@ function localDevContext(search: string): SiteContext | null {
   return contextFromLabel(site)
 }
 
+function pathnameContext(pathname: string): SiteContext | null {
+  const segments = pathname.split('/').filter(Boolean)
+  if (segments.length === 0) {
+    return { type: 'module', module: 'feed' }
+  }
+
+  const [first, second] = segments
+  const moduleFromPath = modulePathSegments[first]
+  if (moduleFromPath) {
+    return { type: 'module', module: moduleFromPath }
+  }
+
+  if ((first === 'users' || first === 'channels') && second) {
+    if (slugPattern.test(second)) {
+      return { type: 'entity', handle: second }
+    }
+    return { type: 'unknown', subdomain: second }
+  }
+
+  return null
+}
+
 export function isLocalHost(hostname: string) {
   return (
     hostname === 'localhost'
@@ -57,9 +82,14 @@ function isIPv4Host(hostname: string) {
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)
 }
 
-export function resolveSiteContext(hostname: string, search = ''): SiteContext {
+export function resolveSiteContext(hostname: string, search = '', pathname?: string): SiteContext {
   const explicitContext = localDevContext(search)
   if (explicitContext) return explicitContext
+
+  if (typeof pathname === 'string') {
+    const pathContext = pathnameContext(pathname)
+    if (pathContext) return pathContext
+  }
 
   if (isLocalHost(hostname)) {
     return { type: 'module', module: 'feed' }

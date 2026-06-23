@@ -22,12 +22,12 @@
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
             <PLink
               v-if="isOwner"
-              :href="`/channel/${channel.slug || channel.id}/manage?site=blog`"
+              :href="`/channels/${channel.slug || channel.id}/manage`"
               label="管理"
             />
             <PLink
               v-if="isOwner"
-              :href="`/post/new?site=blog&channel=${channel.id}`"
+              :href="`/posts/post/new?channel=${channel.id}`"
               label="写文章"
             />
           </div>
@@ -86,7 +86,7 @@
               :key="post.id"
               :title="post.title"
               :summary="post.summary || summarize(post.content)"
-              @click="$router.push(`/post/${post.id}?site=blog`)"
+              @click="$router.push(`/posts/post/${post.id}`)"
             >
               <template #meta>
                 <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -104,10 +104,10 @@
                     :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
                     @click="toggleReadingList(post.id)"
                   />
-                  <PLink :href="`/post/${post.id}?site=blog`" label="查看" />
+                  <PLink :href="`/posts/post/${post.id}`" label="查看" />
                   <PLink
                     v-if="isOwner"
-                    :href="`/post/${post.id}/edit?site=blog`"
+                    :href="`/posts/post/${post.id}/edit`"
                     label="编辑"
                   />
                 </div>
@@ -122,8 +122,8 @@
     <PModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
       <h3 class="a-subtitle" style="margin-bottom:1.5rem">{{ editingCollection ? '编辑合集' : '新建合集' }}</h3>
       <div style="display:flex;flex-direction:column;gap:1rem">
-        <input v-model="collectionForm.name" placeholder="合集名称*" class="a-input" />
-        <textarea v-model="collectionForm.description" placeholder="合集描述（可选）" rows="3" class="a-textarea" />
+        <PInput v-model="collectionForm.name" placeholder="合集名称*" />
+        <PTextarea v-model="collectionForm.description" placeholder="合集描述（可选）" :rows="3" />
       </div>
       <div class="modal-actions">
         <PPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
@@ -141,6 +141,8 @@ import { RouterLink, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import type { Channel, Collection, Post } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
@@ -179,7 +181,7 @@ const channelSubscribeLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
+const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
 const routeParam = computed(() => {
   if (props.entityHandle) return props.entityHandle
   if (siteContext.value.type === 'entity') return siteContext.value.handle

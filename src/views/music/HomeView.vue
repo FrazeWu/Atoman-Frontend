@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { listMusicAlbums, listMusicArtists, type MusicAlbumListItem, type MusicArtistListItem } from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
@@ -11,6 +12,7 @@ import PInput from '@/components/ui/PInput.vue'
 
 type DiscoveryMode = 'hot' | 'random'
 
+const route = useRoute()
 const { isMainShifted, openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
 
 const albums = ref<MusicAlbumListItem[]>([])
@@ -90,13 +92,28 @@ function openArtistFromCard(artistId: string) {
   openArtist(String(artistId))
 }
 
+function applyRouteSelection() {
+  const artist = route.query.artist
+  const album = route.query.album
+  if (typeof artist === 'string' && artist) openArtist(artist)
+  if (typeof album === 'string' && album) openAlbum(album)
+}
+
 onMounted(() => {
   fetchAlbums()
+  applyRouteSelection()
 })
 
 watch([searchQuery, mode], () => {
   fetchAlbums()
 })
+
+watch(
+  () => [route.query.artist, route.query.album],
+  () => {
+    applyRouteSelection()
+  },
+)
 </script>
 
 <template>
@@ -122,6 +139,11 @@ watch([searchQuery, mode], () => {
             @click="changeMode('random')"
           />
         </div>
+      </div>
+
+      <div class="artist-section-heading">
+        <h2>艺术家</h2>
+        <p class="a-muted">搜索艺术家，或从专辑卡片进入相关音乐档案。</p>
       </div>
 
       <div class="search-bar">
@@ -248,6 +270,20 @@ watch([searchQuery, mode], () => {
   display: inline-flex;
   gap: 0.35rem;
   flex-shrink: 0;
+}
+.artist-section-heading {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.artist-section-heading h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.artist-section-heading p {
+  margin: 0;
 }
 .search-bar {
   display: flex;

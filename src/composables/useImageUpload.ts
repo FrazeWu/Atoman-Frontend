@@ -2,7 +2,7 @@
  * useImageUpload.ts
  * Image upload composable for the MarkdownEditor.
  *
- * Backend: POST /api/blog/upload-image
+ * Backend: POST /api/v1/blog/upload-image
  * - Accepts: multipart/form-data with field "image"
  * - Validates: JPEG/PNG/GIF/WebP, max 5MB
  * - Returns: { url: string }

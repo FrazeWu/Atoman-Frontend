@@ -45,7 +45,7 @@ describe('CreateArtistView.vue', () => {
     })
   })
 
-  it('prefills the name from route query and redirects to artist detail after submit', async () => {
+  it('prefills the name from route query and redirects to the music view with the new artist selected after submit', async () => {
     const wrapper = mount(CreateArtistView)
 
     const nameInput = wrapper.get('[data-test="artist-name-input"]')
@@ -66,6 +66,6 @@ describe('CreateArtistView.vue', () => {
       reason: 'Create artist from wiki flow',
       sources: [],
     })
-    expect(mocks.routerPush).toHaveBeenCalledWith('/artist/artist-123')
+    expect(mocks.routerPush).toHaveBeenCalledWith('/music?artist=artist-123')
   })
 })

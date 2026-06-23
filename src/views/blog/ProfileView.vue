@@ -61,7 +61,7 @@
               <p v-if="ch.description" class="a-muted a-clamp-2" style="font-size:.875rem">{{ ch.description }}</p>
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
-              <PButton :to="`/channel/${ch.slug || ch.id}`" size="sm" variant="secondary">查看</PButton>
+              <PButton :to="`/channels/${ch.slug || ch.id}`" size="sm" variant="secondary">查看</PButton>
             </div>
           </div>
         </div>
@@ -80,7 +80,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary"
-            @click="$router.push('/post/' + post.id)"
+            @click="$router.push('/posts/post/' + post.id)"
             class="a-cursor-pointer"
           >
             <template #visual>
@@ -149,7 +149,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
 import { useApi } from '@/composables/useApi'
-import { isLocalHost, resolveSiteContext } from '@/router/siteContext'
+import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel } from '@/types'
@@ -187,18 +187,10 @@ const formatDate = (dateStr: string) => {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
+const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
 const resolvedUsername = ref('')
 const username = computed(() => resolvedUsername.value || (route.params.username as string) || '')
 const isSelf = computed(() => authStore.user?.username === username.value)
-
-const redirectLegacyEntity = () => {
-  if (siteContext.value.type !== 'entity' || !siteContext.value.legacyType) return false
-  if (isLocalHost(window.location.hostname)) return false
-  const target = `${window.location.protocol}//${siteContext.value.handle}.${window.location.hostname.split('.').slice(-2).join('.')}${window.location.pathname}${window.location.search}`
-  window.location.replace(target)
-  return true
-}
 
 const resolveEntityContext = async () => {
   if (siteContext.value.type !== 'entity') return
@@ -282,7 +274,6 @@ const openDM = () => {
 }
 
 onMounted(async () => {
-  if (redirectLegacyEntity()) return
   await resolveEntityContext()
   if (resolvedChannelSlug.value) return
   await fetchProfile()

@@ -59,7 +59,7 @@ export function installRouteGuards(router: Router) {
     const isDisabledTarget = to.path === disabledTarget.path
 
     if (!isSettingRoute && !isDisabledTarget) {
-      const context = resolveSiteContext(window.location.hostname, window.location.search)
+      const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
       if (context.type === 'module' && !siteAccessStore.isModuleVisible(context.module)) {
         return disabledTarget
       }

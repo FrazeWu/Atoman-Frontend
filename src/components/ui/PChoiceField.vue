@@ -134,9 +134,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   cursor: pointer;
 }
 
-.paper-choice-trigger:focus-visible {
+.paper-choice-trigger:focus-visible,
+.paper-choice--open .paper-choice-trigger {
   outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 55%, transparent);
+  border-bottom-color: var(--a-color-accent-confirm);
 }
 
 .paper-choice-placeholder,
@@ -185,10 +186,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .paper-choice-option--active {
-  color: color-mix(in srgb, var(--a-color-ink) 88%, #8b5e3c 12%);
+  color: var(--a-color-accent-confirm);
 }
 
 .paper-choice-marker {
-  color: color-mix(in srgb, var(--a-color-ink) 75%, #8b5e3c 25%);
+  color: var(--a-color-accent-confirm);
 }
 </style>

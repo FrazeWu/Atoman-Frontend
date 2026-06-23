@@ -208,9 +208,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .paper-field-trigger:hover,
-.paper-field-trigger:focus-visible {
+.paper-field-trigger:focus-visible,
+.paper-field--open .paper-field-trigger {
   outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 55%, transparent);
+  border-bottom-color: var(--a-color-accent-confirm);
 }
 
 .paper-field-placeholder,
@@ -229,9 +230,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   flex-direction: column;
   gap: 0.85rem;
   padding: 1rem 1.05rem 1.05rem;
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, white);
-  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
+  border-radius: 0px;
+  background: #ffffff; /* pure white */
+  border: 1px solid var(--a-color-line-soft);
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.15);
 }
 
 .paper-field-search-row {
@@ -279,11 +281,11 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 .paper-field-option:hover,
 .paper-field-option--active {
-  color: color-mix(in srgb, var(--a-color-ink) 88%, #8b5e3c 12%);
+  color: var(--a-color-accent-confirm);
 }
 
 .paper-field-option-marker {
-  color: color-mix(in srgb, var(--a-color-ink) 75%, #8b5e3c 25%);
+  color: var(--a-color-accent-confirm);
 }
 
 .paper-field-empty {

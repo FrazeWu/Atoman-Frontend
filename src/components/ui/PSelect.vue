@@ -151,11 +151,11 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 .p-select-trigger:focus-visible,
 .p-select-trigger--open {
   outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 58%, transparent);
+  border-bottom-color: var(--a-color-accent-confirm);
 }
 
 .p-select-trigger--error {
-  border-bottom-color: var(--a-color-danger, #ef4444);
+  border-bottom-color: var(--a-color-accent-destructive);
 }
 
 .p-select-value--placeholder,
@@ -198,7 +198,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-select-marker {
-  color: color-mix(in srgb, var(--a-color-ink) 75%, #8b5e3c 25%);
+  color: var(--a-color-accent-confirm);
 }
 
 .p-select-empty,
@@ -208,7 +208,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-field-error {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-accent-destructive);
 }
 
 .p-field-hint,

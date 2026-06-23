@@ -34,4 +34,21 @@ describe('PInput', () => {
     expect(wrapper.find('.p-field-dot').exists()).toBe(true)
     expect(wrapper.find('input').classes()).toContain('p-input')
   })
+
+  it('renders error state when error prop is provided', () => {
+    const wrapper = mount(PInput, {
+      props: {
+        modelValue: '',
+        label: '标题',
+        error: '此字段必填',
+      },
+    })
+
+    const input = wrapper.get('input')
+    expect(input.classes()).toContain('p-input--error')
+
+    const errorDiv = wrapper.find('.p-field-error')
+    expect(errorDiv.exists()).toBe(true)
+    expect(errorDiv.text()).toBe('此字段必填')
+  })
 })

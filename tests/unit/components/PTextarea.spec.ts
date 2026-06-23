@@ -14,4 +14,21 @@ describe('PTextarea', () => {
     expect(wrapper.find('.p-field-dot').exists()).toBe(true)
     expect(wrapper.find('textarea').classes()).toContain('p-textarea')
   })
+
+  it('renders error state when error prop is provided', () => {
+    const wrapper = mount(PTextarea, {
+      props: {
+        modelValue: '',
+        label: '摘要',
+        error: '描述不能为空',
+      },
+    })
+
+    const textarea = wrapper.get('textarea')
+    expect(textarea.classes()).toContain('p-textarea--error')
+
+    const errorDiv = wrapper.find('.p-field-error')
+    expect(errorDiv.exists()).toBe(true)
+    expect(errorDiv.text()).toBe('描述不能为空')
+  })
 })

@@ -88,15 +88,15 @@ const handleInput = (event: Event) => {
 
 .p-textarea:focus {
   outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 58%, transparent);
+  border-bottom-color: var(--a-color-accent-confirm);
 }
 
 .p-textarea--error {
-  border-bottom-color: var(--a-color-danger, #ef4444);
+  border-bottom-color: var(--a-color-accent-destructive);
 }
 
 .p-field-error {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-accent-destructive);
   font-size: 0.75rem;
 }
 

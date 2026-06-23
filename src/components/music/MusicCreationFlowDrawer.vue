@@ -185,7 +185,12 @@ async function completeCreation() {
 
 <style scoped>
 .creation-flow { display: flex; flex-direction: column; min-height: 100%; }
-.drawer-header { padding: 1.75rem 2rem 1rem; }
+.drawer-header {
+  margin: -2.5rem -2.5rem 0;
+  padding: 1.75rem 2rem 1.25rem;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-soft);
+}
 .eyebrow {
   margin: 0 0 0.45rem;
   color: var(--a-color-ink-soft);
@@ -207,7 +212,7 @@ async function completeCreation() {
 .drawer-body { display: flex; flex: 1; flex-direction: column; gap: 1rem; padding: 0 2rem 2rem; }
 .error-message {
   margin: 0;
-  color: #b42318;
+  color: var(--a-color-accent-destructive);
   font-family: var(--a-font-meta);
   font-size: 0.82rem;
   font-weight: 800;
@@ -223,12 +228,16 @@ async function completeCreation() {
   cursor: pointer;
 }
 .paper-action {
-  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, white);
+  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, var(--a-color-paper));
   color: var(--a-color-ink);
 }
 .paper-submit {
-  background: color-mix(in srgb, var(--a-color-ink) 92%, #6b4f3a 8%);
-  color: white;
+  background: var(--a-color-accent-confirm);
+  color: var(--a-color-paper);
+  transition: background-color 0.15s ease;
+}
+.paper-submit:hover {
+  background: var(--a-color-accent-confirm-hover);
 }
 
 .drawer-body :deep(.album-details-step .footer-actions) {

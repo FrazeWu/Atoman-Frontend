@@ -429,11 +429,11 @@ async function submitEdit() {
 </template>
 
 <style scoped>
-.drawer-header { padding: 1.8rem 2rem 1rem; border-bottom: none; background: linear-gradient(180deg, color-mix(in srgb, var(--a-color-paper-wash) 82%, white), transparent); }
+.drawer-header { margin: -2.5rem -2.5rem 0; padding: 1.8rem 2rem 1rem; border-bottom: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); }
 .eyebrow { margin: 0 0 0.45rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .title { font-family: var(--a-font-serif); font-size: 1.7rem; margin: 0; }
 .subtitle { margin: 0.55rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 28rem; }
-.drawer-body { padding: 1.6rem 2rem 2rem; }
+.drawer-body { margin: 0 -2.5rem; padding: 1.6rem 2rem 2rem; }
 
 .wiki-form { display: flex; flex-direction: column; gap: 1.1rem; }
 .paper-section {
@@ -441,8 +441,8 @@ async function submitEdit() {
   flex-direction: column;
   gap: 1.1rem;
   padding: 1.1rem 1.15rem 1.2rem;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-soft);
 }
 .section-heading { display: flex; align-items: flex-start; gap: 0.75rem; }
 .section-dot,
@@ -486,20 +486,24 @@ async function submitEdit() {
 }
 .paper-textarea { resize: vertical; min-height: 6rem; line-height: 1.65; }
 .source-row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1rem; }
-.form-error { margin: 0; color: #b42318; font-weight: 800; font-size: 0.9rem; }
-.form-success { margin: 0; color: #047857; font-weight: 800; font-size: 0.9rem; }
+.form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 800; font-size: 0.9rem; }
+.form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 800; font-size: 0.9rem; }
 .paper-submit {
   width: 100%;
   border: 0;
   border-radius: 0px;
   padding: 0.95rem 1.5rem;
   font-weight: 800;
-  background: color-mix(in srgb, var(--a-color-ink) 92%, #6b4f3a 8%);
-  color: white;
+  background: var(--a-color-accent-confirm);
+  color: var(--a-color-paper);
   cursor: pointer;
   font-family: var(--a-font-meta);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  transition: background-color 0.15s ease;
+}
+.paper-submit:hover {
+  background: var(--a-color-accent-confirm-hover);
 }
 .paper-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 .a-btn-secondary { border: 1.5px solid var(--a-color-ink); padding: 0.75rem 1rem; font-weight: bold; background: var(--a-color-paper); cursor: pointer; font-family: var(--a-font-meta); }

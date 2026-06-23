@@ -111,45 +111,108 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
 
 <style scoped>
 .drawer-header-content { display: flex; flex-direction: column; gap: 0.25rem; }
-.kicker { font-family: var(--a-font-meta); font-size: 0.75rem; font-weight: bold; letter-spacing: 0.1em; color: var(--a-color-ink-soft); }
-.title { font-family: var(--a-font-serif); font-size: 2.5rem; margin: 0; line-height: 1.1; }
+.kicker {
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--a-color-ink-soft);
+}
+.title { font-family: var(--a-font-serif); font-size: 2.5rem; margin: 0; line-height: 1.1; letter-spacing: -0.025em; }
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
-.actions { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 2rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-line-soft); align-self: flex-start; }
 .paper-action {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   border: 0;
-  border-radius: 0px;
-  padding: 0.8rem 1.05rem;
+  border-right: 1px solid var(--a-color-line-soft);
+  padding: 0.75rem 1.05rem;
   font-weight: 800;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 74%, white);
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
   cursor: pointer;
   font-family: var(--a-font-meta);
-  color: var(--a-color-ink);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.paper-action:last-child {
+  border-right: none;
+}
+.paper-action:hover {
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
 }
 .paper-action-dot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  background: currentColor;
+  opacity: 0.6;
 }
 
-.album-list-header { margin-bottom: 1.5rem; padding-bottom: 0.85rem; border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent); }
-.album-list-kicker { margin: 0 0 0.35rem; font-family: var(--a-font-meta); font-size: 0.73rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--a-color-ink-soft); }
-.album-list-header h3 { font-size: 1.2rem; font-weight: 900; margin: 0; }
-.album-row { display: flex; gap: 1.4rem; margin-bottom: 1rem; position: relative; cursor: pointer; padding: 1rem 1.05rem; border-radius: 8px; border: none; border-bottom: 1.5px dashed var(--a-color-line-soft); border-left: 3px solid transparent; transition: background-color 0.2s ease; }
-.album-row:hover { background: var(--a-color-paper-wash); border-left-color: var(--a-color-ink); }
-.album-row-left { width: 100px; flex-shrink: 0; text-align: right; padding-top: 0.5rem; }
-.album-year { font-family: var(--a-font-meta); font-size: 1.5rem; font-weight: 900; color: var(--a-color-ink); }
+.album-list-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
+}
+.album-list-kicker {
+  margin: 0 0 0.35rem;
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--a-color-ink-soft);
+}
+.album-list-header h3 { font-size: 1.15rem; font-weight: 900; margin: 0; letter-spacing: -0.02em; }
+.album-row {
+  display: flex;
+  gap: 1.4rem;
+  margin-bottom: 0;
+  position: relative;
+  cursor: pointer;
+  padding: 1rem;
+  border: none;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  border-left: 3px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.album-row:first-of-type {
+  border-top: 1px solid var(--a-color-line-soft);
+}
+.album-row:hover {
+  background: var(--a-color-paper-soft);
+  border-left-color: var(--a-color-ink);
+}
+.album-row-left { width: 80px; flex-shrink: 0; text-align: right; padding-top: 0.35rem; }
+.album-year { font-family: var(--a-font-meta); font-size: 1.25rem; font-weight: 900; color: var(--a-color-ink); }
 .album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; }
-.album-row-cover { width: 92px; height: 92px; background: var(--a-color-paper-wash); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--a-font-meta); font-size: 0.7rem; color: var(--a-color-ink-soft); flex-shrink: 0; overflow: hidden; }
+.album-row-cover {
+  width: 80px;
+  height: 80px;
+  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--a-font-meta);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--a-color-muted-soft);
+  flex-shrink: 0;
+  overflow: hidden;
+}
 .album-row-img { width: 100%; height: 100%; object-fit: cover; }
-.album-row-info { display: flex; flex-direction: column; justify-content: center; }
-.album-row-title { font-family: var(--a-font-serif); font-size: 1.5rem; font-weight: 900; margin-bottom: 0.25rem; }
-.album-row-meta { font-family: var(--a-font-meta); font-size: 0.8rem; color: var(--a-color-ink-soft); }
+.album-row-info { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
+.album-row-title { font-family: var(--a-font-serif); font-size: 1.35rem; font-weight: 900; letter-spacing: -0.015em; }
+.album-row-meta { font-family: var(--a-font-meta); font-size: 0.75rem; color: var(--a-color-ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
-.state-line--error { color: #b42318; }
+.state-line--error { color: var(--a-color-accent-destructive); }
 </style>

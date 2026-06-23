@@ -32,8 +32,8 @@ defineEmits(['click'])
 }
 .discussion-fab:hover {
   transform: translate(-4px, -50%); /* Displaces left */
-  background: #6b4f3a; /* Walnut brown hover */
-  border-color: #6b4f3a;
+  background: var(--a-color-accent-confirm);
+  border-color: var(--a-color-accent-confirm);
 }
 .fab-label {
   writing-mode: vertical-rl;

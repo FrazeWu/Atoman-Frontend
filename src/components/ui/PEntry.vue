@@ -64,7 +64,7 @@ defineEmits(['click'])
   padding: 0.75rem 1.5rem;
   margin: 0 -1.5rem;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  border-radius: 8px;
+  border-radius: var(--a-radius-none, 0px);
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -79,12 +79,12 @@ defineEmits(['click'])
 }
 .p-entry.is-open {
   background-color: var(--a-color-paper-soft);
-  box-shadow: inset -4px 0 0 var(--a-color-ink);
+  box-shadow: inset -4px 0 0 var(--a-color-accent-confirm);
   border-bottom-color: transparent;
 }
 .p-entry.is-focused {
   background-color: var(--a-color-paper-wash);
-  border-left-color: var(--a-color-ink);
+  border-left-color: var(--a-color-accent-confirm);
 }
 
 /* 2. Read State Weakening */

@@ -6,7 +6,7 @@ const musicHomeSource = readFileSync(resolve(__dirname, '../../../src/views/musi
 
 describe('Music Home room name', () => {
   it('uses the functional music page title', () => {
-    expect(musicHomeSource).toContain('<h1 class="page-title">专辑发现</h1>')
+    expect(musicHomeSource).toContain('title="专辑发现"')
     expect(musicHomeSource).not.toContain('藏音')
   })
 })

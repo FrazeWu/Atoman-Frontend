@@ -108,3 +108,13 @@ describe('useMusicDrawers music creation flow', () => {
     expect(drawers.state.value.creationFlow).toBeNull()
   })
 })
+  it('can open the creation flow directly on albumSeed while preserving seeded artist context', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicCreationFlow({ artistId: 'artist-9', startStep: 'albumSeed' })
+
+    expect(drawers.state.value.creationFlow?.step).toBe('albumSeed')
+    expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-9')
+    expect(drawers.state.value.creationFlow?.draft.albumSeed.title).toBe('')
+    expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([])
+  })

@@ -215,5 +215,7 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     await wrapper.find('[data-testid="empty-add-album"]').trigger('click')
 
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(2)
+    expect(mocks.openMusicCreationFlow).toHaveBeenNthCalledWith(1)
+    expect(mocks.openMusicCreationFlow).toHaveBeenNthCalledWith(2, { startStep: 'albumSeed' })
   })
 })

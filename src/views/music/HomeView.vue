@@ -174,7 +174,7 @@ watch(
             <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
           </button>
-          <button class="paper-action" type="button" data-testid="empty-add-album" @click="openMusicCreationFlow()">
+          <button class="paper-action" type="button" data-testid="empty-add-album" @click="openMusicCreationFlow({ startStep: 'albumSeed' })">
             <span class="paper-action-dot" aria-hidden="true" />
             提交专辑
           </button>

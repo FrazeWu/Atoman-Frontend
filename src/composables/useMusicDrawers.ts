@@ -67,9 +67,12 @@ export function useMusicDrawers() {
     state.value.nestedPayload = null
   }
 
-  const openMusicCreationFlow = (seed?: { artistId?: string | null }) => {
+  const openMusicCreationFlow = (seed?: {
+    artistId?: string | null
+    startStep?: MusicCreationFlowStep
+  }) => {
     state.value.creationFlow = {
-      step: 'artist',
+      step: seed?.startStep ?? 'artist',
       draft: createEmptyDraft(seed),
       dirty: false,
       submitting: false,

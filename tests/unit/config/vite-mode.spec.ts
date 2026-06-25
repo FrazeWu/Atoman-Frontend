@@ -13,4 +13,10 @@ describe('vite mode scripts', () => {
   it('loads the prod env file when building for production', () => {
     expect(packageJson.scripts.build).toContain('--mode prod')
   })
+
+  it('keeps vite on a Cloudflare Pages compatible major version', () => {
+    const viteVersion = packageJson.devDependencies?.vite
+    const major = Number(String(viteVersion).replace(/^[^\d]*/, '').split('.')[0])
+    expect(major).toBeGreaterThanOrEqual(6)
+  })
 })

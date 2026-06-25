@@ -8,7 +8,7 @@
     >
       <!-- All topics -->
       <PSidebarItem
-        to="/"
+        :to="moduleUrl('forum')"
         index="1"
         :icon="MessageSquare"
         :active="!$route.query.category_id && !$route.query.tag"
@@ -77,6 +77,7 @@ import { MessageSquare, Folder } from 'lucide-vue-next'
 import { useForumStore } from '@/stores/forum'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+import { moduleUrl } from '@/router/siteUrls'
 
 const route = useRoute()
 const router = useRouter()
@@ -99,14 +100,14 @@ const popularTags = computed(() => {
 })
 
 const selectCategory = (id: string | number) => {
-  router.push({ path: '/', query: { category_id: String(id) } })
+  router.push({ path: moduleUrl('forum'), query: { category_id: String(id) } })
 }
 
 const selectTag = (tag: string) => {
   if (route.query.tag === tag) {
-    router.push({ path: '/' })
+    router.push({ path: moduleUrl('forum') })
   } else {
-    router.push({ path: '/', query: { tag } })
+    router.push({ path: moduleUrl('forum'), query: { tag } })
   }
 }
 

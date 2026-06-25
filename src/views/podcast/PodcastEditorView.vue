@@ -402,7 +402,7 @@ async function doPublish() {
   errorMsg.value = ''
   try {
     const ep = await apiSave(buildPayload('published'))
-    router.push(`/episode/${isEdit.value ? route.params.id : ep.id}`)
+    router.push(`/podcasts/episode/${isEdit.value ? route.params.id : ep.id}`)
   } catch (e: any) {
     errorMsg.value = e?.error || '发布失败，请重试'
   } finally {

@@ -372,7 +372,7 @@ async function doPublish() {
   errorMsg.value = ''
   try {
     const v = await apiSave(buildPayload('published'))
-    router.push(`/watch/${isEdit.value ? route.params.id : v.id}`)
+    router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
   } catch (e: any) {
     errorMsg.value = e?.error || '发布失败，请重试'
   } finally {

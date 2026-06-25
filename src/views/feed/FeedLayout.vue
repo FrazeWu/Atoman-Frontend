@@ -70,6 +70,7 @@ import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
 import { useKeyboardList } from '@/composables/useKeyboardList'
+import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
 
 const router = useRouter()
 const route = useRoute()
@@ -88,10 +89,10 @@ const groups = computed(() => feedStore.groups)
 const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
 
 const navItems = [
-  { to: '/', label: '订阅', icon: Rss, exact: true },
-  { to: '/explore', label: '探索', icon: Compass },
-  { to: '/reading-list', label: '稍后阅读', icon: Bookmark },
-  { to: '/starred', label: '收藏', icon: Star },
+  { to: moduleUrl('feed'), label: '订阅', icon: Rss, exact: true },
+  { to: modulePathUrl('feed', '/explore'), label: '探索', icon: Compass },
+  { to: modulePathUrl('feed', '/reading-list'), label: '稍后阅读', icon: Bookmark },
+  { to: modulePathUrl('feed', '/starred'), label: '收藏', icon: Star },
 ]
 
 // 2. Setup sidebar list navigation (J/K)
@@ -116,12 +117,12 @@ const ensureSidebarSources = () => {
 
 const selectSource = (sourceId: string) => {
   mobileSourcesOpen.value = false
-  void router.push({ path: '/', query: { source_id: sourceId } })
+  void router.push({ path: moduleUrl('feed'), query: { source_id: sourceId } })
 }
 
 const openManageSheet = () => {
   mobileSourcesOpen.value = false
-  void router.push({ path: '/', query: { ...route.query, manage_subscriptions: '1' } })
+  void router.push({ path: moduleUrl('feed'), query: { ...route.query, manage_subscriptions: '1' } })
 }
 
 watch(

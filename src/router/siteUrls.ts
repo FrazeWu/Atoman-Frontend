@@ -1,5 +1,5 @@
 import type { ModuleRoomKey } from '@/config/moduleRooms'
-import { isLocalHost } from './siteContext'
+import { moduleRooms } from '@/config/moduleRooms'
 
 function currentProtocol() {
   return typeof window === 'undefined' ? 'https:' : window.location.protocol
@@ -9,14 +9,17 @@ function currentHostname() {
   return typeof window === 'undefined' ? 'localhost' : window.location.hostname
 }
 
-function baseDomain(hostname: string) {
-  const parts = hostname.split('.')
-  return parts.length >= 2 ? parts.slice(-2).join('.') : hostname
-}
-
-function siteUrl(label: string, protocol: string, hostname: string) {
-  if (isLocalHost(hostname)) return `/?site=${label}`
-  return `${protocol}//${label}.${baseDomain(hostname)}/`
+export function modulePathUrl(
+  module: ModuleRoomKey,
+  path: string,
+  protocol = currentProtocol(),
+  hostname = currentHostname(),
+) {
+  void protocol
+  void hostname
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const prefix = `/${moduleRooms[module].publicPathSegment}`
+  return normalizedPath === '/' ? prefix : `${prefix}${normalizedPath}`
 }
 
 export function moduleUrl(
@@ -24,25 +27,7 @@ export function moduleUrl(
   protocol = currentProtocol(),
   hostname = currentHostname(),
 ) {
-  return siteUrl(module, protocol, hostname)
-}
-
-export function modulePathUrl(
-  module: ModuleRoomKey,
-  path: string,
-  protocol = currentProtocol(),
-  hostname = currentHostname(),
-) {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const base = isLocalHost(hostname) ? `${protocol}//${hostname}/?site=${module}` : siteUrl(module, protocol, hostname)
-  const url = new URL(base)
-  url.pathname = normalizedPath
-
-  if (isLocalHost(hostname)) {
-    return `${url.pathname}${url.search}`
-  }
-
-  return url.toString()
+  return modulePathUrl(module, '/', protocol, hostname)
 }
 
 export function userUrl(
@@ -50,7 +35,9 @@ export function userUrl(
   protocol = currentProtocol(),
   hostname = currentHostname(),
 ) {
-  return siteUrl(username, protocol, hostname)
+  void protocol
+  void hostname
+  return `/users/${username}`
 }
 
 export function channelUrl(
@@ -58,5 +45,7 @@ export function channelUrl(
   protocol = currentProtocol(),
   hostname = currentHostname(),
 ) {
-  return siteUrl(slug, protocol, hostname)
+  void protocol
+  void hostname
+  return `/channels/${slug}`
 }

@@ -270,7 +270,7 @@ const toggleFollow = async () => {
 }
 
 const openDM = () => {
-  router.push({ path: '/inbox', query: { tab: 'dm', user: username.value } })
+  router.push({ path: '/feed/inbox', query: { tab: 'dm', user: username.value } })
 }
 
 onMounted(async () => {

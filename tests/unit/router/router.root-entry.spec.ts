@@ -26,7 +26,8 @@ const makeToken = (expSecondsFromNow: number) => {
 
 const createRootRouter = async (sitePath: ModuleRoomKey | null = null) => {
   if (sitePath) {
-    window.history.replaceState(null, '', `/?site=${sitePath}`)
+    const path = sitePath === 'blog' ? '/posts' : `/${sitePath}`
+    window.history.replaceState(null, '', path)
   } else {
     window.history.replaceState(null, '', '/')
   }

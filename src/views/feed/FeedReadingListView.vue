@@ -2,7 +2,7 @@
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
     <PPageHeader title="稍后阅读" sub="你保存的 RSS 阅读队列">
       <template #action>
-        <RouterLink to="/" style="text-decoration:none">
+        <RouterLink to="/feed" style="text-decoration:none">
           <PPress variant="secondary" label="← 返回订阅" />
         </RouterLink>
       </template>

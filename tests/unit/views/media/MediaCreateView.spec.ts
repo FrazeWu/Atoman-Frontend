@@ -85,7 +85,7 @@ describe('MediaCreateView', () => {
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
   })
 
-  it('publishes through the legacy content publishing route instead of a module-specific leaf route', () => {
+  it('publishes through the explicit blog module publishing route', () => {
     const { selectCollection } = useMediaCollections()
     selectCollection('collection-1', 'article', '长文合集')
 
@@ -111,6 +111,6 @@ describe('MediaCreateView', () => {
       },
     })
 
-    expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('site=blog')
+    expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('/posts')
   })
 })

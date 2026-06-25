@@ -29,14 +29,14 @@ const subscriptions: Subscription[] = [
   },
 ]
 
-const makeRouter = async (initialPath = '/') => {
+const makeRouter = async (initialPath = '/feed') => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/', component: { template: '<div />' } },
-      { path: '/explore', component: { template: '<div />' } },
-      { path: '/reading-list', component: { template: '<div />' } },
-      { path: '/starred', component: { template: '<div />' } },
+      { path: '/feed', component: { template: '<div />' } },
+      { path: '/feed/explore', component: { template: '<div />' } },
+      { path: '/feed/reading-list', component: { template: '<div />' } },
+      { path: '/feed/starred', component: { template: '<div />' } },
     ],
   })
 
@@ -82,7 +82,7 @@ describe('FeedLayout', () => {
   })
 
   it('renders nav rows with Ionicon SVG icons and sidebar sources', async () => {
-    const { wrapper } = await mountLayout('/?source_id=sub-1')
+    const { wrapper } = await mountLayout('/feed?source_id=sub-1')
 
     expect(wrapper.findAll('.p-sidebar-item')).toHaveLength(4)
     expect(wrapper.findAll('.p-sidebar-item-icon svg')).toHaveLength(4)
@@ -92,23 +92,23 @@ describe('FeedLayout', () => {
   })
 
   it('routes to the selected source when a sidebar source is clicked', async () => {
-    const { wrapper, pushSpy } = await mountLayout('/')
+    const { wrapper, pushSpy } = await mountLayout('/feed')
 
     await wrapper.get('[data-source-id="sub-1"]').trigger('click')
 
-    expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { source_id: 'sub-1' } })
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { source_id: 'sub-1' } })
   })
 
   it('opens the manage sheet from the sidebar sources manage button', async () => {
-    const { wrapper, pushSpy } = await mountLayout('/')
+    const { wrapper, pushSpy } = await mountLayout('/feed')
 
     await wrapper.get('[data-testid="feed-sidebar-manage"]').trigger('click')
 
-    expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { manage_subscriptions: '1' } })
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { manage_subscriptions: '1' } })
   })
 
   it('opens the feed mobile sources sheet from the header action and reuses source actions', async () => {
-    const { wrapper, pushSpy } = await mountLayout('/')
+    const { wrapper, pushSpy } = await mountLayout('/feed')
 
     expect(wrapper.find('[data-testid="feed-mobile-sources-trigger"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
@@ -123,7 +123,7 @@ describe('FeedLayout', () => {
     await sheet.get('[data-source-id="sub-1"]').trigger('click')
     await flushPromises()
 
-    expect(pushSpy).toHaveBeenCalledWith({ path: '/', query: { source_id: 'sub-1' } })
+    expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { source_id: 'sub-1' } })
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
 
     pushSpy.mockClear()
@@ -135,14 +135,14 @@ describe('FeedLayout', () => {
     await flushPromises()
 
     expect(pushSpy).toHaveBeenCalledWith({
-      path: '/',
+      path: '/feed',
       query: { source_id: 'sub-1', manage_subscriptions: '1' },
     })
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
   })
 
   it('does not expose the mobile sources entry point when signed out', async () => {
-    const { wrapper } = await mountLayout('/', false)
+    const { wrapper } = await mountLayout('/feed', false)
 
     expect(wrapper.find('[data-testid="feed-mobile-sources-trigger"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
@@ -163,7 +163,7 @@ describe('FeedLayout', () => {
     const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions').mockResolvedValue(undefined)
     vi.spyOn(feedStore, 'fetchGroups').mockResolvedValue(undefined)
 
-    const router = await makeRouter('/')
+    const router = await makeRouter('/feed')
     mount(FeedLayout, {
       global: {
         plugins: [pinia, router],

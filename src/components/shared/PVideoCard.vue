@@ -37,7 +37,7 @@ const handleWatchLater = (e: Event) => {
 </script>
 
 <template>
-  <RouterLink :to="to || `/watch/${video.id}`" class="vc-card">
+  <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-card">
     <!-- Thumbnail -->
     <div class="vc-thumb">
       <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />

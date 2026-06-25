@@ -47,7 +47,7 @@ function episodeCover(ep: PodcastEpisode) {
       <li v-for="ep in episodes" :key="ep.id" class="ps-ep">
         <img :src="episodeCover(ep)" class="ps-ep-cover" :alt="ep.post?.title" />
         <span v-if="ep.episode_number" class="ps-ep-num">第 {{ ep.episode_number }} 集</span>
-        <RouterLink :to="`/episode/${ep.id}`" class="ps-ep-title">
+        <RouterLink :to="`/podcasts/episode/${ep.id}`" class="ps-ep-title">
           {{ ep.post?.title }}
         </RouterLink>
       </li>

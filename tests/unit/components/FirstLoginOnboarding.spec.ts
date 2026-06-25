@@ -49,7 +49,8 @@ describe('FirstLoginOnboarding', () => {
         value: {
           ...originalLocation,
           hostname: 'localhost',
-          search: '?site=feed',
+          search: '',
+          pathname: '/feed',
           assign,
         },
       })

@@ -47,6 +47,9 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...scopedModuleRoutes('video'),
     ...userRoutes,
     ...channelRoutes,
+    { path: '/inbox', redirect: '/feed/inbox' },
+    { path: '/bookmarks', redirect: '/posts/bookmarks' },
+    { path: '/settings', redirect: '/posts/settings' },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ]
 }

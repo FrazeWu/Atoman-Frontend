@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
+import { modulePathUrl } from '@/router/siteUrls'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import MediaCollectionRail from '@/components/media/MediaCollectionRail.vue'
@@ -30,9 +31,9 @@ const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 const publishPath = computed(() => {
   if (!selectedCollectionId.value) return ''
   const query = `channel=${currentMediaChannelId.value || ''}&collection=${selectedCollectionId.value}`
-  if (selectedCollection.value?.type === 'podcast') return `/editor?${query}&site=podcast`
-  if (selectedCollection.value?.type === 'video') return `/upload?${query}&site=video`
-  return `/post/new?${query}&site=blog`
+  if (selectedCollection.value?.type === 'podcast') return `${modulePathUrl('podcast', '/editor')}?${query}`
+  if (selectedCollection.value?.type === 'video') return `${modulePathUrl('video', '/upload')}?${query}`
+  return `${modulePathUrl('blog', '/post/new')}?${query}`
 })
 
 const onChannelChange = async (event: Event) => {

@@ -55,9 +55,8 @@ const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).t
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
 const showMediaChannelSwitch = computed(() => {
-  if (route.query.site === 'media') return true
   if (typeof window === 'undefined') return false
-  const siteContext = resolveSiteContext(window.location.hostname, window.location.search)
+  const siteContext = resolveSiteContext(window.location.hostname, window.location.search, route.path)
   return siteContext.type === 'module' && siteContext.module === 'media'
 })
 

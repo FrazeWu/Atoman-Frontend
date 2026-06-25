@@ -111,7 +111,7 @@ const shouldShowYear = (index: number) =>
         <h1 class="home-title">
           {{ selectedArtistName ? selectedArtistName.toUpperCase() : 'ATOMAN' }}<br />TIMELINE
         </h1>
-        <RouterLink v-if="authStore.isAuthenticated" to="/upload" class="btn-upload">
+        <RouterLink v-if="authStore.isAuthenticated" to="/videos/upload" class="btn-upload">
           上传
         </RouterLink>
       </div>

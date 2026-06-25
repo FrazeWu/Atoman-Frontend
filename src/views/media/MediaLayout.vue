@@ -14,7 +14,7 @@
       <PSidebarItem to="/videos" :index="3" :icon="Video">视频</PSidebarItem>
       <PSidebarItem to="/podcasts" :index="4" :icon="Mic">播客</PSidebarItem>
       <PSidebarItem to="/subscriptions" :index="5" :icon="Rss">订阅</PSidebarItem>
-      <PSidebarItem to="/bookmarks" :index="6" :icon="Bookmark">收藏</PSidebarItem>
+      <PSidebarItem to="/posts/bookmarks" :index="6" :icon="Bookmark">收藏</PSidebarItem>
     </PSidebar>
 
     <main class="a-main-content">

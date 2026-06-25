@@ -62,7 +62,7 @@ function episodeCover(ep: PodcastEpisode) {
         :key="ep.id"
         :title="ep.post?.title || '未命名单集'"
         :summary="ep.post?.summary"
-        @click="router.push(`/episode/${ep.id}`)"
+        @click="router.push(`/podcasts/episode/${ep.id}`)"
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">

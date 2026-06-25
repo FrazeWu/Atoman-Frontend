@@ -5,7 +5,7 @@
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
           <PPress label="新建合集" variant="secondary" @click="showCreateCollectionModal" />
-          <PPress label="上传视频" @click="router.push('/upload?site=video')" />
+          <PPress label="上传视频" @click="router.push('/videos/upload')" />
         </div>
       </template>
     </PPageHeader>
@@ -60,7 +60,7 @@
                 <p v-if="selectedCollection.description" class="a-muted" style="margin:.5rem 0 0 0">{{ selectedCollection.description }}</p>
               </div>
               <div style="display:flex;gap:.75rem">
-                <PPress label="上传视频" @click="router.push(`/upload?site=video&channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+                <PPress label="上传视频" @click="router.push(`/videos/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
               </div>
             </div>
 
@@ -71,7 +71,7 @@
             </div>
             <div v-else-if="videos.length === 0" style="padding:4rem 0;text-align:center">
               <p class="a-muted">该合集下还没有视频</p>
-              <PPress label="立即上传" variant="secondary" size="sm" @click="router.push(`/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+              <PPress label="立即上传" variant="secondary" size="sm" @click="router.push(`/videos/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
             </div>
             <div v-else class="video-list">
               <div v-for="video in videos" :key="video.id" class="video-item">

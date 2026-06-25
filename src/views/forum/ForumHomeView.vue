@@ -270,7 +270,7 @@ const selectCategory = (id: string | null) => {
   } else {
     query.category_id = String(id)
   }
-  void router.push({ path: '/', query })
+  void router.push({ path: '/forum', query })
 }
 
 const setTab = async (tab: TabKey) => {
@@ -281,13 +281,13 @@ const setTab = async (tab: TabKey) => {
 const filterByTag = (tag: string) => {
   const query = { ...route.query }
   query.tag = tag
-  void router.push({ path: '/', query })
+  void router.push({ path: '/forum', query })
 }
 
 const clearTag = () => {
   const query = { ...route.query }
   delete query.tag
-  void router.push({ path: '/', query })
+  void router.push({ path: '/forum', query })
 }
 
 watch(

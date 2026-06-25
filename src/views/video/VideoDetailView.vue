@@ -154,11 +154,7 @@ function toggleTheaterMode() {
 function playNextVideo() {
   const next = recommended.value[0]
   if (!next) return
-  const site = getFirstStringQueryValue(route.query.site)
-  router.push({
-    path: `/watch/${next.id}`,
-    query: site ? { site } : undefined,
-  })
+  router.push(`/videos/watch/${next.id}`)
 }
 
 function handleSeekToTimestamp(value: number) {

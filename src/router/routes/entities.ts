@@ -1,15 +1,13 @@
 import type { RouteRecordRaw } from 'vue-router'
 
 export const userRoutes: RouteRecordRaw[] = [
-  { path: '/', component: () => import('@/views/blog/ProfileView.vue') },
-  { path: '/posts', component: () => import('@/views/blog/ProfileView.vue') },
-  { path: '/channels', component: () => import('@/views/blog/ProfileView.vue') },
-  { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
+  { path: '/users/:handle', component: () => import('@/views/blog/ProfileView.vue') },
+  { path: '/users/:handle/posts', component: () => import('@/views/blog/ProfileView.vue') },
+  { path: '/users/:handle/channels', component: () => import('@/views/blog/ProfileView.vue') },
 ]
 
 export const channelRoutes: RouteRecordRaw[] = [
-  { path: '/', component: () => import('@/views/blog/ChannelView.vue') },
-  { path: '/posts', component: () => import('@/views/blog/ChannelView.vue') },
-  { path: '/about', component: () => import('@/views/blog/ChannelView.vue') },
-  { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
+  { path: '/channels/:slug', component: () => import('@/views/blog/ChannelView.vue') },
+  { path: '/channels/:slug/posts', component: () => import('@/views/blog/ChannelView.vue') },
+  { path: '/channels/:slug/about', component: () => import('@/views/blog/ChannelView.vue') },
 ]

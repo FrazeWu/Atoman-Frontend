@@ -46,7 +46,7 @@ watch(sort, fetchVideos)
         >{{ s.label }}</button>
       </div>
       <div class="vh-bar-action">
-        <PButton v-if="authStore.isAuthenticated && canPublishVideo" to="/upload" variant="primary" size="sm">+ 上传</PButton>
+        <PButton v-if="authStore.isAuthenticated && canPublishVideo" to="/videos/upload" variant="primary" size="sm">+ 上传</PButton>
       </div>
     </div>
 

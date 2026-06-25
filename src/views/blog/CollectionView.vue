@@ -18,10 +18,10 @@
             >
               {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
             </PClip>
-            <PLink :href="`/channel/${channelId}?site=blog`" label="返回频道" />
+            <PLink :href="`/channel/${channelId}`" label="返回频道" />
             <PLink
               v-if="isOwner"
-              :href="`/post/new?site=blog&channel=${channelId}&collection=${collection.id}`"
+              :href="`/posts/post/new?channel=${channelId}&collection=${collection.id}`"
               label="写文章"
             />
           </div>
@@ -31,7 +31,7 @@
       <PCard class="collection-meta-card">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">所属频道</p>
-          <PLink :href="`/channel/${channelId}?site=blog`">
+          <PLink :href="`/channel/${channelId}`">
             {{ channel?.name || '加载中...' }}
           </PLink>
         </div>
@@ -58,7 +58,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary || summarize(post.content)"
-            @click="$router.push(`/post/${post.id}?site=blog`)"
+            @click="$router.push(`/posts/post/${post.id}`)"
           >
             <template #meta>
               <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -76,10 +76,10 @@
                   :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
                   @click="toggleReadingList(post.id)"
                 />
-                <PLink :href="`/post/${post.id}?site=blog`" label="查看" />
+                <PLink :href="`/posts/post/${post.id}`" label="查看" />
                 <PLink
                   v-if="isOwner"
-                  :href="`/post/${post.id}/edit?site=blog&channel=${channelId}`"
+                  :href="`/posts/post/${post.id}/edit?channel=${channelId}`"
                   label="编辑"
                 />
               </div>

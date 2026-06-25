@@ -2,7 +2,7 @@
   <div class="a-page">
     <PPageHeader title="文章" sub="查看当前频道下的文章内容。" accent>
       <template #action>
-        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/post/new">+ 写文章</PButton>
+        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
         <PButton v-else to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>

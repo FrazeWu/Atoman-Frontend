@@ -1124,7 +1124,7 @@ const loadPost = async () => {
       if (!selectedChannelId.value) {
         const fallback = p.channel_id || p.collections?.[0]?.channel_id
         if (fallback) {
-          await router.replace({ path: `/post/${postId}/edit`, query: { channel: fallback } })
+          await router.replace({ path: `/posts/post/${postId}/edit`, query: { channel: fallback } })
         }
       }
       existingCollectionIds.value = (p.collections || []).map((c: Collection) => c.id)

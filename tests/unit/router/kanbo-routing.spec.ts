@@ -24,19 +24,19 @@ describe('content routes', () => {
     ])
   })
 
-  it('supports the media site context as the only module identity', () => {
-    expect(resolveSiteContext('media.atoman.org')).toEqual({ type: 'module', module: 'media' })
-    expect(resolveSiteContext('localhost', 'site=media')).toEqual({ type: 'module', module: 'media' })
-    expect(resolveSiteContext('kanbo.atoman.org')).not.toEqual({ type: 'module', module: 'media' })
-    expect(moduleUrl('media', 'https:', 'blog.atoman.org')).toBe('https://media.atoman.org/')
-    expect(modulePathUrl('media', '/create', 'http:', 'localhost')).toBe('/create?site=media')
+  it('supports the media module only through explicit paths', () => {
+    expect(resolveSiteContext('media.atoman.org', '', '/media')).toEqual({ type: 'module', module: 'media' })
+    expect(resolveSiteContext('localhost', '', '/media')).toEqual({ type: 'module', module: 'media' })
+    expect(resolveSiteContext('kanbo.atoman.org', '', '/')).toEqual({ type: 'module', module: 'feed' })
+    expect(moduleUrl('media', 'https:', 'blog.atoman.org')).toBe('/media')
+    expect(modulePathUrl('media', '/create', 'http:', 'localhost')).toBe('/media/create')
   })
 
   it('returns media as the default path inside media context', () => {
     const originalLocation = window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: { hostname: 'localhost', search: '?site=media' },
+      value: { hostname: 'localhost', search: '', pathname: '/media' },
     })
 
     try {

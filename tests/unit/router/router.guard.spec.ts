@@ -28,7 +28,8 @@ const makeToken = (expSecondsFromNow: number) => {
 }
 
 async function createGuardRouter(site: ModuleRoomKey) {
-  window.history.replaceState(null, '', `/?site=${site}`)
+  const sitePath = site === 'blog' ? '/posts' : `/${site}`
+  window.history.replaceState(null, '', sitePath)
   const router = createRouter({
     history: createMemoryHistory(),
     routes: stubRouteComponents(moduleRoutes[site]),
@@ -54,7 +55,7 @@ describe('router auth guards', () => {
     await router.push('/post/new')
 
     expect(router.currentRoute.value.path).toBe('/login')
-    expect(router.currentRoute.value.query.redirect).toBe('/post/new?site=blog')
+    expect(router.currentRoute.value.query.redirect).toBe('/post/new')
   })
 
   it('allows unauthenticated users to open public content reading routes', async () => {
@@ -68,15 +69,15 @@ describe('router auth guards', () => {
     await router.push('/item/feed-item-1')
     expect(router.currentRoute.value.path).toBe('/item/feed-item-1')
 
-    const kanboRouter = await createGuardRouter('kanbo')
-    await kanboRouter.push('/articles')
-    expect(kanboRouter.currentRoute.value.path).toBe('/articles')
+    const mediaRouter = await createGuardRouter('media')
+    await mediaRouter.push('/articles')
+    expect(mediaRouter.currentRoute.value.path).toBe('/articles')
 
-    await kanboRouter.push('/videos')
-    expect(kanboRouter.currentRoute.value.path).toBe('/videos')
+    await mediaRouter.push('/videos')
+    expect(mediaRouter.currentRoute.value.path).toBe('/videos')
 
-    await kanboRouter.push('/podcasts')
-    expect(kanboRouter.currentRoute.value.path).toBe('/podcasts')
+    await mediaRouter.push('/podcasts')
+    expect(mediaRouter.currentRoute.value.path).toBe('/podcasts')
   })
 
   it('redirects non-admin user away from setting admin routes', async () => {
@@ -103,13 +104,12 @@ describe('router auth guards', () => {
     expect(router.currentRoute.value.path).toBe('/setting/access')
   })
 
-  it('preserves explicit site context on short internal route pushes', async () => {
+  it('keeps internal route pushes path-only', async () => {
     const router = await createGuardRouter('blog')
 
     await router.push('/post/123')
 
     expect(router.currentRoute.value.path).toBe('/post/123')
-    expect(router.currentRoute.value.query.site).toBe('blog')
   })
 
   it('initializes onboarding after restoring authenticated session', async () => {

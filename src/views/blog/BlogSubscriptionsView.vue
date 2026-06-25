@@ -2,7 +2,7 @@
   <div class="a-page-xl blog-subscriptions-page">
     <PPageHeader title="订阅" sub="查看你关注的创作者与频道更新" accent>
       <template #action>
-        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/post/new">+ 写文章</PButton>
+        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
         <PButton v-else-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>

@@ -222,7 +222,7 @@ describe('FeedRecommendedView', () => {
 
     expect(headerActions).toHaveLength(1)
     expect(headerActions[0].props('label')).toBe('返回订阅')
-    expect(headerActions[0].props('to')).toBe('/')
+    expect(headerActions[0].props('to')).toBe('/feed')
   })
 
   it('opens source articles and lets an authenticated user subscribe from explore', async () => {

@@ -15,13 +15,6 @@ function parseOnboardingStep(value: unknown): OnboardingStep | null {
 
 export function installRouteGuards(router: Router) {
   router.beforeEach(async (to, from) => {
-    const currentRouteSite = typeof from.query.site === 'string' ? from.query.site : null
-    const browserSite = new URLSearchParams(window.location.search).get('site')
-    const explicitSite = currentRouteSite || browserSite
-    if (explicitSite && !('site' in to.query)) {
-      return { path: to.path, query: { ...to.query, site: explicitSite }, hash: to.hash }
-    }
-
     const authStore = useAuthStore()
     const onboardingStore = useOnboardingStore()
     const siteAccessStore = useSiteAccessStore()

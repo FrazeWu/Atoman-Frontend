@@ -8,7 +8,7 @@ export { moduleUrl, userUrl, channelUrl, modulePathUrl } from '@/router/siteUrls
 
 export function subdomainDefaultPath() {
   const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
-  return context.type === 'module' ? `/${context.module}` : null
+  return context.type === 'module' ? moduleUrl(context.module) : null
 }
 
 export function useModuleNav() {
@@ -18,7 +18,7 @@ export function useModuleNav() {
   function navigateTo(module: ModuleRoomKey) {
     const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
     if (context.type === 'module' && context.module === module) {
-      router.push('/')
+      router.push(moduleUrl(module))
       return
     }
     void navigateModuleWithShutter(moduleUrl(module))

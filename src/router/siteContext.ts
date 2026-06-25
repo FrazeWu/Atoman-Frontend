@@ -39,13 +39,6 @@ function contextFromLabel(label: string): SiteContext {
   return { type: 'unknown', subdomain: label }
 }
 
-function localDevContext(search: string): SiteContext | null {
-  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
-  const site = params.get('site')
-  if (!site) return null
-  return contextFromLabel(site)
-}
-
 function pathnameContext(pathname: string): SiteContext | null {
   const segments = pathname.split('/').filter(Boolean)
   if (segments.length === 0) {
@@ -83,29 +76,15 @@ function isIPv4Host(hostname: string) {
 }
 
 export function resolveSiteContext(hostname: string, search = '', pathname?: string): SiteContext {
-  const explicitContext = localDevContext(search)
-  if (explicitContext) return explicitContext
-
   if (typeof pathname === 'string') {
     const pathContext = pathnameContext(pathname)
     if (pathContext) return pathContext
   }
 
-  if (isLocalHost(hostname)) {
+  if (isLocalHost(hostname) || isIPv4Host(hostname)) {
     return { type: 'module', module: 'feed' }
   }
-
-  if (isIPv4Host(hostname)) {
-    return { type: 'unknown', subdomain: hostname.split('.')[0] }
-  }
-
-  const parts = hostname.split('.')
-  // If base domain or www, and no ?site= was found
-  if (parts.length <= 2 || parts[0] === 'www') {
-    // Default to feed module on the base domain if no context is provided
-    return { type: 'module', module: 'feed' }
-  }
-
-  // Otherwise, use the subdomain
-  return contextFromLabel(parts[0])
+  void search
+  void contextFromLabel
+  return { type: 'module', module: 'feed' }
 }

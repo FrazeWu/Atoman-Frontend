@@ -15,15 +15,15 @@ function flattenPaths(routes: readonly TestRoute[]): string[] {
 }
 
 describe('host-scoped route tables', () => {
-  it('keeps blog routes short and rejects old /blog prefix', () => {
+  it('keeps blog routes relative to the module root', () => {
     const blogPaths = flattenPaths(moduleRoutes.blog)
     expect(blogPaths).toContain('/')
     expect(blogPaths).toContain('post/new')
     expect(blogPaths).toContain('bookmarks')
-    expect(blogPaths).not.toContain('/blog')
+    expect(blogPaths).not.toContain('/posts')
   })
 
-  it('keeps music routes short and singular', () => {
+  it('keeps music routes relative to the module root', () => {
     const musicPaths = flattenPaths(moduleRoutes.music)
     expect(musicPaths).toContain('explore')
     expect(musicPaths).toContain('starred')
@@ -58,13 +58,13 @@ describe('host-scoped route tables', () => {
     expect(paths(portalRoutes)).toContain('/terms')
   })
 
-  it('does not register old module-prefixed paths in module route tables', () => {
+  it('does not register top-level prefixed paths inside module route tables', () => {
     const allModulePaths = Object.values(moduleRoutes).flatMap(flattenPaths)
-    expect(allModulePaths).not.toContain('/blog')
+    expect(allModulePaths).not.toContain('/posts')
     expect(allModulePaths).not.toContain('/music')
     expect(allModulePaths).not.toContain('/feed')
     expect(allModulePaths).not.toContain('/forum')
-    expect(allModulePaths).not.toContain('/blog/bookmarks')
+    expect(allModulePaths).not.toContain('/posts/bookmarks')
     expect(allModulePaths).not.toContain('/music/albums/:albumId')
   })
 

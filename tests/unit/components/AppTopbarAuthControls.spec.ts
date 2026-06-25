@@ -23,6 +23,7 @@ vi.mock('@/composables/useMediaChannel', () => ({
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
+    { path: '/media', component: { template: '<div />' } },
     { path: '/inbox', component: { template: '<div />' } },
     { path: '/bookmarks', component: { template: '<div />' } },
     { path: '/settings', component: { template: '<div />' } },
@@ -52,7 +53,7 @@ describe('AppTopbarAuthControls', () => {
 
     expect(wrapper.text()).toContain('alice')
     expect(wrapper.find('a[href="/inbox"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/?site=alice"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/bookmarks"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/settings"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/setting"]').exists()).toBe(false)
@@ -85,7 +86,7 @@ describe('AppTopbarAuthControls', () => {
       role: 'user',
     }
 
-    await router.push('/?site=media')
+    await router.push('/media')
 
     mount(AppTopbarAuthControls, {
       global: {
@@ -105,7 +106,7 @@ describe('AppTopbarAuthControls', () => {
       role: 'user',
     }
 
-    await router.push('/?site=media')
+    await router.push('/media')
 
     mount(AppTopbarAuthControls, {
       global: {
@@ -128,7 +129,7 @@ describe('AppTopbarAuthControls', () => {
     }
     channelsMock.value = [{ id: 'old-channel', name: '旧频道' }]
 
-    await router.push('/?site=media')
+    await router.push('/media')
 
     mount(AppTopbarAuthControls, {
       global: {
@@ -149,7 +150,7 @@ describe('AppTopbarAuthControls', () => {
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-2')
   })
 
-  it('treats media subdomain as the media module context', async () => {
+  it('treats media path as the media module context', async () => {
     const authStore = useAuthStore()
     authStore.token = 'token-1'
     authStore.user = {
@@ -160,25 +161,14 @@ describe('AppTopbarAuthControls', () => {
       role: 'user',
     }
 
-    const originalLocation = window.location
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { ...originalLocation, hostname: 'media.atoman.org' },
+    await router.push('/media')
+
+    mount(AppTopbarAuthControls, {
+      global: {
+        plugins: [router],
+      },
     })
 
-    try {
-      mount(AppTopbarAuthControls, {
-        global: {
-          plugins: [router],
-        },
-      })
-
-      expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
-    } finally {
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        value: originalLocation,
-      })
-    }
+    expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
   })
 })

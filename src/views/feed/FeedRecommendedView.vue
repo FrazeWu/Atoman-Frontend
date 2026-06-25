@@ -12,7 +12,7 @@
               @click="changeSort(option.value)"
             />
           </div>
-          <PPress to="/" variant="secondary" label="返回订阅" />
+          <PPress to="/feed" variant="secondary" label="返回订阅" />
         </div>
       </template>
     </PPageHeader>

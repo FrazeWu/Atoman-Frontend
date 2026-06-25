@@ -155,7 +155,7 @@ const notificationTypeByTab: Record<'reply' | 'like' | 'mention', NotificationFi
 }
 
 const switchTab = async (tab: InboxTab) => {
-  await router.push({ path: '/inbox', query: tab === 'reply' ? {} : { tab } })
+  await router.push({ path: '/feed/inbox', query: tab === 'reply' ? {} : { tab } })
 }
 
 const loadTab = async () => {
@@ -190,7 +190,7 @@ const markCurrentNotificationsRead = async () => {
 
 const openConversation = async (username: string) => {
   dmOpenError.value = ''
-  await router.replace({ path: '/inbox', query: { tab: 'dm', user: username } })
+  await router.replace({ path: '/feed/inbox', query: { tab: 'dm', user: username } })
   await dmStore.openConversation(username)
 }
 

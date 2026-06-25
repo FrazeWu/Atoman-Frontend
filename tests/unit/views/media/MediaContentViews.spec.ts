@@ -87,7 +87,7 @@ describe('Media content view shells', () => {
     expect(mount(MediaArticlesView, { global: articleGlobal }).text()).toContain('探索本网站发布的全部文章')
   })
 
-  it('renders videos with PVideoCard links to the legacy video module watch route', async () => {
+  it('renders videos with PVideoCard links to the explicit video module route', async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
       id: 'video-1',
       title: '旧详情可达的视频',
@@ -102,10 +102,10 @@ describe('Media content view shells', () => {
     await vi.waitFor(() => {
       expect(wrapper.findComponent({ name: 'PVideoCard' }).exists()).toBe(true)
     })
-    expect(wrapper.find('a[href="/watch/video-1?site=video"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/videos/watch/video-1"]').exists()).toBe(true)
   })
 
-  it('renders podcast episodes as PEntry rows and opens legacy podcast module episode route', async () => {
+  it('renders podcast episodes as PEntry rows and opens the explicit podcast module route', async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
       id: 'episode-1',
       duration_sec: 125,
@@ -120,7 +120,7 @@ describe('Media content view shells', () => {
       expect(wrapper.find('.p-entry').exists()).toBe(true)
     })
     await wrapper.find('.p-entry').trigger('click')
-    expect(routerPushMock).toHaveBeenCalledWith('/episode/episode-1?site=podcast')
+    expect(routerPushMock).toHaveBeenCalledWith('/podcasts/episode/episode-1')
   })
 
   it('opens articles in the subscription-style right sheet instead of navigating', async () => {
@@ -155,14 +155,15 @@ describe('Media content view shells', () => {
     expect(wrapper.get('[data-test="article-sheet"]').attributes('data-article-id')).toBe('post-1')
   })
 
-  it('keeps article clicks in the right sheet on production media subdomains', async () => {
+  it('keeps article clicks in the right sheet on explicit media paths', async () => {
     const originalLocation = window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: {
         protocol: 'https:',
-        hostname: 'media.atoman.org',
+        hostname: 'atoman.org',
         search: '',
+        pathname: '/media',
       },
     })
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
@@ -187,7 +188,7 @@ describe('Media content view shells', () => {
       await vi.waitFor(() => {
         expect(wrapper.find('.p-entry').exists()).toBe(true)
       })
-      expect(wrapper.find('a[href*="blog.atoman.org/post/post-1"]').exists()).toBe(false)
+      expect(wrapper.find('a[href*="/posts/post/post-1"]').exists()).toBe(false)
       await wrapper.find('.p-entry').trigger('click')
       expect(routerPushMock).not.toHaveBeenCalled()
       expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('true')

@@ -5,7 +5,7 @@
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
           <PPress label="新建合集" variant="secondary" @click="showCreateCollectionModal" />
-          <PLink to="/channels?site=blog" label="频道管理" />
+          <PLink to="/channels" label="频道管理" />
         </div>
       </template>
     </PPageHeader>
@@ -67,8 +67,8 @@
                   loading-text="保存中..."
                   @click="toggleSorting"
                 />
-                <PLink :to="`/collection/${selectedCollection.id}?site=blog`" label="管理合集" variant="secondary" />
-                <PPress label="写文章" @click="router.push(`/post/new?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+                <PLink :to="`/posts/collection/${selectedCollection.id}`" label="管理合集" variant="secondary" />
+                <PPress label="写文章" @click="router.push(`/posts/post/new?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
               </div>
             </div>
 
@@ -79,7 +79,7 @@
             </div>
             <div v-else-if="articles.length === 0" style="padding:4rem 0;text-align:center">
               <p class="a-muted">该合集下还没有文章</p>
-              <PPress label="立即写一篇" variant="secondary" size="sm" @click="router.push(`/post/new?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+              <PPress label="立即写一篇" variant="secondary" size="sm" @click="router.push(`/posts/post/new?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
             </div>
             <div v-else class="article-list">
               <div v-for="(article, index) in articles" :key="article.id" class="article-item">

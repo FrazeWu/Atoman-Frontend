@@ -57,7 +57,8 @@ const handleBrandClick = () => {
     sheetStore.clearStack(true)
   } else {
     // Navigate to current context root
-    router.push('/')
+    const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
+    router.push(context.type === 'module' ? moduleUrl(context.module) : '/feed')
   }
 }
 
@@ -65,7 +66,7 @@ const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 
 const navRooms = computed(() => moduleNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
+const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
 
 const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.value)
 </script>

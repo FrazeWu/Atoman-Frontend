@@ -21,14 +21,14 @@ function contextFromLabel(label: string): SiteContext {
   if (label.startsWith('u-')) {
     const handle = label.slice(2)
     return slugPattern.test(handle)
-      ? { type: 'entity', handle, legacyType: 'user' }
+      ? { type: 'entity', handle }
       : { type: 'unknown', subdomain: label }
   }
 
   if (label.startsWith('c-')) {
     const handle = label.slice(2)
     return slugPattern.test(handle)
-      ? { type: 'entity', handle, legacyType: 'channel' }
+      ? { type: 'entity', handle }
       : { type: 'unknown', subdomain: label }
   }
 

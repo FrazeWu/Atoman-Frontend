@@ -14,6 +14,7 @@ import type { SiteContext } from '@/router/siteContext'
 export type ModuleRoom = {
   key: ModuleRoomKey
   homePath: '/'
+  publicPathSegment: string
   name: string
   helper: string
   homepageSub: string
@@ -23,6 +24,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   feed: {
     key: 'feed',
     homePath: '/',
+    publicPathSegment: 'feed',
     name: '订阅',
     helper: 'RSS 与更新流',
     homepageSub: '聚合你感兴趣的 RSS 订阅源与内容更新。',
@@ -30,6 +32,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   media: {
     key: 'media',
     homePath: '/',
+    publicPathSegment: 'media',
     name: '内容',
     helper: '文章、播客、视频',
     homepageSub: '统一管理频道内的文章、播客与视频创作。',
@@ -37,6 +40,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   music: {
     key: 'music',
     homePath: '/',
+    publicPathSegment: 'music',
     name: '音乐',
     helper: '音乐档案',
     homepageSub: '整理专辑、歌曲与艺人资料。',
@@ -44,6 +48,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   blog: {
     key: 'blog',
     homePath: '/',
+    publicPathSegment: 'posts',
     name: '文章',
     helper: '内容视图',
     homepageSub: '查看当前频道下的文章内容。',
@@ -51,6 +56,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   forum: {
     key: 'forum',
     homePath: '/',
+    publicPathSegment: 'forum',
     name: '论坛',
     helper: '讨论与发帖',
     homepageSub: '坐下来发帖、回复、搜索和闲谈。',
@@ -58,6 +64,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   debate: {
     key: 'debate',
     homePath: '/',
+    publicPathSegment: 'debate',
     name: '辩论',
     helper: '辩题讨论',
     homepageSub: '围绕辩题展开立场、论点与正反讨论。',
@@ -65,6 +72,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   timeline: {
     key: 'timeline',
     homePath: '/',
+    publicPathSegment: 'timeline',
     name: '时间线',
     helper: '人物时间线',
     homepageSub: '记录人物与事件，查看时间脉络和地图。',
@@ -72,6 +80,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   podcast: {
     key: 'podcast',
     homePath: '/',
+    publicPathSegment: 'podcasts',
     name: '播客',
     helper: '内容视图',
     homepageSub: '查看当前频道下的播客内容。',
@@ -79,6 +88,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
   video: {
     key: 'video',
     homePath: '/',
+    publicPathSegment: 'videos',
     name: '视频',
     helper: '内容视图',
     homepageSub: '查看当前频道下的视频内容。',

@@ -73,6 +73,13 @@ export async function apiGetEnvelope<T, M = Record<string, unknown>>(url: string
   }))
 }
 
+export async function apiGetRaw<T>(url: string): Promise<T> {
+  return unwrapResponseEnvelope<T>(await fetch(url, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })) as Promise<T>
+}
+
 export async function apiPostJson<T>(url: string, body: unknown): Promise<T> {
   return unwrapResponse<T>(await fetch(url, {
     method: 'POST',

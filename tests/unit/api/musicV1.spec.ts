@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from '@/api/client'
+import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiGetRaw, apiPatchJson, apiPostJson, apiPostMultipart } from '@/api/client'
 import {
   buildCreateAlbumEdit,
   buildCreateArtistEdit,
@@ -51,6 +51,21 @@ describe('api v1 client', () => {
     expect(result).toEqual({
       data: [{ id: 'album_uuid', title: 'Album' }],
       meta: { page: 2, page_size: 1, total: 5, has_more: true },
+    })
+  })
+
+  it('returns raw JSON payloads when callers handle legacy response shapes', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify([{ id: 'channel_uuid', name: 'Channel' }]),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await apiGetRaw<{ id: string; name: string }[]>('/api/v1/blog/channels')
+
+    expect(result).toEqual([{ id: 'channel_uuid', name: 'Channel' }])
+    expect(fetch).toHaveBeenCalledWith('/api/v1/blog/channels', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
     })
   })
 

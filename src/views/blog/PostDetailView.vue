@@ -324,7 +324,7 @@ const fetchMusicEmbeds = async (content: string) => {
   const entries = await Promise.all(
     ids.map(async (id) => {
       try {
-        const res = await fetch(api.album(id), { headers: authHeaders() })
+        const res = await fetch(api.v1.music.album(id), { headers: authHeaders() })
         if (!res.ok) return null
         const payload = await res.json()
         const album = (payload.data || payload) as import('@/types').Album

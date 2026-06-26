@@ -62,9 +62,23 @@ export const useFeedStore = defineStore('feed', () => {
 
   // --- Feed Actions ---
 
+  const clearUserState = () => {
+    subscriptions.value = []
+    groups.value = []
+    starGroups.value = []
+    starredItemIds.value = new Set()
+    bookmarkedPostIds.value = new Set()
+    readingListItemIds.value = new Set()
+    activeSource.value = null
+    error.value = null
+  }
+
   const fetchSubscriptions = async () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated) {
+      subscriptions.value = []
+      return
+    }
     try {
       const res = await fetch(`${api.url}/feed/subscriptions`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
@@ -80,7 +94,10 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchGroups = async () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated) {
+      groups.value = []
+      return
+    }
     try {
       const res = await fetch(`${api.url}/feed/groups`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
@@ -114,7 +131,10 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchStarGroups = async () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated) {
+      starGroups.value = []
+      return
+    }
     try {
       const res = await fetch(`${api.url}/feed/star-groups`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
@@ -934,7 +954,10 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchStarredIds = async () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated) {
+      starredItemIds.value = new Set()
+      return
+    }
     try {
       const res = await fetch(`${api.url}/feed/stars?limit=500`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
@@ -951,7 +974,10 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchBookmarkedPostIds = async () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated) {
+      bookmarkedPostIds.value = new Set()
+      return
+    }
     try {
       const res = await fetch(`${api.url}/blog/bookmarks`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
@@ -1077,7 +1103,10 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchReadingListIds = async () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return
+    if (!authStore.isAuthenticated) {
+      readingListItemIds.value = new Set()
+      return
+    }
     try {
       const res = await fetch(`${api.url}/feed/reading-list?limit=500`, {
         headers: { Authorization: `Bearer ${authStore.token}` },
@@ -1102,6 +1131,7 @@ export const useFeedStore = defineStore('feed', () => {
     timeline,
     activeSource,
     error,
+    clearUserState,
     fetchSubscriptions,
     fetchGroups,
     createGroup,

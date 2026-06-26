@@ -148,6 +148,23 @@ describe('FeedLayout', () => {
     expect(wrapper.find('[data-testid="feed-mobile-sources-sheet"]').exists()).toBe(false)
   })
 
+  it('clears stale sidebar sources when auth state becomes signed out', async () => {
+    const { wrapper } = await mountLayout('/feed')
+    const authStore = useAuthStore()
+    const feedStore = useFeedStore()
+
+    expect(wrapper.text()).toContain('少数派')
+
+    authStore.isAuthenticated = false
+    authStore.token = null
+    authStore.user = null
+    await flushPromises()
+
+    expect(feedStore.subscriptions).toEqual([])
+    expect(feedStore.groups).toEqual([])
+    expect(wrapper.text()).not.toContain('少数派')
+  })
+
   it('refetches sidebar sources when an auth token becomes available after mount', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

@@ -33,6 +33,30 @@ describe('feed store', () => {
     }))
   })
 
+  it('clears user subscription state instead of leaking stale data when signed out', async () => {
+    const auth = useAuthStore()
+    auth.isAuthenticated = false
+    auth.token = null
+    auth.user = null
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+
+    const feed = useFeedStore()
+    feed.subscriptions = [{ id: 'sub-1', user_id: 'user-1', feed_source_id: 'source-1' } as never]
+    feed.groups = [{ id: 'group-1', user_id: 'user-1', name: 'Old group' } as never]
+    feed.starGroups = [{ id: 'star-group-1', user_id: 'user-1', name: 'Old stars' } as never]
+
+    await Promise.all([
+      feed.fetchSubscriptions(),
+      feed.fetchGroups(),
+      feed.fetchStarGroups(),
+    ])
+
+    expect(feed.subscriptions).toEqual([])
+    expect(feed.groups).toEqual([])
+    expect(feed.starGroups).toEqual([])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('resolves subscription input through the unified resolve endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       status: 'existing_source',

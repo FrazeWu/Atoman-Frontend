@@ -130,6 +130,7 @@ watch(
   ([isAuthenticated, token], [previousAuthenticated, previousToken]) => {
     if (!isAuthenticated) {
       mobileSourcesOpen.value = false
+      feedStore.clearUserState()
       return
     }
     if (!isAuthenticated) return

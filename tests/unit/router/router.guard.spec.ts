@@ -80,6 +80,17 @@ describe('router auth guards', () => {
     expect(mediaRouter.currentRoute.value.path).toBe('/podcasts')
   })
 
+  it('redirects unauthenticated users away from media subscriptions', async () => {
+    const router = await createGuardRouter('media')
+    const auth = useAuthStore()
+    auth.logout()
+
+    await router.push('/subscriptions')
+
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.query.redirect).toBe('/subscriptions')
+  })
+
   it('redirects non-admin user away from setting admin routes', async () => {
     const router = await createGuardRouter('music')
     const auth = useAuthStore()

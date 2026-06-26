@@ -15,7 +15,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'articles', component: () => import('@/views/media/MediaArticlesView.vue') },
         { path: 'videos', component: () => import('@/views/media/MediaVideosView.vue') },
         { path: 'podcasts', component: () => import('@/views/media/MediaPodcastsView.vue') },
-        { path: 'subscriptions', component: () => import('@/views/media/MediaSubscriptionsView.vue') },
+        { path: 'subscriptions', component: () => import('@/views/media/MediaSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'bookmarks', component: () => import('@/views/media/MediaBookmarksView.vue'), meta: { requiresAuth: true } },
       ],
     },

@@ -168,7 +168,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'edit/:id', component: () => import('@/views/video/VideoEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'video', feature: 'video.publish' } } },
       ],
     },
-    { path: '/watch/:id', component: () => import('@/views/video/VideoDetailView.vue') },
+    { path: '/watch/:id', redirect: (to) => `/videos/watch/${to.params.id}` },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },

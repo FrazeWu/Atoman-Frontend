@@ -10,7 +10,7 @@
     />
   </div>
 
-  <RouterLink to="/inbox" class="notif-btn" :title="notificationRoom.helper">
+  <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
     {{ notificationRoom.name }}
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
   </RouterLink>
@@ -23,8 +23,8 @@
     </button>
     <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
       <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
-      <RouterLink to="/bookmarks" class="dropdown-item" @click="closeDropdown">我的收藏</RouterLink>
-      <RouterLink to="/settings" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
+      <RouterLink :to="modulePathUrl('blog', '/bookmarks')" class="dropdown-item" @click="closeDropdown">我的收藏</RouterLink>
+      <RouterLink :to="modulePathUrl('blog', '/settings')" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
       <RouterLink v-if="showSiteSettings" to="/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
       <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
     </div>
@@ -37,7 +37,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
-import { userUrl } from '@/router/siteUrls'
+import { modulePathUrl, userUrl } from '@/router/siteUrls'
 import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole } from '@/utils/roles'
 import { useMediaChannel } from '@/composables/useMediaChannel'

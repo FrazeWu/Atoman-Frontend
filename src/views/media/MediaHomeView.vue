@@ -128,7 +128,7 @@ onMounted(loadHome)
 
     <PPageHeader title="内容" accent>
       <template #action>
-        <PButton to="/create" outline size="sm">进入创作</PButton>
+        <PButton :to="modulePathUrl('media', '/create')" outline size="sm">进入创作</PButton>
       </template>
     </PPageHeader>
 
@@ -160,7 +160,7 @@ onMounted(loadHome)
       <section class="content-home-section">
         <div class="content-home-section__head">
           <h2>文章</h2>
-          <PButton to="/articles" variant="ghost" size="sm">查看全部</PButton>
+          <PButton :to="modulePathUrl('media', '/articles')" variant="ghost" size="sm">查看全部</PButton>
         </div>
         <div class="content-home-list">
           <PEntry
@@ -195,7 +195,7 @@ onMounted(loadHome)
       <section class="content-home-section">
         <div class="content-home-section__head">
           <h2>播客</h2>
-          <PButton to="/podcasts" variant="ghost" size="sm">查看全部</PButton>
+          <PButton :to="modulePathUrl('media', '/podcasts')" variant="ghost" size="sm">查看全部</PButton>
         </div>
         <div class="content-home-list">
           <PEntry

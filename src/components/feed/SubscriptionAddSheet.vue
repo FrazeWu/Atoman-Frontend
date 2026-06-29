@@ -51,6 +51,13 @@
           <PInput v-model="customTitle" placeholder="例如：GitHub Blog" />
         </PField>
 
+        <PField label="类型">
+          <PSelect
+            v-model="selectedCategory"
+            :options="categoryOptions"
+          />
+        </PField>
+
         <PField v-if="groups.length" label="添加到分组（可选）">
           <PSelect
             v-model="selectedGroupId"
@@ -82,6 +89,7 @@
 import { computed, ref, watch } from 'vue'
 import type {
   AutoAddSubscriptionPayload,
+  FeedSourceCategory,
   ResolvedSubscriptionCandidate,
   ResolvedSubscriptionInput,
   SubscriptionGroup,
@@ -112,12 +120,22 @@ const feedStore = useFeedStore()
 const sourceInput = ref('')
 const customTitle = ref('')
 const selectedGroupId = ref('')
+const selectedCategory = ref<FeedSourceCategory>('blog')
 const resolved = ref<ResolvedSubscriptionInput | null>(null)
 const selectedCandidateUrl = ref('')
 const resolving = ref(false)
 const localError = ref('')
 let resolveTimer: ReturnType<typeof setTimeout> | null = null
 let resolveSequence = 0
+
+const categoryOptions: Array<{ label: string; value: FeedSourceCategory }> = [
+  { label: '博客', value: 'blog' },
+  { label: '新闻', value: 'news' },
+  { label: '社交', value: 'social' },
+  { label: '视频', value: 'video' },
+  { label: '论坛', value: 'forum' },
+  { label: '播客', value: 'podcast' },
+]
 
 const defaultGroupId = computed(() => props.groups.find(g => g.name === '默认分组')?.id)
 const nonDefaultGroups = computed(() => props.groups.filter(g => g.name !== '默认分组'))
@@ -175,6 +193,7 @@ const resetForm = () => {
   sourceInput.value = ''
   customTitle.value = ''
   selectedGroupId.value = defaultGroupId.value || ''
+  selectedCategory.value = 'blog'
   resolved.value = null
   selectedCandidateUrl.value = ''
   resolving.value = false
@@ -216,6 +235,7 @@ const submitSubscription = () => {
     candidate_feed_url: candidate?.feed_url,
     title: customTitle.value.trim() || candidate?.title || activeSource.value?.title || '',
     group_id: selectedGroupId.value,
+    category: selectedCategory.value,
   })
 }
 

@@ -8,6 +8,7 @@ const source: FeedExploreSource = {
   id: 'source-1',
   title: '少数派',
   rssUrl: 'https://sspai.com/feed',
+  category: 'blog',
   subscriptionCount: 128,
   recentItemCount: 6,
   lastPublishedAt: '2026-06-20T08:30:00Z',

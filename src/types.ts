@@ -232,6 +232,32 @@ export interface Like {
   created_at: string
 }
 
+// ===== Portal Types =====
+
+export interface PortalHotItem {
+  id: string
+  module: string
+  kind: string
+  title: string
+  summary: string
+  image_url: string
+  target_path: string
+  score: number
+  score_label: string
+  published_at?: string
+}
+
+export interface PortalHotSection {
+  module: string
+  title: string
+  items: PortalHotItem[]
+}
+
+export interface PortalHotResponse {
+  featured: PortalHotItem[]
+  sections: PortalHotSection[]
+}
+
 // ===== Feed / Types =====
 
 export interface FeedDiscoveryCandidate {
@@ -278,11 +304,14 @@ export interface ResolvedSubscriptionInput {
   message: string
 }
 
+export type FeedSourceCategory = 'blog' | 'news' | 'social' | 'video' | 'forum' | 'podcast'
+
 export interface AutoAddSubscriptionPayload {
   input: string
   candidate_feed_url?: string
   title?: string
   group_id?: string
+  category?: FeedSourceCategory
 }
 
 export interface AdminFeedSourceRow {
@@ -338,6 +367,7 @@ export interface FeedExploreSource {
   id: string
   title: string
   rssUrl?: string
+  category: FeedSourceCategory
   subscriptionCount: number
   recentItemCount: number
   lastPublishedAt?: string

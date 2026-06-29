@@ -10,12 +10,26 @@
     </button>
   </div>
 
-  <div v-else-if="!items.length" class="channel-panel-state channel-panel-feedback">
-    <p>暂无可浏览的频道</p>
-  </div>
-
   <div v-else class="channel-panel">
-    <div class="channel-list" data-test="channel-list">
+    <div class="channel-category-tabs" data-test="channel-category-tabs">
+      <button
+        v-for="option in categoryOptions"
+        :key="option.value"
+        type="button"
+        class="channel-category-tab a-font-meta"
+        :class="{ 'is-active': option.value === activeCategory }"
+        :data-test="`channel-category-${option.value}`"
+        @click="emit('change-category', option.value)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+
+    <div v-if="!items.length" class="channel-panel-state channel-panel-feedback">
+      <p>暂无可浏览的频道</p>
+    </div>
+
+    <div v-else class="channel-list" data-test="channel-list">
       <FeedSourceIdentityCard
         v-for="source in items"
         :key="source.id"
@@ -31,6 +45,7 @@
     </div>
 
     <FeedTimelineFooter
+      v-if="items.length"
       :page="page"
       :page-size="pageSize"
       :total="totalItems"
@@ -44,9 +59,11 @@
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { buildSourceAvatarLabel, buildSourceColor, normalizeSourceUrlForCard } from '@/utils/feedSourcePresentation'
-import type { FeedExploreSource } from '@/types'
+import type { FeedExploreSource, FeedSourceCategory } from '@/types'
 
 defineProps<{
+  categoryOptions: Array<{ label: string; value: FeedSourceCategory | 'all' }>
+  activeCategory: FeedSourceCategory | 'all'
   items: FeedExploreSource[]
   loading: boolean
   error: string
@@ -59,6 +76,7 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'open-source', source: FeedExploreSource): void
   (e: 'subscribe-source', source: FeedExploreSource): void
+  (e: 'change-category', category: FeedSourceCategory | 'all'): void
   (e: 'retry'): void
   (e: 'change-page', page: number): void
 }>()
@@ -75,6 +93,30 @@ const emit = defineEmits<{
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.85rem;
+}
+
+.channel-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.channel-category-tab {
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.channel-category-tab.is-active {
+  border-color: var(--a-color-ink);
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
 }
 
 .channel-panel-feedback {

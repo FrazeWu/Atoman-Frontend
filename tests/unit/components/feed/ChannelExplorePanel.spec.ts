@@ -9,6 +9,7 @@ const sources: FeedExploreSource[] = [
     id: 'source-1',
     title: '少数派',
     rssUrl: 'https://sspai.com/feed',
+    category: 'blog',
     subscriptionCount: 128,
     recentItemCount: 6,
     lastPublishedAt: '2026-06-20T08:30:00Z',
@@ -29,6 +30,12 @@ const mountPanel = (props?: Partial<InstanceType<typeof ChannelExplorePanel>['$p
       totalItems: 0,
       page: 1,
       pageSize: 20,
+      categoryOptions: [
+        { label: '全部', value: 'all' },
+        { label: '博客', value: 'blog' },
+        { label: '新闻', value: 'news' },
+      ],
+      activeCategory: 'all',
       ...props,
     },
     global: {
@@ -133,6 +140,14 @@ describe('ChannelExplorePanel', () => {
 
     expect(wrapper.emitted('subscribe-source')).toEqual([[sources[0]]])
     expect(wrapper.emitted('open-source')).toBeUndefined()
+  })
+
+  it('forwards category changes', async () => {
+    const wrapper = mountPanel()
+
+    await wrapper.get('[data-test="channel-category-news"]').trigger('click')
+
+    expect(wrapper.emitted('change-category')).toEqual([['news']])
   })
 
   it('forwards footer page changes', async () => {

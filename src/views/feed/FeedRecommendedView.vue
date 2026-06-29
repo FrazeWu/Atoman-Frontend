@@ -70,6 +70,8 @@
 
       <ChannelExplorePanel
         v-else
+        :category-options="channelCategoryOptions"
+        :active-category="channelCategory"
         :items="channelItems"
         :loading="channelLoading"
         :error="channelError"
@@ -79,6 +81,7 @@
         :subscribing-source-id="subscribingChannelSourceId"
         @open-source="openExploreSource"
         @subscribe-source="subscribeExploreSource"
+        @change-category="changeChannelCategory"
         @retry="retryChannels"
         @change-page="changePage"
       />
@@ -112,7 +115,7 @@ import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import type { FeedArticleSource, FeedExploreSource, FeedItem, TimelineItem } from '@/types'
+import type { FeedArticleSource, FeedExploreSource, FeedItem, FeedSourceCategory, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
 const route = useRoute()
@@ -143,6 +146,7 @@ const channelItems = ref<FeedExploreSource[]>([])
 const channelLoading = ref(false)
 const channelError = ref('')
 const channelTotalItems = ref(0)
+const channelCategory = ref<FeedSourceCategory | 'all'>('all')
 const pageLimit = 20
 const subscriptions = computed(() => feedStore.subscriptions)
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -157,6 +161,15 @@ const sourceArticles = ref<TimelineItem[]>([])
 const sourceArticlesLoading = ref(false)
 const sourceSubscribeBusy = ref(false)
 const subscribingChannelSourceId = ref('')
+const channelCategoryOptions: Array<{ label: string; value: FeedSourceCategory | 'all' }> = [
+  { label: '全部', value: 'all' },
+  { label: '博客', value: 'blog' },
+  { label: '新闻', value: 'news' },
+  { label: '社交', value: 'social' },
+  { label: '视频', value: 'video' },
+  { label: '论坛', value: 'forum' },
+  { label: '播客', value: 'podcast' },
+]
 
 const shortcutHints = [
   { key: 'H', label: '聚焦侧边栏' },
@@ -251,6 +264,7 @@ const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
   id: source.id,
   title: source.title || '未命名来源',
   rssUrl: source.rss_url || source.rssUrl,
+  category: normalizeFeedSourceCategory(source.category),
   subscriptionCount: Number(source.subscription_count ?? source.subscriptionCount ?? 0),
   recentItemCount: Number(source.recent_item_count ?? source.recentItemCount ?? 0),
   lastPublishedAt: source.last_published_at || source.lastPublishedAt || source.last_fetched_at || source.lastFetchedAt,
@@ -263,6 +277,11 @@ const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
     }))
     : [],
 })
+
+const normalizeFeedSourceCategory = (value: unknown): FeedSourceCategory => {
+  if (value === 'news' || value === 'social' || value === 'video' || value === 'forum' || value === 'podcast') return value
+  return 'blog'
+}
 
 const withExploreSourceSubscriptionState = (source: FeedExploreSource): FeedExploreSource => {
   const articleSource = mapExploreSourceToArticleSource(source)
@@ -420,6 +439,7 @@ const fetchExploreSources = async () => {
   channelError.value = ''
   try {
     const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
+    if (channelCategory.value !== 'all') params.set('category', channelCategory.value)
     const headers = authStore.isAuthenticated ? authHeaders() : {}
     const res = await fetch(`${api.feed.exploreSources}?${params.toString()}`, { headers })
     if (!res.ok) {
@@ -462,7 +482,19 @@ const changeMode = async (nextMode: 'articles' | 'channels') => {
     ...route.query,
     mode: nextMode === 'channels' ? 'channels' : undefined,
     page: undefined,
+    category: nextMode === 'channels' && channelCategory.value !== 'all' ? channelCategory.value : undefined,
     sort: nextMode === 'articles' && sort.value !== 'popular' ? sort.value : undefined,
+  }
+  await router.push({ query })
+}
+
+const changeChannelCategory = async (category: FeedSourceCategory | 'all') => {
+  if (category === channelCategory.value) return
+  const query = {
+    ...route.query,
+    mode: 'channels',
+    page: undefined,
+    category: category === 'all' ? undefined : category,
   }
   await router.push({ query })
 }
@@ -477,6 +509,11 @@ const retryChannels = async () => {
   await fetchExploreSources()
 }
 
+const normalizeChannelCategoryQuery = (value: unknown): FeedSourceCategory | 'all' => {
+  if (value === 'blog' || value === 'news' || value === 'social' || value === 'video' || value === 'forum' || value === 'podcast') return value
+  return 'all'
+}
+
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     showArticleSheet.value = false
@@ -488,6 +525,7 @@ watch(
   async (query) => {
     page.value = normalizePage(query.page)
     mode.value = query.mode === 'channels' ? 'channels' : 'articles'
+    channelCategory.value = normalizeChannelCategoryQuery(query.category)
     const queriedSort = query.sort === 'random' ? 'random' : 'popular'
     sort.value = queriedSort
     if (mode.value === 'channels') {

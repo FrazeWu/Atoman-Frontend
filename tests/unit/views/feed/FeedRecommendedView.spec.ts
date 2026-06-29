@@ -317,7 +317,7 @@ describe('FeedRecommendedView', () => {
   })
 
   it('fetches channel explore data when mode=channels', async () => {
-    Object.assign(routeQuery, { mode: 'channels' })
+    Object.assign(routeQuery, { mode: 'channels', category: 'news' })
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
@@ -330,6 +330,7 @@ describe('FeedRecommendedView', () => {
             subscription_count: 3,
             recent_item_count: 8,
             last_published_at: '2026-06-19T00:00:00Z',
+            category: 'blog',
             subscribed: false,
           }],
           meta: { page: 1, page_size: 20, total: 1, has_more: false },
@@ -367,6 +368,70 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Source One')
     expect(wrapper.text()).not.toContain('https://example.com/rss.xml')
+  })
+
+  it('filters channel explore data by category', async () => {
+    Object.assign(routeQuery, { mode: 'channels', category: 'news' })
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/explore/sources')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'source-news',
+            title: 'News Source',
+            rss_url: 'https://news.example.com/rss.xml',
+            category: 'news',
+            subscription_count: 3,
+            recent_item_count: 8,
+            last_published_at: '2026-06-19T00:00:00Z',
+            subscribed: false,
+          }],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [],
+        meta: { page: 1, page_size: 20, total: 0, has_more: false },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PPress: {
+            props: ['label'],
+            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+          PTab: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('全部')
+    expect(wrapper.text()).toContain('新闻')
+
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources') && String(url).includes('category=news'))).toBe(true)
+
+    await wrapper.get('[data-test="channel-category-blog"]').trigger('click')
+
+    expect(routerPush).toHaveBeenLastCalledWith({
+      query: {
+        mode: 'channels',
+        page: undefined,
+        category: 'blog',
+      },
+    })
   })
 
   it('reuses the source drawer article flow from channel mode', async () => {

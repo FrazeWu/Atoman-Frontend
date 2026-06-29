@@ -34,7 +34,7 @@ const mountSheet = (props = {}) => mount(SubscriptionAddSheet, {
         emits: ['update:modelValue'],
         template: `
           <select
-            data-testid="group-select"
+            :data-testid="options.some(option => option.value === 'podcast') ? 'category-select' : 'group-select'"
             :value="modelValue"
             @change="$emit('update:modelValue', $event.target.value)"
           >
@@ -84,8 +84,38 @@ describe('SubscriptionAddSheet', () => {
         candidate_feed_url: undefined,
         title: 'Example Feed',
         group_id: '',
+        category: 'blog',
       },
     ]])
+  })
+
+  it('submits the selected feed source category', async () => {
+    vi.useFakeTimers()
+    resolveSubscriptionInput.mockResolvedValue({
+      status: 'existing_source',
+      source: {
+        id: 'source-1',
+        provider: 'rss',
+        source_type: 'external_rss',
+        title: 'Example Feed',
+        rss_url: 'https://example.com/feed.xml',
+        canonical_url: 'https://example.com/feed.xml',
+      },
+      candidates: [],
+      message: '来源已存在，可添加到你的订阅',
+    })
+    const wrapper = mountSheet()
+
+    await wrapper.get('[data-testid="category-select"]').setValue('podcast')
+    await wrapper.get('input[placeholder="输入网站、RSS 或 GitHub 仓库地址"]').setValue('https://example.com/feed.xml')
+    await vi.advanceTimersByTimeAsync(500)
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '确认订阅')!.trigger('click')
+
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({
+      input: 'https://example.com/feed.xml',
+      category: 'podcast',
+    })
   })
 
   it('disables submit when the source is already subscribed', async () => {
@@ -156,6 +186,7 @@ describe('SubscriptionAddSheet', () => {
         candidate_feed_url: 'https://example.com/feed.xml',
         title: 'Main Feed',
         group_id: '',
+        category: 'blog',
       },
     ]])
   })

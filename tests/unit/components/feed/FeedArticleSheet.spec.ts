@@ -43,6 +43,37 @@ describe('FeedArticleSheet', () => {
     expect(html).not.toContain('onerror')
   })
 
+  it('marks external feed content as width constrained prose', () => {
+    const wrapper = mount(FeedArticleSheet, {
+      props: {
+        show: true,
+        article: {
+          type: 'feed_item',
+          published_at: '2026-06-29T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-wide-content-1',
+            feed_source_id: 'source-wide-content-1',
+            guid: 'guid-wide-content-1',
+            title: '包含超长内容的外部文章',
+            link: 'https://example.com/article',
+            summary: '<p>https://example.com/very-long-unbroken-url-that-should-not-expand-the-page-width</p>',
+            published_at: '2026-06-29T00:00:00Z',
+            fetched_at: '2026-06-29T00:00:00Z',
+          },
+        },
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          PBadge: true,
+        },
+      },
+    })
+
+    expect(wrapper.get('.article-body').classes()).toContain('article-body--external-feed')
+  })
+
   it('renders a play button for podcast feed items and emits play-podcast when clicked', async () => {
     const wrapper = mount(FeedArticleSheet, {
       props: {

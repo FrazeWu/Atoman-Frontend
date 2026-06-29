@@ -62,7 +62,7 @@
         <PBadge v-if="item.content_source" :type="item.content_source === 'full_text' ? 'internal' : 'external'">
           {{ item.content_source === 'full_text' ? 'FULL TEXT' : 'SUMMARY' }}
         </PBadge>
-        <div class="prose-blog article-body" v-html="renderContent(item.content_html || item.content || item.summary || '')"></div>
+        <div class="prose-blog article-body article-body--external-feed" v-html="renderContent(item.content_html || item.content || item.summary || '')"></div>
       </div>
 
       <footer class="article-footer">
@@ -252,10 +252,14 @@ onUnmounted(() => {
 .article-body-wrap {
   display: grid;
   gap: 1rem;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .article-body {
   font-size: 1rem;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .article-footer {

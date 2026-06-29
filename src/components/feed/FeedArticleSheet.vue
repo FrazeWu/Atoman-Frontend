@@ -56,7 +56,7 @@
         <PBadge v-if="article.feed_item.full_text_status" :type="article.feed_item.full_text_status === 'success' ? 'internal' : 'external'">
           {{ article.feed_item.full_text_status === 'success' ? 'FULL TEXT' : 'SUMMARY' }}
         </PBadge>
-        <div class="prose-blog article-body" v-html="renderFeedHTML(article.feed_item.full_text_html || article.feed_item.summary || '')"></div>
+        <div class="prose-blog article-body article-body--external-feed" v-html="renderFeedHTML(article.feed_item.full_text_html || article.feed_item.summary || '')"></div>
       </div>
       
     </template>
@@ -206,10 +206,14 @@ const emitPlayPodcast = () => {
 
 .article-body {
   margin-bottom: 4rem;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .article-body-wrap {
   display: grid;
   gap: 1rem;
+  max-width: 100%;
+  min-width: 0;
 }
 </style>

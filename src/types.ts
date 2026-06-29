@@ -328,6 +328,12 @@ export interface FeedSource {
   created_at: string
 }
 
+export interface FeedExploreRecentItem {
+  id: string
+  title: string
+  publishedAt?: string
+}
+
 export interface FeedExploreSource {
   id: string
   title: string
@@ -336,6 +342,7 @@ export interface FeedExploreSource {
   recentItemCount: number
   lastPublishedAt?: string
   subscribed: boolean
+  recentItems: FeedExploreRecentItem[]
 }
 
 export interface SubscriptionGroup {

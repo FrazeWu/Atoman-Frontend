@@ -13,6 +13,10 @@ const sources: FeedExploreSource[] = [
     recentItemCount: 6,
     lastPublishedAt: '2026-06-20T08:30:00Z',
     subscribed: false,
+    recentItems: [
+      { id: 'item-1', title: 'AI 浏览器自动化新实践', publishedAt: '2026-06-20T08:30:00Z' },
+      { id: 'item-2', title: '个人知识库如何整理', publishedAt: '2026-06-19T08:30:00Z' },
+    ],
   },
 ]
 
@@ -40,6 +44,13 @@ const mountPanel = (props?: Partial<InstanceType<typeof ChannelExplorePanel>['$p
               @click="$emit('select', source)"
             >
               {{ source.title }}
+              <span
+                v-for="item in source.recentItems"
+                :key="item.id"
+                data-test="recent-item-title"
+              >
+                {{ item.title }}
+              </span>
             </button>
           `,
         },
@@ -91,6 +102,11 @@ describe('ChannelExplorePanel', () => {
     })
 
     expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
+    expect(wrapper.get('[data-test="channel-list"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-test="recent-item-title"]').map((node) => node.text())).toEqual([
+      'AI 浏览器自动化新实践',
+      '个人知识库如何整理',
+    ])
 
     await wrapper.get('[data-test="channel-card"]').trigger('click')
 

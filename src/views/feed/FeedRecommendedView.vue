@@ -252,6 +252,13 @@ const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
   recentItemCount: Number(source.recent_item_count ?? source.recentItemCount ?? 0),
   lastPublishedAt: source.last_published_at || source.lastPublishedAt || source.last_fetched_at || source.lastFetchedAt,
   subscribed: Boolean(source.subscribed),
+  recentItems: Array.isArray(source.recent_items || source.recentItems)
+    ? (source.recent_items || source.recentItems).map((item: Record<string, any>) => ({
+      id: item.id,
+      title: item.title || '未命名文章',
+      publishedAt: item.published_at || item.publishedAt,
+    }))
+    : [],
 })
 
 const mapExploreSourceToArticleSource = (source: FeedExploreSource): FeedArticleSource => withSubscriptionState({

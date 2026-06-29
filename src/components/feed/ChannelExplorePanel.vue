@@ -15,7 +15,7 @@
   </div>
 
   <div v-else class="channel-panel">
-    <div class="channel-grid">
+    <div class="channel-list" data-test="channel-list">
       <FeedSourceIdentityCard
         v-for="source in items"
         :key="source.id"
@@ -67,10 +67,10 @@ const emit = defineEmits<{
   gap: 1rem;
 }
 
-.channel-grid {
+.channel-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
 }
 
 .channel-panel-feedback {
@@ -80,7 +80,7 @@ const emit = defineEmits<{
 }
 
 .channel-card-skeleton {
-  height: 8.5rem;
+  height: 11rem;
 }
 
 .channel-panel-feedback {

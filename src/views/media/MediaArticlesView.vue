@@ -9,6 +9,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useApi } from '@/composables/useApi'
+import { modulePathUrl } from '@/router/siteUrls'
 import type { Post, TimelineItem } from '@/types'
 
 const api = useApi()
@@ -59,7 +60,7 @@ onMounted(loadArticles)
       <template #action>
         <div class="media-explore-actions">
           <PTab label="最新" active />
-          <PButton to="/create" outline size="sm">返回创作</PButton>
+          <PButton :to="modulePathUrl('media', '/create')" outline size="sm">返回创作</PButton>
         </div>
       </template>
     </PPageHeader>

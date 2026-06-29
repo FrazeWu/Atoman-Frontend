@@ -47,6 +47,14 @@ describe('host-scoped route tables', () => {
     expect(children.find((route) => route.path === '')?.redirect).toBeUndefined()
   })
 
+  it('keeps content detail pages under the media module root', () => {
+    const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
+    const childPaths = paths(contentRoot?.children || [])
+
+    expect(childPaths).toContain('podcasts/episode/:id')
+    expect(childPaths).toContain('videos/watch/:id')
+  })
+
   it('defines entity profile routes as aggregation spaces', () => {
     expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels'])
     expect(paths(channelRoutes)).toEqual(['/channels/:slug', '/channels/:slug/posts', '/channels/:slug/about'])

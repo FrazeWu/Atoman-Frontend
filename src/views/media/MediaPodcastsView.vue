@@ -47,7 +47,7 @@ const episodeCover = (episode: PodcastEpisode) => {
 
 onMounted(loadPodcasts)
 
-const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${episodeId}`)
+const episodePath = (episodeId: string) => modulePathUrl('media', `/podcasts/episode/${episodeId}`)
 </script>
 
 <template>
@@ -55,7 +55,7 @@ const episodePath = (episodeId: string) => modulePathUrl('podcast', `/episode/${
     <PPageHeader title="播客" sub="探索本网站发布的全部播客单集。" accent>
       <template #action>
         <div class="media-explore-actions">
-          <PButton to="/create" outline size="sm">返回创作</PButton>
+          <PButton :to="modulePathUrl('media', '/create')" outline size="sm">返回创作</PButton>
         </div>
       </template>
     </PPageHeader>

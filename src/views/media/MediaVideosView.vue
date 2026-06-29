@@ -33,7 +33,7 @@ const changeSort = (nextSort: 'latest' | 'popular') => {
 
 onMounted(loadVideos)
 
-const videoPath = (videoId: string) => modulePathUrl('video', `/watch/${videoId}`)
+const videoPath = (videoId: string) => modulePathUrl('media', `/videos/watch/${videoId}`)
 </script>
 
 <template>
@@ -43,7 +43,7 @@ const videoPath = (videoId: string) => modulePathUrl('video', `/watch/${videoId}
         <div class="media-explore-actions">
           <PTab label="最新" :active="sort === 'latest'" @click="changeSort('latest')" />
           <PTab label="热门" :active="sort === 'popular'" @click="changeSort('popular')" />
-          <PButton to="/create" outline size="sm">返回创作</PButton>
+          <PButton :to="modulePathUrl('media', '/create')" outline size="sm">返回创作</PButton>
         </div>
       </template>
     </PPageHeader>

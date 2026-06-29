@@ -203,7 +203,7 @@ onMounted(loadHome)
             :key="episode.id"
             :title="episode.post?.title || '未命名单集'"
             :summary="episode.post?.summary"
-            :to="modulePathUrl('podcast', `/episode/${episode.id}`)"
+            :to="modulePathUrl('media', `/podcasts/episode/${episode.id}`)"
           >
             <template #visual>
               <div class="content-home-list__visual">
@@ -223,14 +223,14 @@ onMounted(loadHome)
       <section class="content-home-section">
         <div class="content-home-section__head">
           <h2>视频</h2>
-          <PButton to="/videos" variant="ghost" size="sm">查看全部</PButton>
+          <PButton :to="modulePathUrl('media', '/videos')" variant="ghost" size="sm">查看全部</PButton>
         </div>
         <div class="content-home-video-grid">
           <PVideoCard
             v-for="video in videos.slice(0, 4)"
             :key="video.id"
             :video="video"
-            :to="modulePathUrl('video', `/watch/${video.id}`)"
+            :to="modulePathUrl('media', `/videos/watch/${video.id}`)"
           />
         </div>
       </section>

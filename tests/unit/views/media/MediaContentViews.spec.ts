@@ -87,7 +87,7 @@ describe('Media content view shells', () => {
     expect(mount(MediaArticlesView, { global: articleGlobal }).text()).toContain('探索本网站发布的全部文章')
   })
 
-  it('renders videos with PVideoCard links to the explicit video module route', async () => {
+  it('renders videos with PVideoCard links to the media-scoped video detail route', async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
       id: 'video-1',
       title: '旧详情可达的视频',
@@ -102,10 +102,10 @@ describe('Media content view shells', () => {
     await vi.waitFor(() => {
       expect(wrapper.findComponent({ name: 'PVideoCard' }).exists()).toBe(true)
     })
-    expect(wrapper.find('a[href="/videos/watch/video-1"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/media/videos/watch/video-1"]').exists()).toBe(true)
   })
 
-  it('renders podcast episodes as PEntry rows and opens the explicit podcast module route', async () => {
+  it('renders podcast episodes as PEntry rows and opens the media-scoped podcast detail route', async () => {
     fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
       id: 'episode-1',
       duration_sec: 125,
@@ -120,7 +120,7 @@ describe('Media content view shells', () => {
       expect(wrapper.find('.p-entry').exists()).toBe(true)
     })
     await wrapper.find('.p-entry').trigger('click')
-    expect(routerPushMock).toHaveBeenCalledWith('/podcasts/episode/episode-1')
+    expect(routerPushMock).toHaveBeenCalledWith('/media/podcasts/episode/episode-1')
   })
 
   it('opens articles in the subscription-style right sheet instead of navigating', async () => {

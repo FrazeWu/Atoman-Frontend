@@ -125,9 +125,9 @@ describe('MediaHomeView', () => {
     expect(wrapper.text()).toContain('播客')
     expect(wrapper.text()).toContain('视频')
     expect(wrapper.text()).toContain('进入创作')
-    expect(wrapper.find('a[href="/articles"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/podcasts"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/videos"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/media/articles"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/media/podcasts"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/media/videos"]').exists()).toBe(true)
   })
 
   it('opens featured or listed article items in the right sheet instead of leaving the homepage', async () => {

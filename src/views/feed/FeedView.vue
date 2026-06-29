@@ -77,6 +77,27 @@
 
     <section class="feed-content">
       <div class="feed-actions">
+        <form class="feed-search" data-test="feed-search-form" @submit.prevent="submitSearch">
+          <input
+            v-model="searchInput"
+            data-test="feed-search-input"
+            class="feed-search__input"
+            type="search"
+            placeholder="搜索标题、来源、摘要"
+            aria-label="搜索订阅内容"
+          />
+          <button class="feed-search__submit" type="submit">搜索</button>
+          <button
+            v-if="activeSearchLabel"
+            class="feed-search__clear"
+            data-test="feed-search-clear"
+            type="button"
+            aria-label="清空搜索"
+            @click="clearSearch"
+          >
+            清空
+          </button>
+        </form>
         <button
           v-if="authStore.isAuthenticated"
           class="filter-toggle-btn"
@@ -271,9 +292,13 @@ const normalizePage = (value: unknown) => {
 const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
 const queryGroupId = computed(() => typeof route.query.group_id === 'string' ? route.query.group_id : null)
 const queryPage = computed(() => normalizePage(route.query.page))
+const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
+const searchInput = ref(querySearch.value)
+const activeSearchLabel = computed(() => querySearch.value.trim())
 const defaultGroupId = computed(() => groups.value.find((group) => group.name === '默认分组')?.id || '')
 const nonDefaultGroups = computed(() => groups.value.filter((group) => group.name !== '默认分组'))
 const emptyTimelineText = computed(() => {
+  if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
   if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
   return subscriptions.value.length ? '订阅源暂无更新' : '订阅后开始探索'
 })
@@ -766,6 +791,26 @@ const setPageInRoute = async (page: number, replace = false) => {
   await router.push({ query })
 }
 
+const setSearchInRoute = async (value: string) => {
+  const search = value.trim()
+  await router.replace({
+    query: {
+      ...route.query,
+      q: search || undefined,
+      page: undefined,
+    },
+  })
+}
+
+const submitSearch = async () => {
+  await setSearchInRoute(searchInput.value)
+}
+
+const clearSearch = async () => {
+  searchInput.value = ''
+  await setSearchInRoute('')
+}
+
 const changePage = async (page: number) => {
   const normalizedPage = normalizePage(page)
   if (normalizedPage === currentPage.value) return
@@ -783,6 +828,7 @@ const fetchTimeline = async () => {
       sourceId: querySourceId.value,
       groupId: queryGroupId.value,
       unreadOnly: unreadOnly.value,
+      q: querySearch.value,
     })
 
     const headers = authStore.isAuthenticated ? authHeaders() : {}
@@ -872,6 +918,10 @@ watch(showManageSheet, (visible) => {
   }
 })
 
+watch(querySearch, (next) => {
+  searchInput.value = next
+})
+
 watch(() => route.query.manage_subscriptions, async (value) => {
   if (value !== '1') return
   const query = { ...route.query }
@@ -882,7 +932,7 @@ watch(() => route.query.manage_subscriptions, async (value) => {
   }
 }, { immediate: true })
 
-watch([querySourceId, queryGroupId, queryPage], async () => {
+watch([querySourceId, queryGroupId, queryPage, querySearch], async () => {
   currentPage.value = queryPage.value
   await fetchTimeline()
 }, { immediate: true })
@@ -948,7 +998,51 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.feed-search {
+  display: grid;
+  grid-template-columns: minmax(12rem, 22rem) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+}
+
+.feed-search__input {
+  min-width: 0;
+  height: 2.25rem;
+  border: 0;
+  border-bottom: 2px solid var(--a-color-ink);
+  border-radius: 0;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
+  font: inherit;
+  padding: 0 0.65rem;
+  outline: none;
+}
+
+.feed-search__input:focus {
+  border-bottom-color: var(--a-color-accent-confirm);
+}
+
+.feed-search__submit,
+.feed-search__clear {
+  height: 2.25rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0.75rem;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
+  font-family: var(--a-font-meta);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.feed-search__clear {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
 }
 
 .filter-toggle-btn {
@@ -1030,6 +1124,21 @@ onUnmounted(() => {
 .feed-source-trigger:focus-visible {
   outline: 2px solid var(--a-color-ink);
   outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .feed-actions {
+    align-items: stretch;
+  }
+
+  .feed-search {
+    grid-template-columns: 1fr auto;
+    width: 100%;
+  }
+
+  .feed-search__clear {
+    grid-column: 1 / -1;
+  }
 }
 
 </style>

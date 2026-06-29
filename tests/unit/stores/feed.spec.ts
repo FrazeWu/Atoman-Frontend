@@ -212,6 +212,25 @@ describe('feed store', () => {
     })
   })
 
+  it('loads the feed timeline with search query params', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{ type: 'feed_item', feed_item: { id: 'feed-item-1', title: 'Citrus item' } }],
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    await feed.fetchTimeline({
+      q: '  citrus notes  ',
+      unreadOnly: true,
+      sourceType: 'external_rss',
+      sourceId: 'source-1',
+    })
+
+    expect(feed.timeline).toHaveLength(1)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/timeline?source_type=external_rss&source_id=source-1&unread_only=true&q=citrus+notes', {
+      headers: { Authorization: 'Bearer token' },
+    })
+  })
+
   it('uses modular toggle star response data to update starred ids', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { starred: true },

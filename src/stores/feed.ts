@@ -48,6 +48,13 @@ export interface FeedOPMLImportResult {
   failed: number
 }
 
+interface FeedTimelineFetchOptions {
+  q?: string | null
+  sourceType?: string
+  sourceId?: string | number | null
+  unreadOnly?: boolean
+}
+
 export const useFeedStore = defineStore('feed', () => {
   // Feed state
   const subscriptions = ref<Subscription[]>([])
@@ -236,13 +243,25 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
-  const fetchTimeline = async (sourceType?: string, sourceId?: number, unreadOnly = false) => {
+  const fetchTimeline = async (
+    sourceTypeOrOptions?: string | FeedTimelineFetchOptions,
+    sourceId?: number,
+    unreadOnly = false,
+  ) => {
     const authStore = useAuthStore()
     try {
+      const options: FeedTimelineFetchOptions = typeof sourceTypeOrOptions === 'object' && sourceTypeOrOptions !== null
+        ? sourceTypeOrOptions
+        : {
+            sourceType: typeof sourceTypeOrOptions === 'string' ? sourceTypeOrOptions : undefined,
+            sourceId,
+            unreadOnly,
+          }
       const params = buildFeedTimelineQuery({
-        sourceType,
-        sourceId,
-        unreadOnly,
+        sourceType: options.sourceType,
+        sourceId: options.sourceId,
+        unreadOnly: options.unreadOnly,
+        q: options.q,
       })
       const query = params.toString()
       const url = query ? `${api.url}/feed/timeline?${query}` : `${api.url}/feed/timeline`

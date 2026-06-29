@@ -859,4 +859,135 @@ describe('FeedView', () => {
     expect(createPodcastSongSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed-item-play-1' }))
     expect(playSongSpy).toHaveBeenCalled()
   })
+
+  it('submits feed search through the route query and resets to the first page', async () => {
+    routeQuery.page = '4'
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    const input = wrapper.get('[data-test="feed-search-input"]')
+    await input.setValue('  rust newsletter  ')
+    await wrapper.get('[data-test="feed-search-form"]').trigger('submit')
+
+    expect(routerReplace).toHaveBeenCalledWith({
+      query: expect.objectContaining({
+        q: 'rust newsletter',
+        page: undefined,
+      }),
+    })
+  })
+
+  it('clears feed search from the route query', async () => {
+    routeQuery.q = 'existing search'
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-test="feed-search-clear"]').trigger('click')
+
+    expect(routerReplace).toHaveBeenCalledWith({
+      query: expect.objectContaining({
+        q: undefined,
+        page: undefined,
+      }),
+    })
+  })
+
+  it('passes feed search query from the route into timeline requests', async () => {
+    routeQuery.q = 'climate digest'
+    mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith(
+      expect.stringContaining('/feed/timeline?'),
+      expect.any(Object),
+    )
+    expect(String(vi.mocked(globalThis.fetch).mock.calls[0][0])).toContain('q=climate+digest')
+  })
+
+  it('shows a feed search empty state for the active query', async () => {
+    routeQuery.q = 'missing topic'
+    vi.mocked(globalThis.fetch).mockResolvedValue(new Response(JSON.stringify({
+      data: [],
+      meta: { page: 1, page_size: 20, total: 0, has_more: false },
+    }), { status: 200 }))
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: {
+            name: 'PEmpty',
+            props: ['text'],
+            template: '<section data-test="empty-state">{{ text }}</section>',
+          },
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="empty-state"]').text()).toContain('没有找到“missing topic”')
+  })
 })

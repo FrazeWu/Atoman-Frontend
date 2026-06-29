@@ -24,4 +24,17 @@ describe('buildFeedTimelineQuery', () => {
 
     expect(query.toString()).toBe('source_type=channel&source_id=42&unread_only=true')
   })
+
+  it('builds timeline params with trimmed search query and filters', () => {
+    const query = buildFeedTimelineQuery({
+      page: 3,
+      limit: 10,
+      q: '  citrus notes  ',
+      sourceType: 'external_rss',
+      sourceId: 'source-1',
+      unreadOnly: true,
+    })
+
+    expect(query.toString()).toBe('page=3&limit=10&source_type=external_rss&source_id=source-1&unread_only=true&q=citrus+notes')
+  })
 })

@@ -516,7 +516,7 @@ function goBack() {
 
 .paper-submit {
   background: var(--a-color-accent-confirm);
-  color: white;
+  color: var(--a-color-paper);
   transition: background-color 0.15s ease;
 }
 

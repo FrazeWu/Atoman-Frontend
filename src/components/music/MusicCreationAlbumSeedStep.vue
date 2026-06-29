@@ -228,7 +228,7 @@ function goNext() {
   font-weight: 800;
   cursor: pointer;
   background: var(--a-color-accent-confirm);
-  color: white;
+  color: var(--a-color-paper);
   transition: background-color 0.15s ease;
 }
 .paper-submit:hover {

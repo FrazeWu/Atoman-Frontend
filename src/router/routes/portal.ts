@@ -2,7 +2,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { settingRoutes } from '@/router/routes/settings'
 
 export const portalRoutes: RouteRecordRaw[] = [
-  { path: '/', redirect: '/feed' },
+  { path: '/', component: () => import('@/views/portal/PortalView.vue') },
   ...settingRoutes,
   { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
   { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },

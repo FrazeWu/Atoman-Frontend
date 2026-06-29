@@ -176,6 +176,10 @@ async function loadHotContent() {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
+    if (response.status === 404) {
+      hotContent.value = { featured: [], sections: [] }
+      return
+    }
     if (!response.ok) throw new Error('服务端返回异常')
     const payload = await response.json() as { data?: PortalHotResponse }
     hotContent.value = payload.data ?? { featured: [], sections: [] }

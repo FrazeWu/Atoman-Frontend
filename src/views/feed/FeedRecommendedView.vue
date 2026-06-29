@@ -76,7 +76,9 @@
         :total-items="channelTotalItems"
         :page="page"
         :page-size="pageLimit"
+        :subscribing-source-id="subscribingChannelSourceId"
         @open-source="openExploreSource"
+        @subscribe-source="subscribeExploreSource"
         @retry="retryChannels"
         @change-page="changePage"
       />
@@ -130,10 +132,10 @@ const normalizePage = (value: unknown) => {
 const items = ref<TimelineItem[]>([])
 const loading = ref(true)
 const mode = ref<'articles' | 'channels'>('articles')
-const sort = ref<'random' | 'popular'>('random')
+const sort = ref<'random' | 'popular'>('popular')
 const sortOptions: Array<{ label: string; value: 'random' | 'popular' }> = [
-  { label: '随机', value: 'random' },
   { label: '热门', value: 'popular' },
+  { label: '随机', value: 'random' },
 ]
 const page = ref(1)
 const totalItems = ref(0)
@@ -154,6 +156,7 @@ const selectedSource = ref<FeedArticleSource | null>(null)
 const sourceArticles = ref<TimelineItem[]>([])
 const sourceArticlesLoading = ref(false)
 const sourceSubscribeBusy = ref(false)
+const subscribingChannelSourceId = ref('')
 
 const shortcutHints = [
   { key: 'H', label: '聚焦侧边栏' },
@@ -261,6 +264,15 @@ const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
     : [],
 })
 
+const withExploreSourceSubscriptionState = (source: FeedExploreSource): FeedExploreSource => {
+  const articleSource = mapExploreSourceToArticleSource(source)
+  const subscription = findSubscriptionForSource(articleSource)
+  return {
+    ...source,
+    subscribed: Boolean(source.subscribed || subscription),
+  }
+}
+
 const mapExploreSourceToArticleSource = (source: FeedExploreSource): FeedArticleSource => withSubscriptionState({
   type: 'external_rss',
   id: source.id,
@@ -346,6 +358,21 @@ const subscribeSelectedSource = async () => {
   }
 }
 
+const subscribeExploreSource = async (source: FeedExploreSource) => {
+  if (source.subscribed || !source.rssUrl || !authStore.isAuthenticated || subscribingChannelSourceId.value) return
+
+  subscribingChannelSourceId.value = source.id
+  try {
+    const success = await feedStore.subscribeToRSS(source.rssUrl, source.title)
+    if (!success) return
+
+    await feedStore.fetchSubscriptions()
+    await fetchExploreSources()
+  } finally {
+    subscribingChannelSourceId.value = ''
+  }
+}
+
 const toggleStar = async (id: string) => {
   if (!authStore.isAuthenticated) return
   await feedStore.toggleStar(id)
@@ -399,7 +426,9 @@ const fetchExploreSources = async () => {
       throw new Error(`频道探索加载失败: ${res.status}`)
     }
     const d = await res.json()
-    channelItems.value = Array.isArray(d.data) ? d.data.map(mapExploreSource) : []
+    channelItems.value = Array.isArray(d.data)
+      ? d.data.map((source: Record<string, any>) => withExploreSourceSubscriptionState(mapExploreSource(source)))
+      : []
     channelTotalItems.value = d.total ?? d.meta?.total ?? 0
   } catch (error) {
     console.error(error)
@@ -433,14 +462,14 @@ const changeMode = async (nextMode: 'articles' | 'channels') => {
     ...route.query,
     mode: nextMode === 'channels' ? 'channels' : undefined,
     page: undefined,
-    sort: nextMode === 'articles' && sort.value !== 'random' ? sort.value : undefined,
+    sort: nextMode === 'articles' && sort.value !== 'popular' ? sort.value : undefined,
   }
   await router.push({ query })
 }
 
 const changeSort = (newSort: 'random' | 'popular') => {
   sort.value = newSort
-  const query = { ...route.query, page: undefined, sort: newSort !== 'random' ? newSort : undefined }
+  const query = { ...route.query, page: undefined, sort: newSort !== 'popular' ? newSort : undefined }
   router.push({ query })
 }
 
@@ -459,7 +488,7 @@ watch(
   async (query) => {
     page.value = normalizePage(query.page)
     mode.value = query.mode === 'channels' ? 'channels' : 'articles'
-    const queriedSort = query.sort === 'popular' ? 'popular' : 'random'
+    const queriedSort = query.sort === 'random' ? 'random' : 'popular'
     sort.value = queriedSort
     if (mode.value === 'channels') {
       await fetchExploreSources()

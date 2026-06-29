@@ -12,10 +12,13 @@ const source: FeedExploreSource = {
   recentItemCount: 6,
   lastPublishedAt: '2026-06-20T08:30:00Z',
   subscribed: false,
+  recentItems: [
+    { id: 'item-1', title: '近期文章', publishedAt: '2026-06-20T08:30:00Z' },
+  ],
 }
 
 describe('FeedSourceIdentityCard', () => {
-  it('renders feed source identity details, keeps its default test hook, and emits select on click', async () => {
+  it('renders feed source identity details, keeps its default test hook, and emits select on row click', async () => {
     const wrapper = mount(FeedSourceIdentityCard, {
       props: {
         source,
@@ -25,19 +28,52 @@ describe('FeedSourceIdentityCard', () => {
       },
     })
 
-    expect(wrapper.get('[data-test="feed-source-card"]').element.tagName).toBe('BUTTON')
+    expect(wrapper.get('[data-test="feed-source-card"]').element.tagName).toBe('ARTICLE')
+    expect(wrapper.get('[data-test="feed-source-card"]').attributes('role')).toBe('button')
     expect((wrapper.vm as any).$options.inheritAttrs).toBe(false)
     expect(wrapper.get('[data-test="feed-source-avatar"]').text()).toContain('少')
     expect(wrapper.get('[data-test="feed-source-title"]').text()).toBe('少数派')
     expect(wrapper.get('[data-test="feed-source-url"]').text()).toBe('sspai.com/feed')
     expect(wrapper.get('[data-test="feed-source-count"]').text()).toContain('128 订阅')
     expect(wrapper.text()).toContain('6 篇近期内容')
+    expect(wrapper.text()).toContain('近期文章')
     expect(wrapper.text()).toMatch(/6.*20/)
-    expect(wrapper.get('[data-test="feed-source-hero"]').attributes('style')).toContain('hsl(12 70% 52%)')
 
     await wrapper.get('[data-test="feed-source-card"]').trigger('click')
 
     expect(wrapper.emitted('select')).toEqual([[source]])
+  })
+
+  it('emits subscribe from the subscribe button without opening the row', async () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source,
+        color: 'hsl(12 70% 52%)',
+        avatarLabel: '少',
+        displayUrl: 'sspai.com/feed',
+      },
+    })
+
+    expect(wrapper.get('[data-test="feed-source-subscribe"]').text()).toBe('订阅')
+
+    await wrapper.get('[data-test="feed-source-subscribe"]').trigger('click')
+
+    expect(wrapper.emitted('subscribe')).toEqual([[source]])
+    expect(wrapper.emitted('select')).toBeUndefined()
+  })
+
+  it('disables the subscribe button for subscribed sources', () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source: { ...source, subscribed: true },
+        color: 'hsl(12 70% 52%)',
+        avatarLabel: '少',
+        displayUrl: 'sspai.com/feed',
+      },
+    })
+
+    expect(wrapper.get('[data-test="feed-source-subscribe"]').text()).toBe('已订阅')
+    expect(wrapper.get('[data-test="feed-source-subscribe"]').attributes('disabled')).toBeDefined()
   })
 
   it('lets a parent override the root data-test hook while forwarding other attrs', async () => {

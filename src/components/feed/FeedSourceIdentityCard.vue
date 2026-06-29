@@ -1,9 +1,12 @@
 <template>
-  <button
+  <article
     v-bind="rootAttrs"
-    type="button"
+    role="button"
+    tabindex="0"
     class="feed-source-card"
     @click="emit('select', source)"
+    @keydown.enter.prevent="emit('select', source)"
+    @keydown.space.prevent="emit('select', source)"
   >
     <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
       {{ avatarLabel }}
@@ -16,9 +19,16 @@
           <p class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
         </div>
 
-        <span class="feed-source-card__status" :class="{ 'is-subscribed': source.subscribed }">
-          {{ source.subscribed ? '已订阅' : '查看' }}
-        </span>
+        <button
+          type="button"
+          class="feed-source-card__subscribe"
+          :class="{ 'is-subscribed': source.subscribed }"
+          :disabled="source.subscribed || subscribeBusy"
+          data-test="feed-source-subscribe"
+          @click.stop="emit('subscribe', source)"
+        >
+          {{ subscribeButtonLabel }}
+        </button>
       </div>
 
       <p class="feed-source-card__summary">
@@ -37,7 +47,7 @@
         <span>{{ formattedLastUpdated }}</span>
       </div>
     </div>
-  </button>
+  </article>
 </template>
 
 <script setup lang="ts">
@@ -54,10 +64,12 @@ const props = defineProps<{
   color: string
   avatarLabel: string
   displayUrl: string
+  subscribeBusy?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'select', source: FeedExploreSource): void
+  (e: 'subscribe', source: FeedExploreSource): void
 }>()
 
 const attrs = useAttrs()
@@ -70,6 +82,12 @@ const rootAttrs = computed(() => ({
 const formattedLastUpdated = computed(() => {
   if (!props.source.lastPublishedAt) return '暂无更新时间'
   return new Date(props.source.lastPublishedAt).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+})
+
+const subscribeButtonLabel = computed(() => {
+  if (props.source.subscribed) return '已订阅'
+  if (props.subscribeBusy) return '订阅中'
+  return '订阅'
 })
 
 const compactCount = (value: number) => {
@@ -94,6 +112,7 @@ const compactCount = (value: number) => {
   text-align: left;
   border-radius: 8px;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  cursor: pointer;
 }
 
 .feed-source-card:hover,
@@ -154,7 +173,7 @@ const compactCount = (value: number) => {
   overflow-wrap: anywhere;
 }
 
-.feed-source-card__status {
+.feed-source-card__subscribe {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -168,11 +187,14 @@ const compactCount = (value: number) => {
   font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: 0.06em;
+  cursor: pointer;
 }
 
-.feed-source-card__status.is-subscribed {
+.feed-source-card__subscribe.is-subscribed,
+.feed-source-card__subscribe:disabled {
   color: var(--a-color-muted);
   background: var(--a-color-bg);
+  cursor: default;
 }
 
 .feed-source-card__summary {
@@ -239,7 +261,7 @@ const compactCount = (value: number) => {
     gap: 0.65rem;
   }
 
-  .feed-source-card__status {
+  .feed-source-card__subscribe {
     width: fit-content;
     min-width: 4.5rem;
   }

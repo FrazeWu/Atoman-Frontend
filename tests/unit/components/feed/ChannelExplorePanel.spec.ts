@@ -34,8 +34,8 @@ const mountPanel = (props?: Partial<InstanceType<typeof ChannelExplorePanel>['$p
     global: {
       stubs: {
         FeedSourceIdentityCard: {
-          props: ['source', 'color', 'avatarLabel', 'displayUrl'],
-          emits: ['select'],
+          props: ['source', 'color', 'avatarLabel', 'displayUrl', 'subscribeBusy'],
+          emits: ['select', 'subscribe'],
           template: `
             <button
               type="button"
@@ -44,12 +44,20 @@ const mountPanel = (props?: Partial<InstanceType<typeof ChannelExplorePanel>['$p
               @click="$emit('select', source)"
             >
               {{ source.title }}
+              <span data-test="channel-card-busy">{{ String(subscribeBusy) }}</span>
               <span
                 v-for="item in source.recentItems"
                 :key="item.id"
                 data-test="recent-item-title"
               >
                 {{ item.title }}
+              </span>
+              <span
+                role="button"
+                data-test="channel-card-subscribe"
+                @click.stop="$emit('subscribe', source)"
+              >
+                订阅
               </span>
             </button>
           `,
@@ -99,10 +107,12 @@ describe('ChannelExplorePanel', () => {
     const wrapper = mountPanel({
       items: sources,
       totalItems: 40,
+      subscribingSourceId: 'source-1',
     })
 
     expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
     expect(wrapper.get('[data-test="channel-list"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="channel-card-busy"]').text()).toBe('true')
     expect(wrapper.findAll('[data-test="recent-item-title"]').map((node) => node.text())).toEqual([
       'AI 浏览器自动化新实践',
       '个人知识库如何整理',
@@ -111,6 +121,18 @@ describe('ChannelExplorePanel', () => {
     await wrapper.get('[data-test="channel-card"]').trigger('click')
 
     expect(wrapper.emitted('open-source')).toEqual([[sources[0]]])
+  })
+
+  it('forwards subscribe clicks without opening the source', async () => {
+    const wrapper = mountPanel({
+      items: sources,
+      totalItems: 40,
+    })
+
+    await wrapper.get('[data-test="channel-card-subscribe"]').trigger('click')
+
+    expect(wrapper.emitted('subscribe-source')).toEqual([[sources[0]]])
+    expect(wrapper.emitted('open-source')).toBeUndefined()
   })
 
   it('forwards footer page changes', async () => {

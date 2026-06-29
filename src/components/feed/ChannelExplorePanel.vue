@@ -23,8 +23,10 @@
         :color="buildSourceColor(source.title || source.rssUrl || source.id)"
         :avatar-label="buildSourceAvatarLabel(source.title)"
         :display-url="normalizeSourceUrlForCard(source.rssUrl, source.title)"
+        :subscribe-busy="subscribingSourceId === source.id"
         data-test="channel-card"
         @select="emit('open-source', $event)"
+        @subscribe="emit('subscribe-source', $event)"
       />
     </div>
 
@@ -51,10 +53,12 @@ defineProps<{
   totalItems: number
   page: number
   pageSize: number
+  subscribingSourceId?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'open-source', source: FeedExploreSource): void
+  (e: 'subscribe-source', source: FeedExploreSource): void
   (e: 'retry'): void
   (e: 'change-page', page: number): void
 }>()

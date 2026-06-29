@@ -156,7 +156,7 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.find('[data-test="channel-card"]').exists()).toBe(false)
   })
 
-  it('renders 热门 / 随机 as tabs while keeping 返回订阅 as a separate action', async () => {
+  it('defaults explore sorting to 热门 while keeping 返回订阅 as a separate action', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
       if (url.includes('/feed/explore')) {
@@ -207,7 +207,7 @@ describe('FeedRecommendedView', () => {
     const headerActions = header.findAllComponents({ name: 'PPress' })
 
     expect(sortTabs).toHaveLength(2)
-    expect(sortTabs.map((tab) => tab.props('label'))).toEqual(['随机', '热门'])
+    expect(sortTabs.map((tab) => tab.props('label'))).toEqual(['热门', '随机'])
     expect(sortTabs.map((tab) => tab.props('active'))).toEqual([true, false])
     expect(sortTabs.map((tab) => tab.attributes('aria-pressed'))).toEqual(['true', 'false'])
 
@@ -216,7 +216,7 @@ describe('FeedRecommendedView', () => {
     expect(routerPush).toHaveBeenLastCalledWith({
       query: {
         page: undefined,
-        sort: 'popular',
+        sort: 'random',
       },
     })
 
@@ -463,6 +463,76 @@ describe('FeedRecommendedView', () => {
 
     expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('true')
     expect(wrapper.get('[data-test="article-sheet"]').text()).toContain('Channel Drawer Article')
+  })
+
+  it('subscribes from channel mode without opening the source and refreshes channel counts', async () => {
+    Object.assign(routeQuery, { mode: 'channels' })
+
+    let sourceFetchCount = 0
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('/feed/explore/sources')) {
+        sourceFetchCount += 1
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'source-2',
+            title: 'Unsubscribed Source',
+            rss_url: 'https://unsubscribed.example.com/rss.xml',
+            subscription_count: sourceFetchCount > 1 ? 4 : 3,
+            recent_item_count: 8,
+            last_published_at: '2026-06-19T00:00:00Z',
+            subscribed: sourceFetchCount > 1,
+            recent_items: [],
+          }],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/subscriptions') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ subscription: { id: 'sub-2' } }), { status: 200 })
+      }
+      if (url.includes('/feed/subscriptions')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [],
+        meta: { page: 1, page_size: 20, total: 0, has_more: false },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PPress: {
+            props: ['label'],
+            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+          PTab: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    await wrapper.get('[data-test="feed-source-subscribe"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchSpy.mock.calls.some(([url, init]) => (
+      String(url).includes('/feed/subscriptions')
+      && init?.method === 'POST'
+      && String(init.body).includes('https://unsubscribed.example.com/rss.xml')
+    ))).toBe(true)
+    expect(sourceFetchCount).toBeGreaterThanOrEqual(2)
+    expect(wrapper.get('[data-test="feed-source-count"]').text()).toContain('4 订阅')
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?'))).toBe(false)
   })
 
   it('switching to channel mode syncs the query string', async () => {

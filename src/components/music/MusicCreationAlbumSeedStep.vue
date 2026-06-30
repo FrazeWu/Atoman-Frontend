@@ -47,6 +47,42 @@ function applyImportSnapshot(snapshot: Awaited<ReturnType<typeof getMusicAlbumIm
   }))
 }
 
+function renumberTracks() {
+  if (!creationFlow.value) return
+  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track, index) => ({
+    ...track,
+    sequence: index + 1,
+  }))
+}
+
+function addTrack() {
+  if (!creationFlow.value) return
+  creationFlow.value.draft.tracks = [
+    ...creationFlow.value.draft.tracks,
+    {
+      id: `manual-track-${Date.now()}`,
+      sequence: creationFlow.value.draft.tracks.length + 1,
+      title: '',
+      origin: 'manual',
+    },
+  ]
+}
+
+function updateTrackTitle(trackId: string, title: string) {
+  if (!creationFlow.value) return
+  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
+    track.id === trackId
+      ? { ...track, title }
+      : track
+  ))
+}
+
+function removeTrack(trackId: string) {
+  if (!creationFlow.value) return
+  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.filter((track) => track.id !== trackId)
+  renumberTracks()
+}
+
 async function handleArchiveChange(event: Event) {
   if (!creationFlow.value || !albumImportDraft.value) return
 
@@ -136,10 +172,43 @@ async function handleArchiveChange(event: Event) {
         </div>
 
         <div v-if="tracksDraft.length" class="track-list" data-testid="album-import-track-list">
-          <div v-for="track in tracksDraft" :key="track.id" class="track-row">
+          <div
+            v-for="track in tracksDraft"
+            :key="track.id"
+            class="track-row track-row--interactive"
+            data-testid="album-import-track-row"
+          >
             <span class="track-seq">{{ String(track.sequence).padStart(2, '0') }}</span>
-            <span class="track-title">{{ track.title }}</span>
+            <PInput
+              :model-value="track.title"
+              data-testid="album-import-track-title-input"
+              class="track-title-input"
+              type="text"
+              placeholder="输入曲目名"
+              @update:model-value="updateTrackTitle(track.id, String($event ?? ''))"
+            />
+            <div class="track-row-actions" data-testid="album-import-track-actions">
+              <button
+                :data-testid="`album-import-track-delete-${track.id}`"
+                type="button"
+                class="track-action-button"
+                @click="removeTrack(track.id)"
+              >
+                删除
+              </button>
+            </div>
           </div>
+        </div>
+
+        <div class="track-toolbar">
+          <button
+            data-testid="album-import-add-track-button"
+            type="button"
+            class="track-add-button"
+            @click="addTrack"
+          >
+            新增曲目
+          </button>
         </div>
       </div>
     </div>
@@ -233,11 +302,44 @@ async function handleArchiveChange(event: Event) {
   padding-bottom: 0;
   border-bottom: 0;
 }
+.track-row--interactive .track-row-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.track-row--interactive:hover .track-row-actions,
+.track-row--interactive:focus-within .track-row-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
 .track-seq {
   min-width: 2rem;
   color: var(--a-color-ink-soft);
   font-size: 0.76rem;
   font-weight: 800;
 }
-.track-title { color: var(--a-color-ink); font-size: 0.92rem; font-weight: 800; }
+.track-title-input {
+  flex: 1;
+}
+.track-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.track-action-button,
+.track-add-button {
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 0;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
+  cursor: pointer;
+  font-family: var(--a-font-meta);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0.45rem 0.7rem;
+}
+.track-toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
 </style>

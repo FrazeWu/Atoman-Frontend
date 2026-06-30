@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import {
-  buildAlbumEditFromCreationFlow,
-  buildArtistEditFromCreationFlow,
-  cancelMusicEdit,
-  revertMusicEdit,
-  submitMusicEdit,
-} from '@/api/musicV1'
+import { computed, watch } from 'vue'
+import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
@@ -75,6 +69,84 @@ const activeStep = computed(() => {
 const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDetails')
 const showFooterActions = computed(() => creationFlow.value?.step === 'artist' || isAlbumDetailsStep.value)
 const finishButtonLabel = computed(() => (creationFlow.value?.submitting ? '提交中…' : activeStep.value.cta))
+const commitMusicAlbumImport = (musicApi as typeof musicApi & {
+  commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
+}).commitMusicAlbumImport
+
+function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
+  const primaryStageName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())
+    ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
+
+  return {
+    artist: {
+      name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
+      legal_name: flow.draft.artist.legalName.trim(),
+      stage_names: flow.draft.artist.stageNames
+        .filter((item) => item.name.trim())
+        .map((item) => ({
+          name: item.name.trim(),
+          isPrimary: item.isPrimary,
+          startDateText: item.startDateText.trim(),
+          endDateText: item.endDateText.trim(),
+        })),
+      birth_place: flow.draft.artist.birthPlace.trim(),
+    },
+    album: {
+      title: flow.draft.albumDetails.title.trim(),
+      release_year: Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10) || 0,
+      tracks: flow.draft.tracks.map((track, index) => ({
+        title: track.title.trim(),
+        trackNumber: index + 1,
+      })),
+    },
+  }
+}
+
+function syncReadyImportToDraft() {
+  const flow = creationFlow.value
+  if (!flow) return
+
+  const { albumImport, albumDetails } = flow.draft
+  if (albumImport.status !== 'ready') return
+
+  if (albumImport.derivedAlbumTitle.trim()) {
+    albumDetails.title = albumImport.derivedAlbumTitle
+  }
+
+  const nextCover = albumImport.coverUrl.trim() || albumImport.derivedCover.trim()
+  if (nextCover) {
+    albumDetails.coverUrl = nextCover
+  }
+
+  flow.draft.tracks = albumImport.derivedTracks.map((track, index) => ({
+    id: `import-track-${index + 1}`,
+    sequence: index + 1,
+    title: track.title,
+    audioKey: track.audioKey,
+    origin: track.origin,
+  }))
+}
+
+watch(
+  () => creationFlow.value?.draft.albumImport.status,
+  () => {
+    syncReadyImportToDraft()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [
+    creationFlow.value?.draft.albumImport.derivedAlbumTitle ?? '',
+    creationFlow.value?.draft.albumImport.coverUrl ?? '',
+    creationFlow.value?.draft.albumImport.derivedCover ?? '',
+    creationFlow.value?.draft.albumImport.derivedTracks ?? [],
+  ],
+  () => {
+    syncReadyImportToDraft()
+  },
+  { deep: true },
+)
 
 function requestClose() {
   const flow = creationFlow.value
@@ -101,43 +173,19 @@ async function completeCreation() {
   flow.submitting = true
   flow.errorMessage = ''
 
-  let createdArtistEdit: Awaited<ReturnType<typeof submitMusicEdit>> | null = null
-
   try {
-    const seededArtistId = flow.draft.artist.id?.trim()
-    let artistId = seededArtistId || ''
-
-    if (!artistId) {
-      createdArtistEdit = await submitMusicEdit(buildArtistEditFromCreationFlow(flow.draft.artist))
-      artistId = createdArtistEdit.entity_id || ''
+    const importId = flow.draft.albumImport.importId?.trim()
+    if (!importId) {
+      throw new Error('缺少 importId，无法提交专辑导入')
     }
 
-    if (!artistId) {
-      throw new Error('artist creation did not return an artist id')
+    if (!commitMusicAlbumImport) {
+      throw new Error('commitMusicAlbumImport is unavailable')
     }
 
-    await submitMusicEdit(buildAlbumEditFromCreationFlow(flow.draft.albumDetails, artistId))
+    await commitMusicAlbumImport(importId, buildCommitInput(flow))
     closeMusicCreationFlow()
   } catch (error) {
-    if (createdArtistEdit) {
-      try {
-        const compensationReason = 'Rollback artist creation after album creation failed in music creation flow'
-        if (createdArtistEdit.status === 'open') {
-          await cancelMusicEdit(createdArtistEdit.id, compensationReason)
-        } else {
-          await revertMusicEdit(createdArtistEdit.id, compensationReason)
-        }
-      } catch (compensationError) {
-        const compensationMessage =
-          compensationError instanceof Error ? compensationError.message : 'failed to rollback artist creation'
-        console.error('Failed to compensate music creation artist:', compensationError)
-        flow.errorMessage = `${
-          error instanceof Error ? error.message : '提交失败，请稍后重试'
-        }；${compensationMessage}`
-        return
-      }
-    }
-
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {
     if (creationFlow.value) {

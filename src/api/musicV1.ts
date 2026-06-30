@@ -49,6 +49,32 @@ export type MusicAlbumImportTrack = {
   origin: string
 }
 
+export type MusicAlbumImportCommitStageName = {
+  name: string
+  isPrimary: boolean
+  startDateText: string
+  endDateText: string
+}
+
+export type MusicAlbumImportCommitTrack = {
+  title: string
+  trackNumber: number
+}
+
+export type MusicAlbumImportCommitInput = {
+  artist: {
+    name: string
+    legal_name: string
+    stage_names: MusicAlbumImportCommitStageName[]
+    birth_place: string
+  }
+  album: {
+    title: string
+    release_year: number
+    tracks: MusicAlbumImportCommitTrack[]
+  }
+}
+
 export type MusicAlbumImport = {
   importId: string
   status: MusicAlbumImportStatus
@@ -227,9 +253,10 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
   albums: () => `${API_V1_BASE}/music/albums`,
   album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
-  albumImports: () => `${API_V1_BASE}/music/album-imports`,
-  albumImport: (importId: string) => `${API_V1_BASE}/music/album-imports/${importId}`,
-  albumImportArchive: (importId: string) => `${API_V1_BASE}/music/album-imports/${importId}/archive`,
+  albumImports: () => `${API_V1_BASE}/music/imports/albums`,
+  albumImport: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}`,
+  albumImportArchive: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/upload`,
+  albumImportCommit: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/commit`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/albums?mode=${mode}`,
   edits: () => `${API_V1_BASE}/music/edits`,
   edit: (editId: string) => `${API_V1_BASE}/music/edits/${editId}`,
@@ -341,6 +368,13 @@ export async function createMusicAlbumImport(input: CreateMusicAlbumImportInput 
 
 export async function getMusicAlbumImport(importId: string): Promise<MusicAlbumImport> {
   return apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId))
+}
+
+export async function commitMusicAlbumImport(
+  importId: string,
+  input: MusicAlbumImportCommitInput,
+): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportCommit(importId), input)
 }
 
 export async function uploadMusicAlbumArchive(

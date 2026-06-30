@@ -87,11 +87,14 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   background: var(--a-color-bg);
 }
 .topbar-inner {
-  padding: 0 24px;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 0 2rem;
   height: 100%;
   display: flex;
   align-items: center;
   gap: 2rem;
+  width: 100%;
 }
 .topbar-inner--auth {
   flex: 1;
@@ -194,7 +197,7 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
 
 @media (max-width: 720px) {
   .topbar-inner {
-    padding: 0 16px;
+    padding: 0 1rem;
     gap: 1rem;
   }
 

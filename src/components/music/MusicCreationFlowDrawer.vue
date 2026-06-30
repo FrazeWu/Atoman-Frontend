@@ -19,21 +19,25 @@ const creationFlow = computed(() => state.value.creationFlow)
 const isOpen = computed(() => creationFlow.value !== null)
 const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
 
-type CreationStepKey = 'artist' | 'albumSeed' | 'albumDetails'
+type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails'
 
 function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
-  const { artist, albumSeed, albumDetails, tracks } = flow.draft
+  const { artist, albumImport, albumDetails, tracks } = flow.draft
 
   return (
     flow.dirty ||
     !!artist.avatarUrl.trim() ||
-    !!artist.name.trim() ||
-    !!artist.country.trim() ||
-    !!artist.birthday.trim() ||
+    !!artist.legalName.trim() ||
+    artist.stageNames.some((stageName) => !!stageName.name.trim()) ||
+    !!artist.nationality.trim() ||
+    !!artist.birthPlace.trim() ||
+    !!artist.birthDate.trim() ||
     !!artist.bio.trim() ||
     !!artist.source.trim() ||
-    !!albumSeed.title.trim() ||
-    albumSeed.uploadedAssets.length > 0 ||
+    !!albumImport.archiveName.trim() ||
+    albumImport.uploadProgress > 0 ||
+    !!albumImport.derivedAlbumTitle.trim() ||
+    albumImport.derivedTracks.length > 0 ||
     !!albumDetails.coverUrl.trim() ||
     !!albumDetails.title.trim() ||
     !!albumDetails.releaseDate.trim() ||
@@ -50,10 +54,10 @@ const stepCopy: Record<CreationStepKey, { index: number; title: string; subtitle
     subtitle: '先建立艺术家与首张专辑的草稿外壳。',
     cta: '下一步',
   },
-  albumSeed: {
+  albumImport: {
     index: 2,
-    title: '上传音频',
-    subtitle: '批量音频上传会在后续步骤中补全细节。',
+    title: '导入专辑',
+    subtitle: '上传专辑压缩包，解析封面与曲目信息。',
     cta: '继续',
   },
   albumDetails: {
@@ -85,8 +89,8 @@ function requestClose() {
 function handlePrimaryAction() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'artist') {
-    if (!creationFlow.value.draft.artist.name.trim()) return
-    setMusicCreationStep('albumSeed')
+    if (!creationFlow.value.draft.artist.legalName.trim()) return
+    setMusicCreationStep('albumImport')
   }
 }
 
@@ -163,7 +167,7 @@ async function completeCreation() {
         </p>
         <MusicCreationArtistStep v-if="creationFlow.step === 'artist'" />
 
-        <MusicCreationAlbumSeedStep v-else-if="creationFlow.step === 'albumSeed'" />
+        <MusicCreationAlbumSeedStep v-else-if="creationFlow.step === 'albumImport'" />
 
         <MusicCreationAlbumDetailsStep v-else-if="creationFlow.step === 'albumDetails'" />
 
@@ -181,7 +185,7 @@ async function completeCreation() {
             data-testid="album-details-back-button"
             type="button"
             class="paper-action"
-            @click="setMusicCreationStep('albumSeed')"
+            @click="setMusicCreationStep('albumImport')"
           >
             返回上一步
           </button>

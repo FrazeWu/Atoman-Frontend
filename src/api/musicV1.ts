@@ -34,6 +34,50 @@ export type MusicSource = {
   title?: string
 }
 
+export type MusicAlbumImportStatus =
+  | 'pending_upload'
+  | 'uploading'
+  | 'uploaded'
+  | 'extracting'
+  | 'ready'
+  | 'failed'
+  | 'committed'
+
+export type MusicAlbumImportTrack = {
+  title: string
+  audioKey: string
+  origin: string
+}
+
+export type MusicAlbumImport = {
+  importId: string
+  status: MusicAlbumImportStatus
+  archiveName: string
+  uploadProgress: number
+  uploadSpeed: number
+  coverUrl: string
+  coverKey: string
+  derivedAlbumTitle: string
+  derivedCover: string
+  derivedTracks: MusicAlbumImportTrack[]
+  lastSyncedAt: string
+  errorMessage: string
+}
+
+export type CreateMusicAlbumImportInput = {
+  artistId?: string | null
+}
+
+export type MusicAlbumArchiveUploadProgress = {
+  loaded: number
+  total: number
+  bytesPerSecond: number
+}
+
+export type UploadMusicAlbumArchiveOptions = {
+  onProgress?: (progress: MusicAlbumArchiveUploadProgress) => void
+}
+
 export type MusicEditRequest = {
   type: MusicEditType
   entity_type: MusicEntityType
@@ -183,6 +227,9 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
   albums: () => `${API_V1_BASE}/music/albums`,
   album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
+  albumImports: () => `${API_V1_BASE}/music/album-imports`,
+  albumImport: (importId: string) => `${API_V1_BASE}/music/album-imports/${importId}`,
+  albumImportArchive: (importId: string) => `${API_V1_BASE}/music/album-imports/${importId}/archive`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/albums?mode=${mode}`,
   edits: () => `${API_V1_BASE}/music/edits`,
   edit: (editId: string) => `${API_V1_BASE}/music/edits/${editId}`,
@@ -286,6 +333,60 @@ export async function uploadMusicAsset(
 
 export async function uploadMusicAudioBatch(files: File[]): Promise<UploadAsset[]> {
   return Promise.all(files.map((file) => uploadMusicAsset(file, 'music.audio')))
+}
+
+export async function createMusicAlbumImport(input: CreateMusicAlbumImportInput = {}): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImports(), input)
+}
+
+export async function getMusicAlbumImport(importId: string): Promise<MusicAlbumImport> {
+  return apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId))
+}
+
+export async function uploadMusicAlbumArchive(
+  importId: string,
+  file: File,
+  options: UploadMusicAlbumArchiveOptions = {},
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const form = new FormData()
+    form.append('archive', file)
+
+    const xhr = new XMLHttpRequest()
+    const startedAt = Date.now()
+    xhr.open('POST', musicV1Endpoints.albumImportArchive(importId))
+    xhr.withCredentials = true
+    xhr.setRequestHeader('Accept', 'application/json')
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) return
+      const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.001)
+      options.onProgress?.({
+        loaded: event.loaded,
+        total: event.total,
+        bytesPerSecond: event.loaded / elapsedSeconds,
+      })
+    })
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+        return
+      }
+
+      reject(new Error(`上传压缩包失败 (${xhr.status})`))
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('上传压缩包失败'))
+    })
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('上传已取消'))
+    })
+
+    xhr.send(form)
+  })
 }
 
 function buildSources(source?: string): MusicSource[] {

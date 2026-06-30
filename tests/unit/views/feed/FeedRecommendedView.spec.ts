@@ -69,6 +69,10 @@ describe('FeedRecommendedView', () => {
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
 
     expect(wrapper.text()).toContain('Article 1')
+    expect(wrapper.text()).not.toContain('Channel 1')
+
+    await wrapper.findAll('.p-tab')[4]?.trigger('click')
+
     expect(wrapper.text()).toContain('Channel 1')
   })
 

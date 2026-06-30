@@ -11,7 +11,7 @@ interface DrawerState {
   artistId: string | null
   albumId: string | null
   nestedAction: NestedActionType
-  nestedPayload: any
+  nestedPayload: unknown
   creationFlow: MusicCreationFlowState | null
 }
 
@@ -19,8 +19,21 @@ function createEmptyDraft(seed?: { artistId?: string | null }): MusicCreationDra
   return {
     artist: {
       id: seed?.artistId ?? null,
+      avatarUrl: '',
+      avatarAsset: null,
+      name: '',
+      country: '',
+      birthday: '',
       legalName: '',
-      stageNames: [],
+      stageNames: [
+        {
+          id: 'stage-name-primary',
+          name: '',
+          isPrimary: true,
+          startDateText: '',
+          endDateText: '',
+        },
+      ],
       nationality: '',
       birthPlace: '',
       birthDate: '',
@@ -30,15 +43,27 @@ function createEmptyDraft(seed?: { artistId?: string | null }): MusicCreationDra
     albumImport: {
       importId: null,
       archiveName: '',
-      status: 'idle',
+      status: 'pending_upload',
       uploadProgress: 0,
-      uploadSpeed: '',
+      uploadSpeed: 0,
       coverUrl: '',
       coverKey: '',
+      derivedAlbumTitle: '',
+      derivedCover: '',
+      derivedTracks: [],
+      lastSyncedAt: '',
       errorMessage: '',
     },
-    albumDetails: {
+    albumSeed: {
       title: '',
+      uploadedAssets: [],
+    },
+    albumDetails: {
+      coverUrl: '',
+      coverAsset: null,
+      title: '',
+      releaseDate: '',
+      type: 'album',
       releaseYear: '',
       bio: '',
       source: '',
@@ -63,7 +88,7 @@ export function useMusicDrawers() {
   const openAlbum = (id: string) => { state.value.albumId = id }
   const closeAlbum = () => { state.value.albumId = null }
   
-  const openNestedAction = (action: NestedActionType, payload: any = null) => {
+  const openNestedAction = (action: NestedActionType, payload: unknown = null) => {
     state.value.nestedAction = action
     state.value.nestedPayload = payload
   }

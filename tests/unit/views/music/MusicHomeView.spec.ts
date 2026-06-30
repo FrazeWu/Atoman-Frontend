@@ -211,11 +211,9 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     })
     await flushPromises()
 
-    await wrapper.find('[data-testid="empty-add-artist"]').trigger('click')
-    await wrapper.find('[data-testid="empty-add-album"]').trigger('click')
+    await wrapper.find('[data-testid="empty-add-artist-and-album"]').trigger('click')
 
-    expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(2)
-    expect(mocks.openMusicCreationFlow).toHaveBeenNthCalledWith(1)
-    expect(mocks.openMusicCreationFlow).toHaveBeenNthCalledWith(2, { startStep: 'albumSeed' })
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1)
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'artist' })
   })
 })

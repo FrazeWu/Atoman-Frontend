@@ -73,7 +73,7 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
           <span class="paper-action-dot" aria-hidden="true" />
           <span>修订艺术家信息</span>
         </button>
-        <button class="paper-action" @click="openMusicCreationFlow({ artistId: state.artistId || null, startStep: 'albumSeed' })">
+        <button class="paper-action" @click="openMusicCreationFlow({ artistId: state.artistId || null, startStep: 'albumImport' })">
           <span class="paper-action-dot" aria-hidden="true" />
           <span>添加新专辑</span>
         </button>

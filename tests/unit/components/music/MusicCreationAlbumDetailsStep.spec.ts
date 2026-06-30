@@ -112,7 +112,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.get('[data-testid="album-details-footer"]').text()).toContain('关闭')
 
     await wrapper.get('[data-testid="album-details-back-button"]').trigger('click')
-    expect(drawers.state.value.creationFlow?.step).toBe('albumSeed')
+    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
 
     drawers.setMusicCreationStep('albumDetails')
     await wrapper.get('[data-testid="album-details-close-button"]').trigger('click')

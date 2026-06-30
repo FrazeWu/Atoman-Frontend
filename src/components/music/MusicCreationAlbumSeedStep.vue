@@ -1,120 +1,146 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { uploadMusicAudioBatch } from '@/api/musicV1'
+import {
+  createMusicAlbumImport,
+  getMusicAlbumImport,
+  uploadMusicAlbumArchive,
+} from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
 
-const { state, setMusicCreationStep } = useMusicDrawers()
+const { state } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
-const albumSeedDraft = computed(() => creationFlow.value?.draft.albumSeed ?? null)
+const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
 const uploading = ref(false)
 const errorMessage = ref('')
 
-function normalizeTrackTitle(filename: string) {
-  return filename.replace(/\.[^.]+$/, '')
+function formatUploadSpeed(bytesPerSecond: number) {
+  if (bytesPerSecond <= 0) return '0 KB/s'
+  return `${Math.round(bytesPerSecond / 1024)} KB/s`
 }
 
-async function handleBatchUpload(event: Event) {
+function applyImportSnapshot(snapshot: Awaited<ReturnType<typeof getMusicAlbumImport>>) {
   if (!creationFlow.value) return
 
+  creationFlow.value.draft.albumImport.importId = snapshot.importId
+  creationFlow.value.draft.albumImport.status = snapshot.status
+  creationFlow.value.draft.albumImport.archiveName = snapshot.archiveName
+  creationFlow.value.draft.albumImport.uploadProgress = snapshot.uploadProgress
+  creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed
+  creationFlow.value.draft.albumImport.coverUrl = snapshot.coverUrl
+  creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
+  creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
+  creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
+  creationFlow.value.draft.albumImport.derivedTracks = snapshot.derivedTracks
+  creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
+  creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
+  creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
+  creationFlow.value.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover || creationFlow.value.draft.albumDetails.coverUrl
+  creationFlow.value.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+    id: `import-track-${index + 1}`,
+    sequence: index + 1,
+    title: track.title,
+    audioKey: track.audioKey,
+    origin: track.origin,
+  }))
+}
+
+async function handleArchiveChange(event: Event) {
+  if (!creationFlow.value || !albumImportDraft.value) return
+
   const input = event.target as HTMLInputElement
-  const files = Array.from(input.files || [])
-  if (!files.length) return
+  const file = input.files?.[0]
+  if (!file) return
 
   uploading.value = true
   errorMessage.value = ''
 
   try {
-    const uploads = await uploadMusicAudioBatch(files)
-    creationFlow.value.draft.albumSeed.uploadedAssets = uploads.map((asset, index) => ({
-      id: asset.key || asset.url || `upload-${index + 1}`,
-      url: asset.url,
-    }))
-    creationFlow.value.draft.tracks = uploads.map((asset, index) => ({
-      id: `draft-track-${index + 1}`,
-      sequence: index + 1,
-      title: normalizeTrackTitle(files[index]?.name || `Track ${index + 1}`),
-      audioUrl: asset.url,
-    }))
+    const session = await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
+    albumImportDraft.value.importId = session.importId
+    albumImportDraft.value.status = 'uploading'
+    albumImportDraft.value.archiveName = file.name
+    albumImportDraft.value.uploadProgress = 0
+    albumImportDraft.value.uploadSpeed = 0
+
+    await uploadMusicAlbumArchive(session.importId, file, {
+      onProgress(progress) {
+        if (!albumImportDraft.value) return
+        albumImportDraft.value.status = 'uploading'
+        albumImportDraft.value.uploadProgress = progress.total > 0
+          ? Math.round((progress.loaded / progress.total) * 100)
+          : 0
+        albumImportDraft.value.uploadSpeed = progress.bytesPerSecond
+      },
+    })
+
+    albumImportDraft.value.status = 'uploaded'
+    const snapshot = await getMusicAlbumImport(session.importId)
+    applyImportSnapshot(snapshot)
   } catch (error) {
-    console.error('Failed to upload album seed audio batch:', error)
-    errorMessage.value = '音频上传失败'
+    if (albumImportDraft.value) {
+      albumImportDraft.value.status = 'failed'
+      albumImportDraft.value.errorMessage = error instanceof Error ? error.message : '压缩包上传失败'
+    }
+    errorMessage.value = error instanceof Error ? error.message : '压缩包上传失败'
   } finally {
     uploading.value = false
     input.value = ''
   }
 }
-
-function goNext() {
-  if (!creationFlow.value) return
-  if (!creationFlow.value.draft.albumSeed.title.trim()) return
-  if (!creationFlow.value.draft.tracks.length) return
-
-  creationFlow.value.draft.albumDetails.title = creationFlow.value.draft.albumSeed.title
-  setMusicCreationStep('albumDetails')
-}
 </script>
 
 <template>
-  <div v-if="albumSeedDraft" class="album-seed-step" data-testid="album-seed-step">
+  <div v-if="albumImportDraft" class="album-seed-step" data-testid="album-seed-step">
     <div class="album-seed-card">
       <div class="section-heading">
         <span class="section-dot" aria-hidden="true" />
         <div>
-          <p class="step-kicker">Album Seed</p>
-          <h4>上传音频</h4>
-          <p class="step-copy">先写专辑标题并批量上传首批音频，下一步再补全专辑细节。</p>
+          <p class="step-kicker">Album Import</p>
+          <h4>导入专辑压缩包</h4>
+          <p class="step-copy">选择 zip 压缩包后先创建导入会话，再上传并回填解析结果。</p>
         </div>
       </div>
 
       <div class="field-stack">
         <div class="field-group">
           <PInput
-            v-model="albumSeedDraft.title"
-            data-testid="album-seed-title-input"
-            type="text"
-            placeholder="例如 Late Registration"
-            label="专辑标题"
-          />
-        </div>
-
-        <div class="field-group">
-          <PInput
-            data-testid="album-seed-batch-upload"
+            data-testid="album-import-archive-input"
             type="file"
-            accept="audio/*"
-            multiple
+            accept=".zip,application/zip"
             :disabled="uploading"
-            label="批量音频"
-            @change="handleBatchUpload"
+            label="专辑 zip 压缩包"
+            @change="handleArchiveChange"
           />
         </div>
 
         <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-        <p v-else-if="uploading" class="state-line">正在上传音频...</p>
-        <p v-else-if="tracksDraft.length" class="state-line">{{ tracksDraft.length }} 首曲目已加入草稿。</p>
-        <p v-else class="state-line">至少上传一首音频后才能进入下一步。</p>
+        <p v-else-if="albumImportDraft.uploadProgress > 0" class="state-line">
+          上传进度 {{ albumImportDraft.uploadProgress }}%
+        </p>
+        <p v-else class="state-line">上传压缩包后会自动解析封面与曲目信息。</p>
 
-        <div v-if="tracksDraft.length" class="track-list" data-testid="album-seed-track-list">
+        <p
+          v-if="albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0"
+          class="state-line"
+          data-testid="album-import-speed"
+        >
+          {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
+        </p>
+
+        <div v-if="albumImportDraft.archiveName" class="import-summary">
+          <span class="summary-label">当前文件</span>
+          <span class="summary-value">{{ albumImportDraft.archiveName }}</span>
+        </div>
+
+        <div v-if="tracksDraft.length" class="track-list" data-testid="album-import-track-list">
           <div v-for="track in tracksDraft" :key="track.id" class="track-row">
             <span class="track-seq">{{ String(track.sequence).padStart(2, '0') }}</span>
             <span class="track-title">{{ track.title }}</span>
           </div>
         </div>
-      </div>
-
-      <div class="step-actions">
-        <button
-          data-testid="album-seed-next-button"
-          type="button"
-          class="paper-submit"
-          :disabled="uploading"
-          @click="goNext"
-        >
-          继续
-        </button>
       </div>
     </div>
   </div>
@@ -158,32 +184,8 @@ function goNext() {
 .step-copy { margin: 0.4rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 38rem; }
 .field-stack { display: grid; gap: 1rem; }
 .field-group { display: grid; gap: 0.45rem; }
-.field-label {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.field-input {
-  width: 100%;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 24%, transparent);
-  border-radius: 0;
-  padding: 0.25rem 0 0.72rem;
-  background: transparent;
-  color: var(--a-color-ink);
-  font: inherit;
-}
 :deep(.p-input:focus) {
   border-bottom-color: var(--a-color-accent-confirm);
-}
-.field-input--file {
-  border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
-  padding: 0.85rem 0.95rem;
-  color: var(--a-color-ink-soft);
-  background: var(--a-color-bg);
 }
 .state-line {
   margin: 0;
@@ -193,6 +195,25 @@ function goNext() {
   font-weight: 800;
 }
 .state-line--error { color: var(--a-color-accent-destructive); }
+.import-summary {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+}
+.summary-label {
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.summary-value {
+  color: var(--a-color-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
 .track-list {
   display: grid;
   gap: 0.6rem;
@@ -219,23 +240,4 @@ function goNext() {
   font-weight: 800;
 }
 .track-title { color: var(--a-color-ink); font-size: 0.92rem; font-weight: 800; }
-.step-actions { display: flex; justify-content: flex-end; padding-top: 0.25rem; }
-.paper-submit {
-  border: 0;
-  border-radius: 0px;
-  padding: 0.85rem 1.2rem;
-  font-family: var(--a-font-meta);
-  font-weight: 800;
-  cursor: pointer;
-  background: var(--a-color-accent-confirm);
-  color: var(--a-color-paper);
-  transition: background-color 0.15s ease;
-}
-.paper-submit:hover {
-  background: var(--a-color-accent-confirm-hover);
-}
-.paper-submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
 </style>

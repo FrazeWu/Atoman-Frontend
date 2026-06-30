@@ -7,12 +7,13 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
-const { state } = useMusicDrawers()
+const { state, setMusicCreationStep } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
 const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
 const avatarUploading = ref(false)
 const avatarErrorMessage = ref('')
+const stageNameErrorMessage = ref('')
 
 async function onAvatarChange(event: Event) {
   if (!artistDraft.value) return
@@ -35,6 +36,35 @@ async function onAvatarChange(event: Event) {
     input.value = ''
   }
 }
+
+function addStageName() {
+  if (!artistDraft.value) return
+
+  artistDraft.value.stageNames.push({
+    id: `stage-name-${Date.now()}-${artistDraft.value.stageNames.length + 1}`,
+    name: '',
+    isPrimary: false,
+    startDateText: '',
+    endDateText: '',
+  })
+}
+
+function validateStageNames() {
+  if (!artistDraft.value) return false
+
+  const hasInvalidAdditionalStage = artistDraft.value.stageNames.slice(1).some((item) => {
+    return item.name.trim() && !item.startDateText.trim() && !item.endDateText.trim()
+  })
+
+  stageNameErrorMessage.value = hasInvalidAdditionalStage ? '请为追加艺名补充持续时间' : ''
+  return !hasInvalidAdditionalStage
+}
+
+function goNext() {
+  if (!artistDraft.value) return
+  if (!validateStageNames()) return
+  setMusicCreationStep('albumImport')
+}
 </script>
 
 <template>
@@ -45,7 +75,7 @@ async function onAvatarChange(event: Event) {
         <div>
           <p class="step-kicker">Artist Entry</p>
           <h4>创建艺术家</h4>
-          <p class="step-copy">按固定顺序先记录艺术家基础信息，再进入首张专辑草稿。</p>
+          <p class="step-copy">先补齐艺术家基础信息，再进入专辑压缩包导入。</p>
         </div>
       </div>
 
@@ -55,7 +85,7 @@ async function onAvatarChange(event: Event) {
           <div class="avatar-upload">
             <PAvatar
               :src="artistDraft.avatarUrl || undefined"
-              :name="artistDraft.name || 'Artist'"
+              :name="artistDraft.legalName || artistDraft.stageNames[0]?.name || 'Artist'"
               size="lg"
             />
             <div class="avatar-upload__controls">
@@ -76,19 +106,74 @@ async function onAvatarChange(event: Event) {
 
         <div class="field-group">
           <PInput
-            v-model="artistDraft.name"
-            data-testid="artist-name-input"
+            v-model="artistDraft.legalName"
+            data-testid="artist-legal-name-input"
             type="text"
-            placeholder="例如 kanye_west"
-            label="名字"
+            placeholder="例如 Kanye Omari West"
+            label="名字（本名）"
           />
         </div>
 
         <div class="field-group">
-          <span class="field-label">国家</span>
+          <div class="field-inline">
+            <span class="field-label">艺名列表</span>
+            <button
+              data-testid="artist-add-stage-name-button"
+              type="button"
+              class="paper-action paper-action--inline"
+              @click="addStageName"
+            >
+              + 添加另一个艺名
+            </button>
+          </div>
+
+          <div
+            v-for="(stageName, index) in artistDraft.stageNames"
+            :key="stageName.id"
+            class="stage-name-card"
+          >
+            <PInput
+              v-model="stageName.name"
+              :data-testid="`artist-stage-name-input-${index}`"
+              type="text"
+              :label="index === 0 ? '主艺名' : `追加艺名 ${index}`"
+              placeholder="例如 Kanye West / Ye"
+              @update:model-value="stageNameErrorMessage = ''"
+            />
+            <div class="stage-name-dates">
+              <PInput
+                v-model="stageName.startDateText"
+                :data-testid="`artist-stage-start-input-${index}`"
+                type="text"
+                label="开始时间"
+                placeholder="例如 2018"
+                @update:model-value="stageNameErrorMessage = ''"
+              />
+              <PInput
+                v-model="stageName.endDateText"
+                :data-testid="`artist-stage-end-input-${index}`"
+                type="text"
+                label="结束时间"
+                placeholder="例如 2021 / 至今"
+                @update:model-value="stageNameErrorMessage = ''"
+              />
+            </div>
+          </div>
+
+          <p
+            v-if="stageNameErrorMessage"
+            data-testid="artist-stage-name-error"
+            class="state-line state-line--error"
+          >
+            {{ stageNameErrorMessage }}
+          </p>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">国籍</span>
           <PCountryRegionField
-            v-model="artistDraft.country"
-            label="国家"
+            v-model="artistDraft.nationality"
+            label="国籍"
             placeholder="选择国家或地区"
             trigger-test-id="artist-country-trigger"
             search-test-id="artist-country-search"
@@ -98,8 +183,18 @@ async function onAvatarChange(event: Event) {
 
         <div class="field-group">
           <PInput
-            v-model="artistDraft.birthday"
-            data-testid="artist-birthday-input"
+            v-model="artistDraft.birthPlace"
+            data-testid="artist-birth-place-input"
+            type="text"
+            placeholder="例如 Atlanta, Georgia, U.S."
+            label="出生地"
+          />
+        </div>
+
+        <div class="field-group">
+          <PInput
+            v-model="artistDraft.birthDate"
+            data-testid="artist-birth-date-input"
             type="date"
             label="生日"
           />
@@ -121,9 +216,21 @@ async function onAvatarChange(event: Event) {
             data-testid="artist-source-input"
             :rows="3"
             placeholder="记录资料来源"
-            label="来源"
+            label="信息来源"
           />
         </div>
+      </div>
+
+      <div class="step-actions">
+        <button
+          data-testid="artist-next-button"
+          type="button"
+          class="paper-submit"
+          :disabled="avatarUploading"
+          @click="goNext"
+        >
+          下一步
+        </button>
       </div>
     </div>
   </div>
@@ -167,6 +274,12 @@ async function onAvatarChange(event: Event) {
 .step-copy { margin: 0.4rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 36rem; }
 .field-stack { display: grid; gap: 1rem; }
 .field-group { display: grid; gap: 0.45rem; }
+.field-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
 .avatar-upload {
   display: flex;
   align-items: center;
@@ -177,6 +290,18 @@ async function onAvatarChange(event: Event) {
   display: grid;
   gap: 0.45rem;
 }
+.stage-name-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+}
+.stage-name-dates {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .field-label {
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
@@ -185,30 +310,9 @@ async function onAvatarChange(event: Event) {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.field-input {
-  width: 100%;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 24%, transparent);
-  border-radius: 0;
-  padding: 0.25rem 0 0.72rem;
-  background: transparent;
-  color: var(--a-color-ink);
-  font: inherit;
-}
 :deep(.p-input:focus),
 :deep(.p-textarea:focus) {
   border-bottom-color: var(--a-color-accent-confirm);
-}
-.field-input--textarea {
-  resize: vertical;
-  min-height: 6rem;
-  line-height: 1.6;
-}
-.field-input--file {
-  border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
-  padding: 0.85rem 0.95rem;
-  color: var(--a-color-ink-soft);
-  background: var(--a-color-bg);
 }
 .state-line {
   margin: 0;
@@ -218,5 +322,49 @@ async function onAvatarChange(event: Event) {
 }
 .state-line--error {
   color: var(--a-color-accent-destructive);
+}
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+.paper-action {
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 0;
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: var(--a-color-ink);
+  font-family: var(--a-font-meta);
+  font-weight: 800;
+  cursor: pointer;
+}
+.paper-action--inline {
+  padding-inline: 0.75rem;
+}
+.paper-submit {
+  border: 0;
+  border-radius: 0;
+  padding: 0.85rem 1.2rem;
+  font-family: var(--a-font-meta);
+  font-weight: 800;
+  cursor: pointer;
+  background: var(--a-color-accent-confirm);
+  color: var(--a-color-paper);
+  transition: background-color 0.15s ease;
+}
+.paper-submit:hover {
+  background: var(--a-color-accent-confirm-hover);
+}
+.paper-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+@media (max-width: 720px) {
+  .field-inline,
+  .avatar-upload,
+  .stage-name-dates {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
 }
 </style>

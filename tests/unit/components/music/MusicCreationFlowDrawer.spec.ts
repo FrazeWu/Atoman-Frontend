@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { computed, ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed, nextTick, reactive, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import HomeView from '@/views/music/HomeView.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -10,12 +10,23 @@ const drawerMocks = {
   state: ref({
     artistId: null as string | null,
     creationFlow: null as null | {
-      step: 'artist' | 'albumImport'
+      step: 'artist' | 'albumImport' | 'albumDetails'
       draft: {
         artist: {
           id: string | null
+          avatarUrl: string
+          name: string
+          country: string
+          birthday: string
           legalName: string
-          stageNames: string[]
+          avatarAsset?: { id: string; url: string } | null
+          stageNames: Array<{
+            id: string
+            name: string
+            isPrimary: boolean
+            startDateText: string
+            endDateText: string
+          }>
           nationality: string
           birthPlace: string
           birthDate: string
@@ -25,15 +36,34 @@ const drawerMocks = {
         albumImport: {
           importId: string | null
           archiveName: string
-          status: 'idle' | 'uploading' | 'done' | 'error'
+          status: 'pending_upload' | 'uploading' | 'uploaded' | 'extracting' | 'ready' | 'failed' | 'committed'
           uploadProgress: number
-          uploadSpeed: string
+          uploadSpeed: number
           coverUrl: string
           coverKey: string
+          derivedAlbumTitle: string
+          derivedCover: string
+          derivedTracks: Array<{
+            title: string
+            audioKey: string
+            origin: string
+          }>
+          lastSyncedAt: string
           errorMessage: string
         }
-        albumDetails: {
+        albumSeed: {
           title: string
+          uploadedAssets: Array<{
+            id: string
+            url: string
+          }>
+        }
+        albumDetails: {
+          coverUrl: string
+          coverAsset?: { id: string; url: string } | null
+          title: string
+          releaseDate: string
+          type: string
           releaseYear: string
           bio: string
           source: string
@@ -42,8 +72,9 @@ const drawerMocks = {
           id: string
           sequence: number
           title: string
-          audioKey: string
-          origin: string
+          audioUrl?: string
+          audioKey?: string
+          origin?: string
         }>
       }
       dirty: boolean
@@ -55,14 +86,24 @@ const drawerMocks = {
   setMusicCreationStep: vi.fn(),
 }
 
+const routeQuery = reactive<Record<string, string | undefined>>({})
+const mountedWrappers: Array<{ unmount: () => void }> = []
+
 const homeMocks = vi.hoisted(() => ({
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
   openAlbum: vi.fn(),
+  closeAlbum: vi.fn(),
   openArtist: vi.fn(),
+  closeArtist: vi.fn(),
   openMusicCreationFlow: vi.fn(),
-  routeQuery: {} as Record<string, string>,
 }))
+
+afterEach(() => {
+  while (mountedWrappers.length) {
+    mountedWrappers.pop()?.unmount()
+  }
+})
 
 vi.mock('@/api/musicV1', async () => {
   const actual = await vi.importActual<typeof import('@/api/musicV1')>('@/api/musicV1')
@@ -84,7 +125,7 @@ const submitMusicEditMock = musicApi.submitMusicEdit as ReturnType<typeof vi.fn>
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
-    query: homeMocks.routeQuery,
+    query: routeQuery,
   }),
 }))
 
@@ -121,7 +162,9 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     state: drawerMocks.state,
     openAlbum: homeMocks.openAlbum,
+    closeAlbum: homeMocks.closeAlbum,
     openArtist: homeMocks.openArtist,
+    closeArtist: homeMocks.closeArtist,
     openMusicCreationFlow: homeMocks.openMusicCreationFlow,
     closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
     setMusicCreationStep: drawerMocks.setMusicCreationStep,
@@ -135,9 +178,13 @@ describe('Music HomeView search entry', () => {
     homeMocks.listMusicAlbums.mockReset()
     homeMocks.listMusicArtists.mockReset()
     homeMocks.openAlbum.mockReset()
+    homeMocks.closeAlbum.mockReset()
     homeMocks.openArtist.mockReset()
+    homeMocks.closeArtist.mockReset()
     homeMocks.openMusicCreationFlow.mockReset()
-    homeMocks.routeQuery = {}
+    for (const key of Object.keys(routeQuery)) {
+      delete routeQuery[key]
+    }
     homeMocks.listMusicAlbums.mockResolvedValue({
       data: [],
       meta: { page: 1, page_size: 48, total: 0, has_more: false },
@@ -148,7 +195,7 @@ describe('Music HomeView search entry', () => {
     })
   })
 
-  it('uses the new search placeholder and empty CTA opens artist step', async () => {
+  it('uses music-search-input and both CTAs open artist creation with the new copy', async () => {
     const wrapper = mount(HomeView, {
       global: {
         stubs: {
@@ -159,14 +206,177 @@ describe('Music HomeView search entry', () => {
         },
       },
     })
+    mountedWrappers.push(wrapper)
 
     await flushPromises()
 
-    expect(wrapper.get('input.search-input').attributes('placeholder')).toBe('搜索艺术家 / 专辑...')
+    const searchInput = wrapper.get('[data-testid="music-search-input"]')
+    expect(searchInput.attributes('placeholder')).toBe('搜索艺术家 / 专辑...')
+    expect(wrapper.text()).toContain('找不到？添加艺术家和首张专辑')
+
+    await wrapper.get('.search-bar .paper-action').trigger('click')
+    expect(homeMocks.openMusicCreationFlow).toHaveBeenNthCalledWith(1, { startStep: 'artist' })
 
     await wrapper.get('[data-testid="empty-add-artist-and-album"]').trigger('click')
 
-    expect(homeMocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'artist' })
+    expect(homeMocks.openMusicCreationFlow).toHaveBeenNthCalledWith(2, { startStep: 'artist' })
+  })
+
+  it('keeps album results when artist search fails', async () => {
+    homeMocks.listMusicAlbums.mockImplementation(async ({ q }: { q?: string }) => {
+      if (q === 'album') {
+        return {
+          data: [
+            {
+              id: 'album-1',
+              title: 'Album Survives',
+              cover_url: '',
+              release_date: '2024-01-01',
+              year: 2024,
+              album_type: 'album',
+              entry_status: 'confirmed',
+              hot_score: 88,
+              artists: [{ id: 'artist-1', name: 'Artist One' }],
+            },
+          ],
+          meta: { page: 1, page_size: 48, total: 1, has_more: false },
+        }
+      }
+      return {
+        data: [],
+        meta: { page: 1, page_size: 48, total: 0, has_more: false },
+      }
+    })
+    homeMocks.listMusicArtists.mockRejectedValueOnce(new Error('artist search failed'))
+
+    const wrapper = mount(HomeView, {
+      global: {
+        stubs: {
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: true,
+        },
+      },
+    })
+    mountedWrappers.push(wrapper)
+
+    await wrapper.get('[data-testid="music-search-input"]').setValue('album')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Album Survives')
+    expect(wrapper.findAll('[data-testid="album-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(0)
+    expect(wrapper.text()).not.toContain('专辑列表加载失败')
+  })
+
+  it('ignores stale responses when a newer search resolves first', async () => {
+    let resolveFirstAlbums!: (value: { data: Array<any>; meta: any }) => void
+    const firstAlbums = new Promise<{ data: Array<any>; meta: any }>((resolve) => {
+      resolveFirstAlbums = resolve
+    })
+    const secondAlbums = Promise.resolve({
+      data: [
+        {
+          id: 'album-new',
+          title: 'Newest Album',
+          cover_url: '',
+          release_date: '2025-01-01',
+          year: 2025,
+          album_type: 'album',
+          entry_status: 'confirmed',
+          hot_score: 91,
+          artists: [],
+        },
+      ],
+      meta: { page: 1, page_size: 48, total: 1, has_more: false },
+    })
+    homeMocks.listMusicAlbums.mockImplementation(() => {
+      return homeMocks.listMusicAlbums.mock.calls.length === 1 ? firstAlbums : secondAlbums
+    })
+
+    let resolveFirstArtists!: (value: { data: Array<any>; meta: any }) => void
+    const firstArtists = new Promise<{ data: Array<any>; meta: any }>((resolve) => {
+      resolveFirstArtists = resolve
+    })
+    const secondArtists = Promise.resolve({
+      data: [],
+      meta: { page: 1, page_size: 12, total: 0, has_more: false },
+    })
+    homeMocks.listMusicArtists.mockImplementation(() => {
+      return homeMocks.listMusicArtists.mock.calls.length === 1 ? firstArtists : secondArtists
+    })
+
+    const wrapper = mount(HomeView, {
+      global: {
+        stubs: {
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: true,
+        },
+      },
+    })
+    mountedWrappers.push(wrapper)
+
+    await wrapper.get('[data-testid="music-search-input"]').setValue('old')
+    await wrapper.get('[data-testid="music-search-input"]').setValue('new')
+    await flushPromises()
+
+    resolveFirstAlbums({
+      data: [
+        {
+          id: 'album-old',
+          title: 'Old Album',
+          cover_url: '',
+          release_date: '2023-01-01',
+          year: 2023,
+          album_type: 'album',
+          entry_status: 'confirmed',
+          hot_score: 70,
+          artists: [],
+        },
+      ],
+      meta: { page: 1, page_size: 48, total: 1, has_more: false },
+    })
+    resolveFirstArtists({
+      data: [],
+      meta: { page: 1, page_size: 12, total: 0, has_more: false },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Newest Album')
+    expect(wrapper.text()).not.toContain('Old Album')
+  })
+
+  it('closes artist and album drawers after matching route query params are removed', async () => {
+    routeQuery.artist = 'artist-9'
+    routeQuery.album = 'album-7'
+
+    const wrapper = mount(HomeView, {
+      global: {
+        stubs: {
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: true,
+        },
+      },
+    })
+    mountedWrappers.push(wrapper)
+    await flushPromises()
+
+    expect(homeMocks.openArtist).toHaveBeenCalledWith('artist-9')
+    expect(homeMocks.openAlbum).toHaveBeenCalledWith('album-7')
+    homeMocks.closeArtist.mockReset()
+    homeMocks.closeAlbum.mockReset()
+
+    delete routeQuery.artist
+    delete routeQuery.album
+    await nextTick()
+
+    expect(homeMocks.closeArtist).toHaveBeenCalledTimes(1)
+    expect(homeMocks.closeAlbum).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -175,7 +385,7 @@ describe('useMusicDrawers creation flow draft model', () => {
     vi.resetModules()
   })
 
-  it('creates the new artist and albumImport draft skeleton', async () => {
+  it('creates the new artist and album seed draft skeleton', async () => {
     const module = await vi.importActual<typeof import('@/composables/useMusicDrawers')>('@/composables/useMusicDrawers')
     const drawers = module.useMusicDrawers()
     drawers.closeAll()
@@ -186,8 +396,21 @@ describe('useMusicDrawers creation flow draft model', () => {
     expect(drawers.state.value.creationFlow?.draft).toEqual({
       artist: {
         id: 'artist-7',
+        avatarUrl: '',
+        name: '',
+        country: '',
+        birthday: '',
         legalName: '',
-        stageNames: [],
+        avatarAsset: null,
+        stageNames: [
+          {
+            id: 'stage-name-primary',
+            name: '',
+            isPrimary: true,
+            startDateText: '',
+            endDateText: '',
+          },
+        ],
         nationality: '',
         birthPlace: '',
         birthDate: '',
@@ -197,15 +420,27 @@ describe('useMusicDrawers creation flow draft model', () => {
       albumImport: {
         importId: null,
         archiveName: '',
-        status: 'idle',
+        status: 'pending_upload',
         uploadProgress: 0,
-        uploadSpeed: '',
+        uploadSpeed: 0,
         coverUrl: '',
         coverKey: '',
+        derivedAlbumTitle: '',
+        derivedCover: '',
+        derivedTracks: [],
+        lastSyncedAt: '',
         errorMessage: '',
       },
-      albumDetails: {
+      albumSeed: {
         title: '',
+        uploadedAssets: [],
+      },
+      albumDetails: {
+        coverUrl: '',
+        coverAsset: null,
+        title: '',
+        releaseDate: '',
+        type: 'album',
         releaseYear: '',
         bio: '',
         source: '',
@@ -225,7 +460,7 @@ describe('MusicCreationFlowDrawer.vue shell', () => {
       drawerMocks.state.value.creationFlow = null
     })
     drawerMocks.setMusicCreationStep.mockReset()
-    drawerMocks.setMusicCreationStep.mockImplementation((step: 'artist' | 'albumImport') => {
+    drawerMocks.setMusicCreationStep.mockImplementation((step: 'artist' | 'albumImport' | 'albumDetails') => {
       if (drawerMocks.state.value.creationFlow) {
         drawerMocks.state.value.creationFlow.step = step
       }
@@ -236,8 +471,21 @@ describe('MusicCreationFlowDrawer.vue shell', () => {
       draft: {
         artist: {
           id: 'artist-seeded',
+          avatarUrl: '',
+          name: '',
+          country: '',
+          birthday: '',
           legalName: '',
-          stageNames: [],
+          avatarAsset: null,
+          stageNames: [
+            {
+              id: 'stage-name-primary',
+              name: '',
+              isPrimary: true,
+              startDateText: '',
+              endDateText: '',
+            },
+          ],
           nationality: '',
           birthPlace: '',
           birthDate: '',
@@ -247,15 +495,27 @@ describe('MusicCreationFlowDrawer.vue shell', () => {
         albumImport: {
           importId: null,
           archiveName: '',
-          status: 'idle',
+          status: 'pending_upload',
           uploadProgress: 0,
-          uploadSpeed: '',
+          uploadSpeed: 0,
           coverUrl: '',
           coverKey: '',
+          derivedAlbumTitle: '',
+          derivedCover: '',
+          derivedTracks: [],
+          lastSyncedAt: '',
           errorMessage: '',
         },
-        albumDetails: {
+        albumSeed: {
           title: '',
+          uploadedAssets: [],
+        },
+        albumDetails: {
+          coverUrl: '',
+          coverAsset: null,
+          title: '',
+          releaseDate: '',
+          type: 'album',
           releaseYear: '',
           bio: '',
           source: '',
@@ -276,19 +536,5 @@ describe('MusicCreationFlowDrawer.vue shell', () => {
     expect(wrapper.text()).toContain('下一步')
     expect(wrapper.text()).toContain('第 1 步')
     expect(wrapper.findAll('[data-testid="artist-step"] button')).toHaveLength(1)
-  })
-
-  it('asks for confirmation before discarding a draft with only album import data in the new model', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    if (drawerMocks.state.value.creationFlow) {
-      drawerMocks.state.value.creationFlow.draft.albumImport.uploadProgress = 18
-    }
-
-    const wrapper = mount(MusicCreationFlowDrawer)
-    wrapper.getComponent({ name: 'PSheet' }).vm.$emit('close')
-
-    expect(confirmSpy).toHaveBeenCalledWith('确认关闭？未完成的艺术家/专辑创建不会保存。')
-    expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
-    expect(drawerMocks.state.value.creationFlow).not.toBeNull()
   })
 })

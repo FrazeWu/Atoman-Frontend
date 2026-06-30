@@ -14,7 +14,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 type DiscoveryMode = 'hot' | 'random'
 
 const route = useRoute()
-const { isMainShifted, openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
+const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicCreationFlow } = useMusicDrawers()
 
 const albums = ref<MusicAlbumListItem[]>([])
 const artists = ref<MusicArtistListItem[]>([])
@@ -22,6 +22,9 @@ const searchQuery = ref('')
 const mode = ref<DiscoveryMode>('hot')
 const loading = ref(false)
 const errorMessage = ref('')
+let activeRequestId = 0
+let lastRouteArtist: string | null = null
+let lastRouteAlbum: string | null = null
 
 const modeLabel = computed(() => (mode.value === 'hot' ? '热门' : '随机'))
 
@@ -45,31 +48,51 @@ function hotScoreLabel(album: MusicAlbumListItem) {
 }
 
 async function fetchAlbums() {
+  const requestId = ++activeRequestId
   loading.value = true
   errorMessage.value = ''
+  const query = searchQuery.value.trim() || undefined
+
   try {
-    const query = searchQuery.value.trim() || undefined
-    const [albumsResponse, artistsResponse] = await Promise.all([
-      listMusicAlbums({
-        q: query,
-        page: 1,
-        page_size: 48,
-        sort: mode.value,
-      }),
-      query
-        ? listMusicArtists({
-            q: query,
-            page: 1,
-            page_size: 12,
-          })
-        : Promise.resolve({ data: [], meta: { page: 1, page_size: 12, total: 0, has_more: false } }),
-    ])
+    const albumsResponse = await listMusicAlbums({
+      q: query,
+      page: 1,
+      page_size: 48,
+      sort: mode.value,
+    })
+    if (requestId !== activeRequestId) return
     albums.value = albumsResponse.data
-    artists.value = artistsResponse.data
   } catch (e) {
+    if (requestId !== activeRequestId) return
     console.error('Failed to fetch music discovery data:', e)
     errorMessage.value = '专辑列表加载失败'
+    artists.value = []
+    loading.value = false
+    return
+  }
+
+  if (!query) {
+    if (requestId === activeRequestId) {
+      artists.value = []
+      loading.value = false
+    }
+    return
+  }
+
+  try {
+    const artistsResponse = await listMusicArtists({
+      q: query,
+      page: 1,
+      page_size: 12,
+    })
+    if (requestId !== activeRequestId) return
+    artists.value = artistsResponse.data
+  } catch (e) {
+    if (requestId !== activeRequestId) return
+    console.error('Failed to fetch music artist search data:', e)
+    artists.value = []
   } finally {
+    if (requestId !== activeRequestId) return
     loading.value = false
   }
 }
@@ -96,8 +119,21 @@ function openArtistFromCard(artistId: string) {
 function applyRouteSelection() {
   const artist = route.query.artist
   const album = route.query.album
-  if (typeof artist === 'string' && artist) openArtist(artist)
-  if (typeof album === 'string' && album) openAlbum(album)
+  if (typeof artist === 'string' && artist) {
+    openArtist(artist)
+    lastRouteArtist = artist
+  } else if (lastRouteArtist !== null) {
+    closeArtist()
+    lastRouteArtist = null
+  }
+
+  if (typeof album === 'string' && album) {
+    openAlbum(album)
+    lastRouteAlbum = album
+  } else if (lastRouteAlbum !== null) {
+    closeAlbum()
+    lastRouteAlbum = null
+  }
 }
 
 onMounted(() => {
@@ -156,11 +192,12 @@ watch(
         <PInput
           v-model="searchQuery"
           placeholder="搜索艺术家 / 专辑..."
+          data-testid="music-search-input"
           class="search-input"
         />
-        <button class="paper-action" type="button" @click="openMusicCreationFlow()">
+        <button class="paper-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
           <span class="paper-action-dot" aria-hidden="true" />
-          找不到？添加艺术家
+          找不到？添加艺术家和首张专辑
         </button>
       </div>
 
@@ -177,7 +214,7 @@ watch(
             @click="openMusicCreationFlow({ startStep: 'artist' })"
           >
             <span class="paper-action-dot" aria-hidden="true" />
-            添加艺术家 / 专辑
+            找不到？添加艺术家和首张专辑
           </button>
         </div>
       </div>

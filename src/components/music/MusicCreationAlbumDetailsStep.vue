@@ -69,7 +69,7 @@ async function onCoverChange(event: Event) {
 }
 
 function goBack() {
-  setMusicCreationStep('albumSeed')
+  setMusicCreationStep('albumImport')
 }
 </script>
 

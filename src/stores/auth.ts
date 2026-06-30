@@ -119,6 +119,17 @@ async function parseApiResponse(response: Response): Promise<AuthApiPayload> {
 }
 
 function authErrorMessage(payload: AuthApiError, fallback: string) {
+  const rawMessage = payload.error || payload.message
+  if (rawMessage === 'Turnstile verification is required') {
+    return '请先完成人机验证'
+  }
+  if (rawMessage === 'Turnstile verification failed') {
+    return '人机验证失败，请重试'
+  }
+  if (rawMessage === 'Turnstile is not configured') {
+    return '注册服务暂未完成验证配置，请稍后重试'
+  }
+
   if (payload.error) return payload.error
   if (payload.message) return payload.message
 

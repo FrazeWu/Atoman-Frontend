@@ -73,6 +73,13 @@
         />
 
         <p v-if="visibleError" class="a-error auth-error" role="alert">{{ visibleError }}</p>
+        <p
+          v-if="turnstileConfigMissing"
+          class="a-error auth-error"
+          role="alert"
+        >
+          当前站点未启用人机验证配置，请联系管理员处理。
+        </p>
 
         <TurnstileWidget
           v-if="turnstileEnabled"
@@ -116,6 +123,7 @@ import { useApi } from '@/composables/useApi'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
+import { shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
 
 const email = ref('')
 const password = ref('')
@@ -137,9 +145,21 @@ const api = useApi()
 const isRegister = computed(() => route.path === '/register')
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 const turnstileEnabled = computed(() => isRegister.value && import.meta.env.PROD && !!turnstileSiteKey)
+const turnstileConfigMissing = computed(() => shouldRequireTurnstileConfig(isRegister.value, import.meta.env.PROD, turnstileSiteKey))
 const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
 
+const safeRedirectPath = (redirect: unknown) => {
+  if (typeof redirect !== 'string') return '/'
+  if (!redirect.startsWith('/') || redirect.startsWith('//')) return '/'
+  if (/[\u0000-\u001F\u007F]/.test(redirect)) return '/'
+  return redirect
+}
+
 const requireTurnstileToken = () => {
+  if (turnstileConfigMissing.value) {
+    errorMsg.value = '当前站点未启用人机验证配置，请联系管理员处理。'
+    return false
+  }
   if (!turnstileEnabled.value) return true
   if (turnstileToken.value) return true
 
@@ -228,8 +248,7 @@ const handleSubmit = async () => {
     } else {
       await authStore.loginWithPassword(email.value, password.value)
     }
-    const redirect = route.query.redirect as string
-    router.push(redirect || '/')
+    router.push(safeRedirectPath(route.query.redirect))
   } catch (error: any) {
     errorMsg.value = error.message
     resetTurnstile()

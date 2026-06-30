@@ -1,605 +1,319 @@
-<template>
-  <div ref="pageRootRef" class="a-page-xl feed-page">
-    <PPageHeader title="探索" accent sub="发现更多有趣的订阅内容">
-      <template #action>
-        <div class="explore-header-actions">
-          <div class="explore-sort-tabs">
-            <PTab
-              v-for="option in sortOptions"
-              :key="option.value"
-              :label="option.label"
-              :active="sort === option.value"
-              @click="changeSort(option.value)"
-            />
-          </div>
-          <PPress to="/feed" variant="secondary" label="返回订阅" />
-        </div>
-      </template>
-    </PPageHeader>
-
-    <FeedSourceArticlesSheet
-      :show="showSourceSheet"
-      :source="selectedSource"
-      :items="sourceArticles"
-      :loading="sourceArticlesLoading"
-      :subscribe-busy="sourceSubscribeBusy"
-      @close="showSourceSheet = false"
-      @subscribe="subscribeSelectedSource"
-      @open-article="openSourceArticle"
-    />
-
-    <section class="feed-content">
-      <div class="feed-actions">
-        <div class="explore-mode-switch">
-          <PPress
-            data-test="explore-mode-articles"
-            label="文章浏览"
-            :variant="mode === 'articles' ? 'primary' : 'secondary'"
-            @click="changeMode('articles')"
-          />
-          <PPress
-            data-test="explore-mode-channels"
-            label="频道浏览"
-            :variant="mode === 'channels' ? 'primary' : 'secondary'"
-            @click="changeMode('channels')"
-          />
-        </div>
-      </div>
-
-      <ArticleExplorePanel
-        v-if="mode === 'articles'"
-        :items="items"
-        :loading="loading"
-        :total-items="totalItems"
-        :page="page"
-        :page-size="pageLimit"
-        :selected-article="selectedArticle"
-        :show-article-sheet="showArticleSheet"
-        :focused-index="focusedIndex"
-        :starred-ids="starredIds"
-        :reading-list-ids="readingListIds"
-        :feed-item-source="feedItemSource"
-        :source-trigger-label="sourceTriggerLabel"
-        @open-article="openArticleSheet"
-        @open-source="openFeedItemSourceSheet"
-        @toggle-star="toggleStar"
-        @toggle-reading-list="toggleReadingList"
-        @change-page="changePage"
-        @play-podcast="playPodcast"
-      />
-
-      <ChannelExplorePanel
-        v-else
-        :category-options="channelCategoryOptions"
-        :active-category="channelCategory"
-        :items="channelItems"
-        :loading="channelLoading"
-        :error="channelError"
-        :total-items="channelTotalItems"
-        :page="page"
-        :page-size="pageLimit"
-        :subscribing-source-id="subscribingChannelSourceId"
-        @open-source="openExploreSource"
-        @subscribe-source="subscribeExploreSource"
-        @change-category="changeChannelCategory"
-        @retry="retryChannels"
-        @change-page="changePage"
-      />
-    </section>
-
-    <PShortcutHints :hints="shortcutHints" />
-    <FeedArticleSheet
-      :show="showArticleSheet"
-      :article="selectedArticle"
-      :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
-      @close="showArticleSheet = false"
-      @play-podcast="playPodcast"
-    />
-  </div>
-</template>
-
 <script setup lang="ts">
-import { nextTick, ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PTab from '@/components/ui/PTab.vue'
-import PShortcutHints from '@/components/ui/PShortcutHints.vue'
-import ArticleExplorePanel from '@/components/feed/ArticleExplorePanel.vue'
-import ChannelExplorePanel from '@/components/feed/ChannelExplorePanel.vue'
-import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
-import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import { useApi } from '@/composables/useApi'
-import { useAuthStore } from '@/stores/auth'
-import { useFeedStore } from '@/stores/feed'
-import { usePlayerStore } from '@/stores/player'
-import { useUIStore } from '@/stores/ui'
-import { useKeyboardList } from '@/composables/useKeyboardList'
-import type { FeedArticleSource, FeedExploreSource, FeedItem, FeedSourceCategory, TimelineItem } from '@/types'
-import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 
-const route = useRoute()
+type RecommendationMode = 'hot' | 'featured' | 'discover'
+
+type RecommendationItem = {
+  id: string
+  title: string
+  summary?: string
+  image_url?: string
+  target_path: string
+  score_label?: string
+}
+
 const router = useRouter()
-const authStore = useAuthStore()
-const feedStore = useFeedStore()
-const playerStore = usePlayerStore()
-const uiStore = useUIStore()
 const api = useApi()
-const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
-const normalizePage = (value: unknown) => {
-  const parsed = Number.parseInt(String(value || '1'), 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
-}
+const mode = ref<RecommendationMode>('hot')
+const loading = ref(false)
+const errorMessage = ref('')
+const articles = ref<RecommendationItem[]>([])
+const channels = ref<RecommendationItem[]>([])
 
-const items = ref<TimelineItem[]>([])
-const loading = ref(true)
-const mode = ref<'articles' | 'channels'>('articles')
-const sort = ref<'random' | 'popular'>('popular')
-const sortOptions: Array<{ label: string; value: 'random' | 'popular' }> = [
-  { label: '热门', value: 'popular' },
-  { label: '随机', value: 'random' },
-]
-const page = ref(1)
-const totalItems = ref(0)
-const channelItems = ref<FeedExploreSource[]>([])
-const channelLoading = ref(false)
-const channelError = ref('')
-const channelTotalItems = ref(0)
-const channelCategory = ref<FeedSourceCategory | 'all'>('all')
-const channelRequestToken = ref(0)
-const pageLimit = 20
-const subscriptions = computed(() => feedStore.subscriptions)
-const pageRootRef = ref<HTMLElement | null>(null)
-const starredIds = computed(() => feedStore.starredItemIds)
-const readingListIds = computed(() => feedStore.readingListItemIds)
-
-const showArticleSheet = ref(false)
-const selectedArticle = ref<TimelineItem | null>(null)
-const showSourceSheet = ref(false)
-const selectedSource = ref<FeedArticleSource | null>(null)
-const sourceArticles = ref<TimelineItem[]>([])
-const sourceArticlesLoading = ref(false)
-const sourceSubscribeBusy = ref(false)
-const subscribingChannelSourceId = ref('')
-const channelCategoryOptions: Array<{ label: string; value: FeedSourceCategory | 'all' }> = [
-  { label: '全部', value: 'all' },
-  { label: '博客', value: 'blog' },
-  { label: '新闻', value: 'news' },
-  { label: '社交', value: 'social' },
-  { label: '视频', value: 'video' },
-  { label: '论坛', value: 'forum' },
-  { label: '播客', value: 'podcast' },
+const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
+  { label: '热度', value: 'hot' },
+  { label: '精选', value: 'featured' },
+  { label: '探索', value: 'discover' },
 ]
 
-const shortcutHints = [
-  { key: 'H', label: '聚焦侧边栏' },
-  { key: 'L', label: '聚焦内容区' },
-  { key: 'J / K', label: '上下切换项目' },
-  { key: 'Enter', label: '打开当前项' },
-  { key: 'Esc', label: '关闭面板' },
-  { key: 'S', label: '收藏/退藏' },
-  { key: 'L', label: '稍后阅读' },
-  { key: 'V', label: '查看原文' }
-]
-
-const { focusedIndex, scrollToFocused } = useKeyboardList({
-  items,
-  section: 'content',
-  onEnter: (item, index) => openArticleSheet(item, index),
-  onAction: (key, item) => {
-    const id = item.feed_item?.id
-    if (!id) return
-    switch (key) {
-      case 's': toggleStar(id); break
-      case 'l': toggleReadingList(id); break
-      case 'v': window.open(item.feed_item?.link || '#', '_blank'); break
-    }
-  }
-})
-
-// Auto-focus first item when switching to content area
-watch(() => uiStore.focusedSection, (section) => {
-  if (section === 'content' && focusedIndex.value === -1 && items.value.length > 0) {
-    focusedIndex.value = 0
-    scrollToFocused()
-  }
-})
-
-// Reset focus when items change
-watch(items, () => {
-  if (focusedIndex.value >= items.value.length) {
-    focusedIndex.value = items.value.length > 0 ? 0 : -1
-  }
-})
-
-const openArticleSheet = (item: TimelineItem, index?: number) => {
-  if (index !== undefined) focusedIndex.value = index
-  selectedArticle.value = item
-  showArticleSheet.value = true
-}
-
-const findSubscriptionForSource = (source: FeedArticleSource) => {
-  if (source.type === 'internal_channel') {
-    return subscriptions.value.find((sub) => (
-      sub.feed_source?.source_type === 'internal_channel'
-      && sub.feed_source.source_id === source.id
-    ))
-  }
-
-  if (source.type === 'external_rss') {
-    return subscriptions.value.find((sub) => (
-      sub.feed_source_id === source.id
-      || sub.feed_source?.id === source.id
-      || (!!source.rssUrl && sub.feed_source?.rss_url === source.rssUrl)
-    ))
-  }
-
-  return undefined
-}
-
-const withSubscriptionState = (source: FeedArticleSource): FeedArticleSource => {
-  const subscription = findSubscriptionForSource(source)
-  return {
-    ...source,
-    subscriptionId: subscription?.id || source.subscriptionId,
-    subscribed: Boolean(subscription || source.subscribed),
-  }
-}
-
-const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
-  const sourceId = item.feed_source?.id || item.feed_source_id
-  if (!sourceId) return null
-  return withSubscriptionState({
-    type: 'external_rss',
-    id: sourceId,
-    title: item.feed_source?.title || 'RSS',
-    rssUrl: item.feed_source?.rss_url,
-    subscribed: false,
-  })
-}
-
-const sourceTriggerLabel = (source: FeedArticleSource) => `查看 ${source.title} 的所有文章`
-
-const mapExploreSource = (source: Record<string, any>): FeedExploreSource => ({
-  id: source.id,
-  title: source.title || '未命名来源',
-  rssUrl: source.rss_url || source.rssUrl,
-  category: normalizeFeedSourceCategory(source.category),
-  subscriptionCount: Number(source.subscription_count ?? source.subscriptionCount ?? 0),
-  recentItemCount: Number(source.recent_item_count ?? source.recentItemCount ?? 0),
-  lastPublishedAt: source.last_published_at || source.lastPublishedAt || source.last_fetched_at || source.lastFetchedAt,
-  subscribed: Boolean(source.subscribed),
-  recentItems: Array.isArray(source.recent_items || source.recentItems)
-    ? (source.recent_items || source.recentItems).map((item: Record<string, any>) => ({
-      id: item.id,
-      title: item.title || '未命名文章',
-      publishedAt: item.published_at || item.publishedAt,
-    }))
-    : [],
-})
-
-const normalizeFeedSourceCategory = (value: unknown): FeedSourceCategory => {
-  if (value === 'news' || value === 'social' || value === 'video' || value === 'forum' || value === 'podcast') return value
-  return 'blog'
-}
-
-const withExploreSourceSubscriptionState = (source: FeedExploreSource): FeedExploreSource => {
-  const articleSource = mapExploreSourceToArticleSource(source)
-  const subscription = findSubscriptionForSource(articleSource)
-  return {
-    ...source,
-    subscribed: Boolean(source.subscribed || subscription),
-  }
-}
-
-const mapExploreSourceToArticleSource = (source: FeedExploreSource): FeedArticleSource => withSubscriptionState({
-  type: 'external_rss',
-  id: source.id,
-  title: source.title,
-  rssUrl: source.rssUrl,
-  subscribed: source.subscribed,
-})
-
-const openSourceArticle = (item: TimelineItem) => {
-  selectedArticle.value = item
-  showArticleSheet.value = true
-}
-
-const fetchSourceArticles = async (source: FeedArticleSource) => {
-  if (!source.id && !source.subscriptionId) {
-    sourceArticles.value = []
-    return
-  }
-
-  sourceArticlesLoading.value = true
-  try {
-    const params = source.id
-      ? new URLSearchParams({
-        limit: '100',
-        feed_source_id: source.id,
-      })
-      : buildFeedTimelineQuery({
-        limit: 100,
-        sourceId: source.subscriptionId,
-      })
-    const headers = authStore.isAuthenticated ? authHeaders() : {}
-    const response = await fetch(`${api.url}/feed/timeline?${params.toString()}`, { headers })
-    if (response.ok) {
-      const data = await response.json()
-      sourceArticles.value = data.data || []
-    }
-  } catch (error) {
-    console.error(error)
-    sourceArticles.value = []
-  } finally {
-    sourceArticlesLoading.value = false
-  }
-}
-
-const openSourceSheet = async (source: FeedArticleSource) => {
-  selectedSource.value = withSubscriptionState(source)
-  sourceArticles.value = []
-  showSourceSheet.value = true
-  showArticleSheet.value = false
-  await fetchSourceArticles(selectedSource.value)
-}
-
-const openExploreSource = async (source: FeedExploreSource) => {
-  await openChannelSourceSheet(source)
-}
-
-const openChannelSourceSheet = async (source: FeedExploreSource) => {
-  await openSourceSheet(mapExploreSourceToArticleSource(source))
-}
-
-const openFeedItemSourceSheet = async (item: FeedItem) => {
-  const source = feedItemSource(item)
-  if (!source) return
-  await openSourceSheet(source)
-}
-
-const subscribeSelectedSource = async () => {
-  if (!selectedSource.value || selectedSource.value.subscribed || !authStore.isAuthenticated) return
-
-  sourceSubscribeBusy.value = true
-  try {
-    let success = false
-    if (selectedSource.value.type === 'external_rss' && selectedSource.value.rssUrl) {
-      success = await feedStore.subscribeToRSS(selectedSource.value.rssUrl, selectedSource.value.title)
-    }
-    if (!success) return
-
-    await feedStore.fetchSubscriptions()
-    selectedSource.value = withSubscriptionState(selectedSource.value)
-    await fetchSourceArticles(selectedSource.value)
-  } finally {
-    sourceSubscribeBusy.value = false
-  }
-}
-
-const subscribeExploreSource = async (source: FeedExploreSource) => {
-  if (source.subscribed || !source.rssUrl || !authStore.isAuthenticated || subscribingChannelSourceId.value) return
-
-  subscribingChannelSourceId.value = source.id
-  try {
-    const success = await feedStore.subscribeToRSS(source.rssUrl, source.title)
-    if (!success) return
-
-    await feedStore.fetchSubscriptions()
-    await fetchExploreSources()
-  } finally {
-    subscribingChannelSourceId.value = ''
-  }
-}
-
-const toggleStar = async (id: string) => {
-  if (!authStore.isAuthenticated) return
-  await feedStore.toggleStar(id)
-}
-
-const toggleReadingList = async (id: string) => {
-  if (!authStore.isAuthenticated) return
-  await feedStore.toggleReadingListItem(id)
-}
-
-const playPodcast = (feedItem: FeedItem) => {
-  playerStore.setQueueFromCurrentItems(items.value)
-
-  const tempSong = playerStore.createPodcastSong(feedItem)
-  if (!tempSong) return
-
-  playerStore.playSong(tempSong)
-}
-
-const isPodcastPlaying = (feedItem: FeedItem) =>
-  playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
-
-const fetchExplore = async () => {
+async function fetchRecommendations() {
   loading.value = true
+  errorMessage.value = ''
   try {
-    const params = new URLSearchParams({ sort: sort.value, page: String(page.value), limit: String(pageLimit) })
-    const headers = authStore.isAuthenticated ? authHeaders() : {}
-    const res = await fetch(`${api.feed.explore}?${params.toString()}`, {
-      headers
-    })
-    if (res.ok) {
-      const d = await res.json()
-      items.value = d.data || []
-      totalItems.value = d.total ?? d.meta?.total ?? 0
+    const [articleRes, channelRes] = await Promise.all([
+      fetch(`${api.url}/feed/recommend/articles?mode=${mode.value}`),
+      fetch(`${api.url}/feed/recommend/channels?mode=${mode.value}`),
+    ])
+
+    if (!articleRes.ok || !channelRes.ok) {
+      throw new Error(`feed recommend failed: ${articleRes.status}/${channelRes.status}`)
     }
-  } catch (e) {
-    console.error(e)
+
+    const [articlePayload, channelPayload] = await Promise.all([
+      articleRes.json(),
+      channelRes.json(),
+    ])
+
+    articles.value = Array.isArray(articlePayload.data) ? articlePayload.data : []
+    channels.value = Array.isArray(channelPayload.data) ? channelPayload.data : []
+  } catch (error) {
+    console.error('Failed to fetch feed recommendations:', error)
+    errorMessage.value = '推荐内容加载失败'
+    articles.value = []
+    channels.value = []
   } finally {
     loading.value = false
   }
 }
 
-const fetchExploreSources = async () => {
-  const requestToken = ++channelRequestToken.value
-  channelLoading.value = true
-  channelError.value = ''
-  try {
-    const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
-    if (channelCategory.value !== 'all') params.set('category', channelCategory.value)
-    const headers = authStore.isAuthenticated ? authHeaders() : {}
-    const res = await fetch(`${api.feed.exploreSources}?${params.toString()}`, { headers })
-    if (!res.ok) {
-      throw new Error(`频道探索加载失败: ${res.status}`)
-    }
-    const d = await res.json()
-    if (requestToken !== channelRequestToken.value) return
-    channelItems.value = Array.isArray(d.data)
-      ? d.data.map((source: Record<string, any>) => withExploreSourceSubscriptionState(mapExploreSource(source)))
-      : []
-    channelTotalItems.value = d.total ?? d.meta?.total ?? 0
-  } catch (error) {
-    if (requestToken !== channelRequestToken.value) return
-    console.error(error)
-    channelItems.value = []
-    channelTotalItems.value = 0
-    channelError.value = '频道探索加载失败，请稍后重试。'
-  } finally {
-    if (requestToken !== channelRequestToken.value) return
-    channelLoading.value = false
-  }
-}
-
-const scrollToTop = async () => {
-  await nextTick()
-  pageRootRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-}
-
-const changePage = async (nextPage: number) => {
-  const normalizedPage = normalizePage(nextPage)
-  if (normalizedPage === page.value) return
-  const query = {
-    ...route.query,
-    page: normalizedPage > 1 ? String(normalizedPage) : undefined,
-  }
-  await router.push({ query })
-  await scrollToTop()
-}
-
-const changeMode = async (nextMode: 'articles' | 'channels') => {
+function changeMode(nextMode: RecommendationMode) {
   if (nextMode === mode.value) return
-  const query = {
-    ...route.query,
-    mode: nextMode === 'channels' ? 'channels' : undefined,
-    page: undefined,
-    category: nextMode === 'channels' && channelCategory.value !== 'all' ? channelCategory.value : undefined,
-    sort: nextMode === 'articles' && sort.value !== 'popular' ? sort.value : undefined,
-  }
-  await router.push({ query })
+  mode.value = nextMode
 }
 
-const changeChannelCategory = async (category: FeedSourceCategory | 'all') => {
-  if (category === channelCategory.value) return
-  channelCategory.value = category
-  page.value = 1
-  channelItems.value = []
-  channelTotalItems.value = 0
-  await fetchExploreSources()
-  await scrollToTop()
+function openTarget(path: string) {
+  router.push(path)
 }
 
-const changeSort = (newSort: 'random' | 'popular') => {
-  sort.value = newSort
-  const query = { ...route.query, page: undefined, sort: newSort !== 'popular' ? newSort : undefined }
-  router.push({ query })
-}
-
-const retryChannels = async () => {
-  await fetchExploreSources()
-}
-
-const normalizeChannelCategoryQuery = (value: unknown): FeedSourceCategory | 'all' => {
-  if (value === 'blog' || value === 'news' || value === 'social' || value === 'video' || value === 'forum' || value === 'podcast') return value
-  return 'all'
-}
-
-const handleKeyDownGlobal = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    showArticleSheet.value = false
-  }
-}
-
-watch(
-  () => route.query,
-  async (query) => {
-    page.value = normalizePage(query.page)
-    mode.value = query.mode === 'channels' ? 'channels' : 'articles'
-    channelCategory.value = normalizeChannelCategoryQuery(query.category)
-    const queriedSort = query.sort === 'random' ? 'random' : 'popular'
-    sort.value = queriedSort
-    if (mode.value === 'channels') {
-      await fetchExploreSources()
-      return
-    }
-    await fetchExplore()
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
-  if (authStore.isAuthenticated) {
-    feedStore.fetchStarredIds()
-    feedStore.fetchReadingListIds()
-    void feedStore.fetchSubscriptions()
-  }
-  window.addEventListener('keydown', handleKeyDownGlobal)
+watch(mode, () => {
+  fetchRecommendations()
 })
 
-watch(
-  [() => authStore.isAuthenticated, () => authStore.token],
-  ([isAuthenticated, token], [previousAuthenticated, previousToken]) => {
-    if (!isAuthenticated) return
-    if (previousAuthenticated !== isAuthenticated || previousToken !== token) {
-      void feedStore.fetchSubscriptions()
-    }
-  },
-  { immediate: true },
-)
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDownGlobal)
+onMounted(() => {
+  fetchRecommendations()
 })
 </script>
 
+<template>
+  <div class="a-page-xl feed-recommend-page">
+    <PPageHeader
+      title="探索"
+      accent
+      kicker="FEED RECOMMEND"
+      sub="把订阅文章和频道拆开推荐，用热度、精选、探索三种模式浏览。"
+    >
+      <template #action>
+        <div class="header-actions">
+          <div class="mode-tabs" aria-label="订阅推荐模式">
+            <PTab
+              v-for="option in modeOptions"
+              :key="option.value"
+              :label="option.label"
+              :active="mode === option.value"
+              @click="changeMode(option.value)"
+            />
+          </div>
+          <PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" />
+        </div>
+      </template>
+    </PPageHeader>
+
+    <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+    <p v-else-if="loading" class="state-line">正在加载推荐内容...</p>
+
+    <div v-else class="recommend-grid">
+      <section class="recommend-section">
+        <div class="section-head">
+          <p class="section-kicker">ARTICLES</p>
+          <h2>推荐文章</h2>
+        </div>
+
+        <PEmpty
+          v-if="!articles.length"
+          kicker="Articles"
+          title="当前没有推荐文章"
+          description="等有更多内容和互动信号后，这里会显示文章推荐。"
+        />
+
+        <div v-else class="card-stack">
+          <article
+            v-for="item in articles"
+            :key="item.id"
+            class="recommend-card"
+            @click="openTarget(item.target_path)"
+          >
+            <div class="recommend-card__cover">
+              <img v-if="item.image_url" :src="item.image_url" :alt="item.title" class="recommend-card__img" />
+              <span v-else class="recommend-card__fallback">POST</span>
+            </div>
+            <div class="recommend-card__body">
+              <p class="recommend-card__meta">{{ item.score_label || '推荐' }}</p>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.summary || '打开后查看完整文章内容。' }}</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="recommend-section">
+        <div class="section-head">
+          <p class="section-kicker">CHANNELS</p>
+          <h2>推荐频道</h2>
+        </div>
+
+        <PEmpty
+          v-if="!channels.length"
+          kicker="Channels"
+          title="当前没有推荐频道"
+          description="等频道侧积累更多更新和质量信号后，这里会显示频道推荐。"
+        />
+
+        <div v-else class="card-stack">
+          <article
+            v-for="item in channels"
+            :key="item.id"
+            class="recommend-card"
+            data-test="channel-card"
+            @click="openTarget(item.target_path)"
+          >
+            <div class="recommend-card__cover recommend-card__cover--channel">
+              <img v-if="item.image_url" :src="item.image_url" :alt="item.title" class="recommend-card__img" />
+              <span v-else class="recommend-card__fallback">CHANNEL</span>
+            </div>
+            <div class="recommend-card__body">
+              <p class="recommend-card__meta">{{ item.score_label || '推荐' }}</p>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.summary || '打开后查看频道文章和归档内容。' }}</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </div>
+</template>
+
 <style scoped>
-.feed-page {
-  padding-bottom: 12rem;
+.feed-recommend-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-bottom: 6rem;
 }
 
-.feed-content {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.state-line {
+  margin: 0;
+  color: var(--a-color-muted);
+}
+
+.state-line--error {
+  color: #8a2f2f;
+}
+
+.recommend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.recommend-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.section-head h2,
+.section-kicker {
+  margin: 0;
+}
+
+.section-kicker {
+  color: var(--a-color-muted);
+  font-family: var(--a-font-meta);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+}
+
+.card-stack {
   display: grid;
   gap: 1rem;
 }
 
-.explore-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
+.recommend-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+  cursor: pointer;
 }
 
-.explore-sort-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  align-items: center;
-}
-
-.feed-actions {
+.recommend-card__cover {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  min-height: 2.5rem;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--a-color-line-soft);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
 }
 
-.explore-mode-switch {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+.recommend-card__cover--channel {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.06));
+}
+
+.recommend-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recommend-card__fallback {
+  color: var(--a-color-muted);
+  font-family: var(--a-font-meta);
+  letter-spacing: 0.16em;
+}
+
+.recommend-card__body {
+  min-width: 0;
+}
+
+.recommend-card__body h3,
+.recommend-card__body p {
+  margin: 0;
+}
+
+.recommend-card__meta {
+  margin-bottom: 0.45rem !important;
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+}
+
+.recommend-card__body h3 {
+  margin-bottom: 0.45rem !important;
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+.recommend-card__body p:last-child {
+  color: var(--a-color-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 960px) {
+  .recommend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .recommend-card {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

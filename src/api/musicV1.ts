@@ -111,6 +111,17 @@ export type MusicAlbumUpdateInput = Partial<MusicAlbumInput>
 
 export type MusicListResponse<T> = ApiList<T>
 
+export type MusicRecommendationMode = 'hot' | 'featured' | 'discover'
+
+export type MusicRecommendationItem = {
+  id: string
+  title: string
+  summary?: string
+  image_url?: string
+  target_path: string
+  score_label?: string
+}
+
 export type MusicListFilters = {
   q?: string
   artist_id?: string
@@ -172,6 +183,7 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
   albums: () => `${API_V1_BASE}/music/albums`,
   album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
+  recommendAlbums: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/albums?mode=${mode}`,
   edits: () => `${API_V1_BASE}/music/edits`,
   edit: (editId: string) => `${API_V1_BASE}/music/edits/${editId}`,
   editVotes: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/votes`,
@@ -351,6 +363,10 @@ export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<M
 
 export async function getMusicAlbum(albumId: string): Promise<MusicAlbumListItem> {
   return apiGet<MusicAlbumListItem>(musicV1Endpoints.album(albumId))
+}
+
+export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
+  return apiGetEnvelope<MusicRecommendationItem[]>(musicV1Endpoints.recommendAlbums(mode))
 }
 
 export async function listMusicArtists(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicArtistListItem>> {

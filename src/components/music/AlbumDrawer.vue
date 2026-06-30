@@ -16,6 +16,30 @@ const errorMessage = ref('')
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => album.value?.release_date?.slice(0, 4) || '----')
 const tracks = computed(() => [...(album.value?.songs || [])].sort((a, b) => (a.track_number || 0) - (b.track_number || 0)))
+const discussionCount = computed(() => {
+  const currentAlbum = album.value as (MusicAlbumListItem & {
+    discussion_count?: number
+    open_discussion_count?: number
+  }) | null
+
+  if (!currentAlbum) return undefined
+  return currentAlbum.discussion_count ?? currentAlbum.open_discussion_count
+})
+
+function formatDuration(value: unknown): string {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    const minutes = Math.floor(value / 60)
+    const seconds = Math.floor(value % 60)
+    return `${minutes}:${String(seconds).padStart(2, '0')}`
+  }
+
+  if (typeof value === 'string' && value.trim()) return value
+  return ''
+}
+
+function getTrackDurationLabel(track: MusicAlbumListItem['songs'][number] | Record<string, unknown>): string {
+  return formatDuration((track as { duration_sec?: unknown }).duration_sec ?? (track as { duration?: unknown }).duration)
+}
 
 async function loadAlbum(albumId: string | null) {
   if (!albumId) {
@@ -73,14 +97,14 @@ watch(() => state.value.albumId, loadAlbum, { immediate: true })
       </div>
 
       <div class="action-bar">
-        <button class="paper-action paper-action--primary">
+        <span class="paper-action paper-action--primary paper-action--static">
           <span class="paper-action-dot" aria-hidden="true" />
           播放全专
-        </button>
-        <button class="paper-action">
+        </span>
+        <span class="paper-action paper-action--static">
           <span class="paper-action-dot" aria-hidden="true" />
           收藏
-        </button>
+        </span>
         <div class="spacer"></div>
         <button class="paper-action" @click="openNestedAction('revise')">
           <span class="paper-action-dot" aria-hidden="true" />
@@ -97,11 +121,11 @@ watch(() => state.value.albumId, loadAlbum, { immediate: true })
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="(track, index) in tracks" :key="track.id" class="track">
           <div><span class="track-num">{{ String(track.track_number || index + 1).padStart(2, '0') }}</span> {{ track.title }}</div>
-          <div class="track-time">03:45</div>
+          <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
         </div>
       </div>
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion')" count="12" />
+    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion')" :count="discussionCount" />
   </PSheet>
 </template>
 
@@ -193,8 +217,15 @@ watch(() => state.value.albumId, loadAlbum, { immediate: true })
   text-transform: uppercase;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
+.paper-action--static {
+  cursor: default;
+}
 .paper-action:last-child {
   border-right: none;
+}
+.paper-action--static:hover {
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
 }
 .paper-action:hover {
   background: var(--a-color-fg);

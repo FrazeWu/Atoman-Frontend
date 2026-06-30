@@ -27,13 +27,6 @@ function fmtDate(s: string): string {
 
 const avatarLetter = () =>
   (props.video.channel?.name ?? props.video.user?.username ?? '?')[0].toUpperCase()
-
-const handleWatchLater = (e: Event) => {
-  e.preventDefault()
-  e.stopPropagation()
-  // logic will be implemented later
-  console.log('Watch later:', props.video.id)
-}
 </script>
 
 <template>
@@ -49,9 +42,7 @@ const handleWatchLater = (e: Event) => {
       
       <!-- Overlays -->
       <div class="vc-overlay-top-right">
-        <button class="vc-watch-later" @click="handleWatchLater">
-          稍后看
-        </button>
+        <span class="vc-watch-later">稍后看</span>
       </div>
 
       <div class="vc-overlay-bottom-left">

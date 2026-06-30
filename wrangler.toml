@@ -3,9 +3,12 @@ name = "atoman-frontend"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-06-25"
 
+
 [vars]
 VITE_API_URL = "https://api.atoman.org/api"
+VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADWwdyVXIVtGi_DE"
 
 [env.production.vars]
 VITE_API_URL = "https://api.atoman.org/api"
 VITE_R2_PUBLIC_BASE_URL = "https://assets.atoman.org"
+VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADWwdyVXIVtGi_DE"

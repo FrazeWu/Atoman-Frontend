@@ -147,6 +147,7 @@ const channelLoading = ref(false)
 const channelError = ref('')
 const channelTotalItems = ref(0)
 const channelCategory = ref<FeedSourceCategory | 'all'>('all')
+const channelRequestToken = ref(0)
 const pageLimit = 20
 const subscriptions = computed(() => feedStore.subscriptions)
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -435,6 +436,7 @@ const fetchExplore = async () => {
 }
 
 const fetchExploreSources = async () => {
+  const requestToken = ++channelRequestToken.value
   channelLoading.value = true
   channelError.value = ''
   try {
@@ -446,23 +448,26 @@ const fetchExploreSources = async () => {
       throw new Error(`频道探索加载失败: ${res.status}`)
     }
     const d = await res.json()
+    if (requestToken !== channelRequestToken.value) return
     channelItems.value = Array.isArray(d.data)
       ? d.data.map((source: Record<string, any>) => withExploreSourceSubscriptionState(mapExploreSource(source)))
       : []
     channelTotalItems.value = d.total ?? d.meta?.total ?? 0
   } catch (error) {
+    if (requestToken !== channelRequestToken.value) return
     console.error(error)
     channelItems.value = []
     channelTotalItems.value = 0
     channelError.value = '频道探索加载失败，请稍后重试。'
   } finally {
+    if (requestToken !== channelRequestToken.value) return
     channelLoading.value = false
   }
 }
 
 const scrollToTop = async () => {
   await nextTick()
-  pageRootRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  pageRootRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
 }
 
 const changePage = async (nextPage: number) => {
@@ -490,13 +495,12 @@ const changeMode = async (nextMode: 'articles' | 'channels') => {
 
 const changeChannelCategory = async (category: FeedSourceCategory | 'all') => {
   if (category === channelCategory.value) return
-  const query = {
-    ...route.query,
-    mode: 'channels',
-    page: undefined,
-    category: category === 'all' ? undefined : category,
-  }
-  await router.push({ query })
+  channelCategory.value = category
+  page.value = 1
+  channelItems.value = []
+  channelTotalItems.value = 0
+  await fetchExploreSources()
+  await scrollToTop()
 }
 
 const changeSort = (newSort: 'random' | 'popular') => {

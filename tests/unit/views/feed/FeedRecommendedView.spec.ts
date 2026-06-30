@@ -19,6 +19,16 @@ describe('FeedRecommendedView', () => {
   beforeEach(() => {
     routerPush.mockReset()
     Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
+    routerPush.mockImplementation(async (target) => {
+      if (!target || typeof target !== 'object' || !('query' in target)) return
+      const query = (target as { query?: Record<string, string | undefined> }).query || {}
+      Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== undefined) {
+          routeQuery[key] = value
+        }
+      })
+    })
     setActivePinia(createPinia())
     window.history.replaceState(null, '', '/explore?site=feed')
 
@@ -370,18 +380,19 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.text()).not.toContain('https://example.com/rss.xml')
   })
 
-  it('filters channel explore data by category', async () => {
+  it('filters channel explore data by category without routing the whole page', async () => {
     Object.assign(routeQuery, { mode: 'channels', category: 'news' })
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
       if (url.includes('/feed/explore/sources')) {
+        const category = new URL(url, 'http://localhost').searchParams.get('category') || 'all'
         return new Response(JSON.stringify({
           data: [{
-            id: 'source-news',
-            title: 'News Source',
-            rss_url: 'https://news.example.com/rss.xml',
-            category: 'news',
+            id: `source-${category}`,
+            title: `${category} Source`,
+            rss_url: `https://${category}.example.com/rss.xml`,
+            category: category === 'all' ? 'blog' : category,
             subscription_count: 3,
             recent_item_count: 8,
             last_published_at: '2026-06-19T00:00:00Z',

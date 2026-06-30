@@ -106,7 +106,7 @@ const compactCount = (value: number) => {
   align-items: start;
   padding: 1.15rem 1.25rem;
   border: 1px solid var(--a-color-line-soft);
-  border-left: 3px solid transparent;
+  border-left: 3px solid color-mix(in srgb, var(--feed-source-color, var(--a-color-line)) 24%, var(--a-color-line-soft));
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;

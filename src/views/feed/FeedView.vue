@@ -376,9 +376,8 @@ const headerRef = ref<HTMLElement | null>(null)
 const pageRootRef = ref<HTMLElement | null>(null)
 const headerBottom = computed(() => {
   if (!showAddModal.value) return '56px'
-  // 56px topbar + header content
   const height = headerRef.value?.offsetHeight || 160
-  return `${56 + height}px`
+  return `${height}px`
 })
 
 const openArticleSheet = (item: TimelineItem, index?: number) => {

@@ -142,6 +142,47 @@ describe('FeedView', () => {
     expect(pageButtons).toContain('2')
   })
 
+  it('positions the add subscription sheet directly below the sticky header without double-counting the top bar', async () => {
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          SubscriptionAddSheet: {
+            name: 'SubscriptionAddSheet',
+            props: ['show', 'top'],
+            template: '<div data-test="add-sheet-probe" :data-show="String(show)" :data-top="top"></div>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const headerRef = wrapper.vm.$refs.headerRef as HTMLElement
+    Object.defineProperty(headerRef, 'offsetHeight', { configurable: true, value: 160 })
+
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    const sheet = wrapper.get('[data-test="add-sheet-probe"]')
+    expect(sheet.attributes('data-show')).toBe('true')
+    expect(sheet.attributes('data-top')).toBe('160px')
+  })
+
   it('does not render feed-item-only actions for internal posts', async () => {
     const wrapper = mount(FeedView, {
       global: {

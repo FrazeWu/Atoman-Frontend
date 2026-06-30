@@ -70,7 +70,7 @@ describe('FeedView', () => {
         stubs: {
           PButton: true,
           PModal: true,
-          PEmpty: true,
+          PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSelect: true,
           PField: true,
@@ -122,7 +122,7 @@ describe('FeedView', () => {
         stubs: {
           PButton: true,
           PModal: true,
-          PEmpty: true,
+          PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSelect: true,
           PField: true,
@@ -142,13 +142,44 @@ describe('FeedView', () => {
     expect(pageButtons).toContain('2')
   })
 
+  it('does not show anonymous timeline items on the subscription home', async () => {
+    const authStore = useAuthStore()
+    authStore.token = ''
+    authStore.user = null as any
+    authStore.isAuthenticated = false
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅后开始探索')
+    expect(wrapper.text()).not.toContain('内部文章')
+  })
+
   it('positions the add subscription sheet directly below the sticky header without double-counting the top bar', async () => {
     const wrapper = mount(FeedView, {
       global: {
         stubs: {
           PButton: true,
           PModal: true,
-          PEmpty: true,
+          PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSelect: true,
           PField: true,
@@ -189,7 +220,7 @@ describe('FeedView', () => {
         stubs: {
           PButton: true,
           PModal: true,
-          PEmpty: true,
+          PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PSelect: true,
           PField: true,
@@ -706,7 +737,7 @@ describe('FeedView', () => {
     expect(routerReplace).toHaveBeenCalledWith({ query: { page: '2' } })
   })
 
-  it('renders anonymous public feed items from the paged v1 response', async () => {
+  it('shows an empty subscription state for anonymous visitors', async () => {
     const authStore = useAuthStore()
     authStore.token = null
     authStore.user = null
@@ -757,8 +788,8 @@ describe('FeedView', () => {
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain('公开 RSS 条目')
-    expect(wrapper.get('[data-test="feed-footer"]').attributes('data-total')).toBe('1')
+    expect(wrapper.text()).not.toContain('公开 RSS 条目')
+    expect(wrapper.find('[data-test="feed-footer"]').exists()).toBe(false)
   })
 
   it('auto-adds subscriptions from the unified add sheet submit event', async () => {
@@ -891,14 +922,14 @@ describe('FeedView', () => {
 
     const playerStore = usePlayerStore()
     const setQueueSpy = vi.spyOn(playerStore, 'setQueueFromCurrentItems')
-    const playSongSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(() => {})
+    const playQueuedSongSpy = vi.spyOn(playerStore, 'playQueuedSong').mockImplementation(() => {})
     const createPodcastSongSpy = vi.spyOn(playerStore, 'createPodcastSong')
 
     await wrapper.get('[data-test="sheet-play"]').trigger('click')
 
     expect(setQueueSpy).toHaveBeenCalled()
     expect(createPodcastSongSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed-item-play-1' }))
-    expect(playSongSpy).toHaveBeenCalled()
+    expect(playQueuedSongSpy).toHaveBeenCalled()
   })
 
   it('submits feed search through the route query and resets to the first page', async () => {

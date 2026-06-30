@@ -821,6 +821,12 @@ const fetchTimeline = async () => {
   loadingTimeline.value = true
 
   try {
+    if (!authStore.isAuthenticated) {
+      timeline.value = []
+      totalItems.value = 0
+      return
+    }
+
     const params = buildFeedTimelineQuery({
       page: currentPage.value,
       limit: pageLimit,
@@ -887,7 +893,7 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   }
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
-  playerStore.playSong(tempSong)
+  playerStore.playQueuedSong(tempSong)
 }
 
 const toggleAllRead = async () => {

@@ -144,13 +144,22 @@ describe('router auth guards', () => {
     expect(router.currentRoute.value.path).toBe('/__disabled__')
   })
 
-  it('does not allow module routes when site access loading fails', async () => {
+  it('keeps module routes reachable with default access when site access loading fails', async () => {
     vi.mocked(fetch).mockResolvedValue(new Response('', { status: 500 }))
     const router = await createGuardRouter('feed')
 
     await router.push('/media')
 
-    expect(router.currentRoute.value.path).toBe('/__disabled__')
+    expect(router.currentRoute.value.path).toBe('/media')
+  })
+
+  it('keeps login reachable when site access loading fails', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 500 }))
+    const router = await createGuardRouter('feed')
+
+    await router.push('/login')
+
+    expect(router.currentRoute.value.path).toBe('/login')
   })
 
   it('initializes onboarding after restoring authenticated session', async () => {

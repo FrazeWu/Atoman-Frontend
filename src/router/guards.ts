@@ -6,6 +6,7 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole, isOwnerRole } from '@/utils/roles'
 
 const disabledTarget = { path: '/__disabled__' }
+const publicSystemPaths = new Set(['/login', '/register', '/about', '/terms', '/privacy', disabledTarget.path])
 
 function parseOnboardingStep(value: unknown): OnboardingStep | null {
   return typeof value === 'string' && onboardingSteps.includes(value as OnboardingStep)
@@ -19,7 +20,7 @@ export function installRouteGuards(router: Router) {
     const onboardingStore = useOnboardingStore()
     const siteAccessStore = useSiteAccessStore()
     const isSettingRoute = to.path === '/setting' || to.path.startsWith('/setting/')
-    const isDisabledTarget = to.path === disabledTarget.path
+    const isPublicSystemRoute = publicSystemPaths.has(to.path)
     const hasValidSession = authStore.validateSession() || await authStore.restoreSession()
     const onboardingStep = parseOnboardingStep(to.query.onboarding_step)
 
@@ -35,11 +36,12 @@ export function installRouteGuards(router: Router) {
       return { path: to.path, query, hash: to.hash, replace: true }
     }
 
-    if (!isSettingRoute && !isDisabledTarget && !siteAccessStore.loaded && !siteAccessStore.loading) {
+    if (!isSettingRoute && !isPublicSystemRoute && !siteAccessStore.loaded && !siteAccessStore.loading) {
       try {
         await siteAccessStore.load()
       } catch {
-        return disabledTarget
+        // Fail open with the default access config so a transient settings API
+        // failure does not make the whole site unreachable.
       }
     }
 
@@ -54,7 +56,7 @@ export function installRouteGuards(router: Router) {
       return '/setting'
     }
 
-    if (!isSettingRoute && !isDisabledTarget) {
+    if (!isSettingRoute && !isPublicSystemRoute) {
       const targetUrl = new URL(to.fullPath, window.location.origin)
       const context = resolveSiteContext(window.location.hostname, targetUrl.search, to.path)
       if (context.type === 'module' && !siteAccessStore.isModuleVisible(context.module)) {
@@ -63,7 +65,7 @@ export function installRouteGuards(router: Router) {
     }
 
     const featureGate = to.meta.featureGate as { module: Parameters<typeof siteAccessStore.isFeatureEnabled>[0]; feature: Parameters<typeof siteAccessStore.isFeatureEnabled>[1] } | undefined
-    if (!isSettingRoute && !isDisabledTarget && featureGate && !siteAccessStore.isFeatureEnabled(featureGate.module, featureGate.feature)) {
+    if (!isSettingRoute && !isPublicSystemRoute && featureGate && !siteAccessStore.isFeatureEnabled(featureGate.module, featureGate.feature)) {
       return disabledTarget
     }
   })

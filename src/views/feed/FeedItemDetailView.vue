@@ -11,7 +11,7 @@
     <div v-else-if="!item" class="feed-error">
       <PEmpty text="内容不存在或已被删除" />
       <div style="text-align:center;margin-top:3rem">
-        <RouterLink to="/" style="text-decoration:none">
+        <RouterLink to="/feed" style="text-decoration:none">
           <PPress variant="secondary" label="← 返回订阅" />
         </RouterLink>
       </div>
@@ -20,7 +20,7 @@
     <!-- Content -->
     <article v-else class="feed-article">
       <header class="article-header">
-        <RouterLink to="/" class="back-link">← BACK TO FEED</RouterLink>
+        <RouterLink to="/feed" class="back-link">← BACK TO FEED</RouterLink>
         <h1 class="article-title">{{ item.title }}</h1>
         <div class="article-meta">
           <PBadge type="external">{{ item.feed_source?.title || 'RSS' }}</PBadge>

@@ -71,6 +71,13 @@ describe('App responsive shell', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/site/access')) {
+        return new Response(JSON.stringify({ modules: {} }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
   })
 
   it('mounts mobile bottom nav on sidebar module routes', async () => {

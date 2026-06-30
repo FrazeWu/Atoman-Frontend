@@ -1,48 +1,45 @@
-import type { UploadAsset } from '@/api/types'
-
-export type MusicCreationFlowStep = 'artist' | 'albumSeed' | 'albumDetails'
-
-export interface MusicCreationUploadedAssetDraft {
-  id: string
-  url: string
-}
+export type MusicCreationFlowStep = 'artist' | 'albumImport'
 
 export interface MusicCreationTrackDraft {
   id: string
   sequence: number
   title: string
-  audioUrl: string
+  audioKey: string
+  origin: string
 }
 
 export interface MusicCreationArtistDraft {
   id: string | null
-  avatarUrl: string
-  avatarAsset?: UploadAsset | null
-  name: string
-  country: string
-  birthday: string
+  legalName: string
+  stageNames: string[]
+  nationality: string
+  birthPlace: string
+  birthDate: string
   bio: string
   source: string
 }
 
-export interface MusicCreationAlbumSeedDraft {
-  title: string
-  uploadedAssets: MusicCreationUploadedAssetDraft[]
+export interface MusicCreationAlbumImportDraft {
+  importId: string | null
+  archiveName: string
+  status: 'idle' | 'uploading' | 'done' | 'error'
+  uploadProgress: number
+  uploadSpeed: string
+  coverUrl: string
+  coverKey: string
+  errorMessage: string
 }
 
 export interface MusicCreationAlbumDetailsDraft {
-  coverUrl: string
-  coverAsset?: UploadAsset | null
   title: string
-  releaseDate: string
-  type: 'album'
+  releaseYear: string
   bio: string
   source: string
 }
 
 export interface MusicCreationDraft {
   artist: MusicCreationArtistDraft
-  albumSeed: MusicCreationAlbumSeedDraft
+  albumImport: MusicCreationAlbumImportDraft
   albumDetails: MusicCreationAlbumDetailsDraft
   tracks: MusicCreationTrackDraft[]
 }

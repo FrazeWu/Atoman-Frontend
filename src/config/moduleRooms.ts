@@ -102,6 +102,8 @@ export const moduleNavOrder: ModuleRoomKey[] = [
   'forum',
   'debate',
   'timeline',
+  'podcast',
+  'video',
 ]
 
 export const isRoomRouteActive = (key: ModuleRoomKey, context: SiteContext) => (

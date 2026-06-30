@@ -287,7 +287,7 @@ const loadChannels = async () => {
 
 const handleVideoAction = async (action: 'edit' | 'delete', video: any) => {
   if (action === 'edit') {
-    router.push(`/edit/${video.id}`)
+    router.push(`/videos/edit/${video.id}`)
   } else if (action === 'delete') {
     if (confirm(`确定要删除视频《${video.title}》吗？`)) {
       try {

@@ -15,7 +15,7 @@ describe('module room naming config', () => {
   })
 
   it('keeps module navigation order stable', () => {
-    expect(moduleNavOrder).toEqual(['feed', 'media', 'music', 'forum', 'debate', 'timeline'])
+    expect(moduleNavOrder).toEqual(['feed', 'media', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
   })
 
   it('uses root home paths for subdomain-scoped modules', () => {

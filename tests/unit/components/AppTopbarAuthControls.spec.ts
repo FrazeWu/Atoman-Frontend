@@ -5,10 +5,22 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import AppTopbarAuthControls from '@/components/system/AppTopbarAuthControls.vue'
 import { useAuthStore } from '@/stores/auth'
 import { nextTick, ref } from 'vue'
+import { afterEach } from 'vitest'
 
 const loadChannelsMock = vi.fn()
 const clearChannelsMock = vi.fn()
 const channelsMock = ref<Array<{ id: string; name: string }>>([])
+const mountedWrappers: Array<ReturnType<typeof mount>> = []
+
+const mountTopbar = () => {
+  const wrapper = mount(AppTopbarAuthControls, {
+    global: {
+      plugins: [router],
+    },
+  })
+  mountedWrappers.push(wrapper)
+  return wrapper
+}
 
 vi.mock('@/composables/useMediaChannel', () => ({
   useMediaChannel: () => ({
@@ -24,9 +36,9 @@ const router = createRouter({
   history: createMemoryHistory(),
   routes: [
     { path: '/media', component: { template: '<div />' } },
-    { path: '/inbox', component: { template: '<div />' } },
-    { path: '/bookmarks', component: { template: '<div />' } },
-    { path: '/settings', component: { template: '<div />' } },
+    { path: '/feed/inbox', component: { template: '<div />' } },
+    { path: '/posts/bookmarks', component: { template: '<div />' } },
+    { path: '/posts/settings', component: { template: '<div />' } },
     { path: '/login', component: { template: '<div />' } },
   ],
 })
@@ -34,28 +46,36 @@ const router = createRouter({
 describe('AppTopbarAuthControls', () => {
   beforeEach(() => {
     loadChannelsMock.mockReset()
+    loadChannelsMock.mockResolvedValue(undefined)
     clearChannelsMock.mockReset()
     channelsMock.value = []
     setActivePinia(createPinia())
     const authStore = useAuthStore()
     authStore.user = { id: 1, username: 'alice', email: 'alice@example.com', role: 'user' }
     authStore.isAuthenticated = true
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/notifications/unread-count') || url.endsWith('/dm/unread-count')) {
+        return new Response(JSON.stringify({ count: 0 }), { status: 200 })
+      }
+      throw new Error(`未 mock fetch: ${url}`)
+    })
+  })
+
+  afterEach(() => {
+    mountedWrappers.splice(0).forEach(wrapper => wrapper.unmount())
   })
 
   it('renders authenticated inbox and user controls', async () => {
-    const wrapper = mount(AppTopbarAuthControls, {
-      global: {
-        plugins: [router],
-      },
-    })
+    const wrapper = mountTopbar()
 
     await wrapper.find('.user-btn').trigger('click')
 
     expect(wrapper.text()).toContain('alice')
-    expect(wrapper.find('a[href="/inbox"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/feed/inbox"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/bookmarks"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/settings"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/posts/bookmarks"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/posts/settings"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/setting"]').exists()).toBe(false)
     expect(wrapper.html()).not.toContain('/blog/bookmarks')
   })
@@ -64,11 +84,7 @@ describe('AppTopbarAuthControls', () => {
     const authStore = useAuthStore()
     authStore.user = { id: 1, username: 'owner', email: 'owner@example.com', role: 'owner' }
 
-    const wrapper = mount(AppTopbarAuthControls, {
-      global: {
-        plugins: [router],
-      },
-    })
+    const wrapper = mountTopbar()
 
     await wrapper.find('.user-btn').trigger('click')
 
@@ -88,11 +104,7 @@ describe('AppTopbarAuthControls', () => {
 
     await router.push('/media')
 
-    mount(AppTopbarAuthControls, {
-      global: {
-        plugins: [router],
-      },
-    })
+    mountTopbar()
 
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
   })
@@ -108,11 +120,7 @@ describe('AppTopbarAuthControls', () => {
 
     await router.push('/media')
 
-    mount(AppTopbarAuthControls, {
-      global: {
-        plugins: [router],
-      },
-    })
+    mountTopbar()
 
     expect(loadChannelsMock).not.toHaveBeenCalled()
   })
@@ -131,11 +139,7 @@ describe('AppTopbarAuthControls', () => {
 
     await router.push('/media')
 
-    mount(AppTopbarAuthControls, {
-      global: {
-        plugins: [router],
-      },
-    })
+    mountTopbar()
 
     loadChannelsMock.mockClear()
     authStore.user = {
@@ -163,12 +167,36 @@ describe('AppTopbarAuthControls', () => {
 
     await router.push('/media')
 
-    mount(AppTopbarAuthControls, {
-      global: {
-        plugins: [router],
-      },
-    })
+    mountTopbar()
 
     expect(loadChannelsMock).toHaveBeenCalledWith('token-1', 'user-uuid-1')
+  })
+
+  it('does not lock same user retries before media channels finish loading', async () => {
+    const authStore = useAuthStore()
+    authStore.token = 'token-1'
+    authStore.user = {
+      id: 1,
+      uuid: 'user-uuid-1',
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'user',
+    }
+    channelsMock.value = [{ id: 'old-channel', name: '旧频道' }]
+    loadChannelsMock.mockReturnValue(new Promise(() => {}))
+
+    await router.push('/media')
+
+    mountTopbar()
+
+    expect(loadChannelsMock).toHaveBeenCalledTimes(1)
+
+    await router.push('/inbox')
+    await nextTick()
+    await router.push('/media')
+    await nextTick()
+
+    expect(loadChannelsMock).toHaveBeenCalledTimes(2)
+    expect(loadChannelsMock).toHaveBeenLastCalledWith('token-1', 'user-uuid-1')
   })
 })

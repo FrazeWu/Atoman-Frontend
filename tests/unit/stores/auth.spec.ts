@@ -112,6 +112,20 @@ describe('auth store', () => {
     expect(auth.user?.onboarding_completed_at).toBe('2026-06-02T08:00:00Z')
   })
 
+  it('invalidates stored token when stored user is missing', () => {
+    localStorage.setItem('token', makeToken(3600))
+
+    const auth = useAuthStore()
+    const valid = auth.validateSession()
+
+    expect(valid).toBe(false)
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.token).toBeNull()
+    expect(auth.user).toBeNull()
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('user')).toBeNull()
+  })
+
   it('throws clear login reason from backend auth code', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       code: 'auth.password_mismatch',

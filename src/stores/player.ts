@@ -11,7 +11,6 @@ type PersistedPlaybackState = {
   song?: Song;
   currentTime?: number;
   volume?: number;
-  isPlaying?: boolean;
   isShuffled?: boolean;
   repeatMode?: RepeatMode;
   playbackMode?: PlaybackMode;
@@ -101,6 +100,16 @@ export const usePlayerStore = defineStore('player', () => {
     }
   };
 
+  const attemptPlay = (player: HTMLAudioElement) => {
+    player.play()
+      .then(() => {
+        isPlaying.value = true;
+      })
+      .catch(() => {
+        isPlaying.value = false;
+      });
+  };
+
   const savePlaybackState = () => {
     if (typeof localStorage === 'undefined') return;
 
@@ -113,7 +122,6 @@ export const usePlayerStore = defineStore('player', () => {
       song: currentSong.value,
       currentTime: audio?.currentTime ?? currentTime.value,
       volume: volume.value,
-      isPlaying: isPlaying.value,
       isShuffled: isShuffled.value,
       repeatMode: repeatMode.value,
       playbackMode: playbackMode.value,
@@ -178,20 +186,34 @@ export const usePlayerStore = defineStore('player', () => {
     return songsRequest;
   };
 
-  const playSong = (song: Song) => {
-    if (currentSong.value?.id === song.id) {
-      togglePlay();
-      return;
-    }
-
+  const startSong = (song: Song) => {
     const player = ensureAudio();
     player.src = song.audio_url;
     player.volume = volume.value;
     currentSong.value = song;
     currentTime.value = 0;
     duration.value = 0;
-    void player.play();
-    isPlaying.value = true;
+    attemptPlay(player);
+  };
+
+  const playSong = (song: Song) => {
+    if (currentSong.value?.id === song.id) {
+      togglePlay();
+      return;
+    }
+
+    currentAlbum.value = null;
+    queue.value = [song];
+    startSong(song);
+  };
+
+  const playQueuedSong = (song: Song) => {
+    if (currentSong.value?.id === song.id) {
+      togglePlay();
+      return;
+    }
+
+    startSong(song);
   };
 
   const playAlbum = (albumSongs: Song[], startIndex = 0) => {
@@ -200,15 +222,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentAlbum.value = albumSongs;
     queue.value = [...albumSongs];
 
-    const song = albumSongs[startIndex];
-    const player = ensureAudio();
-    player.src = song.audio_url;
-    player.volume = volume.value;
-    currentSong.value = song;
-    currentTime.value = 0;
-    duration.value = 0;
-    void player.play();
-    isPlaying.value = true;
+    startSong(albumSongs[startIndex]);
   };
 
   const togglePlay = () => {
@@ -225,11 +239,10 @@ export const usePlayerStore = defineStore('player', () => {
 
     if (isPlaying.value) {
       player.pause();
+      isPlaying.value = false;
     } else {
-      void player.play();
+      attemptPlay(player);
     }
-
-    isPlaying.value = !isPlaying.value;
   };
 
   const getActiveList = () => queue.value.length > 0 ? queue.value : songs.value;
@@ -247,8 +260,7 @@ export const usePlayerStore = defineStore('player', () => {
     } else if (repeatMode.value === 'one') {
       player.currentTime = 0;
       currentTime.value = 0;
-      void player.play();
-      isPlaying.value = true;
+      attemptPlay(player);
       return;
     } else if (repeatMode.value === 'all' || currentIndex < list.length - 1) {
       nextIndex = (currentIndex + 1) % list.length;
@@ -257,7 +269,7 @@ export const usePlayerStore = defineStore('player', () => {
       return;
     }
 
-    playSong(list[nextIndex]);
+    startSong(list[nextIndex]);
   };
 
   const playPrevious = () => {
@@ -266,7 +278,7 @@ export const usePlayerStore = defineStore('player', () => {
 
     const currentIndex = list.findIndex((song) => song.id === currentSong.value?.id);
     const prevIndex = (currentIndex - 1 + list.length) % list.length;
-    playSong(list[prevIndex]);
+    startSong(list[prevIndex]);
   };
 
   const toggleShuffle = () => {
@@ -357,6 +369,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentAlbum,
     fetchSongs,
     playSong,
+    playQueuedSong,
     playAlbum,
     togglePlay,
     playNext,

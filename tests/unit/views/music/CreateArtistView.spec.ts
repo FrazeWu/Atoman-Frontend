@@ -68,4 +68,25 @@ describe('CreateArtistView.vue', () => {
     })
     expect(mocks.routerPush).toHaveBeenCalledWith('/music?artist=artist-123')
   })
+
+  it('falls back to the music module root when creation succeeds without entity id', async () => {
+    mocks.submitMusicEdit.mockResolvedValueOnce({
+      id: 'edit-2',
+      type: 'create_artist',
+      status: 'open',
+      entity_type: 'artist',
+      submitted_by: 'user-1',
+      auto_applied: false,
+      votable: true,
+      votes: { yes: 0, no: 0 },
+      created_at: '2026-06-22T00:00:00Z',
+    })
+
+    const wrapper = mount(CreateArtistView)
+
+    await wrapper.get('[data-test="artist-form"]').trigger('submit')
+    await flushPromises()
+
+    expect(mocks.routerPush).toHaveBeenCalledWith('/music')
+  })
 })

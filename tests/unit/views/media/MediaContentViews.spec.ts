@@ -69,6 +69,18 @@ describe('Media content view shells', () => {
     expect(mount(MediaVideosView, { global }).text()).toContain('视频')
   })
 
+  it('keeps create actions scoped to the media module', () => {
+    const global = { stubs: { RouterLink: RouterLinkStub } }
+
+    for (const View of [MediaArticlesView, MediaPodcastsView, MediaVideosView]) {
+      const wrapper = mount(View, { global })
+      const createLink = wrapper.find('a[href="/media/create"]')
+
+      expect(createLink.exists()).toBe(true)
+      expect(wrapper.find('a[href="/create"]').exists()).toBe(false)
+    }
+  })
+
   it('treats article podcast and video pages as site-wide explore pages', async () => {
     const global = { stubs: ['RouterLink'] }
     mount(MediaArticlesView, { global: articleGlobal })

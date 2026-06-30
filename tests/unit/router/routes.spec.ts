@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { buildAppRoutes } from '@/router/buildAppRoutes'
 import { moduleRoutes } from '@/router/routes/modules'
 import { channelRoutes, userRoutes } from '@/router/routes/entities'
 import { portalRoutes } from '@/router/routes/portal'
 import { settingRoutes } from '@/router/routes/settings'
+import ModuleUnavailableView from '@/views/system/ModuleUnavailableView.vue'
 
 type TestRoute = { path: string; children?: readonly TestRoute[] }
 
@@ -12,6 +15,10 @@ function paths(routes: readonly TestRoute[]) {
 
 function flattenPaths(routes: readonly TestRoute[]): string[] {
   return routes.flatMap((route) => [route.path, ...flattenPaths(route.children || [])])
+}
+
+function lazyImportPath(component: unknown) {
+  return String(component)
 }
 
 describe('host-scoped route tables', () => {
@@ -27,7 +34,21 @@ describe('host-scoped route tables', () => {
     const musicPaths = flattenPaths(moduleRoutes.music)
     expect(musicPaths).toContain('explore')
     expect(musicPaths).toContain('starred')
+    expect(musicPaths).toContain('artist/:artistId')
+    expect(musicPaths).toContain('album/:albumId')
     expect(musicPaths).not.toContain('/music')
+  })
+
+  it('registers music detail route shells under the app music prefix', () => {
+    const musicRoute = buildAppRoutes().find((route) => route.path === '/music')
+    const children = musicRoute?.children || []
+    const artistRoute = children.find((route) => route.path === 'artist/:artistId')
+    const albumRoute = children.find((route) => route.path === 'album/:albumId')
+
+    expect(artistRoute).toBeTruthy()
+    expect(lazyImportPath(artistRoute?.component)).toContain('MusicArtistRouteView.vue')
+    expect(albumRoute).toBeTruthy()
+    expect(lazyImportPath(albumRoute?.component)).toContain('MusicAlbumRouteView.vue')
   })
 
   it('keeps feed and forum routes short', () => {
@@ -53,6 +74,15 @@ describe('host-scoped route tables', () => {
 
     expect(childPaths).toContain('podcasts/episode/:id')
     expect(childPaths).toContain('videos/watch/:id')
+  })
+
+  it('registers video detail pages under the video module root', () => {
+    const videoRoot = moduleRoutes.video.find((route) => route.path === '/')
+    const children = videoRoot?.children || []
+    const detailRoute = children.find((route) => route.path === 'videos/watch/:id')
+
+    expect(detailRoute).toBeTruthy()
+    expect(lazyImportPath(detailRoute?.component)).toContain('VideoDetailView.vue')
   })
 
   it('defines entity profile routes as aggregation spaces', () => {
@@ -91,5 +121,29 @@ describe('host-scoped route tables', () => {
 
     expect(children.find((route) => route.path === 'feed-fulltext')?.redirect).toBe('/setting/access')
     expect(children.find((route) => route.path === 'feed-sources')?.redirect).toBe('/setting/access')
+  })
+
+  it('registers a disabled-module route before the catch-all route', () => {
+    const appRoutePaths = paths(buildAppRoutes())
+    const disabledRouteIndex = appRoutePaths.indexOf('/__disabled__')
+    const catchAllRouteIndex = appRoutePaths.indexOf('/:pathMatch(.*)*')
+
+    expect(disabledRouteIndex).toBeGreaterThanOrEqual(0)
+    expect(disabledRouteIndex).toBeLessThan(catchAllRouteIndex)
+  })
+
+  it('matches disabled guard redirects to ModuleUnavailableView instead of NotFound', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: buildAppRoutes(),
+    })
+
+    await router.push('/__disabled__')
+
+    const matchedRoute = router.currentRoute.value.matched.at(-1)
+    const component = matchedRoute?.components?.default
+
+    expect(matchedRoute?.path).toBe('/__disabled__')
+    expect(component).toBe(ModuleUnavailableView)
   })
 })

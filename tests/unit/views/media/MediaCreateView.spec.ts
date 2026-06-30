@@ -23,6 +23,16 @@ describe('MediaCreateView', () => {
     currentMediaChannelIdMock.value = 'channel-1'
     const { clearSelectionForTest } = useMediaCollections()
     clearSelectionForTest()
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/collections')) {
+        return new Response(JSON.stringify({ collections: [] }), { status: 200 })
+      }
+      if (url.includes('/blog/posts') || url.includes('/podcast/episodes') || url.includes('/videos')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
   })
 
   it('disables publish button before a collection is selected', () => {
@@ -112,5 +122,34 @@ describe('MediaCreateView', () => {
     })
 
     expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('/posts')
+  })
+
+  it('publishes video collections through the video upload route', () => {
+    const { selectCollection } = useMediaCollections()
+    selectCollection('collection-1', 'video', '视频合集')
+
+    const wrapper = mount(MediaCreateView, {
+      global: {
+        plugins: [createTestingPinia({
+          createSpy: vi.fn,
+          initialState: {
+            auth: {
+              token: 'token-1',
+              user: { id: 1, uuid: 'user-uuid-1', username: 'alice', email: 'alice@example.com', role: 'user' },
+              isAuthenticated: true,
+            },
+          },
+        })],
+        stubs: [
+          'RouterLink',
+          'MediaCollectionRail',
+          'MediaMixedFeedSection',
+          'MediaVideoCardSection',
+          'MediaCollectionWorkspace',
+        ],
+      },
+    })
+
+    expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('/videos/upload')
   })
 })

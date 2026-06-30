@@ -109,7 +109,7 @@ import PTab from '@/components/ui/PTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
-import { useApi, useApiUrl } from '@/composables/useApi'
+import { useApi } from '@/composables/useApi'
 import type { Post } from '@/types'
 
 const authStore = useAuthStore()
@@ -129,7 +129,6 @@ const toggleReadingList = (id: string) => {
 }
 
 const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))
-const API_URL = useApiUrl()
 
 const posts = ref<Post[]>([])
 const loading = ref(true)
@@ -173,9 +172,8 @@ const fetchPosts = async (append = false) => {
       limit: '12',
     })
     
-    // Use explore endpoint for site-wide recommendations
-    const endpoint = sortBy.value === 'popular' ? api.blog.explore : `${API_URL}/feed/explore/timeline`
-    // /feed/explore/timeline returns { type, post, feed_item }
+    // Use explore endpoints for site-wide recommendations.
+    const endpoint = sortBy.value === 'popular' ? api.blog.explore : api.feed.explore
 
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`

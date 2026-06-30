@@ -20,6 +20,15 @@
       <h2>热门内容暂时没有加载出来</h2>
       <p>{{ error }}</p>
       <PButton size="sm" @click="loadHotContent">重试</PButton>
+      <div class="portal-hot__fallback-links">
+        <RouterLink
+          v-for="room in visibleRooms"
+          :key="room.key"
+          :to="moduleUrl(room.key)"
+        >
+          先去{{ room.name }}
+        </RouterLink>
+      </div>
     </section>
 
     <template v-else-if="hasContent">

@@ -37,9 +37,17 @@ const makeJsonResponse = (data: unknown) =>
 
 describe('VideoEditorView', () => {
   let createElementSpy: ReturnType<typeof vi.spyOn>
+  let storage: Record<string, string>
 
   beforeEach(() => {
-    localStorage.clear()
+    storage = {}
+    vi.stubGlobal('localStorage', {
+      clear: vi.fn(() => { storage = {} }),
+      getItem: vi.fn((key: string) => storage[key] ?? null),
+      removeItem: vi.fn((key: string) => { delete storage[key] }),
+      setItem: vi.fn((key: string, value: string) => { storage[key] = value }),
+    })
+    globalThis.localStorage?.clear()
     setActivePinia(createPinia())
     vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest)
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
@@ -110,5 +118,58 @@ describe('VideoEditorView', () => {
     expect(wrapper.text()).not.toContain('视频上传失败')
     expect(wrapper.text()).not.toContain('无法读取视频内容')
     expect(wrapper.text()).toContain('自动封面生成失败，可手动上传封面')
+  })
+
+  it('新建视频草稿保存后跳转到带 videos 前缀的编辑页', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [] })
+      }
+      if (url.endsWith('/videos') && init?.method === 'POST') {
+        return makeJsonResponse({ id: 'video-1' })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/videos/upload', component: VideoEditorView },
+        { path: '/videos/edit/:id', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/videos/upload')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await flushPromises()
+
+    await wrapper.find('input[placeholder="为视频起一个吸引人的标题"]').setValue('Draft video')
+    await wrapper.find('input[placeholder="https://youtube.com/watch?v=..."]').setValue('https://example.com/video')
+
+    const saveButton = wrapper.findAll('button').find(button => button.text() === '保存草稿')
+    expect(saveButton).toBeTruthy()
+    await saveButton!.trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/videos$/),
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(router.currentRoute.value.fullPath).toBe('/videos/edit/video-1')
   })
 })

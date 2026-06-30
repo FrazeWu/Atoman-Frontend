@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MediaHomeView from '@/views/media/MediaHomeView.vue'
 
 const fetchMock = vi.fn()
+const routerPushMock = vi.fn()
 const RouterLinkStub = defineComponent({
   props: {
     to: {
@@ -16,9 +17,20 @@ const RouterLinkStub = defineComponent({
   },
 })
 
+vi.mock('vue-router', async importOriginal => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRouter: () => ({
+      push: routerPushMock,
+    }),
+  }
+})
+
 describe('MediaHomeView', () => {
   beforeEach(() => {
     fetchMock.mockReset()
+    routerPushMock.mockReset()
     fetchMock.mockImplementation(async (input) => {
       const url = String(input)
       if (url.includes('/blog/explore')) {
@@ -151,5 +163,30 @@ describe('MediaHomeView', () => {
     await wrapper.get('[data-testid="content-home-feature-0"]').trigger('click')
     expect(wrapper.get('[data-testid="home-article-sheet"]').attributes('data-show')).toBe('true')
     expect(wrapper.get('[data-testid="home-article-sheet"]').attributes('data-article-id')).toBe('post-1')
+  })
+
+  it('navigates featured podcast and video cards to their detail routes', async () => {
+    const wrapper = mount(MediaHomeView, {
+      global: {
+        stubs: {
+          RouterLink: RouterLinkStub,
+          FeedArticleSheet: {
+            name: 'FeedArticleSheet',
+            props: ['show', 'article'],
+            template: '<aside data-testid="home-article-sheet" :data-show="String(show)" :data-article-id="article?.post?.id || \'\'"></aside>',
+          },
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="content-home-feature-2"]').exists()).toBe(true)
+    })
+
+    await wrapper.get('[data-testid="content-home-feature-1"]').trigger('click')
+    expect(routerPushMock).toHaveBeenCalledWith('/media/podcasts/episode/episode-1')
+
+    await wrapper.get('[data-testid="content-home-feature-2"]').trigger('click')
+    expect(routerPushMock).toHaveBeenCalledWith('/media/videos/watch/video-1')
   })
 })

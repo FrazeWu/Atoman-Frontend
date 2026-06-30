@@ -151,6 +151,55 @@ describe('PostEditorView', () => {
     )
   })
 
+  it('新建文章补默认频道时，应保留已注册的编辑器路由前缀', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts/post/new', component: PostEditorView },
+      ],
+    })
+
+    await router.push('/posts/post/new')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-2' }] })
+      }
+      if (url.includes('/blog/channels/channel-2/collections')) {
+        return makeJsonResponse({ data: [] })
+      }
+      if (url.includes('/blog/drafts?context_key=')) {
+        return makeJsonResponse({ data: null })
+      }
+
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/new?channel=channel-2')
+  })
+
   it('协作文档与草稿冲突时，显示冲突弹窗文案', async () => {
     localStorage.setItem('blog_editor_blog:post:post-1', JSON.stringify({
       payload: {
@@ -763,12 +812,12 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
-        { path: '/post/:id', component: { template: '<div>detail</div>' } },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id', component: { template: '<div>detail</div>' } },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -843,6 +892,7 @@ describe('PostEditorView', () => {
     const body = JSON.parse(String(putCall?.[1]?.body ?? '{}'))
     expect(body.channel_id).toBe('channel-1')
     expect(body.collection_ids).toEqual(['collection-1', 'collection-2'])
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1')
   })
 
   it('应当根据 URL 查询参数初始化合集和频道', async () => {

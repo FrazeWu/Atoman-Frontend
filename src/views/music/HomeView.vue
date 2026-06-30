@@ -155,7 +155,7 @@ watch(
         <span class="search-bar-dot" aria-hidden="true" />
         <PInput
           v-model="searchQuery"
-          placeholder="搜索艺术家..."
+          placeholder="搜索艺术家 / 专辑..."
           class="search-input"
         />
         <button class="paper-action" type="button" @click="openMusicCreationFlow()">
@@ -170,13 +170,14 @@ watch(
       <div v-else-if="!albums.length" class="empty-state">
         <p class="state-line">没有匹配的专辑，可以提交新的 wiki 编辑。</p>
         <div class="empty-actions">
-          <button class="paper-action" type="button" data-testid="empty-add-artist" @click="openMusicCreationFlow()">
+          <button
+            class="paper-action"
+            type="button"
+            data-testid="empty-add-artist-and-album"
+            @click="openMusicCreationFlow({ startStep: 'artist' })"
+          >
             <span class="paper-action-dot" aria-hidden="true" />
-            添加艺术家
-          </button>
-          <button class="paper-action" type="button" data-testid="empty-add-album" @click="openMusicCreationFlow({ startStep: 'albumSeed' })">
-            <span class="paper-action-dot" aria-hidden="true" />
-            提交专辑
+            添加艺术家 / 专辑
           </button>
         </div>
       </div>

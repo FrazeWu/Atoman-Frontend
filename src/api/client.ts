@@ -73,10 +73,11 @@ export async function apiGetEnvelope<T, M = Record<string, unknown>>(url: string
   }))
 }
 
-export async function apiGetRaw<T>(url: string): Promise<T> {
+export async function apiGetRaw<T>(url: string, init: RequestInit = {}): Promise<T> {
   return unwrapResponseEnvelope<T>(await fetch(url, {
+    ...init,
     credentials: 'include',
-    headers: { Accept: 'application/json' },
+    headers: { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) },
   })) as Promise<T>
 }
 

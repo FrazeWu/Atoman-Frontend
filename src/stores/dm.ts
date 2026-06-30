@@ -14,6 +14,7 @@ export const useDMStore = defineStore('dm', () => {
   const messages = ref<DMMessage[]>([])
   const loading = ref(false)
   const total = ref(0)
+  let openConversationRequestId = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -43,19 +44,24 @@ export const useDMStore = defineStore('dm', () => {
 
   const openConversation = async (username: string, page = 1) => {
     if (!authStore.token) return
+    const requestId = ++openConversationRequestId
     loading.value = true
     activeConversation.value = username
+    const isLatestRequest = () => requestId === openConversationRequestId && activeConversation.value === username
     try {
       const res = await fetch(`${api.dm.conversation(username)}?page=${page}`, { headers: authHeaders() })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.message || data.error || '获取私信消息失败')
       }
+      if (!isLatestRequest()) return
       messages.value = data.data || []
       total.value = data.total || 0
       await markRead(username)
     } finally {
-      loading.value = false
+      if (isLatestRequest()) {
+        loading.value = false
+      }
     }
   }
 
@@ -149,4 +155,3 @@ export const useDMStore = defineStore('dm', () => {
     receiveDM,
   }
 })
-

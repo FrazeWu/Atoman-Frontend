@@ -6,6 +6,8 @@ import { installRouteGuards } from '@/router/guards'
 import { moduleRoutes } from '@/router/routes/modules'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
+import { useSiteAccessStore } from '@/stores/siteAccess'
+import ModuleUnavailableView from '@/views/system/ModuleUnavailableView.vue'
 
 const RouteStub = { template: '<main data-test-route-stub />' }
 
@@ -32,7 +34,10 @@ async function createGuardRouter(site: ModuleRoomKey) {
   window.history.replaceState(null, '', sitePath)
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: stubRouteComponents(moduleRoutes[site]),
+    routes: [
+      ...stubRouteComponents(moduleRoutes[site]),
+      { path: '/__disabled__', component: ModuleUnavailableView },
+    ],
   })
   installRouteGuards(router)
   await router.replace('/')
@@ -43,7 +48,13 @@ describe('router auth guards', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 401 }))
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+      if (url.endsWith('/site/access')) {
+        return new Response(JSON.stringify({ modules: {} }), { status: 200 })
+      }
+      return new Response('', { status: 401 })
+    })
     setActivePinia(createPinia())
   })
 
@@ -121,6 +132,25 @@ describe('router auth guards', () => {
     await router.push('/post/123')
 
     expect(router.currentRoute.value.path).toBe('/post/123')
+  })
+
+  it('checks module access against the target route path', async () => {
+    const router = await createGuardRouter('feed')
+    const siteAccess = useSiteAccessStore()
+    siteAccess.access.modules.media.enabled = false
+
+    await router.push('/media')
+
+    expect(router.currentRoute.value.path).toBe('/__disabled__')
+  })
+
+  it('does not allow module routes when site access loading fails', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 500 }))
+    const router = await createGuardRouter('feed')
+
+    await router.push('/media')
+
+    expect(router.currentRoute.value.path).toBe('/__disabled__')
   })
 
   it('initializes onboarding after restoring authenticated session', async () => {

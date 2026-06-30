@@ -12,6 +12,7 @@ export type MediaChannel = {
 const currentMediaChannelId = ref<string | null>(null)
 const channels = ref<MediaChannel[]>([])
 const loadingChannels = ref(false)
+let latestLoadChannelsRequest = 0
 
 export function useMediaChannel() {
   const { resetForChannel } = useMediaCollections()
@@ -31,30 +32,39 @@ export function useMediaChannel() {
   }
 
   const loadChannels = async (token?: string | null, userId?: string | number | null) => {
+    const requestId = ++latestLoadChannelsRequest
+
     if (!userId) {
       clearChannels()
       return
     }
 
+    clearChannels()
     loadingChannels.value = true
     try {
       const api = useApi()
       const url = new URL(api.blog.channels, window.location.origin)
       url.searchParams.set('user_id', String(userId))
 
-      if (token) {
-        localStorage.setItem('token', token)
-      } else {
-        localStorage.removeItem('token')
-      }
-      const data = await apiGetRaw<Channel[] | { data?: Channel[] }>(url.toString())
+      const data = await apiGetRaw<Channel[] | { data?: Channel[] }>(url.toString(), {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
       const rows: Channel[] = Array.isArray(data) ? data : (data.data || [])
+      if (requestId !== latestLoadChannelsRequest) return
+
       channels.value = rows.map(channel => ({ id: channel.id, name: channel.name }))
       if (!currentMediaChannelId.value && channels.value.length > 0) {
         setCurrentMediaChannel(channels.value[0].id)
       }
+    } catch (error) {
+      if (requestId === latestLoadChannelsRequest) {
+        clearChannels()
+      }
+      throw error
     } finally {
-      loadingChannels.value = false
+      if (requestId === latestLoadChannelsRequest) {
+        loadingChannels.value = false
+      }
     }
   }
 

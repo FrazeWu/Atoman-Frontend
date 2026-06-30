@@ -18,6 +18,8 @@ export function installRouteGuards(router: Router) {
     const authStore = useAuthStore()
     const onboardingStore = useOnboardingStore()
     const siteAccessStore = useSiteAccessStore()
+    const isSettingRoute = to.path === '/setting' || to.path.startsWith('/setting/')
+    const isDisabledTarget = to.path === disabledTarget.path
     const hasValidSession = authStore.validateSession() || await authStore.restoreSession()
     const onboardingStep = parseOnboardingStep(to.query.onboarding_step)
 
@@ -33,8 +35,12 @@ export function installRouteGuards(router: Router) {
       return { path: to.path, query, hash: to.hash, replace: true }
     }
 
-    if (!siteAccessStore.loaded && !siteAccessStore.loading) {
-      await siteAccessStore.load()
+    if (!isSettingRoute && !isDisabledTarget && !siteAccessStore.loaded && !siteAccessStore.loading) {
+      try {
+        await siteAccessStore.load()
+      } catch {
+        return disabledTarget
+      }
     }
 
     if (to.meta.requiresAuth && !hasValidSession) {
@@ -48,11 +54,9 @@ export function installRouteGuards(router: Router) {
       return '/setting'
     }
 
-    const isSettingRoute = to.path === '/setting' || to.path.startsWith('/setting/')
-    const isDisabledTarget = to.path === disabledTarget.path
-
     if (!isSettingRoute && !isDisabledTarget) {
-      const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
+      const targetUrl = new URL(to.fullPath, window.location.origin)
+      const context = resolveSiteContext(window.location.hostname, targetUrl.search, to.path)
       if (context.type === 'module' && !siteAccessStore.isModuleVisible(context.module)) {
         return disabledTarget
       }

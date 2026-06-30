@@ -98,25 +98,58 @@ const emit = defineEmits<{
 .channel-category-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.35rem;
   align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.25rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: color-mix(in srgb, var(--a-color-bg) 72%, var(--a-color-paper));
+  box-shadow: var(--a-shadow-paper-sm);
 }
 
 .channel-category-tab {
   min-height: 2rem;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-bg);
+  padding: 0.38rem 0.78rem;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--a-color-muted);
   font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: 0.06em;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.channel-category-tab:hover {
+  border-color: var(--a-color-line);
+  background: var(--a-color-paper);
+  color: var(--a-color-fg);
+  box-shadow: var(--a-shadow-paper-sm);
+  transform: translateY(-1px);
+}
+
+.channel-category-tab:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--a-color-accent-confirm) 62%, transparent);
+  outline-offset: 2px;
 }
 
 .channel-category-tab.is-active {
-  border-color: var(--a-color-ink);
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  border-color: color-mix(in srgb, var(--a-color-accent-confirm) 52%, var(--a-color-line));
+  background: color-mix(in srgb, var(--a-color-accent-confirm) 14%, var(--a-color-paper));
+  color: var(--a-color-accent-confirm);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a-color-accent-confirm) 20%, transparent), var(--a-shadow-paper-sm);
+}
+
+.channel-category-tab.is-active:hover {
+  border-color: color-mix(in srgb, var(--a-color-accent-confirm) 68%, var(--a-color-line));
+  background: color-mix(in srgb, var(--a-color-accent-confirm) 18%, var(--a-color-paper));
+  color: var(--a-color-accent-confirm);
+  transform: translateY(-1px);
 }
 
 .channel-panel-feedback {

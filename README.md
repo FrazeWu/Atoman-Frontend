@@ -24,6 +24,39 @@ bun run test:unit
 bun run test:e2e
 ```
 
+## 环境文件
+
+前端保留三套环境文件：
+
+- `.env.example`：模板
+- `.env.dev`：本地开发
+- `.env.prod`：生产构建
+
+当前脚本已经按 mode 区分环境：
+
+```bash
+bun run dev
+bun run build
+```
+
+对应关系：
+
+- `bun run dev` 使用 `.env.dev`
+- `bun run build` 使用 `.env.prod`
+
+本地开发应使用：
+
+```env
+VITE_API_URL=http://localhost:8080/api
+VITE_TURNSTILE_SITE_KEY=
+```
+
+生产环境应使用：
+
+```env
+VITE_API_URL=https://api.atoman.org/api
+```
+
 ## Feed / RSS 模块下一阶段功能 Checklist
 
 > 说明：以下优先级基于当前前端已实现能力与主流 RSS Reader 竞品差异整理，目标是先补齐高频刚需，再强化差异化能力。

@@ -6,7 +6,7 @@
       storage-key="atoman.podcast.sidebar.collapsed"
     >
       <PSidebarItem
-        to="/"
+        to="/podcasts"
         :index="1"
         :icon="Mic"
         exact
@@ -15,7 +15,7 @@
       </PSidebarItem>
       <PSidebarItem
         v-if="canPublishPodcast"
-        to="/editor"
+        to="/podcasts/editor"
         :index="2"
         :icon="PlusCircle"
       >

@@ -226,11 +226,11 @@ const jumpToNotification = async (notification: Notification) => {
   await notificationStore.markRead(notification.id)
   const topicId = notification.meta.topic_id
   if (notification.source_type === 'forum_reply' && topicId) {
-    await router.push(`/topic/${topicId}#reply-${notification.source_id}`)
+    await router.push(`/forum/topic/${topicId}#reply-${notification.source_id}`)
     return
   }
   if (notification.source_type === 'forum_topic' && notification.source_id) {
-    await router.push(`/topic/${notification.source_id}`)
+    await router.push(`/forum/topic/${notification.source_id}`)
     return
   }
 }

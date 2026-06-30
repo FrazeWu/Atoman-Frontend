@@ -18,6 +18,9 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 function releaseYear(album: MusicAlbumListItem) {
+  if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
+    return String(album.year)
+  }
   return album.release_date ? album.release_date.slice(0, 4) : '----'
 }
 

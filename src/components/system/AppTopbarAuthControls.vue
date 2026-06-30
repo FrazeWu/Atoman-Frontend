@@ -83,8 +83,17 @@ const ensureMediaChannels = () => {
   }
   if (lastLoadedMediaChannelUserId.value === userId && channels.value.length > 0) return
 
-  lastLoadedMediaChannelUserId.value = userId
   void loadChannels(authStore.token, userId)
+    .then(() => {
+      if (authUserId.value === userId) {
+        lastLoadedMediaChannelUserId.value = userId
+      }
+    })
+    .catch(() => {
+      if (lastLoadedMediaChannelUserId.value === userId) {
+        lastLoadedMediaChannelUserId.value = null
+      }
+    })
 }
 
 onMounted(() => {

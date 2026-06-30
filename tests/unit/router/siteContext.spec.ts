@@ -40,6 +40,22 @@ describe('resolveSiteContext', () => {
     expect(resolveSiteContext('atoman.org', '', '/')).toEqual({ type: 'module', module: 'feed' })
   })
 
+  it('maps production subdomains to module, entity, or unknown context', () => {
+    expect(resolveSiteContext('media.atoman.org', '', '/')).toEqual({ type: 'module', module: 'media' })
+    expect(resolveSiteContext('u-alice.atoman.org', '', '/')).toEqual({
+      type: 'entity',
+      handle: 'alice',
+    })
+    expect(resolveSiteContext('alice.atoman.org', '', '/')).toEqual({
+      type: 'entity',
+      handle: 'alice',
+    })
+    expect(resolveSiteContext('-bad.atoman.org', '', '/')).toEqual({
+      type: 'unknown',
+      subdomain: '-bad',
+    })
+  })
+
   it('uses the same pathname-based routing on localhost', () => {
     expect(resolveSiteContext('localhost', '', '/feed')).toEqual({ type: 'module', module: 'feed' })
     expect(resolveSiteContext('localhost', '', '/media')).toEqual({ type: 'module', module: 'media' })

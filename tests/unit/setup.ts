@@ -2,6 +2,9 @@ import '@testing-library/jest-dom/vitest'
 import { beforeEach, vi } from 'vitest'
 
 const storage = new Map<string, string>()
+const createUnmockedFetch = () => vi.fn(async (input: RequestInfo | URL) => {
+	throw new Error(`未 mock fetch: ${String(input)}`)
+})
 
 vi.stubGlobal('localStorage', {
 	getItem: (key: string) => storage.get(key) ?? null,
@@ -16,10 +19,10 @@ vi.stubGlobal('localStorage', {
 	},
 })
 
-vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })))
+vi.stubGlobal('fetch', createUnmockedFetch())
 vi.stubGlobal('scrollTo', vi.fn())
 
 beforeEach(() => {
 	storage.clear()
-	vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ data: [], total: 0 }), { status: 200 })))
+	vi.stubGlobal('fetch', createUnmockedFetch())
 })

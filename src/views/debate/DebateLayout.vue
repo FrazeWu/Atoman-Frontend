@@ -6,7 +6,7 @@
       storage-key="atoman.debate.sidebar.collapsed"
     >
       <PSidebarItem
-        to="/"
+        to="/debate"
         :index="1"
         :icon="MessageSquare"
         :active="!$route.query.status"
@@ -15,7 +15,7 @@
         全部辩论
       </PSidebarItem>
       <PSidebarItem
-        to="/?status=open"
+        to="/debate?status=open"
         :index="2"
         :icon="Play"
         :active="$route.query.status === 'open'"
@@ -23,7 +23,7 @@
         进行中
       </PSidebarItem>
       <PSidebarItem
-        to="/?status=concluded"
+        to="/debate?status=concluded"
         :index="3"
         :icon="CheckCircle"
         :active="$route.query.status === 'concluded'"
@@ -31,7 +31,7 @@
         已结题
       </PSidebarItem>
       <PSidebarItem
-        to="/?status=archived"
+        to="/debate?status=archived"
         :index="4"
         :icon="Archive"
         :active="$route.query.status === 'archived'"

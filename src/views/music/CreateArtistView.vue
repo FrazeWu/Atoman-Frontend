@@ -44,7 +44,7 @@ async function handleSubmit(value: MusicArtistUpdateInput) {
       await router.push(`/music?artist=${result.entity_id}`)
       return
     }
-    await router.push('/')
+    await router.push('/music')
   } catch (error) {
     console.error('Failed to create artist:', error)
   } finally {

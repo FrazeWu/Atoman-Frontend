@@ -15,22 +15,27 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
   const access = ref<SiteAccess>(mergeSiteAccess(null))
   const loaded = ref(false)
   const loading = ref(false)
+  let pendingLoad: Promise<void> | null = null
 
   async function load() {
-    if (loading.value) return
-    loading.value = true
+    if (pendingLoad) return pendingLoad
 
-    try {
+    pendingLoad = (async () => {
+      loading.value = true
       const api = useApi()
       const response = await fetch(api.site.access)
-      if (response.ok) {
-        const data = await response.json()
-        access.value = mergeSiteAccess(data)
+      if (!response.ok) {
+        throw new Error(`站点访问配置加载失败 (${response.status})`)
       }
-    } finally {
+      const data = await response.json()
+      access.value = mergeSiteAccess(data)
       loaded.value = true
+    })().finally(() => {
       loading.value = false
-    }
+      pendingLoad = null
+    })
+
+    return pendingLoad
   }
 
   async function save(nextAccess: SiteAccess, token: string | null) {

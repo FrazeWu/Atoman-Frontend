@@ -1,6 +1,6 @@
 import { ref, onBeforeUnmount } from 'vue'
 
-type AutoSaveState = 'idle' | 'saving' | 'saved'
+type AutoSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 interface StoredDraft<T> {
   payload: T
@@ -21,33 +21,50 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>) {
   const getDraftKey = () => options.getDraftKey()
   const shouldPersist = options.shouldPersist ?? (() => true)
 
+  function getStorage(): Storage | null {
+    try {
+      return typeof localStorage === 'undefined' ? null : localStorage
+    } catch {
+      return null
+    }
+  }
+
   function triggerAutoSave() {
     if (timer) clearTimeout(timer)
     autoSaveState.value = 'saving'
     timer = setTimeout(() => {
       const payload = options.getPayload()
-      if (typeof localStorage !== 'undefined') {
+      const storage = getStorage()
+      if (!storage) {
+        autoSaveState.value = 'error'
+        return
+      }
+
+      try {
         if (shouldPersist(payload)) {
           const savedAt = Date.now()
-          localStorage.setItem(
+          storage.setItem(
             getDraftKey(),
             JSON.stringify({ payload, saved_at: savedAt }),
           )
           lastSavedAt.value = savedAt
         } else {
-          localStorage.removeItem(getDraftKey())
+          storage.removeItem(getDraftKey())
           lastSavedAt.value = null
         }
+        autoSaveState.value = 'saved'
+      } catch {
+        autoSaveState.value = 'error'
       }
-      autoSaveState.value = 'saved'
     }, 500)
   }
 
   function loadDraft(): StoredDraft<T> | null {
-    if (typeof localStorage === 'undefined') return null
-    const saved = localStorage.getItem(getDraftKey())
-    if (!saved) return null
     try {
+      const storage = getStorage()
+      if (!storage) return null
+      const saved = storage.getItem(getDraftKey())
+      if (!saved) return null
       const parsed = JSON.parse(saved) as StoredDraft<T>
       if (!parsed || typeof parsed !== 'object' || !('payload' in parsed)) {
         return null
@@ -63,8 +80,14 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>) {
       clearTimeout(timer)
       timer = null
     }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(getDraftKey())
+    const storage = getStorage()
+    if (storage) {
+      try {
+        storage.removeItem(getDraftKey())
+      } catch {
+        autoSaveState.value = 'error'
+        return
+      }
     }
     lastSavedAt.value = null
     autoSaveState.value = 'idle'

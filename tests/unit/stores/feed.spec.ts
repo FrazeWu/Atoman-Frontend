@@ -57,6 +57,31 @@ describe('feed store', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('clears timeline and user display state when user state is reset', () => {
+    const feed = useFeedStore()
+    feed.subscriptions = [{ id: 'sub-1', user_id: 'user-1', feed_source_id: 'source-1' } as never]
+    feed.groups = [{ id: 'group-1', user_id: 'user-1', name: 'Old group' } as never]
+    feed.starGroups = [{ id: 'star-group-1', user_id: 'user-1', name: 'Old stars' } as never]
+    feed.timeline = [{ type: 'feed_item', feed_item: { id: 'feed-item-1', title: 'Old item' } }]
+    feed.starredItemIds = new Set(['feed-item-1'])
+    feed.bookmarkedPostIds = new Set(['post-1'])
+    feed.readingListItemIds = new Set(['feed-item-2'])
+    feed.activeSource = { type: 'external_rss', id: 'source-1' }
+    feed.error = 'Old error'
+
+    feed.clearUserState()
+
+    expect(feed.subscriptions).toEqual([])
+    expect(feed.groups).toEqual([])
+    expect(feed.starGroups).toEqual([])
+    expect(feed.timeline).toEqual([])
+    expect(feed.starredItemIds.size).toBe(0)
+    expect(feed.bookmarkedPostIds.size).toBe(0)
+    expect(feed.readingListItemIds.size).toBe(0)
+    expect(feed.activeSource).toBeNull()
+    expect(feed.error).toBeNull()
+  })
+
   it('resolves subscription input through the unified resolve endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       status: 'existing_source',

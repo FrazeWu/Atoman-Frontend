@@ -21,6 +21,7 @@ const error = ref('')
 const theaterMode = ref(getStoredTheaterMode())
 const showNextPrompt = ref(false)
 let lastProgressSave = 0
+let loadSeq = 0
 
 function getFirstStringQueryValue(value: unknown): string | undefined {
   const firstValue = Array.isArray(value) ? value[0] : value
@@ -67,6 +68,7 @@ function fmtDate(s: string): string {
 }
 
 async function load(id: string) {
+  const seq = ++loadSeq
   loading.value = true
   error.value = ''
   video.value = null
@@ -79,15 +81,20 @@ async function load(id: string) {
       fetch(`${api.url}/videos/${id}`),
       fetch(`${api.url}/videos/${id}/recommended`),
     ])
+    if (seq !== loadSeq) return
     if (!vRes.ok) { error.value = '视频不存在'; return }
     video.value = await vRes.json()
-    if (rRes.ok) recommended.value = await rRes.json()
+    if (seq !== loadSeq) return
+    if (rRes.ok) {
+      const data = await rRes.json()
+      if (seq === loadSeq) recommended.value = data
+    }
     // Fire-and-forget view count increment
-    fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
+    if (seq === loadSeq) fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
   } catch {
-    error.value = '加载失败，请重试'
+    if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 

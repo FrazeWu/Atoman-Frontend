@@ -231,7 +231,7 @@ const submit = async () => {
     })
     if (topic) {
       clearDraft()
-      router.push(`/topic/${topic.id}`)
+      router.push(`/forum/topic/${topic.id}`)
     }
   } finally {
     submitting.value = false

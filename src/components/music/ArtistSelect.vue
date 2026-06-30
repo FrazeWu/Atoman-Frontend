@@ -34,7 +34,7 @@
 
       <div class="dropdown-section">
         <div class="dropdown-divider" />
-        <RouterLink :to="`/artist/new${query.trim() ? `?name=${encodeURIComponent(query.trim())}` : ''}`" class="add-artist-link" @mousedown.prevent>
+        <RouterLink :to="addArtistUrl" class="add-artist-link" @mousedown.prevent>
           没找到艺术家？前往新增页面
         </RouterLink>
       </div>
@@ -49,6 +49,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import PInput from '@/components/ui/PInput.vue'
 import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
+import { modulePathUrl } from '@/router/siteUrls'
 import type { Artist } from '@/types'
 
 const props = defineProps<{
@@ -75,6 +76,11 @@ const filtered = computed(() => {
   return allArtists.value
     .filter(a => !selectedIds.has(a.id) && a.name.toLowerCase().includes(q))
     .slice(0, 8)
+})
+
+const addArtistUrl = computed(() => {
+  const name = query.value.trim()
+  return `${modulePathUrl('music', '/artist/new')}${name ? `?name=${encodeURIComponent(name)}` : ''}`
 })
 
 const select = (a: Artist) => {

@@ -8,69 +8,19 @@ type Fixtures = {
   adminPage: Page
 }
 
-function routeForCurrentModule(url: string) {
-  if (!url.startsWith('/')) return url
-
-  const [path, query = ''] = url.split('?')
-  const legacyPrefixes: Array<[string, string]> = [
-    ['/blog', 'blog'],
-    ['/feed', 'feed'],
-    ['/music', 'music'],
-    ['/forum', 'forum'],
-    ['/debate', 'debate'],
-    ['/timeline', 'timeline'],
-    ['/podcast', 'podcast'],
-    ['/video', 'video'],
-  ]
-
-  for (const [prefix, site] of legacyPrefixes) {
-    if (path === prefix || path.startsWith(`${prefix}/`)) {
-      const modulePath = path === prefix ? '/' : path.slice(prefix.length)
-      const params = new URLSearchParams(query)
-      params.set('site', site)
-      return `${modulePath || '/'}?${params.toString()}`
-    }
-  }
-
-  const modulePaths: Array<[string, string]> = [
-    ['/post', 'blog'], ['/editor', 'blog'], ['/channel', 'blog'], ['/collection', 'blog'],
-    ['/inbox', 'feed'], ['/reading-list', 'feed'],
-    ['/album', 'music'], ['/artist', 'music'], ['/song', 'music'],
-  ]
-
-  for (const [prefix, site] of modulePaths) {
-    if (path === prefix || path.startsWith(`${prefix}/`)) {
-      const params = new URLSearchParams(query)
-      params.set('site', site)
-      return `${path}?${params.toString()}`
-    }
-  }
-
-  return url
-}
-
-function patchGoto(page: Page) {
-  const originalGoto = page.goto.bind(page)
-  page.goto = async (url: string, options?: any) => originalGoto(routeForCurrentModule(url), options)
-}
-
 export const test = base.extend<Fixtures>({
   page: async ({ page }, use) => {
-    patchGoto(page)
-
     await use(page)
   },
   authenticatedPage: async ({ browser }, use) => {
     const context = await browser.newContext({ storageState: AUTH_FILE_ADMIN })
     const page = await context.newPage()
-    patchGoto(page)
     await use(page)
     await context.close()
   },
   adminPage: async ({ browser }, use) => {
     const context = await browser.newContext({ storageState: AUTH_FILE_ADMIN })
     const page = await context.newPage()
-    patchGoto(page)
     await use(page)
     await context.close()
   },

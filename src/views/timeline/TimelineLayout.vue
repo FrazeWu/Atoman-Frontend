@@ -6,7 +6,7 @@
       storage-key="atoman.timeline.sidebar.collapsed"
     >
       <PSidebarItem
-        to="/"
+        to="/timeline"
         :index="1"
         :icon="Clock"
         exact
@@ -14,7 +14,7 @@
         时间轴首页
       </PSidebarItem>
       <PSidebarItem
-        to="/persons"
+        to="/timeline/persons"
         :index="2"
         :icon="Users"
       >

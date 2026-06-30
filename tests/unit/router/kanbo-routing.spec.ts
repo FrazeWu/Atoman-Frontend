@@ -18,7 +18,9 @@ describe('content routes', () => {
       'create',
       'articles',
       'videos',
+      'videos/watch/:id',
       'podcasts',
+      'podcasts/episode/:id',
       'subscriptions',
       'bookmarks',
     ])
@@ -27,7 +29,7 @@ describe('content routes', () => {
   it('supports the media module only through explicit paths', () => {
     expect(resolveSiteContext('media.atoman.org', '', '/media')).toEqual({ type: 'module', module: 'media' })
     expect(resolveSiteContext('localhost', '', '/media')).toEqual({ type: 'module', module: 'media' })
-    expect(resolveSiteContext('kanbo.atoman.org', '', '/')).toEqual({ type: 'module', module: 'feed' })
+    expect(resolveSiteContext('kanbo.atoman.org', '', '/')).toEqual({ type: 'entity', handle: 'kanbo' })
     expect(moduleUrl('media', 'https:', 'blog.atoman.org')).toBe('/media')
     expect(modulePathUrl('media', '/create', 'http:', 'localhost')).toBe('/media/create')
   })

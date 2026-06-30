@@ -14,7 +14,7 @@
         :active-tag="activeTag"
         :search-query="searchQuery"
         @update:active-tab="setTab($event as TabKey)"
-        @create-topic="router.push('/new')"
+        @create-topic="router.push('/forum/new')"
         @request-category="catReqModalOpen = true"
         @update:selected-category-value="selectedCategoryValue = String($event)"
         @clear-tag="clearTag"
@@ -37,7 +37,7 @@
           v-for="(topic, index) in forumStore.topics"
           :key="topic.id"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-          @click="router.push(`/topic/${topic.id}`)"
+          @click="router.push(`/forum/topic/${topic.id}`)"
         >
           <!-- Tags / Category badge -->
           <template #meta>
@@ -153,7 +153,7 @@ const uiStore = useUIStore()
 const { focusedIndex } = useKeyboardList({
   items: computed(() => forumStore.topics),
   onEnter: (topic) => {
-    router.push(`/topic/${topic.id}`)
+    router.push(`/forum/topic/${topic.id}`)
   },
   section: 'content',
   scrollSelector: '.p-entry.is-focused'
@@ -324,7 +324,7 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const doSearch = () => {
   if (searchQuery.value.trim()) {
-    router.push(`/search?q=${encodeURIComponent(searchQuery.value.trim())}`)
+    router.push(`/forum/search?q=${encodeURIComponent(searchQuery.value.trim())}`)
   }
 }
 
@@ -347,7 +347,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
   if (e.key === 'n') {
-    if (authStore.isAuthenticated) router.push('/new')
+    if (authStore.isAuthenticated) router.push('/forum/new')
   } else if (e.key === '/') {
     e.preventDefault()
     searchInputRef.value?.focus()

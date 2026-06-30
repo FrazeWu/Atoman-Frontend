@@ -23,29 +23,29 @@ export function useAsyncNavigate() {
       // 2. 静默请求
       const data = await fetchFn()
 
-      // 3. 请求成功，开始收场动画
-      // 快速收回 Sheet
-      sheet.clearStack(false)
-      
-      // 触发背景文字隐去
-      transition.triggerExit()
-
-      // 4. 存储接力数据
+      // 3. 先存储接力数据，写入失败时不能启动半截转场
       localStorage.setItem('atoman_transition_relay', JSON.stringify({
         type,
         data,
         timestamp: Date.now()
       }))
 
+      // 4. 请求成功且接力数据写入成功，开始收场动画
+      // 快速收回 Sheet
+      sheet.clearStack(false)
+      
+      // 触发背景文字隐去
+      transition.triggerExit()
+
       // 5. 等待动画完成并跳转 (匹配 CSS 0.5s 动画)
       await new Promise(r => setTimeout(r, 500))
-      document.body.style.cursor = 'default'
       window.location.assign(targetUrl)
 
     } catch (err) {
       console.error('Transition fetch failed:', err)
-      document.body.style.cursor = 'default'
       // TODO: 可选：触发一个轻提示告警
+    } finally {
+      document.body.style.cursor = 'default'
     }
   }
 
@@ -55,14 +55,19 @@ export function useAsyncNavigate() {
    * @param targetUrl 目标页面的完整 URL
    */
   async function navigateModuleWithShutter(targetUrl: string) {
+    try {
+      // 1. 先设置基础转场标记，写入失败时不能启动半截转场
+      localStorage.setItem('atoman_transition_relay_basic', 'true')
+    } catch (err) {
+      console.error('Transition relay failed:', err)
+      return
+    }
+
     // 1. 快速收回 Sheet
     sheet.clearStack(false)
     
     // 2. 触发背景文字隐去
     transition.triggerExit()
-
-    // 3. 设置基础转场标记 (让新页面知道是从转场进来的，触发入场动画)
-    localStorage.setItem('atoman_transition_relay_basic', 'true')
 
     // 4. 等待动画完成并跳转 (匹配 CSS 0.5s 动画)
     await new Promise(r => setTimeout(r, 500))

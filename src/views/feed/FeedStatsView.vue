@@ -3,7 +3,7 @@
     <PPageHeader title="阅读统计" sub="按时间和订阅源查看你的 RSS 阅读趋势">
       <template #action>
         <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:flex-end">
-          <RouterLink to="/" style="text-decoration:none">
+          <RouterLink to="/feed" style="text-decoration:none">
             <PPress variant="secondary" label="返回订阅" />
           </RouterLink>
         </div>

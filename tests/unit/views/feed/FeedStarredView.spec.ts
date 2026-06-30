@@ -130,12 +130,42 @@ describe('FeedStarredView', () => {
     const playerStore = usePlayerStore()
     const setQueueSpy = vi.spyOn(playerStore, 'setQueueFromCurrentItems')
     const createPodcastSongSpy = vi.spyOn(playerStore, 'createPodcastSong')
-    const playSongSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(() => {})
+    const playQueuedSongSpy = vi.spyOn(playerStore, 'playQueuedSong').mockImplementation(() => {})
 
     await wrapper.get('[data-test="sheet-play"]').trigger('click')
 
     expect(setQueueSpy).toHaveBeenCalled()
     expect(createPodcastSongSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'feed-item-1' }))
-    expect(playSongSpy).toHaveBeenCalled()
+    expect(playQueuedSongSpy).toHaveBeenCalled()
+  })
+
+  it('returns to the feed module root from the header action', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const wrapper = mount(FeedStarredView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: true,
+          PBadge: true,
+          PClip: true,
+          PPress: {
+            props: ['label'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedTimelineFooter: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('header button').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith('/feed')
   })
 })

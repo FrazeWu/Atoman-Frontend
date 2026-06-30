@@ -5,13 +5,13 @@
       v-model:collapsed="sidebarCollapsed"
       storage-key="atoman.blog.sidebar.collapsed"
     >
-      <PSidebarItem to="/" :index="1" :icon="Compass" exact>
+      <PSidebarItem to="/posts" :index="1" :icon="Compass" exact>
         探索
       </PSidebarItem>
-      <PSidebarItem to="/subscriptions" :index="2" :icon="Rss">
+      <PSidebarItem to="/posts/subscriptions" :index="2" :icon="Rss">
         订阅
       </PSidebarItem>
-      <PSidebarItem to="/manage" :index="3" :icon="Settings">
+      <PSidebarItem to="/posts/manage" :index="3" :icon="Settings">
         管理
       </PSidebarItem>
     </PSidebar>

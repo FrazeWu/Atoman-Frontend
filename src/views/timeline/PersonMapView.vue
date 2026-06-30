@@ -4,7 +4,7 @@
     <aside class="person-panel">
       <!-- Back + person info -->
       <div class="panel-header">
-        <RouterLink to="/persons" class="back-link">← 所有人物</RouterLink>
+        <RouterLink to="/timeline/persons" class="back-link">← 所有人物</RouterLink>
         <div v-if="loading && !currentPerson" style="padding:2rem;text-align:center;font-weight:700">加载中...</div>
         <template v-else-if="currentPerson">
           <div class="person-name">{{ currentPerson.name }}</div>
@@ -220,6 +220,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import Map from 'ol/Map'
 import View from 'ol/View'
@@ -249,7 +250,7 @@ const router = useRouter()
 const store = useTimelineStore()
 const authStore = useAuthStore()
 
-const { currentPerson, loading } = store
+const { currentPerson, loading } = storeToRefs(store)
 
 // Map refs
 const mapEl = ref<HTMLElement | null>(null)
@@ -268,11 +269,11 @@ const lastPickedCoords = ref<{ lat: number; lng: number } | null>(null)
 
 const canEdit = computed(() => {
   return authStore.isAuthenticated &&
-    (currentPerson?.user_id === authStore.user?.uuid || isAdminRole(authStore.user?.role))
+    (currentPerson.value?.user_id === authStore.user?.uuid || isAdminRole(authStore.user?.role))
 })
 
 const sortedLocations = computed(() => {
-  return [...(currentPerson?.locations || [])].sort(
+  return [...(currentPerson.value?.locations || [])].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 })
@@ -442,7 +443,7 @@ const cancelPickCoords = () => {
 
 // Watch for location changes to re-render map
 watch(
-  () => currentPerson?.locations,
+  () => currentPerson.value?.locations,
   () => renderMap(),
   { deep: true }
 )
@@ -492,13 +493,13 @@ const closeLocationForm = () => {
 }
 
 const submitLocation = async () => {
-  if (!locForm.value.date || !locForm.value.place_name || !locForm.value.source || !currentPerson?.id) return
+  if (!locForm.value.date || !locForm.value.place_name || !locForm.value.source || !currentPerson.value?.id) return
   locSubmitting.value = true
   try {
     if (editingLocation.value) {
       await store.updateLocation(editingLocation.value.id, locForm.value)
     } else {
-      await store.addLocation(currentPerson.id, locForm.value)
+      await store.addLocation(currentPerson.value.id, locForm.value)
     }
     closeLocationForm()
   } catch (e) {
@@ -529,23 +530,23 @@ const personForm = ref({ name: '', bio: '', birth_date: '', death_date: '' })
 const personTagsInput = ref('')
 
 const openEditPerson = () => {
-  if (!currentPerson) return
+  if (!currentPerson.value) return
   personForm.value = {
-    name: currentPerson.name,
-    bio: currentPerson.bio || '',
-    birth_date: currentPerson.birth_date ? currentPerson.birth_date.slice(0, 10) : '',
-    death_date: currentPerson.death_date ? currentPerson.death_date.slice(0, 10) : '',
+    name: currentPerson.value.name,
+    bio: currentPerson.value.bio || '',
+    birth_date: currentPerson.value.birth_date ? currentPerson.value.birth_date.slice(0, 10) : '',
+    death_date: currentPerson.value.death_date ? currentPerson.value.death_date.slice(0, 10) : '',
   }
-  personTagsInput.value = (currentPerson.tags || []).join(', ')
+  personTagsInput.value = (currentPerson.value.tags || []).join(', ')
   showPersonForm.value = true
 }
 
 const submitEditPerson = async () => {
-  if (!currentPerson || !personForm.value.name) return
+  if (!currentPerson.value || !personForm.value.name) return
   personSubmitting.value = true
   try {
     const tags = personTagsInput.value.split(',').map((t) => t.trim()).filter(Boolean)
-    await store.updatePerson(currentPerson.id, { ...personForm.value, tags })
+    await store.updatePerson(currentPerson.value.id, { ...personForm.value, tags })
     showPersonForm.value = false
   } catch (e) {
     console.error(e)
@@ -559,9 +560,9 @@ const confirmDeletePerson = () => {
 }
 
 const doDeletePerson = async () => {
-  if (!currentPerson) return
-  await store.deletePerson(currentPerson.id)
-  router.push('/persons')
+  if (!currentPerson.value) return
+  await store.deletePerson(currentPerson.value.id)
+  router.push('/timeline/persons')
 }
 
 onMounted(async () => {

@@ -3,7 +3,7 @@
     <PPageHeader title="收藏" accent sub="你保存的文章合集">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
-          <PPress variant="secondary" label="← 返回订阅" @click="$router.push('/')" />
+          <PPress variant="secondary" label="← 返回订阅" @click="router.push('/feed')" />
         </div>
       </template>
     </PPageHeader>
@@ -260,7 +260,7 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   playerStore.setQueueFromCurrentItems(queueItems)
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
-  playerStore.playSong(tempSong)
+  playerStore.playQueuedSong(tempSong)
 }
 
 const fetchStarred = async () => {

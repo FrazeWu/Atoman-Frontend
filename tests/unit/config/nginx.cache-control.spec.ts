@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 
 const backendRoot = path.resolve(process.cwd(), '../Atoman-Backend')
@@ -22,13 +23,23 @@ const requiredPaths = [
 const describeIfConfigExists = requiredPaths.every(existsSync) ? describe : describe.skip
 
 describeIfConfigExists('production nginx cache control', () => {
-  const nginxSource = readFileSync(nginxPath, 'utf8')
-  const dockerProxySource = readFileSync(dockerProxyPath, 'utf8')
-  const realIpSource = readFileSync(realIpPath, 'utf8')
-  const legacySslSource = readFileSync(legacySslPath, 'utf8')
-  const frontendDockerfile = readFileSync(frontendDockerfilePath, 'utf8')
-  const frontendDockerignore = readFileSync(frontendDockerignorePath, 'utf8')
-  const backendDockerignore = readFileSync(backendDockerignorePath, 'utf8')
+  let nginxSource: string
+  let dockerProxySource: string
+  let realIpSource: string
+  let legacySslSource: string
+  let frontendDockerfile: string
+  let frontendDockerignore: string
+  let backendDockerignore: string
+
+  beforeAll(() => {
+    nginxSource = readFileSync(nginxPath, 'utf8')
+    dockerProxySource = readFileSync(dockerProxyPath, 'utf8')
+    realIpSource = readFileSync(realIpPath, 'utf8')
+    legacySslSource = readFileSync(legacySslPath, 'utf8')
+    frontendDockerfile = readFileSync(frontendDockerfilePath, 'utf8')
+    frontendDockerignore = readFileSync(frontendDockerignorePath, 'utf8')
+    backendDockerignore = readFileSync(backendDockerignorePath, 'utf8')
+  })
 
   it('keeps SPA html revalidated while preserving immutable asset caching', () => {
     expect(nginxSource).toContain('location = /index.html')

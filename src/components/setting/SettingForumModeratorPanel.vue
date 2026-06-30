@@ -264,9 +264,7 @@ async function searchUsers() {
     if (!response.ok) {
       throw new Error(data.error || '搜索用户失败')
     }
-    users.value = (data.data || []).filter((user: SearchUser) => (
-      user.role === 'moderator' || user.role === 'admin' || user.role === 'owner'
-    ))
+    users.value = data.data || []
   } catch (err) {
     error.value = err instanceof Error ? err.message : '搜索用户失败'
   } finally {

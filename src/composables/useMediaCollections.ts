@@ -12,6 +12,14 @@ export type MediaCollection = {
   count?: number
 }
 
+type BackendMediaCollection = Collection & {
+  type?: unknown
+}
+
+const normalizeMediaCollectionType = (type: unknown): MediaCollectionType => (
+  type === 'podcast' || type === 'video' ? type : 'article'
+)
+
 const selectedChannelId = ref<string | null>(null)
 const selectedCollectionId = ref<string | null>(null)
 const selectedCollection = ref<MediaCollection | null>(null)
@@ -28,6 +36,7 @@ export function useMediaCollections() {
     selectedChannelId.value = channelId
     selectedCollectionId.value = null
     selectedCollection.value = null
+    collections.value = []
   }
 
   const loadCollections = async (channelId: string | null) => {
@@ -39,11 +48,11 @@ export function useMediaCollections() {
     loadingCollections.value = true
     try {
       const api = useApi()
-      const data = await apiGetRaw<Collection[] | { data?: Collection[] }>(api.blog.channelCollections(channelId))
-      const rows: Collection[] = Array.isArray(data) ? data : (data.data || [])
+      const data = await apiGetRaw<BackendMediaCollection[] | { data?: BackendMediaCollection[] }>(api.blog.channelCollections(channelId))
+      const rows: BackendMediaCollection[] = Array.isArray(data) ? data : (data.data || [])
       collections.value = rows.map(collection => ({
         id: collection.id,
-        type: 'article',
+        type: normalizeMediaCollectionType(collection.type),
         name: collection.name,
       }))
     } finally {

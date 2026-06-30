@@ -68,8 +68,16 @@ export const useNotificationStore = defineStore('notification', () => {
       headers: authHeaders(),
     })
     if (!res.ok) return
-    notifications.value = notifications.value.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() }))
-    unreadCount.value = 0
+    const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && (!type || item.type === type)).length
+    const data = await res.json().catch(() => null)
+    const nextUnreadCount = data?.unread_total ?? data?.unread_count ?? data?.count
+    const readAt = new Date().toISOString()
+    notifications.value = notifications.value.map((item) =>
+      !type || item.type === type ? { ...item, read_at: item.read_at || readAt } : item,
+    )
+    unreadCount.value = typeof nextUnreadCount === 'number'
+      ? nextUnreadCount
+      : Math.max(0, unreadCount.value - unreadMarkedRead)
   }
 
   const receiveNotification = (notification: Notification) => {

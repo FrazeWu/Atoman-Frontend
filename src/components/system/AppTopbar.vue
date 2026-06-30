@@ -66,7 +66,11 @@ const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 
 const navRooms = computed(() => moduleNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
+const siteContext = computed(() => {
+  const queryStart = route.fullPath.indexOf('?')
+  const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
+  return resolveSiteContext(window.location.hostname, search, route.path)
+})
 
 const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.value)
 </script>

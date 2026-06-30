@@ -42,7 +42,7 @@ function contextFromLabel(label: string): SiteContext {
 function pathnameContext(pathname: string): SiteContext | null {
   const segments = pathname.split('/').filter(Boolean)
   if (segments.length === 0) {
-    return { type: 'module', module: 'feed' }
+    return null
   }
 
   const [first, second] = segments
@@ -75,6 +75,21 @@ function isIPv4Host(hostname: string) {
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)
 }
 
+function productionSubdomainLabel(hostname: string) {
+  const rootDomain = 'atoman.org'
+  const normalizedHostname = hostname.toLowerCase().replace(/\.$/, '')
+  if (normalizedHostname === rootDomain || normalizedHostname === `www.${rootDomain}`) {
+    return null
+  }
+
+  const rootSuffix = `.${rootDomain}`
+  if (!normalizedHostname.endsWith(rootSuffix)) {
+    return null
+  }
+
+  return normalizedHostname.slice(0, -rootSuffix.length)
+}
+
 export function resolveSiteContext(hostname: string, search = '', pathname?: string): SiteContext {
   if (typeof pathname === 'string') {
     const pathContext = pathnameContext(pathname)
@@ -85,6 +100,10 @@ export function resolveSiteContext(hostname: string, search = '', pathname?: str
     return { type: 'module', module: 'feed' }
   }
   void search
-  void contextFromLabel
+  const subdomainLabel = productionSubdomainLabel(hostname)
+  if (subdomainLabel) {
+    return contextFromLabel(subdomainLabel)
+  }
+
   return { type: 'module', module: 'feed' }
 }

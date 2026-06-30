@@ -54,7 +54,7 @@ export const useInboxStore = defineStore('inbox', () => {
     const host = apiBase.startsWith('http')
       ? apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
       : `${protocol}//${window.location.host}`
-    socket = new WebSocket(`${host}/ws/user?token=${encodeURIComponent(authStore.token)}`)
+    socket = new WebSocket(`${host}/ws/user`)
 
     socket.onopen = () => {
       connected.value = true

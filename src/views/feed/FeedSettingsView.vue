@@ -2,7 +2,7 @@
   <div class="a-page-xl feed-subpage">
     <PPageHeader title="设置" accent sub="管理订阅体验与后续偏好选项">
       <template #action>
-        <RouterLink to="/" style="text-decoration:none">
+        <RouterLink to="/feed" style="text-decoration:none">
           <PPress variant="secondary" label="返回订阅" />
         </RouterLink>
       </template>
@@ -44,4 +44,3 @@ import PBadge from '@/components/ui/PBadge.vue'
   gap: 1rem;
 }
 </style>
-

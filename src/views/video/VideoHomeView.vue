@@ -15,14 +15,19 @@ const videos = ref<Video[]>([])
 const loading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
 const canPublishVideo = computed(() => siteAccessStore.isFeatureEnabled('video', 'video.publish'))
+let fetchVideosSeq = 0
 
 async function fetchVideos() {
+  const seq = ++fetchVideosSeq
   loading.value = true
   try {
     const res = await fetch(`${API_URL}/videos?sort=${sort.value}`)
-    if (res.ok) videos.value = await res.json()
+    if (res.ok) {
+      const data = await res.json()
+      if (seq === fetchVideosSeq) videos.value = data
+    }
   } finally {
-    loading.value = false
+    if (seq === fetchVideosSeq) loading.value = false
   }
 }
 

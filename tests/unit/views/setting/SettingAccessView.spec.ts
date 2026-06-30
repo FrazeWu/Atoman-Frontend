@@ -92,7 +92,7 @@ describe('SettingAccessView section sync', () => {
     expect(wrapper.find('[data-testid="feed-source-panel"]').exists()).toBe(true)
   })
 
-  it('保存时会带上 kanbo 模块可见性', async () => {
+  it('保存时会带上 media 模块可见性', async () => {
     const save = vi.fn(async () => undefined)
     siteAccessState.save = save
 
@@ -122,7 +122,7 @@ describe('SettingAccessView section sync', () => {
     await wrapper.findAll('button').at(-1)!.trigger('click')
 
     expect(save).toHaveBeenCalledTimes(1)
-    expect(save.mock.calls[0]?.[0]?.modules?.kanbo?.enabled).toBe(false)
+    expect(save.mock.calls[0]?.[0]?.modules?.media?.enabled).toBe(false)
     expect(save.mock.calls[0]?.[1]).toBe('admin-token')
   })
 })

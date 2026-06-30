@@ -938,7 +938,7 @@ const submitPerson = async () => {
     showPersonForm.value = false
     personForm.value = { name: '', bio: '', birth_date: '', death_date: '' }
     personTagsInput.value = ''
-    router.push(`/person/${created.id}`)
+    router.push(`/timeline/person/${created.id}`)
   } catch (error) {
     console.error(error)
   } finally {

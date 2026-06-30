@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -17,6 +18,7 @@ type FeaturedItem =
   | { kind: 'video'; id: string; title: string; meta: string; image?: string; video: Video }
 
 const api = useApi()
+const router = useRouter()
 const posts = ref<Post[]>([])
 const episodes = ref<PodcastEpisode[]>([])
 const videos = ref<Video[]>([])
@@ -52,6 +54,18 @@ const openArticleSheet = (post: Post) => {
     is_read: false,
   }
   showArticleSheet.value = true
+}
+
+const openFeaturedItem = (item: FeaturedItem) => {
+  if (item.kind === 'article') {
+    openArticleSheet(item.post)
+    return
+  }
+  if (item.kind === 'podcast') {
+    void router.push(modulePathUrl('media', `/podcasts/episode/${item.episode.id}`))
+    return
+  }
+  void router.push(modulePathUrl('media', `/videos/watch/${item.video.id}`))
 }
 
 const featuredItems = computed<FeaturedItem[]>(() => {
@@ -140,7 +154,7 @@ onMounted(loadHome)
         class="content-home-feature"
         :class="{ 'content-home-feature--primary': index === 0 }"
         type="button"
-        @click="item.kind === 'article' ? openArticleSheet(item.post) : null"
+        @click="openFeaturedItem(item)"
       >
         <div v-if="item.image" class="content-home-feature__image" :style="{ backgroundImage: `url(${item.image})` }" />
         <div v-else class="content-home-feature__image content-home-feature__image--empty">{{ item.kind.toUpperCase() }}</div>

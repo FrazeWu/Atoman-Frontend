@@ -21,6 +21,28 @@ const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
 
 type CreationStepKey = 'artist' | 'albumSeed' | 'albumDetails'
 
+function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
+  const { artist, albumSeed, albumDetails, tracks } = flow.draft
+
+  return (
+    flow.dirty ||
+    !!artist.avatarUrl.trim() ||
+    !!artist.name.trim() ||
+    !!artist.country.trim() ||
+    !!artist.birthday.trim() ||
+    !!artist.bio.trim() ||
+    !!artist.source.trim() ||
+    !!albumSeed.title.trim() ||
+    albumSeed.uploadedAssets.length > 0 ||
+    !!albumDetails.coverUrl.trim() ||
+    !!albumDetails.title.trim() ||
+    !!albumDetails.releaseDate.trim() ||
+    !!albumDetails.bio.trim() ||
+    !!albumDetails.source.trim() ||
+    tracks.length > 0
+  )
+}
+
 const stepCopy: Record<CreationStepKey, { index: number; title: string; subtitle: string; cta: string }> = {
   artist: {
     index: 1,
@@ -54,12 +76,7 @@ function requestClose() {
   const flow = creationFlow.value
   if (!flow) return
 
-  const hasDraft =
-    flow.dirty ||
-    !!flow.draft.artist.name.trim() ||
-    !!flow.draft.albumSeed.title.trim() ||
-    !!flow.draft.albumDetails.title.trim() ||
-    flow.draft.tracks.length > 0
+  const hasDraft = hasCreationDraft(flow)
 
   if (hasDraft && !window.confirm('确认关闭？未完成的艺术家/专辑创建不会保存。')) return
   closeMusicCreationFlow()

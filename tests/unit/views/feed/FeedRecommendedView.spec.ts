@@ -1,695 +1,188 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { reactive } from 'vue'
+import { ref } from 'vue'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useFeedStore } from '@/stores/feed'
 
-const routeQuery = reactive({} as Record<string, string | undefined>)
 const routerPush = vi.fn()
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ query: routeQuery }),
   useRouter: () => ({ push: routerPush }),
 }))
 
 describe('FeedRecommendedView', () => {
   beforeEach(() => {
     routerPush.mockReset()
-    Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
-    routerPush.mockImplementation(async (target) => {
-      if (!target || typeof target !== 'object' || !('query' in target)) return
-      const query = (target as { query?: Record<string, string | undefined> }).query || {}
-      Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
-      Object.entries(query).forEach(([key, value]) => {
-        if (value !== undefined) {
-          routeQuery[key] = value
-        }
-      })
-    })
     setActivePinia(createPinia())
-    window.history.replaceState(null, '', '/explore?site=feed')
-
-    const authStore = useAuthStore()
-    authStore.token = 'token'
-    authStore.user = { username: 'fafa', email: 'fafa@example.com' }
-    authStore.isAuthenticated = true
-
-    const feedStore = useFeedStore()
-    feedStore.subscriptions = [
-      {
-        id: 'sub-1',
-        user_id: 'user-1',
-        feed_source_id: 'source-1',
-        title: '来源',
-        feed_source: {
-          id: 'source-1',
-          source_type: 'external_rss',
-          rss_url: 'https://example.com/rss.xml',
-          hash: 'source-1-hash',
-          title: '来源',
-          created_at: '2026-01-01T00:00:00Z',
-        },
-        created_at: '2026-01-01T00:00:00Z',
-      },
-    ]
   })
 
-  it('shows a second page when explore meta total exceeds the page size', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+  it('mounts and defaults to hot mode and fetches recommendations', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/feed/explore')) {
+      if (url.includes('/feed/recommend/articles')) {
         return new Response(JSON.stringify({
           data: [{
-            type: 'feed_item',
-            feed_item: {
-              id: 'feed-item-1',
-              feed_source_id: 'source-1',
-              feed_source: { id: 'source-1', title: '来源' },
-              guid: 'feed-item-1',
-              title: '探索条目',
-              link: 'https://example.com/item',
-              summary: '摘要',
-              author: '作者',
-              published_at: '2026-06-16T00:00:00Z',
-              fetched_at: '2026-06-16T00:00:00Z',
-            },
-            published_at: '2026-06-16T00:00:00Z',
-            is_read: false,
+            id: 'art-1',
+            title: 'Article 1',
+            summary: 'Summary 1',
+            target_path: '/feed/item/1',
           }],
-          meta: { page: 1, page_size: 20, total: 40, has_more: true },
         }), { status: 200 })
       }
-      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
-        return new Response(JSON.stringify({ items: [] }), { status: 200 })
-      }
-      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
-    })
-
-    const wrapper = mount(FeedRecommendedView, {
-      global: {
-        stubs: {
-          PButton: true,
-          PEmpty: true,
-          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-        },
-      },
-    })
-
-    await flushPromises()
-
-    const pageButtons = wrapper.findAll('.feed-page-number').map((button) => button.text())
-    expect(pageButtons).toContain('2')
-  })
-
-  it('keeps article mode as the default explore surface', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/feed/explore')) {
+      if (url.includes('/feed/recommend/channels')) {
         return new Response(JSON.stringify({
           data: [{
-            type: 'feed_item',
-            feed_item: {
-              id: 'feed-item-1',
-              feed_source_id: 'source-1',
-              feed_source: { id: 'source-1', title: '来源' },
-              guid: 'feed-item-1',
-              title: '探索条目',
-              link: 'https://example.com/item',
-              summary: '摘要',
-              author: '作者',
-              published_at: '2026-06-16T00:00:00Z',
-              fetched_at: '2026-06-16T00:00:00Z',
-            },
-            published_at: '2026-06-16T00:00:00Z',
-            is_read: false,
+            id: 'chan-1',
+            title: 'Channel 1',
+            summary: 'Summary Channel 1',
+            target_path: '/feed/channel/1',
           }],
-          meta: { page: 1, page_size: 20, total: 1, has_more: false },
         }), { status: 200 })
       }
-      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
-        return new Response(JSON.stringify({ items: [] }), { status: 200 })
-      }
-      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
     })
 
     const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
-          PButton: true,
-          PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
-        },
-      },
-    })
-
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('探索条目')
-    expect(wrapper.find('[data-test="explore-mode-articles"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="explore-mode-channels"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="channel-card"]').exists()).toBe(false)
-  })
-
-  it('defaults explore sorting to 热门 while keeping 返回订阅 as a separate action', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/feed/explore')) {
-        return new Response(JSON.stringify({
-          data: [],
-          meta: { page: 1, page_size: 20, total: 0, has_more: false },
-        }), { status: 200 })
-      }
-      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
-        return new Response(JSON.stringify({ items: [] }), { status: 200 })
-      }
-      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
-    })
-
-    const wrapper = mount(FeedRecommendedView, {
-      global: {
-        stubs: {
-          PButton: true,
-          PEmpty: true,
-          PPageHeader: {
-            name: 'PPageHeader',
-            template: '<header><slot /><slot name="action" /></header>',
-          },
-          PPress: {
-            name: 'PPress',
-            props: ['label', 'to'],
-            template: '<button type="button" v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
-          },
           PTab: {
-            name: 'PTab',
             props: ['label', 'active'],
-            template: '<button type="button" :aria-pressed="String(active)" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+            template: '<button class="p-tab" :class="{active}" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
+          PPress: {
+            props: ['label'],
+            template: '<button class="p-press" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PEmpty: {
+            props: ['title'],
+            template: '<div class="p-empty">{{ title }}</div>',
+          },
         },
       },
     })
 
     await flushPromises()
 
-    const header = wrapper.get('header')
-    const sortTabs = header.findAllComponents({ name: 'PTab' })
-    const headerActions = header.findAllComponents({ name: 'PPress' })
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=hot'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
 
-    expect(sortTabs).toHaveLength(2)
-    expect(sortTabs.map((tab) => tab.props('label'))).toEqual(['热门', '随机'])
-    expect(sortTabs.map((tab) => tab.props('active'))).toEqual([true, false])
-    expect(sortTabs.map((tab) => tab.attributes('aria-pressed'))).toEqual(['true', 'false'])
-
-    await sortTabs[1].trigger('click')
-
-    expect(routerPush).toHaveBeenLastCalledWith({
-      query: {
-        page: undefined,
-        sort: 'random',
-      },
-    })
-
-    expect(headerActions).toHaveLength(1)
-    expect(headerActions[0].props('label')).toBe('返回订阅')
-    expect(headerActions[0].props('to')).toBe('/feed')
+    expect(wrapper.text()).toContain('Article 1')
+    expect(wrapper.text()).toContain('Channel 1')
   })
 
-  it('opens source articles and lets an authenticated user subscribe from explore', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input)
-      if (url.includes('/feed/explore')) {
-        return new Response(JSON.stringify({
-          data: [{
-            type: 'feed_item',
-            feed_item: {
-              id: 'feed-item-1',
-              feed_source_id: 'source-1',
-              feed_source: { id: 'source-1', title: '来源', rss_url: 'https://example.com/rss.xml' },
-              guid: 'feed-item-1',
-              title: '探索条目',
-              link: 'https://example.com/item',
-              summary: '摘要',
-              author: '作者',
-              published_at: '2026-06-16T00:00:00Z',
-              fetched_at: '2026-06-16T00:00:00Z',
-            },
-            published_at: '2026-06-16T00:00:00Z',
-            is_read: false,
-          }],
-          meta: { page: 1, page_size: 20, total: 1, has_more: false },
-        }), { status: 200 })
-      }
-      if (url.includes('/feed/timeline?')) {
-        return new Response(JSON.stringify({
-          data: [{
-            type: 'feed_item',
-            feed_item: {
-              id: 'feed-item-1',
-              feed_source_id: 'source-1',
-              feed_source: { id: 'source-1', title: '来源', rss_url: 'https://example.com/rss.xml' },
-              guid: 'feed-item-1',
-              title: '来源文章',
-              link: 'https://example.com/source-item',
-              summary: '来源摘要',
-              author: '作者',
-              published_at: '2026-06-15T00:00:00Z',
-              fetched_at: '2026-06-15T00:00:00Z',
-            },
-            published_at: '2026-06-15T00:00:00Z',
-            is_read: false,
-          }],
-        }), { status: 200 })
-      }
-      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
-        return new Response(JSON.stringify({ items: [] }), { status: 200 })
-      }
-      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
-    })
+  it('shows error state when fetching fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
 
     const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
-          PButton: true,
-          PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
           PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: {
-            name: 'FeedArticleSheet',
-            props: ['show', 'article'],
-            template: '<section data-test="article-sheet" :data-show="String(show)">{{ article?.feed_item?.title }}</section>',
-          },
-          FeedSourceArticlesSheet: {
-            name: 'FeedSourceArticlesSheet',
-            props: ['show', 'source', 'items', 'loading', 'subscribeBusy'],
-            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><button data-test="subscribe-btn" @click="$emit(\'subscribe\')">subscribe</button><article v-for="item in items" :key="item.feed_item?.id">{{ item.feed_item?.title }}</article></section>',
-          },
+          PPress: true,
+          PEmpty: true,
         },
       },
     })
 
     await flushPromises()
-
-    const sourceTrigger = wrapper.get('[data-test="feed-source-trigger"]')
-    expect(sourceTrigger.text()).toContain('来源')
-    expect(sourceTrigger.attributes('title')).toBe('查看 来源 的所有文章')
-
-    await sourceTrigger.trigger('click')
-    await flushPromises()
-
-    expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
-    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('来源文章')
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('feed_source_id=source-1'))).toBe(true)
+    expect(wrapper.text()).toContain('推荐内容加载失败')
   })
 
-  it('fetches channel explore data when mode=channels', async () => {
-    Object.assign(routeQuery, { mode: 'channels', category: 'news' })
-
+  it('changes mode and refetches on tab click', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/feed/explore/sources')) {
-        return new Response(JSON.stringify({
-          data: [{
-            id: 'source-1',
-            title: 'Source One',
-            rss_url: 'https://example.com/rss.xml',
-            subscription_count: 3,
-            recent_item_count: 8,
-            last_published_at: '2026-06-19T00:00:00Z',
-            category: 'blog',
-            subscribed: false,
-          }],
-          meta: { page: 1, page_size: 20, total: 1, has_more: false },
-        }), { status: 200 })
-      }
+      const mode = url.includes('mode=featured') ? 'featured' : 'hot'
       return new Response(JSON.stringify({
-        data: [],
-        meta: { page: 1, page_size: 20, total: 0, has_more: false },
+        data: [{
+          id: `art-${mode}`,
+          title: `Article ${mode}`,
+          target_path: `/feed/item/${mode}`,
+        }],
       }), { status: 200 })
     })
 
     const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
-          PButton: true,
-          PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PPress: {
-            props: ['label'],
-            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          PTab: {
+            props: ['label', 'active'],
+            template: '<button class="p-tab" :class="{active}" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
+          PPress: true,
+          PEmpty: true,
         },
       },
     })
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('Article hot')
+
+    const tabs = wrapper.findAll('.p-tab')
+    // Tabs are: 热度, 精选, 探索
+    const featuredTab = tabs.find(t => t.text() === '精选')
+    expect(featuredTab).toBeDefined()
+    await featuredTab?.trigger('click')
     await flushPromises()
 
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
-    expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Source One')
-    expect(wrapper.text()).not.toContain('https://example.com/rss.xml')
+    expect(fetchSpy).toHaveBeenLastCalledWith(expect.stringContaining('/feed/recommend/channels?mode=featured'))
+    expect(wrapper.text()).toContain('Article featured')
   })
 
-  it('filters channel explore data by category without routing the whole page', async () => {
-    Object.assign(routeQuery, { mode: 'channels', category: 'news' })
-
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/feed/explore/sources')) {
-        const category = new URL(url, 'http://localhost').searchParams.get('category') || 'all'
-        return new Response(JSON.stringify({
-          data: [{
-            id: `source-${category}`,
-            title: `${category} Source`,
-            rss_url: `https://${category}.example.com/rss.xml`,
-            category: category === 'all' ? 'blog' : category,
-            subscription_count: 3,
-            recent_item_count: 8,
-            last_published_at: '2026-06-19T00:00:00Z',
-            subscribed: false,
-          }],
-          meta: { page: 1, page_size: 20, total: 1, has_more: false },
-        }), { status: 200 })
-      }
-      return new Response(JSON.stringify({
-        data: [],
-        meta: { page: 1, page_size: 20, total: 0, has_more: false },
-      }), { status: 200 })
-    })
+  it('navigates to feed index when clicking back button', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ data: [] }), { status: 200 }))
 
     const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
-          PButton: true,
-          PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PTab: true,
           PPress: {
             props: ['label'],
-            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+            template: '<button class="p-press" @click="$emit(\'click\')">{{ label }}</button>',
           },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
-        },
-      },
-    })
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('全部')
-    expect(wrapper.text()).toContain('新闻')
-
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources') && String(url).includes('category=news'))).toBe(true)
-
-    await wrapper.get('[data-test="channel-category-blog"]').trigger('click')
-
-    expect(routerPush).toHaveBeenLastCalledWith({
-      query: {
-        mode: 'channels',
-        page: undefined,
-        category: 'blog',
-      },
-    })
-  })
-
-  it('reuses the source drawer article flow from channel mode', async () => {
-    Object.assign(routeQuery, { mode: 'channels' })
-
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      if (url.includes('/feed/explore/sources')) {
-        return new Response(JSON.stringify({
-          data: [{
-            id: 'source-1',
-            title: 'Source One',
-            rss_url: 'https://example.com/rss.xml',
-            subscription_count: 3,
-            recent_item_count: 8,
-            last_published_at: '2026-06-19T00:00:00Z',
-            subscribed: false,
-          }],
-          meta: { page: 1, page_size: 20, total: 1, has_more: false },
-        }), { status: 200 })
-      }
-      if (url.includes('/feed/timeline?')) {
-        return new Response(JSON.stringify({
-          data: [{
-            type: 'feed_item',
-            feed_item: {
-              id: 'feed-item-1',
-              feed_source_id: 'source-1',
-              feed_source: { id: 'source-1', title: 'Source One', rss_url: 'https://example.com/rss.xml' },
-              guid: 'feed-item-1',
-              title: 'Channel Drawer Article',
-              link: 'https://example.com/source-item',
-              summary: 'Drawer summary',
-              author: 'Author',
-              published_at: '2026-06-15T00:00:00Z',
-              fetched_at: '2026-06-15T00:00:00Z',
-            },
-            published_at: '2026-06-15T00:00:00Z',
-            is_read: false,
-          }],
-        }), { status: 200 })
-      }
-      return new Response(JSON.stringify({
-        data: [],
-        meta: { page: 1, page_size: 20, total: 0, has_more: false },
-      }), { status: 200 })
-    })
-
-    const wrapper = mount(FeedRecommendedView, {
-      global: {
-        stubs: {
-          PButton: true,
           PEmpty: true,
-          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PPress: {
-            props: ['label'],
-            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
-          },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: {
-            name: 'FeedArticleSheet',
-            props: ['show', 'article'],
-            template: '<section data-test="article-sheet" :data-show="String(show)">{{ article?.feed_item?.title }}</section>',
-          },
-          FeedSourceArticlesSheet: {
-            name: 'FeedSourceArticlesSheet',
-            props: ['show', 'source', 'items', 'loading', 'subscribeBusy'],
-            emits: ['open-article'],
-            template: '<section data-test="source-sheet" :data-show="String(show)"><h2>{{ source?.title }}</h2><div data-test="source-subscription-id">{{ source?.subscriptionId || \"\" }}</div><button v-for="item in items" :key="item.feed_item?.id" type="button" data-test="source-article-row" @click="$emit(\'open-article\', item)">{{ item.feed_item?.title }}</button></section>',
-          },
         },
       },
     })
 
     await flushPromises()
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/explore/sources'))).toBe(true)
-    expect(wrapper.findAll('[data-test="channel-card"]')).toHaveLength(1)
-
-    await wrapper.get('[data-test="channel-card"]').trigger('click')
-    await flushPromises()
-
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('feed_source_id=source-1'))).toBe(true)
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?') && String(url).includes('source_id=sub-1'))).toBe(false)
-    expect(wrapper.get('[data-test="source-sheet"]').attributes('data-show')).toBe('true')
-    expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('Channel Drawer Article')
-    expect(wrapper.get('[data-test="source-subscription-id"]').text()).toBe('')
-
-    await wrapper.get('[data-test="source-article-row"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('true')
-    expect(wrapper.get('[data-test="article-sheet"]').text()).toContain('Channel Drawer Article')
+    const backBtn = wrapper.find('.p-press')
+    await backBtn.trigger('click')
+    expect(routerPush).toHaveBeenCalledWith('/feed')
   })
 
-  it('subscribes from channel mode without opening the source and refreshes channel counts', async () => {
-    Object.assign(routeQuery, { mode: 'channels' })
-
-    let sourceFetchCount = 0
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input)
-      if (url.includes('/feed/explore/sources')) {
-        sourceFetchCount += 1
-        return new Response(JSON.stringify({
-          data: [{
-            id: 'source-2',
-            title: 'Unsubscribed Source',
-            rss_url: 'https://unsubscribed.example.com/rss.xml',
-            subscription_count: sourceFetchCount > 1 ? 4 : 3,
-            recent_item_count: 8,
-            last_published_at: '2026-06-19T00:00:00Z',
-            subscribed: sourceFetchCount > 1,
-            recent_items: [],
-          }],
-          meta: { page: 1, page_size: 20, total: 1, has_more: false },
-        }), { status: 200 })
-      }
-      if (url.includes('/feed/subscriptions') && init?.method === 'POST') {
-        return new Response(JSON.stringify({ subscription: { id: 'sub-2' } }), { status: 200 })
-      }
-      if (url.includes('/feed/subscriptions')) {
-        return new Response(JSON.stringify({ data: [] }), { status: 200 })
-      }
-      return new Response(JSON.stringify({
-        data: [],
-        meta: { page: 1, page_size: 20, total: 0, has_more: false },
-      }), { status: 200 })
-    })
-
-    const wrapper = mount(FeedRecommendedView, {
-      global: {
-        stubs: {
-          PButton: true,
-          PEmpty: true,
-          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PPress: {
-            props: ['label'],
-            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
-          },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
-        },
-      },
-    })
-
-    await flushPromises()
-
-    await wrapper.get('[data-test="feed-source-subscribe"]').trigger('click')
-    await flushPromises()
-
-    expect(fetchSpy.mock.calls.some(([url, init]) => (
-      String(url).includes('/feed/subscriptions')
-      && init?.method === 'POST'
-      && String(init.body).includes('https://unsubscribed.example.com/rss.xml')
-    ))).toBe(true)
-    expect(sourceFetchCount).toBeGreaterThanOrEqual(2)
-    expect(wrapper.get('[data-test="feed-source-count"]').text()).toContain('4 订阅')
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes('/feed/timeline?'))).toBe(false)
-  })
-
-  it('switching to channel mode syncs the query string', async () => {
+  it('navigates to target path when clicking an item card', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/feed/explore')) {
+      if (url.includes('/feed/recommend/articles')) {
         return new Response(JSON.stringify({
-          data: [],
-          meta: { page: 1, page_size: 20, total: 0, has_more: false },
+          data: [{
+            id: 'art-1',
+            title: 'Article One',
+            target_path: '/feed/item/art-1',
+          }],
         }), { status: 200 })
       }
-      if (url.includes('/feed/stars') || url.includes('/feed/reading-list')) {
-        return new Response(JSON.stringify({ items: [] }), { status: 200 })
-      }
-      return new Response(JSON.stringify({ error: 'unexpected request' }), { status: 404 })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
     })
 
     const wrapper = mount(FeedRecommendedView, {
       global: {
         stubs: {
-          PButton: true,
-          PEmpty: true,
           PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PPress: {
-            props: ['label'],
-            template: '<button v-bind="$attrs" @click="$emit(\'click\')">{{ label }}<slot /></button>',
-          },
           PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
+          PPress: true,
+          PEmpty: true,
         },
       },
     })
 
     await flushPromises()
-    await wrapper.get('[data-test="explore-mode-channels"]').trigger('click')
-
-    expect(routerPush).toHaveBeenCalledWith({
-      query: {
-        mode: 'channels',
-        page: undefined,
-        sort: undefined,
-      },
-    })
-  })
-
-  it('refetches subscriptions when auth token becomes available after mount', async () => {
-    const feedStore = useFeedStore()
-    const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions').mockResolvedValue(undefined)
-    vi.spyOn(feedStore, 'fetchStarredIds').mockResolvedValue(undefined)
-    vi.spyOn(feedStore, 'fetchReadingListIds').mockResolvedValue(undefined)
-
-    const wrapper = mount(FeedRecommendedView, {
-      global: {
-        stubs: {
-          PButton: true,
-          PEmpty: true,
-          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
-          PTab: true,
-          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="meta" /><slot name="actions" /></article>' },
-          PBadge: true,
-          PClip: true,
-          PShortcutHints: true,
-          FeedArticleSheet: true,
-          FeedSourceArticlesSheet: true,
-        },
-      },
-    })
-
-    await flushPromises()
-    expect(fetchSubscriptions.mock.calls.length).toBeGreaterThanOrEqual(1)
-
-    const authStore = useAuthStore()
-    authStore.token = 'new-token'
-    await flushPromises()
-
-    expect(fetchSubscriptions.mock.calls.length).toBeGreaterThanOrEqual(2)
-    expect(wrapper.exists()).toBe(true)
+    const card = wrapper.find('.recommend-card')
+    await card.trigger('click')
+    expect(routerPush).toHaveBeenCalledWith('/feed/item/art-1')
   })
 })

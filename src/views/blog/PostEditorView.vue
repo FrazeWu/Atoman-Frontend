@@ -398,7 +398,7 @@ const authHeaders = computed(() => {
   }
   return headers
 })
-const editorRoutePath = computed(() => isEdit.value ? `/post/${String(route.params.id || '')}/edit` : '/post/new')
+const editorRoutePath = computed(() => isEdit.value ? `/posts/post/${String(route.params.id || '')}/edit` : '/posts/post/new')
 const draftContextKey = computed(() => isEdit.value ? `blog:post:${String(route.params.id || '')}` : 'blog:new')
 const draftPayload = computed<EditorDraftPayload>(() => ({
   context_key: draftContextKey.value,
@@ -436,6 +436,9 @@ const draftStatus = computed<DraftStatus>(() => {
   }
   if (serverDraftState.value === 'error') {
     return { tone: 'warn', text: '云端草稿同步失败，当前仅保存在本地' }
+  }
+  if (autoSaveState.value === 'error') {
+    return { tone: 'warn', text: '本地草稿保存失败，请手动保存或检查浏览器存储权限' }
   }
   if (autoSaveState.value === 'saving' || serverDraftState.value === 'syncing') {
     return { tone: 'warn', text: '草稿同步中…' }
@@ -484,6 +487,9 @@ const localDraftStatusText = computed(() => {
   }
   if (autoSaveState.value === 'saving') {
     return '正在保存中…'
+  }
+  if (autoSaveState.value === 'error') {
+    return '本地草稿保存失败'
   }
   if (hasMeaningfulDraft(draftPayload.value)) {
     return '已有编辑内容，等待下一次自动保存'
@@ -1174,7 +1180,7 @@ const save = async (status: SaveTarget) => {
       const savedPost = d.data || d
       await clearAllDrafts()
       if (isEdit.value) await syncPostCollections(String(savedPost.id))
-      router.push(`/post/${savedPost.id}`)
+      router.push(`/posts/post/${savedPost.id}`)
     } else {
       const err = await res.json()
       error.value = err.error || '保存失败，请重试'

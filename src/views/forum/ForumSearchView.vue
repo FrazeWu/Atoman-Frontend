@@ -1,7 +1,7 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:6rem">
     <PPageHeader title="搜索结果" :sub="searchQuery ? `「${searchQuery}」的搜索结果` : ''"
-      @back="router.push('/')" />
+      @back="router.push('/forum')" />
 
     <!-- Search bar -->
     <div style="margin-bottom:2rem">
@@ -33,7 +33,7 @@
         <PEntry
           v-for="topic in forumStore.searchResults"
           :key="topic.id"
-          @click="router.push(`/topic/${topic.id}`)"
+          @click="router.push(`/forum/topic/${topic.id}`)"
         >
           <!-- Tags / Category badge -->
           <template #meta>
@@ -109,7 +109,7 @@ const formatTime = (iso: string) => {
 const doSearch = async () => {
   const q = localQuery.value.trim()
   if (!q) return
-  router.replace({ path: '/search', query: { q } })
+  router.replace({ path: '/forum/search', query: { q } })
   searchQuery.value = q
   page.value = 1
   await forumStore.searchTopics(q, 1)

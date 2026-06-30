@@ -232,32 +232,6 @@ export interface Like {
   created_at: string
 }
 
-// ===== Portal Types =====
-
-export interface PortalHotItem {
-  id: string
-  module: string
-  kind: string
-  title: string
-  summary: string
-  image_url: string
-  target_path: string
-  score: number
-  score_label: string
-  published_at?: string
-}
-
-export interface PortalHotSection {
-  module: string
-  title: string
-  items: PortalHotItem[]
-}
-
-export interface PortalHotResponse {
-  featured: PortalHotItem[]
-  sections: PortalHotSection[]
-}
-
 // ===== Feed / Types =====
 
 export interface FeedDiscoveryCandidate {

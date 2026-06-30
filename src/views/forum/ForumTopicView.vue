@@ -7,13 +7,13 @@
     <template v-else-if="forumStore.currentTopic">
       <!-- Breadcrumb -->
       <div class="topic-breadcrumb">
-        <RouterLink to="/" class="back-link-muted">论坛</RouterLink>
+        <RouterLink to="/forum" class="back-link-muted">论坛</RouterLink>
         <span class="topic-divider">/</span>
         <span
           v-if="forumStore.currentTopic.category"
           class="a-badge category-pill"
           :style="{ borderColor: forumStore.currentTopic.category.color, color: forumStore.currentTopic.category.color }"
-          @click="router.push(`/?category=${forumStore.currentTopic.category_id}`)"
+          @click="router.push(`/forum?category=${forumStore.currentTopic.category_id}`)"
         >{{ forumStore.currentTopic.category.name }}</span>
       </div>
 

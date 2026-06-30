@@ -73,6 +73,7 @@ export const useFeedStore = defineStore('feed', () => {
     subscriptions.value = []
     groups.value = []
     starGroups.value = []
+    timeline.value = []
     starredItemIds.value = new Set()
     bookmarkedPostIds.value = new Set()
     readingListItemIds.value = new Set()

@@ -55,7 +55,7 @@ function episodeCover(episode: PodcastEpisode) {
         <h1 class="pev-title">{{ ep.post?.title }}</h1>
         <RouterLink
           v-if="ep.channel"
-          :to="`/show/${ep.channel.slug}`"
+          :to="`/podcasts/show/${ep.channel.slug}`"
           class="pev-show"
         >{{ ep.channel.name }}</RouterLink>
         <div class="pev-meta">

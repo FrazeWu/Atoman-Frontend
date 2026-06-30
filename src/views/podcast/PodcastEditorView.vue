@@ -381,7 +381,7 @@ async function saveDraft() {
   draftSaved.value = false
   try {
     const ep = await apiSave(buildPayload('draft'))
-    if (!isEdit.value) router.replace(`/editor/${ep.id}`)
+    if (!isEdit.value) router.replace(`/podcasts/editor/${ep.id}`)
     draftSaved.value = true
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e: any) {

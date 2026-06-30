@@ -351,7 +351,7 @@ async function saveDraft() {
   draftSaved.value = false
   try {
     const v = await apiSave(buildPayload('draft'))
-    if (!isEdit.value) router.replace(`/edit/${v.id}`)
+    if (!isEdit.value) router.replace(`/videos/edit/${v.id}`)
     draftSaved.value = true
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e: any) {

@@ -7,100 +7,170 @@
         <p class="auth-sub">{{ isRegister ? '创建账号，继续进入 Atoman 的数字领域。' : '进入 Atoman 的数字领域。' }}</p>
       </div>
 
+      <!-- Step Indicator for Registration -->
+      <div v-if="isRegister" class="auth-steps-indicator">
+        <div :class="['step-dot', { 'step-dot--active': currentStep >= 1 }]" />
+        <span class="step-label">邮箱验证</span>
+        <div class="step-line" :class="{ 'step-line--active': currentStep >= 2 }" />
+        <div :class="['step-dot', { 'step-dot--active': currentStep >= 2 }]" />
+        <span class="step-label" :class="{ 'step-label--inactive': currentStep < 2 }">凭证设置</span>
+      </div>
+
       <form @submit.prevent="handleSubmit" class="auth-form">
-        <PInput
-          v-if="isRegister"
-          v-model="username"
-          label="用户名"
-          placeholder="输入用户名"
-          :error="fieldErrors.username"
-        />
+        <!-- Error Banner -->
+        <Transition name="fade-slide">
+          <div v-if="visibleError" class="a-error auth-error" role="alert">
+            <span class="error-text">{{ visibleError }}</span>
+            <button type="button" class="error-close-btn" @click="clearGeneralError" aria-label="关闭提示">
+              <svg class="error-close-svg" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </Transition>
 
-        <PInput
-          v-if="!isRegister"
-          v-model="email"
-          label="用户名或邮箱"
-          placeholder="输入用户名或邮箱"
-          :error="fieldErrors.email"
-        />
+        <Transition name="fade-slide">
+          <div
+            v-if="turnstileConfigMissing"
+            class="a-error auth-error"
+            role="alert"
+          >
+            <span class="error-text">当前站点未启用人机验证配置，请联系管理员处理。</span>
+          </div>
+        </Transition>
 
-        <div v-else class="a-field">
-          <label class="a-field-label">邮箱地址</label>
-          <div class="auth-code-row">
-            <PInput
-              v-model="email"
-              type="email"
-              required
-              placeholder="请输入邮箱地址"
-            />
+        <!-- LOGIN VIEW -->
+        <div v-if="!isRegister" class="auth-step-container">
+          <PInput
+            v-model="email"
+            label="用户名或邮箱"
+            placeholder="输入用户名或邮箱"
+            :error="fieldErrors.email"
+          />
+
+          <PInput
+            v-model="password"
+            label="通行密码"
+            type="password"
+            placeholder="输入密码"
+            :error="fieldErrors.password"
+          />
+
+          <PButton
+            type="submit"
+            variant="primary"
+            size="lg"
+            block
+            class="auth-submit"
+            :loading="loading"
+            loading-text="请稍候..."
+          >
+            登 录
+          </PButton>
+        </div>
+
+        <!-- REGISTER VIEW - STEP 1 (Email & Verification Code) -->
+        <div v-else-if="currentStep === 1" class="auth-step-container">
+          <div class="a-field">
+            <label class="a-field-label">邮箱地址</label>
+            <div class="auth-code-row">
+              <PInput
+                v-model="email"
+                type="email"
+                required
+                placeholder="请输入邮箱地址"
+                :error="fieldErrors.email"
+              />
+              <PButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                class="auth-code-btn"
+                :disabled="countdown > 0"
+                @click="sendVerificationCode"
+              >
+                {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+              </PButton>
+            </div>
+          </div>
+
+          <PInput
+            v-model="verificationCode"
+            label="验证码"
+            placeholder="6 位数字验证码"
+            maxlength="6"
+            :error="fieldErrors.code"
+          />
+
+          <PButton
+            type="button"
+            variant="primary"
+            size="lg"
+            block
+            class="auth-submit"
+            @click="goNextStep"
+          >
+            下一步
+          </PButton>
+        </div>
+
+        <!-- REGISTER VIEW - STEP 2 (Username & Passwords & Captcha) -->
+        <div v-else-if="currentStep === 2" class="auth-step-container">
+          <PInput
+            v-model="username"
+            label="用户名"
+            placeholder="输入用户名"
+            :error="fieldErrors.username"
+          />
+
+          <PInput
+            v-model="password"
+            label="通行密码"
+            type="password"
+            placeholder="输入密码"
+            :error="fieldErrors.password"
+          />
+
+          <PInput
+            v-model="passwordConfirm"
+            label="确认密码"
+            type="password"
+            placeholder="再次输入密码"
+            :error="fieldErrors.passwordConfirm"
+          />
+
+          <TurnstileWidget
+            v-if="turnstileEnabled"
+            ref="turnstileRef"
+            :site-key="turnstileSiteKey"
+            @verified="turnstileToken = $event"
+            @expired="turnstileToken = ''"
+            @error="handleTurnstileError"
+          />
+
+          <div class="auth-buttons-row">
             <PButton
               type="button"
               variant="secondary"
-              size="sm"
-              class="auth-code-btn"
-              :disabled="countdown > 0"
-              @click="sendVerificationCode"
+              size="lg"
+              class="auth-back-btn"
+              @click="currentStep = 1"
             >
-              {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+              返回上一步
+            </PButton>
+            <PButton
+              type="submit"
+              variant="primary"
+              size="lg"
+              class="auth-submit-btn"
+              :loading="loading"
+              loading-text="请稍候..."
+            >
+              注册账号
             </PButton>
           </div>
         </div>
-
-        <PInput
-          v-if="isRegister"
-          v-model="verificationCode"
-          label="验证码"
-          placeholder="6 位数字验证码"
-          maxlength="6"
-          :error="fieldErrors.code"
-        />
-
-        <PInput
-          v-model="password"
-          label="通行密码"
-          type="password"
-          placeholder="输入密码"
-          :error="fieldErrors.password"
-        />
-
-        <PInput
-          v-if="isRegister"
-          v-model="passwordConfirm"
-          label="确认密码"
-          type="password"
-          placeholder="再次输入密码"
-          :error="fieldErrors.passwordConfirm"
-        />
-
-        <p v-if="visibleError" class="a-error auth-error" role="alert">{{ visibleError }}</p>
-        <p
-          v-if="turnstileConfigMissing"
-          class="a-error auth-error"
-          role="alert"
-        >
-          当前站点未启用人机验证配置，请联系管理员处理。
-        </p>
-
-        <TurnstileWidget
-          v-if="turnstileEnabled"
-          ref="turnstileRef"
-          :site-key="turnstileSiteKey"
-          @verified="turnstileToken = $event"
-          @expired="turnstileToken = ''"
-          @error="handleTurnstileError"
-        />
-
-        <PButton
-          type="submit"
-          variant="primary"
-          size="lg"
-          block
-          class="auth-submit"
-          :loading="loading"
-          loading-text="请稍候..."
-        >
-          {{ isRegister ? '注册账号' : '登 录' }}
-        </PButton>
       </form>
 
       <div class="auth-footer">
@@ -116,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -141,6 +211,8 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const api = useApi()
+
+const currentStep = ref(1)
 
 const isRegister = computed(() => route.path === '/register')
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
@@ -189,8 +261,9 @@ const startCountdown = () => {
 }
 
 const sendVerificationCode = async () => {
+  fieldErrors.value = {}
   if (!email.value || !email.value.includes('@')) {
-    errorMsg.value = '请输入有效的邮箱地址'
+    fieldErrors.value.email = '请输入有效的邮箱地址'
     return
   }
   if (!requireTurnstileToken()) return
@@ -211,6 +284,33 @@ const sendVerificationCode = async () => {
   }
 }
 
+const clearGeneralError = () => {
+  errorMsg.value = ''
+  authStore.lastAuthError = null
+}
+
+const goNextStep = () => {
+  fieldErrors.value = {}
+  errorMsg.value = ''
+  if (!email.value) {
+    fieldErrors.value.email = '请输入邮箱地址'
+    return
+  }
+  if (!email.value.includes('@')) {
+    fieldErrors.value.email = '请输入有效的邮箱地址'
+    return
+  }
+  if (!verificationCode.value) {
+    fieldErrors.value.code = '请输入验证码'
+    return
+  }
+  if (verificationCode.value.length < 6) {
+    fieldErrors.value.code = '验证码长度应为 6 位'
+    return
+  }
+  currentStep.value = 2
+}
+
 const handleSubmit = async () => {
   authStore.lastAuthError = null
   errorMsg.value = ''
@@ -220,6 +320,11 @@ const handleSubmit = async () => {
     if (isRegister.value) {
       if (!verificationCode.value) {
         fieldErrors.value.code = '请输入验证码'
+        loading.value = false
+        return
+      }
+      if (!username.value) {
+        fieldErrors.value.username = '请输入用户名'
         loading.value = false
         return
       }
@@ -246,6 +351,16 @@ const handleSubmit = async () => {
         turnstileToken.value
       )
     } else {
+      if (!email.value) {
+        fieldErrors.value.email = '请输入用户名或邮箱'
+        loading.value = false
+        return
+      }
+      if (!password.value) {
+        fieldErrors.value.password = '请输入密码'
+        loading.value = false
+        return
+      }
       await authStore.loginWithPassword(email.value, password.value)
     }
     router.push(safeRedirectPath(route.query.redirect))
@@ -256,6 +371,54 @@ const handleSubmit = async () => {
     loading.value = false
   }
 }
+
+// Clear errors on change
+watch(username, () => {
+  if (fieldErrors.value.username) {
+    delete fieldErrors.value.username
+  }
+  clearGeneralError()
+})
+
+watch(email, () => {
+  if (fieldErrors.value.email) {
+    delete fieldErrors.value.email
+  }
+  clearGeneralError()
+})
+
+watch(verificationCode, () => {
+  if (fieldErrors.value.code) {
+    delete fieldErrors.value.code
+  }
+  clearGeneralError()
+})
+
+watch(password, () => {
+  if (fieldErrors.value.password) {
+    delete fieldErrors.value.password
+  }
+  clearGeneralError()
+})
+
+watch(passwordConfirm, () => {
+  if (fieldErrors.value.passwordConfirm) {
+    delete fieldErrors.value.passwordConfirm
+  }
+  clearGeneralError()
+})
+
+watch(() => route.path, () => {
+  currentStep.value = 1
+  errorMsg.value = ''
+  authStore.lastAuthError = null
+  fieldErrors.value = {}
+  username.value = ''
+  email.value = ''
+  verificationCode.value = ''
+  password.value = ''
+  passwordConfirm.value = ''
+})
 </script>
 
 <style scoped>
@@ -263,22 +426,35 @@ const handleSubmit = async () => {
   flex: 1;
   width: 100%;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 3rem 1.5rem 5rem;
-  background: #ffffff;
+  padding: 4rem 1.5rem 6rem;
+  background-color: var(--a-color-paper-soft);
+  background-image: 
+    linear-gradient(var(--a-color-line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--a-color-line-soft) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+  min-height: calc(100vh - 56px);
 }
 
 .auth-paper {
-  width: min(100%, 22.5rem);
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-line-soft);
-  box-shadow: none;
-  padding: 2.25rem 2rem;
+  width: min(100%, 23rem);
+  background: var(--a-color-paper);
+  border: 2px solid var(--a-color-fg);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.15);
+  padding: 2.5rem 2.25rem;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.auth-paper:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
 }
 
 .auth-paper--register {
-  width: min(100%, 25.25rem);
+  width: min(100%, 25.5rem);
 }
 
 .auth-paper-head {
@@ -312,6 +488,55 @@ const handleSubmit = async () => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.auth-step-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.auth-steps-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+}
+
+.step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--a-color-line);
+  transition: background-color 0.3s;
+}
+
+.step-dot--active {
+  background: var(--a-color-fg);
+  box-shadow: 0 0 0 2px var(--a-color-line-soft);
+}
+
+.step-line {
+  width: 24px;
+  height: 1px;
+  background: var(--a-color-line-soft);
+  transition: background-color 0.3s;
+}
+
+.step-line--active {
+  background: var(--a-color-fg);
+}
+
+.step-label {
+  font-weight: 700;
+  color: var(--a-color-fg);
+}
+
+.step-label--inactive {
+  color: var(--a-color-muted);
 }
 
 .auth-form :deep(.p-field) {
@@ -352,56 +577,136 @@ const handleSubmit = async () => {
   align-self: end;
 }
 
-.auth-code-btn:deep(.p-button),
-.auth-code-btn.a-btn {
-  min-height: 2.95rem;
-  border: 1px solid var(--a-color-line-soft);
+.auth-code-btn:deep(.p-button) {
+  min-height: 2.75rem;
+  border: 1px solid var(--a-color-fg);
   box-shadow: none;
   color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
-  letter-spacing: 0.12em;
+  background: var(--a-color-paper-soft);
+  letter-spacing: 0.08em;
+  padding: 0 1rem;
+  font-size: 0.8rem;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-.auth-code-btn:deep(.p-button:hover:not(:disabled)),
-.auth-code-btn.p-button:hover:not(:disabled) {
+.auth-code-btn:deep(.p-button:hover:not(:disabled)) {
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
   text-decoration: none;
+}
+
+.auth-code-btn:deep(.p-button:disabled) {
   background: var(--a-color-paper-wash);
+  color: var(--a-color-muted);
   border-color: var(--a-color-line-soft);
+  opacity: 0.7;
+  text-decoration: none;
 }
 
 .auth-submit {
   margin-top: 0.35rem;
 }
 
-.auth-submit:deep(.p-button),
-.auth-submit.a-btn {
+.auth-submit:deep(.p-button) {
   min-height: 3.05rem;
-  border: 1px solid var(--a-color-fg);
+  border: 2px solid var(--a-color-fg);
   border-radius: 0;
   background: var(--a-color-fg);
   color: var(--a-color-bg);
   box-shadow: none;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
   text-decoration: none;
 }
 
-.auth-submit:deep(.p-button:hover:not(:disabled)),
-.auth-submit.p-button:hover:not(:disabled) {
+.auth-submit:deep(.p-button:hover:not(:disabled)) {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
   text-decoration: none;
   transform: none;
   box-shadow: none;
-  opacity: 0.94;
 }
 
-.auth-submit:deep(.p-button:active:not(:disabled)),
-.auth-submit.p-button:active:not(:disabled) {
-  transform: none;
+.auth-buttons-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0.625rem;
+  margin-top: 0.35rem;
+}
+
+.auth-back-btn:deep(.p-button) {
+  min-height: 3.05rem;
+  border: 2px solid var(--a-color-fg);
+  background: var(--a-color-paper);
+  color: var(--a-color-fg);
+  border-radius: 0;
   box-shadow: none;
-  opacity: 1;
+  letter-spacing: 0.08em;
+}
+
+.auth-back-btn:deep(.p-button:hover:not(:disabled)) {
+  background: var(--a-color-paper-wash);
+  text-decoration: none;
+}
+
+.auth-submit-btn:deep(.p-button) {
+  min-height: 3.05rem;
+  border: 2px solid var(--a-color-fg);
+  border-radius: 0;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+  box-shadow: none;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.auth-submit-btn:deep(.p-button:hover:not(:disabled)) {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
+  text-decoration: none;
 }
 
 .auth-error {
-  margin: 0.25rem 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border: 2px solid var(--a-color-accent-destructive);
+  background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, white);
+  color: var(--a-color-accent-destructive);
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.error-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.error-close-btn {
+  background: none;
+  border: none;
+  color: currentColor;
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.error-close-btn:hover {
+  opacity: 1;
+}
+
+.error-close-svg {
+  transition: transform 0.2s;
+}
+
+.error-close-btn:hover .error-close-svg {
+  transform: rotate(90deg);
 }
 
 .auth-footer {
@@ -418,15 +723,31 @@ const handleSubmit = async () => {
   color: var(--a-color-fg);
 }
 
+/* Transitions */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.2s ease-out;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 @media (max-width: 720px) {
   .auth-page {
-    padding: 1.25rem 1rem 3rem;
+    padding: 2rem 1rem 4rem;
   }
 
   .auth-paper,
   .auth-paper--register {
     width: 100%;
-    padding: 1.5rem;
+    padding: 1.75rem 1.5rem;
   }
 
   .auth-title {
@@ -439,6 +760,10 @@ const handleSubmit = async () => {
 
   .auth-code-btn {
     width: 100%;
+  }
+
+  .auth-buttons-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>

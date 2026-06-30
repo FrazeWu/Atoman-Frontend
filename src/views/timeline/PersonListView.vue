@@ -25,7 +25,7 @@
       <PEntry
         v-for="person in persons"
         :key="person.id"
-        @click="router.push(`/person/${person.id}`)"
+        @click="router.push(`/timeline/person/${person.id}`)"
       >
         <!-- Meta -->
         <template #meta>
@@ -106,6 +106,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
@@ -124,7 +125,7 @@ const store = useTimelineStore()
 const authStore = useAuthStore()
 const router = useRouter()
 
-const { persons, loading } = store
+const { persons, loading } = storeToRefs(store)
 
 const searchText = ref('')
 const showForm = ref(false)
@@ -191,7 +192,7 @@ const submitForm = async () => {
     } else {
       const created = await store.createPerson(payload)
       // Navigate to map view for newly created person
-      router.push(`/person/${created.id}`)
+      router.push(`/timeline/person/${created.id}`)
     }
     closeForm()
   } catch (e) {

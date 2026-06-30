@@ -237,7 +237,7 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   playerStore.setQueueFromCurrentItems(queueItems)
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
-  playerStore.playSong(tempSong)
+  playerStore.playQueuedSong(tempSong)
 }
 
 const scrollToTop = async () => {

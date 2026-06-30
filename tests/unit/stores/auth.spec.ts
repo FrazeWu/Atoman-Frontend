@@ -85,6 +85,19 @@ describe('auth store', () => {
     expect(fetchMock).toHaveBeenCalledWith(`${defaultApiUrl}/auth/session`, { credentials: 'include' })
   })
 
+  it('treats empty shared auth session as logged out without service error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+
+    const auth = useAuthStore()
+    const restored = await auth.restoreSession()
+
+    expect(restored).toBe(false)
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.token).toBeNull()
+    expect(auth.user).toBeNull()
+    expect(auth.lastAuthError).toBeNull()
+  })
+
   it('keeps onboarding completion timestamp in stored user', () => {
     localStorage.setItem('token', makeToken(3600))
     localStorage.setItem('user', JSON.stringify({
@@ -150,6 +163,43 @@ describe('auth store', () => {
 
     await expect(auth.register('alice', 'alice@example.com', 'secret')).rejects.toThrow('无法连接服务器，请检查网络后重试')
     expect(auth.lastAuthError).toBe('无法连接服务器，请检查网络后重试')
+  })
+
+  it('maps missing turnstile token errors to a human-readable register message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      error: 'Turnstile verification is required',
+    }), { status: 403 }))
+
+    const auth = useAuthStore()
+
+    await expect(auth.register('alice', 'alice@example.com', 'secret')).rejects.toThrow('请先完成人机验证')
+    expect(auth.lastAuthError).toBe('请先完成人机验证')
+  })
+
+  it('accepts a successful register response with uuid-based user payload', async () => {
+    const token = makeToken(3600)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      token,
+      user: {
+        uuid: 'user-1',
+        id: 1,
+        username: 'alice',
+        email: 'alice@example.com',
+        role: 'user',
+        display_name: '',
+        avatar_url: '',
+        is_active: true,
+        onboarding_completed_at: null,
+      },
+    }), { status: 201 }))
+
+    const auth = useAuthStore()
+    await auth.register('alice', 'alice@example.com', 'secret', 'secret', '123456', 'turnstile-token')
+
+    expect(auth.isAuthenticated).toBe(true)
+    expect(auth.token).toBe(token)
+    expect(auth.user?.username).toBe('alice')
+    expect(auth.lastAuthError).toBeNull()
   })
 
   it('rejects login when successful response contains null user and keeps logged out state', async () => {

@@ -170,6 +170,13 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(!!token.value)
   const lastAuthError = ref<string | null>(null)
 
+  const clearSessionState = () => {
+    token.value = null
+    user.value = null
+    isAuthenticated.value = false
+    clearStoredSession()
+  }
+
   const loginWithPassword = async (email: string, password: string) => {
     lastAuthError.value = null
     try {
@@ -288,15 +295,18 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const response = await fetch(`${API_URL}/auth/session`, { credentials: 'include' })
+      if (response.status === 204) {
+        clearSessionState()
+        lastAuthError.value = null
+        return false
+      }
+
       const data = await parseApiResponse(response)
       const authError = toAuthApiError(data)
 
       if (!response.ok) {
         if (isAuthInvalidationCode(authError.code)) {
-          token.value = null
-          user.value = null
-          isAuthenticated.value = false
-          clearStoredSession()
+          clearSessionState()
           lastAuthError.value = authErrorMessage(authError, '登录状态已失效，请重新登录')
         }
         return false
@@ -304,19 +314,13 @@ export const useAuthStore = defineStore('auth', () => {
 
       const session = extractSessionPayload(data)
       if (!session) {
-        token.value = null
-        user.value = null
-        isAuthenticated.value = false
-        clearStoredSession()
+        clearSessionState()
         lastAuthError.value = '服务返回异常，请稍后重试'
         return false
       }
 
       if (isTokenExpired(session.token)) {
-        token.value = null
-        user.value = null
-        isAuthenticated.value = false
-        clearStoredSession()
+        clearSessionState()
         lastAuthError.value = '登录状态已失效，请重新登录'
         return false
       }
@@ -335,14 +339,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   const validateSession = () => {
     if (token.value && isTokenExpired(token.value)) {
-      token.value = null
-      user.value = null
-      isAuthenticated.value = false
-      clearStoredSession()
+      clearSessionState()
       lastAuthError.value = '登录状态已失效，请重新登录'
       return false
     }
-    return !!token.value
+    if (!token.value || !user.value) {
+      clearSessionState()
+      return false
+    }
+    return true
   }
 
   const updateUser = (patch: Partial<User>) => {

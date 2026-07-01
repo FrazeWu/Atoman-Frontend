@@ -127,6 +127,25 @@ export type MusicEditSummary = {
   created_at: string
 }
 
+export type MusicRevisionSummary = {
+  id: string
+  content_type: 'album' | 'song' | 'artist'
+  content_id: string
+  version_number: number
+  previous_revision_id?: string | null
+  content_snapshot: unknown
+  editor_id: string
+  editor?: {
+    username?: string
+    display_name?: string
+  }
+  edit_summary: string
+  edit_type: string
+  status: string
+  is_current: boolean
+  created_at: string
+}
+
 export type MusicArtistListItem = {
   id: string
   name: string
@@ -152,8 +171,17 @@ export type MusicAlbumListItem = {
   description?: string
   album_type?: string
   hot_score?: number
-  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string }>
+  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; lyrics?: string; status?: string }>
   entry_status: MusicEntryStatus
+}
+
+export type MusicAlbumTrackEditInput = {
+  id?: string
+  title: string
+  track_number: number
+  lyrics?: string
+  audio_url?: string
+  removed?: boolean
 }
 
 export type MusicArtistInput = {
@@ -174,6 +202,7 @@ export type MusicAlbumInput = {
   cover_key?: string
   description?: string
   album_type?: string
+  tracks?: MusicAlbumTrackEditInput[]
 }
 
 export type MusicArtistUpdateInput = Partial<MusicArtistInput>
@@ -220,6 +249,7 @@ export type AlbumEditDraft = {
   cover?: UploadAsset | null
   description?: string
   album_type?: string
+  tracks?: MusicAlbumTrackEditInput[]
   reason: string
   sources: MusicSource[]
 }
@@ -253,6 +283,9 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
   albums: () => `${API_V1_BASE}/music/albums`,
   album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
+  albumRevisions: (albumId: string) => `${API_V1_BASE}/albums/${albumId}/revisions`,
+  albumRevision: (albumId: string, version: number) => `${API_V1_BASE}/albums/${albumId}/revisions/${version}`,
+  albumRevert: (albumId: string, version: number) => `${API_V1_BASE}/albums/${albumId}/revisions/${version}/revert`,
   albumImports: () => `${API_V1_BASE}/music/imports/albums`,
   albumImport: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}`,
   albumImportArchive: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/upload`,
@@ -264,7 +297,6 @@ export const musicV1Endpoints = {
   editApprove: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/approve`,
   editReject: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/reject`,
   editCancel: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/cancel`,
-  editRevert: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/revert`,
 }
 
 function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
@@ -275,6 +307,9 @@ function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
     ...(draft.cover ? { cover_url: draft.cover.url, cover_key: draft.cover.key } : {}),
     ...(draft.description !== undefined ? { description: draft.description } : {}),
     ...(draft.album_type !== undefined ? { album_type: draft.album_type } : {}),
+    ...(('tracks' in draft && Array.isArray((draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] }).tracks))
+      ? { tracks: (draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] }).tracks }
+      : {}),
   }
 }
 
@@ -500,6 +535,21 @@ export async function getMusicAlbum(albumId: string): Promise<MusicAlbumListItem
   return apiGet<MusicAlbumListItem>(musicV1Endpoints.album(albumId))
 }
 
+export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {
+  const response = await apiGetEnvelope<MusicRevisionSummary[]>(musicV1Endpoints.albumRevisions(albumId))
+  return response.data
+}
+
+export async function getAlbumRevision(albumId: string, version: number): Promise<MusicRevisionSummary> {
+  return apiGet<MusicRevisionSummary>(musicV1Endpoints.albumRevision(albumId, version))
+}
+
+export async function revertAlbumRevision(albumId: string, version: number, editSummary: string): Promise<MusicRevisionSummary> {
+  return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.albumRevert(albumId, version), {
+    edit_summary: editSummary,
+  })
+}
+
 export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
   return apiGetEnvelope<MusicRecommendationItem[]>(musicV1Endpoints.recommendAlbums(mode))
 }
@@ -552,8 +602,4 @@ export async function rejectMusicEdit(editId: string, reason: string): Promise<M
 
 export async function cancelMusicEdit(editId: string, reason: string): Promise<MusicEditSummary> {
   return apiPostJson<MusicEditSummary>(musicV1Endpoints.editCancel(editId), { reason })
-}
-
-export async function revertMusicEdit(editId: string, reason: string): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(musicV1Endpoints.editRevert(editId), { reason })
 }

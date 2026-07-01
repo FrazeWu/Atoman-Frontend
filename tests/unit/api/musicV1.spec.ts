@@ -16,6 +16,7 @@ import {
   musicV1Endpoints,
   uploadMusicAsset,
 } from '@/api/musicV1'
+import * as musicV1 from '@/api/musicV1'
 
 describe('api v1 client', () => {
   afterEach(() => {
@@ -251,6 +252,60 @@ describe('music v1 adapter', () => {
     expect(result).toEqual({ id: 'album_uuid', title: 'Graduation', entry_status: 'open' })
   })
 
+  it('builds update album edits with track collection changes', () => {
+    const result = buildUpdateAlbumEdit('album_uuid', {
+      title: 'Updated Album',
+      artist_ids: ['artist_uuid'],
+      release_date: '2026-07-01',
+      album_type: 'ep',
+      tracks: [
+        {
+          id: 'song-1',
+          title: 'Keep Song',
+          track_number: 1,
+          lyrics: 'lyrics',
+          audio_url: 'https://cdn.example.com/song-1.mp3',
+        },
+        {
+          title: 'New Song',
+          track_number: 2,
+          audio_url: 'https://cdn.example.com/song-2.mp3',
+        },
+      ],
+      reason: 'Update album tracks',
+      sources: [{ type: 'url', url: 'https://example.com/source', title: 'Source' }],
+    })
+
+    expect(result).toEqual({
+      type: 'update_album',
+      entity_type: 'album',
+      entity_id: 'album_uuid',
+      payload: {},
+      changes: {
+        title: 'Updated Album',
+        artist_ids: ['artist_uuid'],
+        release_date: '2026-07-01',
+        album_type: 'ep',
+        tracks: [
+          {
+            id: 'song-1',
+            title: 'Keep Song',
+            track_number: 1,
+            lyrics: 'lyrics',
+            audio_url: 'https://cdn.example.com/song-1.mp3',
+          },
+          {
+            title: 'New Song',
+            track_number: 2,
+            audio_url: 'https://cdn.example.com/song-2.mp3',
+          },
+        ],
+      },
+      reason: 'Update album tracks',
+      sources: [{ type: 'url', url: 'https://example.com/source', title: 'Source' }],
+    })
+  })
+
   it('uploads music cover assets with the correct purpose', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: { url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/c.png', key: 'music/covers/uploads/users/user-1/2026/06/c.png', content_type: 'image/png', size: 1 } }),
@@ -367,6 +422,11 @@ describe('music v1 adapter', () => {
       data: [],
       meta: { page: 2, page_size: 20, total: 24, has_more: true },
     })
+  })
+
+  it('does not expose revert music edit endpoints or api methods', () => {
+    expect(musicV1Endpoints).not.toHaveProperty('editRevert')
+    expect(musicV1).not.toHaveProperty('revertMusicEdit')
   })
 })
 

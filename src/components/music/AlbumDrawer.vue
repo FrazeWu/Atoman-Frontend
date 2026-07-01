@@ -1,6 +1,7 @@
 <!-- web/src/components/music/AlbumDrawer.vue -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -16,6 +17,10 @@ const errorMessage = ref('')
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => album.value?.release_date?.slice(0, 4) || '----')
 const tracks = computed(() => [...(album.value?.songs || [])].sort((a, b) => (a.track_number || 0) - (b.track_number || 0)))
+const editAlbumHref = computed(() => {
+  if (!album.value?.id) return modulePathUrl('music', '/')
+  return modulePathUrl('music', `/album/${album.value.id}/edit`)
+})
 const discussionCount = computed(() => {
   const currentAlbum = album.value as (MusicAlbumListItem & {
     discussion_count?: number
@@ -60,6 +65,12 @@ async function loadAlbum(albumId: string | null) {
 }
 
 watch(() => state.value.albumId, loadAlbum, { immediate: true })
+watch(
+  () => state.value.albumRefreshToken,
+  () => {
+    if (state.value.albumId) void loadAlbum(state.value.albumId)
+  },
+)
 </script>
 
 <template>
@@ -106,6 +117,10 @@ watch(() => state.value.albumId, loadAlbum, { immediate: true })
           收藏
         </span>
         <div class="spacer"></div>
+        <a class="paper-action" :href="editAlbumHref">
+          <span class="paper-action-dot" aria-hidden="true" />
+          编辑
+        </a>
         <button class="paper-action" @click="openNestedAction('revise')">
           <span class="paper-action-dot" aria-hidden="true" />
           修订

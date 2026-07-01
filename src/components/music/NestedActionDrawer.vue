@@ -8,11 +8,15 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   buildUpdateAlbumEdit,
   buildUpdateArtistEdit,
+  getAlbumRevision,
+  listAlbumRevisions,
+  revertAlbumRevision,
   submitMusicEdit,
+  type MusicRevisionSummary,
   type MusicSource,
 } from '@/api/musicV1'
 
-const { state, closeNestedAction } = useMusicDrawers()
+const { state, closeNestedAction, refreshAlbum } = useMusicDrawers()
 const isOpen = computed(() => (
   state.value.nestedAction === 'revise'
   || state.value.nestedAction === 'history'
@@ -66,6 +70,11 @@ const sourceDraft = reactive({
 const submitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const revisionLoading = ref(false)
+const revisions = ref<MusicRevisionSummary[]>([])
+const selectedRevision = ref<MusicRevisionSummary | null>(null)
+const previousRevision = ref<MusicRevisionSummary | null>(null)
+const diffLoading = ref(false)
 
 const isArtistForm = computed(() => state.value.nestedAction === 'revise_artist')
 const isAlbumForm = computed(() => state.value.nestedAction === 'revise')
@@ -92,6 +101,15 @@ watch(() => state.value.nestedAction, () => {
   albumDraft.reason = ''
   sourceDraft.title = ''
   sourceDraft.url = ''
+  revisions.value = []
+  revisionLoading.value = false
+  selectedRevision.value = null
+  previousRevision.value = null
+  diffLoading.value = false
+
+  if (state.value.nestedAction === 'history' && state.value.albumId) {
+    void loadAlbumHistory(state.value.albumId)
+  }
 })
 
 function trimmed(value: string) {
@@ -109,6 +127,126 @@ function sourcesFromDraft(): MusicSource[] {
   const url = trimmed(sourceDraft.url)
   if (!url) return []
   return [{ type: 'url', url, title: trimmed(sourceDraft.title) || undefined }]
+}
+
+async function loadAlbumHistory(albumId: string) {
+  revisionLoading.value = true
+  errorMessage.value = ''
+  try {
+    revisions.value = await listAlbumRevisions(albumId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
+  } finally {
+    revisionLoading.value = false
+  }
+}
+
+async function handleRevert(version: number) {
+  if (!state.value.albumId) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await revertAlbumRevision(state.value.albumId, version, `回滚到版本 v${version}`)
+    successMessage.value = `已回滚到版本 v${version}`
+    refreshAlbum()
+    await loadAlbumHistory(state.value.albumId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '回滚失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function viewRevisionDiff(revision: MusicRevisionSummary) {
+  if (!state.value.albumId) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  diffLoading.value = true
+  errorMessage.value = ''
+  try {
+    selectedRevision.value = await getAlbumRevision(state.value.albumId, revision.version_number)
+    previousRevision.value = revision.previous_revision_id
+      ? await getAlbumRevision(state.value.albumId, revision.version_number - 1)
+      : null
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载版本差异失败'
+  } finally {
+    diffLoading.value = false
+  }
+}
+
+function formatRevisionEditor(revision: MusicRevisionSummary) {
+  return revision.editor?.display_name || revision.editor?.username || revision.editor_id
+}
+
+function formatRevisionTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+function normalizeSnapshot(snapshot: unknown) {
+  return snapshot && typeof snapshot === 'object' ? snapshot as Record<string, unknown> : {}
+}
+
+function summarizeRevisionDiff(current: MusicRevisionSummary | null, previous: MusicRevisionSummary | null) {
+  if (!current) return []
+
+  const currentSnapshot = normalizeSnapshot(current.content_snapshot)
+  const previousSnapshot = normalizeSnapshot(previous?.content_snapshot)
+  const currentAlbum = normalizeSnapshot(currentSnapshot.album)
+  const previousAlbum = normalizeSnapshot(previousSnapshot.album)
+  const currentSongs = Array.isArray(currentSnapshot.songs) ? currentSnapshot.songs as Array<Record<string, unknown>> : []
+  const previousSongs = Array.isArray(previousSnapshot.songs) ? previousSnapshot.songs as Array<Record<string, unknown>> : []
+
+  const lines: string[] = []
+
+  if (currentAlbum.title !== previousAlbum.title) {
+    lines.push(`专辑名：${String(previousAlbum.title ?? '空')} -> ${String(currentAlbum.title ?? '空')}`)
+  }
+  if (currentAlbum.release_date !== previousAlbum.release_date) {
+    lines.push(`发行日期：${String(previousAlbum.release_date ?? '空')} -> ${String(currentAlbum.release_date ?? '空')}`)
+  }
+  if (currentAlbum.album_type !== previousAlbum.album_type) {
+    lines.push(`类型：${String(previousAlbum.album_type ?? '空')} -> ${String(currentAlbum.album_type ?? '空')}`)
+  }
+
+  const previousSongMap = new Map(previousSongs.map((song) => [String(song.id ?? song.title ?? ''), song]))
+  const currentSongMap = new Map(currentSongs.map((song) => [String(song.id ?? song.title ?? ''), song]))
+
+  for (const currentSong of currentSongs) {
+    const key = String(currentSong.id ?? currentSong.title ?? '')
+    const prevSong = previousSongMap.get(key)
+    if (!prevSong) {
+      lines.push(`新增曲目：${String(currentSong.title ?? '未命名曲目')}`)
+      continue
+    }
+    if (currentSong.title !== prevSong.title) {
+      lines.push(`曲目改名：${String(prevSong.title ?? '空')} -> ${String(currentSong.title ?? '空')}`)
+    }
+    if (currentSong.track_number !== prevSong.track_number) {
+      lines.push(`曲序变化：${String(currentSong.title ?? '曲目')} ${String(prevSong.track_number ?? '-')} -> ${String(currentSong.track_number ?? '-')}`)
+    }
+    if (currentSong.audio_url !== prevSong.audio_url) {
+      lines.push(`音频替换：${String(currentSong.title ?? '曲目')}`)
+    }
+  }
+
+  for (const previousSong of previousSongs) {
+    const key = String(previousSong.id ?? previousSong.title ?? '')
+    if (!currentSongMap.has(key)) {
+      lines.push(`移除曲目：${String(previousSong.title ?? '未命名曲目')}`)
+    }
+  }
+
+  return lines
 }
 
 async function submitEdit() {
@@ -413,10 +551,58 @@ async function submitEdit() {
       </form>
 
       <!-- History placeholder -->
-      <div v-else-if="state.nestedAction === 'history'">
-        <div class="history-item">
-          <div><strong>v8 (PENDING)</strong></div>
-          <div>修改简介</div>
+      <div v-else-if="state.nestedAction === 'history'" class="history-panel">
+        <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
+        <p v-else-if="revisionLoading" class="history-state">正在加载历史...</p>
+        <p v-else-if="!revisions.length" class="history-state">暂无版本历史。</p>
+
+        <div v-for="revision in revisions" :key="revision.id" class="history-item">
+          <div class="history-item__head">
+            <div>
+              <strong>v{{ revision.version_number }}</strong>
+              <span v-if="revision.is_current" class="history-badge">当前版本</span>
+            </div>
+            <span class="history-meta">{{ revision.status }}</span>
+          </div>
+          <div class="history-meta">{{ formatRevisionEditor(revision) }} · {{ formatRevisionTime(revision.created_at) }}</div>
+          <div class="history-summary">{{ revision.edit_summary || '无摘要' }}</div>
+          <div class="history-actions">
+            <button
+              class="paper-action history-diff"
+              type="button"
+              :disabled="diffLoading"
+              @click="viewRevisionDiff(revision)"
+            >
+              查看差异
+            </button>
+            <button
+              class="paper-submit history-revert"
+              type="button"
+              :disabled="submitting || revision.is_current"
+              @click="handleRevert(revision.version_number)"
+            >
+              {{ revision.is_current ? '当前版本' : '回滚到此版本' }}
+            </button>
+          </div>
+        </div>
+
+        <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
+
+        <div v-if="selectedRevision" class="history-diff-panel">
+          <div class="section-heading">
+            <span class="section-dot" aria-hidden="true" />
+            <div>
+              <p class="section-kicker">Diff</p>
+              <h4>v{{ selectedRevision.version_number }} 差异摘要</h4>
+            </div>
+          </div>
+          <p v-if="diffLoading" class="history-state">正在加载差异...</p>
+          <div v-else class="history-diff-list">
+            <p v-if="!summarizeRevisionDiff(selectedRevision, previousRevision).length" class="history-state">这个版本没有可识别的结构变化摘要。</p>
+            <div v-for="line in summarizeRevisionDiff(selectedRevision, previousRevision)" :key="line" class="history-diff-line">
+              {{ line }}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -510,6 +696,66 @@ async function submitEdit() {
 .a-btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .history-item { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--a-color-line-soft); }
+.history-panel { display: grid; gap: 1rem; }
+.history-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+.history-meta {
+  color: var(--a-color-ink-soft);
+  font-size: 0.82rem;
+  font-family: var(--a-font-meta);
+}
+.history-summary {
+  margin-top: 0.45rem;
+  line-height: 1.6;
+}
+.history-actions {
+  margin-top: 0.85rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.history-revert {
+  width: auto;
+  padding-inline: 1rem;
+}
+.history-diff {
+  border-right: 0;
+  border: 1px dashed var(--a-color-line-soft);
+}
+.history-badge {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--a-color-accent-confirm);
+  font-family: var(--a-font-meta);
+  font-weight: 800;
+}
+.history-state {
+  margin: 0;
+  color: var(--a-color-ink-soft);
+}
+.history-diff-panel {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-soft);
+}
+.history-diff-list {
+  display: grid;
+  gap: 0.6rem;
+}
+.history-diff-line {
+  padding-bottom: 0.6rem;
+  border-bottom: 1px dashed var(--a-color-line-soft);
+  line-height: 1.6;
+}
+.history-diff-line:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
 
 @media (max-width: 640px) {
   .paper-form-grid,

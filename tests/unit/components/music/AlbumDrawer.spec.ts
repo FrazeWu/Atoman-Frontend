@@ -111,4 +111,22 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('[data-test="discussion-fab"]').text()).toBe('讨论(7)')
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
+
+  it('renders an edit entry that points to the album edit route', async () => {
+    const wrapper = mount(AlbumDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const editLink = wrapper.find('a.paper-action')
+    expect(editLink.exists()).toBe(true)
+    expect(editLink.text()).toContain('编辑')
+    expect(editLink.attributes('href')).toBe('/music/album/1/edit')
+  })
 })

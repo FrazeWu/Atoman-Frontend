@@ -10,6 +10,7 @@ type NestedActionType = 'revise' | 'history' | 'add_album' | 'add_artist' | 'dis
 interface DrawerState {
   artistId: string | null
   albumId: string | null
+  albumRefreshToken: number
   nestedAction: NestedActionType
   nestedPayload: unknown
   creationFlow: MusicCreationFlowState | null
@@ -76,6 +77,7 @@ function createEmptyDraft(seed?: { artistId?: string | null }): MusicCreationDra
 const state = ref<DrawerState>({
   artistId: null,
   albumId: null,
+  albumRefreshToken: 0,
   nestedAction: null,
   nestedPayload: null,
   creationFlow: null,
@@ -87,6 +89,7 @@ export function useMusicDrawers() {
   
   const openAlbum = (id: string) => { state.value.albumId = id }
   const closeAlbum = () => { state.value.albumId = null }
+  const refreshAlbum = () => { state.value.albumRefreshToken += 1 }
   
   const openNestedAction = (action: NestedActionType, payload: unknown = null) => {
     state.value.nestedAction = action
@@ -121,6 +124,7 @@ export function useMusicDrawers() {
   const closeAll = () => {
     state.value.artistId = null
     state.value.albumId = null
+    state.value.albumRefreshToken = 0
     state.value.nestedAction = null
     state.value.nestedPayload = null
     state.value.creationFlow = null
@@ -134,7 +138,7 @@ export function useMusicDrawers() {
   return {
     state,
     openArtist, closeArtist,
-    openAlbum, closeAlbum,
+    openAlbum, closeAlbum, refreshAlbum,
     openNestedAction, closeNestedAction,
     openMusicCreationFlow,
     setMusicCreationStep,

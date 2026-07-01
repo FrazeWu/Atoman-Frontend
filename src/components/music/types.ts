@@ -5,9 +5,13 @@ export type MusicTrackDraft = {
   id: string
   trackNumber: string
   title: string
+  lyrics?: string
+  audioUrl?: string
+  audioAsset?: UploadAsset | null
   file?: File | null
-  songId?: number
+  songId?: string
   isExisting?: boolean
+  removed?: boolean
 }
 
 export type MusicSourceDraft = {

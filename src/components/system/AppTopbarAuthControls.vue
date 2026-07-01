@@ -10,6 +10,13 @@
     />
   </div>
 
+  <div class="topbar-search-wrap">
+    <button class="topbar-search-btn" type="button" @click.stop="toggleSearch">
+      搜索
+    </button>
+    <TopbarSearchPopover :open="showSearch" @close="showSearch = false" />
+  </div>
+
   <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
     {{ notificationRoom.name }}
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
@@ -42,6 +49,7 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole } from '@/utils/roles'
 import { useMediaChannel } from '@/composables/useMediaChannel'
 import PSelect from '@/components/ui/PSelect.vue'
+import TopbarSearchPopover from '@/components/system/TopbarSearchPopover.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
@@ -50,6 +58,7 @@ const route = useRoute()
 const { channels, currentMediaChannelId, switchChannel, clearChannels, loadChannels } = useMediaChannel()
 
 const activeDropdown = ref<string | null>(null)
+const showSearch = ref(false)
 const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
@@ -64,6 +73,10 @@ const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
 
+const toggleSearch = () => {
+  showSearch.value = !showSearch.value
+}
+
 const closeDropdown = () => {
   activeDropdown.value = null
 }
@@ -71,6 +84,7 @@ const closeDropdown = () => {
 const handleClickOutside = (e: MouseEvent) => {
   const target = e.target as HTMLElement
   if (!target.closest('[data-dropdown]')) closeDropdown()
+  if (!target.closest('.topbar-search-wrap')) showSearch.value = false
 }
 
 const ensureMediaChannels = () => {
@@ -163,6 +177,26 @@ watch(authUserId, ensureMediaChannels)
   position: relative;
   transition: color 0.2s;
   text-decoration: none;
+}
+
+.topbar-search-wrap {
+  position: relative;
+}
+
+.topbar-search-btn {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--a-color-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.topbar-search-btn:hover {
+  color: var(--a-color-fg);
+  text-decoration: underline;
 }
 
 .notif-btn:hover {

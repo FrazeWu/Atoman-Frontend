@@ -1,0 +1,169 @@
+import { flushPromises, mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import StarredView from '@/views/music/StarredView.vue'
+
+const mocks = vi.hoisted(() => ({
+  listArtistBookmarks: vi.fn(),
+  listAlbumBookmarks: vi.fn(),
+  listSongBookmarks: vi.fn(),
+  listMusicPlaylists: vi.fn(),
+  getMusicArtist: vi.fn(),
+  getMusicAlbum: vi.fn(),
+  createMusicPlaylist: vi.fn(),
+  getMusicPlaylist: vi.fn(),
+}))
+
+vi.mock('@/api/musicV1', () => ({
+  listArtistBookmarks: mocks.listArtistBookmarks,
+  listAlbumBookmarks: mocks.listAlbumBookmarks,
+  listSongBookmarks: mocks.listSongBookmarks,
+  listMusicPlaylists: mocks.listMusicPlaylists,
+  getMusicArtist: mocks.getMusicArtist,
+  getMusicAlbum: mocks.getMusicAlbum,
+  createMusicPlaylist: mocks.createMusicPlaylist,
+  getMusicPlaylist: mocks.getMusicPlaylist,
+}))
+
+describe('Music StarredView', () => {
+  beforeEach(() => {
+    mocks.listArtistBookmarks.mockReset()
+    mocks.listAlbumBookmarks.mockReset()
+    mocks.listSongBookmarks.mockReset()
+    mocks.listMusicPlaylists.mockReset()
+    mocks.getMusicArtist.mockReset()
+    mocks.getMusicAlbum.mockReset()
+    mocks.createMusicPlaylist.mockReset()
+    mocks.getMusicPlaylist.mockReset()
+
+    mocks.listArtistBookmarks.mockResolvedValue({
+      data: [{ id: 'artist-bookmark-1', artist_id: 'artist-1', created_at: '2026-07-01T00:00:00Z' }],
+    })
+    mocks.listAlbumBookmarks.mockResolvedValue({
+      data: [{ id: 'album-bookmark-1', album_id: 'album-1', created_at: '2026-07-01T00:00:00Z' }],
+    })
+    mocks.listSongBookmarks.mockResolvedValue({
+      data: [{
+        id: 'song-bookmark-1',
+        song_id: 'song-1',
+        created_at: '2026-07-01T00:00:00Z',
+        song: {
+          id: 'song-1',
+          title: 'cellophane',
+          track_number: 1,
+          audio_url: '',
+          cover_url: '',
+          status: 'open',
+          entry_status: 'open',
+          artists: [{ id: 'artist-1', name: 'FKA twigs' }],
+          album: { id: 'album-1', title: 'MAGDALENE' },
+        },
+      }],
+    })
+    mocks.listMusicPlaylists.mockResolvedValue({
+      data: [{
+        id: 'playlist-1',
+        name: '夜航歌单',
+        description: '凌晨反复播放',
+        song_count: 2,
+      }],
+    })
+    mocks.getMusicArtist.mockResolvedValue({
+      id: 'artist-1',
+      name: 'FKA twigs',
+      entry_status: 'open',
+    })
+    mocks.getMusicAlbum.mockResolvedValue({
+      id: 'album-1',
+      title: 'MAGDALENE',
+      year: 2019,
+      entry_status: 'open',
+      artists: [{ id: 'artist-1', name: 'FKA twigs' }],
+    })
+
+    mocks.createMusicPlaylist.mockImplementation(async ({ name }: { name: string }) => ({
+      id: 'playlist-2',
+      name,
+      song_count: 0,
+      songs: [],
+    }))
+
+    mocks.getMusicPlaylist.mockResolvedValue({
+      id: 'playlist-1',
+      name: '夜航歌单',
+      description: '凌晨反复播放',
+      song_count: 2,
+      songs: [
+        {
+          id: 'song-1',
+          title: 'cellophane',
+          track_number: 1,
+          audio_url: '',
+          entry_status: 'open',
+          artists: [{ id: 'artist-1', name: 'FKA twigs' }],
+          album: { id: 'album-1', title: 'MAGDALENE' },
+        },
+        {
+          id: 'song-2',
+          title: 'home with you',
+          track_number: 2,
+          audio_url: '',
+          entry_status: 'open',
+          artists: [{ id: 'artist-1', name: 'FKA twigs' }],
+          album: { id: 'album-1', title: 'MAGDALENE' },
+        },
+      ],
+    })
+  })
+
+  it('loads real starred results and filters by kind tabs', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    expect(mocks.listArtistBookmarks).toHaveBeenCalledWith()
+    expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith()
+    expect(mocks.listSongBookmarks).toHaveBeenCalledWith()
+    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith()
+    expect(wrapper.text()).toContain('FKA twigs')
+    expect(wrapper.text()).toContain('MAGDALENE')
+    expect(wrapper.text()).toContain('cellophane')
+    expect(wrapper.text()).toContain('夜航歌单')
+
+    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
+
+    expect(wrapper.text()).toContain('夜航歌单')
+    expect(wrapper.text()).not.toContain('FKA twigs')
+    expect(wrapper.text()).not.toContain('MAGDALENE')
+    expect(wrapper.text()).not.toContain('cellophane')
+  })
+
+  it('creates a playlist from the starred page and shows it in playlist filter', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="playlist-name-input"]').setValue('通勤歌单')
+    await wrapper.get('[data-testid="playlist-description-input"]').setValue('上班路上听')
+    await wrapper.get('[data-testid="playlist-create-submit"]').trigger('submit')
+    await flushPromises()
+
+    expect(mocks.createMusicPlaylist).toHaveBeenCalledWith({
+      name: '通勤歌单',
+    })
+
+    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
+    expect(wrapper.text()).toContain('通勤歌单')
+  })
+
+  it('loads playlist songs when expanding a playlist card', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
+    await wrapper.get('[data-testid="playlist-toggle-playlist-1"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
+    expect(wrapper.text()).toContain('home with you')
+    expect(wrapper.text()).toContain('查看单曲')
+  })
+})

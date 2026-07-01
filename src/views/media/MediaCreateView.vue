@@ -84,7 +84,7 @@ watch(currentMediaChannelId, channelId => {
 
     <MediaCollectionRail :items="collections" :loading="loadingCollections" />
 
-    <MediaCollectionWorkspace v-if="selectedCollection" />
+    <MediaCollectionWorkspace v-if="selectedCollection" :channel-id="currentMediaChannelId" />
 
     <template v-else>
       <div v-if="loadingOverview" class="a-skeleton media-skeleton" />

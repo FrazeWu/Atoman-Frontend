@@ -9,7 +9,6 @@ import {
   approveMusicEdit,
   rejectMusicEdit,
   cancelMusicEdit,
-  revertMusicEdit,
   type MusicEntityType,
   type MusicEditStatus,
 } from '@/api/musicV1'
@@ -79,10 +78,6 @@ function reject(id: string) {
 
 function cancel(id: string) {
   return runReviewAction(cancelMusicEdit, id, '后台取消')
-}
-
-function revert(id: string) {
-  return runReviewAction(revertMusicEdit, id, '后台回滚')
 }
 
 const fetchEntries = async () => {
@@ -185,7 +180,6 @@ onMounted(async () => {
         @approve="approve"
         @reject="reject"
         @cancel="cancel"
-        @revert="revert"
       />
     </div>
   </div>

@@ -111,6 +111,72 @@ describe('podcast routing prefix', () => {
     expect(replace).toHaveBeenCalledWith('/podcasts/editor/episode-1')
   })
 
+  it('新建单集应在合法频道下恢复 query.collection', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'collection-1', name: '合集 1', channel_id: 'channel-1' },
+            { id: 'collection-2', name: '合集 2', channel_id: 'channel-1' },
+          ],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(
+      PodcastEditorView,
+      '/podcasts/editor?channel=channel-1&collection=collection-2',
+      router,
+    )
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-2')
+  })
+
+  it('新建单集不得恢复不属于当前频道的非法 query.collection', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'collection-1', name: '合集 1', channel_id: 'channel-1' },
+            { id: 'collection-2', name: '合集 2', channel_id: 'channel-1' },
+          ],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(
+      PodcastEditorView,
+      '/podcasts/editor?channel=channel-1&collection=collection-x',
+      router,
+    )
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('')
+  })
+
   it('单集页频道链接指向 /podcasts/show/:slug', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => makeJsonResponse({
       id: 'episode-1',

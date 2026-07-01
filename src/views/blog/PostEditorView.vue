@@ -381,6 +381,10 @@ const selectedChannelId = computed(() => {
   const raw = route.query.channel
   return typeof raw === 'string' && raw ? raw : ''
 })
+const selectedQueryCollectionId = computed(() => {
+  const raw = route.query.collection
+  return typeof raw === 'string' && raw ? raw : ''
+})
 
 const currentChannelId = ref<string>('')
 
@@ -1057,8 +1061,13 @@ const loadChannelCollections = async () => {
     const data = await res.json()
     channelCollections.value = data.data || []
     if (!isEdit.value) {
-      const def = channelCollections.value.find(c => c.is_default) || channelCollections.value[0]
-      selectedCollectionIds.value = def ? [def.id] : []
+      const queryCollection = selectedQueryCollectionId.value
+      if (queryCollection && channelCollections.value.some(collection => collection.id === queryCollection)) {
+        selectedCollectionIds.value = [queryCollection]
+      } else {
+        const def = channelCollections.value.find(c => c.is_default) || channelCollections.value[0]
+        selectedCollectionIds.value = def ? [def.id] : []
+      }
     }
     if (isEdit.value) {
       const allowed = channelCollections.value.map(c => c.id)

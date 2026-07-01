@@ -1,4 +1,4 @@
-import { apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
+import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 
 export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
@@ -146,6 +146,25 @@ export type MusicRevisionSummary = {
   created_at: string
 }
 
+export type MusicDiscussionAuthor = {
+  id: string
+  username?: string
+  display_name?: string
+}
+
+export type MusicDiscussion = {
+  id: string
+  album_id: string
+  parent_id?: string | null
+  content: string
+  created_at: string
+  updated_at?: string
+  author_id: string
+  author?: MusicDiscussionAuthor
+  replies?: MusicDiscussion[]
+  can_delete?: boolean
+}
+
 export type MusicArtistListItem = {
   id: string
   name: string
@@ -171,8 +190,67 @@ export type MusicAlbumListItem = {
   description?: string
   album_type?: string
   hot_score?: number
-  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; lyrics?: string; status?: string }>
+  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; cover_url?: string; lyrics?: string; status?: string }>
   entry_status: MusicEntryStatus
+}
+
+export type MusicSongListItem = {
+  id: string
+  title: string
+  track_number?: number
+  audio_url?: string
+  cover_url?: string
+  lyrics?: string
+  status?: string
+  entry_status: MusicEntryStatus
+  artists?: Array<{ id: string; name: string }>
+  album?: { id: string; title: string }
+}
+
+export type MusicPlaylistSummary = {
+  id: string
+  name: string
+  description?: string
+  song_count: number
+}
+
+export type MusicPlaylistDetail = MusicPlaylistSummary & {
+  songs: MusicSongListItem[]
+}
+
+export type MusicStarredKind = 'artist' | 'album' | 'song' | 'playlist'
+
+export type MusicArtistBookmark = {
+  id: string
+  artist_id: string
+  created_at: string
+}
+
+export type MusicAlbumBookmark = {
+  id: string
+  album_id: string
+  created_at: string
+}
+
+export type MusicSongBookmark = {
+  id: string
+  song_id: string
+  created_at: string
+  song?: MusicSongListItem
+}
+
+export type MusicStarredItem = {
+  id: string
+  kind: MusicStarredKind
+  starred_at: string
+  artist?: MusicArtistListItem
+  album?: MusicAlbumListItem
+  song?: MusicSongListItem
+  playlist?: MusicPlaylistSummary
+}
+
+export type CreateMusicPlaylistInput = {
+  name: string
 }
 
 export type MusicAlbumTrackEditInput = {
@@ -283,9 +361,21 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
   albums: () => `${API_V1_BASE}/music/albums`,
   album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
+  artistBookmarks: () => `${API_V1_BASE}/music/bookmarks/artists`,
+  artistBookmark: (artistId: string) => `${API_V1_BASE}/music/bookmarks/artists/${artistId}`,
+  albumBookmarks: () => `${API_V1_BASE}/music/bookmarks/albums`,
+  albumBookmark: (albumId: string) => `${API_V1_BASE}/music/bookmarks/albums/${albumId}`,
+  songBookmarks: () => `${API_V1_BASE}/music/bookmarks/songs`,
+  songBookmark: (songId: string) => `${API_V1_BASE}/music/bookmarks/songs/${songId}`,
+  playlists: () => `${API_V1_BASE}/music/playlists`,
+  playlist: (playlistId: string) => `${API_V1_BASE}/music/playlists/${playlistId}`,
+  playlistSongs: (playlistId: string) => `${API_V1_BASE}/music/playlists/${playlistId}/songs`,
+  playlistSong: (playlistId: string, songId: string) => `${API_V1_BASE}/music/playlists/${playlistId}/songs/${songId}`,
   albumRevisions: (albumId: string) => `${API_V1_BASE}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${API_V1_BASE}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) => `${API_V1_BASE}/albums/${albumId}/revisions/${version}/revert`,
+  albumDiscussions: (albumId: string) => `${API_V1_BASE}/albums/${albumId}/discussions`,
+  albumDiscussion: (albumId: string, discussionId: string) => `${API_V1_BASE}/albums/${albumId}/discussions/${discussionId}`,
   albumImports: () => `${API_V1_BASE}/music/imports/albums`,
   albumImport: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}`,
   albumImportArchive: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/upload`,
@@ -531,8 +621,80 @@ export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<M
   }
 }
 
+export async function listArtistBookmarks() {
+  return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(musicV1Endpoints.artistBookmarks())
+}
+
+export async function listAlbumBookmarks() {
+  return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(musicV1Endpoints.albumBookmarks())
+}
+
+export async function listSongBookmarks() {
+  return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(musicV1Endpoints.songBookmarks())
+}
+
+export async function listMusicPlaylists() {
+  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(musicV1Endpoints.playlists())
+}
+
+export async function listMusicStarred(): Promise<MusicStarredItem[]> {
+  const [artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
+    listArtistBookmarks(),
+    listAlbumBookmarks(),
+    listSongBookmarks(),
+    listMusicPlaylists(),
+  ])
+
+  const [artists, albums] = await Promise.all([
+    Promise.all(artistBookmarks.data.map((bookmark: MusicArtistBookmark) => getMusicArtist(bookmark.artist_id))),
+    Promise.all(albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => getMusicAlbum(bookmark.album_id))),
+  ])
+
+  return [
+    ...artistBookmarks.data.map((bookmark: MusicArtistBookmark, index: number) => ({
+      id: bookmark.id,
+      kind: 'artist' as const,
+      starred_at: bookmark.created_at,
+      artist: artists[index],
+    })),
+    ...albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
+      id: bookmark.id,
+      kind: 'album' as const,
+      starred_at: bookmark.created_at,
+      album: albums[index],
+    })),
+    ...songBookmarks.data.map((bookmark: MusicSongBookmark) => ({
+      id: bookmark.id,
+      kind: 'song' as const,
+      starred_at: bookmark.created_at,
+      song: bookmark.song,
+    })),
+    ...playlists.data.map((playlist: MusicPlaylistSummary) => ({
+      id: playlist.id,
+      kind: 'playlist' as const,
+      starred_at: '',
+      playlist,
+    })),
+  ]
+}
+
 export async function getMusicAlbum(albumId: string): Promise<MusicAlbumListItem> {
   return apiGet<MusicAlbumListItem>(musicV1Endpoints.album(albumId))
+}
+
+export async function createMusicPlaylist(input: CreateMusicPlaylistInput): Promise<MusicPlaylistDetail> {
+  return apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input)
+}
+
+export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {
+  const [playlist, songsResponse] = await Promise.all([
+    apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
+    apiGetEnvelope<MusicSongListItem[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
+  ])
+  return {
+    ...playlist,
+    songs: songsResponse.data,
+  }
 }
 
 export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {
@@ -548,6 +710,23 @@ export async function revertAlbumRevision(albumId: string, version: number, edit
   return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.albumRevert(albumId, version), {
     edit_summary: editSummary,
   })
+}
+
+export async function listAlbumDiscussions(albumId: string): Promise<MusicDiscussion[]> {
+  const response = await apiGetEnvelope<MusicDiscussion[]>(musicV1Endpoints.albumDiscussions(albumId))
+  return response.data
+}
+
+export async function createAlbumDiscussion(albumId: string, content: string): Promise<MusicDiscussion> {
+  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussions(albumId), { content })
+}
+
+export async function replyAlbumDiscussion(albumId: string, discussionId: string, content: string): Promise<MusicDiscussion> {
+  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussion(albumId, discussionId), { content })
+}
+
+export async function deleteAlbumDiscussion(albumId: string, discussionId: string): Promise<{ success: boolean }> {
+  return apiDeleteJson<{ success: boolean }>(musicV1Endpoints.albumDiscussion(albumId, discussionId))
 }
 
 export async function listRecommendedAlbums(mode: MusicRecommendationMode) {

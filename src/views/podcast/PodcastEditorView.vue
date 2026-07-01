@@ -29,6 +29,12 @@ const audioError = ref('')
 const channels = ref<Channel[]>([])
 const collections = ref<Collection[]>([])
 const selectedCollectionId = ref('')
+const selectedChannelFromQuery = computed(() => (
+  typeof route.query.channel === 'string' ? route.query.channel : ''
+))
+const selectedCollectionFromQuery = computed(() => (
+  typeof route.query.collection === 'string' ? route.query.collection : ''
+))
 
 // Upload state
 const audioUploadProgress = ref(0)   // 0-100, -1 = error
@@ -317,6 +323,19 @@ async function loadCollections(channelID: string) {
 
   const data = await res.json()
   collections.value = data.data ?? data
+  if (isEdit.value) {
+    if (selectedCollectionId.value && !collections.value.some(collection => collection.id === selectedCollectionId.value)) {
+      selectedCollectionId.value = ''
+    }
+    return
+  }
+
+  const queryCollectionId = selectedCollectionFromQuery.value
+  if (queryCollectionId && collections.value.some(collection => collection.id === queryCollectionId)) {
+    selectedCollectionId.value = queryCollectionId
+    return
+  }
+
   if (selectedCollectionId.value && !collections.value.some(collection => collection.id === selectedCollectionId.value)) {
     selectedCollectionId.value = ''
   }
@@ -337,6 +356,10 @@ async function loadChannels() {
   if (res.ok) {
     const data = await res.json()
     channels.value = data.data ?? data
+    const queryChannelId = selectedChannelFromQuery.value
+    if (!form.value.channel_id && queryChannelId && channels.value.some(channel => channel.id === queryChannelId)) {
+      form.value.channel_id = queryChannelId
+    }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id
     }

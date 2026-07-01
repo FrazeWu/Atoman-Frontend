@@ -8,10 +8,15 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   buildUpdateAlbumEdit,
   buildUpdateArtistEdit,
+  createAlbumDiscussion,
+  deleteAlbumDiscussion,
   getAlbumRevision,
+  listAlbumDiscussions,
   listAlbumRevisions,
+  replyAlbumDiscussion,
   revertAlbumRevision,
   submitMusicEdit,
+  type MusicDiscussion,
   type MusicRevisionSummary,
   type MusicSource,
 } from '@/api/musicV1'
@@ -37,12 +42,13 @@ const titleMap: Record<string, string> = {
   discussion: '社区讨论'
 }
 
+const currentAction = computed(() => state.value.nestedAction)
 const displayTitle = computed(() => titleMap[state.value.nestedAction || ''] || 'Action')
 const subtitleMap: Record<string, string> = {
   revise: '补充专辑条目，并保持来源信息清晰。',
   revise_artist: '以纸面编辑方式整理艺术家资料。',
-  history: '查看当前条目的历史占位内容。',
-  discussion: '查看当前条目的讨论占位内容。',
+  history: '查看修订记录、差异摘要，并按版本回滚。',
+  discussion: '查看专辑讨论，并直接发起回复。',
 }
 
 const artistDraft = reactive({
@@ -75,6 +81,11 @@ const revisions = ref<MusicRevisionSummary[]>([])
 const selectedRevision = ref<MusicRevisionSummary | null>(null)
 const previousRevision = ref<MusicRevisionSummary | null>(null)
 const diffLoading = ref(false)
+const discussionLoading = ref(false)
+const discussions = ref<MusicDiscussion[]>([])
+const discussionDraft = ref('')
+const replyDrafts = reactive<Record<string, string>>({})
+const replyingToId = ref<string | null>(null)
 
 const isArtistForm = computed(() => state.value.nestedAction === 'revise_artist')
 const isAlbumForm = computed(() => state.value.nestedAction === 'revise')
@@ -106,11 +117,38 @@ watch(() => state.value.nestedAction, () => {
   selectedRevision.value = null
   previousRevision.value = null
   diffLoading.value = false
+  discussionLoading.value = false
+  discussions.value = []
+  discussionDraft.value = ''
+  replyingToId.value = null
+  for (const key of Object.keys(replyDrafts)) delete replyDrafts[key]
 
   if (state.value.nestedAction === 'history' && state.value.albumId) {
     void loadAlbumHistory(state.value.albumId)
   }
-})
+  if (state.value.nestedAction === 'discussion' && state.value.albumId) {
+    void loadAlbumDiscussions(state.value.albumId)
+  }
+}, { immediate: true })
+
+function normalizeDiscussionList(input: MusicDiscussion[]) {
+  return input.map((item) => ({
+    ...item,
+    replies: Array.isArray(item.replies) ? item.replies : [],
+  }))
+}
+
+async function loadAlbumDiscussions(albumId: string) {
+  discussionLoading.value = true
+  errorMessage.value = ''
+  try {
+    discussions.value = normalizeDiscussionList(await listAlbumDiscussions(albumId))
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载讨论失败'
+  } finally {
+    discussionLoading.value = false
+  }
+}
 
 function trimmed(value: string) {
   return value.trim()
@@ -157,6 +195,89 @@ async function handleRevert(version: number) {
     await loadAlbumHistory(state.value.albumId)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '回滚失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+function formatDiscussionAuthor(discussion: MusicDiscussion) {
+  return discussion.author?.display_name || discussion.author?.username || discussion.author_id
+}
+
+function toggleReply(discussionId: string) {
+  replyingToId.value = replyingToId.value === discussionId ? null : discussionId
+}
+
+async function handleCreateDiscussion() {
+  if (!state.value.albumId) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  const content = trimmed(discussionDraft.value)
+  if (!content) {
+    errorMessage.value = '请输入讨论内容'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await createAlbumDiscussion(state.value.albumId, content)
+    discussionDraft.value = ''
+    successMessage.value = '讨论已发布'
+    await loadAlbumDiscussions(state.value.albumId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '发布讨论失败'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleReplyDiscussion(discussionId: string) {
+  if (!state.value.albumId) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  const content = trimmed(replyDrafts[discussionId] || '')
+  if (!content) {
+    errorMessage.value = '请输入回复内容'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await replyAlbumDiscussion(state.value.albumId, discussionId, content)
+    replyDrafts[discussionId] = ''
+    replyingToId.value = null
+    successMessage.value = '回复已发送'
+    await loadAlbumDiscussions(state.value.albumId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '发送回复失败'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleDeleteDiscussion(discussionId: string) {
+  if (!state.value.albumId) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await deleteAlbumDiscussion(state.value.albumId, discussionId)
+    successMessage.value = '讨论已删除'
+    await loadAlbumDiscussions(state.value.albumId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '删除讨论失败'
   } finally {
     submitting.value = false
   }
@@ -311,7 +432,7 @@ async function submitEdit() {
     <div class="drawer-header">
       <p class="eyebrow">Music Wiki</p>
       <h3 class="title">{{ displayTitle }}</h3>
-      <p class="subtitle">{{ subtitleMap[state.nestedAction || ''] || '编辑当前条目。' }}</p>
+      <p class="subtitle">{{ subtitleMap[currentAction || ''] || '编辑当前条目。' }}</p>
     </div>
 
     <div class="drawer-body">
@@ -551,7 +672,7 @@ async function submitEdit() {
       </form>
 
       <!-- History placeholder -->
-      <div v-else-if="state.nestedAction === 'history'" class="history-panel">
+      <div v-else-if="currentAction === 'history'" class="history-panel">
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-else-if="revisionLoading" class="history-state">正在加载历史...</p>
         <p v-else-if="!revisions.length" class="history-state">暂无版本历史。</p>
@@ -570,6 +691,7 @@ async function submitEdit() {
             <button
               class="paper-action history-diff"
               type="button"
+              :data-test="`history-diff-button-${revision.version_number}`"
               :disabled="diffLoading"
               @click="viewRevisionDiff(revision)"
             >
@@ -578,6 +700,7 @@ async function submitEdit() {
             <button
               class="paper-submit history-revert"
               type="button"
+              :data-test="`history-revert-button-${revision.version_number}`"
               :disabled="submitting || revision.is_current"
               @click="handleRevert(revision.version_number)"
             >
@@ -606,9 +729,86 @@ async function submitEdit() {
         </div>
       </div>
 
-      <div v-else-if="state.nestedAction === 'discussion'" class="history-item">
-        <div><strong>Discussion</strong></div>
-        <div>社区讨论占位内容。</div>
+      <div v-else-if="currentAction === 'discussion'" class="discussion-panel">
+        <form class="discussion-composer" data-test="discussion-create-submit" @submit.prevent="handleCreateDiscussion">
+          <PTextarea
+            v-model="discussionDraft"
+            data-test="discussion-create-input"
+            :rows="4"
+            label="发起讨论"
+            placeholder="写下你对这张专辑的看法"
+          />
+          <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发布讨论</button>
+        </form>
+
+        <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
+        <p v-if="discussionLoading" class="history-state">正在加载讨论...</p>
+        <p v-else-if="!discussions.length" class="history-state">还没有讨论，来发第一条。</p>
+
+        <div v-for="discussion in discussions" :key="discussion.id" class="discussion-thread">
+          <div class="discussion-card">
+            <div class="history-item__head">
+              <strong>{{ formatDiscussionAuthor(discussion) }}</strong>
+              <span class="history-meta">{{ formatRevisionTime(discussion.created_at) }}</span>
+            </div>
+            <div class="history-summary">{{ discussion.content }}</div>
+            <div class="history-actions">
+              <button
+                class="paper-action history-diff"
+                type="button"
+                :data-test="`discussion-reply-toggle-${discussion.id}`"
+                @click="toggleReply(discussion.id)"
+              >
+                {{ replyingToId === discussion.id ? '取消回复' : '回复' }}
+              </button>
+              <button
+                v-if="discussion.can_delete"
+                class="paper-action history-diff"
+                type="button"
+                :data-test="`discussion-delete-button-${discussion.id}`"
+                :disabled="submitting"
+                @click="handleDeleteDiscussion(discussion.id)"
+              >
+                删除
+              </button>
+            </div>
+
+            <form
+              v-if="replyingToId === discussion.id"
+              class="discussion-reply-form"
+              :data-test="`discussion-reply-submit-${discussion.id}`"
+              @submit.prevent="handleReplyDiscussion(discussion.id)"
+            >
+              <PTextarea
+                v-model="replyDrafts[discussion.id]"
+                :data-test="`discussion-reply-input-${discussion.id}`"
+                :rows="3"
+                label="回复内容"
+              />
+              <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发送回复</button>
+            </form>
+          </div>
+
+          <div v-for="reply in discussion.replies" :key="reply.id" class="discussion-reply">
+            <div class="history-item__head">
+              <strong>{{ formatDiscussionAuthor(reply) }}</strong>
+              <span class="history-meta">{{ formatRevisionTime(reply.created_at) }}</span>
+            </div>
+            <div class="history-summary">{{ reply.content }}</div>
+            <div v-if="reply.can_delete" class="history-actions">
+              <button
+                class="paper-action history-diff"
+                type="button"
+                :data-test="`discussion-delete-button-${reply.id}`"
+                :disabled="submitting"
+                @click="handleDeleteDiscussion(reply.id)"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </PSheet>
@@ -755,6 +955,31 @@ async function submitEdit() {
 .history-diff-line:last-child {
   border-bottom: none;
   padding-bottom: 0;
+}
+.discussion-panel {
+  display: grid;
+  gap: 1rem;
+}
+.discussion-composer,
+.discussion-reply-form {
+  display: grid;
+  gap: 0.75rem;
+}
+.discussion-thread {
+  display: grid;
+  gap: 0.75rem;
+}
+.discussion-card,
+.discussion-reply {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-soft);
+}
+.discussion-reply {
+  margin-left: 1.25rem;
+}
+.discussion-submit {
+  width: auto;
 }
 
 @media (max-width: 640px) {

@@ -28,6 +28,9 @@ const urlError = ref('')
 const channels = ref<Channel[]>([])
 const collections = ref<Collection[]>([])
 const selectedCollectionIds = ref<string[]>([])
+const selectedCollectionFromQuery = computed(() => (
+  typeof route.query.collection === 'string' ? route.query.collection : ''
+))
 
 // Upload state
 const videoUploadProgress = ref(0)   // 0-100, -1 = error
@@ -301,6 +304,12 @@ async function loadCollections(channelID: string) {
 
   const data = await res.json()
   collections.value = data.data ?? data
+  if (!isEdit.value) {
+    const queryCollectionId = selectedCollectionFromQuery.value
+    selectedCollectionIds.value = queryCollectionId && collections.value.some(collection => collection.id === queryCollectionId)
+      ? [queryCollectionId]
+      : []
+  }
 }
 
 function onChannelChange(value: string) {

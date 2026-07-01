@@ -172,4 +172,91 @@ describe('VideoEditorView', () => {
     )
     expect(router.currentRoute.value.fullPath).toBe('/videos/edit/video-1')
   })
+
+  it('新建视频应在合法频道下恢复 query.collection', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道 1' }] })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'collection-1', name: '合集 1', channel_id: 'channel-1' },
+            { id: 'collection-2', name: '合集 2', channel_id: 'channel-1' },
+          ],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/upload', component: VideoEditorView }],
+    })
+    await router.push('/videos/upload?channel=channel-1&collection=collection-2')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(VideoEditorView)
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
+  })
+
+  it('新建视频不得恢复不属于当前频道的非法 query.collection', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道 1' }] })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'collection-1', name: '合集 1', channel_id: 'channel-1' },
+            { id: 'collection-2', name: '合集 2', channel_id: 'channel-1' },
+          ],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/upload', component: VideoEditorView }],
+    })
+    await router.push('/videos/upload?channel=channel-1&collection=collection-x')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(VideoEditorView)
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual([])
+  })
 })

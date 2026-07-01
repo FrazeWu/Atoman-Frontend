@@ -200,6 +200,118 @@ describe('PostEditorView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/posts/post/new?channel=channel-2')
   })
 
+  it('新建文章应在合法频道下恢复 query.collection', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts/post/new', component: PostEditorView },
+      ],
+    })
+
+    await router.push('/posts/post/new?channel=channel-2&collection=collection-2')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-2', name: '频道 2' }] })
+      }
+      if (url.includes('/blog/channels/channel-2/collections')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'collection-1', name: '合集 1', channel_id: 'channel-2', is_default: true },
+            { id: 'collection-2', name: '合集 2', channel_id: 'channel-2', is_default: false },
+          ],
+        })
+      }
+      if (url.includes('/blog/drafts?context_key=')) {
+        return makeJsonResponse({ data: null })
+      }
+
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(PostEditorView)
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
+  })
+
+  it('新建文章不得恢复不属于当前频道的非法 query.collection', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts/post/new', component: PostEditorView },
+      ],
+    })
+
+    await router.push('/posts/post/new?channel=channel-2&collection=collection-x')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-2', name: '频道 2' }] })
+      }
+      if (url.includes('/blog/channels/channel-2/collections')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'collection-1', name: '合集 1', channel_id: 'channel-2', is_default: true },
+            { id: 'collection-2', name: '合集 2', channel_id: 'channel-2', is_default: false },
+          ],
+        })
+      }
+      if (url.includes('/blog/drafts?context_key=')) {
+        return makeJsonResponse({ data: null })
+      }
+
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(PostEditorView)
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1'])
+  })
+
   it('协作文档与草稿冲突时，显示冲突弹窗文案', async () => {
     localStorage.setItem('blog_editor_blog:post:post-1', JSON.stringify({
       payload: {
@@ -956,8 +1068,7 @@ describe('PostEditorView', () => {
       expect.anything()
     )
 
-    const collectionItems = wrapper.findAll('.collection-item')
-    const selectedItem = collectionItems.find(item => item.classes().includes('selected') && item.text().includes('默认合集'))
-    expect(selectedItem).toBeTruthy()
+    const editorView = wrapper.findComponent(PostEditorView)
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-3'])
   })
 })

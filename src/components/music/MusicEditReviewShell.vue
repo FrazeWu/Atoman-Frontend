@@ -1,6 +1,6 @@
 <template>
   <div class="music-edit-review-shell">
-    <PPageHeader title="音乐审核" sub="统一展示 Music edit 队列，并提供 approve / reject / cancel / revert 操作。" kicker="Music Review" accent />
+    <PPageHeader title="音乐审核" sub="统一展示 Music edit 队列，并提供 approve / reject / cancel 操作。" kicker="Music Review" accent />
 
     <div class="music-edit-review-shell__filters">
       <PSelect v-model="statusModel" label="状态" :options="statusOptions" />
@@ -26,7 +26,6 @@
           <PButton type="button" variant="primary" size="sm" @click="$emit('approve', item.id)">通过</PButton>
           <PButton type="button" variant="secondary" size="sm" @click="$emit('reject', item.id)">驳回</PButton>
           <PButton type="button" variant="ghost" size="sm" @click="$emit('cancel', item.id)">取消</PButton>
-          <PButton type="button" variant="ghost" size="sm" @click="$emit('revert', item.id)">回滚</PButton>
         </template>
       </PEntry>
     </div>
@@ -64,7 +63,6 @@ const emit = defineEmits<{
   (e: 'approve', id: string): void
   (e: 'reject', id: string): void
   (e: 'cancel', id: string): void
-  (e: 'revert', id: string): void
 }>()
 
 const statusOptions = [

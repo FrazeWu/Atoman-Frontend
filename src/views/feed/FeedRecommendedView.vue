@@ -3,18 +3,25 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
-import PTab from '@/components/ui/PTab.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PEntry from '@/components/ui/PEntry.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PClip from '@/components/ui/PClip.vue'
+import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'
+import { useFeedStore } from '@/stores/feed'
+import { useAuthStore } from '@/stores/auth'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
-type RecommendTarget = 'articles' | 'channels'
+type RecommendTarget = 'articles' | 'channels' | 'mixed'
 type FeedSourceCategory = 'all' | 'blog' | 'news' | 'social' | 'video' | 'forum' | 'podcast'
 
 type RecommendationItem = {
   id: string
   title: string
   summary?: string
+  content_type?: string
   image_url?: string
   target_path: string
   score_label?: string
@@ -22,6 +29,35 @@ type RecommendationItem = {
 
 const router = useRouter()
 const api = useApi()
+const feedStore = useFeedStore()
+const authStore = useAuthStore()
+
+const starredIds = computed(() => feedStore.starredItemIds)
+const bookmarkedIds = computed(() => feedStore.bookmarkedPostIds)
+const readingListIds = computed(() => feedStore.readingListItemIds)
+
+const isStarred = (item: RecommendationItem) => {
+  if (item.target_path.includes('/posts/')) {
+    return bookmarkedIds.value.has(item.id)
+  }
+  return starredIds.value.has(item.id)
+}
+
+const isReadingList = (item: RecommendationItem) => {
+  return readingListIds.value.has(item.id)
+}
+
+const toggleStar = async (item: RecommendationItem) => {
+  if (item.target_path.includes('/posts/')) {
+    await feedStore.togglePostBookmark(item.id)
+  } else {
+    await feedStore.toggleStar(item.id)
+  }
+}
+
+const toggleReadingList = async (item: RecommendationItem) => {
+  await feedStore.toggleReadingListItem(item.id)
+}
 
 const mode = ref<RecommendationMode>('hot')
 const target = ref<RecommendTarget>('articles')
@@ -30,6 +66,9 @@ const loading = ref(false)
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
+const page = ref(1)
+const pageSize = 20
+const totalArticles = ref(0)
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
   { label: '热度', value: 'hot' },
@@ -40,6 +79,7 @@ const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
 const targetOptions: Array<{ label: string; value: RecommendTarget }> = [
   { label: '文章', value: 'articles' },
   { label: '频道', value: 'channels' },
+  { label: '混合', value: 'mixed' },
 ]
 
 const categoryOptions: Array<{ label: string; value: FeedSourceCategory }> = [
@@ -57,8 +97,8 @@ async function fetchRecommendations() {
   errorMessage.value = ''
   try {
     const [articleRes, channelRes] = await Promise.all([
-      fetch(`${api.url}/feed/recommend/articles?mode=${mode.value}`),
-      fetch(`${api.url}/feed/recommend/channels?mode=${mode.value}`),
+      fetch(`${api.url}/feed/recommend/articles?mode=${mode.value}&page=${page.value}&page_size=${pageSize}`),
+      fetch(`${api.url}/feed/recommend/channels?mode=${mode.value}&page=${page.value}&page_size=${pageSize}`),
     ])
 
     if (!articleRes.ok || !channelRes.ok) {
@@ -72,58 +112,72 @@ async function fetchRecommendations() {
 
     articles.value = Array.isArray(articlePayload.data) ? articlePayload.data : []
     channels.value = Array.isArray(channelPayload.data) ? channelPayload.data : []
+    totalArticles.value = articlePayload.meta?.total ?? articlePayload.total ?? articles.value.length
   } catch (error) {
     console.error('Failed to fetch feed recommendations:', error)
     errorMessage.value = '推荐内容加载失败'
     articles.value = []
     channels.value = []
+    totalArticles.value = 0
   } finally {
     loading.value = false
   }
-}
-
-function changeMode(nextMode: RecommendationMode) {
-  if (nextMode === mode.value) return
-  mode.value = nextMode
-}
-
-function changeTarget(nextTarget: RecommendTarget) {
-  if (nextTarget === target.value) return
-  target.value = nextTarget
-}
-
-function changeCategory(nextCategory: FeedSourceCategory) {
-  if (nextCategory === category.value) return
-  category.value = nextCategory
 }
 
 function openTarget(path: string) {
   router.push(path)
 }
 
-function inferChannelCategory(item: RecommendationItem): FeedSourceCategory {
-  const value = `${item.title || ''} ${item.summary || ''}`.toLowerCase()
-  if (value.includes('podcast') || value.includes('播客') || value.includes('audio')) return 'podcast'
-  if (value.includes('video') || value.includes('视频') || value.includes('youtube') || value.includes('bilibili')) return 'video'
-  if (value.includes('forum') || value.includes('论坛') || value.includes('bbs') || value.includes('discourse')) return 'forum'
-  if (value.includes('news') || value.includes('新闻') || value.includes('media') || value.includes('日报')) return 'news'
-  if (value.includes('twitter') || value.includes('x.com') || value.includes('reddit') || value.includes('社交')) return 'social'
-  return 'blog'
+function normalizeItemCategory(item: RecommendationItem): FeedSourceCategory {
+  switch ((item.content_type || '').trim().toLowerCase()) {
+    case 'news':
+      return 'news'
+    case 'social':
+      return 'social'
+    case 'video':
+      return 'video'
+    case 'forum':
+      return 'forum'
+    case 'podcast':
+      return 'podcast'
+    default:
+      return 'blog'
+  }
 }
 
 const visibleChannels = computed(() => {
   if (category.value === 'all') return channels.value
-  return channels.value.filter((item) => inferChannelCategory(item) === category.value)
+  return channels.value.filter((item) => normalizeItemCategory(item) === category.value)
 })
 
-const visibleArticles = computed(() => articles.value)
+const visibleArticles = computed(() => {
+  if (category.value === 'all') return articles.value
+  return articles.value.filter((item) => normalizeItemCategory(item) === category.value)
+})
 
-watch(mode, () => {
+const visibleMixedArticles = computed(() => visibleArticles.value.slice(0, 4))
+const visibleMixedChannels = computed(() => visibleChannels.value.slice(0, 4))
+
+const changePage = (nextPage: number) => {
+  if (nextPage < 1 || nextPage === page.value) return
+  page.value = nextPage
+}
+
+watch([mode, page], () => {
   fetchRecommendations()
+})
+
+watch([mode, target, category], () => {
+  page.value = 1
 })
 
 onMounted(() => {
   fetchRecommendations()
+  if (authStore.isAuthenticated) {
+    feedStore.fetchStarredIds()
+    feedStore.fetchReadingListIds()
+    feedStore.fetchBookmarkedPostIds()
+  }
 })
 </script>
 
@@ -134,38 +188,31 @@ onMounted(() => {
       accent
       kicker="FEED RECOMMEND"
       sub="把订阅文章和频道拆开推荐，用热度、精选、探索三种模式浏览。"
+      mb="1rem"
     >
       <template #action><PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
     </PPageHeader>
 
     <div class="filters-stack">
       <div class="filter-row" aria-label="订阅推荐模式">
-        <PTab
-          v-for="option in modeOptions"
-          :key="option.value"
-          :label="option.label"
-          :active="mode === option.value"
-          @click="changeMode(option.value)"
+        <PSegmentedControl
+          v-model="mode"
+          :options="modeOptions"
         />
       </div>
 
       <div class="filter-row" aria-label="订阅推荐对象">
-        <PTab
-          v-for="option in targetOptions"
-          :key="option.value"
-          :label="option.label"
-          :active="target === option.value"
-          @click="changeTarget(option.value)"
+        <PSegmentedControl
+          v-model="target"
+          :options="targetOptions"
         />
       </div>
 
-      <div v-if="target === 'channels'" class="filter-row filter-row--compact" aria-label="频道类型筛选">
-        <PTab
-          v-for="option in categoryOptions"
-          :key="option.value"
-          :label="option.label"
-          :active="category === option.value"
-          @click="changeCategory(option.value)"
+      <div class="filter-row" aria-label="内容类型筛选">
+        <PSegmentedControl
+          v-model="category"
+          :options="categoryOptions"
+          class="category-segmented-control"
         />
       </div>
     </div>
@@ -187,23 +234,114 @@ onMounted(() => {
           description="等有更多内容和互动信号后，这里会显示文章推荐。"
         />
 
-        <div v-else class="card-stack">
+        <div v-else class="feed-timeline">
           <article
             v-for="item in visibleArticles"
             :key="item.id"
-            class="recommend-card"
+            class="recommend-card recommend-card--article"
             @click="openTarget(item.target_path)"
           >
-            <div class="recommend-card__cover">
-              <img v-if="item.image_url" :src="item.image_url" :alt="item.title" class="recommend-card__img" />
-              <span v-else class="recommend-card__fallback">POST</span>
-            </div>
-            <div class="recommend-card__body">
-              <p class="recommend-card__meta">{{ item.score_label || '推荐' }}</p>
-              <h3>{{ item.title }}</h3>
-              <p>{{ item.summary || '打开后查看完整文章内容。' }}</p>
-            </div>
+            <PEntry
+              :title="item.title"
+              :summary="item.summary"
+            >
+              <template #visual>
+                <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
+                  <PBadge type="external" fill>外部</PBadge>
+                  <PBadge type="external">{{ normalizeItemCategory(item) === 'podcast' ? '播客' : normalizeItemCategory(item) === 'video' ? '视频' : normalizeItemCategory(item) === 'news' ? '新闻' : normalizeItemCategory(item) === 'social' ? '社交' : normalizeItemCategory(item) === 'forum' ? '论坛' : '博客' }}</PBadge>
+                </div>
+              </template>
+              <template #meta>
+                <span class="a-label a-muted">{{ item.score_label || '推荐' }}</span>
+              </template>
+              <template #actions>
+                <PClip
+                  v-if="authStore.isAuthenticated"
+                  :active="isStarred(item)"
+                  :label="isStarred(item) ? '退藏' : '收藏'"
+                  @click="toggleStar(item)"
+                />
+                <PClip
+                  v-if="authStore.isAuthenticated && !item.target_path.includes('/posts/')"
+                  :active="isReadingList(item)"
+                  :label="isReadingList(item) ? '移除' : '稍后阅读'"
+                  @click="toggleReadingList(item)"
+                />
+                <div style="flex:1"></div>
+                <a :href="item.target_path" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
+                  ↗ 原文
+                </a>
+              </template>
+            </PEntry>
           </article>
+        </div>
+
+        <FeedTimelineFooter
+          :page="page"
+          :page-size="pageSize"
+          :total="totalArticles"
+          :loading="loading"
+          @change-page="changePage"
+        />
+      </section>
+    </div>
+
+    <div v-else-if="target === 'mixed'" class="recommend-grid recommend-grid--single">
+      <section class="recommend-section">
+        <div class="section-head">
+          <p class="section-kicker">MIXED OVERVIEW</p>
+          <h2>混合推荐</h2>
+        </div>
+
+        <PEmpty
+          v-if="!visibleMixedArticles.length && !visibleMixedChannels.length"
+          kicker="Mixed"
+          title="当前没有混合推荐"
+          description="等有更多内容和频道信号后，这里会把站内外推荐一起编排。"
+        />
+
+        <div v-else class="recommend-grid recommend-grid--mixed">
+          <section class="recommend-section">
+            <div class="section-head">
+              <p class="section-kicker">ARTICLES</p>
+              <h2>文章推荐</h2>
+            </div>
+            <div class="feed-timeline">
+              <article
+                v-for="item in visibleMixedArticles"
+                :key="item.id"
+                class="recommend-card recommend-card--article"
+                @click="openTarget(item.target_path)"
+              >
+                <PEntry :title="item.title" :summary="item.summary" />
+              </article>
+            </div>
+          </section>
+
+          <section class="recommend-section">
+            <div class="section-head">
+              <p class="section-kicker">CHANNELS</p>
+              <h2>频道推荐</h2>
+            </div>
+            <div class="card-stack">
+              <article
+                v-for="item in visibleMixedChannels"
+                :key="item.id"
+                class="recommend-card"
+                @click="openTarget(item.target_path)"
+              >
+                <div class="recommend-card__cover recommend-card__cover--channel">
+                  <img v-if="item.image_url" :src="item.image_url" :alt="item.title" class="recommend-card__img" />
+                  <span v-else class="recommend-card__fallback">CHANNEL</span>
+                </div>
+                <div class="recommend-card__body">
+                  <p class="recommend-card__meta">{{ item.score_label || '推荐' }}</p>
+                  <h3>{{ item.title }}</h3>
+                  <p>{{ item.summary || '打开后查看频道文章和归档内容。' }}</p>
+                </div>
+              </article>
+            </div>
+          </section>
         </div>
       </section>
     </div>
@@ -250,7 +388,7 @@ onMounted(() => {
 .feed-recommend-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   padding-bottom: 6rem;
 }
 
@@ -267,9 +405,9 @@ onMounted(() => {
   align-items: center;
 }
 
-.filter-row--compact :deep(.p-tab) {
-  min-height: 30px;
-  padding: 0 12px;
+.category-segmented-control :deep(.p-segmented-control-item) {
+  min-height: 24px;
+  padding: 0 10px;
   font-size: 10px;
 }
 
@@ -385,5 +523,32 @@ onMounted(() => {
   .recommend-card {
     grid-template-columns: 1fr;
   }
+}
+
+.feed-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feed-item-external-link {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--a-font-meta);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--a-color-fg);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-line-soft);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.feed-item-external-link:hover {
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
+  border-color: var(--a-color-ink);
+  box-shadow: var(--a-shadow-paper-sm);
 }
 </style>

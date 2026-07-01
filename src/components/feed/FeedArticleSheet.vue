@@ -20,6 +20,24 @@
         <a :href="modulePathUrl('blog', `/post/${article.post.id}`)" class="read-original-link" @click.prevent="handleReadMore(article.post); $emit('close')">
           ↗ 阅读原文
         </a>
+        <button
+          v-if="hasPrevious"
+          type="button"
+          class="read-original-link article-nav-link"
+          data-test="feed-article-prev"
+          @click="emit('previous')"
+        >
+          ← 上一篇
+        </button>
+        <button
+          v-if="hasNext"
+          type="button"
+          class="read-original-link article-nav-link"
+          data-test="feed-article-next"
+          @click="emit('next')"
+        >
+          下一篇 →
+        </button>
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
@@ -37,10 +55,34 @@
         <span style="color:var(--a-color-muted-soft)">{{ formatDate(article.feed_item.published_at) }}</span>
       </div>
       <h1 class="article-title">{{ article.feed_item.title }}</h1>
+      <div class="article-context-meta">
+        <span v-if="feedSourceTitle" class="article-context-chip">{{ feedSourceTitle }}</span>
+        <span v-if="feedContentStateLabel" class="article-context-chip">{{ feedContentStateLabel }}</span>
+        <span v-if="feedWordCountLabel" class="article-context-chip">{{ feedWordCountLabel }}</span>
+        <span v-if="feedFetchedAtLabel" class="article-context-chip">{{ feedFetchedAtLabel }}</span>
+      </div>
       <div class="article-subtitle-meta">
         <a :href="article.feed_item.link" target="_blank" rel="noopener noreferrer" class="read-original-link">
           ↗ 阅读原文
         </a>
+        <button
+          v-if="hasPrevious"
+          type="button"
+          class="read-original-link article-nav-link"
+          data-test="feed-article-prev"
+          @click="emit('previous')"
+        >
+          ← 上一篇
+        </button>
+        <button
+          v-if="hasNext"
+          type="button"
+          class="read-original-link article-nav-link"
+          data-test="feed-article-next"
+          @click="emit('next')"
+        >
+          下一篇 →
+        </button>
         <button
           v-if="isPlayablePodcast"
           type="button"
@@ -56,7 +98,10 @@
         <PBadge v-if="article.feed_item.full_text_status" :type="article.feed_item.full_text_status === 'success' ? 'internal' : 'external'">
           {{ article.feed_item.full_text_status === 'success' ? 'FULL TEXT' : 'SUMMARY' }}
         </PBadge>
-        <div class="prose-blog article-body article-body--external-feed" v-html="renderFeedHTML(article.feed_item.full_text_html || article.feed_item.summary || '')"></div>
+        <p v-if="feedContentStateDescription" class="article-content-note">
+          {{ feedContentStateDescription }}
+        </p>
+        <div class="prose-blog article-body article-body--external-feed" v-html="renderFeedHTML(feedBodyHtml)"></div>
       </div>
       
     </template>
@@ -78,6 +123,8 @@ const props = defineProps<{
   article: TimelineItem | null
   isPodcastPlaying?: boolean
   index?: number
+  hasPrevious?: boolean
+  hasNext?: boolean
 }>()
 
 const { renderMarkdown } = useMarkdownRenderer()
@@ -91,6 +138,8 @@ const renderedContent = computed(() => {
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'play-podcast', feedItem: FeedItem): void
+  (e: 'previous'): void
+  (e: 'next'): void
 }>()
 
 const sheetTitle = computed(() => {
@@ -107,6 +156,53 @@ const sheetTitle = computed(() => {
 const isPlayablePodcast = computed(() => {
   if (props.article?.type !== 'feed_item' || !props.article.feed_item) return false
   return Boolean(props.article.feed_item.enclosure_url)
+})
+
+const feedSourceTitle = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  return props.article.feed_item.feed_source?.title || ''
+})
+
+const feedContentStateLabel = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  if (props.article.feed_item.full_text_status === 'success' || props.article.feed_item.content_source === 'full_text') {
+    return 'FULL TEXT'
+  }
+  if (props.article.feed_item.summary) return 'SUMMARY'
+  return ''
+})
+
+const feedWordCountLabel = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item?.full_text_word_count) return ''
+  return `约 ${props.article.feed_item.full_text_word_count} 字`
+})
+
+const feedFetchedAtLabel = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item?.fetched_at) return ''
+  return `抓取于 ${formatDate(props.article.feed_item.fetched_at)}`
+})
+
+const feedBodyHtml = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  return (
+    props.article.feed_item.full_text_html
+    || props.article.feed_item.content_html
+    || props.article.feed_item.content
+    || props.article.feed_item.summary
+    || ''
+  )
+})
+
+const feedContentStateDescription = computed(() => {
+  if (props.article?.type !== 'feed_item' || !props.article.feed_item) return ''
+  if (props.article.feed_item.full_text_status === 'success' || props.article.feed_item.content_source === 'full_text') {
+    return '已展示抓取到的全文内容'
+  }
+  if (props.article.feed_item.summary) {
+    const error = props.article.feed_item.full_text_error?.trim()
+    return error ? `当前仅展示摘要，全文暂不可用：${error}` : '当前仅展示摘要'
+  }
+  return ''
 })
 
 const { navigateWithShutter } = useAsyncNavigate()
@@ -170,6 +266,25 @@ const emitPlayPodcast = () => {
   margin-bottom: 2.5rem;
 }
 
+.article-context-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.article-context-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.9rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--a-color-line-soft);
+  color: var(--a-color-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .read-original-link {
   display: inline-block;
   font-family: inherit;
@@ -187,6 +302,11 @@ const emitPlayPodcast = () => {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   border-color: var(--a-color-ink);
+}
+
+.article-nav-link {
+  cursor: pointer;
+  background: var(--a-color-bg);
 }
 
 .article-play-link {
@@ -215,5 +335,12 @@ const emitPlayPodcast = () => {
   gap: 1rem;
   max-width: 100%;
   min-width: 0;
+}
+
+.article-content-note {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
 }
 </style>

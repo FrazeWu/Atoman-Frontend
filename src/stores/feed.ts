@@ -55,12 +55,86 @@ interface FeedTimelineFetchOptions {
   unreadOnly?: boolean
 }
 
+export interface FeedFilterRules {
+  mutedSourceIds: string[]
+  hiddenKeywords: string[]
+}
+
+export interface FeedAutomationRules {
+  autoMarkReadSourceIds: string[]
+  autoAddReadingListSourceIds: string[]
+}
+
+const FEED_FILTER_RULES_STORAGE_KEY = 'atoman.feed.filter-rules'
+const FEED_AUTOMATION_RULES_STORAGE_KEY = 'atoman.feed.automation-rules'
+
+const normalizeRuleList = (value: unknown) => {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter(Boolean)
+}
+
+const readFilterRules = (): FeedFilterRules => {
+  if (typeof localStorage === 'undefined') {
+    return { mutedSourceIds: [], hiddenKeywords: [] }
+  }
+
+  try {
+    const raw = localStorage.getItem(FEED_FILTER_RULES_STORAGE_KEY)
+    if (!raw) return { mutedSourceIds: [], hiddenKeywords: [] }
+    const parsed = JSON.parse(raw) as {
+      mutedSourceIds?: unknown
+      hiddenKeywords?: unknown
+    }
+    return {
+      mutedSourceIds: normalizeRuleList(parsed.mutedSourceIds),
+      hiddenKeywords: normalizeRuleList(parsed.hiddenKeywords),
+    }
+  } catch {
+    return { mutedSourceIds: [], hiddenKeywords: [] }
+  }
+}
+
+const writeFilterRules = (rules: FeedFilterRules) => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(FEED_FILTER_RULES_STORAGE_KEY, JSON.stringify(rules))
+}
+
+const readAutomationRules = (): FeedAutomationRules => {
+  if (typeof localStorage === 'undefined') {
+    return { autoMarkReadSourceIds: [], autoAddReadingListSourceIds: [] }
+  }
+
+  try {
+    const raw = localStorage.getItem(FEED_AUTOMATION_RULES_STORAGE_KEY)
+    if (!raw) return { autoMarkReadSourceIds: [], autoAddReadingListSourceIds: [] }
+    const parsed = JSON.parse(raw) as {
+      autoMarkReadSourceIds?: unknown
+      autoAddReadingListSourceIds?: unknown
+    }
+    return {
+      autoMarkReadSourceIds: normalizeRuleList(parsed.autoMarkReadSourceIds),
+      autoAddReadingListSourceIds: normalizeRuleList(parsed.autoAddReadingListSourceIds),
+    }
+  } catch {
+    return { autoMarkReadSourceIds: [], autoAddReadingListSourceIds: [] }
+  }
+}
+
+const writeAutomationRules = (rules: FeedAutomationRules) => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(FEED_AUTOMATION_RULES_STORAGE_KEY, JSON.stringify(rules))
+}
+
 export const useFeedStore = defineStore('feed', () => {
   // Feed state
   const subscriptions = ref<Subscription[]>([])
   const groups = ref<SubscriptionGroup[]>([])
   const starGroups = ref<FeedStarGroup[]>([])
   const timeline = ref<any[]>([])
+  const filterRules = ref<FeedFilterRules>(readFilterRules())
+  const automationRules = ref<FeedAutomationRules>(readAutomationRules())
   const activeSource = ref<{ type: string; id: string } | null>(null)
   const error = ref<string | null>(null)
 
@@ -79,6 +153,28 @@ export const useFeedStore = defineStore('feed', () => {
     readingListItemIds.value = new Set()
     activeSource.value = null
     error.value = null
+  }
+
+  const setFilterRules = (rules: Partial<FeedFilterRules>) => {
+    const nextRules: FeedFilterRules = {
+      mutedSourceIds: normalizeRuleList(rules.mutedSourceIds ?? filterRules.value.mutedSourceIds),
+      hiddenKeywords: normalizeRuleList(rules.hiddenKeywords ?? filterRules.value.hiddenKeywords),
+    }
+    filterRules.value = nextRules
+    writeFilterRules(nextRules)
+  }
+
+  const setAutomationRules = (rules: Partial<FeedAutomationRules>) => {
+    const nextRules: FeedAutomationRules = {
+      autoMarkReadSourceIds: normalizeRuleList(
+        rules.autoMarkReadSourceIds ?? automationRules.value.autoMarkReadSourceIds,
+      ),
+      autoAddReadingListSourceIds: normalizeRuleList(
+        rules.autoAddReadingListSourceIds ?? automationRules.value.autoAddReadingListSourceIds,
+      ),
+    }
+    automationRules.value = nextRules
+    writeAutomationRules(nextRules)
   }
 
   const fetchSubscriptions = async () => {
@@ -1149,9 +1245,13 @@ export const useFeedStore = defineStore('feed', () => {
     groups,
     starGroups,
     timeline,
+    filterRules,
+    automationRules,
     activeSource,
     error,
     clearUserState,
+    setFilterRules,
+    setAutomationRules,
     fetchSubscriptions,
     fetchGroups,
     createGroup,

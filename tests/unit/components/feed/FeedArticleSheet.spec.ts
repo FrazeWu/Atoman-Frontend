@@ -180,4 +180,185 @@ describe('FeedArticleSheet', () => {
 
     expect(wrapper.get('[data-test="feed-article-play"]').text()).toContain('播放中')
   })
+
+  it('shows richer external article reading metadata for readability', () => {
+    const wrapper = mount(FeedArticleSheet, {
+      props: {
+        show: true,
+        article: {
+          type: 'feed_item',
+          published_at: '2026-06-20T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-meta-1',
+            feed_source_id: 'source-meta-1',
+            guid: 'guid-meta-1',
+            title: '带有完整状态信息的外部文章',
+            link: 'https://example.com/meta',
+            summary: '<p>这是一段摘要内容。</p>',
+            author: '外部作者',
+            published_at: '2026-06-20T00:00:00Z',
+            fetched_at: '2026-06-20T08:30:00Z',
+            full_text_status: 'success',
+            content_source: 'full_text',
+            full_text_word_count: 1280,
+            feed_source: {
+              id: 'source-meta-1',
+              source_type: 'external_rss',
+              title: 'Longform Weekly',
+              created_at: '2026-06-01T00:00:00Z',
+            },
+          },
+        } as any,
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          PBadge: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('Longform Weekly')
+    expect(wrapper.text()).toContain('FULL TEXT')
+    expect(wrapper.text()).toContain('约 1280 字')
+    expect(wrapper.text()).toContain('抓取于 2026年6月20日')
+  })
+
+  it('renders previous and next navigation controls when neighboring items exist', async () => {
+    const wrapper = mount(FeedArticleSheet, {
+      props: {
+        show: true,
+        article: {
+          type: 'feed_item',
+          published_at: '2026-06-20T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-nav-2',
+            feed_source_id: 'source-nav',
+            guid: 'guid-nav-2',
+            title: '第二篇文章',
+            link: 'https://example.com/nav-2',
+            summary: '<p>摘要</p>',
+            published_at: '2026-06-20T00:00:00Z',
+            fetched_at: '2026-06-20T00:00:00Z',
+          },
+        } as any,
+        hasPrevious: true,
+        hasNext: true,
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          PBadge: true,
+        },
+      },
+    })
+
+    await wrapper.get('[data-test="feed-article-prev"]').trigger('click')
+    await wrapper.get('[data-test="feed-article-next"]').trigger('click')
+
+    expect(wrapper.emitted('previous')).toEqual([[]])
+    expect(wrapper.emitted('next')).toEqual([[]])
+  })
+
+  it('explains whether the reader is showing full text or only a summary', () => {
+    const fullTextWrapper = mount(FeedArticleSheet, {
+      props: {
+        show: true,
+        article: {
+          type: 'feed_item',
+          published_at: '2026-06-20T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-status-1',
+            feed_source_id: 'source-status-1',
+            guid: 'guid-status-1',
+            title: '全文文章',
+            link: 'https://example.com/full',
+            summary: '<p>摘要</p>',
+            full_text_html: '<p>全文</p>',
+            full_text_status: 'success',
+            content_source: 'full_text',
+            published_at: '2026-06-20T00:00:00Z',
+            fetched_at: '2026-06-20T00:00:00Z',
+          },
+        } as any,
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          PBadge: true,
+        },
+      },
+    })
+
+    const summaryWrapper = mount(FeedArticleSheet, {
+      props: {
+        show: true,
+        article: {
+          type: 'feed_item',
+          published_at: '2026-06-20T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-status-2',
+            feed_source_id: 'source-status-2',
+            guid: 'guid-status-2',
+            title: '摘要文章',
+            link: 'https://example.com/summary',
+            summary: '<p>仅摘要</p>',
+            full_text_status: 'failed',
+            full_text_error: 'fetch timeout',
+            published_at: '2026-06-20T00:00:00Z',
+            fetched_at: '2026-06-20T00:00:00Z',
+          },
+        } as any,
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          PBadge: true,
+        },
+      },
+    })
+
+    expect(fullTextWrapper.text()).toContain('已展示抓取到的全文内容')
+    expect(summaryWrapper.text()).toContain('当前仅展示摘要')
+    expect(summaryWrapper.text()).toContain('fetch timeout')
+  })
+
+  it('falls back to content_html before summary when full-text status is available but html is missing', () => {
+    const wrapper = mount(FeedArticleSheet, {
+      props: {
+        show: true,
+        article: {
+          type: 'feed_item',
+          published_at: '2026-06-20T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-fallback-1',
+            feed_source_id: 'source-fallback-1',
+            guid: 'guid-fallback-1',
+            title: '正文回退文章',
+            link: 'https://example.com/fallback',
+            summary: '<p>只应作为最后回退的摘要</p>',
+            content_html: '<p>这是清洗后的正文 HTML</p>',
+            full_text_status: 'success',
+            content_source: 'full_text',
+            published_at: '2026-06-20T00:00:00Z',
+            fetched_at: '2026-06-20T00:00:00Z',
+          },
+        } as any,
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          PBadge: true,
+        },
+      },
+    })
+
+    expect(wrapper.html()).toContain('这是清洗后的正文 HTML')
+    expect(wrapper.html()).not.toContain('只应作为最后回退的摘要')
+  })
 })

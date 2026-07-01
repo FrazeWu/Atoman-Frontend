@@ -4,7 +4,7 @@
       ref="headerRef"
       :class="{ 'feed-header-sticky': showAddModal }"
     >
-      <PPageHeader accent :title="feedCopy.name" :sub="feedCopy.homepageSub">
+      <PPageHeader accent :title="feedCopy.name" :sub="feedCopy.homepageSub" mb="1rem">
         <template #action>
           <div style="display:flex;gap:0.75rem;align-items:center">
             <PPress
@@ -40,6 +40,8 @@
       :show="showManageSheet"
       :subscriptions="subscriptions"
       :groups="groups"
+      :filter-rules="feedStore.filterRules"
+      :automation-rules="feedStore.automationRules"
       :busy="manageBusy"
       :health-checking="feedStore.healthChecking"
       @close="showManageSheet = false"
@@ -53,14 +55,20 @@
       @check-all-subscriptions-health="checkAllSubscriptionsHealth"
       @import-opml="importOPML"
       @export-opml="exportOPML"
+      @update-filter-rules="updateFilterRules"
+      @update-automation-rules="updateAutomationRules"
     />
     <FeedArticleSheet
       :show="showArticleSheet"
       :article="selectedArticle"
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
+      :has-previous="selectedArticleIndex > 0"
+      :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < visibleTimeline.length - 1"
       :index="showSourceSheet ? 1 : 0"
       @close="showArticleSheet = false"
       @play-podcast="playFeedItemFromSheet"
+      @previous="openPreviousArticle"
+      @next="openNextArticle"
     />
     <FeedSourceArticlesSheet
       :show="showSourceSheet"
@@ -98,6 +106,57 @@
             清空
           </button>
         </form>
+        <div class="source-type-filters" aria-label="来源类型筛选">
+          <button
+            type="button"
+            class="source-type-filter-btn"
+            :class="{ active: sourceTypeFilter === 'all' }"
+            data-test="source-type-filter-all"
+            @click="sourceTypeFilter = 'all'"
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            class="source-type-filter-btn"
+            :class="{ active: sourceTypeFilter === 'internal' }"
+            data-test="source-type-filter-internal"
+            @click="sourceTypeFilter = 'internal'"
+          >
+            站内
+          </button>
+          <button
+            type="button"
+            class="source-type-filter-btn"
+            :class="{ active: sourceTypeFilter === 'blog' }"
+            data-test="source-type-filter-blog"
+            @click="sourceTypeFilter = 'blog'"
+          >
+            博客
+          </button>
+          <button
+            type="button"
+            class="source-type-filter-btn"
+            :class="{ active: sourceTypeFilter === 'podcast' }"
+            data-test="source-type-filter-podcast"
+            @click="sourceTypeFilter = 'podcast'"
+          >
+            播客
+          </button>
+        </div>
+        <div v-if="themeFilters.length" class="theme-filters" aria-label="主题筛选">
+          <button
+            v-for="theme in themeFilters"
+            :key="theme"
+            type="button"
+            class="theme-filter-btn"
+            :class="{ active: activeTheme === theme }"
+            :data-test="`theme-filter-${theme.toLowerCase()}`"
+            @click="activeTheme = activeTheme === theme ? '' : theme"
+          >
+            {{ theme }}
+          </button>
+        </div>
         <button
           v-if="authStore.isAuthenticated"
           class="filter-toggle-btn"
@@ -122,10 +181,10 @@
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
 
-      <PEmpty v-else-if="!timeline.length" class="a-empty" :text="emptyTimelineText" />
+      <PEmpty v-else-if="!visibleTimeline.length" class="a-empty" :text="emptyTimelineText" />
 
       <div v-else class="feed-timeline">
-        <template v-for="(item, index) in timeline" :key="itemKey(item)">
+        <template v-for="(item, index) in visibleTimeline" :key="itemKey(item)">
           <PEntry
             v-if="item.type === 'post' && item.post"
             :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
@@ -294,6 +353,8 @@ const queryGroupId = computed(() => typeof route.query.group_id === 'string' ? r
 const queryPage = computed(() => normalizePage(route.query.page))
 const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
 const searchInput = ref(querySearch.value)
+const sourceTypeFilter = ref<'all' | 'internal' | 'blog' | 'podcast'>('all')
+const activeTheme = ref('')
 const activeSearchLabel = computed(() => querySearch.value.trim())
 const defaultGroupId = computed(() => groups.value.find((group) => group.name === '默认分组')?.id || '')
 const nonDefaultGroups = computed(() => groups.value.filter((group) => group.name !== '默认分组'))
@@ -304,6 +365,49 @@ const emptyTimelineText = computed(() => {
 })
 
 const timeline = ref<TimelineItem[]>([])
+const visibleTimeline = computed(() => {
+  const mutedSourceIds = new Set(feedStore.filterRules.mutedSourceIds)
+  const hiddenKeywords = feedStore.filterRules.hiddenKeywords.map((keyword) => keyword.toLocaleLowerCase())
+
+  return timeline.value.filter((item) => {
+    if (!matchesSourceTypeFilter(item, sourceTypeFilter.value)) return false
+    if (!matchesThemeFilter(item, activeTheme.value)) return false
+
+    const sourceId = item.type === 'feed_item'
+      ? (item.feed_item?.feed_source?.id || item.feed_item?.feed_source_id || '')
+      : ''
+
+    if (sourceId && mutedSourceIds.has(sourceId)) return false
+
+    if (!hiddenKeywords.length) return true
+
+    const title = item.type === 'feed_item'
+      ? (item.feed_item?.title || '')
+      : (item.post?.title || '')
+    const summary = item.type === 'feed_item'
+      ? stripHtml(item.feed_item?.summary || '')
+      : (item.post?.summary || '')
+
+    const haystack = `${title}\n${summary}`.toLocaleLowerCase()
+    return !hiddenKeywords.some((keyword) => haystack.includes(keyword))
+  })
+})
+
+const themeFilters = computed(() => {
+  const counts = new Map<string, number>()
+
+  timeline.value.forEach((item) => {
+    extractThemesFromItem(item).forEach((theme) => {
+      counts.set(theme, (counts.get(theme) || 0) + 1)
+    })
+  })
+
+  return Array.from(counts.entries())
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 6)
+    .map(([theme]) => theme)
+})
 
 const shortcutHints = [
   { key: 'H', label: '聚焦侧边栏' },
@@ -318,7 +422,7 @@ const shortcutHints = [
 ]
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({
-  items: timeline,
+  items: visibleTimeline,
   section: 'content',
   onEnter: (item, index) => openArticleSheet(item, index),
   onAction: (key, item) => {
@@ -337,16 +441,16 @@ const { focusedIndex, scrollToFocused } = useKeyboardList({
 
 // Auto-focus first item when switching to content area
 watch(() => uiStore.focusedSection, (section) => {
-  if (section === 'content' && focusedIndex.value === -1 && timeline.value.length > 0) {
+  if (section === 'content' && focusedIndex.value === -1 && visibleTimeline.value.length > 0) {
     focusedIndex.value = 0
     scrollToFocused()
   }
 })
 
 // Reset focus when timeline changes
-watch(timeline, () => {
-  if (focusedIndex.value >= timeline.value.length) {
-    focusedIndex.value = timeline.value.length > 0 ? 0 : -1
+watch(visibleTimeline, () => {
+  if (focusedIndex.value >= visibleTimeline.value.length) {
+    focusedIndex.value = visibleTimeline.value.length > 0 ? 0 : -1
   }
 })
 
@@ -366,6 +470,10 @@ const addSubscriptionResetKey = ref(0)
 
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
+const selectedArticleIndex = computed(() => {
+  if (!selectedArticle.value) return -1
+  return visibleTimeline.value.findIndex((item) => itemKey(item) === itemKey(selectedArticle.value!))
+})
 const showSourceSheet = ref(false)
 const selectedSource = ref<FeedArticleSource | null>(null)
 const sourceArticles = ref<TimelineItem[]>([])
@@ -390,6 +498,20 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
     item.is_read = true
     void feedStore.markItemsRead([item.feed_item.id])
   }
+}
+
+const openPreviousArticle = () => {
+  if (selectedArticleIndex.value <= 0) return
+  const nextItem = visibleTimeline.value[selectedArticleIndex.value - 1]
+  if (!nextItem) return
+  openArticleSheet(nextItem, selectedArticleIndex.value - 1)
+}
+
+const openNextArticle = () => {
+  if (selectedArticleIndex.value < 0 || selectedArticleIndex.value >= visibleTimeline.value.length - 1) return
+  const nextItem = visibleTimeline.value[selectedArticleIndex.value + 1]
+  if (!nextItem) return
+  openArticleSheet(nextItem, selectedArticleIndex.value + 1)
 }
 
 const openSourceArticle = (item: TimelineItem) => {
@@ -720,6 +842,17 @@ const exportOPML = async () => {
   }
 }
 
+const updateFilterRules = (rules: { mutedSourceIds: string[]; hiddenKeywords: string[] }) => {
+  feedStore.setFilterRules(rules)
+}
+
+const updateAutomationRules = (rules: {
+  autoMarkReadSourceIds: string[]
+  autoAddReadingListSourceIds: string[]
+}) => {
+  feedStore.setAutomationRules(rules)
+}
+
 const getExternalBadge = (item: FeedItem) => {
   if (item.enclosure_url) {
     if (item.enclosure_type?.startsWith('audio/')) return '播客'
@@ -727,6 +860,43 @@ const getExternalBadge = (item: FeedItem) => {
   }
   // Check common RSS feed type indicators or categories if available in the future
   return '博客'
+}
+
+const matchesSourceTypeFilter = (
+  item: TimelineItem,
+  filter: 'all' | 'internal' | 'blog' | 'podcast',
+) => {
+  if (filter === 'all') return true
+  if (filter === 'internal') return item.type === 'post'
+  if (item.type !== 'feed_item' || !item.feed_item) return false
+
+  const badge = getExternalBadge(item.feed_item)
+  if (filter === 'podcast') return badge === '播客'
+  if (filter === 'blog') return badge === '博客'
+  return true
+}
+
+const extractThemesFromItem = (item: TimelineItem) => {
+  const parts = item.type === 'feed_item'
+    ? [
+        item.feed_item?.title || '',
+        item.feed_item?.summary || '',
+        item.feed_item?.feed_source?.title || '',
+      ]
+    : [
+        item.post?.title || '',
+        item.post?.summary || '',
+        item.post?.channel?.name || '',
+      ]
+
+  const text = parts.join(' ')
+  const matches = text.match(/\b[A-Z][A-Z0-9+\-]{1,}\b/g) || []
+  return Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)))
+}
+
+const matchesThemeFilter = (item: TimelineItem, theme: string) => {
+  if (!theme) return true
+  return extractThemesFromItem(item).includes(theme)
 }
 
 const toggleStar = async (feedItemId: string) => {
@@ -851,11 +1021,56 @@ const fetchTimeline = async () => {
 
       timeline.value = items
       totalItems.value = total
+      await applyAutomationRules(items)
     }
   } catch (error) {
     console.error(error)
   } finally {
     loadingTimeline.value = false
+  }
+}
+
+const applyAutomationRules = async (items: TimelineItem[]) => {
+  if (!authStore.isAuthenticated) return
+
+  const autoReadSourceIds = new Set(feedStore.automationRules.autoMarkReadSourceIds)
+  const autoReadingListSourceIds = new Set(feedStore.automationRules.autoAddReadingListSourceIds)
+  if (!autoReadSourceIds.size && !autoReadingListSourceIds.size) return
+
+  const pendingReadIds = items
+    .filter((item) => (
+      item.type === 'feed_item'
+      && item.feed_item
+      && !item.is_read
+      && autoReadSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
+    ))
+    .map((item) => item.feed_item!.id)
+
+  items.forEach((item) => {
+    if (
+      item.type === 'feed_item'
+      && item.feed_item
+      && pendingReadIds.includes(item.feed_item.id)
+    ) {
+      item.is_read = true
+    }
+  })
+
+  if (pendingReadIds.length) {
+    await feedStore.markItemsRead(pendingReadIds)
+  }
+
+  const pendingReadingListIds = items
+    .filter((item) => (
+      item.type === 'feed_item'
+      && item.feed_item
+      && !readingListIds.value.has(item.feed_item.id)
+      && autoReadingListSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
+    ))
+    .map((item) => item.feed_item!.id)
+
+  for (const feedItemId of pendingReadingListIds) {
+    await feedStore.toggleReadingListItem(feedItemId)
   }
 }
 
@@ -966,6 +1181,48 @@ onUnmounted(() => {
 <style scoped>
 .feed-page {
   padding-bottom: 12rem;
+}
+
+.source-type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.theme-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.source-type-filter-btn {
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.source-type-filter-btn.active {
+  background: var(--a-color-paper-wash);
+  border-color: var(--a-color-text);
+}
+
+.theme-filter-btn {
+  border: 1px dashed var(--a-color-line-soft);
+  background: transparent;
+  color: var(--a-color-text);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.theme-filter-btn.active {
+  border-style: solid;
+  background: var(--a-color-paper-wash);
 }
 
 .feed-header-sticky {

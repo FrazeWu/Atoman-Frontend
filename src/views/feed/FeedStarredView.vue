@@ -106,8 +106,12 @@
       :show="showArticleSheet"
       :article="selectedArticle"
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
+      :has-previous="selectedArticleIndex > 0"
+      :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < items.length - 1"
       @close="showArticleSheet = false"
       @play-podcast="playFeedItemFromSheet"
+      @previous="openPreviousArticle"
+      @next="openNextArticle"
     />
   </div>
 </template>
@@ -158,6 +162,10 @@ let starredRequestSeq = 0
 
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
+const selectedArticleIndex = computed(() => {
+  if (!selectedArticle.value?.feed_item?.id) return -1
+  return items.value.findIndex((item) => item.id === selectedArticle.value?.feed_item?.id)
+})
 
 const pageRootRef = ref<HTMLElement | null>(null)
 
@@ -213,6 +221,20 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
     is_read: true
   }
   showArticleSheet.value = true
+}
+
+const openPreviousArticle = () => {
+  if (selectedArticleIndex.value <= 0) return
+  const item = items.value[selectedArticleIndex.value - 1]
+  if (!item) return
+  openArticleSheet(item, selectedArticleIndex.value - 1)
+}
+
+const openNextArticle = () => {
+  if (selectedArticleIndex.value < 0 || selectedArticleIndex.value >= items.value.length - 1) return
+  const item = items.value[selectedArticleIndex.value + 1]
+  if (!item) return
+  openArticleSheet(item, selectedArticleIndex.value + 1)
 }
 
 const formatDate = (d?: string) => {

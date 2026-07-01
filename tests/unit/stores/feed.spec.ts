@@ -256,6 +256,70 @@ describe('feed store', () => {
     })
   })
 
+  it('persists feed filter rules in localStorage', () => {
+    const feed = useFeedStore()
+
+    feed.setFilterRules({
+      mutedSourceIds: ['source-muted-1'],
+      hiddenKeywords: ['剧透', '广告'],
+    })
+
+    expect(feed.filterRules).toEqual({
+      mutedSourceIds: ['source-muted-1'],
+      hiddenKeywords: ['剧透', '广告'],
+    })
+    expect(JSON.parse(localStorage.getItem('atoman.feed.filter-rules') || '{}')).toEqual({
+      mutedSourceIds: ['source-muted-1'],
+      hiddenKeywords: ['剧透', '广告'],
+    })
+  })
+
+  it('hydrates feed filter rules from localStorage', () => {
+    localStorage.setItem('atoman.feed.filter-rules', JSON.stringify({
+      mutedSourceIds: ['source-muted-2'],
+      hiddenKeywords: ['推广'],
+    }))
+
+    const feed = useFeedStore()
+
+    expect(feed.filterRules).toEqual({
+      mutedSourceIds: ['source-muted-2'],
+      hiddenKeywords: ['推广'],
+    })
+  })
+
+  it('persists feed automation rules in localStorage', () => {
+    const feed = useFeedStore()
+
+    feed.setAutomationRules({
+      autoMarkReadSourceIds: ['source-auto-1'],
+      autoAddReadingListSourceIds: ['source-later-1'],
+    })
+
+    expect(feed.automationRules).toEqual({
+      autoMarkReadSourceIds: ['source-auto-1'],
+      autoAddReadingListSourceIds: ['source-later-1'],
+    })
+    expect(JSON.parse(localStorage.getItem('atoman.feed.automation-rules') || '{}')).toEqual({
+      autoMarkReadSourceIds: ['source-auto-1'],
+      autoAddReadingListSourceIds: ['source-later-1'],
+    })
+  })
+
+  it('hydrates feed automation rules from localStorage', () => {
+    localStorage.setItem('atoman.feed.automation-rules', JSON.stringify({
+      autoMarkReadSourceIds: ['source-auto-2'],
+      autoAddReadingListSourceIds: ['source-later-2'],
+    }))
+
+    const feed = useFeedStore()
+
+    expect(feed.automationRules).toEqual({
+      autoMarkReadSourceIds: ['source-auto-2'],
+      autoAddReadingListSourceIds: ['source-later-2'],
+    })
+  })
+
   it('uses modular toggle star response data to update starred ids', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { starred: true },

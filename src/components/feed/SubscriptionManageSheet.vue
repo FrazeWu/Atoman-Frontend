@@ -48,6 +48,91 @@
         </PField>
       </form>
 
+      <section class="filter-rules-section">
+        <div class="filter-rules-header">
+          <h3 class="a-title-xs">过滤规则</h3>
+          <p class="a-muted">在当前设备上隐藏特定来源或关键词命中的条目。</p>
+        </div>
+
+        <PField label="隐藏关键词">
+          <div class="inline-form">
+            <PInput
+              v-model="newKeyword"
+              data-test="filter-keyword-input"
+              placeholder="例如：剧透、广告、促销"
+              :disabled="busy"
+              @keydown.enter.prevent="submitKeyword"
+            />
+            <PPress variant="secondary" label="添加关键词" :disabled="busy" @click="submitKeyword" />
+          </div>
+        </PField>
+
+        <div v-if="localFilterRules.hiddenKeywords.length" class="rule-chip-list">
+          <button
+            v-for="keyword in localFilterRules.hiddenKeywords"
+            :key="keyword"
+            type="button"
+            class="rule-chip"
+            data-test="hidden-keyword-chip"
+            @click="removeKeyword(keyword)"
+          >
+            <span>{{ keyword }}</span>
+            <span class="a-font-meta">移除关键词</span>
+          </button>
+        </div>
+
+        <div v-if="mutedSubscriptions.length" class="muted-list">
+          <p class="a-font-meta muted-list-title">已静音来源</p>
+          <div class="rule-chip-list">
+            <button
+              v-for="sub in mutedSubscriptions"
+              :key="sub.id"
+              type="button"
+              class="rule-chip"
+              data-test="muted-source-chip"
+              @click="toggleMuteSource(sub)"
+            >
+              <span>{{ subscriptionTitle(sub) }}</span>
+              <span class="a-font-meta">取消静音</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="autoReadSubscriptions.length" class="muted-list">
+          <p class="a-font-meta muted-list-title">自动已读来源</p>
+          <div class="rule-chip-list">
+            <button
+              v-for="sub in autoReadSubscriptions"
+              :key="`auto-read-${sub.id}`"
+              type="button"
+              class="rule-chip"
+              data-test="auto-read-source-chip"
+              @click="toggleAutoReadSource(sub)"
+            >
+              <span>{{ subscriptionTitle(sub) }}</span>
+              <span class="a-font-meta">取消自动已读</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="autoReadingListSubscriptions.length" class="muted-list">
+          <p class="a-font-meta muted-list-title">自动稍后阅读来源</p>
+          <div class="rule-chip-list">
+            <button
+              v-for="sub in autoReadingListSubscriptions"
+              :key="`auto-reading-list-${sub.id}`"
+              type="button"
+              class="rule-chip"
+              data-test="auto-reading-list-source-chip"
+              @click="toggleAutoReadingListSource(sub)"
+            >
+              <span>{{ subscriptionTitle(sub) }}</span>
+              <span class="a-font-meta">取消自动稍后阅读</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <div v-if="!subscriptions.length" class="empty-state a-muted">
         暂无订阅源，点击页面上的 “+ 订阅” 添加。
       </div>
@@ -118,6 +203,24 @@
                   :disabled="busy || healthChecking"
                   @click="checkSubscriptionHealth(sub.id)"
                 />
+                <PPress
+                  variant="secondary"
+                  :label="isMutedSource(sub) ? '取消静音' : '静音来源'"
+                  :disabled="busy"
+                  @click="toggleMuteSource(sub)"
+                />
+                <PPress
+                  variant="secondary"
+                  :label="isAutoReadSource(sub) ? '取消自动已读' : '自动已读'"
+                  :disabled="busy"
+                  @click="toggleAutoReadSource(sub)"
+                />
+                <PPress
+                  variant="secondary"
+                  :label="isAutoReadingListSource(sub) ? '取消自动稍后阅读' : '自动稍后阅读'"
+                  :disabled="busy"
+                  @click="toggleAutoReadingListSource(sub)"
+                />
                 <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
               </div>
             </div>
@@ -136,11 +239,14 @@ import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import type { FeedAutomationRules, FeedFilterRules } from '@/stores/feed'
 
 const props = defineProps<{
   show: boolean
   subscriptions: Subscription[]
   groups: SubscriptionGroup[]
+  filterRules: FeedFilterRules
+  automationRules: FeedAutomationRules
   busy?: boolean
   healthChecking?: boolean
 }>()
@@ -157,12 +263,23 @@ const emit = defineEmits<{
   (e: 'check-all-subscriptions-health'): void
   (e: 'import-opml', file: File): void
   (e: 'export-opml'): void
+  (e: 'update-filter-rules', rules: FeedFilterRules): void
+  (e: 'update-automation-rules', rules: FeedAutomationRules): void
 }>()
 
 const newGroupName = ref('')
+const newKeyword = ref('')
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
+const localFilterRules = ref<FeedFilterRules>({
+  mutedSourceIds: [...props.filterRules.mutedSourceIds],
+  hiddenKeywords: [...props.filterRules.hiddenKeywords],
+})
+const localAutomationRules = ref<FeedAutomationRules>({
+  autoMarkReadSourceIds: [...props.automationRules.autoMarkReadSourceIds],
+  autoAddReadingListSourceIds: [...props.automationRules.autoAddReadingListSourceIds],
+})
 
 const groupOptions = computed(() =>
   props.groups.map(group => ({ label: group.name, value: group.id })),
@@ -183,11 +300,131 @@ const displayGroups = computed(() => [
   },
 ])
 
+const mutedSubscriptions = computed(() => {
+  const mutedSourceIds = new Set(localFilterRules.value.mutedSourceIds)
+  return props.subscriptions.filter((sub) => {
+    const sourceId = sub.feed_source?.id || sub.feed_source_id
+    return Boolean(sourceId && mutedSourceIds.has(sourceId))
+  })
+})
+
+const autoReadSubscriptions = computed(() => {
+  const sourceIds = new Set(localAutomationRules.value.autoMarkReadSourceIds)
+  return props.subscriptions.filter((sub) => {
+    const sourceId = sub.feed_source?.id || sub.feed_source_id
+    return Boolean(sourceId && sourceIds.has(sourceId))
+  })
+})
+
+const autoReadingListSubscriptions = computed(() => {
+  const sourceIds = new Set(localAutomationRules.value.autoAddReadingListSourceIds)
+  return props.subscriptions.filter((sub) => {
+    const sourceId = sub.feed_source?.id || sub.feed_source_id
+    return Boolean(sourceId && sourceIds.has(sourceId))
+  })
+})
+
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
 
 const subscriptionSourceLabel = (sub: Subscription) =>
   sub.feed_source?.title || sub.title || sub.feed_source?.rss_url || 'RSS'
+
+const isMutedSource = (sub: Subscription) => {
+  const sourceId = sub.feed_source?.id || sub.feed_source_id
+  return Boolean(sourceId && localFilterRules.value.mutedSourceIds.includes(sourceId))
+}
+
+const emitFilterRules = (rules: FeedFilterRules) => {
+  localFilterRules.value = {
+    mutedSourceIds: [...rules.mutedSourceIds],
+    hiddenKeywords: [...rules.hiddenKeywords],
+  }
+  emit('update-filter-rules', rules)
+}
+
+const emitAutomationRules = (rules: FeedAutomationRules) => {
+  localAutomationRules.value = {
+    autoMarkReadSourceIds: [...rules.autoMarkReadSourceIds],
+    autoAddReadingListSourceIds: [...rules.autoAddReadingListSourceIds],
+  }
+  emit('update-automation-rules', rules)
+}
+
+const toggleMuteSource = (sub: Subscription) => {
+  if (props.busy) return
+  const sourceId = sub.feed_source?.id || sub.feed_source_id
+  if (!sourceId) return
+
+  const mutedSourceIds = new Set(localFilterRules.value.mutedSourceIds)
+  if (mutedSourceIds.has(sourceId)) mutedSourceIds.delete(sourceId)
+  else mutedSourceIds.add(sourceId)
+
+  emitFilterRules({
+    mutedSourceIds: Array.from(mutedSourceIds),
+    hiddenKeywords: localFilterRules.value.hiddenKeywords,
+  })
+}
+
+const submitKeyword = () => {
+  if (props.busy) return
+  const keyword = newKeyword.value.trim()
+  if (!keyword || localFilterRules.value.hiddenKeywords.includes(keyword)) return
+
+  emitFilterRules({
+    mutedSourceIds: localFilterRules.value.mutedSourceIds,
+    hiddenKeywords: [...localFilterRules.value.hiddenKeywords, keyword],
+  })
+  newKeyword.value = ''
+}
+
+const removeKeyword = (keyword: string) => {
+  if (props.busy) return
+  emitFilterRules({
+    mutedSourceIds: localFilterRules.value.mutedSourceIds,
+    hiddenKeywords: localFilterRules.value.hiddenKeywords.filter((item) => item !== keyword),
+  })
+}
+
+const isAutoReadSource = (sub: Subscription) => {
+  const sourceId = sub.feed_source?.id || sub.feed_source_id
+  return Boolean(sourceId && localAutomationRules.value.autoMarkReadSourceIds.includes(sourceId))
+}
+
+const isAutoReadingListSource = (sub: Subscription) => {
+  const sourceId = sub.feed_source?.id || sub.feed_source_id
+  return Boolean(sourceId && localAutomationRules.value.autoAddReadingListSourceIds.includes(sourceId))
+}
+
+const toggleAutoReadSource = (sub: Subscription) => {
+  if (props.busy) return
+  const sourceId = sub.feed_source?.id || sub.feed_source_id
+  if (!sourceId) return
+
+  const next = new Set(localAutomationRules.value.autoMarkReadSourceIds)
+  if (next.has(sourceId)) next.delete(sourceId)
+  else next.add(sourceId)
+
+  emitAutomationRules({
+    autoMarkReadSourceIds: Array.from(next),
+    autoAddReadingListSourceIds: localAutomationRules.value.autoAddReadingListSourceIds,
+  })
+}
+
+const toggleAutoReadingListSource = (sub: Subscription) => {
+  if (props.busy) return
+  const sourceId = sub.feed_source?.id || sub.feed_source_id
+  if (!sourceId) return
+
+  const next = new Set(localAutomationRules.value.autoAddReadingListSourceIds)
+  if (next.has(sourceId)) next.delete(sourceId)
+  else next.add(sourceId)
+
+  emitAutomationRules({
+    autoMarkReadSourceIds: localAutomationRules.value.autoMarkReadSourceIds,
+    autoAddReadingListSourceIds: Array.from(next),
+  })
+}
 
 const updateDraftTitle = (id: string, event: Event) => {
   draftTitles.value[id] = (event.target as HTMLInputElement).value
@@ -286,6 +523,15 @@ const formatCheckedAt = (value: string) => {
 watch(() => props.show, (visible) => {
   if (!visible) return
   newGroupName.value = ''
+  newKeyword.value = ''
+  localFilterRules.value = {
+    mutedSourceIds: [...props.filterRules.mutedSourceIds],
+    hiddenKeywords: [...props.filterRules.hiddenKeywords],
+  }
+  localAutomationRules.value = {
+    autoMarkReadSourceIds: [...props.automationRules.autoMarkReadSourceIds],
+    autoAddReadingListSourceIds: [...props.automationRules.autoAddReadingListSourceIds],
+  }
   draftTitles.value = Object.fromEntries(
     props.subscriptions.map(sub => [sub.id, subscriptionTitle(sub)]),
   )
@@ -315,6 +561,20 @@ watch(() => props.groups, (groups) => {
   })
   draftGroupNames.value = nextDrafts
 })
+
+watch(() => props.filterRules, (rules) => {
+  localFilterRules.value = {
+    mutedSourceIds: [...rules.mutedSourceIds],
+    hiddenKeywords: [...rules.hiddenKeywords],
+  }
+}, { deep: true })
+
+watch(() => props.automationRules, (rules) => {
+  localAutomationRules.value = {
+    autoMarkReadSourceIds: [...rules.autoMarkReadSourceIds],
+    autoAddReadingListSourceIds: [...rules.autoAddReadingListSourceIds],
+  }
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -350,6 +610,26 @@ watch(() => props.groups, (groups) => {
   border-bottom: 1px dashed var(--a-color-line-soft);
 }
 
+.filter-rules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px dashed var(--a-color-line-soft);
+}
+
+.filter-rules-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filter-rules-header h3,
+.filter-rules-header p,
+.muted-list-title {
+  margin: 0;
+}
+
 .inline-form {
   display: flex;
   gap: 0.75rem;
@@ -369,6 +649,29 @@ watch(() => props.groups, (groups) => {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
+}
+
+.rule-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-text);
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+.muted-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .group-section {

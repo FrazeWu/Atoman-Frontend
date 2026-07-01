@@ -27,6 +27,12 @@
 
           <div class="source-sheet-copy">
             <h2 data-test="feed-source-title">{{ sourceTitle }}</h2>
+            <div class="source-sheet-meta">
+              <span v-if="sourceHealthLabel">{{ sourceHealthLabel }}</span>
+              <span v-if="sourceItemCountLabel">{{ sourceItemCountLabel }}</span>
+              <span v-if="sourceCadenceLabel">{{ sourceCadenceLabel }}</span>
+              <span v-if="sourceCheckedAtLabel">{{ sourceCheckedAtLabel }}</span>
+            </div>
           </div>
         </div>
 
@@ -43,19 +49,40 @@
     </template>
 
     <div class="source-sheet-body">
+      <div class="source-sheet-search">
+        <input
+          v-model="searchQuery"
+          data-test="source-search-input"
+          class="source-search-input"
+          type="search"
+          placeholder="搜索此来源内的文章"
+          aria-label="搜索此来源内的文章"
+        />
+        <select
+          v-model="sortMode"
+          data-test="source-sort-select"
+          class="source-sort-select"
+          aria-label="来源文章排序"
+        >
+          <option value="newest">最新</option>
+          <option value="oldest">最旧</option>
+          <option value="title">标题</option>
+        </select>
+      </div>
+
       <div v-if="loading" class="source-sheet-loading">
         <div v-for="i in 4" :key="i" class="a-skeleton source-sheet-skeleton" />
       </div>
 
       <PEmpty
-        v-else-if="!items.length"
+        v-else-if="!visibleItems.length"
         title="暂无文章"
         description="这个来源暂时没有可显示的内容"
       />
 
       <div v-else class="source-article-list">
         <button
-          v-for="item in items"
+          v-for="item in visibleItems"
           :key="itemKey(item)"
           type="button"
           class="source-article-row"
@@ -72,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { FeedArticleSource, TimelineItem } from '@/types'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -117,6 +144,63 @@ const sourceUrl = computed(() => {
 const sourceAvatarLabel = computed(() => buildSourceAvatarLabel(sourceTitle.value))
 
 const sourceColor = computed(() => buildSourceColor(props.source?.rssUrl || sourceTitle.value))
+const searchQuery = ref('')
+const sortMode = ref<'newest' | 'oldest' | 'title'>('newest')
+
+const sourceHealthLabel = computed(() => {
+  const status = (props.source as any)?.healthStatus
+  if (status === 'healthy') return '状态正常'
+  if (status === 'warning') return '状态警告'
+  if (status === 'error') return '状态异常'
+  return ''
+})
+
+const sourceCheckedAtLabel = computed(() => {
+  const value = (props.source as any)?.lastCheckedAt
+  if (!value) return ''
+  return formatDateTime(value)
+})
+
+const sourceItemCountLabel = computed(() => {
+  const count = (props.source as any)?.itemCount
+  if (typeof count !== 'number') return ''
+  return `共 ${count} 篇`
+})
+
+const sourceCadenceLabel = computed(() => {
+  const timestamps = props.items
+    .map((item) => new Date(item.published_at || '').getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => b - a)
+
+  if (timestamps.length < 2) return ''
+
+  const intervals: number[] = []
+  for (let i = 1; i < timestamps.length; i += 1) {
+    const diff = timestamps[i - 1] - timestamps[i]
+    if (diff > 0) intervals.push(diff)
+  }
+
+  if (!intervals.length) return ''
+
+  const averageMs = intervals.reduce((sum, value) => sum + value, 0) / intervals.length
+  const averageDays = averageMs / (1000 * 60 * 60 * 24)
+
+  if (averageDays < 1.5) return '约每天更新一次'
+  if (averageDays < 7) return `约每 ${Math.round(averageDays)} 天更新一次`
+  const averageWeeks = Math.max(1, Math.round(averageDays / 7))
+  return averageWeeks === 1 ? '约每周更新一次' : `约每 ${averageWeeks} 周更新一次`
+})
+
+const visibleItems = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase()
+  const filteredItems = !query ? props.items : props.items.filter((item) => {
+    const haystack = `${itemTitle(item)} ${itemSummary(item)}`.toLocaleLowerCase()
+    return haystack.includes(query)
+  })
+
+  return [...filteredItems].sort((left, right) => compareItems(left, right, sortMode.value))
+})
 
 function itemKey(item: TimelineItem): string {
   if (item.type === 'post' && item.post) return `post-${item.post.id}`
@@ -151,6 +235,28 @@ function stripText(text: string): string {
 function formatDate(date?: string): string {
   if (!date) return ''
   return new Date(date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+function formatDateTime(date?: string): string {
+  if (!date) return ''
+  const value = new Date(date)
+  if (Number.isNaN(value.getTime())) return date
+  const pad = (unit: number) => String(unit).padStart(2, '0')
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}`
+}
+
+function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 'oldest' | 'title') {
+  if (mode === 'title') {
+    return itemTitle(left).localeCompare(itemTitle(right), 'zh-CN')
+  }
+
+  const leftTime = new Date(left.published_at || '').getTime()
+  const rightTime = new Date(right.published_at || '').getTime()
+  const safeLeft = Number.isNaN(leftTime) ? 0 : leftTime
+  const safeRight = Number.isNaN(rightTime) ? 0 : rightTime
+
+  if (mode === 'oldest') return safeLeft - safeRight
+  return safeRight - safeLeft
 }
 </script>
 
@@ -234,10 +340,44 @@ function formatDate(date?: string): string {
   overflow-wrap: anywhere;
 }
 
+.source-sheet-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .source-sheet-body {
   display: grid;
   gap: 1rem;
   padding: 1.5rem 2.5rem 4rem;
+}
+
+.source-sheet-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.source-search-input {
+  flex: 1;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  padding: 0.8rem 0.95rem;
+  font-size: 0.9rem;
+}
+
+.source-sort-select {
+  min-width: 8rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  padding: 0.8rem 0.95rem;
+  font-size: 0.85rem;
 }
 
 .source-sheet-loading,

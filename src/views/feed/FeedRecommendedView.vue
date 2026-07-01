@@ -239,6 +239,7 @@ onMounted(() => {
             v-for="item in visibleArticles"
             :key="item.id"
             class="recommend-card recommend-card--article"
+            style="grid-template-columns: minmax(0, 1fr)"
             @click="openTarget(item.target_path)"
           >
             <PEntry
@@ -311,6 +312,7 @@ onMounted(() => {
                 v-for="item in visibleMixedArticles"
                 :key="item.id"
                 class="recommend-card recommend-card--article"
+                style="grid-template-columns: minmax(0, 1fr)"
                 @click="openTarget(item.target_path)"
               >
                 <PEntry :title="item.title" :summary="item.summary" />

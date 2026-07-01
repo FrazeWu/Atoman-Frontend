@@ -400,4 +400,40 @@ describe('FeedRecommendedView', () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=featured&page=1&page_size=20'))
   })
+
+  it('renders article recommendation cards without the channel two-column grid layout', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'art-layout-1',
+            title: 'Getty Images 宣布新计划',
+            summary: '用于验证文章推荐卡片不再复用频道双列布局。',
+            target_path: '/feed/item/art-layout-1',
+          }],
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: true,
+          PPress: true,
+          PEmpty: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const articleCard = wrapper.get('.recommend-card--article')
+    expect(articleCard.attributes('style') || '').toContain('grid-template-columns: minmax(0, 1fr)')
+  })
 })

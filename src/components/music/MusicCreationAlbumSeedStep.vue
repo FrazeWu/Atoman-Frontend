@@ -130,17 +130,24 @@ async function handleArchiveChange(event: Event) {
 
 <template>
   <div v-if="albumImportDraft" class="album-seed-step" data-testid="album-seed-step">
-    <div class="album-seed-card">
-      <div class="section-heading">
-        <span class="section-dot" aria-hidden="true" />
-        <div>
-          <p class="step-kicker">Album Import</p>
-          <h4>导入专辑压缩包</h4>
-          <p class="step-copy">选择 zip 压缩包后先创建导入会话，再上传并回填解析结果。</p>
+    <div class="album-page">
+      <header class="album-hero">
+        <div class="album-hero__meta">
+          <p class="hero-kicker">音乐档案提交</p>
+          <p class="hero-step">第 2 步 / 专辑资料</p>
         </div>
-      </div>
+        <h4>导入专辑压缩包</h4>
+        <p class="hero-copy">选择专辑 zip 压缩包后，系统会先创建导入会话，再把识别到的专辑名、封面和曲目信息回填到稿件里。</p>
+      </header>
 
-      <div class="field-stack">
+      <section class="album-card album-card--primary">
+        <div class="card-header">
+          <div>
+            <p class="card-kicker">导入文件</p>
+            <p class="card-copy">建议使用专辑名命名压缩包，并把封面和音频一起打进包内。</p>
+          </div>
+        </div>
+
         <div class="field-group">
           <PInput
             data-testid="album-import-archive-input"
@@ -153,22 +160,41 @@ async function handleArchiveChange(event: Event) {
         </div>
 
         <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-        <p v-else-if="albumImportDraft.uploadProgress > 0" class="state-line">
-          上传进度 {{ albumImportDraft.uploadProgress }}%
-        </p>
-        <p v-else class="state-line">上传压缩包后会自动解析封面与曲目信息。</p>
+        <div v-else class="progress-panel">
+          <p v-if="albumImportDraft.uploadProgress > 0" class="state-line">
+            上传进度 {{ albumImportDraft.uploadProgress }}%
+          </p>
+          <p v-else class="state-line">上传压缩包后会自动解析封面与曲目信息。</p>
 
-        <p
-          v-if="albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0"
-          class="state-line"
-          data-testid="album-import-speed"
-        >
-          {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
-        </p>
+          <p
+            v-if="albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0"
+            class="state-line"
+            data-testid="album-import-speed"
+          >
+            {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
+          </p>
 
-        <div v-if="albumImportDraft.archiveName" class="import-summary">
-          <span class="summary-label">当前文件</span>
-          <span class="summary-value">{{ albumImportDraft.archiveName }}</span>
+          <div v-if="albumImportDraft.archiveName" class="import-summary">
+            <span class="summary-label">当前文件</span>
+            <span class="summary-value">{{ albumImportDraft.archiveName }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="album-card album-card--soft">
+        <div class="card-header">
+          <div>
+            <p class="card-kicker">曲目整理</p>
+            <p class="card-copy">默认只展示序号和曲名，操作在 hover 或聚焦时显露，保持页面像表单而不是工具台。</p>
+          </div>
+          <button
+            data-testid="album-import-add-track-button"
+            type="button"
+            class="track-add-button"
+            @click="addTrack"
+          >
+            新增曲目
+          </button>
         </div>
 
         <div v-if="tracksDraft.length" class="track-list" data-testid="album-import-track-list">
@@ -200,62 +226,118 @@ async function handleArchiveChange(event: Event) {
           </div>
         </div>
 
-        <div class="track-toolbar">
-          <button
-            data-testid="album-import-add-track-button"
-            type="button"
-            class="track-add-button"
-            @click="addTrack"
-          >
-            新增曲目
-          </button>
+        <p v-else class="state-line">导入后识别到的曲目会显示在这里，也可以手动补充。</p>
+      </section>
+
+      <section class="album-card">
+        <div class="card-header">
+          <div>
+            <p class="card-kicker">导入结果</p>
+            <p class="card-copy">这里先汇总系统识别结果，后续再作为正式专辑资料提交。</p>
+          </div>
         </div>
-      </div>
+
+        <div class="info-grid">
+          <div class="info-chip">
+            <span class="summary-label">识别到的专辑名</span>
+            <strong>{{ albumImportDraft.derivedAlbumTitle || '等待导入结果' }}</strong>
+          </div>
+          <div class="info-chip">
+            <span class="summary-label">封面结果</span>
+            <strong>{{ albumImportDraft.coverUrl || albumImportDraft.derivedCover || '等待导入结果' }}</strong>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-.album-seed-step { display: flex; flex: 1; flex-direction: column; gap: 1rem; }
-.album-seed-card {
-  display: grid;
-  gap: 1.2rem;
-  padding: 1.4rem 1.5rem 1.35rem;
-  border: 1px solid var(--a-color-line-soft);
-  border-radius: 0;
-  background: var(--a-color-paper-soft);
-}
-.section-heading {
+.album-seed-step {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding-bottom: 0.85rem;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.album-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.album-hero {
+  display: grid;
+  gap: 0.7rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--a-color-line-soft);
 }
-.section-dot {
-  width: 0.48rem;
-  height: 0.48rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
-  margin-top: 0.35rem;
-  flex-shrink: 0;
+
+.album-hero__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
-.step-kicker {
+
+.hero-kicker,
+.hero-step,
+.card-kicker,
+.summary-label {
   margin: 0;
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.album-seed-card h4 { margin: 0; font-family: var(--a-font-serif); font-size: 1.45rem; line-height: 1.1; }
-.step-copy { margin: 0.4rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 38rem; }
+
+.album-hero h4 {
+  margin: 0;
+  font-family: var(--a-font-serif);
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.hero-copy,
+.card-copy {
+  margin: 0;
+  color: var(--a-color-ink-soft);
+  line-height: 1.7;
+}
+
+.album-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+}
+
+.album-card--primary {
+  background: color-mix(in srgb, var(--a-color-paper) 82%, var(--a-color-paper-soft));
+}
+
+.album-card--soft {
+  background: var(--a-color-paper-soft);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 .field-stack { display: grid; gap: 1rem; }
 .field-group { display: grid; gap: 0.45rem; }
+.progress-panel { display: grid; gap: 0.7rem; }
+
 :deep(.p-input:focus) {
   border-bottom-color: var(--a-color-accent-confirm);
 }
+
 .state-line {
   margin: 0;
   color: var(--a-color-ink-soft);
@@ -263,7 +345,9 @@ async function handleArchiveChange(event: Event) {
   font-size: 0.82rem;
   font-weight: 800;
 }
+
 .state-line--error { color: var(--a-color-accent-destructive); }
+
 .import-summary {
   display: flex;
   gap: 0.75rem;
@@ -272,17 +356,13 @@ async function handleArchiveChange(event: Event) {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper-wash);
 }
-.summary-label {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
+
 .summary-value {
   color: var(--a-color-ink);
   font-size: 0.92rem;
   font-weight: 800;
 }
+
 .track-list {
   display: grid;
   gap: 0.6rem;
@@ -290,6 +370,7 @@ async function handleArchiveChange(event: Event) {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper-wash);
 }
+
 .track-row {
   display: flex;
   align-items: center;
@@ -298,34 +379,41 @@ async function handleArchiveChange(event: Event) {
   padding-bottom: 0.45rem;
   border-bottom: 1px dashed color-mix(in srgb, var(--a-color-ink) 12%, transparent);
 }
+
 .track-row:last-child {
   padding-bottom: 0;
   border-bottom: 0;
 }
+
 .track-row--interactive .track-row-actions {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
 }
+
 .track-row--interactive:hover .track-row-actions,
 .track-row--interactive:focus-within .track-row-actions {
   opacity: 1;
   pointer-events: auto;
 }
+
 .track-seq {
   min-width: 2rem;
   color: var(--a-color-ink-soft);
   font-size: 0.76rem;
   font-weight: 800;
 }
+
 .track-title-input {
   flex: 1;
 }
+
 .track-row-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
+
 .track-action-button,
 .track-add-button {
   border: 1px solid var(--a-color-line-soft);
@@ -338,8 +426,24 @@ async function handleArchiveChange(event: Event) {
   font-weight: 800;
   padding: 0.45rem 0.7rem;
 }
-.track-toolbar {
-  display: flex;
-  justify-content: flex-start;
+
+.info-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.info-chip {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: color-mix(in srgb, var(--a-color-paper-wash) 84%, var(--a-color-paper));
+}
+
+@media (max-width: 720px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

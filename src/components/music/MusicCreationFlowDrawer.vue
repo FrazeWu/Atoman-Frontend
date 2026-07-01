@@ -199,8 +199,10 @@ async function completeCreation() {
   <PSheet :show="isOpen" @close="requestClose" width="560px" :index="sheetIndex">
     <div v-if="creationFlow" class="creation-flow">
       <div class="drawer-header">
-        <p class="eyebrow">Music Creation Flow</p>
-        <p class="step-label">第 {{ activeStep.index }} 步</p>
+        <div class="header-meta">
+          <p class="eyebrow">Music Archive Submission</p>
+          <p class="step-label">第 {{ activeStep.index }} 步</p>
+        </div>
         <h3 class="title">{{ activeStep.title }}</h3>
         <p class="subtitle">{{ activeStep.subtitle }}</p>
       </div>
@@ -256,9 +258,16 @@ async function completeCreation() {
 .creation-flow { display: flex; flex-direction: column; min-height: 100%; }
 .drawer-header {
   margin: -2.5rem -2.5rem 0;
-  padding: 1.75rem 2rem 1.25rem;
+  padding: 1.5rem 2rem 1.1rem;
   border-bottom: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  background: color-mix(in srgb, var(--a-color-paper-soft) 86%, var(--a-color-paper));
+}
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  flex-wrap: wrap;
 }
 .eyebrow {
   margin: 0 0 0.45rem;
@@ -276,8 +285,18 @@ async function completeCreation() {
   font-size: 0.82rem;
   font-weight: 800;
 }
-.title { margin: 0.45rem 0 0; font-family: var(--a-font-serif); font-size: 1.9rem; }
-.subtitle { margin: 0.6rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; }
+.title {
+  margin: 0.2rem 0 0;
+  font-family: var(--a-font-serif);
+  font-size: 2.05rem;
+  line-height: 1.05;
+}
+.subtitle {
+  margin: 0.55rem 0 0;
+  color: var(--a-color-ink-soft);
+  line-height: 1.7;
+  max-width: 34rem;
+}
 .drawer-body { display: flex; flex: 1; flex-direction: column; gap: 1rem; padding: 0 2rem 2rem; }
 .error-message {
   margin: 0;
@@ -297,7 +316,8 @@ async function completeCreation() {
   cursor: pointer;
 }
 .paper-action {
-  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, var(--a-color-paper));
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
   color: var(--a-color-ink);
 }
 .paper-submit {

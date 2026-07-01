@@ -11,9 +11,16 @@
   </div>
 
   <div class="topbar-search-wrap">
-    <button class="topbar-search-btn" type="button" @click.stop="toggleSearch">
-      搜索
-    </button>
+    <input
+      v-model="searchDraft"
+      class="topbar-search-input"
+      :class="{ 'is-active': showSearch }"
+      type="search"
+      placeholder="搜索..."
+      @focus="openSearch"
+      @input="emitSearchInput"
+      @keydown.enter.prevent="expandSearch"
+    />
     <TopbarSearchPopover :open="showSearch" @close="showSearch = false" />
   </div>
 
@@ -59,6 +66,7 @@ const { channels, currentMediaChannelId, switchChannel, clearChannels, loadChann
 
 const activeDropdown = ref<string | null>(null)
 const showSearch = ref(false)
+const searchDraft = ref('')
 const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
@@ -73,8 +81,18 @@ const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
 
-const toggleSearch = () => {
-  showSearch.value = !showSearch.value
+const openSearch = () => {
+  showSearch.value = true
+}
+
+const emitSearchInput = () => {
+  showSearch.value = true
+  window.dispatchEvent(new CustomEvent('atoman-topbar-search-input', { detail: searchDraft.value }))
+}
+
+const expandSearch = () => {
+  showSearch.value = true
+  window.dispatchEvent(new CustomEvent('atoman-topbar-search-expand'))
 }
 
 const closeDropdown = () => {
@@ -84,7 +102,10 @@ const closeDropdown = () => {
 const handleClickOutside = (e: MouseEvent) => {
   const target = e.target as HTMLElement
   if (!target.closest('[data-dropdown]')) closeDropdown()
-  if (!target.closest('.topbar-search-wrap')) showSearch.value = false
+  if (!target.closest('.topbar-search-wrap')) {
+    showSearch.value = false
+    searchDraft.value = ''
+  }
 }
 
 const ensureMediaChannels = () => {
@@ -181,22 +202,50 @@ watch(authUserId, ensureMediaChannels)
 
 .topbar-search-wrap {
   position: relative;
+  width: 10rem;
+  transition: width 0.24s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.topbar-search-btn {
+.topbar-search-wrap:focus-within,
+.topbar-search-wrap:has(.topbar-search-input.is-active) {
+  width: 24rem;
+}
+
+.topbar-search-input {
+  width: 100%;
+  border: var(--a-border);
+  border-radius: var(--a-radius-none);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  padding: 0.4rem 0.7rem;
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--a-color-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s;
+  transition:
+    padding 0.24s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.24s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.24s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.topbar-search-btn:hover {
-  color: var(--a-color-fg);
-  text-decoration: underline;
+.topbar-search-input.is-active {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.topbar-search-input:focus {
+  outline: none;
+  border-color: var(--a-color-fg);
+  box-shadow: inset 0 0 0 1px var(--a-color-fg);
+}
+
+@media (max-width: 960px) {
+  .topbar-search-wrap {
+    width: 8.5rem;
+  }
+
+  .topbar-search-wrap:focus-within,
+  .topbar-search-wrap:has(.topbar-search-input.is-active) {
+    width: min(16rem, 42vw);
+  }
 }
 
 .notif-btn:hover {

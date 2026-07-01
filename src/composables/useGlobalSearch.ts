@@ -33,6 +33,8 @@ export type GlobalSearchSection = {
   moreHref: string
 }
 
+export type GlobalSearchMode = 'preview' | 'expanded'
+
 function trimText(value?: string, limit = 80) {
   const text = value?.trim() ?? ''
   if (!text) return ''
@@ -50,7 +52,7 @@ export function useGlobalSearch() {
   const flatItems = computed(() => sections.value.flatMap((section) => section.items))
   const activeItem = computed(() => flatItems.value[activeIndex.value] ?? null)
 
-  const search = async (nextQuery: string) => {
+  const search = async (nextQuery: string, mode: GlobalSearchMode = 'preview') => {
     query.value = nextQuery.trim()
     if (query.value.length < 2) {
       sections.value = []
@@ -58,26 +60,29 @@ export function useGlobalSearch() {
       return
     }
 
+    const limit = mode === 'expanded' ? '8' : '2'
+    const musicLimit = mode === 'expanded' ? 8 : 2
+
     const requestId = ++currentRequestId
     loading.value = true
 
     try {
       const [forumRes, blogRes, albumRes, artistRes] = await Promise.all([
-        fetch(`${api.url}/forum/search?${new URLSearchParams({ q: query.value, limit: '3' })}`, {
+        fetch(`${api.url}/forum/search?${new URLSearchParams({ q: query.value, limit })}`, {
           credentials: 'include',
           headers: { Accept: 'application/json' },
         }).then((res) => res.json()).catch(() => ({ data: [] })),
-        fetch(`${api.blog.posts}?${new URLSearchParams({ q: query.value, limit: '3' })}`, {
+        fetch(`${api.blog.posts}?${new URLSearchParams({ q: query.value, limit })}`, {
           credentials: 'include',
           headers: { Accept: 'application/json' },
         }).then((res) => res.json()).catch(() => []),
-        listMusicAlbums({ q: query.value, page: 1, page_size: 3, sort: 'hot' }).catch(() => ({ data: [], meta: { page: 1, page_size: 3, total: 0, has_more: false } })),
-        listMusicArtists({ q: query.value, page: 1, page_size: 3 }).catch(() => ({ data: [], meta: { page: 1, page_size: 3, total: 0, has_more: false } })),
+        listMusicAlbums({ q: query.value, page: 1, page_size: musicLimit, sort: 'hot' }).catch(() => ({ data: [], meta: { page: 1, page_size: musicLimit, total: 0, has_more: false } })),
+        listMusicArtists({ q: query.value, page: 1, page_size: musicLimit }).catch(() => ({ data: [], meta: { page: 1, page_size: musicLimit, total: 0, has_more: false } })),
       ])
 
       if (requestId !== currentRequestId) return
 
-      const forumItems: GlobalSearchItem[] = ((forumRes?.data ?? []) as ForumSearchResult[]).slice(0, 3).map((item) => ({
+      const forumItems: GlobalSearchItem[] = ((forumRes?.data ?? []) as ForumSearchResult[]).slice(0, Number(limit)).map((item) => ({
         id: item.id,
         type: 'forum',
         title: item.title,
@@ -86,7 +91,7 @@ export function useGlobalSearch() {
         href: `/forum/topic/${item.id}`,
       }))
 
-      const blogItems: GlobalSearchItem[] = ((Array.isArray(blogRes) ? blogRes : blogRes?.data ?? []) as Post[]).slice(0, 3).map((item) => ({
+      const blogItems: GlobalSearchItem[] = ((Array.isArray(blogRes) ? blogRes : blogRes?.data ?? []) as Post[]).slice(0, Number(limit)).map((item) => ({
         id: item.id,
         type: 'blog',
         title: item.title,
@@ -112,7 +117,7 @@ export function useGlobalSearch() {
           meta: '艺术家',
           href: `/music?artist=${item.id}`,
         })),
-      ].slice(0, 3)
+      ].slice(0, musicLimit)
 
       const nextSections = [
         { type: 'forum' as const, label: '论坛', items: forumItems, moreHref: `/forum/search?q=${encodeURIComponent(query.value)}` },

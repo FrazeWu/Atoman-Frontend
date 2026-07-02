@@ -28,13 +28,6 @@ vi.mock('@/composables/useMediaChannel', () => ({
   }),
 }))
 
-vi.mock('@/components/system/TopbarSearchPopover.vue', () => ({
-  default: {
-    props: ['open'],
-    template: '<div v-if="open" data-testid="topbar-search-popover-stub">popover</div>',
-  },
-}))
-
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
@@ -75,9 +68,9 @@ describe('AppTopbarAuthControls search trigger', () => {
     expect(searchInput.exists()).toBe(true)
     expect(inboxButton.exists()).toBe(true)
     expect(searchInput.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(wrapper.find('[data-testid="topbar-search-popover-stub"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(false)
 
     await searchInput.trigger('focus')
-    expect(wrapper.find('[data-testid="topbar-search-popover-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(true)
   })
 })

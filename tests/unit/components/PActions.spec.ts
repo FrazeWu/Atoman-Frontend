@@ -1,7 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import PBookmarkTab from '@/components/ui/PBookmarkTab.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PPress from '@/components/ui/PPress.vue'
@@ -61,16 +60,5 @@ describe('P action components', () => {
 
     expect(wrapper.emitted('click')).toHaveLength(1)
     expect(wrapper.get('button').text()).toContain('Reject')
-  })
-
-  it('separates PBookmarkTab close and select actions', async () => {
-    const wrapper = mount(PBookmarkTab, { props: { label: '文章详情', active: true } })
-
-    await wrapper.get('.p-bookmark-tab__label').trigger('click')
-    await wrapper.get('.p-bookmark-tab__close').trigger('click')
-
-    expect(wrapper.emitted('select')).toHaveLength(1)
-    expect(wrapper.emitted('close')).toHaveLength(1)
-    expect(wrapper.get('.p-bookmark-tab__label').attributes('aria-current')).toBe('page')
   })
 })

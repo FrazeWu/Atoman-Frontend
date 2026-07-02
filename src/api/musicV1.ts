@@ -168,6 +168,7 @@ export type MusicDiscussion = {
 export type MusicArtistListItem = {
   id: string
   name: string
+  legal_name?: string
   bio?: string
   image_url?: string
   nationality?: string
@@ -175,6 +176,7 @@ export type MusicArtistListItem = {
   birth_year?: number
   death_year?: number
   members?: string
+  aliases?: Array<{ id?: string; alias: string; is_main_name?: boolean }>
   entry_status: MusicEntryStatus
   created_at?: string
   updated_at?: string
@@ -381,6 +383,7 @@ export const musicV1Endpoints = {
   albumImportArchive: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/upload`,
   albumImportCommit: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/commit`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/albums?mode=${mode}`,
+  recommendArtists: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/artists?mode=${mode}`,
   edits: () => `${API_V1_BASE}/music/edits`,
   edit: (editId: string) => `${API_V1_BASE}/music/edits/${editId}`,
   editVotes: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/votes`,
@@ -625,8 +628,24 @@ export async function listArtistBookmarks() {
   return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(musicV1Endpoints.artistBookmarks())
 }
 
+export async function createArtistBookmark(artistId: string): Promise<MusicArtistBookmark> {
+  return apiPostJson<MusicArtistBookmark>(musicV1Endpoints.artistBookmarks(), { artist_id: artistId })
+}
+
+export async function deleteArtistBookmark(artistId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.artistBookmark(artistId))
+}
+
 export async function listAlbumBookmarks() {
   return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(musicV1Endpoints.albumBookmarks())
+}
+
+export async function createAlbumBookmark(albumId: string): Promise<MusicAlbumBookmark> {
+  return apiPostJson<MusicAlbumBookmark>(musicV1Endpoints.albumBookmarks(), { album_id: albumId })
+}
+
+export async function deleteAlbumBookmark(albumId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.albumBookmark(albumId))
 }
 
 export async function listSongBookmarks() {
@@ -731,6 +750,10 @@ export async function deleteAlbumDiscussion(albumId: string, discussionId: strin
 
 export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
   return apiGetEnvelope<MusicRecommendationItem[]>(musicV1Endpoints.recommendAlbums(mode))
+}
+
+export async function listRecommendedArtists(mode: MusicRecommendationMode) {
+  return apiGetEnvelope<MusicRecommendationItem[]>(musicV1Endpoints.recommendArtists(mode))
 }
 
 export async function listMusicArtists(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicArtistListItem>> {

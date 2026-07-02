@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
+import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import {
   getMusicAlbum,
   getMusicArtist,
@@ -18,6 +21,7 @@ import {
   type MusicStarredItem,
   type MusicStarredKind,
 } from '@/api/musicV1'
+import { resolveAlbumCoverUrl } from '@/utils/musicMedia'
 
 type StarredFilter = 'all' | MusicStarredKind
 
@@ -44,6 +48,7 @@ const filteredItems = computed(() => (
     ? items.value
     : items.value.filter((item) => item.kind === activeFilter.value)
 ))
+const { openArtist, openAlbum } = useMusicDrawers()
 
 function artistNamesFromSong(song: MusicSongListItem) {
   return song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家'
@@ -66,6 +71,31 @@ function playlistSongsFor(itemId: string) {
 
 function isPlaylistExpanded(itemId: string) {
   return expandedPlaylistIds.value.includes(itemId)
+}
+
+function handleItemClick(item: MusicStarredItem) {
+  if (item.kind === 'artist' && item.artist?.id) {
+    openArtist(String(item.artist.id))
+    return
+  }
+
+  if (item.kind === 'album' && item.album?.id) {
+    openAlbum(String(item.album.id))
+  }
+}
+
+function albumYearLabel(item: MusicStarredItem) {
+  if (!item.album) return '年份未知'
+  if (typeof item.album.year === 'number' && Number.isFinite(item.album.year) && item.album.year > 0) {
+    return String(item.album.year)
+  }
+  if (item.album.release_date?.trim()) return item.album.release_date.slice(0, 4)
+  return '年份未知'
+}
+
+function artistInitial(name?: string) {
+  const value = name?.trim()
+  return value ? value[0].toUpperCase() : '?'
 }
 
 async function loadStarred() {
@@ -120,24 +150,24 @@ async function loadStarred() {
 
 async function submitPlaylist() {
   const name = newPlaylistName.value.trim()
+  const desc = newPlaylistDescription.value.trim()
   if (!name || creatingPlaylist.value) return
 
   creatingPlaylist.value = true
   errorMessage.value = ''
   try {
-    const playlist = await createMusicPlaylist({
-      name,
-    })
+    const created = await createMusicPlaylist({ name })
 
     items.value = [
       {
-        id: playlist.id,
+        id: created.id,
         kind: 'playlist',
         starred_at: new Date().toISOString(),
         playlist: {
-          id: playlist.id,
-          name: playlist.name,
-          song_count: playlist.song_count,
+          id: created.id,
+          name: created.name,
+          description: desc || undefined,
+          song_count: 0,
         },
       },
       ...items.value,
@@ -145,10 +175,6 @@ async function submitPlaylist() {
     activeFilter.value = 'playlist'
     newPlaylistName.value = ''
     newPlaylistDescription.value = ''
-    playlistSongs.value = {
-      ...playlistSongs.value,
-      [playlist.id]: playlist.songs,
-    }
   } catch (error) {
     console.error('Failed to create music playlist:', error)
     errorMessage.value = '新建歌单失败'
@@ -166,12 +192,19 @@ async function togglePlaylist(item: MusicStarredItem) {
     return
   }
 
-  if (!playlistSongs.value[playlistId]) {
-    const playlist: MusicPlaylistDetail = await getMusicPlaylist(playlistId)
+  if (playlistSongs.value[playlistId]) {
+    expandedPlaylistIds.value = [...expandedPlaylistIds.value, playlistId]
+    return
+  }
+
+  try {
+    const detail: MusicPlaylistDetail = await getMusicPlaylist(playlistId)
     playlistSongs.value = {
       ...playlistSongs.value,
-      [playlistId]: playlist.songs,
+      [playlistId]: detail.songs,
     }
+  } catch (error) {
+    console.error('Failed to load playlist songs:', error)
   }
 
   expandedPlaylistIds.value = [...expandedPlaylistIds.value, playlistId]
@@ -251,6 +284,9 @@ onMounted(() => {
         v-for="item in filteredItems"
         :key="`${item.kind}-${item.id}`"
         class="result-card"
+        :class="{ 'result-card--interactive': item.kind === 'artist' || item.kind === 'album' }"
+        :data-testid="item.kind === 'artist' ? 'starred-artist-card' : item.kind === 'album' ? 'starred-album-card' : undefined"
+        @click="handleItemClick(item)"
       >
         <p class="a-font-meta result-kind">
           {{
@@ -265,13 +301,38 @@ onMounted(() => {
         </p>
 
         <template v-if="item.kind === 'artist' && item.artist">
-          <h2>{{ item.artist.name }}</h2>
+          <div class="music-info">
+            <div class="music-avatar" aria-hidden="true">
+              <img v-if="item.artist.image_url" :src="item.artist.image_url" :alt="item.artist.name" class="music-avatar-image" />
+              <span v-else>{{ artistInitial(item.artist.name) }}</span>
+            </div>
+            <div class="music-text">
+              <h2 class="music-title">{{ item.artist.name }}</h2>
+              <p class="music-summary">{{ item.artist.bio || '从收藏夹回到这位艺术家的完整条目。' }}</p>
+            </div>
+          </div>
         </template>
 
         <template v-else-if="item.kind === 'album' && item.album">
-          <h2>{{ item.album.title }}</h2>
-          <p class="result-meta">{{ artistNamesFromItem(item) }}</p>
-          <p class="result-meta">{{ item.album.year || '年份未知' }}</p>
+          <div class="cover-frame">
+            <img
+              v-if="resolveAlbumCoverUrl(item.album)"
+              :src="resolveAlbumCoverUrl(item.album)"
+              :alt="item.album.title"
+              class="cover-image"
+              loading="lazy"
+            />
+            <div v-else class="cover-placeholder">COVER</div>
+          </div>
+          <div class="music-info">
+            <div class="music-avatar" aria-hidden="true">
+              <span>💿</span>
+            </div>
+            <div class="music-text">
+              <h2 class="music-title">{{ item.album.title }}</h2>
+              <p class="music-summary">{{ artistNamesFromItem(item) }} · {{ albumYearLabel(item) }}</p>
+            </div>
+          </div>
         </template>
 
         <template v-else-if="item.kind === 'song' && item.song">
@@ -313,6 +374,8 @@ onMounted(() => {
         </template>
       </article>
     </div>
+    <ArtistDrawer />
+    <AlbumDrawer />
   </section>
 </template>
 
@@ -356,6 +419,23 @@ onMounted(() => {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
   box-shadow: var(--a-shadow-modal);
+}
+
+.result-card--interactive {
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.result-card--interactive:hover {
+  background: var(--a-color-paper-soft);
+  border-color: color-mix(in srgb, var(--a-color-ink) 18%, var(--a-color-line-soft));
+  transform: translateY(-1px);
+}
+
+.result-card--interactive:hover h2 {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 .playlist-creation,
@@ -441,12 +521,96 @@ onMounted(() => {
 
 .results {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1.25rem;
 }
 
 .result-kind {
   margin: 0 0 0.85rem;
   color: var(--a-color-muted);
+}
+
+.cover-frame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--a-color-surface);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--a-color-line-soft);
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+  display: block;
+}
+
+.result-card--interactive:hover .cover-image {
+  transform: scale(1.03);
+}
+
+.cover-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-muted);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.music-info {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0 0;
+}
+
+.music-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.music-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.music-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.music-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--a-color-fg);
+  margin: 0 0 0.25rem 0;
+  transition: color 0.2s;
+}
+
+.music-summary {
+  margin: 0;
+  color: var(--a-color-muted-soft);
+  line-height: 1.4;
+  font-size: 0.775rem;
 }
 
 .playlist-head {

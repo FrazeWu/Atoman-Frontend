@@ -1,8 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import StarredView from '@/views/music/StarredView.vue'
-
 const mocks = vi.hoisted(() => ({
   listArtistBookmarks: vi.fn(),
   listAlbumBookmarks: vi.fn(),
@@ -12,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   getMusicAlbum: vi.fn(),
   createMusicPlaylist: vi.fn(),
   getMusicPlaylist: vi.fn(),
+  openArtist: vi.fn(),
+  openAlbum: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -25,6 +25,29 @@ vi.mock('@/api/musicV1', () => ({
   getMusicPlaylist: mocks.getMusicPlaylist,
 }))
 
+vi.mock('@/composables/useMusicDrawers', () => ({
+  useMusicDrawers: () => ({
+    state: { value: { artistId: null, albumId: null, albumRefreshToken: 0 } },
+    openArtist: mocks.openArtist,
+    openAlbum: mocks.openAlbum,
+    closeArtist: vi.fn(),
+    closeAlbum: vi.fn(),
+    isArtistShifted: { value: false },
+    isAlbumShifted: { value: false },
+    openNestedAction: vi.fn(),
+  }),
+}))
+
+vi.mock('@/components/music/ArtistDrawer.vue', () => ({
+  default: { template: '<div data-testid="artist-drawer-stub" />' },
+}))
+
+vi.mock('@/components/music/AlbumDrawer.vue', () => ({
+  default: { template: '<div data-testid="album-drawer-stub" />' },
+}))
+
+import StarredView from '@/views/music/StarredView.vue'
+
 describe('Music StarredView', () => {
   beforeEach(() => {
     mocks.listArtistBookmarks.mockReset()
@@ -35,6 +58,8 @@ describe('Music StarredView', () => {
     mocks.getMusicAlbum.mockReset()
     mocks.createMusicPlaylist.mockReset()
     mocks.getMusicPlaylist.mockReset()
+    mocks.openArtist.mockReset()
+    mocks.openAlbum.mockReset()
 
     mocks.listArtistBookmarks.mockResolvedValue({
       data: [{ id: 'artist-bookmark-1', artist_id: 'artist-1', created_at: '2026-07-01T00:00:00Z' }],
@@ -165,5 +190,16 @@ describe('Music StarredView', () => {
     expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
     expect(wrapper.text()).toContain('home with you')
     expect(wrapper.text()).toContain('查看单曲')
+  })
+
+  it('opens artist and album drawers when clicking starred cards', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="starred-artist-card"]').trigger('click')
+    await wrapper.get('[data-testid="starred-album-card"]').trigger('click')
+
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
   })
 })

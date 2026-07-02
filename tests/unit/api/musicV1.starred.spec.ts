@@ -11,10 +11,36 @@ import {
   listSongBookmarks,
 } from '@/api/musicV1'
 
+function createStorageMock() {
+  const store = new Map<string, string>()
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value)
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+  }
+}
+
 describe('music v1 starred and playlist adapters', () => {
+  const localStorageMock = createStorageMock()
+
+  beforeEach(() => {
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    })
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    localStorageMock.clear()
   })
 
   it('builds starred and playlist endpoint paths', () => {
@@ -118,5 +144,50 @@ describe('music v1 starred and playlist adapters', () => {
       headers: { Accept: 'application/json' },
     })
     expect(result.songs).toHaveLength(1)
+  })
+
+  it('attaches bearer auth to music bookmark and playlist requests when token exists', async () => {
+    localStorageMock.setItem('token', 'music-token')
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/v1/music/bookmarks/artists') {
+        return new Response(JSON.stringify({
+          data: [],
+          meta: { page: 1, page_size: 20, total: 0, has_more: false },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (url === '/api/v1/music/playlists') {
+        return new Response(JSON.stringify({
+          data: {
+            id: 'playlist-3',
+            name: 'Auth Playlist',
+            song_count: 0,
+          },
+        }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    await listArtistBookmarks()
+    await createMusicPlaylist({ name: 'Auth Playlist' })
+
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/music/bookmarks/artists', {
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer music-token',
+      },
+    })
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/music/playlists', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer music-token',
+      },
+      body: JSON.stringify({ name: 'Auth Playlist' }),
+    })
   })
 })

@@ -3,15 +3,14 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
-import { useApi } from '@/composables/useApi'
+import { listMusicArtists } from '@/api/musicV1'
 import PInput from '@/components/ui/PInput.vue'
 
-const api = useApi()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 player.fetchSongs()
 
-interface ArtistOption { id: number; name: string }
+interface ArtistOption { id: string; name: string }
 
 const artists = ref<ArtistOption[]>([])
 const selectedArtistName = ref('')
@@ -31,9 +30,15 @@ watch(searchQuery, (q) => {
 
 async function fetchArtists(q = '') {
   try {
-    const params = q ? `?q=${encodeURIComponent(q)}` : ''
-    const res = await fetch(`${api.url}/artists${params}`)
-    if (res.ok) artists.value = await res.json()
+    const res = await listMusicArtists({
+      q: q.trim() || undefined,
+      page: 1,
+      page_size: 24,
+    })
+    artists.value = res.data.map((artist) => ({
+      id: artist.id,
+      name: artist.name,
+    }))
   } catch (e) {
     console.error('Failed to fetch artists:', e)
   }

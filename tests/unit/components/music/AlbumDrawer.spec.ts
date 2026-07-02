@@ -9,6 +9,8 @@ const {
   listAlbumBookmarks,
   createAlbumBookmark,
   deleteAlbumBookmark,
+  listMusicPlaylists,
+  addMusicPlaylistSong,
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   getMusicAlbum: vi.fn(),
@@ -16,6 +18,8 @@ const {
   listAlbumBookmarks: vi.fn(),
   createAlbumBookmark: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
+  listMusicPlaylists: vi.fn(() => Promise.resolve({ data: [] })),
+  addMusicPlaylistSong: vi.fn(() => Promise.resolve({})),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -32,6 +36,8 @@ vi.mock('@/api/musicV1', () => ({
   listAlbumBookmarks,
   createAlbumBookmark,
   deleteAlbumBookmark,
+  listMusicPlaylists,
+  addMusicPlaylistSong,
 }))
 
 vi.mock('@/stores/player', () => ({

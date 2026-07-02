@@ -1,36 +1,38 @@
 <template>
-  <div class="p-sheet-root">
-    <!-- Backdrop to catch clicks outside the sheet -->
-    <Transition name="fade">
-      <div v-if="show" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
-    </Transition>
+  <Teleport to="body" :disabled="isTest">
+    <div class="p-sheet-root">
+      <!-- Backdrop to catch clicks outside the sheet -->
+      <Transition name="fade">
+        <div v-if="show" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
+      </Transition>
 
-    <Transition :name="transitionName">
-      <div v-if="show" class="p-sheet-layer p-sheet-panel" :class="[`is-${side}`, { 'is-shifted': isShifted }]" :style="sheetStyle">
-        <!-- Left/Right Edge Close Tab (Taped Component Style) -->
-        <PSheetTab 
-          v-if="showBookmarkTab"
-          class="sheet-tab-position"
-          :style="{ top: computedHandleTop }"
-          :title="title" 
-          @click="$emit('close')" 
-        />
+      <Transition :name="transitionName">
+        <div v-if="show" class="p-sheet-layer p-sheet-panel" :class="[`is-${side}`, { 'is-shifted': isShifted }]" :style="sheetStyle">
+          <!-- Left/Right Edge Close Tab (Taped Component Style) -->
+          <PSheetTab 
+            v-if="showBookmarkTab"
+            class="sheet-tab-position"
+            :style="{ top: computedHandleTop }"
+            :title="title" 
+            @click="$emit('close')" 
+          />
 
-        <div v-if="hasHeader" class="sheet-header">
-          <slot name="header">
-            <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
-          </slot>
-          <button v-if="showHeaderClose" class="header-close-btn a-font-meta" @click="$emit('close')">CLOSE</button>
-        </div>
-        
-        <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
-          <div :class="{ 'sheet-content-inner': readingMode }">
-            <slot />
+          <div v-if="hasHeader" class="sheet-header">
+            <slot name="header">
+              <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
+            </slot>
+            <button v-if="showHeaderClose" class="header-close-btn a-font-meta" @click="$emit('close')">CLOSE</button>
+          </div>
+          
+          <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
+            <div :class="{ 'sheet-content-inner': readingMode }">
+              <slot />
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
-  </div>
+      </Transition>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -38,6 +40,8 @@ import { computed, useSlots } from 'vue'
 import { getActivePinia } from 'pinia'
 import { useSheetStore } from '@/stores/sheet'
 import PSheetTab from './PSheetTab.vue'
+
+const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -154,7 +158,7 @@ const sheetStyle = computed(() => {
   background: white;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
+  z-index: 3000;
 }
 
 .p-sheet-layer.is-right {
@@ -183,7 +187,7 @@ const sheetStyle = computed(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.02); /* Extremely subtle tint */
-  z-index: 999;
+  z-index: 2999;
   cursor: default;
 }
 

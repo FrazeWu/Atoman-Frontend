@@ -12,7 +12,7 @@
     <div v-else-if="errorStatus === 404" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight:900;color:var(--a-color-disabled-border);margin-bottom:1rem">404</p>
       <p class="a-muted" style="margin-bottom:1.5rem">文章不存在</p>
-      <RouterLink to="/" class="a-link">← 返回法堂广场</RouterLink>
+      <RouterLink to="/" class="a-link">← 返回文章</RouterLink>
     </div>
 
     <!-- Draft (only visible to owner) -->
@@ -31,7 +31,7 @@
 
       <div :class="isAcademic ? 'a-page' : 'a-page-md'" style="padding-top:3rem; transition: max-width 0.3s ease;">
         <!-- Breadcrumb -->
-        <RouterLink to="/" class="a-link">← 法堂广场</RouterLink>
+        <RouterLink to="/" class="a-link">← 文章</RouterLink>
 
         <!-- Title -->
         <h1 

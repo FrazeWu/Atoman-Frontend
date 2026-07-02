@@ -1,6 +1,6 @@
 <template>
   <div class="album-editor-shell">
-    <PPageHeader :title="title" :sub="subtitle" kicker="Music Edit" accent />
+    <PPageHeader :title="title" :sub="subtitle" accent />
 
     <MusicSection>
       <template #title>
@@ -30,7 +30,7 @@
 
     <MusicSection>
       <template #title>
-        <h2 class="album-editor-shell__section-title">说明与来源</h2>
+        <h2 class="album-editor-shell__section-title">补充信息</h2>
       </template>
       <div class="album-editor-shell__notes-grid">
         <MusicReviewNotesSection :notes="notes" @update:notes="(value) => $emit('update:notes', value)" />
@@ -77,11 +77,7 @@ const emit = defineEmits<{
 }>()
 
 const title = computed(() => (props.mode === 'create' ? '新建专辑编辑' : '编辑专辑'))
-const subtitle = computed(() =>
-  props.mode === 'create'
-    ? '通过拆分后的 section 组件组织专辑创建流程。'
-    : '通过拆分后的 section 组件组织专辑修改流程。',
-)
+const subtitle = computed(() => '')
 
 function updateMeta<K extends keyof MusicAlbumMetaDraft>(field: K, value: MusicAlbumMetaDraft[K]) {
   emit('update:meta', { ...props.meta, [field]: value })

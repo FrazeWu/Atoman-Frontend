@@ -12,12 +12,19 @@
         艺术家
       </PSidebarItem>
       <PSidebarItem :to="modulePathUrl('music', '/starred')" :index="3" :icon="Star">
-        我的收藏
+        收藏
       </PSidebarItem>
+
+      <template #bottom>
+        <MusicSidebarPlaylists
+          :collapsed="sidebarCollapsed"
+        />
+      </template>
     </PSidebar>
     <main class="a-main-content">
       <router-view />
     </main>
+    <PlaylistDrawer />
   </div>
 </template>
 
@@ -26,6 +33,8 @@ import { ref } from 'vue'
 import { Compass, Users, Star } from 'lucide-vue-next'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'
+import PlaylistDrawer from '@/components/music/PlaylistDrawer.vue'
 import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
 
 const sidebarCollapsed = ref(false)

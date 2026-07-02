@@ -1,7 +1,7 @@
 <template>
   <PModal
     :model-value="show"
-    title="提交修改建议"
+    title="提交修改"
     size="md"
     @close="$emit('close')"
     @update:model-value="(v) => { if (!v) $emit('close') }"
@@ -10,18 +10,18 @@
       <div class="a-field">
         <PTextarea
           v-model="description"
-          placeholder="描述你希望修改的内容……"
+          placeholder="填写要修改的内容"
           :rows="4"
           required
-          label="修改说明"
+          label="修改内容"
         />
       </div>
       <div class="a-field" style="margin-top: 0.75rem">
         <PTextarea
           v-model="reason"
-          placeholder="为什么需要这个修改？"
+          placeholder="补充说明"
           :rows="2"
-          label="修改理由（可选）"
+          label="补充说明（可选）"
         />
       </div>
       <p v-if="errorMsg" style="color: var(--a-color-accent-destructive); font-size: 0.75rem; margin-top: 0.5rem">
@@ -30,7 +30,7 @@
       <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem; justify-content: flex-end">
         <button type="button" class="a-btn a-btn--ghost" @click="$emit('close')">取消</button>
         <button type="submit" class="a-btn a-btn--primary" :disabled="submitting">
-          {{ submitting ? '提交中…' : '提交建议' }}
+          {{ submitting ? '提交中…' : '提交' }}
         </button>
       </div>
     </form>

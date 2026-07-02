@@ -8,7 +8,7 @@
     <PEmpty v-else-if="!collection" text="合集不存在或已被删除" />
 
     <template v-else>
-      <PPageHeader :title="collection.name" accent :sub="collection.description || '合集详情'" style="margin-bottom:2.5rem">
+      <PPageHeader :title="collection.name" accent :sub="collection.description || ''" style="margin-bottom:2.5rem">
         <template #action>
           <div class="paper-actions-row">
             <PClip
@@ -68,12 +68,12 @@
               <div style="display:flex;gap:.75rem;align-items:center">
                 <PClip
                   :active="starredIds.has(post.id)"
-                  :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+                  :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
                   @click="toggleStar(post.id)"
                 />
                 <PClip
                   :active="readingListIds.has(post.id)"
-                  :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+                  :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
                   @click="toggleReadingList(post.id)"
                 />
                 <PLink :href="`/posts/post/${post.id}`" label="查看" />

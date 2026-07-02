@@ -21,7 +21,27 @@
       @input="emitSearchInput"
       @keydown.enter.prevent="expandSearch"
     />
-    <TopbarSearchPopover :open="showSearch" @close="showSearch = false" />
+    <div v-if="showSearch" class="topbar-search-panel" :style="{ maxHeight: `${topbarSearchPanelMaxHeight}px` }">
+      <div class="topbar-search-panel__head">
+        <span class="topbar-search-panel__eyebrow">全站搜索</span>
+        <span class="topbar-search-panel__status">
+          {{ globalSearch.loading.value ? '搜索中...' : searchDraft.trim().length >= 2 ? '预览结果' : '输入至少 2 个字' }}
+        </span>
+      </div>
+      <div v-if="globalSearch.loading.value" class="topbar-search-panel__hint">搜索中...</div>
+      <div v-else-if="searchDraft.trim().length < 2" class="topbar-search-panel__hint">输入至少 2 个字开始搜索，回车展开纸张结果</div>
+      <div v-else-if="globalSearch.sections.value.length === 0" class="topbar-search-panel__hint">没有找到匹配内容</div>
+      <div v-else class="topbar-search-panel__body">
+        <TopbarSearchSection
+          v-for="section in globalSearch.sections.value"
+          :key="section.type"
+          :section="section"
+          :active-id="globalSearch.activeItem.value?.id || ''"
+          @open-item="openSearchHref"
+          @open-more="openSearchHref"
+        />
+      </div>
+    </div>
   </div>
 
   <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
@@ -37,7 +57,7 @@
     </button>
     <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
       <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
-      <RouterLink :to="modulePathUrl('blog', '/bookmarks')" class="dropdown-item" @click="closeDropdown">我的收藏</RouterLink>
+      <RouterLink :to="modulePathUrl('blog', '/bookmarks')" class="dropdown-item" @click="closeDropdown">收藏</RouterLink>
       <RouterLink :to="modulePathUrl('blog', '/settings')" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
       <RouterLink v-if="showSiteSettings" to="/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
       <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
@@ -55,18 +75,21 @@ import { modulePathUrl, userUrl } from '@/router/siteUrls'
 import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole } from '@/utils/roles'
 import { useMediaChannel } from '@/composables/useMediaChannel'
+import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import PSelect from '@/components/ui/PSelect.vue'
-import TopbarSearchPopover from '@/components/system/TopbarSearchPopover.vue'
+import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const router = useRouter()
 const route = useRoute()
 const { channels, currentMediaChannelId, switchChannel, clearChannels, loadChannels } = useMediaChannel()
+const globalSearch = useGlobalSearch()
 
 const activeDropdown = ref<string | null>(null)
 const showSearch = ref(false)
 const searchDraft = ref('')
+const topbarSearchPanelMaxHeight = ref(320)
 const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
@@ -83,20 +106,31 @@ const toggleDropdown = (name: string) => {
 
 const openSearch = () => {
   showSearch.value = true
+  updateTopbarSearchPanelMaxHeight()
 }
 
 const emitSearchInput = () => {
   showSearch.value = true
+  updateTopbarSearchPanelMaxHeight()
+  void globalSearch.search(searchDraft.value, 'preview')
   window.dispatchEvent(new CustomEvent('atoman-topbar-search-input', { detail: searchDraft.value }))
 }
 
 const expandSearch = () => {
   showSearch.value = true
-  window.dispatchEvent(new CustomEvent('atoman-topbar-search-expand'))
+  updateTopbarSearchPanelMaxHeight()
+  void globalSearch.search(searchDraft.value, 'expanded')
 }
 
 const closeDropdown = () => {
   activeDropdown.value = null
+}
+
+const openSearchHref = async (href: string) => {
+  showSearch.value = false
+  searchDraft.value = ''
+  globalSearch.reset()
+  await router.push(href)
 }
 
 const handleClickOutside = (e: MouseEvent) => {
@@ -105,7 +139,18 @@ const handleClickOutside = (e: MouseEvent) => {
   if (!target.closest('.topbar-search-wrap')) {
     showSearch.value = false
     searchDraft.value = ''
+    globalSearch.reset()
   }
+}
+
+const updateTopbarSearchPanelMaxHeight = () => {
+  if (typeof window === 'undefined') return
+  const searchWrap = document.querySelector('.topbar-search-wrap')
+  const rect = searchWrap?.getBoundingClientRect()
+  const top = rect?.bottom ?? 56
+  const playerTop = document.querySelector('.player')?.getBoundingClientRect().top ?? window.innerHeight - 24
+  const safeBottom = Math.max(playerTop - 16, top + 220)
+  topbarSearchPanelMaxHeight.value = Math.max(safeBottom - top, 240)
 }
 
 const ensureMediaChannels = () => {
@@ -135,11 +180,13 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
   ensureMediaChannels()
+  window.addEventListener('resize', updateTopbarSearchPanelMaxHeight)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   inboxStore.disconnect()
+  window.removeEventListener('resize', updateTopbarSearchPanelMaxHeight)
 })
 
 const logout = () => {
@@ -203,12 +250,13 @@ watch(authUserId, ensureMediaChannels)
 .topbar-search-wrap {
   position: relative;
   width: 10rem;
-  transition: width 0.24s cubic-bezier(0.2, 0, 0, 1);
+  overflow: visible;
+  transition: width 0.48s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .topbar-search-wrap:focus-within,
 .topbar-search-wrap:has(.topbar-search-input.is-active) {
-  width: 24rem;
+  width: 30rem;
 }
 
 .topbar-search-input {
@@ -217,24 +265,86 @@ watch(authUserId, ensureMediaChannels)
   border-radius: var(--a-radius-none);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
-  padding: 0.4rem 0.7rem;
+  padding: 0.72rem 0.92rem;
   font-size: 0.875rem;
   font-weight: 700;
   transition:
-    padding 0.24s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.24s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.24s cubic-bezier(0.2, 0, 0, 1);
+    padding 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.48s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .topbar-search-input.is-active {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding-top: 0.86rem;
+  padding-bottom: 0.86rem;
 }
 
 .topbar-search-input:focus {
   outline: none;
   border-color: var(--a-color-fg);
   box-shadow: inset 0 0 0 1px var(--a-color-fg);
+}
+
+.topbar-search-panel {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  z-index: 80;
+  border: 1px solid var(--a-color-line-soft);
+  border-top: 0;
+  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  padding: 1.25rem 1.2rem 1.3rem;
+  animation: topbarSearchReveal 0.52s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: auto;
+}
+
+.topbar-search-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.topbar-search-panel__eyebrow,
+.topbar-search-panel__status {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.topbar-search-panel__eyebrow {
+  color: var(--a-color-muted-soft);
+}
+
+.topbar-search-panel__status {
+  color: var(--a-color-ink-soft);
+}
+
+.topbar-search-panel__hint {
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.topbar-search-panel__body {
+  display: grid;
+  gap: 1rem;
+}
+
+@keyframes topbarSearchReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 960px) {
@@ -244,7 +354,7 @@ watch(authUserId, ensureMediaChannels)
 
   .topbar-search-wrap:focus-within,
   .topbar-search-wrap:has(.topbar-search-input.is-active) {
-    width: min(16rem, 42vw);
+    width: min(22rem, 52vw);
   }
 }
 

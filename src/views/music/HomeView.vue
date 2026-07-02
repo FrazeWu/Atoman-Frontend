@@ -2,13 +2,22 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
+import { listMusicArtists, listArtistBookmarks, type MusicArtistListItem } from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+
+type ArtistFilterTab = 'all' | 'subscribed'
+const activeTab = ref<ArtistFilterTab>('all')
+
+const tabOptions = [
+  { label: '全部', value: 'all' },
+  { label: '已订阅', value: 'subscribed' },
+]
 
 const route = useRoute()
 const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicCreationFlow } = useMusicDrawers()
@@ -31,13 +40,19 @@ async function fetchArtists() {
   errorMessage.value = ''
 
   try {
-    const response = await listMusicArtists({
-      q: undefined,
-      page: 1,
-      page_size: 48,
-    })
-    if (requestId !== activeRequestId) return
-    artists.value = response.data
+    if (activeTab.value === 'subscribed') {
+      const response = await listArtistBookmarks()
+      if (requestId !== activeRequestId) return
+      artists.value = (response.data || []).map((bookmark: any) => bookmark.artist).filter(Boolean)
+    } else {
+      const response = await listMusicArtists({
+        q: undefined,
+        page: 1,
+        page_size: 48,
+      })
+      if (requestId !== activeRequestId) return
+      artists.value = response.data
+    }
   } catch (e) {
     if (requestId !== activeRequestId) return
     console.error('Failed to fetch music artists:', e)
@@ -49,6 +64,10 @@ async function fetchArtists() {
     }
   }
 }
+
+watch(activeTab, () => {
+  fetchArtists()
+})
 
 async function fetchSearchResults() {
   const query = searchQuery.value.trim()
@@ -65,7 +84,7 @@ async function fetchSearchResults() {
     const response = await listMusicArtists({
       q: query,
       page: 1,
-      page_size: 8,
+      page_size: 20,
     })
     if (requestId !== activeSearchRequestId) return
     searchResults.value = response.data
@@ -148,55 +167,64 @@ function handleSearchBlur() {
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
       <div class="page-header">
         <PPageHeader
-          kicker="Music Archive"
           title="艺术家"
-          sub="浏览或搜索音乐档案库中的艺术家。"
           mb="0"
-        />
+        >
+          <template #action>
+            <div class="mode-tabs" aria-label="艺术家列表模式">
+              <PSegmentedControl
+                v-model="activeTab"
+                :options="tabOptions"
+              />
+            </div>
+          </template>
+        </PPageHeader>
       </div>
 
-      <SearchSurface
-        v-model:query="searchQuery"
-        :open="showSearchDropdown"
-        eyebrow="Artist Search"
-        :status="searchLoading ? '搜索中...' : hasSearchQuery ? `结果 ${searchResults.length}` : '浏览全部'"
-        placeholder="搜索艺术家..."
-        input-test-id="music-search-input"
-        dropdown-test-id="music-search-dropdown"
-        :loading="searchLoading"
-        :hint="!hasSearchQuery ? '输入艺名，直接从下拉结果进入艺术家页面。' : ''"
-        :empty="hasSearchQuery && !searchResults.length ? '没有匹配的艺术家' : ''"
-        @focus="handleSearchFocus"
-        @blur="handleSearchBlur"
-      >
-        <template #results>
-          <div class="search-dropdown__list">
-            <button
-              v-for="artist in searchResults"
-              :key="artist.id"
-              type="button"
-              class="search-dropdown__item"
-              data-testid="music-search-result"
-              @mousedown.prevent="openArtistCard(artist.id)"
-            >
-              <span class="search-dropdown__item-title">{{ artist.name }}</span>
-              <span class="search-dropdown__item-meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
-            </button>
-          </div>
-        </template>
-        <template #actions>
-          <button class="paper-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
-            <span class="paper-action-dot" aria-hidden="true" />
-            找不到？添加艺术家和首张专辑
-          </button>
-        </template>
-      </SearchSurface>
+      <div class="search-row">
+        <div class="search-shell" :class="{ 'is-open': showSearchDropdown }">
+          <SearchSurface
+            v-model:query="searchQuery"
+            :open="showSearchDropdown"
+            compact
+            eyebrow=""
+            :status="searchLoading ? '搜索中...' : '搜索艺术家'"
+            placeholder="搜索艺术家..."
+            input-test-id="music-search-input"
+            dropdown-test-id="music-search-dropdown"
+            :loading="searchLoading"
+            :empty="hasSearchQuery && !searchResults.length ? '没有匹配的艺术家' : ''"
+            @focus="handleSearchFocus"
+            @blur="handleSearchBlur"
+          >
+            <template #results>
+              <div class="search-dropdown__list">
+                <button
+                  v-for="artist in searchResults"
+                  :key="artist.id"
+                  type="button"
+                  class="search-dropdown__item"
+                  data-testid="music-search-result"
+                  @mousedown.prevent="openArtistCard(artist.id)"
+                >
+                  <span class="search-dropdown__item-title">{{ artist.name }}</span>
+                  <span class="search-dropdown__item-meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
+                </button>
+              </div>
+            </template>
+          </SearchSurface>
+        </div>
+        <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
+          <span class="paper-action-dot" aria-hidden="true" />
+          添加艺术家
+        </button>
+      </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载艺术家...</p>
 
       <div v-else-if="!artists.length" class="empty-state">
-        <p class="state-line">没有匹配的艺术家，可以提交新的 wiki 编辑。</p>
+        <p class="state-line">{{ activeTab === 'subscribed' ? '暂无订阅的艺术家' : '没有匹配的艺术家' }}</p>
         <div class="empty-actions">
           <button
             class="paper-action"
@@ -205,7 +233,7 @@ function handleSearchBlur() {
             @click="openMusicCreationFlow({ startStep: 'artist' })"
           >
             <span class="paper-action-dot" aria-hidden="true" />
-            找不到？添加艺术家和首张专辑
+            添加艺术家
           </button>
         </div>
       </div>
@@ -268,15 +296,35 @@ function handleSearchBlur() {
   border-bottom: 1px solid var(--a-color-line-soft);
 }
 
+.search-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.search-shell {
+  position: relative;
+  max-width: 28rem;
+  min-height: 112px;
+  flex: 0 1 28rem;
+}
+
+.search-shell.is-open {
+  z-index: 15;
+}
+
+.search-shell.is-open :deep(.search-frame) {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40rem;
+}
+
 .paper-action-dot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
   flex-shrink: 0;
-}
-.search-dropdown {
-  margin-top: -0.15rem;
 }
 .search-dropdown__hint {
   margin: 0;
@@ -294,7 +342,7 @@ function handleSearchBlur() {
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 0.8rem 0.95rem;
+  padding: 1rem 1.05rem;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -303,12 +351,12 @@ function handleSearchBlur() {
   background: color-mix(in srgb, var(--a-color-paper) 58%, var(--a-color-paper-wash) 42%);
 }
 .search-dropdown__item-title {
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   font-weight: 800;
   color: var(--a-color-fg);
 }
 .search-dropdown__item-meta {
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   color: var(--a-color-muted-soft);
 }
 
@@ -340,6 +388,10 @@ function handleSearchBlur() {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   box-shadow: var(--a-shadow-dropdown);
+}
+
+.search-side-action {
+  flex-shrink: 0;
 }
 
 /* ─── Artist Search Results ──────── */
@@ -429,6 +481,27 @@ function handleSearchBlur() {
   color: var(--a-color-muted-soft);
   line-height: 1.4;
   font-size: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-shell,
+  .search-shell.is-open {
+    max-width: 100%;
+    flex-basis: auto;
+  }
+
+  .search-shell.is-open :deep(.search-frame) {
+    width: 100%;
+  }
+
+  .search-side-action {
+    width: fit-content;
+  }
 }
 
 .avatar-placeholder-text {

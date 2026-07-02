@@ -45,6 +45,6 @@ describe('BlogHomeView query search', () => {
     await flushPromises()
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/blog/explore?page=1&limit=12&q=atom')
+    expect(requestedUrls).toContain('/api/v1/blog/explore?page=1&limit=20&q=atom')
   })
 })

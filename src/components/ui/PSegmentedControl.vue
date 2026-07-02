@@ -26,10 +26,11 @@
       role="radio"
       :aria-checked="modelValue === option.value"
       :data-testid="option.testid || option['data-testid'] || (option.value ? 'mode-' + option.value : undefined)"
+      :data-test="option.test || option['data-test'] || option.testid || option['data-testid']"
       @click="selectOption(option.value)"
     >
       <slot name="label" :option="option" :active="modelValue === option.value">
-        <span class="p-segmented-control-label">{{ option.label }}</span>
+        <span class="p-segmented-control-label"> {{ option.label }} </span>
       </slot>
     </button>
   </div>

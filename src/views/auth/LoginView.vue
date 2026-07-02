@@ -2,18 +2,16 @@
   <div class="auth-page">
     <section :class="['auth-paper', { 'auth-paper--register': isRegister }]">
       <div class="auth-paper-head">
-        <p class="auth-kicker">ACCESS</p>
-        <h1 class="auth-title">{{ isRegister ? '加入我们' : '欢迎回来' }}</h1>
-        <p class="auth-sub">{{ isRegister ? '创建账号，继续进入 Atoman 的数字领域。' : '进入 Atoman 的数字领域。' }}</p>
+        <h1 class="auth-title">{{ isRegister ? '注册' : '登录' }}</h1>
       </div>
 
       <!-- Step Indicator for Registration -->
       <div v-if="isRegister" class="auth-steps-indicator">
         <div :class="['step-dot', { 'step-dot--active': currentStep >= 1 }]" />
-        <span class="step-label">邮箱验证</span>
+        <span class="step-label">验证邮箱</span>
         <div class="step-line" :class="{ 'step-line--active': currentStep >= 2 }" />
         <div :class="['step-dot', { 'step-dot--active': currentStep >= 2 }]" />
-        <span class="step-label" :class="{ 'step-label--inactive': currentStep < 2 }">凭证设置</span>
+        <span class="step-label" :class="{ 'step-label--inactive': currentStep < 2 }">设置账号</span>
       </div>
 
       <form @submit.prevent="handleSubmit" class="auth-form">
@@ -36,7 +34,7 @@
             class="a-error auth-error"
             role="alert"
           >
-            <span class="error-text">当前站点未启用人机验证配置，请联系管理员处理。</span>
+            <span class="error-text">当前无法完成验证，请稍后再试</span>
           </div>
         </Transition>
 
@@ -51,7 +49,7 @@
 
           <PInput
             v-model="password"
-            label="通行密码"
+            label="密码"
             type="password"
             placeholder="输入密码"
             :error="fieldErrors.password"
@@ -66,7 +64,7 @@
             :loading="loading"
             loading-text="请稍候..."
           >
-            登 录
+            登录
           </PButton>
         </div>
 
@@ -79,7 +77,7 @@
                 v-model="email"
                 type="email"
                 required
-                placeholder="请输入邮箱地址"
+                placeholder="输入邮箱地址"
                 :error="fieldErrors.email"
               />
               <PButton
@@ -126,7 +124,7 @@
 
           <PInput
             v-model="password"
-            label="通行密码"
+            label="密码"
             type="password"
             placeholder="输入密码"
             :error="fieldErrors.password"
@@ -166,8 +164,8 @@
               class="auth-submit-btn"
               :loading="loading"
               loading-text="请稍候..."
-            >
-              注册账号
+          >
+              注册
             </PButton>
           </div>
         </div>
@@ -175,10 +173,10 @@
 
       <div class="auth-footer">
         <span v-if="isRegister">
-          已有账号？ <RouterLink to="/login" class="toggle-link">立即登录</RouterLink>
+          已有账号？ <RouterLink to="/login" class="toggle-link">去登录</RouterLink>
         </span>
         <span v-else>
-          还没有账号？ <RouterLink to="/register" class="toggle-link">立即注册</RouterLink>
+          还没有账号？ <RouterLink to="/register" class="toggle-link">去注册</RouterLink>
         </span>
       </div>
     </section>
@@ -229,7 +227,7 @@ const safeRedirectPath = (redirect: unknown) => {
 
 const requireTurnstileToken = () => {
   if (turnstileConfigMissing.value) {
-    errorMsg.value = '当前站点未启用人机验证配置，请联系管理员处理。'
+    errorMsg.value = '当前无法完成验证，请稍后再试'
     return false
   }
   if (!turnstileEnabled.value) return true
@@ -305,7 +303,7 @@ const goNextStep = () => {
     return
   }
   if (verificationCode.value.length < 6) {
-    fieldErrors.value.code = '验证码长度应为 6 位'
+    fieldErrors.value.code = '请输入 6 位验证码'
     return
   }
   currentStep.value = 2

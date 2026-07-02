@@ -23,14 +23,13 @@ describe('borderless white UI contract', () => {
     expect(source).toContain('border-radius: 0px')
   })
 
-  it('keeps sidebar focus visible with a flat wash background and left ink border line', () => {
+  it('keeps sidebar focus visible with a flat wash background and non-structural shadow feedback', () => {
     const source = read('src/components/ui/PSidebarItem.vue')
 
     expect(source).not.toContain('box-shadow: inset 4px 0 0')
-    expect(source).toContain('border-left: 3px solid transparent')
-    expect(source).toContain('border-left-color: var(--a-color-ink)')
+    expect(source).not.toMatch(/border-left\s*:/)
     expect(source).toContain('background: var(--a-color-paper-wash)')
-    expect(source).not.toContain('box-shadow: var(--a-shadow-paper-sm)')
+    expect(source).toContain('box-shadow: var(--a-shadow-paper-sm)')
   })
 
   it('enforces borderless/bottom-border-only tabs and removes the old active indicator block', () => {
@@ -82,5 +81,22 @@ describe('borderless white UI contract', () => {
     // PVideoCard contract
     expect(pVideoCardSource).toContain('border-radius: 8px;') // for vc-thumb
     expect(pVideoCardSource).toContain('border-radius: 0px;') // for vc-play-count and vc-duration
+  })
+
+  it('uses kraft-paper hover accents for secondary buttons and stacked sheet affordances', () => {
+    const pButtonSource = read('src/components/ui/PButton.vue')
+    const fabSource = read('src/components/ui/PDiscussionFAB.vue')
+    const sheetTabSource = read('src/components/ui/PSheetTab.vue')
+
+    expect(pButtonSource).toContain('background: #f4ece1;')
+    expect(pButtonSource).toContain('color: #6b4f3a;')
+    expect(pButtonSource).toContain('border-bottom-color: #6b4f3a;')
+
+    expect(fabSource).toContain('background: #6b4f3a;')
+    expect(fabSource).toContain('border-color: #6b4f3a;')
+
+    expect(sheetTabSource).toContain('background-color: #f4ece1;')
+    expect(sheetTabSource).toContain('color: #6b4f3a;')
+    expect(sheetTabSource).toContain('border-color: #6b4f3a;')
   })
 })

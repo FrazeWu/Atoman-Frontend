@@ -9,7 +9,7 @@
 
     <div v-else-if="!profile" style="text-align:center;padding:6rem 0">
       <p class="a-title a-muted" style="margin-bottom:1rem">用户不存在</p>
-      <a :href="moduleUrl('blog')" class="a-link">← 法堂广场</a>
+      <a :href="moduleUrl('blog')" class="a-link">← 文章</a>
     </div>
 
     <template v-else>
@@ -53,7 +53,7 @@
       <!-- Channels list -->
       <section style="margin-bottom:3rem">
         <h2 class="a-subtitle" style="margin-bottom:1.25rem">频道</h2>
-        <PEmpty v-if="!channels.length" title="暂无频道" description="该用户还没有创建频道" />
+        <PEmpty v-if="!channels.length" title="暂无频道" />
         <div v-else class="a-grid-2">
           <div v-for="ch in channels" :key="ch.id" class="a-card a-card-hover channel-card">
             <div style="flex:1">
@@ -85,8 +85,7 @@
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PBadge type="internal" fill>内部</PBadge>
-                <PBadge type="blog">博客</PBadge>
+                <PBadge type="blog">文章</PBadge>
                 <img
                   v-if="post.cover_url"
                   :src="post.cover_url"
@@ -121,12 +120,12 @@
                 </div>
                 <PClip
                   :active="starredIds.has(post.id)"
-                  :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+                  :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
                   @click="toggleStar(post.id)"
                 />
                 <PClip
                   :active="readingListIds.has(post.id)"
-                  :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+                  :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
                   @click="toggleReadingList(post.id)"
                 />
               </div>

@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <PPageHeader title="法堂广场" accent sub="浏览所有人的公开文章" style="margin-bottom:2.5rem" />
+    <PPageHeader title="文章" accent style="margin-bottom:2.5rem" />
 
     <!-- Loading -->
     <div v-if="loading" class="a-grid-3">
@@ -26,8 +26,7 @@
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="internal" fill>内部</PBadge>
-            <PBadge type="blog">博客</PBadge>
+            <PBadge type="blog">文章</PBadge>
             <img
               v-if="post.cover_url"
               :src="post.cover_url"
@@ -58,12 +57,12 @@
             </div>
             <PClip
               :active="starredIds.has(post.id)"
-              :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+              :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
               @click="toggleStar(post.id)"
             />
             <PClip
               :active="readingListIds.has(post.id)"
-              :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+              :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
               @click="toggleReadingList(post.id)"
             />
           </div>
@@ -119,7 +118,7 @@ const posts = ref<Post[]>([])
 const loading = ref(true)
 const currentPage = ref(1)
 const totalPages = ref(1)
-const pageSize = 12
+const pageSize = 20
 
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr)

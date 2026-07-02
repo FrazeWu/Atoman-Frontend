@@ -89,7 +89,7 @@ const select = (a: Artist) => {
   query.value = ''
 }
 
-const remove = (id: number) => {
+const remove = (id: string | number) => {
   if (props.disabled) return
   emit('update:modelValue', selected.value.filter(a => a.id !== id))
 }
@@ -105,7 +105,7 @@ const dedupeArtistsByName = (artists: Artist[]) => {
 }
 
 const toArtistOption = (artist: MusicArtistListItem): Artist => ({
-  id: Number.parseInt(artist.id, 10),
+  id: artist.id,
   name: artist.name,
   bio: artist.bio,
   image_url: artist.image_url,
@@ -125,8 +125,7 @@ const fetchArtists = async () => {
     const result = await listMusicArtists({ page: 1, page_size: 100 })
     allArtists.value = dedupeArtistsByName(
       result.data
-        .map(toArtistOption)
-        .filter((artist) => Number.isFinite(artist.id)),
+        .map(toArtistOption),
     )
   } catch (e) { console.error(e) }
 }

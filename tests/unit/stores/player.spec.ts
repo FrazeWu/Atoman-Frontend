@@ -81,6 +81,17 @@ describe('player store', () => {
     expect(player.currentSong?.id).toBe(3)
   })
 
+  it('advances to next song in an album queue with uuid ids', () => {
+    const player = usePlayerStore()
+    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
+    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
+
+    player.playAlbum([firstSong, secondSong])
+    player.playNext()
+
+    expect(player.currentSong?.id).toBe('song-uuid-2')
+  })
+
   it('plays a queued feed song without shrinking the current queue', () => {
     const player = usePlayerStore()
     const firstFeedItem = {
@@ -114,6 +125,56 @@ describe('player store', () => {
 
     player.playNext()
     expect(player.currentSong?.id).toBe(102)
+  })
+
+  it('keeps album queue when selecting another song from the same queue', () => {
+    const player = usePlayerStore()
+    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
+    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
+    const thirdSong = { id: 'song-uuid-3', title: 'UUID 3', audio_url: 'uuid-3.wav' } as any
+
+    player.playAlbum([firstSong, secondSong, thirdSong])
+    player.playQueuedSong(secondSong)
+
+    expect(player.queue.map((song) => song.id)).toEqual(['song-uuid-1', 'song-uuid-2', 'song-uuid-3'])
+
+    player.playNext()
+    expect(player.currentSong?.id).toBe('song-uuid-3')
+
+    player.playPrevious()
+    expect(player.currentSong?.id).toBe('song-uuid-2')
+  })
+
+  it('keeps current song title populated while moving through album queue', () => {
+    const player = usePlayerStore()
+    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
+    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
+
+    player.playAlbum([firstSong, secondSong])
+    expect(player.currentSong?.title).toBe('UUID 1')
+
+    player.playNext()
+    expect(player.currentSong?.title).toBe('UUID 2')
+
+    player.playPrevious()
+    expect(player.currentSong?.title).toBe('UUID 1')
+  })
+
+  it('does not randomly replay the current song when other queued songs exist', () => {
+    const player = usePlayerStore()
+    const firstSong = { id: 'song-uuid-1', title: 'UUID 1', audio_url: 'uuid-1.wav' } as any
+    const secondSong = { id: 'song-uuid-2', title: 'UUID 2', audio_url: 'uuid-2.wav' } as any
+    const thirdSong = { id: 'song-uuid-3', title: 'UUID 3', audio_url: 'uuid-3.wav' } as any
+
+    player.playAlbum([firstSong, secondSong, thirdSong])
+    player.playbackMode = 'random'
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
+    player.playNext()
+    randomSpy.mockRestore()
+
+    expect(player.currentSong?.id).not.toBe('song-uuid-1')
+    expect(['song-uuid-2', 'song-uuid-3']).toContain(player.currentSong?.id)
   })
 
   it('persists playback without playing intent and restores paused', async () => {

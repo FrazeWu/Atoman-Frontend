@@ -20,15 +20,11 @@
 
     <template v-else>
       <div class="stats-controls">
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <PTab
-            v-for="option in periodOptions"
-            :key="option.value"
-            :label="option.label"
-            :active="period === option.value"
-            @click="selectPeriod(option.value)"
-          />
-        </div>
+        <PSegmentedControl
+          v-model="period"
+          :options="periodOptions"
+          @change="selectPeriod"
+        />
         <PPress
           @click="fetchStats"
           :loading="loading"
@@ -97,7 +93,7 @@ import { RouterLink } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
-import PTab from '@/components/ui/PTab.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 

@@ -1,6 +1,6 @@
 <template>
   <div class="a-page">
-    <PPageHeader title="文章" sub="查看当前频道下的文章内容。" accent>
+    <PPageHeader title="文章" accent>
       <template #action>
         <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
         <PButton v-else to="/login" outline>登录</PButton>
@@ -10,21 +10,17 @@
     <!-- Filters -->
     <div class="blog-home__filters" aria-label="文章筛选">
       <div class="blog-home__filter-group">
-        <PTab
-          v-for="t in typeOptions"
-          :key="t.value"
-          :label="t.label"
-          :active="typeFilter === t.value"
-          @click="selectType(t.value)"
+        <PSegmentedControl
+          v-model="typeFilter"
+          :options="typeOptions"
+          @change="selectType"
         />
       </div>
       <div class="blog-home__filter-group blog-home__filter-group--end">
-        <PTab
-          v-for="s in sortOptions"
-          :key="s.value"
-          :label="s.label"
-          :active="sortBy === s.value"
-          @click="selectSort(s.value)"
+        <PSegmentedControl
+          v-model="sortBy"
+          :options="sortOptions"
+          @change="selectSort"
         />
       </div>
     </div>
@@ -44,7 +40,6 @@
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="internal" fill>内部</PBadge>
             <PBadge type="blog">文章</PBadge>
             <img
               v-if="post.cover_url"
@@ -76,12 +71,12 @@
             </div>
             <PClip
               :active="starredIds.has(post.id)"
-              :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+              :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
               @click="toggleStar(post.id)"
             />
             <PClip
               :active="readingListIds.has(post.id)"
-              :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+              :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
               @click="toggleReadingList(post.id)"
             />
           </div>
@@ -97,7 +92,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -105,7 +101,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PTab from '@/components/ui/PTab.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
@@ -116,6 +112,7 @@ const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const api = useApi()
+const route = useRoute()
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
@@ -136,6 +133,7 @@ const page = ref(1)
 const hasMore = ref(false)
 const typeFilter = ref('all')
 const sortBy = ref('latest')
+const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
@@ -167,26 +165,34 @@ const fetchPosts = async (append = false) => {
   loading.value = true
   if (!append) page.value = 1
   try {
-    const params = new URLSearchParams({
-      page: String(page.value),
-      limit: '12',
-    })
-    
-    // Use explore endpoints for site-wide recommendations.
-    const endpoint = sortBy.value === 'popular' ? api.blog.explore : api.feed.explore
-
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const res = await fetch(`${endpoint}?${params}`, { headers })
+    const isPopular = sortBy.value === 'popular'
+    const query = new URLSearchParams()
+    query.set('page', String(page.value))
+    query.set('limit', '20')
+    if (activeQuery.value) query.set('q', activeQuery.value)
+    const endpoint = isPopular
+      ? `${api.url}/feed/recommend/articles?mode=hot&page=${page.value}&page_size=20`
+      : `${api.blog.explore}?${query.toString()}`
+
+    const res = await fetch(endpoint, { headers })
     if (res.ok) {
       const d = await res.json()
-      // /feed/explore returns { type, post, feed_item }
-      // api.blog.explore returns { post, likes_count, comments_count }
       const rawData = d.data || []
       const extractedPosts: Post[] = rawData.map((item: any) => {
-        if (item.type === 'post') return item.post
-        if (item.post) return item.post // for api.blog.explore
+        if (isPopular) {
+          return {
+            id: item.id,
+            title: item.title,
+            summary: item.summary,
+            cover_url: item.image_url,
+            likes_count: 0,
+            comments_count: 0,
+          }
+        }
+        if (item.post) return item.post
         return null
       }).filter(Boolean)
 
@@ -195,7 +201,9 @@ const fetchPosts = async (append = false) => {
       } else {
         posts.value = extractedPosts
       }
-      hasMore.value = rawData.length === 12
+      hasMore.value = isPopular
+        ? Boolean(d.meta?.has_more)
+        : rawData.length === 12
     }
   } catch (e) {
     console.error(e)
@@ -214,6 +222,12 @@ onMounted(() => {
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
+  }
+})
+
+watch(activeQuery, () => {
+  if (sortBy.value !== 'popular') {
+    void fetchPosts()
   }
 })
 </script>

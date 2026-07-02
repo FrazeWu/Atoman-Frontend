@@ -172,9 +172,9 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button--secondary:hover:not(.p-button--disabled) {
-  background: var(--a-color-accent-confirm);
-  color: var(--a-color-paper);
-  border-bottom-color: var(--a-color-accent-confirm);
+  background: #f4ece1;
+  color: #6b4f3a;
+  border-bottom-color: #6b4f3a;
 }
 
 .p-button--ghost {

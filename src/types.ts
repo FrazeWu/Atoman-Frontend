@@ -18,7 +18,7 @@ export interface LyricAnnotation {
 }
 
 export interface Artist {
-  id: number;
+  id: number | string;
   name: string;
   bio?: string;
   image_url?: string;
@@ -50,11 +50,11 @@ export interface Album {
 }
 
 export interface Song {
-  id: number;
+  id: number | string;
   title: string;
   artist: string;
   album: string;
-  album_id: number;
+  album_id: number | string;
   year: number;
   release_date: string;
   lyrics: string;

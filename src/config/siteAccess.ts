@@ -24,6 +24,8 @@ export type ModuleAccess = {
 
 export type SiteAccessSettings = {
   feed: {
+    allow_manage_sources: boolean
+    allow_add_source: boolean
     full_text_mode: FeedFullTextMode
   }
   blog: {
@@ -115,6 +117,8 @@ const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {
 
 const buildDefaultSettings = (): SiteAccessSettings => ({
   feed: {
+    allow_manage_sources: true,
+    allow_add_source: true,
     full_text_mode: 'per_source',
   },
   blog: {

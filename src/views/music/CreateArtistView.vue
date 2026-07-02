@@ -1,6 +1,6 @@
 <template>
   <div class="a-page">
-    <PPageHeader title="添加/补全艺术家" sub="向音乐档案库添加新的艺术家资料。" accent />
+    <PPageHeader title="添加艺术家" accent />
 
     <PSurface class="form-surface" tone="soft" :layer="1">
       <MusicArtistForm

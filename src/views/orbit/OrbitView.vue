@@ -116,10 +116,7 @@
                 <div class="flex gap-4 items-start">
                   <div class="flex flex-col gap-1 flex-shrink-0">
                     <div class="px-2 py-0.5 border-2 border-black flex items-center justify-center font-black bg-black text-white text-[10px] uppercase tracking-tighter">
-                      内部
-                    </div>
-                    <div class="px-2 py-1 border-2 border-black flex items-center justify-center font-black bg-gray-50 group-hover:bg-black group-hover:text-white transition-all text-xs uppercase tracking-tighter">
-                      博客
+                      文章
                     </div>
                   </div>
                   <div class="flex-1 min-w-0">
@@ -131,7 +128,7 @@
                         {{ formatDate(item.published_at) }}
                       </span>
                       <span class="ml-auto text-xs font-black uppercase tracking-widest text-gray-200 group-hover:text-black transition-colors">
-                        内部文章 →
+                        查看文章 →
                       </span>
                     </div>
                     <h3 class="text-lg font-black tracking-tight leading-tight mb-2 group-hover:underline line-clamp-2">
@@ -285,7 +282,7 @@ const getExternalBadge = (item: OrbitItem) => {
     if (item.enclosure_type?.startsWith('audio/')) return '播客'
     if (item.enclosure_type?.startsWith('video/')) return '视频'
   }
-  return '博客'
+  return '文章'
 }
 
 // Fetch

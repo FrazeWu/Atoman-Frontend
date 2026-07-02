@@ -6,42 +6,28 @@ import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import {
   getMusicAlbum,
   getMusicArtist,
-  createMusicPlaylist,
-  getMusicPlaylist,
   listAlbumBookmarks,
   listArtistBookmarks,
-  listMusicPlaylists,
-  listSongBookmarks,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
-  type MusicPlaylistDetail,
-  type MusicPlaylistSummary,
-  type MusicSongBookmark,
-  type MusicSongListItem,
   type MusicStarredItem,
-  type MusicStarredKind,
 } from '@/api/musicV1'
 import { resolveAlbumCoverUrl } from '@/utils/musicMedia'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
-type StarredFilter = 'all' | MusicStarredKind
+type StarredFilter = 'all' | 'artist' | 'album'
 
 const filterOptions: Array<{ label: string; value: StarredFilter; testId: string }> = [
   { label: '全部', value: 'all', testId: 'filter-all' },
   { label: '艺术家', value: 'artist', testId: 'filter-artist' },
   { label: '专辑', value: 'album', testId: 'filter-album' },
-  { label: '单曲', value: 'song', testId: 'filter-song' },
-  { label: '歌单', value: 'playlist', testId: 'filter-playlist' },
 ]
 
 const items = ref<MusicStarredItem[]>([])
 const activeFilter = ref<StarredFilter>('all')
 const loading = ref(false)
 const errorMessage = ref('')
-const creatingPlaylist = ref(false)
-const newPlaylistName = ref('')
-const newPlaylistDescription = ref('')
-const expandedPlaylistIds = ref<string[]>([])
-const playlistSongs = ref<Record<string, MusicSongListItem[]>>({})
 
 const filteredItems = computed(() => (
   activeFilter.value === 'all'
@@ -50,27 +36,10 @@ const filteredItems = computed(() => (
 ))
 const { openArtist, openAlbum } = useMusicDrawers()
 
-function artistNamesFromSong(song: MusicSongListItem) {
-  return song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家'
-}
-
 function artistNamesFromItem(item: MusicStarredItem) {
   if (item.artist) return item.artist.name
   if (item.album?.artists?.length) return item.album.artists.map((artist) => artist.name).join(' / ')
-  if (item.song) return artistNamesFromSong(item.song)
   return ''
-}
-
-function playlistSongCountLabel(item: MusicStarredItem) {
-  return `${item.playlist?.song_count ?? 0} 首单曲`
-}
-
-function playlistSongsFor(itemId: string) {
-  return playlistSongs.value[itemId] ?? []
-}
-
-function isPlaylistExpanded(itemId: string) {
-  return expandedPlaylistIds.value.includes(itemId)
 }
 
 function handleItemClick(item: MusicStarredItem) {
@@ -102,11 +71,9 @@ async function loadStarred() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
+    const [artistBookmarks, albumBookmarks] = await Promise.all([
       listArtistBookmarks(),
       listAlbumBookmarks(),
-      listSongBookmarks(),
-      listMusicPlaylists(),
     ])
 
     const [artists, albums] = await Promise.all([
@@ -127,18 +94,6 @@ async function loadStarred() {
         starred_at: bookmark.created_at,
         album: albums[index],
       })),
-      ...songBookmarks.data.map((bookmark: MusicSongBookmark) => ({
-        id: bookmark.id,
-        kind: 'song' as const,
-        starred_at: bookmark.created_at,
-        song: bookmark.song,
-      })),
-      ...playlists.data.map((playlist: MusicPlaylistSummary) => ({
-        id: playlist.id,
-        kind: 'playlist' as const,
-        starred_at: '',
-        playlist,
-      })),
     ]
   } catch (error) {
     console.error('Failed to load music starred items:', error)
@@ -146,68 +101,6 @@ async function loadStarred() {
   } finally {
     loading.value = false
   }
-}
-
-async function submitPlaylist() {
-  const name = newPlaylistName.value.trim()
-  const desc = newPlaylistDescription.value.trim()
-  if (!name || creatingPlaylist.value) return
-
-  creatingPlaylist.value = true
-  errorMessage.value = ''
-  try {
-    const created = await createMusicPlaylist({ name })
-
-    items.value = [
-      {
-        id: created.id,
-        kind: 'playlist',
-        starred_at: new Date().toISOString(),
-        playlist: {
-          id: created.id,
-          name: created.name,
-          description: desc || undefined,
-          song_count: 0,
-        },
-      },
-      ...items.value,
-    ]
-    activeFilter.value = 'playlist'
-    newPlaylistName.value = ''
-    newPlaylistDescription.value = ''
-  } catch (error) {
-    console.error('Failed to create music playlist:', error)
-    errorMessage.value = '新建歌单失败'
-  } finally {
-    creatingPlaylist.value = false
-  }
-}
-
-async function togglePlaylist(item: MusicStarredItem) {
-  const playlistId = item.playlist?.id
-  if (!playlistId) return
-
-  if (isPlaylistExpanded(playlistId)) {
-    expandedPlaylistIds.value = expandedPlaylistIds.value.filter((id) => id !== playlistId)
-    return
-  }
-
-  if (playlistSongs.value[playlistId]) {
-    expandedPlaylistIds.value = [...expandedPlaylistIds.value, playlistId]
-    return
-  }
-
-  try {
-    const detail: MusicPlaylistDetail = await getMusicPlaylist(playlistId)
-    playlistSongs.value = {
-      ...playlistSongs.value,
-      [playlistId]: detail.songs,
-    }
-  } catch (error) {
-    console.error('Failed to load playlist songs:', error)
-  }
-
-  expandedPlaylistIds.value = [...expandedPlaylistIds.value, playlistId]
 }
 
 onMounted(() => {
@@ -218,65 +111,26 @@ onMounted(() => {
 <template>
   <section class="music-starred-view">
     <header class="page-header">
-      <p class="a-font-meta kicker">PRIVATE CLIPS / STARRED</p>
-      <h1 class="page-title">我的收藏</h1>
-      <p class="page-desc">把想反复听、想继续校对或想留作线索的音乐档案夹在这里。</p>
+      <PPageHeader
+        title="收藏"
+        mb="0"
+      >
+        <template #action>
+          <div class="mode-tabs" aria-label="收藏筛选">
+            <PSegmentedControl
+              v-model="activeFilter"
+              :options="filterOptions"
+            />
+          </div>
+        </template>
+      </PPageHeader>
     </header>
 
-    <section class="playlist-creation">
-      <div class="section-heading">
-        <h2>新建歌单</h2>
-        <p>先把歌单建起来，后续可以从别的音乐页继续往里加歌。</p>
-      </div>
-
-      <form class="playlist-form" @submit.prevent="submitPlaylist">
-        <input
-          v-model="newPlaylistName"
-          data-testid="playlist-name-input"
-          class="paper-input"
-          type="text"
-          placeholder="歌单名"
-        />
-        <textarea
-          v-model="newPlaylistDescription"
-          data-testid="playlist-description-input"
-          class="paper-textarea"
-          rows="3"
-          placeholder="一句说明"
-        />
-        <button
-          data-testid="playlist-create-submit"
-          class="paper-action"
-          type="submit"
-          :disabled="creatingPlaylist"
-        >
-          {{ creatingPlaylist ? '创建中...' : '新建歌单' }}
-        </button>
-      </form>
-    </section>
-
-    <nav class="filter-tabs" aria-label="收藏筛选">
-      <button
-        v-for="option in filterOptions"
-        :key="option.value"
-        :data-testid="option.testId"
-        class="p-tab"
-        :class="{ 'p-tab--active': activeFilter === option.value }"
-        type="button"
-        @click="activeFilter = option.value"
-      >
-        {{ option.label }}
-      </button>
-    </nav>
-
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="state-line">正在加载收藏...</p>
+    <p v-else-if="loading" class="state-line">正在加载...</p>
 
     <div v-else-if="!filteredItems.length" class="empty-paper" role="status">
-      <span class="p-tab a-font-meta">STARRED</span>
-      <p class="a-font-meta empty-label">NO CLIPS YET</p>
-      <h2>这一栏还是空的</h2>
-      <p>等其他音乐页面接入收藏入口后，这里会显示真实收藏结果。</p>
+      <h2>暂无收藏</h2>
     </div>
 
     <div v-else class="results">
@@ -308,7 +162,7 @@ onMounted(() => {
             </div>
             <div class="music-text">
               <h2 class="music-title">{{ item.artist.name }}</h2>
-              <p class="music-summary">{{ item.artist.bio || '从收藏夹回到这位艺术家的完整条目。' }}</p>
+              <p v-if="item.artist.bio" class="music-summary">{{ item.artist.bio }}</p>
             </div>
           </div>
         </template>
@@ -335,43 +189,6 @@ onMounted(() => {
           </div>
         </template>
 
-        <template v-else-if="item.kind === 'song' && item.song">
-          <h2>{{ item.song.title }}</h2>
-          <p class="result-meta">{{ artistNamesFromItem(item) }}</p>
-          <p class="result-meta">{{ item.song.album?.title || '未归属专辑' }}</p>
-        </template>
-
-        <template v-else-if="item.kind === 'playlist' && item.playlist">
-          <div class="playlist-head">
-            <div>
-              <h2>{{ item.playlist.name }}</h2>
-              <p v-if="item.playlist.description" class="result-meta">{{ item.playlist.description }}</p>
-              <p class="result-meta">{{ playlistSongCountLabel(item) }}</p>
-            </div>
-            <button
-              :data-testid="`playlist-toggle-${item.playlist.id}`"
-              class="paper-action"
-              type="button"
-              @click="togglePlaylist(item)"
-            >
-              {{ isPlaylistExpanded(item.playlist.id) ? '查看单曲列表' : '查看单曲' }}
-            </button>
-          </div>
-
-          <ol v-if="isPlaylistExpanded(item.playlist.id)" class="playlist-songs">
-            <li
-              v-for="song in playlistSongsFor(item.playlist.id)"
-              :key="song.id"
-              class="playlist-song"
-            >
-              <span class="playlist-song-index">{{ song.track_number || '-' }}</span>
-              <div>
-                <p class="playlist-song-title">{{ song.title }}</p>
-                <p class="result-meta">{{ artistNamesFromSong(song) }}</p>
-              </div>
-            </li>
-          </ol>
-        </template>
       </article>
     </div>
     <ArtistDrawer />

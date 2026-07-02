@@ -16,6 +16,7 @@ const artists = ref<ArtistOption[]>([])
 const selectedArtistName = ref('')
 const searchQuery = ref('')
 const showDropdown = ref(false)
+const searchLoading = ref(false)
 
 const dropdownArtists = computed(() => {
   const q = searchQuery.value.toLowerCase()
@@ -30,6 +31,7 @@ watch(searchQuery, (q) => {
 
 async function fetchArtists(q = '') {
   try {
+    searchLoading.value = true
     const res = await listMusicArtists({
       q: q.trim() || undefined,
       page: 1,
@@ -41,6 +43,8 @@ async function fetchArtists(q = '') {
     }))
   } catch (e) {
     console.error('Failed to fetch artists:', e)
+  } finally {
+    searchLoading.value = false
   }
 }
 
@@ -48,6 +52,16 @@ function selectArtist(name: string) {
   selectedArtistName.value = name
   searchQuery.value = ''
   showDropdown.value = false
+}
+
+function handleSearchFocus() {
+  showDropdown.value = true
+}
+
+function handleSearchBlur() {
+  window.setTimeout(() => {
+    showDropdown.value = false
+  }, 120)
 }
 
 function pickRandom() {
@@ -126,32 +140,48 @@ const shouldShowYear = (index: number) =>
 
       <!-- Artist search -->
       <div class="search-row">
-        <div class="search-wrap">
-          <PInput
-            v-model="searchQuery"
-            @focus="showDropdown = true"
-            @blur="showDropdown = false"
-            placeholder="搜索艺术家..."
-            class="search-input"
-          />
-          <div v-if="showDropdown && dropdownArtists.length > 0" class="search-dropdown">
-            <button
-              v-for="artist in dropdownArtists"
-              :key="artist.id"
-              @mousedown.prevent="selectArtist(artist.name)"
-              class="search-item"
-              :class="{ active: artist.name === selectedArtistName }"
-            >
-              {{ artist.name }}
+        <div class="search-surface">
+          <div class="search-wrap">
+            <div class="search-frame">
+              <div class="search-frame__head">
+                <span class="search-frame__eyebrow">Artist Search</span>
+                <span v-if="selectedArtistName" class="search-frame__context">当前：{{ selectedArtistName }}</span>
+              </div>
+              <PInput
+                v-model="searchQuery"
+                @focus="handleSearchFocus"
+                @blur="handleSearchBlur"
+                placeholder="搜索艺术家..."
+                class="search-input"
+              />
+            </div>
+
+            <div v-if="showDropdown" class="search-dropdown">
+              <p v-if="searchQuery.trim().length < 1" class="search-dropdown__hint">输入艺名，快速筛选时间线。</p>
+              <p v-else-if="searchLoading" class="search-dropdown__hint">搜索中...</p>
+              <p v-else-if="dropdownArtists.length === 0" class="search-dropdown__hint">没有匹配的艺术家</p>
+              <div v-else class="search-dropdown__list">
+                <button
+                  v-for="artist in dropdownArtists"
+                  :key="artist.id"
+                  @mousedown.prevent="selectArtist(artist.name)"
+                  class="search-item"
+                  :class="{ active: artist.name === selectedArtistName }"
+                >
+                  <span class="search-item__label">{{ artist.name }}</span>
+                  <span class="search-item__meta">艺术家</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="search-actions">
+            <button @click="pickRandom" class="search-action search-action--primary">随机</button>
+            <button v-if="selectedArtistName" @click="selectedArtistName = ''" class="search-action">
+              全部
             </button>
           </div>
         </div>
-
-        <button @click="pickRandom" class="btn-random">随机</button>
-
-        <button v-if="selectedArtistName" @click="selectedArtistName = ''" class="btn-all">
-          全部
-        </button>
       </div>
     </div>
 
@@ -250,49 +280,118 @@ const shouldShowYear = (index: number) =>
   margin: 0 0 0.75rem;
 }
 .home-subtitle { color: var(--a-color-muted); max-width: 32rem; font-size: 0.875rem; margin: 0 0 1.5rem; }
-.search-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.search-wrap { position: relative; }
+.search-row { display: flex; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+.search-surface {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: min(100%, 34rem);
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 18rem;
+}
+.search-frame {
+  border: var(--a-border);
+  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  padding: 0.75rem 0.9rem 0.85rem;
+  display: grid;
+  gap: 0.55rem;
+}
+.search-frame__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.search-frame__eyebrow,
+.search-frame__context {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.search-frame__eyebrow {
+  color: var(--a-color-muted-soft);
+}
+.search-frame__context {
+  color: var(--a-color-ink-soft);
+}
 .search-input {
-  border: 1px solid var(--a-color-line);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  outline: none;
-  transition: border-color 0.15s ease;
-  width: 240px;
-  background: var(--a-color-bg);
+  width: 100%;
+  background: transparent;
   color: var(--a-color-fg);
 }
-.search-input:focus { border-color: var(--a-color-fg); }
 .search-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 6px);
   left: 0;
+  right: 0;
   z-index: 50;
-  width: 240px;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line);
-  border-top: none;
-  max-height: 208px;
+  border: var(--a-border);
+  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  max-height: 18rem;
   overflow-y: auto;
+  padding: 0.45rem 0;
+}
+.search-dropdown__hint {
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.search-dropdown__list {
+  display: grid;
 }
 .search-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   text-align: left;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 0.9rem;
   font-size: 0.875rem;
-  font-weight: 500;
-  background: var(--a-color-paper);
+  font-weight: 700;
+  background: transparent;
   color: var(--a-color-fg);
   border: none;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
   cursor: pointer;
   transition: all 0.1s ease;
 }
-.search-item:hover, .search-item.active { background: var(--a-color-ink); color: var(--a-color-paper); }
-.btn-random, .btn-all {
-  border: 1px solid var(--a-color-line);
-  padding: 0.5rem 1rem;
+.search-item:hover,
+.search-item.active {
+  background: color-mix(in srgb, var(--a-color-paper) 58%, var(--a-color-paper-wash) 42%);
+  border-top-color: var(--a-color-line-soft);
+  border-bottom-color: var(--a-color-line-soft);
+}
+.search-item__label {
+  font-weight: 800;
+}
+.search-item__meta {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--a-color-muted-soft);
+}
+.search-actions {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+}
+.search-action {
+  border: 0;
+  border-right: 1px solid var(--a-color-line-soft);
+  padding: 0.8rem 1rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
@@ -302,8 +401,15 @@ const shouldShowYear = (index: number) =>
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.btn-random:hover, .btn-all:hover { background: var(--a-color-paper-wash); }
-.btn-all { border-color: var(--a-color-line-soft); color: var(--a-color-muted); }
+.search-action:last-child {
+  border-right: none;
+}
+.search-action:hover {
+  background: var(--a-color-paper-wash);
+}
+.search-action--primary {
+  font-weight: 800;
+}
 
 /* Timeline */
 .timeline-wrap {
@@ -407,4 +513,22 @@ const shouldShowYear = (index: number) =>
   display: inline-block;
 }
 .btn-play:hover, .btn-detail:hover { background: var(--a-color-ink); color: var(--a-color-paper); border-color: var(--a-color-ink); }
+
+@media (max-width: 720px) {
+  .search-surface {
+    width: 100%;
+  }
+
+  .search-wrap {
+    min-width: 100%;
+  }
+
+  .search-actions {
+    width: 100%;
+  }
+
+  .search-action {
+    flex: 1;
+  }
+}
 </style>

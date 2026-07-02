@@ -1,9 +1,11 @@
 import { useTransitionStore } from '@/stores/transition'
 import { useSheetStore } from '@/stores/sheet'
+import { useRouter } from 'vue-router'
 
 export function useAsyncNavigate() {
   const transition = useTransitionStore()
   const sheet = useSheetStore()
+  const router = useRouter()
 
   /**
    * 跨模块跳转函数
@@ -39,7 +41,17 @@ export function useAsyncNavigate() {
 
       // 5. 等待动画完成并跳转 (匹配 CSS 0.5s 动画)
       await new Promise(r => setTimeout(r, 500))
-      window.location.assign(targetUrl)
+      
+      if (router) {
+        transition.reset()
+        await router.push(targetUrl)
+        transition.triggerEntry()
+        const { useTransitionRelay } = await import('@/composables/useTransitionRelay')
+        const { checkRelay } = useTransitionRelay()
+        checkRelay()
+      } else {
+        window.location.assign(targetUrl)
+      }
 
     } catch (err) {
       console.error('Transition fetch failed:', err)
@@ -71,7 +83,15 @@ export function useAsyncNavigate() {
 
     // 4. 等待动画完成并跳转 (匹配 CSS 0.5s 动画)
     await new Promise(r => setTimeout(r, 500))
-    window.location.assign(targetUrl)
+    
+    if (router) {
+      transition.reset()
+      await router.push(targetUrl)
+      transition.triggerEntry()
+      localStorage.removeItem('atoman_transition_relay_basic')
+    } else {
+      window.location.assign(targetUrl)
+    }
   }
 
   return { navigateWithShutter, navigateModuleWithShutter }

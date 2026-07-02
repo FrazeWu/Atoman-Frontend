@@ -10,6 +10,7 @@ import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApi } from '@/composables/useApi'
 import { useRouter } from 'vue-router'
 import { modulePathUrl } from '@/router/siteUrls'
+import { useAuthStore } from '@/stores/auth'
 import type { Channel, PodcastEpisode, Post, Video } from '@/types'
 
 type BookmarkMode = 'content' | 'container'
@@ -54,8 +55,10 @@ type ContainerBookmarkItem = {
 
 const api = useApi()
 const router = useRouter()
+const authStore = useAuthStore()
 
 const loading = ref(false)
+const errorMessage = ref('')
 const mode = ref<BookmarkMode>('content')
 const contentFilter = ref<ContentFilter>('all')
 const containerFilter = ref<ContainerFilter>('all')
@@ -121,22 +124,39 @@ const emptyText = computed(() => {
 })
 
 const loadBookmarks = async () => {
+  if (!authStore.isAuthenticated || !authStore.token) {
+    contentItems.value = []
+    containerItems.value = []
+    errorMessage.value = ''
+    return
+  }
+
   loading.value = true
+  errorMessage.value = ''
   try {
+    const requestInit = {
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+      },
+    }
     const [articleRes, videoRes, podcastRes, videoChannelRes, podcastShowRes] = await Promise.all([
-      fetch(api.blog.bookmarks),
-      fetch(`${api.url}/videos/bookmarks`),
-      fetch(`${api.url}/podcast/bookmarks`),
-      fetch(`${api.url}/videos/channel-bookmarks`),
-      fetch(`${api.url}/podcast/show-bookmarks`),
+      fetch(api.blog.bookmarks, requestInit),
+      fetch(`${api.url}/videos/bookmarks`, requestInit),
+      fetch(`${api.url}/podcast/bookmarks`, requestInit),
+      fetch(`${api.url}/videos/channel-bookmarks`, requestInit),
+      fetch(`${api.url}/podcast/show-bookmarks`, requestInit),
     ])
 
+    if ([articleRes, videoRes, podcastRes, videoChannelRes, podcastShowRes].some((response) => !response.ok)) {
+      throw new Error('收藏加载失败')
+    }
+
     const [articleData, videoData, podcastData, videoChannelData, podcastShowData] = await Promise.all([
-      articleRes.ok ? articleRes.json() : { data: [] },
-      videoRes.ok ? videoRes.json() : { data: [] },
-      podcastRes.ok ? podcastRes.json() : { data: [] },
-      videoChannelRes.ok ? videoChannelRes.json() : { data: [] },
-      podcastShowRes.ok ? podcastShowRes.json() : { data: [] },
+      articleRes.json(),
+      videoRes.json(),
+      podcastRes.json(),
+      videoChannelRes.json(),
+      podcastShowRes.json(),
     ])
 
     const articleBookmarks = ((articleData.data || []) as ArticleBookmark[])
@@ -162,6 +182,11 @@ const loadBookmarks = async () => {
       .map((bookmark) => ({ id: bookmark.id, kind: 'podcast_show' as const, channel: bookmark.channel! }))
 
     containerItems.value = [...videoChannelBookmarks, ...podcastShowBookmarks]
+  } catch (error) {
+    console.error('Failed to load media bookmarks:', error)
+    contentItems.value = []
+    containerItems.value = []
+    errorMessage.value = '收藏加载失败'
   } finally {
     loading.value = false
   }
@@ -172,7 +197,7 @@ onMounted(loadBookmarks)
 
 <template>
   <div class="a-page-xl media-bookmarks-view">
-    <PPageHeader title="收藏" sub="查看你在全站范围内保存的内容，不限定当前频道。" accent />
+    <PPageHeader title="收藏" accent />
 
     <section class="media-bookmarks-toolbar">
       <PSegmentedControl v-model="mode" :options="modeOptions" />
@@ -190,10 +215,11 @@ onMounted(loadBookmarks)
 
     <div v-if="loading" class="a-skeleton media-bookmarks-skeleton" />
 
+    <p v-else-if="errorMessage" class="media-bookmarks-error">{{ errorMessage }}</p>
+
     <PEmpty
       v-else-if="mode === 'content' ? visibleContentItems.length === 0 : visibleContainerItems.length === 0"
       :text="emptyText"
-      sub="这里只展示站内真实收藏数据。"
     />
 
     <div v-else-if="mode === 'content'" class="media-bookmarks-content">
@@ -206,7 +232,6 @@ onMounted(loadBookmarks)
         >
           <template #visual>
             <div class="media-bookmarks-visual">
-              <PBadge type="internal" fill>内部</PBadge>
               <PBadge type="blog">文章</PBadge>
               <img
                 v-if="item.post.cover_url"
@@ -242,7 +267,6 @@ onMounted(loadBookmarks)
         >
           <template #visual>
             <div class="media-bookmarks-visual">
-              <PBadge type="internal" fill>内部</PBadge>
               <PBadge type="podcast">播客</PBadge>
             </div>
           </template>
@@ -265,7 +289,6 @@ onMounted(loadBookmarks)
       >
         <template #visual>
           <div class="media-bookmarks-visual">
-            <PBadge type="internal" fill>内部</PBadge>
             <PBadge :type="item.kind === 'video_channel' ? 'video' : 'podcast'">
               {{ item.kind === 'video_channel' ? '视频频道' : '播客节目' }}
             </PBadge>
@@ -295,6 +318,11 @@ onMounted(loadBookmarks)
 
 .media-bookmarks-skeleton {
   height: 8rem;
+}
+
+.media-bookmarks-error {
+  margin: 0 0 1rem;
+  color: #b42318;
 }
 
 .media-bookmarks-content,

@@ -42,12 +42,54 @@
           </button>
           <span class="nav-btn" @click="player.playNext()">下一首</span>
           <span class="skip-btn" @click="player.skip(5)">+5S</span>
+          
+          <button
+            v-if="player.currentSong"
+            type="button"
+            class="player-fav-btn"
+            :class="{ 'is-active': favoriteSongIds.has(String(player.currentSong.id)) }"
+            title="添加到最爱"
+            @click="toggleTrackFavorite(String(player.currentSong.id))"
+          >
+            <Heart :size="16" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" />
+          </button>
+
+          <PDropdown v-if="player.currentSong" class="player-add-dropdown" position="right">
+            <template #trigger>
+              <button class="player-add-btn" type="button" title="添加到歌单">
+                <Plus :size="16" />
+              </button>
+            </template>
+            <div class="track-add-menu">
+              <div class="track-add-menu-header">添加到歌单</div>
+              <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
+              <button
+                v-for="p in playlists"
+                :key="p.id"
+                type="button"
+                class="track-add-menu-item"
+                @click="addTrackToPlaylist(String(p.id), String(player.currentSong.id))"
+              >
+                {{ p.name }}
+              </button>
+            </div>
+          </PDropdown>
         </div>
         <div class="progress-container">
           <span class="time-stamp">{{ formatTime(player.currentTime) }}</span>
-          <div class="progress-bar" @click="seek">
-            <div class="progress-fill" :style="{ width: progressPct + '%' }" />
-          </div>
+          <input
+            type="range"
+            min="0"
+            :max="player.duration || 100"
+            step="0.1"
+            :value="player.currentTime"
+            @input="handleProgressInput"
+            class="progress-slider"
+            aria-label="播放进度"
+            :style="{
+              '--progress-pct': progressPct + '%'
+            }"
+          />
           <span class="time-stamp">{{ formatTime(player.duration) }}</span>
         </div>
       </div>
@@ -69,7 +111,6 @@
 
         <div class="volume-container">
           <div class="volume-control">
-            <span class="vol-pct">{{ Math.round(player.volume * 100) }}%</span>
             <input
               type="range"
               min="0"
@@ -87,7 +128,6 @@
               <Volume v-else-if="player.volume > 0" :size="20" />
               <VolumeX v-else :size="20" />
             </span>
-            <span class="vol-info-pct">{{ Math.round(player.volume * 100) }}%</span>
           </div>
         </div>
 
@@ -129,7 +169,7 @@
              :key="idx"
              class="queue-item"
              :class="{ active: player.currentSong?.id === song.id }"
-             @click="player.playSong(song)"
+             @click="player.playQueuedSong(song)"
            >
              <span class="q-idx">{{ (idx + 1).toString().padStart(2, '0') }}.</span>
              <span class="q-title">{{ song.title }}</span>
@@ -140,6 +180,7 @@
       </div>
     </div>
   </Transition>
+  <PToast v-model="toastVisible" :message="toastMessage" type="success" />
 </template>
 
 <script setup lang="ts">
@@ -152,8 +193,19 @@ import {
   Volume2, 
   Volume1, 
   Volume, 
-  VolumeX 
+  VolumeX,
+  Heart,
+  Plus
 } from 'lucide-vue-next'
+import PDropdown from '@/components/ui/PDropdown.vue'
+import PToast from '@/components/ui/PToast.vue'
+import {
+  listMusicPlaylists,
+  addMusicPlaylistSong,
+  removeMusicPlaylistSong,
+  createMusicPlaylist,
+  getMusicPlaylist
+} from '@/api/musicV1'
 
 const player = usePlayerStore()
 const playerInnerRef = ref<HTMLElement | null>(null)
@@ -186,23 +238,101 @@ const coverFallback = computed(() => {
 
 const updateMetaCollapse = () => {
   const playerInner = playerInnerRef.value
-  const playerInfo = playerInfoRef.value
-  const playerControls = playerControlsRef.value
-  if (!playerInner || !playerInfo || !playerControls) return
+  if (!playerInner) return
+  isMetaCollapsed.value = playerInner.getBoundingClientRect().width <= 760
+}
 
-  const infoRect = playerInfo.getBoundingClientRect()
-  const controlsRect = playerControls.getBoundingClientRect()
-  const innerRect = playerInner.getBoundingClientRect()
-  const nextCollapsed =
-    infoRect.right + META_COLLAPSE_GAP >= controlsRect.left ||
-    innerRect.width <= 760
+const playlists = ref<any[]>([])
+const playlistsLoaded = ref(false)
+const favoriteSongIds = ref<Set<string>>(new Set())
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
-  isMetaCollapsed.value = nextCollapsed
-
-  if (nextCollapsed) {
-    return
+async function loadPlaylists() {
+  try {
+    const res = await listMusicPlaylists()
+    playlists.value = res.data || []
+    playlistsLoaded.value = true
+  } catch (err) {
+    console.error('Failed to load playlists in AudioPlayer:', err)
   }
 }
+
+async function loadFavorites() {
+  try {
+    const res = await listMusicPlaylists()
+    const list = res.data || []
+    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    if (fav) {
+      const favPlaylistDetail = await getMusicPlaylist(String(fav.id))
+      const ids = (favPlaylistDetail.songs || []).map((s) => String(s.id))
+      favoriteSongIds.value = new Set(ids)
+    } else {
+      favoriteSongIds.value = new Set()
+    }
+  } catch (err) {
+    console.error('Failed to load favorites in AudioPlayer:', err)
+  }
+}
+
+async function toggleTrackFavorite(songId: string) {
+  try {
+    const res = await listMusicPlaylists()
+    const list = res.data || []
+    let fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    if (!fav) {
+      fav = await createMusicPlaylist({ name: '最爱' })
+      await loadPlaylists()
+    }
+    const playlistId = String(fav.id)
+    const isFav = favoriteSongIds.value.has(songId)
+    if (isFav) {
+      await removeMusicPlaylistSong(playlistId, songId)
+      favoriteSongIds.value.delete(songId)
+      toastMessage.value = '已从最爱中移除'
+    } else {
+      await addMusicPlaylistSong(playlistId, songId)
+      favoriteSongIds.value.add(songId)
+      toastMessage.value = '已添加到最爱'
+    }
+    toastVisible.value = true
+  } catch (err) {
+    console.error('Failed to toggle favorite:', err)
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  }
+}
+
+async function addTrackToPlaylist(playlistId: string, songId: string) {
+  try {
+    await addMusicPlaylistSong(playlistId, songId)
+    toastMessage.value = '已成功添加到歌单'
+    toastVisible.value = true
+    const res = await listMusicPlaylists()
+    const list = res.data || []
+    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    if (fav && String(fav.id) === playlistId) {
+      favoriteSongIds.value.add(songId)
+    }
+  } catch (err) {
+    console.error('Failed to add song to playlist:', err)
+    toastMessage.value = '添加失败'
+    toastVisible.value = true
+  }
+}
+
+watch(
+  () => player.currentSong?.id,
+  async (newId) => {
+    if (newId) {
+      if (!playlistsLoaded.value) {
+        await loadPlaylists()
+      }
+      await loadFavorites()
+    }
+  },
+  { immediate: true }
+)
 
 const formatTime = (s: number) => {
   if (!s || isNaN(s)) return '0:00'
@@ -215,6 +345,11 @@ const seek = (e: MouseEvent) => {
   const bar = e.currentTarget as HTMLElement
   const pct = e.offsetX / bar.offsetWidth
   player.seek(pct * player.duration)
+}
+
+const handleProgressInput = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  player.seek(parseFloat(target.value))
 }
 
 watch(
@@ -324,6 +459,7 @@ onBeforeUnmount(() => {
 
 .player-meta {
   min-width: 0;
+  max-width: 360px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -463,31 +599,72 @@ onBeforeUnmount(() => {
   color: var(--a-color-muted);
   min-width: 32px;
 }
-.progress-bar {
+.progress-slider {
   flex: 1;
-  height: 1px;
-  background: var(--a-color-line-soft);
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  outline: none;
   cursor: pointer;
-  position: relative;
 }
-.progress-fill {
-  height: 100%;
-  background: var(--a-color-accent-confirm);
-  position: relative;
+.progress-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    var(--a-color-ink) 0%,
+    var(--a-color-ink) var(--progress-pct, 0%),
+    var(--a-color-line-soft) var(--progress-pct, 0%),
+    var(--a-color-line-soft) 100%
+  );
+  transition: height 0.1s ease;
 }
-.progress-fill::after {
-  content: '';
-  position: absolute;
-  right: -3px;
-  top: -3px;
-  width: 7px;
-  height: 7px;
-  background: var(--a-color-accent-confirm);
+.progress-slider::-moz-range-track {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    var(--a-color-ink) 0%,
+    var(--a-color-ink) var(--progress-pct, 0%),
+    var(--a-color-line-soft) var(--progress-pct, 0%),
+    var(--a-color-line-soft) 100%
+  );
+}
+.progress-slider:hover::-webkit-slider-runnable-track {
+  height: 4px;
+}
+.progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
+  background: var(--a-color-ink);
+  margin-top: -4px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.1s ease, margin-top 0.1s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-.progress-bar:hover .progress-fill::after { opacity: 1; }
+.progress-slider:hover::-webkit-slider-thumb {
+  opacity: 1;
+  margin-top: -3px;
+}
+.progress-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--a-color-ink);
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.progress-slider:hover::-moz-range-thumb {
+  opacity: 1;
+}
 
 /* Right Section */
 .player-features {
@@ -539,23 +716,23 @@ onBeforeUnmount(() => {
 }
 .volume-control {
   position: absolute;
-  bottom: calc(100% + 15px);
+  bottom: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 0;
+  transform: translateX(-50%) translateY(8px);
+  width: 44px;
+  height: 112px;
   opacity: 0;
+  visibility: hidden;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--a-color-bg);
+  background: var(--a-color-paper);
   border: 1px solid var(--a-color-line-soft);
-  padding: 12px 0;
-  gap: 10px;
+  padding: 16px 0;
   z-index: 100;
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: 4px 4px 0px var(--a-color-ink);
   border-radius: 0px;
 }
 .volume-control::after {
@@ -565,29 +742,16 @@ onBeforeUnmount(() => {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--a-color-bg);
+  border-top-color: var(--a-color-paper);
 }
 .volume-container:hover .volume-control {
-  height: 140px;
   opacity: 1;
-}
-.vol-pct {
-  font-family: var(--a-font-mono);
-  font-size: 10px;
-  font-weight: 900;
-  color: var(--a-color-ink);
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 .vol-trigger {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-.vol-info-pct {
-  font-family: var(--a-font-mono);
-  font-size: 9px;
-  font-weight: 800;
-  color: var(--a-color-muted);
-  min-width: 28px;
 }
 .vol-icon {
   cursor: pointer;
@@ -611,7 +775,7 @@ onBeforeUnmount(() => {
   appearance: none;
   width: 10px;
   height: 10px;
-  background: var(--a-color-accent-confirm);
+  background: var(--a-color-ink);
   border-radius: 50%;
 }
 
@@ -745,4 +909,92 @@ onBeforeUnmount(() => {
 
 .slide-right-enter-active, .slide-right-leave-active { transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1); }
 .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); }
+
+/* Player Center Favorite & Add button styles */
+.player-fav-btn {
+  background: transparent;
+  border: 0;
+  color: var(--a-color-ink-soft);
+  cursor: pointer;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  margin-left: 0.5rem;
+}
+.player-fav-btn.is-active {
+  color: #e05e5e !important;
+}
+.player-fav-btn:hover {
+  background-color: var(--a-color-paper-wash);
+}
+.player-add-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.player-add-dropdown :deep(.p-dropdown-panel) {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+.player-add-btn {
+  background: transparent;
+  border: 0;
+  color: var(--a-color-ink-soft);
+  cursor: pointer;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.player-add-btn:hover {
+  background-color: var(--a-color-paper-wash);
+}
+
+.track-add-menu {
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line-soft);
+  box-shadow: var(--a-shadow-dropdown);
+  padding: 0.4rem 0;
+  min-width: 130px;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+.track-add-menu-header {
+  font-family: var(--a-font-meta);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--a-color-ink-soft);
+  padding: 0.3rem 0.8rem;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  margin-bottom: 0.25rem;
+}
+.track-add-menu-empty {
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  color: var(--a-color-muted-soft);
+  padding: 0.4rem 0.8rem;
+}
+.track-add-menu-item {
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+.track-add-menu-item:hover {
+  background-color: var(--a-color-paper-wash);
+}
 </style>

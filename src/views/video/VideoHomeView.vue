@@ -37,7 +37,7 @@ watch(sort, fetchVideos)
 
 <template>
   <div class="vh-wrap">
-    <PPageHeader title="视频" accent sub="查看当前频道下的视频内容。" mb="1.5rem" />
+    <PPageHeader title="视频" accent mb="1.5rem" />
 
     <!-- Sticky filter bar (YouTube style) -->
     <div class="vh-bar">

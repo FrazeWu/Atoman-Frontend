@@ -66,7 +66,7 @@ const stepMap: Record<OnboardingStep, StepContent> = {
     description: '你可以把 Atoman 理解成一个自托管内容中枢，不同模块负责不同内容形态。',
     items: [
       { title: '内容', description: '写文章、发播客、传视频，并在频道内统一管理内容。' },
-      { title: '订阅', description: '订阅 RSS、内部频道和合集，把更新集中阅读。' },
+      { title: '订阅', description: '订阅 RSS、频道和合集，把更新集中阅读。' },
       { title: '论坛 / 辩论', description: '发帖讨论，或者围绕一个议题正反展开。' },
       { title: '音乐 / 时间线 / Orbit', description: '整理音乐档案、时间线和更偏社交的内容关系。' },
     ],

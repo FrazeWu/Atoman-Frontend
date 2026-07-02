@@ -2,7 +2,6 @@
   <div class="a-page music-edit-album">
     <PPageHeader
       title="编辑专辑"
-      sub="使用 wiki 方式提交专辑与曲目修改。"
       accent
     />
 

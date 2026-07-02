@@ -96,12 +96,12 @@
                 <div style="display:flex;gap:.75rem;align-items:center">
                   <PClip
                     :active="starredIds.has(post.id)"
-                    :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+                    :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
                     @click="toggleStar(post.id)"
                   />
                   <PClip
                     :active="readingListIds.has(post.id)"
-                    :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+                    :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
                     @click="toggleReadingList(post.id)"
                   />
                   <PLink :href="`/posts/post/${post.id}`" label="查看" />

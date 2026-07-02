@@ -8,14 +8,12 @@ import { moduleRooms } from '@/config/moduleRooms';
   <div class="a-page-xl video-subscriptions-view">
     <PPageHeader
       title="订阅"
-      sub="查看你关注的频道更新"
       accent
     />
     
     <div style="margin-top: 1.5rem">
       <PEmpty
-        title="订阅功能即将上线"
-        description="我们将在这里展示你关注的视频动态"
+        title="尚未开放"
       />
     </div>
   </div>

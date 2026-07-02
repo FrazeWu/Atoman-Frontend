@@ -44,4 +44,34 @@ describe('SearchSurface.vue', () => {
     await wrapper.setProps({ loading: false })
     expect(wrapper.text()).toContain('输入名称开始搜索')
   })
+
+  it('does not render empty dropdown shell by default', async () => {
+    const wrapper = mount(SearchSurface, {
+      props: {
+        query: '',
+        open: true,
+        eyebrow: 'Artist Search',
+        status: '浏览全部',
+        placeholder: '搜索艺术家...',
+      },
+    })
+
+    expect(wrapper.find('[data-testid="search-surface-dropdown"]').exists()).toBe(false)
+  })
+
+  it('uses compact state before opening', async () => {
+    const wrapper = mount(SearchSurface, {
+      props: {
+        query: '',
+        open: false,
+        compact: true,
+        eyebrow: 'Artist Search',
+        status: '浏览全部',
+      },
+    })
+
+    expect(wrapper.find('.search-frame').classes()).toContain('is-compact')
+    await wrapper.setProps({ open: true, hint: '输入名称开始搜索' })
+    expect(wrapper.find('.search-frame').classes()).not.toContain('is-compact')
+  })
 })

@@ -85,6 +85,7 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.text()).not.toContain('Channel 1')
 
     await wrapper.findAll('.segmented-option').find((node) => node.text() === '频道')?.trigger('click')
+    await flushPromises()
 
     expect(wrapper.text()).toContain('Channel 1')
   })
@@ -193,7 +194,7 @@ describe('FeedRecommendedView', () => {
     })
 
     await flushPromises()
-    const card = wrapper.find('.recommend-card')
+    const card = wrapper.find('.p-entry')
     await card.trigger('click')
     expect(routerPush).toHaveBeenCalledWith('/feed/item/art-1')
   })
@@ -433,7 +434,65 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
 
-    const articleCard = wrapper.get('.recommend-card--article')
-    expect(articleCard.attributes('style') || '').toContain('grid-template-columns: minmax(0, 1fr)')
+    const entry = wrapper.find('.p-entry')
+    expect(entry.exists()).toBe(true)
+  })
+
+  it('renders channel recommendation heat labels and avatar fallback', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({
+          data: [
+            {
+              id: 'chan-visual-1',
+              title: '少数派',
+              summary: '有图片的频道',
+              image_url: 'https://example.com/channel-cover.jpg',
+              target_path: '/feed/channel/chan-visual-1',
+              score_label: '热度 94',
+            },
+            {
+              id: 'chan-visual-2',
+              title: 'Next Blog',
+              summary: '没有图片时显示头像回退',
+              target_path: '/feed/channel/chan-visual-2',
+              score_label: '热度 81',
+            },
+          ],
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const channelTab = wrapper.findAll('.segmented-option').find((node) => node.text() === '频道')
+    expect(channelTab).toBeDefined()
+    await channelTab?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('热度 94')
+    expect(wrapper.text()).toContain('热度 81')
+
+    const channelCards = wrapper.findAll('[data-test="channel-card"]')
+    expect(channelCards).toHaveLength(2)
+
+    expect(channelCards[0].find('.feed-source-card__avatar-image').attributes('src')).toBe('https://example.com/channel-cover.jpg')
+    expect(channelCards[1].get('[data-test="feed-source-avatar"]').text()).toBe('N')
   })
 })

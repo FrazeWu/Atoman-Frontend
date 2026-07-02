@@ -45,7 +45,7 @@ function episodeCover(ep: PodcastEpisode) {
 
 <template>
   <div class="a-page-md">
-    <PPageHeader title="播客" accent sub="查看当前频道下的播客内容。">
+    <PPageHeader title="播客" accent>
       <template #action>
         <PPress v-if="authStore.isAuthenticated && canPublishPodcast" @click="router.push('/podcasts/editor')" label="+ 发布节目" />
       </template>
@@ -66,7 +66,6 @@ function episodeCover(ep: PodcastEpisode) {
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="internal" fill>内部</PBadge>
             <PBadge type="podcast">播客</PBadge>
             <img
               v-if="episodeCover(ep)"

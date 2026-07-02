@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
 import { beforeEach, vi } from 'vitest'
 
+if (typeof import.meta.env !== 'undefined') {
+  import.meta.env.VITE_API_URL = ''
+}
+
 const storage = new Map<string, string>()
 const createUnmockedFetch = () => vi.fn(async (input: RequestInfo | URL) => {
 	throw new Error(`未 mock fetch: ${String(input)}`)

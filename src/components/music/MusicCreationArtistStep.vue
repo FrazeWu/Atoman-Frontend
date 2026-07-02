@@ -14,6 +14,11 @@ const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
 const avatarUploading = ref(false)
 const avatarErrorMessage = ref('')
 const stageNameErrorMessage = ref('')
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
 
 async function onAvatarChange(event: Event) {
   if (!artistDraft.value) return
@@ -63,7 +68,7 @@ function validateStageNames() {
 function goNext() {
   if (!artistDraft.value) return
   if (!validateStageNames()) return
-  setMusicCreationStep('albumImport')
+  setMusicCreationStep('albumDetails')
 }
 </script>
 
@@ -72,62 +77,78 @@ function goNext() {
     <div class="artist-step-shell">
       <header class="artist-hero">
         <div class="artist-hero__meta">
-          <p class="hero-kicker">音乐档案提交</p>
-          <p class="hero-step">第 1 步 / 艺术家资料</p>
+          <p class="hero-step">第 1 步 / 艺术家信息</p>
         </div>
         <h4>新建艺术家</h4>
-        <p class="hero-copy">先提交艺术家资料，再继续补充首张专辑。这些字段会作为正式档案内容进入音乐库。</p>
       </header>
 
       <section class="artist-card artist-card--primary">
         <div class="card-header">
           <div>
             <p class="card-kicker">基本信息</p>
-            <p class="card-copy">先确认这个人是谁，以及在站内如何被展示。</p>
           </div>
         </div>
 
-        <div class="avatar-panel">
-          <PAvatar
-            :src="artistDraft.avatarUrl || undefined"
-            :name="artistDraft.legalName || artistDraft.stageNames[0]?.name || 'Artist'"
-            size="lg"
+        <div class="avatar-upload-section">
+          <!-- Left side: Clickable Avatar Upload -->
+          <div 
+            class="avatar-uploader" 
+            :class="{ 'is-uploading': avatarUploading }"
+            title="点击添加头像"
+            @click="triggerFileInput"
+          >
+            <PAvatar
+              :src="artistDraft.avatarUrl || undefined"
+              :name="artistDraft.legalName || artistDraft.stageNames[0]?.name || 'Artist'"
+              size="xl"
+            />
+            <div class="avatar-uploader-hover">
+              <span v-if="avatarUploading">上传中...</span>
+              <span v-else>{{ artistDraft.avatarUrl ? '修改头像' : '添加头像' }}</span>
+            </div>
+          </div>
+          <!-- Hidden input for file selection -->
+          <input
+            ref="fileInputRef"
+            data-testid="artist-avatar-input"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            :disabled="avatarUploading"
+            @click.stop
+            @change="onAvatarChange"
           />
 
-          <div class="avatar-panel__controls">
-            <div class="field-group">
-              <span class="field-label">头像</span>
-              <PInput
-                data-testid="artist-avatar-input"
-                type="file"
-                accept="image/*"
-                :disabled="avatarUploading"
-                @change="onAvatarChange"
-              />
-              <p v-if="avatarErrorMessage" class="state-line state-line--error">{{ avatarErrorMessage }}</p>
-              <p v-else-if="avatarUploading" class="state-line">正在上传头像...</p>
-              <p v-else-if="artistDraft.avatarUrl" class="state-line">已选择头像，提交时会携带该资源。</p>
-              <p v-else class="state-line">支持图片上传，使用现有音乐封面资源通道。</p>
-            </div>
-
+          <!-- Right side: Basic Fields -->
+          <div class="avatar-upload-fields">
             <div class="field-group">
               <PInput
                 v-model="artistDraft.legalName"
                 data-testid="artist-legal-name-input"
                 type="text"
                 placeholder="例如 Kanye Omari West"
-                label="名字（本名）"
+                label="本名"
+              />
+            </div>
+            <div v-if="artistDraft.stageNames.length" class="field-group">
+              <PInput
+                v-model="artistDraft.stageNames[0].name"
+                data-testid="artist-stage-name-input-0"
+                type="text"
+                label="主艺名"
+                placeholder="例如 Kanye West / Ye"
+                @update:model-value="stageNameErrorMessage = ''"
               />
             </div>
           </div>
         </div>
+        <div v-if="avatarErrorMessage" class="state-line state-line--error" style="margin-top: 0.5rem">{{ avatarErrorMessage }}</div>
       </section>
 
       <section class="artist-card artist-card--soft">
         <div class="card-header">
           <div>
-            <p class="card-kicker">艺名与沿革</p>
-            <p class="card-copy">第一个艺名作为当前展示名，其余艺名按使用时期记录。</p>
+            <p class="card-kicker">艺名</p>
           </div>
           <button
             data-testid="artist-add-stage-name-button"
@@ -135,43 +156,47 @@ function goNext() {
             class="paper-action paper-action--inline"
             @click="addStageName"
           >
-            + 添加另一个艺名
+            添加艺名
           </button>
         </div>
 
         <div class="field-stack">
-          <div
+          <template
             v-for="(stageName, index) in artistDraft.stageNames"
             :key="stageName.id"
-            class="stage-name-card"
           >
-            <PInput
-              v-model="stageName.name"
-              :data-testid="`artist-stage-name-input-${index}`"
-              type="text"
-              :label="index === 0 ? '主艺名' : `追加艺名 ${index}`"
-              placeholder="例如 Kanye West / Ye"
-              @update:model-value="stageNameErrorMessage = ''"
-            />
-            <div v-if="index > 0" class="stage-name-dates">
+            <div
+              v-if="index > 0"
+              class="stage-name-card"
+            >
               <PInput
-                v-model="stageName.startDateText"
-                :data-testid="`artist-stage-start-input-${index}`"
+                v-model="stageName.name"
+                :data-testid="`artist-stage-name-input-${index}`"
                 type="text"
-                label="开始时间"
-                placeholder="例如 2018"
+                label="艺名"
+                placeholder="例如 Kanye West / Ye"
                 @update:model-value="stageNameErrorMessage = ''"
               />
-              <PInput
-                v-model="stageName.endDateText"
-                :data-testid="`artist-stage-end-input-${index}`"
-                type="text"
-                label="结束时间"
-                placeholder="例如 2021 / 至今"
-                @update:model-value="stageNameErrorMessage = ''"
-              />
+              <div class="stage-name-dates">
+                <PInput
+                  v-model="stageName.startDateText"
+                  :data-testid="`artist-stage-start-input-${index}`"
+                  type="text"
+                  label="开始时间"
+                  placeholder="例如 2018"
+                  @update:model-value="stageNameErrorMessage = ''"
+                />
+                <PInput
+                  v-model="stageName.endDateText"
+                  :data-testid="`artist-stage-end-input-${index}`"
+                  type="text"
+                  label="结束时间"
+                  placeholder="例如 2021 / 至今"
+                  @update:model-value="stageNameErrorMessage = ''"
+                />
+              </div>
             </div>
-          </div>
+          </template>
 
           <p
             v-if="stageNameErrorMessage"
@@ -186,8 +211,7 @@ function goNext() {
       <section class="artist-card">
         <div class="card-header">
           <div>
-            <p class="card-kicker">背景资料</p>
-            <p class="card-copy">这部分更像投稿说明，给审核和后续读者使用。</p>
+            <p class="card-kicker">补充信息</p>
           </div>
         </div>
 
@@ -240,8 +264,8 @@ function goNext() {
               v-model="artistDraft.source"
               data-testid="artist-source-input"
               :rows="3"
-              placeholder="记录资料来源"
-              label="信息来源"
+              placeholder="填写来源"
+              label="来源"
             />
           </div>
         </div>
@@ -255,7 +279,7 @@ function goNext() {
           :disabled="avatarUploading"
           @click="goNext"
         >
-          下一步：继续补专辑
+          下一步
         </button>
       </div>
     </div>
@@ -276,7 +300,7 @@ function goNext() {
 }
 
 .artist-hero {
-  display: grid;
+  display: none !important;
   gap: 0.7rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--a-color-line-soft);
@@ -340,13 +364,54 @@ function goNext() {
   flex-wrap: wrap;
 }
 
-.avatar-panel {
+.avatar-upload-section {
   display: flex;
-  gap: 1.1rem;
-  align-items: flex-start;
+  gap: 1.5rem;
+  align-items: center;
 }
 
-.avatar-panel__controls {
+.avatar-uploader {
+  position: relative;
+  cursor: pointer;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 2px dashed var(--a-color-line-soft);
+  padding: 4px;
+  transition: border-color 0.2s ease, transform 0.1s ease;
+}
+
+.avatar-uploader:hover {
+  border-color: var(--a-color-ink);
+  transform: scale(1.02);
+}
+
+.avatar-uploader:active {
+  transform: scale(0.98);
+}
+
+.avatar-uploader-hover {
+  position: absolute;
+  inset: 4px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.avatar-uploader:hover .avatar-uploader-hover,
+.avatar-uploader.is-uploading .avatar-uploader-hover {
+  opacity: 1;
+}
+
+.avatar-upload-fields {
   flex: 1;
   display: grid;
   gap: 1rem;
@@ -374,7 +439,7 @@ function goNext() {
 
 :deep(.p-input:focus),
 :deep(.p-textarea:focus) {
-  border-bottom-color: var(--a-color-accent-confirm);
+  border-bottom-color: var(--a-color-ink);
 }
 
 .state-line {
@@ -389,11 +454,7 @@ function goNext() {
 }
 
 .step-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  align-items: center;
-  padding-top: 0.25rem;
+  display: none !important;
 }
 
 .paper-action,
@@ -429,7 +490,7 @@ function goNext() {
     grid-template-columns: 1fr;
   }
 
-  .avatar-panel {
+  .avatar-upload-section {
     flex-direction: column;
   }
 }

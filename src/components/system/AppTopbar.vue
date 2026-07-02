@@ -87,13 +87,11 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   background: var(--a-color-bg);
 }
 .topbar-inner {
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 2rem 0 0;
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 0;
   width: 100%;
 }
 .topbar-inner--auth {
@@ -109,6 +107,10 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   text-decoration: none;
   color: var(--a-color-fg);
   flex-shrink: 0;
+  /* 与侧边栏等宽，使 nav 左侧与内容区对齐 */
+  min-width: var(--a-sidebar-width, 0px);
+  padding: 0 2rem;
+  box-sizing: border-box;
 }
 .logo-box {
   width: 32px;
@@ -197,8 +199,13 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
 
 @media (max-width: 720px) {
   .topbar-inner {
+    padding: 0 1rem 0 0;
+    gap: 0;
+  }
+
+  .brand-link {
+    min-width: unset;
     padding: 0 1rem;
-    gap: 1rem;
   }
 
   .nav {

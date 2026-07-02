@@ -63,7 +63,7 @@
           <template #actions>
             <PClip
               active
-              label="退藏"
+              label="取消收藏"
               @click="unstar(item.id)"
             />
             
@@ -247,7 +247,7 @@ const getExternalBadge = (item: StarredFeedItem) => {
     if (item.enclosure_type?.startsWith('audio/')) return '播客'
     if (item.enclosure_type?.startsWith('video/')) return '视频'
   }
-  return '博客'
+  return '文章'
 }
 
 const getFeedSourceHomeUrl = (item: StarredFeedItem) => {

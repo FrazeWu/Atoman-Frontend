@@ -51,7 +51,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     publicPathSegment: 'posts',
     name: '文章',
     helper: '内容视图',
-    homepageSub: '查看当前频道下的文章内容。',
+    homepageSub: '',
   },
   forum: {
     key: 'forum',
@@ -83,7 +83,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     publicPathSegment: 'podcasts',
     name: '播客',
     helper: '内容视图',
-    homepageSub: '查看当前频道下的播客内容。',
+    homepageSub: '',
   },
   video: {
     key: 'video',
@@ -91,7 +91,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     publicPathSegment: 'videos',
     name: '视频',
     helper: '内容视图',
-    homepageSub: '查看当前频道下的视频内容。',
+    homepageSub: '',
   },
 }
 

@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <PPageHeader title="视频管理" sub="管理你的视频频道、合集与视频">
+    <PPageHeader title="视频管理">
       <template #action>
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
@@ -17,7 +17,7 @@
     </div>
 
     <!-- Empty state -->
-    <PEmpty v-else-if="channels.length === 0" title="还没有创建频道" description="先创建一个频道，再用合集整理视频">
+    <PEmpty v-else-if="channels.length === 0" title="暂无频道">
       <template #action>
         <PPress label="创建频道" @click="showCreateChannelModal" />
       </template>
@@ -70,8 +70,8 @@
               <div class="a-skeleton" style="height:3rem" />
             </div>
             <div v-else-if="videos.length === 0" style="padding:4rem 0;text-align:center">
-              <p class="a-muted">该合集下还没有视频</p>
-              <PPress label="立即上传" variant="secondary" size="sm" @click="router.push(`/videos/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+              <p class="a-muted">暂无视频</p>
+              <PPress label="上传视频" variant="secondary" size="sm" @click="router.push(`/videos/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
             </div>
             <div v-else class="video-list">
               <div v-for="video in videos" :key="video.id" class="video-item">

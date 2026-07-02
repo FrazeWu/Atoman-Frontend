@@ -1,6 +1,6 @@
 <template>
   <div class="a-page-xl blog-subscriptions-page">
-    <PPageHeader title="订阅" sub="查看你关注的创作者与频道更新" accent>
+    <PPageHeader title="订阅" accent>
       <template #action>
         <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
         <PButton v-else-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
@@ -13,13 +13,12 @@
     </div>
 
     <div v-else-if="!authStore.isAuthenticated">
-      <PEmpty title="请先登录" description="登录后即可查看你关注的创作者动态" />
+      <PEmpty title="请先登录" description="登录后查看订阅内容" />
     </div>
 
     <PEmpty
       v-else-if="!posts.length"
-      title="暂无订阅更新"
-      description="去探索页看看大家都在写什么吧"
+      title="暂无更新"
     />
 
     <div v-else>
@@ -33,8 +32,7 @@
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="internal" fill>内部</PBadge>
-            <PBadge type="blog">博客</PBadge>
+            <PBadge type="blog">文章</PBadge>
             <img
               v-if="post.cover_url"
               :src="post.cover_url"
@@ -65,12 +63,12 @@
             </div>
             <PClip
               :active="starredIds.has(post.id)"
-              :label="starredIds.has(post.id) ? '退藏' : '收藏'"
+              :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
               @click="toggleStar(post.id)"
             />
             <PClip
               :active="readingListIds.has(post.id)"
-              :label="readingListIds.has(post.id) ? '移出队列' : '稍后阅读'"
+              :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
               @click="toggleReadingList(post.id)"
             />
           </div>
@@ -145,7 +143,7 @@ const shortcutHints = [
   { key: 'L', label: '聚焦内容区' },
   { key: 'J / K', label: '上下切换项目' },
   { key: 'Enter', label: '打开当前项' },
-  { key: 'S', label: '收藏/退藏' },
+  { key: 'S', label: '收藏/取消收藏' },
   { key: 'L', label: '稍后阅读' }
 ]
 

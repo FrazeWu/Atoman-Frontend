@@ -52,8 +52,8 @@ defineEmits(['click'])
 }
 
 .sheet-tab:hover {
-  background-color: var(--a-color-accent-destructive);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-accent-destructive);
+  background-color: #f4ece1;
+  color: #6b4f3a;
+  border-color: #6b4f3a;
 }
 </style>

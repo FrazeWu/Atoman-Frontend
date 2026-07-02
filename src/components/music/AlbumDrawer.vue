@@ -5,13 +5,22 @@ import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import PDropdown from '@/components/ui/PDropdown.vue'
+import PToast from '@/components/ui/PToast.vue'
+import { Plus, Play, Heart } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   createAlbumBookmark,
   deleteAlbumBookmark,
   getMusicAlbum,
+  getMusicPlaylist,
   listAlbumBookmarks,
+  listMusicPlaylists,
+  addMusicPlaylistSong,
+  removeMusicPlaylistSong,
+  createMusicPlaylist,
   type MusicAlbumListItem,
+  type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
@@ -26,6 +35,12 @@ const errorMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
+
+const playlists = ref<MusicPlaylistSummary[]>([])
+const playlistsLoaded = ref(false)
+const favoriteSongIds = ref<Set<string>>(new Set())
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => {
@@ -86,6 +101,81 @@ function handleCoverError() {
   isCoverBroken.value = true
 }
 
+async function loadPlaylists() {
+  try {
+    const res = await listMusicPlaylists()
+    playlists.value = res.data
+    playlistsLoaded.value = true
+  } catch (err) {
+    console.error('Failed to load playlists in AlbumDrawer:', err)
+  }
+}
+
+async function loadFavorites() {
+  try {
+    const res = await listMusicPlaylists()
+    const list = res.data || []
+    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    if (fav) {
+      const favPlaylistDetail = await getMusicPlaylist(String(fav.id))
+      const ids = (favPlaylistDetail.songs || []).map((s) => String(s.id))
+      favoriteSongIds.value = new Set(ids)
+    } else {
+      favoriteSongIds.value = new Set()
+    }
+  } catch (err) {
+    console.error('Failed to load favorites in AlbumDrawer:', err)
+  }
+}
+
+async function toggleTrackFavorite(songId: string) {
+  try {
+    const res = await listMusicPlaylists()
+    const list = res.data || []
+    let fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    if (!fav) {
+      fav = await createMusicPlaylist({ name: '最爱' })
+      // Refresh sidebar/playlists
+      await loadPlaylists()
+    }
+    const playlistId = String(fav.id)
+    const isFav = favoriteSongIds.value.has(songId)
+    if (isFav) {
+      await removeMusicPlaylistSong(playlistId, songId)
+      favoriteSongIds.value.delete(songId)
+      toastMessage.value = '已从最爱中移除'
+    } else {
+      await addMusicPlaylistSong(playlistId, songId)
+      favoriteSongIds.value.add(songId)
+      toastMessage.value = '已添加到最爱'
+    }
+    toastVisible.value = true
+  } catch (err) {
+    console.error('Failed to toggle favorite:', err)
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  }
+}
+
+async function addTrackToPlaylist(playlistId: string, songId: string) {
+  try {
+    await addMusicPlaylistSong(playlistId, songId)
+    toastMessage.value = '已成功添加到歌单'
+    toastVisible.value = true
+    // If the playlist happens to be the favorites playlist, update favoriteSongIds too
+    const res = await listMusicPlaylists()
+    const list = res.data || []
+    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    if (fav && String(fav.id) === playlistId) {
+      favoriteSongIds.value.add(songId)
+    }
+  } catch (err) {
+    console.error('Failed to add song to playlist:', err)
+    toastMessage.value = '添加失败'
+    toastVisible.value = true
+  }
+}
+
 async function loadAlbum(albumId: string | null) {
   if (!albumId) {
     album.value = null
@@ -103,6 +193,11 @@ async function loadAlbum(albumId: string | null) {
     album.value = albumResponse
     isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
     isCoverBroken.value = false
+
+    await Promise.all([
+      playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
+      loadFavorites(),
+    ])
   } catch (error) {
     console.error('Failed to fetch album:', error)
     errorMessage.value = '专辑信息加载失败'
@@ -165,7 +260,7 @@ watch(
           <span v-else>COVER</span>
         </div>
         <div class="album-info">
-          <div class="album-type">{{ album?.album_type || 'Album' }}</div>
+          <div class="album-type">{{ album?.album_type || '专辑' }}</div>
           <h2 class="album-title">{{ album?.title || `Album ${state.albumId}` }}</h2>
           <div class="meta-tags">
             <span class="artist-name">
@@ -218,14 +313,14 @@ watch(
           dot
           @click="openNestedAction('revise')"
         >
-          修订
+          修改
         </PButton>
         <PButton
           variant="secondary"
           dot
           @click="openNestedAction('history')"
         >
-          历史
+          版本
         </PButton>
       </div>
 
@@ -242,21 +337,51 @@ watch(
               @click="playTrack(track)"
               aria-label="播放"
             >
-              <span class="track-num">{{ String(track.track_number || index + 1).padStart(2, '0') }}</span>
-              <svg class="track-play-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
+              <span class="track-num">{{ index + 1 }}</span>
+              <Play class="track-play-icon" :size="14" fill="currentColor" />
             </button>
             <div class="track-title">{{ track.title }}</div>
           </div>
           <div class="track-meta">
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
+
+            <button
+              type="button"
+              class="track-fav-btn"
+              :class="{ 'is-active': favoriteSongIds.has(String(track.id)) }"
+              title="添加到最爱"
+              @click="toggleTrackFavorite(String(track.id))"
+            >
+              <Heart :size="12" :fill="favoriteSongIds.has(String(track.id)) ? 'currentColor' : 'none'" />
+            </button>
+
+            <PDropdown class="track-add-dropdown" position="right">
+              <template #trigger>
+                <button class="track-add-btn" type="button" title="添加到歌单">
+                  <Plus :size="12" />
+                </button>
+              </template>
+              <div class="track-add-menu">
+                <div class="track-add-menu-header">添加到歌单</div>
+                <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
+                <button
+                  v-for="p in playlists"
+                  :key="p.id"
+                  type="button"
+                  class="track-add-menu-item"
+                  @click="addTrackToPlaylist(String(p.id), track.id)"
+                >
+                  {{ p.name }}
+                </button>
+              </div>
+            </PDropdown>
           </div>
         </div>
       </div>
     </div>
     <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion')" :count="discussionCount" />
+    <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </PSheet>
 </template>
 
@@ -486,22 +611,18 @@ watch(
   opacity: 0.4;
 }
 .track-play-icon {
-  position: absolute;
-  opacity: 0;
-  transition: opacity 0.1s ease;
+  display: none;
 }
 .track-num {
-  position: absolute;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
   color: var(--a-color-muted-soft);
-  transition: opacity 0.1s ease;
 }
 .track:hover .track-play-btn:not(:disabled) .track-play-icon {
-  opacity: 1;
+  display: block;
 }
 .track:hover .track-play-btn:not(:disabled) .track-num {
-  opacity: 0;
+  display: none;
 }
 .track-title {
   color: var(--a-color-ink);
@@ -527,4 +648,92 @@ watch(
 .track-time { font-family: var(--a-font-meta); color: var(--a-color-ink-soft); font-size: 0.8rem; }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
 .state-line--error { color: var(--a-color-accent-destructive); }
+
+/* Track Playlist Dropdown styles */
+.track-add-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+.track-fav-btn {
+  background: transparent;
+  border: 0;
+  color: var(--a-color-ink-soft);
+  opacity: 0;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+.track-fav-btn.is-active {
+  opacity: 1 !important;
+  color: #e05e5e !important;
+}
+.track-add-btn {
+  background: transparent;
+  border: 0;
+  color: var(--a-color-ink-soft);
+  opacity: 0;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.track:hover .track-add-btn,
+.track:hover .track-fav-btn {
+  opacity: 0.7;
+}
+.track-add-btn:hover,
+.track-fav-btn:hover {
+  opacity: 1 !important;
+  background-color: var(--a-color-paper-wash);
+}
+.track-add-menu {
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line-soft);
+  box-shadow: var(--a-shadow-dropdown);
+  padding: 0.4rem 0;
+  min-width: 130px;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+.track-add-menu-header {
+  font-family: var(--a-font-meta);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--a-color-ink-soft);
+  padding: 0.3rem 0.8rem;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  margin-bottom: 0.25rem;
+}
+.track-add-menu-empty {
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  color: var(--a-color-muted-soft);
+  padding: 0.4rem 0.8rem;
+}
+.track-add-menu-item {
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+.track-add-menu-item:hover {
+  background-color: var(--a-color-paper-wash);
+}
 </style>

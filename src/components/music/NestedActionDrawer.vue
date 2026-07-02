@@ -36,19 +36,19 @@ const sheetIndex = computed(() => {
 })
 
 const titleMap: Record<string, string> = {
-  revise: '修订专辑',
-  revise_artist: '修订艺术家',
+  revise: '修改专辑',
+  revise_artist: '修改艺术家',
   history: '版本历史',
-  discussion: '社区讨论'
+  discussion: '讨论'
 }
 
 const currentAction = computed(() => state.value.nestedAction)
 const displayTitle = computed(() => titleMap[state.value.nestedAction || ''] || 'Action')
 const subtitleMap: Record<string, string> = {
-  revise: '补充专辑条目，并保持来源信息清晰。',
-  revise_artist: '以纸面编辑方式整理艺术家资料。',
-  history: '查看修订记录、差异摘要，并按版本回滚。',
-  discussion: '查看专辑讨论，并直接发起回复。',
+  revise: '补充专辑信息。',
+  revise_artist: '',
+  history: '查看各个版本的修改内容，并恢复到需要的版本。',
+  discussion: '',
 }
 
 const artistDraft = reactive({
@@ -194,7 +194,7 @@ async function handleRevert(version: number) {
     refreshAlbum()
     await loadAlbumHistory(state.value.albumId)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '回滚失败，请稍后重试'
+    errorMessage.value = error instanceof Error ? error.message : '恢复失败，请稍后重试'
   } finally {
     submitting.value = false
   }
@@ -297,7 +297,7 @@ async function viewRevisionDiff(revision: MusicRevisionSummary) {
       ? await getAlbumRevision(state.value.albumId, revision.version_number - 1)
       : null
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '加载版本差异失败'
+    errorMessage.value = error instanceof Error ? error.message : '加载修改内容失败'
   } finally {
     diffLoading.value = false
   }
@@ -412,7 +412,7 @@ async function submitEdit() {
       }))
     }
 
-    successMessage.value = '已保存到音乐档案库。'
+    successMessage.value = '已保存'
     closeNestedAction()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '提交失败，请稍后重试'
@@ -432,7 +432,7 @@ async function submitEdit() {
     <div class="drawer-header">
       <p class="eyebrow">Music Wiki</p>
       <h3 class="title">{{ displayTitle }}</h3>
-      <p class="subtitle">{{ subtitleMap[currentAction || ''] || '编辑当前条目。' }}</p>
+      <p v-if="subtitleMap[currentAction || '']" class="subtitle">{{ subtitleMap[currentAction || ''] }}</p>
     </div>
 
     <div class="drawer-body">
@@ -494,7 +494,7 @@ async function submitEdit() {
             <span class="section-dot" aria-hidden="true" />
             <div>
               <p class="section-kicker">Archive</p>
-              <h4>档案信息</h4>
+              <h4>基本信息</h4>
             </div>
           </div>
 
@@ -524,7 +524,7 @@ async function submitEdit() {
             <span class="section-dot" aria-hidden="true" />
             <div>
               <p class="section-kicker">Source</p>
-              <h4>来源信息</h4>
+              <h4>来源</h4>
             </div>
           </div>
 
@@ -562,7 +562,7 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <button class="paper-submit" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交 wiki 编辑' }}</button>
+        <button class="paper-submit" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
       </form>
 
       <form v-else-if="isAlbumForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
@@ -601,7 +601,7 @@ async function submitEdit() {
             <span class="section-dot" aria-hidden="true" />
             <div>
               <p class="section-kicker">Archive</p>
-              <h4>档案信息</h4>
+              <h4>基本信息</h4>
             </div>
           </div>
 
@@ -630,7 +630,7 @@ async function submitEdit() {
             <span class="section-dot" aria-hidden="true" />
             <div>
               <p class="section-kicker">Source</p>
-              <h4>来源信息</h4>
+              <h4>来源</h4>
             </div>
           </div>
 
@@ -668,13 +668,13 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <button class="paper-submit" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交 wiki 编辑' }}</button>
+        <button class="paper-submit" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
       </form>
 
       <!-- History placeholder -->
       <div v-else-if="currentAction === 'history'" class="history-panel">
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
-        <p v-else-if="revisionLoading" class="history-state">正在加载历史...</p>
+        <p v-else-if="revisionLoading" class="history-state">正在加载版本...</p>
         <p v-else-if="!revisions.length" class="history-state">暂无版本历史。</p>
 
         <div v-for="revision in revisions" :key="revision.id" class="history-item">
@@ -695,7 +695,7 @@ async function submitEdit() {
               :disabled="diffLoading"
               @click="viewRevisionDiff(revision)"
             >
-              查看差异
+              查看修改
             </button>
             <button
               class="paper-submit history-revert"
@@ -704,7 +704,7 @@ async function submitEdit() {
               :disabled="submitting || revision.is_current"
               @click="handleRevert(revision.version_number)"
             >
-              {{ revision.is_current ? '当前版本' : '回滚到此版本' }}
+              {{ revision.is_current ? '当前版本' : '恢复到此版本' }}
             </button>
           </div>
         </div>
@@ -716,12 +716,12 @@ async function submitEdit() {
             <span class="section-dot" aria-hidden="true" />
             <div>
               <p class="section-kicker">Diff</p>
-              <h4>v{{ selectedRevision.version_number }} 差异摘要</h4>
+              <h4>v{{ selectedRevision.version_number }} 修改内容</h4>
             </div>
           </div>
-          <p v-if="diffLoading" class="history-state">正在加载差异...</p>
+          <p v-if="diffLoading" class="history-state">正在加载修改内容...</p>
           <div v-else class="history-diff-list">
-            <p v-if="!summarizeRevisionDiff(selectedRevision, previousRevision).length" class="history-state">这个版本没有可识别的结构变化摘要。</p>
+            <p v-if="!summarizeRevisionDiff(selectedRevision, previousRevision).length" class="history-state">这个版本暂无修改说明。</p>
             <div v-for="line in summarizeRevisionDiff(selectedRevision, previousRevision)" :key="line" class="history-diff-line">
               {{ line }}
             </div>
@@ -735,16 +735,16 @@ async function submitEdit() {
             v-model="discussionDraft"
             data-test="discussion-create-input"
             :rows="4"
-            label="发起讨论"
+            label="添加讨论"
             placeholder="写下你对这张专辑的看法"
           />
-          <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发布讨论</button>
+          <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发布</button>
         </form>
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
         <p v-if="discussionLoading" class="history-state">正在加载讨论...</p>
-        <p v-else-if="!discussions.length" class="history-state">还没有讨论，来发第一条。</p>
+        <p v-else-if="!discussions.length" class="history-state">还没有讨论</p>
 
         <div v-for="discussion in discussions" :key="discussion.id" class="discussion-thread">
           <div class="discussion-card">

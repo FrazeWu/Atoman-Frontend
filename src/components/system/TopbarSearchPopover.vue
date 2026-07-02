@@ -1,44 +1,4 @@
 <template>
-  <div
-    v-if="open"
-    ref="rootRef"
-    class="topbar-search-popover"
-    :class="popoverClasses"
-    :style="popoverStyle"
-    role="dialog"
-    aria-label="全站搜索"
-    @click.stop
-  >
-    <SearchSurface
-      v-if="mode === 'preview'"
-      v-model:query="localQuery"
-      :open="true"
-      eyebrow="全站搜索"
-      :status="search.loading.value ? '搜索中...' : localQuery.trim().length >= 2 ? '预览结果' : '输入至少 2 个字'"
-      placeholder="搜索..."
-      dropdown-test-id="topbar-search-dropdown"
-      :loading="search.loading.value"
-      :hint="localQuery.trim().length < 2 ? '输入至少 2 个字开始搜索，回车展开纸张结果' : ''"
-      :empty="localQuery.trim().length >= 2 && search.sections.value.length === 0 ? '没有找到匹配内容' : ''"
-      @update:query="onInput"
-      @focus="noop"
-      @blur="noop"
-    >
-      <template #results>
-        <div class="topbar-search-preview__sections">
-          <TopbarSearchSection
-            v-for="section in search.sections.value"
-            :key="section.type"
-            :section="section"
-            :active-id="search.activeItem.value?.id || ''"
-            @open-item="openHref"
-            @open-more="openMore"
-          />
-        </div>
-      </template>
-    </SearchSurface>
-  </div>
-
   <Teleport to="body" :disabled="isTest">
     <transition name="topbar-search-backdrop">
       <div
@@ -84,7 +44,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import SearchSurface from '@/components/search/SearchSurface.vue'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 
@@ -116,20 +75,11 @@ const paperStyle = computed(() => ({
   maxHeight: `${paperMaxHeight.value}px`,
 }))
 
-const popoverStyle = computed(() => ({
-  width: 'min(22rem, calc(100vw - 1.25rem))',
-}))
-
 const sheetStyle = computed(() => ({
   top: `${sheetTop.value}px`,
   right: `${sheetRight.value}px`,
   width: 'min(34rem, calc(36vw + 4rem), calc(100vw - 1.25rem))',
   maxHeight: `${paperMaxHeight.value}px`,
-}))
-
-const popoverClasses = computed(() => ({
-  'is-preview': mode.value === 'preview',
-  'is-expanded': mode.value === 'expanded',
 }))
 
 const updatePaperMaxHeight = () => {
@@ -167,8 +117,6 @@ const openMore = async (href: string) => {
   emit('close')
   await router.push(href)
 }
-
-const noop = () => {}
 
 const expandPaper = async () => {
   mode.value = 'expanded'

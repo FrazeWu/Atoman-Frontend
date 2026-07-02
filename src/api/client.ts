@@ -23,6 +23,16 @@ const multipartHeaders = {
   Accept: 'application/json',
 }
 
+function withAuthHeaders(headers: Record<string, string>) {
+  const storage = typeof globalThis !== 'undefined' ? globalThis.localStorage : undefined
+  const token = storage ? storage.getItem('token') : null
+  if (!token) return headers
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`,
+  }
+}
+
 async function parseJson(response: Response): Promise<unknown> {
   const text = await response.text()
   if (!text) return {}
@@ -62,14 +72,14 @@ async function unwrapResponse<T>(response: Response): Promise<T> {
 export async function apiGet<T>(url: string): Promise<T> {
   return unwrapResponse<T>(await fetch(url, {
     credentials: 'include',
-    headers: { Accept: 'application/json' },
+    headers: withAuthHeaders({ Accept: 'application/json' }),
   }))
 }
 
 export async function apiGetEnvelope<T, M = Record<string, unknown>>(url: string): Promise<ApiSuccess<T, M>> {
   return unwrapResponseEnvelope<T, M>(await fetch(url, {
     credentials: 'include',
-    headers: { Accept: 'application/json' },
+    headers: withAuthHeaders({ Accept: 'application/json' }),
   }))
 }
 
@@ -77,7 +87,7 @@ export async function apiGetRaw<T>(url: string, init: RequestInit = {}): Promise
   return unwrapResponseEnvelope<T>(await fetch(url, {
     ...init,
     credentials: 'include',
-    headers: { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) },
+    headers: withAuthHeaders({ Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) }),
   })) as Promise<T>
 }
 
@@ -85,7 +95,7 @@ export async function apiPostJson<T>(url: string, body: unknown): Promise<T> {
   return unwrapResponse<T>(await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: jsonHeaders,
+    headers: withAuthHeaders(jsonHeaders),
     body: JSON.stringify(body),
   }))
 }
@@ -94,7 +104,7 @@ export async function apiPatchJson<T>(url: string, body: unknown): Promise<T> {
   return unwrapResponse<T>(await fetch(url, {
     method: 'PATCH',
     credentials: 'include',
-    headers: jsonHeaders,
+    headers: withAuthHeaders(jsonHeaders),
     body: JSON.stringify(body),
   }))
 }
@@ -103,7 +113,7 @@ export async function apiDeleteJson<T>(url: string, body?: unknown): Promise<T> 
   return unwrapResponse<T>(await fetch(url, {
     method: 'DELETE',
     credentials: 'include',
-    headers: jsonHeaders,
+    headers: withAuthHeaders(jsonHeaders),
     body: body === undefined ? undefined : JSON.stringify(body),
   }))
 }
@@ -112,7 +122,7 @@ export async function apiPostMultipart<T>(url: string, body: FormData): Promise<
   return unwrapResponse<T>(await fetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: multipartHeaders,
+    headers: withAuthHeaders(multipartHeaders),
     body,
   }))
 }

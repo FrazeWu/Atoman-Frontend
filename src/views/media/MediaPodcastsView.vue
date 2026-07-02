@@ -52,7 +52,7 @@ const episodePath = (episodeId: string) => modulePathUrl('media', `/podcasts/epi
 
 <template>
   <div class="a-page-xl media-explore-page">
-    <PPageHeader title="播客" sub="探索本网站发布的全部播客单集。" accent>
+    <PPageHeader title="播客" accent>
       <template #action>
         <div class="media-explore-actions">
           <PButton :to="modulePathUrl('media', '/create')" outline size="sm">返回创作</PButton>
@@ -71,7 +71,6 @@ const episodePath = (episodeId: string) => modulePathUrl('media', `/podcasts/epi
       >
         <template #visual>
           <div class="media-podcast-visual">
-            <PBadge type="internal" fill>内部</PBadge>
             <PBadge type="podcast">播客</PBadge>
             <img
               v-if="episodeCover(episode)"

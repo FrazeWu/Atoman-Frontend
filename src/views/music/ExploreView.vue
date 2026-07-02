@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PTab from '@/components/ui/PTab.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import {
   listMusicAlbums,
@@ -31,17 +31,6 @@ const modeOptions: Array<{ label: string; value: MusicRecommendationMode }> = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
-
-const modeDescription = computed(() => {
-  switch (mode.value) {
-    case 'featured':
-      return '从长期质量和条目完整度出发，挑出更值得反复回看的专辑。'
-    case 'discover':
-      return '把低曝光但值得被发现的专辑翻出来，像在旧货架里重新找唱片。'
-    default:
-      return '优先看近期热度更高的专辑，适合先浏览当前最活跃的音乐条目。'
-  }
-})
 
 async function fetchRecommendations() {
   loading.value = true
@@ -72,8 +61,8 @@ async function fetchSearchResults() {
   searchLoading.value = true
   try {
     const [albumResponse, artistResponse] = await Promise.all([
-      listMusicAlbums({ q: query, page: 1, page_size: 4, sort: 'hot' }),
-      listMusicArtists({ q: query, page: 1, page_size: 4 }),
+      listMusicAlbums({ q: query, page: 1, page_size: 10, sort: 'hot' }),
+      listMusicArtists({ q: query, page: 1, page_size: 10 }),
     ])
     if (requestId !== activeSearchRequestId) return
     searchAlbums.value = albumResponse.data
@@ -90,10 +79,6 @@ async function fetchSearchResults() {
   }
 }
 
-function changeMode(nextMode: MusicRecommendationMode) {
-  if (nextMode === mode.value) return
-  mode.value = nextMode
-}
 
 function openAlbum(item: MusicRecommendationItem) {
   router.push(item.target_path)
@@ -141,77 +126,74 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   <section class="music-explore-view">
     <header class="page-header">
       <PPageHeader
-        kicker="MUSIC INDEX / RECOMMEND"
         title="探索"
-        :sub="modeDescription"
         mb="0"
       >
         <template #action>
           <div class="mode-tabs" aria-label="音乐推荐模式">
-            <PTab
-              v-for="option in modeOptions"
-              :key="option.value"
-              :label="option.label"
-              :active="mode === option.value"
-              @click="changeMode(option.value)"
+            <PSegmentedControl
+              v-model="mode"
+              :options="modeOptions"
             />
           </div>
         </template>
       </PPageHeader>
     </header>
 
-    <SearchSurface
-      v-model:query="searchQuery"
-      :open="searchOpen"
-      eyebrow="Explore Search"
-      :status="searchLoading ? '搜索中...' : hasSearchQuery ? '快速跳转' : '搜索专辑或艺术家'"
-      placeholder="搜索专辑或艺术家..."
-      input-test-id="music-explore-search-input"
-      dropdown-test-id="music-explore-search-dropdown"
-      :loading="searchLoading"
-      :hint="!hasSearchQuery ? '输入名称，从下拉中直接进入专辑或艺术家。' : ''"
-      :empty="hasSearchQuery && !hasSearchResults ? '没有匹配结果' : ''"
-      @focus="handleSearchFocus"
-      @blur="handleSearchBlur"
-    >
-      <template #results>
-        <div class="search-dropdown__sections">
-          <section v-if="searchAlbums.length" class="search-group">
-            <p class="search-group__title">专辑</p>
-            <button
-              v-for="album in searchAlbums"
-              :key="`album-${album.id}`"
-              type="button"
-              class="search-result"
-              data-testid="music-explore-album-result"
-              @mousedown.prevent="openAlbumResult(album)"
-            >
-              <span class="search-result__title">{{ album.title }}</span>
-              <span class="search-result__meta">{{ album.artists?.map((artist) => artist.name).join(' / ') || '专辑' }}</span>
-            </button>
-          </section>
+    <div class="search-shell" :class="{ 'is-open': searchOpen }">
+      <SearchSurface
+        v-model:query="searchQuery"
+        :open="searchOpen"
+        compact
+        eyebrow="Explore Search"
+        :status="searchLoading ? '搜索中...' : '搜索专辑或艺术家'"
+        placeholder="搜索专辑或艺术家..."
+        input-test-id="music-explore-search-input"
+        dropdown-test-id="music-explore-search-dropdown"
+        :loading="searchLoading"
+        :empty="hasSearchQuery && !hasSearchResults ? '没有匹配结果' : ''"
+        @focus="handleSearchFocus"
+        @blur="handleSearchBlur"
+      >
+        <template #results>
+          <div class="search-dropdown__sections">
+            <section v-if="searchAlbums.length" class="search-group">
+              <p class="search-group__title">专辑</p>
+              <button
+                v-for="album in searchAlbums"
+                :key="`album-${album.id}`"
+                type="button"
+                class="search-result"
+                data-testid="music-explore-album-result"
+                @mousedown.prevent="openAlbumResult(album)"
+              >
+                <span class="search-result__title">{{ album.title }}</span>
+                <span class="search-result__meta">{{ album.artists?.map((artist) => artist.name).join(' / ') || '专辑' }}</span>
+              </button>
+            </section>
 
-          <section v-if="searchArtists.length" class="search-group">
-            <p class="search-group__title">艺术家</p>
-            <button
-              v-for="artist in searchArtists"
-              :key="`artist-${artist.id}`"
-              type="button"
-              class="search-result"
-              data-testid="music-explore-artist-result"
-              @mousedown.prevent="openArtistResult(artist)"
-            >
-              <span class="search-result__title">{{ artist.name }}</span>
-              <span class="search-result__meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
-            </button>
-          </section>
-        </div>
-      </template>
-    </SearchSurface>
+            <section v-if="searchArtists.length" class="search-group">
+              <p class="search-group__title">艺术家</p>
+              <button
+                v-for="artist in searchArtists"
+                :key="`artist-${artist.id}`"
+                type="button"
+                class="search-result"
+                data-testid="music-explore-artist-result"
+                @mousedown.prevent="openArtistResult(artist)"
+              >
+                <span class="search-result__title">{{ artist.name }}</span>
+                <span class="search-result__meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
+              </button>
+            </section>
+          </div>
+        </template>
+      </SearchSurface>
+    </div>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="state-line">正在加载推荐专辑...</p>
-    <p v-else-if="!albums.length" class="state-line">当前还没有可展示的推荐专辑。</p>
+    <p v-else-if="loading" class="state-line">正在加载...</p>
+    <p v-else-if="!albums.length" class="state-line">暂无推荐专辑</p>
 
     <div v-else class="index-grid" aria-label="推荐专辑列表">
       <RouterLink
@@ -243,7 +225,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           </div>
           <div class="music-text">
             <h3 class="music-title a-clamp-1">{{ album.title }}</h3>
-            <p class="music-summary a-clamp-2">{{ album.summary || '从音乐档案里继续展开，查看这张专辑的条目与相关讨论。' }}</p>
+            <p v-if="album.summary" class="music-summary a-clamp-2">{{ album.summary }}</p>
           </div>
         </div>
       </RouterLink>
@@ -262,9 +244,24 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   max-width: 900px;
 }
 
+.search-shell {
+  position: relative;
+  max-width: 28rem;
+  min-height: 112px;
+}
+
+.search-shell.is-open {
+  z-index: 15;
+}
+
+.search-shell.is-open :deep(.search-frame) {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40rem;
+}
+
 .search-dropdown {
   max-width: 34rem;
-  margin-top: -1.8rem;
 }
 
 .search-dropdown__sections {
@@ -293,7 +290,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 0.8rem 0.95rem;
+  padding: 1rem 1.05rem;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -304,13 +301,13 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .search-result__title {
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   font-weight: 800;
   color: var(--a-color-fg);
 }
 
 .search-result__meta {
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   color: var(--a-color-muted-soft);
 }
 
@@ -332,8 +329,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
 .index-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 1rem;
 }
 
 .music-card {
@@ -438,5 +435,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   color: var(--a-color-muted-soft);
   line-height: 1.4;
   font-size: 0.775rem;
+}
+
+@media (max-width: 720px) {
+  .search-shell,
+  .search-shell.is-open {
+    max-width: 100%;
+  }
+
+  .search-shell.is-open :deep(.search-frame) {
+    width: 100%;
+  }
 }
 </style>

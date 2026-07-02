@@ -4,22 +4,29 @@
     role="button"
     tabindex="0"
     class="feed-source-card"
+    :class="{
+      'is-compact': compact,
+      'is-recommend': variant === 'recommend',
+    }"
     @click="emit('select', source)"
     @keydown.enter.prevent="emit('select', source)"
     @keydown.space.prevent="emit('select', source)"
   >
     <div class="feed-source-card__avatar" data-test="feed-source-avatar" :style="{ '--feed-source-color': color }">
-      {{ avatarLabel }}
+      <img v-if="imageUrl" :src="imageUrl" :alt="source.title" class="feed-source-card__avatar-image" />
+      <template v-else>{{ avatarLabel }}</template>
     </div>
 
     <div class="feed-source-card__main">
       <div class="feed-source-card__topline">
         <div class="feed-source-card__copy">
+          <p v-if="eyebrow" class="feed-source-card__eyebrow" data-test="feed-source-eyebrow">{{ eyebrow }}</p>
           <h3 data-test="feed-source-title">{{ source.title }}</h3>
-          <p class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
+          <p v-if="displayUrl" class="feed-source-card__url" data-test="feed-source-url">{{ displayUrl }}</p>
         </div>
 
         <button
+          v-if="showSubscribe"
           type="button"
           class="feed-source-card__subscribe"
           :class="{ 'is-subscribed': source.subscribed }"
@@ -31,17 +38,21 @@
         </button>
       </div>
 
-      <p class="feed-source-card__summary">
+      <p v-if="summaryText" class="feed-source-card__summary">
+        {{ summaryText }}
+      </p>
+
+      <p v-else class="feed-source-card__summary">
         {{ source.subscriptionCount }} 位订阅 · {{ source.recentItemCount }} 篇近期内容 · {{ formattedLastUpdated }}
       </p>
 
-      <ul v-if="source.recentItems.length" class="feed-source-card__previews">
+      <ul v-if="showPreviews && source.recentItems.length" class="feed-source-card__previews">
         <li v-for="item in source.recentItems.slice(0, 3)" :key="item.id" data-test="feed-source-preview-title">
           {{ item.title }}
         </li>
       </ul>
 
-      <div class="feed-source-card__meta">
+      <div v-if="showMeta" class="feed-source-card__meta">
         <span data-test="feed-source-count">{{ compactCount(source.subscriptionCount) }} 订阅</span>
         <span>{{ source.recentItemCount }} 近期</span>
         <span>{{ formattedLastUpdated }}</span>
@@ -59,13 +70,30 @@ import { computed, useAttrs } from 'vue'
 
 import type { FeedExploreSource } from '@/types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   source: FeedExploreSource
   color: string
   avatarLabel: string
   displayUrl: string
   subscribeBusy?: boolean
-}>()
+  imageUrl?: string
+  eyebrow?: string
+  summaryText?: string
+  showSubscribe?: boolean
+  showPreviews?: boolean
+  showMeta?: boolean
+  compact?: boolean
+  variant?: 'default' | 'recommend'
+}>(), {
+  imageUrl: undefined,
+  eyebrow: '',
+  summaryText: '',
+  showSubscribe: true,
+  showPreviews: true,
+  showMeta: true,
+  compact: false,
+  variant: 'default',
+})
 
 const emit = defineEmits<{
   (e: 'select', source: FeedExploreSource): void
@@ -139,6 +167,13 @@ const compactCount = (value: number) => {
   font-size: 1.35rem;
   font-weight: 900;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 22%, white);
+  overflow: hidden;
+}
+
+.feed-source-card__avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .feed-source-card__main {
@@ -156,6 +191,15 @@ const compactCount = (value: number) => {
 
 .feed-source-card__copy {
   min-width: 0;
+}
+
+.feed-source-card__eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
 
 .feed-source-card__copy h3 {
@@ -241,6 +285,31 @@ const compactCount = (value: number) => {
   align-items: center;
   gap: 1.5rem;
   color: var(--a-color-muted-soft);
+}
+
+.feed-source-card.is-compact {
+  padding: 1rem 1.1rem;
+}
+
+.feed-source-card.is-compact .feed-source-card__main {
+  gap: 0.4rem;
+}
+
+.feed-source-card.is-compact .feed-source-card__copy h3 {
+  font-size: 0.98rem;
+}
+
+.feed-source-card.is-recommend {
+  border-radius: 0;
+  background: var(--a-color-paper);
+  box-shadow: none;
+}
+
+.feed-source-card.is-recommend .feed-source-card__avatar {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-ink-muted);
 }
 
 @media (max-width: 640px) {

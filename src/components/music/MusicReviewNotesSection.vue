@@ -2,13 +2,11 @@
   <PSurface class="music-review-notes" tone="soft" :layer="0">
     <div class="music-review-notes__header">
       <div>
-        <h3 class="music-review-notes__title">编辑说明</h3>
-        <p class="music-review-notes__hint">说明本次变更内容与审核理由。</p>
+        <h3 class="music-review-notes__title">说明</h3>
       </div>
     </div>
 
-    <PTextarea :model-value="notes.editNote" label="编辑摘要" placeholder="简要说明本次改动" :rows="3" @update:model-value="(value) => updateNotes('editNote', value)" />
-    <PTextarea :model-value="notes.reviewNote" label="审核理由" placeholder="为什么这次提交应被接受" :rows="4" @update:model-value="(value) => updateNotes('reviewNote', value)" />
+    <PTextarea :model-value="notes.editNote" label="修改说明" placeholder="填写这次修改的内容" :rows="4" @update:model-value="(value) => updateNotes('editNote', value)" />
   </PSurface>
 </template>
 

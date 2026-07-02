@@ -5,7 +5,6 @@ import { createTestingPinia } from '@pinia/testing'
 import HomeView from '@/views/music/HomeView.vue'
 
 const mocks = vi.hoisted(() => ({
-  listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
@@ -14,7 +13,6 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/musicV1', () => ({
-  listMusicAlbums: mocks.listMusicAlbums,
   listMusicArtists: mocks.listMusicArtists,
 }))
 
@@ -38,15 +36,10 @@ vi.mock('vue-router', () => ({
 describe('Music HomeView query sync', () => {
   beforeEach(() => {
     mocks.routeQuery = { q: 'blur' }
-    mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
-    mocks.listMusicAlbums.mockResolvedValue({
-      data: [],
-      meta: { page: 1, page_size: 48, total: 0, has_more: false },
-    })
     mocks.listMusicArtists.mockResolvedValue({
       data: [],
-      meta: { page: 1, page_size: 12, total: 0, has_more: false },
+      meta: { page: 1, page_size: 48, total: 0, has_more: false },
     })
   })
 
@@ -67,7 +60,7 @@ describe('Music HomeView query sync', () => {
 
     await flushPromises()
 
-    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 48, sort: 'hot' })
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 48 })
     expect((wrapper.find('[data-testid="music-search-input"]').element as HTMLInputElement).value).toBe('blur')
   })
 })

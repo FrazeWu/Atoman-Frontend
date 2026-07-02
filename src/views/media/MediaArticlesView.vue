@@ -56,7 +56,7 @@ onMounted(loadArticles)
   <div class="a-page-xl media-explore-page">
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
 
-    <PPageHeader title="文章" sub="探索本网站发布的全部文章。" accent>
+    <PPageHeader title="文章" accent>
       <template #action>
         <div class="media-explore-actions">
           <PTab label="最新" active />
@@ -77,7 +77,6 @@ onMounted(loadArticles)
       >
         <template #visual>
           <div class="media-article-visual">
-            <PBadge type="internal" fill>内部</PBadge>
             <PBadge type="blog">文章</PBadge>
             <img
               v-if="post.cover_url"

@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/musicV1', () => ({
   listMusicArtists: mocks.listMusicArtists,
+  listArtistBookmarks: vi.fn().mockResolvedValue({ data: [] }),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -88,6 +89,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
           AlbumDrawer: true,
           NestedActionDrawer: true,
           MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
         },
       },
     })
@@ -112,6 +114,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
           AlbumDrawer: true,
           NestedActionDrawer: true,
           MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
         },
       },
     })
@@ -143,7 +146,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
             bio: 'Search bio',
           },
         ],
-        meta: { page: 1, page_size: 8, total: 1, has_more: false },
+        meta: { page: 1, page_size: 20, total: 1, has_more: false },
       })
 
     const pinia = createTestingPinia({ createSpy: vi.fn })
@@ -156,6 +159,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
           AlbumDrawer: true,
           NestedActionDrawer: true,
           MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
         },
       },
     })
@@ -167,7 +171,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="music-search-dropdown"]').exists()).toBe(true)
-    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'kanye', page: 1, page_size: 8 })
+    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'kanye', page: 1, page_size: 20 })
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Default Artist')
     expect(wrapper.text()).toContain('Ye')
@@ -191,6 +195,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
           AlbumDrawer: true,
           NestedActionDrawer: true,
           MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
         },
       },
     })

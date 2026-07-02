@@ -17,7 +17,7 @@
     </div>
 
     <!-- Empty state -->
-    <PEmpty v-else-if="channels.length === 0" title="还没有创建频道" description="先创建一个频道，再用合集整理文章">
+    <PEmpty v-else-if="channels.length === 0" title="暂无频道">
       <template #action>
         <PPress label="创建频道" @click="showCreateChannelModal" />
       </template>
@@ -78,8 +78,8 @@
               <div class="a-skeleton" style="height:3rem" />
             </div>
             <div v-else-if="articles.length === 0" style="padding:4rem 0;text-align:center">
-              <p class="a-muted">该合集下还没有文章</p>
-              <PPress label="立即写一篇" variant="secondary" size="sm" @click="router.push(`/posts/post/new?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
+              <p class="a-muted">暂无文章</p>
+              <PPress label="写文章" variant="secondary" size="sm" @click="router.push(`/posts/post/new?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
             </div>
             <div v-else class="article-list">
               <div v-for="(article, index) in articles" :key="article.id" class="article-item">

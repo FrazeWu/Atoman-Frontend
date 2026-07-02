@@ -103,7 +103,7 @@ function sourceBadge(sub: Subscription): string {
   if (title.includes('播客') || rssUrl.includes('podcast')) return '播客'
   if (title.includes('周报') || title.includes('newsletter') || rssUrl.includes('newsletter')) return '周报'
 
-  return '博客'
+  return '文章'
 }
 </script>
 

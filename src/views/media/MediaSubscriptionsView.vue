@@ -98,7 +98,7 @@ const emptyText = computed(() => {
   if (activeFilter.value === 'article') return '暂无文章'
   if (activeFilter.value === 'podcast') return '暂无播客'
   if (activeFilter.value === 'video') return '暂无视频'
-  return '暂无订阅内容'
+  return '暂无更新'
 })
 
 const formatDate = (value?: string) => {
@@ -125,7 +125,7 @@ onMounted(loadSubscriptions)
   <div class="a-page-xl media-subscriptions-view">
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
 
-    <PPageHeader title="订阅" sub="查看你在全站范围内关注的内容更新，不限定当前频道。" accent />
+    <PPageHeader title="订阅" accent />
 
     <section class="media-subscriptions-toolbar" aria-label="订阅内容筛选">
       <PSegmentedControl v-model="activeFilter" :options="filterOptions" />
@@ -136,7 +136,6 @@ onMounted(loadSubscriptions)
     <PEmpty
       v-else-if="visibleItems.length === 0"
       :text="emptyText"
-      sub="这里只展示站内订阅内容，不包含 RSS 或外部 feed item。"
     />
 
     <div v-else class="media-subscriptions-list">
@@ -150,7 +149,6 @@ onMounted(loadSubscriptions)
       >
         <template #visual>
           <div class="media-subscriptions-visual">
-            <PBadge type="internal" fill>内部</PBadge>
             <PBadge :type="item.kind === 'podcast' ? 'podcast' : item.kind === 'video' ? 'video' : 'blog'">
               {{ item.kind === 'podcast' ? '播客' : item.kind === 'video' ? '视频' : '文章' }}
             </PBadge>

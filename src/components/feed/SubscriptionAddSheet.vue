@@ -129,7 +129,7 @@ let resolveTimer: ReturnType<typeof setTimeout> | null = null
 let resolveSequence = 0
 
 const categoryOptions: Array<{ label: string; value: FeedSourceCategory }> = [
-  { label: '博客', value: 'blog' },
+  { label: '文章', value: 'blog' },
   { label: '新闻', value: 'news' },
   { label: '社交', value: 'social' },
   { label: '视频', value: 'video' },

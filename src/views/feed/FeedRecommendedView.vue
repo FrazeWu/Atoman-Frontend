@@ -8,14 +8,17 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
+import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
+import { buildSourceAvatarLabel, buildSourceColor } from '@/utils/feedSourcePresentation'
+import type { FeedExploreSource, FeedSourceCategory } from '@/types'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 type RecommendTarget = 'articles' | 'channels' | 'mixed'
-type FeedSourceCategory = 'all' | 'blog' | 'news' | 'social' | 'video' | 'forum' | 'podcast'
+type FeedSourceFilterCategory = 'all' | FeedSourceCategory
 
 type RecommendationItem = {
   id: string
@@ -61,7 +64,7 @@ const toggleReadingList = async (item: RecommendationItem) => {
 
 const mode = ref<RecommendationMode>('hot')
 const target = ref<RecommendTarget>('articles')
-const category = ref<FeedSourceCategory>('all')
+const category = ref<FeedSourceFilterCategory>('all')
 const loading = ref(false)
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
@@ -69,6 +72,7 @@ const channels = ref<RecommendationItem[]>([])
 const page = ref(1)
 const pageSize = 20
 const totalArticles = ref(0)
+const totalChannels = ref(0)
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
   { label: '热度', value: 'hot' },
@@ -82,9 +86,9 @@ const targetOptions: Array<{ label: string; value: RecommendTarget }> = [
   { label: '混合', value: 'mixed' },
 ]
 
-const categoryOptions: Array<{ label: string; value: FeedSourceCategory }> = [
+const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }> = [
   { label: '全部', value: 'all' },
-  { label: '博客', value: 'blog' },
+  { label: '文章', value: 'blog' },
   { label: '新闻', value: 'news' },
   { label: '社交', value: 'social' },
   { label: '视频', value: 'video' },
@@ -113,12 +117,14 @@ async function fetchRecommendations() {
     articles.value = Array.isArray(articlePayload.data) ? articlePayload.data : []
     channels.value = Array.isArray(channelPayload.data) ? channelPayload.data : []
     totalArticles.value = articlePayload.meta?.total ?? articlePayload.total ?? articles.value.length
+    totalChannels.value = channelPayload.meta?.total ?? channelPayload.total ?? channels.value.length
   } catch (error) {
     console.error('Failed to fetch feed recommendations:', error)
     errorMessage.value = '推荐内容加载失败'
     articles.value = []
     channels.value = []
     totalArticles.value = 0
+    totalChannels.value = 0
   } finally {
     loading.value = false
   }
@@ -145,6 +151,29 @@ function normalizeItemCategory(item: RecommendationItem): FeedSourceCategory {
   }
 }
 
+function channelScoreLabel(item: RecommendationItem) {
+  return item.score_label?.trim() || '推荐'
+}
+
+function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
+  return {
+    id: item.id,
+    title: item.title,
+    rssUrl: item.target_path,
+    category: normalizeItemCategory(item),
+    subscriptionCount: 0,
+    recentItemCount: 0,
+    lastPublishedAt: undefined,
+    subscribed: false,
+    recentItems: [],
+  }
+}
+
+function channelSummaryText(item: RecommendationItem) {
+  const bits = [normalizeItemCategory(item), item.summary?.trim()].filter(Boolean)
+  return bits.join(' · ')
+}
+
 const visibleChannels = computed(() => {
   if (category.value === 'all') return channels.value
   return channels.value.filter((item) => normalizeItemCategory(item) === category.value)
@@ -168,7 +197,11 @@ watch([mode, page], () => {
 })
 
 watch([mode, target, category], () => {
-  page.value = 1
+  if (page.value === 1) {
+    fetchRecommendations()
+  } else {
+    page.value = 1
+  }
 })
 
 onMounted(() => {
@@ -186,8 +219,6 @@ onMounted(() => {
     <PPageHeader
       title="探索"
       accent
-      kicker="FEED RECOMMEND"
-      sub="把订阅文章和频道拆开推荐，用热度、精选、探索三种模式浏览。"
       mb="1rem"
     >
       <template #action><PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
@@ -218,7 +249,7 @@ onMounted(() => {
     </div>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="state-line">正在加载推荐内容...</p>
+    <p v-else-if="loading" class="state-line">正在加载...</p>
 
     <div v-else-if="target === 'articles'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
@@ -235,46 +266,41 @@ onMounted(() => {
         />
 
         <div v-else class="feed-timeline">
-          <article
+          <PEntry
             v-for="item in visibleArticles"
             :key="item.id"
-            class="recommend-card recommend-card--article"
-            style="grid-template-columns: minmax(0, 1fr)"
+            :title="item.title"
+            :summary="item.summary"
             @click="openTarget(item.target_path)"
           >
-            <PEntry
-              :title="item.title"
-              :summary="item.summary"
-            >
-              <template #visual>
-                <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                  <PBadge type="external" fill>外部</PBadge>
-                  <PBadge type="external">{{ normalizeItemCategory(item) === 'podcast' ? '播客' : normalizeItemCategory(item) === 'video' ? '视频' : normalizeItemCategory(item) === 'news' ? '新闻' : normalizeItemCategory(item) === 'social' ? '社交' : normalizeItemCategory(item) === 'forum' ? '论坛' : '博客' }}</PBadge>
-                </div>
-              </template>
-              <template #meta>
-                <span class="a-label a-muted">{{ item.score_label || '推荐' }}</span>
-              </template>
-              <template #actions>
-                <PClip
-                  v-if="authStore.isAuthenticated"
-                  :active="isStarred(item)"
-                  :label="isStarred(item) ? '退藏' : '收藏'"
-                  @click="toggleStar(item)"
-                />
-                <PClip
-                  v-if="authStore.isAuthenticated && !item.target_path.includes('/posts/')"
-                  :active="isReadingList(item)"
-                  :label="isReadingList(item) ? '移除' : '稍后阅读'"
-                  @click="toggleReadingList(item)"
-                />
-                <div style="flex:1"></div>
-                <a :href="item.target_path" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
-                  ↗ 原文
-                </a>
-              </template>
-            </PEntry>
-          </article>
+            <template #visual>
+              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
+                <PBadge type="external" fill>外部</PBadge>
+                <PBadge type="external">{{ normalizeItemCategory(item) === 'podcast' ? '播客' : normalizeItemCategory(item) === 'video' ? '视频' : normalizeItemCategory(item) === 'news' ? '新闻' : normalizeItemCategory(item) === 'social' ? '社交' : normalizeItemCategory(item) === 'forum' ? '论坛' : '文章' }}</PBadge>
+              </div>
+            </template>
+            <template #meta>
+              <span class="a-label a-muted">{{ item.score_label || '推荐' }}</span>
+            </template>
+            <template #actions>
+              <PClip
+                v-if="authStore.isAuthenticated"
+                :active="isStarred(item)"
+                :label="isStarred(item) ? '取消收藏' : '收藏'"
+                @click.stop="toggleStar(item)"
+              />
+              <PClip
+                v-if="authStore.isAuthenticated && !item.target_path.includes('/posts/')"
+                :active="isReadingList(item)"
+                :label="isReadingList(item) ? '移除' : '稍后阅读'"
+                @click.stop="toggleReadingList(item)"
+              />
+              <div style="flex:1"></div>
+              <a :href="item.target_path" target="_blank" rel="noopener noreferrer" class="feed-item-external-link" @click.stop>
+                ↗ 原文
+              </a>
+            </template>
+          </PEntry>
         </div>
 
         <FeedTimelineFooter
@@ -308,15 +334,13 @@ onMounted(() => {
               <h2>文章推荐</h2>
             </div>
             <div class="feed-timeline">
-              <article
+              <PEntry
                 v-for="item in visibleMixedArticles"
                 :key="item.id"
-                class="recommend-card recommend-card--article"
-                style="grid-template-columns: minmax(0, 1fr)"
+                :title="item.title"
+                :summary="item.summary"
                 @click="openTarget(item.target_path)"
-              >
-                <PEntry :title="item.title" :summary="item.summary" />
-              </article>
+              />
             </div>
           </section>
 
@@ -326,22 +350,24 @@ onMounted(() => {
               <h2>频道推荐</h2>
             </div>
             <div class="card-stack">
-              <article
+              <FeedSourceIdentityCard
                 v-for="item in visibleMixedChannels"
                 :key="item.id"
-                class="recommend-card"
-                @click="openTarget(item.target_path)"
-              >
-                <div class="recommend-card__cover recommend-card__cover--channel">
-                  <img v-if="item.image_url" :src="item.image_url" :alt="item.title" class="recommend-card__img" />
-                  <span v-else class="recommend-card__fallback">CHANNEL</span>
-                </div>
-                <div class="recommend-card__body">
-                  <p class="recommend-card__meta">{{ item.score_label || '推荐' }}</p>
-                  <h3>{{ item.title }}</h3>
-                  <p>{{ item.summary || '打开后查看频道文章和归档内容。' }}</p>
-                </div>
-              </article>
+                :source="toRecommendedSource(item)"
+                :color="buildSourceColor(item.title || item.id)"
+                :avatar-label="buildSourceAvatarLabel(item.title)"
+                :display-url="''"
+                :image-url="item.image_url"
+                :eyebrow="channelScoreLabel(item)"
+                :summary-text="channelSummaryText(item)"
+                :show-subscribe="false"
+                :show-previews="false"
+                :show-meta="false"
+                compact
+                variant="recommend"
+                data-test="channel-card"
+                @select="openTarget(item.target_path)"
+              />
             </div>
           </section>
         </div>
@@ -363,24 +389,33 @@ onMounted(() => {
         />
 
         <div v-else class="card-stack">
-          <article
+          <FeedSourceIdentityCard
             v-for="item in visibleChannels"
             :key="item.id"
-            class="recommend-card"
+            :source="toRecommendedSource(item)"
+            :color="buildSourceColor(item.title || item.id)"
+            :avatar-label="buildSourceAvatarLabel(item.title)"
+            :display-url="''"
+            :image-url="item.image_url"
+            :eyebrow="channelScoreLabel(item)"
+            :summary-text="channelSummaryText(item)"
+            :show-subscribe="false"
+            :show-previews="false"
+            :show-meta="false"
+            compact
+            variant="recommend"
             data-test="channel-card"
-            @click="openTarget(item.target_path)"
-          >
-            <div class="recommend-card__cover recommend-card__cover--channel">
-              <img v-if="item.image_url" :src="item.image_url" :alt="item.title" class="recommend-card__img" />
-              <span v-else class="recommend-card__fallback">CHANNEL</span>
-            </div>
-            <div class="recommend-card__body">
-              <p class="recommend-card__meta">{{ item.score_label || '推荐' }}</p>
-              <h3>{{ item.title }}</h3>
-              <p>{{ item.summary || '打开后查看频道文章和归档内容。' }}</p>
-            </div>
-          </article>
+            @select="openTarget(item.target_path)"
+          />
         </div>
+
+        <FeedTimelineFooter
+          :page="page"
+          :page-size="pageSize"
+          :total="totalChannels"
+          :loading="loading"
+          @change-page="changePage"
+        />
       </section>
     </div>
   </div>
@@ -468,57 +503,6 @@ onMounted(() => {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
   cursor: pointer;
-}
-
-.recommend-card__cover {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1 / 1;
-  border: 1px solid var(--a-color-line-soft);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
-}
-
-.recommend-card__cover--channel {
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.06));
-}
-
-.recommend-card__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.recommend-card__fallback {
-  color: var(--a-color-muted);
-  font-family: var(--a-font-meta);
-  letter-spacing: 0.16em;
-}
-
-.recommend-card__body {
-  min-width: 0;
-}
-
-.recommend-card__body h3,
-.recommend-card__body p {
-  margin: 0;
-}
-
-.recommend-card__meta {
-  margin-bottom: 0.45rem !important;
-  color: var(--a-color-muted);
-  font-size: 0.78rem;
-}
-
-.recommend-card__body h3 {
-  margin-bottom: 0.45rem !important;
-  font-size: 1.15rem;
-  line-height: 1.25;
-}
-
-.recommend-card__body p:last-child {
-  color: var(--a-color-muted);
-  line-height: 1.6;
 }
 
 @media (max-width: 640px) {

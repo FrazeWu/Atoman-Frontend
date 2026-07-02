@@ -41,13 +41,13 @@ describe('Music ExploreView.vue', () => {
       data: [
         { id: 'album-1', title: '2049', artists: [{ id: 'artist-1', name: 'Ye' }] },
       ],
-      meta: { page: 1, page_size: 4, total: 1, has_more: false },
+      meta: { page: 1, page_size: 10, total: 1, has_more: false },
     })
     mocks.listMusicArtists.mockResolvedValue({
       data: [
         { id: 'artist-1', name: 'Ye', legal_name: 'Kanye' },
       ],
-      meta: { page: 1, page_size: 4, total: 1, has_more: false },
+      meta: { page: 1, page_size: 10, total: 1, has_more: false },
     })
   })
 
@@ -56,7 +56,7 @@ describe('Music ExploreView.vue', () => {
       global: {
         stubs: {
           PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
-          PTab: { props: ['label'], template: '<button><slot>{{ label }}</slot></button>' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
           RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
         },
       },
@@ -68,8 +68,8 @@ describe('Music ExploreView.vue', () => {
     await input.setValue('ye')
     await flushPromises()
 
-    expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({ q: 'ye', page: 1, page_size: 4, sort: 'hot' })
-    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'ye', page: 1, page_size: 4 })
+    expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({ q: 'ye', page: 1, page_size: 10, sort: 'hot' })
+    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'ye', page: 1, page_size: 10 })
     expect(wrapper.text()).toContain('专辑')
     expect(wrapper.text()).toContain('艺术家')
     expect(wrapper.text()).toContain('2049')

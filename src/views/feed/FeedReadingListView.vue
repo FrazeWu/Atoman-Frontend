@@ -219,12 +219,12 @@ const stripHtml = (html: string) =>
   html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
 
 const getExternalBadge = (item?: FeedItem) => {
-  if (!item) return '博客'
+  if (!item) return '文章'
   if (item.enclosure_url) {
     if (item.enclosure_type?.startsWith('audio/')) return '播客'
     if (item.enclosure_type?.startsWith('video/')) return '视频'
   }
-  return '博客'
+  return '文章'
 }
 
 const getFeedSourceHomeUrl = (item?: FeedItem) => {

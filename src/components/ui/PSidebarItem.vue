@@ -67,18 +67,18 @@ const formattedIndex = computed(() => {
 .p-sidebar-item {
   outline: none;
   border-radius: 0px; /* Straight corner */
-  border-left: 3px solid transparent; /* Pre-reserve left border space */
   background: transparent;
+  box-shadow: none;
   transition: all 0.2s ease;
 }
 .p-sidebar-item:hover,
 .p-sidebar-item.is-focused {
   background: var(--a-color-paper-wash); /* #f3f4f6 */
-  border-left-color: var(--a-color-line);
+  box-shadow: var(--a-shadow-paper-sm);
 }
 .p-sidebar-item.active {
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink);
-  border-left-color: var(--a-color-ink); /* Left ink line highlight */
+  box-shadow: var(--a-shadow-paper-sm);
 }
 </style>

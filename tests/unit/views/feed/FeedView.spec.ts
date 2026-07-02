@@ -810,6 +810,21 @@ describe('FeedView', () => {
           SubscriptionManageSheet: true,
           FeedArticleSheet: true,
           FeedSourceArticlesSheet: true,
+          PSegmentedControl: {
+            props: ['modelValue', 'options'],
+            template: `
+              <div>
+                <button
+                  v-for="o in options"
+                  :key="o.value"
+                  :data-test="o.test"
+                  @click="$emit('update:modelValue', o.value)"
+                >
+                  {{ o.label }} |
+                </button>
+              </div>
+            `
+          },
         },
       },
     })

@@ -50,7 +50,7 @@
           <PClip
             v-if="authStore.isAuthenticated"
             :active="starredIds.has(item.feed_item.id)"
-            :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
+            :label="starredIds.has(item.feed_item.id) ? '取消收藏' : '收藏'"
             @click="emit('toggle-star', item.feed_item.id)"
           />
           <PClip
@@ -134,7 +134,7 @@ const getExternalBadge = (item: FeedItem) => {
     if (item.enclosure_type?.startsWith('audio/')) return '播客'
     if (item.enclosure_type?.startsWith('video/')) return '视频'
   }
-  return '博客'
+  return '文章'
 }
 </script>
 

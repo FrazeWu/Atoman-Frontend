@@ -1,6 +1,12 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    query: {},
+  }),
+}))
+
 const mocks = vi.hoisted(() => ({
   listArtistBookmarks: vi.fn(),
   listAlbumBookmarks: vi.fn(),
@@ -147,49 +153,8 @@ describe('Music StarredView', () => {
 
     expect(mocks.listArtistBookmarks).toHaveBeenCalledWith()
     expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith()
-    expect(mocks.listSongBookmarks).toHaveBeenCalledWith()
-    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith()
     expect(wrapper.text()).toContain('FKA twigs')
     expect(wrapper.text()).toContain('MAGDALENE')
-    expect(wrapper.text()).toContain('cellophane')
-    expect(wrapper.text()).toContain('夜航歌单')
-
-    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
-
-    expect(wrapper.text()).toContain('夜航歌单')
-    expect(wrapper.text()).not.toContain('FKA twigs')
-    expect(wrapper.text()).not.toContain('MAGDALENE')
-    expect(wrapper.text()).not.toContain('cellophane')
-  })
-
-  it('creates a playlist from the starred page and shows it in playlist filter', async () => {
-    const wrapper = mount(StarredView)
-    await flushPromises()
-
-    await wrapper.get('[data-testid="playlist-name-input"]').setValue('通勤歌单')
-    await wrapper.get('[data-testid="playlist-description-input"]').setValue('上班路上听')
-    await wrapper.get('[data-testid="playlist-create-submit"]').trigger('submit')
-    await flushPromises()
-
-    expect(mocks.createMusicPlaylist).toHaveBeenCalledWith({
-      name: '通勤歌单',
-    })
-
-    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
-    expect(wrapper.text()).toContain('通勤歌单')
-  })
-
-  it('loads playlist songs when expanding a playlist card', async () => {
-    const wrapper = mount(StarredView)
-    await flushPromises()
-
-    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
-    await wrapper.get('[data-testid="playlist-toggle-playlist-1"]').trigger('click')
-    await flushPromises()
-
-    expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
-    expect(wrapper.text()).toContain('home with you')
-    expect(wrapper.text()).toContain('查看单曲')
   })
 
   it('opens artist and album drawers when clicking starred cards', async () => {

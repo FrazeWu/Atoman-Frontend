@@ -306,4 +306,36 @@ describe('Media global views', () => {
     expect(wrapper.text()).toContain('视频收藏')
     expect(wrapper.text()).toContain('播客收藏')
   })
+
+  it('sends auth headers for every bookmark source request', async () => {
+    mount(MediaBookmarksView, {
+      global: {
+        stubs: {
+          RouterLink: RouterLinkStub,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const bookmarkCalls = fetchMock.mock.calls.filter((call) => {
+      const url = String(call[0])
+      return [
+        '/api/v1/blog/bookmarks',
+        '/api/v1/videos/bookmarks',
+        '/api/v1/podcast/bookmarks',
+        '/api/v1/videos/channel-bookmarks',
+        '/api/v1/podcast/show-bookmarks',
+      ].includes(url)
+    })
+
+    expect(bookmarkCalls).toHaveLength(5)
+    for (const call of bookmarkCalls) {
+      expect(call[1]).toEqual(expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token',
+        }),
+      }))
+    }
+  })
 })

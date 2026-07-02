@@ -107,42 +107,10 @@
           </button>
         </form>
         <div class="source-type-filters" aria-label="来源类型筛选">
-          <button
-            type="button"
-            class="source-type-filter-btn"
-            :class="{ active: sourceTypeFilter === 'all' }"
-            data-test="source-type-filter-all"
-            @click="sourceTypeFilter = 'all'"
-          >
-            全部
-          </button>
-          <button
-            type="button"
-            class="source-type-filter-btn"
-            :class="{ active: sourceTypeFilter === 'internal' }"
-            data-test="source-type-filter-internal"
-            @click="sourceTypeFilter = 'internal'"
-          >
-            站内
-          </button>
-          <button
-            type="button"
-            class="source-type-filter-btn"
-            :class="{ active: sourceTypeFilter === 'blog' }"
-            data-test="source-type-filter-blog"
-            @click="sourceTypeFilter = 'blog'"
-          >
-            博客
-          </button>
-          <button
-            type="button"
-            class="source-type-filter-btn"
-            :class="{ active: sourceTypeFilter === 'podcast' }"
-            data-test="source-type-filter-podcast"
-            @click="sourceTypeFilter = 'podcast'"
-          >
-            播客
-          </button>
+          <PSegmentedControl
+            v-model="sourceTypeFilter"
+            :options="sourceTypeFilterOptions"
+          />
         </div>
         <div v-if="themeFilters.length" class="theme-filters" aria-label="主题筛选">
           <button
@@ -196,8 +164,7 @@
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PBadge type="internal" fill>内部</PBadge>
-                <PBadge type="blog">博客</PBadge>
+                <PBadge type="blog">文章</PBadge>
               </div>
             </template>
             <template #meta>
@@ -264,7 +231,7 @@
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="starredIds.has(item.feed_item.id)"
-                :label="starredIds.has(item.feed_item.id) ? '退藏' : '收藏'"
+                :label="starredIds.has(item.feed_item.id) ? '取消收藏' : '收藏'"
                 @click="toggleStar(item.feed_item.id)"
               />
               <PClip
@@ -307,6 +274,14 @@ import PPress from '@/components/ui/PPress.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+
+const sourceTypeFilterOptions = [
+  { label: '全部', value: 'all', test: 'source-type-filter-all' },
+  { label: '站内', value: 'internal', test: 'source-type-filter-internal' },
+  { label: '文章', value: 'blog', test: 'source-type-filter-blog' },
+  { label: '播客', value: 'podcast', test: 'source-type-filter-podcast' },
+]
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
@@ -416,7 +391,7 @@ const shortcutHints = [
   { key: 'Enter', label: '打开当前项' },
   { key: 'Esc', label: '关闭面板' },
   { key: 'M', label: '标记已读/未读' },
-  { key: 'S', label: '收藏/退藏' },
+  { key: 'S', label: '收藏/取消收藏' },
   { key: 'L', label: '稍后阅读' },
   { key: 'V', label: '查看原文' }
 ]
@@ -859,7 +834,7 @@ const getExternalBadge = (item: FeedItem) => {
     if (item.enclosure_type?.startsWith('video/')) return '视频'
   }
   // Check common RSS feed type indicators or categories if available in the future
-  return '博客'
+  return '文章'
 }
 
 const matchesSourceTypeFilter = (
@@ -872,7 +847,7 @@ const matchesSourceTypeFilter = (
 
   const badge = getExternalBadge(item.feed_item)
   if (filter === 'podcast') return badge === '播客'
-  if (filter === 'blog') return badge === '博客'
+  if (filter === 'blog') return badge === '文章'
   return true
 }
 

@@ -1,7 +1,7 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:12rem">
     <div class="a-section-header" style="margin-bottom:2rem">
-      <h1 class="a-title a-accent-l">我的收藏</h1>
+      <h1 class="a-title a-accent-l">收藏</h1>
       <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
     </div>
 

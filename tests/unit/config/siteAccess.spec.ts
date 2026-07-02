@@ -69,11 +69,29 @@ describe('site access config', () => {
   it('provides structured defaults for feed blog and forum settings', () => {
     const access = mergeSiteAccess(null)
 
+    expect(access.settings.feed.allow_manage_sources).toBe(true)
+    expect(access.settings.feed.allow_add_source).toBe(true)
     expect(getFeedFullTextMode(access)).toBe('per_source')
     expect(getBlogCommentMode(access)).toBe('authenticated')
     expect(isForumCategoryRequestEnabled(access)).toBe(true)
     expect(access.settings.forum.moderator_permissions.review_category_request).toBe(true)
     expect(access.settings.forum.moderator_permissions.pin_topic).toBe(true)
     expect(access.settings.forum.moderator_permissions.lock_topic).toBe(true)
+  })
+
+  it('preserves feed source management flags when merging partial settings', () => {
+    const access = mergeSiteAccess({
+      settings: {
+        feed: {
+          allow_manage_sources: false,
+          allow_add_source: true,
+          full_text_mode: 'disabled',
+        },
+      },
+    })
+
+    expect(access.settings.feed.allow_manage_sources).toBe(false)
+    expect(access.settings.feed.allow_add_source).toBe(true)
+    expect(access.settings.feed.full_text_mode).toBe('disabled')
   })
 })

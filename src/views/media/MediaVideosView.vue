@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PTab from '@/components/ui/PTab.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApi } from '@/composables/useApi'
 import { modulePathUrl } from '@/router/siteUrls'
@@ -38,11 +38,17 @@ const videoPath = (videoId: string) => modulePathUrl('media', `/videos/watch/${v
 
 <template>
   <div class="a-page-xl media-explore-page">
-    <PPageHeader title="视频" sub="探索本网站发布的全部视频。" accent>
+    <PPageHeader title="视频" accent>
       <template #action>
         <div class="media-explore-actions">
-          <PTab label="最新" :active="sort === 'latest'" @click="changeSort('latest')" />
-          <PTab label="热门" :active="sort === 'popular'" @click="changeSort('popular')" />
+          <PSegmentedControl
+            v-model="sort"
+            :options="[
+              { label: '最新', value: 'latest' },
+              { label: '热门', value: 'popular' }
+            ]"
+            @change="changeSort"
+          />
           <PButton :to="modulePathUrl('media', '/create')" outline size="sm">返回创作</PButton>
         </div>
       </template>

@@ -141,7 +141,7 @@ function handleInput(event: Event) {
 .search-frame__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
 }
 
@@ -188,14 +188,16 @@ function handleInput(event: Event) {
   border-bottom: 1px solid transparent;
   background: transparent;
   color: var(--a-color-ink);
-  padding: 0 0 0.45rem 1.6rem;
+  padding: 0 1.6rem 0.45rem;
   font-size: 1rem;
   font-family: inherit;
   box-sizing: border-box;
+  text-align: center;
 }
 
 .search-frame.is-compact .search-input {
   padding-left: 1.6rem !important;
+  padding-right: 1.6rem !important;
 }
 
 .search-input:focus {

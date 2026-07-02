@@ -73,6 +73,7 @@ const drawerMocks = {
     creationFlow: null as MusicCreationFlowState | null,
   }),
   closeMusicCreationFlow: vi.fn(),
+  refreshArtist: vi.fn(),
   setMusicCreationStep: vi.fn(),
 }
 
@@ -110,6 +111,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     state: drawerMocks.state,
     closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
+    refreshArtist: drawerMocks.refreshArtist,
     setMusicCreationStep: drawerMocks.setMusicCreationStep,
     isMainShifted: computed(() => false),
     isCreationFlowOpen: computed(() => drawerMocks.state.value.creationFlow !== null),
@@ -129,6 +131,7 @@ describe('MusicCreationFlowDrawer', () => {
     drawerMocks.closeMusicCreationFlow.mockImplementation(() => {
       drawerMocks.state.value.creationFlow = null
     })
+    drawerMocks.refreshArtist.mockReset()
     drawerMocks.setMusicCreationStep.mockReset()
     drawerMocks.setMusicCreationStep.mockImplementation((step: MusicCreationFlowState['step']) => {
       if (drawerMocks.state.value.creationFlow) {
@@ -196,6 +199,7 @@ describe('MusicCreationFlowDrawer', () => {
 
     expect(commitMusicAlbumImportMock).toHaveBeenCalledTimes(1)
     expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', {
+      artist_id: 'artist-seeded',
       artist: {
         name: 'Seeded Artist',
         legal_name: 'Seeded Artist',
@@ -209,6 +213,60 @@ describe('MusicCreationFlowDrawer', () => {
       },
     })
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
+  })
+
+  it('从已有艺术家进入时提交 artist_id 复用现有艺术家', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'albumDetails',
+      draft: {
+        ...createFlowState().draft,
+        artist: {
+          ...createFlowState().draft.artist,
+          id: 'artist-existing',
+          legalName: '',
+          stageNames: [
+            {
+              id: 'stage-name-primary',
+              name: '',
+              isPrimary: true,
+              startDateText: '',
+              endDateText: '',
+            },
+          ],
+        },
+        albumImport: {
+          ...createFlowState().draft.albumImport,
+          importId: 'import-1',
+          status: 'ready',
+        },
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Graduation',
+          releaseYear: '2007',
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', {
+      artist_id: 'artist-existing',
+      artist: {
+        name: '',
+        legal_name: '',
+        stage_names: [],
+        birth_place: '',
+      },
+      album: {
+        title: 'Graduation',
+        release_year: 2007,
+        tracks: [],
+      },
+    })
   })
 
   it('提交失败时保留抽屉并显示错误', async () => {

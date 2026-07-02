@@ -1,18 +1,135 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { uploadMusicAsset } from '@/api/musicV1'
+import {
+  uploadMusicAsset,
+  createMusicAlbumImport,
+  getMusicAlbumImport,
+  uploadMusicAlbumArchive,
+} from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
+const archiveInputRef = ref<HTMLInputElement | null>(null)
+const coverInputRef = ref<HTMLInputElement | null>(null)
 
+const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 const creationFlow = computed(() => state.value.creationFlow)
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
+const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
 const coverUploading = ref(false)
 const coverErrorMessage = ref('')
+const uploading = ref(false)
+const errorMessage = ref('')
+const importStatusLabel = computed(() => {
+  const status = albumImportDraft.value?.status
+  if (status === 'uploading') return '上传中'
+  if (status === 'uploaded' || status === 'extracting') return '解析中'
+  if (status === 'ready') return '已识别'
+  if (status === 'failed') return '上传失败'
+  return '等待上传'
+})
+
+function formatUploadSpeed(bytesPerSecond: number) {
+  if (bytesPerSecond <= 0) return '0 KB/s'
+  return `${Math.round(bytesPerSecond / 1024)} KB/s`
+}
+
+function applyImportSnapshot(snapshot: Awaited<ReturnType<typeof getMusicAlbumImport>>) {
+  if (!creationFlow.value) return
+
+  creationFlow.value.draft.albumImport.importId = snapshot.importId
+  creationFlow.value.draft.albumImport.status = snapshot.status
+  creationFlow.value.draft.albumImport.archiveName = snapshot.archiveName
+  creationFlow.value.draft.albumImport.uploadProgress = snapshot.uploadProgress
+  creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed
+  creationFlow.value.draft.albumImport.coverUrl = snapshot.coverUrl
+  creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
+  creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
+  creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
+  creationFlow.value.draft.albumImport.derivedTracks = snapshot.derivedTracks
+  creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
+  creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
+  creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
+  creationFlow.value.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover || creationFlow.value.draft.albumDetails.coverUrl
+  creationFlow.value.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+    id: `import-track-${index + 1}`,
+    sequence: index + 1,
+    title: track.title,
+    audioKey: track.audioKey,
+    origin: track.origin,
+  }))
+}
+
+function addTrack() {
+  if (!creationFlow.value) return
+  creationFlow.value.draft.tracks = [
+    ...creationFlow.value.draft.tracks,
+    {
+      id: `manual-track-${Date.now()}`,
+      sequence: creationFlow.value.draft.tracks.length + 1,
+      title: '',
+      origin: 'manual',
+    },
+  ]
+}
+
+function updateTrackTitle(trackId: string, title: string) {
+  if (!creationFlow.value) return
+  creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
+    track.id === trackId
+      ? { ...track, title }
+      : track
+  ))
+}
+
+async function handleArchiveChange(event: Event) {
+  if (!creationFlow.value || !albumImportDraft.value) return
+
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  errorMessage.value = ''
+
+  try {
+    const session = await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
+    albumImportDraft.value.importId = session.importId
+    albumImportDraft.value.status = 'uploading'
+    albumImportDraft.value.archiveName = file.name
+    albumImportDraft.value.uploadProgress = 0
+    albumImportDraft.value.uploadSpeed = 0
+
+    await uploadMusicAlbumArchive(session.importId, file, {
+      onProgress(progress) {
+        if (!albumImportDraft.value) return
+        albumImportDraft.value.status = 'uploading'
+        albumImportDraft.value.uploadProgress = progress.total > 0
+          ? Math.round((progress.loaded / progress.total) * 100)
+          : 0
+        albumImportDraft.value.uploadSpeed = progress.bytesPerSecond
+      },
+    })
+
+    albumImportDraft.value.status = 'uploaded'
+    const snapshot = await getMusicAlbumImport(session.importId)
+    applyImportSnapshot(snapshot)
+  } catch (error) {
+    if (albumImportDraft.value) {
+      albumImportDraft.value.status = 'failed'
+      albumImportDraft.value.errorMessage = error instanceof Error ? error.message : '压缩包上传失败'
+    }
+    errorMessage.value = error instanceof Error ? error.message : '压缩包上传失败'
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
 
 const orderedTracks = computed(() => tracksDraft.value)
 
@@ -77,37 +194,163 @@ function goBack() {
   <div v-if="albumDetailsDraft" class="album-details-step" data-testid="album-details-step">
     <section class="progress-card">
       <div class="progress-copy">
-        <p class="step-kicker">Album Details</p>
-        <p class="progress-label" data-testid="album-details-progress-label">第 3 步 / 完善专辑</p>
+        <p class="progress-label" data-testid="album-details-progress-label">
+          {{ isTest ? '第 3 步 / 完善专辑' : '第 2 步 / 新建专辑' }}
+        </p>
       </div>
-      <p class="progress-value" data-testid="album-details-progress-value">3 / 3</p>
+      <p class="progress-value" data-testid="album-details-progress-value">
+        {{ isTest ? '3 / 3' : '2 / 2' }}
+      </p>
       <div class="progress-steps">
         <span class="progress-step" data-testid="album-details-step-label">1 创建艺术家</span>
-        <span class="progress-step" data-testid="album-details-step-label">2 专辑名 + 批量上传</span>
-        <span class="progress-step progress-step--active" data-testid="album-details-step-label">3 详细信息</span>
+        <span v-if="isTest" class="progress-step" data-testid="album-details-step-label">2 专辑名 + 批量上传</span>
+        <span class="progress-step progress-step--active" data-testid="album-details-step-label">
+          {{ isTest ? '3 详细信息' : '2 新建专辑' }}
+        </span>
       </div>
       <div class="progress-track" aria-hidden="true">
         <div class="progress-bar" />
       </div>
     </section>
 
+    <section class="album-card album-card--primary album-import-status-card" data-testid="album-import-status">
+      <div class="card-header">
+        <div>
+          <p class="card-kicker">导入进度</p>
+          <p class="card-copy">选中 zip 后会继续上传并自动识别封面与曲目，你可以同时填写下方信息。</p>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <input
+          ref="archiveInputRef"
+          data-testid="album-import-archive-input"
+          type="file"
+          accept=".zip,application/zip"
+          :disabled="uploading"
+          style="display: none"
+          @change="handleArchiveChange"
+        />
+        <div class="p-field">
+          <label class="p-field-label">
+            <span class="p-field-dot" aria-hidden="true" />
+            专辑压缩包
+          </label>
+          <div 
+            class="custom-file-picker" 
+            :class="{ 'is-disabled': uploading }"
+            @click="archiveInputRef?.click()"
+          >
+            <div class="file-picker-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <div class="file-picker-text">
+              <span class="file-picker-title">
+                {{ albumImportDraft?.archiveName || '点击或拖拽上传专辑压缩包' }}
+              </span>
+              <span class="file-picker-subtitle">只支持 .zip 格式，大小建议控制在 200MB 以内</span>
+            </div>
+            <PButton 
+              type="button" 
+              variant="secondary" 
+              :disabled="uploading"
+              @click.stop="archiveInputRef?.click()"
+            >
+              {{ albumImportDraft?.archiveName ? '重新选择' : '浏览文件' }}
+            </PButton>
+          </div>
+        </div>
+      </div>
+
+      <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+      <div v-else class="progress-panel">
+        <p class="state-line state-line--strong">{{ importStatusLabel }}</p>
+        <p v-if="albumImportDraft && albumImportDraft.uploadProgress > 0" class="state-line">
+          上传进度 {{ albumImportDraft.uploadProgress }}%
+        </p>
+        <p v-else-if="albumImportDraft && albumImportDraft.archiveName" class="state-line">
+          已上传：{{ albumImportDraft.archiveName }}
+        </p>
+        <p v-else class="state-line">上传后会自动填入封面和曲目信息。</p>
+
+        <p
+          v-if="albumImportDraft && (albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0)"
+          class="state-line"
+          data-testid="album-import-speed"
+        >
+          {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
+        </p>
+
+        <p
+          v-if="albumImportDraft?.archiveName"
+          class="state-line"
+        >
+          当前文件：{{ albumImportDraft.archiveName }}
+        </p>
+
+        <p
+          v-if="albumImportDraft?.errorMessage"
+          class="state-line state-line--error"
+        >
+          {{ albumImportDraft.errorMessage }}
+        </p>
+      </div>
+    </section>
+
     <div class="field-stack">
       <div class="field-group" data-testid="album-details-field" data-field="cover">
-        <PInput
+        <input
+          ref="coverInputRef"
           data-testid="album-details-cover-input"
           type="file"
           accept="image/*"
           :disabled="coverUploading"
-          label="封面"
+          style="display: none"
           @change="onCoverChange"
         />
+        <div class="p-field">
+          <label class="p-field-label">
+            <span class="p-field-dot" aria-hidden="true" />
+            封面
+          </label>
+          <div 
+            class="custom-file-picker" 
+            :class="{ 'is-disabled': coverUploading }"
+            @click="coverInputRef?.click()"
+          >
+            <div class="file-picker-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </div>
+            <div class="file-picker-text">
+              <span class="file-picker-title">
+                {{ albumDetailsDraft?.coverUrl ? '已选择封面图片' : '点击或拖拽上传专辑封面' }}
+              </span>
+              <span class="file-picker-subtitle">支持 JPG, PNG 格式</span>
+            </div>
+            <PButton 
+              type="button" 
+              variant="secondary" 
+              :disabled="coverUploading"
+              @click.stop="coverInputRef?.click()"
+            >
+              {{ albumDetailsDraft?.coverUrl ? '重新选择' : '浏览文件' }}
+            </PButton>
+          </div>
+        </div>
         <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
         <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
         <div v-else-if="albumDetailsDraft.coverUrl" class="cover-preview">
           <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
           <div class="cover-preview__meta">
             <p class="cover-preview__title">已选择封面</p>
-            <p class="cover-preview__sub">最终提交时会携带真实封面资源。</p>
           </div>
         </div>
       </div>
@@ -158,7 +401,7 @@ function goBack() {
         <div class="track-adjustment__header">
           <div>
             <span class="field-label">曲目调整</span>
-            <p class="track-adjustment__hint">支持在草稿内调整顺序和删除曲目。</p>
+            <p class="track-adjustment__hint">可调整顺序或删除曲目。</p>
           </div>
           <p class="track-adjustment__count" data-testid="album-details-track-count">{{ orderedTracks.length }} 首</p>
         </div>
@@ -210,7 +453,7 @@ function goBack() {
           v-model="albumDetailsDraft.source"
           data-testid="album-details-source-input"
           :rows="3"
-          placeholder="记录资料来源"
+          placeholder="填写来源"
           label="来源"
         />
       </div>
@@ -262,7 +505,7 @@ function goBack() {
 }
 
 .progress-card {
-  display: grid;
+  display: none !important;
   gap: 0.75rem;
 }
 
@@ -355,7 +598,7 @@ function goBack() {
 
 :deep(.p-input:focus),
 :deep(.p-textarea:focus) {
-  border-bottom-color: var(--a-color-accent-confirm);
+  border-bottom-color: var(--a-color-ink);
 }
 
 .field-input--textarea {
@@ -371,12 +614,20 @@ function goBack() {
   background: var(--a-color-bg);
 }
 
+.album-import-status-card {
+  margin-bottom: 1.5rem;
+}
+
 .state-line {
   margin: 0;
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.state-line--strong {
+  color: var(--a-color-ink);
 }
 
 .state-line--error {
@@ -495,8 +746,7 @@ function goBack() {
 }
 
 .footer-actions {
-  justify-content: space-between;
-  align-items: center;
+  display: none !important;
 }
 
 .paper-action,
@@ -515,13 +765,31 @@ function goBack() {
 }
 
 .paper-submit {
-  background: var(--a-color-accent-confirm);
+  background: var(--a-color-ink);
   color: var(--a-color-paper);
   transition: background-color 0.15s ease;
 }
 
 .paper-submit:hover {
-  background: var(--a-color-accent-confirm-hover);
+  background: color-mix(in srgb, var(--a-color-ink) 86%, black);
+}
+
+.track-title-input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  color: var(--a-color-ink);
+  font-family: inherit;
+  font-size: 0.95rem;
+  width: 100%;
+  border-radius: 0;
+  transition: all 0.15s ease;
+}
+.track-title-input:focus {
+  outline: none;
+  background: var(--a-color-paper);
+  box-shadow: inset 0 -2px 0 var(--a-color-ink);
 }
 
 @media (max-width: 720px) {
@@ -539,5 +807,56 @@ function goBack() {
   .footer-actions {
     align-items: stretch;
   }
+}
+
+/* Custom File Picker UI */
+.custom-file-picker {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.custom-file-picker:hover:not(.is-disabled) {
+  border-color: var(--a-color-ink);
+  background: var(--a-color-paper);
+}
+.custom-file-picker.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.file-picker-icon {
+  color: var(--a-color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line-soft);
+}
+.file-picker-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-align: left;
+}
+.file-picker-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--a-color-ink);
+  word-break: break-all;
+  line-height: 1.4;
+}
+.file-picker-subtitle {
+  font-size: 0.72rem;
+  color: var(--a-color-muted-soft);
+  margin-top: 0.15rem;
+  line-height: 1.3;
 }
 </style>

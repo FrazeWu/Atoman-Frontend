@@ -62,6 +62,7 @@ export type MusicAlbumImportCommitTrack = {
 }
 
 export type MusicAlbumImportCommitInput = {
+  artist_id?: string
   artist: {
     name: string
     legal_name: string
@@ -708,12 +709,20 @@ export async function createMusicPlaylist(input: CreateMusicPlaylistInput): Prom
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {
   const [playlist, songsResponse] = await Promise.all([
     apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
-    apiGetEnvelope<MusicSongListItem[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
+    apiGetEnvelope<any[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
   ])
   return {
     ...playlist,
-    songs: songsResponse.data,
+    songs: (songsResponse.data || []).map((item) => item.song).filter(Boolean),
   }
+}
+
+export async function addMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
+  return apiPostJson<any>(musicV1Endpoints.playlistSongs(playlistId), { song_id: songId })
+}
+
+export async function removeMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
+  return apiDeleteJson<any>(musicV1Endpoints.playlistSong(playlistId, songId))
 }
 
 export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {

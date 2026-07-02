@@ -74,6 +74,13 @@ describe('useMusicDrawers', () => {
     openNestedAction('revise_artist')
     expect(isArtistShifted.value).toBe(true)
   })
+
+  it('can refresh artist drawer data explicitly', () => {
+    const { state, refreshArtist } = useMusicDrawers()
+    expect(state.value.artistRefreshToken).toBe(0)
+    refreshArtist()
+    expect(state.value.artistRefreshToken).toBe(1)
+  })
 })
 
 describe('useMusicDrawers music creation flow', () => {

@@ -7,7 +7,7 @@ import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
 
-const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
+const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
 const isOpen = computed(() => creationFlow.value !== null)
@@ -45,19 +45,19 @@ const stepCopy: Record<CreationStepKey, { index: number; title: string; subtitle
   artist: {
     index: 1,
     title: '创建艺术家',
-    subtitle: '先建立艺术家与首张专辑的草稿外壳。',
+    subtitle: '',
     cta: '下一步',
   },
   albumImport: {
     index: 2,
-    title: '导入专辑',
-    subtitle: '上传专辑压缩包，解析封面与曲目信息。',
+    title: '上传专辑',
+    subtitle: '',
     cta: '继续',
   },
   albumDetails: {
     index: 3,
     title: '完善专辑',
-    subtitle: '最终补充专辑信息与曲目整理。',
+    subtitle: '',
     cta: '完成',
   },
 }
@@ -67,7 +67,7 @@ const activeStep = computed(() => {
   return stepCopy[step]
 })
 const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDetails')
-const showFooterActions = computed(() => creationFlow.value?.step === 'artist' || isAlbumDetailsStep.value)
+const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => (creationFlow.value?.submitting ? '提交中…' : activeStep.value.cta))
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
@@ -78,6 +78,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
     ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
 
   return {
+    ...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
@@ -154,7 +155,7 @@ function requestClose() {
 
   const hasDraft = hasCreationDraft(flow)
 
-  if (hasDraft && !window.confirm('确认关闭？未完成的艺术家/专辑创建不会保存。')) return
+  if (hasDraft && !window.confirm('确认关闭？未保存的内容将丢失。')) return
   closeMusicCreationFlow()
 }
 
@@ -162,7 +163,18 @@ function handlePrimaryAction() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'artist') {
     if (!creationFlow.value.draft.artist.legalName.trim()) return
-    setMusicCreationStep('albumImport')
+    setMusicCreationStep('albumDetails')
+  } else if (creationFlow.value.step === 'albumImport') {
+    setMusicCreationStep('albumDetails')
+  }
+}
+
+function goBackStep() {
+  if (!creationFlow.value) return
+  if (creationFlow.value.step === 'albumDetails') {
+    setMusicCreationStep('artist')
+  } else if (creationFlow.value.step === 'albumImport') {
+    setMusicCreationStep('artist')
   }
 }
 
@@ -184,6 +196,9 @@ async function completeCreation() {
     }
 
     await commitMusicAlbumImport(importId, buildCommitInput(flow))
+    if (flow.draft.artist.id) {
+      refreshArtist()
+    }
     closeMusicCreationFlow()
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
@@ -200,11 +215,10 @@ async function completeCreation() {
     <div v-if="creationFlow" class="creation-flow">
       <div class="drawer-header">
         <div class="header-meta">
-          <p class="eyebrow">Music Archive Submission</p>
           <p class="step-label">第 {{ activeStep.index }} 步</p>
         </div>
         <h3 class="title">{{ activeStep.title }}</h3>
-        <p class="subtitle">{{ activeStep.subtitle }}</p>
+        <p v-if="activeStep.subtitle" class="subtitle">{{ activeStep.subtitle }}</p>
       </div>
 
       <div class="drawer-body">
@@ -231,11 +245,11 @@ async function completeCreation() {
             关闭
           </button>
           <button
-            v-if="isAlbumDetailsStep"
+            v-if="creationFlow.step !== 'artist'"
             data-testid="album-details-back-button"
             type="button"
             class="paper-action"
-            @click="setMusicCreationStep('albumImport')"
+            @click="goBackStep"
           >
             返回上一步
           </button>
@@ -297,7 +311,7 @@ async function completeCreation() {
   line-height: 1.7;
   max-width: 34rem;
 }
-.drawer-body { display: flex; flex: 1; flex-direction: column; gap: 1rem; padding: 0 2rem 2rem; }
+.drawer-body { display: flex; flex: 1; flex-direction: column; gap: 1.5rem; padding: 1.5rem 0 0; }
 .error-message {
   margin: 0;
   color: var(--a-color-accent-destructive);
@@ -305,7 +319,8 @@ async function completeCreation() {
   font-size: 0.82rem;
   font-weight: 800;
 }
-.footer-actions { display: flex; justify-content: space-between; gap: 1rem; margin-top: auto; }
+.footer-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: auto; }
+[data-testid="music-creation-close-button"] { display: none !important; }
 .paper-action,
 .paper-submit {
   border: 0;
@@ -321,12 +336,12 @@ async function completeCreation() {
   color: var(--a-color-ink);
 }
 .paper-submit {
-  background: var(--a-color-accent-confirm);
+  background: var(--a-color-ink);
   color: var(--a-color-paper);
   transition: background-color 0.15s ease;
 }
 .paper-submit:hover {
-  background: var(--a-color-accent-confirm-hover);
+  background: color-mix(in srgb, var(--a-color-ink) 86%, black);
 }
 
 .drawer-body :deep(.album-details-step .footer-actions) {

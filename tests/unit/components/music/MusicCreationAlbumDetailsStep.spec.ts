@@ -118,4 +118,26 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     await wrapper.get('[data-testid="album-details-close-button"]').trigger('click')
     expect(drawers.state.value.creationFlow).toBeNull()
   })
+
+  it('在上传中也展示详情表单，并在顶部显示导入进度', () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
+    drawers.setMusicCreationStep('albumDetails')
+
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    flow.draft.albumImport.archiveName = 'graduation.zip'
+    flow.draft.albumImport.status = 'uploading'
+    flow.draft.albumImport.uploadProgress = 37
+    flow.draft.albumImport.uploadSpeed = 128 * 1024
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+
+    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('上传中')
+    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('graduation.zip')
+    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('上传进度 37%')
+    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('128 KB/s')
+    expect(wrapper.get('[data-testid="album-details-title-input"]').exists()).toBe(true)
+  })
 })

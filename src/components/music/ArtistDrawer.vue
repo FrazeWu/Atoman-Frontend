@@ -2,10 +2,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   getMusicArtist,
   listMusicAlbums,
+  createArtistBookmark,
+  deleteArtistBookmark,
+  listArtistBookmarks,
   type MusicAlbumListItem,
   type MusicArtistListItem,
 } from '@/api/musicV1'
@@ -16,6 +20,16 @@ const artist = ref<MusicArtistListItem | null>(null)
 const albums = ref<MusicAlbumListItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+const isBookmarked = ref(false)
+const bookmarkLoading = ref(false)
+const lastLoadKey = ref<string | null>(null)
+
+const artistAliases = computed(() => (
+  artist.value?.aliases
+    ?.map((item) => item.alias.trim())
+    .filter((alias) => alias && alias.toLowerCase() !== artist.value?.name.toLowerCase())
+    ?? []
+))
 
 function releaseYear(album: MusicAlbumListItem) {
   if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
@@ -28,27 +42,60 @@ async function loadArtist(artistId: string | null) {
   if (!artistId) {
     artist.value = null
     albums.value = []
+    isBookmarked.value = false
+    lastLoadKey.value = null
     return
   }
 
   loading.value = true
   errorMessage.value = ''
   try {
-    const [artistResponse, albumsResponse] = await Promise.all([
+    const [artistResponse, albumsResponse, bookmarksResponse] = await Promise.all([
       getMusicArtist(artistId),
       listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 }),
+      listArtistBookmarks(),
     ])
     artist.value = artistResponse
     albums.value = artistResponse.albums?.length ? artistResponse.albums : albumsResponse.data
+    isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
   } catch (error) {
     console.error('Failed to fetch artist:', error)
     errorMessage.value = '艺术家信息加载失败'
+    lastLoadKey.value = null
   } finally {
     loading.value = false
   }
 }
 
-watch(() => state.value.artistId, loadArtist, { immediate: true })
+async function toggleArtistBookmark() {
+  const artistId = state.value.artistId
+  if (!artistId || bookmarkLoading.value) return
+  bookmarkLoading.value = true
+  try {
+    if (isBookmarked.value) {
+      await deleteArtistBookmark(artistId)
+      isBookmarked.value = false
+    } else {
+      await createArtistBookmark(artistId)
+      isBookmarked.value = true
+    }
+  } catch (error) {
+    console.error('Failed to toggle artist bookmark:', error)
+  } finally {
+    bookmarkLoading.value = false
+  }
+}
+
+watch(
+  () => [state.value.artistId, state.value.artistRefreshToken] as const,
+  ([artistId, refreshToken]) => {
+    const nextKey = artistId ? `${artistId}:${refreshToken}` : null
+    if (nextKey && nextKey === lastLoadKey.value) return
+    lastLoadKey.value = nextKey
+    void loadArtist(artistId)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -61,32 +108,62 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
   >
     <template #header>
       <div class="drawer-header-content">
-        <div class="kicker">ARTIST ENTRY</div>
-        <h2 class="title">{{ artist?.name || `Artist ${state.artistId}` }}</h2>
+        <div class="artist-header-profile">
+          <img v-if="artist?.image_url" :src="artist.image_url" :alt="artist?.name" class="artist-header-avatar" />
+          <div v-else class="artist-header-avatar-placeholder">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          <div class="artist-header-info">
+            <h2 class="title">{{ artist?.name || `Artist ${state.artistId}` }}</h2>
+            <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
+            <p v-if="artistAliases.length" class="artist-meta-line">曾用名：{{ artistAliases.join(' / ') }}</p>
+          </div>
+        </div>
         <p v-if="artist?.bio" class="artist-bio">{{ artist.bio }}</p>
       </div>
     </template>
 
     <div class="drawer-body">
       <div class="actions">
-        <button class="paper-action" @click="openNestedAction('revise_artist')">
-          <span class="paper-action-dot" aria-hidden="true" />
-          <span>修订艺术家信息</span>
-        </button>
-        <button class="paper-action" @click="openMusicCreationFlow({ artistId: state.artistId || null, startStep: 'albumImport' })">
-          <span class="paper-action-dot" aria-hidden="true" />
-          <span>添加新专辑</span>
-        </button>
+        <PButton
+          variant="secondary"
+          :disabled="bookmarkLoading"
+          dot
+          data-testid="artist-bookmark-toggle"
+          @click="toggleArtistBookmark"
+        >
+          {{ isBookmarked ? '已订阅' : '订阅' }}
+        </PButton>
+        <PButton
+          variant="secondary"
+          dot
+          @click="openNestedAction('revise_artist')"
+        >
+          修改艺术家信息
+        </PButton>
+        <PButton
+          variant="secondary"
+          dot
+          @click="openMusicCreationFlow({
+            artistId: state.artistId || null,
+            artistName: artist?.name || '',
+            artistLegalName: artist?.legal_name || '',
+            startStep: 'albumImport',
+          })"
+        >
+          添加新专辑
+        </PButton>
       </div>
 
       <div class="album-list-header">
-        <p class="album-list-kicker">Discography</p>
         <h3>专辑列表</h3>
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载专辑...</p>
-      <p v-else-if="!albums.length" class="state-line">暂无专辑，可以提交新专辑 wiki 编辑。</p>
+      <p v-else-if="!albums.length" class="state-line">暂无专辑，可以添加新专辑。</p>
 
       <div
         v-for="album in albums"
@@ -104,7 +181,7 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
           </div>
           <div class="album-row-info">
             <div class="album-row-title">{{ album.title }}</div>
-            <div class="album-row-meta">{{ album.songs?.length || 0 }} Tracks · {{ album.album_type || 'Album' }}</div>
+            <div class="album-row-meta">{{ album.songs?.length || 0 }} 首 · 专辑</div>
           </div>
         </div>
       </div>
@@ -123,6 +200,14 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
   color: var(--a-color-ink-soft);
 }
 .title { font-family: var(--a-font-serif); font-size: 2.5rem; margin: 0; line-height: 1.1; letter-spacing: -0.025em; }
+.artist-meta-line {
+  margin: 0.35rem 0 0;
+  font-family: var(--a-font-meta);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--a-color-ink-soft);
+}
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
@@ -218,4 +303,38 @@ watch(() => state.value.artistId, loadArtist, { immediate: true })
 .album-row-meta { font-family: var(--a-font-meta); font-size: 0.75rem; color: var(--a-color-ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
 .state-line--error { color: var(--a-color-accent-destructive); }
+
+.artist-header-profile {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.artist-header-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--a-color-line-soft);
+  flex-shrink: 0;
+}
+
+.artist-header-avatar-placeholder {
+  width: 90px;
+  height: 90px;
+  border-radius: 8px;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.artist-header-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 </style>

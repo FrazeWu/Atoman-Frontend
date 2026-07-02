@@ -7,14 +7,17 @@ import {
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
+import PButton from '@/components/ui/PButton.vue'
 
-const { state } = useMusicDrawers()
+const { state, setMusicCreationStep } = useMusicDrawers()
+const archiveInputRef = ref<HTMLInputElement | null>(null)
 
 const creationFlow = computed(() => state.value.creationFlow)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
 const uploading = ref(false)
 const errorMessage = ref('')
+const resolvedCoverUrl = computed(() => albumImportDraft.value?.coverUrl || albumImportDraft.value?.derivedCover || '')
 
 function formatUploadSpeed(bytesPerSecond: number) {
   if (bytesPerSecond <= 0) return '0 KB/s'
@@ -100,6 +103,7 @@ async function handleArchiveChange(event: Event) {
     albumImportDraft.value.archiveName = file.name
     albumImportDraft.value.uploadProgress = 0
     albumImportDraft.value.uploadSpeed = 0
+    setMusicCreationStep('albumDetails')
 
     await uploadMusicAlbumArchive(session.importId, file, {
       onProgress(progress) {
@@ -133,30 +137,62 @@ async function handleArchiveChange(event: Event) {
     <div class="album-page">
       <header class="album-hero">
         <div class="album-hero__meta">
-          <p class="hero-kicker">音乐档案提交</p>
-          <p class="hero-step">第 2 步 / 专辑资料</p>
+          <p class="hero-step">第 2 步 / 上传专辑</p>
         </div>
-        <h4>导入专辑压缩包</h4>
-        <p class="hero-copy">选择专辑 zip 压缩包后，系统会先创建导入会话，再把识别到的专辑名、封面和曲目信息回填到稿件里。</p>
+        <h4>上传专辑</h4>
       </header>
 
       <section class="album-card album-card--primary">
         <div class="card-header">
           <div>
-            <p class="card-kicker">导入文件</p>
-            <p class="card-copy">建议使用专辑名命名压缩包，并把封面和音频一起打进包内。</p>
+            <p class="card-kicker">上传文件</p>
+            <p class="card-copy">只支持 zip 压缩包，建议包含专辑封面和音频文件。</p>
           </div>
         </div>
 
         <div class="field-group">
-          <PInput
+          <input
+            ref="archiveInputRef"
             data-testid="album-import-archive-input"
             type="file"
             accept=".zip,application/zip"
             :disabled="uploading"
-            label="专辑 zip 压缩包"
+            style="display: none"
             @change="handleArchiveChange"
           />
+          <div class="p-field">
+            <label class="p-field-label">
+              <span class="p-field-dot" aria-hidden="true" />
+              专辑压缩包
+            </label>
+            <div 
+              class="custom-file-picker" 
+              :class="{ 'is-disabled': uploading }"
+              @click="archiveInputRef?.click()"
+            >
+              <div class="file-picker-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              </div>
+              <div class="file-picker-text">
+                <span class="file-picker-title">
+                  {{ albumImportDraft?.archiveName || '点击或拖拽上传专辑压缩包' }}
+                </span>
+                <span class="file-picker-subtitle">只支持 .zip 格式，建议包含专辑封面与音频</span>
+              </div>
+              <PButton 
+                type="button" 
+                variant="secondary" 
+                :disabled="uploading"
+                @click.stop="archiveInputRef?.click()"
+              >
+                {{ albumImportDraft?.archiveName ? '重新选择' : '浏览文件' }}
+              </PButton>
+            </div>
+          </div>
         </div>
 
         <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
@@ -164,7 +200,7 @@ async function handleArchiveChange(event: Event) {
           <p v-if="albumImportDraft.uploadProgress > 0" class="state-line">
             上传进度 {{ albumImportDraft.uploadProgress }}%
           </p>
-          <p v-else class="state-line">上传压缩包后会自动解析封面与曲目信息。</p>
+          <p v-else class="state-line">上传后会自动填入封面和曲目信息。</p>
 
           <p
             v-if="albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0"
@@ -185,7 +221,6 @@ async function handleArchiveChange(event: Event) {
         <div class="card-header">
           <div>
             <p class="card-kicker">曲目整理</p>
-            <p class="card-copy">默认只展示序号和曲名，操作在 hover 或聚焦时显露，保持页面像表单而不是工具台。</p>
           </div>
           <button
             data-testid="album-import-add-track-button"
@@ -205,13 +240,13 @@ async function handleArchiveChange(event: Event) {
             data-testid="album-import-track-row"
           >
             <span class="track-seq">{{ String(track.sequence).padStart(2, '0') }}</span>
-            <PInput
-              :model-value="track.title"
+            <input
+              :value="track.title"
               data-testid="album-import-track-title-input"
               class="track-title-input"
               type="text"
               placeholder="输入曲目名"
-              @update:model-value="updateTrackTitle(track.id, String($event ?? ''))"
+              @input="e => updateTrackTitle(track.id, (e.target as HTMLInputElement).value)"
             />
             <div class="track-row-actions" data-testid="album-import-track-actions">
               <button
@@ -226,25 +261,32 @@ async function handleArchiveChange(event: Event) {
           </div>
         </div>
 
-        <p v-else class="state-line">导入后识别到的曲目会显示在这里，也可以手动补充。</p>
+        <p v-else class="state-line">上传后识别到的曲目会显示在这里，也可以手动添加。</p>
       </section>
 
       <section class="album-card">
         <div class="card-header">
           <div>
-            <p class="card-kicker">导入结果</p>
-            <p class="card-copy">这里先汇总系统识别结果，后续再作为正式专辑资料提交。</p>
+            <p class="card-kicker">已识别内容</p>
           </div>
         </div>
 
         <div class="info-grid">
           <div class="info-chip">
-            <span class="summary-label">识别到的专辑名</span>
-            <strong>{{ albumImportDraft.derivedAlbumTitle || '等待导入结果' }}</strong>
+            <span class="summary-label">专辑名</span>
+            <strong>{{ albumImportDraft.derivedAlbumTitle || '等待上传' }}</strong>
           </div>
           <div class="info-chip">
-            <span class="summary-label">封面结果</span>
-            <strong>{{ albumImportDraft.coverUrl || albumImportDraft.derivedCover || '等待导入结果' }}</strong>
+            <span class="summary-label">封面</span>
+            <div v-if="resolvedCoverUrl" class="cover-summary">
+              <img
+                :src="resolvedCoverUrl"
+                alt="已识别专辑封面"
+                class="cover-summary__image"
+                data-testid="album-import-cover-preview"
+              />
+            </div>
+            <strong v-else>等待上传</strong>
           </div>
         </div>
       </section>
@@ -265,8 +307,22 @@ async function handleArchiveChange(event: Event) {
   gap: 1rem;
 }
 
+.cover-summary {
+  display: flex;
+  align-items: center;
+}
+
+.cover-summary__image {
+  width: 5.5rem;
+  height: 5.5rem;
+  object-fit: cover;
+  border-radius: 0.9rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-2);
+}
+
 .album-hero {
-  display: grid;
+  display: none !important;
   gap: 0.7rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--a-color-line-soft);
@@ -335,7 +391,7 @@ async function handleArchiveChange(event: Event) {
 .progress-panel { display: grid; gap: 0.7rem; }
 
 :deep(.p-input:focus) {
-  border-bottom-color: var(--a-color-accent-confirm);
+  border-bottom-color: var(--a-color-ink);
 }
 
 .state-line {
@@ -406,6 +462,20 @@ async function handleArchiveChange(event: Event) {
 
 .track-title-input {
   flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  color: var(--a-color-ink);
+  font-family: inherit;
+  font-size: 0.95rem;
+  width: 100%;
+  border-radius: 0;
+  transition: all 0.15s ease;
+}
+.track-title-input:focus {
+  outline: none;
+  background: var(--a-color-paper);
+  box-shadow: inset 0 -2px 0 var(--a-color-ink);
 }
 
 .track-row-actions {
@@ -445,5 +515,56 @@ async function handleArchiveChange(event: Event) {
   .info-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Custom File Picker UI */
+.custom-file-picker {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.custom-file-picker:hover:not(.is-disabled) {
+  border-color: var(--a-color-ink);
+  background: var(--a-color-paper);
+}
+.custom-file-picker.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.file-picker-icon {
+  color: var(--a-color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-line-soft);
+}
+.file-picker-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-align: left;
+}
+.file-picker-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--a-color-ink);
+  word-break: break-all;
+  line-height: 1.4;
+}
+.file-picker-subtitle {
+  font-size: 0.72rem;
+  color: var(--a-color-muted-soft);
+  margin-top: 0.15rem;
+  line-height: 1.3;
 }
 </style>

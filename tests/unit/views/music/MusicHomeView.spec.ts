@@ -1,11 +1,11 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { computed, ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
 import HomeView from '@/views/music/HomeView.vue'
 
 const mocks = vi.hoisted(() => ({
-  listMusicAlbums: vi.fn(),
+  listMusicArtists: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openNestedAction: vi.fn(),
@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/musicV1', () => ({
-  listMusicAlbums: mocks.listMusicAlbums,
+  listMusicArtists: mocks.listMusicArtists,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -44,9 +44,10 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
-describe('Music HomeView.vue (Album Discovery)', () => {
+describe('Music HomeView.vue (Artist Discovery)', () => {
   beforeEach(() => {
-    mocks.listMusicAlbums.mockReset()
+    vi.useFakeTimers()
+    mocks.listMusicArtists.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openNestedAction.mockReset()
@@ -59,25 +60,24 @@ describe('Music HomeView.vue (Album Discovery)', () => {
       creationFlow: null,
     }
     mocks.routeQuery = {}
-    mocks.listMusicAlbums.mockResolvedValue({
+    mocks.listMusicArtists.mockResolvedValue({
       data: [
         {
-          id: 'album-1',
-          title: 'Hot Album',
-          cover_url: '/covers/hot.jpg',
-          release_date: '2026-05-29T00:00:00Z',
-          year: 2026,
-          album_type: 'album',
-          entry_status: 'open',
-          hot_score: 91.5,
-          artists: [{ id: 'artist-1', name: 'Hot Artist' }],
+          id: 'artist-1',
+          name: 'Hot Artist',
+          nationality: 'UK',
+          bio: 'Artist bio',
         },
       ],
       meta: { page: 1, page_size: 48, total: 1, has_more: false },
     })
   })
 
-  it('loads hot albums by default and renders an album grid', async () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('loads artists by default and renders an artist grid', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {
       global: {
@@ -93,16 +93,15 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     })
     await flushPromises()
 
-    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ q: undefined, page: 1, page_size: 48, sort: 'hot' })
-    expect(wrapper.find('h1').text()).toContain('专辑')
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: undefined, page: 1, page_size: 48 })
+    expect(wrapper.find('h1').text()).toContain('艺术家')
     expect(wrapper.find('.search-input').exists()).toBe(true)
-    expect(wrapper.findAll('[data-testid="album-card"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Hot Album')
+    expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Hot Artist')
-    expect(wrapper.text()).toContain('热度 91.5')
+    expect(wrapper.text()).toContain('UK')
   })
 
-  it('reloads albums in random mode when the random tab is selected', async () => {
+  it('opens artist drawers from artist cards', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {
       global: {
@@ -118,62 +117,37 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     })
     await flushPromises()
 
-    await wrapper.find('[data-testid="mode-random"]').trigger('click')
-    await flushPromises()
-
-    expect(mocks.listMusicAlbums).toHaveBeenLastCalledWith({ q: undefined, page: 1, page_size: 48, sort: 'random' })
-  })
-
-  it('renders hot and random discovery mode controls as shared tabs', async () => {
-    const pinia = createTestingPinia({ createSpy: vi.fn })
-    const wrapper = mount(HomeView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-        },
-      },
-    })
-    await flushPromises()
-
-    const tabs = wrapper.findAll('.p-tab')
-
-    expect(tabs).toHaveLength(2)
-    expect(tabs.map((tab) => tab.text())).toEqual(['热门', '随机'])
-    expect(tabs[0]?.classes()).toContain('p-tab--active')
-  })
-
-  it('opens album and artist drawers from album cards', async () => {
-    const pinia = createTestingPinia({ createSpy: vi.fn })
-    const wrapper = mount(HomeView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-        },
-      },
-    })
-    await flushPromises()
-
-    await wrapper.find('[data-testid="album-card"]').trigger('click')
-    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
-
-    await wrapper.find('[data-testid="album-artist"]').trigger('click')
+    await wrapper.find('[data-testid="artist-card"]').trigger('click')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
   })
 
-  it('opens drawers from music query parameters on first load', async () => {
-    mocks.routeQuery = { artist: 'artist-99', album: 'album-42' }
+  it('shows search results in dropdown and opens artist from there', async () => {
+    mocks.listMusicArtists
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: 'artist-1',
+            name: 'Default Artist',
+            nationality: 'UK',
+            bio: 'Default bio',
+          },
+        ],
+        meta: { page: 1, page_size: 48, total: 1, has_more: false },
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: 'artist-2',
+            name: 'Ye',
+            legal_name: 'Kanye',
+            bio: 'Search bio',
+          },
+        ],
+        meta: { page: 1, page_size: 8, total: 1, has_more: false },
+      })
+
     const pinia = createTestingPinia({ createSpy: vi.fn })
-    mount(HomeView, {
+    const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
         stubs: {
@@ -187,12 +161,23 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     })
     await flushPromises()
 
-    expect(mocks.openArtist).toHaveBeenCalledWith('artist-99')
-    expect(mocks.openAlbum).toHaveBeenCalledWith('album-42')
+    const input = wrapper.find('input[placeholder="搜索艺术家..."]')
+    await input.trigger('focus')
+    await input.setValue('kanye')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="music-search-dropdown"]').exists()).toBe(true)
+    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'kanye', page: 1, page_size: 8 })
+    expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Default Artist')
+    expect(wrapper.text()).toContain('Ye')
+
+    await wrapper.find('[data-testid="music-search-result"]').trigger('mousedown')
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-2')
   })
 
-  it('offers wiki edit actions when no albums match', async () => {
-    mocks.listMusicAlbums.mockResolvedValueOnce({
+  it('offers wiki edit actions when no artists match', async () => {
+    mocks.listMusicArtists.mockResolvedValueOnce({
       data: [],
       meta: { page: 1, page_size: 48, total: 0, has_more: false },
     })
@@ -211,7 +196,7 @@ describe('Music HomeView.vue (Album Discovery)', () => {
     })
     await flushPromises()
 
-    await wrapper.find('[data-testid="empty-add-artist-and-album"]').trigger('click')
+    await wrapper.find('[data-testid="empty-add-artist"]').trigger('click')
 
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1)
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'artist' })

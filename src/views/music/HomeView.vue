@@ -2,118 +2,88 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { listMusicAlbums, listMusicArtists, type MusicAlbumListItem, type MusicArtistListItem } from '@/api/musicV1'
+import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
-import PTab from '@/components/ui/PTab.vue'
-import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-
-type DiscoveryMode = 'hot' | 'random'
+import SearchSurface from '@/components/search/SearchSurface.vue'
 
 const route = useRoute()
 const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicCreationFlow } = useMusicDrawers()
 
-const albums = ref<MusicAlbumListItem[]>([])
 const artists = ref<MusicArtistListItem[]>([])
+const searchResults = ref<MusicArtistListItem[]>([])
 const searchQuery = ref('')
-const mode = ref<DiscoveryMode>('hot')
 const loading = ref(false)
+const searchLoading = ref(false)
 const errorMessage = ref('')
+const showSearchDropdown = ref(false)
 let activeRequestId = 0
+let activeSearchRequestId = 0
 let lastRouteArtist: string | null = null
 let lastRouteAlbum: string | null = null
 
-const modeLabel = computed(() => (mode.value === 'hot' ? '热门' : '随机'))
-
-function albumArtists(album: MusicAlbumListItem) {
-  return album.artists || []
-}
-
-function releaseLabel(album: MusicAlbumListItem) {
-  if (album.year) return String(album.year)
-  if (album.release_date) return album.release_date.slice(0, 4)
-  return '年份未知'
-}
-
-function statusLabel(status: string) {
-  return status === 'confirmed' ? '已确认' : '待完善'
-}
-
-function hotScoreLabel(album: MusicAlbumListItem) {
-  if (album.hot_score === undefined || album.hot_score === null) return ''
-  return Number.isInteger(album.hot_score) ? String(album.hot_score) : album.hot_score.toFixed(1)
-}
-
-async function fetchAlbums() {
+async function fetchArtists() {
   const requestId = ++activeRequestId
   loading.value = true
   errorMessage.value = ''
-  const query = searchQuery.value.trim() || undefined
 
   try {
-    const albumsResponse = await listMusicAlbums({
-      q: query,
+    const response = await listMusicArtists({
+      q: undefined,
       page: 1,
       page_size: 48,
-      sort: mode.value,
     })
     if (requestId !== activeRequestId) return
-    albums.value = albumsResponse.data
+    artists.value = response.data
   } catch (e) {
     if (requestId !== activeRequestId) return
-    console.error('Failed to fetch music discovery data:', e)
-    errorMessage.value = '专辑列表加载失败'
-    artists.value = []
-    loading.value = false
-    return
-  }
-
-  if (!query) {
-    if (requestId === activeRequestId) {
-      artists.value = []
-      loading.value = false
-    }
-    return
-  }
-
-  try {
-    const artistsResponse = await listMusicArtists({
-      q: query,
-      page: 1,
-      page_size: 12,
-    })
-    if (requestId !== activeRequestId) return
-    artists.value = artistsResponse.data
-  } catch (e) {
-    if (requestId !== activeRequestId) return
-    console.error('Failed to fetch music artist search data:', e)
+    console.error('Failed to fetch music artists:', e)
+    errorMessage.value = '艺术家列表加载失败'
     artists.value = []
   } finally {
-    if (requestId !== activeRequestId) return
-    loading.value = false
+    if (requestId === activeRequestId) {
+      loading.value = false
+    }
   }
 }
 
-const showArtistResults = computed(() => !!searchQuery.value.trim() && artists.value.length > 0)
+async function fetchSearchResults() {
+  const query = searchQuery.value.trim()
+  const requestId = ++activeSearchRequestId
+
+  if (!query) {
+    searchResults.value = []
+    searchLoading.value = false
+    return
+  }
+
+  searchLoading.value = true
+  try {
+    const response = await listMusicArtists({
+      q: query,
+      page: 1,
+      page_size: 8,
+    })
+    if (requestId !== activeSearchRequestId) return
+    searchResults.value = response.data
+  } catch (e) {
+    if (requestId !== activeSearchRequestId) return
+    console.error('Failed to search music artists:', e)
+    searchResults.value = []
+  } finally {
+    if (requestId === activeSearchRequestId) {
+      searchLoading.value = false
+    }
+  }
+}
 
 function openArtistCard(artistId: string) {
   openArtist(String(artistId))
-}
-
-function changeMode(nextMode: DiscoveryMode) {
-  if (mode.value === nextMode) return
-  mode.value = nextMode
-}
-
-function openAlbumCard(album: MusicAlbumListItem) {
-  openAlbum(String(album.id))
-}
-
-function openArtistFromCard(artistId: string) {
-  openArtist(String(artistId))
+  showSearchDropdown.value = false
+  searchQuery.value = ''
 }
 
 function applyRouteSelection() {
@@ -137,20 +107,40 @@ function applyRouteSelection() {
 }
 
 onMounted(() => {
-  fetchAlbums()
+  if (typeof route.query.q === 'string' && route.query.q.trim()) {
+    searchQuery.value = route.query.q.trim()
+  }
+  fetchArtists()
+  fetchSearchResults()
   applyRouteSelection()
 })
 
-watch([searchQuery, mode], () => {
-  fetchAlbums()
+watch(searchQuery, () => {
+  fetchSearchResults()
 })
 
 watch(
-  () => [route.query.artist, route.query.album],
+  () => [route.query.artist, route.query.album, route.query.q],
   () => {
+    const routeQuery = typeof route.query.q === 'string' ? route.query.q.trim() : ''
+    if (routeQuery !== searchQuery.value) {
+      searchQuery.value = routeQuery
+    }
     applyRouteSelection()
   },
 )
+
+const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
+
+function handleSearchFocus() {
+  showSearchDropdown.value = true
+}
+
+function handleSearchBlur() {
+  window.setTimeout(() => {
+    showSearchDropdown.value = false
+  }, 120)
+}
 </script>
 
 <template>
@@ -159,58 +149,59 @@ watch(
       <div class="page-header">
         <PPageHeader
           kicker="Music Archive"
-          title="专辑发现"
-          sub="按热度或随机浏览音乐档案库中的专辑与艺术家。"
+          title="艺术家"
+          sub="浏览或搜索音乐档案库中的艺术家。"
           mb="0"
-        >
-          <template #action>
-            <div class="mode-tabs" aria-label="专辑浏览模式">
-              <PTab
-                label="热门"
-                :active="mode === 'hot'"
-                data-testid="mode-hot"
-                @click="changeMode('hot')"
-              />
-              <PTab
-                label="随机"
-                :active="mode === 'random'"
-                data-testid="mode-random"
-                @click="changeMode('random')"
-              />
-            </div>
-          </template>
-        </PPageHeader>
-      </div>
-
-      <div class="artist-section-heading">
-        <h2>艺术家</h2>
-        <p class="a-muted">搜索艺术家，或从专辑卡片进入相关音乐档案。</p>
-      </div>
-
-      <div class="search-bar">
-        <span class="search-bar-dot" aria-hidden="true" />
-        <PInput
-          v-model="searchQuery"
-          placeholder="搜索艺术家 / 专辑..."
-          data-testid="music-search-input"
-          class="search-input"
         />
-        <button class="paper-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
-          <span class="paper-action-dot" aria-hidden="true" />
-          找不到？添加艺术家和首张专辑
-        </button>
       </div>
+
+      <SearchSurface
+        v-model:query="searchQuery"
+        :open="showSearchDropdown"
+        eyebrow="Artist Search"
+        :status="searchLoading ? '搜索中...' : hasSearchQuery ? `结果 ${searchResults.length}` : '浏览全部'"
+        placeholder="搜索艺术家..."
+        input-test-id="music-search-input"
+        dropdown-test-id="music-search-dropdown"
+        :loading="searchLoading"
+        :hint="!hasSearchQuery ? '输入艺名，直接从下拉结果进入艺术家页面。' : ''"
+        :empty="hasSearchQuery && !searchResults.length ? '没有匹配的艺术家' : ''"
+        @focus="handleSearchFocus"
+        @blur="handleSearchBlur"
+      >
+        <template #results>
+          <div class="search-dropdown__list">
+            <button
+              v-for="artist in searchResults"
+              :key="artist.id"
+              type="button"
+              class="search-dropdown__item"
+              data-testid="music-search-result"
+              @mousedown.prevent="openArtistCard(artist.id)"
+            >
+              <span class="search-dropdown__item-title">{{ artist.name }}</span>
+              <span class="search-dropdown__item-meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
+            </button>
+          </div>
+        </template>
+        <template #actions>
+          <button class="paper-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
+            <span class="paper-action-dot" aria-hidden="true" />
+            找不到？添加艺术家和首张专辑
+          </button>
+        </template>
+      </SearchSurface>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="loading" class="state-line">正在加载{{ modeLabel }}专辑...</p>
+      <p v-else-if="loading" class="state-line">正在加载艺术家...</p>
 
-      <div v-else-if="!albums.length" class="empty-state">
-        <p class="state-line">没有匹配的专辑，可以提交新的 wiki 编辑。</p>
+      <div v-else-if="!artists.length" class="empty-state">
+        <p class="state-line">没有匹配的艺术家，可以提交新的 wiki 编辑。</p>
         <div class="empty-actions">
           <button
             class="paper-action"
             type="button"
-            data-testid="empty-add-artist-and-album"
+            data-testid="empty-add-artist"
             @click="openMusicCreationFlow({ startStep: 'artist' })"
           >
             <span class="paper-action-dot" aria-hidden="true" />
@@ -219,61 +210,37 @@ watch(
         </div>
       </div>
 
-      <div v-else class="grid">
-        <article
-          v-for="album in albums"
-          :key="album.id"
-          class="card"
-          data-testid="album-card"
-          @click="openAlbumCard(album)"
+      <div v-else class="artist-results-grid">
+        <button
+          v-for="artist in artists"
+          :key="artist.id"
+          class="artist-card"
+          data-testid="artist-card"
+          type="button"
+          @click="openArtistCard(artist.id)"
         >
-          <div class="card-img">
-            <img v-if="album.cover_url" :src="album.cover_url" class="album-cover" alt="" />
-            <span v-else>ALBUM</span>
-          </div>
-          <div class="card-body">
-            <div class="card-title">{{ album.title }}</div>
-            <div class="artist-row" @click.stop>
-              <button
-                v-for="artist in albumArtists(album)"
-                :key="artist.id"
-                class="artist-link"
-                type="button"
-                data-testid="album-artist"
-                @click="openArtistFromCard(artist.id)"
-              >
-                {{ artist.name }}
-              </button>
-              <span v-if="!albumArtists(album).length" class="card-sub">未知艺术家</span>
+          <!-- Thumbnail/Avatar -->
+          <div class="avatar-frame">
+            <img v-if="artist.image_url" :src="artist.image_url" :alt="artist.name" class="avatar-image" loading="lazy" />
+            <div v-else class="avatar-placeholder-text">
+              <span>{{ artist.name ? artist.name[0].toUpperCase() : '?' }}</span>
             </div>
-            <div class="meta-row">
-              <span>{{ releaseLabel(album) }}</span>
-              <span>{{ album.album_type || 'album' }}</span>
-              <span>{{ statusLabel(album.entry_status) }}</span>
+            
+            <!-- Nationality Overlay -->
+            <div v-if="artist.nationality" class="nationality-overlay">
+              <span>{{ artist.nationality }}</span>
             </div>
-            <div v-if="hotScoreLabel(album)" class="card-sub">热度 {{ hotScoreLabel(album) }}</div>
           </div>
-        </article>
-      </div>
 
-      <section v-if="showArtistResults" class="artist-results-panel">
-        <div class="artist-results-header">
-          <span class="artist-results-dot" aria-hidden="true" />
-          <h2>匹配艺术家</h2>
-        </div>
-        <div class="artist-results-grid">
-          <article
-            v-for="artist in artists"
-            :key="artist.id"
-            class="artist-card"
-            data-testid="artist-card"
-            @click="openArtistCard(artist.id)"
-          >
-            <div class="artist-card-title">{{ artist.name }}</div>
-            <p class="artist-card-sub">{{ artist.nationality || artist.bio || '新建艺术家，暂未关联专辑' }}</p>
-          </article>
-        </div>
-      </section>
+          <!-- Info row -->
+          <div class="artist-info">
+            <div class="artist-text">
+              <h3 class="artist-card-title a-clamp-1">{{ artist.name }}</h3>
+              <p class="artist-card-sub a-clamp-2">{{ artist.bio || '暂无个人简介' }}</p>
+            </div>
+          </div>
+        </button>
+      </div>
     </div>
 
     <ArtistDrawer />
@@ -300,37 +267,7 @@ watch(
   margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--a-color-line-soft);
 }
-.mode-tabs {
-  display: inline-flex;
-  gap: 0;
-  flex-shrink: 0;
-  border: 1px solid var(--a-color-line-soft);
-}
 
-.artist-section-heading {
-  margin-top: 1.5rem;
-  display: grid;
-  gap: 0.35rem;
-}
-.artist-section-heading h2 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-}
-.artist-section-heading p {
-  margin: 0;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1.5rem 0 2rem;
-  padding: 0.85rem 0 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 18%, transparent);
-}
-.search-bar-dot,
 .paper-action-dot {
   width: 0.45rem;
   height: 0.45rem;
@@ -338,84 +275,42 @@ watch(
   background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
   flex-shrink: 0;
 }
-.search-input {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font-size: 1rem;
-  flex: 1;
-  max-width: 520px;
-  outline: none;
+.search-dropdown {
+  margin-top: -0.15rem;
 }
-.search-input:focus {
-  box-shadow: none;
-}
-
-/* ─── Album Grid ─────────────────── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
-.card {
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line-soft);
-  border-left: 3px solid transparent;
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-  overflow: hidden;
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.card:hover {
-  background: var(--a-color-paper-soft);
-  border-left-color: var(--a-color-accent-confirm);
-  box-shadow: var(--a-shadow-dropdown);
-}
-.card-img {
-  aspect-ratio: 1;
-  background: var(--a-color-paper-wash);
-  border-bottom: 1px solid var(--a-color-line-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--a-font-meta);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--a-color-muted-soft);
-  overflow: hidden;
-}
-.album-cover { width: 100%; height: 100%; object-fit: cover; }
-.card-body { padding: 1rem; text-align: left; display: flex; flex-direction: column; gap: 0.45rem; }
-.card-title { font-weight: 900; font-size: 1rem; line-height: 1.2; letter-spacing: -0.01em; }
-.artist-row { display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 1.4rem; }
-.artist-link {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--a-color-ink);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--a-color-line);
-  transition: text-decoration-color 0.15s ease;
-}
-.artist-link:hover {
-  text-decoration-color: var(--a-color-ink);
-}
-.meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-  font-family: var(--a-font-meta);
+.search-dropdown__hint {
+  margin: 0;
+  padding: 0.55rem 0.95rem;
   color: var(--a-color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
-.meta-row span::after { content: '·'; margin-left: 0.4rem; opacity: 0.5; }
-.meta-row span:last-child::after { content: ''; margin-left: 0; }
-.card-sub { font-size: 0.78rem; color: var(--a-color-muted); font-family: var(--a-font-meta); }
+.search-dropdown__list {
+  display: grid;
+}
+.search-dropdown__item {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.8rem 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.search-dropdown__item:hover {
+  background: color-mix(in srgb, var(--a-color-paper) 58%, var(--a-color-paper-wash) 42%);
+}
+.search-dropdown__item-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--a-color-fg);
+}
+.search-dropdown__item-meta {
+  font-size: 0.74rem;
+  color: var(--a-color-muted-soft);
+}
 
 /* ─── State / Empty ──────────────── */
 .state-line { margin: 1.5rem 0; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
@@ -442,75 +337,114 @@ watch(
   transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 .paper-action:hover {
-  background: var(--a-color-accent-confirm);
+  background: var(--a-color-ink);
   color: var(--a-color-paper);
   box-shadow: var(--a-shadow-dropdown);
 }
 
 /* ─── Artist Search Results ──────── */
-.artist-results-panel {
-  margin-top: 2rem;
-  display: grid;
-  gap: 1rem;
-}
-.artist-results-header {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-.artist-results-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
-}
-.artist-results-header h2 {
-  margin: 0;
-  font-family: var(--a-font-meta);
-  font-size: 0.75rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--a-color-ink-soft);
-}
 .artist-results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1.25rem;
 }
 .artist-card {
-  display: grid;
-  gap: 0.35rem;
-  padding: 1rem 1.1rem;
-  background: var(--a-color-paper);
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
   cursor: pointer;
-  border: 1px solid var(--a-color-line-soft);
-  border-left: 3px solid transparent;
-  margin-top: -1px;
-  margin-left: -1px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  width: 100%;
 }
-.artist-card:hover {
-  background: var(--a-color-paper-soft);
-  border-left-color: var(--a-color-accent-confirm);
-  z-index: 1;
+.avatar-frame {
   position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--a-color-surface);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--a-color-line-soft);
+}
+.artist-card:hover .avatar-image {
+  transform: scale(1.03);
+}
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+  display: block;
+}
+.avatar-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-muted);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
+}
+.nationality-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+}
+.nationality-overlay span {
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  letter-spacing: 0.02em;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.artist-info {
+  display: flex;
+  padding: 8px 0 0;
+  text-align: left;
+}
+.artist-text {
+  min-width: 0;
+  flex: 1;
 }
 .artist-card-title {
-  font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--a-color-fg);
+  margin: 0 0 0.25rem 0;
+  transition: color 0.2s;
+}
+.artist-card:hover .artist-card-title {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 .artist-card-sub {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  line-height: 1.5;
-  font-size: 0.83rem;
+  color: var(--a-color-muted-soft);
+  line-height: 1.4;
+  font-size: 0.75rem;
 }
 
-@media (max-width: 720px) {
-  .search-bar { flex-direction: column; align-items: flex-start; }
-  .mode-tabs,
-  .search-input { width: 100%; max-width: none; }
+.avatar-placeholder-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--a-color-ink);
+  background: linear-gradient(135deg, var(--a-color-surface), var(--a-color-line-soft));
+  text-transform: uppercase;
+  font-family: var(--a-font-meta);
+  letter-spacing: -0.05em;
+  opacity: 0.85;
 }
+
 </style>

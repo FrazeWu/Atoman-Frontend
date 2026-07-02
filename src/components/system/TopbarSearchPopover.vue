@@ -9,22 +9,34 @@
     aria-label="全站搜索"
     @click.stop
   >
-    <div class="topbar-search-preview">
-      <p v-if="mode === 'preview' && localQuery.trim().length < 2" class="topbar-search-popover__hint">输入至少 2 个字开始搜索，回车展开纸张结果</p>
-      <p v-else-if="mode === 'preview' && search.loading.value" class="topbar-search-popover__hint">搜索中...</p>
-      <p v-else-if="mode === 'preview' && search.sections.value.length === 0" class="topbar-search-popover__hint">没有找到匹配内容</p>
-
-      <div v-else-if="mode === 'preview'" class="topbar-search-preview__sections">
-        <TopbarSearchSection
-          v-for="section in search.sections.value"
-          :key="section.type"
-          :section="section"
-          :active-id="search.activeItem.value?.id || ''"
-          @open-item="openHref"
-          @open-more="openMore"
-        />
-      </div>
-    </div>
+    <SearchSurface
+      v-if="mode === 'preview'"
+      v-model:query="localQuery"
+      :open="true"
+      eyebrow="全站搜索"
+      :status="search.loading.value ? '搜索中...' : localQuery.trim().length >= 2 ? '预览结果' : '输入至少 2 个字'"
+      placeholder="搜索..."
+      dropdown-test-id="topbar-search-dropdown"
+      :loading="search.loading.value"
+      :hint="localQuery.trim().length < 2 ? '输入至少 2 个字开始搜索，回车展开纸张结果' : ''"
+      :empty="localQuery.trim().length >= 2 && search.sections.value.length === 0 ? '没有找到匹配内容' : ''"
+      @update:query="onInput"
+      @focus="noop"
+      @blur="noop"
+    >
+      <template #results>
+        <div class="topbar-search-preview__sections">
+          <TopbarSearchSection
+            v-for="section in search.sections.value"
+            :key="section.type"
+            :section="section"
+            :active-id="search.activeItem.value?.id || ''"
+            @open-item="openHref"
+            @open-more="openMore"
+          />
+        </div>
+      </template>
+    </SearchSurface>
   </div>
 
   <Teleport to="body" :disabled="isTest">
@@ -72,6 +84,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import SearchSurface from '@/components/search/SearchSurface.vue'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 
@@ -154,6 +167,8 @@ const openMore = async (href: string) => {
   emit('close')
   await router.push(href)
 }
+
+const noop = () => {}
 
 const expandPaper = async () => {
   mode.value = 'expanded'

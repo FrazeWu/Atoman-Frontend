@@ -185,7 +185,7 @@ function handleInput(event: Event) {
   width: 100%;
   flex: 1;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  border-bottom: 1px solid transparent;
   background: transparent;
   color: var(--a-color-ink);
   padding: 0 0 0.9rem 1.75rem;

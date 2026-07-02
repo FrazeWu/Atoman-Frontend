@@ -289,11 +289,9 @@ function handleSearchBlur() {
   pointer-events: none;
 }
 
-/* Use PPageHeader, wrap it in a container with a border-bottom separator */
 .page-header {
-  padding-bottom: 1.5rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .search-row {
@@ -305,7 +303,6 @@ function handleSearchBlur() {
 .search-shell {
   position: relative;
   max-width: 28rem;
-  min-height: 112px;
   flex: 0 1 28rem;
 }
 
@@ -399,6 +396,7 @@ function handleSearchBlur() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
   gap: 1.25rem;
+  margin-top: 1.5rem;
 }
 .artist-card {
   display: block;

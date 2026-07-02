@@ -237,7 +237,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .music-explore-view {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 1rem;
 }
 
 .page-header {
@@ -247,7 +247,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .search-shell {
   position: relative;
   max-width: 28rem;
-  min-height: 112px;
 }
 
 .search-shell.is-open {
@@ -331,6 +330,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
   gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 .music-card {

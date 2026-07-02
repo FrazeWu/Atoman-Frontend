@@ -145,7 +145,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         v-model:query="searchQuery"
         :open="searchOpen"
         compact
-        eyebrow="Explore Search"
+        eyebrow=""
         :status="searchLoading ? '搜索中...' : ''"
         placeholder="搜索专辑或艺术家..."
         input-test-id="music-explore-search-input"

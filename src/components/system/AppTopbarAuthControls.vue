@@ -21,7 +21,7 @@
       @input="emitSearchInput"
       @keydown.enter.prevent="expandSearch"
     />
-    <div v-if="showSearch" class="topbar-search-panel" :style="{ maxHeight: `${topbarSearchPanelMaxHeight}px` }">
+    <div v-if="showSearch" class="topbar-search-panel" :style="{ height: `${topbarSearchPanelMaxHeight}px` }">
       <div class="topbar-search-panel__head">
         <span class="topbar-search-panel__eyebrow">全站搜索</span>
         <span class="topbar-search-panel__status">
@@ -298,6 +298,9 @@ watch(authUserId, ensureMediaChannels)
   padding: 1.25rem 1.2rem 1.3rem;
   animation: topbarSearchReveal 0.52s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: auto;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .topbar-search-panel__head {
@@ -334,6 +337,9 @@ watch(authUserId, ensureMediaChannels)
 .topbar-search-panel__body {
   display: grid;
   gap: 1rem;
+  align-content: start;
+  overflow: auto;
+  min-height: 0;
 }
 
 @keyframes topbarSearchReveal {

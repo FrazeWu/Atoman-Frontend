@@ -7,7 +7,7 @@
   --a-color-muted-soft: #9ca3af;
   --a-color-danger: #991b1b;
   --a-color-danger-bg: #fff;
-  --a-color-success: #166534;
+  --a-color-success: var(--a-color-ink-soft);
   --a-color-success-bg: #fff;
   --a-color-disabled-fg: #9ca3af;
   --a-color-disabled-border: #d1d5db;
@@ -24,8 +24,8 @@
   --a-color-danger-ink: #7f1d1d;
   --a-color-danger-line: #b91c1c;
 
-  --a-color-accent-confirm: #0d9488;
-  --a-color-accent-confirm-hover: #0f766e;
+  --a-color-accent-confirm: var(--a-color-ink);
+  --a-color-accent-confirm-hover: color-mix(in srgb, var(--a-color-ink) 85%, #000);
   --a-color-accent-destructive: #ea580c;
   --a-color-accent-destructive-hover: #c2410c;
 

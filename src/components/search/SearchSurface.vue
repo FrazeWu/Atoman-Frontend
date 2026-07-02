@@ -8,16 +8,22 @@
 
       <div class="search-main">
         <slot name="input">
-          <input
-            :value="query"
-            class="search-input"
-            type="text"
-            :placeholder="placeholder"
-            :data-testid="inputTestId"
-            @input="handleInput"
-            @focus="$emit('focus')"
-            @blur="$emit('blur')"
-          >
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              :value="query"
+              class="search-input"
+              type="text"
+              :placeholder="placeholder"
+              :data-testid="inputTestId"
+              @input="handleInput"
+              @focus="$emit('focus')"
+              @blur="$emit('blur')"
+            >
+          </div>
         </slot>
 
         <div v-if="$slots.actions" class="search-actions">
@@ -155,6 +161,26 @@ function handleInput(event: Event) {
   color: var(--a-color-ink-soft);
 }
 
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0;
+  bottom: 0.95rem;
+  color: var(--a-color-muted-soft);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.search-frame.is-compact .search-icon {
+  bottom: 0.75rem;
+}
+
 .search-input {
   width: 100%;
   flex: 1;
@@ -162,10 +188,14 @@ function handleInput(event: Event) {
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
   background: transparent;
   color: var(--a-color-ink);
-  padding: 0 0 0.9rem;
+  padding: 0 0 0.9rem 1.75rem;
   font-size: 1rem;
   font-family: inherit;
   box-sizing: border-box;
+}
+
+.search-frame.is-compact .search-input {
+  padding-left: 1.75rem !important;
 }
 
 .search-input:focus {
@@ -173,14 +203,17 @@ function handleInput(event: Event) {
   border-bottom-color: var(--a-color-accent-confirm);
 }
 
+.search-input:focus + .search-icon {
+  color: var(--a-color-ink);
+}
+
 .search-dropdown {
   margin-top: 0.25rem;
   padding: 0.75rem 0 0;
   border-top: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
   background: transparent;
-  min-height: 33vh;
-  max-height: 33vh;
-  overflow: auto;
+  max-height: 420px;
+  overflow-y: auto;
   animation: searchSurfaceReveal 0.52s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

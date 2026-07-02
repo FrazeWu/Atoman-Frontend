@@ -60,6 +60,7 @@ describe('SubscriptionAddSheet', () => {
         id: 'source-1',
         provider: 'rss',
         source_type: 'external_rss',
+        category: 'podcast',
         title: 'Example Feed',
         rss_url: 'https://example.com/feed.xml',
         canonical_url: 'https://example.com/feed.xml',
@@ -75,6 +76,7 @@ describe('SubscriptionAddSheet', () => {
 
     expect(resolveSubscriptionInput).toHaveBeenCalledWith('https://example.com/feed.xml')
     expect(wrapper.text()).toContain('来源已存在，可添加到你的订阅')
+    expect(wrapper.get('[data-testid="category-select"]').element.value).toBe('podcast')
 
     await wrapper.findAll('button').find((button) => button.text() === '确认订阅')!.trigger('click')
 
@@ -84,7 +86,7 @@ describe('SubscriptionAddSheet', () => {
         candidate_feed_url: undefined,
         title: 'Example Feed',
         group_id: '',
-        category: 'blog',
+        category: 'podcast',
       },
     ]])
   })

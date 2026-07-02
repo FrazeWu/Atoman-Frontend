@@ -258,6 +258,7 @@ export interface ResolvedSubscriptionSource {
   id?: string
   provider: FeedSourceProvider
   source_type: 'external_rss' | 'internal_user' | 'internal_channel' | 'internal_collection'
+  category?: FeedSourceCategory
   title: string
   rss_url: string
   site_url?: string

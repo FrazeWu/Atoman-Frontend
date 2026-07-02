@@ -58,6 +58,10 @@
           />
         </PField>
 
+        <div v-if="detectedCategoryLabel" class="resolve-status resolve-status--ok">
+          已识别为：{{ detectedCategoryLabel }}
+        </div>
+
         <PField v-if="groups.length" label="添加到分组（可选）">
           <PSelect
             v-model="selectedGroupId"
@@ -147,6 +151,12 @@ const activeSource = computed(() => selectedCandidate.value?.source || resolved.
 const resolvedSourceTitle = computed(() => customTitle.value.trim() || activeSource.value?.title || selectedCandidate.value?.title || '')
 const resolvedSourceUrl = computed(() => selectedCandidate.value?.feed_url || activeSource.value?.rss_url || '')
 const resolveMessage = computed(() => resolved.value?.message || '')
+const detectedCategory = computed<FeedSourceCategory | ''>(() => {
+  const category = activeSource.value?.category
+  if (!category) return ''
+  return category
+})
+const detectedCategoryLabel = computed(() => categoryOptions.find((option) => option.value === detectedCategory.value)?.label || '')
 const selectedCandidateBlocked = computed(() => selectedCandidate.value?.status === 'already_subscribed')
 const canSubmit = computed(() => {
   if (resolving.value || !sourceInput.value.trim() || !resolved.value) return false
@@ -185,6 +195,10 @@ watch(sourceInput, (value) => {
     resolved.value = result
     if (!result) {
       localError.value = feedStore.error || '检测失败，请稍后重试'
+      return
+    }
+    if (result.source?.category) {
+      selectedCategory.value = result.source.category
     }
   }, 500)
 })

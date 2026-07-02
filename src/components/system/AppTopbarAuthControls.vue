@@ -150,7 +150,7 @@ const updateTopbarSearchPanelMaxHeight = () => {
   const top = rect?.bottom ?? 56
   const playerTop = document.querySelector('.player')?.getBoundingClientRect().top ?? window.innerHeight - 24
   const safeBottom = Math.max(playerTop - 16, top + 220)
-  topbarSearchPanelMaxHeight.value = Math.max(safeBottom - top, 240)
+  topbarSearchPanelMaxHeight.value = Math.max(safeBottom - top, Math.floor(window.innerHeight / 3))
 }
 
 const ensureMediaChannels = () => {

@@ -103,9 +103,9 @@ function handleInput(event: Event) {
   border: var(--a-border);
   background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
   box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
-  padding: 1rem 1.05rem 1.1rem;
+  padding: 0.6rem 0.8rem 0.65rem;
   display: grid;
-  gap: 0.6rem;
+  gap: 0.4rem;
   overflow: hidden;
   transition:
     width 0.48s cubic-bezier(0.16, 1, 0.3, 1),
@@ -119,8 +119,8 @@ function handleInput(event: Event) {
 }
 
 .search-frame.is-compact {
-  padding: 0.82rem 0.92rem 0.88rem;
-  gap: 0.55rem;
+  padding: 0.45rem 0.65rem 0.5rem;
+  gap: 0.35rem;
 }
 
 .search-frame.is-compact .search-frame__eyebrow,
@@ -130,7 +130,7 @@ function handleInput(event: Event) {
 
 .search-frame.is-compact .search-input {
   font-size: 0.98rem;
-  padding-bottom: 0.72rem;
+  padding-bottom: 0.35rem;
 }
 
 .search-main {
@@ -171,14 +171,14 @@ function handleInput(event: Event) {
 .search-icon {
   position: absolute;
   left: 0;
-  bottom: 0.95rem;
+  bottom: 0.45rem;
   color: var(--a-color-muted-soft);
   pointer-events: none;
   transition: color 0.2s ease;
 }
 
 .search-frame.is-compact .search-icon {
-  bottom: 0.75rem;
+  bottom: 0.4rem;
 }
 
 .search-input {
@@ -188,14 +188,14 @@ function handleInput(event: Event) {
   border-bottom: 1px solid transparent;
   background: transparent;
   color: var(--a-color-ink);
-  padding: 0 0 0.9rem 1.75rem;
+  padding: 0 0 0.45rem 1.6rem;
   font-size: 1rem;
   font-family: inherit;
   box-sizing: border-box;
 }
 
 .search-frame.is-compact .search-input {
-  padding-left: 1.75rem !important;
+  padding-left: 1.6rem !important;
 }
 
 .search-input:focus {

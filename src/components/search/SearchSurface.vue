@@ -22,9 +22,18 @@
               @input="handleInput"
               @focus="$emit('focus')"
               @blur="$emit('blur')"
+              @keydown.enter="$emit('submit')"
             >
           </div>
         </slot>
+
+        <button
+          class="search-btn"
+          type="button"
+          @click="$emit('submit')"
+        >
+          搜索
+        </button>
 
         <div v-if="$slots.actions" class="search-actions">
           <slot name="actions" />
@@ -75,6 +84,7 @@ const emit = defineEmits<{
   'update:query': [string]
   focus: []
   blur: []
+  submit: []
 }>()
 
 const showDropdown = computed(() => (
@@ -134,8 +144,33 @@ function handleInput(event: Event) {
 }
 
 .search-main {
-  display: grid;
-  gap: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.search-btn {
+  border: 1px solid var(--a-color-line);
+  border-radius: 0px;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
+  cursor: pointer;
+  font-family: var(--a-font-meta);
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.35rem 0.85rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-btn:hover {
+  background: var(--a-color-paper-wash);
+  border-color: var(--a-color-ink);
 }
 
 .search-frame__head {

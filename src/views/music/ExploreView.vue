@@ -146,7 +146,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         :open="searchOpen"
         compact
         eyebrow="Explore Search"
-        :status="searchLoading ? '搜索中...' : '搜索专辑或艺术家'"
+        :status="searchLoading ? '搜索中...' : '搜索'"
         placeholder="搜索专辑或艺术家..."
         input-test-id="music-explore-search-input"
         dropdown-test-id="music-explore-search-dropdown"

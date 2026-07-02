@@ -188,7 +188,7 @@ function handleSearchBlur() {
             :open="showSearchDropdown"
             compact
             eyebrow=""
-            :status="searchLoading ? '搜索中...' : '搜索艺术家'"
+            :status="searchLoading ? '搜索中...' : '搜索'"
             placeholder="搜索艺术家..."
             input-test-id="music-search-input"
             dropdown-test-id="music-search-dropdown"

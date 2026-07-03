@@ -2,8 +2,9 @@
 import { computed, ref } from 'vue'
 import {
   createMusicAlbumImport,
-  getMusicAlbumImport,
-  uploadMusicAlbumArchive,
+  type MusicAlbumImport,
+  uploadMusicAlbumArchiveMultipart,
+  validateMusicAlbumArchiveFile,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
@@ -24,7 +25,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   return `${Math.round(bytesPerSecond / 1024)} KB/s`
 }
 
-function applyImportSnapshot(snapshot: Awaited<ReturnType<typeof getMusicAlbumImport>>) {
+function applyImportSnapshot(snapshot: MusicAlbumImport) {
   if (!creationFlow.value) return
 
   creationFlow.value.draft.albumImport.importId = snapshot.importId
@@ -97,6 +98,8 @@ async function handleArchiveChange(event: Event) {
   errorMessage.value = ''
 
   try {
+    validateMusicAlbumArchiveFile(file)
+
     const session = await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
     albumImportDraft.value.importId = session.importId
     albumImportDraft.value.status = 'uploading'
@@ -105,7 +108,7 @@ async function handleArchiveChange(event: Event) {
     albumImportDraft.value.uploadSpeed = 0
     setMusicCreationStep('albumDetails')
 
-    await uploadMusicAlbumArchive(session.importId, file, {
+    const snapshot = await uploadMusicAlbumArchiveMultipart(session.importId, file, {
       onProgress(progress) {
         if (!albumImportDraft.value) return
         albumImportDraft.value.status = 'uploading'
@@ -116,8 +119,7 @@ async function handleArchiveChange(event: Event) {
       },
     })
 
-    albumImportDraft.value.status = 'uploaded'
-    const snapshot = await getMusicAlbumImport(session.importId)
+    albumImportDraft.value.status = 'extracting'
     applyImportSnapshot(snapshot)
   } catch (error) {
     if (albumImportDraft.value) {

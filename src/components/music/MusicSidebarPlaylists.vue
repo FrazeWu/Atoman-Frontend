@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
+import { ApiErrorResponseError } from '@/api/client'
 import { useRoute } from 'vue-router'
 import { ListMusic, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
@@ -104,6 +105,10 @@ async function fetchPlaylists() {
     })
     playlists.value = list
   } catch (error) {
+    if (error instanceof ApiErrorResponseError && error.status === 401) {
+      playlists.value = []
+      return
+    }
     console.error('Failed to fetch sidebar playlists:', error)
   }
 }

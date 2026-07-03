@@ -2,6 +2,7 @@
 import { nextTick, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { ApiErrorResponseError } from '@/api/client'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 
 const drawerState = ref({ artistId: '1', artistRefreshToken: 0 })
@@ -182,5 +183,24 @@ describe('ArtistDrawer.vue', () => {
       artistLegalName: 'Kanye Omari West',
       startStep: 'albumImport',
     })
+  })
+
+  it('keeps artist details visible when bookmark loading requires login', async () => {
+    listArtistBookmarks.mockRejectedValueOnce(
+      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
+    )
+
+    const wrapper = mount(ArtistDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
+        },
+      },
+    })
+
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Ye')
+    expect(wrapper.text()).not.toContain('艺术家信息加载失败')
   })
 })

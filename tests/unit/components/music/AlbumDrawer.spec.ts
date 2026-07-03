@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiErrorResponseError } from '@/api/client'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 
 const {
@@ -212,6 +213,26 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('[data-test="discussion-fab"]').text()).toBe('讨论')
     expect(wrapper.text()).not.toContain('03:45')
     expect(wrapper.find('.track-time').exists()).toBe(false)
+  })
+
+  it('keeps album details visible when bookmark loading requires login', async () => {
+    listAlbumBookmarks.mockRejectedValueOnce(
+      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
+    )
+
+    const wrapper = mount(AlbumDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Test Album')
+    expect(wrapper.text()).not.toContain('专辑信息加载失败')
   })
 
   it('shows discussion count and track durations when real data exists', async () => {

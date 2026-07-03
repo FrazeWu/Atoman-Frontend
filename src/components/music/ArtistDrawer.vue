@@ -1,6 +1,7 @@
 <!-- web/src/components/music/ArtistDrawer.vue -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -50,14 +51,22 @@ async function loadArtist(artistId: string | null) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [artistResponse, albumsResponse, bookmarksResponse] = await Promise.all([
+    const [artistResponse, albumsResponse] = await Promise.all([
       getMusicArtist(artistId),
       listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 }),
-      listArtistBookmarks(),
     ])
     artist.value = artistResponse
     albums.value = artistResponse.albums?.length ? artistResponse.albums : albumsResponse.data
-    isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
+    try {
+      const bookmarksResponse = await listArtistBookmarks()
+      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
+    } catch (error) {
+      if (error instanceof ApiErrorResponseError && error.status === 401) {
+        isBookmarked.value = false
+      } else {
+        throw error
+      }
+    }
   } catch (error) {
     console.error('Failed to fetch artist:', error)
     errorMessage.value = '艺术家信息加载失败'

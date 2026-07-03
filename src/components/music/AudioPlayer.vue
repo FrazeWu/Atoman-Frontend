@@ -185,6 +185,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ApiErrorResponseError } from '@/api/client'
 import { usePlayerStore } from '@/stores/player'
 import { 
   Repeat, 
@@ -254,6 +255,11 @@ async function loadPlaylists() {
     playlists.value = res.data || []
     playlistsLoaded.value = true
   } catch (err) {
+    if (err instanceof ApiErrorResponseError && err.status === 401) {
+      playlists.value = []
+      playlistsLoaded.value = true
+      return
+    }
     console.error('Failed to load playlists in AudioPlayer:', err)
   }
 }

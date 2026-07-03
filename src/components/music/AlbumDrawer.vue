@@ -1,6 +1,7 @@
 <!-- web/src/components/music/AlbumDrawer.vue -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -107,6 +108,11 @@ async function loadPlaylists() {
     playlists.value = res.data
     playlistsLoaded.value = true
   } catch (err) {
+    if (err instanceof ApiErrorResponseError && err.status === 401) {
+      playlists.value = []
+      playlistsLoaded.value = true
+      return
+    }
     console.error('Failed to load playlists in AlbumDrawer:', err)
   }
 }
@@ -124,6 +130,10 @@ async function loadFavorites() {
       favoriteSongIds.value = new Set()
     }
   } catch (err) {
+    if (err instanceof ApiErrorResponseError && err.status === 401) {
+      favoriteSongIds.value = new Set()
+      return
+    }
     console.error('Failed to load favorites in AlbumDrawer:', err)
   }
 }
@@ -186,12 +196,18 @@ async function loadAlbum(albumId: string | null) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [albumResponse, bookmarksResponse] = await Promise.all([
-      getMusicAlbum(albumId),
-      listAlbumBookmarks(),
-    ])
+    const albumResponse = await getMusicAlbum(albumId)
     album.value = albumResponse
-    isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
+    try {
+      const bookmarksResponse = await listAlbumBookmarks()
+      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
+    } catch (error) {
+      if (error instanceof ApiErrorResponseError && error.status === 401) {
+        isBookmarked.value = false
+      } else {
+        throw error
+      }
+    }
     isCoverBroken.value = false
 
     await Promise.all([

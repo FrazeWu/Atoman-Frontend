@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
+import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
 import * as musicApi from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
@@ -109,6 +110,107 @@ describe('MusicCreationAlbumImportStep.vue', () => {
 
     resolveUpload?.()
     await pending
+  })
+
+  it('Seed 触发上传并切到详情页后禁用详情页压缩包入口', async () => {
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
+      importId: 'import-uploading',
+      status: 'pending_upload',
+      archiveName: '',
+      uploadProgress: 0,
+      uploadSpeed: 0,
+      derivedAlbumTitle: '',
+      derivedCover: '',
+      derivedTracks: [],
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockImplementation(async (_importId, _file, options) => {
+      options?.onProgress?.({ loaded: 256_000, total: 1_024_000, bytesPerSecond: 128_000 })
+      await new Promise<never>(() => {})
+    })
+
+    const seedWrapper = mount(MusicCreationAlbumSeedStep)
+    const drawers = useMusicDrawers()
+    const file = new File(['zip'], 'uploading.zip', { type: 'application/zip' })
+    const seedInput = seedWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+    Object.defineProperty(seedInput, 'files', { configurable: true, value: [file] })
+
+    void seedWrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    await flushPromises()
+
+    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
+
+    const detailsWrapper = mount(MusicCreationAlbumDetailsStep)
+    const detailsInput = detailsWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+
+    expect(detailsInput.disabled).toBe(true)
+    expect(detailsWrapper.get('[data-testid="album-import-status"]').text()).toContain('上传中')
+    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
+    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
+      'import-uploading',
+      file,
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    )
+  })
+
+  it('详情页重新选择压缩包时复用已有 importId 并走 multipart', async () => {
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
+      importId: 'unexpected-import',
+      status: 'pending_upload',
+      archiveName: '',
+      uploadProgress: 0,
+      uploadSpeed: 0,
+      derivedAlbumTitle: '',
+      derivedCover: '',
+      derivedTracks: [],
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
+      importId: 'import-existing',
+      status: 'ready',
+      archiveName: 'replacement.zip',
+      uploadProgress: 100,
+      uploadSpeed: 0,
+      derivedAlbumTitle: 'Replacement',
+      derivedCover: '',
+      derivedTracks: [],
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+
+    const drawers = useMusicDrawers()
+    drawers.setMusicCreationStep('albumDetails')
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-existing'
+    drawers.state.value.creationFlow.draft.albumImport.status = 'ready'
+    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'existing.zip'
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    const file = new File(['zip'], 'replacement.zip', { type: 'application/zip' })
+    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+
+    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    await flushPromises()
+
+    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
+    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
+    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
+      'import-existing',
+      file,
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    )
+    expect(drawers.state.value.creationFlow.draft.albumDetails.title).toBe('Replacement')
   })
 
   it('超过 2GB 的 zip 在本地拦截且不创建导入会话', async () => {

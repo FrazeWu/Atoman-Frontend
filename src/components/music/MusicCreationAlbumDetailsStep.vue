@@ -3,8 +3,9 @@ import { computed, ref } from 'vue'
 import {
   uploadMusicAsset,
   createMusicAlbumImport,
-  getMusicAlbumImport,
-  uploadMusicAlbumArchive,
+  type MusicAlbumImport,
+  uploadMusicAlbumArchiveMultipart,
+  validateMusicAlbumArchiveFile,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
@@ -25,6 +26,10 @@ const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const uploading = ref(false)
 const errorMessage = ref('')
+const archiveUploadLocked = computed(() => {
+  const status = albumImportDraft.value?.status
+  return uploading.value || status === 'uploading' || status === 'extracting'
+})
 const importStatusLabel = computed(() => {
   const status = albumImportDraft.value?.status
   if (status === 'uploading') return '上传中'
@@ -39,7 +44,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   return `${Math.round(bytesPerSecond / 1024)} KB/s`
 }
 
-function applyImportSnapshot(snapshot: Awaited<ReturnType<typeof getMusicAlbumImport>>) {
+function applyImportSnapshot(snapshot: MusicAlbumImport) {
   if (!creationFlow.value) return
 
   creationFlow.value.draft.albumImport.importId = snapshot.importId
@@ -98,14 +103,21 @@ async function handleArchiveChange(event: Event) {
   errorMessage.value = ''
 
   try {
-    const session = await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
-    albumImportDraft.value.importId = session.importId
+    validateMusicAlbumArchiveFile(file)
+
+    const session = albumImportDraft.value.importId
+      ? null
+      : await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
+    const importId = albumImportDraft.value.importId || session?.importId
+    if (!importId) throw new Error('压缩包上传失败')
+
+    albumImportDraft.value.importId = importId
     albumImportDraft.value.status = 'uploading'
     albumImportDraft.value.archiveName = file.name
     albumImportDraft.value.uploadProgress = 0
     albumImportDraft.value.uploadSpeed = 0
 
-    await uploadMusicAlbumArchive(session.importId, file, {
+    const snapshot = await uploadMusicAlbumArchiveMultipart(importId, file, {
       onProgress(progress) {
         if (!albumImportDraft.value) return
         albumImportDraft.value.status = 'uploading'
@@ -116,8 +128,7 @@ async function handleArchiveChange(event: Event) {
       },
     })
 
-    albumImportDraft.value.status = 'uploaded'
-    const snapshot = await getMusicAlbumImport(session.importId)
+    albumImportDraft.value.status = 'extracting'
     applyImportSnapshot(snapshot)
   } catch (error) {
     if (albumImportDraft.value) {
@@ -227,7 +238,7 @@ function goBack() {
           data-testid="album-import-archive-input"
           type="file"
           accept=".zip,application/zip"
-          :disabled="uploading"
+          :disabled="archiveUploadLocked"
           style="display: none"
           @change="handleArchiveChange"
         />
@@ -238,8 +249,8 @@ function goBack() {
           </label>
           <div 
             class="custom-file-picker" 
-            :class="{ 'is-disabled': uploading }"
-            @click="archiveInputRef?.click()"
+            :class="{ 'is-disabled': archiveUploadLocked }"
+            @click="archiveUploadLocked ? undefined : archiveInputRef?.click()"
           >
             <div class="file-picker-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -252,13 +263,13 @@ function goBack() {
               <span class="file-picker-title">
                 {{ albumImportDraft?.archiveName || '点击或拖拽上传专辑压缩包' }}
               </span>
-              <span class="file-picker-subtitle">只支持 .zip 格式，大小建议控制在 200MB 以内</span>
+              <span class="file-picker-subtitle">只支持 .zip 格式，文件需在 2GB 以内</span>
             </div>
             <PButton 
               type="button" 
               variant="secondary" 
-              :disabled="uploading"
-              @click.stop="archiveInputRef?.click()"
+              :disabled="archiveUploadLocked"
+              @click.stop="archiveUploadLocked ? undefined : archiveInputRef?.click()"
             >
               {{ albumImportDraft?.archiveName ? '重新选择' : '浏览文件' }}
             </PButton>

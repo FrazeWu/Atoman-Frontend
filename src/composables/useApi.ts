@@ -8,6 +8,26 @@ export function useApiUrl() {
   return `${normalizedBaseUrl}/api/v1`
 }
 
+export function useWebSocketUrl(path: string) {
+  const apiUrl = useApiUrl()
+
+  if (apiUrl.startsWith('http://') || apiUrl.startsWith('https://')) {
+    const url = new URL(apiUrl)
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    url.pathname = path
+    url.search = ''
+    url.hash = ''
+    return url.toString()
+  }
+
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}${path}`
+  }
+
+  return path
+}
+
 export function useApi() {
   const apiUrl = useApiUrl();
 

@@ -37,6 +37,7 @@ export interface AdminFeedFulltextSourceRow {
   id: string
   title: string
   rss_url: string
+  source_type?: string
   full_text_enabled: boolean
   success_count: number
   retry_count: number
@@ -52,6 +53,12 @@ export interface AdminFeedFulltextSourceRow {
   last_sync_error?: string
   last_sync_failed_at?: string
   consecutive_sync_failures?: number
+  bookmark_count?: number
+  read_count?: number
+  recent_events?: Array<{
+    event_type: string
+    created_at: string
+  }>
 }
 
 export type AdminFeedFulltextItemStatus = 'pending' | 'fetching' | 'retry' | 'success' | 'failed'

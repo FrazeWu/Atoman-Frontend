@@ -60,7 +60,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(wrapper.text()).not.toContain('http://localhost:9100/atoman-dev/music/covers/uploads/users/u1/2026/07/cover.jpg')
   })
 
-  it('选择 zip 后立即切到详情填写步骤', async () => {
+  it('选择 zip 后保持在专辑导入步骤内继续填写', async () => {
     let resolveUpload: (() => void) | null = null
 
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
@@ -106,7 +106,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     const pending = wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
     await flushPromises()
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
+    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
 
     resolveUpload?.()
     await pending

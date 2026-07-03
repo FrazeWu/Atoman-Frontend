@@ -122,6 +122,15 @@
             待处理 {{ source.pending_count || 0 }} ·
             重试 {{ source.retry_count || 0 }}
           </small>
+          <small>
+            收藏 {{ source.bookmark_count || 0 }} · 阅读 {{ source.read_count || 0 }}
+          </small>
+          <small v-if="source.recent_events?.length" class="setting-feed-panel__events">
+            最近事件：
+            <span v-for="event in source.recent_events" :key="`${source.id}-${event.event_type}-${event.created_at}`">
+              {{ event.event_type }}
+            </span>
+          </small>
         </div>
 
         <div class="setting-feed-panel__row-actions">
@@ -171,8 +180,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useAdminFeedFulltextStore } from '@/stores/adminFeedFulltext'
-import type { FeedSource } from '@/types'
+import { useAdminFeedFulltextStore, type AdminFeedFulltextSourceRow } from '@/stores/adminFeedFulltext'
 
 const props = defineProps<{
   fullTextMode: 'disabled' | 'per_source'
@@ -195,7 +203,7 @@ const syncingSourceIds = ref(new Set<string>())
 const itemsSheetOpen = ref(false)
 const itemsSheetLoading = ref(false)
 const itemsSheetError = ref('')
-const selectedSource = ref<FeedSource | null>(null)
+const selectedSource = ref<AdminFeedFulltextSourceRow | null>(null)
 const selectedSourceItems = ref([])
 const opmlInput = ref<HTMLInputElement | null>(null)
 const draft = ref({
@@ -203,7 +211,7 @@ const draft = ref({
   rssUrl: '',
 })
 
-const sources = computed(() => adminFeedFulltextStore.sources as FeedSource[])
+const sources = computed(() => adminFeedFulltextStore.sources as AdminFeedFulltextSourceRow[])
 const canSubmit = computed(() => draft.value.rssUrl.trim().length > 0)
 const statusFilterOptions = [
   { label: '全部', value: '' },
@@ -320,7 +328,7 @@ async function exportOPML() {
   }
 }
 
-function startEdit(source: FeedSource) {
+function startEdit(source: AdminFeedFulltextSourceRow) {
   editingId.value = source.id
   draft.value = {
     title: source.title || '',
@@ -328,7 +336,7 @@ function startEdit(source: FeedSource) {
   }
 }
 
-async function openItemsSheet(source: FeedSource) {
+async function openItemsSheet(source: AdminFeedFulltextSourceRow) {
   if (!authStore.token) return
 
   selectedSource.value = source
@@ -350,7 +358,7 @@ async function openItemsSheet(source: FeedSource) {
   }
 }
 
-async function toggleSource(source: FeedSource) {
+async function toggleSource(source: AdminFeedFulltextSourceRow) {
   if (!authStore.token || props.fullTextMode !== 'per_source') return
 
   const next = new Set(pendingSourceIds.value)

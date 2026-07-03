@@ -25,6 +25,50 @@
       </div>
     </div>
 
+    <section class="blog-home__recommendations" aria-label="文章推荐">
+      <div class="blog-home__recommendation-header">
+        <div>
+          <h2 class="blog-home__recommendation-title">推荐</h2>
+          <p class="blog-home__recommendation-note">按热度、精选、探索切换当前文章推荐。</p>
+        </div>
+        <PSegmentedControl
+          v-model="recommendationMode"
+          :options="recommendationOptions"
+          @change="selectRecommendationMode"
+        />
+      </div>
+
+      <div v-if="recommendationLoading" class="a-grid-2">
+        <div v-for="i in 3" :key="i" class="a-skeleton" style="height:10rem" />
+      </div>
+      <PEmpty v-else-if="!recommendedPosts.length" title="暂无推荐" description="稍后再来看新的文章推荐。" />
+      <div v-else class="blog-home__recommendation-list">
+        <PEntry
+          v-for="item in recommendedPosts"
+          :key="item.id"
+          :title="item.title"
+          :summary="item.summary"
+          @click="$router.push(item.targetPath)"
+        >
+          <template #visual>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
+              <PBadge type="blog">文章</PBadge>
+              <img
+                v-if="item.image_url"
+                :src="item.image_url"
+                class="blog-entry-cover"
+                style="margin-top:0.25rem"
+              />
+            </div>
+          </template>
+
+          <template #meta>
+            <span>{{ item.score_label }}</span>
+          </template>
+        </PEntry>
+      </div>
+    </section>
+
     <!-- Posts list -->
     <div v-if="loading" class="a-grid-2">
       <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
@@ -128,11 +172,21 @@ const toggleReadingList = (id: string) => {
 const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))
 
 const posts = ref<Post[]>([])
+const recommendedPosts = ref<Array<{
+  id: string
+  title: string
+  summary: string
+  image_url: string
+  targetPath: string
+  score_label: string
+}>>([])
 const loading = ref(true)
+const recommendationLoading = ref(false)
 const page = ref(1)
 const hasMore = ref(false)
 const typeFilter = ref('all')
 const sortBy = ref('latest')
+const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
 
 const formatDate = (dateStr?: string) => {
@@ -151,6 +205,12 @@ const sortOptions = [
   { label: '最热', value: 'popular' },
 ]
 
+const recommendationOptions = [
+  { label: '热度', value: 'hot' },
+  { label: '精选', value: 'featured' },
+  { label: '探索', value: 'discover' },
+]
+
 const selectType = (value: string) => {
   typeFilter.value = value
   fetchPosts()
@@ -159,6 +219,38 @@ const selectType = (value: string) => {
 const selectSort = (value: string) => {
   sortBy.value = value
   fetchPosts()
+}
+
+const selectRecommendationMode = (value: string) => {
+  recommendationMode.value = value as 'hot' | 'featured' | 'discover'
+  void fetchRecommendedPosts()
+}
+
+const fetchRecommendedPosts = async () => {
+  recommendationLoading.value = true
+  try {
+    const headers: Record<string, string> = {}
+    if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+
+    const res = await fetch(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=1&page_size=20`, { headers })
+    if (!res.ok) return
+    const data = await res.json()
+    recommendedPosts.value = Array.isArray(data.data)
+      ? data.data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          image_url: item.image_url,
+          targetPath: item.target_path,
+          score_label: item.score_label,
+        }))
+      : []
+  } catch (error) {
+    console.error(error)
+    recommendedPosts.value = []
+  } finally {
+    recommendationLoading.value = false
+  }
 }
 
 const fetchPosts = async (append = false) => {
@@ -219,6 +311,7 @@ const loadMore = () => {
 
 onMounted(() => {
   void fetchPosts()
+  void fetchRecommendedPosts()
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
@@ -249,6 +342,36 @@ watch(activeQuery, () => {
 
 .blog-home__filter-group--end {
   margin-left: auto;
+}
+
+.blog-home__recommendations {
+  margin-bottom: 2rem;
+}
+
+.blog-home__recommendation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.blog-home__recommendation-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.blog-home__recommendation-note {
+  margin: 0.35rem 0 0;
+  color: var(--a-color-muted-soft);
+  font-size: 0.85rem;
+}
+
+.blog-home__recommendation-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .blog-entry-cover {

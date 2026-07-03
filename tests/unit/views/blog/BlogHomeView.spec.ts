@@ -72,6 +72,6 @@ describe('BlogHomeView', () => {
     await flushPromises()
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/feed/recommend/articles?mode=hot&page=1&page_size=20')
+    expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20')
   })
 })

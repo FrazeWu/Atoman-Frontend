@@ -6,11 +6,11 @@
       "localStorage": [
         {
           "name": "token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzMzc3NDYsInJvbGUiOiJvd25lciIsInVzZXJfaWQiOiIwMTllZDVjOS0yZjhlLTdjZjgtOWJiYS02YzVhNTQzZjY4YjMiLCJ1c2VybmFtZSI6ImFkbWluIn0.i9kBQUUZW5bEzJHfHJbyqh7M1xCYEeeL9Kh6MLjCr0k"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODU2NDA5NTksInJvbGUiOiJvd25lciIsInVzZXJfaWQiOiIwMTllZmYzNi0wOWZhLTdlZjItYWFlOS04YjFlMTc1MGNjOWUiLCJ1c2VybmFtZSI6ImFkbWluIn0.ZMjWrivHNUU9vk4nhHkAqFU0VtZlzFDBmY1XiMAVxaE"
         },
         {
           "name": "user",
-          "value": "{\"avatar_url\":\"\",\"display_name\":\"\",\"email\":\"admin@atoman.com\",\"id\":4,\"is_active\":true,\"onboarding_completed_at\":\"2026-06-18T01:22:26.722Z\",\"role\":\"owner\",\"username\":\"admin\",\"uuid\":\"019ed5c9-2f8e-7cf8-9bba-6c5a543f68b3\"}"
+          "value": "{\"avatar_url\":\"\",\"display_name\":\"\",\"email\":\"admin@atoman.com\",\"id\":1,\"is_active\":true,\"onboarding_completed_at\":\"2026-06-25T22:43:51.640208+08:00\",\"role\":\"owner\",\"username\":\"admin\",\"uuid\":\"019eff36-09fa-7ef2-aae9-8b1e1750cc9e\"}"
         }
       ]
     }

@@ -1,6 +1,6 @@
 import type { UploadAsset } from '@/api/types'
 
-export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails'
+export type MusicCreationFlowStep = 'artist' | 'albumImport'
 
 export interface MusicCreationTrackDraft {
   id: string

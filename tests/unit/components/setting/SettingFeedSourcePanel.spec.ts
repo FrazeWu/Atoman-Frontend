@@ -67,6 +67,7 @@ function createSourceRow(overrides: Record<string, any> = {}) {
     id: 'source-1',
     title: '示例源',
     rss_url: 'https://example.com/feed.xml',
+    source_type: 'external_rss',
     full_text_enabled: true,
     success_count: 0,
     retry_count: 0,
@@ -74,6 +75,9 @@ function createSourceRow(overrides: Record<string, any> = {}) {
     pending_count: 0,
     success_rate: 1,
     status: 'healthy',
+    bookmark_count: 0,
+    read_count: 0,
+    recent_events: [],
     ...overrides,
   }
 }
@@ -275,6 +279,30 @@ describe('SettingFeedSourcePanel', () => {
       limit: 20,
     })
     expect(wrapper.get('[data-testid="feed-source-items-sheet"]').text()).toContain('可查看条目的源')
+  })
+
+  it('展示来源统计和最近事件', async () => {
+    storeState.sources = [createSourceRow({
+      title: '统计源',
+      bookmark_count: 12,
+      read_count: 34,
+      recent_events: [
+        { event_type: 'detail_open', created_at: '2026-07-03T09:00:00Z' },
+        { event_type: 'original_click', created_at: '2026-07-03T10:00:00Z' },
+      ],
+    })]
+
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('收藏 12')
+    expect(wrapper.text()).toContain('阅读 34')
+    expect(wrapper.text()).toContain('detail_open')
+    expect(wrapper.text()).toContain('original_click')
   })
 
   it('导入 OPML 后刷新订阅源列表并显示统计', async () => {

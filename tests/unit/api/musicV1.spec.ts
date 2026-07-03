@@ -19,6 +19,7 @@ import {
   type MusicAlbumListItem,
   musicV1Endpoints,
   uploadMusicAlbumArchiveMultipart,
+  uploadMusicAlbumArchive,
   uploadMusicAsset,
 } from '@/api/musicV1'
 import * as musicV1 from '@/api/musicV1'
@@ -179,6 +180,59 @@ describe('music v1 adapter', () => {
 
     expect(musicV1Endpoints.albums()).toBe('https://api.atoman.org/api/v1/music/albums')
     expect(musicV1Endpoints.artist('artist_uuid')).toBe('https://api.atoman.org/api/v1/music/artists/artist_uuid')
+  })
+
+  it('sends bearer authorization when uploading album archives', async () => {
+    const storage = {
+      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    }
+    vi.stubGlobal('localStorage', storage)
+
+    class FakeXMLHttpRequest {
+      static lastInstance: FakeXMLHttpRequest | null = null
+      method = ''
+      url = ''
+      withCredentials = false
+      requestHeaders: Record<string, string> = {}
+      upload = {
+        addEventListener: vi.fn(),
+      }
+      private listeners: Record<string, Array<() => void>> = {}
+      status = 200
+
+      constructor() {
+        FakeXMLHttpRequest.lastInstance = this
+      }
+
+      open(method: string, url: string) {
+        this.method = method
+        this.url = url
+      }
+
+      setRequestHeader(name: string, value: string) {
+        this.requestHeaders[name] = value
+      }
+
+      addEventListener(name: string, handler: () => void) {
+        this.listeners[name] = this.listeners[name] || []
+        this.listeners[name].push(handler)
+      }
+
+      send(_body: FormData) {
+        this.listeners.load?.forEach((handler) => handler())
+      }
+    }
+
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
+
+    await uploadMusicAlbumArchive('import-uuid', new File(['zip'], 'album.zip', { type: 'application/zip' }))
+
+    expect(FakeXMLHttpRequest.lastInstance?.withCredentials).toBe(true)
+    expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Accept).toBe('application/json')
+    expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Authorization).toBe('Bearer test-token')
   })
 
   it('serializes list filters using the api v1 query vocabulary and preserves server pagination meta', async () => {

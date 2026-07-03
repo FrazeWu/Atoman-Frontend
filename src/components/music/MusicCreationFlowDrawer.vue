@@ -168,7 +168,7 @@ function handlePrimaryAction() {
     if (!creationFlow.value.draft.artist.legalName.trim()) return
     setMusicCreationStep('albumDetails')
   } else if (creationFlow.value.step === 'albumImport') {
-    setMusicCreationStep('albumDetails')
+    setMusicCreationStep('albumImport')
   }
 }
 

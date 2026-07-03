@@ -68,7 +68,7 @@ function validateStageNames() {
 function goNext() {
   if (!artistDraft.value) return
   if (!validateStageNames()) return
-  setMusicCreationStep('albumDetails')
+  setMusicCreationStep('albumImport')
 }
 </script>
 

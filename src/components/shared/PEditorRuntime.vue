@@ -138,7 +138,7 @@ import { tags } from '@lezer/highlight'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { yCollab } from 'y-codemirror.next'
-import { useApi } from '@/composables/useApi'
+import { useApi, useWebSocketUrl } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 
@@ -509,9 +509,8 @@ function initCodeMirror() {
 
   if (props.enableCollab && props.collabRoomId) {
     ydoc = new Y.Doc()
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
     provider = new WebsocketProvider(
-      `${proto}//${location.host}/api/v1/collab/ws/${props.collabRoomId}`,
+      useWebSocketUrl(`/api/v1/collab/ws/${props.collabRoomId}`),
       props.collabRoomId,
       ydoc,
       { connect: true },

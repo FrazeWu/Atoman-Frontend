@@ -100,13 +100,6 @@ vi.mock('@/components/music/MusicCreationArtistStep.vue', () => ({
   },
 }))
 
-vi.mock('@/components/music/MusicCreationAlbumDetailsStep.vue', () => ({
-  default: {
-    name: 'MusicCreationAlbumDetailsStep',
-    template: '<section data-testid="album-details-step">album details step</section>',
-  },
-}))
-
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     state: drawerMocks.state,
@@ -181,7 +174,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('最终按钮点击后只提交一次 commitMusicAlbumImport', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumDetails',
+      step: 'albumImport',
       draft: {
         ...createFlowState().draft,
         albumImport: {
@@ -247,7 +240,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('从已有艺术家进入时提交 artist_id 复用现有艺术家', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumDetails',
+      step: 'albumImport',
       draft: {
         ...createFlowState().draft,
         artist: {
@@ -301,7 +294,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('提交失败时保留抽屉并显示错误', async () => {
     commitMusicAlbumImportMock.mockRejectedValue(new Error('commit failed'))
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumDetails',
+      step: 'albumImport',
       draft: {
         ...createFlowState().draft,
         albumImport: {

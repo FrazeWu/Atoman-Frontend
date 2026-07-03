@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { globSync } from 'glob'
-import { useApi, useApiUrl } from '../../../src/composables/useApi'
+import { useApi, useApiUrl, useWebSocketUrl } from '../../../src/composables/useApi'
 
 const projectRoot = process.cwd()
 const allowedApiFiles = new Set([
@@ -46,6 +46,18 @@ describe('API endpoint construction contract', () => {
     expect(api.v1.forum.categories).toBe('http://localhost:8080/api/v1/forum/categories')
     expect(api.admin.feed.opmlImport).toBe('http://localhost:8080/api/v1/feed/sources/opml/import')
     expect(api.admin.feed.opmlExport).toBe('http://localhost:8080/api/v1/feed/sources/opml/export')
+
+    env.VITE_API_URL = undefined as unknown as string
+  })
+
+  it('derives websocket urls from the configured api origin', () => {
+    const env = import.meta.env as ImportMetaEnv
+
+    env.VITE_API_URL = 'https://api.atoman.org/api'
+    expect(useWebSocketUrl('/api/v1/collab/ws/room-1')).toBe('wss://api.atoman.org/api/v1/collab/ws/room-1')
+
+    env.VITE_API_URL = 'http://localhost:8080/api'
+    expect(useWebSocketUrl('/api/v1/collab/ws/room-1')).toBe('ws://localhost:8080/api/v1/collab/ws/room-1')
 
     env.VITE_API_URL = undefined as unknown as string
   })

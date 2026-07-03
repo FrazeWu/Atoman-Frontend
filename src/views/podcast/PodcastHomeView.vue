@@ -5,6 +5,8 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PPress from '@/components/ui/PPress.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { PodcastEpisode } from '@/types'
@@ -18,6 +20,20 @@ const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podca
 const API_URL = useApiUrl()
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(false)
+const recommendedEpisodes = ref<Array<{
+  id: string
+  title: string
+  summary: string
+  targetPath: string
+  scoreLabel: string
+}>>([])
+const recommendationLoading = ref(false)
+const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
+const recommendationOptions = [
+  { label: '热度', value: 'hot' },
+  { label: '精选', value: 'featured' },
+  { label: '探索', value: 'discover' },
+]
 
 onMounted(async () => {
   loading.value = true
@@ -27,7 +43,31 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  void fetchRecommendedEpisodes()
 })
+
+async function fetchRecommendedEpisodes() {
+  recommendationLoading.value = true
+  try {
+    const res = await fetch(`${API_URL}/podcast/recommend/episodes?mode=${recommendationMode.value}&page=1&page_size=8`)
+    if (!res.ok) {
+      recommendedEpisodes.value = []
+      return
+    }
+    const data = await res.json()
+    recommendedEpisodes.value = Array.isArray(data.data)
+      ? data.data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          targetPath: item.target_path,
+          scoreLabel: item.score_label,
+        }))
+      : []
+  } finally {
+    recommendationLoading.value = false
+  }
+}
 
 function fmtDuration(sec: number) {
   if (!sec) return ''
@@ -50,6 +90,43 @@ function episodeCover(ep: PodcastEpisode) {
         <PPress v-if="authStore.isAuthenticated && canPublishPodcast" @click="router.push('/podcasts/editor')" label="+ 发布节目" />
       </template>
     </PPageHeader>
+
+    <section class="ph-recommendations" aria-label="播客推荐">
+      <div class="ph-recommendations__header">
+        <div>
+          <h2 class="ph-recommendations__title">推荐</h2>
+          <p class="ph-recommendations__note">按热度、精选、探索切换当前播客推荐。</p>
+        </div>
+        <PSegmentedControl
+          v-model="recommendationMode"
+          :options="recommendationOptions"
+          @change="() => void fetchRecommendedEpisodes()"
+        />
+      </div>
+
+      <div v-if="recommendationLoading" class="ph-state">
+        <div v-for="i in 2" :key="i" class="a-skeleton" style="height: 8rem; margin-bottom: 1rem" />
+      </div>
+      <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" description="稍后再来看新的播客推荐。" />
+      <div v-else class="ph-list">
+        <PEntry
+          v-for="item in recommendedEpisodes"
+          :key="item.id"
+          :title="item.title"
+          :summary="item.summary"
+          @click="router.push(item.targetPath)"
+        >
+          <template #visual>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
+              <PBadge type="podcast">播客</PBadge>
+            </div>
+          </template>
+          <template #meta>
+            <span class="a-label a-muted">{{ item.scoreLabel }}</span>
+          </template>
+        </PEntry>
+      </div>
+    </section>
 
     <div v-if="loading" class="ph-state">
       <div v-for="i in 3" :key="i" class="a-skeleton" style="height: 10rem; margin-bottom: 1.5rem" />
@@ -90,4 +167,29 @@ function episodeCover(ep: PodcastEpisode) {
 <style scoped>
 .ph-state { padding: 4rem 0; color: #9ca3af; }
 .ph-list { display: flex; flex-direction: column; }
+
+.ph-recommendations {
+  margin-bottom: 2rem;
+}
+
+.ph-recommendations__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.ph-recommendations__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.ph-recommendations__note {
+  margin: 0.35rem 0 0;
+  color: var(--a-color-muted-soft);
+  font-size: 0.85rem;
+}
 </style>

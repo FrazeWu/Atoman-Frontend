@@ -146,9 +146,14 @@ describe('MusicCreationAlbumImportStep.vue', () => {
 
     const detailsWrapper = mount(MusicCreationAlbumDetailsStep)
     const detailsInput = detailsWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+    const detailsButton = detailsWrapper.get('[data-testid="album-import-status"] button').element as HTMLButtonElement
+    vi.mocked(musicApi.createMusicAlbumImport).mockClear()
 
     expect(detailsInput.disabled).toBe(true)
+    expect(detailsButton.disabled).toBe(true)
     expect(detailsWrapper.get('[data-testid="album-import-status"]').text()).toContain('上传中')
+    await detailsWrapper.get('[data-testid="album-import-status"] button').trigger('click')
+    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
     expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
     expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
       'import-uploading',
@@ -228,6 +233,62 @@ describe('MusicCreationAlbumImportStep.vue', () => {
       expect.objectContaining({ onProgress: expect.any(Function) }),
     )
     expect(drawers.state.value.creationFlow.draft.albumDetails.title).toBe('Replacement')
+  })
+
+  it('详情页 pending_upload 后重新选择压缩包时复用旧 importId 并走 multipart', async () => {
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
+      importId: 'unexpected-import',
+      status: 'pending_upload',
+      archiveName: '',
+      uploadProgress: 0,
+      uploadSpeed: 0,
+      derivedAlbumTitle: '',
+      derivedCover: '',
+      derivedTracks: [],
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
+      importId: 'import-pending',
+      status: 'ready',
+      archiveName: 'pending.zip',
+      uploadProgress: 100,
+      uploadSpeed: 0,
+      derivedAlbumTitle: 'Pending Album',
+      derivedCover: '',
+      derivedTracks: [],
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+
+    const drawers = useMusicDrawers()
+    drawers.setMusicCreationStep('albumDetails')
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-pending'
+    drawers.state.value.creationFlow.draft.albumImport.status = 'pending_upload'
+    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'pending.zip'
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    const file = new File(['zip'], 'pending.zip', { type: 'application/zip' })
+    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+
+    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    await flushPromises()
+
+    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
+    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
+    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
+      'import-pending',
+      file,
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    )
+    expect(drawers.state.value.creationFlow.draft.albumDetails.title).toBe('Pending Album')
   })
 
   it('详情页 failed 后重新选择压缩包时复用旧 importId 并走 multipart', async () => {

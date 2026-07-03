@@ -7,7 +7,6 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   buildUpdateAlbumEdit,
-  buildUpdateArtistEdit,
   createAlbumDiscussion,
   deleteAlbumDiscussion,
   getAlbumRevision,
@@ -16,6 +15,7 @@ import {
   replyAlbumDiscussion,
   revertAlbumRevision,
   submitMusicEdit,
+  updateMusicArtist,
   type MusicDiscussion,
   type MusicRevisionSummary,
   type MusicSource,
@@ -389,15 +389,13 @@ async function submitEdit() {
       if (!state.value.artistId) {
         throw new Error('缺少艺术家 ID')
       }
-      await submitMusicEdit(buildUpdateArtistEdit(state.value.artistId, {
+      await updateMusicArtist(state.value.artistId, {
         name: trimmed(artistDraft.name) || undefined,
         bio: trimmed(artistDraft.bio) || undefined,
         image_url: trimmed(artistDraft.imageUrl) || undefined,
         nationality: trimmed(artistDraft.nationality) || undefined,
         birth_year: optionalNumber(artistDraft.birthYear),
-        reason,
-        sources: sourcesFromDraft(),
-      }))
+      })
     } else if (action === 'revise') {
       if (!state.value.albumId) {
         throw new Error('缺少专辑 ID')

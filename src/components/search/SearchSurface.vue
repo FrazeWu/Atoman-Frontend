@@ -1,7 +1,7 @@
 <template>
   <div class="search-surface">
-    <div class="search-frame" :class="{ 'is-open': showDropdown, 'is-compact': compact && !showDropdown }">
-      <div class="search-frame__head">
+    <div class="search-frame" :class="{ 'is-open': showDropdown, 'is-compact': compact && !showDropdown, 'is-overlay-results': overlayResults }">
+      <div v-if="eyebrow || status" class="search-frame__head">
         <span class="search-frame__eyebrow">{{ eyebrow }}</span>
         <span v-if="status" class="search-frame__status">{{ status }}</span>
       </div>
@@ -28,6 +28,7 @@
         </slot>
 
         <button
+          v-if="showSubmit"
           class="search-btn"
           type="button"
           @click="$emit('submit')"
@@ -40,7 +41,7 @@
         </div>
       </div>
 
-      <div v-if="showDropdown" class="search-dropdown" :data-testid="dropdownTestId">
+      <div v-if="showDropdown" class="search-dropdown" :data-testid="dropdownTestId" :style="dropdownStyle">
         <p v-if="loading" class="search-dropdown__hint">搜索中...</p>
         <template v-else-if="$slots.results">
           <slot name="results" />
@@ -60,19 +61,25 @@ const props = withDefaults(defineProps<{
   open: boolean
   eyebrow: string
   compact?: boolean
+  overlayResults?: boolean
+  showSubmit?: boolean
   status?: string
   placeholder?: string
   inputTestId?: string
   dropdownTestId?: string
+  dropdownHeight?: string
   loading?: boolean
   hint?: string
   empty?: string
 }>(), {
   compact: false,
+  overlayResults: false,
+  showSubmit: true,
   status: '',
   placeholder: '搜索...',
   inputTestId: '',
   dropdownTestId: 'search-surface-dropdown',
+  dropdownHeight: '',
   loading: false,
   hint: '',
   empty: '',
@@ -96,6 +103,12 @@ const showDropdown = computed(() => (
   )
 ))
 
+const dropdownStyle = computed(() => (
+  props.dropdownHeight
+    ? { minHeight: props.dropdownHeight, maxHeight: props.dropdownHeight }
+    : {}
+))
+
 function handleInput(event: Event) {
   emit('update:query', (event.target as HTMLInputElement).value)
 }
@@ -110,6 +123,7 @@ function handleInput(event: Event) {
   flex: 1;
   width: 100%;
   min-width: min(100%, 24rem);
+  position: relative;
   border: var(--a-border);
   background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
   box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
@@ -250,6 +264,19 @@ function handleInput(event: Event) {
   max-height: 420px;
   overflow-y: auto;
   animation: searchSurfaceReveal 0.52s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.search-frame.is-overlay-results .search-dropdown {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  margin-top: 0;
+  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  border: 1px solid var(--a-color-line-soft);
+  border-top: 0;
+  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  z-index: 80;
 }
 
 .search-dropdown__hint {

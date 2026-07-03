@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiGetRaw, apiPatchJson, apiPostJson, apiPostMultipart } from '@/api/client'
 import {
+  createMusicArtist,
   buildCreateAlbumEdit,
   buildCreateArtistEdit,
   buildDeleteAlbumEdit,
@@ -12,6 +13,7 @@ import {
   listMusicArtists,
   listMusicAlbums,
   listMusicEdits,
+  updateMusicArtist,
   type MusicAlbumListItem,
   musicV1Endpoints,
   uploadMusicAsset,
@@ -235,6 +237,40 @@ describe('music v1 adapter', () => {
       headers: { Accept: 'application/json' },
     })
     expect(result).toEqual({ id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' })
+  })
+
+  it('creates artists through the direct wiki endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await createMusicArtist({ name: 'Kanye West', bio: 'Artist bio' })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name: 'Kanye West', bio: 'Artist bio' }),
+    })
+    expect(result).toEqual({ id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' })
+  })
+
+  it('updates artists through the direct wiki endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'artist_uuid', name: 'Ye', bio: 'Updated bio', entry_status: 'open' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await updateMusicArtist('artist_uuid', { name: 'Ye', bio: 'Updated bio' })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists/artist_uuid', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name: 'Ye', bio: 'Updated bio' }),
+    })
+    expect(result.name).toBe('Ye')
   })
 
   it('gets album details through the direct wiki endpoint', async () => {

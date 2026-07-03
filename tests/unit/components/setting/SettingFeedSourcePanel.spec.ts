@@ -7,6 +7,8 @@ const createSource = vi.fn().mockResolvedValue(null)
 const updateSource = vi.fn().mockResolvedValue(null)
 const updateSourceEnabled = vi.fn().mockResolvedValue(null)
 const syncSource = vi.fn().mockResolvedValue(null)
+const fetchItems = vi.fn().mockResolvedValue([])
+const retryItem = vi.fn().mockResolvedValue(null)
 const importGlobalOPML = vi.fn().mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
 const exportGlobalOPML = vi.fn().mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
 
@@ -18,6 +20,8 @@ const storeState = reactive({
   updateSource,
   updateSourceEnabled,
   syncSource,
+  fetchItems,
+  retryItem,
   importGlobalOPML,
   exportGlobalOPML,
 })
@@ -88,6 +92,8 @@ describe('SettingFeedSourcePanel', () => {
     updateSource.mockResolvedValue(null)
     updateSourceEnabled.mockResolvedValue(null)
     syncSource.mockResolvedValue(null)
+    fetchItems.mockResolvedValue([])
+    retryItem.mockResolvedValue(null)
     importGlobalOPML.mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
     exportGlobalOPML.mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
   })
@@ -228,6 +234,47 @@ describe('SettingFeedSourcePanel', () => {
 
     expect(syncSource).toHaveBeenCalledWith('source-1', 'admin-token')
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+  })
+
+  it('点击订阅源后打开条目 sheet 并按 source 拉取条目', async () => {
+    storeState.sources = [createSourceRow({
+      id: 'source-1',
+      title: '可查看条目的源',
+      pending_count: 3,
+    })]
+
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: {
+        stubs: {
+          ...stubs,
+          SettingFeedSourceItemsSheet: defineComponent({
+            props: {
+              show: { type: Boolean, default: false },
+              sourceTitle: { type: String, default: '' },
+              items: { type: Array, default: () => [] },
+            },
+            template: '<div v-if="show" data-testid="feed-source-items-sheet">{{ sourceTitle }}</div>',
+          }),
+        },
+      },
+    })
+
+    await flushPromises()
+    fetchItems.mockClear()
+
+    const sourceTitle = wrapper.findAll('strong').find((node) => node.text() === '可查看条目的源')
+    expect(sourceTitle).toBeTruthy()
+
+    await sourceTitle!.trigger('click')
+    await flushPromises()
+
+    expect(fetchItems).toHaveBeenCalledWith('admin-token', {
+      sourceId: 'source-1',
+      page: 1,
+      limit: 20,
+    })
+    expect(wrapper.get('[data-testid="feed-source-items-sheet"]').text()).toContain('可查看条目的源')
   })
 
   it('导入 OPML 后刷新订阅源列表并显示统计', async () => {

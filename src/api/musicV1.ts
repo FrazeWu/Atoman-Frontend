@@ -782,6 +782,14 @@ export async function getMusicArtist(artistId: string): Promise<MusicArtistListI
   return apiGet<MusicArtistListItem & { albums?: MusicAlbumListItem[] }>(musicV1Endpoints.artist(artistId))
 }
 
+export async function createMusicArtist(input: MusicArtistInput): Promise<MusicArtistListItem> {
+  return apiPostJson<MusicArtistListItem>(musicV1Endpoints.artists(), input)
+}
+
+export async function updateMusicArtist(artistId: string, input: MusicArtistUpdateInput): Promise<MusicArtistListItem> {
+  return apiPatchJson<MusicArtistListItem>(musicV1Endpoints.artist(artistId), input)
+}
+
 export async function submitMusicEdit(request: MusicEditRequest): Promise<MusicEditSummary> {
   return apiPostJson<MusicEditSummary>(musicV1Endpoints.edits(), request)
 }

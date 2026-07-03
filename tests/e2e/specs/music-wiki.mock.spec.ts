@@ -23,6 +23,30 @@ test.describe('Music Wiki Mock', () => {
     await expect(authenticatedPage.getByPlaceholder('例如：kanye_west')).toHaveValue('mock_artist')
   })
 
+  test('submits artist creation through the direct wiki endpoint', async ({ authenticatedPage }) => {
+    await authenticatedPage.route('**/api/v1/music/artists', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            id: 'artist-created-1',
+            name: 'Mock Created Artist',
+            bio: 'Created in mock flow',
+            entry_status: 'open',
+          },
+        }),
+      })
+    })
+
+    await authenticatedPage.goto('/artist/new?name=mock_created_artist')
+    await authenticatedPage.getByPlaceholder('例如：Kanye West').fill('Mock Created Artist')
+    await authenticatedPage.getByPlaceholder('输入艺术家的详细生平、音乐风格和主要成就...').fill('Created in mock flow')
+    await authenticatedPage.getByRole('button', { name: '创建艺术家' }).click()
+
+    await expect(authenticatedPage).toHaveURL(/\/music\?artist=artist-created-1/)
+  })
+
   test('renders mocked artist drawer content when wiki artist endpoint resolves', async ({ page }) => {
     const artist = buildMockMusicArtist()
 

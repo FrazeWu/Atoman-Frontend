@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   closeNestedAction: vi.fn(),
   refreshAlbum: vi.fn(),
   submitMusicEdit: vi.fn(),
+  updateMusicArtist: vi.fn(),
   listMusicArtists: vi.fn(),
   uploadMusicAsset: vi.fn(),
   listAlbumRevisions: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
     listMusicArtists: mocks.listMusicArtists,
     uploadMusicAsset: mocks.uploadMusicAsset,
     submitMusicEdit: mocks.submitMusicEdit,
+    updateMusicArtist: mocks.updateMusicArtist,
     listAlbumRevisions: mocks.listAlbumRevisions,
     getAlbumRevision: mocks.getAlbumRevision,
     revertAlbumRevision: mocks.revertAlbumRevision,
@@ -112,6 +114,7 @@ describe('NestedActionDrawer.vue', () => {
     mocks.closeNestedAction.mockReset()
     mocks.refreshAlbum.mockReset()
     mocks.submitMusicEdit.mockReset()
+    mocks.updateMusicArtist.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.listAlbumRevisions.mockReset()
@@ -144,6 +147,12 @@ describe('NestedActionDrawer.vue', () => {
       created_at: '2026-06-17T00:00:00Z',
     })
     mocks.listAlbumRevisions.mockResolvedValue([])
+    mocks.updateMusicArtist.mockResolvedValue({
+      id: 'artist-1',
+      name: 'Revised Artist',
+      bio: 'revised biography',
+      entry_status: 'open',
+    })
     mocks.getAlbumRevision.mockResolvedValue(buildRevision())
     mocks.revertAlbumRevision.mockResolvedValue(buildRevision({ is_current: true, version_number: 1 }))
     mocks.listAlbumDiscussions.mockResolvedValue([])
@@ -173,17 +182,9 @@ describe('NestedActionDrawer.vue', () => {
     await wrapper.get('[data-test="edit-reason-input"]').setValue('update bio and name')
     await wrapper.get('[data-test="music-edit-submit"]').trigger('submit')
 
-    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
-      type: 'update_artist',
-      entity_type: 'artist',
-      entity_id: 'artist-1',
-      payload: {},
-      changes: {
-        name: 'Revised Artist',
-        bio: 'revised biography',
-      },
-      reason: 'update bio and name',
-      sources: [],
+    expect(mocks.updateMusicArtist).toHaveBeenCalledWith('artist-1', {
+      name: 'Revised Artist',
+      bio: 'revised biography',
     })
     expect(mocks.closeNestedAction).toHaveBeenCalled()
   })

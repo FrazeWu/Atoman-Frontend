@@ -16,6 +16,10 @@ const mocks = vi.hoisted(() => ({
   getMusicAlbum: vi.fn(),
   createMusicPlaylist: vi.fn(),
   getMusicPlaylist: vi.fn(),
+  listRecommendedArtists: vi.fn(),
+  listRecommendedAlbums: vi.fn(),
+  createArtistBookmark: vi.fn(),
+  deleteArtistBookmark: vi.fn(),
   openArtist: vi.fn(),
   openAlbum: vi.fn(),
 }))
@@ -29,6 +33,10 @@ vi.mock('@/api/musicV1', () => ({
   getMusicAlbum: mocks.getMusicAlbum,
   createMusicPlaylist: mocks.createMusicPlaylist,
   getMusicPlaylist: mocks.getMusicPlaylist,
+  listRecommendedArtists: mocks.listRecommendedArtists,
+  listRecommendedAlbums: mocks.listRecommendedAlbums,
+  createArtistBookmark: mocks.createArtistBookmark,
+  deleteArtistBookmark: mocks.deleteArtistBookmark,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -64,6 +72,10 @@ describe('Music StarredView', () => {
     mocks.getMusicAlbum.mockReset()
     mocks.createMusicPlaylist.mockReset()
     mocks.getMusicPlaylist.mockReset()
+    mocks.listRecommendedArtists.mockReset()
+    mocks.listRecommendedAlbums.mockReset()
+    mocks.createArtistBookmark.mockReset()
+    mocks.deleteArtistBookmark.mockReset()
     mocks.openArtist.mockReset()
     mocks.openAlbum.mockReset()
 
@@ -72,6 +84,12 @@ describe('Music StarredView', () => {
     })
     mocks.listAlbumBookmarks.mockResolvedValue({
       data: [{ id: 'album-bookmark-1', album_id: 'album-1', created_at: '2026-07-01T00:00:00Z' }],
+    })
+    mocks.listRecommendedArtists.mockResolvedValue({
+      data: [{ id: 'artist-1', target_path: '/music/artist/artist-1' }],
+    })
+    mocks.listRecommendedAlbums.mockResolvedValue({
+      data: [{ id: 'album-1', target_path: '/music/album/album-1' }],
     })
     mocks.listSongBookmarks.mockResolvedValue({
       data: [{

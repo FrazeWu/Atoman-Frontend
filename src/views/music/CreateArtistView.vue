@@ -18,7 +18,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { buildCreateArtistEdit, submitMusicEdit, type MusicArtistUpdateInput } from '@/api/musicV1'
+import { createMusicArtist, type MusicArtistUpdateInput } from '@/api/musicV1'
 import MusicArtistForm from '@/components/music/MusicArtistForm.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
@@ -35,13 +35,17 @@ const initialValue = computed(() => ({
 async function handleSubmit(value: MusicArtistUpdateInput) {
   submitting.value = true
   try {
-    const result = await submitMusicEdit(buildCreateArtistEdit({
-      ...value,
-      reason: 'Create artist from wiki flow',
-      sources: [],
-    }))
-    if (result.entity_id) {
-      await router.push(`/music?artist=${result.entity_id}`)
+    const result = await createMusicArtist({
+      name: value.name || '',
+      bio: value.bio,
+      image_url: value.image_url,
+      nationality: value.nationality,
+      birth_date: value.birth_date,
+      birth_year: value.birth_year,
+      death_year: value.death_year,
+    })
+    if (result.id) {
+      await router.push(`/music?artist=${result.id}`)
       return
     }
     await router.push('/music')

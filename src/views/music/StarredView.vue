@@ -1,20 +1,32 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import {
+  createArtistBookmark,
+  deleteAlbumBookmark,
+  deleteArtistBookmark,
   getMusicAlbum,
   getMusicArtist,
   listAlbumBookmarks,
   listArtistBookmarks,
+  listRecommendedAlbums,
+  listRecommendedArtists,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
+  type MusicRecommendationMode,
   type MusicStarredItem,
 } from '@/api/musicV1'
 import { resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import {
+  filterAlbumRecommendationsByBookmarks,
+  filterArtistRecommendationsByBookmarks,
+  MUSIC_RECOMMENDATION_MODE_OPTIONS,
+} from '@/utils/musicRecommendations'
+import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 
 type StarredFilter = 'all' | 'artist' | 'album'
 
@@ -26,6 +38,7 @@ const filterOptions: Array<{ label: string; value: StarredFilter; testId: string
 
 const items = ref<MusicStarredItem[]>([])
 const activeFilter = ref<StarredFilter>('all')
+const recommendationMode = ref<MusicRecommendationMode>('hot')
 const loading = ref(false)
 const errorMessage = ref('')
 
@@ -34,7 +47,7 @@ const filteredItems = computed(() => (
     ? items.value
     : items.value.filter((item) => item.kind === activeFilter.value)
 ))
-const { openArtist, openAlbum } = useMusicDrawers()
+const { isMainShifted, openArtist, openAlbum } = useMusicDrawers()
 
 function artistNamesFromItem(item: MusicStarredItem) {
   if (item.artist) return item.artist.name
@@ -50,6 +63,28 @@ function handleItemClick(item: MusicStarredItem) {
 
   if (item.kind === 'album' && item.album?.id) {
     openAlbum(String(item.album.id))
+  }
+}
+
+async function handleToggleArtistBookmark(artistId: string) {
+  try {
+    await deleteArtistBookmark(artistId)
+    items.value = items.value.filter(
+      (item) => !(item.kind === 'artist' && String(item.artist?.id) === artistId)
+    )
+  } catch (e) {
+    console.error('Failed to delete bookmark:', e)
+  }
+}
+
+async function handleToggleAlbumBookmark(albumId: string) {
+  try {
+    await deleteAlbumBookmark(albumId)
+    items.value = items.value.filter(
+      (item) => !(item.kind === 'album' && String(item.album?.id) === albumId)
+    )
+  } catch (e) {
+    console.error('Failed to delete album bookmark:', e)
   }
 }
 
@@ -76,22 +111,43 @@ async function loadStarred() {
       listAlbumBookmarks(),
     ])
 
+    const [recommendedArtists, recommendedAlbums] = await Promise.all([
+      listRecommendedArtists(recommendationMode.value),
+      listRecommendedAlbums(recommendationMode.value),
+    ])
+
+    const visibleArtistBookmarks = filterArtistRecommendationsByBookmarks(
+      recommendedArtists.data,
+      artistBookmarks.data as MusicArtistBookmark[],
+    )
+    const visibleAlbumBookmarks = filterAlbumRecommendationsByBookmarks(
+      recommendedAlbums.data,
+      albumBookmarks.data as MusicAlbumBookmark[],
+    )
+
+    const artistBookmarksById = new Map(
+      artistBookmarks.data.map((bookmark: MusicArtistBookmark) => [String(bookmark.artist_id), bookmark]),
+    )
+    const albumBookmarksById = new Map(
+      albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => [String(bookmark.album_id), bookmark]),
+    )
+
     const [artists, albums] = await Promise.all([
-      Promise.all(artistBookmarks.data.map((bookmark: MusicArtistBookmark) => getMusicArtist(bookmark.artist_id))),
-      Promise.all(albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => getMusicAlbum(bookmark.album_id))),
+      Promise.all(visibleArtistBookmarks.map((item) => getMusicArtist(item.id))),
+      Promise.all(visibleAlbumBookmarks.map((item) => getMusicAlbum(item.id))),
     ])
 
     items.value = [
-      ...artistBookmarks.data.map((bookmark: MusicArtistBookmark, index: number) => ({
-        id: bookmark.id,
+      ...visibleArtistBookmarks.map((item, index: number) => ({
+        id: artistBookmarksById.get(item.id)?.id ?? item.id,
         kind: 'artist' as const,
-        starred_at: bookmark.created_at,
+        starred_at: artistBookmarksById.get(item.id)?.created_at ?? '',
         artist: artists[index],
       })),
-      ...albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
-        id: bookmark.id,
+      ...visibleAlbumBookmarks.map((item, index: number) => ({
+        id: albumBookmarksById.get(item.id)?.id ?? item.id,
         kind: 'album' as const,
-        starred_at: bookmark.created_at,
+        starred_at: albumBookmarksById.get(item.id)?.created_at ?? '',
         album: albums[index],
       })),
     ]
@@ -106,112 +162,178 @@ async function loadStarred() {
 onMounted(() => {
   loadStarred()
 })
+
+watch(recommendationMode, () => {
+  loadStarred()
+})
 </script>
 
 <template>
-  <section class="music-starred-view">
-    <header class="page-header">
-      <PPageHeader
-        title="收藏"
-        mb="0"
-      >
-        <template #action>
-          <div class="mode-tabs" aria-label="收藏筛选">
+  <div class="music-starred-view">
+    <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
+      <header class="page-header">
+        <PPageHeader
+          title="收藏"
+          mb="0"
+        >
+          <template #action>
+            <div class="mode-tabs" aria-label="收藏筛选">
+              <PSegmentedControl
+                v-model="activeFilter"
+                :options="filterOptions"
+              />
+            </div>
+          </template>
+        </PPageHeader>
+      </header>
+
+      <div class="toolbar-row">
+        <div class="toolbar-left">
+          <div class="search-shell search-shell--placeholder" aria-hidden="true" />
+        </div>
+        <div class="toolbar-right">
+          <div class="recommendation-tabs" aria-label="收藏推荐模式">
             <PSegmentedControl
-              v-model="activeFilter"
-              :options="filterOptions"
+              v-model="recommendationMode"
+              :options="MUSIC_RECOMMENDATION_MODE_OPTIONS"
             />
           </div>
-        </template>
-      </PPageHeader>
-    </header>
+        </div>
+      </div>
 
-    <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-    <p v-else-if="loading" class="state-line">正在加载...</p>
+      <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+      <p v-else-if="loading" class="state-line">正在加载...</p>
 
-    <div v-else-if="!filteredItems.length" class="empty-paper" role="status">
-      <h2>暂无收藏</h2>
-    </div>
+      <div v-else-if="!filteredItems.length" class="empty-paper" role="status">
+        <h2>暂无收藏</h2>
+      </div>
 
-    <div v-else class="results">
-      <article
-        v-for="item in filteredItems"
-        :key="`${item.kind}-${item.id}`"
-        class="result-card"
-        :class="{ 'result-card--interactive': item.kind === 'artist' || item.kind === 'album' }"
-        :data-testid="item.kind === 'artist' ? 'starred-artist-card' : item.kind === 'album' ? 'starred-album-card' : undefined"
-        @click="handleItemClick(item)"
-      >
-        <p class="a-font-meta result-kind">
-          {{
-            item.kind === 'artist'
-              ? '艺术家'
-              : item.kind === 'album'
-                ? '专辑'
-                : item.kind === 'song'
+      <div v-else class="results">
+        <template
+          v-for="item in filteredItems"
+          :key="`${item.kind}-${item.id}`"
+        >
+          <MusicAlbumCard
+            v-if="item.kind === 'album' && item.album"
+            :album="item.album"
+            is-bookmarked
+            data-testid="starred-album-card"
+            @click="handleItemClick(item)"
+            @toggle-bookmark="handleToggleAlbumBookmark(String(item.album.id))"
+          />
+
+          <MusicArtistCard
+            v-else-if="item.kind === 'artist' && item.artist"
+            :artist="item.artist"
+            is-bookmarked
+            data-testid="starred-artist-card"
+            @click="handleItemClick(item)"
+            @toggle-bookmark="handleToggleArtistBookmark(String(item.artist.id))"
+          />
+
+          <article
+            v-else
+            class="result-card"
+            @click="handleItemClick(item)"
+          >
+            <p class="a-font-meta result-kind">
+              {{
+                item.kind === 'song'
                   ? '单曲'
                   : '歌单'
-          }}
-        </p>
-
-        <template v-if="item.kind === 'artist' && item.artist">
-          <div class="music-info">
-            <div class="music-avatar" aria-hidden="true">
-              <img v-if="item.artist.image_url" :src="item.artist.image_url" :alt="item.artist.name" class="music-avatar-image" />
-              <span v-else>{{ artistInitial(item.artist.name) }}</span>
-            </div>
-            <div class="music-text">
-              <h2 class="music-title">{{ item.artist.name }}</h2>
-              <p v-if="item.artist.bio" class="music-summary">{{ item.artist.bio }}</p>
-            </div>
-          </div>
+              }}
+            </p>
+          </article>
         </template>
-
-        <template v-else-if="item.kind === 'album' && item.album">
-          <div class="cover-frame">
-            <img
-              v-if="resolveAlbumCoverUrl(item.album)"
-              :src="resolveAlbumCoverUrl(item.album)"
-              :alt="item.album.title"
-              class="cover-image"
-              loading="lazy"
-            />
-            <div v-else class="cover-placeholder">COVER</div>
-          </div>
-          <div class="music-info">
-            <div class="music-avatar" aria-hidden="true">
-              <span>💿</span>
-            </div>
-            <div class="music-text">
-              <h2 class="music-title">{{ item.album.title }}</h2>
-              <p class="music-summary">{{ artistNamesFromItem(item) }} · {{ albumYearLabel(item) }}</p>
-            </div>
-          </div>
-        </template>
-
-      </article>
+      </div>
     </div>
     <ArtistDrawer />
     <AlbumDrawer />
-  </section>
+  </div>
 </template>
 
 <style scoped>
 .music-starred-view {
+  position: relative;
+}
+
+.main-level-1 {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
+.main-level-1.is-shifted {
+  transform: translateX(-10%) scale(0.98);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .page-header {
-  max-width: 760px;
   border-left: 4px solid var(--a-color-line-soft);
   padding-left: 1.25rem;
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1 1 auto;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.search-shell {
+  max-width: 28rem;
+  flex: 0 1 28rem;
+}
+
+.search-shell--placeholder {
+  min-height: 1px;
+}
+
+.recommendation-tabs {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .kicker {
   margin: 0 0 0.75rem;
   color: var(--a-color-muted);
+}
+
+@media (max-width: 720px) {
+  .toolbar-row,
+  .toolbar-left,
+  .toolbar-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-shell {
+    max-width: 100%;
+  }
+
+  .search-shell--placeholder {
+    display: none;
+  }
+
+  .recommendation-tabs {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 .page-title {
@@ -338,7 +460,7 @@ onMounted(() => {
 
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
   gap: 1.25rem;
 }
 
@@ -347,40 +469,7 @@ onMounted(() => {
   color: var(--a-color-muted);
 }
 
-.cover-frame {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  background: var(--a-color-surface);
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--a-color-line-soft);
-}
-
-.cover-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.2s ease;
-  display: block;
-}
-
-.result-card--interactive:hover .cover-image {
-  transform: scale(1.03);
-}
-
-.cover-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--a-color-muted);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
-  font-family: var(--a-font-meta);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
+/* Unused cover-frame styles removed, handled by MusicAlbumCard.vue */
 
 .music-info {
   display: flex;

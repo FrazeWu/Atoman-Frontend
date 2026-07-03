@@ -2,17 +2,33 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { listMusicArtists, listArtistBookmarks, type MusicArtistListItem } from '@/api/musicV1'
+import {
+  createArtistBookmark,
+  deleteArtistBookmark,
+  getMusicArtist,
+  listArtistBookmarks,
+  listMusicArtists,
+  listRecommendedArtists,
+  type MusicArtistBookmark,
+  type MusicArtistListItem,
+  type MusicRecommendationMode,
+} from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
+import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import {
+  filterArtistRecommendationsByBookmarks,
+  MUSIC_RECOMMENDATION_MODE_OPTIONS,
+} from '@/utils/musicRecommendations'
 
 type ArtistFilterTab = 'all' | 'subscribed'
 const activeTab = ref<ArtistFilterTab>('all')
+const recommendationMode = ref<MusicRecommendationMode>('hot')
 
 const tabOptions = [
   { label: '全部', value: 'all' },
@@ -34,25 +50,73 @@ let activeSearchRequestId = 0
 let lastRouteArtist: string | null = null
 let lastRouteAlbum: string | null = null
 
+const starredArtistIds = ref<string[]>([])
+
+async function fetchBookmarks() {
+  try {
+    const response = await listArtistBookmarks()
+    starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
+  } catch (e) {
+    console.error('Failed to fetch bookmarks:', e)
+  }
+}
+
+async function handleToggleBookmark(artistId: string) {
+  const isCurrentlyBookmarked = starredArtistIds.value.includes(artistId)
+  try {
+    if (isCurrentlyBookmarked) {
+      await deleteArtistBookmark(artistId)
+      starredArtistIds.value = starredArtistIds.value.filter(id => id !== artistId)
+      if (activeTab.value === 'subscribed') {
+        artists.value = artists.value.filter(a => String(a.id) !== artistId)
+      }
+    } else {
+      await createArtistBookmark(artistId)
+      starredArtistIds.value.push(artistId)
+    }
+  } catch (e) {
+    console.error('Failed to toggle bookmark:', e)
+  }
+}
+
 async function fetchArtists() {
   const requestId = ++activeRequestId
   loading.value = true
   errorMessage.value = ''
 
   try {
-    if (activeTab.value === 'subscribed') {
-      const response = await listArtistBookmarks()
-      if (requestId !== activeRequestId) return
-      artists.value = (response.data || []).map((bookmark: any) => bookmark.artist).filter(Boolean)
-    } else {
+    await fetchBookmarks()
+    if (requestId !== activeRequestId) return
+
+    if (searchQuery.value.trim()) {
       const response = await listMusicArtists({
-        q: undefined,
+        q: searchQuery.value.trim(),
         page: 1,
         page_size: 48,
       })
       if (requestId !== activeRequestId) return
       artists.value = response.data
+      return
     }
+
+    const recommendedResponse = await listRecommendedArtists(recommendationMode.value)
+    if (requestId !== activeRequestId) return
+
+    let filteredRecommendations = recommendedResponse.data
+    if (activeTab.value === 'subscribed') {
+      const bookmarksResponse = await listArtistBookmarks()
+      if (requestId !== activeRequestId) return
+      filteredRecommendations = filterArtistRecommendationsByBookmarks(
+        recommendedResponse.data,
+        bookmarksResponse.data as MusicArtistBookmark[],
+      )
+    }
+
+    const detailResults = await Promise.all(
+      filteredRecommendations.map((item) => getMusicArtist(item.id).catch(() => null)),
+    )
+    if (requestId !== activeRequestId) return
+    artists.value = detailResults.filter(Boolean) as MusicArtistListItem[]
   } catch (e) {
     if (requestId !== activeRequestId) return
     console.error('Failed to fetch music artists:', e)
@@ -66,6 +130,10 @@ async function fetchArtists() {
 }
 
 watch(activeTab, () => {
+  fetchArtists()
+})
+
+watch(recommendationMode, () => {
   fetchArtists()
 })
 
@@ -136,6 +204,7 @@ onMounted(() => {
 
 watch(searchQuery, () => {
   fetchSearchResults()
+  fetchArtists()
 })
 
 watch(
@@ -181,43 +250,53 @@ function handleSearchBlur() {
         </PPageHeader>
       </div>
 
-      <div class="search-row">
-        <div class="search-shell" :class="{ 'is-open': showSearchDropdown }">
-          <SearchSurface
-            v-model:query="searchQuery"
-            :open="showSearchDropdown"
-            compact
-            eyebrow=""
-            :status="searchLoading ? '搜索中...' : ''"
-            placeholder="搜索艺术家..."
-            input-test-id="music-search-input"
-            dropdown-test-id="music-search-dropdown"
-            :loading="searchLoading"
-            :empty="hasSearchQuery && !searchResults.length ? '没有匹配的艺术家' : ''"
-            @focus="handleSearchFocus"
-            @blur="handleSearchBlur"
-          >
-            <template #results>
-              <div class="search-dropdown__list">
-                <button
-                  v-for="artist in searchResults"
-                  :key="artist.id"
-                  type="button"
-                  class="search-dropdown__item"
-                  data-testid="music-search-result"
-                  @mousedown.prevent="openArtistCard(artist.id)"
-                >
-                  <span class="search-dropdown__item-title">{{ artist.name }}</span>
-                  <span class="search-dropdown__item-meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
-                </button>
-              </div>
-            </template>
-          </SearchSurface>
+      <div class="toolbar-row">
+        <div class="toolbar-left">
+          <div class="search-shell" :class="{ 'is-open': showSearchDropdown }">
+            <SearchSurface
+              v-model:query="searchQuery"
+              :open="showSearchDropdown"
+              compact
+              eyebrow=""
+              :status="searchLoading ? '搜索中...' : ''"
+              placeholder="搜索艺术家..."
+              input-test-id="music-search-input"
+              dropdown-test-id="music-search-dropdown"
+              :loading="searchLoading"
+              :empty="hasSearchQuery && !searchResults.length ? '没有匹配的艺术家' : ''"
+              @focus="handleSearchFocus"
+              @blur="handleSearchBlur"
+            >
+              <template #results>
+                <div class="search-dropdown__list">
+                  <button
+                    v-for="artist in searchResults"
+                    :key="artist.id"
+                    type="button"
+                    class="search-dropdown__item"
+                    data-testid="music-search-result"
+                    @mousedown.prevent="openArtistCard(artist.id)"
+                  >
+                    <span class="search-dropdown__item-title">{{ artist.name }}</span>
+                    <span class="search-dropdown__item-meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
+                  </button>
+                </div>
+              </template>
+            </SearchSurface>
+          </div>
+          <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
+            <span class="paper-action-dot" aria-hidden="true" />
+            添加艺术家
+          </button>
         </div>
-        <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
-          <span class="paper-action-dot" aria-hidden="true" />
-          添加艺术家
-        </button>
+        <div class="toolbar-right">
+          <div class="recommendation-tabs" aria-label="艺术家推荐模式">
+            <PSegmentedControl
+              v-model="recommendationMode"
+              :options="MUSIC_RECOMMENDATION_MODE_OPTIONS"
+            />
+          </div>
+        </div>
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
@@ -239,35 +318,15 @@ function handleSearchBlur() {
       </div>
 
       <div v-else class="artist-results-grid">
-        <button
+        <MusicArtistCard
           v-for="artist in artists"
           :key="artist.id"
-          class="artist-card"
+          :artist="artist"
+          :is-bookmarked="starredArtistIds.includes(String(artist.id))"
           data-testid="artist-card"
-          type="button"
           @click="openArtistCard(artist.id)"
-        >
-          <!-- Thumbnail/Avatar -->
-          <div class="avatar-frame">
-            <img v-if="artist.image_url" :src="artist.image_url" :alt="artist.name" class="avatar-image" loading="lazy" />
-            <div v-else class="avatar-placeholder-text">
-              <span>{{ artist.name ? artist.name[0].toUpperCase() : '?' }}</span>
-            </div>
-            
-            <!-- Nationality Overlay -->
-            <div v-if="artist.nationality" class="nationality-overlay">
-              <span>{{ artist.nationality }}</span>
-            </div>
-          </div>
-
-          <!-- Info row -->
-          <div class="artist-info">
-            <div class="artist-text">
-              <h3 class="artist-card-title a-clamp-1">{{ artist.name }}</h3>
-              <p class="artist-card-sub a-clamp-2">{{ artist.bio || '暂无个人简介' }}</p>
-            </div>
-          </div>
-        </button>
+          @toggle-bookmark="handleToggleBookmark(String(artist.id))"
+        />
       </div>
     </div>
 
@@ -294,16 +353,35 @@ function handleSearchBlur() {
   margin-bottom: 0.75rem;
 }
 
-.search-row {
+.toolbar-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1 1 auto;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .search-shell {
   position: relative;
   max-width: 28rem;
   flex: 0 1 28rem;
+}
+
+.recommendation-tabs {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .search-shell.is-open {
@@ -394,95 +472,16 @@ function handleSearchBlur() {
 /* ─── Artist Search Results ──────── */
 .artist-results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
   gap: 1.25rem;
   margin-top: 1.5rem;
 }
-.artist-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  border: none;
-  background: transparent;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  width: 100%;
-}
-.avatar-frame {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  background: var(--a-color-surface);
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--a-color-line-soft);
-}
-.artist-card:hover .avatar-image {
-  transform: scale(1.03);
-}
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.2s ease;
-  display: block;
-}
-.avatar-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--a-color-muted);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
-}
-.nationality-overlay {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  z-index: 1;
-}
-.nationality-overlay span {
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 5px;
-  letter-spacing: 0.02em;
-  border-radius: 2px;
-  white-space: nowrap;
-}
-.artist-info {
-  display: flex;
-  padding: 8px 0 0;
-  text-align: left;
-}
-.artist-text {
-  min-width: 0;
-  flex: 1;
-}
-.artist-card-title {
-  font-size: 0.9rem;
-  font-weight: 800;
-  line-height: 1.35;
-  color: var(--a-color-fg);
-  margin: 0 0 0.25rem 0;
-  transition: color 0.2s;
-}
-.artist-card:hover .artist-card-title {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-}
-.artist-card-sub {
-  margin: 0;
-  color: var(--a-color-muted-soft);
-  line-height: 1.4;
-  font-size: 0.75rem;
-}
+/* Unused artist-card styles removed, handled by MusicArtistCard.vue */
 
 @media (max-width: 720px) {
-  .search-row {
+  .toolbar-row,
+  .toolbar-left,
+  .toolbar-right {
     flex-direction: column;
     align-items: stretch;
   }
@@ -497,8 +496,9 @@ function handleSearchBlur() {
     width: 100%;
   }
 
-  .search-side-action {
-    width: fit-content;
+  .recommendation-tabs {
+    min-width: 0;
+    max-width: 100%;
   }
 }
 

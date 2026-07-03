@@ -6,6 +6,8 @@ import HomeView from '@/views/music/HomeView.vue'
 
 const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
+  listRecommendedArtists: vi.fn(),
+  getMusicArtist: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openNestedAction: vi.fn(),
@@ -22,6 +24,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/musicV1', () => ({
   listMusicArtists: mocks.listMusicArtists,
+  listRecommendedArtists: mocks.listRecommendedArtists,
+  getMusicArtist: mocks.getMusicArtist,
   listArtistBookmarks: vi.fn().mockResolvedValue({ data: [] }),
 }))
 
@@ -49,6 +53,8 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mocks.listMusicArtists.mockReset()
+    mocks.listRecommendedArtists.mockReset()
+    mocks.getMusicArtist.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openNestedAction.mockReset()
@@ -61,6 +67,20 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
       creationFlow: null,
     }
     mocks.routeQuery = {}
+    mocks.listRecommendedArtists.mockResolvedValue({
+      data: [
+        {
+          id: 'artist-1',
+          target_path: '/music?artist=artist-1',
+        },
+      ],
+    })
+    mocks.getMusicArtist.mockResolvedValue({
+      id: 'artist-1',
+      name: 'Hot Artist',
+      nationality: 'UK',
+      bio: 'Artist bio',
+    })
     mocks.listMusicArtists.mockResolvedValue({
       data: [
         {
@@ -95,7 +115,8 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     })
     await flushPromises()
 
-    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: undefined, page: 1, page_size: 48 })
+    expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('hot')
+    expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')
     expect(wrapper.find('h1').text()).toContain('艺术家')
     expect(wrapper.find('.search-input').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
@@ -125,19 +146,21 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
   })
 
   it('shows search results in dropdown and opens artist from there', async () => {
-    mocks.listMusicArtists
-      .mockResolvedValueOnce({
-        data: [
-          {
-            id: 'artist-1',
-            name: 'Default Artist',
-            nationality: 'UK',
-            bio: 'Default bio',
-          },
-        ],
-        meta: { page: 1, page_size: 48, total: 1, has_more: false },
-      })
-      .mockResolvedValueOnce({
+    mocks.listRecommendedArtists.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'artist-1',
+          target_path: '/music?artist=artist-1',
+        },
+      ],
+    })
+    mocks.getMusicArtist.mockResolvedValueOnce({
+      id: 'artist-1',
+      name: 'Default Artist',
+      nationality: 'UK',
+      bio: 'Default bio',
+    })
+    mocks.listMusicArtists.mockResolvedValueOnce({
         data: [
           {
             id: 'artist-2',
@@ -171,9 +194,9 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="music-search-dropdown"]').exists()).toBe(true)
-    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'kanye', page: 1, page_size: 20 })
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'kanye', page: 1, page_size: 20 })
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Default Artist')
+    expect(wrapper.text()).toContain('Hot Artist')
     expect(wrapper.text()).toContain('Ye')
 
     await wrapper.find('[data-testid="music-search-result"]').trigger('mousedown')
@@ -181,9 +204,8 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
   })
 
   it('offers wiki edit actions when no artists match', async () => {
-    mocks.listMusicArtists.mockResolvedValueOnce({
+    mocks.listRecommendedArtists.mockResolvedValueOnce({
       data: [],
-      meta: { page: 1, page_size: 48, total: 0, has_more: false },
     })
     const pinia = createTestingPinia({ createSpy: vi.fn })
     const wrapper = mount(HomeView, {

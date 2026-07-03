@@ -115,7 +115,7 @@
         :layer="0"
       >
         <div class="setting-feed-panel__meta">
-          <strong>{{ source.title || '未命名订阅源' }}</strong>
+          <strong @click="openItemsSheet(source)">{{ source.title || '未命名订阅源' }}</strong>
           <small>{{ source.rss_url }}</small>
           <small>
             状态：{{ source.status || 'healthy' }} ·
@@ -150,12 +150,23 @@
     </div>
 
     <p v-else class="setting-feed-panel__empty">暂无外部 RSS 订阅源。</p>
+
+    <SettingFeedSourceItemsSheet
+      :show="itemsSheetOpen"
+      :source-title="selectedSource?.title || ''"
+      :items="selectedSourceItems"
+      :loading="itemsSheetLoading"
+      :error="itemsSheetError"
+      @close="itemsSheetOpen = false"
+      @retry="retryItem"
+    />
   </PSurface>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceItemsSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSurface from '@/components/ui/PSurface.vue'
@@ -181,6 +192,11 @@ const error = ref('')
 const statusFilter = ref<'healthy' | 'degraded' | 'failing' | ''>('')
 const pendingSourceIds = ref(new Set<string>())
 const syncingSourceIds = ref(new Set<string>())
+const itemsSheetOpen = ref(false)
+const itemsSheetLoading = ref(false)
+const itemsSheetError = ref('')
+const selectedSource = ref<FeedSource | null>(null)
+const selectedSourceItems = ref([])
 const opmlInput = ref<HTMLInputElement | null>(null)
 const draft = ref({
   title: '',
@@ -312,6 +328,28 @@ function startEdit(source: FeedSource) {
   }
 }
 
+async function openItemsSheet(source: FeedSource) {
+  if (!authStore.token) return
+
+  selectedSource.value = source
+  itemsSheetOpen.value = true
+  itemsSheetLoading.value = true
+  itemsSheetError.value = ''
+
+  try {
+    selectedSourceItems.value = await adminFeedFulltextStore.fetchItems(authStore.token, {
+      sourceId: source.id,
+      page: 1,
+      limit: 20,
+    })
+  } catch (err) {
+    itemsSheetError.value = err instanceof Error ? err.message : '加载条目失败'
+    selectedSourceItems.value = []
+  } finally {
+    itemsSheetLoading.value = false
+  }
+}
+
 async function toggleSource(source: FeedSource) {
   if (!authStore.token || props.fullTextMode !== 'per_source') return
 
@@ -353,6 +391,22 @@ async function runSync(sourceId: string) {
     const current = new Set(syncingSourceIds.value)
     current.delete(sourceId)
     syncingSourceIds.value = current
+  }
+}
+
+async function retryItem(itemId: string) {
+  if (!authStore.token || !selectedSource.value) return
+
+  itemsSheetError.value = ''
+  try {
+    await adminFeedFulltextStore.retryItem(itemId, authStore.token)
+    selectedSourceItems.value = await adminFeedFulltextStore.fetchItems(authStore.token, {
+      sourceId: selectedSource.value.id,
+      page: 1,
+      limit: 20,
+    })
+  } catch (err) {
+    itemsSheetError.value = err instanceof Error ? err.message : '重试条目失败'
   }
 }
 

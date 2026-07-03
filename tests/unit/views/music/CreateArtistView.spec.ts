@@ -6,7 +6,7 @@ import CreateArtistView from '@/views/music/CreateArtistView.vue'
 const mocks = vi.hoisted(() => ({
   routerPush: vi.fn(),
   routeQuery: { name: 'Seed Artist' } as Record<string, unknown>,
-  submitMusicEdit: vi.fn(),
+  createMusicArtist: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -22,26 +22,20 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/musicV1')>()
   return {
     ...actual,
-    submitMusicEdit: mocks.submitMusicEdit,
+    createMusicArtist: mocks.createMusicArtist,
   }
 })
 
 describe('CreateArtistView.vue', () => {
   beforeEach(() => {
     mocks.routerPush.mockReset()
-    mocks.submitMusicEdit.mockReset()
+    mocks.createMusicArtist.mockReset()
     mocks.routeQuery = { name: 'Seed Artist' }
-    mocks.submitMusicEdit.mockResolvedValue({
-      id: 'edit-1',
-      type: 'create_artist',
-      status: 'applied',
-      entity_type: 'artist',
-      entity_id: 'artist-123',
-      submitted_by: 'user-1',
-      auto_applied: true,
-      votable: false,
-      votes: { yes: 0, no: 0 },
-      created_at: '2026-06-22T00:00:00Z',
+    mocks.createMusicArtist.mockResolvedValue({
+      id: 'artist-123',
+      name: 'Seed Artist',
+      bio: 'Artist bio',
+      entry_status: 'open',
     })
   })
 
@@ -55,31 +49,18 @@ describe('CreateArtistView.vue', () => {
     await wrapper.get('[data-test="artist-form"]').trigger('submit')
     await flushPromises()
 
-    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
-      type: 'create_artist',
-      entity_type: 'artist',
-      payload: {
-        name: 'Seed Artist',
-        bio: 'Artist bio',
-      },
-      changes: {},
-      reason: 'Create artist from wiki flow',
-      sources: [],
+    expect(mocks.createMusicArtist).toHaveBeenCalledWith({
+      name: 'Seed Artist',
+      bio: 'Artist bio',
     })
     expect(mocks.routerPush).toHaveBeenCalledWith('/music?artist=artist-123')
   })
 
   it('falls back to the music module root when creation succeeds without entity id', async () => {
-    mocks.submitMusicEdit.mockResolvedValueOnce({
-      id: 'edit-2',
-      type: 'create_artist',
-      status: 'open',
-      entity_type: 'artist',
-      submitted_by: 'user-1',
-      auto_applied: false,
-      votable: true,
-      votes: { yes: 0, no: 0 },
-      created_at: '2026-06-22T00:00:00Z',
+    mocks.createMusicArtist.mockResolvedValueOnce({
+      id: '',
+      name: 'Seed Artist',
+      entry_status: 'open',
     })
 
     const wrapper = mount(CreateArtistView)

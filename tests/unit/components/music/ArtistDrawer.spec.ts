@@ -5,15 +5,20 @@ import { beforeEach, describe, it, expect, vi } from 'vitest'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 
 const drawerState = ref({ artistId: '1', artistRefreshToken: 0 })
+const musicDrawerMocks = vi.hoisted(() => ({
+  openNestedAction: vi.fn(),
+  openAlbum: vi.fn(),
+  openMusicCreationFlow: vi.fn(),
+}))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     state: drawerState,
     closeArtist: vi.fn(),
     isArtistShifted: ref(false),
-    openNestedAction: vi.fn(),
-    openAlbum: vi.fn(),
-    openMusicCreationFlow: vi.fn(),
+    openNestedAction: musicDrawerMocks.openNestedAction,
+    openAlbum: musicDrawerMocks.openAlbum,
+    openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
   })
 }))
 
@@ -47,6 +52,9 @@ describe('ArtistDrawer.vue', () => {
     listArtistBookmarks.mockReset()
     createArtistBookmark.mockReset()
     deleteArtistBookmark.mockReset()
+    musicDrawerMocks.openNestedAction.mockReset()
+    musicDrawerMocks.openAlbum.mockReset()
+    musicDrawerMocks.openMusicCreationFlow.mockReset()
 
     getMusicArtist.mockResolvedValue({
       id: '1',
@@ -137,5 +145,42 @@ describe('ArtistDrawer.vue', () => {
     expect(getMusicArtist.mock.calls.length).toBeGreaterThan(artistCallsBeforeRefresh)
     expect(listMusicAlbums.mock.calls.length).toBeGreaterThan(albumCallsBeforeRefresh)
     wrapper.unmount()
+  })
+
+  it('opens revise_artist from the artist detail action bar', async () => {
+    const wrapper = mount(ArtistDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
+        },
+      },
+    })
+
+    await vi.dynamicImportSettled()
+
+    await wrapper.get('button:nth-of-type(2)').trigger('click')
+
+    expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith('revise_artist')
+  })
+
+  it('opens the creation flow with seeded artist data from the artist detail action bar', async () => {
+    const wrapper = mount(ArtistDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
+        },
+      },
+    })
+
+    await vi.dynamicImportSettled()
+
+    await wrapper.get('button:nth-of-type(3)').trigger('click')
+
+    expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
+      artistId: '1',
+      artistName: 'Ye',
+      artistLegalName: 'Kanye Omari West',
+      startStep: 'albumImport',
+    })
   })
 })

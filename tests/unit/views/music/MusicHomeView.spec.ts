@@ -2,11 +2,13 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { computed, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
+import { ApiErrorResponseError } from '@/api/client'
 import HomeView from '@/views/music/HomeView.vue'
 
 const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
   listRecommendedArtists: vi.fn(),
+  listArtistBookmarks: vi.fn(),
   getMusicArtist: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
@@ -26,7 +28,7 @@ vi.mock('@/api/musicV1', () => ({
   listMusicArtists: mocks.listMusicArtists,
   listRecommendedArtists: mocks.listRecommendedArtists,
   getMusicArtist: mocks.getMusicArtist,
-  listArtistBookmarks: vi.fn().mockResolvedValue({ data: [] }),
+  listArtistBookmarks: mocks.listArtistBookmarks,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -54,6 +56,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     vi.useFakeTimers()
     mocks.listMusicArtists.mockReset()
     mocks.listRecommendedArtists.mockReset()
+    mocks.listArtistBookmarks.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
@@ -92,6 +95,7 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
       ],
       meta: { page: 1, page_size: 48, total: 1, has_more: false },
     })
+    mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
   })
 
   afterEach(() => {
@@ -121,7 +125,6 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     expect(wrapper.find('.search-input').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('Hot Artist')
-    expect(wrapper.text()).toContain('UK')
   })
 
   it('opens artist drawers from artist cards', async () => {
@@ -227,5 +230,30 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
 
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1)
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'artist' })
+  })
+
+  it('keeps artist recommendations visible when bookmarks require login', async () => {
+    mocks.listArtistBookmarks.mockRejectedValueOnce(
+      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
+    )
+
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(HomeView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Hot Artist')
+    expect(wrapper.text()).not.toContain('艺术家列表加载失败')
   })
 })

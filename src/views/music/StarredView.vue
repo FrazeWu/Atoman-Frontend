@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
@@ -106,10 +107,20 @@ async function loadStarred() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [artistBookmarks, albumBookmarks] = await Promise.all([
-      listArtistBookmarks(),
-      listAlbumBookmarks(),
-    ])
+    let artistBookmarks: { data: MusicArtistBookmark[] }
+    let albumBookmarks: { data: MusicAlbumBookmark[] }
+    try {
+      ;[artistBookmarks, albumBookmarks] = await Promise.all([
+        listArtistBookmarks(),
+        listAlbumBookmarks(),
+      ])
+    } catch (error) {
+      if (error instanceof ApiErrorResponseError && error.status === 401) {
+        items.value = []
+        return
+      }
+      throw error
+    }
 
     const [recommendedArtists, recommendedAlbums] = await Promise.all([
       listRecommendedArtists(recommendationMode.value),

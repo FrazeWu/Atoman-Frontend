@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiErrorResponseError } from '@/api/client'
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
@@ -184,5 +185,20 @@ describe('Music StarredView', () => {
 
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+  })
+
+  it('shows empty state instead of error when bookmarks require login', async () => {
+    mocks.listArtistBookmarks.mockRejectedValueOnce(
+      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
+    )
+    mocks.listAlbumBookmarks.mockRejectedValueOnce(
+      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
+    )
+
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('暂无收藏')
+    expect(wrapper.text()).not.toContain('收藏加载失败')
   })
 })

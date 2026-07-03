@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   createArtistBookmark,
@@ -57,6 +58,10 @@ async function fetchBookmarks() {
     const response = await listArtistBookmarks()
     starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
   } catch (e) {
+    if (e instanceof ApiErrorResponseError && e.status === 401) {
+      starredArtistIds.value = []
+      return
+    }
     console.error('Failed to fetch bookmarks:', e)
   }
 }
@@ -124,11 +129,9 @@ async function fetchArtists() {
 
     let filteredRecommendations = recommendedResponse.data
     if (activeTab.value === 'subscribed') {
-      const bookmarksResponse = await listArtistBookmarks()
-      if (requestId !== activeRequestId) return
       filteredRecommendations = filterArtistRecommendationsByBookmarks(
         recommendedResponse.data,
-        bookmarksResponse.data as MusicArtistBookmark[],
+        starredArtistIds.value.map((artistId) => ({ artist_id: artistId })) as MusicArtistBookmark[],
       )
     }
 

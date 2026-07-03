@@ -614,6 +614,20 @@ export async function uploadMusicAlbumArchiveMultipart(
   const missingPartNumbers = Array.from({ length: totalParts }, (_, index) => index + 1)
     .filter((partNumber) => !completedParts.has(partNumber))
 
+  function reportProgress(): void {
+    const completedBytes = Math.min(loaded, file.size)
+    const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.001)
+    options.onProgress?.({
+      loaded: completedBytes,
+      total: file.size,
+      bytesPerSecond: completedBytes / elapsedSeconds,
+    })
+  }
+
+  if (missingPartNumbers.length === 0) {
+    reportProgress()
+  }
+
   async function uploadPart(partNumber: number): Promise<void> {
     const start = (partNumber - 1) * multipart.partSize
     const end = Math.min(start + multipart.partSize, file.size)
@@ -623,12 +637,7 @@ export async function uploadMusicAlbumArchiveMultipart(
     await completeMusicAlbumImportMultipartPart(importId, partNumber, etag)
 
     loaded += partBody.size
-    const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.001)
-    options.onProgress?.({
-      loaded: Math.min(loaded, file.size),
-      total: file.size,
-      bytesPerSecond: Math.min(loaded, file.size) / elapsedSeconds,
-    })
+    reportProgress()
   }
 
   let cursor = 0

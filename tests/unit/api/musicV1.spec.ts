@@ -532,10 +532,14 @@ describe('music v1 adapter', () => {
       }
       if (url === 'https://r2.example.com/part-1') {
         expect(init).toMatchObject({ method: 'PUT' })
+        expect(init?.credentials).toBeUndefined()
+        expect(init?.headers).toBeUndefined()
         return new Response(null, { status: 200, headers: { ETag: '"etag-1"' } })
       }
       if (url === 'https://r2.example.com/part-3') {
         expect(init).toMatchObject({ method: 'PUT' })
+        expect(init?.credentials).toBeUndefined()
+        expect(init?.headers).toBeUndefined()
         return new Response(null, { status: 200, headers: { ETag: '"etag-3"' } })
       }
       if (url.endsWith('/multipart/parts/1/complete') || url.endsWith('/multipart/parts/3/complete')) {
@@ -620,6 +624,129 @@ describe('music v1 adapter', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/complete', expect.objectContaining({ method: 'POST' }))
     expect(progress.at(-1)).toMatchObject({ loaded: 8, total: 8 })
     expect(progress.at(-1)?.bytesPerSecond).toBeGreaterThan(0)
+  })
+
+  it('retries failed R2 PUT requests twice and succeeds on the third attempt', async () => {
+    const file = new File(['aaaa'], 'album.zip', { type: 'application/zip' })
+    const putCalls: RequestInit[] = []
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart') {
+        return new Response(JSON.stringify({ data: { partSize: 4, completedParts: [] } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart/parts/1') {
+        return new Response(JSON.stringify({ data: { partNumber: 1, uploadUrl: 'https://r2.example.com/retry-part' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === 'https://r2.example.com/retry-part') {
+        putCalls.push(init as RequestInit)
+        expect(init?.credentials).toBeUndefined()
+        expect(init?.headers).toBeUndefined()
+        return new Response(null, {
+          status: putCalls.length < 3 ? 500 : 200,
+          headers: putCalls.length < 3 ? undefined : { ETag: '"etag-after-retry"' },
+        })
+      }
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart/parts/1/complete') {
+        return new Response(JSON.stringify({ data: { partNumber: 1, etag: '"etag-after-retry"' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart/complete') {
+        return new Response(JSON.stringify({ data: { importId: 'import_uuid', status: 'uploaded' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      throw new Error(`unexpected request ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await uploadMusicAlbumArchiveMultipart('import_uuid', file)
+
+    expect(result).toMatchObject({ importId: 'import_uuid', status: 'uploaded' })
+    expect(putCalls).toHaveLength(3)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/complete', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('throws a useful error after R2 PUT retries are exhausted and skips final complete', async () => {
+    const file = new File(['aaaa'], 'album.zip', { type: 'application/zip' })
+    const putCalls: RequestInit[] = []
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart') {
+        return new Response(JSON.stringify({ data: { partSize: 4, completedParts: [] } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart/parts/1') {
+        return new Response(JSON.stringify({ data: { partNumber: 1, uploadUrl: 'https://r2.example.com/failing-part' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === 'https://r2.example.com/failing-part') {
+        putCalls.push(init as RequestInit)
+        expect(init?.credentials).toBeUndefined()
+        expect(init?.headers).toBeUndefined()
+        return new Response(null, { status: 503 })
+      }
+      throw new Error(`unexpected request ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(uploadMusicAlbumArchiveMultipart('import_uuid', file)).rejects.toThrow('上传分片失败 (503)')
+
+    expect(putCalls).toHaveLength(3)
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/v1/music/imports/albums/import_uuid/multipart/complete',
+      expect.anything(),
+    )
+  })
+
+  it('reports 100% progress when all multipart parts are already completed', async () => {
+    const file = new File(['aaaabbbb'], 'album.zip', { type: 'application/zip' })
+    const progress: Array<{ loaded: number; total: number; bytesPerSecond: number }> = []
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart') {
+        return new Response(JSON.stringify({
+          data: {
+            partSize: 4,
+            completedParts: [
+              { partNumber: 1, etag: '"etag-1"' },
+              { partNumber: 2, etag: '"etag-2"' },
+            ],
+          },
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === '/api/v1/music/imports/albums/import_uuid/multipart/complete') {
+        return new Response(JSON.stringify({ data: { importId: 'import_uuid', status: 'uploaded' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      throw new Error(`unexpected request ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await uploadMusicAlbumArchiveMultipart('import_uuid', file, {
+      onProgress: (event) => progress.push(event),
+    })
+
+    expect(progress).toHaveLength(1)
+    expect(progress[0]).toMatchObject({ loaded: 8, total: 8 })
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/v1/music/imports/albums/import_uuid/multipart/parts/1',
+      expect.anything(),
+    )
   })
 })
 

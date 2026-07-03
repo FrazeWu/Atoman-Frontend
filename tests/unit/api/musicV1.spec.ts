@@ -2,6 +2,7 @@ import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiGetRaw, apiPatchJson, apiPostJson, apiPostMultipart } from '@/api/client'
+import * as apiUrlModule from '@/composables/useApi'
 import {
   createMusicArtist,
   buildCreateAlbumEdit,
@@ -169,6 +170,13 @@ describe('music v1 adapter', () => {
     expect(musicV1Endpoints.album('album_uuid')).toBe('/api/v1/music/albums/album_uuid')
     expect(musicV1Endpoints.edits()).toBe('/api/v1/music/edits')
     expect(musicV1Endpoints.editApprove('edit_uuid')).toBe('/api/v1/music/edits/edit_uuid/approve')
+  })
+
+  it('reuses the shared api base url for music endpoints', () => {
+    vi.spyOn(apiUrlModule, 'useApiUrl').mockReturnValue('https://api.atoman.org/api/v1')
+
+    expect(musicV1Endpoints.albums()).toBe('https://api.atoman.org/api/v1/music/albums')
+    expect(musicV1Endpoints.artist('artist_uuid')).toBe('https://api.atoman.org/api/v1/music/artists/artist_uuid')
   })
 
   it('serializes list filters using the api v1 query vocabulary and preserves server pagination meta', async () => {

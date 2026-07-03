@@ -1,5 +1,6 @@
 import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
+import { useApiUrl } from '@/composables/useApi'
 
 export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
 export type MusicEntityType = 'artist' | 'album' | 'song'
@@ -347,7 +348,9 @@ export type ArtistEditDraft = {
   sources: MusicSource[]
 }
 
-const API_V1_BASE = '/api/v1'
+function apiV1Base() {
+  return useApiUrl()
+}
 
 function queryString(filters: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams()
@@ -359,38 +362,38 @@ function queryString(filters: Record<string, string | number | undefined>): stri
 }
 
 export const musicV1Endpoints = {
-  uploads: () => `${API_V1_BASE}/uploads`,
-  artists: () => `${API_V1_BASE}/music/artists`,
-  artist: (artistId: string) => `${API_V1_BASE}/music/artists/${artistId}`,
-  albums: () => `${API_V1_BASE}/music/albums`,
-  album: (albumId: string) => `${API_V1_BASE}/music/albums/${albumId}`,
-  artistBookmarks: () => `${API_V1_BASE}/music/bookmarks/artists`,
-  artistBookmark: (artistId: string) => `${API_V1_BASE}/music/bookmarks/artists/${artistId}`,
-  albumBookmarks: () => `${API_V1_BASE}/music/bookmarks/albums`,
-  albumBookmark: (albumId: string) => `${API_V1_BASE}/music/bookmarks/albums/${albumId}`,
-  songBookmarks: () => `${API_V1_BASE}/music/bookmarks/songs`,
-  songBookmark: (songId: string) => `${API_V1_BASE}/music/bookmarks/songs/${songId}`,
-  playlists: () => `${API_V1_BASE}/music/playlists`,
-  playlist: (playlistId: string) => `${API_V1_BASE}/music/playlists/${playlistId}`,
-  playlistSongs: (playlistId: string) => `${API_V1_BASE}/music/playlists/${playlistId}/songs`,
-  playlistSong: (playlistId: string, songId: string) => `${API_V1_BASE}/music/playlists/${playlistId}/songs/${songId}`,
-  albumRevisions: (albumId: string) => `${API_V1_BASE}/albums/${albumId}/revisions`,
-  albumRevision: (albumId: string, version: number) => `${API_V1_BASE}/albums/${albumId}/revisions/${version}`,
-  albumRevert: (albumId: string, version: number) => `${API_V1_BASE}/albums/${albumId}/revisions/${version}/revert`,
-  albumDiscussions: (albumId: string) => `${API_V1_BASE}/albums/${albumId}/discussions`,
-  albumDiscussion: (albumId: string, discussionId: string) => `${API_V1_BASE}/albums/${albumId}/discussions/${discussionId}`,
-  albumImports: () => `${API_V1_BASE}/music/imports/albums`,
-  albumImport: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}`,
-  albumImportArchive: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/upload`,
-  albumImportCommit: (importId: string) => `${API_V1_BASE}/music/imports/albums/${importId}/commit`,
-  recommendAlbums: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/albums?mode=${mode}`,
-  recommendArtists: (mode: MusicRecommendationMode) => `${API_V1_BASE}/music/recommend/artists?mode=${mode}`,
-  edits: () => `${API_V1_BASE}/music/edits`,
-  edit: (editId: string) => `${API_V1_BASE}/music/edits/${editId}`,
-  editVotes: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/votes`,
-  editApprove: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/approve`,
-  editReject: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/reject`,
-  editCancel: (editId: string) => `${API_V1_BASE}/music/edits/${editId}/cancel`,
+  uploads: () => `${apiV1Base()}/uploads`,
+  artists: () => `${apiV1Base()}/music/artists`,
+  artist: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}`,
+  albums: () => `${apiV1Base()}/music/albums`,
+  album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
+  artistBookmarks: () => `${apiV1Base()}/music/bookmarks/artists`,
+  artistBookmark: (artistId: string) => `${apiV1Base()}/music/bookmarks/artists/${artistId}`,
+  albumBookmarks: () => `${apiV1Base()}/music/bookmarks/albums`,
+  albumBookmark: (albumId: string) => `${apiV1Base()}/music/bookmarks/albums/${albumId}`,
+  songBookmarks: () => `${apiV1Base()}/music/bookmarks/songs`,
+  songBookmark: (songId: string) => `${apiV1Base()}/music/bookmarks/songs/${songId}`,
+  playlists: () => `${apiV1Base()}/music/playlists`,
+  playlist: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}`,
+  playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
+  playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
+  albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
+  albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
+  albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,
+  albumDiscussions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/discussions`,
+  albumDiscussion: (albumId: string, discussionId: string) => `${apiV1Base()}/albums/${albumId}/discussions/${discussionId}`,
+  albumImports: () => `${apiV1Base()}/music/imports/albums`,
+  albumImport: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}`,
+  albumImportArchive: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/upload`,
+  albumImportCommit: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/commit`,
+  recommendAlbums: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
+  recommendArtists: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/artists?mode=${mode}`,
+  edits: () => `${apiV1Base()}/music/edits`,
+  edit: (editId: string) => `${apiV1Base()}/music/edits/${editId}`,
+  editVotes: (editId: string) => `${apiV1Base()}/music/edits/${editId}/votes`,
+  editApprove: (editId: string) => `${apiV1Base()}/music/edits/${editId}/approve`,
+  editReject: (editId: string) => `${apiV1Base()}/music/edits/${editId}/reject`,
+  editCancel: (editId: string) => `${apiV1Base()}/music/edits/${editId}/cancel`,
 }
 
 function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {

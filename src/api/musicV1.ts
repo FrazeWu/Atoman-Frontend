@@ -92,8 +92,29 @@ export type MusicAlbumImport = {
   errorMessage: string
 }
 
+export type MusicAlbumImportMultipartPart = {
+  partNumber: number
+  etag: string
+}
+
 export type CreateMusicAlbumImportInput = {
   artistId?: string | null
+}
+
+export type StartMusicAlbumImportMultipartInput = {
+  fileName: string
+  fileSize: number
+  contentType?: string
+}
+
+export type MusicAlbumImportMultipart = {
+  partSize: number
+  completedParts: MusicAlbumImportMultipartPart[]
+}
+
+export type MusicAlbumImportMultipartPartUpload = {
+  partNumber: number
+  uploadUrl: string
 }
 
 export type MusicAlbumArchiveUploadProgress = {
@@ -385,6 +406,10 @@ export const musicV1Endpoints = {
   albumImports: () => `${apiV1Base()}/music/imports/albums`,
   albumImport: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}`,
   albumImportArchive: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/upload`,
+  albumImportMultipart: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/multipart`,
+  albumImportMultipartPart: (importId: string, partNumber: number) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/parts/${partNumber}`,
+  albumImportMultipartPartComplete: (importId: string, partNumber: number) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/parts/${partNumber}/complete`,
+  albumImportMultipartComplete: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/complete`,
   albumImportCommit: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/commit`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
   recommendArtists: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/artists?mode=${mode}`,
@@ -507,6 +532,116 @@ export async function commitMusicAlbumImport(
   input: MusicAlbumImportCommitInput,
 ): Promise<MusicAlbumImport> {
   return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportCommit(importId), input)
+}
+
+const maxAlbumArchiveBytes = 2 * 1024 * 1024 * 1024
+
+export function validateMusicAlbumArchiveFile(file: File): void {
+  if (!file.name.toLowerCase().endsWith('.zip')) {
+    throw new Error('请上传 .zip 压缩包')
+  }
+  if (file.size > maxAlbumArchiveBytes) {
+    throw new Error('文件需在 2GB 以内，请转换或压缩后上传')
+  }
+}
+
+export async function startMusicAlbumImportMultipart(
+  importId: string,
+  input: StartMusicAlbumImportMultipartInput,
+): Promise<MusicAlbumImportMultipart> {
+  return apiPostJson<MusicAlbumImportMultipart>(musicV1Endpoints.albumImportMultipart(importId), input)
+}
+
+export async function createMusicAlbumImportMultipartPartUpload(
+  importId: string,
+  partNumber: number,
+): Promise<MusicAlbumImportMultipartPartUpload> {
+  return apiPostJson<MusicAlbumImportMultipartPartUpload>(musicV1Endpoints.albumImportMultipartPart(importId, partNumber), {})
+}
+
+export async function completeMusicAlbumImportMultipartPart(
+  importId: string,
+  partNumber: number,
+  etag: string,
+): Promise<MusicAlbumImportMultipartPart> {
+  return apiPostJson<MusicAlbumImportMultipartPart>(musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber), { etag })
+}
+
+export async function completeMusicAlbumImportMultipart(importId: string): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportMultipartComplete(importId), {})
+}
+
+async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError
+}
+
+async function uploadAlbumArchivePart(uploadUrl: string, body: Blob): Promise<string> {
+  const response = await fetch(uploadUrl, { method: 'PUT', body })
+  if (!response.ok) throw new Error(`上传分片失败 (${response.status})`)
+  const etag = response.headers.get('ETag') || response.headers.get('etag')
+  if (!etag) throw new Error('上传分片失败')
+  return etag
+}
+
+export async function uploadMusicAlbumArchiveMultipart(
+  importId: string,
+  file: File,
+  options: UploadMusicAlbumArchiveOptions = {},
+): Promise<MusicAlbumImport> {
+  validateMusicAlbumArchiveFile(file)
+
+  const startedAt = Date.now()
+  const multipart = await startMusicAlbumImportMultipart(importId, {
+    fileName: file.name,
+    fileSize: file.size,
+    contentType: file.type || 'application/zip',
+  })
+  const completedParts = new Set(multipart.completedParts.map((part) => part.partNumber))
+  const totalParts = Math.ceil(file.size / multipart.partSize)
+  let loaded = multipart.completedParts.reduce((sum, part) => {
+    const start = (part.partNumber - 1) * multipart.partSize
+    return sum + Math.max(Math.min(file.size - start, multipart.partSize), 0)
+  }, 0)
+
+  const missingPartNumbers = Array.from({ length: totalParts }, (_, index) => index + 1)
+    .filter((partNumber) => !completedParts.has(partNumber))
+
+  async function uploadPart(partNumber: number): Promise<void> {
+    const start = (partNumber - 1) * multipart.partSize
+    const end = Math.min(start + multipart.partSize, file.size)
+    const partBody = file.slice(start, end)
+    const upload = await createMusicAlbumImportMultipartPartUpload(importId, partNumber)
+    const etag = await uploadAlbumArchivePart(upload.uploadUrl, partBody)
+    await completeMusicAlbumImportMultipartPart(importId, partNumber, etag)
+
+    loaded += partBody.size
+    const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.001)
+    options.onProgress?.({
+      loaded: Math.min(loaded, file.size),
+      total: file.size,
+      bytesPerSecond: Math.min(loaded, file.size) / elapsedSeconds,
+    })
+  }
+
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(3, missingPartNumbers.length) }, async () => {
+    while (cursor < missingPartNumbers.length) {
+      const partNumber = missingPartNumbers[cursor]
+      cursor += 1
+      await retry(() => uploadPart(partNumber), 2)
+    }
+  })
+
+  await Promise.all(workers)
+  return completeMusicAlbumImportMultipart(importId)
 }
 
 export async function uploadMusicAlbumArchive(

@@ -352,22 +352,22 @@ onMounted(() => {
       <template #action><PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
     </PPageHeader>
 
-    <div class="filters-stack">
-      <div class="filter-row" aria-label="订阅推荐模式">
+    <div class="filters-wrap" data-test="feed-filter-wrap">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐模式">
         <PSegmentedControl
           v-model="mode"
           :options="modeOptions"
         />
       </div>
 
-      <div class="filter-row" aria-label="订阅推荐对象">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐对象">
         <PSegmentedControl
           v-model="target"
           :options="targetOptions"
         />
       </div>
 
-      <div class="filter-row" aria-label="内容类型筛选">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="内容类型筛选">
         <PSegmentedControl
           v-model="category"
           :options="categoryOptions"
@@ -375,7 +375,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="filter-row" aria-label="主题筛选">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="主题筛选">
         <PSegmentedControl
           v-model="theme"
           :options="themeOptions"
@@ -569,17 +569,42 @@ onMounted(() => {
   padding-bottom: 6rem;
 }
 
-.filters-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.filter-row {
+.filters-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.75rem 1rem;
+  align-items: flex-start;
+}
+
+.filter-group {
+  display: flex;
   align-items: center;
+  min-width: 0;
+}
+
+.filter-group + .filter-group {
+  position: relative;
+}
+
+.filter-group + .filter-group::before {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  width: 1px;
+  height: 1.5rem;
+  background: var(--a-color-line-soft);
+  transform: translateY(-50%);
+}
+
+.filter-group :deep(.p-segmented-control) {
+  width: auto;
+}
+
+@media (max-width: 720px) {
+  .filter-group + .filter-group::before {
+    display: none;
+  }
 }
 
 .category-segmented-control :deep(.p-segmented-control-item) {

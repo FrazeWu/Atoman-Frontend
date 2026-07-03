@@ -134,6 +134,39 @@ describe('FeedRecommendedView', () => {
     expect(wrapper.text()).toContain('推荐内容加载失败')
   })
 
+  it('renders four filter groups inside one compact wrap container', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const compactWrap = wrapper.find('[data-test="feed-filter-wrap"]')
+    expect(compactWrap.exists()).toBe(true)
+    expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(4)
+  })
+
   it('restores route query and requests themes and recommendations with category and theme', async () => {
     routeQuery.mode = 'featured'
     routeQuery.target = 'channels'

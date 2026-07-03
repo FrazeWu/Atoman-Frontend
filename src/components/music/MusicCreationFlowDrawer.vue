@@ -69,6 +69,9 @@ const activeStep = computed(() => {
 const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDetails')
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => (creationFlow.value?.submitting ? '提交中…' : activeStep.value.cta))
+const canSubmitAlbumImport = computed(() => (
+  !isAlbumDetailsStep.value || creationFlow.value?.draft.albumImport.status === 'ready'
+))
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
 }).commitMusicAlbumImport
@@ -191,6 +194,10 @@ async function completeCreation() {
       throw new Error('缺少 importId，无法提交专辑导入')
     }
 
+    if (flow.draft.albumImport.status !== 'ready') {
+      throw new Error('请等待压缩包处理完成')
+    }
+
     if (!commitMusicAlbumImport) {
       throw new Error('commitMusicAlbumImport is unavailable')
     }
@@ -257,7 +264,7 @@ async function completeCreation() {
             :data-testid="isAlbumDetailsStep ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="paper-submit"
-            :disabled="creationFlow.submitting"
+            :disabled="creationFlow.submitting || !canSubmitAlbumImport"
             @click="isAlbumDetailsStep ? completeCreation() : handlePrimaryAction()"
           >
             {{ finishButtonLabel }}

@@ -215,6 +215,35 @@ describe('MusicCreationFlowDrawer', () => {
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
   })
 
+  it.each(['uploading', 'extracting'] as const)(
+    '%s 状态点击完成不会提交专辑导入',
+    async (status) => {
+      commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+      drawerMocks.state.value.creationFlow = createFlowState({
+        step: 'albumDetails',
+        draft: {
+          ...createFlowState().draft,
+          albumImport: {
+            ...createFlowState().draft.albumImport,
+            importId: 'import-1',
+            status,
+          },
+        },
+      })
+
+      const wrapper = mount(MusicCreationFlowDrawer)
+      const finishButton = wrapper.get('[data-testid="music-creation-finish-button"]')
+
+      expect(finishButton.attributes('disabled')).toBeDefined()
+
+      await finishButton.trigger('click')
+      await flushPromises()
+
+      expect(commitMusicAlbumImportMock).not.toHaveBeenCalled()
+      expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
+    },
+  )
+
   it('从已有艺术家进入时提交 artist_id 复用现有艺术家', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({

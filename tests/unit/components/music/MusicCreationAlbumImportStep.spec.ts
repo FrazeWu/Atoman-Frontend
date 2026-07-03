@@ -157,6 +157,23 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     )
   })
 
+  it('详情页 extracting 状态禁用压缩包入口', () => {
+    const drawers = useMusicDrawers()
+    drawers.setMusicCreationStep('albumDetails')
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-extracting'
+    drawers.state.value.creationFlow.draft.albumImport.status = 'extracting'
+    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'extracting.zip'
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+    const button = wrapper.get('[data-testid="album-import-status"] button').element as HTMLButtonElement
+
+    expect(input.disabled).toBe(true)
+    expect(button.disabled).toBe(true)
+    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('解析中')
+  })
+
   it('详情页 ready 后重新选择压缩包时创建新 import session 并走 multipart', async () => {
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
       importId: 'import-replacement',

@@ -71,7 +71,7 @@ function applyImportSnapshot(snapshot: MusicAlbumImport) {
 }
 
 function canReuseImportSession(status: MusicAlbumImport['status']) {
-  return status === 'failed' || status === 'pending_upload'
+  return status === 'failed' || status === 'pending_upload' || status === 'uploading'
 }
 
 function addTrack() {

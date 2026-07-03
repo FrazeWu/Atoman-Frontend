@@ -36,6 +36,7 @@ type RecommendationItem = {
   read_count?: number
   update_frequency_label?: string
   last_published_at?: string
+  subscribed?: boolean
   recent_items?: Array<{ id: string; title: string }>
 }
 
@@ -79,6 +80,7 @@ const theme = ref(ALL_THEME)
 const themes = ref<FeedRecommendationTheme[]>([])
 const themesLoading = ref(false)
 const loading = ref(false)
+const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
@@ -197,6 +199,15 @@ async function fetchRecommendations() {
 
     articles.value = Array.isArray(articlePayload.data) ? articlePayload.data : []
     channels.value = Array.isArray(channelPayload.data) ? channelPayload.data : []
+    if (authStore.isAuthenticated && channels.value.length) {
+      const subscribedStates = await Promise.all(
+        channels.value.map((item) => feedStore.isSubscribedToChannel(item.id)),
+      )
+      channels.value = channels.value.map((item, index) => ({
+        ...item,
+        subscribed: subscribedStates[index] ?? false,
+      }))
+    }
     totalArticles.value = articlePayload.meta?.total ?? articlePayload.total ?? articles.value.length
     totalChannels.value = channelPayload.meta?.total ?? channelPayload.total ?? channels.value.length
   } catch (error) {
@@ -278,6 +289,31 @@ function channelMetadataText(item: RecommendationItem) {
     bits.push(new Date(item.last_published_at).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }))
   }
   return bits.filter(Boolean).join(' · ')
+}
+
+function isChannelSubscribeBusy(channelId: string) {
+  return subscribingChannelIds.value.includes(channelId)
+}
+
+async function subscribeRecommendedChannel(item: RecommendationItem) {
+  if (!authStore.isAuthenticated || item.subscribed || isChannelSubscribeBusy(item.id)) return
+
+  subscribingChannelIds.value = [...subscribingChannelIds.value, item.id]
+  try {
+    const success = await feedStore.subscribeToChannel(item.id)
+    if (!success) {
+      errorMessage.value = '订阅失败，请重试'
+      return
+    }
+
+    channels.value = channels.value.map((channel) => (
+      channel.id === item.id
+        ? { ...channel, subscribed: true }
+        : channel
+    ))
+  } finally {
+    subscribingChannelIds.value = subscribingChannelIds.value.filter((id) => id !== item.id)
+  }
 }
 
 const visibleChannels = computed(() => {
@@ -491,7 +527,7 @@ onMounted(() => {
               <FeedSourceIdentityCard
                 v-for="item in visibleMixedChannels"
                 :key="item.id"
-                :source="toRecommendedSource(item)"
+                :source="{ ...toRecommendedSource(item), subscribed: Boolean(item.subscribed) }"
                 :color="buildSourceColor(item.title || item.id)"
                 :avatar-label="buildSourceAvatarLabel(item.title)"
                 :display-url="''"
@@ -499,13 +535,15 @@ onMounted(() => {
                 :eyebrow="channelMetricLabel(item)"
                 :summary-text="channelSummaryText(item)"
                 :metadata-text="channelMetadataText(item)"
-                :show-subscribe="false"
+                :subscribe-busy="isChannelSubscribeBusy(item.id)"
+                :show-subscribe="authStore.isAuthenticated"
                 :show-previews="true"
                 :show-meta="false"
                 compact
                 variant="recommend"
                 data-test="channel-card"
                 @select="openTarget(item.target_path)"
+                @subscribe="subscribeRecommendedChannel(item)"
               />
             </div>
           </section>
@@ -531,7 +569,7 @@ onMounted(() => {
           <FeedSourceIdentityCard
             v-for="item in visibleChannels"
             :key="item.id"
-            :source="toRecommendedSource(item)"
+            :source="{ ...toRecommendedSource(item), subscribed: Boolean(item.subscribed) }"
             :color="buildSourceColor(item.title || item.id)"
             :avatar-label="buildSourceAvatarLabel(item.title)"
             :display-url="''"
@@ -539,13 +577,15 @@ onMounted(() => {
             :eyebrow="channelMetricLabel(item)"
             :summary-text="channelSummaryText(item)"
             :metadata-text="channelMetadataText(item)"
-            :show-subscribe="false"
+            :subscribe-busy="isChannelSubscribeBusy(item.id)"
+            :show-subscribe="authStore.isAuthenticated"
             :show-previews="true"
             :show-meta="false"
             compact
             variant="recommend"
             data-test="channel-card"
             @select="openTarget(item.target_path)"
+            @subscribe="subscribeRecommendedChannel(item)"
           />
         </div>
 

@@ -3,6 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 
 const routerPush = vi.fn()
 const routerReplace = vi.fn()
@@ -43,6 +45,128 @@ describe('FeedRecommendedView', () => {
     routeQuery.category = undefined
     routeQuery.theme = undefined
     setActivePinia(createPinia())
+  })
+
+  it('shows subscribe action for unsubscribed recommended channels and marks them subscribed after click', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'chan-1',
+            title: 'Channel 1',
+            summary: 'Summary Channel 1',
+            target_path: '/feed/channel/1',
+          }],
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'isSubscribedToChannel').mockResolvedValue(false)
+    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToChannel').mockResolvedValue(true)
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: {
+            props: ['title'],
+            template: '<div class="p-empty">{{ title }}</div>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const channelTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '频道')
+    expect(channelTab).toBeDefined()
+    await channelTab?.trigger('click')
+    await flushPromises()
+
+    const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]')
+    expect(subscribeButton.exists()).toBe(true)
+    expect(subscribeButton.text()).toContain('订阅')
+
+    await subscribeButton.trigger('click')
+    await flushPromises()
+
+    expect(subscribeSpy).toHaveBeenCalledWith('chan-1')
+    expect(wrapper.find('[data-test="feed-source-subscribe"]').text()).toContain('已订阅')
+  })
+
+  it('does not trigger a second subscribe for already subscribed recommended channels', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'chan-1',
+            title: 'Channel 1',
+            summary: 'Summary Channel 1',
+            target_path: '/feed/channel/1',
+          }],
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'isSubscribedToChannel').mockResolvedValue(true)
+    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToChannel').mockResolvedValue(true)
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: {
+            props: ['title'],
+            template: '<div class="p-empty">{{ title }}</div>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const channelTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '频道')
+    expect(channelTab).toBeDefined()
+    await channelTab?.trigger('click')
+    await flushPromises()
+
+    const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]')
+    expect(subscribeButton.exists()).toBe(true)
+    expect(subscribeButton.text()).toContain('已订阅')
+    expect(subscribeButton.attributes('disabled')).toBeDefined()
+
+    await subscribeButton.trigger('click')
+    await flushPromises()
+
+    expect(subscribeSpy).not.toHaveBeenCalled()
   })
 
   it('mounts and defaults to hot mode and fetches recommendations', async () => {

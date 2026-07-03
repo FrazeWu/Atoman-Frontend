@@ -4,11 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
 import HomeView from '@/views/music/HomeView.vue'
 
+vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/music/NestedActionDrawer.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/music/MusicEntityEditorDrawer.vue', () => ({ default: { template: '<div />' } }))
+
 const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openMusicCreationFlow: vi.fn(),
+  openMusicEditor: vi.fn(),
   routeQuery: {} as Record<string, string>,
 }))
 
@@ -23,7 +29,9 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     closeAlbum: vi.fn(),
     openArtist: mocks.openArtist,
     closeArtist: vi.fn(),
+    openMusicEditor: mocks.openMusicEditor,
     openMusicCreationFlow: mocks.openMusicCreationFlow,
+    closeMusicEditor: vi.fn(),
   }),
 }))
 
@@ -48,13 +56,6 @@ describe('Music HomeView query sync', () => {
     const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: true,
-        },
       },
     })
 

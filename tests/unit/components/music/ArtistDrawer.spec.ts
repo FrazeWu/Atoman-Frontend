@@ -5,10 +5,17 @@ import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { ApiErrorResponseError } from '@/api/client'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 
+vi.mock('@/components/ui/PSheet.vue', () => ({
+  default: {
+    template: '<div><slot name="header" /><slot /></div>',
+  },
+}))
+
 const drawerState = ref({ artistId: '1', artistRefreshToken: 0 })
 const musicDrawerMocks = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   openAlbum: vi.fn(),
+  openMusicEditor: vi.fn(),
   openMusicCreationFlow: vi.fn(),
 }))
 
@@ -19,6 +26,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     isArtistShifted: ref(false),
     openNestedAction: musicDrawerMocks.openNestedAction,
     openAlbum: musicDrawerMocks.openAlbum,
+    openMusicEditor: musicDrawerMocks.openMusicEditor,
     openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
   })
 }))
@@ -55,6 +63,7 @@ describe('ArtistDrawer.vue', () => {
     deleteArtistBookmark.mockReset()
     musicDrawerMocks.openNestedAction.mockReset()
     musicDrawerMocks.openAlbum.mockReset()
+    musicDrawerMocks.openMusicEditor.mockReset()
     musicDrawerMocks.openMusicCreationFlow.mockReset()
 
     getMusicArtist.mockResolvedValue({
@@ -81,15 +90,7 @@ describe('ArtistDrawer.vue', () => {
   })
 
   it('renders artist information and albums when artistId is present', async () => {
-    const wrapper = mount(ArtistDrawer, {
-      global: { 
-        stubs: {
-          PSheet: {
-            template: '<div><slot name="header" /><slot /></div>'
-          }
-        }
-      }
-    })
+    const wrapper = mount(ArtistDrawer)
     await vi.dynamicImportSettled()
     
     // Check if artist title is rendered (artistId is '1' in mock)
@@ -106,13 +107,7 @@ describe('ArtistDrawer.vue', () => {
   })
 
   it('creates an artist bookmark when clicking 订阅 and reflects the state', async () => {
-    const wrapper = mount(ArtistDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-        },
-      },
-    })
+    const wrapper = mount(ArtistDrawer)
 
     await vi.dynamicImportSettled()
 
@@ -127,13 +122,7 @@ describe('ArtistDrawer.vue', () => {
   })
 
   it('re-fetches artist data when artistRefreshToken changes', async () => {
-    const wrapper = mount(ArtistDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-        },
-      },
-    })
+    const wrapper = mount(ArtistDrawer)
 
     await vi.dynamicImportSettled()
     const artistCallsBeforeRefresh = getMusicArtist.mock.calls.length
@@ -148,40 +137,35 @@ describe('ArtistDrawer.vue', () => {
     wrapper.unmount()
   })
 
-  it('opens revise_artist from the artist detail action bar', async () => {
-    const wrapper = mount(ArtistDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
-        },
-      },
-    })
+  it('opens unified artist editor from the artist detail action bar', async () => {
+    const wrapper = mount(ArtistDrawer)
 
     await vi.dynamicImportSettled()
 
     await wrapper.get('button:nth-of-type(2)').trigger('click')
 
-    expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith('revise_artist')
+    expect(musicDrawerMocks.openMusicEditor).toHaveBeenCalledWith({
+      entity: 'artist',
+      mode: 'edit',
+      id: '1',
+    })
   })
 
-  it('opens the creation flow with seeded artist data from the artist detail action bar', async () => {
-    const wrapper = mount(ArtistDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
-        },
-      },
-    })
+  it('opens unified album creation editor with seeded artist data from the artist detail action bar', async () => {
+    const wrapper = mount(ArtistDrawer)
 
     await vi.dynamicImportSettled()
 
     await wrapper.get('button:nth-of-type(3)').trigger('click')
 
-    expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
-      artistId: '1',
-      artistName: 'Ye',
-      artistLegalName: 'Kanye Omari West',
-      startStep: 'albumImport',
+    expect(musicDrawerMocks.openMusicEditor).toHaveBeenCalledWith({
+      entity: 'album',
+      mode: 'create',
+      seed: {
+        artistId: '1',
+        artistName: 'Ye',
+        artistLegalName: 'Kanye Omari West',
+      },
     })
   })
 

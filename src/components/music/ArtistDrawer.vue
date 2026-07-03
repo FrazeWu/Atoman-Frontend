@@ -15,7 +15,7 @@ import {
   type MusicArtistListItem,
 } from '@/api/musicV1'
 
-const { state, closeArtist, isArtistShifted, openAlbum, openNestedAction, openMusicCreationFlow } = useMusicDrawers()
+const { state, closeArtist, isArtistShifted, openAlbum, openMusicEditor } = useMusicDrawers()
 const isOpen = computed(() => state.value.artistId !== null)
 const artist = ref<MusicArtistListItem | null>(null)
 const albums = ref<MusicAlbumListItem[]>([])
@@ -148,18 +148,21 @@ watch(
         <PButton
           variant="secondary"
           dot
-          @click="openNestedAction('revise_artist')"
+          @click="state.artistId && openMusicEditor({ entity: 'artist', mode: 'edit', id: state.artistId })"
         >
           修改艺术家信息
         </PButton>
         <PButton
           variant="secondary"
           dot
-          @click="openMusicCreationFlow({
-            artistId: state.artistId || null,
-            artistName: artist?.name || '',
-            artistLegalName: artist?.legal_name || '',
-            startStep: 'albumImport',
+          @click="openMusicEditor({
+            entity: 'album',
+            mode: 'create',
+            seed: {
+              artistId: state.artistId || null,
+              artistName: artist?.name || '',
+              artistLegalName: artist?.legal_name || '',
+            },
           })"
         >
           添加新专辑

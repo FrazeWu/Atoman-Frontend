@@ -26,7 +26,7 @@ import {
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
 
-const { state, closeAlbum, isAlbumShifted, openNestedAction, openArtist } = useMusicDrawers()
+const { state, closeAlbum, isAlbumShifted, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
 const player = usePlayerStore()
 const isOpen = computed(() => state.value.albumId !== null)
 const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
@@ -53,10 +53,6 @@ const tracks = computed(() => [...(album.value?.songs || [])].sort((a, b) => (a.
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
 const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
-const editAlbumHref = computed(() => {
-  if (!album.value?.id) return modulePathUrl('music', '/')
-  return modulePathUrl('music', `/album/${album.value.id}/edit`)
-})
 const discussionCount = computed(() => {
   const currentAlbum = album.value as (MusicAlbumListItem & {
     discussion_count?: number
@@ -319,8 +315,8 @@ watch(
         <div class="spacer"></div>
         <PButton
           variant="secondary"
-          :href="editAlbumHref"
           dot
+          @click="album?.id && openMusicEditor({ entity: 'album', mode: 'edit', id: album.id })"
         >
           编辑
         </PButton>

@@ -37,6 +37,27 @@ describe('useMusicDrawers', () => {
     expect(state.value.nestedAction).toBeNull()
   })
 
+  it('manages unified music editor state', () => {
+    const { state, openMusicEditor, closeMusicEditor } = useMusicDrawers()
+
+    openMusicEditor({ entity: 'artist', mode: 'create', seed: { name: 'Ye' } })
+    expect(state.value.musicEditor).toEqual({
+      entity: 'artist',
+      mode: 'create',
+      seed: { name: 'Ye' },
+    })
+
+    openMusicEditor({ entity: 'album', mode: 'edit', id: 'album-1' })
+    expect(state.value.musicEditor).toEqual({
+      entity: 'album',
+      mode: 'edit',
+      id: 'album-1',
+    })
+
+    closeMusicEditor()
+    expect(state.value.musicEditor).toBeNull()
+  })
+
   it('computes shifted states correctly', () => {
     const { isMainShifted, isArtistShifted, isAlbumShifted, openArtist, openAlbum, openNestedAction } = useMusicDrawers()
     
@@ -59,6 +80,20 @@ describe('useMusicDrawers', () => {
     expect(isMainShifted.value).toBe(false)
     openNestedAction('add_artist')
     expect(isMainShifted.value).toBe(true)
+  })
+
+  it('computes shifted states correctly with unified music editor', () => {
+    const { isMainShifted, isArtistShifted, isAlbumShifted, openMusicEditor } = useMusicDrawers()
+
+    openMusicEditor({ entity: 'artist', mode: 'create' })
+    expect(isMainShifted.value).toBe(true)
+    expect(isArtistShifted.value).toBe(true)
+    expect(isAlbumShifted.value).toBe(false)
+
+    openMusicEditor({ entity: 'album', mode: 'edit', id: 'album-1' })
+    expect(isMainShifted.value).toBe(true)
+    expect(isArtistShifted.value).toBe(true)
+    expect(isAlbumShifted.value).toBe(true)
   })
 
   it('computes isArtistShifted correctly with add_album', () => {
@@ -115,13 +150,3 @@ describe('useMusicDrawers music creation flow', () => {
     expect(drawers.state.value.creationFlow).toBeNull()
   })
 })
-  it('can open the creation flow directly on albumSeed while preserving seeded artist context', () => {
-    const drawers = useMusicDrawers()
-
-    drawers.openMusicCreationFlow({ artistId: 'artist-9', startStep: 'albumSeed' })
-
-    expect(drawers.state.value.creationFlow?.step).toBe('albumSeed')
-    expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-9')
-    expect(drawers.state.value.creationFlow?.draft.albumSeed.title).toBe('')
-    expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([])
-  })

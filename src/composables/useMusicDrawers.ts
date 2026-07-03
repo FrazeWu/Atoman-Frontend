@@ -7,6 +7,16 @@ import type {
 
 type NestedActionType = 'revise' | 'history' | 'add_album' | 'add_artist' | 'discussion' | 'revise_artist' | null
 
+export type MusicEditorEntity = 'artist' | 'album'
+export type MusicEditorMode = 'create' | 'edit'
+
+export interface MusicEditorState {
+  entity: MusicEditorEntity
+  mode: MusicEditorMode
+  id?: string
+  seed?: Record<string, unknown>
+}
+
 interface DrawerState {
   artistId: string | null
   artistRefreshToken: number
@@ -15,6 +25,7 @@ interface DrawerState {
   albumRefreshToken: number
   nestedAction: NestedActionType
   nestedPayload: unknown
+  musicEditor: MusicEditorState | null
   creationFlow: MusicCreationFlowState | null
 }
 
@@ -90,6 +101,7 @@ const state = ref<DrawerState>({
   albumRefreshToken: 0,
   nestedAction: null,
   nestedPayload: null,
+  musicEditor: null,
   creationFlow: null,
 })
 
@@ -112,6 +124,14 @@ export function useMusicDrawers() {
   const closeNestedAction = () => {
     state.value.nestedAction = null
     state.value.nestedPayload = null
+  }
+
+  const openMusicEditor = (editor: MusicEditorState) => {
+    state.value.musicEditor = editor
+  }
+
+  const closeMusicEditor = () => {
+    state.value.musicEditor = null
   }
 
   const openMusicCreationFlow = (seed?: {
@@ -145,13 +165,33 @@ export function useMusicDrawers() {
     state.value.albumRefreshToken = 0
     state.value.nestedAction = null
     state.value.nestedPayload = null
+    state.value.musicEditor = null
     state.value.creationFlow = null
   }
 
-  const isMainShifted = computed(() => state.value.artistId !== null || state.value.playlistId !== null || state.value.nestedAction === 'add_artist' || state.value.creationFlow !== null)
-  const isArtistShifted = computed(() => state.value.albumId !== null || state.value.nestedAction === 'add_album' || state.value.nestedAction === 'revise_artist' || state.value.creationFlow !== null)
-  const isAlbumShifted = computed(() => state.value.nestedAction === 'revise' || state.value.nestedAction === 'history' || state.value.nestedAction === 'discussion')
+  const isMainShifted = computed(() => (
+    state.value.artistId !== null
+    || state.value.playlistId !== null
+    || state.value.nestedAction === 'add_artist'
+    || state.value.creationFlow !== null
+    || state.value.musicEditor !== null
+  ))
+  const isArtistShifted = computed(() => (
+    state.value.albumId !== null
+    || state.value.nestedAction === 'add_album'
+    || state.value.nestedAction === 'revise_artist'
+    || state.value.creationFlow !== null
+    || state.value.musicEditor?.entity === 'artist'
+    || state.value.musicEditor?.entity === 'album'
+  ))
+  const isAlbumShifted = computed(() => (
+    state.value.nestedAction === 'revise'
+    || state.value.nestedAction === 'history'
+    || state.value.nestedAction === 'discussion'
+    || (state.value.musicEditor?.entity === 'album' && state.value.musicEditor?.mode === 'edit')
+  ))
   const isCreationFlowOpen = computed(() => state.value.creationFlow !== null)
+  const isMusicEditorOpen = computed(() => state.value.musicEditor !== null)
 
   return {
     state,
@@ -159,11 +199,13 @@ export function useMusicDrawers() {
     openAlbum, closeAlbum, refreshAlbum,
     openPlaylist, closePlaylist,
     openNestedAction, closeNestedAction,
+    openMusicEditor, closeMusicEditor,
     openMusicCreationFlow,
     setMusicCreationStep,
     closeMusicCreationFlow,
     closeAll,
     isMainShifted, isArtistShifted, isAlbumShifted,
     isCreationFlowOpen,
+    isMusicEditorOpen,
   }
 }

@@ -16,7 +16,7 @@ import {
 } from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
-import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
+import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -37,7 +37,7 @@ const tabOptions = [
 ]
 
 const route = useRoute()
-const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicCreationFlow } = useMusicDrawers()
+const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicEditor, closeMusicEditor } = useMusicDrawers()
 
 const artists = ref<MusicArtistListItem[]>([])
 const searchResults = ref<MusicArtistListItem[]>([])
@@ -50,6 +50,7 @@ let activeRequestId = 0
 let activeSearchRequestId = 0
 let lastRouteArtist: string | null = null
 let lastRouteAlbum: string | null = null
+let lastRouteEditor: string | null = null
 
 const starredArtistIds = ref<string[]>([])
 
@@ -199,6 +200,8 @@ function openArtistCard(artistId: string) {
 function applyRouteSelection() {
   const artist = route.query.artist
   const album = route.query.album
+  const editor = route.query.editor
+  const name = route.query.name
   if (typeof artist === 'string' && artist) {
     openArtist(artist)
     lastRouteArtist = artist
@@ -213,6 +216,40 @@ function applyRouteSelection() {
   } else if (lastRouteAlbum !== null) {
     closeAlbum()
     lastRouteAlbum = null
+  }
+
+  const nextEditorKey = [
+    typeof editor === 'string' ? editor : '',
+    typeof artist === 'string' ? artist : '',
+    typeof album === 'string' ? album : '',
+    typeof name === 'string' ? name : '',
+  ].join('|')
+
+  if (typeof editor === 'string' && nextEditorKey !== lastRouteEditor) {
+    if (editor === 'artist-create') {
+      openMusicEditor({
+        entity: 'artist',
+        mode: 'create',
+        seed: typeof name === 'string' && name.trim() ? { name: name.trim() } : undefined,
+      })
+      lastRouteEditor = nextEditorKey
+      return
+    }
+
+    if (editor === 'album-edit' && typeof album === 'string' && album) {
+      openMusicEditor({
+        entity: 'album',
+        mode: 'edit',
+        id: album,
+      })
+      lastRouteEditor = nextEditorKey
+      return
+    }
+  }
+
+  if (typeof editor !== 'string' && lastRouteEditor !== null) {
+    closeMusicEditor()
+    lastRouteEditor = null
   }
 }
 
@@ -308,7 +345,7 @@ function handleSearchBlur() {
               </template>
             </SearchSurface>
           </div>
-          <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
+          <button class="paper-action search-side-action" type="button" @click="openMusicEditor({ entity: 'artist', mode: 'create' })">
             <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
           </button>
@@ -333,7 +370,7 @@ function handleSearchBlur() {
             class="paper-action"
             type="button"
             data-testid="empty-add-artist"
-            @click="openMusicCreationFlow({ startStep: 'artist' })"
+            @click="openMusicEditor({ entity: 'artist', mode: 'create' })"
           >
             <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
@@ -356,7 +393,7 @@ function handleSearchBlur() {
 
     <ArtistDrawer />
     <AlbumDrawer />
-    <MusicCreationFlowDrawer />
+    <MusicEntityEditorDrawer />
     <NestedActionDrawer />
   </div>
 </template>

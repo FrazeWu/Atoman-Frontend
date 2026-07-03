@@ -5,6 +5,14 @@ import { createTestingPinia } from '@pinia/testing'
 import { ApiErrorResponseError } from '@/api/client'
 import HomeView from '@/views/music/HomeView.vue'
 
+vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<div data-testid="artist-drawer-stub" />' } }))
+vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div data-testid="album-drawer-stub" />' } }))
+vi.mock('@/components/music/NestedActionDrawer.vue', () => ({ default: { template: '<div data-testid="nested-action-drawer-stub" />' } }))
+vi.mock('@/components/music/MusicEntityEditorDrawer.vue', () => ({ default: { template: '<div data-testid="music-entity-editor-drawer-stub" />' } }))
+vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
+  default: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+}))
+
 const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
   listRecommendedArtists: vi.fn(),
@@ -13,12 +21,14 @@ const mocks = vi.hoisted(() => ({
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openNestedAction: vi.fn(),
+  openMusicEditor: vi.fn(),
   openMusicCreationFlow: vi.fn(),
   drawerStateValue: {
     artistId: null as string | null,
     albumId: null as string | null,
     nestedAction: null as string | null,
     nestedPayload: null as unknown,
+    musicEditor: null as unknown,
     creationFlow: null as unknown,
   },
   routeQuery: {} as Record<string, string>,
@@ -38,6 +48,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     openAlbum: mocks.openAlbum,
     openArtist: mocks.openArtist,
     openNestedAction: mocks.openNestedAction,
+    openMusicEditor: mocks.openMusicEditor,
     openMusicCreationFlow: mocks.openMusicCreationFlow,
     closeMusicCreationFlow: vi.fn(),
     setMusicCreationStep: vi.fn(),
@@ -61,12 +72,14 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openNestedAction.mockReset()
+    mocks.openMusicEditor.mockReset()
     mocks.openMusicCreationFlow.mockReset()
     mocks.drawerStateValue = {
       artistId: null,
       albumId: null,
       nestedAction: null,
       nestedPayload: null,
+      musicEditor: null,
       creationFlow: null,
     }
     mocks.routeQuery = {}
@@ -107,14 +120,6 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
-        },
       },
     })
     await flushPromises()
@@ -132,14 +137,6 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
-        },
       },
     })
     await flushPromises()
@@ -179,14 +176,6 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
-        },
       },
     })
     await flushPromises()
@@ -214,22 +203,17 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
-        },
       },
     })
     await flushPromises()
 
     await wrapper.find('[data-testid="empty-add-artist"]').trigger('click')
 
-    expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1)
-    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'artist' })
+    expect(mocks.openMusicEditor).toHaveBeenCalledTimes(1)
+    expect(mocks.openMusicEditor).toHaveBeenCalledWith({
+      entity: 'artist',
+      mode: 'create',
+    })
   })
 
   it('keeps artist recommendations visible when bookmarks require login', async () => {
@@ -241,14 +225,6 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     const wrapper = mount(HomeView, {
       global: {
         plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: { template: '<div data-testid="music-creation-flow-drawer-stub" />' },
-          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
-        },
       },
     })
     await flushPromises()

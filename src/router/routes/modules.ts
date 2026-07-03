@@ -61,10 +61,24 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: '', component: () => import('@/views/music/HomeView.vue') },
         { path: 'explore', component: () => import('@/views/music/ExploreView.vue') },
         { path: 'starred', component: () => import('@/views/music/StarredView.vue') },
-        { path: 'artist/new', component: () => import('@/views/music/CreateArtistView.vue'), meta: { requiresAuth: true } },
+        {
+          path: 'artist/new',
+          redirect: (to) => {
+            const query = new URLSearchParams({ editor: 'artist-create' })
+            if (typeof to.query.name === 'string' && to.query.name.trim()) {
+              query.set('name', to.query.name.trim())
+            }
+            return `/music?${query.toString()}`
+          },
+          meta: { requiresAuth: true },
+        },
         { path: 'artist/:artistId', component: () => import('@/views/music/MusicArtistRouteView.vue') },
         { path: 'album/:albumId', component: () => import('@/views/music/MusicAlbumRouteView.vue') },
-        { path: 'album/:albumId/edit', component: () => import('@/views/music/EditAlbumView.vue'), meta: { requiresAuth: true } },
+        {
+          path: 'album/:albumId/edit',
+          redirect: (to) => `/music?editor=album-edit&album=${to.params.albumId}`,
+          meta: { requiresAuth: true },
+        },
       ],
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },

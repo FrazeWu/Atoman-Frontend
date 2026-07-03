@@ -3,8 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiErrorResponseError } from '@/api/client'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 
+vi.mock('@/components/ui/PSheet.vue', () => ({
+  default: {
+    template: '<div><slot /></div>',
+  },
+}))
+
+vi.mock('@/components/ui/PDiscussionFAB.vue', () => ({
+  default: {
+    props: ['count'],
+    template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>',
+  },
+}))
+
 const {
   openNestedAction,
+  openMusicEditor,
   getMusicAlbum,
   playAlbum,
   listAlbumBookmarks,
@@ -14,6 +28,7 @@ const {
   addMusicPlaylistSong,
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
+  openMusicEditor: vi.fn(),
   getMusicAlbum: vi.fn(),
   playAlbum: vi.fn(),
   listAlbumBookmarks: vi.fn(),
@@ -28,7 +43,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: { value: { albumId: '1' } },
     closeAlbum: vi.fn(),
     isAlbumShifted: { value: false },
-    openNestedAction
+    openNestedAction,
+    openMusicEditor,
   })
 }))
 
@@ -50,6 +66,7 @@ vi.mock('@/stores/player', () => ({
 describe('AlbumDrawer.vue', () => {
   beforeEach(() => {
     openNestedAction.mockReset()
+    openMusicEditor.mockReset()
     getMusicAlbum.mockReset()
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
@@ -77,24 +94,12 @@ describe('AlbumDrawer.vue', () => {
 
   it('renders correctly', () => {
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
     expect(wrapper.text()).toContain('Album Notes')
   })
 
   it('plays album songs through the player when clicking play album', async () => {
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -120,12 +125,6 @@ describe('AlbumDrawer.vue', () => {
 
   it('plays a single track from the album queue at the clicked index', async () => {
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -152,12 +151,6 @@ describe('AlbumDrawer.vue', () => {
     })
 
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -181,12 +174,6 @@ describe('AlbumDrawer.vue', () => {
     })
 
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -200,12 +187,6 @@ describe('AlbumDrawer.vue', () => {
 
   it('does not show hard-coded discussion count or fake track durations when data is absent', async () => {
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -249,12 +230,6 @@ describe('AlbumDrawer.vue', () => {
     })
 
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -263,22 +238,20 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
 
-  it('renders an edit entry that points to the album edit route', async () => {
+  it('opens unified album editor when clicking 编辑', async () => {
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
 
-    const editLink = wrapper.find('a.p-button')
-    expect(editLink.exists()).toBe(true)
-    expect(editLink.text()).toContain('编辑')
-    expect(editLink.attributes('href')).toBe('/music/album/1/edit')
+    const buttons = wrapper.findAllComponents({ name: 'PButton' })
+    await buttons[2].trigger('click')
+
+    expect(openMusicEditor).toHaveBeenCalledWith({
+      entity: 'album',
+      mode: 'edit',
+      id: '1',
+    })
   })
 
   it('uses song cover as fallback when album cover is missing', async () => {
@@ -294,12 +267,6 @@ describe('AlbumDrawer.vue', () => {
     })
 
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()
@@ -319,12 +286,6 @@ describe('AlbumDrawer.vue', () => {
     })
 
     const wrapper = mount(AlbumDrawer, {
-      global: {
-        stubs: {
-          PSheet: { template: '<div><slot /></div>' },
-          PDiscussionFAB: { props: ['count'], template: '<button data-test="discussion-fab">讨论<span v-if="count !== undefined">({{ count }})</span></button>' },
-        },
-      },
     })
 
     await flushPromises()

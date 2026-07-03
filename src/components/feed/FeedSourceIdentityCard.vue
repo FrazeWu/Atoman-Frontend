@@ -52,7 +52,11 @@
         </li>
       </ul>
 
-      <div v-if="showMeta" class="feed-source-card__meta">
+      <div v-if="metadataText || showMeta" class="feed-source-card__meta">
+        <span v-if="metadataText">{{ metadataText }}</span>
+      </div>
+
+      <div v-if="showMeta && !metadataText" class="feed-source-card__meta">
         <span data-test="feed-source-count">{{ compactCount(source.subscriptionCount) }} 订阅</span>
         <span>{{ source.recentItemCount }} 近期</span>
         <span>{{ formattedLastUpdated }}</span>
@@ -79,6 +83,7 @@ const props = withDefaults(defineProps<{
   imageUrl?: string
   eyebrow?: string
   summaryText?: string
+  metadataText?: string
   showSubscribe?: boolean
   showPreviews?: boolean
   showMeta?: boolean
@@ -88,6 +93,7 @@ const props = withDefaults(defineProps<{
   imageUrl: undefined,
   eyebrow: '',
   summaryText: '',
+  metadataText: '',
   showSubscribe: true,
   showPreviews: true,
   showMeta: true,

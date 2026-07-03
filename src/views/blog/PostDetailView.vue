@@ -224,6 +224,21 @@ const fetchPost = async () => {
       post.value = d.data || d
       likesCount.value = post.value?.likes_count ?? 0
 
+      if (post.value?.channel_id) {
+        void fetch(`${api.url}/feed/events/read`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}),
+          },
+          body: JSON.stringify({
+            source_type: 'internal_channel',
+            source_id: post.value.channel_id,
+            event_type: 'detail_open',
+          }),
+        })
+      }
+
       if (post.value) {
         await fetchEmbeds(post.value.content)
       }

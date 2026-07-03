@@ -27,10 +27,16 @@ type RecommendationItem = {
   id: string
   title: string
   summary?: string
+  description?: string
   content_type?: string
   image_url?: string
   target_path: string
   score_label?: string
+  bookmark_count?: number
+  read_count?: number
+  update_frequency_label?: string
+  last_published_at?: string
+  recent_items?: Array<{ id: string; title: string }>
 }
 
 const router = useRouter()
@@ -236,17 +242,42 @@ function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
     title: item.title,
     rssUrl: item.target_path,
     category: normalizeItemCategory(item),
-    subscriptionCount: 0,
-    recentItemCount: 0,
-    lastPublishedAt: undefined,
+    subscriptionCount: item.bookmark_count ?? 0,
+    recentItemCount: item.recent_items?.length ?? 0,
+    lastPublishedAt: item.last_published_at,
     subscribed: false,
-    recentItems: [],
+    recentItems: (item.recent_items ?? []).map((recent) => ({
+      id: recent.id,
+      title: recent.title,
+    })),
+    description: item.description,
+    updateFrequencyLabel: item.update_frequency_label,
+    bookmarkCount: item.bookmark_count ?? 0,
+    readCount: item.read_count ?? 0,
   }
 }
 
 function channelSummaryText(item: RecommendationItem) {
-  const bits = [normalizeItemCategory(item), item.summary?.trim()].filter(Boolean)
-  return bits.join(' · ')
+  return item.description?.trim() || item.summary?.trim() || ''
+}
+
+function compactMetric(value?: number) {
+  if (!value) return '0'
+  if (value >= 10000) return `${Math.round(value / 1000) / 10}万`
+  if (value >= 1000) return `${Math.round(value / 100) / 10}K`
+  return String(value)
+}
+
+function channelMetricLabel(item: RecommendationItem) {
+  return `${channelScoreLabel(item)} · 收藏 ${compactMetric(item.bookmark_count)} · 阅读 ${compactMetric(item.read_count)}`
+}
+
+function channelMetadataText(item: RecommendationItem) {
+  const bits = [item.update_frequency_label?.trim()]
+  if (item.last_published_at) {
+    bits.push(new Date(item.last_published_at).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }))
+  }
+  return bits.filter(Boolean).join(' · ')
 }
 
 const visibleChannels = computed(() => {
@@ -465,10 +496,11 @@ onMounted(() => {
                 :avatar-label="buildSourceAvatarLabel(item.title)"
                 :display-url="''"
                 :image-url="item.image_url"
-                :eyebrow="channelScoreLabel(item)"
+                :eyebrow="channelMetricLabel(item)"
                 :summary-text="channelSummaryText(item)"
+                :metadata-text="channelMetadataText(item)"
                 :show-subscribe="false"
-                :show-previews="false"
+                :show-previews="true"
                 :show-meta="false"
                 compact
                 variant="recommend"
@@ -504,10 +536,11 @@ onMounted(() => {
             :avatar-label="buildSourceAvatarLabel(item.title)"
             :display-url="''"
             :image-url="item.image_url"
-            :eyebrow="channelScoreLabel(item)"
+            :eyebrow="channelMetricLabel(item)"
             :summary-text="channelSummaryText(item)"
+            :metadata-text="channelMetadataText(item)"
             :show-subscribe="false"
-            :show-previews="false"
+            :show-previews="true"
             :show-meta="false"
             compact
             variant="recommend"

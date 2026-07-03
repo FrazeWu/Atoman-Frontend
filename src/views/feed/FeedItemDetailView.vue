@@ -68,7 +68,7 @@
       <footer class="article-footer">
         <div class="footer-divider"></div>
         <div style="display:flex;gap:1.5rem;justify-content:center;padding:3rem 0">
-          <a :href="item.link" target="_blank" rel="noopener noreferrer" class="external-btn">
+          <a :href="item.link" target="_blank" rel="noopener noreferrer" class="external-btn" @click="trackOriginalClick">
             ↗ VIEW ORIGINAL SOURCE
           </a>
         </div>
@@ -130,6 +130,26 @@ const onEnded = () => {
   isPlaying.value = false
 }
 
+const reportReadEvent = (eventType: 'detail_open' | 'original_click') => {
+  if (!item.value?.feed_source_id) return
+  void fetch(`${api.url}/feed/events/read`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {}),
+    },
+    body: JSON.stringify({
+      source_type: 'external_rss',
+      source_id: item.value.feed_source_id,
+      event_type: eventType,
+    }),
+  })
+}
+
+const trackOriginalClick = () => {
+  reportReadEvent('original_click')
+}
+
 const fetchItem = async () => {
   loading.value = true
   try {
@@ -140,6 +160,7 @@ const fetchItem = async () => {
     if (res.ok) {
       const data = await res.json()
       item.value = data.data
+      reportReadEvent('detail_open')
     }
   } catch (e) {
     console.error('Failed to fetch feed item:', e)

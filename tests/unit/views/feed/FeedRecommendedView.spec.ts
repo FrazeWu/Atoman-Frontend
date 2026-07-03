@@ -69,6 +69,14 @@ describe('FeedRecommendedView', () => {
             id: 'chan-1',
             title: 'Channel 1',
             summary: 'Summary Channel 1',
+            description: '关注模型、工具、应用与研究动态',
+            update_frequency_label: '每周多次',
+            bookmark_count: 1200,
+            read_count: 8400,
+            recent_items: [
+              { id: 'preview-1', title: 'Recent item 1' },
+              { id: 'preview-2', title: 'Recent item 2' },
+            ],
             target_path: '/feed/channel/1',
           }],
         }), { status: 200 })
@@ -585,6 +593,9 @@ describe('FeedRecommendedView', () => {
   it('renders channel recommendation heat labels and avatar fallback', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
       if (url.includes('/feed/recommend/articles')) {
         return new Response(JSON.stringify({ data: [] }), { status: 200 })
       }
@@ -595,6 +606,14 @@ describe('FeedRecommendedView', () => {
               id: 'chan-visual-1',
               title: '少数派',
               summary: '有图片的频道',
+              description: '关注模型、工具、应用与研究动态',
+              update_frequency_label: '每周多次',
+              bookmark_count: 1200,
+              read_count: 8400,
+              recent_items: [
+                { id: 'recent-1', title: 'OpenAI o3 之后，agent 设计空间怎么变了' },
+                { id: 'recent-2', title: 'Claude Code 工作流拆解' },
+              ],
               image_url: 'https://example.com/channel-cover.jpg',
               target_path: '/feed/channel/chan-visual-1',
               score_label: '热度 94',
@@ -603,6 +622,13 @@ describe('FeedRecommendedView', () => {
               id: 'chan-visual-2',
               title: 'Next Blog',
               summary: '没有图片时显示头像回退',
+              description: '关注独立写作、产品观察与持续输出',
+              update_frequency_label: '偶尔更新',
+              bookmark_count: 540,
+              read_count: 3200,
+              recent_items: [
+                { id: 'recent-3', title: '为什么越来越多团队重写检索层' },
+              ],
               target_path: '/feed/channel/chan-visual-2',
               score_label: '热度 81',
             },
@@ -632,6 +658,10 @@ describe('FeedRecommendedView', () => {
 
     expect(wrapper.text()).toContain('热度 94')
     expect(wrapper.text()).toContain('热度 81')
+    expect(wrapper.text()).toContain('收藏 1.2K')
+    expect(wrapper.text()).toContain('阅读 8.4K')
+    expect(wrapper.text()).toContain('每周多次')
+    expect(wrapper.text()).toContain('OpenAI o3 之后，agent 设计空间怎么变了')
 
     const channelCards = wrapper.findAll('[data-test="channel-card"]')
     expect(channelCards).toHaveLength(2)

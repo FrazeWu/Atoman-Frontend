@@ -348,6 +348,10 @@ export interface FeedExploreSource {
   lastPublishedAt?: string
   subscribed: boolean
   recentItems: FeedExploreRecentItem[]
+  description?: string
+  updateFrequencyLabel?: string
+  bookmarkCount?: number
+  readCount?: number
 }
 
 export interface FeedRecommendationTheme {

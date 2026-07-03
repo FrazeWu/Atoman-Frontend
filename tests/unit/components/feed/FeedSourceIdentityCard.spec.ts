@@ -118,4 +118,25 @@ describe('FeedSourceIdentityCard', () => {
     expect(urlStyle.textTransform).toBe('none')
     expect(titleStyle.letterSpacing).toBe('normal')
   })
+
+  it('renders description, compact stats, and recent previews for recommendation cards', () => {
+    const wrapper = mount(FeedSourceIdentityCard, {
+      props: {
+        source,
+        color: 'hsl(120 40% 52%)',
+        avatarLabel: '少',
+        displayUrl: 'sspai.com/feed',
+        eyebrow: '热度 94 · 收藏 1.2K · 阅读 8.4K',
+        summaryText: '关注模型、工具、应用与研究动态，偏产品落地与工作流实践。',
+        metadataText: '每周多次 · 3 天前更新',
+        compact: true,
+        variant: 'recommend',
+      },
+    })
+
+    expect(wrapper.text()).toContain('热度 94 · 收藏 1.2K · 阅读 8.4K')
+    expect(wrapper.text()).toContain('关注模型、工具、应用与研究动态')
+    expect(wrapper.text()).toContain('每周多次 · 3 天前更新')
+    expect(wrapper.text()).toContain('近期文章')
+  })
 })

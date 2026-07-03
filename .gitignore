@@ -12,6 +12,7 @@ test-results/
 .codegraph/
 .superpowers/
 $TMPDIR/
+/topbar-default.png
 .claude/
 .gstack/
 .worktrees/

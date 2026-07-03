@@ -350,6 +350,12 @@ export interface FeedExploreSource {
   recentItems: FeedExploreRecentItem[]
 }
 
+export interface FeedRecommendationTheme {
+  id: string
+  label: string
+  description: string
+}
+
 export interface SubscriptionGroup {
   id: string
   user_id: string

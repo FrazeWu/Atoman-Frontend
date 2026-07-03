@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -14,12 +14,15 @@ import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { buildSourceAvatarLabel, buildSourceColor } from '@/utils/feedSourcePresentation'
-import type { FeedExploreSource, FeedSourceCategory } from '@/types'
+import type { FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory } from '@/types'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 type RecommendTarget = 'articles' | 'channels' | 'mixed'
-type FeedSourceFilterCategory = 'all' | FeedSourceCategory
 
+const ALL_CATEGORY = 'all'
+const ALL_THEME = 'all'
+
+type FeedSourceFilterCategory = typeof ALL_CATEGORY | FeedSourceCategory
 type RecommendationItem = {
   id: string
   title: string
@@ -31,6 +34,7 @@ type RecommendationItem = {
 }
 
 const router = useRouter()
+const route = useRoute()
 const api = useApi()
 const feedStore = useFeedStore()
 const authStore = useAuthStore()
@@ -64,7 +68,10 @@ const toggleReadingList = async (item: RecommendationItem) => {
 
 const mode = ref<RecommendationMode>('hot')
 const target = ref<RecommendTarget>('articles')
-const category = ref<FeedSourceFilterCategory>('all')
+const category = ref<FeedSourceFilterCategory>(ALL_CATEGORY)
+const theme = ref(ALL_THEME)
+const themes = ref<FeedRecommendationTheme[]>([])
+const themesLoading = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
@@ -87,7 +94,7 @@ const targetOptions: Array<{ label: string; value: RecommendTarget }> = [
 ]
 
 const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }> = [
-  { label: '全部', value: 'all' },
+  { label: '全部', value: ALL_CATEGORY },
   { label: '文章', value: 'blog' },
   { label: '新闻', value: 'news' },
   { label: '社交', value: 'social' },
@@ -96,13 +103,81 @@ const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }>
   { label: '播客', value: 'podcast' },
 ]
 
+const themeOptions = computed(() => ([
+  { label: '全部', value: ALL_THEME },
+  ...themes.value.map((item) => ({ label: item.label, value: item.id })),
+]))
+
+const currentThemeDescription = computed(() => {
+  if (theme.value === ALL_THEME) return ''
+  return themes.value.find((item) => item.id === theme.value)?.description ?? ''
+})
+
+function normalizeMode(raw: unknown): RecommendationMode {
+  return raw === 'featured' || raw === 'discover' ? raw : 'hot'
+}
+
+function normalizeTarget(raw: unknown): RecommendTarget {
+  return raw === 'channels' || raw === 'mixed' ? raw : 'articles'
+}
+
+function normalizeCategory(raw: unknown): FeedSourceFilterCategory {
+  return raw === 'blog' || raw === 'news' || raw === 'social' || raw === 'video' || raw === 'forum' || raw === 'podcast'
+    ? raw
+    : ALL_CATEGORY
+}
+
+function normalizedCategoryParam(value: FeedSourceFilterCategory) {
+  return value === ALL_CATEGORY ? 'all' : value
+}
+
+function syncQuery() {
+  router.replace({
+    query: {
+      ...route.query,
+      mode: mode.value,
+      target: target.value,
+      category: category.value,
+      theme: theme.value,
+    },
+  })
+}
+
+async function fetchThemes() {
+  themesLoading.value = true
+  try {
+    const response = await fetch(`${api.url}/feed/recommend/themes?category=${normalizedCategoryParam(category.value)}`)
+    if (!response.ok) {
+      throw new Error(`theme fetch failed: ${response.status}`)
+    }
+    const payload = await response.json()
+    themes.value = Array.isArray(payload.data) ? payload.data : []
+    if (theme.value !== ALL_THEME && !themes.value.some((item) => item.id === theme.value)) {
+      theme.value = ALL_THEME
+      syncQuery()
+    }
+  } catch (error) {
+    console.error('Failed to fetch recommendation themes:', error)
+    themes.value = []
+  } finally {
+    themesLoading.value = false
+  }
+}
+
 async function fetchRecommendations() {
   loading.value = true
   errorMessage.value = ''
   try {
+    const params = new URLSearchParams({
+      mode: mode.value,
+      page: String(page.value),
+      page_size: String(pageSize),
+      category: normalizedCategoryParam(category.value),
+      theme: theme.value,
+    })
     const [articleRes, channelRes] = await Promise.all([
-      fetch(`${api.url}/feed/recommend/articles?mode=${mode.value}&page=${page.value}&page_size=${pageSize}`),
-      fetch(`${api.url}/feed/recommend/channels?mode=${mode.value}&page=${page.value}&page_size=${pageSize}`),
+      fetch(`${api.url}/feed/recommend/articles?${params.toString()}`),
+      fetch(`${api.url}/feed/recommend/channels?${params.toString()}`),
     ])
 
     if (!articleRes.ok || !channelRes.ok) {
@@ -175,13 +250,11 @@ function channelSummaryText(item: RecommendationItem) {
 }
 
 const visibleChannels = computed(() => {
-  if (category.value === 'all') return channels.value
-  return channels.value.filter((item) => normalizeItemCategory(item) === category.value)
+  return channels.value
 })
 
 const visibleArticles = computed(() => {
-  if (category.value === 'all') return articles.value
-  return articles.value.filter((item) => normalizeItemCategory(item) === category.value)
+  return articles.value
 })
 
 const visibleMixedArticles = computed(() => visibleArticles.value.slice(0, 4))
@@ -192,11 +265,29 @@ const changePage = (nextPage: number) => {
   page.value = nextPage
 }
 
-watch([mode, page], () => {
+watch([mode, page, theme], () => {
+  syncQuery()
   fetchRecommendations()
 })
 
-watch([mode, target, category], () => {
+watch([target], () => {
+  syncQuery()
+})
+
+watch([mode], () => {
+  if (page.value === 1) {
+    fetchRecommendations()
+  } else {
+    page.value = 1
+  }
+})
+
+watch(category, async (nextCategory, previousCategory) => {
+  if (nextCategory !== previousCategory) {
+    theme.value = ALL_THEME
+  }
+  syncQuery()
+  await fetchThemes()
   if (page.value === 1) {
     fetchRecommendations()
   } else {
@@ -205,6 +296,12 @@ watch([mode, target, category], () => {
 })
 
 onMounted(() => {
+  mode.value = normalizeMode(route.query.mode)
+  target.value = normalizeTarget(route.query.target)
+  category.value = normalizeCategory(route.query.category)
+  theme.value = typeof route.query.theme === 'string' && route.query.theme.trim() ? route.query.theme.trim() : ALL_THEME
+  syncQuery()
+  fetchThemes()
   fetchRecommendations()
   if (authStore.isAuthenticated) {
     feedStore.fetchStarredIds()
@@ -246,7 +343,17 @@ onMounted(() => {
           class="category-segmented-control"
         />
       </div>
+
+      <div class="filter-row" aria-label="主题筛选">
+        <PSegmentedControl
+          v-model="theme"
+          :options="themeOptions"
+        />
+      </div>
     </div>
+
+    <p v-if="currentThemeDescription" class="state-line">{{ currentThemeDescription }}</p>
+    <p v-else-if="themesLoading" class="state-line">正在加载主题...</p>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>

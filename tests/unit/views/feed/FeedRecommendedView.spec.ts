@@ -1,11 +1,17 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
 
 const routerPush = vi.fn()
+const routerReplace = vi.fn()
+const routeQuery = {
+  mode: undefined as string | undefined,
+  target: undefined as string | undefined,
+  category: undefined as string | undefined,
+  theme: undefined as string | undefined,
+}
 
 const segmentedControlStub = {
   props: ['modelValue', 'options'],
@@ -24,18 +30,29 @@ const segmentedControlStub = {
 }
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: routerPush }),
+  useRouter: () => ({ push: routerPush, replace: routerReplace }),
+  useRoute: () => ({ query: routeQuery }),
 }))
 
 describe('FeedRecommendedView', () => {
   beforeEach(() => {
     routerPush.mockReset()
+    routerReplace.mockReset()
+    routeQuery.mode = undefined
+    routeQuery.target = undefined
+    routeQuery.category = undefined
+    routeQuery.theme = undefined
     setActivePinia(createPinia())
   })
 
   it('mounts and defaults to hot mode and fetches recommendations', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({
+          data: [{ id: 'ai', label: 'AI', description: 'AI 主题' }],
+        }), { status: 200 })
+      }
       if (url.includes('/feed/recommend/articles')) {
         return new Response(JSON.stringify({
           data: [{
@@ -78,6 +95,7 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
 
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=all'))
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=hot'))
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
 
@@ -106,6 +124,119 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
     expect(wrapper.text()).toContain('推荐内容加载失败')
+  })
+
+  it('restores route query and requests themes and recommendations with category and theme', async () => {
+    routeQuery.mode = 'featured'
+    routeQuery.target = 'channels'
+    routeQuery.category = 'blog'
+    routeQuery.theme = 'ai'
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({
+          data: [{ id: 'ai', label: 'AI', description: 'AI 主题' }],
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'chan-ai-1',
+            title: 'AI Channel',
+            summary: 'AI Channel Summary',
+            content_type: 'blog',
+            target_path: '/feed/channel/ai',
+          }],
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=blog'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=featured'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('category=blog'))
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('theme=ai'))
+    expect(wrapper.text()).toContain('AI Channel')
+  })
+
+  it('resets theme to all and refreshes themes when category changes', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes?category=all')) {
+        return new Response(JSON.stringify({
+          data: [{ id: 'general', label: '综合', description: '综合主题' }],
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/themes?category=blog')) {
+        return new Response(JSON.stringify({
+          data: [{ id: 'ai', label: 'AI', description: 'AI 主题' }],
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'art-1',
+            title: 'Article 1',
+            content_type: 'blog',
+            target_path: '/feed/item/1',
+          }],
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const articleButtons = wrapper.findAll('.segmented-option').filter((tab) => tab.text() === '文章')
+    expect(articleButtons.length).toBeGreaterThan(1)
+    await articleButtons[1]?.trigger('click')
+    await flushPromises()
+
+    const aiThemeTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === 'AI')
+    expect(aiThemeTab).toBeDefined()
+    await aiThemeTab?.trigger('click')
+    await flushPromises()
+
+    const newsCategoryTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '新闻')
+    expect(newsCategoryTab).toBeDefined()
+    await newsCategoryTab?.trigger('click')
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=news'))
+    expect(routerReplace).toHaveBeenLastCalledWith(expect.objectContaining({
+      query: expect.objectContaining({ theme: 'all', category: 'news' }),
+    }))
   })
 
   it('changes mode and refetches on tab click', async () => {
@@ -170,6 +301,9 @@ describe('FeedRecommendedView', () => {
   it('navigates to target path when clicking an item card', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
       if (url.includes('/feed/recommend/articles')) {
         return new Response(JSON.stringify({
           data: [{
@@ -235,9 +369,9 @@ describe('FeedRecommendedView', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('深入理解 SwiftUI 状态同步')
 
-    const blogTypeTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '博客')
-    expect(blogTypeTab).toBeDefined()
-    await blogTypeTab?.trigger('click')
+    const articleCategoryButtons = wrapper.findAll('.segmented-option').filter((tab) => tab.text() === '文章')
+    expect(articleCategoryButtons.length).toBeGreaterThan(1)
+    await articleCategoryButtons[1]?.trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('深入理解 SwiftUI 状态同步')
@@ -299,17 +433,27 @@ describe('FeedRecommendedView', () => {
   it('does not classify plain articles as videos only because the title contains video keywords', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
       if (url.includes('/feed/recommend/articles')) {
+        if (url.includes('category=video')) {
+          return new Response(JSON.stringify({ data: [] }), { status: 200 })
+        }
         return new Response(JSON.stringify({
           data: [{
             id: 'art-video-keyword-1',
             title: 'Video encoding 深入笔记',
             summary: '这是一篇纯文章，不是视频条目。',
+            content_type: 'blog',
             target_path: '/posts/post/art-video-keyword-1',
           }],
         }), { status: 200 })
       }
       if (url.includes('/feed/recommend/channels')) {
+        if (url.includes('category=video')) {
+          return new Response(JSON.stringify({ data: [] }), { status: 200 })
+        }
         return new Response(JSON.stringify({ data: [] }), { status: 200 })
       }
       return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })

@@ -80,6 +80,8 @@ export interface MusicArtistCardItem {
   birth_year?: number | string
   birth_date?: string
   entry_status?: string
+  play_count?: number
+  bookmark_count?: number
 }
 
 const props = withDefaults(defineProps<{
@@ -116,34 +118,16 @@ const birthYear = computed(() => {
   return ''
 })
 
-// Generate consistent mock stats based on artist ID/name if not provided
 const formattedPlayCount = computed(() => {
-  if (props.playCount !== undefined) return String(props.playCount)
-  // Seed hash based on ID string
-  let hash = 0
-  const idStr = String(props.artist.id || props.artist.name)
-  for (let i = 0; i < idStr.length; i++) {
-    hash = idStr.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const baseCount = Math.abs(hash % 950) + 50 // 50 to 1000
-  if (baseCount >= 100) {
-    return `${(baseCount / 10).toFixed(1)}万`
-  }
-  return `${baseCount}千`
+  const value = props.playCount ?? props.artist.play_count
+  if (value !== undefined) return String(value)
+  return '0'
 })
 
 const formattedSubscribers = computed(() => {
-  if (props.subscriberCount !== undefined) return String(props.subscriberCount)
-  let hash = 0
-  const idStr = String(props.artist.id || props.artist.name)
-  for (let i = 0; i < idStr.length; i++) {
-    hash = idStr.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const baseCount = Math.abs((hash >> 2) % 450) + 10 // 10 to 460
-  if (baseCount >= 100) {
-    return `${(baseCount / 10).toFixed(1)}万`
-  }
-  return `${baseCount}千`
+  const value = props.subscriberCount ?? props.artist.bookmark_count
+  if (value !== undefined) return String(value)
+  return '0'
 })
 </script>
 

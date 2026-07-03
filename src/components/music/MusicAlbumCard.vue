@@ -85,6 +85,8 @@ export interface MusicAlbumCardItem {
   artists?: { name: string }[]
   summary?: string
   target_path?: string
+  play_count?: number
+  bookmark_count?: number
 }
 
 const props = withDefaults(defineProps<{
@@ -96,34 +98,30 @@ const props = withDefaults(defineProps<{
   isBookmarked: false,
 })
 
+const publicAssetBase = import.meta.env.VITE_R2_PUBLIC_BASE_URL?.trim().replace(/\/$/, '') || ''
+
 defineEmits<{
   (e: 'click'): void
   (e: 'toggle-bookmark'): void
 }>()
 
-function seedHash(str: string) {
-  let h = 0
-  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h)
-  return Math.abs(h)
-}
-
 const formattedPlayCount = computed(() => {
-  if (props.playCount !== undefined) return String(props.playCount)
-  const base = (seedHash(String(props.album.id || props.album.title)) % 950) + 50
-  return base >= 100 ? `${(base / 10).toFixed(1)}万` : `${base}千`
+  const value = props.playCount ?? props.album.play_count
+  if (value !== undefined) return String(value)
+  return '0'
 })
 
 const formattedListeners = computed(() => {
-  if (props.listenerCount !== undefined) return String(props.listenerCount)
-  const base = (seedHash(String(props.album.id || props.album.title) + 'L') % 450) + 10
-  return base >= 100 ? `${(base / 10).toFixed(1)}万` : `${base}千`
+  const value = props.listenerCount ?? props.album.bookmark_count
+  if (value !== undefined) return String(value)
+  return '0'
 })
 
 const coverUrl = computed(() => {
   if (props.album.cover_url) return props.album.cover_url
   if (props.album.image_url) return props.album.image_url
-  if (props.album.cover_s3_key) {
-    return `http://localhost:9100/atoman-music-covers/${props.album.cover_s3_key}`
+  if (props.album.cover_s3_key && publicAssetBase) {
+    return `${publicAssetBase}/${props.album.cover_s3_key.replace(/^\/+/, '')}`
   }
   return ''
 })

@@ -200,6 +200,8 @@ export type MusicArtistListItem = {
   death_year?: number
   members?: string
   aliases?: Array<{ id?: string; alias: string; is_main_name?: boolean }>
+  play_count?: number
+  bookmark_count?: number
   entry_status: MusicEntryStatus
   created_at?: string
   updated_at?: string
@@ -215,7 +217,9 @@ export type MusicAlbumListItem = {
   description?: string
   album_type?: string
   hot_score?: number
-  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; cover_url?: string; lyrics?: string; status?: string }>
+  play_count?: number
+  bookmark_count?: number
+  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; cover_url?: string; lyrics?: string; status?: string; play_count?: number }>
   entry_status: MusicEntryStatus
 }
 
@@ -322,6 +326,8 @@ export type MusicRecommendationItem = {
   image_url?: string
   target_path: string
   score_label?: string
+  play_count?: number
+  bookmark_count?: number
 }
 
 export type MusicListFilters = {
@@ -398,6 +404,7 @@ export const musicV1Endpoints = {
   playlist: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}`,
   playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
+  plays: () => `${apiV1Base()}/music/plays`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,
@@ -667,6 +674,10 @@ export async function uploadMusicAlbumArchive(
     xhr.open('POST', musicV1Endpoints.albumImportArchive(importId))
     xhr.withCredentials = true
     xhr.setRequestHeader('Accept', 'application/json')
+    const token = typeof globalThis !== 'undefined' ? globalThis.localStorage?.getItem('token') : null
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    }
 
     xhr.upload.addEventListener('progress', (event) => {
       if (!event.lengthComputable) return
@@ -683,8 +694,13 @@ export async function uploadMusicAlbumArchive(
         resolve()
         return
       }
-
-      reject(new Error(`上传压缩包失败 (${xhr.status})`))
+      try {
+        const payload = xhr.responseText ? JSON.parse(xhr.responseText) as { error?: { message?: string } } : null
+        const message = payload?.error?.message?.trim()
+        reject(new Error(message || `上传压缩包失败 (${xhr.status})`))
+      } catch {
+        reject(new Error(`上传压缩包失败 (${xhr.status})`))
+      }
     })
 
     xhr.addEventListener('error', () => {
@@ -870,6 +886,10 @@ export async function addMusicPlaylistSong(playlistId: string, songId: string): 
 
 export async function removeMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
   return apiDeleteJson<any>(musicV1Endpoints.playlistSong(playlistId, songId))
+}
+
+export async function recordMusicSongPlay(songId: string): Promise<{ recorded: boolean }> {
+  return apiPostJson<{ recorded: boolean }>(musicV1Endpoints.plays(), { song_id: songId })
 }
 
 export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {

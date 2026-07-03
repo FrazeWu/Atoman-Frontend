@@ -67,12 +67,32 @@ async function handleToggleBookmark(artistId: string) {
     if (isCurrentlyBookmarked) {
       await deleteArtistBookmark(artistId)
       starredArtistIds.value = starredArtistIds.value.filter(id => id !== artistId)
+      artists.value = artists.value.map((artist) => (
+        String(artist.id) === artistId
+          ? { ...artist, bookmark_count: Math.max(0, (artist.bookmark_count ?? 0) - 1) }
+          : artist
+      ))
+      searchResults.value = searchResults.value.map((artist) => (
+        String(artist.id) === artistId
+          ? { ...artist, bookmark_count: Math.max(0, (artist.bookmark_count ?? 0) - 1) }
+          : artist
+      ))
       if (activeTab.value === 'subscribed') {
         artists.value = artists.value.filter(a => String(a.id) !== artistId)
       }
     } else {
       await createArtistBookmark(artistId)
       starredArtistIds.value.push(artistId)
+      artists.value = artists.value.map((artist) => (
+        String(artist.id) === artistId
+          ? { ...artist, bookmark_count: (artist.bookmark_count ?? 0) + 1 }
+          : artist
+      ))
+      searchResults.value = searchResults.value.map((artist) => (
+        String(artist.id) === artistId
+          ? { ...artist, bookmark_count: (artist.bookmark_count ?? 0) + 1 }
+          : artist
+      ))
     }
   } catch (e) {
     console.error('Failed to toggle bookmark:', e)

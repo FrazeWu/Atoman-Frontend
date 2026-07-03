@@ -48,9 +48,19 @@ async function handleToggleAlbumBookmark(albumId: string) {
     if (isCurrentlyBookmarked) {
       await deleteAlbumBookmark(albumId)
       starredAlbumIds.value = starredAlbumIds.value.filter(id => id !== albumId)
+      albums.value = albums.value.map((album) => (
+        String(album.id) === albumId
+          ? { ...album, bookmark_count: Math.max(0, (album.bookmark_count ?? 0) - 1) }
+          : album
+      ))
     } else {
       await createAlbumBookmark(albumId)
       starredAlbumIds.value.push(albumId)
+      albums.value = albums.value.map((album) => (
+        String(album.id) === albumId
+          ? { ...album, bookmark_count: (album.bookmark_count ?? 0) + 1 }
+          : album
+      ))
     }
   } catch (e) {
     console.error('Failed to toggle album bookmark:', e)

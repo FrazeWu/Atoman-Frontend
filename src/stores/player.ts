@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import type { Song, RepeatMode, TimelineItem } from '@/types';
 import { useApi } from '@/composables/useApi'
+import { recordMusicSongPlay } from '@/api/musicV1'
 
 const api = useApi();
 
@@ -56,6 +57,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   let audio: HTMLAudioElement | null = null;
   let songsRequest: Promise<void> | null = null;
+  let lastReportedSongId: string | null = null;
 
   const ensureAudio = () => {
     if (audio) return audio;
@@ -195,6 +197,15 @@ export const usePlayerStore = defineStore('player', () => {
     duration.value = 0;
     attemptPlay(player);
   };
+
+  watch(currentSong, (song) => {
+    const songId = song?.id ? String(song.id) : null
+    if (!songId || songId === lastReportedSongId) return
+    lastReportedSongId = songId
+    void recordMusicSongPlay(songId).catch((error) => {
+      console.error('Failed to record music play:', error)
+    })
+  })
 
   const playSong = (song: Song) => {
     if (currentSong.value?.id === song.id) {

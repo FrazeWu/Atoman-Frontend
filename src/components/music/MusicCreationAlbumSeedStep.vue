@@ -183,7 +183,7 @@ async function handleArchiveChange(event: Event) {
                 <span class="file-picker-title">
                   {{ albumImportDraft?.archiveName || '点击或拖拽上传专辑压缩包' }}
                 </span>
-                <span class="file-picker-subtitle">只支持 .zip 格式，建议包含专辑封面与音频</span>
+                <span class="file-picker-subtitle">只支持 .zip 格式，文件需在 2GB 以内</span>
               </div>
               <PButton 
                 type="button" 

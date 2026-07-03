@@ -70,6 +70,10 @@ function applyImportSnapshot(snapshot: MusicAlbumImport) {
   }))
 }
 
+function canReuseImportSession(status: MusicAlbumImport['status']) {
+  return status === 'failed' || status === 'pending_upload'
+}
+
 function addTrack() {
   if (!creationFlow.value) return
   creationFlow.value.draft.tracks = [
@@ -105,10 +109,13 @@ async function handleArchiveChange(event: Event) {
   try {
     validateMusicAlbumArchiveFile(file)
 
-    const session = albumImportDraft.value.importId
+    const reusableImportId = canReuseImportSession(albumImportDraft.value.status)
+      ? albumImportDraft.value.importId
+      : null
+    const session = reusableImportId
       ? null
       : await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
-    const importId = albumImportDraft.value.importId || session?.importId
+    const importId = reusableImportId || session?.importId
     if (!importId) throw new Error('压缩包上传失败')
 
     albumImportDraft.value.importId = importId

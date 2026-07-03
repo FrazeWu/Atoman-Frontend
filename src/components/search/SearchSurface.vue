@@ -1,6 +1,10 @@
 <template>
   <div class="search-surface">
-    <div class="search-frame" :class="{ 'is-open': showDropdown, 'is-compact': compact && !showDropdown, 'is-overlay-results': overlayResults }">
+    <div class="search-frame" :class="{
+      'is-open': showDropdown,
+      'is-compact': compact && !showDropdown,
+      'is-overlay-results': overlayResults
+    }">
       <div v-if="eyebrow || status" class="search-frame__head">
         <span class="search-frame__eyebrow">{{ eyebrow }}</span>
         <span v-if="status" class="search-frame__status">{{ status }}</span>
@@ -41,14 +45,16 @@
         </div>
       </div>
 
-      <div v-if="showDropdown" class="search-dropdown" :data-testid="dropdownTestId" :style="dropdownStyle">
-        <p v-if="loading" class="search-dropdown__hint">搜索中...</p>
-        <template v-else-if="$slots.results">
-          <slot name="results" />
-        </template>
-        <p v-else-if="empty" class="search-dropdown__hint">{{ empty }}</p>
-        <p v-else-if="hint" class="search-dropdown__hint">{{ hint }}</p>
-      </div>
+      <Transition name="search-dropdown-slide">
+        <div v-if="showDropdown" class="search-dropdown" :data-testid="dropdownTestId" :style="dropdownStyle">
+          <p v-if="loading" class="search-dropdown__hint">搜索中...</p>
+          <template v-else-if="$slots.results">
+            <slot name="results" />
+          </template>
+          <p v-else-if="empty" class="search-dropdown__hint">{{ empty }}</p>
+          <p v-else-if="hint" class="search-dropdown__hint">{{ hint }}</p>
+        </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -117,6 +123,7 @@ function handleInput(event: Event) {
 <style scoped>
 .search-surface {
   width: 100%;
+  height: 100%;
 }
 
 .search-frame {
@@ -129,21 +136,24 @@ function handleInput(event: Event) {
   box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
   padding: 0.6rem 0.8rem 0.65rem;
   display: grid;
+  align-items: center; /* 确保垂直居中 */
   gap: 0.4rem;
   overflow: hidden;
+  box-sizing: border-box;
+  height: 100%;
   transition:
-    width 0.48s cubic-bezier(0.16, 1, 0.3, 1),
-    padding 0.48s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.48s cubic-bezier(0.16, 1, 0.3, 1),
-    gap 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+    width 0.6s cubic-bezier(0.2, 1, 0.2, 1),
+    padding 0.6s cubic-bezier(0.2, 1, 0.2, 1),
+    box-shadow 0.6s cubic-bezier(0.2, 1, 0.2, 1),
+    gap 0.6s cubic-bezier(0.2, 1, 0.2, 1);
 }
 
-.search-frame.is-open {
+.search-frame.is-open:not(.is-overlay-results) {
   padding-bottom: 0;
 }
 
 .search-frame.is-compact {
-  padding: 0.45rem 0.65rem 0.5rem;
+  padding: 0 1rem; /* 内部完全靠 flex 垂直居中，高度由外部容器指定 */
   gap: 0.35rem;
 }
 
@@ -154,7 +164,6 @@ function handleInput(event: Event) {
 
 .search-frame.is-compact .search-input {
   font-size: 0.98rem;
-  padding-bottom: 0.35rem;
 }
 
 .search-main {
@@ -162,29 +171,27 @@ function handleInput(event: Event) {
   align-items: center;
   gap: 0.6rem;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .search-btn {
-  border: 1px solid var(--a-color-line);
-  border-radius: 0px;
-  background: var(--a-color-paper);
+  border: none;
+  background: transparent;
   color: var(--a-color-ink);
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
   font-weight: 800;
-  padding: 0.35rem 0.85rem;
+  padding: 0 0.5rem;
   white-space: nowrap;
   transition: all 0.15s ease;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .search-btn:hover {
-  background: var(--a-color-paper-wash);
-  border-color: var(--a-color-ink);
+  color: var(--a-color-muted);
 }
 
 .search-frame__head {
@@ -263,7 +270,15 @@ function handleInput(event: Event) {
   background: transparent;
   max-height: 420px;
   overflow-y: auto;
-  animation: searchSurfaceReveal 0.52s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: searchSurfaceReveal 0.6s cubic-bezier(0.2, 1, 0.2, 1);
+}
+
+.search-frame.is-overlay-results {
+  overflow: visible;
+}
+
+.search-frame.is-open.is-overlay-results {
+  box-shadow: none;
 }
 
 .search-frame.is-overlay-results .search-dropdown {
@@ -273,7 +288,7 @@ function handleInput(event: Event) {
   right: 0;
   margin-top: 0;
   background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
-  border: 1px solid var(--a-color-line-soft);
+  border: var(--a-border);
   border-top: 0;
   box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
   z-index: 80;
@@ -329,10 +344,23 @@ function handleInput(event: Event) {
     gap: 0.75rem;
   }
 
+
   .search-actions {
     justify-self: stretch;
     padding-top: 0.75rem;
     border-top: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
   }
+}
+
+.search-dropdown-slide-enter-active,
+.search-dropdown-slide-leave-active {
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.search-dropdown-slide-enter-from,
+.search-dropdown-slide-leave-to {
+  max-height: 0 !important;
+  opacity: 0;
 }
 </style>

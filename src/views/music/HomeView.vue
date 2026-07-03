@@ -258,6 +258,7 @@ function handleSearchBlur() {
               :open="showSearchDropdown"
               compact
               eyebrow=""
+              overlay-results
               :status="searchLoading ? '搜索中...' : ''"
               placeholder="搜索艺术家..."
               input-test-id="music-search-input"
@@ -377,6 +378,7 @@ function handleSearchBlur() {
   position: relative;
   max-width: 28rem;
   flex: 0 1 28rem;
+  height: 36px; /* 与热度选项卡保持一致的初始高度 */
 }
 
 .recommendation-tabs {
@@ -388,10 +390,22 @@ function handleSearchBlur() {
   z-index: 15;
 }
 
+/* 默认状态下：relative 相对定位，自适应高度及文档流，确保任何时候都不会被下方的元素遮挡 */
+.search-shell :deep(.search-frame) {
+  position: relative;
+  width: 100%;
+  height: 100%; /* 填满占位 shell (36px) */
+  box-sizing: border-box;
+}
+
+/* 激活状态下：切换为 absolute 绝对定位以向右延伸扩展，并赋予高 z-index 浮动在一切内容上方 */
 .search-shell.is-open :deep(.search-frame) {
   position: absolute;
-  inset: 0 auto auto 0;
+  top: 0;
+  left: 0;
   width: 40rem;
+  height: auto !important; /* 允许搜索框向下延伸其高度 */
+  z-index: 100;
 }
 
 .paper-action-dot {
@@ -448,7 +462,9 @@ function handleSearchBlur() {
   gap: 0.55rem;
   border: 1px solid var(--a-color-line-soft);
   border-radius: 0;
-  padding: 0.7rem 1rem;
+  padding: 0 1rem; /* 配合固定高度垂直居中 */
+  height: 36px; /* 与热度选项卡保持一致的高度 */
+  box-sizing: border-box;
   font-weight: 800;
   background: var(--a-color-paper);
   color: var(--a-color-ink);

@@ -164,6 +164,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             :open="searchOpen"
             compact
             eyebrow=""
+            overlay-results
             :status="searchLoading ? '搜索中...' : ''"
             placeholder="搜索专辑或艺术家..."
             input-test-id="music-explore-search-input"
@@ -271,6 +272,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   position: relative;
   max-width: 28rem;
   flex: 0 1 28rem;
+  height: 36px; /* 固定的初始占位高度，与右侧选项卡等高 */
 }
 
 .recommendation-tabs {
@@ -282,10 +284,22 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   z-index: 15;
 }
 
+/* 默认状态下：relative 相对定位，自适应高度及文档流，确保任何时候都不会被下方的元素遮挡 */
+.search-shell :deep(.search-frame) {
+  position: relative;
+  width: 100%;
+  height: 100%; /* 填满被撑开的 shell (36px) */
+  box-sizing: border-box;
+}
+
+/* 激活状态下：切换为 absolute 绝对定位以向右延伸扩展，并赋予高 z-index 浮动在一切内容上方 */
 .search-shell.is-open :deep(.search-frame) {
   position: absolute;
-  inset: 0 auto auto 0;
+  top: 0;
+  left: 0;
   width: 40rem;
+  height: auto !important; /* 允许搜索框高度向下延伸 */
+  z-index: 100;
 }
 
 .search-dropdown {

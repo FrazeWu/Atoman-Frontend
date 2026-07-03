@@ -10,80 +10,81 @@
     />
   </div>
 
-  <!-- Topbar Search: pill always visible -->
-  <div ref="searchWrapRef" class="topbar-search-wrap">
+  <!-- Topbar Search -->
+  <div ref="searchWrapRef" class="topbar-search-wrap" :class="{ 'is-open': showSearch }">
+    <!-- Collapsed pill: shown when search not active -->
     <button
+      v-if="!showSearch"
       class="search-pill"
-      :class="{ 'is-active': showSearch }"
       type="button"
       data-testid="topbar-search-pill"
-      @click.stop="showSearch ? closeSearch() : openSearch()"
+      @click.stop="openSearch"
     >
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="8"/>
         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
-      <span>搜索</span>
+      <span>搜索...</span>
     </button>
-  </div>
 
-  <!-- Search panel: single box containing both input and results, expanding rightwards -->
-  <Teleport to="body">
-    <div
-      v-if="showSearch"
-      class="search-panel"
-      :style="panelStyle"
-      data-testid="topbar-search-dropdown"
-      @click.stop
-    >
-      <!-- Input line within the unified panel -->
-      <div class="search-panel__input-row">
-        <svg class="search-panel__input-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    <!-- Expanded search input -->
+    <div v-else class="search-box" @click.stop>
+      <svg class="search-box-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        ref="searchInputRef"
+        v-model="searchDraft"
+        class="topbar-search-input"
+        type="search"
+        placeholder="搜索..."
+        data-testid="topbar-search-input"
+        @input="emitSearchInput"
+        @keydown.enter.prevent="expandSearch"
+        @keydown.escape="closeSearch"
+      />
+      <button class="search-close-btn" type="button" @click="closeSearch" aria-label="关闭搜索">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
-        <input
-          ref="searchInputRef"
-          v-model="searchDraft"
-          class="search-panel__input"
-          type="search"
-          placeholder="搜索..."
-          data-testid="topbar-search-input"
-          @input="emitSearchInput"
-          @keydown.enter.prevent="expandSearch"
-          @keydown.escape="closeSearch"
-        />
-        <button class="search-panel__close-btn" type="button" @click="closeSearch" aria-label="关闭搜索">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-
-      <div class="search-panel__inner">
-        <p v-if="globalSearch.loading.value" class="search-panel__hint">搜索中...</p>
-        <p v-else-if="searchDraft.trim().length === 0" class="search-panel__hint">输入关键词开始搜索</p>
-        <p v-else-if="searchDraft.trim().length < 2" class="search-panel__hint">请再输入一些字符...</p>
-        <template v-else-if="globalSearch.sections.value.length > 0">
-          <div class="search-panel__body">
-            <TopbarSearchSection
-              v-for="section in globalSearch.sections.value"
-              :key="section.type"
-              :section="section"
-              :active-id="globalSearch.activeItem.value?.id || ''"
-              @open-item="openSearchHref"
-              @open-more="openSearchHref"
-            />
-          </div>
-          <div v-if="!isExpanded" class="search-panel__footer">
-            <button class="search-panel__expand-btn" type="button" @click="expandSearch">回车查看全部结果</button>
-          </div>
-        </template>
-        <p v-else class="search-panel__hint">没有匹配的结果</p>
-      </div>
+      </button>
     </div>
-  </Teleport>
+
+    <!-- Search panel: positioned absolutely relative to topbar-search-wrap, drops down and expands rightwards -->
+    <Transition name="search-panel-slide">
+      <div
+        v-if="showSearch"
+        class="search-panel"
+        :style="{ '--panel-height': isExpanded ? '70vh' : '30vh' }"
+        data-testid="topbar-search-dropdown"
+        @click.stop
+      >
+        <div class="search-panel__inner">
+          <p v-if="globalSearch.loading.value" class="search-panel__hint">搜索中...</p>
+          <p v-else-if="searchDraft.trim().length === 0" class="search-panel__hint">输入关键词开始搜索</p>
+          <p v-else-if="searchDraft.trim().length < 2" class="search-panel__hint">请再输入一些字符...</p>
+          <template v-else-if="globalSearch.sections.value.length > 0">
+            <div class="search-panel__body">
+              <TopbarSearchSection
+                v-for="section in globalSearch.sections.value"
+                :key="section.type"
+                :section="section"
+                :active-id="globalSearch.activeItem.value?.id || ''"
+                @open-item="openSearchHref"
+                @open-more="openSearchHref"
+              />
+            </div>
+            <div v-if="!isExpanded" class="search-panel__footer">
+              <button class="search-panel__expand-btn" type="button" @click="expandSearch">回车查看全部结果</button>
+            </div>
+          </template>
+          <p v-else class="search-panel__hint">没有匹配的结果</p>
+        </div>
+      </div>
+    </Transition>
+  </div>
 
   <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
     {{ notificationRoom.name }}
@@ -133,7 +134,6 @@ const isExpanded = ref(false)
 const searchDraft = ref('')
 const searchWrapRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
-const panelStyle = ref<Record<string, string>>({})
 const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
@@ -149,14 +149,10 @@ const toggleDropdown = (name: string) => {
 }
 
 const openSearch = async () => {
-  // 先算好面板坐标，再显示 panel，避免首帧位置错误
-  updatePanelGeometry()
   showSearch.value = true
   isExpanded.value = false
   await nextTick()
   searchInputRef.value?.focus()
-  // 展开后 search-box 改变了布局，再算一次
-  updatePanelGeometry()
 }
 
 const closeSearch = () => {
@@ -168,39 +164,13 @@ const closeSearch = () => {
 
 const emitSearchInput = () => {
   isExpanded.value = false
-  updatePanelGeometry()
   void globalSearch.search(searchDraft.value, 'preview')
   window.dispatchEvent(new CustomEvent('atoman-topbar-search-input', { detail: searchDraft.value }))
 }
 
 const expandSearch = () => {
   isExpanded.value = true
-  updatePanelGeometry()
   void globalSearch.search(searchDraft.value, 'expanded')
-}
-
-const updatePanelGeometry = () => {
-  if (typeof window === 'undefined') return
-  const wrap = searchWrapRef.value
-  if (!wrap) return
-  const rect = wrap.getBoundingClientRect()
-  const panelTop = rect.bottom + 4
-  const playerEl = document.querySelector('.player')
-  const playerTop = playerEl ? playerEl.getBoundingClientRect().top : window.innerHeight
-  // 预览模式底边：屏幕高度的 1/3 处
-  const previewBottom = window.innerHeight - Math.floor(window.innerHeight / 3)
-  // 展开模式底边：音乐播放器上方 8px，或至少留 80px
-  const expandedBottom = window.innerHeight - Math.max(playerTop - 8, 80)
-  
-  // 向右弹出：左边缘对齐 pill 左端，右边缘宽度通过 width 弹性控制，避免溢出视口
-  const left = rect.left
-  const bottom = isExpanded.value ? expandedBottom : previewBottom
-  panelStyle.value = {
-    top: `${panelTop}px`,
-    left: `${left}px`,
-    bottom: `${bottom}px`,
-    width: `min(480px, calc(100vw - ${left}px - 16px))`
-  }
 }
 
 const closeDropdown = () => {
@@ -227,13 +197,11 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
   ensureMediaChannels()
-  window.addEventListener('resize', updatePanelGeometry)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   inboxStore.disconnect()
-  window.removeEventListener('resize', updatePanelGeometry)
 })
 
 const logout = () => {
@@ -322,23 +290,38 @@ watch(authUserId, ensureMediaChannels)
   display: flex;
   align-items: center;
   z-index: 120;
+  margin-left: auto;
+  margin-right: 4rem; /* 向左推开，避免拥挤右边 */
+  flex-shrink: 0;
+  width: 400px; /* 默认就是展开后的大致宽度 */
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.topbar-search-wrap.is-open {
+  /* 长度不再变化，高度通过内部 dropdown 延伸 */
 }
 
 /* Collapsed pill */
 .search-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 8px;
   background: var(--a-color-bg);
   border: var(--a-border);
   border-radius: var(--a-radius-none);
-  padding: 0.375rem 0.75rem;
+  height: 36px; /* 固定的 36px 高度，保证与展开时高度一致，防止跳动 */
+  padding: 0 0.75rem; /* 取消上下内边距，完全通过 height 居中 */
+  margin: 0;
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--a-color-muted);
   cursor: pointer;
   white-space: nowrap;
+  width: 100%; /* 占满父级 400px */
+  text-align: left;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  box-sizing: border-box;
 }
 
 .search-pill:hover {
@@ -347,41 +330,47 @@ watch(authUserId, ensureMediaChannels)
   border-color: var(--a-color-ink);
 }
 
-
-.search-panel__input-row {
+.search-box {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  padding: 0.5rem 0.75rem;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--a-color-fg);
+  border-bottom: 1px solid var(--a-color-line-soft); /* 输入框下方的横线 */
+  background: var(--a-color-bg);
+  width: 100%; /* 占满父级 400px */
+  height: 36px; /* 固定的 36px 高度 */
+  box-sizing: border-box;
 }
 
-.search-panel__input-icon {
+.search-box-icon {
   flex-shrink: 0;
-  margin-left: 0.5rem;
+  margin-left: 0.75rem;
   color: var(--a-color-muted);
 }
 
-.search-panel__input {
+.topbar-search-input {
   flex: 1;
   border: none;
   background: transparent;
   color: var(--a-color-fg);
-  padding: 0.5rem 0.75rem;
+  padding: 0 0.75rem; /* 移除上下 padding */
+  height: 100%; /* 占满父级容器高度 */
   font-size: 0.875rem;
   font-weight: 700;
   font-family: inherit;
   min-width: 0;
 }
 
-.search-panel__input:focus {
+.topbar-search-input:focus {
   outline: none;
 }
 
-.search-panel__input::-webkit-search-cancel-button {
+.topbar-search-input::-webkit-search-cancel-button {
   display: none;
 }
 
-.search-panel__close-btn {
+.search-close-btn {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -395,26 +384,29 @@ watch(authUserId, ensureMediaChannels)
   transition: color 0.15s ease;
 }
 
-.search-panel__close-btn:hover {
+.search-close-btn:hover {
   color: var(--a-color-fg);
 }
 
 
-/* Floating search panel - rendered via Teleport to body */
+
+/* Floating search panel */
 .search-panel {
-  position: fixed;
+  position: absolute;
+  top: 100%; /* 与输入框无缝连接 */
+  left: 0;
   z-index: 500;
-  bottom: var(--panel-preview-bottom);
   background: var(--a-color-bg);
-  border: var(--a-border);
+  border: 1px solid var(--a-color-fg);
+  border-top: none; /* 移除顶部边框，避免双重边框 */
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
   overflow-y: auto;
+  min-height: 80px;
+  width: 100%;
+  max-width: calc(100vw - 20px);
+  max-height: var(--panel-height, 30vh);
   animation: panelReveal 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: bottom 0.36s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.search-panel.is-expanded {
-  bottom: var(--panel-expanded-bottom);
+  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes panelReveal {
@@ -462,10 +454,12 @@ watch(authUserId, ensureMediaChannels)
 }
 
 @media (max-width: 960px) {
-  .search-box {
-    width: calc(100vw - 10rem);
-    max-width: 28rem;
-    min-width: 12rem;
+  .topbar-search-wrap {
+    width: 200px;
+    margin-right: 1.5rem;
+  }
+  .topbar-search-wrap.is-open {
+    width: 320px;
   }
 }
 
@@ -588,63 +582,19 @@ watch(authUserId, ensureMediaChannels)
   background: var(--a-color-line-soft);
   margin: 0.25rem 0;
 }
-</style>
 
-<!-- Global styles for Teleported search panel (cannot be scoped) -->
-<style>
-.search-panel {
-  position: fixed;
-  z-index: 500;
-  background: var(--a-color-bg, #fff);
-  border: var(--a-border, 1px solid #e4e4e4);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
-  overflow-y: auto;
-  min-height: 80px;
-  animation: atoman-panelReveal 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: bottom 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+/* 下拉菜单向下平滑展开延伸的动画 */
+.search-panel-slide-enter-active,
+.search-panel-slide-leave-active {
+  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  overflow: hidden;
 }
 
-@keyframes atoman-panelReveal {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.search-panel__inner {
-  padding: 0.75rem 0;
-}
-
-.search-panel__hint {
-  margin: 0;
-  padding: 0.75rem 1.25rem;
-  color: var(--a-color-muted, #999);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.search-panel__body {
-  display: grid;
-  gap: 0;
-}
-
-.search-panel__footer {
-  border-top: 1px solid var(--a-color-line-soft, #f0f0f0);
-  padding: 0.5rem 1rem;
-  text-align: center;
-}
-
-.search-panel__expand-btn {
-  background: none;
-  border: none;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--a-color-muted, #999);
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  transition: color 0.15s ease;
-}
-
-.search-panel__expand-btn:hover {
-  color: var(--a-color-fg, #111);
-  text-decoration: underline;
+.search-panel-slide-enter-from,
+.search-panel-slide-leave-to {
+  max-height: 0 !important;
+  opacity: 0;
 }
 </style>
+
+

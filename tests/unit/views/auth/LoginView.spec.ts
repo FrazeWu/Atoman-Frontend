@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 
 import LoginView from '@/views/auth/LoginView.vue'
 import { shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
@@ -62,5 +64,12 @@ describe('LoginView redirect', () => {
     expect(shouldRequireTurnstileConfig(true, true, '0x4AAAAA')).toBe(false)
     expect(shouldRequireTurnstileConfig(true, false, '')).toBe(false)
     expect(shouldRequireTurnstileConfig(false, true, '')).toBe(false)
+  })
+
+  it('renders turnstile in the registration verification step as well as the final submit step', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'src/views/auth/LoginView.vue'), 'utf8')
+
+    expect(source).toMatch(/REGISTER VIEW - STEP 1[\s\S]*<TurnstileWidget/)
+    expect(source).toMatch(/REGISTER VIEW - STEP 2[\s\S]*<TurnstileWidget/)
   })
 })

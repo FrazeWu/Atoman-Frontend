@@ -101,6 +101,15 @@
             :error="fieldErrors.code"
           />
 
+          <TurnstileWidget
+            v-if="turnstileEnabled"
+            ref="turnstileRef"
+            :site-key="turnstileSiteKey"
+            @verified="turnstileToken = $event"
+            @expired="turnstileToken = ''"
+            @error="handleTurnstileError"
+          />
+
           <PButton
             type="button"
             variant="primary"

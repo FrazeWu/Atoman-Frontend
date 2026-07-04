@@ -5,13 +5,16 @@
       v-model:collapsed="sidebarCollapsed"
       storage-key="atoman.music.sidebar.collapsed"
     >
-      <PSidebarItem :to="modulePathUrl('music', '/explore')" :index="1" :icon="Compass">
-        探索
+      <PSidebarItem :to="modulePathUrl('music', '/discover')" :index="1" :icon="Compass">
+        发现
       </PSidebarItem>
-      <PSidebarItem :to="moduleUrl('music')" :index="2" :icon="Users" exact>
-        艺术家
+      <PSidebarItem :to="moduleUrl('music')" :index="2" :icon="Disc3" exact>
+        专辑
       </PSidebarItem>
-      <PSidebarItem :to="modulePathUrl('music', '/starred')" :index="3" :icon="Star">
+      <PSidebarItem :to="modulePathUrl('music', '/artists')" :index="3" :icon="Users">
+        艺人
+      </PSidebarItem>
+      <PSidebarItem :to="modulePathUrl('music', '/starred')" :index="4" :icon="Star">
         收藏
       </PSidebarItem>
 
@@ -30,7 +33,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Compass, Users, Star } from 'lucide-vue-next'
+import { Compass, Disc3, Users, Star } from 'lucide-vue-next'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'

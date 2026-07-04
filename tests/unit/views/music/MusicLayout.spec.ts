@@ -8,19 +8,22 @@ describe('MusicLayout.vue', () => {
   it('renders only the simplified sidebar items', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [] })
     const wrapper = mount(MusicLayout, {
-      global: { 
-        plugins: [router], 
+      global: {
+        plugins: [router],
         stubs: {
           'router-view': true,
           'PSidebar': { template: '<div><slot /></div>' },
-          'PSidebarItem': { template: '<p-sidebar-item-stub><slot /></p-sidebar-item-stub>' }
-        }
-      }
+          'PSidebarItem': { template: '<div class="sidebar-item"><slot /></div>' },
+          MusicSidebarPlaylists: true,
+          PlaylistDrawer: true,
+        },
+      },
     })
-    const items = wrapper.findAll('p-sidebar-item-stub')
-    expect(items.length).toBe(3)
-    expect(items[0].text()).toContain('探索')
-    expect(items[1].text()).toContain('艺术家')
-    expect(items[2].text()).toContain('我的收藏')
+    const items = wrapper.findAll('.sidebar-item')
+    expect(items.length).toBe(4)
+    expect(items[0].text()).toContain('发现')
+    expect(items[1].text()).toContain('专辑')
+    expect(items[2].text()).toContain('艺人')
+    expect(items[3].text()).toContain('收藏')
   })
 })

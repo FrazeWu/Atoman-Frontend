@@ -10,7 +10,8 @@ describe('music module routes', () => {
     )
 
     expect(musicRoutes).toContain("{ path: '', component: () => import('@/views/music/HomeView.vue') }")
-    expect(musicRoutes).toContain("{ path: 'explore', component: () => import('@/views/music/ExploreView.vue') }")
+    expect(musicRoutes).toContain("{ path: 'discover', component: () => import('@/views/music/ExploreView.vue') }")
+    expect(musicRoutes).toContain("{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') }")
     expect(musicRoutes).toContain("{ path: 'starred', component: () => import('@/views/music/StarredView.vue') }")
   })
 })

@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import LoginView from '@/views/auth/LoginView.vue'
-import { shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
+import { buildRegisterTurnstileKey, shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
@@ -64,6 +64,12 @@ describe('LoginView redirect', () => {
     expect(shouldRequireTurnstileConfig(true, true, '0x4AAAAA')).toBe(false)
     expect(shouldRequireTurnstileConfig(true, false, '')).toBe(false)
     expect(shouldRequireTurnstileConfig(false, true, '')).toBe(false)
+  })
+
+  it('uses different turnstile keys for different register steps', () => {
+    expect(buildRegisterTurnstileKey(1)).toBe('register-turnstile-step-1')
+    expect(buildRegisterTurnstileKey(2)).toBe('register-turnstile-step-2')
+    expect(buildRegisterTurnstileKey(1)).not.toBe(buildRegisterTurnstileKey(2))
   })
 
   it('renders turnstile in the registration verification step as well as the final submit step', () => {

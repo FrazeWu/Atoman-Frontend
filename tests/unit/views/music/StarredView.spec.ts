@@ -155,6 +155,19 @@ describe('Music StarredView', () => {
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
   })
 
+  it('opens playlist drawer when clicking starred playlist cards', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="playlist-drawer-stub"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="starred-playlist-card"]').trigger('click')
+
+    expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
+  })
+
   it('shows empty state instead of error when bookmarks require login', async () => {
     mocks.listArtistBookmarks.mockRejectedValueOnce(
       new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),

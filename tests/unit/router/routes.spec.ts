@@ -32,7 +32,8 @@ describe('host-scoped route tables', () => {
 
   it('keeps music routes relative to the module root', () => {
     const musicPaths = flattenPaths(moduleRoutes.music)
-    expect(musicPaths).toContain('explore')
+    expect(musicPaths).toContain('discover')
+    expect(musicPaths).toContain('artists')
     expect(musicPaths).toContain('starred')
     expect(musicPaths).toContain('artist/:artistId')
     expect(musicPaths).toContain('album/:albumId')

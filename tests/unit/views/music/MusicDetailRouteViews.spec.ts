@@ -41,17 +41,19 @@ describe('music legacy detail route shells', () => {
     mocks.routeParams = { artistId: 'artist-123' }
     const component = (await import('@/views/music/MusicArtistRouteView.vue')).default
 
-    mount(component)
+    const wrapper = mount(component)
 
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-123')
+    expect(wrapper.find('[data-testid="music-home-view-stub"]').exists()).toBe(true)
   })
 
   it('opens the album drawer for /album/:albumId', async () => {
     mocks.routeParams = { albumId: 'album-456' }
     const component = (await import('@/views/music/MusicAlbumRouteView.vue')).default
 
-    mount(component)
+    const wrapper = mount(component)
 
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-456')
+    expect(wrapper.find('[data-testid="music-home-view-stub"]').exists()).toBe(true)
   })
 })

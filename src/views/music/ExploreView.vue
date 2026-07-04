@@ -19,6 +19,12 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { MUSIC_RECOMMENDATION_MODE_OPTIONS } from '@/utils/musicRecommendations'
 import { MusicAlbumCard } from '@/components/music'
 
+withDefaults(defineProps<{
+  pageTitle?: string
+}>(), {
+  pageTitle: '发现',
+})
+
 const router = useRouter()
 const mode = ref<MusicRecommendationMode>('hot')
 const loading = ref(false)
@@ -161,7 +167,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   <section class="music-explore-view">
     <header class="page-header">
       <PPageHeader
-        title="探索"
+        :title="pageTitle"
         mb="0"
       />
     </header>

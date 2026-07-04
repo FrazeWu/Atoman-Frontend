@@ -2,7 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { computed, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
-import HomeView from '@/views/music/HomeView.vue'
+import ArtistsView from '@/views/music/ArtistsView.vue'
 
 vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div />' } }))
@@ -53,7 +53,7 @@ describe('Music HomeView query sync', () => {
 
   it('uses route query q as initial search keyword', async () => {
     const pinia = createTestingPinia({ createSpy: vi.fn })
-    const wrapper = mount(HomeView, {
+    const wrapper = mount(ArtistsView, {
       global: {
         plugins: [pinia],
       },

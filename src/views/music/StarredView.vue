@@ -4,22 +4,23 @@ import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
+import PlaylistDrawer from '@/components/music/PlaylistDrawer.vue'
 import {
-  createArtistBookmark,
   deleteAlbumBookmark,
   deleteArtistBookmark,
   getMusicAlbum,
   getMusicArtist,
   listAlbumBookmarks,
   listArtistBookmarks,
+  listMusicPlaylists,
   listRecommendedAlbums,
   listRecommendedArtists,
+  type MusicPlaylistSummary,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
   type MusicRecommendationMode,
   type MusicStarredItem,
 } from '@/api/musicV1'
-import { resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import {
@@ -29,32 +30,34 @@ import {
 } from '@/utils/musicRecommendations'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 
-type StarredFilter = 'all' | 'artist' | 'album'
+type StarredFilter = 'album' | 'artist' | 'playlist'
 
-const filterOptions: Array<{ label: string; value: StarredFilter; testId: string }> = [
-  { label: '全部', value: 'all', testId: 'filter-all' },
-  { label: '艺术家', value: 'artist', testId: 'filter-artist' },
-  { label: '专辑', value: 'album', testId: 'filter-album' },
+const filterOptions: Array<{ label: string; value: StarredFilter; testid: string }> = [
+  { label: '收藏专辑', value: 'album', testid: 'filter-album' },
+  { label: '收藏艺人', value: 'artist', testid: 'filter-artist' },
+  { label: '收藏歌单', value: 'playlist', testid: 'filter-playlist' },
 ]
 
-const items = ref<MusicStarredItem[]>([])
-const activeFilter = ref<StarredFilter>('all')
+const artistItems = ref<MusicStarredItem[]>([])
+const albumItems = ref<MusicStarredItem[]>([])
+const playlistItems = ref<MusicPlaylistSummary[]>([])
+const activeFilter = ref<StarredFilter>('album')
 const recommendationMode = ref<MusicRecommendationMode>('hot')
 const loading = ref(false)
 const errorMessage = ref('')
 
-const filteredItems = computed(() => (
-  activeFilter.value === 'all'
-    ? items.value
-    : items.value.filter((item) => item.kind === activeFilter.value)
+const filteredItems = computed(() => {
+  if (activeFilter.value === 'artist') return artistItems.value
+  if (activeFilter.value === 'playlist') return []
+  return albumItems.value
+})
+const isPlaylistFilter = computed(() => activeFilter.value === 'playlist')
+const hasVisibleItems = computed(() => (
+  isPlaylistFilter.value
+    ? playlistItems.value.length > 0
+    : filteredItems.value.length > 0
 ))
-const { isMainShifted, openArtist, openAlbum } = useMusicDrawers()
-
-function artistNamesFromItem(item: MusicStarredItem) {
-  if (item.artist) return item.artist.name
-  if (item.album?.artists?.length) return item.album.artists.map((artist) => artist.name).join(' / ')
-  return ''
-}
+const { isMainShifted, openArtist, openAlbum, openPlaylist } = useMusicDrawers()
 
 function handleItemClick(item: MusicStarredItem) {
   if (item.kind === 'artist' && item.artist?.id) {
@@ -67,10 +70,14 @@ function handleItemClick(item: MusicStarredItem) {
   }
 }
 
+function handlePlaylistClick(playlistId: string) {
+  openPlaylist(playlistId)
+}
+
 async function handleToggleArtistBookmark(artistId: string) {
   try {
     await deleteArtistBookmark(artistId)
-    items.value = items.value.filter(
+    artistItems.value = artistItems.value.filter(
       (item) => !(item.kind === 'artist' && String(item.artist?.id) === artistId)
     )
   } catch (e) {
@@ -81,26 +88,12 @@ async function handleToggleArtistBookmark(artistId: string) {
 async function handleToggleAlbumBookmark(albumId: string) {
   try {
     await deleteAlbumBookmark(albumId)
-    items.value = items.value.filter(
+    albumItems.value = albumItems.value.filter(
       (item) => !(item.kind === 'album' && String(item.album?.id) === albumId)
     )
   } catch (e) {
     console.error('Failed to delete album bookmark:', e)
   }
-}
-
-function albumYearLabel(item: MusicStarredItem) {
-  if (!item.album) return '年份未知'
-  if (typeof item.album.year === 'number' && Number.isFinite(item.album.year) && item.album.year > 0) {
-    return String(item.album.year)
-  }
-  if (item.album.release_date?.trim()) return item.album.release_date.slice(0, 4)
-  return '年份未知'
-}
-
-function artistInitial(name?: string) {
-  const value = name?.trim()
-  return value ? value[0].toUpperCase() : '?'
 }
 
 async function loadStarred() {
@@ -109,14 +102,18 @@ async function loadStarred() {
   try {
     let artistBookmarks: { data: MusicArtistBookmark[] }
     let albumBookmarks: { data: MusicAlbumBookmark[] }
+    let playlistsResponse: { data: MusicPlaylistSummary[] }
     try {
-      ;[artistBookmarks, albumBookmarks] = await Promise.all([
+      ;[artistBookmarks, albumBookmarks, playlistsResponse] = await Promise.all([
         listArtistBookmarks(),
         listAlbumBookmarks(),
+        listMusicPlaylists(),
       ])
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
-        items.value = []
+        artistItems.value = []
+        albumItems.value = []
+        playlistItems.value = []
         return
       }
       throw error
@@ -148,20 +145,19 @@ async function loadStarred() {
       Promise.all(visibleAlbumBookmarks.map((item) => getMusicAlbum(item.id))),
     ])
 
-    items.value = [
-      ...visibleArtistBookmarks.map((item, index: number) => ({
-        id: artistBookmarksById.get(item.id)?.id ?? item.id,
-        kind: 'artist' as const,
-        starred_at: artistBookmarksById.get(item.id)?.created_at ?? '',
-        artist: artists[index],
-      })),
-      ...visibleAlbumBookmarks.map((item, index: number) => ({
-        id: albumBookmarksById.get(item.id)?.id ?? item.id,
-        kind: 'album' as const,
-        starred_at: albumBookmarksById.get(item.id)?.created_at ?? '',
-        album: albums[index],
-      })),
-    ]
+    artistItems.value = visibleArtistBookmarks.map((item, index: number) => ({
+      id: artistBookmarksById.get(item.id)?.id ?? item.id,
+      kind: 'artist' as const,
+      starred_at: artistBookmarksById.get(item.id)?.created_at ?? '',
+      artist: artists[index],
+    }))
+    albumItems.value = visibleAlbumBookmarks.map((item, index: number) => ({
+      id: albumBookmarksById.get(item.id)?.id ?? item.id,
+      kind: 'album' as const,
+      starred_at: albumBookmarksById.get(item.id)?.created_at ?? '',
+      album: albums[index],
+    }))
+    playlistItems.value = playlistsResponse.data
   } catch (error) {
     console.error('Failed to load music starred items:', error)
     errorMessage.value = '收藏加载失败'
@@ -215,12 +211,30 @@ watch(recommendationMode, () => {
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载...</p>
 
-      <div v-else-if="!filteredItems.length" class="empty-paper" role="status">
+      <div v-else-if="!hasVisibleItems" class="empty-paper" role="status">
         <h2>暂无收藏</h2>
       </div>
 
       <div v-else class="results">
+        <template v-if="isPlaylistFilter">
+          <article
+            v-for="playlist in playlistItems"
+            :key="playlist.id"
+            class="result-card result-card--interactive playlist-card"
+            data-testid="starred-playlist-card"
+            @click="handlePlaylistClick(String(playlist.id))"
+          >
+            <p class="a-font-meta result-kind">歌单</p>
+            <div class="playlist-head">
+              <h2>{{ playlist.name }}</h2>
+              <span class="playlist-count">{{ playlist.song_count }} 首</span>
+            </div>
+            <p v-if="playlist.description" class="result-meta">{{ playlist.description }}</p>
+          </article>
+        </template>
+
         <template
+          v-else
           v-for="item in filteredItems"
           :key="`${item.kind}-${item.id}`"
         >
@@ -241,25 +255,12 @@ watch(recommendationMode, () => {
             @click="handleItemClick(item)"
             @toggle-bookmark="handleToggleArtistBookmark(String(item.artist.id))"
           />
-
-          <article
-            v-else
-            class="result-card"
-            @click="handleItemClick(item)"
-          >
-            <p class="a-font-meta result-kind">
-              {{
-                item.kind === 'song'
-                  ? '单曲'
-                  : '歌单'
-              }}
-            </p>
-          </article>
         </template>
       </div>
     </div>
     <ArtistDrawer />
     <AlbumDrawer />
+    <PlaylistDrawer />
   </div>
 </template>
 
@@ -535,6 +536,16 @@ watch(recommendationMode, () => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.playlist-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.playlist-count {
+  color: var(--a-color-muted);
+  white-space: nowrap;
 }
 
 .playlist-songs {

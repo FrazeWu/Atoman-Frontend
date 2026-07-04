@@ -11,32 +11,27 @@ vi.mock('vue-router', () => ({
 const mocks = vi.hoisted(() => ({
   listArtistBookmarks: vi.fn(),
   listAlbumBookmarks: vi.fn(),
-  listSongBookmarks: vi.fn(),
   listMusicPlaylists: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
-  createMusicPlaylist: vi.fn(),
-  getMusicPlaylist: vi.fn(),
   listRecommendedArtists: vi.fn(),
   listRecommendedAlbums: vi.fn(),
-  createArtistBookmark: vi.fn(),
+  deleteAlbumBookmark: vi.fn(),
   deleteArtistBookmark: vi.fn(),
   openArtist: vi.fn(),
   openAlbum: vi.fn(),
+  openPlaylist: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
   listArtistBookmarks: mocks.listArtistBookmarks,
   listAlbumBookmarks: mocks.listAlbumBookmarks,
-  listSongBookmarks: mocks.listSongBookmarks,
   listMusicPlaylists: mocks.listMusicPlaylists,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
-  createMusicPlaylist: mocks.createMusicPlaylist,
-  getMusicPlaylist: mocks.getMusicPlaylist,
   listRecommendedArtists: mocks.listRecommendedArtists,
   listRecommendedAlbums: mocks.listRecommendedAlbums,
-  createArtistBookmark: mocks.createArtistBookmark,
+  deleteAlbumBookmark: mocks.deleteAlbumBookmark,
   deleteArtistBookmark: mocks.deleteArtistBookmark,
 }))
 
@@ -45,6 +40,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: { value: { artistId: null, albumId: null, albumRefreshToken: 0 } },
     openArtist: mocks.openArtist,
     openAlbum: mocks.openAlbum,
+    openPlaylist: mocks.openPlaylist,
     closeArtist: vi.fn(),
     closeAlbum: vi.fn(),
     isArtistShifted: { value: false },
@@ -61,24 +57,26 @@ vi.mock('@/components/music/AlbumDrawer.vue', () => ({
   default: { template: '<div data-testid="album-drawer-stub" />' },
 }))
 
+vi.mock('@/components/music/PlaylistDrawer.vue', () => ({
+  default: { template: '<div data-testid="playlist-drawer-stub" />' },
+}))
+
 import StarredView from '@/views/music/StarredView.vue'
 
 describe('Music StarredView', () => {
   beforeEach(() => {
     mocks.listArtistBookmarks.mockReset()
     mocks.listAlbumBookmarks.mockReset()
-    mocks.listSongBookmarks.mockReset()
     mocks.listMusicPlaylists.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.getMusicAlbum.mockReset()
-    mocks.createMusicPlaylist.mockReset()
-    mocks.getMusicPlaylist.mockReset()
     mocks.listRecommendedArtists.mockReset()
     mocks.listRecommendedAlbums.mockReset()
-    mocks.createArtistBookmark.mockReset()
+    mocks.deleteAlbumBookmark.mockReset()
     mocks.deleteArtistBookmark.mockReset()
     mocks.openArtist.mockReset()
     mocks.openAlbum.mockReset()
+    mocks.openPlaylist.mockReset()
 
     mocks.listArtistBookmarks.mockResolvedValue({
       data: [{ id: 'artist-bookmark-1', artist_id: 'artist-1', created_at: '2026-07-01T00:00:00Z' }],
@@ -91,24 +89,6 @@ describe('Music StarredView', () => {
     })
     mocks.listRecommendedAlbums.mockResolvedValue({
       data: [{ id: 'album-1', target_path: '/music/album/album-1' }],
-    })
-    mocks.listSongBookmarks.mockResolvedValue({
-      data: [{
-        id: 'song-bookmark-1',
-        song_id: 'song-1',
-        created_at: '2026-07-01T00:00:00Z',
-        song: {
-          id: 'song-1',
-          title: 'cellophane',
-          track_number: 1,
-          audio_url: '',
-          cover_url: '',
-          status: 'open',
-          entry_status: 'open',
-          artists: [{ id: 'artist-1', name: 'FKA twigs' }],
-          album: { id: 'album-1', title: 'MAGDALENE' },
-        },
-      }],
     })
     mocks.listMusicPlaylists.mockResolvedValue({
       data: [{
@@ -130,61 +110,49 @@ describe('Music StarredView', () => {
       entry_status: 'open',
       artists: [{ id: 'artist-1', name: 'FKA twigs' }],
     })
-
-    mocks.createMusicPlaylist.mockImplementation(async ({ name }: { name: string }) => ({
-      id: 'playlist-2',
-      name,
-      song_count: 0,
-      songs: [],
-    }))
-
-    mocks.getMusicPlaylist.mockResolvedValue({
-      id: 'playlist-1',
-      name: '夜航歌单',
-      description: '凌晨反复播放',
-      song_count: 2,
-      songs: [
-        {
-          id: 'song-1',
-          title: 'cellophane',
-          track_number: 1,
-          audio_url: '',
-          entry_status: 'open',
-          artists: [{ id: 'artist-1', name: 'FKA twigs' }],
-          album: { id: 'album-1', title: 'MAGDALENE' },
-        },
-        {
-          id: 'song-2',
-          title: 'home with you',
-          track_number: 2,
-          audio_url: '',
-          entry_status: 'open',
-          artists: [{ id: 'artist-1', name: 'FKA twigs' }],
-          album: { id: 'album-1', title: 'MAGDALENE' },
-        },
-      ],
-    })
   })
 
-  it('loads real starred results and filters by kind tabs', async () => {
+  it('shows three starred columns and switches among album artist and playlist results', async () => {
     const wrapper = mount(StarredView)
     await flushPromises()
 
     expect(mocks.listArtistBookmarks).toHaveBeenCalledWith()
     expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith()
-    expect(wrapper.text()).toContain('FKA twigs')
+    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith()
+    expect(wrapper.text()).toContain('收藏专辑')
+    expect(wrapper.text()).toContain('收藏艺人')
+    expect(wrapper.text()).toContain('收藏歌单')
+    expect(wrapper.text()).not.toContain('全部')
     expect(wrapper.text()).toContain('MAGDALENE')
+    expect(wrapper.findAll('[data-testid="starred-album-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="starred-artist-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="starred-playlist-card"]')).toHaveLength(0)
+
+    await wrapper.get('[data-testid="filter-artist"]').trigger('click')
+    expect(wrapper.findAll('[data-testid="starred-album-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="starred-artist-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="starred-playlist-card"]')).toHaveLength(0)
+    expect(wrapper.text()).toContain('FKA twigs')
+    expect(wrapper.text()).not.toContain('MAGDALENE')
+
+    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
+    expect(wrapper.findAll('[data-testid="starred-album-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="starred-artist-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="starred-playlist-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('夜航歌单')
+    expect(wrapper.text()).not.toContain('MAGDALENE')
   })
 
   it('opens artist and album drawers when clicking starred cards', async () => {
     const wrapper = mount(StarredView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="starred-artist-card"]').trigger('click')
     await wrapper.get('[data-testid="starred-album-card"]').trigger('click')
+    await wrapper.get('[data-testid="filter-artist"]').trigger('click')
+    await wrapper.get('[data-testid="starred-artist-card"]').trigger('click')
 
-    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
   })
 
   it('shows empty state instead of error when bookmarks require login', async () => {

@@ -18,6 +18,7 @@ import {
   type MusicDiscoverPlaylistItem,
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 withDefaults(defineProps<{
   pageTitle?: string
@@ -26,6 +27,7 @@ withDefaults(defineProps<{
 })
 
 const router = useRouter()
+const { openPlaylist } = useMusicDrawers()
 const loading = ref(false)
 const errorMessage = ref('')
 const discoverItems = ref<MusicDiscoverItem[]>([])
@@ -119,6 +121,10 @@ async function fetchSearchResults() {
 }
 
 function openDiscoverItem(item: MusicDiscoverItem) {
+  if (item.type === 'playlist') {
+    openPlaylist(String(item.id))
+    return
+  }
   router.push(item.target_path)
 }
 
@@ -257,6 +263,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         <MusicArtistCard
           v-else-if="item.type === 'artist'"
           :artist="artistCardItem(item)"
+          :show-bookmark-button="false"
           :data-testid="discoverItemTestId(item)"
           @click="openDiscoverItem(item)"
         />

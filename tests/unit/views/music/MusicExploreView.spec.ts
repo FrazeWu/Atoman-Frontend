@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   createAlbumBookmark: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
   push: vi.fn(),
+  openPlaylist: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -31,6 +32,12 @@ vi.mock('vue-router', () => ({
   },
 }))
 
+vi.mock('@/composables/useMusicDrawers', () => ({
+  useMusicDrawers: () => ({
+    openPlaylist: mocks.openPlaylist,
+  }),
+}))
+
 describe('Music ExploreView.vue', () => {
   beforeEach(() => {
     mocks.listMusicDiscoverFeed.mockReset()
@@ -40,6 +47,7 @@ describe('Music ExploreView.vue', () => {
     mocks.createAlbumBookmark.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
     mocks.push.mockReset()
+    mocks.openPlaylist.mockReset()
 
     mocks.listMusicDiscoverFeed.mockResolvedValue({
       data: {
@@ -183,5 +191,22 @@ describe('Music ExploreView.vue', () => {
     expect(wrapper.text()).toContain('Recommended Album')
     expect(wrapper.text()).toContain('Ye')
     expect(wrapper.text()).toContain('Late Night Mix')
+  })
+
+  it('opens playlist drawer when clicking a discover playlist card', async () => {
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="discover-playlist-card"]').trigger('click')
+
+    expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
+    expect(mocks.push).not.toHaveBeenCalledWith('/music/playlists/playlist-1')
   })
 })

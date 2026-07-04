@@ -13,6 +13,7 @@ import {
   getMusicArtist,
   listMusicArtists,
   listMusicAlbums,
+  listMusicDiscoverFeed,
   listMusicEdits,
   startMusicAlbumImportMultipart,
   updateMusicArtist,
@@ -180,6 +181,31 @@ describe('music v1 adapter', () => {
 
     expect(musicV1Endpoints.albums()).toBe('https://api.atoman.org/api/v1/music/albums')
     expect(musicV1Endpoints.artist('artist_uuid')).toBe('https://api.atoman.org/api/v1/music/artists/artist_uuid')
+  })
+
+  it('requests the discover feed from GET /api/v1/music/discover and returns data.items', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({
+        data: {
+          items: [
+            { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
+            { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
+          ],
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await listMusicDiscoverFeed()
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/discover', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(result.data.items).toEqual([
+      { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
+      { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
+    ])
   })
 
   it('sends bearer authorization when uploading album archives', async () => {

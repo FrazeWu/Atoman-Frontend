@@ -15,6 +15,7 @@
 
       <!-- Bookmark/Star Button on Top Right -->
       <button
+        v-if="showBookmarkButton"
         type="button"
         class="bookmark-btn"
         :class="{ 'is-bookmarked': isBookmarked }"
@@ -89,8 +90,10 @@ const props = withDefaults(defineProps<{
   isBookmarked?: boolean
   playCount?: number | string
   subscriberCount?: number | string
+  showBookmarkButton?: boolean
 }>(), {
   isBookmarked: false,
+  showBookmarkButton: true,
 })
 
 defineEmits<{

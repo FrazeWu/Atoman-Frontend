@@ -51,11 +51,50 @@ describe('Music ExploreView.vue', () => {
     })
   })
 
+  it('uses 发现 as the default page title', async () => {
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: {
+            props: ['title'],
+            template: '<div data-testid="page-header-title">{{ title }}</div>',
+          },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="page-header-title"]').text()).toBe('发现')
+  })
+
+  it('uses the external page title when provided', async () => {
+    const wrapper = mount(ExploreView, {
+      props: {
+        pageTitle: '专辑',
+      },
+      global: {
+        stubs: {
+          PPageHeader: {
+            props: ['title'],
+            template: '<div data-testid="page-header-title">{{ title }}</div>',
+          },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="page-header-title"]').text()).toBe('专辑')
+  })
+
   it('shows album and artist groups in search dropdown', async () => {
     const wrapper = mount(ExploreView, {
       global: {
         stubs: {
-          PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span><slot /><slot name="action" /></div>' },
           PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
           RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
         },

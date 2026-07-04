@@ -5,6 +5,10 @@ const musicHomeSource = readFileSync(
   path.resolve(process.cwd(), 'src/views/music/HomeView.vue'),
   'utf8',
 )
+const musicExploreSource = readFileSync(
+  path.resolve(process.cwd(), 'src/views/music/ExploreView.vue'),
+  'utf8',
+)
 
 const playerStoreSource = readFileSync(
   path.resolve(process.cwd(), 'src/stores/player.ts'),
@@ -12,9 +16,10 @@ const playerStoreSource = readFileSync(
 )
 
 describe('music loading boundaries', () => {
-  it('does not bootstrap songs from the music home view', () => {
+  it('keeps the music home view as a thin shell and leaves album loading to ExploreView', () => {
     expect(musicHomeSource).not.toContain('player.fetchSongs()')
-    expect(musicHomeSource).toContain('fetchAlbums()')
+    expect(musicHomeSource).toContain('<ExploreView page-title="专辑" />')
+    expect(musicExploreSource).toContain('listRecommendedAlbums')
   })
 
   it('keeps the player audio element lazily created', () => {

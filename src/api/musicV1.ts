@@ -330,6 +330,37 @@ export type MusicRecommendationItem = {
   bookmark_count?: number
 }
 
+export type MusicDiscoverItemType = 'album' | 'artist' | 'playlist'
+
+export type MusicDiscoverAlbumItem = MusicRecommendationItem & {
+  type: 'album'
+  cover_url?: string
+  cover_s3_key?: string
+  release_date?: string
+  year?: number | string
+  artists?: Array<{ id: string; name: string }>
+}
+
+export type MusicDiscoverArtistItem = MusicArtistListItem & {
+  type: 'artist'
+  target_path: string
+}
+
+export type MusicDiscoverPlaylistItem = {
+  type: 'playlist'
+  id: string
+  title: string
+  description?: string
+  cover_url?: string
+  song_count: number
+  target_path: string
+}
+
+export type MusicDiscoverItem =
+  | MusicDiscoverAlbumItem
+  | MusicDiscoverArtistItem
+  | MusicDiscoverPlaylistItem
+
 export type MusicListFilters = {
   q?: string
   artist_id?: string
@@ -418,6 +449,7 @@ export const musicV1Endpoints = {
   albumImportMultipartPartComplete: (importId: string, partNumber: number) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/parts/${partNumber}/complete`,
   albumImportMultipartComplete: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/complete`,
   albumImportCommit: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/commit`,
+  discover: () => `${apiV1Base()}/music/discover`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
   recommendArtists: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/artists?mode=${mode}`,
   edits: () => `${apiV1Base()}/music/edits`,
@@ -926,6 +958,10 @@ export async function deleteAlbumDiscussion(albumId: string, discussionId: strin
 
 export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
   return apiGetEnvelope<MusicRecommendationItem[]>(musicV1Endpoints.recommendAlbums(mode))
+}
+
+export async function listMusicDiscoverFeed() {
+  return apiGetEnvelope<{ items: MusicDiscoverItem[] }>(musicV1Endpoints.discover())
 }
 
 export async function listRecommendedArtists(mode: MusicRecommendationMode) {

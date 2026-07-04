@@ -3,16 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ExploreView from '@/views/music/ExploreView.vue'
 
 const mocks = vi.hoisted(() => ({
-  listRecommendedAlbums: vi.fn(),
+  listMusicDiscoverFeed: vi.fn(),
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
+  listAlbumBookmarks: vi.fn(),
+  createAlbumBookmark: vi.fn(),
+  deleteAlbumBookmark: vi.fn(),
   push: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
-  listRecommendedAlbums: mocks.listRecommendedAlbums,
+  listMusicDiscoverFeed: mocks.listMusicDiscoverFeed,
   listMusicAlbums: mocks.listMusicAlbums,
   listMusicArtists: mocks.listMusicArtists,
+  listAlbumBookmarks: mocks.listAlbumBookmarks,
+  createAlbumBookmark: mocks.createAlbumBookmark,
+  deleteAlbumBookmark: mocks.deleteAlbumBookmark,
 }))
 
 vi.mock('vue-router', () => ({
@@ -27,15 +33,44 @@ vi.mock('vue-router', () => ({
 
 describe('Music ExploreView.vue', () => {
   beforeEach(() => {
-    mocks.listRecommendedAlbums.mockReset()
+    mocks.listMusicDiscoverFeed.mockReset()
     mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
+    mocks.listAlbumBookmarks.mockReset()
+    mocks.createAlbumBookmark.mockReset()
+    mocks.deleteAlbumBookmark.mockReset()
     mocks.push.mockReset()
 
-    mocks.listRecommendedAlbums.mockResolvedValue({
-      data: [
-        { id: 'rec-1', title: 'Recommended Album', summary: 'summary', target_path: '/music?album=rec-1', image_url: '' },
-      ],
+    mocks.listMusicDiscoverFeed.mockResolvedValue({
+      data: {
+        items: [
+          {
+            type: 'album',
+            id: 'album-1',
+            title: 'Recommended Album',
+            summary: 'Album summary',
+            target_path: '/music?album=album-1',
+            image_url: '',
+            artists: [{ id: 'artist-1', name: 'Ye' }],
+          },
+          {
+            type: 'artist',
+            id: 'artist-1',
+            name: 'Ye',
+            legal_name: 'Kanye',
+            target_path: '/music?artist=artist-1',
+          },
+          {
+            type: 'playlist',
+            id: 'playlist-1',
+            title: 'Late Night Mix',
+            description: '夜间循环',
+            cover_url: '',
+            song_count: 18,
+            target_path: '/music/playlists/playlist-1',
+          },
+        ],
+      },
     })
     mocks.listMusicAlbums.mockResolvedValue({
       data: [
@@ -49,6 +84,7 @@ describe('Music ExploreView.vue', () => {
       ],
       meta: { page: 1, page_size: 10, total: 1, has_more: false },
     })
+    mocks.listAlbumBookmarks.mockResolvedValue({ data: [] })
   })
 
   it('uses 发现 as the default page title', async () => {
@@ -124,5 +160,28 @@ describe('Music ExploreView.vue', () => {
     const reopenedButtons = wrapper.findAll('button.search-result')
     await reopenedButtons[1].trigger('mousedown')
     expect(mocks.push).toHaveBeenCalledWith('/music?artist=artist-1')
+  })
+
+  it('renders a mixed discover feed with album, artist, and playlist cards', async () => {
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(mocks.listMusicDiscoverFeed).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[aria-label="发现流列表"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="推荐专辑列表"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Recommended Album')
+    expect(wrapper.text()).toContain('Ye')
+    expect(wrapper.text()).toContain('Late Night Mix')
   })
 })

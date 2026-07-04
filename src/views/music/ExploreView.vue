@@ -9,15 +9,15 @@ import {
   listAlbumBookmarks,
   listMusicAlbums,
   listMusicArtists,
-  listRecommendedAlbums,
+  listMusicDiscoverFeed,
   type MusicAlbumListItem,
   type MusicArtistListItem,
-  type MusicRecommendationItem,
-  type MusicRecommendationMode,
+  type MusicDiscoverAlbumItem,
+  type MusicDiscoverArtistItem,
+  type MusicDiscoverItem,
+  type MusicDiscoverPlaylistItem,
 } from '@/api/musicV1'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import { MUSIC_RECOMMENDATION_MODE_OPTIONS } from '@/utils/musicRecommendations'
-import { MusicAlbumCard } from '@/components/music'
+import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 
 withDefaults(defineProps<{
   pageTitle?: string
@@ -26,10 +26,9 @@ withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const mode = ref<MusicRecommendationMode>('hot')
 const loading = ref(false)
 const errorMessage = ref('')
-const albums = ref<MusicRecommendationItem[]>([])
+const discoverItems = ref<MusicDiscoverItem[]>([])
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
@@ -54,35 +53,34 @@ async function handleToggleAlbumBookmark(albumId: string) {
     if (isCurrentlyBookmarked) {
       await deleteAlbumBookmark(albumId)
       starredAlbumIds.value = starredAlbumIds.value.filter(id => id !== albumId)
-      albums.value = albums.value.map((album) => (
-        String(album.id) === albumId
-          ? { ...album, bookmark_count: Math.max(0, (album.bookmark_count ?? 0) - 1) }
-          : album
-      ))
-    } else {
-      await createAlbumBookmark(albumId)
-      starredAlbumIds.value.push(albumId)
-      albums.value = albums.value.map((album) => (
-        String(album.id) === albumId
-          ? { ...album, bookmark_count: (album.bookmark_count ?? 0) + 1 }
-          : album
-      ))
+      discoverItems.value = discoverItems.value.map((item) => {
+        if (item.type !== 'album' || String(item.id) !== albumId) return item
+        return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
+      })
+      return
     }
+
+    await createAlbumBookmark(albumId)
+    starredAlbumIds.value.push(albumId)
+    discoverItems.value = discoverItems.value.map((item) => {
+      if (item.type !== 'album' || String(item.id) !== albumId) return item
+      return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
+    })
   } catch (e) {
     console.error('Failed to toggle album bookmark:', e)
   }
 }
 
-async function fetchRecommendations() {
+async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [response] = await Promise.all([listRecommendedAlbums(mode.value), fetchAlbumBookmarks()])
-    albums.value = response.data
+    const [response] = await Promise.all([listMusicDiscoverFeed(), fetchAlbumBookmarks()])
+    discoverItems.value = response.data.items ?? []
   } catch (error) {
-    console.error('Failed to fetch music recommendations:', error)
-    errorMessage.value = '推荐专辑加载失败'
-    albums.value = []
+    console.error('Failed to fetch music discover feed:', error)
+    errorMessage.value = '发现内容加载失败'
+    discoverItems.value = []
   } finally {
     loading.value = false
   }
@@ -120,9 +118,26 @@ async function fetchSearchResults() {
   }
 }
 
-
-function openAlbum(item: MusicRecommendationItem) {
+function openDiscoverItem(item: MusicDiscoverItem) {
   router.push(item.target_path)
+}
+
+function discoverItemTestId(item: MusicDiscoverItem) {
+  if (item.type === 'album') return 'discover-album-card'
+  if (item.type === 'artist') return 'discover-artist-card'
+  return 'discover-playlist-card'
+}
+
+function albumCardItem(item: MusicDiscoverAlbumItem) {
+  return item
+}
+
+function artistCardItem(item: MusicDiscoverArtistItem) {
+  return item
+}
+
+function playlistCardItem(item: MusicDiscoverPlaylistItem) {
+  return item
 }
 
 function openAlbumResult(album: MusicAlbumListItem) {
@@ -147,16 +162,12 @@ function handleSearchBlur() {
   }, 120)
 }
 
-watch(mode, () => {
-  fetchRecommendations()
-})
-
 watch(searchQuery, () => {
   fetchSearchResults()
 })
 
 onMounted(() => {
-  fetchRecommendations()
+  fetchDiscoverFeed()
 })
 
 const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
@@ -226,30 +237,37 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           </SearchSurface>
         </div>
       </div>
-      <div class="toolbar-right">
-        <div class="recommendation-tabs" aria-label="推荐模式">
-          <PSegmentedControl
-            v-model="mode"
-            :options="MUSIC_RECOMMENDATION_MODE_OPTIONS"
-          />
-        </div>
-      </div>
     </div>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
-    <p v-else-if="!albums.length" class="state-line">暂无推荐专辑</p>
+    <p v-else-if="!discoverItems.length" class="state-line">暂无发现内容</p>
 
-    <div v-else class="index-grid" aria-label="推荐专辑列表">
-      <MusicAlbumCard
-        v-for="album in albums"
-        :key="album.id"
-        :album="album"
-        :is-bookmarked="starredAlbumIds.includes(String(album.id))"
-        data-testid="recommended-album-card"
-        @click="router.push(album.target_path)"
-        @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
-      />
+    <div v-else class="discover-grid" aria-label="发现流列表">
+      <template v-for="item in discoverItems" :key="`${item.type}-${item.id}`">
+        <MusicAlbumCard
+          v-if="item.type === 'album'"
+          :album="albumCardItem(item)"
+          :is-bookmarked="starredAlbumIds.includes(String(item.id))"
+          :data-testid="discoverItemTestId(item)"
+          @click="openDiscoverItem(item)"
+          @toggle-bookmark="handleToggleAlbumBookmark(String(item.id))"
+        />
+
+        <MusicArtistCard
+          v-else-if="item.type === 'artist'"
+          :artist="artistCardItem(item)"
+          :data-testid="discoverItemTestId(item)"
+          @click="openDiscoverItem(item)"
+        />
+
+        <MusicPlaylistCard
+          v-else
+          :playlist="playlistCardItem(item)"
+          :data-testid="discoverItemTestId(item)"
+          @click="openDiscoverItem(item)"
+        />
+      </template>
     </div>
   </section>
 </template>
@@ -259,9 +277,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.page-header {
 }
 
 .toolbar-row {
@@ -278,48 +293,31 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   flex: 1 1 auto;
 }
 
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-}
-
 .search-shell {
   position: relative;
   max-width: 28rem;
   flex: 0 1 28rem;
-  height: 36px; /* 固定的初始占位高度，与右侧选项卡等高 */
-}
-
-.recommendation-tabs {
-  display: flex;
-  justify-content: flex-end;
+  height: 36px;
 }
 
 .search-shell.is-open {
   z-index: 15;
 }
 
-/* 默认状态下：relative 相对定位，自适应高度及文档流，确保任何时候都不会被下方的元素遮挡 */
 .search-shell :deep(.search-frame) {
   position: relative;
   width: 100%;
-  height: 100%; /* 填满被撑开的 shell (36px) */
+  height: 100%;
   box-sizing: border-box;
 }
 
-/* 激活状态下：切换为 absolute 绝对定位以向右延伸扩展，并赋予高 z-index 浮动在一切内容上方 */
 .search-shell.is-open :deep(.search-frame) {
   position: absolute;
   top: 0;
   left: 0;
   width: 40rem;
-  height: auto !important; /* 允许搜索框高度向下延伸 */
+  height: auto !important;
   z-index: 100;
-}
-
-.search-dropdown {
-  max-width: 34rem;
 }
 
 .search-dropdown__sections {
@@ -369,12 +367,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   color: var(--a-color-muted-soft);
 }
 
-.mode-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
 .state-line {
   margin: 0;
   color: var(--a-color-muted);
@@ -385,19 +377,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   color: #8a2f2f;
 }
 
-.index-grid {
+.discover-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
   gap: 1.25rem;
   margin-top: 1.5rem;
 }
 
-/* Unused card styles removed, handled by MusicAlbumCard.vue */
-
 @media (max-width: 720px) {
   .toolbar-row,
-  .toolbar-left,
-  .toolbar-right {
+  .toolbar-left {
     flex-direction: column;
     align-items: stretch;
   }
@@ -409,11 +398,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
   .search-shell.is-open :deep(.search-frame) {
     width: 100%;
-  }
-
-  .recommendation-tabs {
-    min-width: 0;
-    max-width: 100%;
   }
 }
 </style>

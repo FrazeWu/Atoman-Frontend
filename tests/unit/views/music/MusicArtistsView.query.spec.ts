@@ -1,5 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
 import ArtistsView from '@/views/music/ArtistsView.vue'
@@ -41,7 +41,7 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
-describe('Music HomeView query sync', () => {
+describe('Music ArtistsView query sync', () => {
   beforeEach(() => {
     mocks.routeQuery = { q: 'blur' }
     mocks.listMusicArtists.mockReset()

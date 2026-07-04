@@ -22,6 +22,7 @@ import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import {
   filterArtistRecommendationsByBookmarks,
   MUSIC_RECOMMENDATION_MODE_OPTIONS,
@@ -48,11 +49,16 @@ const errorMessage = ref('')
 const showSearchDropdown = ref(false)
 let activeRequestId = 0
 let activeSearchRequestId = 0
-let lastRouteArtist: string | null = null
-let lastRouteAlbum: string | null = null
-let lastRouteEditor: string | null = null
 
 const starredArtistIds = ref<string[]>([])
+const { applyRouteSelection } = useMusicRouteSelection({
+  openAlbum,
+  closeAlbum,
+  openArtist,
+  closeArtist,
+  openMusicEditor,
+  closeMusicEditor,
+})
 
 async function fetchBookmarks() {
   try {
@@ -197,69 +203,13 @@ function openArtistCard(artistId: string) {
   searchQuery.value = ''
 }
 
-function applyRouteSelection() {
-  const artist = route.query.artist
-  const album = route.query.album
-  const editor = route.query.editor
-  const name = route.query.name
-  if (typeof artist === 'string' && artist) {
-    openArtist(artist)
-    lastRouteArtist = artist
-  } else if (lastRouteArtist !== null) {
-    closeArtist()
-    lastRouteArtist = null
-  }
-
-  if (typeof album === 'string' && album) {
-    openAlbum(album)
-    lastRouteAlbum = album
-  } else if (lastRouteAlbum !== null) {
-    closeAlbum()
-    lastRouteAlbum = null
-  }
-
-  const nextEditorKey = [
-    typeof editor === 'string' ? editor : '',
-    typeof artist === 'string' ? artist : '',
-    typeof album === 'string' ? album : '',
-    typeof name === 'string' ? name : '',
-  ].join('|')
-
-  if (typeof editor === 'string' && nextEditorKey !== lastRouteEditor) {
-    if (editor === 'artist-create') {
-      openMusicEditor({
-        entity: 'artist',
-        mode: 'create',
-        seed: typeof name === 'string' && name.trim() ? { name: name.trim() } : undefined,
-      })
-      lastRouteEditor = nextEditorKey
-      return
-    }
-
-    if (editor === 'album-edit' && typeof album === 'string' && album) {
-      openMusicEditor({
-        entity: 'album',
-        mode: 'edit',
-        id: album,
-      })
-      lastRouteEditor = nextEditorKey
-      return
-    }
-  }
-
-  if (typeof editor !== 'string' && lastRouteEditor !== null) {
-    closeMusicEditor()
-    lastRouteEditor = null
-  }
-}
-
 onMounted(() => {
   if (typeof route.query.q === 'string' && route.query.q.trim()) {
     searchQuery.value = route.query.q.trim()
   }
   fetchArtists()
   fetchSearchResults()
-  applyRouteSelection()
+  applyRouteSelection(route.query)
 })
 
 watch(searchQuery, () => {
@@ -274,7 +224,7 @@ watch(
     if (routeQuery !== searchQuery.value) {
       searchQuery.value = routeQuery
     }
-    applyRouteSelection()
+    applyRouteSelection(route.query)
   },
 )
 

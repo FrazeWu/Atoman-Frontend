@@ -104,7 +104,7 @@
           />
 
           <TurnstileWidget
-            v-if="turnstileEnabled"
+            v-if="turnstileVisible"
             :key="turnstileWidgetKey"
             ref="turnstileRef"
             :site-key="turnstileSiteKey"
@@ -151,7 +151,7 @@
           />
 
           <TurnstileWidget
-            v-if="turnstileEnabled"
+            v-if="turnstileVisible"
             :key="turnstileWidgetKey"
             ref="turnstileRef"
             :site-key="turnstileSiteKey"
@@ -204,7 +204,11 @@ import { useApi } from '@/composables/useApi'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
-import { buildRegisterTurnstileKey, shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
+import {
+  buildRegisterTurnstileKey,
+  shouldRenderTurnstileForRegisterStep,
+  shouldRequireTurnstileConfig,
+} from '@/views/auth/turnstileConfig'
 
 const email = ref('')
 const password = ref('')
@@ -231,6 +235,12 @@ const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 const turnstileEnabled = computed(() => isRegister.value && import.meta.env.PROD && !!turnstileSiteKey)
 const turnstileConfigMissing = computed(() => shouldRequireTurnstileConfig(isRegister.value, import.meta.env.PROD, turnstileSiteKey))
 const turnstileWidgetKey = computed(() => buildRegisterTurnstileKey(currentStep.value))
+const turnstileVisible = computed(() => shouldRenderTurnstileForRegisterStep(
+  isRegister.value,
+  import.meta.env.PROD,
+  turnstileSiteKey,
+  currentStep.value,
+))
 const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
 
 const safeRedirectPath = (redirect: unknown) => {

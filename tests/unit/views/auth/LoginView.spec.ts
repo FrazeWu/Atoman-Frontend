@@ -5,7 +5,11 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import LoginView from '@/views/auth/LoginView.vue'
-import { buildRegisterTurnstileKey, shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
+import {
+  buildRegisterTurnstileKey,
+  shouldRenderTurnstileForRegisterStep,
+  shouldRequireTurnstileConfig,
+} from '@/views/auth/turnstileConfig'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
@@ -77,5 +81,13 @@ describe('LoginView redirect', () => {
 
     expect(source).toMatch(/REGISTER VIEW - STEP 1[\s\S]*<TurnstileWidget/)
     expect(source).toMatch(/REGISTER VIEW - STEP 2[\s\S]*<TurnstileWidget/)
+  })
+
+  it('renders turnstile in both register steps for production', () => {
+    expect(shouldRenderTurnstileForRegisterStep(true, true, '0x4AAAAA', 1)).toBe(true)
+    expect(shouldRenderTurnstileForRegisterStep(true, true, '0x4AAAAA', 2)).toBe(true)
+    expect(shouldRenderTurnstileForRegisterStep(true, false, '0x4AAAAA', 1)).toBe(false)
+    expect(shouldRenderTurnstileForRegisterStep(false, true, '0x4AAAAA', 1)).toBe(false)
+    expect(shouldRenderTurnstileForRegisterStep(true, true, '', 1)).toBe(false)
   })
 })

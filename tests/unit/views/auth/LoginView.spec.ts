@@ -7,9 +7,13 @@ import path from 'node:path'
 import LoginView from '@/views/auth/LoginView.vue'
 import {
   buildRegisterTurnstileKey,
+  isRetryableTurnstileError,
+  shouldDisplayTurnstileError,
+  resolveTurnstileErrorMessage,
   shouldRenderTurnstileForRegisterStep,
   shouldRequireTurnstileConfig,
 } from '@/views/auth/turnstileConfig'
+import { validateRegisterUsername } from '@/views/auth/registerValidation'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
@@ -89,5 +93,35 @@ describe('LoginView redirect', () => {
     expect(shouldRenderTurnstileForRegisterStep(true, false, '0x4AAAAA', 1)).toBe(false)
     expect(shouldRenderTurnstileForRegisterStep(false, true, '0x4AAAAA', 1)).toBe(false)
     expect(shouldRenderTurnstileForRegisterStep(true, true, '', 1)).toBe(false)
+  })
+
+  it('treats transient turnstile failures as retryable', () => {
+    expect(isRetryableTurnstileError(200500)).toBe(true)
+    expect(isRetryableTurnstileError(300030)).toBe(true)
+    expect(isRetryableTurnstileError(600010)).toBe(true)
+    expect(isRetryableTurnstileError(110200)).toBe(false)
+  })
+
+  it('maps fatal turnstile codes to user-facing messages', () => {
+    expect(resolveTurnstileErrorMessage(110200)).toBe('当前域名尚未完成验证配置，请稍后再试')
+    expect(resolveTurnstileErrorMessage(110100)).toBe('当前无法完成验证，请稍后再试')
+    expect(resolveTurnstileErrorMessage(400070)).toBe('当前无法完成验证，请稍后再试')
+    expect(resolveTurnstileErrorMessage()).toBe('')
+  })
+
+  it('only surfaces known fatal turnstile errors to users', () => {
+    expect(shouldDisplayTurnstileError(110200)).toBe(true)
+    expect(shouldDisplayTurnstileError(110100)).toBe(true)
+    expect(shouldDisplayTurnstileError(400070)).toBe(true)
+    expect(shouldDisplayTurnstileError(200500)).toBe(false)
+    expect(shouldDisplayTurnstileError()).toBe(false)
+  })
+
+  it('validates register usernames against site handle rules', () => {
+    expect(validateRegisterUsername('alice-1')).toBeNull()
+    expect(validateRegisterUsername('Alice')).toBe('用户名只能使用小写字母、数字或连字符')
+    expect(validateRegisterUsername('a')).toBe('用户名长度需要在 2 到 30 个字符之间')
+    expect(validateRegisterUsername('music')).toBe('该用户名暂时不可用')
+    expect(validateRegisterUsername('-alice')).toBe('用户名只能使用小写字母、数字或连字符')
   })
 })

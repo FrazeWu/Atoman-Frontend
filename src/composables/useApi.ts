@@ -107,6 +107,8 @@ export function useApi() {
       register: `${apiUrl}/auth/register`,
       login: `${apiUrl}/auth/login`,
       session: `${apiUrl}/auth/session`,
+      checkEmail: `${apiUrl}/auth/check-email`,
+      checkUsername: `${apiUrl}/auth/check-username`,
       sendVerification: `${apiUrl}/auth/send-verification`,
       verifyEmail: `${apiUrl}/auth/verify-email`,
       onboardingComplete: `${apiUrl}/auth/onboarding/complete`,

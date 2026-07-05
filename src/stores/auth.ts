@@ -129,6 +129,15 @@ function authErrorMessage(payload: AuthApiError, fallback: string) {
   if (rawMessage === 'Turnstile is not configured') {
     return '注册服务暂未完成验证配置，请稍后重试'
   }
+  if (rawMessage === 'Invalid site handle') {
+    return '用户名只能使用小写字母、数字或连字符'
+  }
+  if (rawMessage === 'Site handle is reserved') {
+    return '该用户名暂时不可用'
+  }
+  if (rawMessage === 'Site handle is already in use') {
+    return '该用户名已被使用'
+  }
 
   if (payload.error) return payload.error
   if (payload.message) return payload.message

@@ -86,13 +86,17 @@
               <button
                 type="button"
                 class="auth-code-btn-inline"
-                :disabled="countdown > 0 || sendingCode"
+                :disabled="countdown > 0 || !canSendVerification"
                 @click="sendVerificationCode"
               >
-                {{ sendingCode ? '发送中...' : (countdown > 0 ? `${countdown}s` : '获取验证码') }}
+                {{ emailChecking ? '检查中...' : countdown > 0 ? `${countdown}s` : '获取验证码' }}
               </button>
             </div>
             <div v-if="fieldErrors.email" class="p-field-error">{{ fieldErrors.email }}</div>
+            <div v-else-if="emailHint" class="auth-inline-tip">{{ emailHint }}</div>
+            <div v-if="emailAvailability.reason === 'registered'" class="auth-inline-tip">
+              该邮箱已注册，<RouterLink to="/login" class="toggle-link">去登录</RouterLink>
+            </div>
           </div>
 
           <PInput
@@ -108,8 +112,8 @@
             :key="turnstileWidgetKey"
             ref="turnstileRef"
             :site-key="turnstileSiteKey"
-            @verified="turnstileToken = $event"
-            @expired="turnstileToken = ''"
+            @verified="handleTurnstileVerified"
+            @expired="handleTurnstileExpired"
             @error="handleTurnstileError"
           />
 
@@ -132,6 +136,7 @@
             label="用户名"
             placeholder="输入用户名"
             :error="fieldErrors.username"
+            :hint="usernameHint"
           />
 
           <PInput
@@ -155,8 +160,8 @@
             :key="turnstileWidgetKey"
             ref="turnstileRef"
             :site-key="turnstileSiteKey"
-            @verified="turnstileToken = $event"
-            @expired="turnstileToken = ''"
+            @verified="handleTurnstileVerified"
+            @expired="handleTurnstileExpired"
             @error="handleTurnstileError"
           />
 
@@ -175,6 +180,7 @@
               variant="primary"
               size="lg"
               class="auth-submit-btn"
+              :disabled="!canSubmitRegister"
               :loading="loading"
               loading-text="请稍候..."
           >
@@ -204,8 +210,12 @@ import { useApi } from '@/composables/useApi'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
+import { validateRegisterUsername } from '@/views/auth/registerValidation'
 import {
   buildRegisterTurnstileKey,
+  isRetryableTurnstileError,
+  resolveTurnstileErrorMessage,
+  shouldDisplayTurnstileError,
   shouldRenderTurnstileForRegisterStep,
   shouldRequireTurnstileConfig,
 } from '@/views/auth/turnstileConfig'
@@ -229,6 +239,16 @@ const authStore = useAuthStore()
 const api = useApi()
 
 const currentStep = ref(1)
+const emailCheckSeq = ref(0)
+const usernameCheckSeq = ref(0)
+
+type AvailabilityState = {
+  status: 'idle' | 'checking' | 'available' | 'unavailable'
+  reason: '' | 'registered' | 'invalid' | 'reserved' | 'taken'
+}
+
+const emailAvailability = ref<AvailabilityState>({ status: 'idle', reason: '' })
+const usernameAvailability = ref<AvailabilityState>({ status: 'idle', reason: '' })
 
 const isRegister = computed(() => route.path === '/register')
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
@@ -241,7 +261,36 @@ const turnstileVisible = computed(() => shouldRenderTurnstileForRegisterStep(
   turnstileSiteKey,
   currentStep.value,
 ))
+const turnstileWidgetKey = computed(() => buildRegisterTurnstileKey(currentStep.value))
 const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
+const emailChecking = computed(() => emailAvailability.value.status === 'checking')
+const usernameChecking = computed(() => usernameAvailability.value.status === 'checking')
+const emailHint = computed(() => {
+  if (fieldErrors.value.email) return ''
+  if (emailAvailability.value.status === 'checking') return '正在检查邮箱是否可用'
+  if (emailAvailability.value.status === 'available') return '该邮箱可以注册'
+  return ''
+})
+const usernameHint = computed(() => {
+  if (fieldErrors.value.username) return ''
+  if (usernameAvailability.value.status === 'checking') return '正在检查用户名是否可用'
+  if (usernameAvailability.value.status === 'available') return '该用户名可以使用'
+  if (usernameAvailability.value.reason === 'taken') return '该用户名已被使用'
+  if (usernameAvailability.value.reason === 'reserved') return '该用户名暂时不可用'
+  return ''
+})
+const canSendVerification = computed(() => (
+  emailAvailability.value.status === 'available'
+  && !emailChecking.value
+))
+const canSubmitRegister = computed(() => (
+  !loading.value
+  && !usernameChecking.value
+  && usernameAvailability.value.status === 'available'
+  && password.value.length >= 6
+  && password.value === passwordConfirm.value
+  && !!verificationCode.value
+))
 
 const safeRedirectPath = (redirect: unknown) => {
   if (typeof redirect !== 'string') return '/'
@@ -267,9 +316,26 @@ const resetTurnstile = () => {
   turnstileRef.value?.reset()
 }
 
-const handleTurnstileError = () => {
+const handleTurnstileVerified = (token: string) => {
+  turnstileToken.value = token
+  if (errorMsg.value.includes('人机验证')) {
+    errorMsg.value = ''
+  }
+}
+
+const handleTurnstileExpired = () => {
   turnstileToken.value = ''
-  errorMsg.value = '人机验证加载失败，请刷新后重试'
+}
+
+const handleTurnstileError = (errorCode?: string) => {
+  turnstileToken.value = ''
+  if (isRetryableTurnstileError(errorCode)) {
+    return
+  }
+  if (!shouldDisplayTurnstileError(errorCode)) {
+    return
+  }
+  errorMsg.value = resolveTurnstileErrorMessage(errorCode)
 }
 
 const startCountdown = () => {
@@ -283,10 +349,95 @@ const startCountdown = () => {
   }, 1000)
 }
 
+const normalizeEmail = (value: string) => value.trim().toLowerCase()
+
+const checkEmailAvailability = async () => {
+  const normalizedEmail = normalizeEmail(email.value)
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    emailAvailability.value = { status: 'idle', reason: '' }
+    return false
+  }
+
+  const seq = ++emailCheckSeq.value
+  emailAvailability.value = { status: 'checking', reason: '' }
+  try {
+    const response = await fetch(api.auth.checkEmail, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail }),
+    })
+    const data = await response.json()
+    if (seq !== emailCheckSeq.value) return false
+    if (!response.ok) {
+      emailAvailability.value = { status: 'idle', reason: '' }
+      return false
+    }
+    emailAvailability.value = data.available
+      ? { status: 'available', reason: '' }
+      : { status: 'unavailable', reason: data.reason ?? '' }
+    return data.available === true
+  } catch {
+    if (seq === emailCheckSeq.value) {
+      emailAvailability.value = { status: 'idle', reason: '' }
+    }
+    return false
+  }
+}
+
+const mapUsernameReason = (reason: AvailabilityState['reason']) => {
+  if (reason === 'invalid') return '用户名只能使用小写字母、数字或连字符'
+  if (reason === 'reserved') return '该用户名暂时不可用'
+  if (reason === 'taken') return '该用户名已被使用'
+  return '用户名不可用'
+}
+
+const checkUsernameAvailability = async () => {
+  const localError = validateRegisterUsername(username.value)
+  if (localError) {
+    usernameAvailability.value = {
+      status: 'unavailable',
+      reason: localError === '该用户名暂时不可用' ? 'reserved' : 'invalid',
+    }
+    return false
+  }
+
+  const normalizedUsername = username.value.trim()
+  const seq = ++usernameCheckSeq.value
+  usernameAvailability.value = { status: 'checking', reason: '' }
+  try {
+    const response = await fetch(api.auth.checkUsername, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: normalizedUsername }),
+    })
+    const data = await response.json()
+    if (seq !== usernameCheckSeq.value) return false
+    if (!response.ok) {
+      usernameAvailability.value = { status: 'idle', reason: '' }
+      return false
+    }
+    usernameAvailability.value = data.available
+      ? { status: 'available', reason: '' }
+      : { status: 'unavailable', reason: data.reason ?? '' }
+    return data.available === true
+  } catch {
+    if (seq === usernameCheckSeq.value) {
+      usernameAvailability.value = { status: 'idle', reason: '' }
+    }
+    return false
+  }
+}
+
 const sendVerificationCode = async () => {
   fieldErrors.value = {}
   if (!email.value || !email.value.includes('@')) {
     fieldErrors.value.email = '请输入有效的邮箱地址'
+    return
+  }
+  if (!(await checkEmailAvailability())) {
+    if (emailAvailability.value.reason === 'registered') {
+      fieldErrors.value.email = '该邮箱已注册'
+    }
     return
   }
   if (!requireTurnstileToken()) return
@@ -334,6 +485,10 @@ const goNextStep = () => {
     fieldErrors.value.code = '请输入 6 位验证码'
     return
   }
+  if (emailAvailability.value.status !== 'available') {
+    fieldErrors.value.email = '请先确认邮箱可用'
+    return
+  }
   currentStep.value = 2
 }
 
@@ -351,6 +506,17 @@ const handleSubmit = async () => {
       }
       if (!username.value) {
         fieldErrors.value.username = '请输入用户名'
+        loading.value = false
+        return
+      }
+      const usernameError = validateRegisterUsername(username.value)
+      if (usernameError) {
+        fieldErrors.value.username = usernameError
+        loading.value = false
+        return
+      }
+      if (!(await checkUsernameAvailability())) {
+        fieldErrors.value.username = mapUsernameReason(usernameAvailability.value.reason)
         loading.value = false
         return
       }
@@ -403,6 +569,7 @@ watch(username, () => {
   if (fieldErrors.value.username) {
     delete fieldErrors.value.username
   }
+  usernameAvailability.value = { status: 'idle', reason: '' }
   clearGeneralError()
 })
 
@@ -410,6 +577,7 @@ watch(email, () => {
   if (fieldErrors.value.email) {
     delete fieldErrors.value.email
   }
+  emailAvailability.value = { status: 'idle', reason: '' }
   clearGeneralError()
 })
 
@@ -444,6 +612,33 @@ watch(() => route.path, () => {
   verificationCode.value = ''
   password.value = ''
   passwordConfirm.value = ''
+  emailAvailability.value = { status: 'idle', reason: '' }
+  usernameAvailability.value = { status: 'idle', reason: '' }
+})
+
+let emailCheckTimer: ReturnType<typeof setTimeout> | null = null
+watch(email, (value) => {
+  if (emailCheckTimer) clearTimeout(emailCheckTimer)
+  const normalizedEmail = normalizeEmail(value)
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    emailAvailability.value = { status: 'idle', reason: '' }
+    return
+  }
+  emailCheckTimer = setTimeout(() => {
+    void checkEmailAvailability()
+  }, 400)
+})
+
+let usernameCheckTimer: ReturnType<typeof setTimeout> | null = null
+watch(username, (value) => {
+  if (usernameCheckTimer) clearTimeout(usernameCheckTimer)
+  if (!value.trim()) {
+    usernameAvailability.value = { status: 'idle', reason: '' }
+    return
+  }
+  usernameCheckTimer = setTimeout(() => {
+    void checkUsernameAvailability()
+  }, 400)
 })
 </script>
 
@@ -520,6 +715,12 @@ watch(() => route.path, () => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.auth-inline-tip {
+  margin-top: 0.45rem;
+  color: var(--a-color-ink-soft);
+  font-size: 0.75rem;
 }
 
 .auth-steps-indicator {

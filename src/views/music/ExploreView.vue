@@ -135,15 +135,26 @@ function discoverItemTestId(item: MusicDiscoverItem) {
 }
 
 function albumCardItem(item: MusicDiscoverAlbumItem) {
-  return item
+  return {
+    ...item,
+    cover_url: item.cover_url || item.image_url,
+  }
 }
 
 function artistCardItem(item: MusicDiscoverArtistItem) {
-  return item
+  return {
+    ...item,
+    name: item.name || item.title,
+    bio: item.bio || item.summary,
+  }
 }
 
 function playlistCardItem(item: MusicDiscoverPlaylistItem) {
-  return item
+  return {
+    ...item,
+    description: item.description || item.summary,
+    cover_url: item.cover_url || item.image_url,
+  }
 }
 
 function openAlbumResult(album: MusicAlbumListItem) {

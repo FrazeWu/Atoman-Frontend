@@ -343,6 +343,8 @@ export type MusicDiscoverAlbumItem = MusicRecommendationItem & {
 
 export type MusicDiscoverArtistItem = MusicArtistListItem & {
   type: 'artist'
+  title?: string
+  summary?: string
   target_path: string
 }
 
@@ -351,7 +353,9 @@ export type MusicDiscoverPlaylistItem = {
   id: string
   title: string
   description?: string
+  summary?: string
   cover_url?: string
+  image_url?: string
   song_count: number
   target_path: string
 }

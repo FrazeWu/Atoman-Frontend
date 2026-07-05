@@ -7,8 +7,11 @@ const mocks = vi.hoisted(() => ({
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
   listAlbumBookmarks: vi.fn(),
+  listArtistBookmarks: vi.fn(),
   createAlbumBookmark: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
+  createArtistBookmark: vi.fn(),
+  deleteArtistBookmark: vi.fn(),
   push: vi.fn(),
   openPlaylist: vi.fn(),
 }))
@@ -18,8 +21,11 @@ vi.mock('@/api/musicV1', () => ({
   listMusicAlbums: mocks.listMusicAlbums,
   listMusicArtists: mocks.listMusicArtists,
   listAlbumBookmarks: mocks.listAlbumBookmarks,
+  listArtistBookmarks: mocks.listArtistBookmarks,
   createAlbumBookmark: mocks.createAlbumBookmark,
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
+  createArtistBookmark: mocks.createArtistBookmark,
+  deleteArtistBookmark: mocks.deleteArtistBookmark,
 }))
 
 vi.mock('vue-router', () => ({
@@ -44,8 +50,11 @@ describe('Music ExploreView.vue', () => {
     mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.listAlbumBookmarks.mockReset()
+    mocks.listArtistBookmarks.mockReset()
     mocks.createAlbumBookmark.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
+    mocks.createArtistBookmark.mockReset()
+    mocks.deleteArtistBookmark.mockReset()
     mocks.push.mockReset()
     mocks.openPlaylist.mockReset()
 
@@ -91,6 +100,7 @@ describe('Music ExploreView.vue', () => {
       meta: { page: 1, page_size: 10, total: 1, has_more: false },
     })
     mocks.listAlbumBookmarks.mockResolvedValue({ data: [] })
+    mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
   })
 
   it('uses 发现 as the default page title', async () => {
@@ -206,5 +216,30 @@ describe('Music ExploreView.vue', () => {
 
     expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
     expect(mocks.push).not.toHaveBeenCalledWith('/music/playlists/playlist-1')
+  })
+
+  it('toggles artist bookmark from the discover feed', async () => {
+    mocks.createArtistBookmark.mockResolvedValue({
+      id: 'artist-bookmark-1',
+      artist_id: 'artist-1',
+      created_at: '2026-07-05T00:00:00Z',
+    })
+
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const artistCard = wrapper.find('[data-testid="discover-artist-card"]')
+    expect(artistCard.find('button[aria-label="收藏"]').exists()).toBe(true)
+
+    await artistCard.find('button[aria-label="收藏"]').trigger('click')
+
+    expect(mocks.createArtistBookmark).toHaveBeenCalledWith('artist-1')
   })
 })

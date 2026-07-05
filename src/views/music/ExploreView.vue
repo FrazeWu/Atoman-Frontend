@@ -5,8 +5,11 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import {
   createAlbumBookmark,
+  createArtistBookmark,
   deleteAlbumBookmark,
+  deleteArtistBookmark,
   listAlbumBookmarks,
+  listArtistBookmarks,
   listMusicAlbums,
   listMusicArtists,
   listMusicDiscoverFeed,
@@ -39,6 +42,7 @@ const searchArtists = ref<MusicArtistListItem[]>([])
 let activeSearchRequestId = 0
 
 const starredAlbumIds = ref<string[]>([])
+const starredArtistIds = ref<string[]>([])
 
 async function fetchAlbumBookmarks() {
   try {
@@ -46,6 +50,15 @@ async function fetchAlbumBookmarks() {
     starredAlbumIds.value = response.data.map((b: any) => String(b.album_id))
   } catch (e) {
     console.error('Failed to fetch album bookmarks:', e)
+  }
+}
+
+async function fetchArtistBookmarks() {
+  try {
+    const response = await listArtistBookmarks()
+    starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
+  } catch (e) {
+    console.error('Failed to fetch artist bookmarks:', e)
   }
 }
 
@@ -73,11 +86,39 @@ async function handleToggleAlbumBookmark(albumId: string) {
   }
 }
 
+async function handleToggleArtistBookmark(artistId: string) {
+  const isCurrentlyBookmarked = starredArtistIds.value.includes(artistId)
+  try {
+    if (isCurrentlyBookmarked) {
+      await deleteArtistBookmark(artistId)
+      starredArtistIds.value = starredArtistIds.value.filter(id => id !== artistId)
+      discoverItems.value = discoverItems.value.map((item) => {
+        if (item.type !== 'artist' || String(item.id) !== artistId) return item
+        return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
+      })
+      return
+    }
+
+    await createArtistBookmark(artistId)
+    starredArtistIds.value.push(artistId)
+    discoverItems.value = discoverItems.value.map((item) => {
+      if (item.type !== 'artist' || String(item.id) !== artistId) return item
+      return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
+    })
+  } catch (e) {
+    console.error('Failed to toggle artist bookmark:', e)
+  }
+}
+
 async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [response] = await Promise.all([listMusicDiscoverFeed(), fetchAlbumBookmarks()])
+    const [response] = await Promise.all([
+      listMusicDiscoverFeed(),
+      fetchAlbumBookmarks(),
+      fetchArtistBookmarks(),
+    ])
     discoverItems.value = response.data ?? []
   } catch (error) {
     console.error('Failed to fetch music discover feed:', error)
@@ -274,9 +315,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         <MusicArtistCard
           v-else-if="item.type === 'artist'"
           :artist="artistCardItem(item)"
-          :show-bookmark-button="false"
+          :is-bookmarked="starredArtistIds.includes(String(item.id))"
           :data-testid="discoverItemTestId(item)"
           @click="openDiscoverItem(item)"
+          @toggle-bookmark="handleToggleArtistBookmark(String(item.id))"
         />
 
         <MusicPlaylistCard

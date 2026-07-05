@@ -78,7 +78,7 @@ async function fetchDiscoverFeed() {
   errorMessage.value = ''
   try {
     const [response] = await Promise.all([listMusicDiscoverFeed(), fetchAlbumBookmarks()])
-    discoverItems.value = response.data.items ?? []
+    discoverItems.value = response.data ?? []
   } catch (error) {
     console.error('Failed to fetch music discover feed:', error)
     errorMessage.value = '发现内容加载失败'

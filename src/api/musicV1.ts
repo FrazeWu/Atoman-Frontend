@@ -961,7 +961,7 @@ export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
 }
 
 export async function listMusicDiscoverFeed() {
-  return apiGetEnvelope<{ items: MusicDiscoverItem[] }>(musicV1Endpoints.discover())
+  return apiGetEnvelope<MusicDiscoverItem[]>(musicV1Endpoints.discover())
 }
 
 export async function listRecommendedArtists(mode: MusicRecommendationMode) {

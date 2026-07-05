@@ -50,35 +50,33 @@ describe('Music ExploreView.vue', () => {
     mocks.openPlaylist.mockReset()
 
     mocks.listMusicDiscoverFeed.mockResolvedValue({
-      data: {
-        items: [
-          {
-            type: 'album',
-            id: 'album-1',
-            title: 'Recommended Album',
-            summary: 'Album summary',
-            target_path: '/music?album=album-1',
-            image_url: '',
-            artists: [{ id: 'artist-1', name: 'Ye' }],
-          },
-          {
-            type: 'artist',
-            id: 'artist-1',
-            name: 'Ye',
-            legal_name: 'Kanye',
-            target_path: '/music?artist=artist-1',
-          },
-          {
-            type: 'playlist',
-            id: 'playlist-1',
-            title: 'Late Night Mix',
-            description: '夜间循环',
-            cover_url: '',
-            song_count: 18,
-            target_path: '/music/playlists/playlist-1',
-          },
-        ],
-      },
+      data: [
+        {
+          type: 'album',
+          id: 'album-1',
+          title: 'Recommended Album',
+          summary: 'Album summary',
+          target_path: '/music?album=album-1',
+          image_url: '',
+          artists: [{ id: 'artist-1', name: 'Ye' }],
+        },
+        {
+          type: 'artist',
+          id: 'artist-1',
+          name: 'Ye',
+          legal_name: 'Kanye',
+          target_path: '/music?artist=artist-1',
+        },
+        {
+          type: 'playlist',
+          id: 'playlist-1',
+          title: 'Late Night Mix',
+          description: '夜间循环',
+          cover_url: '',
+          song_count: 18,
+          target_path: '/music/playlists/playlist-1',
+        },
+      ],
     })
     mocks.listMusicAlbums.mockResolvedValue({
       data: [

@@ -183,15 +183,14 @@ describe('music v1 adapter', () => {
     expect(musicV1Endpoints.artist('artist_uuid')).toBe('https://api.atoman.org/api/v1/music/artists/artist_uuid')
   })
 
-  it('requests the discover feed from GET /api/v1/music/discover and returns data.items', async () => {
+  it('requests the discover feed from GET /api/v1/music/discover and returns the list payload', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({
-        data: {
-          items: [
-            { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
-            { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
-          ],
-        },
+        data: [
+          { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
+          { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
+        ],
+        meta: { page: 1, page_size: 20, total: 2, has_more: false },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
@@ -202,7 +201,7 @@ describe('music v1 adapter', () => {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
-    expect(result.data.items).toEqual([
+    expect(result.data).toEqual([
       { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
       { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
     ])

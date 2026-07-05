@@ -18,7 +18,7 @@ const playerStoreSource = readFileSync(
 describe('music loading boundaries', () => {
   it('keeps the music home view as a thin shell and leaves album loading to ExploreView', () => {
     expect(musicHomeSource).not.toContain('player.fetchSongs()')
-    expect(musicHomeSource).toContain('<ExploreView page-title="专辑" />')
+    expect(musicHomeSource).toContain('<ExploreView page-title="专辑" content-mode="albums" />')
     expect(musicExploreSource).toContain('listMusicDiscoverFeed')
   })
 

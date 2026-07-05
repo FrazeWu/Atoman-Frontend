@@ -5,9 +5,14 @@
         <div class="logo-box">
           <div class="logo-inner"></div>
         </div>
-        <span class="logo-copy">
-          <span class="logo-text">ATOMAN</span>
-          <span v-if="appVersion" class="logo-version">{{ appVersion }}</span>
+        <span class="logo-block">
+          <span class="logo-copy">
+            <span class="logo-text">ATOMAN</span>
+            <span class="logo-meta">
+              <span v-if="appVersion" class="logo-version">{{ appVersion }}</span>
+              <span class="logo-notice">测试阶段，不保留用户数据</span>
+            </span>
+          </span>
         </span>
       </a>
 
@@ -41,6 +46,7 @@ import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 
 const router = useRouter()
@@ -50,7 +56,6 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const sheetStore = useSheetStore()
 const { navigateTo } = useModuleNav()
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
-const appVersion = import.meta.env.VITE_APP_VERSION?.trim()
 
 const handleBrandClick = () => {
   if (sheetStore.stack.length > 0) {
@@ -133,14 +138,30 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   font-size: 1.2rem;
   letter-spacing: -0.02em;
 }
+.logo-block {
+  min-width: 0;
+}
 .logo-copy {
   display: flex;
   flex-direction: column;
   line-height: 1;
 }
-.logo-version {
-  align-self: flex-end;
+.logo-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
   margin-top: 2px;
+  min-width: 0;
+}
+.logo-notice {
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  color: var(--a-color-muted-soft);
+  white-space: nowrap;
+}
+.logo-version {
   font-size: 0.52rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -207,6 +228,19 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   .brand-link {
     min-width: unset;
     padding: 0 1rem;
+  }
+
+  .logo-block {
+    width: 100%;
+  }
+
+  .logo-meta {
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+  }
+
+  .logo-notice {
+    white-space: normal;
   }
 
   .nav {

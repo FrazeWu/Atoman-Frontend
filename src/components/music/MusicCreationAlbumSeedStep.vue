@@ -34,6 +34,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 
 function applyImportSnapshot(snapshot: MusicAlbumImport) {
   if (!creationFlow.value) return
+  const derivedTracks = snapshot.derivedTracks ?? []
 
   creationFlow.value.draft.albumImport.importId = snapshot.importId
   creationFlow.value.draft.albumImport.status = snapshot.status
@@ -44,12 +45,12 @@ function applyImportSnapshot(snapshot: MusicAlbumImport) {
   creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
   creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
   creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
-  creationFlow.value.draft.albumImport.derivedTracks = snapshot.derivedTracks
+  creationFlow.value.draft.albumImport.derivedTracks = derivedTracks
   creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
   creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
   creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
   creationFlow.value.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover || creationFlow.value.draft.albumDetails.coverUrl
-  creationFlow.value.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+  creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
     id: `import-track-${index + 1}`,
     sequence: index + 1,
     title: track.title,

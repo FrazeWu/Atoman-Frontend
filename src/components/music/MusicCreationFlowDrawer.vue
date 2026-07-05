@@ -112,6 +112,7 @@ function syncReadyImportToDraft() {
 
   const { albumImport, albumDetails } = flow.draft
   if (albumImport.status !== 'ready') return
+  const derivedTracks = albumImport.derivedTracks ?? []
 
   if (albumImport.derivedAlbumTitle.trim()) {
     albumDetails.title = albumImport.derivedAlbumTitle
@@ -122,7 +123,7 @@ function syncReadyImportToDraft() {
     albumDetails.coverUrl = nextCover
   }
 
-  flow.draft.tracks = albumImport.derivedTracks.map((track, index) => ({
+  flow.draft.tracks = derivedTracks.map((track, index) => ({
     id: `import-track-${index + 1}`,
     sequence: index + 1,
     title: track.title,
@@ -168,7 +169,7 @@ function handlePrimaryAction() {
     if (!creationFlow.value.draft.artist.legalName.trim()) return
     setMusicCreationStep('albumDetails')
   } else if (creationFlow.value.step === 'albumImport') {
-    setMusicCreationStep('albumImport')
+    setMusicCreationStep('albumDetails')
   }
 }
 

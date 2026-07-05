@@ -112,7 +112,50 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     await pending
   })
 
-  it('Seed 触发上传并切到详情页后禁用详情页压缩包入口', async () => {
+  it('handles null derivedTracks from album import snapshots without crashing', async () => {
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
+      importId: 'import-null-tracks',
+      status: 'pending_upload',
+      archiveName: '',
+      uploadProgress: 0,
+      uploadSpeed: 0,
+      derivedAlbumTitle: '',
+      derivedCover: '',
+      derivedTracks: [],
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
+      importId: 'import-null-tracks',
+      status: 'ready',
+      archiveName: 'null-tracks.zip',
+      uploadProgress: 100,
+      uploadSpeed: 0,
+      derivedAlbumTitle: 'Null Tracks Album',
+      derivedCover: '',
+      derivedTracks: null,
+      coverUrl: '',
+      coverKey: '',
+      lastSyncedAt: '',
+      errorMessage: '',
+    } as unknown as musicApi.MusicAlbumImport)
+
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    const drawers = useMusicDrawers()
+    const file = new File(['zip'], 'null-tracks.zip', { type: 'application/zip' })
+    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+
+    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    await flushPromises()
+
+    expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([])
+    expect(drawers.state.value.creationFlow?.draft.albumImport.derivedTracks).toEqual([])
+  })
+
+  it('Seed 触发上传时保持在当前步骤，并在详情页中禁用压缩包入口', async () => {
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
       importId: 'import-uploading',
       status: 'pending_upload',
@@ -142,7 +185,9 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     void seedWrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
     await flushPromises()
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
+    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
+
+    drawers.setMusicCreationStep('albumDetails')
 
     const detailsWrapper = mount(MusicCreationAlbumDetailsStep)
     const detailsInput = detailsWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement

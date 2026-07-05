@@ -17,14 +17,16 @@ export type MobileMoreItem = {
 }
 
 const PRIMARY_TABS: MobilePrimaryTab[] = [
-  { key: 'discover', label: '首页/播客', module: 'media', href: moduleUrl('media') },
+  { key: 'discover', label: '首页/博客', module: 'blog', href: moduleUrl('blog') },
   { key: 'feed', label: '订阅', module: 'feed', href: moduleUrl('feed') },
-  { key: 'create', label: '创作/播客', module: 'media', href: modulePathUrl('media', '/create') },
+  { key: 'create', label: '写博客', module: 'blog', href: modulePathUrl('blog', '/post/new') },
   { key: 'more', label: '更多' },
 ]
 
 const MORE_ITEMS: MobileMoreItem[] = [
   { module: 'music', label: '音乐', href: moduleUrl('music') },
+  { module: 'podcast', label: '播客', href: moduleUrl('podcast') },
+  { module: 'video', label: '视频', href: moduleUrl('video') },
   { module: 'forum', label: '论坛', href: moduleUrl('forum') },
   { module: 'debate', label: '辩论', href: moduleUrl('debate') },
   { module: 'timeline', label: '时间线', href: moduleUrl('timeline') },

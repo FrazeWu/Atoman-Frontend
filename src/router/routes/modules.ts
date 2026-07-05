@@ -7,17 +7,13 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     ...settingRoutes,
     {
       path: '/',
-      component: () => import('@/views/media/MediaLayout.vue'),
+      redirect: '/podcasts',
       children: [
-        { path: '', component: () => import('@/views/media/MediaHomeView.vue') },
-        { path: 'create', component: () => import('@/views/media/MediaCreateView.vue'), meta: { requiresAuth: true } },
-        { path: 'articles', component: () => import('@/views/media/MediaArticlesView.vue') },
-        { path: 'videos', component: () => import('@/views/media/MediaVideosView.vue') },
-        { path: 'videos/watch/:id', component: () => import('@/views/video/VideoDetailView.vue') },
-        { path: 'podcasts', component: () => import('@/views/media/MediaPodcastsView.vue') },
-        { path: 'podcasts/episode/:id', component: () => import('@/views/podcast/PodcastEpisodeView.vue') },
-        { path: 'subscriptions', component: () => import('@/views/media/MediaSubscriptionsView.vue'), meta: { requiresAuth: true } },
-        { path: 'bookmarks', component: () => import('@/views/media/MediaBookmarksView.vue'), meta: { requiresAuth: true } },
+        { path: 'articles', redirect: '/posts' },
+        { path: 'videos', redirect: '/videos' },
+        { path: 'podcasts', redirect: '/podcasts' },
+        { path: 'subscriptions', redirect: '/feed' },
+        { path: 'bookmarks', redirect: '/posts/bookmarks' },
       ],
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
@@ -29,6 +25,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     {
       path: '/',
       component: () => import('@/views/blog/BlogLayout.vue'),
+      meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/blog/BlogHomeView.vue') },
         { path: 'subscriptions', component: () => import('@/views/blog/BlogSubscriptionsView.vue'), meta: { requiresAuth: true } },
@@ -159,6 +156,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     {
       path: '/',
       component: () => import('@/views/podcast/PodcastLayout.vue'),
+      meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/podcast/PodcastHomeView.vue') },
         { path: 'show/:channelSlug', component: () => import('@/views/podcast/PodcastShowView.vue') },
@@ -175,6 +173,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     {
       path: '/',
       component: () => import('@/views/video/VideoLayout.vue'),
+      meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/video/VideoHomeView.vue') },
         { path: 'subscriptions', component: () => import('@/views/video/VideoSubscriptionsView.vue'), meta: { requiresAuth: true } },

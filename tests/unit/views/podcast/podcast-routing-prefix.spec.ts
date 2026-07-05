@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import PodcastEditorView from '@/views/podcast/PodcastEditorView.vue'
 import PodcastEpisodeView from '@/views/podcast/PodcastEpisodeView.vue'
 import PodcastHomeView from '@/views/podcast/PodcastHomeView.vue'
+import PodcastLayout from '@/views/podcast/PodcastLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const makeJsonResponse = (data: unknown) =>
@@ -40,6 +41,25 @@ describe('podcast routing prefix', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     vi.stubGlobal('fetch', vi.fn(async () => makeJsonResponse([])))
+  })
+
+  it('恢复播客侧栏入口到 /podcasts 模块前缀', () => {
+    const wrapper = mount(PodcastLayout, {
+      global: {
+        plugins: [createPinia()],
+        stubs: {
+          RouterView: true,
+          PSidebar: { template: '<nav><slot /></nav>' },
+          PSidebarItem: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('a[href="/podcasts"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/podcasts/editor"]').exists()).toBe(true)
   })
 
   it('首页发布按钮跳转到 /podcasts/editor', async () => {

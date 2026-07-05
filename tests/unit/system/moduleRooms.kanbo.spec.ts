@@ -12,6 +12,6 @@ describe('moduleRooms media integration', () => {
 
   it('keeps full module order and dedicated topbar order', () => {
     expect(moduleNavOrder.slice(0, 4)).toEqual(['feed', 'media', 'music', 'forum'])
-    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'media', 'debate', 'timeline'])
+    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast', 'debate', 'timeline'])
   })
 })

@@ -60,20 +60,21 @@ describe('host-scoped route tables', () => {
     expect(forumPaths).not.toContain('/forum')
   })
 
-  it('renders a dedicated public homepage at the content root instead of redirecting to a leaf page', () => {
+  it('keeps media root as a compatibility redirect instead of a public homepage', () => {
     const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
-    const children = contentRoot?.children || []
-
-    expect(children.find((route) => route.path === '')?.component).toBeTruthy()
-    expect(children.find((route) => route.path === '')?.redirect).toBeUndefined()
+    expect(contentRoot?.redirect).toBe('/podcasts')
   })
 
-  it('keeps content detail pages under the media module root', () => {
+  it('keeps only compatibility redirects under the media module root', () => {
     const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
-    const childPaths = paths(contentRoot?.children || [])
+    const children = contentRoot?.children || []
+    const redirects = Object.fromEntries(children.map((route) => [route.path, route.redirect]))
 
-    expect(childPaths).toContain('podcasts/episode/:id')
-    expect(childPaths).toContain('videos/watch/:id')
+    expect(redirects['articles']).toBe('/posts')
+    expect(redirects['videos']).toBe('/videos')
+    expect(redirects['podcasts']).toBe('/podcasts')
+    expect(redirects['subscriptions']).toBe('/feed')
+    expect(redirects['bookmarks']).toBe('/posts/bookmarks')
   })
 
   it('registers video detail pages under the video module root', () => {

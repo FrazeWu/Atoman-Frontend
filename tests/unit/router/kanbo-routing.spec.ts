@@ -5,7 +5,7 @@ import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
 import { subdomainDefaultPath } from '@/composables/useSubdomainNav'
 
 describe('content routes', () => {
-  it('registers the media module and required child routes', () => {
+  it('keeps the media module only as a compatibility redirect group', () => {
     const routes = moduleRoutes.media
     expect(routes).toBeTruthy()
 
@@ -14,13 +14,9 @@ describe('content routes', () => {
 
     const children = root?.children || []
     expect(children.map((child) => child.path)).toEqual([
-      '',
-      'create',
       'articles',
       'videos',
-      'videos/watch/:id',
       'podcasts',
-      'podcasts/episode/:id',
       'subscriptions',
       'bookmarks',
     ])

@@ -67,11 +67,23 @@ const activeStep = computed(() => {
   return stepCopy[step]
 })
 const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDetails')
+const shouldShowFinishButton = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return false
+  return flow.step === 'albumDetails' || (flow.step === 'albumImport' && flow.draft.albumImport.status === 'ready')
+})
 const showFooterActions = computed(() => true)
-const finishButtonLabel = computed(() => (creationFlow.value?.submitting ? '提交中…' : activeStep.value.cta))
-const canSubmitAlbumImport = computed(() => (
-  !isAlbumDetailsStep.value || creationFlow.value?.draft.albumImport.status === 'ready'
-))
+const finishButtonLabel = computed(() => {
+  if (creationFlow.value?.submitting) return '提交中…'
+  return shouldShowFinishButton.value ? '完成' : activeStep.value.cta
+})
+const canGoForward = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return false
+  if (flow.step === 'artist') return !!flow.draft.artist.legalName.trim()
+  if (flow.step === 'albumImport') return flow.draft.albumImport.status === 'ready'
+  return flow.draft.albumImport.status === 'ready'
+})
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
 }).commitMusicAlbumImport
@@ -167,8 +179,8 @@ function handlePrimaryAction() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'artist') {
     if (!creationFlow.value.draft.artist.legalName.trim()) return
-    setMusicCreationStep('albumDetails')
-  } else if (creationFlow.value.step === 'albumImport') {
+    setMusicCreationStep('albumImport')
+  } else if (creationFlow.value.step === 'albumImport' && creationFlow.value.draft.albumImport.status === 'ready') {
     setMusicCreationStep('albumDetails')
   }
 }
@@ -176,7 +188,7 @@ function handlePrimaryAction() {
 function goBackStep() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'albumDetails') {
-    setMusicCreationStep('artist')
+    setMusicCreationStep('albumImport')
   } else if (creationFlow.value.step === 'albumImport') {
     setMusicCreationStep('artist')
   }
@@ -262,11 +274,11 @@ async function completeCreation() {
             返回上一步
           </button>
           <button
-            :data-testid="isAlbumDetailsStep ? 'music-creation-finish-button' : 'artist-next-button'"
+            :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="paper-submit"
-            :disabled="creationFlow.submitting || !canSubmitAlbumImport"
-            @click="isAlbumDetailsStep ? completeCreation() : handlePrimaryAction()"
+            :disabled="creationFlow.submitting || !canGoForward"
+            @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction()"
           >
             {{ finishButtonLabel }}
           </button>

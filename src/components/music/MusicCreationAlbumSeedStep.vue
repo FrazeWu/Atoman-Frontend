@@ -13,7 +13,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 
-const { state } = useMusicDrawers()
+const { state, setMusicCreationStep } = useMusicDrawers()
 const archiveInputRef = ref<HTMLInputElement | null>(null)
 const coverInputRef = ref<HTMLInputElement | null>(null)
 
@@ -145,6 +145,7 @@ async function handleArchiveChange(event: Event) {
           ? Math.round((progress.loaded / progress.total) * 100)
           : 0
         albumImportDraft.value.uploadSpeed = progress.bytesPerSecond
+        setMusicCreationStep('albumDetails')
       },
     })
 

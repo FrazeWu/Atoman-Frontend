@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest'
 const layoutSource = readFileSync(resolve(__dirname, '../../../../src/views/video/VideoLayout.vue'), 'utf8')
 
 describe('VideoLayout', () => {
-  it('keeps video sidebar links under the videos module prefix', () => {
-    expect(layoutSource).toContain('to="/videos"')
-    expect(layoutSource).toContain('to="/videos/subscriptions"')
-    expect(layoutSource).toContain('to="/videos/manage"')
+  it('renders video content directly without an extra sidebar shell', () => {
+    expect(layoutSource).toContain('<main class="a-main-content">')
+    expect(layoutSource).toContain('<router-view />')
+    expect(layoutSource).not.toContain('<PSidebar')
   })
 })

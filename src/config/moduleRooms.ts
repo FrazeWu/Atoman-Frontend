@@ -33,9 +33,9 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     key: 'media',
     homePath: '/',
     publicPathSegment: 'media',
-    name: '内容',
-    helper: '文章、播客、视频',
-    homepageSub: '统一管理频道内的文章、播客与视频创作。',
+    name: '播客',
+    helper: '播客内容',
+    homepageSub: '浏览站内播客、节目更新与相关内容。',
   },
   music: {
     key: 'music',
@@ -49,7 +49,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     key: 'blog',
     homePath: '/',
     publicPathSegment: 'posts',
-    name: '文章',
+    name: '博客',
     helper: '内容视图',
     homepageSub: '',
   },
@@ -104,6 +104,16 @@ export const moduleNavOrder: ModuleRoomKey[] = [
   'timeline',
   'podcast',
   'video',
+]
+
+export const topbarNavOrder: ModuleRoomKey[] = [
+  'feed',
+  'blog',
+  'music',
+  'video',
+  'media',
+  'debate',
+  'timeline',
 ]
 
 export const isRoomRouteActive = (key: ModuleRoomKey, context: SiteContext) => (

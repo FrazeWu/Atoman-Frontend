@@ -26,7 +26,7 @@ describe('useResponsiveShell', () => {
     const tabs = getMobilePrimaryTabs()
 
     expect(tabs.map((tab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
-    expect(tabs.map((tab) => tab.label)).toEqual(['首页/发现', '订阅', '创作/内容', '更多'])
+    expect(tabs.map((tab) => tab.label)).toEqual(['首页/播客', '订阅', '创作/播客', '更多'])
     expect(tabs[0]?.href).toBe(moduleUrl('media'))
     expect(tabs[1]?.href).toBe(moduleUrl('feed'))
     expect(tabs[2]?.href).toBe(modulePathUrl('media', '/create'))
@@ -55,7 +55,7 @@ describe('useResponsiveShell', () => {
     firstTabs[0]!.label = 'changed'
     firstMoreItems[0]!.label = 'changed'
 
-    expect(secondTabs[0]?.label).toBe('首页/发现')
+    expect(secondTabs[0]?.label).toBe('首页/播客')
     expect(secondMoreItems[0]?.label).toBe('音乐')
   })
 
@@ -79,7 +79,7 @@ describe('useResponsiveShell', () => {
     const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
 
     expect(tabs).toHaveLength(4)
-    expect(tabs.map((tab) => tab.text())).toEqual(['首页/发现', '订阅', '创作/内容', '更多'])
+    expect(tabs.map((tab) => tab.text())).toEqual(['首页/播客', '订阅', '创作/播客', '更多'])
     expect(wrapper.get('[data-tab-key="feed"]').classes()).toContain('is-active')
   })
 

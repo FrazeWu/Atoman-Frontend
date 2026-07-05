@@ -45,7 +45,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
-import { isRoomRouteActive, moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 
@@ -71,7 +71,7 @@ const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const showAuthControls = computed(() => authStore.isAuthenticated && !!authStore.user)
 
-const navRooms = computed(() => moduleNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
+const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
   const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''

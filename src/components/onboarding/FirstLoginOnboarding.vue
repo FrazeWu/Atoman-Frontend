@@ -58,15 +58,16 @@ const busy = ref(false)
 const stepMap: Record<OnboardingStep, StepContent> = {
   overview: {
     title: '欢迎来到 Atoman',
-    description: '这里把内容、订阅、论坛、辩题和音乐资料放进同一个站点。先用一分钟看完主要入口，再完成一次真实订阅。',
+    description: '这里把播客、订阅、论坛、辩题和音乐资料放进同一个站点。先用一分钟看完主要入口，再完成一次真实订阅。',
     items: [],
   },
   modules: {
     title: '先认识每个模块',
     description: '你可以把 Atoman 理解成一个自托管内容中枢，不同模块负责不同内容形态。',
     items: [
-      { title: '内容', description: '写文章、发播客、传视频，并在频道内统一管理内容。' },
+      { title: '播客', description: '浏览站内播客、节目与相关更新。' },
       { title: '订阅', description: '订阅 RSS、频道和合集，把更新集中阅读。' },
+      { title: '视频 / 博客', description: '分别查看视频与博客内容，不再额外套一层内容侧栏。' },
       { title: '论坛 / 辩论', description: '发帖讨论，或者围绕一个议题正反展开。' },
       { title: '音乐 / 时间线 / Orbit', description: '整理音乐档案、时间线和更偏社交的内容关系。' },
     ],

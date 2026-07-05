@@ -1,25 +1,13 @@
-import { mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import BlogLayout from '@/views/blog/BlogLayout.vue'
+const layoutSource = readFileSync(resolve(__dirname, '../../../../src/views/blog/BlogLayout.vue'), 'utf8')
 
 describe('BlogLayout', () => {
-  it('侧栏入口使用 /posts 模块前缀', () => {
-    const wrapper = mount(BlogLayout, {
-      global: {
-        stubs: {
-          RouterView: true,
-          PSidebar: { template: '<nav><slot /></nav>' },
-          PSidebarItem: {
-            props: ['to'],
-            template: '<a :href="to"><slot /></a>',
-          },
-        },
-      },
-    })
-
-    expect(wrapper.find('a[href="/posts"]').text()).toContain('探索')
-    expect(wrapper.find('a[href="/posts/subscriptions"]').text()).toContain('订阅')
-    expect(wrapper.find('a[href="/posts/manage"]').text()).toContain('管理')
+  it('renders blog content directly without an extra sidebar shell', () => {
+    expect(layoutSource).toContain('<main class="a-main-content">')
+    expect(layoutSource).toContain('<router-view />')
+    expect(layoutSource).not.toContain('<PSidebar')
   })
 })

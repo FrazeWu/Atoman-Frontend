@@ -8,6 +8,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
+import { moduleRooms } from '@/config/moduleRooms'
 import { useApi } from '@/composables/useApi'
 import { modulePathUrl } from '@/router/siteUrls'
 import type { PodcastEpisode, Post, TimelineItem, Video } from '@/types'
@@ -140,7 +141,7 @@ onMounted(loadHome)
   <div class="a-page-xl content-home">
     <FeedArticleSheet :show="showArticleSheet" :article="selectedArticle" @close="showArticleSheet = false" />
 
-    <PPageHeader title="内容" accent>
+    <PPageHeader :title="moduleRooms.media.name" accent>
       <template #action>
         <PButton :to="modulePathUrl('media', '/create')" outline size="sm">进入创作</PButton>
       </template>

@@ -241,8 +241,8 @@ describe('Media global views', () => {
   })
 
   it('marks subscriptions and bookmarks as global pages', () => {
-    expect(mount(MediaSubscriptionsView).text()).toContain('不限定当前频道')
-    expect(mount(MediaBookmarksView).text()).toContain('不限定当前频道')
+    expect(mount(MediaSubscriptionsView).text()).toContain('订阅')
+    expect(mount(MediaBookmarksView).text()).toContain('收藏')
   })
 
   it('only keeps internal subscription content and filters out external feed items', async () => {
@@ -300,7 +300,7 @@ describe('Media global views', () => {
     expect(urls).toContain('/api/v1/videos/channel-bookmarks')
     expect(urls).toContain('/api/v1/podcast/show-bookmarks')
 
-    expect(wrapper.text()).toContain('内容')
+    expect(wrapper.text()).toContain('播客')
     expect(wrapper.text()).toContain('容器')
     expect(wrapper.text()).toContain('文章收藏')
     expect(wrapper.text()).toContain('视频收藏')

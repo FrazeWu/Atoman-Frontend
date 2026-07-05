@@ -129,7 +129,12 @@ describe('music v1 starred and playlist adapters', () => {
       if (url === '/api/v1/music/playlists/playlist-1/songs') {
         return new Response(JSON.stringify({
           data: [
-            { id: 'song-1', title: 'cellophane', track_number: 1, audio_url: '', entry_status: 'open' },
+            {
+              id: 'playlist-song-1',
+              playlist_id: 'playlist-1',
+              song_id: 'song-1',
+              song: { id: 'song-1', title: 'cellophane', track_number: 1, audio_url: '', entry_status: 'open' },
+            },
           ],
           meta: { page: 1, page_size: 20, total: 1, has_more: false },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } })

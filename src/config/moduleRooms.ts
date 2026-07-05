@@ -1,6 +1,5 @@
 export type ModuleRoomKey =
   | 'feed'
-  | 'media'
   | 'music'
   | 'blog'
   | 'forum'
@@ -28,14 +27,6 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     name: '订阅',
     helper: 'RSS 与更新流',
     homepageSub: '聚合你感兴趣的 RSS 订阅源与内容更新。',
-  },
-  media: {
-    key: 'media',
-    homePath: '/',
-    publicPathSegment: 'media',
-    name: '播客',
-    helper: '播客内容',
-    homepageSub: '浏览站内播客、节目更新与相关内容。',
   },
   music: {
     key: 'music',
@@ -97,7 +88,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 
 export const moduleNavOrder: ModuleRoomKey[] = [
   'feed',
-  'media',
+  'blog',
   'music',
   'forum',
   'debate',

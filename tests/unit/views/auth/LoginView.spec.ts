@@ -122,6 +122,7 @@ describe('LoginView redirect', () => {
     expect(validateRegisterUsername('Alice')).toBe('用户名只能使用小写字母、数字或连字符')
     expect(validateRegisterUsername('a')).toBe('用户名长度需要在 2 到 30 个字符之间')
     expect(validateRegisterUsername('music')).toBe('该用户名暂时不可用')
+    expect(validateRegisterUsername('media')).toBe('该用户名暂时不可用')
     expect(validateRegisterUsername('-alice')).toBe('用户名只能使用小写字母、数字或连字符')
   })
 })

@@ -21,7 +21,7 @@ const techStack = [
       <div>
         <h1 class="page-title">关于 Atoman</h1>
         <p class="page-desc">
-          一个开放的言论自由平台，支持法堂写作、音乐归档与 RSS 订阅聚合。完全开源、可自托管，遵循 GPL 协议。
+          一个开放的言论自由平台，支持博客写作、音乐归档与 RSS 订阅聚合。完全开源、可自托管，遵循 GPL 协议。
         </p>
       </div>
 
@@ -36,10 +36,10 @@ const techStack = [
         </a>
 
         <a :href="moduleUrl('blog')" class="feature-card">
-          <div class="card-label">法堂</div>
-          <h2 class="card-title">个人法堂</h2>
+          <div class="card-label">博客</div>
+          <h2 class="card-title">个人博客</h2>
           <p class="card-desc">
-            支持 Markdown 的所见即所得法堂。可发布长短文、创建专栏与合集，支持评论、点赞与书签。
+            支持 Markdown 的所见即所得博客。可发布长短文、创建专栏与合集，支持评论、点赞与书签。
           </p>
         </a>
 
@@ -69,7 +69,7 @@ const techStack = [
         <ul class="contrib-list">
           <li class="contrib-item">
             <span class="contrib-num">01</span>
-            <span class="contrib-text">注册账号后可上传音乐内容或发布法堂文章</span>
+            <span class="contrib-text">注册账号后可上传音乐内容或发布博客文章</span>
           </li>
           <li class="contrib-item">
             <span class="contrib-num">02</span>
@@ -81,7 +81,7 @@ const techStack = [
           </li>
           <li class="contrib-item">
             <span class="contrib-num">04</span>
-            <span class="contrib-text">法堂内容由作者自主管理，无需审核即可发布</span>
+            <span class="contrib-text">博客内容由作者自主管理，无需审核即可发布</span>
           </li>
         </ul>
       </div>

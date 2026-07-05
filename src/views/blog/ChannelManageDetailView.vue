@@ -10,7 +10,7 @@
     <template v-else>
       <PPageHeader :title="`管理：${channel.name}`" accent>
         <template #action>
-          <RouterLink :to="`/channel/${channel.slug || channel.id}`" class="a-btn-outline-sm">← 查看频道</RouterLink>
+          <RouterLink :to="`/posts/channel/${channel.slug || channel.id}`" class="a-btn-outline-sm">← 查看频道</RouterLink>
         </template>
       </PPageHeader>
 
@@ -32,7 +32,7 @@
           <div>
             <label class="a-label" style="margin-bottom:.4rem;display:block">Slug（URL标识）</label>
             <input v-model="infoForm.slug" class="a-input" placeholder="my-channel" />
-            <p class="a-muted" style="font-size:.8rem;margin-top:.25rem">访问路径：/channel/{{ infoForm.slug || channel.slug }}</p>
+            <p class="a-muted" style="font-size:.8rem;margin-top:.25rem">访问路径：/posts/channel/{{ infoForm.slug || channel.slug }}</p>
           </div>
           <div>
             <label class="a-label" style="margin-bottom:.4rem;display:block">简介</label>
@@ -87,8 +87,8 @@
               <p class="a-muted" style="font-size:.8rem">{{ formatDate(post.updated_at) }}</p>
             </div>
             <div style="display:flex;gap:.5rem;flex-shrink:0">
-              <RouterLink :to="`/post/${post.id}/edit`" class="a-btn-outline-sm">编辑</RouterLink>
-              <RouterLink :to="`/post/${post.id}`" class="a-btn-outline-sm">查看</RouterLink>
+              <RouterLink :to="`/posts/post/${post.id}/edit`" class="a-btn-outline-sm">编辑</RouterLink>
+              <RouterLink :to="`/posts/post/${post.id}`" class="a-btn-outline-sm">查看</RouterLink>
             </div>
           </div>
         </div>
@@ -196,7 +196,7 @@ const fetchChannel = async () => {
     }
     // Verify ownership
     if (channel.value.user_id !== authStore.user?.uuid) {
-      router.push(`/channel/${slug.value}`)
+      router.push(`/posts/channel/${slug.value}`)
     }
   }
 }
@@ -229,7 +229,7 @@ const saveInfo = async () => {
       const newSlug = infoForm.value.slug
       channel.value = (await res.json()).data || channel.value
       if (newSlug && newSlug !== slug.value) {
-        router.replace(`/channel/${newSlug}/manage`)
+        router.replace(`/posts/channel/${newSlug}/manage`)
       }
     }
   } finally { infoSaving.value = false }

@@ -6,7 +6,7 @@ describe('site URL builders', () => {
   it('builds module URLs as path prefixes', () => {
     expect(moduleUrl('blog', 'https:', 'music.atoman.org')).toBe('/posts')
     expect(moduleUrl('feed', 'https:', 'u-alice.atoman.org')).toBe('/feed')
-    expect(moduleUrl('media', 'https:', 'blog.atoman.org')).toBe('/media')
+    expect(moduleUrl('podcast', 'https:', 'blog.atoman.org')).toBe('/podcasts')
   })
 
   it('builds user and channel URLs as explicit paths', () => {

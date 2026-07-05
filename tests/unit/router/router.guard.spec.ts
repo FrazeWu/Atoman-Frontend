@@ -80,19 +80,13 @@ describe('router auth guards', () => {
     await router.push('/item/feed-item-1')
     expect(router.currentRoute.value.path).toBe('/item/feed-item-1')
 
-    const mediaRouter = await createGuardRouter('media')
-    await mediaRouter.push('/articles')
-    expect(mediaRouter.currentRoute.value.path).toBe('/articles')
-
-    await mediaRouter.push('/videos')
-    expect(mediaRouter.currentRoute.value.path).toBe('/videos')
-
-    await mediaRouter.push('/podcasts')
-    expect(mediaRouter.currentRoute.value.path).toBe('/podcasts')
+    const blogRouter = await createGuardRouter('blog')
+    await blogRouter.push('/post/123')
+    expect(blogRouter.currentRoute.value.path).toBe('/post/123')
   })
 
-  it('redirects unauthenticated users away from media subscriptions', async () => {
-    const router = await createGuardRouter('media')
+  it('redirects unauthenticated users away from blog subscriptions', async () => {
+    const router = await createGuardRouter('blog')
     const auth = useAuthStore()
     auth.logout()
 
@@ -137,9 +131,9 @@ describe('router auth guards', () => {
   it('checks module access against the target route path', async () => {
     const router = await createGuardRouter('feed')
     const siteAccess = useSiteAccessStore()
-    siteAccess.access.modules.media.enabled = false
+    siteAccess.access.modules.podcast.enabled = false
 
-    await router.push('/media')
+    await router.push('/podcasts')
 
     expect(router.currentRoute.value.path).toBe('/__disabled__')
   })
@@ -148,9 +142,9 @@ describe('router auth guards', () => {
     vi.mocked(fetch).mockResolvedValue(new Response('', { status: 500 }))
     const router = await createGuardRouter('feed')
 
-    await router.push('/media')
+    await router.push('/podcasts')
 
-    expect(router.currentRoute.value.path).toBe('/media')
+    expect(router.currentRoute.value.path).toBe('/podcasts')
   })
 
   it('keeps login reachable when site access loading fails', async () => {

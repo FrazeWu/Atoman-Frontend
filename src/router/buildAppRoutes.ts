@@ -36,7 +36,6 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...portalRoutes.filter((route) => route.path !== '/:pathMatch(.*)*'),
     ...settingRoutes,
     ...scopedModuleRoutes('feed'),
-    ...scopedModuleRoutes('media'),
     ...scopedModuleRoutes('music'),
     ...scopedModuleRoutes('forum'),
     ...scopedModuleRoutes('debate'),

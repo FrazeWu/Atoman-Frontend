@@ -13,8 +13,8 @@ describe('site access config', () => {
   it('defaults every module and feature to enabled', () => {
     const access = mergeSiteAccess(null)
 
-    expect(getVisibleModuleKeys(access)).toEqual(['feed', 'media', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
-    expect(access.modules.media.enabled).toBe(true)
+    expect(getVisibleModuleKeys(access)).toEqual(['feed', 'blog', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
+    expect(access.modules.blog.enabled).toBe(true)
     expect(isModuleFeatureEnabled(access, 'blog', 'post.create')).toBe(true)
     expect(isModuleFeatureEnabled(access, 'podcast', 'podcast.publish')).toBe(true)
     expect(isModuleFeatureEnabled(access, 'video', 'video.publish')).toBe(true)

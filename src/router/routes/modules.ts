@@ -3,23 +3,6 @@ import type { ModuleRoomKey } from '@/config/moduleRooms'
 import { settingRoutes } from '@/router/routes/settings'
 
 export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
-  media: [
-    ...settingRoutes,
-    {
-      path: '/',
-      redirect: '/podcasts',
-      children: [
-        { path: 'articles', redirect: '/posts' },
-        { path: 'videos', redirect: '/videos' },
-        { path: 'podcasts', redirect: '/podcasts' },
-        { path: 'subscriptions', redirect: '/feed' },
-        { path: 'bookmarks', redirect: '/posts/bookmarks' },
-      ],
-    },
-    { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
-    { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
-  ],
   blog: [
     ...settingRoutes,
     {

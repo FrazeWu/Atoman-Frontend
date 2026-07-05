@@ -1,15 +1,4 @@
 <template>
-  <div v-if="showMediaChannelSwitch" class="channel-select-wrap">
-    <PSelect
-      :model-value="currentMediaChannelId || ''"
-      :options="[
-        { label: '频道', value: '' },
-        ...channels.map(channel => ({ label: channel.name, value: channel.id }))
-      ]"
-      @update:model-value="onMediaChannelChange"
-    />
-  </div>
-
   <!-- Topbar Search -->
   <div ref="searchWrapRef" class="topbar-search-wrap" :class="{ 'is-open': showSearch }">
     <!-- Collapsed pill: shown when search not active -->
@@ -108,24 +97,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
 import { modulePathUrl, userUrl } from '@/router/siteUrls'
-import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole } from '@/utils/roles'
-import { useMediaChannel } from '@/composables/useMediaChannel'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
-import PSelect from '@/components/ui/PSelect.vue'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const router = useRouter()
-const route = useRoute()
-const { channels, currentMediaChannelId, switchChannel, clearChannels, loadChannels } = useMediaChannel()
 const globalSearch = useGlobalSearch()
 
 const activeDropdown = ref<string | null>(null)
@@ -134,15 +118,8 @@ const isExpanded = ref(false)
 const searchDraft = ref('')
 const searchWrapRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
-const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
-const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
-const showMediaChannelSwitch = computed(() => {
-  if (typeof window === 'undefined') return false
-  const siteContext = resolveSiteContext(window.location.hostname, window.location.search, route.path)
-  return siteContext.type === 'module' && siteContext.module === 'media'
-})
 
 const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
@@ -196,7 +173,6 @@ const handleClickOutside = (e: MouseEvent) => {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
-  ensureMediaChannels()
 })
 
 onBeforeUnmount(() => {
@@ -211,67 +187,9 @@ const logout = async () => {
   await router.push('/login')
 }
 
-const onMediaChannelChange = (value: string | number) => {
-  const channelId = String(value) || null
-  void switchChannel(channelId, authStore.token)
-}
-
-const ensureMediaChannels = () => {
-  const userId = authUserId.value
-  if (!showMediaChannelSwitch.value) return
-  if (!userId) {
-    lastLoadedMediaChannelUserId.value = null
-    clearChannels()
-    return
-  }
-  if (lastLoadedMediaChannelUserId.value === userId && channels.value.length > 0) return
-
-  void loadChannels(authStore.token, userId)
-    .then(() => {
-      if (authUserId.value === userId) {
-        lastLoadedMediaChannelUserId.value = userId
-      }
-    })
-    .catch(() => {
-      if (lastLoadedMediaChannelUserId.value === userId) {
-        lastLoadedMediaChannelUserId.value = null
-      }
-    })
-}
-
-watch(showMediaChannelSwitch, ensureMediaChannels)
-watch(authUserId, ensureMediaChannels)
 </script>
 
 <style scoped>
-.channel-select-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.channel-select {
-  min-width: 8rem;
-  max-width: 12rem;
-  border: var(--a-border);
-  border-radius: var(--a-radius-none);
-  padding: 0.35rem 2rem 0.35rem 0.6rem;
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-size: 0.8rem;
-  font-weight: var(--a-font-weight-strong, 700);
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
-
-.channel-select-icon {
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
-  color: var(--a-color-ink-soft);
-}
-
 .notif-btn {
   font-size: 0.875rem;
   font-weight: 700;
@@ -596,4 +514,3 @@ watch(authUserId, ensureMediaChannels)
   opacity: 0;
 }
 </style>
-

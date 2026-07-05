@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <PPageHeader title="法堂管理" sub="管理你的频道、合集与文章">
+    <PPageHeader title="博客管理" sub="管理你的频道、合集与文章">
       <template #action>
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
@@ -329,7 +329,7 @@ const loadChannels = async () => {
 
 const handleArticleAction = async (action: 'edit' | 'delete', article: any) => {
   if (action === 'edit') {
-    router.push(`/post/${article.id}/edit`)
+    router.push(`/posts/post/${article.id}/edit`)
   } else if (action === 'delete') {
     if (confirm(`确定要删除文章《${article.title}》吗？`)) {
       try {

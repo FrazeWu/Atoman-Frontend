@@ -19,7 +19,7 @@
         :key="collection.id"
         class="a-card"
         style="cursor:pointer"
-        @click="$router.push(`/collection/${collection.id}`)"
+        @click="$router.push(`/posts/collection/${collection.id}`)"
       >
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div style="flex:1">

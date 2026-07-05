@@ -18,16 +18,6 @@ vi.mock('@/stores/inbox', () => ({
   }),
 }))
 
-vi.mock('@/composables/useMediaChannel', () => ({
-  useMediaChannel: () => ({
-    channels: ref([]),
-    currentMediaChannelId: ref(null),
-    switchChannel: vi.fn(),
-    clearChannels: vi.fn(),
-    loadChannels: vi.fn(),
-  }),
-}))
-
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
@@ -36,7 +26,9 @@ const router = createRouter({
   ],
 })
 
-const mountTopbar = () => {
+const mountTopbar = async () => {
+  await router.push('/feed/inbox')
+  await router.isReady()
   const wrapper = mount(AppTopbarAuthControls, {
     global: {
       plugins: [router],
@@ -59,18 +51,18 @@ describe('AppTopbarAuthControls search trigger', () => {
     mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount())
   })
 
-  it('renders the search input before the inbox button and opens popover on focus', async () => {
-    const wrapper = mountTopbar()
+  it('renders the search trigger before the inbox button and opens the dropdown on click', async () => {
+    const wrapper = await mountTopbar()
 
-    const searchInput = wrapper.find('.topbar-search-input')
+    const searchTrigger = wrapper.find('[data-testid="topbar-search-pill"]')
     const inboxButton = wrapper.find('.notif-btn')
 
-    expect(searchInput.exists()).toBe(true)
+    expect(searchTrigger.exists()).toBe(true)
     expect(inboxButton.exists()).toBe(true)
-    expect(searchInput.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(searchTrigger.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(false)
 
-    await searchInput.trigger('focus')
+    await searchTrigger.trigger('click')
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(true)
   })
 })

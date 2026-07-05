@@ -4,7 +4,6 @@ import { footbarLinks, moduleNavOrder, moduleRooms, notificationRoom, topbarNavO
 describe('module room naming config', () => {
   it('contains the approved room names and helper labels', () => {
     expect(moduleRooms.feed).toMatchObject({ name: '订阅', helper: 'RSS 与更新流' })
-    expect(moduleRooms.media).toMatchObject({ name: '播客', helper: '播客内容' })
     expect(moduleRooms.music).toMatchObject({ name: '音乐', helper: '音乐档案' })
     expect(moduleRooms.blog).toMatchObject({ name: '博客', helper: '内容视图' })
     expect(moduleRooms.forum).toMatchObject({ name: '论坛', helper: '讨论与发帖' })
@@ -15,7 +14,7 @@ describe('module room naming config', () => {
   })
 
   it('keeps module navigation order stable', () => {
-    expect(moduleNavOrder).toEqual(['feed', 'media', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
+    expect(moduleNavOrder).toEqual(['feed', 'blog', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
   })
 
   it('keeps topbar navigation order stable', () => {

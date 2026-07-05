@@ -61,23 +61,6 @@ describe('host-scoped route tables', () => {
     expect(forumPaths).not.toContain('/forum')
   })
 
-  it('keeps media root as a compatibility redirect instead of a public homepage', () => {
-    const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
-    expect(contentRoot?.redirect).toBe('/podcasts')
-  })
-
-  it('keeps only compatibility redirects under the media module root', () => {
-    const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
-    const children = contentRoot?.children || []
-    const redirects = Object.fromEntries(children.map((route) => [route.path, route.redirect]))
-
-    expect(redirects['articles']).toBe('/posts')
-    expect(redirects['videos']).toBe('/videos')
-    expect(redirects['podcasts']).toBe('/podcasts')
-    expect(redirects['subscriptions']).toBe('/feed')
-    expect(redirects['bookmarks']).toBe('/posts/bookmarks')
-  })
-
   it('registers video detail pages under the video module root', () => {
     const videoRoot = moduleRoutes.video.find((route) => route.path === '/')
     const children = videoRoot?.children || []
@@ -103,6 +86,7 @@ describe('host-scoped route tables', () => {
     expect(allModulePaths).not.toContain('/posts')
     expect(allModulePaths).not.toContain('/music')
     expect(allModulePaths).not.toContain('/feed')
+    expect(allModulePaths).not.toContain('/media')
     expect(allModulePaths).not.toContain('/forum')
     expect(allModulePaths).not.toContain('/posts/bookmarks')
     expect(allModulePaths).not.toContain('/music/albums/:albumId')

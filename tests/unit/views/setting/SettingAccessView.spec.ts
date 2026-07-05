@@ -92,7 +92,7 @@ describe('SettingAccessView section sync', () => {
     expect(wrapper.find('[data-testid="feed-source-panel"]').exists()).toBe(true)
   })
 
-  it('保存时会带上 media 模块可见性', async () => {
+  it('保存时会带上 podcast 模块可见性', async () => {
     const save = vi.fn(async () => undefined)
     siteAccessState.save = save
 
@@ -112,17 +112,17 @@ describe('SettingAccessView section sync', () => {
       },
     })
 
-    const kanboToggle = wrapper
+    const podcastToggle = wrapper
       .findAll('label.setting-access__module-toggle-item')
-      .find((item) => item.text().includes('内容'))
+      .find((item) => item.text().includes('播客'))
       ?.find('input[type="checkbox"]')
-    expect(kanboToggle.exists()).toBe(true)
+    expect(podcastToggle.exists()).toBe(true)
 
-    await kanboToggle!.setValue(false)
+    await podcastToggle!.setValue(false)
     await wrapper.findAll('button').at(-1)!.trigger('click')
 
     expect(save).toHaveBeenCalledTimes(1)
-    expect(save.mock.calls[0]?.[0]?.modules?.media?.enabled).toBe(false)
+    expect(save.mock.calls[0]?.[0]?.modules?.podcast?.enabled).toBe(false)
     expect(save.mock.calls[0]?.[1]).toBe('admin-token')
   })
 })

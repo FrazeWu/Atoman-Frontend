@@ -8,23 +8,12 @@ const sidebarLayouts = [
   '../../../src/views/podcast/PodcastLayout.vue',
 ] as const
 
-const redirectLayouts = [
-  '../../../src/views/media/MediaLayout.vue',
-] as const
-
 describe('content layout shells', () => {
   it('restores sidebars for blog, podcast and video modules', () => {
     for (const filePath of sidebarLayouts) {
       const source = readFileSync(resolve(__dirname, filePath), 'utf8')
       expect(source).toContain('<PSidebar')
       expect(source).toContain("from '@/components/ui/PSidebar.vue'")
-    }
-  })
-
-  it('keeps media layout as a thin redirect shell without PSidebar', () => {
-    for (const filePath of redirectLayouts) {
-      const source = readFileSync(resolve(__dirname, filePath), 'utf8')
-      expect(source).not.toContain('<PSidebar')
     }
   })
 })

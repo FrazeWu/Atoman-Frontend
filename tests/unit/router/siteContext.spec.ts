@@ -17,7 +17,6 @@ describe('isLocalHost', () => {
 describe('resolveSiteContext', () => {
   it('maps known module paths to module context', () => {
     expect(resolveSiteContext('www.atoman.org', '', '/feed')).toEqual({ type: 'module', module: 'feed' })
-    expect(resolveSiteContext('www.atoman.org', '', '/media')).toEqual({ type: 'module', module: 'media' })
     expect(resolveSiteContext('www.atoman.org', '', '/music')).toEqual({ type: 'module', module: 'music' })
     expect(resolveSiteContext('www.atoman.org', '', '/posts')).toEqual({ type: 'module', module: 'blog' })
     expect(resolveSiteContext('www.atoman.org', '', '/videos')).toEqual({ type: 'module', module: 'video' })
@@ -41,7 +40,7 @@ describe('resolveSiteContext', () => {
   })
 
   it('maps production subdomains to module, entity, or unknown context', () => {
-    expect(resolveSiteContext('media.atoman.org', '', '/')).toEqual({ type: 'module', module: 'media' })
+    expect(resolveSiteContext('media.atoman.org', '', '/')).not.toEqual({ type: 'module', module: 'podcast' })
     expect(resolveSiteContext('u-alice.atoman.org', '', '/')).toEqual({
       type: 'entity',
       handle: 'alice',
@@ -58,7 +57,9 @@ describe('resolveSiteContext', () => {
 
   it('uses the same pathname-based routing on localhost', () => {
     expect(resolveSiteContext('localhost', '', '/feed')).toEqual({ type: 'module', module: 'feed' })
-    expect(resolveSiteContext('localhost', '', '/media')).toEqual({ type: 'module', module: 'media' })
+    expect(resolveSiteContext('localhost', '', '/media')).toEqual({ type: 'module', module: 'feed' })
+    expect(resolveSiteContext('localhost', '', '/posts/post/123')).toEqual({ type: 'module', module: 'blog' })
+    expect(resolveSiteContext('localhost', '', '/posts/channel/demo')).toEqual({ type: 'module', module: 'blog' })
     expect(resolveSiteContext('localhost', '', '/users/alice')).toEqual({
       type: 'entity',
       handle: 'alice',

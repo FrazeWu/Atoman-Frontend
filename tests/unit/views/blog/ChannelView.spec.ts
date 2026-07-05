@@ -18,7 +18,7 @@ vi.mock('@/router/siteContext', () => ({
 describe('ChannelView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    window.history.replaceState(null, '', '/channel/channel-1?site=blog')
+    window.history.replaceState(null, '', '/posts/channel/channel-1?site=blog')
 
     const authStore = useAuthStore()
     authStore.token = 'token'
@@ -26,7 +26,7 @@ describe('ChannelView', () => {
     authStore.isAuthenticated = true
   })
 
-  it('turns 收藏 into 退藏 after saving a channel post', async () => {
+  it('turns 收藏 into 取消收藏 after saving a channel post', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)
       if (url.includes('/blog/channels/slug/channel-1') && !url.includes('/collections')) {
@@ -99,6 +99,6 @@ describe('ChannelView', () => {
     await saveButton!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.findAll('button').map((button) => button.text())).toContain('退藏')
+    expect(wrapper.findAll('button').map((button) => button.text())).toContain('取消收藏')
   })
 })

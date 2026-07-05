@@ -19,7 +19,7 @@
     <div v-else-if="errorStatus === 403" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight:900;color:var(--a-color-disabled-border);margin-bottom:1rem">草稿</p>
       <p class="a-muted" style="margin-bottom:1.5rem">该文章尚未发布，请登录后查看或编辑</p>
-      <RouterLink :to="`/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+      <RouterLink :to="`/posts/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
     </div>
 
     <!-- Post content -->
@@ -54,7 +54,7 @@
               >
                 📖 极简单栏
               </button>
-              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
+              <RouterLink v-if="isOwner" :to="`/posts/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
             </div>
           </template>
           <template v-else>
@@ -73,7 +73,7 @@
               >
                 🔬 学术双栏
               </button>
-              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
+              <RouterLink v-if="isOwner" :to="`/posts/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
             </div>
           </template>
         </div>
@@ -317,7 +317,7 @@ const fetchPostEmbeds = async (content: string) => {
             title: embedPost.title,
             summary: embedPost.summary,
             meta: embedPost.channel?.name,
-            href: `/post/${id}`,
+            href: `/posts/post/${id}`,
           } satisfies EmbedData,
         ] as const
       } catch {

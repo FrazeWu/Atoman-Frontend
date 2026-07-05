@@ -272,17 +272,17 @@ export const useAuthStore = defineStore('auth', () => {
       const session = extractSessionPayload(data)
       if (!session) {
         const message = '服务返回异常，请稍后重试'
+        clearStoredSession()
         token.value = null
         user.value = null
-        isAuthenticated.value = false
-        clearStoredSession()
+        syncAuthState()
         lastAuthError.value = message
         throw new Error(message)
       }
 
       token.value = session.token
       user.value = session.user
-      isAuthenticated.value = true
+      syncAuthState()
       lastAuthError.value = null
       storeSession(session)
     } catch (error) {

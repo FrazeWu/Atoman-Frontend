@@ -26,7 +26,7 @@
       </nav>
 
       <div class="nav-right">
-        <AppTopbarAuthControls v-if="authStore.isAuthenticated" />
+        <AppTopbarAuthControls v-if="showAuthControls" />
         <RouterLink v-else to="/login" class="a-btn a-btn--primary a-btn--sm">登录</RouterLink>
       </div>
     </div>
@@ -64,6 +64,7 @@ const handleBrandClick = () => {
 
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
+const showAuthControls = computed(() => authStore.isAuthenticated && !!authStore.user)
 
 const navRooms = computed(() => moduleNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const siteContext = computed(() => {

@@ -10,7 +10,7 @@ describe('AppTopbar auth loading', () => {
   it('keeps authenticated inbox controls behind an async boundary', () => {
     expect(topbarSource).not.toContain("import { useInboxStore } from '@/stores/inbox'")
     expect(topbarSource).toContain("defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))")
-    expect(topbarSource).toContain('v-if="authStore.isAuthenticated"')
+    expect(topbarSource).toContain('v-if="showAuthControls"')
   })
 
   it('renders the configured app version below the brand text and right aligned', () => {

@@ -169,11 +169,16 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(tokenNotExpired ? loadStoredUser() : null)
   const isAuthenticated = ref(!!token.value)
   const lastAuthError = ref<string | null>(null)
+  let restoreSessionInFlight: Promise<boolean> | null = null
+
+  const syncAuthState = () => {
+    isAuthenticated.value = Boolean(token.value && user.value)
+  }
 
   const clearSessionState = () => {
     token.value = null
     user.value = null
-    isAuthenticated.value = false
+    syncAuthState()
     clearStoredSession()
   }
 
@@ -199,17 +204,17 @@ export const useAuthStore = defineStore('auth', () => {
       const session = extractSessionPayload(data)
       if (!session) {
         const message = '服务返回异常，请稍后重试'
+        clearStoredSession()
         token.value = null
         user.value = null
-        isAuthenticated.value = false
-        clearStoredSession()
+        syncAuthState()
         lastAuthError.value = message
         throw new Error(message)
       }
 
       token.value = session.token
       user.value = session.user
-      isAuthenticated.value = true
+      syncAuthState()
       lastAuthError.value = null
       storeSession(session)
     } catch (error) {
@@ -284,57 +289,65 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     token.value = null
     user.value = null
-    isAuthenticated.value = false
+    syncAuthState()
     lastAuthError.value = null
+    restoreSessionInFlight = null
     clearStoredSession()
     await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
   }
 
   const restoreSession = async () => {
     if (validateSession()) return true
+    if (restoreSessionInFlight) return restoreSessionInFlight
 
-    try {
-      const response = await fetch(`${API_URL}/auth/session`, { credentials: 'include' })
-      if (response.status === 204) {
-        clearSessionState()
-        lastAuthError.value = null
-        return false
-      }
-
-      const data = await parseApiResponse(response)
-      const authError = toAuthApiError(data)
-
-      if (!response.ok) {
-        if (isAuthInvalidationCode(authError.code)) {
+    restoreSessionInFlight = (async () => {
+      try {
+        const response = await fetch(`${API_URL}/auth/session`, { credentials: 'include' })
+        if (response.status === 204) {
           clearSessionState()
-          lastAuthError.value = authErrorMessage(authError, '登录状态已失效，请重新登录')
+          lastAuthError.value = null
+          return false
         }
-        return false
-      }
 
-      const session = extractSessionPayload(data)
-      if (!session) {
-        clearSessionState()
-        lastAuthError.value = '服务返回异常，请稍后重试'
-        return false
-      }
+        const data = await parseApiResponse(response)
+        const authError = toAuthApiError(data)
 
-      if (isTokenExpired(session.token)) {
-        clearSessionState()
-        lastAuthError.value = '登录状态已失效，请重新登录'
-        return false
-      }
+        if (!response.ok) {
+          if (isAuthInvalidationCode(authError.code)) {
+            clearSessionState()
+            lastAuthError.value = authErrorMessage(authError, '登录状态已失效，请重新登录')
+          }
+          return false
+        }
 
-      token.value = session.token
-      user.value = session.user
-      isAuthenticated.value = true
-      lastAuthError.value = null
-      storeSession(session)
-      return true
-    } catch {
-      lastAuthError.value = '无法连接服务器，请检查网络后重试'
-      return false
-    }
+        const session = extractSessionPayload(data)
+        if (!session) {
+          clearSessionState()
+          lastAuthError.value = '服务返回异常，请稍后重试'
+          return false
+        }
+
+        if (isTokenExpired(session.token)) {
+          clearSessionState()
+          lastAuthError.value = '登录状态已失效，请重新登录'
+          return false
+        }
+
+        token.value = session.token
+        user.value = session.user
+        syncAuthState()
+        lastAuthError.value = null
+        storeSession(session)
+        return true
+      } catch {
+        lastAuthError.value = '无法连接服务器，请检查网络后重试'
+        return false
+      } finally {
+        restoreSessionInFlight = null
+      }
+    })()
+
+    return restoreSessionInFlight
   }
 
   const validateSession = () => {
@@ -347,6 +360,7 @@ export const useAuthStore = defineStore('auth', () => {
       clearSessionState()
       return false
     }
+    syncAuthState()
     return true
   }
 

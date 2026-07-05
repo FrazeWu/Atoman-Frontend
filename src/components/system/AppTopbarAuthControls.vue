@@ -204,11 +204,11 @@ onBeforeUnmount(() => {
   inboxStore.disconnect()
 })
 
-const logout = () => {
-  authStore.logout()
+const logout = async () => {
+  await authStore.logout()
   closeDropdown()
   inboxStore.disconnect()
-  router.push('/login')
+  await router.push('/login')
 }
 
 const onMediaChannelChange = (value: string | number) => {
@@ -596,5 +596,4 @@ watch(authUserId, ensureMediaChannels)
   opacity: 0;
 }
 </style>
-
 

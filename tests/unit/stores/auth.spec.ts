@@ -85,6 +85,29 @@ describe('auth store', () => {
     expect(fetchMock).toHaveBeenCalledWith(`${defaultApiUrl}/auth/session`, { credentials: 'include' })
   })
 
+  it('deduplicates concurrent restoreSession requests', async () => {
+    const token = makeToken(3600)
+    let resolveFetch: ((value: Response) => void) | null = null
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise((resolve) => {
+      resolveFetch = resolve
+    }) as Promise<Response>)
+
+    const auth = useAuthStore()
+    const first = auth.restoreSession()
+    const second = auth.restoreSession()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    resolveFetch?.(new Response(JSON.stringify({
+      token,
+      user: { username: 'cookie-user', email: 'cookie@example.com', role: 'user' },
+    }), { status: 200 }))
+
+    await expect(first).resolves.toBe(true)
+    await expect(second).resolves.toBe(true)
+    expect(auth.user?.username).toBe('cookie-user')
+  })
+
   it('treats empty shared auth session as logged out without service error', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
 

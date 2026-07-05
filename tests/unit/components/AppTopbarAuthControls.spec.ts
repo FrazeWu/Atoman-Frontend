@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
@@ -198,5 +198,29 @@ describe('AppTopbarAuthControls', () => {
 
     expect(loadChannelsMock).toHaveBeenCalledTimes(2)
     expect(loadChannelsMock).toHaveBeenLastCalledWith('token-1', 'user-uuid-1')
+  })
+
+  it('waits for logout to finish before redirecting to login', async () => {
+    const authStore = useAuthStore()
+    let resolveLogout: (() => void) | null = null
+    const logoutPromise = new Promise<void>((resolve) => {
+      resolveLogout = resolve
+    })
+    const logoutSpy = vi.spyOn(authStore, 'logout').mockReturnValue(logoutPromise)
+
+    await router.push('/media')
+    const wrapper = mountTopbar()
+
+    await wrapper.find('.user-btn').trigger('click')
+    await wrapper.find('.dropdown-item-danger').trigger('click')
+
+    expect(logoutSpy).toHaveBeenCalled()
+    expect(router.currentRoute.value.path).toBe('/media')
+
+    resolveLogout?.()
+    await logoutPromise
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/login')
   })
 })

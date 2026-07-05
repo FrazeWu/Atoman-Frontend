@@ -72,6 +72,7 @@ export type MusicAlbumImportCommitInput = {
   }
   album: {
     title: string
+    release_date?: string
     release_year: number
     tracks: MusicAlbumImportCommitTrack[]
   }

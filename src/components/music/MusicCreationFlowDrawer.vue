@@ -91,6 +91,9 @@ const commitMusicAlbumImport = (musicApi as typeof musicApi & {
 function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
   const primaryStageName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())
     ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
+  const releaseDate = flow.draft.albumDetails.releaseDate.trim()
+  const parsedReleaseYear = Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10)
+  const derivedReleaseYear = releaseDate ? Number.parseInt(releaseDate.slice(0, 4), 10) : 0
 
   return {
     ...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
@@ -109,7 +112,8 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
     },
     album: {
       title: flow.draft.albumDetails.title.trim(),
-      release_year: Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10) || 0,
+      ...(releaseDate ? { release_date: releaseDate } : {}),
+      release_year: parsedReleaseYear || derivedReleaseYear || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
         title: track.title.trim(),
         trackNumber: index + 1,

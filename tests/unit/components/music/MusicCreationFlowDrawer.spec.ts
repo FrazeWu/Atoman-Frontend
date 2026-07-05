@@ -295,6 +295,48 @@ describe('MusicCreationFlowDrawer', () => {
     })
   })
 
+  it('填写发行日期时会同时提交 release_date 和推导后的 release_year', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'albumImport',
+      draft: {
+        ...createFlowState().draft,
+        albumImport: {
+          ...createFlowState().draft.albumImport,
+          importId: 'import-1',
+          status: 'ready',
+        },
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Late Registration',
+          releaseDate: '2005-08-30',
+          releaseYear: '',
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', {
+      artist_id: 'artist-seeded',
+      artist: {
+        name: 'Seeded Artist',
+        legal_name: 'Seeded Artist',
+        stage_names: [],
+        birth_place: '',
+      },
+      album: {
+        title: 'Late Registration',
+        release_date: '2005-08-30',
+        release_year: 2005,
+        tracks: [],
+      },
+    })
+  })
+
   it('提交失败时保留抽屉并显示错误', async () => {
     commitMusicAlbumImportMock.mockRejectedValue(new Error('commit failed'))
     drawerMocks.state.value.creationFlow = createFlowState({

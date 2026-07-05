@@ -187,8 +187,6 @@ describe('MusicCreationFlowDrawer', () => {
 
     const wrapper = mount(MusicCreationFlowDrawer)
 
-    await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
-    await flushPromises()
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
     await flushPromises()
 
@@ -274,8 +272,6 @@ describe('MusicCreationFlowDrawer', () => {
 
     const wrapper = mount(MusicCreationFlowDrawer)
 
-    await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
-    await flushPromises()
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
     await flushPromises()
 
@@ -353,8 +349,6 @@ describe('MusicCreationFlowDrawer', () => {
 
     const wrapper = mount(MusicCreationFlowDrawer)
 
-    await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
-    await flushPromises()
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
     await flushPromises()
 

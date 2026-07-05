@@ -155,7 +155,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(drawers.state.value.creationFlow?.draft.albumImport.derivedTracks).toEqual([])
   })
 
-  it('Seed 触发上传时保持在当前步骤，并在详情页中禁用压缩包入口', async () => {
+  it('Seed 触发上传时切到详情页，并在详情页中禁用压缩包入口', async () => {
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
       importId: 'import-uploading',
       status: 'pending_upload',
@@ -185,9 +185,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     void seedWrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
     await flushPromises()
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
-
-    drawers.setMusicCreationStep('albumDetails')
+    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
 
     const detailsWrapper = mount(MusicCreationAlbumDetailsStep)
     const detailsInput = detailsWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement

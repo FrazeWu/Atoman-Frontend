@@ -142,6 +142,31 @@ describe('Music ExploreView.vue', () => {
     expect(wrapper.find('[data-testid="page-header-title"]').text()).toBe('专辑')
   })
 
+  it('renders album-only content when used in albums mode', async () => {
+    const wrapper = mount(ExploreView, {
+      props: {
+        pageTitle: '专辑',
+        contentMode: 'albums',
+      },
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(mocks.listMusicDiscoverFeed).not.toHaveBeenCalled()
+    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 48, sort: 'hot' })
+    expect(wrapper.find('[aria-label="专辑列表"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(0)
+    expect(wrapper.text()).toContain('2049')
+    expect(wrapper.text()).not.toContain('Late Night Mix')
+  })
+
   it('shows album and artist groups in search dropdown', async () => {
     const wrapper = mount(ExploreView, {
       global: {

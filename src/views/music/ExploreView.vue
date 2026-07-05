@@ -23,10 +23,12 @@ import {
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   pageTitle?: string
+  contentMode?: 'discover' | 'albums'
 }>(), {
   pageTitle: '发现',
+  contentMode: 'discover',
 })
 
 const router = useRouter()
@@ -39,6 +41,7 @@ const searchOpen = ref(false)
 const searchLoading = ref(false)
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
+const albumItems = ref<MusicAlbumListItem[]>([])
 let activeSearchRequestId = 0
 
 const starredAlbumIds = ref<string[]>([])
@@ -124,6 +127,24 @@ async function fetchDiscoverFeed() {
     console.error('Failed to fetch music discover feed:', error)
     errorMessage.value = '发现内容加载失败'
     discoverItems.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchAlbumIndex() {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const [response] = await Promise.all([
+      listMusicAlbums({ page: 1, page_size: 48, sort: 'hot' }),
+      fetchAlbumBookmarks(),
+    ])
+    albumItems.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch music albums:', error)
+    errorMessage.value = '专辑列表加载失败'
+    albumItems.value = []
   } finally {
     loading.value = false
   }
@@ -225,6 +246,10 @@ watch(searchQuery, () => {
 })
 
 onMounted(() => {
+  if (props.contentMode === 'albums') {
+    fetchAlbumIndex()
+    return
+  }
   fetchDiscoverFeed()
 })
 
@@ -299,7 +324,20 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
-    <p v-else-if="!discoverItems.length" class="state-line">暂无发现内容</p>
+    <p v-else-if="contentMode === 'albums' && !albumItems.length" class="state-line">暂无专辑</p>
+    <p v-else-if="contentMode === 'discover' && !discoverItems.length" class="state-line">暂无发现内容</p>
+
+    <div v-else-if="contentMode === 'albums'" class="discover-grid" aria-label="专辑列表">
+      <MusicAlbumCard
+        v-for="album in albumItems"
+        :key="album.id"
+        :album="album"
+        :is-bookmarked="starredAlbumIds.includes(String(album.id))"
+        data-testid="discover-album-card"
+        @click="router.push(`/music?album=${album.id}`)"
+        @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
+      />
+    </div>
 
     <div v-else class="discover-grid" aria-label="发现流列表">
       <template v-for="item in discoverItems" :key="`${item.type}-${item.id}`">

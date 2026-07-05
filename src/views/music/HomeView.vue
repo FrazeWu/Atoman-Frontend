@@ -30,7 +30,7 @@ watch(
 <template>
   <div class="music-base-view">
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
-      <ExploreView page-title="专辑" />
+      <ExploreView page-title="专辑" content-mode="albums" />
     </div>
 
     <ArtistDrawer />

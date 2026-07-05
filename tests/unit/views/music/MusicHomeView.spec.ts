@@ -16,8 +16,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/views/music/ExploreView.vue', () => ({
   default: {
     name: 'ExploreViewStub',
-    props: ['pageTitle'],
-    template: '<div data-testid="music-explore-view-stub" :data-page-title="pageTitle">专辑首页</div>',
+    props: ['pageTitle', 'contentMode'],
+    template: '<div data-testid="music-explore-view-stub" :data-page-title="pageTitle" :data-content-mode="contentMode">专辑首页</div>',
   },
 }))
 
@@ -61,6 +61,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('专辑首页')
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-page-title')).toBe('专辑')
+    expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-content-mode')).toBe('albums')
     expect(wrapper.find('[data-testid="artist-drawer-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="album-drawer-stub"]').exists()).toBe(true)
   })

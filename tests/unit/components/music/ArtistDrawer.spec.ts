@@ -168,6 +168,17 @@ describe('ArtistDrawer.vue', () => {
     expect(wrapper.get('[data-testid="artist-bookmark-toggle"]').text()).toContain('已订阅')
   })
 
+  it('still renders artist details when bookmark lookup returns 401', async () => {
+    listArtistBookmarks.mockRejectedValueOnce(new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'))
+
+    const wrapper = mount(ArtistDrawer)
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Ye')
+    expect(wrapper.text()).toContain('本名：Kanye Omari West')
+    expect(wrapper.text()).not.toContain('艺术家信息加载失败')
+  })
+
   it('re-fetches artist data when artistRefreshToken changes', async () => {
     const wrapper = mount(ArtistDrawer)
 

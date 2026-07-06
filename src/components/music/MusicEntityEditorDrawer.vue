@@ -109,7 +109,6 @@ watch(editor, async (value) => {
   if (!value) {
     resetArtistState()
     resetAlbumState()
-    closeMusicCreationFlow()
     return
   }
 

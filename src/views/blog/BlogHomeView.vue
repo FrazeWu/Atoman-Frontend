@@ -80,7 +80,7 @@
         :key="post.id"
         :title="post.title"
         :summary="post.summary"
-        @click="$router.push('/posts/post/' + post.id)"
+        @click="openPost(post)"
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
@@ -114,14 +114,14 @@
               <span>💬 {{ post.comments_count || 0 }}</span>
             </div>
             <PClip
-              :active="starredIds.has(post.id)"
-              :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
-              @click="toggleStar(post.id)"
+              :active="isStarred(post)"
+              :label="isStarred(post) ? '取消收藏' : '收藏'"
+              @click="toggleStar(post)"
             />
             <PClip
-              :active="readingListIds.has(post.id)"
-              :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
-              @click="toggleReadingList(post.id)"
+              :active="isReadingList(post)"
+              :label="isReadingList(post) ? '取消稍后阅读' : '稍后阅读'"
+              @click="toggleReadingList(post)"
             />
           </div>
         </template>
@@ -137,7 +137,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -157,21 +157,53 @@ const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const api = useApi()
 const route = useRoute()
+const router = useRouter()
 
-const starredIds = computed(() => feedStore.bookmarkedPostIds)
-const readingListIds = computed(() => feedStore.readingListItemIds)
+const PAGE_SIZE = 20
 
-const toggleStar = (id: string) => {
-  void feedStore.togglePostBookmark(id)
+type BlogHomeListItem = Post & {
+  source: 'post' | 'feed'
+  targetPath: string
 }
 
-const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id)
+const postStarredIds = computed(() => feedStore.bookmarkedPostIds)
+const feedStarredIds = computed(() => feedStore.starredItemIds)
+const readingListIds = computed(() => feedStore.readingListItemIds)
+
+const isStarred = (item: BlogHomeListItem) => {
+  return item.source === 'feed'
+    ? feedStarredIds.value.has(item.id)
+    : postStarredIds.value.has(item.id)
+}
+
+const isReadingList = (item: BlogHomeListItem) => {
+  return readingListIds.value.has(item.id)
+}
+
+const toggleStar = (item: BlogHomeListItem) => {
+  if (item.source === 'feed') {
+    void feedStore.toggleStar(item.id)
+    return
+  }
+  void feedStore.togglePostBookmark(item.id)
+}
+
+const toggleReadingList = (item: BlogHomeListItem) => {
+  void feedStore.toggleReadingListItem(item.id)
+}
+
+const openPost = (item: BlogHomeListItem) => {
+  void router.push(item.targetPath)
+}
+
+const postIdFromTargetPath = (targetPath: string) => {
+  const match = targetPath.match(/^\/posts\/post\/([^/?#]+)/)
+  return match?.[1]
 }
 
 const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))
 
-const posts = ref<Post[]>([])
+const posts = ref<BlogHomeListItem[]>([])
 const recommendedPosts = ref<Array<{
   id: string
   title: string
@@ -263,28 +295,40 @@ const fetchPosts = async (append = false) => {
     const isPopular = sortBy.value === 'popular'
     const query = new URLSearchParams()
     query.set('page', String(page.value))
-    query.set('limit', '20')
+    query.set('limit', String(PAGE_SIZE))
     if (activeQuery.value) query.set('q', activeQuery.value)
     const endpoint = isPopular
-      ? `${api.url}/feed/recommend/articles?mode=hot&page=${page.value}&page_size=20`
+      ? `${api.url}/feed/recommend/articles?mode=hot&page=${page.value}&page_size=${PAGE_SIZE}`
       : `${api.blog.explore}?${query.toString()}`
 
     const res = await fetch(endpoint, { headers })
     if (res.ok) {
       const d = await res.json()
       const rawData = d.data || []
-      const extractedPosts: Post[] = rawData.map((item: any) => {
+      const extractedPosts: BlogHomeListItem[] = rawData.map((item: any) => {
         if (isPopular) {
+          const targetPath = item.target_path || `/feed/item/${item.id}`
+          const targetPostId = postIdFromTargetPath(targetPath)
+          const source = targetPostId ? 'post' : 'feed'
           return {
-            id: item.id,
+            id: targetPostId || item.id,
             title: item.title,
             summary: item.summary,
             cover_url: item.image_url,
             likes_count: 0,
             comments_count: 0,
+            source,
+            targetPath,
           }
         }
-        if (item.post) return item.post
+        const post = item.post || item
+        if (post?.id) {
+          return {
+            ...post,
+            source: 'post',
+            targetPath: `/posts/post/${post.id}`,
+          }
+        }
         return null
       }).filter(Boolean)
 
@@ -295,7 +339,7 @@ const fetchPosts = async (append = false) => {
       }
       hasMore.value = isPopular
         ? Boolean(d.meta?.has_more)
-        : rawData.length === 12
+        : rawData.length === PAGE_SIZE
     }
   } catch (e) {
     console.error(e)
@@ -314,6 +358,7 @@ onMounted(() => {
   void fetchRecommendedPosts()
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
+    void feedStore.fetchStarredIds()
     void feedStore.fetchReadingListIds()
   }
 })

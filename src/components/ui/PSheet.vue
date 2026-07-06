@@ -3,7 +3,7 @@
     <div class="p-sheet-root">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade">
-        <div v-if="show" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
+        <div v-if="show && showBackdrop" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
       </Transition>
 
       <Transition :name="transitionName">
@@ -54,6 +54,7 @@ const props = withDefaults(defineProps<{
   readingMode?: boolean // If true, adds 720px max-width to content
   isShifted?: boolean
   index?: number
+  showBackdrop?: boolean
 }>(), {
   title: 'VIEW',
   width: 'min(100%, 480px)',
@@ -61,7 +62,8 @@ const props = withDefaults(defineProps<{
   side: 'right',
   closeType: 'bookmark',
   readingMode: false,
-  isShifted: false
+  isShifted: false,
+  showBackdrop: true,
 })
 
 defineEmits(['close'])

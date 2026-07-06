@@ -57,9 +57,7 @@ describe('MusicCreationArtistStep.vue', () => {
     await wrapper.get('[data-testid="artist-legal-name-input"]').setValue('Kanye Omari West')
     await wrapper.get('[data-testid="artist-stage-name-input-0"]').setValue('Kanye West')
     await wrapper.get('[data-testid="artist-nationality-input"]').setValue('US')
-    await wrapper.get('[data-testid="artist-birth-year-input"]').setValue('1977')
-    await wrapper.get('[data-testid="artist-birth-month-input"]').setValue('6')
-    await wrapper.get('[data-testid="artist-birth-day-input"]').setValue('8')
+    await wrapper.get('[data-testid="artist-birth-input"]').setValue('1977/6/8')
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/source')
     const input = wrapper.get('[data-testid="artist-avatar-input"]').element as HTMLInputElement
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })
@@ -78,7 +76,7 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
   })
 
-  it('uses birthDateParts as the primary birthday draft and derives birthDate', async () => {
+  it('uses a single birthday input and derives birthDateParts plus birthDate', async () => {
     const drawers = useMusicDrawers()
     const wrapper = mount(MusicCreationArtistStep, {
       global: {
@@ -92,9 +90,7 @@ describe('MusicCreationArtistStep.vue', () => {
       },
     })
 
-    await wrapper.get('[data-testid="artist-birth-year-input"]').setValue('2001')
-    await wrapper.get('[data-testid="artist-birth-month-input"]').setValue('6')
-    await wrapper.get('[data-testid="artist-birth-day-input"]').setValue('8')
+    await wrapper.get('[data-testid="artist-birth-input"]').setValue('2001/6/8')
 
     expect(drawers.state.value.creationFlow?.draft.artist.birthDateParts).toEqual({
       year: '2001',
@@ -102,6 +98,27 @@ describe('MusicCreationArtistStep.vue', () => {
       day: '8',
     })
     expect(drawers.state.value.creationFlow?.draft.artist.birthDate).toBe('2001-06-08')
+  })
+
+  it('shows required markers for mandatory personal artist fields', () => {
+    const wrapper = mount(MusicCreationArtistStep, {
+      global: {
+        stubs: {
+          PCountryRegionField: {
+            props: ['modelValue', 'label'],
+            emits: ['update:modelValue'],
+            template: '<label>{{ label }}</label><input data-testid="artist-nationality-input" :value="modelValue" />',
+          },
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('头像*')
+    expect(wrapper.text()).toContain('本名*')
+    expect(wrapper.text()).toContain('主艺名*')
+    expect(wrapper.text()).toContain('国籍*')
+    expect(wrapper.text()).toContain('生日*')
+    expect(wrapper.text()).toContain('来源*')
   })
 
   it('requires personal mandatory fields before moving forward', async () => {
@@ -136,9 +153,7 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
 
     await wrapper.get('[data-testid="artist-nationality-input"]').setValue('US')
-    await wrapper.get('[data-testid="artist-birth-year-input"]').setValue('1977')
-    await wrapper.get('[data-testid="artist-birth-month-input"]').setValue('6')
-    await wrapper.get('[data-testid="artist-birth-day-input"]').setValue('8')
+    await wrapper.get('[data-testid="artist-birth-input"]').setValue('1977/6/8')
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/source')
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
 

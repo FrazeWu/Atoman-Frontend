@@ -109,6 +109,7 @@ vi.mock('@/components/ui/PButton.vue', () => ({
 }))
 
 vi.mock('@/api/musicV1', () => ({
+  createMusicArtist: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
   updateMusicArtist: vi.fn(),
@@ -169,14 +170,14 @@ describe('MusicEntityEditorDrawer.vue', () => {
     mocks.routerReplace.mockReset()
   })
 
-  it('prefers unified creation flow over legacy artist form in artist create mode', () => {
+  it('uses the artist form in artist create mode', () => {
     drawerState.value.musicEditor = { entity: 'artist', mode: 'create' }
-    drawerState.value.creationFlow = createFlowState('artist')
 
     const wrapper = mount(MusicEntityEditorDrawer)
 
-    expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
+    expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('新建艺术家')
   })
 

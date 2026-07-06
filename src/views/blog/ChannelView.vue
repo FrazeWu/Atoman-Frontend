@@ -23,7 +23,7 @@
             <PLink
               v-if="isOwner"
               :href="`/channels/${channel.slug || channel.id}/manage`"
-              label="管理"
+              label="创作"
             />
             <PLink
               v-if="isOwner"

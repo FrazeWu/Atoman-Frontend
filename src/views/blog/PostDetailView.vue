@@ -146,6 +146,11 @@ type EmbedData = {
   href?: string
 }
 
+type PostDetailResponse = Post & {
+  liked?: boolean
+  is_liked?: boolean
+}
+
 const props = defineProps<{
   id?: string
 }>()
@@ -221,8 +226,10 @@ const fetchPost = async () => {
     const res = await fetch(api.blog.post(id), { headers })
     if (res.ok) {
       const d = await res.json()
-      post.value = d.data || d
-      likesCount.value = post.value?.likes_count ?? 0
+      const detail = (d.data || d) as PostDetailResponse
+      post.value = detail
+      liked.value = detail.liked ?? detail.is_liked ?? false
+      likesCount.value = detail.likes_count ?? 0
 
       if (post.value?.channel_id) {
         void fetch(`${api.url}/feed/events/read`, {
@@ -350,7 +357,7 @@ const fetchMusicEmbeds = async (content: string) => {
             title: album.title,
             summary: album.release_date ? `发行日期：${album.release_date}` : undefined,
             meta: [album.artists?.map((artist) => artist.name).join(' / '), album.year ? String(album.year) : ''].filter(Boolean).join(' · '),
-            href: `/music/albums/${id}`,
+            href: `/music/album/${id}`,
           } satisfies EmbedData,
         ] as const
       } catch {

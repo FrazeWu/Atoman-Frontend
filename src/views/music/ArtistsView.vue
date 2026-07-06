@@ -16,6 +16,7 @@ import {
 } from '@/api/musicV1'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
+import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import { MusicArtistCard } from '@/components/music'
@@ -38,7 +39,17 @@ const tabOptions = [
 ]
 
 const route = useRoute()
-const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicEditor, closeMusicEditor } = useMusicDrawers()
+const {
+  isMainShifted,
+  openAlbum,
+  closeAlbum,
+  openArtist,
+  closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
+  openMusicEditor,
+  closeMusicEditor,
+} = useMusicDrawers()
 
 const artists = ref<MusicArtistListItem[]>([])
 const searchResults = ref<MusicArtistListItem[]>([])
@@ -56,6 +67,8 @@ const { applyRouteSelection } = useMusicRouteSelection({
   closeAlbum,
   openArtist,
   closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
   openMusicEditor,
   closeMusicEditor,
 })
@@ -295,7 +308,7 @@ function handleSearchBlur() {
               </template>
             </SearchSurface>
           </div>
-          <button class="paper-action search-side-action" type="button" @click="openMusicEditor({ entity: 'artist', mode: 'create' })">
+          <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow()">
             <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
           </button>
@@ -320,7 +333,7 @@ function handleSearchBlur() {
             class="paper-action"
             type="button"
             data-testid="empty-add-artist"
-            @click="openMusicEditor({ entity: 'artist', mode: 'create' })"
+            @click="openMusicCreationFlow()"
           >
             <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
@@ -343,6 +356,7 @@ function handleSearchBlur() {
 
     <ArtistDrawer />
     <AlbumDrawer />
+    <MusicCreationFlowDrawer />
     <MusicEntityEditorDrawer />
     <NestedActionDrawer />
   </div>

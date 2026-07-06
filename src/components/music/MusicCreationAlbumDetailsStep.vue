@@ -54,6 +54,10 @@ const unresolvedImportedCoverUrl = computed(() => {
   return nextCoverUrl
 })
 
+function requiredLabel(label: string) {
+  return `${label}*`
+}
+
 function createEmptyDateParts() {
   return {
     year: '',
@@ -506,7 +510,7 @@ watch(
         <div class="p-field">
           <label class="p-field-label">
             <span class="p-field-dot" aria-hidden="true" />
-            专辑压缩包
+            {{ requiredLabel('专辑压缩包') }}
           </label>
           <div 
             class="custom-file-picker" 
@@ -587,7 +591,7 @@ watch(
         <div class="p-field">
           <label class="p-field-label">
             <span class="p-field-dot" aria-hidden="true" />
-            封面
+            {{ requiredLabel('封面') }}
           </label>
           <div 
             class="custom-file-picker" 
@@ -648,7 +652,7 @@ watch(
           data-testid="album-details-title-input"
           type="text"
           placeholder="例如 Late Registration"
-          label="名字"
+          :label="requiredLabel('名字')"
         />
       </div>
 
@@ -657,7 +661,7 @@ watch(
       </div>
 
       <div class="field-group" data-testid="album-details-field" data-field="date">
-        <span class="field-label">日期</span>
+        <span class="field-label">{{ requiredLabel('日期') }}</span>
         <div class="date-parts-grid">
           <PInput
             v-model="albumDetailsDraft.releaseDateParts.year"
@@ -689,7 +693,7 @@ watch(
       <div class="field-group" data-testid="album-details-field" data-field="type">
         <PSelect
           v-model="albumDetailsDraft.type"
-          label="类型"
+          :label="requiredLabel('类型')"
           :options="[{ label: 'album', value: 'album' }]"
         />
         <input
@@ -775,7 +779,7 @@ watch(
           data-testid="album-details-source-input"
           :rows="3"
           placeholder="填写来源"
-          label="来源"
+          :label="requiredLabel('来源')"
         />
       </div>
     </div>

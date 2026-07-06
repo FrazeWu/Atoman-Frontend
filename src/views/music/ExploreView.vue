@@ -12,13 +12,12 @@ import {
   listArtistBookmarks,
   listMusicAlbums,
   listMusicArtists,
-  listMusicDiscoverFeed,
+  listPublicMusicPlaylists,
+  listRecommendedArtists,
   type MusicAlbumListItem,
   type MusicArtistListItem,
-  type MusicDiscoverAlbumItem,
-  type MusicDiscoverArtistItem,
-  type MusicDiscoverItem,
-  type MusicDiscoverPlaylistItem,
+  type MusicPlaylistSummary,
+  type MusicRecommendationItem,
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -35,7 +34,9 @@ const router = useRouter()
 const { openPlaylist } = useMusicDrawers()
 const loading = ref(false)
 const errorMessage = ref('')
-const discoverItems = ref<MusicDiscoverItem[]>([])
+const discoverAlbums = ref<MusicAlbumListItem[]>([])
+const discoverArtists = ref<MusicRecommendationItem[]>([])
+const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
@@ -71,8 +72,8 @@ async function handleToggleAlbumBookmark(albumId: string) {
     if (isCurrentlyBookmarked) {
       await deleteAlbumBookmark(albumId)
       starredAlbumIds.value = starredAlbumIds.value.filter(id => id !== albumId)
-      discoverItems.value = discoverItems.value.map((item) => {
-        if (item.type !== 'album' || String(item.id) !== albumId) return item
+      discoverAlbums.value = discoverAlbums.value.map((item) => {
+        if (String(item.id) !== albumId) return item
         return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
       })
       return
@@ -80,8 +81,8 @@ async function handleToggleAlbumBookmark(albumId: string) {
 
     await createAlbumBookmark(albumId)
     starredAlbumIds.value.push(albumId)
-    discoverItems.value = discoverItems.value.map((item) => {
-      if (item.type !== 'album' || String(item.id) !== albumId) return item
+    discoverAlbums.value = discoverAlbums.value.map((item) => {
+      if (String(item.id) !== albumId) return item
       return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
     })
   } catch (e) {
@@ -95,8 +96,8 @@ async function handleToggleArtistBookmark(artistId: string) {
     if (isCurrentlyBookmarked) {
       await deleteArtistBookmark(artistId)
       starredArtistIds.value = starredArtistIds.value.filter(id => id !== artistId)
-      discoverItems.value = discoverItems.value.map((item) => {
-        if (item.type !== 'artist' || String(item.id) !== artistId) return item
+      discoverArtists.value = discoverArtists.value.map((item) => {
+        if (String(item.id) !== artistId) return item
         return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
       })
       return
@@ -104,8 +105,8 @@ async function handleToggleArtistBookmark(artistId: string) {
 
     await createArtistBookmark(artistId)
     starredArtistIds.value.push(artistId)
-    discoverItems.value = discoverItems.value.map((item) => {
-      if (item.type !== 'artist' || String(item.id) !== artistId) return item
+    discoverArtists.value = discoverArtists.value.map((item) => {
+      if (String(item.id) !== artistId) return item
       return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
     })
   } catch (e) {
@@ -117,16 +118,22 @@ async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [response] = await Promise.all([
-      listMusicDiscoverFeed(),
+    const [albumResponse, artistResponse, playlistResponse] = await Promise.all([
+      listMusicAlbums({ page: 1, page_size: 6, sort: 'hot' }),
+      listRecommendedArtists('discover'),
+      listPublicMusicPlaylists({ page: 1, page_size: 6 }),
       fetchAlbumBookmarks(),
       fetchArtistBookmarks(),
     ])
-    discoverItems.value = response.data ?? []
+    discoverAlbums.value = albumResponse.data ?? []
+    discoverArtists.value = artistResponse.data ?? []
+    discoverPlaylists.value = playlistResponse.data ?? []
   } catch (error) {
     console.error('Failed to fetch music discover feed:', error)
     errorMessage.value = '发现内容加载失败'
-    discoverItems.value = []
+    discoverAlbums.value = []
+    discoverArtists.value = []
+    discoverPlaylists.value = []
   } finally {
     loading.value = false
   }
@@ -182,41 +189,37 @@ async function fetchSearchResults() {
   }
 }
 
-function openDiscoverItem(item: MusicDiscoverItem) {
-  if (item.type === 'playlist') {
-    openPlaylist(String(item.id))
-    return
-  }
-  router.push(item.target_path)
-}
-
-function discoverItemTestId(item: MusicDiscoverItem) {
-  if (item.type === 'album') return 'discover-album-card'
-  if (item.type === 'artist') return 'discover-artist-card'
-  return 'discover-playlist-card'
-}
-
-function albumCardItem(item: MusicDiscoverAlbumItem) {
+function artistCardItem(item: MusicRecommendationItem) {
   return {
-    ...item,
-    cover_url: item.cover_url || item.image_url,
+    id: item.id,
+    name: item.title,
+    bio: item.summary,
+    image_url: item.image_url,
+    play_count: item.play_count,
+    bookmark_count: item.bookmark_count,
   }
 }
 
-function artistCardItem(item: MusicDiscoverArtistItem) {
+function playlistCardItem(item: MusicPlaylistSummary) {
   return {
-    ...item,
-    name: item.name || item.title,
-    bio: item.bio || item.summary,
+    id: item.id,
+    title: item.name,
+    description: item.description,
+    cover_url: item.cover_url,
+    song_count: item.song_count,
   }
 }
 
-function playlistCardItem(item: MusicDiscoverPlaylistItem) {
-  return {
-    ...item,
-    description: item.description || item.summary,
-    cover_url: item.cover_url || item.image_url,
-  }
+function openDiscoverAlbum(album: MusicAlbumListItem) {
+  router.push(`/music?album=${album.id}`)
+}
+
+function openDiscoverArtist(artist: MusicRecommendationItem) {
+  router.push(artist.target_path)
+}
+
+function openDiscoverPlaylist(playlist: MusicPlaylistSummary) {
+  openPlaylist(String(playlist.id))
 }
 
 function openAlbumResult(album: MusicAlbumListItem) {
@@ -325,7 +328,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
     <p v-else-if="contentMode === 'albums' && !albumItems.length" class="state-line">暂无专辑</p>
-    <p v-else-if="contentMode === 'discover' && !discoverItems.length" class="state-line">暂无发现内容</p>
+    <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length" class="state-line">暂无发现内容</p>
 
     <div v-else-if="contentMode === 'albums'" class="discover-grid" aria-label="专辑列表">
       <MusicAlbumCard
@@ -339,33 +342,90 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       />
     </div>
 
-    <div v-else class="discover-grid" aria-label="发现流列表">
-      <template v-for="item in discoverItems" :key="`${item.type}-${item.id}`">
-        <MusicAlbumCard
-          v-if="item.type === 'album'"
-          :album="albumCardItem(item)"
-          :is-bookmarked="starredAlbumIds.includes(String(item.id))"
-          :data-testid="discoverItemTestId(item)"
-          @click="openDiscoverItem(item)"
-          @toggle-bookmark="handleToggleAlbumBookmark(String(item.id))"
-        />
+    <div v-else class="discover-sections" aria-label="发现分区">
+      <section v-if="discoverAlbums.length" class="discover-section">
+        <div class="discover-section__header">
+          <h2 class="discover-section__title" data-testid="discover-section-title">专辑</h2>
+        </div>
+        <div class="discover-layout discover-layout--albums" aria-label="发现专辑分区">
+          <MusicAlbumCard
+            v-for="(item, index) in discoverAlbums"
+            :key="item.id"
+            :class="[
+              'discover-layout__item',
+              index === 0 ? 'discover-layout__item--album-hero' : 'discover-layout__item--album-compact',
+            ]"
+            :album="item"
+            :is-bookmarked="starredAlbumIds.includes(String(item.id))"
+            data-testid="discover-album-card"
+            @click="openDiscoverAlbum(item)"
+            @toggle-bookmark="handleToggleAlbumBookmark(String(item.id))"
+          />
+        </div>
+      </section>
 
-        <MusicArtistCard
-          v-else-if="item.type === 'artist'"
-          :artist="artistCardItem(item)"
-          :is-bookmarked="starredArtistIds.includes(String(item.id))"
-          :data-testid="discoverItemTestId(item)"
-          @click="openDiscoverItem(item)"
-          @toggle-bookmark="handleToggleArtistBookmark(String(item.id))"
-        />
+      <section class="discover-section">
+        <div class="discover-section__header">
+          <h2 class="discover-section__title" data-testid="discover-section-title">歌单</h2>
+        </div>
+        <div class="discover-layout discover-layout--playlists" aria-label="发现歌单分区">
+          <template v-if="discoverPlaylists.length">
+            <MusicPlaylistCard
+              v-for="(item, index) in discoverPlaylists"
+              :key="item.id"
+              :class="[
+                'discover-layout__item',
+                index === 0 ? 'discover-layout__item--playlist-tall' : 'discover-layout__item--playlist-compact',
+              ]"
+              :playlist="playlistCardItem(item)"
+              data-testid="discover-playlist-card"
+              @click="openDiscoverPlaylist(item)"
+            />
+          </template>
+          <template v-else>
+            <article
+              class="discover-layout__item discover-layout__playlist-placeholder discover-layout__playlist-placeholder--tall"
+              data-testid="discover-playlist-placeholder"
+            >
+              <p class="discover-placeholder__eyebrow">Playlist</p>
+              <h3 class="discover-placeholder__title">暂无公开歌单</h3>
+              <p class="discover-placeholder__copy">这里会保留歌单高块结构，等公开歌单接入后直接落位。</p>
+            </article>
+            <article
+              class="discover-layout__item discover-layout__playlist-placeholder"
+              data-testid="discover-playlist-placeholder"
+            >
+              <p class="discover-placeholder__eyebrow">Playlist</p>
+              <h3 class="discover-placeholder__title discover-placeholder__title--compact">留给精选歌单</h3>
+            </article>
+            <article
+              class="discover-layout__item discover-layout__playlist-placeholder"
+              data-testid="discover-playlist-placeholder"
+            >
+              <p class="discover-placeholder__eyebrow">Playlist</p>
+              <h3 class="discover-placeholder__title discover-placeholder__title--compact">留给场景歌单</h3>
+            </article>
+          </template>
+        </div>
+      </section>
 
-        <MusicPlaylistCard
-          v-else
-          :playlist="playlistCardItem(item)"
-          :data-testid="discoverItemTestId(item)"
-          @click="openDiscoverItem(item)"
-        />
-      </template>
+      <section v-if="discoverArtists.length" class="discover-section">
+        <div class="discover-section__header">
+          <h2 class="discover-section__title" data-testid="discover-section-title">艺人</h2>
+        </div>
+        <div class="discover-layout discover-layout--artists" aria-label="发现艺人分区">
+          <MusicArtistCard
+            v-for="item in discoverArtists"
+            :key="item.id"
+            class="discover-layout__item discover-layout__item--artist"
+            :artist="artistCardItem(item)"
+            :is-bookmarked="starredArtistIds.includes(String(item.id))"
+            data-testid="discover-artist-card"
+            @click="openDiscoverArtist(item)"
+            @toggle-bookmark="handleToggleArtistBookmark(String(item.id))"
+          />
+        </div>
+      </section>
     </div>
   </section>
 </template>
@@ -482,6 +542,123 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   margin-top: 1.5rem;
 }
 
+.discover-sections {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.5rem;
+}
+
+.discover-section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.discover-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.discover-section__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.discover-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.discover-layout--albums {
+  grid-template-columns: minmax(0, 1.45fr) minmax(11rem, 0.9fr) minmax(11rem, 0.9fr);
+}
+
+.discover-layout--playlists {
+  grid-template-columns: minmax(0, 1.15fr) minmax(11rem, 1fr) minmax(11rem, 1fr);
+}
+
+.discover-layout--artists {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.discover-layout__item {
+  min-width: 0;
+}
+
+.discover-layout__item--album-hero {
+  grid-column: span 2;
+}
+
+.discover-layout__item--album-hero :deep(.cover-frame) {
+  aspect-ratio: 1.8 / 1;
+  border-radius: 20px;
+}
+
+.discover-layout__item--album-hero :deep(.music-title) {
+  font-size: 1.16rem;
+}
+
+.discover-layout__item--playlist-tall :deep(.cover-frame) {
+  aspect-ratio: 1 / 1.28;
+  border-radius: 18px;
+}
+
+.discover-layout__item--playlist-compact :deep(.cover-frame) {
+  aspect-ratio: 1 / 1.04;
+}
+
+.discover-layout__item--artist :deep(.avatar-frame) {
+  aspect-ratio: 0.9 / 1;
+  border-radius: 18px;
+}
+
+.discover-layout__playlist-placeholder {
+  min-height: 13rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--a-color-paper) 86%, var(--a-color-paper-wash) 14%), var(--a-color-paper));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.discover-layout__playlist-placeholder--tall {
+  min-height: 18rem;
+}
+
+.discover-placeholder__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--a-color-muted-soft);
+}
+
+.discover-placeholder__title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--a-color-fg);
+}
+
+.discover-placeholder__title--compact {
+  font-size: 1.05rem;
+}
+
+.discover-placeholder__copy {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--a-color-muted);
+}
+
 @media (max-width: 720px) {
   .toolbar-row,
   .toolbar-left {
@@ -496,6 +673,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
   .search-shell.is-open :deep(.search-frame) {
     width: 100%;
+  }
+
+  .discover-layout--albums,
+  .discover-layout--playlists,
+  .discover-layout--artists {
+    grid-template-columns: 1fr;
+  }
+
+  .discover-layout__item--album-hero {
+    grid-column: span 1;
   }
 }
 </style>

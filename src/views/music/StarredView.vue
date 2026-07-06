@@ -13,24 +13,17 @@ import {
   listAlbumBookmarks,
   listArtistBookmarks,
   listMusicPlaylists,
-  listRecommendedAlbums,
-  listRecommendedArtists,
   type MusicPlaylistSummary,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
-  type MusicRecommendationMode,
   type MusicStarredItem,
 } from '@/api/musicV1'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import {
-  filterAlbumRecommendationsByBookmarks,
-  filterArtistRecommendationsByBookmarks,
-  MUSIC_RECOMMENDATION_MODE_OPTIONS,
-} from '@/utils/musicRecommendations'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 
 type StarredFilter = 'album' | 'artist' | 'playlist'
+type StarredSortMode = 'latest' | 'popular'
 
 const filterOptions: Array<{ label: string; value: StarredFilter; testid: string }> = [
   { label: '收藏专辑', value: 'album', testid: 'filter-album' },
@@ -42,9 +35,14 @@ const artistItems = ref<MusicStarredItem[]>([])
 const albumItems = ref<MusicStarredItem[]>([])
 const playlistItems = ref<MusicPlaylistSummary[]>([])
 const activeFilter = ref<StarredFilter>('album')
-const recommendationMode = ref<MusicRecommendationMode>('hot')
+const sortMode = ref<StarredSortMode>('latest')
 const loading = ref(false)
 const errorMessage = ref('')
+
+const sortOptions: Array<{ label: string; value: StarredSortMode }> = [
+  { label: '最新', value: 'latest' },
+  { label: '最热', value: 'popular' },
+]
 
 const filteredItems = computed(() => {
   if (activeFilter.value === 'artist') return artistItems.value
@@ -105,9 +103,9 @@ async function loadStarred() {
     let playlistsResponse: { data: MusicPlaylistSummary[] }
     try {
       ;[artistBookmarks, albumBookmarks, playlistsResponse] = await Promise.all([
-        listArtistBookmarks(),
-        listAlbumBookmarks(),
-        listMusicPlaylists(),
+        listArtistBookmarks({ sort: sortMode.value }),
+        listAlbumBookmarks({ sort: sortMode.value }),
+        listMusicPlaylists({ sort: sortMode.value }),
       ])
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
@@ -119,20 +117,6 @@ async function loadStarred() {
       throw error
     }
 
-    const [recommendedArtists, recommendedAlbums] = await Promise.all([
-      listRecommendedArtists(recommendationMode.value),
-      listRecommendedAlbums(recommendationMode.value),
-    ])
-
-    const visibleArtistBookmarks = filterArtistRecommendationsByBookmarks(
-      recommendedArtists.data,
-      artistBookmarks.data as MusicArtistBookmark[],
-    )
-    const visibleAlbumBookmarks = filterAlbumRecommendationsByBookmarks(
-      recommendedAlbums.data,
-      albumBookmarks.data as MusicAlbumBookmark[],
-    )
-
     const artistBookmarksById = new Map(
       artistBookmarks.data.map((bookmark: MusicArtistBookmark) => [String(bookmark.artist_id), bookmark]),
     )
@@ -141,20 +125,20 @@ async function loadStarred() {
     )
 
     const [artists, albums] = await Promise.all([
-      Promise.all(visibleArtistBookmarks.map((item) => getMusicArtist(item.id))),
-      Promise.all(visibleAlbumBookmarks.map((item) => getMusicAlbum(item.id))),
+      Promise.all(artistBookmarks.data.map((bookmark: MusicArtistBookmark) => getMusicArtist(bookmark.artist_id))),
+      Promise.all(albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => getMusicAlbum(bookmark.album_id))),
     ])
 
-    artistItems.value = visibleArtistBookmarks.map((item, index: number) => ({
-      id: artistBookmarksById.get(item.id)?.id ?? item.id,
+    artistItems.value = artistBookmarks.data.map((bookmark: MusicArtistBookmark, index: number) => ({
+      id: bookmark.id,
       kind: 'artist' as const,
-      starred_at: artistBookmarksById.get(item.id)?.created_at ?? '',
+      starred_at: artistBookmarksById.get(String(bookmark.artist_id))?.created_at ?? '',
       artist: artists[index],
     }))
-    albumItems.value = visibleAlbumBookmarks.map((item, index: number) => ({
-      id: albumBookmarksById.get(item.id)?.id ?? item.id,
+    albumItems.value = albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
+      id: bookmark.id,
       kind: 'album' as const,
-      starred_at: albumBookmarksById.get(item.id)?.created_at ?? '',
+      starred_at: albumBookmarksById.get(String(bookmark.album_id))?.created_at ?? '',
       album: albums[index],
     }))
     playlistItems.value = playlistsResponse.data
@@ -170,7 +154,7 @@ onMounted(() => {
   loadStarred()
 })
 
-watch(recommendationMode, () => {
+watch(sortMode, () => {
   loadStarred()
 })
 </script>
@@ -199,10 +183,10 @@ watch(recommendationMode, () => {
           <div class="search-shell search-shell--placeholder" aria-hidden="true" />
         </div>
         <div class="toolbar-right">
-          <div class="recommendation-tabs" aria-label="收藏推荐模式">
+          <div class="recommendation-tabs" aria-label="收藏排序">
             <PSegmentedControl
-              v-model="recommendationMode"
-              :options="MUSIC_RECOMMENDATION_MODE_OPTIONS"
+              v-model="sortMode"
+              :options="sortOptions"
             />
           </div>
         </div>

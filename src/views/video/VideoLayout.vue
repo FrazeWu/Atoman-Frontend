@@ -12,7 +12,7 @@
         订阅
       </PSidebarItem>
       <PSidebarItem to="/videos/manage" :index="3" :icon="Settings">
-        管理
+        创作
       </PSidebarItem>
     </PSidebar>
     <main class="a-main-content">

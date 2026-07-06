@@ -494,6 +494,7 @@ export const musicV1Endpoints = {
   albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,
   albumDiscussions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/discussions`,
   albumDiscussion: (albumId: string, discussionId: string) => `${apiV1Base()}/albums/${albumId}/discussions/${discussionId}`,
+  albumDiscussionReply: (albumId: string, discussionId: string) => `${apiV1Base()}/albums/${albumId}/discussions/${discussionId}/reply`,
   albumImports: () => `${apiV1Base()}/music/imports/albums`,
   albumImport: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}`,
   albumImportArchive: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/upload`,
@@ -873,8 +874,8 @@ export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<M
   }
 }
 
-export async function listArtistBookmarks() {
-  return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(musicV1Endpoints.artistBookmarks())
+export async function listArtistBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(`${musicV1Endpoints.artistBookmarks()}${queryString(filters)}`)
 }
 
 export async function createArtistBookmark(artistId: string): Promise<MusicArtistBookmark> {
@@ -885,8 +886,8 @@ export async function deleteArtistBookmark(artistId: string): Promise<{ deleted:
   return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.artistBookmark(artistId))
 }
 
-export async function listAlbumBookmarks() {
-  return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(musicV1Endpoints.albumBookmarks())
+export async function listAlbumBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(`${musicV1Endpoints.albumBookmarks()}${queryString(filters)}`)
 }
 
 export async function createAlbumBookmark(albumId: string): Promise<MusicAlbumBookmark> {
@@ -897,12 +898,12 @@ export async function deleteAlbumBookmark(albumId: string): Promise<{ deleted: b
   return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.albumBookmark(albumId))
 }
 
-export async function listSongBookmarks() {
-  return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(musicV1Endpoints.songBookmarks())
+export async function listSongBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(`${musicV1Endpoints.songBookmarks()}${queryString(filters)}`)
 }
 
-export async function listMusicPlaylists() {
-  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(musicV1Endpoints.playlists())
+export async function listMusicPlaylists(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(`${musicV1Endpoints.playlists()}${queryString(filters)}`)
 }
 
 export async function listPublicMusicPlaylists(filters: Pick<MusicListFilters, 'page' | 'page_size'> = {}) {
@@ -1028,7 +1029,7 @@ export async function createAlbumDiscussion(albumId: string, content: string): P
 }
 
 export async function replyAlbumDiscussion(albumId: string, discussionId: string, content: string): Promise<MusicDiscussion> {
-  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussion(albumId, discussionId), { content })
+  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussionReply(albumId, discussionId), { content })
 }
 
 export async function deleteAlbumDiscussion(albumId: string, discussionId: string): Promise<{ success: boolean }> {

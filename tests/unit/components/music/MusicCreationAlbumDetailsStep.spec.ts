@@ -93,6 +93,21 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.get('[data-testid="album-details-track-count"]').text()).toContain('3 首')
   })
 
+  it('shows required markers for mandatory album fields', () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
+    drawers.setMusicCreationStep('albumDetails')
+
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+
+    expect(wrapper.text()).toContain('专辑压缩包*')
+    expect(wrapper.text()).toContain('封面*')
+    expect(wrapper.text()).toContain('名字*')
+    expect(wrapper.text()).toContain('日期*')
+    expect(wrapper.text()).toContain('类型*')
+    expect(wrapper.text()).toContain('来源*')
+  })
+
   it('searches existing artists, adds contributors, and allows removing unlocked contributors', async () => {
     vi.mocked(listMusicArtists).mockResolvedValue({
       data: [

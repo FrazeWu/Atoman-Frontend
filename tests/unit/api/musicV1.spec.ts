@@ -9,12 +9,14 @@ import {
   buildCreateArtistEdit,
   buildDeleteAlbumEdit,
   buildUpdateAlbumEdit,
+  updateMusicPlaylist,
   getMusicAlbum,
   getMusicArtist,
   listMusicArtists,
   listMusicAlbums,
   listMusicDiscoverFeed,
   listMusicEdits,
+  replyAlbumDiscussion,
   startMusicAlbumImportMultipart,
   updateMusicArtist,
   type MusicAlbumListItem,
@@ -43,6 +45,23 @@ describe('api v1 client', () => {
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/albums/album_uuid', {
       credentials: 'include',
       headers: { Accept: 'application/json' },
+    })
+  })
+
+  it('attaches Authorization for same-origin relative API requests when a token exists', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'playlist_uuid', name: 'Playlist' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
+    })
+
+    await apiGet<{ id: string; name: string }>('/api/v1/music/playlists/playlist_uuid')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
+      credentials: 'include',
+      headers: { Accept: 'application/json', Authorization: 'Bearer test-token' },
     })
   })
 
@@ -142,6 +161,40 @@ describe('api v1 client', () => {
     expect(error.status).toBe(422)
     expect(error.code).toBe('music.invalid_source')
     expect(error.details).toEqual({ field: 'sources' })
+  })
+
+  it('retries playlist updates with bearer auth on same-origin absolute URL after a not-found response', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
+    })
+    vi.stubGlobal('window', {
+      location: { origin: 'http://localhost:5176' },
+    })
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ error: { message: 'Not found' } }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ data: { id: 'playlist-1', name: 'Playlist', description: '', is_public: true, song_count: 0, songs: [] } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )))
+
+    const result = await updateMusicPlaylist('playlist-1', { is_public: true })
+
+    expect(result).toMatchObject({ id: 'playlist-1', is_public: true })
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/api/v1/music/playlists/playlist-1')
+    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+    })
+    expect(vi.mocked(fetch).mock.calls[1][0]).toBe('http://localhost:5176/api/v1/music/playlists/playlist-1')
+    expect(vi.mocked(fetch).mock.calls[1][1]).toMatchObject({
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+    })
   })
 
   it('sends PATCH JSON requests with credentials and Accept headers', async () => {
@@ -552,6 +605,23 @@ describe('music v1 adapter', () => {
   it('does not expose revert music edit endpoints or api methods', () => {
     expect(musicV1Endpoints).not.toHaveProperty('editRevert')
     expect(musicV1).not.toHaveProperty('revertMusicEdit')
+  })
+
+  it('replies to album discussions through the reply endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'reply_uuid', album_id: 'album_uuid', parent_id: 'discussion_uuid', content: 'Reply', author_id: 'user_uuid', created_at: '2026-07-06T00:00:00Z' } }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await replyAlbumDiscussion('album_uuid', 'discussion_uuid', 'Reply')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/albums/album_uuid/discussions/discussion_uuid/reply', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ content: 'Reply' }),
+    })
+    expect(result.parent_id).toBe('discussion_uuid')
   })
 
   it('starts album import multipart uploads through the correct path and body', async () => {

@@ -156,9 +156,7 @@ export function useMusicDrawers() {
   }
 
   const openMusicEditor = (editor: MusicEditorState) => {
-    if (editor.mode !== 'create') {
-      state.value.creationFlow = null
-    }
+    state.value.creationFlow = null
     state.value.musicEditor = editor
   }
 

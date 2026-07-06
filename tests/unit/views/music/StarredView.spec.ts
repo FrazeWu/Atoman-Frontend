@@ -14,8 +14,6 @@ const mocks = vi.hoisted(() => ({
   listMusicPlaylists: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
-  listRecommendedArtists: vi.fn(),
-  listRecommendedAlbums: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
   deleteArtistBookmark: vi.fn(),
   openArtist: vi.fn(),
@@ -29,8 +27,6 @@ vi.mock('@/api/musicV1', () => ({
   listMusicPlaylists: mocks.listMusicPlaylists,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
-  listRecommendedArtists: mocks.listRecommendedArtists,
-  listRecommendedAlbums: mocks.listRecommendedAlbums,
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
   deleteArtistBookmark: mocks.deleteArtistBookmark,
 }))
@@ -70,8 +66,6 @@ describe('Music StarredView', () => {
     mocks.listMusicPlaylists.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.getMusicAlbum.mockReset()
-    mocks.listRecommendedArtists.mockReset()
-    mocks.listRecommendedAlbums.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
     mocks.deleteArtistBookmark.mockReset()
     mocks.openArtist.mockReset()
@@ -83,12 +77,6 @@ describe('Music StarredView', () => {
     })
     mocks.listAlbumBookmarks.mockResolvedValue({
       data: [{ id: 'album-bookmark-1', album_id: 'album-1', created_at: '2026-07-01T00:00:00Z' }],
-    })
-    mocks.listRecommendedArtists.mockResolvedValue({
-      data: [{ id: 'artist-1', target_path: '/music/artist/artist-1' }],
-    })
-    mocks.listRecommendedAlbums.mockResolvedValue({
-      data: [{ id: 'album-1', target_path: '/music/album/album-1' }],
     })
     mocks.listMusicPlaylists.mockResolvedValue({
       data: [{
@@ -116,9 +104,9 @@ describe('Music StarredView', () => {
     const wrapper = mount(StarredView)
     await flushPromises()
 
-    expect(mocks.listArtistBookmarks).toHaveBeenCalledWith()
-    expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith()
-    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith()
+    expect(mocks.listArtistBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
+    expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
+    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith({ sort: 'latest' })
     expect(wrapper.text()).toContain('收藏专辑')
     expect(wrapper.text()).toContain('收藏艺人')
     expect(wrapper.text()).toContain('收藏歌单')
@@ -181,5 +169,23 @@ describe('Music StarredView', () => {
 
     expect(wrapper.text()).toContain('暂无收藏')
     expect(wrapper.text()).not.toContain('收藏加载失败')
+  })
+
+  it('切换到最热时会按 popular 重新请求收藏数据', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    mocks.listArtistBookmarks.mockClear()
+    mocks.listAlbumBookmarks.mockClear()
+    mocks.listMusicPlaylists.mockClear()
+
+    const popularButton = wrapper.findAll('button').find((button) => button.text() === '最热')
+    expect(popularButton).toBeTruthy()
+    await popularButton!.trigger('click')
+    await flushPromises()
+
+    expect(mocks.listArtistBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
+    expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
+    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith({ sort: 'popular' })
   })
 })

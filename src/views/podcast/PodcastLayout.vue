@@ -19,7 +19,7 @@
         :index="2"
         :icon="PlusCircle"
       >
-        发布单集
+        播客创作
       </PSidebarItem>
     </PSidebar>
     <main class="a-main-content">

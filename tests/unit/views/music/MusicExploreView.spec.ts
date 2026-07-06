@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   listMusicDiscoverFeed: vi.fn(),
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
+  listRecommendedArtists: vi.fn(),
+  listPublicMusicPlaylists: vi.fn(),
   listAlbumBookmarks: vi.fn(),
   listArtistBookmarks: vi.fn(),
   createAlbumBookmark: vi.fn(),
@@ -20,6 +22,8 @@ vi.mock('@/api/musicV1', () => ({
   listMusicDiscoverFeed: mocks.listMusicDiscoverFeed,
   listMusicAlbums: mocks.listMusicAlbums,
   listMusicArtists: mocks.listMusicArtists,
+  listRecommendedArtists: mocks.listRecommendedArtists,
+  listPublicMusicPlaylists: mocks.listPublicMusicPlaylists,
   listAlbumBookmarks: mocks.listAlbumBookmarks,
   listArtistBookmarks: mocks.listArtistBookmarks,
   createAlbumBookmark: mocks.createAlbumBookmark,
@@ -49,6 +53,8 @@ describe('Music ExploreView.vue', () => {
     mocks.listMusicDiscoverFeed.mockReset()
     mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
+    mocks.listRecommendedArtists.mockReset()
+    mocks.listPublicMusicPlaylists.mockReset()
     mocks.listAlbumBookmarks.mockReset()
     mocks.listArtistBookmarks.mockReset()
     mocks.createAlbumBookmark.mockReset()
@@ -58,35 +64,7 @@ describe('Music ExploreView.vue', () => {
     mocks.push.mockReset()
     mocks.openPlaylist.mockReset()
 
-    mocks.listMusicDiscoverFeed.mockResolvedValue({
-      data: [
-        {
-          type: 'album',
-          id: 'album-1',
-          title: 'Recommended Album',
-          summary: 'Album summary',
-          target_path: '/music?album=album-1',
-          image_url: '',
-          artists: [{ id: 'artist-1', name: 'Ye' }],
-        },
-        {
-          type: 'artist',
-          id: 'artist-1',
-          name: 'Ye',
-          legal_name: 'Kanye',
-          target_path: '/music?artist=artist-1',
-        },
-        {
-          type: 'playlist',
-          id: 'playlist-1',
-          title: 'Late Night Mix',
-          description: '夜间循环',
-          cover_url: '',
-          song_count: 18,
-          target_path: '/music/playlists/playlist-1',
-        },
-      ],
-    })
+    mocks.listMusicDiscoverFeed.mockResolvedValue({ data: [] })
     mocks.listMusicAlbums.mockResolvedValue({
       data: [
         { id: 'album-1', title: '2049', artists: [{ id: 'artist-1', name: 'Ye' }] },
@@ -96,6 +74,32 @@ describe('Music ExploreView.vue', () => {
     mocks.listMusicArtists.mockResolvedValue({
       data: [
         { id: 'artist-1', name: 'Ye', legal_name: 'Kanye' },
+      ],
+      meta: { page: 1, page_size: 10, total: 1, has_more: false },
+    })
+    mocks.listRecommendedArtists.mockResolvedValue({
+      data: [
+        {
+          id: 'artist-1',
+          title: 'Ye',
+          summary: 'Kanye',
+          image_url: '',
+          target_path: '/music?artist=artist-1',
+          play_count: 3,
+          bookmark_count: 1,
+        },
+      ],
+      meta: { page: 1, page_size: 10, total: 1, has_more: false },
+    })
+    mocks.listPublicMusicPlaylists.mockResolvedValue({
+      data: [
+        {
+          id: 'playlist-1',
+          name: 'Late Night Mix',
+          description: '夜间循环',
+          cover_url: '',
+          song_count: 18,
+        },
       ],
       meta: { page: 1, page_size: 10, total: 1, has_more: false },
     })
@@ -203,7 +207,7 @@ describe('Music ExploreView.vue', () => {
     expect(mocks.push).toHaveBeenCalledWith('/music?artist=artist-1')
   })
 
-  it('renders a mixed discover feed with album, artist, and playlist cards', async () => {
+  it('renders discover sections from independent album, artist, and playlist sources', async () => {
     const wrapper = mount(ExploreView, {
       global: {
         stubs: {
@@ -215,15 +219,47 @@ describe('Music ExploreView.vue', () => {
     })
     await flushPromises()
 
-    expect(mocks.listMusicDiscoverFeed).toHaveBeenCalledTimes(1)
-    expect(wrapper.find('[aria-label="发现流列表"]').exists()).toBe(true)
+    expect(mocks.listMusicDiscoverFeed).not.toHaveBeenCalled()
+    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 6, sort: 'hot' })
+    expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('discover')
+    expect(mocks.listPublicMusicPlaylists).toHaveBeenCalledWith({ page: 1, page_size: 6 })
+    expect(wrapper.find('[aria-label="发现分区"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="推荐专辑列表"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="发现专辑分区"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="发现歌单分区"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="发现艺人分区"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('Recommended Album')
+    expect(wrapper.text()).toContain('2049')
     expect(wrapper.text()).toContain('Ye')
     expect(wrapper.text()).toContain('Late Night Mix')
+
+    const sections = wrapper.findAll('[data-testid="discover-section-title"]').map(node => node.text())
+    expect(sections).toEqual(['专辑', '歌单', '艺人'])
+  })
+
+  it('keeps the playlist section structure visible when public playlists are empty', async () => {
+    mocks.listPublicMusicPlaylists.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, page_size: 10, total: 0, has_more: false },
+    })
+
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          PSegmentedControl: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[aria-label="发现歌单分区"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="discover-playlist-placeholder"]')).toHaveLength(3)
+    expect(wrapper.text()).toContain('暂无公开歌单')
   })
 
   it('opens playlist drawer when clicking a discover playlist card', async () => {

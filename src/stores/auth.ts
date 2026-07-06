@@ -305,8 +305,8 @@ export const useAuthStore = defineStore('auth', () => {
     await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
   }
 
-  const restoreSession = async () => {
-    if (validateSession()) return true
+  const restoreSession = async (force = false) => {
+    if (!force && validateSession()) return true
     if (restoreSessionInFlight) return restoreSessionInFlight
 
     restoreSessionInFlight = (async () => {

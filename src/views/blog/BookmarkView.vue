@@ -2,7 +2,10 @@
   <div class="a-page-xl" style="padding-bottom:12rem">
     <div class="a-section-header" style="margin-bottom:2rem">
       <h1 class="a-title a-accent-l">收藏</h1>
-      <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <PSegmentedControl v-model="sortMode" :options="sortOptions" />
+        <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
+      </div>
     </div>
 
     <div style="display:flex;min-height:60vh;gap:2rem">
@@ -108,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -116,10 +119,13 @@ import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { userUrl } from '@/composables/useSubdomainNav'
 import type { Bookmark, BookmarkFolder } from '@/types'
+
+type BookmarkSortMode = 'latest' | 'popular'
 
 const authStore = useAuthStore()
 const api = useApi()
@@ -133,6 +139,12 @@ const showNewFolder = ref(false)
 const newFolderName = ref('')
 const showDeleteConfirm = ref(false)
 const pendingDeleteFolderId = ref<string | null>(null)
+const sortMode = ref<BookmarkSortMode>('latest')
+
+const sortOptions: Array<{ label: string; value: BookmarkSortMode }> = [
+  { label: '最新', value: 'latest' },
+  { label: '最热', value: 'popular' },
+]
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
@@ -152,7 +164,7 @@ const fetchAll = async () => {
   try {
     const [fRes, bRes] = await Promise.all([
       fetch(api.blog.bookmarkFolders, { headers: authHeader.value }),
-      fetch(api.blog.bookmarks, { headers: authHeader.value })
+      fetch(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
     ])
     if (fRes.ok) folders.value = (await fRes.json()).data || []
     if (bRes.ok) bookmarks.value = (await bRes.json()).data || []
@@ -210,6 +222,10 @@ const confirmDeleteFolder = async () => {
 }
 
 onMounted(fetchAll)
+
+watch(sortMode, () => {
+  void fetchAll()
+})
 </script>
 
 <style scoped>

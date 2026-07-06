@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   closeAlbum: vi.fn(),
   openArtist: vi.fn(),
   closeArtist: vi.fn(),
+  openMusicCreationFlow: vi.fn(),
+  closeMusicCreationFlow: vi.fn(),
   openMusicEditor: vi.fn(),
   closeMusicEditor: vi.fn(),
   routeQuery: {} as Record<string, string>,
@@ -25,6 +27,7 @@ vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<d
 vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div data-testid="album-drawer-stub" />' } }))
 vi.mock('@/components/music/NestedActionDrawer.vue', () => ({ default: { template: '<div data-testid="nested-action-drawer-stub" />' } }))
 vi.mock('@/components/music/MusicEntityEditorDrawer.vue', () => ({ default: { template: '<div data-testid="music-entity-editor-drawer-stub" />' } }))
+vi.mock('@/components/music/MusicCreationFlowDrawer.vue', () => ({ default: { template: '<div data-testid="music-creation-flow-drawer-stub" />' } }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
@@ -33,6 +36,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     closeAlbum: mocks.closeAlbum,
     openArtist: mocks.openArtist,
     closeArtist: mocks.closeArtist,
+    openMusicCreationFlow: mocks.openMusicCreationFlow,
+    closeMusicCreationFlow: mocks.closeMusicCreationFlow,
     openMusicEditor: mocks.openMusicEditor,
     closeMusicEditor: mocks.closeMusicEditor,
   }),
@@ -50,6 +55,8 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.closeAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.closeArtist.mockReset()
+    mocks.openMusicCreationFlow.mockReset()
+    mocks.closeMusicCreationFlow.mockReset()
     mocks.openMusicEditor.mockReset()
     mocks.closeMusicEditor.mockReset()
     mocks.routeQuery = {}
@@ -64,6 +71,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-content-mode')).toBe('albums')
     expect(wrapper.find('[data-testid="artist-drawer-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="album-drawer-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="music-creation-flow-drawer-stub"]').exists()).toBe(true)
   })
 
   it('opens drawers from route query state on mount', () => {
@@ -106,5 +114,6 @@ describe('Music HomeView.vue (Album Landing)', () => {
       mode: 'create',
       seed: { name: 'Seed Artist' },
     })
+    expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
   })
 })

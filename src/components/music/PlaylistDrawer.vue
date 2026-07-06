@@ -4,28 +4,43 @@ import { computed, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { getMusicPlaylist, type MusicPlaylistDetail, type MusicSongListItem } from '@/api/musicV1'
+import { getMusicPlaylist, updateMusicPlaylist, uploadMusicAsset, type MusicPlaylistDetail, type MusicSongListItem } from '@/api/musicV1'
+import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
 const { state, closePlaylist } = useMusicDrawers()
 const player = usePlayerStore()
+const authStore = useAuthStore()
 
 const isOpen = computed(() => state.value.playlistId !== null)
+const editSheetIndex = computed(() => 1)
 const playlist = ref<MusicPlaylistDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const editing = ref(false)
+const saving = ref(false)
+const editDescription = ref('')
+const editIsPublic = ref(false)
+const editCoverUrl = ref('')
+const coverUploading = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
 
 async function loadPlaylist(playlistId: string | null) {
   if (!playlistId) {
     playlist.value = null
+    editing.value = false
     return
   }
 
   loading.value = true
   errorMessage.value = ''
   try {
+    await authStore.restoreSession()
     const detail = await getMusicPlaylist(playlistId)
     playlist.value = detail
   } catch (error) {
@@ -33,6 +48,80 @@ async function loadPlaylist(playlistId: string | null) {
     errorMessage.value = '歌单信息加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+function syncEditForm(detail: MusicPlaylistDetail | null) {
+  editDescription.value = detail?.description || ''
+  editIsPublic.value = Boolean(detail?.is_public)
+  editCoverUrl.value = detail?.cover_url || ''
+}
+
+function startEditPlaylist() {
+  syncEditForm(playlist.value)
+  editing.value = true
+}
+
+function cancelEditPlaylist() {
+  syncEditForm(playlist.value)
+  editing.value = false
+}
+
+function openCoverPicker() {
+  coverInput.value?.click()
+}
+
+async function handleCoverChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  coverUploading.value = true
+  try {
+    const asset = await uploadMusicAsset(file, 'music.cover')
+    editCoverUrl.value = asset.url
+  } catch (error) {
+    console.error('Failed to upload playlist cover:', error)
+    errorMessage.value = '歌单封面上传失败'
+  } finally {
+    coverUploading.value = false
+    input.value = ''
+  }
+}
+
+async function savePlaylist() {
+  if (!playlist.value) return
+  await authStore.restoreSession()
+  if (!authStore.isAuthenticated) {
+    errorMessage.value = '请先登录'
+    return
+  }
+
+  saving.value = true
+  errorMessage.value = ''
+  try {
+    const payload = {
+      description: editDescription.value.trim(),
+      is_public: editIsPublic.value,
+      ...(editCoverUrl.value.trim() ? { cover_url: editCoverUrl.value.trim() } : {}),
+    }
+    const updated = await updateMusicPlaylist(playlist.value.id, payload)
+    playlist.value = {
+      ...updated,
+      songs: playlist.value.songs,
+      song_count: playlist.value.song_count,
+    }
+    syncEditForm(playlist.value)
+    editing.value = false
+  } catch (error) {
+    console.error('Failed to update playlist:', error)
+    errorMessage.value = error instanceof ApiErrorResponseError
+      ? error.message
+      : error instanceof Error
+        ? error.message
+        : '歌单保存失败'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -72,7 +161,15 @@ const playableSongs = computed<Song[]>(() => {
 const firstSongCover = computed(() => {
   const songs = playlist.value?.songs
   if (!songs || songs.length === 0) return null
-  return songs[0]?.cover_url || null
+  return songs[0]?.cover_url || songs[0]?.album?.cover_url || null
+})
+
+const displayCover = computed(() => playlist.value?.cover_url || firstSongCover.value || null)
+const editCoverPreview = computed(() => editCoverUrl.value || firstSongCover.value || '')
+const canEditPlaylist = computed(() => {
+  if (!authStore.isAuthenticated) return false
+  if (!playlist.value?.user_id) return false
+  return authStore.user?.uuid === playlist.value.user_id
 })
 
 function playPlaylist() {
@@ -87,6 +184,7 @@ function playTrack(track: MusicSongListItem) {
 }
 
 watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
+watch(playlist, syncEditForm, { immediate: true })
 </script>
 
 <template>
@@ -100,8 +198,8 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
       <div class="playlist-header-container">
         <!-- Spotify-style Cover Collage / Art Block -->
         <div class="playlist-cover-wrapper">
-          <div v-if="firstSongCover" class="cover-single">
-            <img :src="firstSongCover" class="single-img" alt="歌单封面" />
+          <div v-if="displayCover" class="cover-single">
+            <img :src="displayCover" class="single-img" alt="歌单封面" />
           </div>
           <div v-else class="cover-placeholder">
             <Disc class="placeholder-icon" :size="36" />
@@ -116,6 +214,8 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
             <span class="stat-author">Atoman Studio</span>
             <span class="stat-dot">•</span>
             <span class="stat-count">{{ playlist?.song_count || 0 }} 首单曲</span>
+            <span class="stat-dot">•</span>
+            <span class="stat-count">{{ playlist?.is_public ? '公开' : '私有' }}</span>
           </div>
         </div>
       </div>
@@ -130,7 +230,15 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
           dot
           @click="playPlaylist"
         >
-          播放歌单
+          播放全部
+        </PButton>
+        <PButton
+          v-if="canEditPlaylist && !editing"
+          variant="secondary"
+          data-testid="playlist-edit-button"
+          @click="startEditPlaylist"
+        >
+          编辑
         </PButton>
       </div>
 
@@ -188,6 +296,84 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </PSheet>
+
+  <PSheet
+    :show="editing"
+    @close="cancelEditPlaylist"
+    width="540px"
+    :index="editSheetIndex"
+    close-type="header"
+    :show-backdrop="false"
+  >
+    <div class="playlist-edit-sheet">
+      <PPageHeader
+        title="编辑歌单"
+        sub="修改可见性、简介和封面。公开后会进入发现页候选。"
+        accent
+        mb="0"
+      />
+
+      <div class="playlist-edit-panel">
+        <div class="playlist-edit-row">
+          <label class="playlist-edit-toggle">
+            <input
+              data-testid="playlist-public-toggle"
+              type="checkbox"
+              :checked="editIsPublic"
+              @change="editIsPublic = ($event.target as HTMLInputElement).checked"
+            />
+            <span>设为公开</span>
+          </label>
+        </div>
+
+        <div class="playlist-cover-editor">
+          <input
+            ref="coverInput"
+            data-testid="playlist-cover-input"
+            class="playlist-cover-input"
+            type="file"
+            accept="image/*"
+            @change="handleCoverChange"
+          />
+          <button
+            type="button"
+            class="playlist-cover-preview playlist-cover-preview--button"
+            :disabled="coverUploading"
+            @click="openCoverPicker"
+          >
+            <img v-if="editCoverPreview" :src="editCoverPreview" alt="歌单封面预览" class="playlist-cover-preview__image" />
+            <div v-else class="playlist-cover-preview__empty">点击上传</div>
+            <span v-if="coverUploading" class="playlist-cover-preview__badge">上传中...</span>
+          </button>
+        </div>
+
+        <PTextarea
+          data-testid="playlist-description-input"
+          :model-value="editDescription"
+          :rows="4"
+          placeholder="一句话介绍这张歌单"
+          @update:model-value="(value) => editDescription = value"
+        />
+
+        <div class="playlist-edit-actions">
+          <PButton
+            variant="secondary"
+            :disabled="saving"
+            @click="cancelEditPlaylist"
+          >
+            取消
+          </PButton>
+          <PButton
+            data-testid="playlist-save-button"
+            :loading="saving"
+            @click="savePlaylist"
+          >
+            保存
+          </PButton>
         </div>
       </div>
     </div>
@@ -295,6 +481,100 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
   color: var(--a-color-ink-soft);
 }
 
+.playlist-edit-sheet {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.playlist-edit-panel {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+  padding: 1rem;
+}
+
+.playlist-edit-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.playlist-edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  color: var(--a-color-fg);
+}
+
+.playlist-cover-editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.playlist-cover-input {
+  display: none;
+}
+
+.playlist-cover-preview {
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+  overflow: hidden;
+  position: relative;
+}
+
+.playlist-cover-preview--button {
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.playlist-cover-preview--button:hover {
+  border-color: var(--a-color-ink);
+}
+
+.playlist-cover-preview--button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.playlist-cover-preview__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.playlist-cover-preview__empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-muted);
+  font-size: 0.86rem;
+}
+
+.playlist-cover-preview__badge {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: 0.7rem;
+  border-radius: 999px;
+}
+
+.playlist-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .stat-author {
   color: var(--a-color-fg);
 }
@@ -308,6 +588,7 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
   display: flex;
   align-items: center;
   padding: 1.25rem 0;
+  gap: 0.85rem;
 }
 
 

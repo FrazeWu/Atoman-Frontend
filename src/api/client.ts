@@ -24,7 +24,7 @@ const multipartHeaders = {
 }
 
 function shouldAttachBearer(url: string) {
-  return /^https?:\/\//i.test(url)
+  return /^https?:\/\//i.test(url) || url.startsWith('/api/')
 }
 
 function withAuthHeaders(url: string, headers: Record<string, string>) {

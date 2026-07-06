@@ -26,7 +26,7 @@
             <h3 style="font-size:1.25rem;font-weight:bold;margin-bottom:0.5rem">{{ collection.name }}</h3>
             <p v-if="collection.description" style="color:#666;margin-bottom:1rem">{{ collection.description }}</p>
             <div style="display:flex;gap:1rem;font-size:0.875rem;color:#999">
-              <span>{{ collection.channel_name }}</span>
+              <span>{{ collectionChannelName(collection) }}</span>
               <span>{{ collection.posts_count || 0 }}篇文章</span>
             </div>
           </div>
@@ -124,6 +124,9 @@ const collectionToDelete = ref<Collection | null>(null)
 const deleting = ref(false)
 
 const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name, value: ch.id })))
+const collectionChannelName = (collection: Collection) => {
+  return collection.channel_name || channels.value.find(channel => channel.id === collection.channel_id)?.name || '未命名频道'
+}
 
 const loadChannels = async () => {
   try {
@@ -138,7 +141,7 @@ const loadChannels = async () => {
 const loadCollections = async () => {
   loadingCollections.value = true
   try {
-    const res = await fetch(api.blog.collections)
+    const res = await fetch(api.blog.collections, { headers: { Authorization: `Bearer ${authStore.token}` } })
     const data = await res.json()
     collections.value = data.data || []
   } catch (err) {
@@ -183,7 +186,7 @@ const handleSubmit = async () => {
   submitting.value = true
   try {
     const url = modalMode.value === 'create' 
-      ? api.blog.collections 
+      ? api.blog.channelCollections(formData.value.channel_id)
       : api.blog.collection(collectionToDelete.value!.id)
     const method = modalMode.value === 'create' ? 'POST' : 'PUT'
     

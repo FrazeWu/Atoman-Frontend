@@ -157,7 +157,7 @@ defineEmits(['click'])
   padding-left: 2rem;
   background: linear-gradient(to right, transparent, var(--a-color-paper-wash) 40%);
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   z-index: 5;
 }
@@ -165,7 +165,6 @@ defineEmits(['click'])
 .p-entry:hover .feed-entry-actions,
 .p-entry.force-show-actions .feed-entry-actions {
   opacity: 1;
-  pointer-events: auto;
 }
 
 .p-entry.is-open .feed-entry-actions {

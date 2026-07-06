@@ -148,7 +148,7 @@ function handleInputBlur() {
 
 async function createPlaylistWithName(name: string) {
   try {
-    const created = await createMusicPlaylist({ name })
+    const created = await createMusicPlaylist({ name, is_public: false })
     await fetchPlaylists()
     openPlaylist(String(created.id))
   } catch (error) {

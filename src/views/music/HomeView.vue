@@ -3,6 +3,7 @@ import { watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
+import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -10,12 +11,24 @@ import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import ExploreView from '@/views/music/ExploreView.vue'
 
 const route = useRoute()
-const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicEditor, closeMusicEditor } = useMusicDrawers()
+const {
+  isMainShifted,
+  openAlbum,
+  closeAlbum,
+  openArtist,
+  closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
+  openMusicEditor,
+  closeMusicEditor,
+} = useMusicDrawers()
 const { applyRouteSelection } = useMusicRouteSelection({
   openAlbum,
   closeAlbum,
   openArtist,
   closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
   openMusicEditor,
   closeMusicEditor,
 })
@@ -35,6 +48,7 @@ watch(
 
     <ArtistDrawer />
     <AlbumDrawer />
+    <MusicCreationFlowDrawer />
     <MusicEntityEditorDrawer />
     <NestedActionDrawer />
   </div>

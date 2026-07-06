@@ -261,7 +261,6 @@ const turnstileVisible = computed(() => shouldRenderTurnstileForRegisterStep(
   turnstileSiteKey,
   currentStep.value,
 ))
-const turnstileWidgetKey = computed(() => buildRegisterTurnstileKey(currentStep.value))
 const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
 const emailChecking = computed(() => emailAvailability.value.status === 'checking')
 const usernameChecking = computed(() => usernameAvailability.value.status === 'checking')

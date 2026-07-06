@@ -46,6 +46,17 @@ function parseDateToParts(value: string) {
   return { year, month, day }
 }
 
+function parseLooseDateToParts(value: string) {
+  const segments = value
+    .trim()
+    .split(/[^\d]+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+
+  const [year = '', month = '', day = ''] = segments
+  return { year, month, day }
+}
+
 function formatDateParts(parts?: { year: string; month: string; day: string }) {
   if (!parts) return ''
 
@@ -55,6 +66,16 @@ function formatDateParts(parts?: { year: string; month: string; day: string }) {
 
   if (!year || !month || !day) return ''
   return `${year}-${month}-${day}`
+}
+
+function formatLooseDateParts(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return ''
+  const values = [parts.year.trim(), parts.month.trim(), parts.day.trim()].filter(Boolean)
+  return values.join('/')
+}
+
+function requiredLabel(label: string) {
+  return `${label}*`
 }
 
 watch(
@@ -81,6 +102,19 @@ watch(
   },
   { deep: true, immediate: true },
 )
+
+const birthDateModel = computed({
+  get: () => {
+    if (!artistDraft.value) return ''
+    const valueFromParts = formatLooseDateParts(artistDraft.value.birthDateParts)
+    if (valueFromParts) return valueFromParts
+    return artistDraft.value.birthDate.trim().replaceAll('-', '/')
+  },
+  set: (value: string) => {
+    if (!artistDraft.value) return
+    artistDraft.value.birthDateParts = parseLooseDateToParts(value)
+  },
+})
 
 function triggerFileInput() {
   fileInputRef.value?.click()
@@ -277,6 +311,9 @@ function goNext() {
         </div>
 
         <div class="avatar-upload-section">
+          <div v-if="!isGroup" class="field-group">
+            <span class="field-label">{{ requiredLabel('头像') }}</span>
+          </div>
           <div
             class="avatar-uploader"
             :class="{ 'is-uploading': avatarUploading }"
@@ -311,7 +348,7 @@ function goNext() {
                 data-testid="artist-legal-name-input"
                 type="text"
                 placeholder="例如 Kanye Omari West"
-                label="本名"
+                :label="requiredLabel('本名')"
               />
             </div>
             <div v-if="artistDraft.stageNames.length" class="field-group">
@@ -319,14 +356,14 @@ function goNext() {
                 v-model="artistDraft.stageNames[0].name"
                 :data-testid="isGroup ? 'artist-group-name-input' : 'artist-stage-name-input-0'"
                 type="text"
-                :label="isGroup ? '组合名' : '主艺名'"
+                :label="isGroup ? requiredLabel('组合名') : requiredLabel('主艺名')"
                 :placeholder="isGroup ? '例如 Daft Punk' : '例如 Kanye West / Ye'"
                 @update:model-value="() => { stageNameErrorMessage = ''; groupErrorMessage = '' }"
               />
             </div>
             <div v-if="isGroup" class="field-grid field-grid--duo">
               <div class="field-group">
-                <span class="field-label">成立时间</span>
+                <span class="field-label">{{ requiredLabel('成立时间') }}</span>
                 <div class="date-parts-grid">
                   <PInput
                     v-model="artistDraft.activeStartDateParts.year"
@@ -507,7 +544,7 @@ function goNext() {
 
             <div class="field-grid field-grid--duo">
               <div class="field-group">
-                <span class="field-label">加入时间</span>
+                <span class="field-label">{{ requiredLabel('加入时间') }}</span>
                 <div class="date-parts-grid">
                   <PInput
                     v-model="member.joinDateParts.year"
@@ -588,10 +625,10 @@ function goNext() {
         <div class="field-stack">
           <div v-if="!isGroup" class="field-grid field-grid--duo">
             <div class="field-group">
-              <span class="field-label">国籍</span>
+              <span class="field-label">{{ requiredLabel('国籍') }}</span>
               <PCountryRegionField
                 v-model="artistDraft.nationality"
-                label="国籍"
+                :label="requiredLabel('国籍')"
                 placeholder="选择国家或地区"
                 trigger-test-id="artist-country-trigger"
                 search-test-id="artist-country-search"
@@ -601,33 +638,14 @@ function goNext() {
           </div>
 
           <div v-if="!isGroup" class="field-group">
-            <span class="field-label">生日</span>
-            <div class="date-parts-grid">
-              <PInput
-                v-model="artistDraft.birthDateParts.year"
-                data-testid="artist-birth-year-input"
-                type="text"
-                inputmode="numeric"
-                placeholder="年"
-                label="年份"
-              />
-              <PInput
-                v-model="artistDraft.birthDateParts.month"
-                data-testid="artist-birth-month-input"
-                type="text"
-                inputmode="numeric"
-                placeholder="月"
-                label="月份"
-              />
-              <PInput
-                v-model="artistDraft.birthDateParts.day"
-                data-testid="artist-birth-day-input"
-                type="text"
-                inputmode="numeric"
-                placeholder="日"
-                label="日期"
-              />
-            </div>
+            <PInput
+              v-model="birthDateModel"
+              data-testid="artist-birth-input"
+              type="text"
+              inputmode="numeric"
+              placeholder="year/mo/day"
+              :label="requiredLabel('生日')"
+            />
           </div>
 
           <div class="field-group">
@@ -646,7 +664,7 @@ function goNext() {
               data-testid="artist-source-input"
               :rows="4"
               placeholder="填写来源"
-              label="来源"
+              :label="requiredLabel('来源')"
             />
           </div>
           <p

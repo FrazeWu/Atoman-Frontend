@@ -8,7 +8,7 @@
     <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或您没有权限管理" />
 
     <template v-else>
-      <PPageHeader :title="`管理：${channel.name}`" accent>
+      <PPageHeader :title="`创作：${channel.name}`" accent>
         <template #action>
           <RouterLink :to="`/posts/channel/${channel.slug || channel.id}`" class="a-btn-outline-sm">← 查看频道</RouterLink>
         </template>

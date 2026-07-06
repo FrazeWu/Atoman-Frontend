@@ -70,27 +70,29 @@
 
         <!-- REGISTER VIEW - STEP 1 (Email & Verification Code) -->
         <div v-else-if="currentStep === 1" class="auth-step-container">
-          <div class="a-field">
-            <label class="a-field-label">邮箱地址</label>
-            <div class="auth-code-row">
-              <PInput
+          <div class="p-field">
+            <label class="email-field-label">
+              <span class="email-field-dot" aria-hidden="true" />
+              邮箱地址
+            </label>
+            <div class="auth-code-input-group" :class="{ 'auth-code-input-group--error': fieldErrors.email }">
+              <input
                 v-model="email"
                 type="email"
                 required
                 placeholder="输入邮箱地址"
-                :error="fieldErrors.email"
+                class="auth-code-input"
               />
-              <PButton
+              <button
                 type="button"
-                variant="secondary"
-                size="sm"
-                class="auth-code-btn"
-                :disabled="countdown > 0"
+                class="auth-code-btn-inline"
+                :disabled="countdown > 0 || sendingCode"
                 @click="sendVerificationCode"
               >
-                {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-              </PButton>
+                {{ sendingCode ? '发送中...' : (countdown > 0 ? `${countdown}s` : '获取验证码') }}
+              </button>
             </div>
+            <div v-if="fieldErrors.email" class="p-field-error">{{ fieldErrors.email }}</div>
           </div>
 
           <PInput
@@ -210,6 +212,7 @@ const passwordConfirm = ref('')
 const username = ref('')
 const verificationCode = ref('')
 const codeSent = ref(false)
+const sendingCode = ref(false)
 const countdown = ref(0)
 const errorMsg = ref('')
 const loading = ref(false)
@@ -277,6 +280,7 @@ const sendVerificationCode = async () => {
     return
   }
   if (!requireTurnstileToken()) return
+  sendingCode.value = true
   try {
     const response = await fetch(api.auth.sendVerification, {
       method: 'POST',
@@ -291,6 +295,8 @@ const sendVerificationCode = async () => {
   } catch (error: any) {
     errorMsg.value = error.message || '发送验证码失败'
     resetTurnstile()
+  } finally {
+    sendingCode.value = false
   }
 }
 
@@ -576,41 +582,104 @@ watch(() => route.path, () => {
   box-shadow: inset 0 0 0 1px var(--a-color-fg);
 }
 
-.auth-code-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.625rem;
-  align-items: end;
-}
-
-.auth-code-btn {
-  align-self: end;
-}
-
-.auth-code-btn:deep(.p-button) {
-  min-height: 2.75rem;
-  border: 1px solid var(--a-color-fg);
-  box-shadow: none;
-  color: var(--a-color-fg);
-  background: var(--a-color-paper-soft);
-  letter-spacing: 0.08em;
-  padding: 0 1rem;
+.email-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  transition: background-color 0.2s, color 0.2s;
+  font-weight: 800;
+  letter-spacing: 0.05em;
 }
 
-.auth-code-btn:deep(.p-button:hover:not(:disabled)) {
+.email-field-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  flex-shrink: 0;
+}
+
+.auth-code-input-group {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--a-color-line-soft);
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.auth-code-input-group:focus-within {
+  border-color: var(--a-color-fg);
+  box-shadow: inset 0 0 0 1px var(--a-color-fg);
+}
+
+.auth-code-input-group--error {
+  border-color: var(--a-color-accent-destructive);
+}
+
+.auth-code-input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.88rem 0.95rem;
+  font-size: 0.98rem;
+  font-family: inherit;
+  color: var(--a-color-fg);
+  width: 100%;
+  min-width: 0;
+}
+
+.auth-code-input:focus {
+  outline: none;
+}
+
+.auth-code-input::placeholder {
+  color: var(--a-color-muted-soft);
+}
+
+.auth-code-btn-inline {
+  align-self: center;
+  margin-right: 0.5rem;
+  height: 2.2rem;
+  padding: 0 1rem;
+  border: 1.5px solid var(--a-color-fg);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font-family: var(--a-font-meta);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 2px 2px 0px var(--a-color-fg);
+  border-radius: 0;
+}
+
+.auth-code-btn-inline:hover:not(:disabled) {
   background: var(--a-color-fg);
   color: var(--a-color-bg);
-  text-decoration: none;
+  box-shadow: 3px 3px 0px var(--a-color-fg);
+  transform: translate(-1px, -1px);
 }
 
-.auth-code-btn:deep(.p-button:disabled) {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-muted);
+.auth-code-btn-inline:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px var(--a-color-fg);
+}
+
+.auth-code-btn-inline:disabled {
   border-color: var(--a-color-line-soft);
-  opacity: 0.7;
-  text-decoration: none;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-muted-soft);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
 }
 
 .auth-submit {
@@ -762,14 +831,6 @@ watch(() => route.path, () => {
 
   .auth-title {
     font-size: 2.65rem;
-  }
-
-  .auth-code-row {
-    grid-template-columns: 1fr;
-  }
-
-  .auth-code-btn {
-    width: 100%;
   }
 
   .auth-buttons-row {

@@ -280,7 +280,10 @@ export type MusicPlaylistSummary = {
   cover_url?: string
   song_count: number
   user_id?: string
+  owner_username?: string
   is_public?: boolean
+  play_count?: number
+  bookmark_count?: number
 }
 
 export type MusicPlaylistDetail = MusicPlaylistSummary & {
@@ -406,6 +409,9 @@ export type MusicDiscoverPlaylistItem = {
   cover_url?: string
   image_url?: string
   song_count: number
+  owner_username?: string
+  play_count?: number
+  bookmark_count?: number
   target_path: string
 }
 

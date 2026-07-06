@@ -21,11 +21,15 @@
     </div>
 
     <div class="playlist-info">
-      <h3 class="playlist-title a-clamp-1" :title="playlist.title">{{ playlist.title }}</h3>
+      <h3 class="playlist-title a-clamp-1" :title="displayTitle">{{ displayTitle }}</h3>
       <p class="playlist-summary a-clamp-2" :title="playlist.description || '歌单'">
         {{ playlist.description || '歌单' }}
       </p>
-      <p class="playlist-count">{{ playlist.song_count }} 首</p>
+      <p class="playlist-count">
+        <span>播放 {{ formattedPlayCount }}</span>
+        <span>收藏 {{ formattedBookmarkCount }}</span>
+        <span>{{ playlist.song_count }} 首</span>
+      </p>
     </div>
   </div>
 </template>
@@ -39,6 +43,9 @@ export interface MusicPlaylistCardItem {
   description?: string
   cover_url?: string
   song_count: number
+  owner_username?: string
+  play_count?: number
+  bookmark_count?: number
 }
 
 const props = defineProps<{
@@ -50,6 +57,14 @@ defineEmits<{
 }>()
 
 const coverUrl = computed(() => props.playlist.cover_url || '')
+
+const displayTitle = computed(() => {
+  const owner = props.playlist.owner_username?.trim()
+  return owner ? `${owner}/${props.playlist.title}` : props.playlist.title
+})
+
+const formattedPlayCount = computed(() => String(props.playlist.play_count ?? 0))
+const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_count ?? 0))
 </script>
 
 <style scoped>
@@ -113,6 +128,9 @@ const coverUrl = computed(() => props.playlist.cover_url || '')
 
 .playlist-count {
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--a-color-muted-soft);

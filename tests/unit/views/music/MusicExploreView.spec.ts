@@ -97,8 +97,11 @@ describe('Music ExploreView.vue', () => {
           id: 'playlist-1',
           name: 'Late Night Mix',
           description: '夜间循环',
-          cover_url: '',
+          cover_url: '/uploads/late-night.jpg',
           song_count: 18,
+          owner_username: 'alice',
+          play_count: 42,
+          bookmark_count: 7,
         },
       ],
       meta: { page: 1, page_size: 10, total: 1, has_more: false },
@@ -233,7 +236,10 @@ describe('Music ExploreView.vue', () => {
     expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('2049')
     expect(wrapper.text()).toContain('Ye')
-    expect(wrapper.text()).toContain('Late Night Mix')
+    expect(wrapper.text()).toContain('alice/Late Night Mix')
+    expect(wrapper.text()).toContain('42')
+    expect(wrapper.text()).toContain('7')
+    expect(wrapper.get('[data-testid="discover-playlist-card"] img').attributes('src')).toBe('/uploads/late-night.jpg')
 
     const sections = wrapper.findAll('[data-testid="discover-section-title"]').map(node => node.text())
     expect(sections).toEqual(['专辑', '歌单', '艺人'])

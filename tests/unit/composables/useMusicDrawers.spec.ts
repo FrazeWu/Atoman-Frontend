@@ -134,19 +134,97 @@ describe('useMusicDrawers music creation flow', () => {
 
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
     expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-7')
+    expect(drawers.state.value.creationFlow?.draft.artist.kind).toBe('person')
+    expect(drawers.state.value.creationFlow?.draft.artist.members).toEqual([])
+    expect(drawers.state.value.creationFlow?.draft.artist.birthDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.activeStartDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.activeEndDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0]).toMatchObject({
+      startDateParts: {
+        year: '',
+        month: '',
+        day: '',
+      },
+      endDateParts: {
+        year: '',
+        month: '',
+        day: '',
+      },
+    })
     expect(drawers.state.value.creationFlow?.draft.albumSeed.title).toBe('')
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.releaseDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([
+      {
+        id: 'contributor-artist-7',
+        artistId: 'artist-7',
+        name: '',
+        avatarUrl: '',
+        kind: 'person',
+        locked: false,
+      },
+    ])
+    expect('name' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
+    expect('country' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
+    expect('birthday' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
 
     expect(drawers.isMainShifted.value).toBe(true)
     expect(drawers.isArtistShifted.value).toBe(true)
+  })
+
+  it('opens standalone artist-first flow with empty contributors and reusable member draft structure', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicCreationFlow()
+
+    expect(drawers.state.value.creationFlow?.draft.artist.members).toEqual([])
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([])
   })
 
   it('clears the creation flow draft when closeMusicCreationFlow is called', () => {
     const drawers = useMusicDrawers()
 
     drawers.openMusicCreationFlow()
-    drawers.state.value.creationFlow!.draft.artist.name = 'Kanye West'
+    drawers.state.value.creationFlow!.draft.artist.legalName = 'Kanye West'
     drawers.closeMusicCreationFlow()
 
     expect(drawers.state.value.creationFlow).toBeNull()
+  })
+
+  it('clears creationFlow together when closing the music editor', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicEditor({ entity: 'artist', mode: 'create' })
+    drawers.openMusicCreationFlow()
+    drawers.closeMusicEditor()
+
+    expect(drawers.state.value.musicEditor).toBeNull()
+    expect(drawers.state.value.creationFlow).toBeNull()
+  })
+
+  it('clears create-mode musicEditor when closing the creation flow', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicEditor({ entity: 'artist', mode: 'create' })
+    drawers.openMusicCreationFlow()
+    drawers.closeMusicCreationFlow()
+
+    expect(drawers.state.value.creationFlow).toBeNull()
+    expect(drawers.state.value.musicEditor).toBeNull()
   })
 })

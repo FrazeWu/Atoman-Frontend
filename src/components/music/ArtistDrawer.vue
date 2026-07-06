@@ -15,7 +15,7 @@ import {
   type MusicArtistListItem,
 } from '@/api/musicV1'
 
-const { state, closeArtist, isArtistShifted, openAlbum, openMusicEditor } = useMusicDrawers()
+const { state, closeArtist, isArtistShifted, openArtist, openAlbum, openMusicEditor } = useMusicDrawers()
 const isOpen = computed(() => state.value.artistId !== null)
 const artist = ref<MusicArtistListItem | null>(null)
 const albums = ref<MusicAlbumListItem[]>([])
@@ -31,12 +31,23 @@ const artistAliases = computed(() => (
     .filter((alias) => alias && alias.toLowerCase() !== artist.value?.name.toLowerCase())
     ?? []
 ))
+const memberGroups = computed(() => artist.value?.member_groups ?? { current: [], former: [] })
+const hasMemberGroups = computed(() => (
+  artist.value?.artist_form === 'group'
+  && (memberGroups.value.current.length > 0 || memberGroups.value.former.length > 0)
+))
 
 function releaseYear(album: MusicAlbumListItem) {
   if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
     return String(album.year)
   }
   return album.release_date ? album.release_date.slice(0, 4) : '----'
+}
+
+function formatMemberPeriod(joinDate?: string, leaveDate?: string) {
+  const start = joinDate || '未知'
+  const end = leaveDate || '至今'
+  return `${start} - ${end}`
 }
 
 async function loadArtist(artistId: string | null) {
@@ -169,6 +180,58 @@ watch(
         </PButton>
       </div>
 
+      <div v-if="hasMemberGroups" class="member-sections">
+        <div v-if="memberGroups.current.length" class="member-section">
+          <h3 class="member-section-title">现成员</h3>
+          <button
+            v-for="member in memberGroups.current"
+            :key="`current-${member.artist_id}`"
+            type="button"
+            class="member-row"
+            :data-testid="`artist-member-${member.artist_id}`"
+            @click="openArtist(String(member.artist_id))"
+          >
+            <div class="member-avatar">
+              <img v-if="member.image_url" :src="member.image_url" :alt="member.name" class="member-avatar-img" />
+              <div v-else class="member-avatar-placeholder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="member-info">
+              <div class="member-name">{{ member.name }}</div>
+              <div class="member-period">{{ formatMemberPeriod(member.join_date, member.leave_date) }}</div>
+            </div>
+          </button>
+        </div>
+
+        <div v-if="memberGroups.former.length" class="member-section">
+          <h3 class="member-section-title">前成员</h3>
+          <button
+            v-for="member in memberGroups.former"
+            :key="`former-${member.artist_id}`"
+            type="button"
+            class="member-row"
+            :data-testid="`artist-member-${member.artist_id}`"
+            @click="openArtist(String(member.artist_id))"
+          >
+            <div class="member-avatar">
+              <img v-if="member.image_url" :src="member.image_url" :alt="member.name" class="member-avatar-img" />
+              <div v-else class="member-avatar-placeholder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="member-info">
+              <div class="member-name">{{ member.name }}</div>
+              <div class="member-period">{{ formatMemberPeriod(member.join_date, member.leave_date) }}</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div class="album-list-header">
         <h3>专辑列表</h3>
       </div>
@@ -224,6 +287,78 @@ watch(
 
 .drawer-body { display: flex; flex-direction: column; }
 .actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-line-soft); align-self: flex-start; }
+.member-sections {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.member-section {
+  display: flex;
+  flex-direction: column;
+}
+.member-section-title {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.85rem 0;
+  border: none;
+  border-top: 1px solid var(--a-color-line-soft);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.member-row:last-child {
+  border-bottom: 1px solid var(--a-color-line-soft);
+}
+.member-row:hover {
+  background: var(--a-color-paper-soft);
+}
+.member-avatar {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.member-avatar-img,
+.member-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--a-color-line-soft);
+}
+.member-avatar-img {
+  object-fit: cover;
+}
+.member-avatar-placeholder {
+  background: var(--a-color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.member-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.member-name {
+  font-family: var(--a-font-serif);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+.member-period {
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--a-color-ink-soft);
+}
 .paper-action {
   display: inline-flex;
   align-items: center;

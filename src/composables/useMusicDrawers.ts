@@ -35,27 +35,54 @@ type MusicCreationFlowSeed = {
   artistLegalName?: string
 }
 
+function createEmptyDateParts() {
+  return {
+    year: '',
+    month: '',
+    day: '',
+  }
+}
+
+function createSeededContributors(seed?: MusicCreationFlowSeed) {
+  if (!seed?.artistId) return []
+
+  return [
+    {
+      id: `contributor-${seed.artistId}`,
+      artistId: seed.artistId,
+      name: seed.artistName ?? '',
+      avatarUrl: '',
+      kind: 'person' as const,
+      locked: false,
+    },
+  ]
+}
+
 function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
   return {
     artist: {
       id: seed?.artistId ?? null,
       avatarUrl: '',
       avatarAsset: null,
-      name: seed?.artistName ?? '',
-      country: '',
-      birthday: '',
+      kind: 'person',
       legalName: seed?.artistLegalName ?? '',
       stageNames: [
         {
           id: 'stage-name-primary',
           name: seed?.artistName ?? '',
           isPrimary: true,
+          startDateParts: createEmptyDateParts(),
+          endDateParts: createEmptyDateParts(),
           startDateText: '',
           endDateText: '',
         },
       ],
+      members: [],
       nationality: '',
       birthPlace: '',
+      birthDateParts: createEmptyDateParts(),
+      activeStartDateParts: createEmptyDateParts(),
+      activeEndDateParts: createEmptyDateParts(),
       birthDate: '',
       bio: '',
       source: '',
@@ -82,6 +109,8 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
       coverUrl: '',
       coverAsset: null,
       title: '',
+      contributors: createSeededContributors(seed),
+      releaseDateParts: createEmptyDateParts(),
       releaseDate: '',
       type: 'album',
       releaseYear: '',
@@ -127,11 +156,15 @@ export function useMusicDrawers() {
   }
 
   const openMusicEditor = (editor: MusicEditorState) => {
+    if (editor.mode !== 'create') {
+      state.value.creationFlow = null
+    }
     state.value.musicEditor = editor
   }
 
   const closeMusicEditor = () => {
     state.value.musicEditor = null
+    state.value.creationFlow = null
   }
 
   const openMusicCreationFlow = (seed?: {
@@ -143,6 +176,8 @@ export function useMusicDrawers() {
     state.value.creationFlow = {
       step: seed?.startStep ?? 'artist',
       draft: createEmptyDraft(seed),
+      tracksCustomized: false,
+      titleCustomized: false,
       dirty: false,
       submitting: false,
       errorMessage: '',
@@ -155,6 +190,9 @@ export function useMusicDrawers() {
 
   const closeMusicCreationFlow = () => {
     state.value.creationFlow = null
+    if (state.value.musicEditor?.mode === 'create') {
+      state.value.musicEditor = null
+    }
   }
   
   const closeAll = () => {

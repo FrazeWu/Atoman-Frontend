@@ -1,6 +1,13 @@
 import type { UploadAsset } from '@/api/types'
 
 export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails'
+export type MusicArtistKind = 'person' | 'group'
+
+export interface MusicCreationDatePartsDraft {
+  year: string
+  month: string
+  day: string
+}
 
 export interface MusicCreationTrackDraft {
   id: string
@@ -15,21 +22,32 @@ export interface MusicCreationArtistStageNameDraft {
   id: string
   name: string
   isPrimary: boolean
+  startDateParts?: MusicCreationDatePartsDraft
+  endDateParts?: MusicCreationDatePartsDraft
   startDateText: string
   endDateText: string
+}
+
+export interface MusicCreationArtistMemberDraft {
+  id: string
+  name: string
+  joinDateParts: MusicCreationDatePartsDraft
+  leaveDateParts: MusicCreationDatePartsDraft
 }
 
 export interface MusicCreationArtistDraft {
   id: string | null
   avatarUrl: string
   avatarAsset?: UploadAsset | null
-  name: string
-  country: string
-  birthday: string
+  kind: MusicArtistKind
   legalName: string
   stageNames: MusicCreationArtistStageNameDraft[]
+  members: MusicCreationArtistMemberDraft[]
   nationality: string
   birthPlace: string
+  birthDateParts?: MusicCreationDatePartsDraft
+  activeStartDateParts?: MusicCreationDatePartsDraft
+  activeEndDateParts?: MusicCreationDatePartsDraft
   birthDate: string
   bio: string
   source: string
@@ -62,10 +80,21 @@ export interface MusicCreationAlbumSeedDraft {
   }>
 }
 
+export interface MusicCreationAlbumContributorDraft {
+  id: string
+  artistId: string | null
+  name: string
+  avatarUrl: string
+  kind: MusicArtistKind
+  locked: boolean
+}
+
 export interface MusicCreationAlbumDetailsDraft {
   coverUrl: string
   coverAsset?: UploadAsset | null
   title: string
+  contributors?: MusicCreationAlbumContributorDraft[]
+  releaseDateParts?: MusicCreationDatePartsDraft
   releaseDate: string
   type: string
   releaseYear: string
@@ -84,6 +113,8 @@ export interface MusicCreationDraft {
 export interface MusicCreationFlowState {
   step: MusicCreationFlowStep
   draft: MusicCreationDraft
+  tracksCustomized: boolean
+  titleCustomized: boolean
   dirty: boolean
   submitting: boolean
   errorMessage: string

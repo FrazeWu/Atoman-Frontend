@@ -1,4 +1,4 @@
-import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
+import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -62,6 +62,24 @@ export type MusicAlbumImportCommitTrack = {
   trackNumber: number
 }
 
+export type MusicAlbumImportCommitMember = {
+  artist_id: string
+  join_date: string
+  leave_date: string
+}
+
+export type MusicAlbumImportCommitArtist = {
+  artist_id: string
+  name: string
+  legal_name: string
+  stage_names: MusicAlbumImportCommitStageName[]
+  birth_place: string
+  artist_form: 'person' | 'group'
+  active_start_date: string
+  active_end_date: string
+  members: MusicAlbumImportCommitMember[]
+}
+
 export type MusicAlbumImportCommitInput = {
   artist_id?: string
   artist: {
@@ -70,6 +88,7 @@ export type MusicAlbumImportCommitInput = {
     stage_names: MusicAlbumImportCommitStageName[]
     birth_place: string
   }
+  artists?: MusicAlbumImportCommitArtist[]
   album: {
     title: string
     release_date?: string
@@ -199,7 +218,24 @@ export type MusicArtistListItem = {
   birth_date?: string
   birth_year?: number
   death_year?: number
+  artist_form?: 'person' | 'group'
   members?: string
+  member_groups?: {
+    current: Array<{
+      artist_id: string
+      name: string
+      image_url?: string
+      join_date?: string
+      leave_date?: string
+    }>
+    former: Array<{
+      artist_id: string
+      name: string
+      image_url?: string
+      join_date?: string
+      leave_date?: string
+    }>
+  }
   aliases?: Array<{ id?: string; alias: string; is_main_name?: boolean }>
   play_count?: number
   bookmark_count?: number
@@ -234,14 +270,17 @@ export type MusicSongListItem = {
   status?: string
   entry_status: MusicEntryStatus
   artists?: Array<{ id: string; name: string }>
-  album?: { id: string; title: string }
+  album?: { id: string; title: string; cover_url?: string }
 }
 
 export type MusicPlaylistSummary = {
   id: string
   name: string
   description?: string
+  cover_url?: string
   song_count: number
+  user_id?: string
+  is_public?: boolean
 }
 
 export type MusicPlaylistDetail = MusicPlaylistSummary & {
@@ -281,6 +320,15 @@ export type MusicStarredItem = {
 
 export type CreateMusicPlaylistInput = {
   name: string
+  description?: string
+  cover_url?: string
+  is_public?: boolean
+}
+
+export type UpdateMusicPlaylistInput = {
+  description?: string
+  cover_url?: string
+  is_public?: boolean
 }
 
 export type MusicAlbumTrackEditInput = {
@@ -857,6 +905,10 @@ export async function listMusicPlaylists() {
   return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(musicV1Endpoints.playlists())
 }
 
+export async function listPublicMusicPlaylists(filters: Pick<MusicListFilters, 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(`${musicV1Endpoints.playlists()}/public${queryString(filters)}`)
+}
+
 export async function listMusicStarred(): Promise<MusicStarredItem[]> {
   const [artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
     listArtistBookmarks(),
@@ -906,6 +958,22 @@ export async function createMusicPlaylist(input: CreateMusicPlaylistInput): Prom
   return apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input)
 }
 
+export async function updateMusicPlaylist(playlistId: string, input: UpdateMusicPlaylistInput): Promise<MusicPlaylistDetail> {
+  try {
+    return await apiPatchJson<MusicPlaylistDetail>(musicV1Endpoints.playlist(playlistId), input)
+  } catch (error) {
+    const shouldRetryWithBearer = (
+      error instanceof ApiErrorResponseError
+      && error.status === 404
+      && typeof window !== 'undefined'
+    )
+    if (!shouldRetryWithBearer) throw error
+
+    const absoluteUrl = new URL(musicV1Endpoints.playlist(playlistId), window.location.origin).toString()
+    return apiPatchJson<MusicPlaylistDetail>(absoluteUrl, input)
+  }
+}
+
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {
   const [playlist, songsResponse] = await Promise.all([
     apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
@@ -913,7 +981,13 @@ export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylis
   ])
   return {
     ...playlist,
-    songs: (songsResponse.data || []).map((item) => item.song).filter(Boolean),
+    songs: (songsResponse.data || [])
+      .map((item) => item.song)
+      .filter(Boolean)
+      .map((song) => ({
+        ...song,
+        cover_url: song.cover_url || song.album?.cover_url || '',
+      })),
   }
 }
 

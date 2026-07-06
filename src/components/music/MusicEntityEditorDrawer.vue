@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import {
   buildUpdateAlbumEdit,
   commitMusicAlbumImport,
-  createMusicArtist,
   getMusicAlbum,
   getMusicArtist,
   submitMusicEdit,
@@ -50,7 +49,7 @@ const isArtistEditor = computed(() => editor.value?.entity === 'artist')
 const isAlbumEditor = computed(() => editor.value?.entity === 'album')
 const isCreateMode = computed(() => editor.value?.mode === 'create')
 const isEditMode = computed(() => editor.value?.mode === 'edit')
-const isAlbumCreateFlow = computed(() => isAlbumEditor.value && isCreateMode.value && creationFlow.value !== null)
+const isCreateFlowActive = computed(() => isCreateMode.value && creationFlow.value !== null)
 const sheetIndex = computed(() => {
   let count = 0
   if (state.value.artistId !== null) count += 1
@@ -89,6 +88,9 @@ let notes = reactive<MusicReviewNotesDraft>({
 let sources = ref<MusicSourceDraft[]>([])
 
 const sheetTitle = computed(() => {
+  if (isCreateFlowActive.value) {
+    return albumCreateStep.value === 'artist' ? '新建艺术家' : '新建专辑'
+  }
   if (isArtistEditor.value) {
     return isCreateMode.value ? '新建艺术家' : '编辑艺术家'
   }
@@ -110,14 +112,20 @@ watch(editor, async (value) => {
   }
 
   if (value.entity === 'artist') {
-    closeMusicCreationFlow()
     resetArtistState()
-    if (value.mode === 'edit' && value.id) {
+    resetAlbumState()
+    if (value.mode === 'create') {
+      const seed = value.seed as { name?: string } | undefined
+      openMusicCreationFlow({
+        artistName: seed?.name ?? '',
+        startStep: 'artist',
+      })
+      return
+    }
+
+    closeMusicCreationFlow()
+    if (value.id) {
       await loadArtist(value.id)
-    } else {
-      artistInitialValue.value = {
-        name: typeof value.seed?.name === 'string' ? value.seed.name : '',
-      }
     }
     return
   }
@@ -204,24 +212,6 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
   artistSubmitting.value = true
   artistErrorMessage.value = ''
   try {
-    if (current.mode === 'create') {
-      const result = await createMusicArtist({
-        name: value.name || '',
-        bio: value.bio,
-        image_url: value.image_url,
-        nationality: value.nationality,
-        birth_date: value.birth_date,
-        birth_year: value.birth_year,
-        death_year: value.death_year,
-      })
-      refreshArtist()
-      closeMusicEditor()
-      if (result.id) {
-        await router.replace(`/music?artist=${result.id}`)
-      }
-      return
-    }
-
     if (!current.id) throw new Error('缺少艺术家 ID')
 
     await updateMusicArtist(current.id, value)
@@ -470,18 +460,7 @@ async function finishAlbumCreate() {
         <PPageHeader :title="sheetTitle" accent mb="0" />
       </div>
 
-      <div v-if="isArtistEditor" class="entity-editor__body">
-        <p v-if="artistErrorMessage" class="entity-editor__error">{{ artistErrorMessage }}</p>
-        <MusicArtistForm
-          :initial-value="artistInitialValue"
-          :submitting="artistSubmitting"
-          :submit-label="isCreateMode ? '创建艺术家' : '保存艺术家'"
-          :submitting-label="isCreateMode ? '正在创建...' : '正在保存...'"
-          @submit="handleArtistSubmit"
-        />
-      </div>
-
-      <div v-else-if="isAlbumCreateFlow && creationFlow" class="entity-editor__body">
+      <div v-if="isCreateFlowActive && creationFlow" class="entity-editor__body">
         <p v-if="creationFlow.errorMessage" class="entity-editor__error">{{ creationFlow.errorMessage }}</p>
         <MusicCreationArtistStep v-if="albumCreateStep === 'artist'" />
         <MusicCreationAlbumSeedStep v-else-if="albumCreateStep === 'albumImport'" />
@@ -513,6 +492,17 @@ async function finishAlbumCreate() {
             完成
           </PButton>
         </div>
+      </div>
+
+      <div v-else-if="isArtistEditor" class="entity-editor__body">
+        <p v-if="artistErrorMessage" class="entity-editor__error">{{ artistErrorMessage }}</p>
+        <MusicArtistForm
+          :initial-value="artistInitialValue"
+          :submitting="artistSubmitting"
+          :submit-label="isCreateMode ? '创建艺术家' : '保存艺术家'"
+          :submitting-label="isCreateMode ? '正在创建...' : '正在保存...'"
+          @submit="handleArtistSubmit"
+        />
       </div>
 
       <div v-else-if="isAlbumEditor" class="entity-editor__body">

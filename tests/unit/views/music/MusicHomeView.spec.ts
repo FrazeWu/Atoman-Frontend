@@ -55,7 +55,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.routeQuery = {}
   })
 
-  it('renders the album landing content instead of the artist discovery page', () => {
+  it('renders the album landing content for the music module entry', () => {
     const wrapper = mount(HomeView)
 
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').exists()).toBe(true)
@@ -90,6 +90,21 @@ describe('Music HomeView.vue (Album Landing)', () => {
       entity: 'album',
       mode: 'edit',
       id: 'album-9',
+    })
+  })
+
+  it('opens the unified artist creation entry from route query state on mount', () => {
+    mocks.routeQuery = {
+      editor: 'artist-create',
+      name: 'Seed Artist',
+    }
+
+    mount(HomeView)
+
+    expect(mocks.openMusicEditor).toHaveBeenCalledWith({
+      entity: 'artist',
+      mode: 'create',
+      seed: { name: 'Seed Artist' },
     })
   })
 })

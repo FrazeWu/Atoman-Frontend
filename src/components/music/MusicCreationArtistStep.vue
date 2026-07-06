@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
@@ -11,21 +12,95 @@ const { state, setMusicCreationStep } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
 const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
+const isGroup = computed(() => artistDraft.value?.kind === 'group')
 const avatarUploading = ref(false)
 const avatarErrorMessage = ref('')
 const stageNameErrorMessage = ref('')
+const groupErrorMessage = ref('')
+const membersErrorMessage = ref('')
+const personalErrorMessage = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const pendingAvatarFile = ref<File | null>(null)
+
+function createEmptyDateParts() {
+  return {
+    year: '',
+    month: '',
+    day: '',
+  }
+}
+
+function hasDatePartsValue(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return false
+  return !!parts.year.trim() || !!parts.month.trim() || !!parts.day.trim()
+}
+
+function normalizeDatePart(value: string, length: number) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return trimmed.padStart(length, '0')
+}
+
+function parseDateToParts(value: string) {
+  const [year = '', month = '', day = ''] = value.trim().split('-')
+  return { year, month, day }
+}
+
+function formatDateParts(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return ''
+
+  const year = parts.year.trim()
+  const month = normalizeDatePart(parts.month, 2)
+  const day = normalizeDatePart(parts.day, 2)
+
+  if (!year || !month || !day) return ''
+  return `${year}-${month}-${day}`
+}
+
+watch(
+  artistDraft,
+  (draft) => {
+    if (!draft) return
+
+    if (!draft.birthDateParts) {
+      draft.birthDateParts = createEmptyDateParts()
+    }
+
+    if (!hasDatePartsValue(draft.birthDateParts) && draft.birthDate.trim()) {
+      draft.birthDateParts = parseDateToParts(draft.birthDate)
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => artistDraft.value?.birthDateParts,
+  (parts) => {
+    if (!artistDraft.value) return
+    artistDraft.value.birthDate = formatDateParts(parts)
+  },
+  { deep: true, immediate: true },
+)
 
 function triggerFileInput() {
   fileInputRef.value?.click()
 }
 
 async function onAvatarChange(event: Event) {
-  if (!artistDraft.value) return
-
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+
+  pendingAvatarFile.value = file
+  input.value = ''
+}
+
+function clearPendingAvatarCrop() {
+  pendingAvatarFile.value = null
+}
+
+async function confirmAvatarCrop(file: File) {
+  if (!artistDraft.value) return
 
   avatarUploading.value = true
   avatarErrorMessage.value = ''
@@ -38,7 +113,7 @@ async function onAvatarChange(event: Event) {
     avatarErrorMessage.value = error instanceof Error ? error.message : '头像上传失败'
   } finally {
     avatarUploading.value = false
-    input.value = ''
+    clearPendingAvatarCrop()
   }
 }
 
@@ -49,9 +124,36 @@ function addStageName() {
     id: `stage-name-${Date.now()}-${artistDraft.value.stageNames.length + 1}`,
     name: '',
     isPrimary: false,
+    startDateParts: createEmptyDateParts(),
+    endDateParts: createEmptyDateParts(),
     startDateText: '',
     endDateText: '',
   })
+}
+
+function addMember() {
+  if (!artistDraft.value) return
+
+  artistDraft.value.members.push({
+    id: `member-${Date.now()}-${artistDraft.value.members.length + 1}`,
+    name: '',
+    joinDateParts: createEmptyDateParts(),
+    leaveDateParts: createEmptyDateParts(),
+  })
+}
+
+function removeMember(memberId: string) {
+  if (!artistDraft.value) return
+  artistDraft.value.members = artistDraft.value.members.filter((member) => member.id !== memberId)
+}
+
+function setArtistKind(kind: 'person' | 'group') {
+  if (!artistDraft.value) return
+  artistDraft.value.kind = kind
+  stageNameErrorMessage.value = ''
+  groupErrorMessage.value = ''
+  membersErrorMessage.value = ''
+  personalErrorMessage.value = ''
 }
 
 function validateStageNames() {
@@ -65,15 +167,79 @@ function validateStageNames() {
   return !hasInvalidAdditionalStage
 }
 
+function validateGroupDraft() {
+  if (!artistDraft.value) return false
+
+  const hasGroupName = !!artistDraft.value.stageNames[0]?.name.trim()
+  const hasStartYear = !!artistDraft.value.activeStartDateParts?.year.trim()
+  const namedMembers = artistDraft.value.members.filter((member) => member.name.trim())
+  const hasMissingJoinDate = namedMembers.some((member) => !member.joinDateParts.year.trim())
+
+  groupErrorMessage.value = !hasGroupName
+    ? '请填写组合名'
+    : !hasStartYear
+      ? '请填写组合成立时间'
+      : ''
+  membersErrorMessage.value = namedMembers.length < 2
+    ? '组合至少需要 2 名成员'
+    : hasMissingJoinDate
+      ? '请为每位成员填写加入时间'
+      : ''
+
+  personalErrorMessage.value = !artistDraft.value.source.trim() ? '请填写来源' : ''
+
+  return !groupErrorMessage.value && !membersErrorMessage.value && !personalErrorMessage.value
+}
+
+function validatePersonDraft() {
+  if (!artistDraft.value) return false
+
+  const hasAvatar = !!artistDraft.value.avatarUrl.trim()
+  const hasLegalName = !!artistDraft.value.legalName.trim()
+  const hasPrimaryStageName = !!artistDraft.value.stageNames[0]?.name.trim()
+  const hasNationality = !!artistDraft.value.nationality.trim()
+  const hasBirthDate = !!artistDraft.value.birthDate.trim()
+  const hasSource = !!artistDraft.value.source.trim()
+
+  personalErrorMessage.value = !hasAvatar
+    ? '请上传头像'
+    : !hasLegalName
+      ? '请填写本名'
+      : !hasPrimaryStageName
+        ? '请填写主艺名'
+        : !hasNationality
+          ? '请填写国籍'
+          : !hasBirthDate
+            ? '请填写生日'
+            : !hasSource
+              ? '请填写来源'
+              : ''
+
+  return !personalErrorMessage.value && validateStageNames()
+}
+
 function goNext() {
   if (!artistDraft.value) return
-  if (!validateStageNames()) return
+  personalErrorMessage.value = ''
+  if (isGroup.value) {
+    if (!validateGroupDraft()) return
+  } else {
+    if (!validatePersonDraft()) return
+  }
   setMusicCreationStep('albumImport')
 }
 </script>
 
 <template>
   <div v-if="artistDraft" class="artist-step" data-testid="artist-step">
+    <MusicSquareImageCropSheet
+      :show="!!pendingAvatarFile"
+      :source-file="pendingAvatarFile"
+      title="裁剪头像"
+      @cancel="clearPendingAvatarCrop"
+      @confirm="confirmAvatarCrop"
+    />
+
     <div class="artist-step-shell">
       <header class="artist-hero">
         <div class="artist-hero__meta">
@@ -89,17 +255,37 @@ function goNext() {
           </div>
         </div>
 
+        <div class="kind-switch">
+          <button
+            data-testid="artist-kind-person-button"
+            type="button"
+            class="kind-switch__button"
+            :class="{ 'is-active': !isGroup }"
+            @click="setArtistKind('person')"
+          >
+            个人
+          </button>
+          <button
+            data-testid="artist-kind-group-button"
+            type="button"
+            class="kind-switch__button"
+            :class="{ 'is-active': isGroup }"
+            @click="setArtistKind('group')"
+          >
+            组合
+          </button>
+        </div>
+
         <div class="avatar-upload-section">
-          <!-- Left side: Clickable Avatar Upload -->
-          <div 
-            class="avatar-uploader" 
+          <div
+            class="avatar-uploader"
             :class="{ 'is-uploading': avatarUploading }"
             title="点击添加头像"
             @click="triggerFileInput"
           >
             <PAvatar
               :src="artistDraft.avatarUrl || undefined"
-              :name="artistDraft.legalName || artistDraft.stageNames[0]?.name || 'Artist'"
+              :name="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
               size="xl"
             />
             <div class="avatar-uploader-hover">
@@ -107,7 +293,6 @@ function goNext() {
               <span v-else>{{ artistDraft.avatarUrl ? '修改头像' : '添加头像' }}</span>
             </div>
           </div>
-          <!-- Hidden input for file selection -->
           <input
             ref="fileInputRef"
             data-testid="artist-avatar-input"
@@ -119,9 +304,8 @@ function goNext() {
             @change="onAvatarChange"
           />
 
-          <!-- Right side: Basic Fields -->
           <div class="avatar-upload-fields">
-            <div class="field-group">
+            <div v-if="!isGroup" class="field-group">
               <PInput
                 v-model="artistDraft.legalName"
                 data-testid="artist-legal-name-input"
@@ -133,19 +317,93 @@ function goNext() {
             <div v-if="artistDraft.stageNames.length" class="field-group">
               <PInput
                 v-model="artistDraft.stageNames[0].name"
-                data-testid="artist-stage-name-input-0"
+                :data-testid="isGroup ? 'artist-group-name-input' : 'artist-stage-name-input-0'"
                 type="text"
-                label="主艺名"
-                placeholder="例如 Kanye West / Ye"
-                @update:model-value="stageNameErrorMessage = ''"
+                :label="isGroup ? '组合名' : '主艺名'"
+                :placeholder="isGroup ? '例如 Daft Punk' : '例如 Kanye West / Ye'"
+                @update:model-value="() => { stageNameErrorMessage = ''; groupErrorMessage = '' }"
               />
+            </div>
+            <div v-if="isGroup" class="field-grid field-grid--duo">
+              <div class="field-group">
+                <span class="field-label">成立时间</span>
+                <div class="date-parts-grid">
+                  <PInput
+                    v-model="artistDraft.activeStartDateParts.year"
+                    data-testid="artist-group-start-year-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="年"
+                    label="年份"
+                  />
+                  <PInput
+                    v-model="artistDraft.activeStartDateParts.month"
+                    data-testid="artist-group-start-month-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="月"
+                    label="月份"
+                  />
+                  <PInput
+                    v-model="artistDraft.activeStartDateParts.day"
+                    data-testid="artist-group-start-day-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="日"
+                    label="日期"
+                  />
+                </div>
+              </div>
+              <div class="field-group">
+                <span class="field-label">结束时间</span>
+                <div class="date-parts-grid">
+                  <PInput
+                    v-model="artistDraft.activeEndDateParts.year"
+                    data-testid="artist-group-end-year-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="年"
+                    label="年份"
+                  />
+                  <PInput
+                    v-model="artistDraft.activeEndDateParts.month"
+                    data-testid="artist-group-end-month-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="月"
+                    label="月份"
+                  />
+                  <PInput
+                    v-model="artistDraft.activeEndDateParts.day"
+                    data-testid="artist-group-end-day-input"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="日"
+                    label="日期"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
         <div v-if="avatarErrorMessage" class="state-line state-line--error" style="margin-top: 0.5rem">{{ avatarErrorMessage }}</div>
+        <p
+          v-if="groupErrorMessage"
+          data-testid="artist-group-error"
+          class="state-line state-line--error"
+        >
+          {{ groupErrorMessage }}
+        </p>
+        <p
+          v-if="personalErrorMessage && isGroup"
+          data-testid="artist-source-error"
+          class="state-line state-line--error"
+        >
+          {{ personalErrorMessage }}
+        </p>
       </section>
 
-      <section class="artist-card artist-card--soft">
+      <section v-if="!isGroup" class="artist-card artist-card--soft">
         <div class="card-header">
           <div>
             <p class="card-kicker">艺名</p>
@@ -208,6 +466,118 @@ function goNext() {
         </div>
       </section>
 
+      <section v-if="isGroup" class="artist-card artist-card--soft">
+        <div class="card-header">
+          <div>
+            <p class="card-kicker">组合成员</p>
+          </div>
+          <button
+            data-testid="artist-add-member-button"
+            type="button"
+            class="paper-action paper-action--inline"
+            @click="addMember"
+          >
+            添加成员
+          </button>
+        </div>
+
+        <div class="field-stack">
+          <div
+            v-for="(member, index) in artistDraft.members"
+            :key="member.id"
+            class="stage-name-card"
+          >
+            <div class="member-card__header">
+              <PInput
+                v-model="member.name"
+                :data-testid="`artist-member-name-input-${index}`"
+                type="text"
+                label="成员名"
+                placeholder="例如 Thomas Bangalter"
+                @update:model-value="membersErrorMessage = ''"
+              />
+              <button
+                type="button"
+                class="paper-action paper-action--inline"
+                @click="removeMember(member.id)"
+              >
+                删除
+              </button>
+            </div>
+
+            <div class="field-grid field-grid--duo">
+              <div class="field-group">
+                <span class="field-label">加入时间</span>
+                <div class="date-parts-grid">
+                  <PInput
+                    v-model="member.joinDateParts.year"
+                    :data-testid="`artist-member-join-year-input-${index}`"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="年"
+                    label="年份"
+                  />
+                  <PInput
+                    v-model="member.joinDateParts.month"
+                    :data-testid="`artist-member-join-month-input-${index}`"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="月"
+                    label="月份"
+                  />
+                  <PInput
+                    v-model="member.joinDateParts.day"
+                    :data-testid="`artist-member-join-day-input-${index}`"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="日"
+                    label="日期"
+                  />
+                </div>
+              </div>
+
+              <div class="field-group">
+                <span class="field-label">退出时间</span>
+                <div class="date-parts-grid">
+                  <PInput
+                    v-model="member.leaveDateParts.year"
+                    :data-testid="`artist-member-leave-year-input-${index}`"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="年"
+                    label="年份"
+                  />
+                  <PInput
+                    v-model="member.leaveDateParts.month"
+                    :data-testid="`artist-member-leave-month-input-${index}`"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="月"
+                    label="月份"
+                  />
+                  <PInput
+                    v-model="member.leaveDateParts.day"
+                    :data-testid="`artist-member-leave-day-input-${index}`"
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="日"
+                    label="日期"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p
+            v-if="membersErrorMessage"
+            data-testid="artist-members-error"
+            class="state-line state-line--error"
+          >
+            {{ membersErrorMessage }}
+          </p>
+        </div>
+      </section>
+
       <section class="artist-card">
         <div class="card-header">
           <div>
@@ -216,7 +586,7 @@ function goNext() {
         </div>
 
         <div class="field-stack">
-          <div class="field-grid field-grid--duo">
+          <div v-if="!isGroup" class="field-grid field-grid--duo">
             <div class="field-group">
               <span class="field-label">国籍</span>
               <PCountryRegionField
@@ -228,25 +598,36 @@ function goNext() {
                 option-prefix="artist-country-option-"
               />
             </div>
-
-            <div class="field-group">
-              <PInput
-                v-model="artistDraft.birthPlace"
-                data-testid="artist-birth-place-input"
-                type="text"
-                placeholder="例如 Atlanta, Georgia, U.S."
-                label="出生地"
-              />
-            </div>
           </div>
 
-          <div class="field-group field-group--narrow">
-            <PInput
-              v-model="artistDraft.birthDate"
-              data-testid="artist-birth-date-input"
-              type="date"
-              label="生日"
-            />
+          <div v-if="!isGroup" class="field-group">
+            <span class="field-label">生日</span>
+            <div class="date-parts-grid">
+              <PInput
+                v-model="artistDraft.birthDateParts.year"
+                data-testid="artist-birth-year-input"
+                type="text"
+                inputmode="numeric"
+                placeholder="年"
+                label="年份"
+              />
+              <PInput
+                v-model="artistDraft.birthDateParts.month"
+                data-testid="artist-birth-month-input"
+                type="text"
+                inputmode="numeric"
+                placeholder="月"
+                label="月份"
+              />
+              <PInput
+                v-model="artistDraft.birthDateParts.day"
+                data-testid="artist-birth-day-input"
+                type="text"
+                inputmode="numeric"
+                placeholder="日"
+                label="日期"
+              />
+            </div>
           </div>
 
           <div class="field-group">
@@ -263,11 +644,18 @@ function goNext() {
             <PTextarea
               v-model="artistDraft.source"
               data-testid="artist-source-input"
-              :rows="3"
+              :rows="4"
               placeholder="填写来源"
               label="来源"
             />
           </div>
+          <p
+            v-if="personalErrorMessage && !isGroup"
+            data-testid="artist-personal-error"
+            class="state-line state-line--error"
+          >
+            {{ personalErrorMessage }}
+          </p>
         </div>
       </section>
 
@@ -364,6 +752,29 @@ function goNext() {
   flex-wrap: wrap;
 }
 
+.kind-switch {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.kind-switch__button {
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 0;
+  padding: 0.55rem 0.9rem;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kind-switch__button.is-active {
+  border-color: var(--a-color-ink);
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
+}
+
 .avatar-upload-section {
   display: flex;
   gap: 1.5rem;
@@ -422,6 +833,7 @@ function goNext() {
 .field-grid--duo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .field-group { display: grid; gap: 0.45rem; }
 .field-group--narrow { max-width: 16rem; }
+.date-parts-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .stage-name-card {
   display: grid;
@@ -435,6 +847,13 @@ function goNext() {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.member-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: end;
 }
 
 :deep(.p-input:focus),
@@ -486,7 +905,8 @@ function goNext() {
 
 @media (max-width: 720px) {
   .field-grid--duo,
-  .stage-name-dates {
+  .stage-name-dates,
+  .date-parts-grid {
     grid-template-columns: 1fr;
   }
 

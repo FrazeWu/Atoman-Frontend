@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   uploadMusicAsset,
   createMusicAlbumImport,
@@ -8,6 +8,8 @@ import {
   validateMusicAlbumArchiveFile,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
+import MusicCreationContributorPicker from '@/components/music/MusicCreationContributorPicker.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -26,6 +28,103 @@ const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const uploading = ref(false)
 const errorMessage = ref('')
+const draggedTrackId = ref<string | null>(null)
+const pendingCoverCrop = ref<{
+  kind: 'manual' | 'imported'
+  sourceFile?: File | null
+  sourceUrl?: string
+} | null>(null)
+const handledImportedCoverUrl = ref('')
+const titleModel = computed({
+  get: () => albumDetailsDraft.value?.title ?? '',
+  set: (value: string) => {
+    if (!albumDetailsDraft.value) return
+    if (creationFlow.value) {
+      creationFlow.value.titleCustomized = true
+    }
+    albumDetailsDraft.value.title = value
+  },
+})
+const unresolvedImportedCoverUrl = computed(() => {
+  const coverUrl = albumImportDraft.value?.coverUrl?.trim() || ''
+  const derivedCover = albumImportDraft.value?.derivedCover?.trim() || ''
+  const nextCoverUrl = coverUrl || derivedCover
+  if (!nextCoverUrl) return ''
+  if (handledImportedCoverUrl.value === nextCoverUrl) return ''
+  return nextCoverUrl
+})
+
+function createEmptyDateParts() {
+  return {
+    year: '',
+    month: '',
+    day: '',
+  }
+}
+
+function hasDatePartsValue(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return false
+  return !!parts.year.trim() || !!parts.month.trim() || !!parts.day.trim()
+}
+
+function normalizeDatePart(value: string, length: number) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return trimmed.padStart(length, '0')
+}
+
+function parseDateToParts(value: string) {
+  const [year = '', month = '', day = ''] = value.trim().split('-')
+  return { year, month, day }
+}
+
+function formatDateParts(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return ''
+
+  const year = parts.year.trim()
+  const month = normalizeDatePart(parts.month, 2)
+  const day = normalizeDatePart(parts.day, 2)
+
+  if (!year || !month || !day) return ''
+  return `${year}-${month}-${day}`
+}
+
+watch(
+  albumDetailsDraft,
+  (draft) => {
+    if (!draft) return
+
+    if (!draft.releaseDateParts) {
+      draft.releaseDateParts = createEmptyDateParts()
+    }
+
+    if (!draft.contributors) {
+      draft.contributors = []
+    }
+
+    if (!hasDatePartsValue(draft.releaseDateParts) && draft.releaseDate.trim()) {
+      draft.releaseDateParts = parseDateToParts(draft.releaseDate)
+    } else if (!hasDatePartsValue(draft.releaseDateParts) && draft.releaseYear.trim()) {
+      draft.releaseDateParts = {
+        year: draft.releaseYear.trim(),
+        month: '',
+        day: '',
+      }
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => albumDetailsDraft.value?.releaseDateParts,
+  (parts) => {
+    if (!albumDetailsDraft.value) return
+    albumDetailsDraft.value.releaseDate = formatDateParts(parts)
+    albumDetailsDraft.value.releaseYear = parts?.year.trim() ?? ''
+  },
+  { deep: true, immediate: true },
+)
+
 const archiveUploadLocked = computed(() => {
   const status = albumImportDraft.value?.status
   return uploading.value || status === 'uploading' || status === 'extracting'
@@ -60,15 +159,19 @@ function applyImportSnapshot(snapshot: MusicAlbumImport) {
   creationFlow.value.draft.albumImport.derivedTracks = derivedTracks
   creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
   creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
-  creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
-  creationFlow.value.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover || creationFlow.value.draft.albumDetails.coverUrl
-  creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
-    id: `import-track-${index + 1}`,
-    sequence: index + 1,
-    title: track.title,
-    audioKey: track.audioKey,
-    origin: track.origin,
-  }))
+  if (!creationFlow.value.titleCustomized) {
+    creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
+  }
+
+  if (!creationFlow.value.tracksCustomized) {
+    creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
+      id: `import-track-${index + 1}`,
+      sequence: index + 1,
+      title: track.title,
+      audioKey: track.audioKey,
+      origin: track.origin,
+    }))
+  }
 }
 
 function canReuseImportSession(status: MusicAlbumImport['status']) {
@@ -77,6 +180,7 @@ function canReuseImportSession(status: MusicAlbumImport['status']) {
 
 function addTrack() {
   if (!creationFlow.value) return
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = [
     ...creationFlow.value.draft.tracks,
     {
@@ -88,8 +192,42 @@ function addTrack() {
   ]
 }
 
+function syncLockedNewArtistContributor() {
+  if (!creationFlow.value || !albumDetailsDraft.value) return
+
+  const isNewArtistFlow = !creationFlow.value.draft.artist.id
+  const lockedContributorId = 'contributor-new-artist'
+
+  if (!isNewArtistFlow) {
+    albumDetailsDraft.value.contributors = albumDetailsDraft.value.contributors.filter((item) => item.id !== lockedContributorId)
+    return
+  }
+
+  const artistName = creationFlow.value.draft.artist.stageNames[0]?.name.trim()
+    || creationFlow.value.draft.artist.legalName.trim()
+  if (!artistName) return
+
+  const nextContributor = {
+    id: lockedContributorId,
+    artistId: null,
+    name: artistName,
+    avatarUrl: creationFlow.value.draft.artist.avatarUrl,
+    kind: creationFlow.value.draft.artist.kind,
+    locked: true,
+  }
+
+  const existingIndex = albumDetailsDraft.value.contributors.findIndex((item) => item.id === lockedContributorId)
+  if (existingIndex >= 0) {
+    albumDetailsDraft.value.contributors.splice(existingIndex, 1, nextContributor)
+    return
+  }
+
+  albumDetailsDraft.value.contributors = [nextContributor, ...albumDetailsDraft.value.contributors]
+}
+
 function updateTrackTitle(trackId: string, title: string) {
   if (!creationFlow.value) return
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.map((track) => (
     track.id === trackId
       ? { ...track, title }
@@ -172,22 +310,83 @@ function moveTrack(index: number, direction: -1 | 1) {
   const next = [...creationFlow.value.draft.tracks]
   const [track] = next.splice(index, 1)
   next.splice(target, 0, track)
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = next
+  renumberTracks()
+}
+
+function handleTrackDragStart(trackId: string, event: DragEvent) {
+  draggedTrackId.value = trackId
+  event.dataTransfer?.setData('text/plain', trackId)
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function handleTrackDrop(targetTrackId: string, event: DragEvent) {
+  event.preventDefault()
+  if (!creationFlow.value) return
+
+  const sourceTrackId = event.dataTransfer?.getData('text/plain') || draggedTrackId.value
+  draggedTrackId.value = null
+  if (!sourceTrackId || sourceTrackId === targetTrackId) return
+
+  const nextTracks = [...creationFlow.value.draft.tracks]
+  const sourceIndex = nextTracks.findIndex((track) => track.id === sourceTrackId)
+  const targetIndex = nextTracks.findIndex((track) => track.id === targetTrackId)
+  if (sourceIndex < 0 || targetIndex < 0) return
+
+  const [sourceTrack] = nextTracks.splice(sourceIndex, 1)
+  const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
+  nextTracks.splice(insertionIndex, 0, sourceTrack)
+  creationFlow.value.tracksCustomized = true
+  creationFlow.value.draft.tracks = nextTracks
   renumberTracks()
 }
 
 function removeTrack(trackId: string) {
   if (!creationFlow.value) return
+  creationFlow.value.tracksCustomized = true
   creationFlow.value.draft.tracks = creationFlow.value.draft.tracks.filter((track) => track.id !== trackId)
   renumberTracks()
 }
 
-async function onCoverChange(event: Event) {
+function queueManualCoverCrop(file: File) {
+  pendingCoverCrop.value = {
+    kind: 'manual',
+    sourceFile: file,
+  }
+}
+
+function queueImportedCoverCrop(sourceUrl: string) {
+  if (!creationFlow.value || !sourceUrl.trim()) return
+
+  if (creationFlow.value.draft.albumDetails.coverUrl === sourceUrl) {
+    creationFlow.value.draft.albumDetails.coverUrl = ''
+    creationFlow.value.draft.albumDetails.coverAsset = null
+  }
+
+  pendingCoverCrop.value = {
+    kind: 'imported',
+    sourceUrl,
+  }
+}
+
+function reopenImportedCoverCrop() {
+  if (!unresolvedImportedCoverUrl.value) return
+  queueImportedCoverCrop(unresolvedImportedCoverUrl.value)
+}
+
+function clearPendingCoverCrop() {
+  pendingCoverCrop.value = null
+}
+
+async function confirmCoverCrop(file: File) {
   if (!creationFlow.value || !albumDetailsDraft.value) return
 
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+  const importedSourceUrl = pendingCoverCrop.value?.kind === 'imported'
+    ? pendingCoverCrop.value.sourceUrl?.trim() || ''
+    : ''
 
   coverUploading.value = true
   coverErrorMessage.value = ''
@@ -196,21 +395,75 @@ async function onCoverChange(event: Event) {
     const asset = await uploadMusicAsset(file, 'music.cover')
     albumDetailsDraft.value.coverAsset = asset
     albumDetailsDraft.value.coverUrl = asset.url
+    if (importedSourceUrl) {
+      handledImportedCoverUrl.value = importedSourceUrl
+    }
+    pendingCoverCrop.value = null
   } catch (error) {
     coverErrorMessage.value = error instanceof Error ? error.message : '封面上传失败'
   } finally {
     coverUploading.value = false
-    input.value = ''
   }
+}
+
+async function onCoverChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  queueManualCoverCrop(file)
+  input.value = ''
 }
 
 function goBack() {
   setMusicCreationStep('albumImport')
 }
+
+watch(
+  () => unresolvedImportedCoverUrl.value,
+  (nextCoverUrl) => {
+    if (!creationFlow.value || !nextCoverUrl) return
+    if (pendingCoverCrop.value?.kind === 'manual') return
+    if (handledImportedCoverUrl.value === nextCoverUrl) return
+
+    if (
+      pendingCoverCrop.value?.kind === 'imported'
+      && pendingCoverCrop.value.sourceUrl?.trim() === nextCoverUrl
+    ) {
+      return
+    }
+
+    queueImportedCoverCrop(nextCoverUrl)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [
+    creationFlow.value?.draft.artist.id ?? '',
+    creationFlow.value?.draft.artist.kind ?? 'person',
+    creationFlow.value?.draft.artist.avatarUrl ?? '',
+    creationFlow.value?.draft.artist.legalName ?? '',
+    creationFlow.value?.draft.artist.stageNames[0]?.name ?? '',
+  ],
+  () => {
+    syncLockedNewArtistContributor()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div v-if="albumDetailsDraft" class="album-details-step" data-testid="album-details-step">
+    <MusicSquareImageCropSheet
+      :show="!!pendingCoverCrop"
+      :source-file="pendingCoverCrop?.sourceFile || null"
+      :source-url="pendingCoverCrop?.sourceUrl || ''"
+      title="裁剪封面"
+      @cancel="clearPendingCoverCrop"
+      @confirm="confirmCoverCrop"
+    />
+
     <section class="progress-card">
       <div class="progress-copy">
         <p class="progress-label" data-testid="album-details-progress-label">
@@ -366,6 +619,21 @@ function goBack() {
         </div>
         <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
         <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+        <div
+          v-if="unresolvedImportedCoverUrl"
+          class="imported-cover-callout"
+          data-testid="album-details-imported-cover-callout"
+        >
+          <p class="imported-cover-callout__copy">已识别到封面，确认裁剪后才会作为最终封面。</p>
+          <PButton
+            type="button"
+            variant="secondary"
+            data-testid="album-details-imported-cover-action"
+            @click="reopenImportedCoverCrop"
+          >
+            继续裁剪识别封面
+          </PButton>
+        </div>
         <div v-else-if="albumDetailsDraft.coverUrl" class="cover-preview">
           <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
           <div class="cover-preview__meta">
@@ -376,7 +644,7 @@ function goBack() {
 
       <div class="field-group" data-testid="album-details-field" data-field="name">
         <PInput
-          v-model="albumDetailsDraft.title"
+          v-model="titleModel"
           data-testid="album-details-title-input"
           type="text"
           placeholder="例如 Late Registration"
@@ -384,13 +652,38 @@ function goBack() {
         />
       </div>
 
+      <div class="field-group" data-testid="album-details-field" data-field="contributors">
+        <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
+      </div>
+
       <div class="field-group" data-testid="album-details-field" data-field="date">
-        <PInput
-          v-model="albumDetailsDraft.releaseDate"
-          data-testid="album-details-date-input"
-          type="date"
-          label="日期"
-        />
+        <span class="field-label">日期</span>
+        <div class="date-parts-grid">
+          <PInput
+            v-model="albumDetailsDraft.releaseDateParts.year"
+            data-testid="album-details-date-year-input"
+            type="text"
+            inputmode="numeric"
+            placeholder="年"
+            label="年份"
+          />
+          <PInput
+            v-model="albumDetailsDraft.releaseDateParts.month"
+            data-testid="album-details-date-month-input"
+            type="text"
+            inputmode="numeric"
+            placeholder="月"
+            label="月份"
+          />
+          <PInput
+            v-model="albumDetailsDraft.releaseDateParts.day"
+            data-testid="album-details-date-day-input"
+            type="text"
+            inputmode="numeric"
+            placeholder="日"
+            label="日期"
+          />
+        </div>
       </div>
 
       <div class="field-group" data-testid="album-details-field" data-field="type">
@@ -426,14 +719,23 @@ function goBack() {
         </div>
 
         <div v-if="orderedTracks.length" class="track-list">
-          <div v-for="(track, index) in orderedTracks" :key="track.id" class="track-row">
+          <div
+            v-for="(track, index) in orderedTracks"
+            :key="track.id"
+            :data-testid="`album-track-row-${track.id}`"
+            class="track-row"
+            draggable="true"
+            @dragstart="handleTrackDragStart(track.id, $event)"
+            @dragover.prevent
+            @drop="handleTrackDrop(track.id, $event)"
+          >
             <span class="track-sequence" data-testid="album-track-sequence">{{ formatSequence(track.sequence) }}</span>
             <PInput
               :model-value="track.title"
               data-testid="album-track-title-input"
               class="track-row__input"
               type="text"
-              readonly
+              @update:model-value="updateTrackTitle(track.id, $event)"
             />
             <div class="track-row__actions">
               <button
@@ -599,6 +901,12 @@ function goBack() {
   gap: 1rem;
 }
 
+.date-parts-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .field-group {
   display: grid;
   gap: 0.45rem;
@@ -651,6 +959,21 @@ function goBack() {
 
 .state-line--error {
   color: var(--a-color-accent-destructive);
+}
+
+.imported-cover-callout {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.imported-cover-callout__copy {
+  margin: 0;
+  color: var(--a-color-ink-soft);
+  line-height: 1.5;
+  font-size: 0.9rem;
 }
 
 .cover-preview {
@@ -812,6 +1135,7 @@ function goBack() {
 }
 
 @media (max-width: 720px) {
+  .date-parts-grid,
   .progress-copy,
   .track-adjustment__header,
   .track-row {

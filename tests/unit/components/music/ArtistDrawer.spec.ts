@@ -14,6 +14,7 @@ vi.mock('@/components/ui/PSheet.vue', () => ({
 const drawerState = ref({ artistId: '1', artistRefreshToken: 0 })
 const musicDrawerMocks = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
+  openArtist: vi.fn(),
   openAlbum: vi.fn(),
   openMusicEditor: vi.fn(),
   openMusicCreationFlow: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     closeArtist: vi.fn(),
     isArtistShifted: ref(false),
     openNestedAction: musicDrawerMocks.openNestedAction,
+    openArtist: musicDrawerMocks.openArtist,
     openAlbum: musicDrawerMocks.openAlbum,
     openMusicEditor: musicDrawerMocks.openMusicEditor,
     openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
@@ -62,6 +64,7 @@ describe('ArtistDrawer.vue', () => {
     createArtistBookmark.mockReset()
     deleteArtistBookmark.mockReset()
     musicDrawerMocks.openNestedAction.mockReset()
+    musicDrawerMocks.openArtist.mockReset()
     musicDrawerMocks.openAlbum.mockReset()
     musicDrawerMocks.openMusicEditor.mockReset()
     musicDrawerMocks.openMusicCreationFlow.mockReset()
@@ -70,10 +73,31 @@ describe('ArtistDrawer.vue', () => {
       id: '1',
       name: 'Ye',
       legal_name: 'Kanye Omari West',
+      artist_form: 'group',
       aliases: [
         { alias: 'Kanye West' },
         { alias: 'kanye' },
       ],
+      member_groups: {
+        current: [
+          {
+            artist_id: '2',
+            name: 'Pusha T',
+            image_url: 'https://example.com/pusha-t.jpg',
+            join_date: '2020-01-01',
+            leave_date: '',
+          },
+        ],
+        former: [
+          {
+            artist_id: '3',
+            name: 'Kid Cudi',
+            image_url: '',
+            join_date: '2018-01-01',
+            leave_date: '2022-06-30',
+          },
+        ],
+      },
       bio: 'English rock band',
       entry_status: 'open',
     })
@@ -104,6 +128,29 @@ describe('ArtistDrawer.vue', () => {
     expect(wrapper.text()).toContain('Wish You Were Here')
     expect(wrapper.text()).toContain('1973')
     expect(wrapper.text()).toContain('1975')
+  })
+
+  it('renders current and former members for group artists', async () => {
+    const wrapper = mount(ArtistDrawer)
+
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('现成员')
+    expect(wrapper.text()).toContain('前成员')
+    expect(wrapper.text()).toContain('Pusha T')
+    expect(wrapper.text()).toContain('2020-01-01 - 至今')
+    expect(wrapper.text()).toContain('Kid Cudi')
+    expect(wrapper.text()).toContain('2018-01-01 - 2022-06-30')
+  })
+
+  it('opens the member artist page when clicking a member item', async () => {
+    const wrapper = mount(ArtistDrawer)
+
+    await vi.dynamicImportSettled()
+
+    await wrapper.get('[data-testid="artist-member-2"]').trigger('click')
+
+    expect(musicDrawerMocks.openArtist).toHaveBeenCalledWith('2')
   })
 
   it('creates an artist bookmark when clicking 订阅 and reflects the state', async () => {

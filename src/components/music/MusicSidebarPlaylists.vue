@@ -45,6 +45,24 @@
         
         <p v-if="!playlists.length && !isCreating" class="music-sidebar-playlists__empty">暂无歌单</p>
       </div>
+
+      <div v-if="bookmarkedPlaylists.length" class="music-sidebar-playlists__items music-sidebar-playlists__items--bookmarked">
+        <p class="music-sidebar-playlists__eyebrow a-font-meta">收藏的歌单</p>
+        <button
+          v-for="playlist in bookmarkedPlaylists"
+          :key="playlist.id"
+          type="button"
+          class="music-sidebar-playlists__item"
+          :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
+          :data-testid="`bookmarked-playlist-${playlist.id}`"
+          @click="openPlaylist(String(playlist.id))"
+        >
+          <span class="playlist-icon-frame playlist-icon-frame--bookmarked">
+            <Bookmark :size="15" />
+          </span>
+          <span class="music-sidebar-playlists__name">{{ playlistDisplayName(playlist) }}</span>
+        </button>
+      </div>
     </template>
     <template v-else>
       <div class="collapsed-icons">
@@ -67,6 +85,17 @@
         >
           <ListMusic :size="20" />
         </button>
+        <button
+          v-for="playlist in bookmarkedPlaylists"
+          :key="`bookmarked-${playlist.id}`"
+          type="button"
+          class="collapsed-icon-btn"
+          :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
+          :title="playlistDisplayName(playlist)"
+          @click="openPlaylist(String(playlist.id))"
+        >
+          <Bookmark :size="20" />
+        </button>
       </div>
     </template>
   </section>
@@ -76,8 +105,8 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useRoute } from 'vue-router'
-import { ListMusic, Plus } from 'lucide-vue-next'
-import { listMusicPlaylists, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
+import { Bookmark, ListMusic, Plus } from 'lucide-vue-next'
+import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 defineProps<{
@@ -85,6 +114,7 @@ defineProps<{
 }>()
 
 const playlists = ref<MusicPlaylistSummary[]>([])
+const bookmarkedPlaylists = ref<MusicPlaylistSummary[]>([])
 const route = useRoute()
 const { state, openPlaylist } = useMusicDrawers()
 
@@ -111,6 +141,26 @@ async function fetchPlaylists() {
     }
     console.error('Failed to fetch sidebar playlists:', error)
   }
+}
+
+async function fetchBookmarkedPlaylists() {
+  try {
+    const response = await listPlaylistBookmarks()
+    bookmarkedPlaylists.value = (response.data || [])
+      .map(bookmark => bookmark.playlist)
+      .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
+  } catch (error) {
+    if (error instanceof ApiErrorResponseError && error.status === 401) {
+      bookmarkedPlaylists.value = []
+      return
+    }
+    console.error('Failed to fetch bookmarked playlists:', error)
+  }
+}
+
+function playlistDisplayName(playlist: MusicPlaylistSummary) {
+  const owner = playlist.owner_username?.trim()
+  return owner ? `${owner}/${playlist.name}` : playlist.name
 }
 
 function startCreatePlaylist() {
@@ -171,11 +221,13 @@ watch(
   () => route.path,
   () => {
     fetchPlaylists()
+    fetchBookmarkedPlaylists()
   }
 )
 
 onMounted(() => {
   fetchPlaylists()
+  fetchBookmarkedPlaylists()
 })
 </script>
 
@@ -199,6 +251,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.music-sidebar-playlists__items--bookmarked {
+  border-top: 1px solid var(--a-color-line-soft);
+  padding-top: 0.85rem;
 }
 
 .create-playlist-btn {

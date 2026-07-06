@@ -12,7 +12,7 @@ import {
   getMusicArtist,
   listAlbumBookmarks,
   listArtistBookmarks,
-  listMusicPlaylists,
+  listPlaylistBookmarks,
   type MusicPlaylistSummary,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
@@ -100,12 +100,12 @@ async function loadStarred() {
   try {
     let artistBookmarks: { data: MusicArtistBookmark[] }
     let albumBookmarks: { data: MusicAlbumBookmark[] }
-    let playlistsResponse: { data: MusicPlaylistSummary[] }
+    let playlistsResponse: { data: Array<{ playlist?: MusicPlaylistSummary }> }
     try {
       ;[artistBookmarks, albumBookmarks, playlistsResponse] = await Promise.all([
         listArtistBookmarks({ sort: sortMode.value }),
         listAlbumBookmarks({ sort: sortMode.value }),
-        listMusicPlaylists({ sort: sortMode.value }),
+        listPlaylistBookmarks({ sort: sortMode.value }),
       ])
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
@@ -142,6 +142,8 @@ async function loadStarred() {
       album: albums[index],
     }))
     playlistItems.value = playlistsResponse.data
+      .map(bookmark => bookmark.playlist)
+      .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
   } catch (error) {
     console.error('Failed to load music starred items:', error)
     errorMessage.value = '收藏加载失败'

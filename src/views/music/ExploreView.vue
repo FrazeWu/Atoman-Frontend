@@ -6,10 +6,13 @@ import SearchSurface from '@/components/search/SearchSurface.vue'
 import {
   createAlbumBookmark,
   createArtistBookmark,
+  createPlaylistBookmark,
   deleteAlbumBookmark,
   deleteArtistBookmark,
+  deletePlaylistBookmark,
   listAlbumBookmarks,
   listArtistBookmarks,
+  listPlaylistBookmarks,
   listMusicAlbums,
   listMusicArtists,
   listPublicMusicPlaylists,
@@ -47,6 +50,7 @@ let activeSearchRequestId = 0
 
 const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
+const starredPlaylistIds = ref<string[]>([])
 
 async function fetchAlbumBookmarks() {
   try {
@@ -63,6 +67,15 @@ async function fetchArtistBookmarks() {
     starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
   } catch (e) {
     console.error('Failed to fetch artist bookmarks:', e)
+  }
+}
+
+async function fetchPlaylistBookmarks() {
+  try {
+    const response = await listPlaylistBookmarks()
+    starredPlaylistIds.value = response.data.map((b: any) => String(b.playlist_id))
+  } catch (e) {
+    console.error('Failed to fetch playlist bookmarks:', e)
   }
 }
 
@@ -114,6 +127,30 @@ async function handleToggleArtistBookmark(artistId: string) {
   }
 }
 
+async function handleTogglePlaylistBookmark(playlistId: string) {
+  const isCurrentlyBookmarked = starredPlaylistIds.value.includes(playlistId)
+  try {
+    if (isCurrentlyBookmarked) {
+      await deletePlaylistBookmark(playlistId)
+      starredPlaylistIds.value = starredPlaylistIds.value.filter(id => id !== playlistId)
+      discoverPlaylists.value = discoverPlaylists.value.map((item) => {
+        if (String(item.id) !== playlistId) return item
+        return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
+      })
+      return
+    }
+
+    await createPlaylistBookmark(playlistId)
+    starredPlaylistIds.value.push(playlistId)
+    discoverPlaylists.value = discoverPlaylists.value.map((item) => {
+      if (String(item.id) !== playlistId) return item
+      return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
+    })
+  } catch (e) {
+    console.error('Failed to toggle playlist bookmark:', e)
+  }
+}
+
 async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
@@ -124,6 +161,7 @@ async function fetchDiscoverFeed() {
       listPublicMusicPlaylists({ page: 1, page_size: 6 }),
       fetchAlbumBookmarks(),
       fetchArtistBookmarks(),
+      fetchPlaylistBookmarks(),
     ])
     discoverAlbums.value = albumResponse.data ?? []
     discoverArtists.value = artistResponse.data ?? []
@@ -381,8 +419,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
                 index === 0 ? 'discover-layout__item--playlist-tall' : 'discover-layout__item--playlist-compact',
               ]"
               :playlist="playlistCardItem(item)"
+              :is-bookmarked="starredPlaylistIds.includes(String(item.id))"
               data-testid="discover-playlist-card"
               @click="openDiscoverPlaylist(item)"
+              @toggle-bookmark="handleTogglePlaylistBookmark(String(item.id))"
             />
           </template>
           <template v-else>

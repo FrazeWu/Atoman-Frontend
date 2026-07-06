@@ -311,6 +311,13 @@ export type MusicSongBookmark = {
   song?: MusicSongListItem
 }
 
+export type MusicPlaylistBookmark = {
+  id: string
+  playlist_id: string
+  created_at: string
+  playlist?: MusicPlaylistSummary
+}
+
 export type MusicStarredItem = {
   id: string
   kind: MusicStarredKind
@@ -490,6 +497,8 @@ export const musicV1Endpoints = {
   albumBookmark: (albumId: string) => `${apiV1Base()}/music/bookmarks/albums/${albumId}`,
   songBookmarks: () => `${apiV1Base()}/music/bookmarks/songs`,
   songBookmark: (songId: string) => `${apiV1Base()}/music/bookmarks/songs/${songId}`,
+  playlistBookmarks: () => `${apiV1Base()}/music/bookmarks/playlists`,
+  playlistBookmark: (playlistId: string) => `${apiV1Base()}/music/bookmarks/playlists/${playlistId}`,
   playlists: () => `${apiV1Base()}/music/playlists`,
   playlist: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}`,
   playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
@@ -908,6 +917,18 @@ export async function listSongBookmarks(filters: Pick<MusicListFilters, 'sort' |
   return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(`${musicV1Endpoints.songBookmarks()}${queryString(filters)}`)
 }
 
+export async function listPlaylistBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicPlaylistBookmark[], PaginationMeta>(`${musicV1Endpoints.playlistBookmarks()}${queryString(filters)}`)
+}
+
+export async function createPlaylistBookmark(playlistId: string): Promise<MusicPlaylistBookmark> {
+  return apiPostJson<MusicPlaylistBookmark>(musicV1Endpoints.playlistBookmarks(), { playlist_id: playlistId })
+}
+
+export async function deletePlaylistBookmark(playlistId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.playlistBookmark(playlistId))
+}
+
 export async function listMusicPlaylists(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
   return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(`${musicV1Endpoints.playlists()}${queryString(filters)}`)
 }
@@ -917,11 +938,11 @@ export async function listPublicMusicPlaylists(filters: Pick<MusicListFilters, '
 }
 
 export async function listMusicStarred(): Promise<MusicStarredItem[]> {
-  const [artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
+  const [artistBookmarks, albumBookmarks, songBookmarks, playlistBookmarks] = await Promise.all([
     listArtistBookmarks(),
     listAlbumBookmarks(),
     listSongBookmarks(),
-    listMusicPlaylists(),
+    listPlaylistBookmarks(),
   ])
 
   const [artists, albums] = await Promise.all([
@@ -948,11 +969,11 @@ export async function listMusicStarred(): Promise<MusicStarredItem[]> {
       starred_at: bookmark.created_at,
       song: bookmark.song,
     })),
-    ...playlists.data.map((playlist: MusicPlaylistSummary) => ({
-      id: playlist.id,
+    ...playlistBookmarks.data.map((bookmark: MusicPlaylistBookmark) => ({
+      id: bookmark.id,
       kind: 'playlist' as const,
-      starred_at: '',
-      playlist,
+      starred_at: bookmark.created_at,
+      playlist: bookmark.playlist,
     })),
   ]
 }

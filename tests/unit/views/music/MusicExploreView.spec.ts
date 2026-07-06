@@ -8,8 +8,11 @@ const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
   listRecommendedArtists: vi.fn(),
   listPublicMusicPlaylists: vi.fn(),
+  listPlaylistBookmarks: vi.fn(),
   listAlbumBookmarks: vi.fn(),
   listArtistBookmarks: vi.fn(),
+  createPlaylistBookmark: vi.fn(),
+  deletePlaylistBookmark: vi.fn(),
   createAlbumBookmark: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
   createArtistBookmark: vi.fn(),
@@ -24,8 +27,11 @@ vi.mock('@/api/musicV1', () => ({
   listMusicArtists: mocks.listMusicArtists,
   listRecommendedArtists: mocks.listRecommendedArtists,
   listPublicMusicPlaylists: mocks.listPublicMusicPlaylists,
+  listPlaylistBookmarks: mocks.listPlaylistBookmarks,
   listAlbumBookmarks: mocks.listAlbumBookmarks,
   listArtistBookmarks: mocks.listArtistBookmarks,
+  createPlaylistBookmark: mocks.createPlaylistBookmark,
+  deletePlaylistBookmark: mocks.deletePlaylistBookmark,
   createAlbumBookmark: mocks.createAlbumBookmark,
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
   createArtistBookmark: mocks.createArtistBookmark,
@@ -55,8 +61,11 @@ describe('Music ExploreView.vue', () => {
     mocks.listMusicArtists.mockReset()
     mocks.listRecommendedArtists.mockReset()
     mocks.listPublicMusicPlaylists.mockReset()
+    mocks.listPlaylistBookmarks.mockReset()
     mocks.listAlbumBookmarks.mockReset()
     mocks.listArtistBookmarks.mockReset()
+    mocks.createPlaylistBookmark.mockReset()
+    mocks.deletePlaylistBookmark.mockReset()
     mocks.createAlbumBookmark.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
     mocks.createArtistBookmark.mockReset()
@@ -108,6 +117,7 @@ describe('Music ExploreView.vue', () => {
     })
     mocks.listAlbumBookmarks.mockResolvedValue({ data: [] })
     mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
+    mocks.listPlaylistBookmarks.mockResolvedValue({ data: [] })
   })
 
   it('uses 发现 as the default page title', async () => {
@@ -283,6 +293,32 @@ describe('Music ExploreView.vue', () => {
 
     expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
     expect(mocks.push).not.toHaveBeenCalledWith('/music/playlists/playlist-1')
+  })
+
+  it('toggles playlist bookmark from the discover feed', async () => {
+    mocks.createPlaylistBookmark.mockResolvedValue({
+      id: 'playlist-bookmark-1',
+      playlist_id: 'playlist-1',
+      created_at: '2026-07-05T00:00:00Z',
+    })
+
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const playlistCard = wrapper.find('[data-testid="discover-playlist-card"]')
+    expect(playlistCard.find('button[aria-label="收藏"]').exists()).toBe(true)
+
+    await playlistCard.find('button[aria-label="收藏"]').trigger('click')
+
+    expect(mocks.createPlaylistBookmark).toHaveBeenCalledWith('playlist-1')
+    expect(wrapper.text()).toContain('收藏 8')
   })
 
   it('toggles artist bookmark from the discover feed', async () => {

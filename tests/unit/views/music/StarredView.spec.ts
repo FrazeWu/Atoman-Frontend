@@ -11,7 +11,7 @@ vi.mock('vue-router', () => ({
 const mocks = vi.hoisted(() => ({
   listArtistBookmarks: vi.fn(),
   listAlbumBookmarks: vi.fn(),
-  listMusicPlaylists: vi.fn(),
+  listPlaylistBookmarks: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/api/musicV1', () => ({
   listArtistBookmarks: mocks.listArtistBookmarks,
   listAlbumBookmarks: mocks.listAlbumBookmarks,
-  listMusicPlaylists: mocks.listMusicPlaylists,
+  listPlaylistBookmarks: mocks.listPlaylistBookmarks,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
@@ -63,7 +63,7 @@ describe('Music StarredView', () => {
   beforeEach(() => {
     mocks.listArtistBookmarks.mockReset()
     mocks.listAlbumBookmarks.mockReset()
-    mocks.listMusicPlaylists.mockReset()
+    mocks.listPlaylistBookmarks.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.getMusicAlbum.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
@@ -78,12 +78,16 @@ describe('Music StarredView', () => {
     mocks.listAlbumBookmarks.mockResolvedValue({
       data: [{ id: 'album-bookmark-1', album_id: 'album-1', created_at: '2026-07-01T00:00:00Z' }],
     })
-    mocks.listMusicPlaylists.mockResolvedValue({
+    mocks.listPlaylistBookmarks.mockResolvedValue({
       data: [{
-        id: 'playlist-1',
-        name: '夜航歌单',
-        description: '凌晨反复播放',
-        song_count: 2,
+        id: 'playlist-bookmark-1',
+        playlist_id: 'playlist-1',
+        playlist: {
+          id: 'playlist-1',
+          name: '夜航歌单',
+          description: '凌晨反复播放',
+          song_count: 2,
+        },
       }],
     })
     mocks.getMusicArtist.mockResolvedValue({
@@ -106,7 +110,7 @@ describe('Music StarredView', () => {
 
     expect(mocks.listArtistBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
     expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
-    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith({ sort: 'latest' })
+    expect(mocks.listPlaylistBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
     expect(wrapper.text()).toContain('收藏专辑')
     expect(wrapper.text()).toContain('收藏艺人')
     expect(wrapper.text()).toContain('收藏歌单')
@@ -177,7 +181,7 @@ describe('Music StarredView', () => {
 
     mocks.listArtistBookmarks.mockClear()
     mocks.listAlbumBookmarks.mockClear()
-    mocks.listMusicPlaylists.mockClear()
+    mocks.listPlaylistBookmarks.mockClear()
 
     const popularButton = wrapper.findAll('button').find((button) => button.text() === '最热')
     expect(popularButton).toBeTruthy()
@@ -186,6 +190,6 @@ describe('Music StarredView', () => {
 
     expect(mocks.listArtistBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
     expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
-    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith({ sort: 'popular' })
+    expect(mocks.listPlaylistBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
   })
 })

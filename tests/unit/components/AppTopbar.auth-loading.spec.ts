@@ -28,4 +28,10 @@ describe('AppTopbar auth loading', () => {
     expect(topbarSource).toContain('class="logo-notice"')
     expect(topbarSource).toContain('class="logo-meta"')
   })
+
+  it('does not clip authenticated dropdown menus in the right side of the topbar', () => {
+    const navRightRule = topbarSource.match(/\.nav-right\s*\{[^}]*\}/)?.[0] || ''
+    expect(navRightRule).toContain('.nav-right')
+    expect(navRightRule).not.toContain('overflow: hidden;')
+  })
 })

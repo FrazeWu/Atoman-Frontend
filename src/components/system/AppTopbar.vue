@@ -228,7 +228,7 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   margin-left: auto;
   min-width: 0;
   flex-shrink: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
 @media (max-width: 1280px) {

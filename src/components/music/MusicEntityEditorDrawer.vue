@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import {
   buildUpdateAlbumEdit,
   commitMusicAlbumImport,
+  createMusicArtist,
   getMusicAlbum,
   getMusicArtist,
   submitMusicEdit,
@@ -12,6 +13,7 @@ import {
   type MusicAlbumImportCommitInput,
   type MusicAlbumListItem,
   type MusicAlbumTrackEditInput,
+  type MusicArtistInput,
   type MusicArtistUpdateInput,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -116,10 +118,7 @@ watch(editor, async (value) => {
     resetAlbumState()
     if (value.mode === 'create') {
       const seed = value.seed as { name?: string } | undefined
-      openMusicCreationFlow({
-        artistName: seed?.name ?? '',
-        startStep: 'artist',
-      })
+      artistInitialValue.value = { name: seed?.name ?? '' }
       return
     }
 
@@ -212,9 +211,22 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
   artistSubmitting.value = true
   artistErrorMessage.value = ''
   try {
-    if (!current.id) throw new Error('缺少艺术家 ID')
-
-    await updateMusicArtist(current.id, value)
+    if (current.id) {
+      await updateMusicArtist(current.id, value)
+    } else {
+      const name = value.name?.trim()
+      if (!name) throw new Error('请输入艺术家名称')
+      const payload: MusicArtistInput = {
+        name,
+        bio: value.bio,
+        image_url: value.image_url,
+        nationality: value.nationality,
+        birth_date: value.birth_date,
+        birth_year: value.birth_year,
+        death_year: value.death_year,
+      }
+      await createMusicArtist(payload)
+    }
     refreshArtist()
     closeMusicEditor()
   } catch (error) {

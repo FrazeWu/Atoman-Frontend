@@ -80,12 +80,21 @@
     :to="currentModuleManagePath"
     class="default-channel-link"
     data-testid="default-channel-link"
+    :title="currentDefaultChannel.name"
+    :aria-label="`当前频道：${currentDefaultChannel.name}`"
   >
-    {{ currentDefaultChannel.name }}
+    <span class="default-channel-link__icon" aria-hidden="true">◎</span>
+    <span class="default-channel-link__text">{{ currentDefaultChannel.name }}</span>
   </RouterLink>
 
-  <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
-    {{ notificationRoom.name }}
+  <RouterLink
+    :to="modulePathUrl('feed', '/inbox')"
+    class="notif-btn"
+    :title="notificationRoom.helper"
+    :aria-label="notificationRoom.name"
+  >
+    <span class="notif-btn__icon" aria-hidden="true">◌</span>
+    <span class="notif-btn__text">{{ notificationRoom.name }}</span>
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
   </RouterLink>
 
@@ -250,11 +259,30 @@ const logout = async () => {
 
 <style scoped>
 .default-channel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--a-color-fg);
   text-decoration: none;
   white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.default-channel-link__icon {
+  display: none;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.default-channel-link__text {
+  display: block;
+  min-width: 0;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .default-channel-link:hover {
@@ -262,6 +290,9 @@ const logout = async () => {
 }
 
 .notif-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--a-color-muted);
@@ -272,6 +303,14 @@ const logout = async () => {
   position: relative;
   transition: color 0.2s;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.notif-btn__icon {
+  display: none;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .topbar-search-wrap {
@@ -280,9 +319,10 @@ const logout = async () => {
   align-items: center;
   z-index: 120;
   margin-left: auto;
-  margin-right: 4rem; /* 向左推开，避免拥挤右边 */
-  flex-shrink: 0;
-  width: 400px; /* 默认就是展开后的大致宽度 */
+  margin-right: 0;
+  flex: 0 1 clamp(10rem, 24vw, 24rem);
+  min-width: 2.25rem;
+  width: auto;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -444,11 +484,65 @@ const logout = async () => {
 
 @media (max-width: 960px) {
   .topbar-search-wrap {
-    width: 200px;
-    margin-right: 1.5rem;
+    flex-basis: 2.25rem;
+    min-width: 2.25rem;
   }
+
   .topbar-search-wrap.is-open {
-    width: 320px;
+    flex-basis: min(20rem, calc(100vw - 10rem));
+    min-width: min(20rem, calc(100vw - 10rem));
+  }
+
+  .search-pill {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .search-pill span {
+    display: none;
+  }
+
+  .default-channel-link {
+    justify-content: center;
+    width: 2.25rem;
+    min-width: 2.25rem;
+    padding: 0;
+  }
+
+  .default-channel-link__icon {
+    display: inline-block;
+  }
+
+  .default-channel-link__text {
+    display: none;
+  }
+
+  .notif-btn {
+    justify-content: center;
+    min-width: 2rem;
+  }
+
+  .notif-btn__icon {
+    display: inline-block;
+  }
+
+  .notif-btn__text {
+    display: none;
+  }
+
+  .user-name,
+  .chevron {
+    display: none;
+  }
+
+  .user-btn {
+    padding-inline: 0.5rem;
+  }
+}
+
+@media (max-width: 820px) {
+  .default-channel-link {
+    display: none;
   }
 }
 
@@ -487,6 +581,7 @@ const logout = async () => {
   font-weight: 700;
   font-size: 0.875rem;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .user-btn:hover {

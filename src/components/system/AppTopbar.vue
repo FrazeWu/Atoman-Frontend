@@ -99,6 +99,7 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   align-items: center;
   gap: 0;
   width: 100%;
+  min-width: 0;
 }
 .topbar-inner--auth {
   flex: 1;
@@ -173,6 +174,14 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   align-items: center;
   gap: 0.5rem;
   flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
 }
 .nav-link {
   display: flex;
@@ -217,6 +226,24 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   align-items: center;
   gap: 1rem;
   margin-left: auto;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .topbar-inner {
+    padding-right: 1rem;
+  }
+
+  .brand-link {
+    min-width: auto;
+    padding-right: 1rem;
+  }
+
+  .logo-notice {
+    display: none;
+  }
 }
 
 @media (max-width: 720px) {

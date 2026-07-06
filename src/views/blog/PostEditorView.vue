@@ -191,12 +191,14 @@ import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import type { BlogDraft, Collection } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 // ── 布局 ─────────────────────────────────────────────────
 type OutlineItem = {
@@ -1019,6 +1021,7 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 const loadChannels = async () => {
   if (!authStore.isAuthenticated) return
   try {
+    await defaultChannelsStore.load()
     const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, {
       headers: authHeaders.value,
     })
@@ -1027,7 +1030,10 @@ const loadChannels = async () => {
       if (selectedChannelId.value) {
         currentChannelId.value = selectedChannelId.value
       } else if (!isEdit.value) {
-        const fallbackChannelId = data.data?.[0]?.id || ''
+        const defaultChannelId = defaultChannelsStore.channelFor('blog')?.id || ''
+        const fallbackChannelId = data.data?.find((channel: { id?: string }) => channel.id === defaultChannelId)?.id
+          || data.data?.[0]?.id
+          || ''
         if (fallbackChannelId) {
           await updateEditorChannel(fallbackChannelId)
         }

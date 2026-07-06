@@ -75,6 +75,15 @@
     </Transition>
   </div>
 
+  <RouterLink
+    v-if="currentDefaultChannel"
+    :to="currentModuleManagePath"
+    class="default-channel-link"
+    data-testid="default-channel-link"
+  >
+    {{ currentDefaultChannel.name }}
+  </RouterLink>
+
   <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
     {{ notificationRoom.name }}
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
@@ -89,6 +98,15 @@
     <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
       <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
       <RouterLink :to="modulePathUrl('blog', '/bookmarks')" class="dropdown-item" @click="closeDropdown">收藏</RouterLink>
+      <RouterLink
+        v-if="currentModuleManagePath && currentDefaultChannel"
+        :to="currentModuleManagePath"
+        class="dropdown-item"
+        data-testid="channel-manage-link"
+        @click="closeDropdown"
+      >
+        频道管理
+      </RouterLink>
       <RouterLink :to="modulePathUrl('blog', '/settings')" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
       <RouterLink v-if="showSiteSettings" to="/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
       <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
@@ -97,8 +115,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
@@ -106,10 +124,18 @@ import { modulePathUrl, userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
+import {
+  defaultChannelManagePath,
+  isDefaultChannelModule,
+  useDefaultChannelsStore,
+} from '@/stores/defaultChannels'
+import { resolveSiteContext } from '@/router/siteContext'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
+const defaultChannelsStore = useDefaultChannelsStore()
 const router = useRouter()
+const route = useRoute()
 const globalSearch = useGlobalSearch()
 
 const activeDropdown = ref<string | null>(null)
@@ -120,6 +146,26 @@ const searchWrapRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
+const siteContext = computed(() => {
+  const queryStart = route.fullPath.indexOf('?')
+  const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
+  return resolveSiteContext(window.location.hostname, search, route.path)
+})
+const currentModule = computed(() => (
+  siteContext.value.type === 'module' && isDefaultChannelModule(siteContext.value.module)
+    ? siteContext.value.module
+    : null
+))
+const currentDefaultChannel = computed(() => {
+  if (!currentModule.value) return null
+  const channel = defaultChannelsStore.channelFor(currentModule.value)
+  return channel?.name.trim() ? channel : null
+})
+const currentModuleManagePath = computed(() => (
+  currentModule.value && currentDefaultChannel.value
+    ? defaultChannelManagePath(currentModule.value)
+    : ''
+))
 
 const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
@@ -173,6 +219,7 @@ const handleClickOutside = (e: MouseEvent) => {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
+  void defaultChannelsStore.load()
 })
 
 onBeforeUnmount(() => {
@@ -180,16 +227,40 @@ onBeforeUnmount(() => {
   inboxStore.disconnect()
 })
 
+watch(
+  () => authStore.user?.id ?? null,
+  (userId) => {
+    if (!userId || !authStore.isAuthenticated) {
+      defaultChannelsStore.reset()
+      return
+    }
+    void defaultChannelsStore.load(true)
+  },
+)
+
 const logout = async () => {
   await authStore.logout()
   closeDropdown()
   inboxStore.disconnect()
+  defaultChannelsStore.reset()
   await router.push('/login')
 }
 
 </script>
 
 <style scoped>
+.default-channel-link {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--a-color-fg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.default-channel-link:hover {
+  text-decoration: underline;
+}
+
 .notif-btn {
   font-size: 0.875rem;
   font-weight: 700;

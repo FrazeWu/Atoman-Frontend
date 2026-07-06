@@ -45,6 +45,19 @@ describe('AppTopbarAuthControls search trigger', () => {
     authStore.user = { id: 1, username: 'alice', email: 'alice@example.com', role: 'user' }
     authStore.isAuthenticated = true
     authStore.token = 'token'
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return new Response(JSON.stringify({
+          data: {
+            blog: { id: 'blog-channel-1', name: '博客默认频道', slug: 'blog-default' },
+            podcast: null,
+            video: null,
+          },
+        }), { status: 200 })
+      }
+      throw new Error(`未 mock fetch: ${url}`)
+    })
   })
 
   afterEach(() => {

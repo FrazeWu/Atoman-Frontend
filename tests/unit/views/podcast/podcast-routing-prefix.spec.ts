@@ -40,7 +40,13 @@ describe('podcast routing prefix', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
-    vi.stubGlobal('fetch', vi.fn(async () => makeJsonResponse([])))
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
+      return makeJsonResponse([])
+    }))
   })
 
   it('恢复播客侧栏入口到 /podcasts 模块前缀', () => {
@@ -80,6 +86,9 @@ describe('podcast routing prefix', () => {
   it('新草稿保存后跳转到 /podcasts/editor/:id', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
       }
@@ -114,6 +123,9 @@ describe('podcast routing prefix', () => {
   it('新建单集应在合法频道下恢复 query.collection', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
       }
@@ -147,6 +159,9 @@ describe('podcast routing prefix', () => {
   it('新建单集不得恢复不属于当前频道的非法 query.collection', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
       }
@@ -175,6 +190,103 @@ describe('podcast routing prefix', () => {
     await flushPromises()
 
     expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('')
+  })
+
+  it('新建单集在没有 query.channel 时优先使用默认频道', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({
+          data: {
+            blog: null,
+            podcast: { id: 'channel-2', name: '默认节目频道', slug: 'channel-2' },
+            video: null,
+          },
+        })
+      }
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'channel-1', name: '频道 1' },
+            { id: 'channel-2', name: '频道 2' },
+          ],
+        })
+      }
+      if (url.includes('/blog/channels/channel-2/collections')) {
+        return makeJsonResponse({ data: [] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(PodcastEditorView, '/podcasts/editor', router)
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.form.channel_id).toBe('channel-2')
+  })
+
+  it('可以在单集编辑页把当前频道设为默认频道', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels') && !init?.method) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
+      if (url.includes('/users/me/default-channels/podcast') && init?.method === 'PATCH') {
+        return makeJsonResponse({ data: { id: 'channel-1', name: '频道', slug: 'channel-1' } })
+      }
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [] })
+      }
+      if (url.includes('/podcast/episodes/episode-1')) {
+        return makeJsonResponse({
+          id: 'episode-1',
+          channel_id: 'channel-1',
+          audio_url: 'https://cdn.example.com/audio.mp3',
+          episode_cover_url: '',
+          season_number: 1,
+          episode_number: 1,
+          post: { title: '测试单集', content: '', collections: [] },
+          collections: [],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/podcasts/editor/:id', component: PodcastEditorView }],
+    })
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(PodcastEditorView, '/podcasts/editor/episode-1', router)
+    await flushPromises()
+
+    const button = wrapper.find('button.pe-default-channel-btn')
+    expect(button.exists()).toBe(true)
+    expect(button.text()).toBe('设为默认频道')
+
+    await button.trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/users/me/default-channels/podcast'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ channel_id: 'channel-1' }),
+      }),
+    )
   })
 
   it('单集页频道链接指向 /podcasts/show/:slug', async () => {

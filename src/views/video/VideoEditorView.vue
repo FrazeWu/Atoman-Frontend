@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -16,6 +17,7 @@ const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
@@ -272,6 +274,7 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 
 async function loadChannels() {
   if (!authStore.user) return
+  await defaultChannelsStore.load()
   const res = await fetch(
     `${api.url}/blog/channels?user_id=${authStore.user.id}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } }
@@ -282,6 +285,10 @@ async function loadChannels() {
     const fromQuery = typeof route.query.channel === 'string' ? route.query.channel : ''
     if (!form.value.channel_id && fromQuery && channels.value.some(ch => ch.id === fromQuery)) {
       form.value.channel_id = fromQuery
+    }
+    const defaultChannelId = defaultChannelsStore.channelFor('video')?.id || ''
+    if (!form.value.channel_id && defaultChannelId && channels.value.some(ch => ch.id === defaultChannelId)) {
+      form.value.channel_id = defaultChannelId
     }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id

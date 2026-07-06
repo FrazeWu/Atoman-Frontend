@@ -12,11 +12,13 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
 import type { PodcastEpisode, Channel, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
@@ -70,6 +72,10 @@ const effectiveCoverLabel = computed(() =>
 )
 const canEditMetadata = computed(() => isEdit.value || uploadStarted.value)
 const audioBusy = computed(() => audioUploading.value || audioProcessing.value)
+const selectedDefaultChannel = computed(() => defaultChannelsStore.channelFor('podcast'))
+const isCurrentDefaultChannel = computed(() => (
+  !!form.value.channel_id && selectedDefaultChannel.value?.id === form.value.channel_id
+))
 
 // ── Upload helpers ─────────────────────────────────────────
 
@@ -347,8 +353,14 @@ function onChannelChange(value: string) {
   void loadCollections(value)
 }
 
+async function setCurrentChannelAsDefault() {
+  if (!form.value.channel_id) return
+  await defaultChannelsStore.setDefaultChannel('podcast', form.value.channel_id)
+}
+
 async function loadChannels() {
   if (!authStore.user) return
+  await defaultChannelsStore.load()
   const res = await fetch(
     `${api.url}/blog/channels?user_id=${authStore.user.id}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } },
@@ -359,6 +371,10 @@ async function loadChannels() {
     const queryChannelId = selectedChannelFromQuery.value
     if (!form.value.channel_id && queryChannelId && channels.value.some(channel => channel.id === queryChannelId)) {
       form.value.channel_id = queryChannelId
+    }
+    const defaultChannelId = defaultChannelsStore.channelFor('podcast')?.id || ''
+    if (!form.value.channel_id && defaultChannelId && channels.value.some(channel => channel.id === defaultChannelId)) {
+      form.value.channel_id = defaultChannelId
     }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id
@@ -534,6 +550,16 @@ async function doPublish() {
               @update:model-value="onChannelChange($event as string)"
             />
           </div>
+          <div v-if="form.channel_id" class="pe-default-channel-row">
+            <button
+              type="button"
+              class="pe-default-channel-btn"
+              :disabled="isCurrentDefaultChannel"
+              @click="setCurrentChannelAsDefault"
+            >
+              {{ isCurrentDefaultChannel ? '当前默认频道' : '设为默认频道' }}
+            </button>
+          </div>
 
           <div class="pe-collections">
             <label class="pe-field-label">加入合集</label>
@@ -667,6 +693,27 @@ async function doPublish() {
 }
 
 .pe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+.pe-default-channel-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: -0.25rem;
+}
+
+.pe-default-channel-btn {
+  border: 1px solid var(--a-color-line-soft, #d6d3d1);
+  background: var(--a-color-paper, #fffdf8);
+  color: var(--a-color-ink, #111827);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pe-default-channel-btn:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
 
 .pe-field-label {
   display: block;

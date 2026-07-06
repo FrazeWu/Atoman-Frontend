@@ -107,6 +107,9 @@ describe('PostEditorView', () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
 
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [] })
@@ -169,9 +172,18 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({
+          data: {
+            blog: { id: 'channel-2', name: '默认博客频道', slug: 'channel-2' },
+            podcast: null,
+            video: null,
+          },
+        })
+      }
 
       if (url.includes('/blog/channels?')) {
-        return makeJsonResponse({ data: [{ id: 'channel-2' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1' }, { id: 'channel-2' }] })
       }
       if (url.includes('/blog/channels/channel-2/collections')) {
         return makeJsonResponse({ data: [] })
@@ -218,6 +230,9 @@ describe('PostEditorView', () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
 
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-2', name: '频道 2' }] })
@@ -275,6 +290,9 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
 
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-2', name: '频道 2' }] })
@@ -345,6 +363,9 @@ describe('PostEditorView', () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
 
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [] })
@@ -430,6 +451,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -516,6 +538,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -590,6 +613,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -670,6 +694,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -735,6 +760,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -795,6 +821,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -873,6 +900,7 @@ describe('PostEditorView', () => {
 
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1')) {
@@ -939,6 +967,7 @@ describe('PostEditorView', () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
 
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.includes('/blog/posts/post-1') && (!init?.method || init.method === 'GET')) {
@@ -1025,6 +1054,9 @@ describe('PostEditorView', () => {
 
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-2' }] })
       }

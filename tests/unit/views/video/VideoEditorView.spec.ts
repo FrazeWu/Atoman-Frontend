@@ -52,6 +52,9 @@ describe('VideoEditorView', () => {
     vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest)
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [] })
       }
@@ -123,6 +126,9 @@ describe('VideoEditorView', () => {
   it('新建视频草稿保存后跳转到带 videos 前缀的编辑页', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [] })
       }
@@ -176,6 +182,9 @@ describe('VideoEditorView', () => {
   it('新建视频应在合法频道下恢复 query.collection', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道 1' }] })
       }
@@ -220,6 +229,9 @@ describe('VideoEditorView', () => {
   it('新建视频不得恢复不属于当前频道的非法 query.collection', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
       if (url.includes('/blog/channels?')) {
         return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道 1' }] })
       }
@@ -258,5 +270,57 @@ describe('VideoEditorView', () => {
 
     const editorView = wrapper.findComponent(VideoEditorView)
     expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual([])
+  })
+
+  it('新建视频在没有 query.channel 时优先使用默认频道', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({
+          data: {
+            blog: null,
+            podcast: null,
+            video: { id: 'channel-2', name: '默认视频频道', slug: 'channel-2' },
+          },
+        })
+      }
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'channel-1', name: '频道 1' },
+            { id: 'channel-2', name: '频道 2' },
+          ],
+        })
+      }
+      if (url.includes('/blog/channels/channel-2/collections')) {
+        return makeJsonResponse({ data: [] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/upload', component: VideoEditorView }],
+    })
+    await router.push('/videos/upload')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({
+      template: '<router-view />',
+    }, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(VideoEditorView)
+    expect(editorView.vm.$.setupState.form.channel_id).toBe('channel-2')
   })
 })

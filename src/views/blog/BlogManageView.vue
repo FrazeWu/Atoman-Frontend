@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <PPageHeader title="博客管理" sub="管理你的频道、合集与文章">
+    <PPageHeader title="博客创作" sub="管理你的频道、合集与文章">
       <template #action>
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
@@ -56,6 +56,15 @@
                 <div style="display:flex;align-items:center;gap:.75rem">
                   <h3 style="font-size:1.5rem;font-weight:900;margin:0">{{ selectedCollection.name }}</h3>
                   <span class="a-badge">{{ selectedCollection.channelName }}</span>
+                </div>
+                <div style="margin-top:.75rem">
+                  <PPress
+                    size="sm"
+                    variant="secondary"
+                    :label="isDefaultChannel ? '当前默认频道' : '设为默认频道'"
+                    :disabled="isDefaultChannel || settingDefaultChannel"
+                    @click="handleSetDefaultChannel"
+                  />
                 </div>
                 <p v-if="selectedCollection.description" class="a-muted" style="margin:.5rem 0 0 0">{{ selectedCollection.description }}</p>
               </div>
@@ -188,6 +197,7 @@ import { useApi } from '@/composables/useApi'
 import PCard from '@/components/ui/PCard.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PPress from '@/components/ui/PPress.vue'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import type { Post } from '@/types'
 
 interface Collection {
@@ -209,6 +219,7 @@ interface Channel {
 const authStore = useAuthStore()
 const api = useApi()
 const router = useRouter()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const loadingChannels = ref(false)
 const channels = ref<Channel[]>([])
@@ -219,6 +230,7 @@ const articles = ref<any[]>([])
 const loadingArticles = ref(false)
 const isSorting = ref(false)
 const savingOrder = ref(false)
+const settingDefaultChannel = ref(false)
 
 const allCollections = computed(() => {
   const list: (Collection & { channelName: string, channelId: string })[] = []
@@ -234,6 +246,10 @@ const allCollections = computed(() => {
 
 const selectedCollection = computed(() => {
   return allCollections.value.find(c => c.id === selectedCollectionId.value) || null
+})
+
+const isDefaultChannel = computed(() => {
+  return defaultChannelsStore.channelFor('blog')?.id === selectedCollection.value?.channelId
 })
 
 const moveArticle = (index: number, direction: 'up' | 'down') => {
@@ -293,6 +309,20 @@ const fetchArticles = async () => {
 const selectCollection = (id: string) => {
   selectedCollectionId.value = id
   fetchArticles()
+}
+
+const handleSetDefaultChannel = async () => {
+  if (!selectedCollection.value || isDefaultChannel.value || settingDefaultChannel.value) return
+
+  settingDefaultChannel.value = true
+  try {
+    await defaultChannelsStore.setDefaultChannel('blog', selectedCollection.value.channelId)
+  } catch (error) {
+    console.error('Failed to set default blog channel', error)
+    alert('设置默认频道失败，请重试')
+  } finally {
+    settingDefaultChannel.value = false
+  }
 }
 
 const loadChannels = async () => {

@@ -6,10 +6,19 @@ import BlogManageView from '@/views/blog/BlogManageView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const push = vi.fn()
+const setDefaultChannel = vi.fn()
+const channelFor = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push,
+  }),
+}))
+
+vi.mock('@/stores/defaultChannels', () => ({
+  useDefaultChannelsStore: () => ({
+    setDefaultChannel,
+    channelFor,
   }),
 }))
 
@@ -23,6 +32,9 @@ describe('BlogManageView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     push.mockReset()
+    setDefaultChannel.mockReset()
+    channelFor.mockReset()
+    channelFor.mockReturnValue(null)
 
     const auth = useAuthStore()
     auth.token = 'token'
@@ -252,5 +264,108 @@ describe('BlogManageView', () => {
         body: JSON.stringify({ post_ids: ['draft-1', 'published-1'] }),
       }),
     )
+  })
+
+  it('点击设为默认频道时调用 blog 默认频道设置', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/blog/channels?user_id=user-1')) {
+        return makeJsonResponse({
+          data: [{ id: 'channel-1', name: '频道一' }],
+        })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }],
+        })
+      }
+      if (url.includes('/blog/posts/drafts')) {
+        return makeJsonResponse({ data: [] })
+      }
+      if (url.includes('/blog/posts?collection_id=collection-1')) {
+        return makeJsonResponse({ data: [] })
+      }
+
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount(BlogManageView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
+          PEmpty: { template: '<div><slot /><slot name="action" /></div>' },
+          PModal: { template: '<div><slot /></div>' },
+          PInput: { template: '<input />' },
+          PTextarea: { template: '<textarea />' },
+          PSelect: { template: '<select />' },
+          PCard: { template: '<div><slot /></div>' },
+          PLink: { template: '<a><slot /></a>' },
+          PPress: { props: ['label', 'disabled'], template: '<button :disabled="disabled">{{ label }}<slot /></button>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const defaultButton = wrapper.findAll('button').find((button) => button.text() === '设为默认频道')
+    expect(defaultButton).toBeTruthy()
+
+    await defaultButton!.trigger('click')
+
+    expect(setDefaultChannel).toHaveBeenCalledWith('blog', 'channel-1')
+  })
+
+  it('当前频道是 blog 默认频道时显示默认状态', async () => {
+    channelFor.mockReturnValue({
+      id: 'channel-1',
+      name: '频道一',
+    })
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/blog/channels?user_id=user-1')) {
+        return makeJsonResponse({
+          data: [{ id: 'channel-1', name: '频道一' }],
+        })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }],
+        })
+      }
+      if (url.includes('/blog/posts/drafts')) {
+        return makeJsonResponse({ data: [] })
+      }
+      if (url.includes('/blog/posts?collection_id=collection-1')) {
+        return makeJsonResponse({ data: [] })
+      }
+
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount(BlogManageView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
+          PEmpty: { template: '<div><slot /><slot name="action" /></div>' },
+          PModal: { template: '<div><slot /></div>' },
+          PInput: { template: '<input />' },
+          PTextarea: { template: '<textarea />' },
+          PSelect: { template: '<select />' },
+          PCard: { template: '<div><slot /></div>' },
+          PLink: { template: '<a><slot /></a>' },
+          PPress: { props: ['label', 'disabled'], template: '<button :disabled="disabled">{{ label }}<slot /></button>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const defaultButton = wrapper.findAll('button').find((button) => button.text() === '当前默认频道')
+    expect(defaultButton).toBeTruthy()
+    expect(defaultButton!.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).not.toContain('设为默认频道')
   })
 })

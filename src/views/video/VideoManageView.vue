@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <PPageHeader title="视频管理">
+    <PPageHeader title="视频创作">
       <template #action>
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
@@ -56,6 +56,15 @@
                 <div style="display:flex;align-items:center;gap:.75rem">
                   <h3 style="font-size:1.5rem;font-weight:900;margin:0">{{ selectedCollection.name }}</h3>
                   <span class="a-badge">{{ selectedCollection.channelName }}</span>
+                </div>
+                <div style="margin-top:.75rem">
+                  <PPress
+                    size="sm"
+                    variant="secondary"
+                    :label="isDefaultChannel ? '当前默认频道' : '设为默认频道'"
+                    :disabled="isDefaultChannel || settingDefaultChannel"
+                    @click="handleSetDefaultChannel"
+                  />
                 </div>
                 <p v-if="selectedCollection.description" class="a-muted" style="margin:.5rem 0 0 0">{{ selectedCollection.description }}</p>
               </div>
@@ -165,6 +174,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PPress from '@/components/ui/PPress.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import { useApi } from '@/composables/useApi'
 
 interface Collection {
@@ -185,6 +195,7 @@ interface Channel {
 const authStore = useAuthStore()
 const api = useApi()
 const router = useRouter()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const loadingChannels = ref(false)
 const channels = ref<Channel[]>([])
@@ -193,6 +204,7 @@ const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name
 const selectedCollectionId = ref<string | null>(null)
 const videos = ref<any[]>([])
 const loadingVideos = ref(false)
+const settingDefaultChannel = ref(false)
 
 const allCollections = computed(() => {
   const list: (Collection & { channelName: string, channelId: string })[] = []
@@ -208,6 +220,10 @@ const allCollections = computed(() => {
 
 const selectedCollection = computed(() => {
   return allCollections.value.find(c => c.id === selectedCollectionId.value) || null
+})
+
+const isDefaultChannel = computed(() => {
+  return defaultChannelsStore.channelFor('video')?.id === selectedCollection.value?.channelId
 })
 
 // Create channel modal state
@@ -247,6 +263,20 @@ const fetchVideos = async () => {
 const selectCollection = (id: string) => {
   selectedCollectionId.value = id
   fetchVideos()
+}
+
+const handleSetDefaultChannel = async () => {
+  if (!selectedCollection.value || isDefaultChannel.value || settingDefaultChannel.value) return
+
+  settingDefaultChannel.value = true
+  try {
+    await defaultChannelsStore.setDefaultChannel('video', selectedCollection.value.channelId)
+  } catch (error) {
+    console.error('Failed to set default video channel', error)
+    alert('设置默认频道失败，请重试')
+  } finally {
+    settingDefaultChannel.value = false
+  }
 }
 
 const loadChannels = async () => {

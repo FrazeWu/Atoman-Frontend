@@ -61,6 +61,25 @@ describe('FeedView', () => {
     authStore.token = 'token'
     authStore.user = { username: 'fafa', email: 'fafa@example.com' }
     authStore.isAuthenticated = true
+
+    const feedStore = useFeedStore()
+    feedStore.fetchSubscriptions = vi.fn().mockResolvedValue(undefined) as any
+    feedStore.fetchGroups = vi.fn().mockResolvedValue(undefined) as any
+    feedStore.fetchSubscriptionRules = vi.fn().mockResolvedValue(undefined) as any
+    feedStore.createSubscriptionRule = vi.fn().mockImplementation(async (payload) => {
+      feedStore.subscriptionRules = [
+        {
+          id: 'rule-1',
+          position: 0,
+          ...payload,
+        },
+      ] as any
+      return true
+    }) as any
+    feedStore.updateSubscriptionRule = vi.fn().mockResolvedValue(true) as any
+    feedStore.deleteSubscriptionRule = vi.fn().mockResolvedValue(true) as any
+    feedStore.reorderSubscriptionRules = vi.fn().mockResolvedValue(true) as any
+    feedStore.applySubscriptionRules = vi.fn().mockResolvedValue(true) as any
   })
 
   it('opens internal posts in the feed article sheet', async () => {
@@ -422,7 +441,7 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('外部条目')
   })
 
-  it('filters muted sources and hidden keywords from the visible timeline', async () => {
+  it('filters muted sources from subscription flags and still keeps hidden keywords local', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
       data: [
         {
@@ -493,8 +512,31 @@ describe('FeedView', () => {
     }), { status: 200 }))
 
     const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-muted-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-muted-1',
+        is_muted: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-1',
+        is_muted: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-2',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-2',
+        is_muted: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
     feedStore.setFilterRules({
-      mutedSourceIds: ['source-muted-1'],
+      mutedSourceIds: [],
       hiddenKeywords: ['剧透'],
     })
 
@@ -525,7 +567,7 @@ describe('FeedView', () => {
     expect(wrapper.text()).toContain('保留下来的条目')
   })
 
-  it('auto-marks configured sources as read after timeline load', async () => {
+  it('auto-marks sources as read from subscription flags instead of local automation rules', async () => {
     const fetchMock = vi.mocked(globalThis.fetch)
     fetchMock.mockImplementation(async (input, init) => {
       const url = String(input)
@@ -586,8 +628,25 @@ describe('FeedView', () => {
     })
 
     const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-auto-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-auto-1',
+        auto_mark_read: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-1',
+        auto_mark_read: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
     feedStore.setAutomationRules({
-      autoMarkReadSourceIds: ['source-auto-1'],
+      autoMarkReadSourceIds: ['source-normal-1'],
+      autoAddReadingListSourceIds: [],
     })
 
     const wrapper = mount(FeedView, {
@@ -620,7 +679,7 @@ describe('FeedView', () => {
     expect(wrapper.text()).toContain('保持未读的条目')
   })
 
-  it('auto-adds configured sources to reading list after timeline load', async () => {
+  it('auto-adds sources to reading list from subscription flags instead of local automation rules', async () => {
     const fetchMock = vi.mocked(globalThis.fetch)
     fetchMock.mockImplementation(async (input) => {
       const url = String(input)
@@ -681,9 +740,25 @@ describe('FeedView', () => {
     })
 
     const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-later-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-later-1',
+        auto_add_reading_list: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-2',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-2',
+        auto_add_reading_list: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
     feedStore.setAutomationRules({
       autoMarkReadSourceIds: [],
-      autoAddReadingListSourceIds: ['source-later-1'],
+      autoAddReadingListSourceIds: ['source-normal-2'],
     })
 
     mount(FeedView, {
@@ -714,6 +789,90 @@ describe('FeedView', () => {
     }))
     expect(feedStore.readingListItemIds.has('feed-item-auto-later-1')).toBe(true)
     expect(feedStore.readingListItemIds.has('feed-item-normal-2')).toBe(false)
+  })
+
+  it('re-applies subscription automation after subscriptions arrive later on first load', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch)
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/timeline/mark-read')) {
+        return new Response(null, { status: 204 })
+      }
+      if (url.includes('/feed/timeline')) {
+        return new Response(JSON.stringify({
+          data: [
+            {
+              type: 'feed_item',
+              feed_item: {
+                id: 'feed-item-late-auto-read-1',
+                feed_source_id: 'source-late-auto-1',
+                feed_source: {
+                  id: 'source-late-auto-1',
+                  source_type: 'external_rss',
+                  title: '晚到来源',
+                  rss_url: 'https://example.com/late-auto.xml',
+                },
+                guid: 'feed-item-late-auto-read-1',
+                title: '订阅晚到后也应自动已读',
+                link: 'https://example.com/late-auto-item',
+                summary: '摘要',
+                published_at: '2026-06-16T00:00:00Z',
+                fetched_at: '2026-06-16T00:00:00Z',
+              },
+              published_at: '2026-06-16T00:00:00Z',
+              is_read: false,
+            },
+          ],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = []
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/feed/timeline/mark-read'))).toBe(false)
+
+    feedStore.subscriptions = [
+      {
+        id: 'sub-late-auto-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-late-auto-1',
+        auto_mark_read: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/timeline/mark-read'), expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ feed_item_ids: ['feed-item-late-auto-read-1'] }),
+    }))
+    expect(wrapper.text()).toContain('已读')
   })
 
   it('filters the mixed timeline by source content type', async () => {
@@ -1686,5 +1845,150 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-test="empty-state"]').text()).toContain('没有找到“missing topic”')
+  })
+
+  it('fetches rules when opening the manage sheet', async () => {
+    const feedStore = useFeedStore()
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PBadge: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+
+    expect(feedStore.fetchSubscriptions).toHaveBeenCalled()
+    expect(feedStore.fetchGroups).toHaveBeenCalled()
+    expect(feedStore.fetchSubscriptionRules).toHaveBeenCalled()
+  })
+
+  it('creates a rule then confirms and applies it to existing subscriptions', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const feedStore = useFeedStore()
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PBadge: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            emits: ['close', 'save-rule'],
+            template: '<section data-test="manage-sheet" @click="$emit(\'save-rule\', { id: null, payload: { name: \'播客归档\', enabled: true, match_type: \'source_category\', conditions_json: { categories: [\'podcast\'] }, action_group_id: \'group-1\', action_muted: false, action_auto_mark_read: true, action_auto_add_reading_list: false } })" />',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(feedStore.createSubscriptionRule).toHaveBeenCalledWith({
+      name: '播客归档',
+      enabled: true,
+      match_type: 'source_category',
+      conditions_json: { categories: ['podcast'] },
+      action_group_id: 'group-1',
+      action_muted: false,
+      action_auto_mark_read: true,
+      action_auto_add_reading_list: false,
+    })
+    expect(feedStore.applySubscriptionRules).toHaveBeenCalledWith({ rule_id: 'rule-1' })
+
+    confirm.mockRestore()
+  })
+
+  it('reorders and applies rules from the manage sheet', async () => {
+    const feedStore = useFeedStore()
+    feedStore.subscriptionRules = [
+      {
+        id: 'rule-1',
+        name: '规则一',
+        enabled: true,
+        position: 0,
+        match_type: 'keywords',
+        conditions_json: { keywords: ['AI'] },
+      },
+      {
+        id: 'rule-2',
+        name: '规则二',
+        enabled: true,
+        position: 1,
+        match_type: 'source_ids',
+        conditions_json: { source_ids: ['source-2'] },
+      },
+    ] as any
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PBadge: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            emits: ['close', 'move-rule-down', 'apply-all-rules'],
+            template: '<section><button data-test="move-down" @click="$emit(\'move-rule-down\', \'rule-1\')" /><button data-test="apply-all" @click="$emit(\'apply-all-rules\')" /></section>',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="move-down"]').trigger('click')
+    await wrapper.get('[data-test="apply-all"]').trigger('click')
+    await flushPromises()
+
+    expect(feedStore.reorderSubscriptionRules).toHaveBeenCalledWith(['rule-2', 'rule-1'])
+    expect(feedStore.applySubscriptionRules).toHaveBeenCalledWith({ all: true })
   })
 })

@@ -8,6 +8,30 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
     show: true,
     busy: false,
     healthChecking: false,
+    subscriptionRules: [
+      {
+        id: 'rule-1',
+        name: '播客自动整理',
+        enabled: true,
+        position: 0,
+        match_type: 'source_category',
+        conditions_json: {
+          categories: ['podcast'],
+        },
+        action_group_id: 'group-1',
+        action_muted: true,
+        action_auto_mark_read: false,
+        action_auto_add_reading_list: true,
+      },
+    ],
+    ruleApplySummary: {
+      scanned_count: 12,
+      updated_count: 5,
+      group_changed_count: 3,
+      muted_changed_count: 2,
+      auto_mark_read_changed_count: 0,
+      auto_add_reading_list_changed_count: 4,
+    },
     filterRules: {
       mutedSourceIds: [],
       hiddenKeywords: [],
@@ -61,6 +85,7 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
         emits: ['update:modelValue'],
         template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
       },
+      SubscriptionRuleEditorSheet: true,
     },
   },
 })
@@ -115,47 +140,112 @@ describe('SubscriptionManageSheet', () => {
     confirm.mockRestore()
   })
 
-  it('emits filter rule updates when muting a source and adding a keyword', async () => {
+  it('keeps only hidden keyword local controls and emits keyword updates', async () => {
     const wrapper = mountSheet()
 
-    await wrapper.findAll('button').find((button) => button.text() === '静音来源')!.trigger('click')
     await wrapper.get('[data-test="filter-keyword-input"]').setValue('剧透')
     await wrapper.findAll('button').find((button) => button.text() === '添加关键词')!.trigger('click')
 
     expect(wrapper.emitted('update-filter-rules')).toEqual([
-      [{ mutedSourceIds: ['source-1'], hiddenKeywords: [] }],
-      [{ mutedSourceIds: ['source-1'], hiddenKeywords: ['剧透'] }],
+      [{ mutedSourceIds: [], hiddenKeywords: ['剧透'] }],
     ])
+    expect(wrapper.text()).not.toContain('静音来源')
+    expect(wrapper.text()).not.toContain('自动已读来源')
+    expect(wrapper.text()).not.toContain('自动稍后阅读来源')
   })
 
-  it('emits automation rule updates when toggling source automation actions', async () => {
+  it('shows subscription rules summary and emits rule management events', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountSheet()
 
-    await wrapper.findAll('button').find((button) => button.text() === '自动已读')!.trigger('click')
-    await wrapper.findAll('button').find((button) => button.text() === '自动稍后阅读')!.trigger('click')
+    expect(wrapper.text()).toContain('规则管理')
+    expect(wrapper.text()).toContain('播客自动整理')
+    expect(wrapper.text()).toContain('已启用')
+    expect(wrapper.text()).toContain('podcast')
+    expect(wrapper.text()).toContain('最近一次应用')
+    expect(wrapper.text()).toContain('扫描 12')
+    expect(wrapper.text()).toContain('更新 5')
 
-    expect(wrapper.emitted('update-automation-rules')).toEqual([
-      [{
-        autoMarkReadSourceIds: ['source-1'],
-        autoAddReadingListSourceIds: [],
-      }],
-      [{
-        autoMarkReadSourceIds: ['source-1'],
-        autoAddReadingListSourceIds: ['source-1'],
-      }],
-    ])
+    await wrapper.findAll('button').find((button) => button.text() === '新建规则')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '重算全部订阅')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '上移')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '下移')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '编辑')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '应用到已有订阅')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '删除规则')!.trigger('click')
+
+    expect(wrapper.emitted('create-rule')).toEqual([[]])
+    expect(wrapper.emitted('apply-all-rules')).toEqual([[]])
+    expect(wrapper.emitted('move-rule-up')).toEqual([['rule-1']])
+    expect(wrapper.emitted('move-rule-down')).toEqual([['rule-1']])
+    expect(wrapper.emitted('edit-rule')).toEqual([['rule-1']])
+    expect(wrapper.emitted('apply-rule')).toEqual([['rule-1']])
+    expect(wrapper.emitted('delete-rule')).toEqual([['rule-1']])
+
+    confirm.mockRestore()
   })
 
-  it('shows active filter rules and allows removing them', async () => {
+  it('opens the rule editor and emits save when editor confirms payload', async () => {
+    const wrapper = mount(SubscriptionManageSheet, {
+      ...mountSheet().props(),
+      props: {
+        ...mountSheet().props(),
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          PField: { props: ['label'], template: '<label><span>{{ label }}</span><slot /></label>' },
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PSelect: {
+            props: ['modelValue', 'options'],
+            emits: ['update:modelValue'],
+            template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
+          },
+          SubscriptionRuleEditorSheet: {
+            props: ['show', 'mode', 'groups', 'rule'],
+            emits: ['close', 'submit'],
+            template: '<div v-if="show" data-test="rule-editor" :data-mode="mode" @click="$emit(\'submit\', { name: \'新闻静音\', enabled: true, match_type: \'source_category\', conditions_json: { categories: [\'news\'] }, action_group_id: \'group-1\', action_muted: true, action_auto_mark_read: false, action_auto_add_reading_list: false })" />',
+          },
+        },
+      },
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === '编辑')!.trigger('click')
+    await wrapper.get('[data-test="rule-editor"]').trigger('click')
+
+    expect(wrapper.emitted('save-rule')).toEqual([[
+      {
+        id: 'rule-1',
+        payload: {
+          name: '新闻静音',
+          enabled: true,
+          match_type: 'source_category',
+          conditions_json: { categories: ['news'] },
+          action_group_id: 'group-1',
+          action_muted: true,
+          action_auto_mark_read: false,
+          action_auto_add_reading_list: false,
+        },
+      },
+    ]])
+  })
+
+  it('shows active hidden keywords and does not expose legacy local source automation controls', async () => {
     const wrapper = mount(SubscriptionManageSheet, {
       ...mountSheet().props(),
       props: {
         show: true,
         busy: false,
         healthChecking: false,
+        subscriptionRules: [],
+        ruleApplySummary: null,
         filterRules: {
-          mutedSourceIds: ['source-1'],
           hiddenKeywords: ['剧透'],
+          mutedSourceIds: ['source-1'],
         },
         automationRules: {
           autoMarkReadSourceIds: ['source-1'],
@@ -207,30 +297,18 @@ describe('SubscriptionManageSheet', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('已静音来源')
-    expect(wrapper.text()).toContain('自动已读来源')
-    expect(wrapper.text()).toContain('自动稍后阅读来源')
-    expect(wrapper.text()).toContain('Example Feed')
     expect(wrapper.text()).toContain('剧透')
+    expect(wrapper.text()).not.toContain('已静音来源')
+    expect(wrapper.text()).not.toContain('自动已读来源')
+    expect(wrapper.text()).not.toContain('自动稍后阅读来源')
+    expect(wrapper.text()).not.toContain('取消静音')
+    expect(wrapper.text()).not.toContain('取消自动已读')
+    expect(wrapper.text()).not.toContain('取消自动稍后阅读')
 
-    await wrapper.get('[data-test="muted-source-chip"]').trigger('click')
     await wrapper.get('[data-test="hidden-keyword-chip"]').trigger('click')
-    await wrapper.get('[data-test="auto-read-source-chip"]').trigger('click')
-    await wrapper.get('[data-test="auto-reading-list-source-chip"]').trigger('click')
 
     expect(wrapper.emitted('update-filter-rules')).toEqual([
-      [{ mutedSourceIds: [], hiddenKeywords: ['剧透'] }],
-      [{ mutedSourceIds: [], hiddenKeywords: [] }],
-    ])
-    expect(wrapper.emitted('update-automation-rules')).toEqual([
-      [{
-        autoMarkReadSourceIds: [],
-        autoAddReadingListSourceIds: ['source-1'],
-      }],
-      [{
-        autoMarkReadSourceIds: [],
-        autoAddReadingListSourceIds: [],
-      }],
+      [{ mutedSourceIds: ['source-1'], hiddenKeywords: [] }],
     ])
   })
 })

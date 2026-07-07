@@ -40,6 +40,8 @@
       :show="showManageSheet"
       :subscriptions="subscriptions"
       :groups="groups"
+      :subscription-rules="feedStore.subscriptionRules"
+      :rule-apply-summary="feedStore.ruleApplySummary"
       :filter-rules="feedStore.filterRules"
       :automation-rules="feedStore.automationRules"
       :busy="manageBusy"
@@ -55,6 +57,12 @@
       @check-all-subscriptions-health="checkAllSubscriptionsHealth"
       @import-opml="importOPML"
       @export-opml="exportOPML"
+      @save-rule="saveSubscriptionRule"
+      @move-rule-up="moveSubscriptionRuleUp"
+      @move-rule-down="moveSubscriptionRuleDown"
+      @apply-rule="applySubscriptionRule"
+      @apply-all-rules="applyAllSubscriptionRules"
+      @delete-rule="deleteSubscriptionRule"
       @update-filter-rules="updateFilterRules"
       @update-automation-rules="updateAutomationRules"
     />
@@ -294,7 +302,13 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { Filter } from 'lucide-vue-next'
-import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedItem, TimelineItem } from '@/types'
+import type {
+  AutoAddSubscriptionPayload,
+  FeedArticleSource,
+  FeedItem,
+  FeedSubscriptionRuleMatchType,
+  TimelineItem,
+} from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 import { looksLikeUrl } from '@/utils/feedTitles'
 import { useApiUrl } from '@/composables/useApi'
@@ -333,6 +347,30 @@ const activeTheme = ref('')
 const activeSearchLabel = computed(() => querySearch.value.trim())
 const defaultGroupId = computed(() => groups.value.find((group) => group.name === '默认分组')?.id || '')
 const nonDefaultGroups = computed(() => groups.value.filter((group) => group.name !== '默认分组'))
+
+function findSubscriptionByTimelineItem(item: TimelineItem) {
+  if (item.type === 'feed_item' && item.feed_item) {
+    const sourceId = item.feed_item.feed_source?.id || item.feed_item.feed_source_id
+    if (!sourceId) return undefined
+    return subscriptions.value.find((sub) => (
+      sub.feed_source_id === sourceId
+      || sub.feed_source?.id === sourceId
+      || (!!item.feed_item?.feed_source?.rss_url && sub.feed_source?.rss_url === item.feed_item.feed_source.rss_url)
+    ))
+  }
+
+  if (item.type === 'post' && item.post) {
+    const channelId = item.post.channel_id || item.post.channel?.id
+    if (!channelId) return undefined
+    return subscriptions.value.find((sub) => (
+      sub.feed_source?.source_type === 'internal_channel'
+      && sub.feed_source.source_id === channelId
+    ))
+  }
+
+  return undefined
+}
+
 const emptyTimelineText = computed(() => {
   if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
   if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
@@ -341,18 +379,13 @@ const emptyTimelineText = computed(() => {
 
 const timeline = ref<TimelineItem[]>([])
 const visibleTimeline = computed(() => {
-  const mutedSourceIds = new Set(feedStore.filterRules.mutedSourceIds)
   const hiddenKeywords = feedStore.filterRules.hiddenKeywords.map((keyword) => keyword.toLocaleLowerCase())
 
   return timeline.value.filter((item) => {
     if (!matchesSourceTypeFilter(item, sourceTypeFilter.value)) return false
     if (!matchesThemeFilter(item, activeTheme.value)) return false
 
-    const sourceId = item.type === 'feed_item'
-      ? (item.feed_item?.feed_source?.id || item.feed_item?.feed_source_id || '')
-      : ''
-
-    if (sourceId && mutedSourceIds.has(sourceId)) return false
+    if (findSubscriptionByTimelineItem(item)?.is_muted) return false
 
     if (!hiddenKeywords.length) return true
 
@@ -686,6 +719,20 @@ const openManageSheet = () => {
   showManageSheet.value = true
 }
 
+type SubscriptionRuleSavePayload = {
+  id: string | null
+  payload: {
+    name: string
+    enabled: boolean
+    match_type: FeedSubscriptionRuleMatchType
+    conditions_json: Record<string, unknown>
+    action_group_id?: string | null
+    action_muted?: boolean | null
+    action_auto_mark_read?: boolean | null
+    action_auto_add_reading_list?: boolean | null
+  }
+}
+
 const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
   addSubscriptionError.value = ''
   addingSubscription.value = true
@@ -812,6 +859,93 @@ const exportOPML = async () => {
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const findSavedRuleId = (saved: SubscriptionRuleSavePayload) => {
+  if (saved.id) return saved.id
+  const matchedRules = feedStore.subscriptionRules.filter((rule) =>
+    rule.name === saved.payload.name
+    && rule.match_type === saved.payload.match_type
+    && JSON.stringify(rule.conditions_json) === JSON.stringify(saved.payload.conditions_json),
+  )
+  return matchedRules[matchedRules.length - 1]?.id || null
+}
+
+const confirmApplySavedRule = async (ruleId: string | null) => {
+  if (!ruleId) return
+  if (!window.confirm('规则已保存，是否立即应用到已有订阅？')) return
+  await feedStore.applySubscriptionRules({ rule_id: ruleId })
+}
+
+const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
+  manageBusy.value = true
+  try {
+    const success = saved.id
+      ? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
+      : await feedStore.createSubscriptionRule(saved.payload)
+    if (!success) return
+
+    await confirmApplySavedRule(findSavedRuleId(saved))
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
+  manageBusy.value = true
+  try {
+    await feedStore.reorderSubscriptionRules(nextRuleIds)
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const moveSubscriptionRuleUp = async (id: string) => {
+  const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id)
+  if (index <= 0) return
+  const next = [...feedStore.subscriptionRules]
+  const [target] = next.splice(index, 1)
+  next.splice(index - 1, 0, target)
+  await reorderSubscriptionRules(next.map((rule) => rule.id))
+}
+
+const moveSubscriptionRuleDown = async (id: string) => {
+  const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id)
+  if (index < 0 || index >= feedStore.subscriptionRules.length - 1) return
+  const next = [...feedStore.subscriptionRules]
+  const [target] = next.splice(index, 1)
+  next.splice(index + 1, 0, target)
+  await reorderSubscriptionRules(next.map((rule) => rule.id))
+}
+
+const applySubscriptionRule = async (id: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.applySubscriptionRules({ rule_id: id })
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const applyAllSubscriptionRules = async () => {
+  manageBusy.value = true
+  try {
+    await feedStore.applySubscriptionRules({ all: true })
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const deleteSubscriptionRule = async (id: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.deleteSubscriptionRule(id)
   } finally {
     manageBusy.value = false
   }
@@ -1008,16 +1142,26 @@ const fetchTimeline = async () => {
 const applyAutomationRules = async (items: TimelineItem[]) => {
   if (!authStore.isAuthenticated) return
 
-  const autoReadSourceIds = new Set(feedStore.automationRules.autoMarkReadSourceIds)
-  const autoReadingListSourceIds = new Set(feedStore.automationRules.autoAddReadingListSourceIds)
-  if (!autoReadSourceIds.size && !autoReadingListSourceIds.size) return
+  const autoReadSubscriptionSourceIds = new Set(
+    subscriptions.value
+      .filter((sub) => sub.auto_mark_read)
+      .map((sub) => sub.feed_source?.id || sub.feed_source_id)
+      .filter(Boolean),
+  )
+  const autoReadingListSubscriptionSourceIds = new Set(
+    subscriptions.value
+      .filter((sub) => sub.auto_add_reading_list)
+      .map((sub) => sub.feed_source?.id || sub.feed_source_id)
+      .filter(Boolean),
+  )
+  if (!autoReadSubscriptionSourceIds.size && !autoReadingListSubscriptionSourceIds.size) return
 
   const pendingReadIds = items
     .filter((item) => (
       item.type === 'feed_item'
       && item.feed_item
       && !item.is_read
-      && autoReadSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
+      && autoReadSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
     ))
     .map((item) => item.feed_item!.id)
 
@@ -1040,7 +1184,7 @@ const applyAutomationRules = async (items: TimelineItem[]) => {
       item.type === 'feed_item'
       && item.feed_item
       && !readingListIds.value.has(item.feed_item.id)
-      && autoReadingListSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
+      && autoReadingListSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
     ))
     .map((item) => item.feed_item!.id)
 
@@ -1109,9 +1253,23 @@ const toggleAllRead = async () => {
 
 watch(showManageSheet, (visible) => {
   if (visible && authStore.isAuthenticated) {
-    void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
+    void Promise.all([
+      feedStore.fetchSubscriptions(),
+      feedStore.fetchGroups(),
+      feedStore.fetchSubscriptionRules(),
+    ])
   }
 })
+
+watch(subscriptions, async (nextSubscriptions, previousSubscriptions) => {
+  if (!authStore.isAuthenticated || !timeline.value.length) return
+
+  const previousCount = previousSubscriptions?.length || 0
+  const nextCount = nextSubscriptions.length
+  if (!nextCount || nextCount === previousCount) return
+
+  await applyAutomationRules(timeline.value)
+}, { deep: true })
 
 watch(querySearch, (next) => {
   searchInput.value = next

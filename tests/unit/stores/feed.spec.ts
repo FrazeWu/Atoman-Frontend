@@ -518,4 +518,182 @@ describe('feed store', () => {
     expect(await result).toBe(true)
     expect(feed.readingListItemIds.has('feed-item-1')).toBe(true)
   })
+
+  it('loads server-managed subscription fields when fetching subscriptions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        id: 'sub-1',
+        user_id: 'user-1',
+        feed_source_id: 'source-1',
+        is_muted: true,
+        auto_mark_read: false,
+        auto_add_reading_list: true,
+        created_at: '2026-07-07T00:00:00Z',
+      }],
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    await feed.fetchSubscriptions()
+
+    expect(feed.subscriptions).toEqual([expect.objectContaining({
+      id: 'sub-1',
+      is_muted: true,
+      auto_mark_read: false,
+      auto_add_reading_list: true,
+    })])
+  })
+
+  it('fetches subscription rules into dedicated server-managed state', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        id: 'rule-1',
+        name: '播客整理',
+        enabled: true,
+        position: 1,
+        match_type: 'source_category',
+        conditions_json: { categories: ['podcast'] },
+        action_auto_mark_read: true,
+      }],
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    await feed.fetchSubscriptionRules()
+
+    expect(feed.subscriptionRules).toEqual([expect.objectContaining({
+      id: 'rule-1',
+      action_auto_mark_read: true,
+    })])
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/subscription-rules', {
+      headers: { Authorization: 'Bearer token' },
+    })
+  })
+
+  it('creates a subscription rule through the backend-aligned endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: {
+          id: 'rule-1',
+          name: '播客整理',
+          enabled: true,
+          position: 1,
+          match_type: 'source_category',
+          conditions_json: { categories: ['podcast'] },
+        },
+      }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'rule-1',
+          name: '播客整理',
+          enabled: true,
+          position: 1,
+          match_type: 'source_category',
+          conditions_json: { categories: ['podcast'] },
+        }],
+      }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const result = await feed.createSubscriptionRule({
+      name: '播客整理',
+      enabled: true,
+      match_type: 'source_category',
+      conditions_json: { categories: ['podcast'] },
+    })
+
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscription-rules', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        name: '播客整理',
+        enabled: true,
+        match_type: 'source_category',
+        conditions_json: { categories: ['podcast'] },
+      }),
+    }))
+    expect(feed.subscriptionRules).toHaveLength(1)
+  })
+
+  it('updates, reorders, deletes, and applies subscription rules while keeping summary state', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'rule-1',
+          name: '已更新规则',
+          enabled: false,
+          position: 2,
+          match_type: 'keywords',
+          conditions_json: { keywords: ['go'] },
+        }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'rule-2',
+          name: '第二条规则',
+          enabled: true,
+          position: 1,
+          match_type: 'source_ids',
+          conditions_json: { source_ids: ['source-2'] },
+        }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: {
+          scanned_count: 12,
+          updated_count: 4,
+          group_changed_count: 2,
+          muted_changed_count: 1,
+          auto_mark_read_changed_count: 1,
+          auto_add_reading_list_changed_count: 0,
+        },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'sub-1',
+          user_id: 'user-1',
+          feed_source_id: 'source-1',
+          is_muted: true,
+          auto_mark_read: true,
+          auto_add_reading_list: false,
+          created_at: '2026-07-07T00:00:00Z',
+        }],
+      }), { status: 200 }))
+
+    const feed = useFeedStore()
+
+    expect(await feed.updateSubscriptionRule('rule-1', {
+      name: '已更新规则',
+      enabled: false,
+      position: 2,
+      match_type: 'keywords',
+      conditions_json: { keywords: ['go'] },
+    })).toBe(true)
+    expect(await feed.reorderSubscriptionRules(['rule-2', 'rule-1'])).toBe(true)
+    expect(await feed.deleteSubscriptionRule('rule-1')).toBe(true)
+    expect(await feed.applySubscriptionRules({ all: true })).toBe(true)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscription-rules/rule-1', expect.objectContaining({
+      method: 'PUT',
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/feed/subscription-rules/reorder', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({ rule_ids: ['rule-2', 'rule-1'] }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/feed/subscription-rules/rule-1', expect.objectContaining({
+      method: 'DELETE',
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(7, '/api/v1/feed/subscription-rules/apply', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ all: true }),
+    }))
+    expect(feed.ruleApplySummary).toEqual(expect.objectContaining({
+      updated_count: 4,
+      muted_changed_count: 1,
+    }))
+    expect(feed.subscriptions).toEqual([expect.objectContaining({
+      is_muted: true,
+      auto_mark_read: true,
+    })])
+  })
 })

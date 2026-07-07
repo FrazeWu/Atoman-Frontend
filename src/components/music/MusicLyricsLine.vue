@@ -117,11 +117,11 @@ function handleMouseUp() {
   endRange.selectNodeContents(root)
   endRange.setEnd(range.endContainer, range.endOffset)
 
-  const selectedText = selection.toString().trim()
+  const selectedText = selection.toString()
   const startOffset = startRange.toString().length
   const endOffset = endRange.toString().length
 
-  if (!selectedText || endOffset <= startOffset) return
+  if (!selectedText.trim() || endOffset <= startOffset) return
 
   emit('select-text', {
     line: props.line,

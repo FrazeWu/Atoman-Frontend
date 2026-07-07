@@ -69,7 +69,8 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     return result
   }
 
-  const applyTargetState = (data: unknown) => {
+  const applyTargetState = (data: unknown, options: { applyCommentCount?: boolean } = {}) => {
+    const applyCommentCount = options.applyCommentCount ?? true
     if (!data || typeof data !== 'object') return
     const target = (data as { target?: unknown }).target
     const source = target && typeof target === 'object' ? target : data
@@ -88,8 +89,8 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     if (typeof values.viewer_liked === 'boolean') liked.value = values.viewer_liked
     if (typeof values.like_count === 'number') likeCount.value = values.like_count
     if (typeof values.LikeCount === 'number') likeCount.value = values.LikeCount
-    if (typeof values.comment_count === 'number') commentCount.value = values.comment_count
-    if (typeof values.CommentCount === 'number') commentCount.value = values.CommentCount
+    if (applyCommentCount && typeof values.comment_count === 'number') commentCount.value = values.comment_count
+    if (applyCommentCount && typeof values.CommentCount === 'number') commentCount.value = values.CommentCount
   }
 
   const like = async () => {
@@ -126,7 +127,7 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       const payload = await readJson(response)
       comments.value = readItems(payload.data)
       commentCount.value = countComments(comments.value)
-      applyTargetState(payload.data)
+      applyTargetState(payload.data, { applyCommentCount: false })
     } finally {
       loadingComments.value = false
     }

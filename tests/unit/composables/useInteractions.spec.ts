@@ -48,7 +48,7 @@ describe('useInteractions', () => {
               { id: 'c3', content: 'reply 2', created_at: '2026-07-07T00:02:00Z' },
             ],
           }],
-          target: { like_count: 3, viewer_liked: true },
+          target: { comment_count: 1, like_count: 3, viewer_liked: true },
         },
       }),
     })

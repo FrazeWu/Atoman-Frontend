@@ -791,6 +791,90 @@ describe('FeedView', () => {
     expect(feedStore.readingListItemIds.has('feed-item-normal-2')).toBe(false)
   })
 
+  it('re-applies subscription automation after subscriptions arrive later on first load', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch)
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/timeline/mark-read')) {
+        return new Response(null, { status: 204 })
+      }
+      if (url.includes('/feed/timeline')) {
+        return new Response(JSON.stringify({
+          data: [
+            {
+              type: 'feed_item',
+              feed_item: {
+                id: 'feed-item-late-auto-read-1',
+                feed_source_id: 'source-late-auto-1',
+                feed_source: {
+                  id: 'source-late-auto-1',
+                  source_type: 'external_rss',
+                  title: '晚到来源',
+                  rss_url: 'https://example.com/late-auto.xml',
+                },
+                guid: 'feed-item-late-auto-read-1',
+                title: '订阅晚到后也应自动已读',
+                link: 'https://example.com/late-auto-item',
+                summary: '摘要',
+                published_at: '2026-06-16T00:00:00Z',
+                fetched_at: '2026-06-16T00:00:00Z',
+              },
+              published_at: '2026-06-16T00:00:00Z',
+              is_read: false,
+            },
+          ],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = []
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/feed/timeline/mark-read'))).toBe(false)
+
+    feedStore.subscriptions = [
+      {
+        id: 'sub-late-auto-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-late-auto-1',
+        auto_mark_read: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/timeline/mark-read'), expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ feed_item_ids: ['feed-item-late-auto-read-1'] }),
+    }))
+    expect(wrapper.text()).toContain('已读')
+  })
+
   it('filters the mixed timeline by source content type', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
       const url = String(input)

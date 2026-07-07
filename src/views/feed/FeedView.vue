@@ -1261,6 +1261,16 @@ watch(showManageSheet, (visible) => {
   }
 })
 
+watch(subscriptions, async (nextSubscriptions, previousSubscriptions) => {
+  if (!authStore.isAuthenticated || !timeline.value.length) return
+
+  const previousCount = previousSubscriptions?.length || 0
+  const nextCount = nextSubscriptions.length
+  if (!nextCount || nextCount === previousCount) return
+
+  await applyAutomationRules(timeline.value)
+}, { deep: true })
+
 watch(querySearch, (next) => {
   searchInput.value = next
 })

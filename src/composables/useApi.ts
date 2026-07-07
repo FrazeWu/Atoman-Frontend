@@ -102,6 +102,18 @@ export function useApi() {
       bookmarkFolder: (id: number | string) => `${apiUrl}/blog/bookmark-folders/${id}`,
       bookmarks: `${apiUrl}/blog/bookmarks`,
     },
+
+    interactions: {
+      blogLikes: `${apiUrl}/blog/likes`,
+      blogPostComments: (postId: number | string) => `${apiUrl}/blog/posts/${postId}/comments`,
+      blogComment: (commentId: number | string) => `${apiUrl}/blog/comments/${commentId}`,
+      forumLikes: `${apiUrl}/forum/likes`,
+      forumTopicComments: (topicId: number | string) => `${apiUrl}/forum/topics/${topicId}/comments`,
+      forumComment: (commentId: number | string) => `${apiUrl}/forum/comments/${commentId}`,
+      videoLikes: `${apiUrl}/videos/likes`,
+      videoComments: (videoId: number | string) => `${apiUrl}/videos/${videoId}/comments`,
+      videoComment: (commentId: number | string) => `${apiUrl}/videos/comments/${commentId}`,
+    },
     
     auth: {
       register: `${apiUrl}/auth/register`,

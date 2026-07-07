@@ -224,6 +224,28 @@ export interface Comment {
   updated_at: string
 }
 
+export type InteractionModule = 'blog' | 'forum' | 'videos'
+export type InteractionTargetType = 'post' | 'forum_topic' | 'video'
+
+export interface InteractionUserRef {
+  id?: string
+  username: string
+  display_name?: string
+  avatar_url?: string
+}
+
+export interface InteractionComment {
+  id: string
+  content: string
+  created_at: string
+  root_comment_id?: string | null
+  parent_comment_id?: string | null
+  reply_to_user?: InteractionUserRef | null
+  user?: InteractionUserRef | null
+  replies?: InteractionComment[]
+  timestamp_sec?: number | null
+}
+
 export interface Like {
   id: string
   user_id: string

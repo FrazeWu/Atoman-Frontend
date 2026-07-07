@@ -196,18 +196,22 @@ Fields:
 
 There is one vote per annotation per user.
 
-### Notification Record
+### Notification Event
 
-Stage 1 needs a minimal notification record for annotation rebind events. If the backend already has a notification system by implementation time, reuse it. Otherwise add a simple music notification table with:
+Stage 1 should not add a dedicated music notification table.
 
-- `id`
-- `user_id`
-- `type`
-- `payload`
-- `read_at`
-- `created_at`
+When an annotation is moved to `needs_rebind`, the music module should write a unified notification event for the notification system with:
 
-The notification module will be planned after this lyrics design.
+- `event_type`: `collaboration.required`
+- `subject_type`: `music_lyrics`
+- `subject_id`: the song ID
+- `payload.recipient_id`: annotation author
+- `payload.song_id`
+- `payload.annotation_id`
+- `payload.title`
+- `payload.body`
+- `payload.reason`
+- `payload.required`: `true`
 
 ## API Design
 
@@ -371,7 +375,7 @@ When a user edits lyrics:
 4. Backend validates again.
 5. If anchors are broken, save requires explicit resolutions.
 6. Resolved anchors are rebound.
-7. Unresolved anchors are marked `needs_rebind` and authors are notified.
+7. Unresolved anchors are marked `needs_rebind` and authors are notified through the unified notification event queue.
 
 ## Development Phases
 
@@ -389,7 +393,7 @@ Build the basic usable loop:
 8. Add lyric wiki editor.
 9. Add version history and revert.
 10. Add anchor validation and conflict resolution.
-11. Add minimal notification records for rebind requests.
+11. Emit unified collaboration reminder events for rebind requests.
 12. Verify with type-check and focused tests.
 
 ### Stage 2
@@ -435,4 +439,3 @@ Verification:
 - Run backend build after backend implementation.
 - Run frontend type-check after frontend implementation.
 - Add focused tests instead of broad unrelated test churn.
-

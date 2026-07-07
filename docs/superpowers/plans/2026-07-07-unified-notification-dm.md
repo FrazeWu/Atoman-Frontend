@@ -2494,5 +2494,5 @@ Spec coverage:
 Implementation notes:
 
 - This plan does not build email, browser push, digest, deletion, archive, or an all-notifications tab.
-- This plan does not implement the music lyrics collaboration event producer. The lyrics feature plan should enqueue `collaboration.required` events through `notification.Service.EnqueueEvent`.
+- The music lyrics plan is the first non-forum producer for collaboration reminders. It should create `notification_events` rows with `event_type = collaboration.required`, `subject_type = music_lyrics`, `subject_id = song_id`, and payload keys `recipient_id`, `song_id`, `annotation_id`, `title`, `body`, `reason`, `required = true`.
 - Existing forum notification producers remain compatible during this plan. Producer-by-producer migration to `EnqueueEvent` is a follow-up plan because it touches forum reply, mention, solved, and like flows separately.

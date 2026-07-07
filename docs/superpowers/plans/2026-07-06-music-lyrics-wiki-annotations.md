@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build stage 1 of the music lyrics system: song-level wiki lyrics, bilingual rolling lyrics, selected-text annotations, annotation votes, anchor conflict handling, version history, and minimal notification records.
+**Goal:** Build stage 1 of the music lyrics system: song-level wiki lyrics, bilingual rolling lyrics, selected-text annotations, annotation votes, anchor conflict handling, version history, and unified collaboration reminder events for annotation rebind.
 
-**Architecture:** Backend owns lyric persistence, parsing, anchor validation, versioning, permissions, and vote ranking. Frontend owns player lyrics presentation, text selection, editing flows, and conflict resolution UI. The first implementation keeps notification UI minimal and stores notification records for the later notification module plan.
+**Architecture:** Backend owns lyric persistence, parsing, anchor validation, versioning, permissions, and vote ranking. Frontend owns player lyrics presentation, text selection, editing flows, and conflict resolution UI. When a lyric edit forces annotation author follow-up, the music module writes a unified `notification_events` record for the notification system instead of maintaining a dedicated music notification table or inbox UI.
 
 **Tech Stack:** Go, Gin, GORM, PostgreSQL, Vue 3, TypeScript, Pinia, Vitest, Playwright where useful.
 
@@ -46,6 +46,10 @@ Frontend files:
 Pre-existing blocker:
 
 - `Atoman-Frontend/src/components/music/AlbumDrawer.vue` currently contains unresolved conflict markers. Task 0 resolves it before any frontend type-check.
+
+Cross-plan dependency:
+
+- Before implementing Task 3's `needs_rebind` notification branch, land Task 1 from [2026-07-07-unified-notification-dm.md](/Users/fafa/projects/Atoman/Atoman-Frontend/docs/superpowers/plans/2026-07-07-unified-notification-dm.md) so `notification_events` and `model.NotificationEvent` exist.
 
 ---
 
@@ -145,7 +149,6 @@ func TestRunMusicLyricsMigrationCreatesTables(t *testing.T) {
 		&model.MusicSongLyricVersion{},
 		&model.MusicLyricAnnotation{},
 		&model.MusicLyricAnnotationVote{},
-		&model.MusicLyricNotification{},
 	}
 	for _, table := range tables {
 		if !db.Migrator().HasTable(table) {
@@ -174,8 +177,6 @@ Create `Atoman-Backend/internal/model/music_lyrics.go`:
 package model
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -242,15 +243,6 @@ type MusicLyricAnnotationVote struct {
 
 func (MusicLyricAnnotationVote) TableName() string { return "music_lyric_annotation_votes" }
 
-type MusicLyricNotification struct {
-	Base
-	UserID uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
-	Type   string    `json:"type" gorm:"not null;index"`
-	Payload string   `json:"payload" gorm:"type:text"`
-	ReadAt *time.Time `json:"read_at,omitempty"`
-}
-
-func (MusicLyricNotification) TableName() string { return "music_lyric_notifications" }
 ```
 
 - [ ] **Step 4: Add migration**
@@ -273,7 +265,6 @@ func RunMusicLyricsMigration(db *gorm.DB) error {
 		&model.MusicSongLyricVersion{},
 		&model.MusicLyricAnnotation{},
 		&model.MusicLyricAnnotationVote{},
-		&model.MusicLyricNotification{},
 	)
 }
 ```
@@ -583,7 +574,6 @@ func newLyricsServiceTest(t *testing.T) (*Service, *gorm.DB, authctx.CurrentUser
 		&model.MusicSongLyricVersion{},
 		&model.MusicLyricAnnotation{},
 		&model.MusicLyricAnnotationVote{},
-		&model.MusicLyricNotification{},
 	)
 	user := model.User{Username: "lyrics-user", Email: "lyrics@example.com", Password: "hash", Role: "user", IsActive: true}
 	if err := db.Create(&user).Error; err != nil {
@@ -689,10 +679,10 @@ At top of `Atoman-Backend/internal/modules/music/lyrics_service.go`:
 package music
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"atoman/internal/model"
 	"atoman/internal/platform/apperr"
@@ -1024,16 +1014,24 @@ func (s *Service) validateOrMarkAnnotationAnchors(tx *gorm.DB, user authctx.Curr
 			if err := tx.Model(&annotation).Update("status", "needs_rebind").Error; err != nil {
 				return err
 			}
-			payload, _ := json.Marshal(map[string]string{
-				"annotation_id": annotation.ID.String(),
-				"song_id": songID.String(),
-			})
-			notice := model.MusicLyricNotification{
-				UserID: annotation.CreatedBy,
-				Type: "music.lyric_annotation_rebind",
-				Payload: string(payload),
+			event := model.NotificationEvent{
+				EventType:   "collaboration.required",
+				ActorID:     &user.ID,
+				SubjectType: "music_lyrics",
+				SubjectID:   songID,
+				Payload: model.NotificationMeta{
+					"recipient_id": annotation.CreatedBy.String(),
+					"song_id": songID.String(),
+					"annotation_id": annotation.ID.String(),
+					"title": "歌词修改影响了你的注释绑定",
+					"body": "需要重新确认或重新绑定这条注释。",
+					"reason": "歌词修改影响了你的注释",
+					"required": true,
+				},
+				Status:      "pending",
+				AvailableAt: time.Now(),
 			}
-			if err := tx.Create(&notice).Error; err != nil {
+			if err := tx.Create(&event).Error; err != nil {
 				return err
 			}
 		default:
@@ -1145,7 +1143,6 @@ Modify `newMusicHTTPTestService` migration list in `Atoman-Backend/internal/modu
 		&model.MusicSongLyricVersion{},
 		&model.MusicLyricAnnotation{},
 		&model.MusicLyricAnnotationVote{},
-		&model.MusicLyricNotification{},
 ```
 
 - [ ] **Step 2: Write HTTP tests**
@@ -2743,12 +2740,12 @@ Spec coverage:
 - Upvote/downvote: Task 3, Task 4, Task 8.
 - Net score sorting: Task 7 and backend DTO helpers in Task 3.
 - Anchor conflict handling: Task 3 and Task 10 baseline.
-- Minimal notification record: Task 1 and Task 3.
+- Unified collaboration reminder event: notification plan Task 1 plus this plan's Task 3.
 - Version history and revert: Task 11.
 - Stage 2 is intentionally out of implementation scope.
 
 Known implementation risks:
 
 - The plan uses a simple offset calculation in `MusicLyricsLine.vue` based on `indexOf`. This is acceptable for stage 1 but should be improved in stage 2 for repeated selected text.
-- The plan uses current component patterns but does not introduce a global notification UI. Notification module planning follows this plan.
+- The plan uses current component patterns but does not introduce a global notification UI. It only emits collaboration events for the notification module to consume.
 - The frontend API plan adds `apiPutJson` and uses it for `PUT /lyrics` and `PUT /lyrics/annotations/:id/vote`.

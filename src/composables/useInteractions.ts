@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, unref, type Ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { InteractionComment, InteractionModule, InteractionTargetType } from '@/types'
@@ -11,12 +11,18 @@ type ApiEnvelope = {
   data?: unknown
 }
 
+type InteractionTargetId = string | Ref<string>
+
 function readItems(data: unknown): InteractionComment[] {
   if (Array.isArray(data)) return data as InteractionComment[]
   if (data && typeof data === 'object' && Array.isArray((data as { items?: unknown }).items)) {
     return (data as { items: InteractionComment[] }).items
   }
   return []
+}
+
+function countComments(items: InteractionComment[]): number {
+  return items.reduce((total, item) => total + 1 + (item.replies ? countComments(item.replies) : 0), 0)
 }
 
 async function readJson(response: Response): Promise<ApiEnvelope> {
@@ -27,7 +33,7 @@ async function readJson(response: Response): Promise<ApiEnvelope> {
   return payload as ApiEnvelope
 }
 
-export function useInteractions(moduleName: InteractionModule, targetType: InteractionTargetType, targetId: string) {
+export function useInteractions(moduleName: InteractionModule, targetType: InteractionTargetType, targetId: InteractionTargetId) {
   const api = useApi()
   const authStore = useAuthStore()
 
@@ -38,23 +44,24 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   const loadingComments = ref(false)
   const submittingComment = ref(false)
 
-  const endpoints = {
+  const currentTargetId = () => unref(targetId)
+  const endpoints = () => ({
     blog: {
       likes: api.interactions.blogLikes,
-      comments: api.interactions.blogPostComments(targetId),
+      comments: api.interactions.blogPostComments(currentTargetId()),
       comment: api.interactions.blogComment,
     },
     forum: {
       likes: api.interactions.forumLikes,
-      comments: api.interactions.forumTopicComments(targetId),
+      comments: api.interactions.forumTopicComments(currentTargetId()),
       comment: api.interactions.forumComment,
     },
     videos: {
       likes: api.interactions.videoLikes,
-      comments: api.interactions.videoComments(targetId),
+      comments: api.interactions.videoComments(currentTargetId()),
       comment: api.interactions.videoComment,
     },
-  }[moduleName]
+  })[moduleName]
 
   const headers = () => {
     const result: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -66,31 +73,44 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     if (!data || typeof data !== 'object') return
     const target = (data as { target?: unknown }).target
     const source = target && typeof target === 'object' ? target : data
-    const values = source as { liked?: unknown; like_count?: unknown; comment_count?: unknown; viewer_liked?: unknown }
+    const values = source as {
+      liked?: unknown
+      Liked?: unknown
+      like_count?: unknown
+      LikeCount?: unknown
+      comment_count?: unknown
+      CommentCount?: unknown
+      viewer_liked?: unknown
+    }
 
     if (typeof values.liked === 'boolean') liked.value = values.liked
+    if (typeof values.Liked === 'boolean') liked.value = values.Liked
     if (typeof values.viewer_liked === 'boolean') liked.value = values.viewer_liked
     if (typeof values.like_count === 'number') likeCount.value = values.like_count
+    if (typeof values.LikeCount === 'number') likeCount.value = values.LikeCount
     if (typeof values.comment_count === 'number') commentCount.value = values.comment_count
+    if (typeof values.CommentCount === 'number') commentCount.value = values.CommentCount
   }
 
   const like = async () => {
-    const response = await fetch(endpoints.likes, {
+    const selectedEndpoints = endpoints()
+    const response = await fetch(selectedEndpoints.likes, {
       method: 'POST',
       headers: headers(),
       credentials: 'include',
-      body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+      body: JSON.stringify({ target_type: targetType, target_id: currentTargetId() }),
     })
     const payload = await readJson(response)
     applyTargetState(payload.data)
   }
 
   const unlike = async () => {
-    const response = await fetch(endpoints.likes, {
+    const selectedEndpoints = endpoints()
+    const response = await fetch(selectedEndpoints.likes, {
       method: 'DELETE',
       headers: headers(),
       credentials: 'include',
-      body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+      body: JSON.stringify({ target_type: targetType, target_id: currentTargetId() }),
     })
     const payload = await readJson(response)
     applyTargetState(payload.data)
@@ -99,13 +119,13 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   const fetchComments = async () => {
     loadingComments.value = true
     try {
-      const response = await fetch(endpoints.comments, {
+      const response = await fetch(endpoints().comments, {
         headers: headers(),
         credentials: 'include',
       })
       const payload = await readJson(response)
       comments.value = readItems(payload.data)
-      commentCount.value = comments.value.length
+      commentCount.value = countComments(comments.value)
       applyTargetState(payload.data)
     } finally {
       loadingComments.value = false
@@ -120,7 +140,7 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
         ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
         ...(options?.timestamp_sec !== undefined ? { timestamp_sec: options.timestamp_sec } : {}),
       }
-      const response = await fetch(endpoints.comments, {
+      const response = await fetch(endpoints().comments, {
         method: 'POST',
         headers: headers(),
         credentials: 'include',
@@ -134,7 +154,7 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   }
 
   const deleteComment = async (commentId: string) => {
-    const response = await fetch(endpoints.comment(commentId), {
+    const response = await fetch(endpoints().comment(commentId), {
       method: 'DELETE',
       headers: headers(),
       credentials: 'include',

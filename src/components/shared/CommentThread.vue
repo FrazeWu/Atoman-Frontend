@@ -52,16 +52,19 @@
 import { computed, defineComponent, h, ref } from 'vue'
 import type { InteractionComment } from '@/types'
 
-defineProps<{
+type SubmitPayload = { content: string; parentCommentId?: string }
+
+const props = defineProps<{
   items: InteractionComment[]
   loading?: boolean
   submitting?: boolean
   canComment?: boolean
   canDelete?: boolean
+  submitAction?: (payload: SubmitPayload) => void | Promise<void>
 }>()
 
 const emit = defineEmits<{
-  submit: [payload: { content: string; parentCommentId?: string }]
+  submit: [payload: SubmitPayload]
   delete: [commentId: string]
 }>()
 
@@ -88,16 +91,21 @@ function cancelReply() {
   replyingTo.value = null
 }
 
-function submitComment() {
+async function submitComment() {
   const content = draft.value.trim()
   if (!content) return
 
-  emit('submit', {
+  const payload = {
     content,
     ...(replyingTo.value ? { parentCommentId: replyingTo.value.id } : {}),
-  })
-  draft.value = ''
-  replyingTo.value = null
+  }
+  if (props.submitAction) {
+    await props.submitAction(payload)
+    draft.value = ''
+    replyingTo.value = null
+    return
+  }
+  emit('submit', payload)
 }
 
 const CommentNode = defineComponent({

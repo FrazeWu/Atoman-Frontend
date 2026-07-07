@@ -47,6 +47,35 @@ describe('CommentThread', () => {
     expect(wrapper.emitted('submit')?.[0]).toEqual([{ content: 'reply to reply', parentCommentId: 'c2' }])
   })
 
+  it('keeps draft when emit-only submit has no success signal', async () => {
+    const wrapper = mount(CommentThread, {
+      props: {
+        items,
+        canComment: true,
+      },
+    })
+
+    await wrapper.find('textarea').setValue('keep this')
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('keep this')
+  })
+
+  it('clears draft after submitAction resolves', async () => {
+    const wrapper = mount(CommentThread, {
+      props: {
+        items,
+        canComment: true,
+        submitAction: async () => {},
+      },
+    })
+
+    await wrapper.find('textarea').setValue('clear this')
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('')
+  })
+
   it('shows reply_to_user mention when content does not include it', () => {
     const wrapper = mount(CommentThread, { props: { items } })
 

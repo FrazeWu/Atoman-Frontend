@@ -8,6 +8,25 @@ vi.mock('@/api/musicV1', () => ({
   uploadMusicAsset: vi.fn(),
 }))
 
+vi.mock('naive-ui', () => ({
+  NDatePicker: {
+    inheritAttrs: false,
+    props: ['formattedValue', 'formatted-value'],
+    emits: ['update:formattedValue', 'update:formatted-value'],
+    template: `
+      <input
+        type="text"
+        data-testid="artist-birth-input"
+        :value="formattedValue || $props['formatted-value']"
+        @input="
+          $emit('update:formattedValue', $event.target.value);
+          $emit('update:formatted-value', $event.target.value)
+        "
+      />
+    `,
+  },
+}))
+
 vi.mock('@/components/music/MusicSquareImageCropSheet.vue', () => ({
   default: {
     props: ['show'],
@@ -28,6 +47,10 @@ describe('MusicCreationArtistStep.vue', () => {
     drawers.openMusicCreationFlow()
     drawers.setMusicCreationStep('artist')
     vi.mocked(uploadMusicAsset).mockReset()
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:artist-avatar-preview'),
+      revokeObjectURL: vi.fn(),
+    })
   })
 
   it('blocks moving forward when an additional stage name has no duration', async () => {
@@ -57,7 +80,7 @@ describe('MusicCreationArtistStep.vue', () => {
     await wrapper.get('[data-testid="artist-legal-name-input"]').setValue('Kanye Omari West')
     await wrapper.get('[data-testid="artist-stage-name-input-0"]').setValue('Kanye West')
     await wrapper.get('[data-testid="artist-nationality-input"]').setValue('US')
-    await wrapper.get('[data-testid="artist-birth-input"]').setValue('1977/6/8')
+    drawers.state.value.creationFlow!.draft.artist.birthDateParts = { year: '1977', month: '06', day: '08' }
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/source')
     const input = wrapper.get('[data-testid="artist-avatar-input"]').element as HTMLInputElement
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })
@@ -76,7 +99,7 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
   })
 
-  it('uses a single birthday input and derives birthDateParts plus birthDate', async () => {
+  it('shows a single birthday input and auto-formats digits with segmented placeholders', async () => {
     const drawers = useMusicDrawers()
     const wrapper = mount(MusicCreationArtistStep, {
       global: {
@@ -90,14 +113,55 @@ describe('MusicCreationArtistStep.vue', () => {
       },
     })
 
-    await wrapper.get('[data-testid="artist-birth-input"]').setValue('2001/6/8')
+    expect(wrapper.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="artist-birth-input"]').setValue('20010608')
+    await flushPromises()
 
+    expect((wrapper.get('[data-testid="artist-birth-input"]').element as HTMLInputElement).value).toBe('2001/06/08')
     expect(drawers.state.value.creationFlow?.draft.artist.birthDateParts).toEqual({
       year: '2001',
-      month: '6',
-      day: '8',
+      month: '06',
+      day: '08',
     })
     expect(drawers.state.value.creationFlow?.draft.artist.birthDate).toBe('2001-06-08')
+  })
+
+  it('fills the remaining birthday segments with placeholders while typing', async () => {
+    const wrapper = mount(MusicCreationArtistStep, {
+      global: {
+        stubs: {
+          PCountryRegionField: {
+            props: ['modelValue'],
+            emits: ['update:modelValue'],
+            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
+          },
+        },
+      },
+    })
+
+    await wrapper.get('[data-testid="artist-birth-input"]').setValue('1987')
+    await flushPromises()
+
+    expect((wrapper.get('[data-testid="artist-birth-input"]').element as HTMLInputElement).value).toBe('1987/mm/dd')
+  })
+
+  it('places nationality and birthday on the same row', () => {
+    const wrapper = mount(MusicCreationArtistStep, {
+      global: {
+        stubs: {
+          PCountryRegionField: {
+            props: ['modelValue'],
+            emits: ['update:modelValue'],
+            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
+          },
+        },
+      },
+    })
+
+    const row = wrapper.find('.field-grid--duo')
+    expect(row.exists()).toBe(true)
+    expect(row.find('[data-testid="artist-nationality-input"]').exists()).toBe(true)
+    expect(row.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
   })
 
   it('shows required markers for mandatory personal artist fields', () => {
@@ -153,7 +217,7 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
 
     await wrapper.get('[data-testid="artist-nationality-input"]').setValue('US')
-    await wrapper.get('[data-testid="artist-birth-input"]').setValue('1977/6/8')
+    drawers.state.value.creationFlow!.draft.artist.birthDateParts = { year: '1977', month: '06', day: '08' }
     await wrapper.get('[data-testid="artist-source-input"]').setValue('https://example.com/source')
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
 
@@ -300,10 +364,10 @@ describe('MusicCreationArtistStep.vue', () => {
   })
 
   it('opens square crop sheet before applying artist avatar preview', async () => {
-    vi.mocked(uploadMusicAsset).mockResolvedValue({
-      key: 'music/avatar-cropped.png',
-      url: 'https://img.example/avatar-cropped.png',
-    })
+    let resolveUpload: ((value: { key: string; url: string }) => void) | null = null
+    vi.mocked(uploadMusicAsset).mockImplementation(() => new Promise((resolve) => {
+      resolveUpload = resolve
+    }))
 
     const drawers = useMusicDrawers()
     const wrapper = mount(MusicCreationArtistStep, {
@@ -332,11 +396,20 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(drawers.state.value.creationFlow?.draft.artist.avatarUrl).toBe('')
 
     await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="artist-avatar-preview-image"]').attributes('src')).toBe('blob:artist-avatar-preview')
+    expect(drawers.state.value.creationFlow?.draft.artist.avatarUrl).toBe('')
+
+    resolveUpload?.({
+      key: 'music/avatar-cropped.png',
+      url: 'https://img.example/avatar-cropped.png',
+    })
     await flushPromises()
 
     expect(vi.mocked(uploadMusicAsset)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(uploadMusicAsset).mock.calls[0]?.[1]).toBe('music.cover')
     expect(drawers.state.value.creationFlow?.draft.artist.avatarUrl).toBe('https://img.example/avatar-cropped.png')
+    expect(wrapper.get('[data-testid="artist-avatar-preview"]').classes()).toContain('is-square')
     expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
   })
 })

@@ -299,6 +299,10 @@ const emit = defineEmits<{
 
 const panelOpen = ref(false)
 const selectedContinentCode = ref<ContinentCode | null>(null)
+const regionNamesInChinese = typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined'
+  ? new Intl.DisplayNames(['zh-CN'], { type: 'region' })
+  : null
+const COMMON_COUNTRY_CODES = ['CN', 'US', 'GB', 'JP', 'KR', 'FR', 'DE', 'CA', 'AU', 'IT'] as const
 
 function normalizeCountryEntry(entry: unknown) {
   if (!Array.isArray(entry)) return null
@@ -323,9 +327,10 @@ const countryOptions = computed<CountryOption[]>(() => {
       if (!continentCode) return null
 
       const continentLabel = CONTINENT_META.find((item) => item.code === continentCode)?.label ?? ''
+      const localizedName = regionNamesInChinese?.of(country.code)?.trim() || country.name
 
       return {
-        name: country.name,
+        name: localizedName,
         code: country.code,
         continentCode,
         continentLabel,
@@ -336,7 +341,18 @@ const countryOptions = computed<CountryOption[]>(() => {
 })
 
 const countryByName = computed(() => {
-  return new Map(countryOptions.value.map((country) => [country.name, country]))
+  const entries = countryOptions.value.flatMap((country) => {
+    const localizedEntry: [string, CountryOption] = [country.name, country]
+    const englishEntry = normalizeCountryEntry(
+      allCountries.find((entry) => Array.isArray(entry) && entry[1] === country.code),
+    )
+
+    return englishEntry
+      ? [localizedEntry, [englishEntry.name, country] as [string, CountryOption]]
+      : [localizedEntry]
+  })
+
+  return new Map(entries)
 })
 
 const continentOptions = computed(() => {
@@ -347,10 +363,14 @@ const continentOptions = computed(() => {
 
 const currentCountry = computed(() => countryByName.value.get(props.modelValue.trim()) ?? null)
 const activeContinentCode = computed(() => selectedContinentCode.value ?? currentCountry.value?.continentCode ?? null)
-const selectedLabel = computed(() => props.modelValue.trim())
+const selectedLabel = computed(() => currentCountry.value?.name ?? props.modelValue.trim())
+const commonCountryOptions = computed(() => {
+  const commonCountryCodeSet = new Set<string>(COMMON_COUNTRY_CODES)
+  return countryOptions.value.filter((country) => commonCountryCodeSet.has(country.code))
+})
 
 const countriesInActiveContinent = computed(() => {
-  if (!activeContinentCode.value) return []
+  if (!activeContinentCode.value) return commonCountryOptions.value
   return countryOptions.value.filter((country) => country.continentCode === activeContinentCode.value)
 })
 
@@ -440,7 +460,7 @@ function chooseCountry(country: CountryOption) {
 
           <section class="paper-field-dialog-section">
             <p class="paper-field-section-title">
-              {{ activeContinentCode ? '选择国家或地区' : '请先选择洲' }}
+              {{ activeContinentCode ? '选择国家或地区' : '请选择国家' }}
             </p>
             <div class="paper-field-country-list">
               <button

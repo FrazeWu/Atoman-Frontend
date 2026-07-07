@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { CalendarDays } from 'lucide-vue-next'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
+import { formatBirthDateInput, getBirthDateCursorIndex, getBirthDateDigits } from '@/components/music/birthDateMask'
 import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
@@ -20,7 +22,10 @@ const groupErrorMessage = ref('')
 const membersErrorMessage = ref('')
 const personalErrorMessage = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const birthDatePickerRef = ref<HTMLInputElement | null>(null)
 const pendingAvatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
+const birthDateDigits = ref('')
 
 function createEmptyDateParts() {
   return {
@@ -42,18 +47,7 @@ function normalizeDatePart(value: string, length: number) {
 }
 
 function parseDateToParts(value: string) {
-  const [year = '', month = '', day = ''] = value.trim().split('-')
-  return { year, month, day }
-}
-
-function parseLooseDateToParts(value: string) {
-  const segments = value
-    .trim()
-    .split(/[^\d]+/)
-    .map((segment) => segment.trim())
-    .filter(Boolean)
-
-  const [year = '', month = '', day = ''] = segments
+  const [year = '', month = '', day = ''] = value.trim().split(/[-/]/)
   return { year, month, day }
 }
 
@@ -66,12 +60,6 @@ function formatDateParts(parts?: { year: string; month: string; day: string }) {
 
   if (!year || !month || !day) return ''
   return `${year}-${month}-${day}`
-}
-
-function formatLooseDateParts(parts?: { year: string; month: string; day: string }) {
-  if (!parts) return ''
-  const values = [parts.year.trim(), parts.month.trim(), parts.day.trim()].filter(Boolean)
-  return values.join('/')
 }
 
 function requiredLabel(label: string) {
@@ -90,6 +78,9 @@ watch(
     if (!hasDatePartsValue(draft.birthDateParts) && draft.birthDate.trim()) {
       draft.birthDateParts = parseDateToParts(draft.birthDate)
     }
+
+    const formattedBirthDate = formatDateParts(draft.birthDateParts) || draft.birthDate.trim()
+    birthDateDigits.value = getBirthDateDigits(formattedBirthDate)
   },
   { immediate: true },
 )
@@ -103,21 +94,56 @@ watch(
   { deep: true, immediate: true },
 )
 
+const avatarDisplayUrl = computed(() => {
+  if (avatarPreviewUrl.value) return avatarPreviewUrl.value
+  return artistDraft.value?.avatarUrl || ''
+})
+
 const birthDateModel = computed({
   get: () => {
-    if (!artistDraft.value) return ''
-    const valueFromParts = formatLooseDateParts(artistDraft.value.birthDateParts)
-    if (valueFromParts) return valueFromParts
-    return artistDraft.value.birthDate.trim().replaceAll('-', '/')
+    return formatBirthDateInput(birthDateDigits.value)
   },
   set: (value: string) => {
     if (!artistDraft.value) return
-    artistDraft.value.birthDateParts = parseLooseDateToParts(value)
+    birthDateDigits.value = value.replace(/\D/g, '').slice(0, 8)
+    artistDraft.value.birthDateParts = parseDateToParts(formatBirthDateInput(birthDateDigits.value))
   },
 })
 
+const birthDateNativeValue = computed(() => artistDraft.value?.birthDate.trim() || '')
+
+function replaceAvatarPreviewUrl(file: File) {
+  if (avatarPreviewUrl.value) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
+  }
+  avatarPreviewUrl.value = URL.createObjectURL(file)
+}
+
 function triggerFileInput() {
   fileInputRef.value?.click()
+}
+
+function openBirthDatePicker() {
+  birthDatePickerRef.value?.showPicker?.()
+  birthDatePickerRef.value?.focus()
+}
+
+function onBirthDatePickerChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  birthDateModel.value = input.value.replaceAll('-', '/')
+}
+
+function handleBirthDateInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const selectionStart = input.selectionStart ?? input.value.length
+  const digitCountBeforeCursor = getBirthDateDigits(input.value.slice(0, selectionStart)).length
+
+  birthDateModel.value = input.value
+
+  void nextTick(() => {
+    const cursorIndex = getBirthDateCursorIndex(digitCountBeforeCursor)
+    input.setSelectionRange(cursorIndex, cursorIndex)
+  })
 }
 
 async function onAvatarChange(event: Event) {
@@ -136,6 +162,7 @@ function clearPendingAvatarCrop() {
 async function confirmAvatarCrop(file: File) {
   if (!artistDraft.value) return
 
+  replaceAvatarPreviewUrl(file)
   avatarUploading.value = true
   avatarErrorMessage.value = ''
 
@@ -315,19 +342,29 @@ function goNext() {
             <span class="field-label">{{ requiredLabel('头像') }}</span>
           </div>
           <div
+            data-testid="artist-avatar-preview"
             class="avatar-uploader"
-            :class="{ 'is-uploading': avatarUploading }"
+            :class="{ 'is-uploading': avatarUploading, 'is-square': true }"
             title="点击添加头像"
             @click="triggerFileInput"
           >
-            <PAvatar
-              :src="artistDraft.avatarUrl || undefined"
-              :name="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
-              size="xl"
-            />
+            <div class="artist-avatar-frame">
+              <img
+                v-if="avatarDisplayUrl"
+                data-testid="artist-avatar-preview-image"
+                :src="avatarDisplayUrl"
+                :alt="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
+                class="artist-avatar-image"
+              >
+              <PAvatar
+                v-else
+                :name="artistDraft.stageNames[0]?.name || artistDraft.legalName || 'Artist'"
+                size="xl"
+              />
+            </div>
             <div class="avatar-uploader-hover">
               <span v-if="avatarUploading">上传中...</span>
-              <span v-else>{{ artistDraft.avatarUrl ? '修改头像' : '添加头像' }}</span>
+              <span v-else>{{ avatarDisplayUrl ? '修改头像' : '添加头像' }}</span>
             </div>
           </div>
           <input
@@ -625,7 +662,6 @@ function goNext() {
         <div class="field-stack">
           <div v-if="!isGroup" class="field-grid field-grid--duo">
             <div class="field-group">
-              <span class="field-label">{{ requiredLabel('国籍') }}</span>
               <PCountryRegionField
                 v-model="artistDraft.nationality"
                 :label="requiredLabel('国籍')"
@@ -635,17 +671,39 @@ function goNext() {
                 option-prefix="artist-country-option-"
               />
             </div>
-          </div>
-
-          <div v-if="!isGroup" class="field-group">
-            <PInput
-              v-model="birthDateModel"
-              data-testid="artist-birth-input"
-              type="text"
-              inputmode="numeric"
-              placeholder="year/mo/day"
-              :label="requiredLabel('生日')"
-            />
+            <div class="field-group">
+              <label class="field-label" for="artist-birth-input">{{ requiredLabel('生日') }}</label>
+              <div class="birth-date-field">
+              <input
+                id="artist-birth-input"
+                :value="birthDateModel"
+                data-testid="artist-birth-input"
+                type="text"
+                inputmode="numeric"
+                class="birth-date-input"
+                placeholder="yyyy/mm/dd"
+                @input="handleBirthDateInput"
+              >
+                <button
+                  type="button"
+                  class="birth-date-trigger"
+                  data-testid="artist-birth-picker-button"
+                  aria-label="选择生日"
+                  @click="openBirthDatePicker"
+                >
+                  <CalendarDays :size="18" />
+                </button>
+                <input
+                  ref="birthDatePickerRef"
+                  :value="birthDateNativeValue"
+                  type="date"
+                  class="birth-date-native"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  @change="onBirthDatePickerChange"
+                >
+              </div>
+            </div>
           </div>
 
           <div class="field-group">
@@ -802,11 +860,32 @@ function goNext() {
 .avatar-uploader {
   position: relative;
   cursor: pointer;
-  border-radius: 9999px;
+  border-radius: 0;
   overflow: hidden;
   border: 2px dashed var(--a-color-line-soft);
   padding: 4px;
   transition: border-color 0.2s ease, transform 0.1s ease;
+}
+
+.artist-avatar-frame {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--a-color-paper-wash);
+}
+
+.artist-avatar-frame :deep(.p-avatar) {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.artist-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .avatar-uploader:hover {
@@ -821,7 +900,7 @@ function goNext() {
 .avatar-uploader-hover {
   position: absolute;
   inset: 4px;
-  border-radius: 9999px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.6);
   color: white;
   display: flex;
@@ -844,6 +923,64 @@ function goNext() {
   flex: 1;
   display: grid;
   gap: 1rem;
+}
+
+.birth-date-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  background: var(--a-color-paper);
+  min-height: 3.2rem;
+}
+
+.birth-date-field:focus-within {
+  border-color: var(--a-color-accent-confirm);
+}
+
+.birth-date-input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink);
+  padding: 0.85rem 3rem 0.85rem 0.95rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.birth-date-input:focus {
+  outline: none;
+}
+
+.birth-date-input::placeholder {
+  color: color-mix(in srgb, var(--a-color-ink) 28%, transparent);
+}
+
+.birth-date-trigger {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  cursor: pointer;
+}
+
+.birth-date-trigger:hover {
+  color: var(--a-color-ink);
+}
+
+.birth-date-native {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .field-stack { display: grid; gap: 1rem; }

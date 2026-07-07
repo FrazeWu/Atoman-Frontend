@@ -1,4 +1,4 @@
-import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
+import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -472,6 +472,84 @@ export type ArtistEditDraft = {
   sources: MusicSource[]
 }
 
+export type MusicLyricsFormat = 'plain' | 'lrc'
+export type MusicLyricsAnnotationVote = 'up' | 'down'
+export type MusicLyricsAnnotationStatus = 'active' | 'deleted' | 'needs_rebind'
+
+export type MusicSongLyricsLine = {
+  id: string
+  text: string
+  translation: string
+  startTimeMs: number | null
+  endTimeMs: number | null
+  lineNumber: number
+}
+
+export type MusicLyricsAnnotation = {
+  id: string
+  line_id: string
+  body: string
+  selected_text: string
+  start_offset: number
+  end_offset: number
+  upvotes: number
+  downvotes: number
+  net_score: number
+  current_user_vote?: MusicLyricsAnnotationVote | null
+  status: MusicLyricsAnnotationStatus
+  created_at: string
+  updated_at: string
+}
+
+export type MusicSongLyricsVersion = {
+  id: string
+  song_id: string
+  version: number
+  edit_summary: string
+  created_at: string
+  editor_id: string
+  is_current: boolean
+}
+
+export type MusicLyricsAnnotationResolutionInput = {
+  annotation_id: string
+  action: 'rebind' | 'needs_rebind'
+  line_id?: string
+  selected_text?: string
+  start_offset?: number
+  end_offset?: number
+}
+
+export type UpdateMusicSongLyricsInput = {
+  content: string
+  translation: string
+  format: MusicLyricsFormat
+  edit_summary: string
+  annotation_resolutions?: MusicLyricsAnnotationResolutionInput[]
+}
+
+export type CreateMusicLyricsAnnotationInput = {
+  line_id: string
+  selected_text: string
+  start_offset: number
+  end_offset: number
+  body: string
+}
+
+export type UpdateMusicLyricsAnnotationInput = {
+  body: string
+}
+
+export type MusicSongLyrics = {
+  song_id: string
+  format: MusicLyricsFormat
+  content: string
+  translation: string
+  lines: MusicSongLyricsLine[]
+  annotations: MusicLyricsAnnotation[]
+  version: number
+}
+
 function apiV1Base() {
   return useApiUrl()
 }
@@ -491,6 +569,12 @@ export const musicV1Endpoints = {
   artist: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}`,
   albums: () => `${apiV1Base()}/music/albums`,
   album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
+  songLyrics: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics`,
+  lyricAnnotations: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations`,
+  lyricAnnotation: (annotationId: string) => `${apiV1Base()}/music/lyrics/annotations/${annotationId}`,
+  lyricAnnotationVote: (annotationId: string) => `${apiV1Base()}/music/lyrics/annotations/${annotationId}/vote`,
+  songLyricsVersions: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/versions`,
+  songLyricsVersionRevert: (songId: string, version: number) => `${apiV1Base()}/music/songs/${songId}/lyrics/versions/${version}/revert`,
   artistBookmarks: () => `${apiV1Base()}/music/bookmarks/artists`,
   artistBookmark: (artistId: string) => `${apiV1Base()}/music/bookmarks/artists/${artistId}`,
   albumBookmarks: () => `${apiV1Base()}/music/bookmarks/albums`,
@@ -1029,6 +1113,44 @@ export async function removeMusicPlaylistSong(playlistId: string, songId: string
 
 export async function recordMusicSongPlay(songId: string): Promise<{ recorded: boolean }> {
   return apiPostJson<{ recorded: boolean }>(musicV1Endpoints.plays(), { song_id: songId })
+}
+
+export async function getMusicSongLyrics(songId: string): Promise<MusicSongLyrics> {
+  return apiGet<MusicSongLyrics>(musicV1Endpoints.songLyrics(songId))
+}
+
+export async function updateMusicSongLyrics(songId: string, input: UpdateMusicSongLyricsInput): Promise<MusicSongLyrics> {
+  return apiPutJson<MusicSongLyrics>(musicV1Endpoints.songLyrics(songId), input)
+}
+
+export async function createMusicLyricsAnnotation(songId: string, input: CreateMusicLyricsAnnotationInput): Promise<MusicLyricsAnnotation> {
+  return apiPostJson<MusicLyricsAnnotation>(musicV1Endpoints.lyricAnnotations(songId), input)
+}
+
+export async function updateMusicLyricsAnnotation(annotationId: string, input: UpdateMusicLyricsAnnotationInput): Promise<MusicLyricsAnnotation> {
+  return apiPatchJson<MusicLyricsAnnotation>(musicV1Endpoints.lyricAnnotation(annotationId), input)
+}
+
+export async function deleteMusicLyricsAnnotation(annotationId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.lyricAnnotation(annotationId))
+}
+
+export async function voteMusicLyricsAnnotation(
+  annotationId: string,
+  vote: MusicLyricsAnnotationVote | null,
+): Promise<MusicLyricsAnnotation> {
+  return apiPutJson<MusicLyricsAnnotation>(musicV1Endpoints.lyricAnnotationVote(annotationId), { vote })
+}
+
+export async function listMusicSongLyricsVersions(songId: string): Promise<MusicSongLyricsVersion[]> {
+  const response = await apiGetEnvelope<MusicSongLyricsVersion[]>(musicV1Endpoints.songLyricsVersions(songId))
+  return response.data
+}
+
+export async function revertMusicSongLyricsVersion(songId: string, version: number, editSummary: string): Promise<MusicSongLyrics> {
+  return apiPostJson<MusicSongLyrics>(musicV1Endpoints.songLyricsVersionRevert(songId, version), {
+    edit_summary: editSummary,
+  })
 }
 
 export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {

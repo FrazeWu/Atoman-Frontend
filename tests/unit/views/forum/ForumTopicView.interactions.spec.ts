@@ -45,7 +45,7 @@ const InteractionBarStub = defineComponent({
 
 const CommentThreadStub = defineComponent({
   name: 'CommentThread',
-  props: ['items', 'canComment', 'loading', 'submitting', 'submitAction'],
+  props: ['items', 'canComment', 'canDelete', 'loading', 'submitting', 'submitAction'],
   emits: ['delete'],
   template: '<section data-test="comment-thread" />',
 })
@@ -66,8 +66,8 @@ const forumCategory: ForumCategory = {
   created_at: '2026-07-07T00:00:00Z',
 }
 
-const makeTopic = (): ForumTopic => ({
-  id: 'topic-1',
+const makeTopic = (id = 'topic-1'): ForumTopic => ({
+  id,
   user_id: 'user-1',
   category_id: forumCategory.id,
   category: forumCategory,
@@ -98,7 +98,9 @@ async function mountTopicView() {
   const forumStore = useForumStore()
   forumStore.loading = false
   forumStore.currentTopic = makeTopic()
-  vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
+  const fetchTopicSpy = vi.spyOn(forumStore, 'fetchTopic').mockImplementation(async (id: string) => {
+    forumStore.currentTopic = makeTopic(id)
+  })
   const fetchRepliesSpy = vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
 
   const router = createRouter({
@@ -128,7 +130,7 @@ async function mountTopicView() {
     },
   })
   await flushPromises()
-  return { wrapper, fetchRepliesSpy }
+  return { wrapper, router, fetchRepliesSpy, fetchTopicSpy }
 }
 
 describe('ForumTopicView shared interactions', () => {
@@ -157,5 +159,33 @@ describe('ForumTopicView shared interactions', () => {
     expect(fetchRepliesSpy).not.toHaveBeenCalled()
     expect(wrapper.find('[data-test="comment-thread"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="legacy-reply-node"]').exists()).toBe(false)
+  })
+
+  it('路由 topic id 变化时重新拉取话题和共享评论', async () => {
+    const { router, fetchTopicSpy } = await mountTopicView()
+    mocks.interactions.fetchComments.mockClear()
+
+    await router.push('/forum/topic/topic-2')
+    await flushPromises()
+
+    expect(fetchTopicSpy).toHaveBeenLastCalledWith('topic-2')
+    expect(mocks.interactions.fetchComments).toHaveBeenCalledTimes(1)
+  })
+
+  it('只允许评论作者、话题作者或管理员删除评论', async () => {
+    const { wrapper } = await mountTopicView()
+    const canDelete = wrapper.findComponent(CommentThreadStub).props('canDelete') as (comment: {
+      user?: { id?: string }
+    }) => boolean
+
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(false)
+    expect(canDelete({ user: { id: 'user-2' } })).toBe(true)
+
+    const authStore = useAuthStore()
+    authStore.user = { uuid: 'user-1', username: 'author', email: 'author@example.com' }
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+
+    authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
   })
 })

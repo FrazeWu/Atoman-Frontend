@@ -95,7 +95,7 @@
               :loading="interactions.loadingComments.value"
               :submitting="interactions.submittingComment.value"
               :can-comment="canComment"
-              :can-delete="authStore.isAuthenticated"
+              :can-delete="canDeleteComment"
               :submit-action="submitComment"
               @delete="interactions.deleteComment"
             />
@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
@@ -158,6 +158,7 @@ import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentThread from '@/components/shared/CommentThread.vue'
 import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'
+import type { InteractionComment } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,6 +174,16 @@ const commentNotice = computed(() => {
   if (!authStore.isAuthenticated) return '登录后即可参与讨论'
   return ''
 })
+const canDeleteComment = (comment: InteractionComment) => {
+  if (!authStore.user) return false
+  const authNumericId = authStore.user.id === undefined ? undefined : String(authStore.user.id)
+  return (
+    comment.user?.id === authStore.user.uuid ||
+    comment.user?.id === authNumericId ||
+    authStore.user.uuid === forumStore.currentTopic?.user_id ||
+    isAdminRole(authStore.user.role)
+  )
+}
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -198,9 +209,7 @@ const onScroll = () => {
   showBackTop.value = window.scrollY > 300
 }
 
-// ─── Lifecycle ───────────────────────────────────────────────────────────────
-
-onMounted(async () => {
+const loadTopic = async () => {
   await forumStore.fetchTopic(topicId.value)
   if (forumStore.currentTopic) {
     interactions.liked.value = forumStore.currentTopic.is_liked
@@ -208,7 +217,16 @@ onMounted(async () => {
     interactions.commentCount.value = forumStore.currentTopic.reply_count
     await interactions.fetchComments()
   }
+}
 
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+
+watch(topicId, () => {
+  void loadTopic()
+})
+
+onMounted(async () => {
+  await loadTopic()
   window.addEventListener('scroll', onScroll)
 })
 

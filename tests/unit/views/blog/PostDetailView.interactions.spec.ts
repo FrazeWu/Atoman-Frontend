@@ -45,7 +45,7 @@ const InteractionBarStub = defineComponent({
 
 const CommentThreadStub = defineComponent({
   name: 'CommentThread',
-  props: ['items', 'canComment', 'loading', 'submitting', 'submitAction'],
+  props: ['items', 'canComment', 'canDelete', 'loading', 'submitting', 'submitAction'],
   emits: ['delete'],
   template: '<section data-test="comment-thread" />',
 })
@@ -141,5 +141,22 @@ describe('PostDetailView shared interactions', () => {
     expect(mocks.interactions.fetchComments).toHaveBeenCalledTimes(1)
     expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="comment-thread"]').exists()).toBe(true)
+  })
+
+  it('只允许评论作者、文章作者或管理员删除评论', async () => {
+    const wrapper = await mountPostDetail()
+    const canDelete = wrapper.findComponent(CommentThreadStub).props('canDelete') as (comment: {
+      user?: { id?: string }
+    }) => boolean
+
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+
+    const authStore = useAuthStore()
+    authStore.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(false)
+    expect(canDelete({ user: { id: 'reader-1' } })).toBe(true)
+
+    authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
   })
 })

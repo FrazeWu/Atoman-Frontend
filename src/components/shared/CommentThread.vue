@@ -26,7 +26,7 @@
         <CommentNode
           :comment="comment"
           :can-comment="canComment"
-          :can-delete="canDelete"
+          :can-delete="canDeleteComment(comment)"
           @reply="startReply"
           @delete="$emit('delete', $event)"
         />
@@ -37,7 +37,7 @@
             :key="reply.id"
             :comment="reply"
             :can-comment="canComment"
-            :can-delete="canDelete"
+            :can-delete="canDeleteComment(reply)"
             is-reply
             @reply="startReply"
             @delete="$emit('delete', $event)"
@@ -53,13 +53,14 @@ import { computed, defineComponent, h, ref } from 'vue'
 import type { InteractionComment } from '@/types'
 
 type SubmitPayload = { content: string; parentCommentId?: string }
+type CanDelete = boolean | ((comment: InteractionComment) => boolean)
 
 const props = defineProps<{
   items: InteractionComment[]
   loading?: boolean
   submitting?: boolean
   canComment?: boolean
-  canDelete?: boolean
+  canDelete?: CanDelete
   submitAction?: (payload: SubmitPayload) => void | Promise<void>
 }>()
 
@@ -81,6 +82,11 @@ function contentWithReplyTo(comment: InteractionComment) {
   if (!username) return comment.content
   const mention = `@${username}`
   return comment.content.includes(mention) ? comment.content : `${mention} ${comment.content}`
+}
+
+function canDeleteComment(comment: InteractionComment) {
+  if (typeof props.canDelete === 'function') return props.canDelete(comment)
+  return Boolean(props.canDelete)
 }
 
 function startReply(comment: InteractionComment) {

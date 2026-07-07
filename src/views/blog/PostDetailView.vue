@@ -122,7 +122,7 @@
           :loading="interactions.loadingComments.value"
           :submitting="interactions.submittingComment.value"
           :can-comment="canComment"
-          :can-delete="authStore.isAuthenticated"
+          :can-delete="canDeleteComment"
           :submit-action="submitComment"
           @delete="interactions.deleteComment"
         />
@@ -142,7 +142,8 @@ import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useInteractions } from '@/composables/useInteractions'
-import type { Post } from '@/types'
+import { isAdminRole } from '@/utils/roles'
+import type { InteractionComment, Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 
 type EmbedData = {
@@ -193,6 +194,16 @@ const commentNotice = computed(() => {
   if (!authStore.isAuthenticated) return '登录后即可评论'
   return ''
 })
+const canDeleteComment = (comment: InteractionComment) => {
+  if (!authStore.user) return false
+  const authNumericId = authStore.user.id === undefined ? undefined : String(authStore.user.id)
+  return (
+    comment.user?.id === authStore.user.uuid ||
+    comment.user?.id === authNumericId ||
+    authStore.user.uuid === post.value?.user_id ||
+    isAdminRole(authStore.user.role)
+  )
+}
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 

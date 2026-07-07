@@ -1,9 +1,12 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type {
+  ApplySubscriptionRulesSummary,
   AutoAddSubscriptionPayload,
   FeedDiscoveryCandidate,
   FeedSourceProvider,
+  FeedSubscriptionRule,
+  FeedSubscriptionRuleMatchType,
   FeedStarGroup,
   ResolvedSubscriptionInput,
   Subscription,
@@ -53,6 +56,23 @@ interface FeedTimelineFetchOptions {
   sourceType?: string
   sourceId?: string | number | null
   unreadOnly?: boolean
+}
+
+interface SubscriptionRulePayload {
+  name: string
+  enabled: boolean
+  match_type: FeedSubscriptionRuleMatchType
+  conditions_json: Record<string, unknown>
+  action_group_id?: string | null
+  action_muted?: boolean | null
+  action_auto_mark_read?: boolean | null
+  action_auto_add_reading_list?: boolean | null
+  position?: number
+}
+
+interface ApplySubscriptionRulesPayload {
+  rule_id?: string
+  all?: boolean
 }
 
 export interface FeedFilterRules {
@@ -130,9 +150,12 @@ const writeAutomationRules = (rules: FeedAutomationRules) => {
 export const useFeedStore = defineStore('feed', () => {
   // Feed state
   const subscriptions = ref<Subscription[]>([])
+  const subscriptionRules = ref<FeedSubscriptionRule[]>([])
+  const ruleApplySummary = ref<ApplySubscriptionRulesSummary | null>(null)
   const groups = ref<SubscriptionGroup[]>([])
   const starGroups = ref<FeedStarGroup[]>([])
   const timeline = ref<any[]>([])
+  // Legacy local-only rule state kept for gradual migration in a later task.
   const filterRules = ref<FeedFilterRules>(readFilterRules())
   const automationRules = ref<FeedAutomationRules>(readAutomationRules())
   const activeSource = ref<{ type: string; id: string } | null>(null)
@@ -145,6 +168,8 @@ export const useFeedStore = defineStore('feed', () => {
 
   const clearUserState = () => {
     subscriptions.value = []
+    subscriptionRules.value = []
+    ruleApplySummary.value = null
     groups.value = []
     starGroups.value = []
     timeline.value = []
@@ -213,6 +238,117 @@ export const useFeedStore = defineStore('feed', () => {
     } catch (e) {
       console.error('Failed to fetch groups', e)
     }
+  }
+
+  const fetchSubscriptionRules = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      subscriptionRules.value = []
+      ruleApplySummary.value = null
+      return
+    }
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        subscriptionRules.value = data.data || []
+      }
+    } catch (e) {
+      console.error('Failed to fetch subscription rules', e)
+    }
+  }
+
+  const createSubscriptionRule = async (payload: SubscriptionRulePayload): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to create subscription rule', e)
+    }
+    return false
+  }
+
+  const updateSubscriptionRule = async (id: string, payload: Partial<SubscriptionRulePayload>): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to update subscription rule', e)
+    }
+    return false
+  }
+
+  const deleteSubscriptionRule = async (id: string): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to delete subscription rule', e)
+    }
+    return false
+  }
+
+  const reorderSubscriptionRules = async (ruleIds: string[]): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify({ rule_ids: ruleIds }),
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to reorder subscription rules', e)
+    }
+    return false
+  }
+
+  const applySubscriptionRules = async (payload: ApplySubscriptionRulesPayload): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) return false
+      const data = await res.json().catch(() => ({}))
+      ruleApplySummary.value = data.data || null
+      await fetchSubscriptions()
+      return true
+    } catch (e) {
+      console.error('Failed to apply subscription rules', e)
+    }
+    return false
   }
 
   const createGroup = async (name: string) => {
@@ -1242,6 +1378,8 @@ export const useFeedStore = defineStore('feed', () => {
   return {
     // Feed
     subscriptions,
+    subscriptionRules,
+    ruleApplySummary,
     groups,
     starGroups,
     timeline,
@@ -1253,13 +1391,19 @@ export const useFeedStore = defineStore('feed', () => {
     setFilterRules,
     setAutomationRules,
     fetchSubscriptions,
+    fetchSubscriptionRules,
     fetchGroups,
+    createSubscriptionRule,
     createGroup,
     fetchStarGroups,
     createStarGroup,
     updateSubscription,
+    updateSubscriptionRule,
     updateGroup,
+    deleteSubscriptionRule,
     deleteGroup,
+    reorderSubscriptionRules,
+    applySubscriptionRules,
     setSubscriptionGroup,
     fetchTimeline,
     subscribe,

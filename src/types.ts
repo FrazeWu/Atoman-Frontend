@@ -384,10 +384,39 @@ export interface Subscription {
   title?: string
   subscription_group_id?: string
   subscription_group?: SubscriptionGroup
+  is_muted?: boolean
+  auto_mark_read?: boolean
+  auto_add_reading_list?: boolean
   health_status?: 'healthy' | 'warning' | 'error'
   error_message?: string
   last_checked?: string
   created_at: string
+}
+
+export type FeedSubscriptionRuleMatchType = 'source_category' | 'source_ids' | 'keywords'
+
+export interface FeedSubscriptionRule {
+  id: string
+  name: string
+  enabled: boolean
+  position: number
+  match_type: FeedSubscriptionRuleMatchType
+  conditions_json: Record<string, unknown>
+  action_group_id?: string | null
+  action_muted?: boolean | null
+  action_auto_mark_read?: boolean | null
+  action_auto_add_reading_list?: boolean | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ApplySubscriptionRulesSummary {
+  scanned_count: number
+  updated_count: number
+  group_changed_count: number
+  muted_changed_count: number
+  auto_mark_read_changed_count: number
+  auto_add_reading_list_changed_count: number
 }
 
 export interface FeedItem {

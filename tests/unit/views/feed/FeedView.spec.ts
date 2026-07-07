@@ -441,7 +441,7 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('外部条目')
   })
 
-  it('filters muted sources and hidden keywords from the visible timeline', async () => {
+  it('filters muted sources from subscription flags and still keeps hidden keywords local', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
       data: [
         {
@@ -512,8 +512,31 @@ describe('FeedView', () => {
     }), { status: 200 }))
 
     const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-muted-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-muted-1',
+        is_muted: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-1',
+        is_muted: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-2',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-2',
+        is_muted: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
     feedStore.setFilterRules({
-      mutedSourceIds: ['source-muted-1'],
+      mutedSourceIds: [],
       hiddenKeywords: ['剧透'],
     })
 
@@ -544,7 +567,7 @@ describe('FeedView', () => {
     expect(wrapper.text()).toContain('保留下来的条目')
   })
 
-  it('auto-marks configured sources as read after timeline load', async () => {
+  it('auto-marks sources as read from subscription flags instead of local automation rules', async () => {
     const fetchMock = vi.mocked(globalThis.fetch)
     fetchMock.mockImplementation(async (input, init) => {
       const url = String(input)
@@ -605,8 +628,25 @@ describe('FeedView', () => {
     })
 
     const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-auto-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-auto-1',
+        auto_mark_read: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-1',
+        auto_mark_read: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
     feedStore.setAutomationRules({
-      autoMarkReadSourceIds: ['source-auto-1'],
+      autoMarkReadSourceIds: ['source-normal-1'],
+      autoAddReadingListSourceIds: [],
     })
 
     const wrapper = mount(FeedView, {
@@ -639,7 +679,7 @@ describe('FeedView', () => {
     expect(wrapper.text()).toContain('保持未读的条目')
   })
 
-  it('auto-adds configured sources to reading list after timeline load', async () => {
+  it('auto-adds sources to reading list from subscription flags instead of local automation rules', async () => {
     const fetchMock = vi.mocked(globalThis.fetch)
     fetchMock.mockImplementation(async (input) => {
       const url = String(input)
@@ -700,9 +740,25 @@ describe('FeedView', () => {
     })
 
     const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-later-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-later-1',
+        auto_add_reading_list: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'sub-normal-2',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-normal-2',
+        auto_add_reading_list: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
     feedStore.setAutomationRules({
       autoMarkReadSourceIds: [],
-      autoAddReadingListSourceIds: ['source-later-1'],
+      autoAddReadingListSourceIds: ['source-normal-2'],
     })
 
     mount(FeedView, {

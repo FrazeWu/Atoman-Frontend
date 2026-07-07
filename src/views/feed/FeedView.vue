@@ -347,6 +347,30 @@ const activeTheme = ref('')
 const activeSearchLabel = computed(() => querySearch.value.trim())
 const defaultGroupId = computed(() => groups.value.find((group) => group.name === '默认分组')?.id || '')
 const nonDefaultGroups = computed(() => groups.value.filter((group) => group.name !== '默认分组'))
+
+function findSubscriptionByTimelineItem(item: TimelineItem) {
+  if (item.type === 'feed_item' && item.feed_item) {
+    const sourceId = item.feed_item.feed_source?.id || item.feed_item.feed_source_id
+    if (!sourceId) return undefined
+    return subscriptions.value.find((sub) => (
+      sub.feed_source_id === sourceId
+      || sub.feed_source?.id === sourceId
+      || (!!item.feed_item?.feed_source?.rss_url && sub.feed_source?.rss_url === item.feed_item.feed_source.rss_url)
+    ))
+  }
+
+  if (item.type === 'post' && item.post) {
+    const channelId = item.post.channel_id || item.post.channel?.id
+    if (!channelId) return undefined
+    return subscriptions.value.find((sub) => (
+      sub.feed_source?.source_type === 'internal_channel'
+      && sub.feed_source.source_id === channelId
+    ))
+  }
+
+  return undefined
+}
+
 const emptyTimelineText = computed(() => {
   if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
   if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
@@ -355,18 +379,13 @@ const emptyTimelineText = computed(() => {
 
 const timeline = ref<TimelineItem[]>([])
 const visibleTimeline = computed(() => {
-  const mutedSourceIds = new Set(feedStore.filterRules.mutedSourceIds)
   const hiddenKeywords = feedStore.filterRules.hiddenKeywords.map((keyword) => keyword.toLocaleLowerCase())
 
   return timeline.value.filter((item) => {
     if (!matchesSourceTypeFilter(item, sourceTypeFilter.value)) return false
     if (!matchesThemeFilter(item, activeTheme.value)) return false
 
-    const sourceId = item.type === 'feed_item'
-      ? (item.feed_item?.feed_source?.id || item.feed_item?.feed_source_id || '')
-      : ''
-
-    if (sourceId && mutedSourceIds.has(sourceId)) return false
+    if (findSubscriptionByTimelineItem(item)?.is_muted) return false
 
     if (!hiddenKeywords.length) return true
 
@@ -1123,16 +1142,26 @@ const fetchTimeline = async () => {
 const applyAutomationRules = async (items: TimelineItem[]) => {
   if (!authStore.isAuthenticated) return
 
-  const autoReadSourceIds = new Set(feedStore.automationRules.autoMarkReadSourceIds)
-  const autoReadingListSourceIds = new Set(feedStore.automationRules.autoAddReadingListSourceIds)
-  if (!autoReadSourceIds.size && !autoReadingListSourceIds.size) return
+  const autoReadSubscriptionSourceIds = new Set(
+    subscriptions.value
+      .filter((sub) => sub.auto_mark_read)
+      .map((sub) => sub.feed_source?.id || sub.feed_source_id)
+      .filter(Boolean),
+  )
+  const autoReadingListSubscriptionSourceIds = new Set(
+    subscriptions.value
+      .filter((sub) => sub.auto_add_reading_list)
+      .map((sub) => sub.feed_source?.id || sub.feed_source_id)
+      .filter(Boolean),
+  )
+  if (!autoReadSubscriptionSourceIds.size && !autoReadingListSubscriptionSourceIds.size) return
 
   const pendingReadIds = items
     .filter((item) => (
       item.type === 'feed_item'
       && item.feed_item
       && !item.is_read
-      && autoReadSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
+      && autoReadSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
     ))
     .map((item) => item.feed_item!.id)
 
@@ -1155,7 +1184,7 @@ const applyAutomationRules = async (items: TimelineItem[]) => {
       item.type === 'feed_item'
       && item.feed_item
       && !readingListIds.value.has(item.feed_item.id)
-      && autoReadingListSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
+      && autoReadingListSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
     ))
     .map((item) => item.feed_item!.id)
 

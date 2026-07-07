@@ -145,15 +145,14 @@
   </div>
 
   <Transition name="slide-up">
-    <div v-if="player.showLyrics" class="lyrics-panel">
-      <div class="lyrics-header">
-         <span class="close-btn" @click="player.toggleLyrics">关闭</span>
-      </div>
-      <div class="lyrics-content">
-         <p class="placeholder-text">歌词即将到来</p>
-         <p class="song-meta">{{ player.currentSong.title }} - {{ artistText }}</p>
-      </div>
-    </div>
+    <MusicLyricsPanel
+      v-if="player.showLyrics && player.currentSong"
+      :song-id="String(player.currentSong.id)"
+      :song-title="player.currentSong.title"
+      :artist-text="artistText"
+      :current-time-seconds="player.currentTime"
+      @close="player.toggleLyrics"
+    />
   </Transition>
 
   <Transition name="slide-up">
@@ -198,6 +197,7 @@ import {
   Heart,
   Plus
 } from 'lucide-vue-next'
+import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import {

@@ -40,6 +40,8 @@
       :show="showManageSheet"
       :subscriptions="subscriptions"
       :groups="groups"
+      :subscription-rules="feedStore.subscriptionRules"
+      :rule-apply-summary="feedStore.ruleApplySummary"
       :filter-rules="feedStore.filterRules"
       :automation-rules="feedStore.automationRules"
       :busy="manageBusy"
@@ -55,6 +57,12 @@
       @check-all-subscriptions-health="checkAllSubscriptionsHealth"
       @import-opml="importOPML"
       @export-opml="exportOPML"
+      @save-rule="saveSubscriptionRule"
+      @move-rule-up="moveSubscriptionRuleUp"
+      @move-rule-down="moveSubscriptionRuleDown"
+      @apply-rule="applySubscriptionRule"
+      @apply-all-rules="applyAllSubscriptionRules"
+      @delete-rule="deleteSubscriptionRule"
       @update-filter-rules="updateFilterRules"
       @update-automation-rules="updateAutomationRules"
     />
@@ -294,7 +302,13 @@ import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { Filter } from 'lucide-vue-next'
-import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedItem, TimelineItem } from '@/types'
+import type {
+  AutoAddSubscriptionPayload,
+  FeedArticleSource,
+  FeedItem,
+  FeedSubscriptionRuleMatchType,
+  TimelineItem,
+} from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
 import { looksLikeUrl } from '@/utils/feedTitles'
 import { useApiUrl } from '@/composables/useApi'
@@ -686,6 +700,20 @@ const openManageSheet = () => {
   showManageSheet.value = true
 }
 
+type SubscriptionRuleSavePayload = {
+  id: string | null
+  payload: {
+    name: string
+    enabled: boolean
+    match_type: FeedSubscriptionRuleMatchType
+    conditions_json: Record<string, unknown>
+    action_group_id?: string | null
+    action_muted?: boolean | null
+    action_auto_mark_read?: boolean | null
+    action_auto_add_reading_list?: boolean | null
+  }
+}
+
 const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
   addSubscriptionError.value = ''
   addingSubscription.value = true
@@ -812,6 +840,93 @@ const exportOPML = async () => {
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const findSavedRuleId = (saved: SubscriptionRuleSavePayload) => {
+  if (saved.id) return saved.id
+  const matchedRules = feedStore.subscriptionRules.filter((rule) =>
+    rule.name === saved.payload.name
+    && rule.match_type === saved.payload.match_type
+    && JSON.stringify(rule.conditions_json) === JSON.stringify(saved.payload.conditions_json),
+  )
+  return matchedRules[matchedRules.length - 1]?.id || null
+}
+
+const confirmApplySavedRule = async (ruleId: string | null) => {
+  if (!ruleId) return
+  if (!window.confirm('规则已保存，是否立即应用到已有订阅？')) return
+  await feedStore.applySubscriptionRules({ rule_id: ruleId })
+}
+
+const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
+  manageBusy.value = true
+  try {
+    const success = saved.id
+      ? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
+      : await feedStore.createSubscriptionRule(saved.payload)
+    if (!success) return
+
+    await confirmApplySavedRule(findSavedRuleId(saved))
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
+  manageBusy.value = true
+  try {
+    await feedStore.reorderSubscriptionRules(nextRuleIds)
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const moveSubscriptionRuleUp = async (id: string) => {
+  const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id)
+  if (index <= 0) return
+  const next = [...feedStore.subscriptionRules]
+  const [target] = next.splice(index, 1)
+  next.splice(index - 1, 0, target)
+  await reorderSubscriptionRules(next.map((rule) => rule.id))
+}
+
+const moveSubscriptionRuleDown = async (id: string) => {
+  const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id)
+  if (index < 0 || index >= feedStore.subscriptionRules.length - 1) return
+  const next = [...feedStore.subscriptionRules]
+  const [target] = next.splice(index, 1)
+  next.splice(index + 1, 0, target)
+  await reorderSubscriptionRules(next.map((rule) => rule.id))
+}
+
+const applySubscriptionRule = async (id: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.applySubscriptionRules({ rule_id: id })
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const applyAllSubscriptionRules = async () => {
+  manageBusy.value = true
+  try {
+    await feedStore.applySubscriptionRules({ all: true })
+    await fetchTimeline()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const deleteSubscriptionRule = async (id: string) => {
+  manageBusy.value = true
+  try {
+    await feedStore.deleteSubscriptionRule(id)
   } finally {
     manageBusy.value = false
   }
@@ -1109,7 +1224,11 @@ const toggleAllRead = async () => {
 
 watch(showManageSheet, (visible) => {
   if (visible && authStore.isAuthenticated) {
-    void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
+    void Promise.all([
+      feedStore.fetchSubscriptions(),
+      feedStore.fetchGroups(),
+      feedStore.fetchSubscriptionRules(),
+    ])
   }
 })
 

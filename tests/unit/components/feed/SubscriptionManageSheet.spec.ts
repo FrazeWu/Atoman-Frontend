@@ -8,6 +8,30 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
     show: true,
     busy: false,
     healthChecking: false,
+    subscriptionRules: [
+      {
+        id: 'rule-1',
+        name: '播客自动整理',
+        enabled: true,
+        position: 0,
+        match_type: 'source_category',
+        conditions_json: {
+          categories: ['podcast'],
+        },
+        action_group_id: 'group-1',
+        action_muted: true,
+        action_auto_mark_read: false,
+        action_auto_add_reading_list: true,
+      },
+    ],
+    ruleApplySummary: {
+      scanned_count: 12,
+      updated_count: 5,
+      group_changed_count: 3,
+      muted_changed_count: 2,
+      auto_mark_read_changed_count: 0,
+      auto_add_reading_list_changed_count: 4,
+    },
     filterRules: {
       mutedSourceIds: [],
       hiddenKeywords: [],
@@ -61,6 +85,7 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
         emits: ['update:modelValue'],
         template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
       },
+      SubscriptionRuleEditorSheet: true,
     },
   },
 })
@@ -146,6 +171,86 @@ describe('SubscriptionManageSheet', () => {
     ])
   })
 
+  it('shows subscription rules summary and emits rule management events', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const wrapper = mountSheet()
+
+    expect(wrapper.text()).toContain('规则管理')
+    expect(wrapper.text()).toContain('播客自动整理')
+    expect(wrapper.text()).toContain('已启用')
+    expect(wrapper.text()).toContain('podcast')
+    expect(wrapper.text()).toContain('最近一次应用')
+    expect(wrapper.text()).toContain('扫描 12')
+    expect(wrapper.text()).toContain('更新 5')
+
+    await wrapper.findAll('button').find((button) => button.text() === '新建规则')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '重算全部订阅')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '上移')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '下移')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '编辑')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '应用到已有订阅')!.trigger('click')
+    await wrapper.findAll('button').find((button) => button.text() === '删除规则')!.trigger('click')
+
+    expect(wrapper.emitted('create-rule')).toEqual([[]])
+    expect(wrapper.emitted('apply-all-rules')).toEqual([[]])
+    expect(wrapper.emitted('move-rule-up')).toEqual([['rule-1']])
+    expect(wrapper.emitted('move-rule-down')).toEqual([['rule-1']])
+    expect(wrapper.emitted('edit-rule')).toEqual([['rule-1']])
+    expect(wrapper.emitted('apply-rule')).toEqual([['rule-1']])
+    expect(wrapper.emitted('delete-rule')).toEqual([['rule-1']])
+
+    confirm.mockRestore()
+  })
+
+  it('opens the rule editor and emits save when editor confirms payload', async () => {
+    const wrapper = mount(SubscriptionManageSheet, {
+      ...mountSheet().props(),
+      props: {
+        ...mountSheet().props(),
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          PField: { props: ['label'], template: '<label><span>{{ label }}</span><slot /></label>' },
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PSelect: {
+            props: ['modelValue', 'options'],
+            emits: ['update:modelValue'],
+            template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
+          },
+          SubscriptionRuleEditorSheet: {
+            props: ['show', 'mode', 'groups', 'rule'],
+            emits: ['close', 'submit'],
+            template: '<div v-if="show" data-test="rule-editor" :data-mode="mode" @click="$emit(\'submit\', { name: \'新闻静音\', enabled: true, match_type: \'source_category\', conditions_json: { categories: [\'news\'] }, action_group_id: \'group-1\', action_muted: true, action_auto_mark_read: false, action_auto_add_reading_list: false })" />',
+          },
+        },
+      },
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === '编辑')!.trigger('click')
+    await wrapper.get('[data-test="rule-editor"]').trigger('click')
+
+    expect(wrapper.emitted('save-rule')).toEqual([[
+      {
+        id: 'rule-1',
+        payload: {
+          name: '新闻静音',
+          enabled: true,
+          match_type: 'source_category',
+          conditions_json: { categories: ['news'] },
+          action_group_id: 'group-1',
+          action_muted: true,
+          action_auto_mark_read: false,
+          action_auto_add_reading_list: false,
+        },
+      },
+    ]])
+  })
+
   it('shows active filter rules and allows removing them', async () => {
     const wrapper = mount(SubscriptionManageSheet, {
       ...mountSheet().props(),
@@ -153,6 +258,8 @@ describe('SubscriptionManageSheet', () => {
         show: true,
         busy: false,
         healthChecking: false,
+        subscriptionRules: [],
+        ruleApplySummary: null,
         filterRules: {
           mutedSourceIds: ['source-1'],
           hiddenKeywords: ['剧透'],

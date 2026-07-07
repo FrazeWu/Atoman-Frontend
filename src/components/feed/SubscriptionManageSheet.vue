@@ -48,6 +48,63 @@
         </PField>
       </form>
 
+      <section class="subscription-rules-section">
+        <div class="subscription-rules-header">
+          <div>
+            <h3 class="a-title-xs">规则管理</h3>
+            <p class="a-muted">统一整理新增订阅和已有订阅。</p>
+          </div>
+          <div class="manage-toolbar">
+            <PPress variant="secondary" label="新建规则" :disabled="busy" @click="openCreateRule" />
+            <PPress
+              variant="secondary"
+              label="重算全部订阅"
+              :disabled="busy || !subscriptionRules.length"
+              @click="applyAllRules"
+            />
+          </div>
+        </div>
+
+        <div v-if="ruleApplySummary" class="rule-apply-summary">
+          <p class="a-font-meta">最近一次应用</p>
+          <p class="a-muted">
+            扫描 {{ ruleApplySummary.scanned_count }} · 更新 {{ ruleApplySummary.updated_count }} ·
+            分组 {{ ruleApplySummary.group_changed_count }} · 静音 {{ ruleApplySummary.muted_changed_count }} ·
+            自动已读 {{ ruleApplySummary.auto_mark_read_changed_count }} ·
+            自动稍后阅读 {{ ruleApplySummary.auto_add_reading_list_changed_count }}
+          </p>
+        </div>
+
+        <div v-if="subscriptionRules.length" class="subscription-rule-list">
+          <article v-for="rule in subscriptionRules" :key="rule.id" class="subscription-rule-card">
+            <div class="subscription-rule-main">
+              <div class="subscription-rule-title">
+                <strong>{{ rule.name }}</strong>
+                <span class="a-font-meta">{{ rule.enabled ? '已启用' : '已停用' }}</span>
+              </div>
+              <p class="a-muted">{{ ruleConditionSummary(rule) }}</p>
+              <p class="a-muted">{{ ruleActionSummary(rule) }}</p>
+            </div>
+            <div class="subscription-rule-actions">
+              <PPress variant="secondary" label="上移" :disabled="busy" @click="moveRuleUp(rule.id)" />
+              <PPress variant="secondary" label="下移" :disabled="busy" @click="moveRuleDown(rule.id)" />
+              <PPress variant="secondary" label="编辑" :disabled="busy" @click="openEditRule(rule)" />
+              <PPress
+                variant="secondary"
+                label="应用到已有订阅"
+                :disabled="busy"
+                @click="applyRule(rule.id)"
+              />
+              <PPress variant="secondary" label="删除规则" :disabled="busy" @click="confirmDeleteRule(rule.id)" />
+            </div>
+          </article>
+        </div>
+
+        <div v-else class="empty-state a-muted">
+          暂无规则，先创建一条。
+        </div>
+      </section>
+
       <section class="filter-rules-section">
         <div class="filter-rules-header">
           <h3 class="a-title-xs">过滤规则</h3>
@@ -228,23 +285,52 @@
         </section>
       </div>
     </div>
+
+    <SubscriptionRuleEditorSheet
+      :show="showRuleEditor"
+      :mode="ruleEditorMode"
+      :groups="groups"
+      :rule="editingRule"
+      @close="closeRuleEditor"
+      @submit="submitRuleEditor"
+    />
   </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { Subscription, SubscriptionGroup } from '@/types'
+import type {
+  ApplySubscriptionRulesSummary,
+  FeedSubscriptionRule,
+  FeedSubscriptionRuleMatchType,
+  Subscription,
+  SubscriptionGroup,
+} from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import SubscriptionRuleEditorSheet from '@/components/feed/SubscriptionRuleEditorSheet.vue'
 import type { FeedAutomationRules, FeedFilterRules } from '@/stores/feed'
+
+type RuleEditorPayload = {
+  name: string
+  enabled: boolean
+  match_type: FeedSubscriptionRuleMatchType
+  conditions_json: Record<string, unknown>
+  action_group_id?: string | null
+  action_muted?: boolean | null
+  action_auto_mark_read?: boolean | null
+  action_auto_add_reading_list?: boolean | null
+}
 
 const props = defineProps<{
   show: boolean
   subscriptions: Subscription[]
   groups: SubscriptionGroup[]
+  subscriptionRules: FeedSubscriptionRule[]
+  ruleApplySummary: ApplySubscriptionRulesSummary | null
   filterRules: FeedFilterRules
   automationRules: FeedAutomationRules
   busy?: boolean
@@ -263,6 +349,14 @@ const emit = defineEmits<{
   (e: 'check-all-subscriptions-health'): void
   (e: 'import-opml', file: File): void
   (e: 'export-opml'): void
+  (e: 'create-rule'): void
+  (e: 'edit-rule', id: string): void
+  (e: 'save-rule', payload: { id: string | null; payload: RuleEditorPayload }): void
+  (e: 'move-rule-up', id: string): void
+  (e: 'move-rule-down', id: string): void
+  (e: 'apply-rule', id: string): void
+  (e: 'apply-all-rules'): void
+  (e: 'delete-rule', id: string): void
   (e: 'update-filter-rules', rules: FeedFilterRules): void
   (e: 'update-automation-rules', rules: FeedAutomationRules): void
 }>()
@@ -272,6 +366,9 @@ const newKeyword = ref('')
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
+const showRuleEditor = ref(false)
+const ruleEditorMode = ref<'create' | 'edit'>('create')
+const editingRule = ref<FeedSubscriptionRule | null>(null)
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
@@ -299,6 +396,33 @@ const displayGroups = computed(() => [
     subscriptions: props.subscriptions.filter(sub => !sub.subscription_group_id),
   },
 ])
+
+const joinList = (items: unknown[]) => items.map((item) => String(item).trim()).filter(Boolean).join(' / ')
+
+const ruleConditionSummary = (rule: FeedSubscriptionRule) => {
+  if (rule.match_type === 'source_category') {
+    const categories = Array.isArray(rule.conditions_json.categories) ? rule.conditions_json.categories : []
+    return `条件：来源分类 ${joinList(categories)}`
+  }
+  if (rule.match_type === 'source_ids') {
+    const sourceIds = Array.isArray(rule.conditions_json.source_ids) ? rule.conditions_json.source_ids : []
+    return `条件：来源 ${joinList(sourceIds)}`
+  }
+  const keywords = Array.isArray(rule.conditions_json.keywords) ? rule.conditions_json.keywords : []
+  return `条件：关键词 ${joinList(keywords)}`
+}
+
+const ruleActionSummary = (rule: FeedSubscriptionRule) => {
+  const actions: string[] = []
+  if (rule.action_group_id) {
+    const groupName = props.groups.find((group) => group.id === rule.action_group_id)?.name || rule.action_group_id
+    actions.push(`分组到 ${groupName}`)
+  }
+  if (rule.action_muted) actions.push('静音')
+  if (rule.action_auto_mark_read) actions.push('自动已读')
+  if (rule.action_auto_add_reading_list) actions.push('自动稍后阅读')
+  return `动作：${actions.length ? actions.join(' / ') : '无'}`
+}
 
 const mutedSubscriptions = computed(() => {
   const mutedSourceIds = new Set(localFilterRules.value.mutedSourceIds)
@@ -490,6 +614,61 @@ const exportOPML = () => {
   emit('export-opml')
 }
 
+const openCreateRule = () => {
+  if (props.busy) return
+  emit('create-rule')
+  ruleEditorMode.value = 'create'
+  editingRule.value = null
+  showRuleEditor.value = true
+}
+
+const openEditRule = (rule: FeedSubscriptionRule) => {
+  if (props.busy) return
+  emit('edit-rule', rule.id)
+  ruleEditorMode.value = 'edit'
+  editingRule.value = rule
+  showRuleEditor.value = true
+}
+
+const closeRuleEditor = () => {
+  showRuleEditor.value = false
+  editingRule.value = null
+}
+
+const submitRuleEditor = (payload: RuleEditorPayload) => {
+  emit('save-rule', {
+    id: editingRule.value?.id || null,
+    payload,
+  })
+  closeRuleEditor()
+}
+
+const moveRuleUp = (id: string) => {
+  if (props.busy) return
+  emit('move-rule-up', id)
+}
+
+const moveRuleDown = (id: string) => {
+  if (props.busy) return
+  emit('move-rule-down', id)
+}
+
+const applyRule = (id: string) => {
+  if (props.busy) return
+  emit('apply-rule', id)
+}
+
+const applyAllRules = () => {
+  if (props.busy || !props.subscriptionRules.length) return
+  emit('apply-all-rules')
+}
+
+const confirmDeleteRule = (id: string) => {
+  if (props.busy) return
+  if (!window.confirm('确定删除这条规则吗？')) return
+  emit('delete-rule', id)
+}
+
 const confirmDelete = (id: string) => {
   if (props.busy) return
   if (!window.confirm('确定删除这个订阅源吗？')) return
@@ -521,7 +700,10 @@ const formatCheckedAt = (value: string) => {
 }
 
 watch(() => props.show, (visible) => {
-  if (!visible) return
+  if (!visible) {
+    closeRuleEditor()
+    return
+  }
   newGroupName.value = ''
   newKeyword.value = ''
   localFilterRules.value = {
@@ -616,6 +798,75 @@ watch(() => props.automationRules, (rules) => {
   gap: 1rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px dashed var(--a-color-line-soft);
+}
+
+.subscription-rules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px dashed var(--a-color-line-soft);
+}
+
+.subscription-rules-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.subscription-rules-header h3,
+.subscription-rules-header p,
+.rule-apply-summary p {
+  margin: 0;
+}
+
+.rule-apply-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+}
+
+.subscription-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.subscription-rule-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+}
+
+.subscription-rule-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.subscription-rule-main p {
+  margin: 0;
+}
+
+.subscription-rule-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.subscription-rule-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
 .filter-rules-header {

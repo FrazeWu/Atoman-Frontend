@@ -175,11 +175,14 @@ describe('ForumTopicView shared interactions', () => {
   it('只允许评论作者、话题作者或管理员删除评论', async () => {
     const { wrapper } = await mountTopicView()
     const canDelete = wrapper.findComponent(CommentThreadStub).props('canDelete') as (comment: {
-      user?: { id?: string }
+      user_id?: string | null
+      user?: { id?: string | number; uuid?: string }
     }) => boolean
 
     expect(canDelete({ user: { id: 'other-user' } })).toBe(false)
     expect(canDelete({ user: { id: 'user-2' } })).toBe(true)
+    expect(canDelete({ user_id: 'user-2' })).toBe(true)
+    expect(canDelete({ user: { uuid: 'user-2' } })).toBe(true)
 
     const authStore = useAuthStore()
     authStore.user = { uuid: 'user-1', username: 'author', email: 'author@example.com' }

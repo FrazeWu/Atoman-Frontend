@@ -146,15 +146,19 @@ describe('PostDetailView shared interactions', () => {
   it('只允许评论作者、文章作者或管理员删除评论', async () => {
     const wrapper = await mountPostDetail()
     const canDelete = wrapper.findComponent(CommentThreadStub).props('canDelete') as (comment: {
-      user?: { id?: string }
+      user_id?: string | null
+      user?: { id?: string | number; uuid?: string }
     }) => boolean
 
     expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
 
     const authStore = useAuthStore()
-    authStore.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    authStore.user = { id: 42, uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
     expect(canDelete({ user: { id: 'other-user' } })).toBe(false)
     expect(canDelete({ user: { id: 'reader-1' } })).toBe(true)
+    expect(canDelete({ user_id: 'reader-1' })).toBe(true)
+    expect(canDelete({ user: { uuid: 'reader-1' } })).toBe(true)
+    expect(canDelete({ user: { id: 42 } })).toBe(true)
 
     authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
     expect(canDelete({ user: { id: 'other-user' } })).toBe(true)

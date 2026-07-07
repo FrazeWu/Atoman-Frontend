@@ -228,7 +228,8 @@ export type InteractionModule = 'blog' | 'forum' | 'videos'
 export type InteractionTargetType = 'post' | 'forum_topic' | 'video'
 
 export interface InteractionUserRef {
-  id?: string
+  id?: string | number
+  uuid?: string
   username: string
   display_name?: string
   avatar_url?: string
@@ -238,6 +239,7 @@ export interface InteractionComment {
   id: string
   content: string
   created_at: string
+  user_id?: string | null
   root_comment_id?: string | null
   parent_comment_id?: string | null
   reply_to_user?: InteractionUserRef | null

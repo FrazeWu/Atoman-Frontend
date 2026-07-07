@@ -176,10 +176,17 @@ const commentNotice = computed(() => {
 })
 const canDeleteComment = (comment: InteractionComment) => {
   if (!authStore.user) return false
-  const authNumericId = authStore.user.id === undefined ? undefined : String(authStore.user.id)
+  const authIDs = new Set([
+    authStore.user.uuid,
+    authStore.user.id === undefined ? undefined : String(authStore.user.id),
+  ].filter((id): id is string => Boolean(id)))
+  const commentIDs = [
+    comment.user_id ?? undefined,
+    comment.user?.uuid,
+    comment.user?.id === undefined ? undefined : String(comment.user.id),
+  ].filter((id): id is string => Boolean(id))
   return (
-    comment.user?.id === authStore.user.uuid ||
-    comment.user?.id === authNumericId ||
+    commentIDs.some((id) => authIDs.has(id)) ||
     authStore.user.uuid === forumStore.currentTopic?.user_id ||
     isAdminRole(authStore.user.role)
   )

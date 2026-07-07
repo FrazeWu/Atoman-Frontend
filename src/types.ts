@@ -132,7 +132,7 @@ export interface User {
   uuid?: string
   username: string
   email: string
-  role?: 'user' | 'admin' | 'owner'
+  role?: 'user' | 'moderator' | 'admin' | 'owner'
   display_name?: string
   avatar_url?: string
   bio?: string

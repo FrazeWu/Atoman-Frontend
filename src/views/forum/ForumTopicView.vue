@@ -148,7 +148,7 @@ import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
-import { isAdminRole } from '@/utils/roles'
+import { isAdminRole, isModeratorRole } from '@/utils/roles'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -188,7 +188,7 @@ const canDeleteComment = (comment: InteractionComment) => {
   return (
     commentIDs.some((id) => authIDs.has(id)) ||
     authStore.user.uuid === forumStore.currentTopic?.user_id ||
-    isAdminRole(authStore.user.role)
+    isModeratorRole(authStore.user.role)
   )
 }
 

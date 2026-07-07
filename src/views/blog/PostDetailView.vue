@@ -142,7 +142,7 @@ import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useInteractions } from '@/composables/useInteractions'
-import { isAdminRole } from '@/utils/roles'
+import { isModeratorRole } from '@/utils/roles'
 import type { InteractionComment, Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 
@@ -208,7 +208,7 @@ const canDeleteComment = (comment: InteractionComment) => {
   return (
     commentIDs.some((id) => authIDs.has(id)) ||
     authStore.user.uuid === post.value?.user_id ||
-    isAdminRole(authStore.user.role)
+    isModeratorRole(authStore.user.role)
   )
 }
 

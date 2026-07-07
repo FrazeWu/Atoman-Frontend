@@ -188,6 +188,9 @@ describe('ForumTopicView shared interactions', () => {
     authStore.user = { uuid: 'user-1', username: 'author', email: 'author@example.com' }
     expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
 
+    authStore.user = { uuid: 'mod-1', username: 'mod', email: 'mod@example.com', role: 'moderator' }
+    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+
     authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
     expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
   })

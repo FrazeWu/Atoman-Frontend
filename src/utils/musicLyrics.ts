@@ -11,6 +11,10 @@ export type MusicLyricsAnnotationIndex = {
   rangesByLine: Map<string, MusicLyricsAnnotationRange[]>
 }
 
+function isIndexedAnnotation(annotation: MusicLyricsAnnotation) {
+  return annotation.status === 'active'
+}
+
 function buildPlainLineId(index: number) {
   return `plain-${index}`
 }
@@ -91,7 +95,7 @@ export function mergeLyricsWithTranslation(
 }
 
 export function buildLyricsAnnotationIndex(annotations: MusicLyricsAnnotation[]): MusicLyricsAnnotationIndex {
-  const activeAnnotations = annotations.filter((annotation) => annotation.status !== 'deleted')
+  const activeAnnotations = annotations.filter(isIndexedAnnotation)
   const annotationsByLine = new Map<string, MusicLyricsAnnotation[]>()
   const rangesByLine = new Map<string, MusicLyricsAnnotationRange[]>()
 

@@ -132,6 +132,44 @@ describe('musicLyrics utils', () => {
     ])
   })
 
+  it('excludes needs_rebind annotations from line indexes and highlight ranges', () => {
+    const index = buildLyricsAnnotationIndex([
+      {
+        id: 'ann-1',
+        line_id: 'line-1',
+        body: 'active note',
+        selected_text: 'Hello',
+        start_offset: 0,
+        end_offset: 5,
+        upvotes: 2,
+        downvotes: 0,
+        net_score: 2,
+        status: 'active',
+        created_at: '2026-07-07T00:00:00Z',
+        updated_at: '2026-07-07T00:00:00Z',
+      },
+      {
+        id: 'ann-2',
+        line_id: 'line-1',
+        body: 'stale anchor',
+        selected_text: 'Hello',
+        start_offset: 0,
+        end_offset: 5,
+        upvotes: 9,
+        downvotes: 0,
+        net_score: 9,
+        status: 'needs_rebind',
+        created_at: '2026-07-07T00:00:00Z',
+        updated_at: '2026-07-07T00:00:00Z',
+      },
+    ])
+
+    expect(index.annotationsByLine.get('line-1')?.map((annotation) => annotation.id)).toEqual(['ann-1'])
+    expect(index.rangesByLine.get('line-1')).toEqual([
+      { annotationId: 'ann-1', startOffset: 0, endOffset: 5 },
+    ])
+  })
+
   it('computes current lyric line from current time in seconds', () => {
     const lines = parseLrcLyrics('[00:01.00]Hello\n[00:03.00]World')
 

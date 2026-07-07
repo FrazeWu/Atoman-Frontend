@@ -41,17 +41,14 @@
           <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
           <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
           <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
-          <span>{{ forumStore.currentTopic.reply_count }} 回复</span>
-
-          <!-- Like button -->
-          <PButton
-            v-if="authStore.isAuthenticated"
-            @click="forumStore.toggleTopicLike(forumStore.currentTopic!.id)"
-            outline
-            size="sm"
-            :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_liked }"
-          >{{ forumStore.currentTopic.is_liked ? '已赞' : '点赞' }} {{ forumStore.currentTopic.like_count }}</PButton>
-          <span v-else>{{ forumStore.currentTopic.like_count }} 赞</span>
+          <InteractionBar
+            :liked="interactions.liked.value"
+            :like-count="interactions.likeCount.value"
+            :comment-count="interactions.commentCount.value"
+            :disabled="!authStore.isAuthenticated"
+            @like="interactions.like"
+            @unlike="interactions.unlike"
+          />
 
           <!-- Bookmark button -->
           <PButton
@@ -88,136 +85,20 @@
             v-html="renderMarkdown(forumStore.currentTopic.content)"
           />
 
-          <!-- Reply sort -->
-          <div class="reply-sort-wrap">
-            <h2 class="reply-count-title">
-              {{ forumStore.currentTopic.reply_count }} 条回复
-            </h2>
-            <div class="reply-sort-tabs">
-              <PButton
-                v-for="(label, s) in replySortOptions"
-                :key="s"
-                outline
-                size="sm"
-                class="reply-sort-tab"
-                :class="{ 'reply-sort-tab-active': replySort === s }"
-                @click="setReplySort(s as 'oldest' | 'best')"
-              >{{ label }}</PButton>
+          <div class="reply-form-root">
+            <div v-if="commentNotice" class="reply-login-notice">
+              <p class="reply-login-text">{{ commentNotice }}</p>
+              <PButton v-if="!authStore.isAuthenticated && !forumStore.currentTopic.closed" to="/login">登录</PButton>
             </div>
-          </div>
-
-          <!-- Replies -->
-          <PEmpty v-if="forumStore.replies.length === 0" text="还没有回复，来说第一句" />
-          <div class="reply-scroll-list">
-            <template
-              v-for="reply in topLevelReplies"
-              :key="reply.id"
-            >
-              <ForumReplyNode
-                :reply="reply"
-                :quoted-reply="getQuotedReply(reply)"
-                :auth-user-id="authStore.user?.uuid"
-                :is-authenticated="authStore.isAuthenticated"
-                :is-solution="reply.id === forumStore.currentTopic?.solved_reply_id"
-                :is-topic-owner="authStore.user?.uuid === forumStore.currentTopic?.user_id"
-                :topic-is-solved="forumStore.currentTopic?.is_solved"
-                @quote="setQuote"
-                @delete="handleDeleteReply"
-                @toggle-like="forumStore.toggleReplyLike"
-                @report="(id) => openReportModal('reply', id)"
-                @solve="handleSolveReply"
-                @unsolve="handleUnsolveReply"
-              />
-              <!-- Sub-replies -->
-              <div v-if="subRepliesMap[reply.id]?.length" class="sub-reply-wrap">
-                <ForumReplyNode
-                  v-for="sub in (expandedReplies.has(reply.id)
-                    ? subRepliesMap[reply.id]
-                    : subRepliesMap[reply.id].slice(0, 2))"
-                  :key="sub.id"
-                  :reply="sub"
-                  :quoted-reply="getQuotedReply(sub)"
-                  :auth-user-id="authStore.user?.uuid"
-                  :is-authenticated="authStore.isAuthenticated"
-                  :is-solution="sub.id === forumStore.currentTopic?.solved_reply_id"
-                  :is-topic-owner="authStore.user?.uuid === forumStore.currentTopic?.user_id"
-                  :topic-is-solved="forumStore.currentTopic?.is_solved"
-                  @quote="setQuote"
-                  @delete="handleDeleteReply"
-                  @toggle-like="forumStore.toggleReplyLike"
-                  @report="(id) => openReportModal('reply', id)"
-                  @solve="handleSolveReply"
-                  @unsolve="handleUnsolveReply"
-                />
-                <PButton
-                  v-if="subRepliesMap[reply.id].length > 2 && !expandedReplies.has(reply.id)"
-                  outline
-                  size="sm"
-                  class="expand-replies-btn"
-                  @click="expandedReplies.add(reply.id)"
-                >展开 {{ subRepliesMap[reply.id].length - 2 }} 条回复</PButton>
-                <PButton
-                  v-if="expandedReplies.has(reply.id) && subRepliesMap[reply.id].length > 2"
-                  outline
-                  size="sm"
-                  class="expand-replies-btn"
-                  @click="expandedReplies.delete(reply.id)"
-                >收起回复</PButton>
-              </div>
-            </template>
-          </div>
-
-          <!-- Reply form -->
-          <div id="reply-form" class="reply-form-root">
-            <div v-if="forumStore.currentTopic.closed" class="reply-closed-notice">
-              该话题已关闭，不允许回复
-            </div>
-
-            <div v-else-if="!authStore.isAuthenticated" class="reply-login-notice">
-              <p class="reply-login-text">登录后即可参与讨论</p>
-              <PButton to="/login">登录</PButton>
-            </div>
-
-            <div v-else class="reply-form-wrap">
-              <h3 class="reply-form-title">
-                {{ quotedReply ? `引用 @${getReplyAuthor(quotedReply)}` : '发表回复' }}
-              </h3>
-
-              <!-- Quote indicator -->
-              <div v-if="quotedReply" class="quote-box">
-                <div>
-                  <div>引用 #{{ quotedReply.floor_number }} @{{ getReplyAuthor(quotedReply) }} 的回复</div>
-                  <div class="quote-preview">
-                    {{ getReplyPreview(quotedReply.content) }}
-                  </div>
-                </div>
-                <PButton outline size="sm" @click="clearQuote">取消引用</PButton>
-              </div>
-
-              <!-- Draft restore notice -->
-              <div v-if="draftRestored" class="draft-restored">
-                <span>已恢复草稿</span>
-                <PButton outline size="sm" @click="clearReplyDraft">清除</PButton>
-              </div>
-
-              <!-- PEditor for reply -->
-              <div class="reply-editor-wrap">
-                <PEditor
-                  v-model="replyContent"
-                  mode="normal"
-                  :rendering-level="'comment'"
-                  :enable-mentions="true"
-                  :show-mode-toggle="false"
-                  :show-sync-scroll-toggle="false"
-                  placeholder="写下你的回复…（支持 Markdown，@ 提及用户）"
-                />
-              </div>
-
-              <div class="reply-actions">
-                <PButton v-if="replyContent" outline size="sm" @click="clearReplyDraft">清除草稿</PButton>
-                <PButton @click="submitReply" :loading="submitting" :disabled="!replyContent.trim()">提交回复</PButton>
-              </div>
-            </div>
+            <CommentThread
+              :items="interactions.comments.value"
+              :loading="interactions.loadingComments.value"
+              :submitting="interactions.submittingComment.value"
+              :can-comment="canComment"
+              :can-delete="authStore.isAuthenticated"
+              :submit-action="submitComment"
+              @delete="interactions.deleteComment"
+            />
           </div>
       </div>
     </template>
@@ -263,81 +144,35 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
-import type { ForumReply } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
-import PEmpty from '@/components/ui/PEmpty.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
-import ForumReplyNode from '@/components/forum/ForumReplyNode.vue'
+import InteractionBar from '@/components/shared/InteractionBar.vue'
+import CommentThread from '@/components/shared/CommentThread.vue'
 import { useApi } from '@/composables/useApi'
-
-const PEditor = defineAsyncComponent(() => import('@/components/shared/PEditor.vue'))
+import { useInteractions } from '@/composables/useInteractions'
 
 const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
-
-const replyContent = ref('')
-const submitting = ref(false)
-const quotedReply = ref<ForumReply | null>(null)
-const replySort = ref<'oldest' | 'best'>('oldest')
+const topicId = computed(() => String(route.params.id || ''))
+const interactions = useInteractions('forum', 'forum_topic', topicId)
 const showBackTop = ref(false)
-const draftRestored = ref(false)
-
-const replyLookup = computed(() => {
-  const lookup = new Map<string, ForumReply>()
-  forumStore.replies.forEach((reply) => lookup.set(reply.id, reply))
-  return lookup
+const canComment = computed(() => Boolean(forumStore.currentTopic && !forumStore.currentTopic.closed && authStore.isAuthenticated))
+const commentNotice = computed(() => {
+  if (forumStore.currentTopic?.closed) return '该话题已关闭'
+  if (!authStore.isAuthenticated) return '登录后即可参与讨论'
+  return ''
 })
-
-const topLevelReplies = computed(() =>
-  forumStore.replies.filter((r) => !r.depth || r.depth === 0 || !r.parent_reply_id)
-)
-
-const subRepliesMap = computed(() => {
-  const map: Record<string, ForumReply[]> = {}
-  forumStore.replies.forEach((r) => {
-    if ((r.depth ?? 0) > 0 && r.parent_reply_id) {
-      if (!map[r.parent_reply_id]) map[r.parent_reply_id] = []
-      map[r.parent_reply_id].push(r)
-    }
-  })
-  return map
-})
-
-const expandedReplies = ref<Set<string>>(new Set())
-
-const replySortOptions: Record<string, string> = {
-  oldest: '时间',
-  best: '最赞',
-}
-
-const REPLY_DRAFT_KEY = () => `reply:${route.params.id}`
-
-// ─── Draft persistence for replies ──────────────────────────────────────────
-
-let autosaveTimer: ReturnType<typeof setInterval> | null = null
-
-const saveReplyDraft = () => {
-  if (replyContent.value.trim()) {
-    forumStore.saveDraftLocal(REPLY_DRAFT_KEY(), { context_key: REPLY_DRAFT_KEY(), content: replyContent.value })
-  }
-}
-
-const clearReplyDraft = () => {
-  forumStore.clearDraftLocal(REPLY_DRAFT_KEY())
-  replyContent.value = ''
-  draftRestored.value = false
-}
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -353,52 +188,8 @@ const formatTime = (iso: string) => {
   return d.toLocaleDateString('zh-CN')
 }
 
-const getReplyAuthor = (reply: ForumReply) => {
-  return reply.user?.display_name || reply.user?.username || '匿名'
-}
-
-const getReplyPreview = (content: string) => {
-  return content.replace(/\s+/g, ' ').trim().slice(0, 140)
-}
-
-const getQuotedReply = (reply: ForumReply) => {
-  if (!reply.parent_reply_id) return null
-  return replyLookup.value.get(reply.parent_reply_id) ?? null
-}
-
-const setQuote = (reply: ForumReply) => {
-  quotedReply.value = reply
-  document.getElementById('reply-form')?.scrollIntoView({ behavior: 'smooth' })
-}
-
-const clearQuote = () => {
-  quotedReply.value = null
-}
-
-const setReplySort = async (s: 'oldest' | 'best') => {
-  replySort.value = s
-  await forumStore.fetchReplies(route.params.id as string, s)
-}
-
-const submitReply = async () => {
-  if (!replyContent.value.trim()) return
-  submitting.value = true
-  const newReply = await forumStore.createReply(
-    route.params.id as string,
-    replyContent.value.trim(),
-    quotedReply.value?.id,
-  )
-  if (newReply) {
-    clearReplyDraft()
-    clearQuote()
-    await forumStore.fetchReplies(route.params.id as string, replySort.value)
-  }
-  submitting.value = false
-}
-
-const handleDeleteReply = async (replyId: string) => {
-  await forumStore.deleteReply(replyId)
-  await forumStore.fetchReplies(route.params.id as string, replySort.value)
+const submitComment = async (payload: { content: string; parentCommentId?: string }) => {
+  await interactions.createComment(payload.content, payload.parentCommentId)
 }
 
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -410,24 +201,18 @@ const onScroll = () => {
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
 onMounted(async () => {
-  const id = route.params.id as string
-  await forumStore.fetchTopic(id)
-  await forumStore.fetchReplies(id)
-
-  // Restore reply draft
-  const draft = forumStore.loadDraftLocal(REPLY_DRAFT_KEY())
-  if (draft?.content) {
-    replyContent.value = draft.content
-    draftRestored.value = true
+  await forumStore.fetchTopic(topicId.value)
+  if (forumStore.currentTopic) {
+    interactions.liked.value = forumStore.currentTopic.is_liked
+    interactions.likeCount.value = forumStore.currentTopic.like_count
+    interactions.commentCount.value = forumStore.currentTopic.reply_count
+    await interactions.fetchComments()
   }
 
-  // Autosave every 2s
-  autosaveTimer = setInterval(saveReplyDraft, 2000)
   window.addEventListener('scroll', onScroll)
 })
 
 onBeforeUnmount(() => {
-  if (autosaveTimer) clearInterval(autosaveTimer)
   window.removeEventListener('scroll', onScroll)
 })
 
@@ -486,28 +271,6 @@ const toggleFeatured = async () => {
   })
   if (res.ok) {
     topic.featured = !topic.featured
-  }
-}
-
-const handleSolveReply = async (replyId: string) => {
-  const res = await fetch(`${api.url}/forum/replies/${replyId}/solve`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (res.ok && forumStore.currentTopic) {
-    forumStore.currentTopic.is_solved = true
-    forumStore.currentTopic.solved_reply_id = replyId
-  }
-}
-
-const handleUnsolveReply = async (replyId: string) => {
-  const res = await fetch(`${api.url}/forum/replies/${replyId}/solve`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (res.ok && forumStore.currentTopic) {
-    forumStore.currentTopic.is_solved = false
-    forumStore.currentTopic.solved_reply_id = undefined
   }
 }
 </script>

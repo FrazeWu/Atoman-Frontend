@@ -94,13 +94,14 @@
 
         <!-- Interaction bar -->
         <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 0;margin-bottom:3rem">
-          <button
-            @click="toggleLike"
-            class="a-toggle-btn"
-            :class="{ 'a-toggle-btn-active': liked }"
-          >
-            ♥ {{ likesCount }}
-          </button>
+          <InteractionBar
+            :liked="interactions.liked.value"
+            :like-count="interactions.likeCount.value"
+            :comment-count="interactions.commentCount.value"
+            :disabled="!authStore.isAuthenticated"
+            @like="interactions.like"
+            @unlike="interactions.unlike"
+          />
           <a
             v-if="post.user?.username"
             :href="api.feed.rss(post.user.username)"
@@ -113,11 +114,17 @@
         </div>
 
         <!-- Comments -->
-        <CommentSection
-          :post-id="post.id"
-          :allow-comments="post.allow_comments"
-          :comment-mode="siteAccessStore.blogCommentMode"
-          :post-owner-id="post.user_id"
+        <div v-if="commentNotice" class="comment-notice">
+          {{ commentNotice }}
+        </div>
+        <CommentThread
+          :items="interactions.comments.value"
+          :loading="interactions.loadingComments.value"
+          :submitting="interactions.submittingComment.value"
+          :can-comment="canComment"
+          :can-delete="authStore.isAuthenticated"
+          :submit-action="submitComment"
+          @delete="interactions.deleteComment"
         />
       </div>
     </article>
@@ -127,14 +134,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import CommentSection from '@/components/blog/CommentSection.vue'
-import PConfirm from '@/components/ui/PConfirm.vue'
-import PSheet from '@/components/ui/PSheet.vue'
+import InteractionBar from '@/components/shared/InteractionBar.vue'
+import CommentThread from '@/components/shared/CommentThread.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import { useInteractions } from '@/composables/useInteractions'
 import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 
@@ -149,6 +156,8 @@ type EmbedData = {
 type PostDetailResponse = Post & {
   liked?: boolean
   is_liked?: boolean
+  like_count?: number
+  comment_count?: number
 }
 
 const props = defineProps<{
@@ -163,13 +172,12 @@ const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
 const api = useApi()
 const { renderMarkdown } = useMarkdownRenderer()
+const interactions = useInteractions('blog', 'post', postId)
 
 const post = ref<Post | null>(null)
 const isAcademic = ref(false)
 const loading = ref(true)
 const errorStatus = ref<number | null>(null)
-const liked = ref(false)
-const likesCount = ref(0)
 const bookmarked = ref(false)
 const showUnbookmarkConfirm = ref(false)
 const postEmbeds = ref<Record<string, EmbedData>>({})
@@ -177,6 +185,14 @@ const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
 
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
+const canComment = computed(() =>
+  Boolean(post.value?.allow_comments && siteAccessStore.blogCommentMode !== 'disabled' && authStore.isAuthenticated),
+)
+const commentNotice = computed(() => {
+  if (!post.value?.allow_comments || siteAccessStore.blogCommentMode === 'disabled') return '评论已关闭'
+  if (!authStore.isAuthenticated) return '登录后即可评论'
+  return ''
+})
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -228,8 +244,9 @@ const fetchPost = async () => {
       const d = await res.json()
       const detail = (d.data || d) as PostDetailResponse
       post.value = detail
-      liked.value = detail.liked ?? detail.is_liked ?? false
-      likesCount.value = detail.likes_count ?? 0
+      interactions.liked.value = detail.liked ?? detail.is_liked ?? false
+      interactions.likeCount.value = detail.likes_count ?? detail.like_count ?? 0
+      interactions.commentCount.value = detail.comments_count ?? detail.comment_count ?? 0
 
       if (post.value?.channel_id) {
         void fetch(`${api.url}/feed/events/read`, {
@@ -258,6 +275,8 @@ const fetchPost = async () => {
       if (props.id && post.value) {
         sheetStore.updateSheetTitle(props.id, 'post', post.value.title)
       }
+
+      await interactions.fetchComments()
     } else {
       errorStatus.value = res.status
     }
@@ -393,22 +412,8 @@ const fetchEmbeds = async (content: string) => {
   await Promise.all([fetchPostEmbeds(content), fetchMusicEmbeds(content), fetchVideoEmbeds(content)])
 }
 
-const toggleLike = async () => {
-  if (!authStore.isAuthenticated || !post.value) return
-  const method = liked.value ? 'DELETE' : 'POST'
-  try {
-    const res = await fetch(api.blog.likes, {
-      method,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-      body: JSON.stringify({ target_type: 'post', target_id: post.value.id })
-    })
-    if (res.ok) {
-      liked.value = !liked.value
-      likesCount.value += liked.value ? 1 : -1
-    }
-  } catch (e) {
-    console.error(e)
-  }
+const submitComment = async (payload: { content: string; parentCommentId?: string }) => {
+  await interactions.createComment(payload.content, payload.parentCommentId)
 }
 
 onMounted(fetchPost)

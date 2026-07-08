@@ -47,18 +47,24 @@ export function useMusicLyrics() {
   const loading = ref(false)
   const saving = ref(false)
   const errorMessage = ref('')
+  let activeLoadRequestId = 0
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
 
   async function load(songId: string) {
+    const requestId = ++activeLoadRequestId
     loading.value = true
     errorMessage.value = ''
     try {
-      lyrics.value = await getMusicSongLyrics(songId)
+      const nextLyrics = await getMusicSongLyrics(songId)
+      if (requestId !== activeLoadRequestId) return
+      lyrics.value = nextLyrics
     } catch {
+      if (requestId !== activeLoadRequestId) return
       lyrics.value = null
       errorMessage.value = '歌词加载失败'
     } finally {
+      if (requestId !== activeLoadRequestId) return
       loading.value = false
     }
   }

@@ -12,6 +12,14 @@ const mocks = vi.hoisted(() => ({
   currentLine: vi.fn(),
 }))
 
+const apiMocks = vi.hoisted(() => ({
+  getMusicSongLyrics: vi.fn(),
+}))
+
+const authState = vi.hoisted(() => ({
+  user: null as null | { id?: number | string; uuid?: string; username: string; email: string },
+}))
+
 const lyricsState = {
   lyrics: ref<any>(null),
   loading: ref(false),
@@ -43,6 +51,19 @@ vi.mock('@/composables/useMusicLyrics', () => ({
   }),
 }))
 
+vi.mock('@/api/musicV1', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/musicV1')>()
+
+  return {
+    ...actual,
+    getMusicSongLyrics: apiMocks.getMusicSongLyrics,
+  }
+})
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => authState,
+}))
+
 vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
   default: {
     props: ['line', 'annotations', 'active', 'bilingual'],
@@ -60,20 +81,6 @@ vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
         <button type="button" class="select-text" @click="$emit('select-text', { line, selectedText: 'Neon', startOffset: 0, endOffset: 4 })">
           选中文本
         </button>
-      </div>
-    `,
-  },
-}))
-
-vi.mock('@/components/music/MusicAnnotationPanel.vue', () => ({
-  default: {
-    props: ['annotations'],
-    template: `
-      <div class="annotation-panel-stub">
-        <span class="annotation-count">{{ annotations.length }}</span>
-        <button type="button" class="vote-annotation" @click="$emit('vote', annotations[0]?.id, 'up')">投票</button>
-        <button type="button" class="edit-annotation" @click="$emit('edit', annotations[0])">编辑</button>
-        <button type="button" class="delete-annotation" @click="$emit('delete', annotations[0]?.id)">删除</button>
       </div>
     `,
   },
@@ -125,6 +132,11 @@ async function mountPanel(props?: Record<string, unknown>) {
 
 describe('MusicLyricsPanel.vue', () => {
   beforeEach(() => {
+    authState.user = {
+      uuid: 'user-1',
+      username: 'fafa',
+      email: 'fafa@example.com',
+    }
     lyricsState.lyrics.value = {
       song_id: 'song-1',
       format: 'plain',
@@ -192,7 +204,7 @@ describe('MusicLyricsPanel.vue', () => {
 
     await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
 
-    expect(wrapper.get('.annotation-count').text()).toBe('1')
+    expect(wrapper.get('.music-annotation-panel__count').text()).toBe('1')
   })
 
   it('从歌词选区创建注释', async () => {
@@ -232,5 +244,74 @@ describe('MusicLyricsPanel.vue', () => {
       format: 'plain',
       edit_summary: '修正歌词',
     })
+  })
+
+  it('作者标识落在 creator.uuid 时仍显示编辑和删除', async () => {
+    lyricsState.lyrics.value.annotations[0].creator = {
+      uuid: 'user-1',
+      username: 'fafa',
+    }
+
+    const wrapper = await mountPanel()
+    await flushPromises()
+    await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
+
+    const actionButtons = wrapper.findAll('.music-annotation-card__actions button')
+    expect(actionButtons.map((button) => button.text())).toEqual(['编辑', '删除'])
+  })
+})
+
+describe('useMusicLyrics', () => {
+  beforeEach(() => {
+    apiMocks.getMusicSongLyrics.mockReset()
+  })
+
+  it('快速切歌时忽略晚返回的旧歌词请求', async () => {
+    let resolveSong1: ((value: any) => void) | null = null
+    let resolveSong2: ((value: any) => void) | null = null
+
+    apiMocks.getMusicSongLyrics.mockImplementation((songId: string) => new Promise((resolve) => {
+      if (songId === 'song-1') resolveSong1 = resolve
+      if (songId === 'song-2') resolveSong2 = resolve
+    }))
+
+    const { useMusicLyrics } = await vi.importActual<typeof import('@/composables/useMusicLyrics')>('@/composables/useMusicLyrics')
+    const musicLyrics = useMusicLyrics()
+
+    const firstLoad = musicLyrics.load('song-1')
+    const secondLoad = musicLyrics.load('song-2')
+
+    resolveSong2?.({
+      id: 'lyrics-2',
+      song_id: 'song-2',
+      format: 'plain',
+      content: 'Song 2',
+      translation: '',
+      edit_summary: 'latest',
+      updated_at: '2026-07-08T00:00:00Z',
+      lines: [],
+      annotations: [],
+      version: 1,
+    })
+    await secondLoad
+
+    resolveSong1?.({
+      id: 'lyrics-1',
+      song_id: 'song-1',
+      format: 'plain',
+      content: 'Song 1',
+      translation: '',
+      edit_summary: 'stale',
+      updated_at: '2026-07-08T00:00:00Z',
+      lines: [],
+      annotations: [],
+      version: 1,
+    })
+    await firstLoad
+
+    expect(musicLyrics.lyrics.value?.song_id).toBe('song-2')
+    expect(musicLyrics.lyrics.value?.content).toBe('Song 2')
+    expect(musicLyrics.loading.value).toBe(false)
+    expect(musicLyrics.errorMessage.value).toBe('')
   })
 })

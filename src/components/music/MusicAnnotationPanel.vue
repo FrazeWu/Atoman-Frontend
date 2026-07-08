@@ -83,14 +83,21 @@ const emit = defineEmits<{
   delete: [annotationId: string]
 }>()
 
-const currentUserId = computed(() => {
-  const user = authStore.user
-  if (!user) return ''
-  return String(user.id ?? user.uuid ?? '')
-})
+function collectIdentityValues(value: Record<string, unknown> | null | undefined) {
+  if (!value) return []
+
+  return [value.id, value.uuid]
+    .filter((candidate) => candidate !== null && candidate !== undefined && candidate !== '')
+    .map((candidate) => String(candidate))
+}
+
+const currentUserIds = computed(() => collectIdentityValues(authStore.user as Record<string, unknown> | null))
 
 function canManageAnnotation(annotation: MusicLyricsAnnotation) {
-  return currentUserId.value !== '' && currentUserId.value === annotation.creator?.id
+  if (currentUserIds.value.length === 0) return false
+
+  const creatorIds = collectIdentityValues(annotation.creator as Record<string, unknown> | null)
+  return creatorIds.some((creatorId) => currentUserIds.value.includes(creatorId))
 }
 
 function annotationScore(annotation: MusicLyricsAnnotation) {

@@ -48,11 +48,13 @@ export function useMusicLyrics() {
   const saving = ref(false)
   const errorMessage = ref('')
   let activeLoadRequestId = 0
+  const activeSongId = ref('')
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
 
   async function load(songId: string) {
     const requestId = ++activeLoadRequestId
+    activeSongId.value = songId
     loading.value = true
     errorMessage.value = ''
     try {
@@ -73,13 +75,20 @@ export function useMusicLyrics() {
     saving.value = true
     errorMessage.value = ''
     try {
-      lyrics.value = await updateMusicSongLyrics(songId, input)
-      return lyrics.value
+      const updatedLyrics = await updateMusicSongLyrics(songId, input)
+      if (activeSongId.value === songId) {
+        lyrics.value = updatedLyrics
+      }
+      return updatedLyrics
     } catch (error) {
-      errorMessage.value = '歌词保存失败'
+      if (activeSongId.value === songId) {
+        errorMessage.value = '歌词保存失败'
+      }
       throw error
     } finally {
-      saving.value = false
+      if (activeSongId.value === songId) {
+        saving.value = false
+      }
     }
   }
 
@@ -87,12 +96,14 @@ export function useMusicLyrics() {
     errorMessage.value = ''
     try {
       const annotation = await createMusicLyricsAnnotation(songId, input)
-      if (lyrics.value) {
+      if (activeSongId.value === songId && lyrics.value) {
         lyrics.value.annotations = [...lyrics.value.annotations, annotation]
       }
       return annotation
     } catch (error) {
-      errorMessage.value = '注释创建失败'
+      if (activeSongId.value === songId) {
+        errorMessage.value = '注释创建失败'
+      }
       throw error
     }
   }
@@ -101,10 +112,12 @@ export function useMusicLyrics() {
     errorMessage.value = ''
     try {
       const updated = await updateMusicLyricsAnnotation(songId, annotationId, input)
-      if (lyrics.value) replaceAnnotation(lyrics.value, updated)
+      if (activeSongId.value === songId && lyrics.value) replaceAnnotation(lyrics.value, updated)
       return updated
     } catch (error) {
-      errorMessage.value = '注释更新失败'
+      if (activeSongId.value === songId) {
+        errorMessage.value = '注释更新失败'
+      }
       throw error
     }
   }
@@ -113,12 +126,14 @@ export function useMusicLyrics() {
     errorMessage.value = ''
     try {
       const result = await deleteMusicLyricsAnnotation(songId, annotationId)
-      if (result.deleted && lyrics.value) {
+      if (activeSongId.value === songId && result.deleted && lyrics.value) {
         lyrics.value.annotations = lyrics.value.annotations.filter((annotation) => annotation.id !== annotationId)
       }
       return result
     } catch (error) {
-      errorMessage.value = '注释删除失败'
+      if (activeSongId.value === songId) {
+        errorMessage.value = '注释删除失败'
+      }
       throw error
     }
   }
@@ -127,10 +142,12 @@ export function useMusicLyrics() {
     errorMessage.value = ''
     try {
       const updated = await voteMusicLyricsAnnotation(songId, annotationId, vote)
-      if (lyrics.value) replaceAnnotation(lyrics.value, updated)
+      if (activeSongId.value === songId && lyrics.value) replaceAnnotation(lyrics.value, updated)
       return updated
     } catch (error) {
-      errorMessage.value = '注释投票失败'
+      if (activeSongId.value === songId) {
+        errorMessage.value = '注释投票失败'
+      }
       throw error
     }
   }

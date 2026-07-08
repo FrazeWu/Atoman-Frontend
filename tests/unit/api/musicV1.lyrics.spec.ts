@@ -40,8 +40,8 @@ describe('music lyrics endpoints', () => {
   it('builds music lyrics endpoint paths', () => {
     expect(musicV1Endpoints.songLyrics('song-1')).toBe('/api/v1/music/songs/song-1/lyrics')
     expect(musicV1Endpoints.lyricAnnotations('song-1')).toBe('/api/v1/music/songs/song-1/lyrics/annotations')
-    expect(musicV1Endpoints.lyricAnnotation('ann-1')).toBe('/api/v1/music/lyrics/annotations/ann-1')
-    expect(musicV1Endpoints.lyricAnnotationVote('ann-1')).toBe('/api/v1/music/lyrics/annotations/ann-1/vote')
+    expect(musicV1Endpoints.lyricAnnotation('song-1', 'ann-1')).toBe('/api/v1/music/songs/song-1/lyrics/annotations/ann-1')
+    expect(musicV1Endpoints.lyricAnnotationVote('song-1', 'ann-1')).toBe('/api/v1/music/songs/song-1/lyrics/annotations/ann-1/votes')
     expect(musicV1Endpoints.songLyricsVersions('song-1')).toBe('/api/v1/music/songs/song-1/lyrics/versions')
     expect(musicV1Endpoints.songLyricsVersionRevert('song-1', 3)).toBe('/api/v1/music/songs/song-1/lyrics/versions/3/revert')
   })
@@ -57,10 +57,14 @@ describe('music lyrics api adapter', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({
         data: {
+          id: 'lyrics-1',
           song_id: 'song-1',
           format: 'lrc',
           content: '[00:01.00]Hello',
           translation: '[00:01.00]你好',
+          edit_summary: 'initial',
+          updated_at: '2026-07-07T00:00:00Z',
+          updated_by: 'user-1',
           lines: [],
           annotations: [],
           version: 4,
@@ -82,10 +86,14 @@ describe('music lyrics api adapter', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({
         data: {
+          id: 'lyrics-1',
           song_id: 'song-1',
           format: 'plain',
           content: 'Hello',
           translation: '你好',
+          edit_summary: 'cleanup',
+          updated_at: '2026-07-07T00:00:00Z',
+          updated_by: 'user-1',
           lines: [],
           annotations: [],
           version: 5,
@@ -99,12 +107,6 @@ describe('music lyrics api adapter', () => {
       translation: '你好',
       format: 'plain',
       edit_summary: 'cleanup',
-      annotation_resolutions: [
-        {
-          annotation_id: 'ann-1',
-          action: 'needs_rebind',
-        },
-      ],
     })
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/songs/song-1/lyrics', {
@@ -116,12 +118,6 @@ describe('music lyrics api adapter', () => {
         translation: '你好',
         format: 'plain',
         edit_summary: 'cleanup',
-        annotation_resolutions: [
-          {
-            annotation_id: 'ann-1',
-            action: 'needs_rebind',
-          },
-        ],
       }),
     })
   })
@@ -132,17 +128,22 @@ describe('music lyrics api adapter', () => {
         JSON.stringify({
           data: {
             id: 'ann-1',
-            line_id: 'line-1',
+            song_id: 'song-1',
+            line_key: 'line-1',
             body: 'note',
             selected_text: 'Hello',
             start_offset: 0,
             end_offset: 5,
             upvotes: 0,
             downvotes: 0,
-            net_score: 0,
             created_at: '2026-07-07T00:00:00Z',
             updated_at: '2026-07-07T00:00:00Z',
             status: 'active',
+            creator: {
+              id: 'user-1',
+              username: 'fafa',
+            },
+            viewer_vote: 'none',
           },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -151,17 +152,22 @@ describe('music lyrics api adapter', () => {
         JSON.stringify({
           data: {
             id: 'ann-1',
-            line_id: 'line-1',
+            song_id: 'song-1',
+            line_key: 'line-1',
             body: 'updated',
             selected_text: 'Hello',
             start_offset: 0,
             end_offset: 5,
             upvotes: 0,
             downvotes: 0,
-            net_score: 0,
             created_at: '2026-07-07T00:00:00Z',
             updated_at: '2026-07-07T00:01:00Z',
             status: 'active',
+            creator: {
+              id: 'user-1',
+              username: 'fafa',
+            },
+            viewer_vote: 'none',
           },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -172,14 +178,14 @@ describe('music lyrics api adapter', () => {
       )))
 
     await createMusicLyricsAnnotation('song-1', {
-      line_id: 'line-1',
+      line_key: 'line-1',
       selected_text: 'Hello',
       start_offset: 0,
       end_offset: 5,
       body: 'note',
     })
-    await updateMusicLyricsAnnotation('ann-1', { body: 'updated' })
-    await deleteMusicLyricsAnnotation('ann-1')
+    await updateMusicLyricsAnnotation('song-1', 'ann-1', { body: 'updated' })
+    await deleteMusicLyricsAnnotation('song-1', 'ann-1')
 
     expect(vi.mocked(fetch).mock.calls[0]).toEqual([
       '/api/v1/music/songs/song-1/lyrics/annotations',
@@ -188,7 +194,7 @@ describe('music lyrics api adapter', () => {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
-          line_id: 'line-1',
+          line_key: 'line-1',
           selected_text: 'Hello',
           start_offset: 0,
           end_offset: 5,
@@ -197,7 +203,7 @@ describe('music lyrics api adapter', () => {
       },
     ])
     expect(vi.mocked(fetch).mock.calls[1]).toEqual([
-      '/api/v1/music/lyrics/annotations/ann-1',
+      '/api/v1/music/songs/song-1/lyrics/annotations/ann-1',
       {
         method: 'PATCH',
         credentials: 'include',
@@ -206,7 +212,7 @@ describe('music lyrics api adapter', () => {
       },
     ])
     expect(vi.mocked(fetch).mock.calls[2]).toEqual([
-      '/api/v1/music/lyrics/annotations/ann-1',
+      '/api/v1/music/songs/song-1/lyrics/annotations/ann-1',
       {
         method: 'DELETE',
         credentials: 'include',
@@ -216,32 +222,36 @@ describe('music lyrics api adapter', () => {
     ])
   })
 
-  it('votes on annotations with PUT', async () => {
+  it('votes on annotations with POST', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({
         data: {
           id: 'ann-1',
-          line_id: 'line-1',
+          song_id: 'song-1',
+          line_key: 'line-1',
           body: 'note',
           selected_text: 'Hello',
           start_offset: 0,
           end_offset: 5,
           upvotes: 3,
           downvotes: 1,
-          net_score: 2,
-          current_user_vote: 'down',
           created_at: '2026-07-07T00:00:00Z',
           updated_at: '2026-07-07T00:00:00Z',
           status: 'active',
+          creator: {
+            id: 'user-2',
+            username: 'other',
+          },
+          viewer_vote: 'down',
         },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
 
-    await voteMusicLyricsAnnotation('ann-1', 'down')
+    await voteMusicLyricsAnnotation('song-1', 'ann-1', 'down')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/lyrics/annotations/ann-1/vote', {
-      method: 'PUT',
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/songs/song-1/lyrics/annotations/ann-1/votes', {
+      method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ vote: 'down' }),
@@ -257,10 +267,13 @@ describe('music lyrics api adapter', () => {
               id: 'version-1',
               song_id: 'song-1',
               version: 1,
+              content: 'Hello',
+              translation: '',
+              format: 'plain',
               edit_summary: 'initial',
               created_at: '2026-07-07T00:00:00Z',
-              editor_id: 'user-1',
-              is_current: false,
+              created_by: 'user-1',
+              updated_by: 'user-1',
             },
           ],
         }),
@@ -269,10 +282,14 @@ describe('music lyrics api adapter', () => {
       .mockResolvedValueOnce(new Response(
         JSON.stringify({
           data: {
+            id: 'lyrics-1',
             song_id: 'song-1',
             format: 'plain',
             content: 'Hello again',
             translation: '',
+            edit_summary: 'restore',
+            updated_at: '2026-07-07T00:01:00Z',
+            updated_by: 'user-1',
             lines: [],
             annotations: [],
             version: 2,

@@ -19,11 +19,12 @@ const lyricsState = {
   errorMessage: ref(''),
 }
 
-const annotationsByLine = computed<Record<string, any[]>>(() => {
-  const index: Record<string, any[]> = {}
+const annotationsByLine = computed<Map<string, any[]>>(() => {
+  const index = new Map<string, any[]>()
   for (const annotation of lyricsState.lyrics.value?.annotations ?? []) {
-    index[annotation.line_id] ??= []
-    index[annotation.line_id].push(annotation)
+    const lineAnnotations = index.get(annotation.line_key) ?? []
+    lineAnnotations.push(annotation)
+    index.set(annotation.line_key, lineAnnotations)
   }
   return index
 })
@@ -48,7 +49,7 @@ vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
     template: `
       <div
         class="lyrics-line-stub"
-        :data-line-id="line.id"
+        :data-line-id="line.line_key ?? line.id"
         :data-active="String(active)"
         :data-annotation-count="annotations.length"
       >
@@ -130,25 +131,32 @@ describe('MusicLyricsPanel.vue', () => {
       content: 'Neon lights\nMidnight radio',
       translation: '霓虹灯\n午夜电台',
       version: 3,
+      edit_summary: 'initial',
+      updated_at: '2026-07-07T00:00:00Z',
+      updated_by: 'user-1',
       lines: [
-        { id: 'line-1', text: 'Neon lights', translation: '霓虹灯', startTimeMs: 0, endTimeMs: 10000, lineNumber: 1 },
-        { id: 'line-2', text: 'Midnight radio', translation: '午夜电台', startTimeMs: 10001, endTimeMs: 20000, lineNumber: 2 },
+        { line_key: 'line-1', line_index: 0, time_ms: 0, text: 'Neon lights', translation: '霓虹灯' },
+        { line_key: 'line-2', line_index: 1, time_ms: 10001, text: 'Midnight radio', translation: '午夜电台' },
       ],
       annotations: [
         {
           id: 'annotation-1',
-          line_id: 'line-1',
+          song_id: 'song-1',
+          line_key: 'line-1',
           body: '第一句的意象',
           selected_text: 'Neon',
           start_offset: 0,
           end_offset: 4,
           upvotes: 3,
           downvotes: 0,
-          net_score: 3,
-          current_user_vote: null,
           status: 'active',
           created_at: '2026-07-07T00:00:00Z',
           updated_at: '2026-07-07T00:00:00Z',
+          creator: {
+            id: 'user-1',
+            username: 'fafa',
+          },
+          viewer_vote: 'none',
         },
       ],
     }
@@ -198,7 +206,7 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('.annotation-save').trigger('click')
 
     expect(mocks.createAnnotation).toHaveBeenCalledWith('song-1', {
-      line_id: 'line-1',
+      line_key: 'line-1',
       selected_text: 'Neon',
       start_offset: 0,
       end_offset: 4,

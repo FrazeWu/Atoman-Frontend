@@ -13,10 +13,33 @@ import {
   type UpdateMusicLyricsAnnotationInput,
   type UpdateMusicSongLyricsInput,
 } from '@/api/musicV1'
-import { buildLyricsAnnotationIndex, computeCurrentLyricLine } from '@/utils/musicLyrics'
+import { computeCurrentLyricLine } from '@/utils/musicLyrics'
 
 function replaceAnnotation(lyrics: MusicSongLyrics, updated: MusicLyricsAnnotation) {
   lyrics.annotations = lyrics.annotations.map((annotation) => annotation.id === updated.id ? updated : annotation)
+}
+
+function buildAnnotationsByLine(annotations: MusicLyricsAnnotation[]) {
+  const grouped = new Map<string, MusicLyricsAnnotation[]>()
+
+  for (const annotation of annotations) {
+    if (annotation.status !== 'active') continue
+    const lineKey = annotation.line_key ?? annotation.line_id
+    if (!lineKey) continue
+    const lineAnnotations = grouped.get(lineKey) ?? []
+    lineAnnotations.push(annotation)
+    grouped.set(lineKey, lineAnnotations)
+  }
+
+  for (const lineAnnotations of grouped.values()) {
+    lineAnnotations.sort((left, right) => (
+      (right.upvotes - right.downvotes) - (left.upvotes - left.downvotes)
+      || right.upvotes - left.upvotes
+      || left.id.localeCompare(right.id)
+    ))
+  }
+
+  return grouped
 }
 
 export function useMusicLyrics() {
@@ -25,7 +48,7 @@ export function useMusicLyrics() {
   const saving = ref(false)
   const errorMessage = ref('')
 
-  const annotationsByLine = computed(() => buildLyricsAnnotationIndex(lyrics.value?.annotations ?? []).annotationsByLine)
+  const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
 
   async function load(songId: string) {
     loading.value = true
@@ -68,10 +91,10 @@ export function useMusicLyrics() {
     }
   }
 
-  async function updateAnnotation(annotationId: string, input: UpdateMusicLyricsAnnotationInput) {
+  async function updateAnnotation(songId: string, annotationId: string, input: UpdateMusicLyricsAnnotationInput) {
     errorMessage.value = ''
     try {
-      const updated = await updateMusicLyricsAnnotation(annotationId, input)
+      const updated = await updateMusicLyricsAnnotation(songId, annotationId, input)
       if (lyrics.value) replaceAnnotation(lyrics.value, updated)
       return updated
     } catch (error) {
@@ -80,10 +103,10 @@ export function useMusicLyrics() {
     }
   }
 
-  async function deleteAnnotation(annotationId: string) {
+  async function deleteAnnotation(songId: string, annotationId: string) {
     errorMessage.value = ''
     try {
-      const result = await deleteMusicLyricsAnnotation(annotationId)
+      const result = await deleteMusicLyricsAnnotation(songId, annotationId)
       if (result.deleted && lyrics.value) {
         lyrics.value.annotations = lyrics.value.annotations.filter((annotation) => annotation.id !== annotationId)
       }
@@ -94,10 +117,10 @@ export function useMusicLyrics() {
     }
   }
 
-  async function voteAnnotation(annotationId: string, vote: MusicLyricsAnnotationVote | null) {
+  async function voteAnnotation(songId: string, annotationId: string, vote: MusicLyricsAnnotationVote | null) {
     errorMessage.value = ''
     try {
-      const updated = await voteMusicLyricsAnnotation(annotationId, vote)
+      const updated = await voteMusicLyricsAnnotation(songId, annotationId, vote)
       if (lyrics.value) replaceAnnotation(lyrics.value, updated)
       return updated
     } catch (error) {
@@ -107,7 +130,16 @@ export function useMusicLyrics() {
   }
 
   function currentLine(currentTimeSeconds: number) {
-    return computeCurrentLyricLine(lyrics.value?.lines ?? [], currentTimeSeconds)
+    const normalizedLines = (lyrics.value?.lines ?? []).map((line, index, lines) => ({
+      id: line.line_key ?? line.id ?? `line-${index}`,
+      text: line.text,
+      translation: line.translation,
+      startTimeMs: line.time_ms ?? line.startTimeMs ?? null,
+      endTimeMs: lines[index + 1]?.time_ms ?? lines[index + 1]?.startTimeMs ?? null,
+      lineNumber: line.line_index ?? line.lineNumber ?? index,
+    }))
+    const activeLine = computeCurrentLyricLine(normalizedLines, currentTimeSeconds)
+    return lyrics.value?.lines.find((line) => (line.line_key ?? line.id) === activeLine?.id) ?? null
   }
 
   return {

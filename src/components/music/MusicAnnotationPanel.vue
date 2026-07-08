@@ -25,23 +25,23 @@
         <button
           type="button"
           class="music-annotation-card__vote"
-          :class="{ 'is-active': annotation.current_user_vote === 'up' }"
-          @click="emit('vote', annotation.id, annotation.current_user_vote === 'up' ? null : 'up')"
+          :class="{ 'is-active': annotation.viewer_vote === 'up' }"
+          @click="emit('vote', annotation.id, annotation.viewer_vote === 'up' ? null : 'up')"
         >
           赞 {{ annotation.upvotes }}
         </button>
         <button
           type="button"
           class="music-annotation-card__vote"
-          :class="{ 'is-active': annotation.current_user_vote === 'down' }"
-          @click="emit('vote', annotation.id, annotation.current_user_vote === 'down' ? null : 'down')"
+          :class="{ 'is-active': annotation.viewer_vote === 'down' }"
+          @click="emit('vote', annotation.id, annotation.viewer_vote === 'down' ? null : 'down')"
         >
           踩 {{ annotation.downvotes }}
         </button>
-        <span class="music-annotation-card__score">净 {{ annotation.net_score }}</span>
+        <span class="music-annotation-card__score">净 {{ annotationScore(annotation) }}</span>
       </div>
 
-      <div class="music-annotation-card__actions">
+      <div v-if="canManageAnnotation(annotation)" class="music-annotation-card__actions">
         <PButton
           type="button"
           size="sm"
@@ -64,8 +64,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { MusicLyricsAnnotation, MusicLyricsAnnotationVote } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
+import { useAuthStore } from '@/stores/auth'
 
 withDefaults(defineProps<{
   annotations?: MusicLyricsAnnotation[]
@@ -73,11 +75,27 @@ withDefaults(defineProps<{
   annotations: () => [],
 })
 
+const authStore = useAuthStore()
+
 const emit = defineEmits<{
   vote: [annotationId: string, vote: MusicLyricsAnnotationVote | null]
   edit: [annotation: MusicLyricsAnnotation]
   delete: [annotationId: string]
 }>()
+
+const currentUserId = computed(() => {
+  const user = authStore.user
+  if (!user) return ''
+  return String(user.id ?? user.uuid ?? '')
+})
+
+function canManageAnnotation(annotation: MusicLyricsAnnotation) {
+  return currentUserId.value !== '' && currentUserId.value === annotation.creator?.id
+}
+
+function annotationScore(annotation: MusicLyricsAnnotation) {
+  return annotation.upvotes - annotation.downvotes
+}
 </script>
 
 <style scoped>

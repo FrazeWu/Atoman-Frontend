@@ -38,10 +38,10 @@
         <div v-else class="music-lyrics-panel__lines">
           <MusicLyricsLine
             v-for="line in lyrics.lines"
-            :key="line.id"
+            :key="line.line_key ?? line.id ?? line.text"
             :line="line"
-            :annotations="annotationsByLine[line.id] ?? []"
-            :active="currentLineId === line.id"
+            :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
+            :active="currentLineId === (line.line_key ?? line.id ?? '')"
             :bilingual="showTranslation"
             @select-text="handleSelectText"
             @open-annotations="handleOpenAnnotations"
@@ -130,7 +130,7 @@ const selectedTextDraft = ref<{
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const isLyricEditorOpen = ref(false)
 
-const currentLineId = computed(() => currentLine(props.currentTimeSeconds)?.id ?? '')
+const currentLineId = computed(() => currentLine(props.currentTimeSeconds)?.line_key ?? currentLine(props.currentTimeSeconds)?.id ?? '')
 const showTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
 const selectedAnnotations = computed(() => {
   if (!lyrics.value || selectedAnnotationIds.value.length === 0) return []
@@ -178,15 +178,18 @@ function handleCancelAnnotation() {
 
 async function handleSaveAnnotation(body: string) {
   if (editingAnnotation.value) {
-    await updateAnnotation(editingAnnotation.value.id, { body })
+    await updateAnnotation(props.songId, editingAnnotation.value.id, { body })
     editingAnnotation.value = null
     return
   }
 
   if (!selectedTextDraft.value) return
 
+  const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
+  if (!lineKey) return
+
   await createAnnotation(props.songId, {
-    line_id: selectedTextDraft.value.line.id,
+    line_key: lineKey,
     selected_text: selectedTextDraft.value.selectedText,
     start_offset: selectedTextDraft.value.startOffset,
     end_offset: selectedTextDraft.value.endOffset,
@@ -202,12 +205,12 @@ function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
 }
 
 async function handleDeleteAnnotation(annotationId: string) {
-  await deleteAnnotation(annotationId)
+  await deleteAnnotation(props.songId, annotationId)
   selectedAnnotationIds.value = selectedAnnotationIds.value.filter((id) => id !== annotationId)
 }
 
 async function handleVoteAnnotation(annotationId: string, vote: 'up' | 'down' | null) {
-  await voteAnnotation(annotationId, vote)
+  await voteAnnotation(props.songId, annotationId, vote)
 }
 
 async function handleSaveLyrics(payload: {

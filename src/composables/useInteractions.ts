@@ -43,6 +43,7 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   const liked = ref(false)
   const loadingComments = ref(false)
   const submittingComment = ref(false)
+  let fetchCommentsSeq = 0
 
   const currentTargetId = () => unref(targetId)
   const endpoints = () => ({
@@ -118,6 +119,8 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   }
 
   const fetchComments = async () => {
+    const requestSeq = ++fetchCommentsSeq
+    const requestTargetId = currentTargetId()
     loadingComments.value = true
     try {
       const response = await fetch(endpoints().comments, {
@@ -125,11 +128,15 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
         credentials: 'include',
       })
       const payload = await readJson(response)
+      if (requestSeq !== fetchCommentsSeq || requestTargetId !== currentTargetId()) return
+
       comments.value = readItems(payload.data)
       commentCount.value = countComments(comments.value)
       applyTargetState(payload.data, { applyCommentCount: false })
     } finally {
-      loadingComments.value = false
+      if (requestSeq === fetchCommentsSeq) {
+        loadingComments.value = false
+      }
     }
   }
 

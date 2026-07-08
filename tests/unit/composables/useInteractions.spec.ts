@@ -6,6 +6,14 @@ import { useInteractions } from '@/composables/useInteractions'
 
 const fetchMock = vi.fn()
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 beforeEach(() => {
   setActivePinia(createPinia())
   fetchMock.mockReset()
@@ -77,6 +85,42 @@ describe('useInteractions', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/blog/likes', expect.objectContaining({
       body: JSON.stringify({ target_type: 'post', target_id: 'post-2' }),
     }))
+  })
+
+  it('keeps comments from the latest target when stale requests finish later', async () => {
+    const firstResponse = deferred<unknown>()
+    const secondResponse = deferred<unknown>()
+    fetchMock
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise)
+
+    const targetId = ref('video-a')
+    const interactions = useInteractions('videos', 'video', targetId)
+
+    const firstFetch = interactions.fetchComments()
+    targetId.value = 'video-b'
+    const secondFetch = interactions.fetchComments()
+
+    secondResponse.resolve({
+      ok: true,
+      json: async () => ({
+        data: { items: [{ id: 'comment-b', content: 'new', created_at: '2026-07-08T00:00:00Z' }] },
+      }),
+    })
+    await secondFetch
+
+    firstResponse.resolve({
+      ok: true,
+      json: async () => ({
+        data: { items: [{ id: 'comment-a', content: 'old', created_at: '2026-07-07T00:00:00Z' }] },
+      }),
+    })
+    await firstFetch
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/videos/video-a/comments', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/videos/video-b/comments', expect.anything())
+    expect(interactions.comments.value.map((comment) => comment.id)).toEqual(['comment-b'])
+    expect(interactions.commentCount.value).toBe(1)
   })
 
   it('deletes comments through module delete endpoint', async () => {

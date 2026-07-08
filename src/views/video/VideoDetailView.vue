@@ -1,18 +1,38 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { Video } from '@/types'
+import type { InteractionComment, Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
+import { extractTimestampFromComment, serializeTimestampComment } from '@/composables/useVideoTimestamp'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
-import VideoCommentSection from '@/components/video/VideoCommentSection.vue'
+import InteractionBar from '@/components/shared/InteractionBar.vue'
+import CommentThread from '@/components/shared/CommentThread.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
 import { useApi } from '@/composables/useApi'
+import { useInteractions } from '@/composables/useInteractions'
+import { useAuthStore } from '@/stores/auth'
+import { isModeratorRole } from '@/utils/roles'
+
+type VideoDetailResponse = Video & {
+  liked?: boolean
+  is_liked?: boolean
+  viewer_liked?: boolean
+  like_count?: number
+  likes_count?: number
+  LikeCount?: number
+  comment_count?: number
+  comments_count?: number
+  CommentCount?: number
+}
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+const videoId = computed(() => String(route.params.id || ''))
+const interactions = useInteractions('videos', 'video', videoId)
 
 const video = ref<Video | null>(null)
 const recommended = ref<Video[]>([])
@@ -67,6 +87,42 @@ function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString('zh-CN')
 }
 
+const canComment = computed(() => authStore.isAuthenticated)
+const commentNotice = computed(() => authStore.isAuthenticated ? '' : '登录后即可评论')
+
+const canDeleteComment = (comment: InteractionComment) => {
+  if (!authStore.user) return false
+  const authIDs = new Set([
+    authStore.user.uuid,
+    authStore.user.id === undefined ? undefined : String(authStore.user.id),
+  ].filter((id): id is string => Boolean(id)))
+  const commentIDs = [
+    comment.user_id ?? undefined,
+    comment.user?.uuid,
+    comment.user?.id === undefined ? undefined : String(comment.user.id),
+  ].filter((id): id is string => Boolean(id))
+  return (
+    commentIDs.some((id) => authIDs.has(id)) ||
+    authStore.user.uuid === video.value?.user_id ||
+    isModeratorRole(authStore.user.role)
+  )
+}
+
+async function submitComment(payload: { content: string; parentCommentId?: string }) {
+  const timestamp = serializeTimestampComment(extractTimestampFromComment(payload.content))
+  await interactions.createComment(
+    payload.content,
+    payload.parentCommentId,
+    timestamp.timestamp_sec === null ? undefined : timestamp,
+  )
+}
+
+function syncInteractionState(detail: VideoDetailResponse) {
+  interactions.liked.value = detail.liked ?? detail.is_liked ?? detail.viewer_liked ?? false
+  interactions.likeCount.value = detail.like_count ?? detail.likes_count ?? detail.LikeCount ?? 0
+  interactions.commentCount.value = detail.comment_count ?? detail.comments_count ?? detail.CommentCount ?? 0
+}
+
 async function load(id: string) {
   const seq = ++loadSeq
   loading.value = true
@@ -83,12 +139,15 @@ async function load(id: string) {
     ])
     if (seq !== loadSeq) return
     if (!vRes.ok) { error.value = '视频不存在'; return }
-    video.value = await vRes.json()
+    const detail = await vRes.json() as VideoDetailResponse
     if (seq !== loadSeq) return
+    video.value = detail
+    syncInteractionState(detail)
     if (rRes.ok) {
       const data = await rRes.json()
       if (seq === loadSeq) recommended.value = data
     }
+    if (seq === loadSeq) await interactions.fetchComments()
     // Fire-and-forget view count increment
     if (seq === loadSeq) fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
   } catch {
@@ -98,7 +157,7 @@ async function load(id: string) {
   }
 }
 
-onMounted(() => load(route.params.id as string))
+onMounted(() => load(videoId.value))
 watch(() => route.params.id, (id) => { if (id) load(id as string) })
 
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -257,13 +316,27 @@ function handleSeekToTimestamp(value: number) {
         <!-- Timestamp hint -->
         <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
 
-        <!-- Comment Section (before description) -->
-        <VideoCommentSection
-          :video-id="video.id"
-          :video-owner-id="video.user_id"
-          data-testid="video-comments"
-          @seek-to-timestamp="handleSeekToTimestamp"
-        />
+        <!-- Interactions and comments -->
+        <div class="vd-interactions" data-testid="video-comments">
+          <InteractionBar
+            :liked="interactions.liked.value"
+            :like-count="interactions.likeCount.value"
+            :comment-count="interactions.commentCount.value"
+            :disabled="!authStore.isAuthenticated"
+            @like="interactions.like"
+            @unlike="interactions.unlike"
+          />
+          <p v-if="commentNotice" class="vd-comment-notice">{{ commentNotice }}</p>
+          <CommentThread
+            :items="interactions.comments.value"
+            :loading="interactions.loadingComments.value"
+            :submitting="interactions.submittingComment.value"
+            :can-comment="canComment"
+            :can-delete="canDeleteComment"
+            :submit-action="submitComment"
+            @delete="interactions.deleteComment"
+          />
+        </div>
 
         <!-- Tags -->
         <div v-if="video.tags && video.tags.length" class="vd-tags">
@@ -432,6 +505,18 @@ function handleSeekToTimestamp(value: number) {
   font-family: inherit;
   margin: 0;
   line-height: 1.6;
+}
+
+.vd-interactions {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.vd-comment-notice {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--a-color-muted, #6b7280);
 }
 
 /* Sidebar */

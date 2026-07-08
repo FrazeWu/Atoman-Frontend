@@ -753,103 +753,84 @@ const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
   }
 }
 
-const createSubscriptionGroup = async (name: string) => {
+const withManageBusy = async <T>(task: () => Promise<T>): Promise<T> => {
   manageBusy.value = true
   try {
+    return await task()
+  } finally {
+    manageBusy.value = false
+  }
+}
+
+const createSubscriptionGroup = async (name: string) => {
+  await withManageBusy(async () => {
     const success = await feedStore.createGroup(name)
     if (!success) return
     await Promise.all([feedStore.fetchGroups(), feedStore.fetchSubscriptions()])
     await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const renameSubscription = async (id: string, title: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     const success = await feedStore.updateSubscription(id, { title })
     if (success) await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const moveSubscription = async (id: string, groupId: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     const success = await feedStore.updateSubscription(id, { group_id: groupId })
     if (success) await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const deleteSubscription = async (id: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.unsubscribe(id)
     currentPage.value = 1
     await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const renameGroup = async (id: string, name: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.updateGroup(id, name)
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const deleteGroup = async (id: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.deleteGroup(id)
     currentPage.value = 1
     await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const checkSubscriptionHealth = async (id: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.checkSubscriptionHealth(id)
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const checkAllSubscriptionsHealth = async () => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.checkAllSubscriptionsHealth()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const importOPML = async (file: File) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     const result = await feedStore.importOPML(file)
     if (result) {
       currentPage.value = 1
       await fetchTimeline()
     }
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const exportOPML = async () => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     const blob = await feedStore.exportOPML()
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -859,9 +840,7 @@ const exportOPML = async () => {
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const findSavedRuleId = (saved: SubscriptionRuleSavePayload) => {
@@ -881,8 +860,7 @@ const confirmApplySavedRule = async (ruleId: string | null) => {
 }
 
 const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     const success = saved.id
       ? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
       : await feedStore.createSubscriptionRule(saved.payload)
@@ -890,18 +868,13 @@ const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
 
     await confirmApplySavedRule(findSavedRuleId(saved))
     await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.reorderSubscriptionRules(nextRuleIds)
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const moveSubscriptionRuleUp = async (id: string) => {
@@ -923,32 +896,23 @@ const moveSubscriptionRuleDown = async (id: string) => {
 }
 
 const applySubscriptionRule = async (id: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.applySubscriptionRules({ rule_id: id })
     await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const applyAllSubscriptionRules = async () => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.applySubscriptionRules({ all: true })
     await fetchTimeline()
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const deleteSubscriptionRule = async (id: string) => {
-  manageBusy.value = true
-  try {
+  await withManageBusy(async () => {
     await feedStore.deleteSubscriptionRule(id)
-  } finally {
-    manageBusy.value = false
-  }
+  })
 }
 
 const updateFilterRules = (rules: { mutedSourceIds: string[]; hiddenKeywords: string[] }) => {

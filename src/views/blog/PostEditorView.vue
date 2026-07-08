@@ -1097,12 +1097,18 @@ const onCollectionToggle = (id: string, event: Event) => {
   }
 }
 
+const uniqueCollectionIds = (ids: string[]) => Array.from(new Set(ids))
+
+const diffCollectionIds = (targetIds: string[], existingIds: string[]) => ({
+  toAdd: targetIds.filter(id => !existingIds.includes(id)),
+  toRemove: existingIds.filter(id => !targetIds.includes(id)),
+})
+
 // ── 同步合集 ─────────────────────────────────────────────
 const syncPostCollections = async (postId: string) => {
-  const target = Array.from(new Set(selectedCollectionIds.value))
-  const existing = Array.from(new Set(existingCollectionIds.value))
-  const toAdd = target.filter(id => !existing.includes(id))
-  const toRemove = existing.filter(id => !target.includes(id))
+  const target = uniqueCollectionIds(selectedCollectionIds.value)
+  const existing = uniqueCollectionIds(existingCollectionIds.value)
+  const { toAdd, toRemove } = diffCollectionIds(target, existing)
   for (const id of toAdd) {
     const res = await fetch(api.blog.postCollections(postId), {
       method: 'POST',
@@ -1176,7 +1182,7 @@ const save = async (status: SaveTarget) => {
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || null,
-          collection_ids: Array.from(new Set(selectedCollectionIds.value)),
+          collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
         }),
       })
     } else {
@@ -1186,7 +1192,7 @@ const save = async (status: SaveTarget) => {
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || selectedChannelId.value || undefined,
-          collection_ids: Array.from(new Set(selectedCollectionIds.value)),
+          collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
         }),
       })
     }

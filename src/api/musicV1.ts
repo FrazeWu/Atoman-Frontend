@@ -1,5 +1,5 @@
 import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
-import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
+import type { ApiList, ApiSuccess, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
 export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
@@ -446,6 +446,23 @@ export type MusicEditFilters = {
   page?: number
   page_size?: number
   sort?: string
+}
+
+type PaginationFallbackFilters = Pick<MusicListFilters, 'page' | 'page_size'>
+
+function listResponseWithPaginationFallback<T>(
+  response: ApiSuccess<T[], PaginationMeta>,
+  filters: PaginationFallbackFilters = {},
+): MusicListResponse<T> {
+  return {
+    data: response.data,
+    meta: response.meta ?? {
+      page: filters.page ?? 1,
+      page_size: filters.page_size ?? response.data.length,
+      total: response.data.length,
+      has_more: false,
+    },
+  }
 }
 
 export type AlbumEditDraft = {
@@ -970,15 +987,7 @@ export function buildAlbumEditFromCreationFlow(
 
 export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicAlbumListItem>> {
   const response = await apiGetEnvelope<MusicAlbumListItem[], PaginationMeta>(`${musicV1Endpoints.albums()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
 }
 
 export async function listArtistBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
@@ -1208,15 +1217,7 @@ export async function listRecommendedArtists(mode: MusicRecommendationMode) {
 
 export async function listMusicArtists(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicArtistListItem>> {
   const response = await apiGetEnvelope<MusicArtistListItem[], PaginationMeta>(`${musicV1Endpoints.artists()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
 }
 
 export async function getMusicArtist(artistId: string): Promise<MusicArtistListItem & { albums?: MusicAlbumListItem[] }> {
@@ -1237,15 +1238,7 @@ export async function submitMusicEdit(request: MusicEditRequest): Promise<MusicE
 
 export async function listMusicEdits(filters: MusicEditFilters = {}): Promise<MusicListResponse<MusicEditSummary>> {
   const response = await apiGetEnvelope<MusicEditSummary[], PaginationMeta>(`${musicV1Endpoints.edits()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
 }
 
 export async function voteMusicEdit(editId: string, vote: 'yes' | 'no', comment = ''): Promise<MusicEditSummary> {

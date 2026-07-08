@@ -48,6 +48,7 @@ export function useMusicLyrics() {
   const saving = ref(false)
   const errorMessage = ref('')
   let activeLoadRequestId = 0
+  let activeSaveRequestId = 0
   const activeSongId = ref('')
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
@@ -72,6 +73,7 @@ export function useMusicLyrics() {
   }
 
   async function save(songId: string, input: UpdateMusicSongLyricsInput) {
+    const requestId = ++activeSaveRequestId
     saving.value = true
     errorMessage.value = ''
     try {
@@ -86,7 +88,7 @@ export function useMusicLyrics() {
       }
       throw error
     } finally {
-      if (activeSongId.value === songId) {
+      if (requestId === activeSaveRequestId) {
         saving.value = false
       }
     }

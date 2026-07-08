@@ -66,5 +66,6 @@ describe('useMusicLyrics', () => {
 
     expect(composable.lyrics.value?.song_id).toBe('song-2')
     expect(composable.lyrics.value?.content).toBe('song two')
+    expect(composable.saving.value).toBe(false)
   })
 })

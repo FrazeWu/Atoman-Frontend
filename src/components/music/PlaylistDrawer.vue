@@ -4,16 +4,27 @@ import { computed, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { getMusicPlaylist, updateMusicPlaylist, uploadMusicAsset, type MusicPlaylistDetail, type MusicSongListItem } from '@/api/musicV1'
+import {
+  createPlaylistBookmark,
+  deletePlaylistBookmark,
+  deleteMusicPlaylist,
+  getMusicPlaylist,
+  listPlaylistBookmarks,
+  updateMusicPlaylist,
+  uploadMusicAsset,
+  type MusicPlaylistDetail,
+  type MusicSongListItem,
+} from '@/api/musicV1'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
-const { state, closePlaylist } = useMusicDrawers()
+const { state, closePlaylist, refreshPlaylists } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 
@@ -24,11 +35,33 @@ const loading = ref(false)
 const errorMessage = ref('')
 const editing = ref(false)
 const saving = ref(false)
+const deleting = ref(false)
+const editName = ref('')
 const editDescription = ref('')
 const editIsPublic = ref(false)
 const editCoverUrl = ref('')
 const coverUploading = ref(false)
 const coverInput = ref<HTMLInputElement | null>(null)
+const isBookmarked = ref(false)
+const bookmarkLoading = ref(false)
+
+async function loadBookmarkState(playlistId: string) {
+  if (!authStore.isAuthenticated) {
+    isBookmarked.value = false
+    return
+  }
+
+  try {
+    const response = await listPlaylistBookmarks()
+    isBookmarked.value = response.data.some((bookmark) => String(bookmark.playlist_id) === playlistId)
+  } catch (error) {
+    if (error instanceof ApiErrorResponseError && error.status === 401) {
+      isBookmarked.value = false
+      return
+    }
+    console.error('Failed to fetch playlist bookmark state:', error)
+  }
+}
 
 async function loadPlaylist(playlistId: string | null) {
   if (!playlistId) {
@@ -43,6 +76,7 @@ async function loadPlaylist(playlistId: string | null) {
     await authStore.restoreSession()
     const detail = await getMusicPlaylist(playlistId)
     playlist.value = detail
+    await loadBookmarkState(String(detail.id))
   } catch (error) {
     console.error('Failed to fetch playlist details:', error)
     errorMessage.value = '歌单信息加载失败'
@@ -52,6 +86,7 @@ async function loadPlaylist(playlistId: string | null) {
 }
 
 function syncEditForm(detail: MusicPlaylistDetail | null) {
+  editName.value = detail?.name || ''
   editDescription.value = detail?.description || ''
   editIsPublic.value = Boolean(detail?.is_public)
   editCoverUrl.value = detail?.cover_url || ''
@@ -97,10 +132,16 @@ async function savePlaylist() {
     return
   }
 
+  if (!editName.value.trim()) {
+    errorMessage.value = '请输入歌单名称'
+    return
+  }
+
   saving.value = true
   errorMessage.value = ''
   try {
     const payload = {
+      name: editName.value.trim(),
       description: editDescription.value.trim(),
       is_public: editIsPublic.value,
       ...(editCoverUrl.value.trim() ? { cover_url: editCoverUrl.value.trim() } : {}),
@@ -122,6 +163,35 @@ async function savePlaylist() {
         : '歌单保存失败'
   } finally {
     saving.value = false
+  }
+}
+
+async function deletePlaylist() {
+  if (!playlist.value || deleting.value) return
+  if (!window.confirm('删除后无法恢复，确定删除这张歌单吗？')) return
+
+  await authStore.restoreSession()
+  if (!authStore.isAuthenticated) {
+    errorMessage.value = '请先登录'
+    return
+  }
+
+  deleting.value = true
+  errorMessage.value = ''
+  try {
+    await deleteMusicPlaylist(playlist.value.id)
+    refreshPlaylists()
+    editing.value = false
+    closePlaylist()
+  } catch (error) {
+    console.error('Failed to delete playlist:', error)
+    errorMessage.value = error instanceof ApiErrorResponseError
+      ? error.message
+      : error instanceof Error
+        ? error.message
+        : '歌单删除失败'
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -166,10 +236,17 @@ const firstSongCover = computed(() => {
 
 const displayCover = computed(() => playlist.value?.cover_url || firstSongCover.value || null)
 const editCoverPreview = computed(() => editCoverUrl.value || firstSongCover.value || '')
+const playlistOwnerName = computed(() => playlist.value?.owner_username?.trim() || 'Atoman Studio')
 const canEditPlaylist = computed(() => {
   if (!authStore.isAuthenticated) return false
   if (!playlist.value?.user_id) return false
   return authStore.user?.uuid === playlist.value.user_id
+})
+const canBookmarkPlaylist = computed(() => {
+  if (!authStore.isAuthenticated) return false
+  if (!playlist.value?.is_public) return false
+  if (!playlist.value?.user_id) return true
+  return authStore.user?.uuid !== playlist.value.user_id
 })
 
 function playPlaylist() {
@@ -181,6 +258,44 @@ function playTrack(track: MusicSongListItem) {
   if (!track.audio_url) return
   const index = playableSongs.value.findIndex((song) => song.id === track.id)
   player.playAlbum(playableSongs.value, index >= 0 ? index : 0)
+}
+
+async function toggleBookmark() {
+  if (!playlist.value || bookmarkLoading.value) return
+  await authStore.restoreSession()
+  if (!authStore.isAuthenticated) {
+    errorMessage.value = '请先登录'
+    return
+  }
+
+  const playlistId = String(playlist.value.id)
+  bookmarkLoading.value = true
+  errorMessage.value = ''
+  try {
+    if (isBookmarked.value) {
+      await deletePlaylistBookmark(playlistId)
+      isBookmarked.value = false
+      playlist.value = {
+        ...playlist.value,
+        bookmark_count: Math.max(0, (playlist.value.bookmark_count ?? 0) - 1),
+      }
+      refreshPlaylists()
+      return
+    }
+
+    await createPlaylistBookmark(playlistId)
+    isBookmarked.value = true
+    playlist.value = {
+      ...playlist.value,
+      bookmark_count: (playlist.value.bookmark_count ?? 0) + 1,
+    }
+    refreshPlaylists()
+  } catch (error) {
+    console.error('Failed to toggle playlist bookmark:', error)
+    errorMessage.value = '操作失败'
+  } finally {
+    bookmarkLoading.value = false
+  }
 }
 
 watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
@@ -211,7 +326,7 @@ watch(playlist, syncEditForm, { immediate: true })
           <h2 class="playlist-title">{{ playlist?.name || '歌单详情' }}</h2>
           <p v-if="playlist?.description" class="playlist-description">{{ playlist.description }}</p>
           <div class="playlist-stats">
-            <span class="stat-author">Atoman Studio</span>
+            <span class="stat-author">{{ playlistOwnerName }}</span>
             <span class="stat-dot">•</span>
             <span class="stat-count">{{ playlist?.song_count || 0 }} 首单曲</span>
             <span class="stat-dot">•</span>
@@ -239,6 +354,15 @@ watch(playlist, syncEditForm, { immediate: true })
           @click="startEditPlaylist"
         >
           编辑
+        </PButton>
+        <PButton
+          v-if="canBookmarkPlaylist"
+          variant="secondary"
+          :loading="bookmarkLoading"
+          data-testid="playlist-bookmark-button"
+          @click="toggleBookmark"
+        >
+          {{ isBookmarked ? '取消收藏' : '收藏歌单' }}
         </PButton>
       </div>
 
@@ -312,12 +436,19 @@ watch(playlist, syncEditForm, { immediate: true })
     <div class="playlist-edit-sheet">
       <PPageHeader
         title="编辑歌单"
-        sub="修改可见性、简介和封面。公开后会进入发现页候选。"
+        sub="修改名称、可见性、简介和封面。"
         accent
         mb="0"
       />
 
       <div class="playlist-edit-panel">
+        <PInput
+          data-testid="playlist-name-input"
+          :model-value="editName"
+          placeholder="歌单名称"
+          @update:model-value="(value) => editName = value"
+        />
+
         <div class="playlist-edit-row">
           <label class="playlist-edit-toggle">
             <input
@@ -361,8 +492,17 @@ watch(playlist, syncEditForm, { immediate: true })
 
         <div class="playlist-edit-actions">
           <PButton
-            variant="secondary"
+            data-testid="playlist-delete-button"
+            variant="danger"
+            :loading="deleting"
             :disabled="saving"
+            @click="deletePlaylist"
+          >
+            删除
+          </PButton>
+          <PButton
+            variant="secondary"
+            :disabled="saving || deleting"
             @click="cancelEditPlaylist"
           >
             取消
@@ -370,6 +510,7 @@ watch(playlist, syncEditForm, { immediate: true })
           <PButton
             data-testid="playlist-save-button"
             :loading="saving"
+            :disabled="deleting"
             @click="savePlaylist"
           >
             保存

@@ -1,12 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiErrorResponseError } from '@/api/client'
-
-vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    query: {},
-  }),
-}))
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const mocks = vi.hoisted(() => ({
   listArtistBookmarks: vi.fn(),
@@ -16,9 +11,14 @@ const mocks = vi.hoisted(() => ({
   getMusicAlbum: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
   deleteArtistBookmark: vi.fn(),
-  openArtist: vi.fn(),
-  openAlbum: vi.fn(),
-  openPlaylist: vi.fn(),
+  routerPush: vi.fn(),
+}))
+
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    query: {},
+  }),
+  useRouter: () => ({ push: mocks.routerPush }),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -29,20 +29,6 @@ vi.mock('@/api/musicV1', () => ({
   getMusicAlbum: mocks.getMusicAlbum,
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
   deleteArtistBookmark: mocks.deleteArtistBookmark,
-}))
-
-vi.mock('@/composables/useMusicDrawers', () => ({
-  useMusicDrawers: () => ({
-    state: { value: { artistId: null, albumId: null, albumRefreshToken: 0 } },
-    openArtist: mocks.openArtist,
-    openAlbum: mocks.openAlbum,
-    openPlaylist: mocks.openPlaylist,
-    closeArtist: vi.fn(),
-    closeAlbum: vi.fn(),
-    isArtistShifted: { value: false },
-    isAlbumShifted: { value: false },
-    openNestedAction: vi.fn(),
-  }),
 }))
 
 vi.mock('@/components/music/ArtistDrawer.vue', () => ({
@@ -68,9 +54,8 @@ describe('Music StarredView', () => {
     mocks.getMusicAlbum.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
     mocks.deleteArtistBookmark.mockReset()
-    mocks.openArtist.mockReset()
-    mocks.openAlbum.mockReset()
-    mocks.openPlaylist.mockReset()
+    mocks.routerPush.mockReset()
+    useMusicDrawers().closeAll()
 
     mocks.listArtistBookmarks.mockResolvedValue({
       data: [{ id: 'artist-bookmark-1', artist_id: 'artist-1', created_at: '2026-07-01T00:00:00Z' }],
@@ -143,8 +128,8 @@ describe('Music StarredView', () => {
     await wrapper.get('[data-testid="filter-artist"]').trigger('click')
     await wrapper.get('[data-testid="starred-artist-card"]').trigger('click')
 
-    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
-    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(useMusicDrawers().state.value.albumId).toBe('album-1')
+    expect(useMusicDrawers().state.value.artistId).toBe('artist-1')
   })
 
   it('opens playlist drawer when clicking starred playlist cards', async () => {
@@ -157,7 +142,7 @@ describe('Music StarredView', () => {
 
     await wrapper.get('[data-testid="starred-playlist-card"]').trigger('click')
 
-    expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
+    expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/playlist-1')
   })
 
   it('shows empty state instead of error when bookmarks require login', async () => {
@@ -191,5 +176,22 @@ describe('Music StarredView', () => {
     expect(mocks.listArtistBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
     expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
     expect(mocks.listPlaylistBookmarks).toHaveBeenCalledWith({ sort: 'popular' })
+  })
+
+  it('reloads starred items when playlist refresh token changes', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    mocks.listArtistBookmarks.mockClear()
+    mocks.listAlbumBookmarks.mockClear()
+    mocks.listPlaylistBookmarks.mockClear()
+
+    useMusicDrawers().refreshPlaylists()
+    await flushPromises()
+
+    expect(wrapper.exists()).toBe(true)
+    expect(mocks.listArtistBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
+    expect(mocks.listAlbumBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
+    expect(mocks.listPlaylistBookmarks).toHaveBeenCalledWith({ sort: 'latest' })
   })
 })

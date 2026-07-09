@@ -1,23 +1,18 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const mocks = vi.hoisted(() => ({
   listMusicPlaylists: vi.fn(),
   listPlaylistBookmarks: vi.fn(),
   createMusicPlaylist: vi.fn(),
-  openPlaylist: vi.fn(),
+  routerPush: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ path: '/music' }),
-}))
-
-vi.mock('@/composables/useMusicDrawers', () => ({
-  useMusicDrawers: () => ({
-    state: { value: { playlistId: null } },
-    openPlaylist: mocks.openPlaylist,
-  }),
+  useRouter: () => ({ push: mocks.routerPush }),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -31,7 +26,8 @@ describe('MusicSidebarPlaylists', () => {
     mocks.listMusicPlaylists.mockReset()
     mocks.listPlaylistBookmarks.mockReset()
     mocks.createMusicPlaylist.mockReset()
-    mocks.openPlaylist.mockReset()
+    mocks.routerPush.mockReset()
+    useMusicDrawers().closeAll()
 
     mocks.listMusicPlaylists.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } })
     mocks.listPlaylistBookmarks.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } })
@@ -96,6 +92,23 @@ describe('MusicSidebarPlaylists', () => {
 
     await wrapper.get('[data-testid="bookmarked-playlist-shared-1"]').trigger('click')
 
-    expect(mocks.openPlaylist).toHaveBeenCalledWith('shared-1')
+    expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/shared-1')
+  })
+
+  it('reloads sidebar playlists when playlist refresh token changes', async () => {
+    const wrapper = mount(MusicSidebarPlaylists, {
+      props: { collapsed: false },
+    })
+    await flushPromises()
+
+    mocks.listMusicPlaylists.mockClear()
+    mocks.listPlaylistBookmarks.mockClear()
+
+    useMusicDrawers().refreshPlaylists()
+    await flushPromises()
+
+    expect(wrapper.exists()).toBe(true)
+    expect(mocks.listMusicPlaylists).toHaveBeenCalled()
+    expect(mocks.listPlaylistBookmarks).toHaveBeenCalled()
   })
 })

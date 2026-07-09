@@ -34,7 +34,7 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
+const { openAlbum, openArtist } = useMusicDrawers()
 const loading = ref(false)
 const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
@@ -260,7 +260,7 @@ function openDiscoverArtist(artist: MusicRecommendationItem) {
 }
 
 function openDiscoverPlaylist(playlist: MusicPlaylistSummary) {
-  openPlaylist(String(playlist.id))
+  router.push(`/music/playlist/${playlist.id}`)
 }
 
 function openAlbumResult(album: MusicAlbumListItem) {

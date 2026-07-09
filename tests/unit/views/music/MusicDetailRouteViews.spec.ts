@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   openArtist: vi.fn(),
   openAlbum: vi.fn(),
+  openPlaylist: vi.fn(),
   closeAll: vi.fn(),
   routeParams: {} as Record<string, string>,
 }))
@@ -18,6 +19,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     openArtist: mocks.openArtist,
     openAlbum: mocks.openAlbum,
+    openPlaylist: mocks.openPlaylist,
     closeAll: mocks.closeAll,
   }),
 }))
@@ -33,6 +35,7 @@ describe('music legacy detail route shells', () => {
   beforeEach(() => {
     mocks.openArtist.mockReset()
     mocks.openAlbum.mockReset()
+    mocks.openPlaylist.mockReset()
     mocks.closeAll.mockReset()
     mocks.routeParams = {}
   })
@@ -54,6 +57,16 @@ describe('music legacy detail route shells', () => {
     const wrapper = mount(component)
 
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-456')
+    expect(wrapper.find('[data-testid="music-home-view-stub"]').exists()).toBe(true)
+  })
+
+  it('opens the playlist drawer for /playlist/:playlistId', async () => {
+    mocks.routeParams = { playlistId: 'playlist-789' }
+    const component = (await import('@/views/music/MusicPlaylistRouteView.vue')).default
+
+    const wrapper = mount(component)
+
+    expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-789')
     expect(wrapper.find('[data-testid="music-home-view-stub"]').exists()).toBe(true)
   })
 })

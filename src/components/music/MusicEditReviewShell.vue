@@ -1,13 +1,13 @@
 <template>
   <div class="music-edit-review-shell">
-    <PPageHeader title="音乐审核" sub="统一展示 Music edit 队列，并提供 approve / reject / cancel 操作。" kicker="Music Review" accent />
+    <PPageHeader title="音乐审核" sub="处理音乐资料的新增、修改和删除请求。" accent />
 
     <div class="music-edit-review-shell__filters">
       <PSelect v-model="statusModel" label="状态" :options="statusOptions" />
       <PSelect v-model="entityTypeModel" label="实体类型" :options="entityTypeOptions" />
     </div>
 
-    <PEmpty v-if="!items.length" description="当前没有待审核的 music edits" />
+    <PEmpty v-if="!items.length" description="当前没有待处理请求" />
 
     <div v-else class="music-edit-review-shell__list">
       <PEntry
@@ -17,8 +17,8 @@
         :summary="item.reason || '暂无理由'"
       >
         <template #meta>
-          <span>{{ item.type }}</span>
-          <span>{{ item.status }}</span>
+          <span>{{ editTypeLabel(item.type) }}</span>
+          <span>{{ statusLabel(item.status) }}</span>
           <span>{{ item.createdAt }}</span>
         </template>
         <template #summary>{{ item.reason || '暂无说明' }}</template>
@@ -67,19 +67,45 @@ const emit = defineEmits<{
 
 const statusOptions = [
   { label: '全部状态', value: '' },
-  { label: 'Open', value: 'open' },
-  { label: 'Applied', value: 'applied' },
-  { label: 'Rejected', value: 'rejected' },
-  { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Reverted', value: 'reverted' },
+  { label: '待处理', value: 'open' },
+  { label: '已通过', value: 'applied' },
+  { label: '已驳回', value: 'rejected' },
+  { label: '已取消', value: 'cancelled' },
+  { label: '已回退', value: 'reverted' },
 ]
 
 const entityTypeOptions = [
-  { label: '全部实体', value: '' },
-  { label: 'Artist', value: 'artist' },
-  { label: 'Album', value: 'album' },
-  { label: 'Song', value: 'song' },
+  { label: '全部内容', value: '' },
+  { label: '艺人', value: 'artist' },
+  { label: '专辑', value: 'album' },
+  { label: '单曲', value: 'song' },
 ]
+
+const statusText: Partial<Record<MusicEditStatus, string>> = {
+  open: '待处理',
+  applied: '已通过',
+  rejected: '已驳回',
+  cancelled: '已取消',
+  reverted: '已回退',
+}
+
+const editTypeText: Partial<Record<MusicEditType, string>> = {
+  create_artist: '新增艺人',
+  update_artist: '修改艺人',
+  merge_artist: '合并艺人',
+  create_album: '新增专辑',
+  update_album: '修改专辑',
+  delete_album: '删除专辑',
+  update_song: '修改单曲',
+}
+
+function statusLabel(status: MusicEditStatus) {
+  return statusText[status] || status
+}
+
+function editTypeLabel(type: MusicEditType) {
+  return editTypeText[type] || type
+}
 
 const statusModel = computed({
   get: () => props.status,

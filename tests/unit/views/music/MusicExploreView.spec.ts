@@ -284,7 +284,7 @@ describe('Music ExploreView.vue', () => {
     expect(wrapper.text()).toContain('暂无公开歌单')
   })
 
-  it('opens playlist drawer when clicking a discover playlist card', async () => {
+  it('opens playlist route when clicking a discover playlist card', async () => {
     const wrapper = mount(ExploreView, {
       global: {
         stubs: {
@@ -297,8 +297,8 @@ describe('Music ExploreView.vue', () => {
 
     await wrapper.get('[data-testid="discover-playlist-card"]').trigger('click')
 
-    expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
-    expect(mocks.push).not.toHaveBeenCalledWith('/music/playlists/playlist-1')
+    expect(mocks.push).toHaveBeenCalledWith('/music/playlist/playlist-1')
+    expect(mocks.openPlaylist).not.toHaveBeenCalled()
   })
 
   it('opens album drawer when clicking a discover album card', async () => {

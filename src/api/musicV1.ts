@@ -336,6 +336,7 @@ export type CreateMusicPlaylistInput = {
 }
 
 export type UpdateMusicPlaylistInput = {
+  name?: string
   description?: string
   cover_url?: string
   is_public?: boolean
@@ -446,6 +447,12 @@ export type MusicEditFilters = {
   page?: number
   page_size?: number
   sort?: string
+}
+
+export type MusicUploadTarget = {
+  entityType: 'artist' | 'album' | 'playlist'
+  entityId: string
+  stagingId: string
 }
 
 type PaginationFallbackFilters = Pick<MusicListFilters, 'page' | 'page_size'>
@@ -725,10 +732,16 @@ export function buildDeleteAlbumEdit(albumId: string, reason: string): MusicEdit
 export async function uploadMusicAsset(
   file: File,
   purpose: Extract<UploadPurpose, 'music.cover' | 'music.audio'>,
+  target?: MusicUploadTarget,
 ): Promise<UploadAsset> {
   const form = new FormData()
   form.append('file', file)
   form.append('purpose', purpose)
+  if (target) {
+    form.append('entity_type', target.entityType)
+    form.append('entity_id', target.entityId)
+    form.append('staging_id', target.stagingId)
+  }
   return apiPostMultipart<UploadAsset>(musicV1Endpoints.uploads(), form)
 }
 
@@ -1101,6 +1114,10 @@ export async function updateMusicPlaylist(playlistId: string, input: UpdateMusic
     const absoluteUrl = new URL(musicV1Endpoints.playlist(playlistId), window.location.origin).toString()
     return apiPatchJson<MusicPlaylistDetail>(absoluteUrl, input)
   }
+}
+
+export async function deleteMusicPlaylist(playlistId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.playlist(playlistId))
 }
 
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {

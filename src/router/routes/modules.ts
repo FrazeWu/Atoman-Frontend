@@ -53,6 +53,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         },
         { path: 'artist/:artistId', component: () => import('@/views/music/MusicArtistRouteView.vue') },
         { path: 'album/:albumId', component: () => import('@/views/music/MusicAlbumRouteView.vue') },
+        { path: 'playlist/:playlistId', component: () => import('@/views/music/MusicPlaylistRouteView.vue') },
         {
           path: 'album/:albumId/edit',
           redirect: (to) => `/music?editor=album-edit&album=${to.params.albumId}`,

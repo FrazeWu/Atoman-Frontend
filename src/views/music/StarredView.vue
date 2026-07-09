@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
@@ -43,6 +44,7 @@ const sortOptions: Array<{ label: string; value: StarredSortMode }> = [
   { label: '最新', value: 'latest' },
   { label: '最热', value: 'popular' },
 ]
+const router = useRouter()
 
 const filteredItems = computed(() => {
   if (activeFilter.value === 'artist') return artistItems.value
@@ -55,7 +57,7 @@ const hasVisibleItems = computed(() => (
     ? playlistItems.value.length > 0
     : filteredItems.value.length > 0
 ))
-const { isMainShifted, openArtist, openAlbum, openPlaylist } = useMusicDrawers()
+const { state, isMainShifted, openArtist, openAlbum } = useMusicDrawers()
 
 function handleItemClick(item: MusicStarredItem) {
   if (item.kind === 'artist' && item.artist?.id) {
@@ -69,7 +71,7 @@ function handleItemClick(item: MusicStarredItem) {
 }
 
 function handlePlaylistClick(playlistId: string) {
-  openPlaylist(playlistId)
+  router.push(`/music/playlist/${playlistId}`)
 }
 
 async function handleToggleArtistBookmark(artistId: string) {
@@ -159,6 +161,13 @@ onMounted(() => {
 watch(sortMode, () => {
   loadStarred()
 })
+
+watch(
+  () => state.value.playlistRefreshToken,
+  () => {
+    loadStarred()
+  },
+)
 </script>
 
 <template>

@@ -9,6 +9,7 @@ vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<d
 vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div data-testid="album-drawer-stub" />' } }))
 vi.mock('@/components/music/NestedActionDrawer.vue', () => ({ default: { template: '<div data-testid="nested-action-drawer-stub" />' } }))
 vi.mock('@/components/music/MusicEntityEditorDrawer.vue', () => ({ default: { template: '<div data-testid="music-entity-editor-drawer-stub" />' } }))
+vi.mock('@/components/music/MusicCreationFlowDrawer.vue', () => ({ default: { template: '<div data-testid="music-creation-flow-drawer-stub" />' } }))
 vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
   default: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
 }))

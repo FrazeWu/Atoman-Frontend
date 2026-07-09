@@ -443,11 +443,13 @@ describe('music v1 adapter', () => {
           track_number: 1,
           lyrics: 'lyrics',
           audio_url: 'https://cdn.example.com/song-1.mp3',
+          audio_key: 'music/album/album-1/staging/stage-1/tracks/song-1.mp3',
         },
         {
           title: 'New Song',
           track_number: 2,
           audio_url: 'https://cdn.example.com/song-2.mp3',
+          audio_key: 'music/album/album-1/staging/stage-1/tracks/new-song.mp3',
         },
       ],
       reason: 'Update album tracks',
@@ -471,11 +473,13 @@ describe('music v1 adapter', () => {
             track_number: 1,
             lyrics: 'lyrics',
             audio_url: 'https://cdn.example.com/song-1.mp3',
+            audio_key: 'music/album/album-1/staging/stage-1/tracks/song-1.mp3',
           },
           {
             title: 'New Song',
             track_number: 2,
             audio_url: 'https://cdn.example.com/song-2.mp3',
+            audio_key: 'music/album/album-1/staging/stage-1/tracks/new-song.mp3',
           },
         ],
       },
@@ -499,6 +503,27 @@ describe('music v1 adapter', () => {
     expect(result.url).not.toMatch(/^\/uploads\//)
     expect(body.get('purpose')).toBe('music.cover')
     expect(body.get('file')).toBe(file)
+  })
+
+  it('uploads music assets with entity staging metadata when provided', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { url: 'https://cdn.example.com/assets/music/album/album-1/staging/stage-1/cover.png', key: 'music/album/album-1/staging/stage-1/cover.png', content_type: 'image/png', size: 1 } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    const file = new File(['x'], 'cover.png', { type: 'image/png' })
+
+    await uploadMusicAsset(file, 'music.cover', {
+      entityType: 'album',
+      entityId: 'album-1',
+      stagingId: 'stage-1',
+    })
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    const body = (init as RequestInit).body as FormData
+    expect(body.get('purpose')).toBe('music.cover')
+    expect(body.get('entity_type')).toBe('album')
+    expect(body.get('entity_id')).toBe('album-1')
+    expect(body.get('staging_id')).toBe('stage-1')
   })
 
   it('builds create album edit payloads instead of direct CRUD payloads', () => {

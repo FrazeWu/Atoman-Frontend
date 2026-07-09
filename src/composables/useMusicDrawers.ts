@@ -23,6 +23,7 @@ interface DrawerState {
   albumId: string | null
   playlistId: string | null
   albumRefreshToken: number
+  playlistRefreshToken: number
   nestedAction: NestedActionType
   nestedPayload: unknown
   musicEditor: MusicEditorState | null
@@ -128,6 +129,7 @@ const state = ref<DrawerState>({
   albumId: null,
   playlistId: null,
   albumRefreshToken: 0,
+  playlistRefreshToken: 0,
   nestedAction: null,
   nestedPayload: null,
   musicEditor: null,
@@ -145,6 +147,7 @@ export function useMusicDrawers() {
 
   const openPlaylist = (id: string) => { state.value.playlistId = id }
   const closePlaylist = () => { state.value.playlistId = null }
+  const refreshPlaylists = () => { state.value.playlistRefreshToken += 1 }
   
   const openNestedAction = (action: NestedActionType, payload: unknown = null) => {
     state.value.nestedAction = action
@@ -199,6 +202,7 @@ export function useMusicDrawers() {
     state.value.albumId = null
     state.value.playlistId = null
     state.value.albumRefreshToken = 0
+    state.value.playlistRefreshToken = 0
     state.value.nestedAction = null
     state.value.nestedPayload = null
     state.value.musicEditor = null
@@ -233,7 +237,7 @@ export function useMusicDrawers() {
     state,
     openArtist, closeArtist, refreshArtist,
     openAlbum, closeAlbum, refreshAlbum,
-    openPlaylist, closePlaylist,
+    openPlaylist, closePlaylist, refreshPlaylists,
     openNestedAction, closeNestedAction,
     openMusicEditor, closeMusicEditor,
     openMusicCreationFlow,

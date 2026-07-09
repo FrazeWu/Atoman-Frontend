@@ -35,7 +35,7 @@
           type="button"
           class="music-sidebar-playlists__item"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
-          @click="openPlaylist(String(playlist.id))"
+          @click="openPlaylistRoute(String(playlist.id))"
         >
           <span class="playlist-icon-frame">
             <ListMusic :size="15" />
@@ -55,7 +55,7 @@
           class="music-sidebar-playlists__item"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
           :data-testid="`bookmarked-playlist-${playlist.id}`"
-          @click="openPlaylist(String(playlist.id))"
+          @click="openPlaylistRoute(String(playlist.id))"
         >
           <span class="playlist-icon-frame playlist-icon-frame--bookmarked">
             <Bookmark :size="15" />
@@ -81,7 +81,7 @@
           class="collapsed-icon-btn"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
           :title="playlist.name"
-          @click="openPlaylist(String(playlist.id))"
+          @click="openPlaylistRoute(String(playlist.id))"
         >
           <ListMusic :size="20" />
         </button>
@@ -92,7 +92,7 @@
           class="collapsed-icon-btn"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
           :title="playlistDisplayName(playlist)"
-          @click="openPlaylist(String(playlist.id))"
+          @click="openPlaylistRoute(String(playlist.id))"
         >
           <Bookmark :size="20" />
         </button>
@@ -104,7 +104,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, ListMusic, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -116,7 +116,8 @@ defineProps<{
 const playlists = ref<MusicPlaylistSummary[]>([])
 const bookmarkedPlaylists = ref<MusicPlaylistSummary[]>([])
 const route = useRoute()
-const { state, openPlaylist } = useMusicDrawers()
+const router = useRouter()
+const { state } = useMusicDrawers()
 
 const isCreating = ref(false)
 const newPlaylistName = ref('')
@@ -163,6 +164,10 @@ function playlistDisplayName(playlist: MusicPlaylistSummary) {
   return owner ? `${owner}/${playlist.name}` : playlist.name
 }
 
+function openPlaylistRoute(playlistId: string) {
+  router.push(`/music/playlist/${playlistId}`)
+}
+
 function startCreatePlaylist() {
   isCreating.value = true
   newPlaylistName.value = ''
@@ -200,7 +205,7 @@ async function createPlaylistWithName(name: string) {
   try {
     const created = await createMusicPlaylist({ name, is_public: false })
     await fetchPlaylists()
-    openPlaylist(String(created.id))
+    await router.push(`/music/playlist/${created.id}`)
   } catch (error) {
     console.error('Failed to create playlist:', error)
   }
@@ -223,6 +228,14 @@ watch(
     fetchPlaylists()
     fetchBookmarkedPlaylists()
   }
+)
+
+watch(
+  () => state.value.playlistRefreshToken,
+  () => {
+    fetchPlaylists()
+    fetchBookmarkedPlaylists()
+  },
 )
 
 onMounted(() => {

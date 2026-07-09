@@ -3,6 +3,8 @@ import {
   createMusicLyricsAnnotation,
   deleteMusicLyricsAnnotation,
   getMusicSongLyrics,
+  listMusicSongLyricsVersions,
+  revertMusicSongLyricsVersion,
   updateMusicLyricsAnnotation,
   updateMusicSongLyrics,
   voteMusicLyricsAnnotation,
@@ -10,6 +12,7 @@ import {
   type MusicLyricsAnnotation,
   type MusicLyricsAnnotationVote,
   type MusicSongLyrics,
+  type MusicSongLyricsVersion,
   type UpdateMusicLyricsAnnotationInput,
   type UpdateMusicSongLyricsInput,
 } from '@/api/musicV1'
@@ -46,6 +49,8 @@ export function useMusicLyrics() {
   const lyrics = ref<MusicSongLyrics | null>(null)
   const loading = ref(false)
   const saving = ref(false)
+  const versions = ref<MusicSongLyricsVersion[]>([])
+  const versionsLoading = ref(false)
   const errorMessage = ref('')
   let activeLoadRequestId = 0
   let activeSaveRequestId = 0
@@ -154,6 +159,38 @@ export function useMusicLyrics() {
     }
   }
 
+  async function loadVersions(songId: string) {
+    versionsLoading.value = true
+    errorMessage.value = ''
+    try {
+      versions.value = await listMusicSongLyricsVersions(songId)
+      return versions.value
+    } catch (error) {
+      errorMessage.value = '版本加载失败'
+      throw error
+    } finally {
+      versionsLoading.value = false
+    }
+  }
+
+  async function revertVersion(songId: string, version: number, editSummary: string) {
+    saving.value = true
+    errorMessage.value = ''
+    try {
+      const updatedLyrics = await revertMusicSongLyricsVersion(songId, version, editSummary)
+      if (activeSongId.value === songId || activeSongId.value === '') {
+        lyrics.value = updatedLyrics
+        activeSongId.value = songId
+      }
+      return updatedLyrics
+    } catch (error) {
+      errorMessage.value = '版本恢复失败'
+      throw error
+    } finally {
+      saving.value = false
+    }
+  }
+
   function currentLine(currentTimeSeconds: number) {
     const normalizedLines = (lyrics.value?.lines ?? []).map((line, index, lines) => ({
       id: line.line_key ?? line.id ?? `line-${index}`,
@@ -171,6 +208,8 @@ export function useMusicLyrics() {
     lyrics,
     loading,
     saving,
+    versions,
+    versionsLoading,
     errorMessage,
     annotationsByLine,
     load,
@@ -179,6 +218,8 @@ export function useMusicLyrics() {
     updateAnnotation,
     deleteAnnotation,
     voteAnnotation,
+    loadVersions,
+    revertVersion,
     currentLine,
   }
 }

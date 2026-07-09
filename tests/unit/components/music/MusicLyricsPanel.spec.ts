@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   updateAnnotation: vi.fn(),
   deleteAnnotation: vi.fn(),
   voteAnnotation: vi.fn(),
+  loadVersions: vi.fn(),
+  revertVersion: vi.fn(),
   currentLine: vi.fn(),
 }))
 
@@ -25,6 +27,8 @@ const lyricsState = {
   loading: ref(false),
   saving: ref(false),
   errorMessage: ref(''),
+  versions: ref<any[]>([]),
+  versionsLoading: ref(false),
 }
 
 const annotationsByLine = computed<Map<string, any[]>>(() => {
@@ -47,6 +51,10 @@ vi.mock('@/composables/useMusicLyrics', () => ({
     updateAnnotation: mocks.updateAnnotation,
     deleteAnnotation: mocks.deleteAnnotation,
     voteAnnotation: mocks.voteAnnotation,
+    versions: lyricsState.versions,
+    versionsLoading: lyricsState.versionsLoading,
+    loadVersions: mocks.loadVersions,
+    revertVersion: mocks.revertVersion,
     currentLine: mocks.currentLine,
   }),
 }))
@@ -175,6 +183,20 @@ describe('MusicLyricsPanel.vue', () => {
     lyricsState.loading.value = false
     lyricsState.saving.value = false
     lyricsState.errorMessage.value = ''
+    lyricsState.versions.value = [
+      {
+        id: 'version-2',
+        song_id: 'song-1',
+        version: 2,
+        content: 'Old lyrics',
+        translation: '',
+        format: 'plain',
+        edit_summary: '修正错字',
+        created_at: '2026-07-07T01:00:00Z',
+        created_by: 'user-1',
+      },
+    ]
+    lyricsState.versionsLoading.value = false
 
     mocks.load.mockReset()
     mocks.save.mockReset()
@@ -182,6 +204,8 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.updateAnnotation.mockReset()
     mocks.deleteAnnotation.mockReset()
     mocks.voteAnnotation.mockReset()
+    mocks.loadVersions.mockReset()
+    mocks.revertVersion.mockReset()
     mocks.currentLine.mockReset()
 
     mocks.load.mockResolvedValue(undefined)
@@ -190,6 +214,8 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.updateAnnotation.mockResolvedValue(undefined)
     mocks.deleteAnnotation.mockResolvedValue({ deleted: true })
     mocks.voteAnnotation.mockResolvedValue(undefined)
+    mocks.loadVersions.mockResolvedValue(lyricsState.versions.value)
+    mocks.revertVersion.mockResolvedValue(lyricsState.lyrics.value)
     mocks.currentLine.mockReturnValue(lyricsState.lyrics.value.lines[1])
   })
 
@@ -244,6 +270,22 @@ describe('MusicLyricsPanel.vue', () => {
       format: 'plain',
       edit_summary: '修正歌词',
     })
+  })
+
+  it('查看并恢复歌词版本', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.loadVersions).toHaveBeenCalledWith('song-1')
+    expect(wrapper.text()).toContain('修正错字')
+
+    await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.revertVersion).toHaveBeenCalledWith('song-1', 2, '恢复到第 2 版')
   })
 
   it('作者标识落在 creator.uuid 时仍显示编辑和删除', async () => {

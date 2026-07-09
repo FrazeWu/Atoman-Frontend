@@ -11,6 +11,14 @@
         <PButton
           type="button"
           variant="secondary"
+          data-testid="lyrics-versions-trigger"
+          @click="toggleVersions"
+        >
+          版本
+        </PButton>
+        <PButton
+          type="button"
+          variant="secondary"
           data-testid="lyrics-edit-trigger"
           @click="isLyricEditorOpen = true"
         >
@@ -29,6 +37,31 @@
     <p v-if="errorMessage" class="music-lyrics-panel__feedback">
       {{ errorMessage }}
     </p>
+
+    <div v-if="versionsVisible" class="music-lyrics-panel__versions">
+      <p v-if="versionsLoading" class="music-lyrics-panel__placeholder">正在加载版本</p>
+      <p v-else-if="!versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
+      <div v-else class="music-lyrics-panel__version-list">
+        <article
+          v-for="version in versions"
+          :key="version.id || version.version"
+          class="music-lyrics-panel__version"
+        >
+          <div>
+            <strong>第 {{ version.version }} 版</strong>
+            <span>{{ version.edit_summary || '歌词更新' }}</span>
+          </div>
+          <button
+            type="button"
+            class="music-lyrics-panel__version-action"
+            :data-testid="`lyrics-revert-version-${version.version}`"
+            @click="handleRevertVersion(version.version)"
+          >
+            恢复
+          </button>
+        </article>
+      </div>
+    </div>
 
     <div class="music-lyrics-panel__layout">
       <div class="music-lyrics-panel__main">
@@ -117,6 +150,10 @@ const {
   updateAnnotation,
   deleteAnnotation,
   voteAnnotation,
+  versions,
+  versionsLoading,
+  loadVersions,
+  revertVersion,
   currentLine,
 } = useMusicLyrics()
 
@@ -129,6 +166,7 @@ const selectedTextDraft = ref<{
 } | null>(null)
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const isLyricEditorOpen = ref(false)
+const versionsVisible = ref(false)
 
 const currentLineId = computed(() => currentLine(props.currentTimeSeconds)?.line_key ?? currentLine(props.currentTimeSeconds)?.id ?? '')
 const showTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
@@ -149,6 +187,7 @@ watch(
     selectedTextDraft.value = null
     editingAnnotation.value = null
     isLyricEditorOpen.value = false
+    versionsVisible.value = false
     void load(songId)
   },
   { immediate: true },
@@ -211,6 +250,16 @@ async function handleDeleteAnnotation(annotationId: string) {
 
 async function handleVoteAnnotation(annotationId: string, vote: 'up' | 'down' | null) {
   await voteAnnotation(props.songId, annotationId, vote)
+}
+
+async function toggleVersions() {
+  versionsVisible.value = !versionsVisible.value
+  if (versionsVisible.value) await loadVersions(props.songId)
+}
+
+async function handleRevertVersion(version: number) {
+  await revertVersion(props.songId, version, `恢复到第 ${version} 版`)
+  versionsVisible.value = false
 }
 
 async function handleSaveLyrics(payload: {
@@ -302,6 +351,45 @@ async function handleSaveLyrics(payload: {
 .music-lyrics-panel__placeholder {
   margin: 0;
   color: var(--a-color-ink-soft);
+}
+
+.music-lyrics-panel__versions {
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+  padding: 0.75rem;
+}
+
+.music-lyrics-panel__version-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.music-lyrics-panel__version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--a-color-ink);
+}
+
+.music-lyrics-panel__version div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.music-lyrics-panel__version span {
+  color: var(--a-color-ink-soft);
+  font-size: 0.82rem;
+}
+
+.music-lyrics-panel__version-action {
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink);
+  cursor: pointer;
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .music-lyrics-panel__layout {

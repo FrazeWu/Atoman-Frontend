@@ -44,7 +44,7 @@
           <span class="skip-btn" @click="player.skip(5)">+5S</span>
           
           <button
-            v-if="player.currentSong"
+            v-if="player.currentSong && !isPodcast"
             type="button"
             class="player-fav-btn"
             :class="{ 'is-active': favoriteSongIds.has(String(player.currentSong.id)) }"
@@ -54,7 +54,7 @@
             <Heart :size="16" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" />
           </button>
 
-          <PDropdown v-if="player.currentSong" class="player-add-dropdown" position="right">
+          <PDropdown v-if="player.currentSong && !isPodcast" class="player-add-dropdown" position="right">
             <template #trigger>
               <button class="player-add-btn" type="button" title="添加到歌单">
                 <Plus :size="16" />
@@ -74,6 +74,26 @@
               </button>
             </div>
           </PDropdown>
+
+          <button
+            v-if="isPodcastEpisode"
+            type="button"
+            class="player-fav-btn"
+            title="收藏单集"
+            @click="addPodcastBookmark"
+          >
+            <Heart :size="16" />
+          </button>
+
+          <button
+            v-if="isPodcastEpisode"
+            type="button"
+            class="player-add-btn"
+            title="稍后听"
+            @click="addPodcastListenLater"
+          >
+            <Clock :size="16" />
+          </button>
         </div>
         <div class="progress-container">
           <span class="time-stamp">{{ formatTime(player.currentTime) }}</span>
@@ -96,7 +116,7 @@
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
-        <div class="feature-link" @click="player.toggleLyrics">词</div>
+        <div class="feature-link" @click="player.toggleLyrics">{{ featureLabel }}</div>
         
         <div class="feature-toggle" @click="player.cyclePlaybackMode()">
           <div v-if="player.playbackMode === 'single'" class="repeat-one-wrapper">
@@ -186,6 +206,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { usePlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 import { 
   Repeat, 
   Shuffle, 
@@ -195,7 +217,8 @@ import {
   Volume, 
   VolumeX,
   Heart,
-  Plus
+  Plus,
+  Clock
 } from 'lucide-vue-next'
 import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
@@ -209,6 +232,8 @@ import {
 } from '@/api/musicV1'
 
 const player = usePlayerStore()
+const authStore = useAuthStore()
+const api = useApi()
 const playerInnerRef = ref<HTMLElement | null>(null)
 const playerInfoRef = ref<HTMLElement | null>(null)
 const playerMetaRef = ref<HTMLElement | null>(null)
@@ -236,6 +261,14 @@ const coverFallback = computed(() => {
   const firstChar = text.trim().charAt(0)
   return firstChar || 'P'
 })
+
+const isPodcast = computed(() =>
+  player.currentSong?.source_type === 'podcast_episode'
+  || player.currentSong?.source_type === 'feed_podcast'
+)
+
+const isPodcastEpisode = computed(() => player.currentSong?.source_type === 'podcast_episode')
+const featureLabel = computed(() => isPodcast.value ? '说明' : '词')
 
 const updateMetaCollapse = () => {
   const playerInner = playerInnerRef.value
@@ -309,6 +342,60 @@ async function toggleTrackFavorite(songId: string) {
   }
 }
 
+async function addPodcastBookmark() {
+  const episodeId = player.currentSong?.source_id
+  if (!episodeId) return
+  if (!authStore.token) {
+    toastMessage.value = '请先登录'
+    toastVisible.value = true
+    return
+  }
+  try {
+    const res = await fetch(api.podcast.bookmarks, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({ episode_id: episodeId }),
+    })
+    if (!res.ok) throw new Error('bookmark failed')
+    toastMessage.value = '已收藏'
+    toastVisible.value = true
+  } catch (err) {
+    console.error('Failed to bookmark podcast episode:', err)
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  }
+}
+
+async function addPodcastListenLater() {
+  const episodeId = player.currentSong?.source_id
+  if (!episodeId) return
+  if (!authStore.token) {
+    toastMessage.value = '请先登录'
+    toastVisible.value = true
+    return
+  }
+  try {
+    const res = await fetch(api.podcast.listenLater, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({ episode_id: episodeId }),
+    })
+    if (!res.ok) throw new Error('listen later failed')
+    toastMessage.value = '已加入稍后听'
+    toastVisible.value = true
+  } catch (err) {
+    console.error('Failed to add podcast listen later:', err)
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  }
+}
+
 async function addTrackToPlaylist(playlistId: string, songId: string) {
   try {
     await addMusicPlaylistSong(playlistId, songId)
@@ -330,6 +417,7 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 watch(
   () => player.currentSong?.id,
   async (newId) => {
+    if (isPodcast.value) return
     if (newId) {
       if (!playlistsLoaded.value) {
         await loadPlaylists()

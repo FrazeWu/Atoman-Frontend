@@ -11,7 +11,6 @@ import {
   deleteArtistBookmark,
   getMusicAlbum,
   getMusicArtist,
-  listMusicPlaylists,
   listAlbumBookmarks,
   listArtistBookmarks,
   listPlaylistBookmarks,
@@ -20,7 +19,6 @@ import {
   type MusicArtistBookmark,
   type MusicStarredItem,
 } from '@/api/musicV1'
-import { isFavoritePlaylistName } from '@/composables/useMusicFavoritePlaylist'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
@@ -105,13 +103,11 @@ async function loadStarred() {
     let artistBookmarks: { data: MusicArtistBookmark[] }
     let albumBookmarks: { data: MusicAlbumBookmark[] }
     let playlistsResponse: { data: Array<{ playlist?: MusicPlaylistSummary }> }
-    let ownPlaylistsResponse: { data: MusicPlaylistSummary[] }
     try {
-      ;[artistBookmarks, albumBookmarks, playlistsResponse, ownPlaylistsResponse] = await Promise.all([
+      ;[artistBookmarks, albumBookmarks, playlistsResponse] = await Promise.all([
         listArtistBookmarks({ sort: sortMode.value }),
         listAlbumBookmarks({ sort: sortMode.value }),
         listPlaylistBookmarks({ sort: sortMode.value }),
-        listMusicPlaylists(),
       ])
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
@@ -150,12 +146,6 @@ async function loadStarred() {
     playlistItems.value = playlistsResponse.data
       .map(bookmark => bookmark.playlist)
       .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
-    const favoritePlaylists = (ownPlaylistsResponse.data || []).filter((playlist) => isFavoritePlaylistName(playlist.name))
-    const playlistMap = new Map<string, MusicPlaylistSummary>()
-    for (const playlist of [...favoritePlaylists, ...playlistItems.value]) {
-      playlistMap.set(String(playlist.id), playlist)
-    }
-    playlistItems.value = [...playlistMap.values()]
   } catch (error) {
     console.error('Failed to load music starred items:', error)
     errorMessage.value = '收藏加载失败'

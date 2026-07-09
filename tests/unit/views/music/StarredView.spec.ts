@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   listArtistBookmarks: vi.fn(),
   listAlbumBookmarks: vi.fn(),
   listPlaylistBookmarks: vi.fn(),
+  listMusicPlaylists: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('@/api/musicV1', () => ({
   listArtistBookmarks: mocks.listArtistBookmarks,
   listAlbumBookmarks: mocks.listAlbumBookmarks,
   listPlaylistBookmarks: mocks.listPlaylistBookmarks,
+  listMusicPlaylists: mocks.listMusicPlaylists,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
   deleteAlbumBookmark: mocks.deleteAlbumBookmark,
@@ -50,6 +52,7 @@ describe('Music StarredView', () => {
     mocks.listArtistBookmarks.mockReset()
     mocks.listAlbumBookmarks.mockReset()
     mocks.listPlaylistBookmarks.mockReset()
+    mocks.listMusicPlaylists.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.getMusicAlbum.mockReset()
     mocks.deleteAlbumBookmark.mockReset()
@@ -75,6 +78,7 @@ describe('Music StarredView', () => {
         },
       }],
     })
+    mocks.listMusicPlaylists.mockResolvedValue({ data: [] })
     mocks.getMusicArtist.mockResolvedValue({
       id: 'artist-1',
       name: 'FKA twigs',
@@ -143,6 +147,26 @@ describe('Music StarredView', () => {
     await wrapper.get('[data-testid="starred-playlist-card"]').trigger('click')
 
     expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/playlist-1')
+  })
+
+  it('shows the favorite playlist in playlist results even when it is not bookmarked', async () => {
+    mocks.listPlaylistBookmarks.mockResolvedValueOnce({ data: [] })
+    mocks.listMusicPlaylists.mockResolvedValueOnce({
+      data: [{
+        id: 'favorite-playlist',
+        name: '最爱',
+        description: '',
+        song_count: 3,
+      }],
+    })
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
+
+    expect(wrapper.findAll('[data-testid="starred-playlist-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('最爱')
+    expect(wrapper.text()).toContain('3 首')
   })
 
   it('shows empty state instead of error when bookmarks require login', async () => {

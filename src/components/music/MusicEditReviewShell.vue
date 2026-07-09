@@ -19,6 +19,10 @@
         <template #meta>
           <span>{{ editTypeLabel(item.type) }}</span>
           <span>{{ statusLabel(item.status) }}</span>
+          <span>{{ entityTypeLabel(item.entityType) }}</span>
+          <span v-if="item.submittedBy">提交 {{ item.submittedBy }}</span>
+          <span v-if="item.votes">赞成 {{ item.votes.yes }}</span>
+          <span v-if="item.votes">反对 {{ item.votes.no }}</span>
           <span>{{ item.createdAt }}</span>
         </template>
         <template #summary>{{ item.reason || '暂无说明' }}</template>
@@ -49,6 +53,8 @@ export type MusicEditReviewItem = {
   targetTitle: string
   reason: string
   createdAt: string
+  submittedBy?: string
+  votes?: { yes: number; no: number }
 }
 
 const props = defineProps<{
@@ -87,16 +93,32 @@ const statusText: Partial<Record<MusicEditStatus, string>> = {
   rejected: '已驳回',
   cancelled: '已取消',
   reverted: '已回退',
+  failed_dependency: '等待依赖',
+  failed_prerequisite: '条件不足',
+  internal_error: '处理失败',
 }
 
 const editTypeText: Partial<Record<MusicEditType, string>> = {
   create_artist: '新增艺人',
   update_artist: '修改艺人',
   merge_artist: '合并艺人',
+  delete_artist: '删除艺人',
   create_album: '新增专辑',
   update_album: '修改专辑',
+  merge_album: '合并专辑',
   delete_album: '删除专辑',
+  create_song: '新增单曲',
   update_song: '修改单曲',
+  move_song: '移动单曲',
+  delete_song: '删除单曲',
+  update_lyrics: '修改歌词',
+  change_entry_status: '修改状态',
+}
+
+const entityTypeText: Record<MusicEntityType, string> = {
+  artist: '艺人',
+  album: '专辑',
+  song: '单曲',
 }
 
 function statusLabel(status: MusicEditStatus) {
@@ -105,6 +127,10 @@ function statusLabel(status: MusicEditStatus) {
 
 function editTypeLabel(type: MusicEditType) {
   return editTypeText[type] || type
+}
+
+function entityTypeLabel(type: MusicEntityType) {
+  return entityTypeText[type] || type
 }
 
 const statusModel = computed({

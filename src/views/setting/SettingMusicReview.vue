@@ -55,8 +55,10 @@ async function fetchReviewItems() {
       status: item.status,
       entityType: item.entity_type,
       targetTitle: item.entity_id || item.type,
-      reason: item.type,
+      reason: (item as typeof item & { reason?: string }).reason || item.type,
       createdAt: item.created_at,
+      submittedBy: item.submitted_by,
+      votes: item.votes,
     }))
   } finally {
     loading.value = false

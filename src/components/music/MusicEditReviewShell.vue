@@ -25,7 +25,40 @@
           <span v-if="item.votes">反对 {{ item.votes.no }}</span>
           <span>{{ item.createdAt }}</span>
         </template>
-        <template #summary>{{ item.reason || '暂无说明' }}</template>
+        <template #summary>
+          <div class="music-edit-review-shell__summary">
+            <p>{{ item.reason || '暂无说明' }}</p>
+            <div v-if="hasReviewObject(item.payload)" class="music-edit-review-shell__detail">
+              <strong>提交内容</strong>
+              <dl>
+                <template v-for="[key, value] in reviewRows(item.payload)" :key="`payload-${item.id}-${key}`">
+                  <dt>{{ key }}</dt>
+                  <dd>{{ formatReviewValue(value) }}</dd>
+                </template>
+              </dl>
+            </div>
+            <div v-if="hasReviewObject(item.changes)" class="music-edit-review-shell__detail">
+              <strong>修改内容</strong>
+              <dl>
+                <template v-for="[key, value] in reviewRows(item.changes)" :key="`changes-${item.id}-${key}`">
+                  <dt>{{ key }}</dt>
+                  <dd>{{ formatReviewValue(value) }}</dd>
+                </template>
+              </dl>
+            </div>
+            <div v-if="item.sources?.length" class="music-edit-review-shell__detail">
+              <strong>来源</strong>
+              <ul>
+                <li v-for="source in item.sources" :key="source.url || source.title">
+                  <a v-if="source.url" :href="source.url" target="_blank" rel="noreferrer">
+                    {{ source.title && source.title !== source.url ? `${source.title} ${source.url}` : source.url }}
+                  </a>
+                  <span v-else>{{ source.title || source.type }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </template>
         <template #actions>
           <PButton type="button" variant="primary" size="sm" @click="$emit('approve', item.id)">通过</PButton>
           <PButton type="button" variant="secondary" size="sm" @click="$emit('reject', item.id)">驳回</PButton>
@@ -43,7 +76,7 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PEntry from '@/components/ui/PEntry.vue'
-import type { MusicEditStatus, MusicEntityType, MusicEditType } from '@/api/musicV1'
+import type { MusicEditStatus, MusicEntityType, MusicEditType, MusicSource } from '@/api/musicV1'
 
 export type MusicEditReviewItem = {
   id: string
@@ -55,6 +88,9 @@ export type MusicEditReviewItem = {
   createdAt: string
   submittedBy?: string
   votes?: { yes: number; no: number }
+  payload?: Record<string, unknown>
+  changes?: Record<string, unknown>
+  sources?: MusicSource[]
 }
 
 const props = defineProps<{
@@ -133,6 +169,21 @@ function entityTypeLabel(type: MusicEntityType) {
   return entityTypeText[type] || type
 }
 
+function hasReviewObject(value?: Record<string, unknown>) {
+  return Boolean(value && Object.keys(value).length)
+}
+
+function reviewRows(value?: Record<string, unknown>) {
+  return Object.entries(value ?? {})
+}
+
+function formatReviewValue(value: unknown) {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return JSON.stringify(value)
+}
+
 const statusModel = computed({
   get: () => props.status,
   set: (value) => emit('update:status', String(value)),
@@ -159,6 +210,56 @@ const entityTypeModel = computed({
 .music-edit-review-shell__list {
   display: grid;
   gap: 1rem;
+}
+
+.music-edit-review-shell__summary {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.music-edit-review-shell__summary p {
+  margin: 0;
+}
+
+.music-edit-review-shell__detail {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.music-edit-review-shell__detail strong {
+  font-size: 0.76rem;
+  color: var(--a-color-ink);
+}
+
+.music-edit-review-shell__detail dl {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+}
+
+.music-edit-review-shell__detail dt {
+  color: var(--a-color-ink-soft);
+  font-weight: 800;
+}
+
+.music-edit-review-shell__detail dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.music-edit-review-shell__detail ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.music-edit-review-shell__detail a {
+  color: var(--a-color-ink);
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 720px) {

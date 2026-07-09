@@ -164,9 +164,13 @@ export type MusicEditSummary = {
   entity_type: MusicEntityType
   entity_id?: string
   submitted_by: string
+  reason: string
+  payload: Record<string, unknown>
+  changes: Record<string, unknown>
+  sources: MusicSource[]
   auto_applied: boolean
   votable: boolean
-  votes: { yes: number; no: number }
+  votes?: { yes: number; no: number }
   created_at: string
 }
 

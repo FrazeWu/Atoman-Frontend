@@ -69,4 +69,42 @@ describe('MusicEditReviewShell', () => {
     expect(wrapper.text()).not.toContain('create_song')
     expect(wrapper.text()).not.toContain('failed_dependency')
   })
+
+  it('renders structured payload changes and sources for review items', () => {
+    const wrapper = mount(MusicEditReviewShell, {
+      props: {
+        items: [{
+          id: 'edit-1',
+          type: 'update_artist',
+          status: 'open',
+          entityType: 'artist',
+          targetTitle: 'artist-1',
+          reason: '修正资料',
+          createdAt: '2026-07-01T00:00:00Z',
+          payload: { name: 'Before Name' },
+          changes: { name: 'After Name', bio: 'Updated bio' },
+          sources: [{ type: 'url', url: 'https://example.com/source', title: 'source' }],
+        }],
+        status: 'open',
+        entityType: '',
+      },
+      global: {
+        stubs: {
+          PPageHeader: { template: '<div><slot /></div>' },
+          PSelect: { template: '<div />' },
+          PEmpty: { template: '<div />' },
+          PEntry: { props: ['title', 'summary'], template: '<article><h2>{{ title }}</h2><slot name="summary" /><slot name="actions" /></article>' },
+          PButton: { template: '<button><slot /></button>' },
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('提交内容')
+    expect(wrapper.text()).toContain('Before Name')
+    expect(wrapper.text()).toContain('修改内容')
+    expect(wrapper.text()).toContain('After Name')
+    expect(wrapper.text()).toContain('Updated bio')
+    expect(wrapper.text()).toContain('来源')
+    expect(wrapper.text()).toContain('https://example.com/source')
+  })
 })

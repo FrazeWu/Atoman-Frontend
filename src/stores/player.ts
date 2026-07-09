@@ -18,6 +18,12 @@ type PersistedPlaybackState = {
   playbackMode?: PlaybackMode;
 };
 
+function resolveUploadedMediaUrl(url: string) {
+  if (!url.startsWith('/uploads/')) return url;
+  if (!api.url.startsWith('http://') && !api.url.startsWith('https://')) return url;
+  return `${new URL(api.url).origin}${url}`;
+}
+
 export const usePlayerStore = defineStore('player', () => {
   const songs = ref<Song[]>([]);
   const currentSong = ref<Song | null>(null);
@@ -354,8 +360,8 @@ export const usePlayerStore = defineStore('player', () => {
     year: new Date(episode.created_at || '').getFullYear() || 0,
     release_date: episode.created_at || '',
     lyrics: episode.post?.content || '',
-    audio_url: episode.audio_url,
-    cover_url: episodeCover(episode),
+    audio_url: resolveUploadedMediaUrl(episode.audio_url),
+    cover_url: resolveUploadedMediaUrl(episodeCover(episode)),
     track_number: episode.episode_number,
     status: 'approved',
   });

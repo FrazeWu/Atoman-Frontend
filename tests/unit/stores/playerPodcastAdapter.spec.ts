@@ -8,6 +8,11 @@ vi.mock('@/api/musicV1', () => ({
   recordMusicSongPlay: vi.fn().mockResolvedValue({ recorded: true }),
 }))
 
+vi.mock('@/composables/useApi', () => ({
+  useApiUrl: () => 'http://localhost:8081/api/v1',
+  useApi: () => ({ url: 'http://localhost:8081/api/v1' }),
+}))
+
 class MockAudio {
   currentTime = 0
   duration = 100
@@ -72,6 +77,17 @@ describe('player podcast adapter', () => {
       cover_url: 'collection.jpg',
       track_number: 2,
     })
+  })
+
+  it('resolves uploaded podcast media against the API origin', () => {
+    const player = usePlayerStore()
+    const song = player.createPodcastEpisodeSong(podcastEpisode({
+      audio_url: '/uploads/podcast/audio/smoke.wav',
+      episode_cover_url: '/uploads/podcast/covers/smoke.jpg',
+    }))
+
+    expect(song.audio_url).toBe('http://localhost:8081/uploads/podcast/audio/smoke.wav')
+    expect(song.cover_url).toBe('http://localhost:8081/uploads/podcast/covers/smoke.jpg')
   })
 
   it('does not record music play for podcast source', () => {

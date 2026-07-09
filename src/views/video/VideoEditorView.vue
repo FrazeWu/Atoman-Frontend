@@ -46,7 +46,7 @@ const form = ref({
   channel_id: '' as string,
   title: '',
   description: '',
-  storage_type: 'external' as 'local' | 'external',
+  storage_type: 'local' as 'local' | 'external',
   video_url: '',
   thumbnail_url: '',
   visibility: 'public' as 'public' | 'followers' | 'private',
@@ -233,11 +233,17 @@ async function onCoverFileChange(e: Event) {
 // ── Form logic ────────────────────────────────────────────
 
 function validate(): boolean {
+  errorMsg.value = ''
   titleError.value = form.value.title.trim() ? '' : '请填写视频标题'
   urlError.value = form.value.video_url.trim() ? '' : (
     form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
   )
-  return !titleError.value && !urlError.value
+  if (titleError.value || urlError.value) return false
+  if (!form.value.channel_id || selectedCollectionIds.value.length === 0) {
+    errorMsg.value = '请先创建或选择合集'
+    return false
+  }
+  return true
 }
 
 function buildPayload(status: 'draft' | 'published') {

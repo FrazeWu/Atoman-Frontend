@@ -212,6 +212,21 @@ async function copyVideoLink() {
   }
 }
 
+async function shareVideo() {
+  if (!video.value || video.value.visibility !== 'public') return
+  try {
+    const shareUrl = window.location.href
+    if (navigator.share) {
+      await navigator.share({ title: video.value.title, url: shareUrl })
+    } else {
+      await navigator.clipboard.writeText(shareUrl)
+    }
+    await fetch(`${api.url}/videos/${video.value.id}/share`, { method: 'POST' })
+  } catch {
+    // The user may cancel native share.
+  }
+}
+
 function toggleTheaterMode() {
   theaterMode.value = !theaterMode.value
   saveStoredTheaterMode(theaterMode.value)
@@ -311,6 +326,15 @@ function handleSeekToTimestamp(value: number) {
             <span>{{ fmtDate(video.created_at) }}</span>
             <span v-if="video.duration_sec">{{ fmtDuration(video.duration_sec) }}</span>
           </div>
+          <button
+            v-if="video.visibility === 'public'"
+            type="button"
+            class="vd-share"
+            data-testid="video-share"
+            @click="shareVideo"
+          >
+            分享
+          </button>
         </div>
 
         <!-- Timestamp hint -->
@@ -474,6 +498,16 @@ function handleSeekToTimestamp(value: number) {
   gap: 0.75rem;
   font-size: 0.8rem;
   color: var(--a-color-muted, #6b7280);
+}
+.vd-share {
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+  color: var(--a-color-fg);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
 }
 .vd-tags {
   display: flex;

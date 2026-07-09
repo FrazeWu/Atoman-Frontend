@@ -20,6 +20,7 @@ describe('music loading boundaries', () => {
     expect(musicHomeSource).not.toContain('player.fetchSongs()')
     expect(musicHomeSource).toContain('<ExploreView page-title="专辑" content-mode="albums" />')
     expect(musicExploreSource).toContain('listMusicDiscoverFeed')
+    expect(musicExploreSource).toContain('listMusicAlbums')
   })
 
   it('keeps the player audio element lazily created', () => {

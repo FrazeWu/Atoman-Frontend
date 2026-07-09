@@ -164,8 +164,12 @@ describe('VideoEditorView', () => {
 
     await flushPromises()
 
-    await wrapper.find('input[placeholder="为视频起一个吸引人的标题"]').setValue('Draft video')
-    await wrapper.find('input[placeholder="https://youtube.com/watch?v=..."]').setValue('https://example.com/video')
+    const editorView = wrapper.findComponent(VideoEditorView)
+    editorView.vm.$.setupState.form.channel_id = 'channel-1'
+    editorView.vm.$.setupState.selectedCollectionIds = ['collection-1']
+    editorView.vm.$.setupState.form.storage_type = 'external'
+    editorView.vm.$.setupState.form.title = 'Draft video'
+    editorView.vm.$.setupState.form.video_url = 'https://example.com/video'
 
     const saveButton = wrapper.findAll('button').find(button => button.text() === '保存草稿')
     expect(saveButton).toBeTruthy()

@@ -11,7 +11,10 @@
       <PSidebarItem to="/posts/subscriptions" :index="2" :icon="Rss">
         订阅
       </PSidebarItem>
-      <PSidebarItem to="/posts/manage" :index="3" :icon="Settings">
+      <PSidebarItem to="/posts/bookmarks" :index="3" :icon="Bookmark">
+        收藏
+      </PSidebarItem>
+      <PSidebarItem to="/posts/manage" :index="4" :icon="Settings">
         创作
       </PSidebarItem>
     </PSidebar>
@@ -23,7 +26,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Compass, Rss, Settings } from 'lucide-vue-next'
+import { Bookmark, Compass, Rss, Settings } from 'lucide-vue-next'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 

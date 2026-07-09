@@ -7,6 +7,7 @@ import { defineComponent, h } from 'vue'
 import PostDetailView from '@/views/blog/PostDetailView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { useFeedStore } from '@/stores/feed'
 import { mergeSiteAccess } from '@/config/siteAccess'
 
 const mocks = vi.hoisted(() => ({
@@ -165,5 +166,34 @@ describe('PostDetailView shared interactions', () => {
 
     authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
     expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+  })
+
+  it('提供收藏、稍后阅读和分享动作', async () => {
+    const clipboardWriteText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, {
+      clipboard: { writeText: clipboardWriteText },
+    })
+
+    const wrapper = await mountPostDetail()
+    const feedStore = useFeedStore()
+    const togglePostBookmark = vi.spyOn(feedStore, 'togglePostBookmark').mockResolvedValue(true)
+    const toggleReadingListItem = vi.spyOn(feedStore, 'toggleReadingListItem').mockResolvedValue(true)
+
+    const buttons = wrapper.findAll('button')
+    const bookmarkButton = buttons.find((button) => button.text() === '收藏')
+    const readingListButton = buttons.find((button) => button.text() === '稍后阅读')
+    const shareButton = buttons.find((button) => button.text() === '分享')
+
+    expect(bookmarkButton).toBeTruthy()
+    expect(readingListButton).toBeTruthy()
+    expect(shareButton).toBeTruthy()
+
+    await bookmarkButton!.trigger('click')
+    await readingListButton!.trigger('click')
+    await shareButton!.trigger('click')
+
+    expect(togglePostBookmark).toHaveBeenCalledWith('post-1')
+    expect(toggleReadingListItem).toHaveBeenCalledWith('post-1')
+    expect(clipboardWriteText).toHaveBeenCalledWith(window.location.href)
   })
 })

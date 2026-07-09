@@ -7,81 +7,105 @@
       </template>
     </PPageHeader>
 
-    <!-- Posts list -->
-    <div v-if="loading && !posts.length" class="a-grid-2">
-      <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
-    </div>
-
-    <div v-else-if="!authStore.isAuthenticated">
+    <div v-if="!authStore.isAuthenticated">
       <PEmpty title="请先登录" description="登录后查看订阅内容" />
     </div>
 
-    <PEmpty
-      v-else-if="!posts.length"
-      title="暂无更新"
-    />
+    <div v-else class="blog-subscriptions-layout">
+      <aside class="subscription-source-panel">
+        <button
+          class="subscription-source"
+          :class="{ active: selectedSubscriptionId === null }"
+          @click="selectSubscription(null)"
+        >
+          <span>全部</span>
+          <span>{{ subscriptions.length }}</span>
+        </button>
+        <button
+          v-for="subscription in subscriptions"
+          :key="subscription.id"
+          class="subscription-source"
+          :class="{ active: selectedSubscriptionId === subscription.id }"
+          @click="selectSubscription(subscription.id)"
+        >
+          <span>{{ subscriptionTitle(subscription) }}</span>
+          <span v-if="subscription.unread_count">{{ subscription.unread_count }}</span>
+        </button>
+      </aside>
 
-    <div v-else>
-      <PEntry
-        v-for="(post, index) in posts"
-        :key="post.id"
-        :title="post.title"
-        :summary="post.summary"
-        :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-        @click="router.push('/posts/post/' + post.id)"
-      >
-        <template #visual>
-          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="blog">文章</PBadge>
-            <img
-              v-if="post.cover_url"
-              :src="post.cover_url"
-              class="blog-entry-cover"
-              style="margin-top:0.25rem"
-            />
-            <PAvatar
-              v-else
-              :src="post.user?.avatar_url"
-              :name="post.user?.display_name || post.user?.username"
-              size="sm"
-              style="margin-top:0.25rem"
-            />
-          </div>
-        </template>
+      <section class="subscription-posts">
+        <div v-if="loading && !posts.length" class="a-grid-2">
+          <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
+        </div>
 
-        <template #meta>
-          <span>《{{ post.channel?.name || '未分类' }}》</span>
-          <span>{{ post.user?.display_name || post.user?.username }}</span>
-          <span>{{ formatDate(post.created_at) }}</span>
-        </template>
+        <PEmpty
+          v-else-if="!posts.length"
+          title="暂无更新"
+        />
 
-        <template #actions>
-          <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-            <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
-              <span>♥ {{ post.likes_count || 0 }}</span>
-              <span>💬 {{ post.comments_count || 0 }}</span>
-            </div>
-            <PClip
-              :active="starredIds.has(post.id)"
-              :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
-              @click="toggleStar(post.id)"
-            />
-            <PClip
-              :active="readingListIds.has(post.id)"
-              :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
-              @click="toggleReadingList(post.id)"
-            />
-          </div>
-        </template>
-      </PEntry>
-    </div>
+        <div v-else>
+          <PEntry
+            v-for="(post, index) in posts"
+            :key="post.id"
+            :title="post.title"
+            :summary="post.summary"
+            :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+            @click="router.push('/posts/post/' + post.id)"
+          >
+            <template #visual>
+              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
+                <PBadge type="blog">文章</PBadge>
+                <img
+                  v-if="post.cover_url"
+                  :src="post.cover_url"
+                  class="blog-entry-cover"
+                  style="margin-top:0.25rem"
+                />
+                <PAvatar
+                  v-else
+                  :src="post.user?.avatar_url"
+                  :name="post.user?.display_name || post.user?.username"
+                  size="sm"
+                  style="margin-top:0.25rem"
+                />
+              </div>
+            </template>
 
-    <!-- Load more -->
-    <div v-if="hasMore && !loading" style="display:flex;justify-content:center;margin-top:2rem">
-      <PButton outline @click="loadMore">加载更多</PButton>
-    </div>
-    <div v-else-if="loading && posts.length" style="display:flex;justify-content:center;margin-top:2rem">
-      <p class="a-muted">加载中...</p>
+            <template #meta>
+              <span>《{{ post.channel?.name || '未分类' }}》</span>
+              <span>{{ post.user?.display_name || post.user?.username }}</span>
+              <span>{{ formatDate(post.created_at) }}</span>
+            </template>
+
+            <template #actions>
+              <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
+                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
+                  <span>♥ {{ post.likes_count || 0 }}</span>
+                  <span>💬 {{ post.comments_count || 0 }}</span>
+                </div>
+                <PClip
+                  :active="starredIds.has(post.id)"
+                  :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
+                  @click="toggleStar(post.id)"
+                />
+                <PClip
+                  :active="readingListIds.has(post.id)"
+                  :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
+                  @click="toggleReadingList(post.id)"
+                />
+              </div>
+            </template>
+          </PEntry>
+        </div>
+
+        <!-- Load more -->
+        <div v-if="hasMore && !loading" style="display:flex;justify-content:center;margin-top:2rem">
+          <PButton outline @click="loadMore">加载更多</PButton>
+        </div>
+        <div v-else-if="loading && posts.length" style="display:flex;justify-content:center;margin-top:2rem">
+          <p class="a-muted">加载中...</p>
+        </div>
+      </section>
     </div>
 
     <PShortcutHints :hints="shortcutHints" />
@@ -107,7 +131,7 @@ import { useUIStore } from '@/stores/ui'
 import { useApi } from '@/composables/useApi'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { moduleRooms } from '@/config/moduleRooms'
-import type { Post, TimelineItem } from '@/types'
+import type { Post, Subscription, TimelineItem } from '@/types'
 
 // Included components from BlogHomeView as requested, even if not used directly in template
 // to maintain consistency and fulfill requirement
@@ -122,6 +146,8 @@ const api = useApi()
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
+const subscriptions = computed(() => feedStore.subscriptions)
+const selectedSubscriptionId = ref<string | null>(null)
 
 const toggleStar = (id: string) => {
   void feedStore.togglePostBookmark(id)
@@ -182,6 +208,9 @@ const formatDate = (dateStr?: string) => {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
+const subscriptionTitle = (subscription: Subscription) =>
+  subscription.title || subscription.feed_source?.title || '订阅'
+
 const fetchTimeline = async (append = false) => {
   if (!authStore.isAuthenticated) {
     loading.value = false
@@ -192,9 +221,10 @@ const fetchTimeline = async (append = false) => {
   if (!append) page.value = 1
   try {
     const params = new URLSearchParams({
-      page: String(page.value),
-      limit: '12',
     })
+    if (selectedSubscriptionId.value) params.set('source_id', selectedSubscriptionId.value)
+    params.set('page', String(page.value))
+    params.set('limit', '12')
 
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${authStore.token}`
@@ -228,9 +258,16 @@ const loadMore = () => {
   fetchTimeline(true)
 }
 
+const selectSubscription = (id: string | null) => {
+  if (selectedSubscriptionId.value === id) return
+  selectedSubscriptionId.value = id
+  void fetchTimeline()
+}
+
 onMounted(() => {
   void fetchTimeline()
   if (authStore.isAuthenticated) {
+    void feedStore.fetchSubscriptions()
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
@@ -244,5 +281,63 @@ onMounted(() => {
   object-fit: cover;
   filter: grayscale(100%);
   border-radius: 8px;
+}
+
+.blog-subscriptions-layout {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.subscription-source-panel {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.subscription-source {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: var(--a-border);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  cursor: pointer;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.subscription-source.active,
+.subscription-source:hover {
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+}
+
+.subscription-posts {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .blog-subscriptions-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-source-panel {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .subscription-source {
+    min-width: 8rem;
+  }
 }
 </style>

@@ -114,6 +114,74 @@ describe('BlogManageView', () => {
     expect(wrapper.text()).toContain('草稿')
   })
 
+  it('在创作中心显示总览、最近文章和草稿提醒', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/blog/channels?user_id=user-1')) {
+        return makeJsonResponse({
+          data: [{ id: 'channel-1', name: '频道一', posts_count: 1 }],
+        })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({
+          data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }],
+        })
+      }
+      if (url.includes('/blog/posts/drafts')) {
+        return makeJsonResponse({
+          data: [{
+            id: 'draft-1',
+            title: '草稿文章',
+            status: 'draft',
+            created_at: '2026-07-07T00:00:00Z',
+            collections: [{ id: 'collection-1', channel_id: 'channel-1' }],
+          }],
+        })
+      }
+      if (url.includes('/blog/posts?collection_id=collection-1')) {
+        return makeJsonResponse({
+          data: [{
+            id: 'published-1',
+            title: '已发布文章',
+            status: 'published',
+            comments_count: 5,
+            bookmarks_count: 4,
+            created_at: '2026-07-08T00:00:00Z',
+          }],
+        })
+      }
+
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount(BlogManageView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
+          PEmpty: { template: '<div><slot /><slot name="action" /></div>' },
+          PModal: { template: '<div><slot /></div>' },
+          PInput: { template: '<input />' },
+          PTextarea: { template: '<textarea />' },
+          PSelect: { template: '<select />' },
+          PCard: { template: '<div><slot /></div>' },
+          PLink: { props: ['label'], template: '<a>{{ label }}<slot /></a>' },
+          PPress: { props: ['label', 'disabled'], template: '<button :disabled="disabled">{{ label }}<slot /></button>' },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('总览')
+    expect(wrapper.text()).toContain('文章')
+    expect(wrapper.text()).toContain('草稿')
+    expect(wrapper.text()).toContain('收藏')
+    expect(wrapper.text()).toContain('评论')
+    expect(wrapper.text()).toContain('已发布文章')
+    expect(wrapper.text()).toContain('草稿文章')
+  })
+
   it('persists collection order when finishing sort mode', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)

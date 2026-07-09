@@ -9,6 +9,7 @@ describe('BlogLayout', () => {
     expect(layoutSource).toContain('<PSidebar')
     expect(layoutSource).toContain('to="/posts"')
     expect(layoutSource).toContain('to="/posts/subscriptions"')
+    expect(layoutSource).toContain('to="/posts/bookmarks"')
     expect(layoutSource).toContain('to="/posts/manage"')
   })
 })

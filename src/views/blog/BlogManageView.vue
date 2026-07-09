@@ -25,6 +25,66 @@
 
     <!-- Two-stage linkage layout -->
     <div v-else style="display:flex;flex-direction:column;gap:2rem">
+      <section class="blog-manage-dashboard">
+        <div class="dashboard-header">
+          <h2>总览</h2>
+          <PPress label="写文章" @click="openNewPost" />
+        </div>
+
+        <div class="dashboard-stats">
+          <div class="dashboard-stat">
+            <span>文章</span>
+            <strong>{{ publishedArticleCount }}</strong>
+          </div>
+          <div class="dashboard-stat">
+            <span>草稿</span>
+            <strong>{{ draftArticleCount }}</strong>
+          </div>
+          <div class="dashboard-stat">
+            <span>收藏</span>
+            <strong>{{ bookmarkCount }}</strong>
+          </div>
+          <div class="dashboard-stat">
+            <span>评论</span>
+            <strong>{{ commentCount }}</strong>
+          </div>
+        </div>
+
+        <div class="dashboard-lists">
+          <div>
+            <h3>最近文章</h3>
+            <div v-if="recentArticles.length" class="dashboard-list">
+              <button
+                v-for="article in recentArticles"
+                :key="article.id"
+                class="dashboard-list-item"
+                @click="handleArticleAction('edit', article)"
+              >
+                <span>{{ article.title }}</span>
+                <span>{{ article.status === 'draft' ? '草稿' : '已发布' }}</span>
+              </button>
+            </div>
+            <p v-else class="a-muted">暂无文章</p>
+          </div>
+
+          <div>
+            <h3>草稿</h3>
+            <div v-if="draftArticles.length" class="dashboard-list">
+              <button
+                v-for="article in draftArticles"
+                :key="article.id"
+                class="dashboard-list-item"
+                @click="handleArticleAction('edit', article)"
+              >
+                <span>{{ article.title }}</span>
+                <span>继续编辑</span>
+              </button>
+            </div>
+            <p v-else class="a-muted">暂无草稿</p>
+          </div>
+        </div>
+      </section>
+
       <!-- Master: Collection Selector -->
       <section>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
@@ -248,6 +308,17 @@ const selectedCollection = computed(() => {
   return allCollections.value.find(c => c.id === selectedCollectionId.value) || null
 })
 
+const publishedArticleCount = computed(() => articles.value.filter((article) => article.status !== 'draft').length)
+const draftArticles = computed(() => articles.value.filter((article) => article.status === 'draft'))
+const draftArticleCount = computed(() => draftArticles.value.length)
+const bookmarkCount = computed(() =>
+  articles.value.reduce((total, article) => total + Number(article.bookmarks_count || article.bookmark_count || 0), 0),
+)
+const commentCount = computed(() =>
+  articles.value.reduce((total, article) => total + Number(article.comments_count || article.comment_count || 0), 0),
+)
+const recentArticles = computed(() => articles.value.slice(0, 3))
+
 const isDefaultChannel = computed(() => {
   return defaultChannelsStore.channelFor('blog')?.id === selectedCollection.value?.channelId
 })
@@ -309,6 +380,14 @@ const fetchArticles = async () => {
 const selectCollection = (id: string) => {
   selectedCollectionId.value = id
   fetchArticles()
+}
+
+const openNewPost = () => {
+  if (selectedCollection.value) {
+    router.push(`/posts/post/new?channel=${selectedCollection.value.channelId}&collection=${selectedCollection.value.id}`)
+    return
+  }
+  router.push('/posts/post/new')
 }
 
 const handleSetDefaultChannel = async () => {
@@ -555,6 +634,86 @@ onMounted(() => {
   text-align: center;
 }
 
+.blog-manage-dashboard {
+  border: var(--a-border);
+  background: var(--a-color-bg);
+  padding: 1.25rem;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-header h2,
+.dashboard-lists h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.dashboard-stat {
+  border: 1px solid var(--a-color-line-soft);
+  padding: 0.85rem;
+}
+
+.dashboard-stat span {
+  display: block;
+  color: var(--a-color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-stat strong {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.dashboard-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.75rem;
+}
+
+.dashboard-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  padding: 0.65rem 0;
+  text-align: left;
+  font-weight: 800;
+}
+
+.dashboard-list-item span:last-child {
+  color: var(--a-color-text-muted);
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
 .collection-pills {
   display: flex;
   flex-wrap: wrap;
@@ -659,5 +818,12 @@ onMounted(() => {
 .action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .dashboard-stats,
+  .dashboard-lists {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

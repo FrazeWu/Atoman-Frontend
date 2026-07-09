@@ -102,6 +102,27 @@
             @like="interactions.like"
             @unlike="interactions.unlike"
           />
+          <div class="post-detail-actions">
+            <button
+              class="a-toggle-btn"
+              :class="{ 'a-toggle-btn-active': bookmarked }"
+              :disabled="!authStore.isAuthenticated"
+              @click="toggleBookmark"
+            >
+              {{ bookmarked ? '取消收藏' : '收藏' }}
+            </button>
+            <button
+              class="a-toggle-btn"
+              :class="{ 'a-toggle-btn-active': isInReadingList }"
+              :disabled="!authStore.isAuthenticated"
+              @click="toggleReadingList"
+            >
+              {{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}
+            </button>
+            <button class="a-toggle-btn" @click="sharePost">
+              分享
+            </button>
+          </div>
           <a
             v-if="post.user?.username"
             :href="api.feed.rss(post.user.username)"
@@ -145,6 +166,7 @@ import { useInteractions } from '@/composables/useInteractions'
 import { isModeratorRole } from '@/utils/roles'
 import type { InteractionComment, Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
+import { useFeedStore } from '@/stores/feed'
 
 type EmbedData = {
   id: string
@@ -168,6 +190,7 @@ const props = defineProps<{
 const route = useRoute()
 const sheetStore = useSheetStore()
 const siteAccessStore = useSiteAccessStore()
+const feedStore = useFeedStore()
 
 const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
@@ -186,6 +209,7 @@ const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
 
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
+const isInReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
 const canComment = computed(() =>
   Boolean(post.value?.allow_comments && siteAccessStore.blogCommentMode !== 'disabled' && authStore.isAuthenticated),
 )
@@ -288,6 +312,7 @@ const fetchPost = async () => {
       // Initialize bookmark state
       if (authStore.isAuthenticated && post.value) {
         fetchBookmarkState(post.value.id)
+        void feedStore.fetchReadingListIds()
       }
 
       if (props.id && post.value) {
@@ -321,6 +346,32 @@ const fetchBookmarkState = async (postId: string) => {
       bookmarked.value = items.some((b: { post_id: string }) => b.post_id === postId)
     }
   } catch (e) { console.error(e) }
+}
+
+const toggleBookmark = async () => {
+  if (!post.value) return
+  const nextState = await feedStore.togglePostBookmark(post.value.id)
+  if (nextState !== null) bookmarked.value = nextState
+}
+
+const toggleReadingList = async () => {
+  if (!post.value) return
+  await feedStore.toggleReadingListItem(post.value.id)
+}
+
+const sharePost = async () => {
+  const url = window.location.href
+  const title = post.value?.title || document.title
+  const share = navigator.share?.bind(navigator)
+  if (share) {
+    try {
+      await share({ title, url })
+      return
+    } catch {
+      // Fall back to clipboard when native sharing is unavailable or canceled.
+    }
+  }
+  await navigator.clipboard?.writeText(url)
 }
 
 const extractEmbedIds = (content: string, kind: 'post' | 'music' | 'video') => {

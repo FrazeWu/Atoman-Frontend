@@ -1,6 +1,6 @@
 <template>
-  <div class="a-page-xl" style="padding-bottom:8rem">
-    <div v-if="forumStore.loading" style="padding:4rem 0;text-align:center;font-weight:900;letter-spacing:.1em;font-size:.75rem;text-transform:uppercase">
+  <div class="a-page-xl topic-page">
+    <div v-if="forumStore.loading" class="topic-loading">
       加载中...
     </div>
 
@@ -13,19 +13,22 @@
           v-if="forumStore.currentTopic.category"
           class="a-badge category-pill"
           :style="{ borderColor: forumStore.currentTopic.category.color, color: forumStore.currentTopic.category.color }"
-          @click="router.push(`/forum?category=${forumStore.currentTopic.category_id}`)"
+          @click="router.push(`/forum?category_id=${forumStore.currentTopic.category_id}`)"
         >{{ forumStore.currentTopic.category.name }}</span>
       </div>
 
       <!-- Topic header -->
       <div class="topic-header">
         <h1 class="topic-title">
-          <span v-if="forumStore.currentTopic.pinned" class="badge-pinned">置顶</span>
-          <span v-if="forumStore.currentTopic.featured" class="badge-featured">精华</span>
-          <span v-if="forumStore.currentTopic.closed" class="badge-closed">已关闭</span>
-          <span v-if="forumStore.currentTopic.is_solved" class="badge-solved">✓ 已解决</span>
           {{ forumStore.currentTopic.title }}
         </h1>
+
+        <div class="topic-status-row">
+          <span v-if="forumStore.currentTopic.pinned" class="topic-status-badge">置顶</span>
+          <span v-if="forumStore.currentTopic.featured" class="topic-status-badge">精华</span>
+          <span v-if="forumStore.currentTopic.closed" class="topic-status-badge topic-status-muted">已关闭</span>
+          <span v-if="forumStore.currentTopic.is_solved" class="topic-status-badge topic-status-solved">已解决</span>
+        </div>
 
         <!-- Tags -->
         <div v-if="(forumStore.currentTopic.tags || []).length > 0" class="topic-tag-row">
@@ -38,9 +41,11 @@
 
         <!-- Meta bar -->
         <div class="topic-meta">
-          <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
-          <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
-          <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
+          <div class="topic-meta-text">
+            <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
+            <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
+            <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
+          </div>
           <InteractionBar
             :liked="interactions.liked.value"
             :like-count="interactions.likeCount.value"
@@ -302,8 +307,24 @@ const toggleFeatured = async () => {
 
 <style scoped>
 /* ── Topic header ─────────────────────────────────────────────────────────── */
+.topic-page {
+  padding-bottom: 8rem;
+}
+
+.topic-loading {
+  padding: 4rem 0;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .topic-header {
   margin-bottom: 2rem;
+  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  padding-bottom: 1.5rem;
 }
 
 .topic-title {
@@ -314,49 +335,16 @@ const toggleFeatured = async () => {
   margin: 0 0 0.75rem;
 }
 
-.badge-pinned {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  margin-right: 0.6rem;
-  vertical-align: middle;
+.topic-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
-.badge-closed {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  border-color: var(--a-color-disabled-border);
-  color: var(--a-color-muted-soft);
-  margin-right: 0.6rem;
-  vertical-align: middle;
-}
-
-.badge-solved {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  border-color: var(--a-color-success);
-  color: var(--a-color-bg);
-  background: var(--a-color-success);
-  margin-right: 0.6rem;
-  vertical-align: middle;
-}
-
-.badge-featured {
-  display: inline-block;
+.topic-status-badge {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.7rem;
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
@@ -365,17 +353,33 @@ const toggleFeatured = async () => {
   border: var(--a-border);
   border-color: var(--a-color-muted);
   color: var(--a-color-fg);
-  margin-right: 0.6rem;
-  vertical-align: middle;
+}
+
+.topic-status-muted {
+  border-color: var(--a-color-disabled-border);
+  color: var(--a-color-muted-soft);
+}
+
+.topic-status-solved {
+  border-color: var(--a-color-success);
+  background: var(--a-color-success);
+  color: var(--a-color-bg);
 }
 
 .topic-meta {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--a-color-muted);
+  flex-wrap: wrap;
+}
+
+.topic-meta-text {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 

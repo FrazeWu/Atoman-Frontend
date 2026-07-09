@@ -15,6 +15,7 @@ import {
   deleteMusicPlaylist,
   getMusicPlaylist,
   listPlaylistBookmarks,
+  removeMusicPlaylistSong,
   updateMusicPlaylist,
   uploadMusicAsset,
   type MusicPlaylistDetail,
@@ -44,6 +45,7 @@ const coverUploading = ref(false)
 const coverInput = ref<HTMLInputElement | null>(null)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
+const removingSongIds = ref<Set<string>>(new Set())
 
 async function loadBookmarkState(playlistId: string) {
   if (!authStore.isAuthenticated) {
@@ -192,6 +194,29 @@ async function deletePlaylist() {
         : '歌单删除失败'
   } finally {
     deleting.value = false
+  }
+}
+
+async function removePlaylistSong(songId: string) {
+  if (!playlist.value || removingSongIds.value.has(songId)) return
+
+  removingSongIds.value = new Set([...removingSongIds.value, songId])
+  errorMessage.value = ''
+  try {
+    await removeMusicPlaylistSong(playlist.value.id, songId)
+    playlist.value = {
+      ...playlist.value,
+      songs: playlist.value.songs.filter((song) => String(song.id) !== songId),
+      song_count: Math.max(0, (playlist.value.song_count ?? 0) - 1),
+    }
+    refreshPlaylists()
+  } catch (error) {
+    console.error('Failed to remove playlist song:', error)
+    errorMessage.value = '歌曲移除失败'
+  } finally {
+    const next = new Set(removingSongIds.value)
+    next.delete(songId)
+    removingSongIds.value = next
   }
 }
 
@@ -419,6 +444,16 @@ watch(playlist, syncEditForm, { immediate: true })
 
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
+            <button
+              v-if="canEditPlaylist"
+              type="button"
+              class="track-remove-btn"
+              :disabled="removingSongIds.has(String(track.id))"
+              :data-testid="`playlist-remove-song-${track.id}`"
+              @click="removePlaylistSong(String(track.id))"
+            >
+              移除
+            </button>
           </div>
         </div>
       </div>
@@ -772,7 +807,7 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .col-status {
-  width: 4rem;
+  width: 5.5rem;
   flex-shrink: 0;
   text-align: right;
 }
@@ -860,6 +895,26 @@ watch(playlist, syncEditForm, { immediate: true })
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink-soft);
   border: 1px solid var(--a-color-line-soft);
+}
+
+.track-remove-btn {
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.track-remove-btn:hover {
+  color: var(--a-color-accent-destructive);
+}
+
+.track-remove-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .is-disabled {

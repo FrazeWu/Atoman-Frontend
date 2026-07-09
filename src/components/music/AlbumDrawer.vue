@@ -10,16 +10,13 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { Plus, Play, Heart } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
   createAlbumBookmark,
   deleteAlbumBookmark,
   getMusicAlbum,
-  getMusicPlaylist,
   listAlbumBookmarks,
   listMusicPlaylists,
-  addMusicPlaylistSong,
-  removeMusicPlaylistSong,
-  createMusicPlaylist,
   type MusicAlbumListItem,
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
@@ -39,9 +36,14 @@ const bookmarkLoading = ref(false)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
-const favoriteSongIds = ref<Set<string>>(new Set())
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const {
+  favoriteSongIds,
+  loadFavoriteSongs,
+  toggleFavoriteSong,
+  addSongToPlaylist,
+} = useMusicFavoritePlaylist()
 
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => {
@@ -115,16 +117,7 @@ async function loadPlaylists() {
 
 async function loadFavorites() {
   try {
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
-    if (fav) {
-      const favPlaylistDetail = await getMusicPlaylist(String(fav.id))
-      const ids = (favPlaylistDetail.songs || []).map((s) => String(s.id))
-      favoriteSongIds.value = new Set(ids)
-    } else {
-      favoriteSongIds.value = new Set()
-    }
+    await loadFavoriteSongs()
   } catch (err) {
     if (err instanceof ApiErrorResponseError && err.status === 401) {
       favoriteSongIds.value = new Set()
@@ -136,26 +129,10 @@ async function loadFavorites() {
 
 async function toggleTrackFavorite(songId: string) {
   try {
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    let fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
-    if (!fav) {
-      fav = await createMusicPlaylist({ name: '最爱' })
-      // Refresh sidebar/playlists
-      await loadPlaylists()
-    }
-    const playlistId = String(fav.id)
-    const isFav = favoriteSongIds.value.has(songId)
-    if (isFav) {
-      await removeMusicPlaylistSong(playlistId, songId)
-      favoriteSongIds.value.delete(songId)
-      toastMessage.value = '已从最爱中移除'
-    } else {
-      await addMusicPlaylistSong(playlistId, songId)
-      favoriteSongIds.value.add(songId)
-      toastMessage.value = '已添加到最爱'
-    }
+    const result = await toggleFavoriteSong(songId)
+    toastMessage.value = result.message
     toastVisible.value = true
+    await loadPlaylists()
   } catch (err) {
     console.error('Failed to toggle favorite:', err)
     toastMessage.value = '操作失败'
@@ -165,16 +142,9 @@ async function toggleTrackFavorite(songId: string) {
 
 async function addTrackToPlaylist(playlistId: string, songId: string) {
   try {
-    await addMusicPlaylistSong(playlistId, songId)
+    await addSongToPlaylist(playlistId, songId)
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
-    // If the playlist happens to be the favorites playlist, update favoriteSongIds too
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
-    if (fav && String(fav.id) === playlistId) {
-      favoriteSongIds.value.add(songId)
-    }
   } catch (err) {
     console.error('Failed to add song to playlist:', err)
     toastMessage.value = '添加失败'

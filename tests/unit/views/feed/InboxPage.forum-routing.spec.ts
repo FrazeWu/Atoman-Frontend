@@ -15,8 +15,11 @@ const makeNotification = (overrides: Partial<Notification>): Notification => ({
   actor_id: 'user-2',
   actor: { username: 'alice', email: 'alice@example.com' },
   type: 'forum_reply',
+  category: 'reply',
+  reason: '回复内容',
   source_type: 'forum_reply',
   source_id: 'reply-1',
+  actor_count: 1,
   meta: {
     topic_id: 'topic-1',
     topic_title: '通知跳转',
@@ -48,11 +51,11 @@ const mountInbox = async (notification: Notification) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/feed/inbox', component: { template: '<div />' } },
+      { path: '/inbox', component: { template: '<div />' } },
       { path: '/forum/topic/:id', component: { template: '<div />' } },
     ],
   })
-  await router.push('/feed/inbox')
+  await router.push('/inbox')
   await router.isReady()
   const pushSpy = vi.spyOn(router, 'push')
   pushSpy.mockResolvedValue(undefined)
@@ -104,5 +107,29 @@ describe('InboxPage forum 通知跳转', () => {
     await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
 
     expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-2')
+  })
+
+  it('优先使用 source_url 跳转到来源', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      id: 'notice-3',
+      source_url: '/forum/topic/topic-3#reply-reply-3',
+    }))
+
+    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
+
+    expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-3#reply-reply-3')
+  })
+
+  it('没有可用来源时不显示跳转按钮', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      id: 'notice-4',
+      source_type: 'music_lyrics',
+      source_id: 'lyrics-1',
+      meta: {},
+    }))
+
+    expect(wrapper.findAll('button').some((button) => button.text().includes('前往来源内容'))).toBe(false)
+    expect(wrapper.text()).toContain('来源已不可用')
+    expect(pushSpy).not.toHaveBeenCalled()
   })
 })

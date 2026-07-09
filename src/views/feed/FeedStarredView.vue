@@ -206,6 +206,8 @@ watch(items, () => {
 
 const openArticleSheet = (item: StarredFeedItem, index?: number) => {
   if (index !== undefined) focusedIndex.value = index
+  const wasRead = item.is_read === true
+  item.is_read = true
   // Convert StarredFeedItem to TimelineItem for FeedArticleSheet
   selectedArticle.value = {
     type: 'feed_item',
@@ -221,6 +223,14 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
     is_read: true
   }
   showArticleSheet.value = true
+  if (!wasRead) {
+    void markItemsReadAndRefresh([item.id])
+  }
+}
+
+const markItemsReadAndRefresh = async (ids: string[]) => {
+  const success = await feedStore.markItemsRead(ids)
+  if (success) await feedStore.fetchSubscriptions()
 }
 
 const openPreviousArticle = () => {

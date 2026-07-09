@@ -414,6 +414,7 @@ export interface Subscription {
   health_status?: 'healthy' | 'warning' | 'error'
   error_message?: string
   last_checked?: string
+  unread_count?: number
   created_at: string
 }
 
@@ -498,6 +499,7 @@ export interface StarredFeedItem {
   source_site_url?: string
   source_image_url?: string
   group_id?: string | null
+  is_read?: boolean
 }
 
 // Unified timeline item returned by GET /api/feed/timeline
@@ -637,15 +639,28 @@ export interface UserProfile {
   created_at: string
 }
 
+export type NotificationCategory = 'like' | 'interaction' | 'mention' | 'reply' | 'collaboration' | 'system'
+export type InboxTab = NotificationCategory | 'dm'
+export type NotificationFilterType = NotificationCategory
+
 export interface Notification {
   id: string
   recipient_id: string
   actor_id?: string | null
   actor?: User | null
-  type: 'forum_reply' | 'forum_mention' | 'forum_solved' | 'forum_like'
+  latest_actor?: User | null
+  type: string
+  category: NotificationCategory
+  reason: string
   source_type: string
   source_id: string
+  source_url?: string
+  aggregate_key?: string
+  actor_count: number
   meta: {
+    title?: string
+    body?: string
+    source_label?: string
     topic_id?: string
     topic_title?: string
     reply_excerpt?: string
@@ -665,6 +680,34 @@ export interface DMConversation {
   last_message_at?: string | null
   preview: string
   unread_count: number
+  is_blocked?: boolean
+}
+
+export interface NotificationUnreadCounts {
+  total: number
+  items: Record<InboxTab, number>
+}
+
+export interface NotificationPreference {
+  id?: string
+  category: NotificationCategory
+  event_type: string
+  enabled: boolean
+}
+
+export interface NotificationMute {
+  id: string
+  source_type: string
+  source_id: string
+  reason: string
+  created_at: string
+}
+
+export interface BlockedUser {
+  id: string
+  blocked_id: string
+  blocked?: User
+  created_at: string
 }
 
 export interface DMMessage {
@@ -695,8 +738,6 @@ export interface DMRealtimePayload {
   created_at: string
 }
 
-export type InboxTab = 'reply' | 'like' | 'mention' | 'dm'
-export type NotificationFilterType = '' | 'forum_reply' | 'forum_like' | 'forum_mention'
 export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====

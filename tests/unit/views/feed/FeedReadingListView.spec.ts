@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedReadingListView from '@/views/feed/FeedReadingListView.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 
 const { routeQuery, routerPush, routerReplace } = vi.hoisted(() => ({
   routeQuery: {} as Record<string, string | undefined>,
@@ -198,5 +199,111 @@ describe('FeedReadingListView', () => {
 
     expect(wrapper.get('[data-test="sheet-title"]').text()).toBe('列表第二篇')
     expect(wrapper.find('[data-test="sheet-prev"]').exists()).toBe(true)
+  })
+
+  it('marks an unread reading-list item as read when opening it', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          feed_item_id: 'feed-item-unread-1',
+          created_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-unread-1',
+            feed_source_id: 'source-1',
+            feed_source: { id: 'source-1', title: '来源' },
+            guid: 'feed-item-unread-1',
+            title: '待读文章',
+            link: 'https://example.com/unread',
+            summary: '摘要',
+            author: '作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+    const feedStore = useFeedStore()
+    const markItemsRead = vi.spyOn(feedStore, 'markItemsRead')
+    const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions')
+
+    const wrapper = mount(FeedReadingListView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: {
+            props: ['title', 'summary'],
+            template: '<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
+          },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+
+    expect(markItemsRead).toHaveBeenCalledWith(['feed-item-unread-1'])
+    expect(fetchSubscriptions).toHaveBeenCalled()
+  })
+
+  it('does not refresh subscriptions when marking a reading-list item read fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          feed_item_id: 'feed-item-read-fail-1',
+          created_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+          feed_item: {
+            id: 'feed-item-read-fail-1',
+            feed_source_id: 'source-1',
+            feed_source: { id: 'source-1', title: '来源' },
+            guid: 'feed-item-read-fail-1',
+            title: '标记失败待读文章',
+            link: 'https://example.com/read-fail',
+            summary: '摘要',
+            author: '作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(false)
+    const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions')
+
+    const wrapper = mount(FeedReadingListView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: {
+            props: ['title', 'summary'],
+            template: '<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
+          },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+
+    expect(feedStore.markItemsRead).toHaveBeenCalledWith(['feed-item-read-fail-1'])
+    expect(fetchSubscriptions).not.toHaveBeenCalled()
   })
 })

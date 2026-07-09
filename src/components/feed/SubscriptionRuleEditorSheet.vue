@@ -35,6 +35,20 @@
           </div>
         </PField>
 
+        <PField v-else-if="draft.match_type === 'source_ids' && sourceOptions.length" label="来源">
+          <div class="source-list">
+            <label v-for="option in sourceOptions" :key="option.value" class="check-row">
+              <input
+                :checked="selectedSourceIds.includes(option.value)"
+                :data-test="`rule-source-option-${option.value}`"
+                type="checkbox"
+                @change="toggleSourceId(option.value, ($event.target as HTMLInputElement).checked)"
+              />
+              <span>{{ option.label }}</span>
+            </label>
+          </div>
+        </PField>
+
         <PTextarea
           v-else-if="draft.match_type === 'source_ids'"
           v-model="sourceIdsInput"
@@ -65,7 +79,7 @@
               <span>静音</span>
             </label>
             <label class="check-row">
-              <input v-model="draft.action_auto_mark_read" type="checkbox" />
+              <input v-model="draft.action_auto_mark_read" data-test="rule-action-auto-read" type="checkbox" />
               <span>自动已读</span>
             </label>
             <label class="check-row">
@@ -95,7 +109,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import type { FeedSubscriptionRule, FeedSubscriptionRuleMatchType, SubscriptionGroup } from '@/types'
+import type { FeedSubscriptionRule, FeedSubscriptionRuleMatchType, Subscription, SubscriptionGroup } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -114,12 +128,15 @@ type RuleEditorPayload = {
   action_auto_add_reading_list?: boolean | null
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   mode: 'create' | 'edit'
   groups: SubscriptionGroup[]
+  subscriptions: Subscription[]
   rule?: FeedSubscriptionRule | null
-}>()
+}>(), {
+  subscriptions: () => [],
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -153,6 +170,7 @@ const draft = reactive<RuleEditorPayload>({
 })
 
 const selectedCategories = ref<string[]>([])
+const selectedSourceIds = ref<string[]>([])
 const sourceIdsInput = ref('')
 const keywordsInput = ref('')
 
@@ -161,11 +179,42 @@ const groupOptions = computed(() => [
   ...props.groups.map((group) => ({ label: group.name, value: group.id })),
 ])
 
+const isURLLike = (value: string) => /^https?:\/\//i.test(value.trim())
+
+const subscriptionLabel = (subscription: Subscription) => {
+  const title = subscription.title?.trim()
+  if (title && !isURLLike(title)) return title
+  return subscription.feed_source?.title || title || subscription.feed_source?.rss_url || subscription.feed_source_id
+}
+
+const sourceOptions = computed(() => {
+  const options = props.subscriptions.map((subscription) => ({
+    label: subscriptionLabel(subscription),
+    value: subscription.feed_source_id,
+  }))
+  const knownSourceIds = new Set(options.map((option) => option.value))
+  selectedSourceIds.value.forEach((sourceId) => {
+    if (!knownSourceIds.has(sourceId)) {
+      options.push({ label: sourceId, value: sourceId })
+    }
+  })
+  return options
+})
+
 const normalizeListInput = (value: string) =>
   value
     .split(/[\n,]/)
     .map((entry) => entry.trim())
     .filter(Boolean)
+
+const normalizeCategoryConditions = (conditions: Record<string, unknown> | undefined) => {
+  const categories = Array.isArray(conditions?.categories)
+    ? conditions.categories
+    : typeof conditions?.category === 'string'
+      ? [conditions.category]
+      : []
+  return categories.map((category) => String(category).trim()).filter(Boolean)
+}
 
 const normalizeNullableString = (value: unknown) => {
   const text = String(value || '').trim()
@@ -182,13 +231,12 @@ const resetDraft = () => {
   draft.action_auto_add_reading_list = props.rule?.action_auto_add_reading_list ?? false
 
   selectedCategories.value = []
+  selectedSourceIds.value = []
   sourceIdsInput.value = ''
   keywordsInput.value = ''
 
   if (draft.match_type === 'source_category') {
-    selectedCategories.value = Array.isArray(props.rule?.conditions_json?.categories)
-      ? (props.rule?.conditions_json?.categories as string[]).filter(Boolean)
-      : []
+    selectedCategories.value = normalizeCategoryConditions(props.rule?.conditions_json)
     draft.conditions_json = { categories: [...selectedCategories.value] }
     return
   }
@@ -197,6 +245,7 @@ const resetDraft = () => {
     const sourceIds = Array.isArray(props.rule?.conditions_json?.source_ids)
       ? (props.rule?.conditions_json?.source_ids as string[]).filter(Boolean)
       : []
+    selectedSourceIds.value = [...sourceIds]
     sourceIdsInput.value = sourceIds.join('\n')
     draft.conditions_json = { source_ids: sourceIds }
     return
@@ -217,6 +266,7 @@ const updateMatchType = (value: string) => {
     return
   }
   if (draft.match_type === 'source_ids') {
+    selectedSourceIds.value = []
     sourceIdsInput.value = ''
     draft.conditions_json = { source_ids: [] }
     return
@@ -235,8 +285,19 @@ const toggleCategory = (value: string, checked: boolean) => {
   }
 }
 
+const toggleSourceId = (value: string, checked: boolean) => {
+  const next = new Set(selectedSourceIds.value)
+  if (checked) next.add(value)
+  else next.delete(value)
+  selectedSourceIds.value = Array.from(next)
+  draft.conditions_json = {
+    source_ids: [...selectedSourceIds.value],
+  }
+}
+
 watch(sourceIdsInput, (value) => {
   if (draft.match_type !== 'source_ids') return
+  if (sourceOptions.value.length) return
   draft.conditions_json = {
     source_ids: normalizeListInput(value),
   }
@@ -264,7 +325,14 @@ const hasConditions = computed(() => {
   return Array.isArray(draft.conditions_json.keywords) && draft.conditions_json.keywords.length > 0
 })
 
-const canSubmit = computed(() => draft.name.trim().length > 0 && hasConditions.value)
+const hasAction = computed(() =>
+  Boolean(draft.action_group_id) ||
+  Boolean(draft.action_muted) ||
+  Boolean(draft.action_auto_mark_read) ||
+  Boolean(draft.action_auto_add_reading_list),
+)
+
+const canSubmit = computed(() => draft.name.trim().length > 0 && hasConditions.value && hasAction.value)
 
 const submitRule = () => {
   if (!canSubmit.value) return
@@ -295,6 +363,7 @@ const submitRule = () => {
 }
 
 .category-list,
+.source-list,
 .rule-action-grid {
   display: flex;
   flex-direction: column;

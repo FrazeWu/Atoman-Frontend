@@ -16,7 +16,7 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
         position: 0,
         match_type: 'source_category',
         conditions_json: {
-          categories: ['podcast'],
+          category: 'podcast',
         },
         action_group_id: 'group-1',
         action_muted: true,
@@ -111,6 +111,20 @@ describe('SubscriptionManageSheet', () => {
     expect(wrapper.emitted('check-subscription-health')).toEqual([['sub-1']])
   })
 
+  it('emits subscription flag updates from source cards', async () => {
+    const wrapper = mountSheet()
+
+    await wrapper.get('[data-test="subscription-flag-muted"]').setValue(true)
+    await wrapper.get('[data-test="subscription-flag-auto-read"]').setValue(true)
+    await wrapper.get('[data-test="subscription-flag-reading-list"]').setValue(true)
+
+    expect(wrapper.emitted('update-subscription')).toEqual([
+      ['sub-1', { is_muted: true }],
+      ['sub-1', { auto_mark_read: true }],
+      ['sub-1', { auto_add_reading_list: true }],
+    ])
+  })
+
   it('allows moving a subscription back to unassigned', async () => {
     const wrapper = mountSheet()
     const groupSelect = wrapper.get('select')
@@ -120,6 +134,25 @@ describe('SubscriptionManageSheet', () => {
     await groupSelect.setValue('')
 
     expect(wrapper.emitted('move-subscription')).toEqual([['sub-1', '']])
+  })
+
+  it('separates manage content into task tabs', async () => {
+    const wrapper = mountSheet()
+
+    expect(wrapper.get('[data-test="subscription-manage-tab-sources"]').classes()).toContain('is-active')
+    expect(wrapper.text()).toContain('Example Feed')
+    expect(wrapper.text()).not.toContain('规则管理')
+
+    await wrapper.get('[data-test="subscription-manage-tab-rules"]').trigger('click')
+
+    expect(wrapper.text()).toContain('规则管理')
+    expect(wrapper.text()).toContain('播客自动整理')
+    expect(wrapper.text()).not.toContain('Example Feed')
+
+    await wrapper.get('[data-test="subscription-manage-tab-keywords"]').trigger('click')
+
+    expect(wrapper.text()).toContain('过滤规则')
+    expect(wrapper.text()).not.toContain('播客自动整理')
   })
 
   it('emits OPML import and export actions', async () => {
@@ -154,6 +187,7 @@ describe('SubscriptionManageSheet', () => {
   it('keeps only hidden keyword local controls and emits keyword updates', async () => {
     const wrapper = mountSheet()
 
+    await wrapper.get('[data-test="subscription-manage-tab-keywords"]').trigger('click')
     await wrapper.get('[data-test="filter-keyword-input"]').setValue('剧透')
     await wrapper.findAll('button').find((button) => button.text() === '添加关键词')!.trigger('click')
 
@@ -168,6 +202,8 @@ describe('SubscriptionManageSheet', () => {
   it('shows subscription rules summary and emits rule management events', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountSheet()
+
+    await wrapper.get('[data-test="subscription-manage-tab-rules"]').trigger('click')
 
     expect(wrapper.text()).toContain('规则管理')
     expect(wrapper.text()).toContain('播客自动整理')
@@ -214,7 +250,7 @@ describe('SubscriptionManageSheet', () => {
           PSelect: {
             props: ['modelValue', 'options'],
             emits: ['update:modelValue'],
-            template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
+            template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
           },
           SubscriptionRuleEditorSheet: {
             props: ['show', 'mode', 'groups', 'rule'],
@@ -225,6 +261,7 @@ describe('SubscriptionManageSheet', () => {
       },
     })
 
+    await wrapper.get('[data-test="subscription-manage-tab-rules"]').trigger('click')
     await wrapper.findAll('button').find((button) => button.text() === '编辑')!.trigger('click')
     await wrapper.get('[data-test="rule-editor"]').trigger('click')
 
@@ -307,6 +344,8 @@ describe('SubscriptionManageSheet', () => {
         },
       },
     })
+
+    await wrapper.get('[data-test="subscription-manage-tab-keywords"]').trigger('click')
 
     expect(wrapper.text()).toContain('剧透')
     expect(wrapper.text()).not.toContain('已静音来源')

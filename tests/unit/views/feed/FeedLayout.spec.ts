@@ -27,6 +27,14 @@ const subscriptions: Subscription[] = [
     subscription_group_id: 'g-tech',
     created_at: '2026-01-01T00:00:00Z',
   },
+  {
+    id: 'sub-2',
+    user_id: 'user-1',
+    feed_source_id: 'source-2',
+    title: '英格兰周报',
+    subscription_group_id: 'g-tech',
+    created_at: '2026-01-01T00:00:00Z',
+  },
 ]
 
 const makeRouter = async (initialPath = '/feed') => {
@@ -97,6 +105,82 @@ describe('FeedLayout', () => {
     await wrapper.get('[data-source-id="sub-1"]').trigger('click')
 
     expect(pushSpy).toHaveBeenCalledWith({ path: '/feed', query: { source_id: 'sub-1' } })
+  })
+
+  it('shows unread counts from the loaded feed timeline', async () => {
+    const { wrapper } = await mountLayout('/feed')
+    const feedStore = useFeedStore()
+
+    feedStore.timeline = [
+      {
+        type: 'feed_item',
+        is_read: false,
+        published_at: '2026-01-01T00:00:00Z',
+        feed_item: {
+          id: 'item-1',
+          feed_source_id: 'source-1',
+          guid: 'item-1',
+          title: '未读文章',
+          link: 'https://example.com/1',
+          summary: '',
+          author: '',
+          published_at: '2026-01-01T00:00:00Z',
+          fetched_at: '2026-01-01T00:00:00Z',
+        },
+      },
+      {
+        type: 'feed_item',
+        is_read: true,
+        published_at: '2026-01-01T00:00:00Z',
+        feed_item: {
+          id: 'item-2',
+          feed_source_id: 'source-2',
+          guid: 'item-2',
+          title: '已读文章',
+          link: 'https://example.com/2',
+          summary: '',
+          author: '',
+          published_at: '2026-01-01T00:00:00Z',
+          fetched_at: '2026-01-01T00:00:00Z',
+        },
+      },
+    ]
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text()).toBe('1')
+    expect(wrapper.find('[data-test="feed-sidebar-unread-count-sub-2"]').exists()).toBe(false)
+  })
+
+  it('prefers server unread counts over the current timeline page', async () => {
+    const { wrapper } = await mountLayout('/feed')
+    const feedStore = useFeedStore()
+
+    feedStore.subscriptions = [
+      { ...subscriptions[0], unread_count: 5 },
+      { ...subscriptions[1], unread_count: 0 },
+    ]
+    feedStore.timeline = [
+      {
+        type: 'feed_item',
+        is_read: false,
+        published_at: '2026-01-01T00:00:00Z',
+        feed_item: {
+          id: 'item-1',
+          feed_source_id: 'source-1',
+          guid: 'item-1',
+          title: '当前页未读',
+          link: 'https://example.com/1',
+          summary: '',
+          author: '',
+          published_at: '2026-01-01T00:00:00Z',
+          fetched_at: '2026-01-01T00:00:00Z',
+        },
+      },
+    ]
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text()).toBe('5')
+    expect(wrapper.find('[data-test="feed-sidebar-unread-count-sub-2"]').exists()).toBe(false)
   })
 
   it('opens the manage sheet from the sidebar sources manage button', async () => {

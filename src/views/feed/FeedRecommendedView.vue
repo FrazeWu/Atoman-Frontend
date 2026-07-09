@@ -407,7 +407,6 @@ onMounted(() => {
         <PSegmentedControl
           v-model="category"
           :options="categoryOptions"
-          class="category-segmented-control"
         />
       </div>
 
@@ -645,12 +644,6 @@ onMounted(() => {
   .filter-group + .filter-group::before {
     display: none;
   }
-}
-
-.category-segmented-control :deep(.p-segmented-control-item) {
-  min-height: 24px;
-  padding: 0 10px;
-  font-size: 10px;
 }
 
 .state-line {

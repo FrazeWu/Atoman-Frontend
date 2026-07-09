@@ -1,10 +1,14 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+
+const source = readFileSync(resolve(__dirname, '../../../../src/views/feed/FeedRecommendedView.vue'), 'utf8')
 
 const routerPush = vi.fn()
 const routerReplace = vi.fn()
@@ -45,6 +49,10 @@ describe('FeedRecommendedView', () => {
     routeQuery.category = undefined
     routeQuery.theme = undefined
     setActivePinia(createPinia())
+  })
+
+  it('uses the shared segmented control size for category filters', () => {
+    expect(source).not.toContain('.category-segmented-control :deep(.p-segmented-control-item)')
   })
 
   it('shows subscribe action for unsubscribed recommended channels and marks them subscribed after click', async () => {

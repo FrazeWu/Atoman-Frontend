@@ -118,6 +118,7 @@ interface ReadingListEntry {
   feed_item_id: string
   feed_item?: FeedItem
   created_at: string
+  is_read?: boolean
 }
 
 const route = useRoute()
@@ -187,6 +188,8 @@ watch(items, () => {
 const openArticleSheet = (entry: ReadingListEntry, index?: number) => {
   if (index !== undefined) focusedIndex.value = index
   if (!entry.feed_item) return
+  const wasRead = entry.is_read === true
+  entry.is_read = true
   selectedArticle.value = {
     type: 'feed_item',
     feed_item: entry.feed_item,
@@ -194,6 +197,14 @@ const openArticleSheet = (entry: ReadingListEntry, index?: number) => {
     is_read: true
   }
   showArticleSheet.value = true
+  if (!wasRead) {
+    void markItemsReadAndRefresh([entry.feed_item.id])
+  }
+}
+
+const markItemsReadAndRefresh = async (ids: string[]) => {
+  const success = await feedStore.markItemsRead(ids)
+  if (success) await feedStore.fetchSubscriptions()
 }
 
 const openPreviousArticle = () => {

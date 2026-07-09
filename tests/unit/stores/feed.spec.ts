@@ -349,12 +349,25 @@ describe('feed store', () => {
     authenticate()
 
     const feed = useFeedStore()
-    await feed.markItemsUnread(['feed-item-1'])
+    expect(await feed.markItemsUnread(['feed-item-1'])).toBe(true)
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/timeline/mark-unread', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ feed_item_ids: ['feed-item-1'] }),
     }))
+  })
+
+  it('reports failed read state writes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
+
+    const feed = useFeedStore()
+
+    expect(await feed.markItemsRead(['feed-item-1'])).toBe(false)
+    expect(await feed.markItemsUnread(['feed-item-1'])).toBe(false)
+    expect(await feed.markSubscriptionRead('sub-1')).toBe(false)
+    expect(await feed.markSubscriptionUnread('sub-1')).toBe(false)
+    expect(await feed.markAllFeedRead()).toBe(false)
+    expect(await feed.markAllFeedUnread()).toBe(false)
   })
 
   it('moves provider-created subscriptions into the selected group', async () => {
@@ -377,6 +390,16 @@ describe('feed store', () => {
       method: 'PUT',
       body: JSON.stringify({ group_id: 'group-1' }),
     }))
+  })
+
+  it('reports failed subscription management writes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
+
+    const feed = useFeedStore()
+
+    expect(await feed.setSubscriptionGroup('sub-1', 'group-1')).toBe(false)
+    expect(await feed.unsubscribe('sub-1')).toBe(false)
+    expect(await feed.deleteGroup('group-1')).toBe(false)
   })
 
   it('optimistically updates starred ids while the star request is pending', async () => {
@@ -568,6 +591,37 @@ describe('feed store', () => {
     })
   })
 
+  it('does not send a subscription rule without any action', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const feed = useFeedStore()
+
+    const result = await feed.createSubscriptionRule({
+      name: '播客整理',
+      enabled: true,
+      match_type: 'source_category',
+      conditions_json: { categories: ['podcast'] },
+    })
+
+    expect(result).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('does not send a subscription rule without any condition', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const feed = useFeedStore()
+
+    const result = await feed.createSubscriptionRule({
+      name: '空条件规则',
+      enabled: true,
+      match_type: 'keywords',
+      conditions_json: { keywords: [] },
+      action_auto_mark_read: true,
+    })
+
+    expect(result).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('creates a subscription rule through the backend-aligned endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -578,6 +632,7 @@ describe('feed store', () => {
           position: 1,
           match_type: 'source_category',
           conditions_json: { categories: ['podcast'] },
+          action_auto_mark_read: true,
         },
       }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -588,6 +643,7 @@ describe('feed store', () => {
           position: 1,
           match_type: 'source_category',
           conditions_json: { categories: ['podcast'] },
+          action_auto_mark_read: true,
         }],
       }), { status: 200 }))
 
@@ -597,6 +653,7 @@ describe('feed store', () => {
       enabled: true,
       match_type: 'source_category',
       conditions_json: { categories: ['podcast'] },
+      action_auto_mark_read: true,
     })
 
     expect(result).toBe(true)
@@ -607,6 +664,7 @@ describe('feed store', () => {
         enabled: true,
         match_type: 'source_category',
         conditions_json: { categories: ['podcast'] },
+        action_auto_mark_read: true,
       }),
     }))
     expect(feed.subscriptionRules).toHaveLength(1)
@@ -623,6 +681,7 @@ describe('feed store', () => {
           position: 2,
           match_type: 'keywords',
           conditions_json: { keywords: ['go'] },
+          action_muted: true,
         }],
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
@@ -668,6 +727,7 @@ describe('feed store', () => {
       position: 2,
       match_type: 'keywords',
       conditions_json: { keywords: ['go'] },
+      action_muted: true,
     })).toBe(true)
     expect(await feed.reorderSubscriptionRules(['rule-2', 'rule-1'])).toBe(true)
     expect(await feed.deleteSubscriptionRule('rule-1')).toBe(true)

@@ -70,6 +70,29 @@ interface SubscriptionRulePayload {
   position?: number
 }
 
+const hasSubscriptionRuleAction = (payload: Partial<SubscriptionRulePayload>) =>
+  Boolean(payload.action_group_id) ||
+  Boolean(payload.action_muted) ||
+  Boolean(payload.action_auto_mark_read) ||
+  Boolean(payload.action_auto_add_reading_list)
+
+const hasNonEmptyListValue = (value: unknown) =>
+  Array.isArray(value) && value.some((entry) => String(entry).trim().length > 0)
+
+const hasSubscriptionRuleConditions = (payload: Partial<SubscriptionRulePayload>) => {
+  const conditions = payload.conditions_json || {}
+  if (payload.match_type === 'source_category') {
+    return hasNonEmptyListValue(conditions.categories) || String(conditions.category || '').trim().length > 0
+  }
+  if (payload.match_type === 'source_ids') {
+    return hasNonEmptyListValue(conditions.source_ids)
+  }
+  if (payload.match_type === 'keywords') {
+    return hasNonEmptyListValue(conditions.keywords)
+  }
+  return false
+}
+
 interface ApplySubscriptionRulesPayload {
   rule_id?: string
   all?: boolean
@@ -263,6 +286,8 @@ export const useFeedStore = defineStore('feed', () => {
   const createSubscriptionRule = async (payload: SubscriptionRulePayload): Promise<boolean> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
+    if (!hasSubscriptionRuleAction(payload)) return false
+    if (!hasSubscriptionRuleConditions(payload)) return false
     try {
       const res = await fetch(`${api.url}/feed/subscription-rules`, {
         method: 'POST',
@@ -281,6 +306,8 @@ export const useFeedStore = defineStore('feed', () => {
   const updateSubscriptionRule = async (id: string, payload: Partial<SubscriptionRulePayload>): Promise<boolean> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
+    if (!hasSubscriptionRuleAction(payload)) return false
+    if (!hasSubscriptionRuleConditions(payload)) return false
     try {
       const res = await fetch(`${api.url}/feed/subscription-rules/${id}`, {
         method: 'PUT',
@@ -410,7 +437,13 @@ export const useFeedStore = defineStore('feed', () => {
   // Only sets an explicit group UUID; use setSubscriptionGroup or a default group UUID to clear/reset.
   const updateSubscription = async (
     id: string,
-    payload: { title?: string; group_id?: string },
+    payload: {
+      title?: string
+      group_id?: string
+      is_muted?: boolean
+      auto_mark_read?: boolean
+      auto_add_reading_list?: boolean
+    },
   ): Promise<boolean> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
@@ -448,32 +481,38 @@ export const useFeedStore = defineStore('feed', () => {
     return false
   }
 
-  const deleteGroup = async (id: string) => {
+  const deleteGroup = async (id: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/groups/${id}`, {
+      const res = await fetch(`${api.url}/feed/groups/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      if (!res.ok) return false
       await fetchGroups()
       await fetchSubscriptions()
+      return true
     } catch (e) {
       console.error('Failed to delete group', e)
     }
+    return false
   }
 
-  const setSubscriptionGroup = async (subId: string, groupId: string | null) => {
+  const setSubscriptionGroup = async (subId: string, groupId: string | null): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/subscriptions/${subId}/group`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subId}/group`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ group_id: groupId }),
       })
+      if (!res.ok) return false
       await fetchSubscriptions()
+      return true
     } catch (e) {
       console.error('Failed to set subscription group', e)
     }
+    return false
   }
 
   const fetchTimeline = async (
@@ -529,69 +568,110 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
-  const unsubscribe = async (subscriptionId: string) => {
+  const unsubscribe = async (subscriptionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/subscriptions/${subscriptionId}`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      if (!res.ok) return false
       await fetchSubscriptions()
+      return true
     } catch (e) {
       console.error('Failed to unsubscribe', e)
     }
+    return false
   }
 
-  const markItemsRead = async (feedItemIds: string[]) => {
+  const markItemsRead = async (feedItemIds: string[]): Promise<boolean> => {
     const authStore = useAuthStore()
-    if (!feedItemIds.length) return
+    if (!feedItemIds.length) return false
     try {
-      await fetch(`${api.url}/feed/timeline/mark-read`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark items read', e)
     }
+    return false
   }
 
-  const markItemsUnread = async (feedItemIds: string[]) => {
+  const markItemsUnread = async (feedItemIds: string[]): Promise<boolean> => {
     const authStore = useAuthStore()
-    if (!feedItemIds.length) return
+    if (!feedItemIds.length) return false
     try {
-      await fetch(`${api.url}/feed/timeline/mark-unread`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-unread`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark items unread', e)
     }
+    return false
   }
 
-  const markAllRead = async () => {
+  const markSubscriptionRead = async (subscriptionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
+    if (!subscriptionId) return false
     try {
-      await fetch(`${api.url}/feed/timeline/mark-all-read`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/mark-read`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      return res.ok
+    } catch (e) {
+      console.error('Failed to mark subscription read', e)
+    }
+    return false
+  }
+
+  const markSubscriptionUnread = async (subscriptionId: string): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!subscriptionId) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/mark-unread`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      return res.ok
+    } catch (e) {
+      console.error('Failed to mark subscription unread', e)
+    }
+    return false
+  }
+
+  const markAllRead = async (): Promise<boolean> => {
+    const authStore = useAuthStore()
+    try {
+      const res = await fetch(`${api.url}/feed/timeline/mark-all-read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark all read', e)
     }
+    return false
   }
 
-  const markAllUnread = async () => {
+  const markAllUnread = async (): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/timeline/mark-all-unread`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-all-unread`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark all unread', e)
     }
+    return false
   }
 
   const subscribeToChannel = async (channelId: string): Promise<boolean> => {
@@ -1410,6 +1490,8 @@ export const useFeedStore = defineStore('feed', () => {
     unsubscribe,
     markItemsRead,
     markItemsUnread,
+    markSubscriptionRead,
+    markSubscriptionUnread,
     markAllFeedRead: markAllRead,
     markAllFeedUnread: markAllUnread,
     // Health check

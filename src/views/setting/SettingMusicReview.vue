@@ -153,7 +153,7 @@ onMounted(async () => {
       <div v-else class="entries-list">
         <div v-for="entry in entries" :key="entry.id" class="entry-row">
           <div class="entry-info">
-            <RouterLink :to="entry.type === 'album' ? `/music?album=${entry.id}` : `/music?artist=${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
+            <RouterLink :to="entry.type === 'album' ? `/music/album/${entry.id}` : `/music/artist/${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
             <span class="entry-type">{{ entry.type === 'album' ? '专辑' : '艺术家' }}</span>
             <span v-if="entry.album_type" class="entry-album-type">{{ entry.album_type.toUpperCase() }}</span>
           </div>

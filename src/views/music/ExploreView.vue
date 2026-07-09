@@ -304,13 +304,13 @@ function openDiscoverPlaylist(playlist: MusicPlaylistSummary) {
 function openAlbumResult(album: MusicAlbumListItem) {
   searchOpen.value = false
   searchQuery.value = ''
-  router.push(`/music?album=${album.id}`)
+  router.push(`/music/album/${album.id}`)
 }
 
 function openArtistResult(artist: MusicArtistListItem) {
   searchOpen.value = false
   searchQuery.value = ''
-  router.push(`/music?artist=${artist.id}`)
+  router.push(`/music/artist/${artist.id}`)
 }
 
 function handleSearchFocus() {
@@ -416,7 +416,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         :album="album"
         :is-bookmarked="starredAlbumIds.includes(String(album.id))"
         data-testid="discover-album-card"
-        @click="router.push(`/music?album=${album.id}`)"
+        @click="router.push(`/music/album/${album.id}`)"
         @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
       />
     </div>

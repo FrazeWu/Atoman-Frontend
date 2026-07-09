@@ -71,5 +71,6 @@ describe('useGlobalSearch', () => {
     expect(search.sections.value[0]?.items[0]).toMatchObject({ title: 'Forum Topic', href: '/forum/topic/topic-1' })
     expect(search.sections.value[1]?.items[0]).toMatchObject({ title: 'Blog Post', href: '/post/post-1' })
     expect(search.sections.value[2]?.items.map((item) => item.title)).toEqual(['Album Name', 'Artist Only'])
+    expect(search.sections.value[2]?.items.map((item) => item.href)).toEqual(['/music/album/album-1', '/music/artist/artist-2'])
   })
 })

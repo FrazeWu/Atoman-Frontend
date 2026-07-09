@@ -333,7 +333,7 @@ async function handleAlbumEditSubmit() {
 
     refreshAlbum()
     closeMusicEditor()
-    await router.replace(`/music?album=${current.id}`)
+    await router.replace(`/music/album/${current.id}`)
   } catch (error) {
     console.error('Failed to save album edit:', error)
     albumErrorMessage.value = '保存失败，请检查填写内容后重试'

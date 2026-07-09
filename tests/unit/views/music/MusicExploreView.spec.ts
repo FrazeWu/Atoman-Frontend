@@ -253,14 +253,14 @@ describe('Music ExploreView.vue', () => {
 
     const resultButtons = wrapper.findAll('button.search-result')
     await resultButtons[0].trigger('mousedown')
-    expect(mocks.push).toHaveBeenCalledWith('/music?album=album-1')
+    expect(mocks.push).toHaveBeenCalledWith('/music/album/album-1')
 
     await input.trigger('focus')
     await input.setValue('ye')
     await flushPromises()
     const reopenedButtons = wrapper.findAll('button.search-result')
     await reopenedButtons[1].trigger('mousedown')
-    expect(mocks.push).toHaveBeenCalledWith('/music?artist=artist-1')
+    expect(mocks.push).toHaveBeenCalledWith('/music/artist/artist-1')
   })
 
   it('renders discover sections from the backend discover feed', async () => {

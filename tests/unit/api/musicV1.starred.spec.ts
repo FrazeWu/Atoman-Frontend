@@ -10,6 +10,7 @@ import {
   listMusicStarred,
   musicV1Endpoints,
   listSongBookmarks,
+  reorderMusicPlaylistSongs,
   updateMusicPlaylist,
 } from '@/api/musicV1'
 
@@ -156,6 +157,23 @@ describe('music v1 starred and playlist adapters', () => {
     })
     expect(updated.name).toBe('晚间歌单')
     expect(deleted.deleted).toBe(true)
+  })
+
+  it('reorders playlist songs through the music namespace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { reordered: true } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await reorderMusicPlaylistSongs('playlist-1', ['song-2', 'song-1'])
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist-1/songs/order', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ song_ids: ['song-2', 'song-1'] }),
+    })
+    expect(result.reordered).toBe(true)
   })
 
   it('gets playlist details with songs', async () => {

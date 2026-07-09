@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   deleteMusicPlaylist: vi.fn(),
   updateMusicPlaylist: vi.fn(),
   removeMusicPlaylistSong: vi.fn(),
+  reorderMusicPlaylistSongs: vi.fn(),
   uploadMusicAsset: vi.fn(),
   listPlaylistBookmarks: vi.fn(),
   createPlaylistBookmark: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('@/api/musicV1', () => ({
   deleteMusicPlaylist: mocks.deleteMusicPlaylist,
   updateMusicPlaylist: mocks.updateMusicPlaylist,
   removeMusicPlaylistSong: mocks.removeMusicPlaylistSong,
+  reorderMusicPlaylistSongs: mocks.reorderMusicPlaylistSongs,
   uploadMusicAsset: mocks.uploadMusicAsset,
   listPlaylistBookmarks: mocks.listPlaylistBookmarks,
   createPlaylistBookmark: mocks.createPlaylistBookmark,
@@ -62,6 +64,7 @@ describe('PlaylistDrawer', () => {
     mocks.deleteMusicPlaylist.mockReset()
     mocks.updateMusicPlaylist.mockReset()
     mocks.removeMusicPlaylistSong.mockReset()
+    mocks.reorderMusicPlaylistSongs.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.listPlaylistBookmarks.mockReset()
     mocks.createPlaylistBookmark.mockReset()
@@ -91,6 +94,7 @@ describe('PlaylistDrawer', () => {
     mocks.deletePlaylistBookmark.mockResolvedValue({ deleted: true })
     mocks.deleteMusicPlaylist.mockResolvedValue({ deleted: true })
     mocks.removeMusicPlaylistSong.mockResolvedValue({ deleted: true })
+    mocks.reorderMusicPlaylistSongs.mockResolvedValue({ reordered: true })
     mocks.uploadMusicAsset.mockResolvedValue({
       url: '/uploads/playlist-cover.jpg',
       key: 'music/covers/playlist-cover.jpg',
@@ -224,5 +228,33 @@ describe('PlaylistDrawer', () => {
     expect(mocks.refreshPlaylists).toHaveBeenCalled()
     expect(wrapper.text()).not.toContain('First Song')
     expect(wrapper.text()).toContain('Second Song')
+  })
+
+  it('reorders songs in an owned playlist', async () => {
+    mocks.getMusicPlaylist.mockResolvedValue({
+      id: 'playlist-1',
+      user_id: 'user-1',
+      owner_username: 'alice',
+      name: '夜航歌单',
+      description: '',
+      cover_url: '',
+      is_public: false,
+      song_count: 2,
+      songs: [
+        { id: 'song-1', title: 'First Song', entry_status: 'open', audio_url: 'https://cdn.test/1.mp3' },
+        { id: 'song-2', title: 'Second Song', entry_status: 'open', audio_url: 'https://cdn.test/2.mp3' },
+      ],
+    })
+
+    const wrapper = mount(PlaylistDrawer)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="playlist-move-song-down-song-1"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.reorderMusicPlaylistSongs).toHaveBeenCalledWith('playlist-1', ['song-2', 'song-1'])
+    expect(mocks.refreshPlaylists).toHaveBeenCalled()
+    const text = wrapper.text()
+    expect(text.indexOf('Second Song')).toBeLessThan(text.indexOf('First Song'))
   })
 })

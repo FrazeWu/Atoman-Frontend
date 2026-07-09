@@ -16,6 +16,7 @@ import {
   getMusicPlaylist,
   listPlaylistBookmarks,
   removeMusicPlaylistSong,
+  reorderMusicPlaylistSongs,
   updateMusicPlaylist,
   uploadMusicAsset,
   type MusicPlaylistDetail,
@@ -46,6 +47,7 @@ const coverInput = ref<HTMLInputElement | null>(null)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const removingSongIds = ref<Set<string>>(new Set())
+const reordering = ref(false)
 
 async function loadBookmarkState(playlistId: string) {
   if (!authStore.isAuthenticated) {
@@ -217,6 +219,33 @@ async function removePlaylistSong(songId: string) {
     const next = new Set(removingSongIds.value)
     next.delete(songId)
     removingSongIds.value = next
+  }
+}
+
+async function movePlaylistSong(index: number, direction: -1 | 1) {
+  if (!playlist.value || reordering.value) return
+  const nextIndex = index + direction
+  if (nextIndex < 0 || nextIndex >= playlist.value.songs.length) return
+
+  const nextSongs = [...playlist.value.songs]
+  const [song] = nextSongs.splice(index, 1)
+  if (!song) return
+  nextSongs.splice(nextIndex, 0, song)
+
+  reordering.value = true
+  errorMessage.value = ''
+  try {
+    await reorderMusicPlaylistSongs(playlist.value.id, nextSongs.map((item) => String(item.id)))
+    playlist.value = {
+      ...playlist.value,
+      songs: nextSongs,
+    }
+    refreshPlaylists()
+  } catch (error) {
+    console.error('Failed to reorder playlist songs:', error)
+    errorMessage.value = '歌曲排序失败'
+  } finally {
+    reordering.value = false
   }
 }
 
@@ -444,6 +473,28 @@ watch(playlist, syncEditForm, { immediate: true })
 
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
+            <span v-if="canEditPlaylist" class="track-order-actions">
+              <button
+                type="button"
+                class="track-order-btn"
+                :disabled="index === 0 || reordering"
+                :data-testid="`playlist-move-song-up-${track.id}`"
+                aria-label="上移歌曲"
+                @click="movePlaylistSong(index, -1)"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="track-order-btn"
+                :disabled="index === playlist.songs.length - 1 || reordering"
+                :data-testid="`playlist-move-song-down-${track.id}`"
+                aria-label="下移歌曲"
+                @click="movePlaylistSong(index, 1)"
+              >
+                ↓
+              </button>
+            </span>
             <button
               v-if="canEditPlaylist"
               type="button"
@@ -807,7 +858,7 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .col-status {
-  width: 5.5rem;
+  width: 7.5rem;
   flex-shrink: 0;
   text-align: right;
 }
@@ -915,6 +966,33 @@ watch(playlist, syncEditForm, { immediate: true })
 .track-remove-btn:disabled {
   cursor: default;
   opacity: 0.45;
+}
+
+.track-order-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-right: 0.35rem;
+}
+
+.track-order-btn {
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+  font-family: var(--a-font-meta);
+  font-size: 0.8rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0.1rem 0.15rem;
+}
+
+.track-order-btn:hover {
+  color: var(--a-color-ink);
+}
+
+.track-order-btn:disabled {
+  cursor: default;
+  opacity: 0.35;
 }
 
 .is-disabled {

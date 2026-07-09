@@ -618,6 +618,7 @@ export const musicV1Endpoints = {
   playlists: () => `${apiV1Base()}/music/playlists`,
   playlist: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}`,
   playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
+  playlistSongsOrder: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/order`,
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
   plays: () => `${apiV1Base()}/music/plays`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
@@ -1143,6 +1144,10 @@ export async function addMusicPlaylistSong(playlistId: string, songId: string): 
 
 export async function removeMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
   return apiDeleteJson<any>(musicV1Endpoints.playlistSong(playlistId, songId))
+}
+
+export async function reorderMusicPlaylistSongs(playlistId: string, songIds: string[]): Promise<{ reordered: boolean }> {
+  return apiPatchJson<{ reordered: boolean }>(musicV1Endpoints.playlistSongsOrder(playlistId), { song_ids: songIds })
 }
 
 export async function recordMusicSongPlay(songId: string): Promise<{ recorded: boolean }> {

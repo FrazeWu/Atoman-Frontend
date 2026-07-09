@@ -51,6 +51,8 @@ export interface Album {
 
 export interface Song {
   id: number | string;
+  source_type?: 'music' | 'podcast_episode' | 'feed_podcast'
+  source_id?: string
   title: string;
   artist: string;
   album: string;
@@ -211,7 +213,7 @@ export interface BlogDraft {
 
 export interface Comment {
   id: string
-  target_type?: 'post' | 'video'
+  target_type?: 'post' | 'video' | 'podcast_episode'
   target_id?: string
   post_id?: string
   user_id?: string | null
@@ -850,6 +852,26 @@ export interface PodcastEpisode {
   episode_number: number
   created_at: string
   updated_at: string
+}
+
+export interface PodcastEpisodeProgress {
+  id: string
+  user_id: string
+  episode_id: string
+  episode?: PodcastEpisode
+  position_sec: number
+  duration_sec: number
+  completed: boolean
+  last_played_at?: string
+}
+
+export interface PodcastListenLater {
+  id: string
+  user_id: string
+  episode_id: string
+  episode?: PodcastEpisode
+  position: number
+  created_at: string
 }
 
 export interface VideoTag {

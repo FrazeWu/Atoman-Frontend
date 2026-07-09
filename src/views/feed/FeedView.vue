@@ -780,8 +780,8 @@ const renameSubscription = async (id: string, title: string) => {
 
 const moveSubscription = async (id: string, groupId: string) => {
   await withManageBusy(async () => {
-    const success = await feedStore.updateSubscription(id, { group_id: groupId })
-    if (success) await fetchTimeline()
+    await feedStore.setSubscriptionGroup(id, groupId || null)
+    await fetchTimeline()
   })
 }
 

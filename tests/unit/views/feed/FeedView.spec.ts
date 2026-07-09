@@ -1933,6 +1933,48 @@ describe('FeedView', () => {
     confirm.mockRestore()
   })
 
+  it('moves subscriptions back to the default group through the group endpoint', async () => {
+    const feedStore = useFeedStore()
+    const setSubscriptionGroup = vi.spyOn(feedStore, 'setSubscriptionGroup').mockResolvedValue(undefined)
+    const updateSubscription = vi.spyOn(feedStore, 'updateSubscription').mockResolvedValue(true)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PBadge: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            emits: ['move-subscription'],
+            template: '<section data-test="manage-sheet" @click="$emit(\'move-subscription\', \'sub-1\', \'\')" />',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(setSubscriptionGroup).toHaveBeenCalledWith('sub-1', null)
+    expect(updateSubscription).not.toHaveBeenCalledWith('sub-1', { group_id: '' })
+  })
+
   it('reorders and applies rules from the manage sheet', async () => {
     const feedStore = useFeedStore()
     feedStore.subscriptionRules = [

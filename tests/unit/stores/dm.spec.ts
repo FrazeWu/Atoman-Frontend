@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useDMStore } from '@/stores/dm'
+import { useAuthStore } from '@/stores/auth'
 
 const makeToken = () => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -74,5 +75,27 @@ describe('dm store', () => {
       method: 'PUT',
     }))
     expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/dm/conversations/alice/read', expect.anything())
+  })
+
+  it('does not count own realtime echo as unread', () => {
+    const auth = useAuthStore()
+    auth.user = { uuid: 'me-id', username: 'me', email: 'me@example.com' } as never
+    const store = useDMStore()
+    store.unreadCount = 2
+    store.conversations = [{ conversation_id: 'c1', other_username: 'alice', other_user_id: 'alice-id', preview: '', unread_count: 0 }]
+    store.activeConversation = 'alice'
+
+    store.receiveDM({
+      conversation_id: 'c1',
+      message_id: 'm1',
+      sender_id: 'me-id',
+      sender_username: 'me',
+      content: 'hello',
+      image_url: '',
+      created_at: '2026-07-09T00:00:00Z',
+    })
+
+    expect(store.unreadCount).toBe(2)
+    expect(store.conversations[0].unread_count).toBe(0)
   })
 })

@@ -112,8 +112,13 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const receiveDM = (payload: DMRealtimePayload) => {
-    const active = activeConversation.value === payload.sender_username
-    if (!active) {
+    const currentUserIds = new Set([
+      authStore.user?.uuid,
+      authStore.user?.id === undefined ? undefined : String(authStore.user.id),
+    ].filter((id): id is string => Boolean(id)))
+    const isOwnMessage = currentUserIds.has(payload.sender_id)
+    const active = !isOwnMessage && activeConversation.value === payload.sender_username
+    if (!active && !isOwnMessage) {
       unreadCount.value += 1
     }
 
@@ -121,7 +126,7 @@ export const useDMStore = defineStore('dm', () => {
     if (existingConversation) {
       existingConversation.preview = payload.content || '[图片]'
       existingConversation.last_message_at = payload.created_at
-      if (!active) existingConversation.unread_count += 1
+      if (!active && !isOwnMessage) existingConversation.unread_count += 1
       conversations.value = [existingConversation, ...conversations.value.filter((item) => item.conversation_id !== payload.conversation_id)]
     }
 

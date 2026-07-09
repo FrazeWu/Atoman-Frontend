@@ -83,7 +83,7 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
       PSelect: {
         props: ['modelValue', 'options'],
         emits: ['update:modelValue'],
-        template: '<select :value="modelValue"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
+        template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="String(option.value)" :value="option.value">{{ option.label }}</option></select>',
       },
       SubscriptionRuleEditorSheet: true,
     },
@@ -109,6 +109,17 @@ describe('SubscriptionManageSheet', () => {
 
     expect(wrapper.emitted('check-all-subscriptions-health')).toEqual([[]])
     expect(wrapper.emitted('check-subscription-health')).toEqual([['sub-1']])
+  })
+
+  it('allows moving a subscription back to unassigned', async () => {
+    const wrapper = mountSheet()
+    const groupSelect = wrapper.get('select')
+
+    expect(groupSelect.text()).toContain('未分类')
+
+    await groupSelect.setValue('')
+
+    expect(wrapper.emitted('move-subscription')).toEqual([['sub-1', '']])
   })
 
   it('emits OPML import and export actions', async () => {

@@ -305,9 +305,10 @@ const localFilterRules = ref<FeedFilterRules>({
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
 })
 
-const groupOptions = computed(() =>
-  props.groups.map(group => ({ label: group.name, value: group.id })),
-)
+const groupOptions = computed(() => [
+  { label: '未分类', value: '' },
+  ...props.groups.map(group => ({ label: group.name, value: group.id })),
+])
 
 const displayGroups = computed(() => [
   ...props.groups.map(group => ({
@@ -418,7 +419,6 @@ const submitGroupRename = (group: { id: string; name: string; virtual?: boolean 
 
 const moveSubscription = (id: string, groupId: string) => {
   if (props.busy) return
-  if (!groupId) return
   emit('move-subscription', id, groupId)
 }
 

@@ -79,7 +79,44 @@ describe('Music ExploreView.vue', () => {
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
 
-    mocks.listMusicDiscoverFeed.mockResolvedValue({ data: [] })
+    mocks.listMusicDiscoverFeed.mockResolvedValue({
+      data: [
+        {
+          type: 'album',
+          id: 'album-1',
+          title: '2049',
+          image_url: '/uploads/2049.jpg',
+          target_path: '/music/album/album-1',
+          artists: [{ id: 'artist-1', name: 'Ye' }],
+          play_count: 12,
+          bookmark_count: 4,
+        },
+        {
+          type: 'playlist',
+          id: 'playlist-1',
+          title: 'Late Night Mix',
+          description: '夜间循环',
+          cover_url: '/uploads/late-night.jpg',
+          song_count: 18,
+          owner_username: 'alice',
+          play_count: 42,
+          bookmark_count: 7,
+          target_path: '/music/playlist/playlist-1',
+        },
+        {
+          type: 'artist',
+          id: 'artist-1',
+          name: 'Ye',
+          title: 'Ye',
+          summary: 'Kanye',
+          image_url: '',
+          target_path: '/music/artist/artist-1',
+          play_count: 3,
+          bookmark_count: 1,
+          entry_status: 'open',
+        },
+      ],
+    })
     mocks.listMusicAlbums.mockResolvedValue({
       data: [
         { id: 'album-1', title: '2049', artists: [{ id: 'artist-1', name: 'Ye' }] },
@@ -226,7 +263,7 @@ describe('Music ExploreView.vue', () => {
     expect(mocks.push).toHaveBeenCalledWith('/music?artist=artist-1')
   })
 
-  it('renders discover sections from independent album, artist, and playlist sources', async () => {
+  it('renders discover sections from the backend discover feed', async () => {
     const wrapper = mount(ExploreView, {
       global: {
         stubs: {
@@ -238,10 +275,10 @@ describe('Music ExploreView.vue', () => {
     })
     await flushPromises()
 
-    expect(mocks.listMusicDiscoverFeed).not.toHaveBeenCalled()
-    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 6, sort: 'hot' })
-    expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('discover')
-    expect(mocks.listPublicMusicPlaylists).toHaveBeenCalledWith({ page: 1, page_size: 6 })
+    expect(mocks.listMusicDiscoverFeed).toHaveBeenCalled()
+    expect(mocks.listMusicAlbums).not.toHaveBeenCalled()
+    expect(mocks.listRecommendedArtists).not.toHaveBeenCalled()
+    expect(mocks.listPublicMusicPlaylists).not.toHaveBeenCalled()
     expect(wrapper.find('[aria-label="发现分区"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="推荐专辑列表"]').exists()).toBe(false)
     expect(wrapper.find('[aria-label="发现专辑分区"]').exists()).toBe(true)
@@ -262,9 +299,23 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('keeps the playlist section structure visible when public playlists are empty', async () => {
-    mocks.listPublicMusicPlaylists.mockResolvedValueOnce({
-      data: [],
-      meta: { page: 1, page_size: 10, total: 0, has_more: false },
+    mocks.listMusicDiscoverFeed.mockResolvedValueOnce({
+      data: [
+        {
+          type: 'album',
+          id: 'album-1',
+          title: '2049',
+          target_path: '/music/album/album-1',
+          artists: [{ id: 'artist-1', name: 'Ye' }],
+        },
+        {
+          type: 'artist',
+          id: 'artist-1',
+          name: 'Ye',
+          target_path: '/music/artist/artist-1',
+          entry_status: 'open',
+        },
+      ],
     })
 
     const wrapper = mount(ExploreView, {

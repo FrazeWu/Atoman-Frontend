@@ -13,10 +13,10 @@ import {
   listAlbumBookmarks,
   listArtistBookmarks,
   listPlaylistBookmarks,
+  listMusicDiscoverFeed,
   listMusicAlbums,
   listMusicArtists,
-  listPublicMusicPlaylists,
-  listRecommendedArtists,
+  type MusicDiscoverItem,
   type MusicAlbumListItem,
   type MusicArtistListItem,
   type MusicPlaylistSummary,
@@ -155,17 +155,13 @@ async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [albumResponse, artistResponse, playlistResponse] = await Promise.all([
-      listMusicAlbums({ page: 1, page_size: 6, sort: 'hot' }),
-      listRecommendedArtists('discover'),
-      listPublicMusicPlaylists({ page: 1, page_size: 6 }),
+    const [feedResponse] = await Promise.all([
+      listMusicDiscoverFeed(),
       fetchAlbumBookmarks(),
       fetchArtistBookmarks(),
       fetchPlaylistBookmarks(),
     ])
-    discoverAlbums.value = albumResponse.data ?? []
-    discoverArtists.value = artistResponse.data ?? []
-    discoverPlaylists.value = playlistResponse.data ?? []
+    applyDiscoverFeed(feedResponse.data ?? [])
   } catch (error) {
     console.error('Failed to fetch music discover feed:', error)
     errorMessage.value = '发现内容加载失败'
@@ -175,6 +171,48 @@ async function fetchDiscoverFeed() {
   } finally {
     loading.value = false
   }
+}
+
+function applyDiscoverFeed(items: MusicDiscoverItem[]) {
+  discoverAlbums.value = items
+    .filter((item) => item.type === 'album')
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      artists: item.artists,
+      year: typeof item.year === 'number' ? item.year : undefined,
+      release_date: item.release_date,
+      cover_url: item.cover_url || item.image_url,
+      description: item.summary,
+      play_count: item.play_count,
+      bookmark_count: item.bookmark_count,
+      entry_status: 'open',
+    }))
+
+  discoverArtists.value = items
+    .filter((item) => item.type === 'artist')
+    .map((item) => ({
+      id: item.id,
+      title: item.title || item.name,
+      summary: item.summary || item.bio,
+      image_url: item.image_url,
+      target_path: item.target_path,
+      play_count: item.play_count,
+      bookmark_count: item.bookmark_count,
+    }))
+
+  discoverPlaylists.value = items
+    .filter((item) => item.type === 'playlist')
+    .map((item) => ({
+      id: item.id,
+      name: item.title,
+      description: item.description || item.summary,
+      cover_url: item.cover_url || item.image_url,
+      song_count: item.song_count,
+      owner_username: item.owner_username,
+      play_count: item.play_count,
+      bookmark_count: item.bookmark_count,
+    }))
 }
 
 async function fetchAlbumIndex() {

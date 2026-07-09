@@ -24,6 +24,11 @@ onMounted(async () => {
     const res = await fetch(`${api.url}/podcast/episodes/${id}`)
     if (res.ok) {
       ep.value = await res.json()
+      const startAt = typeof route.query.t === 'string' ? Number(route.query.t) : NaN
+      if (Number.isFinite(startAt) && startAt >= 0) {
+        playEpisode()
+        player.seek(startAt)
+      }
     } else {
       error.value = '单集不存在'
     }

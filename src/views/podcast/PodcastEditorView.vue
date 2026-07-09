@@ -50,6 +50,7 @@ const form = ref({
   channel_id: '' as string,
   title: '',
   shownotes: '',
+  visibility: 'public' as 'public' | 'followers' | 'private',
   audio_url: '',
   episode_cover_url: '',
   season_number: 1,
@@ -60,6 +61,12 @@ const channelOptions = computed(() => [
   { label: '请选择节目频道', value: '' },
   ...channels.value.map(ch => ({ label: ch.name, value: ch.id })),
 ])
+
+const visibilityOptions = [
+  { label: '公开', value: 'public' },
+  { label: '仅订阅', value: 'followers' },
+  { label: '私有', value: 'private' },
+]
 
 const selectedCollection = computed(() =>
   collections.value.find(collection => collection.id === selectedCollectionId.value) || null,
@@ -297,6 +304,7 @@ function buildPayload(status: 'draft' | 'published') {
     season_number: form.value.season_number,
     episode_number: form.value.episode_number,
     status,
+    visibility: form.value.visibility,
     collection_ids: selectedCollectionId.value ? [selectedCollectionId.value] : [],
   }
 }
@@ -396,6 +404,7 @@ async function loadEpisode() {
     channel_id: ep.channel_id,
     title: ep.post?.title || '',
     shownotes: ep.post?.content || '',
+    visibility: ep.post?.visibility || 'public',
     audio_url: ep.audio_url,
     episode_cover_url: ep.episode_cover_url,
     season_number: ep.season_number,
@@ -406,12 +415,25 @@ async function loadEpisode() {
 }
 
 onMounted(async () => {
+  await loadCreatorSettings()
   await loadChannels()
   if (isEdit.value) {
     uploadStarted.value = true
     await loadEpisode()
   }
 })
+
+async function loadCreatorSettings() {
+  if (isEdit.value) return
+  const res = await fetch(api.podcast.creatorSettings, {
+    headers: { Authorization: `Bearer ${authStore.token}` },
+  }).catch(() => null)
+  if (!res?.ok) return
+  const body = await res.json()
+  if (body.data?.default_visibility) {
+    form.value.visibility = body.data.default_visibility
+  }
+}
 
 async function saveDraft() {
   if (!validate()) return
@@ -420,8 +442,9 @@ async function saveDraft() {
   draftSaved.value = false
   try {
     const ep = await apiSave(buildPayload('draft'))
-    if (!isEdit.value) router.replace(`/podcasts/editor/${ep.id}`)
+    void ep
     draftSaved.value = true
+    router.push('/podcasts/creator?tab=manage')
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e: any) {
     errorMsg.value = e?.error || '保存失败，请重试'
@@ -535,6 +558,13 @@ async function doPublish() {
               label="节目说明（Shownotes）"
               placeholder="节目内容简介、时间轴、嘉宾介绍、相关链接…"
               :rows="7"
+            />
+          </div>
+          <div class="a-field--line">
+            <PSelect
+              v-model="form.visibility"
+              label="可见性"
+              :options="visibilityOptions"
             />
           </div>
         </PSurface>

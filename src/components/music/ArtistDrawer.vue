@@ -11,6 +11,7 @@ import {
   createArtistBookmark,
   deleteArtistBookmark,
   listArtistBookmarks,
+  mergeMusicArtists,
   type MusicAlbumListItem,
   type MusicArtistListItem,
 } from '@/api/musicV1'
@@ -24,6 +25,10 @@ const errorMessage = ref('')
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
+const mergeSourceArtistId = ref('')
+const mergeLoading = ref(false)
+const mergeMessage = ref('')
+const mergeErrorMessage = ref('')
 
 const artistAliases = computed(() => (
   artist.value?.aliases
@@ -36,6 +41,10 @@ const hasMemberGroups = computed(() => (
   artist.value?.artist_form === 'group'
   && (memberGroups.value.current.length > 0 || memberGroups.value.former.length > 0)
 ))
+const canMergeArtist = computed(() => {
+  const sourceArtistId = mergeSourceArtistId.value.trim()
+  return Boolean(state.value.artistId && sourceArtistId && sourceArtistId !== state.value.artistId && !mergeLoading.value)
+})
 
 function releaseYear(album: MusicAlbumListItem) {
   if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
@@ -103,6 +112,27 @@ async function toggleArtistBookmark() {
     console.error('Failed to toggle artist bookmark:', error)
   } finally {
     bookmarkLoading.value = false
+  }
+}
+
+async function mergeArtistIntoCurrent() {
+  const targetArtistId = state.value.artistId
+  const sourceArtistId = mergeSourceArtistId.value.trim()
+  if (!targetArtistId || !sourceArtistId || sourceArtistId === targetArtistId || mergeLoading.value) return
+
+  mergeLoading.value = true
+  mergeMessage.value = ''
+  mergeErrorMessage.value = ''
+  try {
+    await mergeMusicArtists(targetArtistId, sourceArtistId)
+    mergeSourceArtistId.value = ''
+    mergeMessage.value = '已合并'
+    await loadArtist(targetArtistId)
+  } catch (error) {
+    console.error('Failed to merge artist:', error)
+    mergeErrorMessage.value = '请检查艺人 ID'
+  } finally {
+    mergeLoading.value = false
   }
 }
 
@@ -178,6 +208,26 @@ watch(
         >
           添加新专辑
         </PButton>
+      </div>
+
+      <div class="artist-merge-box">
+        <input
+          v-model="mergeSourceArtistId"
+          class="artist-merge-input"
+          data-testid="artist-merge-source-input"
+          placeholder="要合并的艺人 ID"
+          @keydown.enter.prevent="mergeArtistIntoCurrent"
+        />
+        <PButton
+          variant="secondary"
+          :disabled="!canMergeArtist"
+          data-testid="artist-merge-submit"
+          @click="mergeArtistIntoCurrent"
+        >
+          {{ mergeLoading ? '合并中' : '合并到当前艺人' }}
+        </PButton>
+        <span v-if="mergeMessage" class="artist-merge-state">{{ mergeMessage }}</span>
+        <span v-else-if="mergeErrorMessage" class="artist-merge-state artist-merge-state--error">{{ mergeErrorMessage }}</span>
       </div>
 
       <div v-if="hasMemberGroups" class="member-sections">
@@ -287,6 +337,36 @@ watch(
 
 .drawer-body { display: flex; flex-direction: column; }
 .actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-line-soft); align-self: flex-start; }
+.artist-merge-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: -0.75rem 0 2rem;
+}
+.artist-merge-input {
+  width: min(100%, 21rem);
+  min-height: 2.5rem;
+  border: 1px solid var(--a-color-line-soft);
+  border-radius: 6px;
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
+  padding: 0 0.85rem;
+  font: inherit;
+}
+.artist-merge-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--a-color-ink) 18%, transparent);
+  outline-offset: 2px;
+}
+.artist-merge-state {
+  font-family: var(--a-font-meta);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--a-color-ink-soft);
+}
+.artist-merge-state--error {
+  color: var(--a-color-accent-destructive);
+}
 .member-sections {
   display: grid;
   gap: 1.5rem;

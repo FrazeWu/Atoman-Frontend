@@ -39,12 +39,14 @@ const {
   listArtistBookmarks,
   createArtistBookmark,
   deleteArtistBookmark,
+  mergeMusicArtists,
 } = vi.hoisted(() => ({
   getMusicArtist: vi.fn(),
   listMusicAlbums: vi.fn(),
   listArtistBookmarks: vi.fn(),
   createArtistBookmark: vi.fn(),
   deleteArtistBookmark: vi.fn(),
+  mergeMusicArtists: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -53,6 +55,7 @@ vi.mock('@/api/musicV1', () => ({
   listArtistBookmarks,
   createArtistBookmark,
   deleteArtistBookmark,
+  mergeMusicArtists,
 }))
 
 describe('ArtistDrawer.vue', () => {
@@ -63,6 +66,7 @@ describe('ArtistDrawer.vue', () => {
     listArtistBookmarks.mockReset()
     createArtistBookmark.mockReset()
     deleteArtistBookmark.mockReset()
+    mergeMusicArtists.mockReset()
     musicDrawerMocks.openNestedAction.mockReset()
     musicDrawerMocks.openArtist.mockReset()
     musicDrawerMocks.openAlbum.mockReset()
@@ -111,6 +115,7 @@ describe('ArtistDrawer.vue', () => {
     listArtistBookmarks.mockResolvedValue({ data: [] })
     createArtistBookmark.mockResolvedValue({ id: 'artist-bookmark-1', artist_id: '1', created_at: '2026-07-02T00:00:00Z' })
     deleteArtistBookmark.mockResolvedValue({ deleted: true })
+    mergeMusicArtists.mockResolvedValue({ merged: true })
   })
 
   it('renders artist information and albums when artistId is present', async () => {
@@ -225,6 +230,21 @@ describe('ArtistDrawer.vue', () => {
         artistLegalName: 'Kanye Omari West',
       },
     })
+  })
+
+  it('merges another artist into the current artist and reloads details', async () => {
+    const wrapper = mount(ArtistDrawer)
+
+    await vi.dynamicImportSettled()
+    const artistCallsBeforeMerge = getMusicArtist.mock.calls.length
+
+    await wrapper.get('[data-testid="artist-merge-source-input"]').setValue(' 2 ')
+    await wrapper.get('[data-testid="artist-merge-submit"]').trigger('click')
+    await vi.dynamicImportSettled()
+
+    expect(mergeMusicArtists).toHaveBeenCalledWith('1', '2')
+    expect(getMusicArtist.mock.calls.length).toBeGreaterThan(artistCallsBeforeMerge)
+    expect(wrapper.text()).toContain('已合并')
   })
 
   it('keeps artist details visible when bookmark loading requires login', async () => {

@@ -599,6 +599,7 @@ export const musicV1Endpoints = {
   uploads: () => `${apiV1Base()}/uploads`,
   artists: () => `${apiV1Base()}/music/artists`,
   artist: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}`,
+  artistMerge: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}/merge`,
   albums: () => `${apiV1Base()}/music/albums`,
   album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
   songLyrics: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics`,
@@ -1252,6 +1253,12 @@ export async function createMusicArtist(input: MusicArtistInput): Promise<MusicA
 
 export async function updateMusicArtist(artistId: string, input: MusicArtistUpdateInput): Promise<MusicArtistListItem> {
   return apiPatchJson<MusicArtistListItem>(musicV1Endpoints.artist(artistId), input)
+}
+
+export async function mergeMusicArtists(targetArtistId: string, sourceArtistId: string): Promise<{ merged: boolean }> {
+  return apiPostJson<{ merged: boolean }>(musicV1Endpoints.artistMerge(targetArtistId), {
+    source_artist_id: sourceArtistId,
+  })
 }
 
 export async function submitMusicEdit(request: MusicEditRequest): Promise<MusicEditSummary> {

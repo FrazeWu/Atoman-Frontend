@@ -8,6 +8,7 @@ import {
   deleteMusicPlaylist,
   getMusicPlaylist,
   listMusicStarred,
+  mergeMusicArtists,
   musicV1Endpoints,
   listSongBookmarks,
   reorderMusicPlaylistSongs,
@@ -52,6 +53,7 @@ describe('music v1 starred and playlist adapters', () => {
     expect(musicV1Endpoints.songBookmarks()).toBe('/api/v1/music/bookmarks/songs')
     expect(musicV1Endpoints.playlists()).toBe('/api/v1/music/playlists')
     expect(musicV1Endpoints.playlistSongs('playlist-1')).toBe('/api/v1/music/playlists/playlist-1/songs')
+    expect(musicV1Endpoints.artistMerge('artist-target')).toBe('/api/v1/music/artists/artist-target/merge')
     expect(musicV1Endpoints.albumRevisions('album-1')).toBe('/api/v1/albums/album-1/revisions')
     expect(musicV1Endpoints.albumDiscussions('album-1')).toBe('/api/v1/albums/album-1/discussions')
   })
@@ -174,6 +176,23 @@ describe('music v1 starred and playlist adapters', () => {
       body: JSON.stringify({ song_ids: ['song-2', 'song-1'] }),
     })
     expect(result.reordered).toBe(true)
+  })
+
+  it('merges artists through the music namespace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { merged: true } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await mergeMusicArtists('artist-target', 'artist-source')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists/artist-target/merge', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ source_artist_id: 'artist-source' }),
+    })
+    expect(result.merged).toBe(true)
   })
 
   it('gets playlist details with songs', async () => {

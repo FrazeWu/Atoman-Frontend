@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
-import type { Song, RepeatMode, TimelineItem } from '@/types';
+import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from '@/types';
 import { useApi } from '@/composables/useApi'
 import { recordMusicSongPlay } from '@/api/musicV1'
+import { useAuthStore } from '@/stores/auth'
 
 const api = useApi();
 
@@ -58,6 +59,7 @@ export const usePlayerStore = defineStore('player', () => {
   let audio: HTMLAudioElement | null = null;
   let songsRequest: Promise<void> | null = null;
   let lastReportedSongId: string | null = null;
+  let lastPodcastProgressSyncAt = 0;
 
   const ensureAudio = () => {
     if (audio) return audio;
@@ -65,11 +67,13 @@ export const usePlayerStore = defineStore('player', () => {
     const nextAudio = new Audio();
     nextAudio.addEventListener('timeupdate', () => {
       currentTime.value = nextAudio.currentTime;
+      syncPodcastProgress();
     });
     nextAudio.addEventListener('durationchange', () => {
       duration.value = Number.isFinite(nextAudio.duration) ? nextAudio.duration : 0;
     });
     nextAudio.addEventListener('ended', () => {
+      syncPodcastProgress(true);
       playNext();
     });
     nextAudio.volume = volume.value;
@@ -189,6 +193,7 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const startSong = (song: Song) => {
+    syncPodcastProgress(true);
     const player = ensureAudio();
     player.src = song.audio_url;
     player.volume = volume.value;
@@ -199,6 +204,7 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   watch(currentSong, (song) => {
+    if (song?.source_type && song.source_type !== 'music') return
     const songId = song?.id ? String(song.id) : null
     if (!songId || songId === lastReportedSongId) return
     lastReportedSongId = songId
@@ -249,6 +255,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     if (isPlaying.value) {
+      syncPodcastProgress(true);
       player.pause();
       isPlaying.value = false;
     } else {
@@ -313,6 +320,8 @@ export const usePlayerStore = defineStore('player', () => {
 
     return {
       id: Number(feedItem.id),
+      source_type: 'feed_podcast',
+      source_id: String(feedItem.id),
       title: feedItem.title || '未知播客',
       artist: feedItem.author || feedItem.feed_source?.title || 'Podcast',
       album: feedItem.feed_source?.title || 'Podcast',
@@ -326,6 +335,31 @@ export const usePlayerStore = defineStore('player', () => {
     };
   };
 
+  const episodeCover = (episode: PodcastEpisode) =>
+    episode.episode_cover_url
+    || episode.post?.cover_url
+    || episode.post?.collections?.[0]?.cover_url
+    || episode.collections?.[0]?.cover_url
+    || episode.channel?.cover_url
+    || '';
+
+  const createPodcastEpisodeSong = (episode: PodcastEpisode): Song => ({
+    id: `podcast:${episode.id}`,
+    source_type: 'podcast_episode',
+    source_id: episode.id,
+    title: episode.post?.title || '未命名单集',
+    artist: episode.channel?.name || '播客',
+    album: episode.post?.collections?.[0]?.name || episode.collections?.[0]?.name || episode.channel?.name || '播客',
+    album_id: episode.post?.collections?.[0]?.id || episode.collections?.[0]?.id || episode.channel_id,
+    year: new Date(episode.created_at || '').getFullYear() || 0,
+    release_date: episode.created_at || '',
+    lyrics: episode.post?.content || '',
+    audio_url: episode.audio_url,
+    cover_url: episodeCover(episode),
+    track_number: episode.episode_number,
+    status: 'approved',
+  });
+
   const setQueueFromCurrentItems = (items: TimelineItem[]) => {
     const podcastSongs: Song[] = items
       .filter(item => item.type === 'feed_item' && item.feed_item?.enclosure_url)
@@ -333,6 +367,41 @@ export const usePlayerStore = defineStore('player', () => {
       .filter((song): song is Song => Boolean(song));
     queue.value = podcastSongs;
   };
+
+  const setQueueFromPodcastEpisodes = (episodes: PodcastEpisode[]) => {
+    queue.value = episodes.map(createPodcastEpisodeSong);
+  };
+
+  function syncPodcastProgress(force = false) {
+    const song = currentSong.value;
+    if (song?.source_type !== 'podcast_episode' || !song.source_id) return;
+
+    const authStore = useAuthStore();
+    if (!authStore.token) return;
+
+    const now = Date.now();
+    if (!force && now - lastPodcastProgressSyncAt < 15_000) return;
+    lastPodcastProgressSyncAt = now;
+
+    const playerDuration = audio?.duration;
+    const durationSec = Number.isFinite(playerDuration)
+      ? Math.floor(playerDuration || 0)
+      : Math.floor(duration.value || 0);
+
+    void fetch(api.podcast.episodeProgress(song.source_id), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({
+        position_sec: Math.floor(audio?.currentTime ?? currentTime.value),
+        duration_sec: durationSec,
+      }),
+    }).catch((error) => {
+      console.error('Failed to sync podcast progress:', error);
+    });
+  }
 
   const setVolume = (v: number) => {
     volume.value = v;
@@ -389,7 +458,9 @@ export const usePlayerStore = defineStore('player', () => {
     toggleRepeat,
     cyclePlaybackMode,
     createPodcastSong,
+    createPodcastEpisodeSong,
     setQueueFromCurrentItems,
+    setQueueFromPodcastEpisodes,
     setVolume,
     seek,
     skip,

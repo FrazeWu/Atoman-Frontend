@@ -10,6 +10,8 @@ export type PlaybackMode = 'loop' | 'single' | 'random';
 
 type PersistedPlaybackState = {
   song?: Song;
+  queue?: Song[];
+  currentAlbum?: Song[] | null;
   currentTime?: number;
   volume?: number;
   isShuffled?: boolean;
@@ -122,6 +124,8 @@ export const usePlayerStore = defineStore('player', () => {
 
     const state: PersistedPlaybackState = {
       song: currentSong.value,
+      queue: queue.value,
+      currentAlbum: currentAlbum.value,
       currentTime: audio?.currentTime ?? currentTime.value,
       volume: volume.value,
       isShuffled: isShuffled.value,
@@ -146,6 +150,8 @@ export const usePlayerStore = defineStore('player', () => {
       playbackMode.value = state.playbackMode || 'loop';
       currentTime.value = typeof state.currentTime === 'number' ? state.currentTime : 0;
       currentSong.value = state.song || null;
+      queue.value = Array.isArray(state.queue) ? state.queue : (state.song ? [state.song] : []);
+      currentAlbum.value = Array.isArray(state.currentAlbum) ? state.currentAlbum : null;
       isPlaying.value = false;
     } catch (error) {
       console.error('Failed to restore playback state:', error);
@@ -154,7 +160,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   restorePlaybackState();
 
-  watch([currentSong, currentTime, volume, isPlaying, isShuffled, repeatMode, playbackMode], () => {
+  watch([currentSong, currentTime, volume, isPlaying, isShuffled, repeatMode, playbackMode, queue, currentAlbum], () => {
     savePlaybackState();
   }, { deep: true });
 

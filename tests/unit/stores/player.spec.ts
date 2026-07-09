@@ -194,6 +194,28 @@ describe('player store', () => {
     expect(restoredPlayer.isPlaying).toBe(false)
   })
 
+  it('persists and restores the active queue', async () => {
+    localStorage.clear()
+    const player = usePlayerStore()
+    const firstSong = { id: 'song-1', title: 'Song 1', audio_url: 'song-1.mp3' } as any
+    const secondSong = { id: 'song-2', title: 'Song 2', audio_url: 'song-2.mp3' } as any
+
+    player.playAlbum([firstSong, secondSong], 1)
+    await nextTick()
+
+    const savedState = JSON.parse(localStorage.getItem('playbackState') || '{}')
+    expect(savedState.queue.map((song: any) => song.id)).toEqual(['song-1', 'song-2'])
+
+    setActivePinia(createPinia())
+    const restoredPlayer = usePlayerStore()
+
+    expect(restoredPlayer.currentSong?.id).toBe('song-2')
+    expect(restoredPlayer.queue.map((song) => song.id)).toEqual(['song-1', 'song-2'])
+
+    restoredPlayer.playPrevious()
+    expect(restoredPlayer.currentSong?.id).toBe('song-1')
+  })
+
   it('does not mark playSong as playing when audio play fails', async () => {
     const player = usePlayerStore()
     const song = { id: 1, title: 'Rejected', audio_url: 'rejected.mp3' } as any

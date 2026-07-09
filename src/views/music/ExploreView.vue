@@ -34,7 +34,7 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const { openPlaylist } = useMusicDrawers()
+const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
 const loading = ref(false)
 const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
@@ -252,11 +252,11 @@ function playlistCardItem(item: MusicPlaylistSummary) {
 }
 
 function openDiscoverAlbum(album: MusicAlbumListItem) {
-  router.push(`/music?album=${album.id}`)
+  openAlbum(String(album.id))
 }
 
 function openDiscoverArtist(artist: MusicRecommendationItem) {
-  router.push(artist.target_path)
+  openArtist(String(artist.id))
 }
 
 function openDiscoverPlaylist(playlist: MusicPlaylistSummary) {
@@ -390,12 +390,9 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         </div>
         <div class="discover-layout discover-layout--albums" aria-label="发现专辑分区">
           <MusicAlbumCard
-            v-for="(item, index) in discoverAlbums"
+            v-for="item in discoverAlbums"
             :key="item.id"
-            :class="[
-              'discover-layout__item',
-              index === 0 ? 'discover-layout__item--album-hero' : 'discover-layout__item--album-compact',
-            ]"
+            class="discover-layout__item"
             :album="item"
             :is-bookmarked="starredAlbumIds.includes(String(item.id))"
             data-testid="discover-album-card"
@@ -412,12 +409,9 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         <div class="discover-layout discover-layout--playlists" aria-label="发现歌单分区">
           <template v-if="discoverPlaylists.length">
             <MusicPlaylistCard
-              v-for="(item, index) in discoverPlaylists"
+              v-for="item in discoverPlaylists"
               :key="item.id"
-              :class="[
-                'discover-layout__item',
-                index === 0 ? 'discover-layout__item--playlist-tall' : 'discover-layout__item--playlist-compact',
-              ]"
+              class="discover-layout__item"
               :playlist="playlistCardItem(item)"
               :is-bookmarked="starredPlaylistIds.includes(String(item.id))"
               data-testid="discover-playlist-card"
@@ -427,7 +421,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           </template>
           <template v-else>
             <article
-              class="discover-layout__item discover-layout__playlist-placeholder discover-layout__playlist-placeholder--tall"
+              class="discover-layout__item discover-layout__playlist-placeholder"
               data-testid="discover-playlist-placeholder"
             >
               <p class="discover-placeholder__eyebrow">Playlist</p>
@@ -616,11 +610,11 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .discover-layout--albums {
-  grid-template-columns: minmax(0, 1.45fr) minmax(11rem, 0.9fr) minmax(11rem, 0.9fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .discover-layout--playlists {
-  grid-template-columns: minmax(0, 1.15fr) minmax(11rem, 1fr) minmax(11rem, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .discover-layout--artists {
@@ -629,33 +623,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
 .discover-layout__item {
   min-width: 0;
-}
-
-.discover-layout__item--album-hero {
-  grid-column: span 2;
-}
-
-.discover-layout__item--album-hero :deep(.cover-frame) {
-  aspect-ratio: 1.8 / 1;
-  border-radius: 20px;
-}
-
-.discover-layout__item--album-hero :deep(.music-title) {
-  font-size: 1.16rem;
-}
-
-.discover-layout__item--playlist-tall :deep(.cover-frame) {
-  aspect-ratio: 1 / 1.28;
-  border-radius: 18px;
-}
-
-.discover-layout__item--playlist-compact :deep(.cover-frame) {
-  aspect-ratio: 1 / 1.04;
-}
-
-.discover-layout__item--artist :deep(.avatar-frame) {
-  aspect-ratio: 0.9 / 1;
-  border-radius: 18px;
 }
 
 .discover-layout__playlist-placeholder {
@@ -669,10 +636,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   flex-direction: column;
   justify-content: space-between;
   gap: 0.8rem;
-}
-
-.discover-layout__playlist-placeholder--tall {
-  min-height: 18rem;
 }
 
 .discover-placeholder__eyebrow {
@@ -724,8 +687,5 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     grid-template-columns: 1fr;
   }
 
-  .discover-layout__item--album-hero {
-    grid-column: span 1;
-  }
 }
 </style>

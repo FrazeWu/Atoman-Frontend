@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   createArtistBookmark: vi.fn(),
   deleteArtistBookmark: vi.fn(),
   push: vi.fn(),
+  openAlbum: vi.fn(),
+  openArtist: vi.fn(),
   openPlaylist: vi.fn(),
 }))
 
@@ -50,6 +52,8 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
+    openAlbum: mocks.openAlbum,
+    openArtist: mocks.openArtist,
     openPlaylist: mocks.openPlaylist,
   }),
 }))
@@ -71,6 +75,8 @@ describe('Music ExploreView.vue', () => {
     mocks.createArtistBookmark.mockReset()
     mocks.deleteArtistBookmark.mockReset()
     mocks.push.mockReset()
+    mocks.openAlbum.mockReset()
+    mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
 
     mocks.listMusicDiscoverFeed.mockResolvedValue({ data: [] })
@@ -293,6 +299,40 @@ describe('Music ExploreView.vue', () => {
 
     expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
     expect(mocks.push).not.toHaveBeenCalledWith('/music/playlists/playlist-1')
+  })
+
+  it('opens album drawer when clicking a discover album card', async () => {
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[aria-label="发现专辑分区"] [data-testid="discover-album-card"]').trigger('click')
+
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+    expect(mocks.push).not.toHaveBeenCalledWith('/music?album=album-1')
+  })
+
+  it('opens artist drawer when clicking a discover artist card', async () => {
+    const wrapper = mount(ExploreView, {
+      global: {
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="discover-artist-card"]').trigger('click')
+
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.push).not.toHaveBeenCalledWith('/music?artist=artist-1')
   })
 
   it('toggles playlist bookmark from the discover feed', async () => {

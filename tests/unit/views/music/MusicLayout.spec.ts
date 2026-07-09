@@ -18,6 +18,8 @@ describe('MusicLayout.vue', () => {
             template: '<div class="sidebar-item" :data-to="to"><slot /></div>',
           },
           MusicSidebarPlaylists: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
           PlaylistDrawer: true,
         },
       },
@@ -32,5 +34,53 @@ describe('MusicLayout.vue', () => {
     expect(items[2].attributes('data-to')).toBe('/music/artists')
     expect(items[3].text()).toContain('收藏')
     expect(items[3].attributes('data-to')).toBe('/music/starred')
+  })
+
+  it('marks the music main content area for module-specific scroll behavior', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [] })
+    const wrapper = mount(MusicLayout, {
+      global: {
+        plugins: [router],
+        stubs: {
+          'router-view': true,
+          'PSidebar': { template: '<div><slot /></div>' },
+          'PSidebarItem': {
+            props: ['to'],
+            template: '<div class="sidebar-item" :data-to="to"><slot /></div>',
+          },
+          MusicSidebarPlaylists: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          PlaylistDrawer: true,
+        },
+      },
+    })
+
+    expect(wrapper.find('main').classes()).toContain('music-main-content')
+  })
+
+  it('mounts artist and album drawers for discover-route sheets', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [] })
+    const wrapper = mount(MusicLayout, {
+      global: {
+        plugins: [router],
+        stubs: {
+          'router-view': true,
+          'PSidebar': { template: '<div><slot /></div>' },
+          'PSidebarItem': {
+            props: ['to'],
+            template: '<div class="sidebar-item" :data-to="to"><slot /></div>',
+          },
+          MusicSidebarPlaylists: true,
+          ArtistDrawer: { template: '<div data-testid="artist-drawer-stub" />' },
+          AlbumDrawer: { template: '<div data-testid="album-drawer-stub" />' },
+          PlaylistDrawer: { template: '<div data-testid="playlist-drawer-stub" />' },
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="artist-drawer-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="album-drawer-stub"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="playlist-drawer-stub"]').exists()).toBe(true)
   })
 })

@@ -101,7 +101,7 @@ describe('podcast routing prefix', () => {
       throw new Error(`unexpected fetch: ${url}`)
     }))
     const router = makeRouter('/podcasts/editor', PodcastEditorView)
-    const replace = vi.spyOn(router, 'replace')
+    const push = vi.spyOn(router, 'push')
     const authStore = useAuthStore()
     authStore.token = 'token'
     authStore.user = { id: 'user-1' } as never
@@ -109,7 +109,7 @@ describe('podcast routing prefix', () => {
 
     const wrapper = await mountWithRouter(PodcastEditorView, '/podcasts/editor', router)
     await flushPromises()
-    replace.mockClear()
+    push.mockClear()
 
     const form = wrapper.vm.$.setupState.form as { title: string; audio_url: string }
     form.title = '测试单集'
@@ -117,7 +117,7 @@ describe('podcast routing prefix', () => {
     await wrapper.vm.$.setupState.saveDraft()
     await flushPromises()
 
-    expect(replace).toHaveBeenCalledWith('/podcasts/editor/episode-1')
+    expect(push).toHaveBeenCalledWith('/podcasts/creator?tab=manage')
   })
 
   it('新建单集应在合法频道下恢复 query.collection', async () => {

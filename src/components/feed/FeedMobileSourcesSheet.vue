@@ -11,7 +11,9 @@
         :subscriptions="subscriptions"
         :groups="groups"
         :active-source-id="activeSourceId"
+        :unread-counts="unreadCounts"
         @select-source="emit('select-source', $event)"
+        @select-all="emit('select-all')"
         @manage="emit('manage')"
       />
     </div>
@@ -28,11 +30,13 @@ defineProps<{
   subscriptions: Subscription[]
   groups: SubscriptionGroup[]
   activeSourceId?: string | null
+  unreadCounts?: Record<string, number>
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'select-source', sourceId: string): void
+  (e: 'select-all'): void
   (e: 'manage'): void
 }>()
 </script>

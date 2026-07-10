@@ -46,9 +46,11 @@
       :automation-rules="feedStore.automationRules"
       :busy="manageBusy"
       :health-checking="feedStore.healthChecking"
+      :error="manageError"
       @close="showManageSheet = false"
       @create-group="createSubscriptionGroup"
       @rename-subscription="renameSubscription"
+      @update-subscription="updateSubscriptionFlags"
       @move-subscription="moveSubscription"
       @delete-subscription="deleteSubscription"
       @rename-group="renameGroup"
@@ -92,6 +94,28 @@
     <PShortcutHints :hints="shortcutHints" />
 
     <section class="feed-content">
+      <div
+        v-if="currentSourceSubscription"
+        data-test="feed-current-source"
+        class="feed-current-source"
+      >
+        <div class="feed-current-source__main">
+          <span class="a-font-meta">当前来源</span>
+          <strong>{{ currentSourceTitle }}</strong>
+          <span v-if="currentSourceUnreadCount > 0" class="feed-current-source__count a-font-meta">
+            {{ currentSourceUnreadCount }} 未读
+          </span>
+        </div>
+        <button
+          type="button"
+          data-test="feed-clear-source"
+          class="feed-current-source__clear a-font-meta"
+          @click="clearSourceFilter"
+        >
+          返回全部
+        </button>
+      </div>
+
       <div class="feed-actions">
         <form class="feed-search" data-test="feed-search-form" @submit.prevent="submitSearch">
           <input
@@ -149,7 +173,7 @@
           :loading="markingAllRead"
           loading-text="处理中..."
           @click="toggleAllRead"
-          :label="allRead ? '全部未读' : '全部已读'"
+          :label="bulkReadLabel"
         />
       </div>
 
@@ -173,6 +197,7 @@
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
                 <PBadge type="blog">文章</PBadge>
+                <span v-if="!item.is_read" class="unread-dot" />
               </div>
             </template>
             <template #meta>
@@ -189,7 +214,6 @@
               </button>
               <span v-else class="a-label a-muted">未知频道</span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.published_at) }}</span>
-              <span v-if="item.is_read" class="a-label" style="color:var(--a-color-success)">已读</span>
             </template>
 
           </PEntry>
@@ -207,6 +231,7 @@
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
                 <PBadge type="external" fill>外部</PBadge>
                 <PBadge type="external">{{ getExternalBadge(item.feed_item) }}</PBadge>
+                <span v-if="!item.is_read" class="unread-dot" />
               </div>
             </template>
 
@@ -227,7 +252,6 @@
                 时长: {{ item.feed_item.duration }}
               </span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.feed_item.published_at) }}</span>
-              <span v-if="item.is_read" class="a-label" style="color:var(--a-color-success)">已读</span>
             </template>
 
             <template #actions>
@@ -310,7 +334,7 @@ import type {
   TimelineItem,
 } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
-import { looksLikeUrl } from '@/utils/feedTitles'
+import { looksLikeUrl, subscriptionDisplayTitle } from '@/utils/feedTitles'
 import { useApiUrl } from '@/composables/useApi'
 
 const route = useRoute()
@@ -347,6 +371,21 @@ const activeTheme = ref('')
 const activeSearchLabel = computed(() => querySearch.value.trim())
 const defaultGroupId = computed(() => groups.value.find((group) => group.name === '默认分组')?.id || '')
 const nonDefaultGroups = computed(() => groups.value.filter((group) => group.name !== '默认分组'))
+const currentSourceSubscription = computed(() => {
+  if (!querySourceId.value) return null
+  return subscriptions.value.find((sub) => sub.id === querySourceId.value) || null
+})
+const currentSourceTitle = computed(() =>
+  currentSourceSubscription.value ? subscriptionDisplayTitle(currentSourceSubscription.value) : '',
+)
+const currentSourceUnreadCount = computed(() =>
+  Math.max(0, currentSourceSubscription.value?.unread_count || 0),
+)
+const sourceViewMode = computed(() => Boolean(querySourceId.value))
+const bulkReadLabel = computed(() => {
+  if (sourceViewMode.value) return allRead.value ? '当前来源未读' : '当前来源已读'
+  return allRead.value ? '全部未读' : '全部已读'
+})
 
 function findSubscriptionByTimelineItem(item: TimelineItem) {
   if (item.type === 'feed_item' && item.feed_item) {
@@ -473,6 +512,7 @@ const allRead = ref(false)
 const showAddModal = ref(false)
 const showManageSheet = ref(false)
 const manageBusy = ref(false)
+const manageError = ref('')
 const addSubscriptionError = ref('')
 const addSubscriptionResetKey = ref(0)
 
@@ -504,7 +544,7 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
   showArticleSheet.value = true
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
     item.is_read = true
-    void feedStore.markItemsRead([item.feed_item.id])
+    void markItemsReadAndRefresh([item.feed_item.id])
   }
 }
 
@@ -527,7 +567,7 @@ const openSourceArticle = (item: TimelineItem) => {
   showArticleSheet.value = true
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
     item.is_read = true
-    void feedStore.markItemsRead([item.feed_item.id])
+    void markItemsReadAndRefresh([item.feed_item.id])
   }
 }
 
@@ -716,6 +756,7 @@ const toggleAddModal = () => {
 const openManageSheet = () => {
   showAddModal.value = false
   addSubscriptionError.value = ''
+  manageError.value = ''
   showManageSheet.value = true
 }
 
@@ -762,10 +803,18 @@ const withManageBusy = async <T>(task: () => Promise<T>): Promise<T> => {
   }
 }
 
+const setManageError = (fallback: string) => {
+  manageError.value = feedStore.error || fallback
+}
+
 const createSubscriptionGroup = async (name: string) => {
   await withManageBusy(async () => {
+    manageError.value = ''
     const success = await feedStore.createGroup(name)
-    if (!success) return
+    if (!success) {
+      setManageError('创建失败')
+      return
+    }
     await Promise.all([feedStore.fetchGroups(), feedStore.fetchSubscriptions()])
     await fetchTimeline()
   })
@@ -773,21 +822,51 @@ const createSubscriptionGroup = async (name: string) => {
 
 const renameSubscription = async (id: string, title: string) => {
   await withManageBusy(async () => {
+    manageError.value = ''
     const success = await feedStore.updateSubscription(id, { title })
-    if (success) await fetchTimeline()
+    if (!success) {
+      setManageError('保存失败')
+      return
+    }
+    await fetchTimeline()
   })
 }
 
 const moveSubscription = async (id: string, groupId: string) => {
   await withManageBusy(async () => {
-    await feedStore.setSubscriptionGroup(id, groupId || null)
+    manageError.value = ''
+    const success = await feedStore.setSubscriptionGroup(id, groupId || null)
+    if (!success) {
+      setManageError('移动失败')
+      return
+    }
+    await fetchTimeline()
+  })
+}
+
+const updateSubscriptionFlags = async (
+  id: string,
+  payload: { is_muted?: boolean; auto_mark_read?: boolean; auto_add_reading_list?: boolean },
+) => {
+  await withManageBusy(async () => {
+    manageError.value = ''
+    const success = await feedStore.updateSubscription(id, payload)
+    if (!success) {
+      setManageError('保存失败')
+      return
+    }
     await fetchTimeline()
   })
 }
 
 const deleteSubscription = async (id: string) => {
   await withManageBusy(async () => {
-    await feedStore.unsubscribe(id)
+    manageError.value = ''
+    const success = await feedStore.unsubscribe(id)
+    if (!success) {
+      setManageError('删除失败')
+      return
+    }
     currentPage.value = 1
     await fetchTimeline()
   })
@@ -795,13 +874,20 @@ const deleteSubscription = async (id: string) => {
 
 const renameGroup = async (id: string, name: string) => {
   await withManageBusy(async () => {
-    await feedStore.updateGroup(id, name)
+    manageError.value = ''
+    const success = await feedStore.updateGroup(id, name)
+    if (!success) setManageError('保存失败')
   })
 }
 
 const deleteGroup = async (id: string) => {
   await withManageBusy(async () => {
-    await feedStore.deleteGroup(id)
+    manageError.value = ''
+    const success = await feedStore.deleteGroup(id)
+    if (!success) {
+      setManageError('删除失败')
+      return
+    }
     currentPage.value = 1
     await fetchTimeline()
   })
@@ -809,37 +895,49 @@ const deleteGroup = async (id: string) => {
 
 const checkSubscriptionHealth = async (id: string) => {
   await withManageBusy(async () => {
-    await feedStore.checkSubscriptionHealth(id)
+    manageError.value = ''
+    const success = await feedStore.checkSubscriptionHealth(id)
+    if (!success) setManageError('检查失败')
   })
 }
 
 const checkAllSubscriptionsHealth = async () => {
   await withManageBusy(async () => {
-    await feedStore.checkAllSubscriptionsHealth()
+    manageError.value = ''
+    const success = await feedStore.checkAllSubscriptionsHealth()
+    if (!success) setManageError('检查失败')
   })
 }
 
 const importOPML = async (file: File) => {
   await withManageBusy(async () => {
+    manageError.value = ''
     const result = await feedStore.importOPML(file)
     if (result) {
       currentPage.value = 1
       await fetchTimeline()
+    } else {
+      manageError.value = feedStore.error || '导入失败'
     }
   })
 }
 
 const exportOPML = async () => {
   await withManageBusy(async () => {
-    const blob = await feedStore.exportOPML()
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'atoman-subscriptions.opml'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    manageError.value = ''
+    try {
+      const blob = await feedStore.exportOPML()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'atoman-subscriptions.opml'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      manageError.value = error instanceof Error ? error.message : '导出失败'
+    }
   })
 }
 
@@ -861,10 +959,14 @@ const confirmApplySavedRule = async (ruleId: string | null) => {
 
 const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
   await withManageBusy(async () => {
+    manageError.value = ''
     const success = saved.id
       ? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
       : await feedStore.createSubscriptionRule(saved.payload)
-    if (!success) return
+    if (!success) {
+      manageError.value = feedStore.error || '保存失败'
+      return
+    }
 
     await confirmApplySavedRule(findSavedRuleId(saved))
     await fetchTimeline()
@@ -873,7 +975,9 @@ const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
 
 const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
   await withManageBusy(async () => {
-    await feedStore.reorderSubscriptionRules(nextRuleIds)
+    manageError.value = ''
+    const success = await feedStore.reorderSubscriptionRules(nextRuleIds)
+    if (!success) setManageError('排序失败')
   })
 }
 
@@ -897,21 +1001,33 @@ const moveSubscriptionRuleDown = async (id: string) => {
 
 const applySubscriptionRule = async (id: string) => {
   await withManageBusy(async () => {
-    await feedStore.applySubscriptionRules({ rule_id: id })
+    manageError.value = ''
+    const success = await feedStore.applySubscriptionRules({ rule_id: id })
+    if (!success) {
+      setManageError('应用失败')
+      return
+    }
     await fetchTimeline()
   })
 }
 
 const applyAllSubscriptionRules = async () => {
   await withManageBusy(async () => {
-    await feedStore.applySubscriptionRules({ all: true })
+    manageError.value = ''
+    const success = await feedStore.applySubscriptionRules({ all: true })
+    if (!success) {
+      setManageError('应用失败')
+      return
+    }
     await fetchTimeline()
   })
 }
 
 const deleteSubscriptionRule = async (id: string) => {
   await withManageBusy(async () => {
-    await feedStore.deleteSubscriptionRule(id)
+    manageError.value = ''
+    const success = await feedStore.deleteSubscriptionRule(id)
+    if (!success) setManageError('删除失败')
   })
 }
 
@@ -987,10 +1103,20 @@ const toggleRead = (item: TimelineItem) => {
   const id = item.feed_item.id
   item.is_read = !item.is_read
   if (item.is_read) {
-    void feedStore.markItemsRead([id])
+    void markItemsReadAndRefresh([id])
   } else {
-    void feedStore.markItemsUnread([id])
+    void markItemsUnreadAndRefresh([id])
   }
+}
+
+const markItemsReadAndRefresh = async (ids: string[]) => {
+  const success = await feedStore.markItemsRead(ids)
+  if (success) await feedStore.fetchSubscriptions()
+}
+
+const markItemsUnreadAndRefresh = async (ids: string[]) => {
+  const success = await feedStore.markItemsUnread(ids)
+  if (success) await feedStore.fetchSubscriptions()
 }
 
 const itemKey = (item: TimelineItem) => {
@@ -1044,6 +1170,17 @@ const setSearchInRoute = async (value: string) => {
   })
 }
 
+const clearSourceFilter = async () => {
+  await router.push({
+    query: {
+      ...route.query,
+      source_id: undefined,
+      group_id: undefined,
+      page: undefined,
+    },
+  })
+}
+
 const submitSearch = async () => {
   await setSearchInRoute(searchInput.value)
 }
@@ -1066,6 +1203,7 @@ const fetchTimeline = async () => {
   try {
     if (!authStore.isAuthenticated) {
       timeline.value = []
+      feedStore.timeline = []
       totalItems.value = 0
       return
     }
@@ -1093,6 +1231,7 @@ const fetchTimeline = async () => {
       }
 
       timeline.value = items
+      feedStore.timeline = items
       totalItems.value = total
       await applyAutomationRules(items)
     }
@@ -1140,7 +1279,7 @@ const applyAutomationRules = async (items: TimelineItem[]) => {
   })
 
   if (pendingReadIds.length) {
-    await feedStore.markItemsRead(pendingReadIds)
+    await markItemsReadAndRefresh(pendingReadIds)
   }
 
   const pendingReadingListIds = items
@@ -1167,7 +1306,7 @@ const toggleUnreadOnly = () => {
 const onItemClick = (item: TimelineItem) => {
   if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
   item.is_read = true
-  void feedStore.markItemsRead([item.feed_item.id])
+  void markItemsReadAndRefresh([item.feed_item.id])
 }
 
 const playPodcast = (feedItem: FeedItem, event: Event) => {
@@ -1187,7 +1326,7 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   )
   if (authStore.isAuthenticated && timelineItem && !timelineItem.is_read) {
     timelineItem.is_read = true
-    void feedStore.markItemsRead([feedItem.id])
+    void markItemsReadAndRefresh([feedItem.id])
   }
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
@@ -1197,17 +1336,42 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
 const toggleAllRead = async () => {
   markingAllRead.value = true
   try {
+    if (sourceViewMode.value) {
+      if (allRead.value) {
+        const success = await feedStore.markSubscriptionUnread(querySourceId.value!)
+        if (!success) return
+        timeline.value.forEach((item) => {
+          if (item.type === 'feed_item') item.is_read = false
+        })
+        await Promise.all([fetchTimeline(), feedStore.fetchSubscriptions()])
+        allRead.value = false
+      } else {
+        const success = await feedStore.markSubscriptionRead(querySourceId.value!)
+        if (!success) return
+        timeline.value.forEach((item) => {
+          if (item.type === 'feed_item') item.is_read = true
+        })
+        await Promise.all([fetchTimeline(), feedStore.fetchSubscriptions()])
+        allRead.value = true
+      }
+      return
+    }
+
     if (allRead.value) {
-      await feedStore.markAllFeedUnread()
+      const success = await feedStore.markAllFeedUnread()
+      if (!success) return
       timeline.value.forEach((item) => {
         if (item.type === 'feed_item') item.is_read = false
       })
+      await feedStore.fetchSubscriptions()
       allRead.value = false
     } else {
-      await feedStore.markAllFeedRead()
+      const success = await feedStore.markAllFeedRead()
+      if (!success) return
       timeline.value.forEach((item) => {
         if (item.type === 'feed_item') item.is_read = true
       })
+      await feedStore.fetchSubscriptions()
       allRead.value = true
     }
   } finally {
@@ -1276,6 +1440,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  margin-top: 0.25rem;
+  align-self: center;
+}
+
 .feed-page {
   padding-bottom: 12rem;
 }
@@ -1351,6 +1524,51 @@ onUnmounted(() => {
 .feed-login-copy {
   max-width: 28rem;
   margin-bottom: 2rem;
+}
+
+.feed-current-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 1rem;
+  background: var(--a-color-paper-wash);
+}
+
+.feed-current-source__main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.feed-current-source__main strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-current-source__count {
+  flex-shrink: 0;
+  color: var(--a-color-muted);
+}
+
+.feed-current-source__clear {
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--a-color-ink);
+  cursor: pointer;
+}
+
+.feed-current-source__clear:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .feed-actions {

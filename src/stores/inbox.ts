@@ -2,13 +2,11 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
-import { useDMStore } from '@/stores/dm'
 import { useApi } from '@/composables/useApi'
 
 export const useInboxStore = defineStore('inbox', () => {
   const authStore = useAuthStore()
   const notificationStore = useNotificationStore()
-  const dmStore = useDMStore()
   const api = useApi()
 
   const connected = ref(false)
@@ -17,7 +15,7 @@ export const useInboxStore = defineStore('inbox', () => {
   let socket: WebSocket | null = null
   let pollingTimer: number | null = null
 
-  const totalUnread = computed(() => notificationStore.unreadCount + dmStore.unreadCount)
+  const totalUnread = computed(() => notificationStore.unreadCount)
 
   const stopPolling = () => {
     if (pollingTimer) {
@@ -31,10 +29,7 @@ export const useInboxStore = defineStore('inbox', () => {
     if (pollingTimer || !authStore.isAuthenticated) return
     polling.value = true
     pollingTimer = window.setInterval(async () => {
-      await Promise.all([
-        notificationStore.fetchUnreadCount(),
-        dmStore.fetchUnreadCount(),
-      ])
+      await notificationStore.fetchUnreadCounts()
     }, 60000)
   }
 
@@ -75,6 +70,8 @@ export const useInboxStore = defineStore('inbox', () => {
         notificationStore.receiveNotification(payload.data)
       }
       if (payload.event === 'dm') {
+        const { useDMStore } = await import('@/stores/dm')
+        const dmStore = useDMStore()
         dmStore.receiveDM(payload.data)
         if (dmStore.activeConversation === payload.data.sender_username) {
           await dmStore.markRead(payload.data.sender_username)
@@ -89,10 +86,7 @@ export const useInboxStore = defineStore('inbox', () => {
       initialized.value = false
       return
     }
-    await Promise.all([
-      notificationStore.fetchUnreadCount(),
-      dmStore.fetchUnreadCount(),
-    ])
+    await notificationStore.fetchUnreadCounts()
     await connect()
     initialized.value = true
   }

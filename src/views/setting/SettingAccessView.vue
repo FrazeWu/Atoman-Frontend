@@ -1,5 +1,5 @@
 <template>
-  <section class="setting-access">
+  <section class="setting-access settings-center">
     <PSectionHeader
       title="模块设置中心"
       kicker="SITE ACCESS"
@@ -9,7 +9,7 @@
     <p v-if="error" class="setting-access__message setting-access__message--error">{{ error }}</p>
     <p v-else-if="saved" class="setting-access__message">已保存</p>
 
-    <PSurface class="setting-access__module-toggle-bar" :layer="1">
+    <PSurface class="setting-access__module-toggle-bar settings-center__section-card" :layer="1">
       <div class="setting-access__bar-head">
         <div>
           <h2 class="a-title-sm">启用模块</h2>
@@ -21,45 +21,49 @@
         <label
           v-for="key in moduleNavOrder"
           :key="key"
-          class="setting-access__module-toggle-item"
+          class="setting-access__module-toggle-item settings-block"
         >
-          <div>
+          <div class="settings-block__copy">
             <strong>{{ moduleRooms[key].name }}</strong>
             <small>{{ moduleRooms[key].helper }}</small>
           </div>
-          <input v-model="draft.modules[key].enabled" type="checkbox" />
+          <div class="settings-block__control">
+            <input v-model="draft.modules[key].enabled" type="checkbox" />
+          </div>
         </label>
       </div>
     </PSurface>
 
-    <div class="setting-access__shell">
-      <aside class="setting-access__module-nav" aria-label="模块目录">
+    <div class="settings-center__shell">
+      <aside class="settings-center__sidebar" aria-label="模块目录">
+        <nav class="setting-access__module-nav settings-center__nav">
         <button
           v-for="key in moduleNavOrder"
           :key="key"
           type="button"
-          class="setting-access__module-nav-item"
+          class="setting-access__module-nav-item settings-center__nav-item"
           :class="{ 'is-active': activeSection === key }"
           @click="scrollToSection(key)"
         >
-          <span class="setting-access__module-nav-kicker">{{ moduleKeyLabel(key) }}</span>
+          <span class="settings-center__kicker">{{ moduleKeyLabel(key) }}</span>
           <strong>{{ moduleRooms[key].name }}</strong>
           <small>{{ moduleRooms[key].helper }}</small>
         </button>
+        </nav>
       </aside>
 
-      <div class="setting-access__sections">
+      <div class="setting-access__sections settings-center__sections">
         <section
           v-for="key in moduleNavOrder"
           :id="`module-${key}`"
           :key="key"
           :ref="(el) => registerSection(key, el)"
-          class="setting-access__section"
+          class="setting-access__section settings-center__section"
         >
-          <PSurface :layer="1" class="setting-access__section-card">
-            <div class="setting-access__section-head">
+          <PSurface :layer="1" class="setting-access__section-card settings-center__section-card">
+            <div class="setting-access__section-head settings-center__section-head">
               <div>
-                <p class="setting-access__section-kicker">{{ moduleKeyLabel(key) }}</p>
+                <p class="settings-center__kicker">{{ moduleKeyLabel(key) }}</p>
                 <h2>{{ moduleRooms[key].name }}</h2>
                 <p>{{ moduleRooms[key].homepageSub }}</p>
               </div>
@@ -71,12 +75,12 @@
             <p class="setting-access__module-helper">{{ moduleRooms[key].helper }}</p>
 
             <div v-if="key === 'feed'" class="setting-access__module-body">
-              <div class="setting-access__setting-block">
-                <div class="setting-access__setting-copy">
+              <div class="setting-access__setting-block settings-block">
+                <div class="setting-access__setting-copy settings-block__copy">
                   <strong>全文抓取策略</strong>
                   <small>决定 external_rss 订阅源是否允许逐个开启全文抓取。</small>
                 </div>
-                <div class="setting-access__setting-control setting-access__setting-control--stack">
+                <div class="setting-access__setting-control settings-block__control settings-block__control--stack">
                   <label class="setting-access__radio-row">
                     <input v-model="draft.settings.feed.full_text_mode" type="radio" value="per_source" />
                     <div>
@@ -98,12 +102,12 @@
             </div>
 
             <div v-else-if="key === 'blog'" class="setting-access__module-body">
-              <div class="setting-access__setting-block">
-                <div class="setting-access__setting-copy">
+              <div class="setting-access__setting-block settings-block">
+                <div class="setting-access__setting-copy settings-block__copy">
                   <strong>评论权限</strong>
                   <small>控制文章评论开放范围。</small>
                 </div>
-                <div class="setting-access__setting-control setting-access__setting-control--stack">
+                <div class="setting-access__setting-control settings-block__control settings-block__control--stack">
                   <label
                     v-for="mode in blogCommentModes"
                     :key="mode.value"
@@ -120,12 +124,12 @@
             </div>
 
             <div v-else-if="key === 'forum'" class="setting-access__module-body">
-              <label class="setting-access__setting-block">
-                <div class="setting-access__setting-copy">
+              <label class="setting-access__setting-block settings-block">
+                <div class="setting-access__setting-copy settings-block__copy">
                   <strong>申请分类</strong>
                   <small>控制普通用户是否可发起新分类申请。</small>
                 </div>
-                <div class="setting-access__setting-control">
+                <div class="setting-access__setting-control settings-block__control">
                   <input v-model="draft.settings.forum.allow_category_request" type="checkbox" />
                 </div>
               </label>
@@ -134,13 +138,13 @@
             </div>
 
             <div v-else class="setting-access__module-body">
-              <div class="setting-access__setting-block">
-                <div class="setting-access__setting-copy">
+              <div class="setting-access__setting-block settings-block">
+                <div class="setting-access__setting-copy settings-block__copy">
                   <strong>{{ moduleRooms[key].name }}</strong>
-                  <small>这个模块先保留占位，后续按同样结构补具体设置。</small>
+                  <small>{{ moduleRooms[key].helper }}</small>
                 </div>
-                <div class="setting-access__setting-control">
-                  <p class="setting-access__placeholder">暂未开放具体配置</p>
+                <div class="setting-access__setting-control settings-block__control">
+                  <span class="setting-access__placeholder settings-placeholder">尚未开放</span>
                 </div>
               </div>
             </div>
@@ -285,7 +289,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .setting-access {
-  display: grid;
   gap: 1.5rem;
 }
 
@@ -307,11 +310,6 @@ onBeforeUnmount(() => {
 }
 
 .setting-access__module-toggle-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.85rem 1rem;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper-soft);
 }
@@ -336,81 +334,8 @@ onBeforeUnmount(() => {
   accent-color: var(--a-color-ink);
 }
 
-.setting-access__shell {
-  display: grid;
-  grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: start;
-}
-
 .setting-access__module-nav {
-  position: sticky;
-  top: 1.5rem;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.setting-access__module-nav-item {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
-  text-align: left;
-  cursor: pointer;
-}
-
-.setting-access__module-nav-item.is-active {
-  border-color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
-}
-
-.setting-access__module-nav-item.is-active strong {
-  text-decoration: underline;
-}
-
-.setting-access__module-nav-kicker,
-.setting-access__section-kicker {
-  margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.setting-access__module-nav-item strong {
-  font-size: 1rem;
-  font-weight: 950;
-}
-
-.setting-access__module-nav-item small {
-  color: var(--a-color-ink-muted);
-  font-size: var(--a-text-xs);
-}
-
-.setting-access__sections {
-  display: grid;
-  gap: 1rem;
-}
-
-.setting-access__section {
-  scroll-margin-top: 1.25rem;
-}
-
-.setting-access__section-card {
-  display: grid;
-  gap: 1rem;
-  padding: 1.1rem;
-}
-
-.setting-access__section-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: start;
+  width: 100%;
 }
 
 .setting-access__section-head h2,
@@ -421,13 +346,6 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
-.setting-access__section-head h2 {
-  color: var(--a-color-ink);
-  font-size: 1.45rem;
-  font-weight: 950;
-}
-
-.setting-access__section-head p,
 .setting-access__module-helper,
 .setting-access__placeholder {
   color: var(--a-color-ink-muted);
@@ -449,46 +367,11 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
-.setting-access__setting-block {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
-  gap: 1rem;
-  align-items: start;
-  padding: 0.9rem 0;
-  border-top: 1px solid var(--a-color-line-soft);
-}
-
 .setting-access__setting-copy strong,
 .setting-access__setting-copy small,
 .setting-access__radio-row strong,
 .setting-access__radio-row small {
   display: block;
-}
-
-.setting-access__setting-copy strong,
-.setting-access__radio-row strong {
-  color: var(--a-color-ink);
-  font-size: 0.96rem;
-  font-weight: 900;
-}
-
-.setting-access__setting-copy small,
-.setting-access__radio-row small {
-  color: var(--a-color-ink-muted);
-  font-size: var(--a-text-sm);
-  line-height: 1.5;
-}
-
-.setting-access__setting-control {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-.setting-access__setting-control--stack {
-  display: grid;
-  gap: 0.5rem;
-  justify-content: stretch;
 }
 
 .setting-access__radio-row {
@@ -517,30 +400,15 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
-  .setting-access__shell {
-    grid-template-columns: 1fr;
-  }
-
   .setting-access__module-nav {
-    position: static;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .setting-access__module-toggle-item,
-  .setting-access__section-head,
   .setting-access__actions {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .setting-access__setting-block {
-    grid-template-columns: 1fr;
-  }
-
-  .setting-access__setting-control {
-    justify-content: flex-start;
   }
 }
 </style>

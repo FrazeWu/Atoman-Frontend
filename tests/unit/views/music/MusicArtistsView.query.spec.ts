@@ -8,9 +8,11 @@ vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<d
 vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/music/NestedActionDrawer.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('@/components/music/MusicEntityEditorDrawer.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('@/components/music/MusicCreationFlowDrawer.vue', () => ({ default: { template: '<div />' } }))
 
 const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
+  listArtistBookmarks: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openMusicCreationFlow: vi.fn(),
@@ -20,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/musicV1', () => ({
   listMusicArtists: mocks.listMusicArtists,
+  listArtistBookmarks: mocks.listArtistBookmarks,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -45,10 +48,12 @@ describe('Music ArtistsView query sync', () => {
   beforeEach(() => {
     mocks.routeQuery = { q: 'blur' }
     mocks.listMusicArtists.mockReset()
+    mocks.listArtistBookmarks.mockReset()
     mocks.listMusicArtists.mockResolvedValue({
       data: [],
       meta: { page: 1, page_size: 48, total: 0, has_more: false },
     })
+    mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
   })
 
   it('uses route query q as initial search keyword', async () => {

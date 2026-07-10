@@ -149,9 +149,10 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   padding: 3px;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-ink);
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
+  background: var(--a-color-paper-wash);
+  border: none;
+  border-radius: var(--a-radius-none, 4px);
+  box-shadow: none;
   user-select: none;
 }
 
@@ -164,9 +165,11 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 3px;
   bottom: 3px;
-  background: var(--a-color-ink);
+  background: var(--a-color-paper);
+  border-radius: calc(var(--a-radius-none, 4px) - 1px);
   transition: left 0.25s cubic-bezier(0.25, 1, 0.5, 1), width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
   z-index: 1;
+  border: 1px solid var(--a-color-line-soft);
 }
 
 .p-segmented-control-item {
@@ -179,11 +182,11 @@ onBeforeUnmount(() => {
   padding: 0 16px;
   border: none;
   background: transparent;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.75rem;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -194,7 +197,7 @@ onBeforeUnmount(() => {
 }
 
 .p-segmented-control-item--active {
-  color: var(--a-color-paper) !important;
+  color: var(--a-color-ink) !important;
 }
 
 .p-segmented-control-item:focus-visible {

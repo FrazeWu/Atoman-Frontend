@@ -77,6 +77,13 @@ describe('dm store', () => {
     expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/dm/conversations/alice/read', expect.anything())
   })
 
+  it('exposes blocked state for active conversation', () => {
+    const store = useDMStore()
+    store.conversations = [{ conversation_id: 'c1', other_username: 'alice', other_user_id: 'u1', preview: '', unread_count: 0, is_blocked: true }]
+    store.activeConversation = 'alice'
+    expect(store.activeConversationBlocked).toBe(true)
+  })
+
   it('does not count own realtime echo as unread', () => {
     const auth = useAuthStore()
     auth.user = { uuid: 'me-id', username: 'me', email: 'me@example.com' } as never

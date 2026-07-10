@@ -163,6 +163,73 @@ describe('FeedSidebarSources', () => {
     expect(wrapper.find('.feed-sidebar-sources__groups').exists()).toBe(false)
   })
 
+  it('filters sources by title and rss url', async () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions,
+        groups,
+      },
+    })
+
+    await wrapper.get('[data-test="feed-sidebar-source-search"]').setValue('rss.xml')
+
+    expect(wrapper.text()).toContain('未分类来源')
+    expect(wrapper.text()).not.toContain('少数派')
+    expect(wrapper.text()).not.toContain('英格兰周报')
+  })
+
+  it('toggles source groups without removing the group heading', async () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions,
+        groups,
+      },
+    })
+
+    await wrapper.get('[data-test="feed-sidebar-group-g-tech"]').trigger('click')
+
+    expect(wrapper.text()).toContain('科技生活')
+    expect(wrapper.text()).not.toContain('少数派')
+    expect(wrapper.text()).toContain('英格兰周报')
+  })
+
+  it('shows source health state when subscription health is not healthy', () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions: [
+          {
+            ...subscriptions[0],
+            health_status: 'error',
+          },
+        ],
+        groups,
+      },
+    })
+
+    expect(wrapper.text()).toContain('异常')
+  })
+
+  it('shows unread counts and can filter to unread sources', async () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions,
+        groups,
+        unreadCounts: {
+          'sub-1': 2,
+          'sub-2': 0,
+        },
+      },
+    })
+
+    expect(wrapper.get('[data-test="feed-sidebar-unread-count-sub-1"]').text()).toBe('2')
+    expect(wrapper.text()).toContain('英格兰周报')
+
+    await wrapper.get('[data-test="feed-sidebar-unread-only"]').trigger('click')
+
+    expect(wrapper.text()).toContain('少数派')
+    expect(wrapper.text()).not.toContain('英格兰周报')
+  })
+
   it('classifies lowercase newsletter subscriptions as weekly reports', () => {
     const wrapper = mount(FeedSidebarSources, {
       props: {
@@ -196,6 +263,20 @@ describe('FeedSidebarSources', () => {
 
     expect(wrapper.emitted('select-source')).toEqual([['sub-1']])
     expect(wrapper.emitted('manage')).toEqual([[]])
+  })
+
+  it('emits select all when the all sources entry is clicked', async () => {
+    const wrapper = mount(FeedSidebarSources, {
+      props: {
+        subscriptions,
+        groups,
+        activeSourceId: 'sub-2',
+      },
+    })
+
+    await wrapper.get('[data-test="feed-sidebar-all-sources"]').trigger('click')
+
+    expect(wrapper.emitted('select-all')).toEqual([[]])
   })
 
   it('hides source content when collapsed', () => {

@@ -441,6 +441,311 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="source-sheet"]').text()).toContain('外部条目')
   })
 
+  it('shows current source context and returns to all subscriptions', async () => {
+    routeQuery.source_id = 'sub-rss-1'
+    vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-1',
+            feed_source_id: 'source-rss-1',
+            feed_source: {
+              id: 'source-rss-1',
+              source_type: 'external_rss',
+              title: 'Example RSS',
+              rss_url: 'https://example.com/feed.xml',
+            },
+            guid: 'feed-item-1',
+            title: '外部条目',
+            link: 'https://example.com/item',
+            summary: '摘要',
+            author: '外部作者',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-rss-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-rss-1',
+        title: 'Example RSS',
+        unread_count: 3,
+        feed_source: {
+          id: 'source-rss-1',
+          source_type: 'external_rss',
+          rss_url: 'https://example.com/feed.xml',
+          hash: 'external-rss:example',
+          title: 'Example RSS',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="feed-current-source"]').text()).toContain('Example RSS')
+    expect(wrapper.get('[data-test="feed-current-source"]').text()).toContain('3')
+
+    await wrapper.get('[data-test="feed-clear-source"]').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith({
+      query: {
+        source_id: undefined,
+        group_id: undefined,
+        page: undefined,
+      },
+    })
+  })
+
+  it('marks the current source read while in a source view', async () => {
+    routeQuery.source_id = 'sub-rss-1'
+    const fetchMock = vi.mocked(globalThis.fetch)
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/timeline/mark-read')) {
+        return new Response(null, { status: 204 })
+      }
+      if (url.includes('/feed/subscriptions')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [
+          {
+            type: 'feed_item',
+            feed_item: {
+              id: 'feed-item-1',
+              feed_source_id: 'source-rss-1',
+              feed_source: { id: 'source-rss-1', source_type: 'external_rss', title: 'Example RSS' },
+              guid: 'feed-item-1',
+              title: '外部条目',
+              link: 'https://example.com/item',
+              summary: '摘要',
+              author: '外部作者',
+              published_at: '2026-06-16T00:00:00Z',
+              fetched_at: '2026-06-16T00:00:00Z',
+            },
+            published_at: '2026-06-16T00:00:00Z',
+            is_read: false,
+          },
+        ],
+        meta: { page: 1, page_size: 20, total: 1, has_more: false },
+      }), { status: 200 })
+    })
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-rss-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-rss-1',
+        title: 'Example RSS',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+    const markItemsRead = vi.spyOn(feedStore, 'markItemsRead')
+    const markSubscriptionRead = vi.spyOn(feedStore, 'markSubscriptionRead')
+    const markAllFeedRead = vi.spyOn(feedStore, 'markAllFeedRead')
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    await wrapper.findAll('button').find((button) => button.text() === '当前来源已读')!.trigger('click')
+    await flushPromises()
+
+    expect(markSubscriptionRead).toHaveBeenCalledWith('sub-rss-1')
+    expect(markItemsRead).not.toHaveBeenCalled()
+    expect(markAllFeedRead).not.toHaveBeenCalled()
+  })
+
+  it('keeps source read state unchanged when marking the current source read fails', async () => {
+    routeQuery.source_id = 'sub-rss-1'
+    vi.mocked(globalThis.fetch).mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-source-fail-1',
+            feed_source_id: 'source-rss-1',
+            feed_source: { id: 'source-rss-1', source_type: 'external_rss', title: 'Example RSS' },
+            guid: 'feed-item-source-fail-1',
+            title: '来源批量失败条目',
+            link: 'https://example.com/source-fail',
+            summary: '摘要',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [
+      {
+        id: 'sub-rss-1',
+        user_id: 'viewer-1',
+        feed_source_id: 'source-rss-1',
+        title: 'Example RSS',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+    vi.spyOn(feedStore, 'markSubscriptionRead').mockResolvedValue(false)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    vi.mocked(feedStore.fetchSubscriptions).mockClear()
+
+    await wrapper.findAll('button').find((button) => button.text() === '当前来源已读')!.trigger('click')
+    await flushPromises()
+
+    expect(feedStore.markSubscriptionRead).toHaveBeenCalledWith('sub-rss-1')
+    expect(feedStore.fetchSubscriptions).not.toHaveBeenCalled()
+    expect(wrapper.findAll('button').some((button) => button.text() === '当前来源已读')).toBe(true)
+  })
+
+  it('keeps all-read state unchanged when marking all feed read fails', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-all-fail-1',
+            feed_source_id: 'source-all-fail-1',
+            feed_source: { id: 'source-all-fail-1', source_type: 'external_rss', title: 'All Feed' },
+            guid: 'feed-item-all-fail-1',
+            title: '全部已读失败条目',
+            link: 'https://example.com/all-fail',
+            summary: '摘要',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'markAllFeedRead').mockResolvedValue(false)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    vi.mocked(feedStore.fetchSubscriptions).mockClear()
+
+    await wrapper.findAll('button').find((button) => button.text() === '全部已读')!.trigger('click')
+    await flushPromises()
+
+    expect(feedStore.markAllFeedRead).toHaveBeenCalled()
+    expect(feedStore.fetchSubscriptions).not.toHaveBeenCalled()
+    expect(wrapper.findAll('button').some((button) => button.text() === '全部已读')).toBe(true)
+  })
+
   it('filters muted sources from subscription flags and still keeps hidden keywords local', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
       data: [
@@ -675,8 +980,68 @@ describe('FeedView', () => {
       method: 'POST',
       body: JSON.stringify({ feed_item_ids: ['feed-item-auto-read-1'] }),
     }))
-    expect(wrapper.text()).toContain('已读')
+    const autoReadEntry = wrapper.findAll('.p-entry').find(el => el.text().includes('自动标记为已读的条目'))
+    expect(autoReadEntry?.classes()).toContain('is-read')
     expect(wrapper.text()).toContain('保持未读的条目')
+  })
+
+  it('does not refresh subscriptions when marking an opened item read fails', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(new Response(JSON.stringify({
+      data: [
+        {
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-read-fail-1',
+            feed_source_id: 'source-read-fail-1',
+            feed_source: {
+              id: 'source-read-fail-1',
+              source_type: 'external_rss',
+              title: '失败来源',
+              rss_url: 'https://example.com/fail.xml',
+            },
+            guid: 'feed-item-read-fail-1',
+            title: '打开后标记失败的条目',
+            link: 'https://example.com/fail-item',
+            summary: '摘要',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(false)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+
+    expect(feedStore.markItemsRead).toHaveBeenCalledWith(['feed-item-read-fail-1'])
+    expect(feedStore.fetchSubscriptions).not.toHaveBeenCalled()
   })
 
   it('auto-adds sources to reading list from subscription flags instead of local automation rules', async () => {
@@ -872,7 +1237,7 @@ describe('FeedView', () => {
       method: 'POST',
       body: JSON.stringify({ feed_item_ids: ['feed-item-late-auto-read-1'] }),
     }))
-    expect(wrapper.text()).toContain('已读')
+    expect(wrapper.find('.p-entry').classes()).toContain('is-read')
   })
 
   it('filters the mixed timeline by source content type', async () => {
@@ -1483,6 +1848,324 @@ describe('FeedView', () => {
     expect(wrapper.get('[data-test="manage-sheet"]').attributes('data-show')).toBe('true')
   })
 
+  it('shows manage errors when OPML import fails', async () => {
+    const feedStore = useFeedStore()
+    const file = new File(['bad opml'], 'feeds.opml', { type: 'text/xml' })
+    vi.spyOn(feedStore, 'importOPML').mockImplementation(async () => {
+      feedStore.error = '导入失败'
+      return null
+    })
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            name: 'PPress',
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show', 'error'],
+            emits: ['import-opml'],
+            template: '<section data-test="manage-sheet" @click="$emit(\'import-opml\', file)">{{ error }}</section>',
+            setup() {
+              return { file }
+            },
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').text()).toContain('导入失败')
+  })
+
+  it('shows manage errors when OPML export fails', async () => {
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'exportOPML').mockRejectedValue(new Error('导出失败'))
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            name: 'PPress',
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show', 'error'],
+            emits: ['export-opml'],
+            template: '<section data-test="manage-sheet" @click="$emit(\'export-opml\')">{{ error }}</section>',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').text()).toContain('导出失败')
+  })
+
+  it('shows manage errors when saving subscription rules fails', async () => {
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'createSubscriptionRule').mockImplementation(async () => {
+      feedStore.error = '保存失败'
+      return false
+    })
+
+    const rule = {
+      id: null,
+      payload: {
+        name: '自动稍后阅读',
+        is_enabled: true,
+        match_type: 'all',
+        conditions_json: [{ field: 'title', operator: 'contains', value: 'AI' }],
+        actions_json: { add_to_read_later: true },
+      },
+    }
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            name: 'PPress',
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show', 'error'],
+            emits: ['save-rule'],
+            template: '<section data-test="manage-sheet" @click="$emit(\'save-rule\', rule)">{{ error }}</section>',
+            setup() {
+              return { rule }
+            },
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').text()).toContain('保存失败')
+  })
+
+  it.each([
+    {
+      eventName: 'create-group',
+      methodName: 'createGroup',
+      errorText: '创建失败',
+      args: ['新分组'],
+    },
+    {
+      eventName: 'rename-subscription',
+      methodName: 'updateSubscription',
+      errorText: '保存失败',
+      args: ['sub-1', '新标题'],
+    },
+    {
+      eventName: 'update-subscription',
+      methodName: 'updateSubscription',
+      errorText: '保存失败',
+      args: ['sub-1', { is_muted: true }],
+    },
+    {
+      eventName: 'move-subscription',
+      methodName: 'setSubscriptionGroup',
+      errorText: '移动失败',
+      args: ['sub-1', 'group-1'],
+    },
+    {
+      eventName: 'delete-subscription',
+      methodName: 'unsubscribe',
+      errorText: '删除失败',
+      args: ['sub-1'],
+    },
+    {
+      eventName: 'rename-group',
+      methodName: 'updateGroup',
+      errorText: '保存失败',
+      args: ['group-1', '新分组'],
+    },
+    {
+      eventName: 'delete-group',
+      methodName: 'deleteGroup',
+      errorText: '删除失败',
+      args: ['group-1'],
+    },
+    {
+      eventName: 'check-subscription-health',
+      methodName: 'checkSubscriptionHealth',
+      errorText: '检查失败',
+      args: ['sub-1'],
+    },
+    {
+      eventName: 'check-all-subscriptions-health',
+      methodName: 'checkAllSubscriptionsHealth',
+      errorText: '检查失败',
+      args: [],
+    },
+  ])('shows manage errors when $eventName fails', async ({ eventName, methodName, errorText, args }) => {
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, methodName as any).mockResolvedValue(false)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            name: 'PPress',
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show', 'error'],
+            emits: [eventName],
+            template: '<section data-test="manage-sheet" @click="$emit(eventName, ...args)">{{ error }}</section>',
+            setup() {
+              return { eventName, args }
+            },
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').text()).toContain(errorText)
+  })
+
+  it.each([
+    {
+      eventName: 'move-rule-down',
+      methodName: 'reorderSubscriptionRules',
+      errorText: '排序失败',
+      payload: 'rule-1',
+    },
+    {
+      eventName: 'apply-rule',
+      methodName: 'applySubscriptionRules',
+      errorText: '应用失败',
+      payload: 'rule-1',
+    },
+    {
+      eventName: 'delete-rule',
+      methodName: 'deleteSubscriptionRule',
+      errorText: '删除失败',
+      payload: 'rule-1',
+    },
+  ])('shows manage errors when $eventName fails', async ({ eventName, methodName, errorText, payload }) => {
+    const feedStore = useFeedStore()
+    feedStore.subscriptionRules = [
+      { id: 'rule-1', name: '规则一', position: 0 },
+      { id: 'rule-2', name: '规则二', position: 1 },
+    ] as any
+    vi.spyOn(feedStore, methodName as any).mockResolvedValue(false)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            name: 'PPress',
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            props: ['show', 'error'],
+            emits: [eventName],
+            template: '<section data-test="manage-sheet" @click="$emit(eventName, payload)">{{ error }}</section>',
+            setup() {
+              return { eventName, payload }
+            },
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="manage-sheet"]').text()).toContain(errorText)
+  })
+
   it('clears manage_subscriptions query without opening management for unauthenticated users', async () => {
     routeQuery.manage_subscriptions = '1'
     routeQuery.page = '2'
@@ -1931,6 +2614,46 @@ describe('FeedView', () => {
     expect(feedStore.applySubscriptionRules).toHaveBeenCalledWith({ rule_id: 'rule-1' })
 
     confirm.mockRestore()
+  })
+
+  it('updates subscription flags from the management sheet', async () => {
+    const feedStore = useFeedStore()
+    const updateSubscription = vi.spyOn(feedStore, 'updateSubscription').mockResolvedValue(true)
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PBadge: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: {
+            name: 'SubscriptionManageSheet',
+            emits: ['update-subscription'],
+            template: '<section data-test="manage-sheet" @click="$emit(\'update-subscription\', \'sub-1\', { is_muted: true })" />',
+          },
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('button').find((button) => button.text() === '订阅源管理')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="manage-sheet"]').trigger('click')
+    await flushPromises()
+
+    expect(updateSubscription).toHaveBeenCalledWith('sub-1', { is_muted: true })
   })
 
   it('moves subscriptions back to the default group through the group endpoint', async () => {

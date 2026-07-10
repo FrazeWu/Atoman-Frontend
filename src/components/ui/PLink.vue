@@ -9,7 +9,7 @@
     @click="emit('click', $event)"
   >
     <span class="p-link__label"><slot>{{ label }}</slot></span>
-    <span class="p-link__arrow" aria-hidden="true">{{ external ? '↗' : '→' }}</span>
+    <span class="p-link__arrow" aria-hidden="true">↗</span>
   </component>
 </template>
 
@@ -45,42 +45,33 @@ const computedRel = computed(() => props.rel ?? (props.target === '_blank' || pr
 
 <style scoped>
 .p-link {
-  position: relative;
-  display: inline-grid;
-  grid-template-columns: 8px 1fr auto;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0 9px;
-  border-bottom: 1px solid var(--a-color-line);
+  gap: 4px;
   color: var(--a-color-ink);
-  font-family: var(--a-font-meta);
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
   text-decoration: none;
-  text-transform: uppercase;
-}
-
-.p-link::before {
-  width: 7px;
-  height: 7px;
-  background: var(--a-color-ink);
-  content: '';
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
 
 .p-link:hover,
 .p-link:focus-visible {
-  border-bottom-color: var(--a-color-ink);
   outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .p-link__arrow {
-  font-size: 17px;
-  transition: transform 0.16s ease;
+  font-size: 0.9em;
+  display: inline-block;
+  transition: transform 0.15s ease;
 }
 
 .p-link:hover .p-link__arrow,
 .p-link:focus-visible .p-link__arrow {
-  transform: translateX(4px);
+  transform: translate(2px, -2px);
 }
 </style>

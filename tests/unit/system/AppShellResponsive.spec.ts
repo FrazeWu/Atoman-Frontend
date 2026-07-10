@@ -97,6 +97,18 @@ describe('App responsive shell', () => {
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
   })
+
+  it('omits the footer on sidebar module routes', async () => {
+    const { wrapper } = await mountAppAt('/')
+
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(false)
+  })
+
+  it('keeps the footer on non-sidebar routes', async () => {
+    const { wrapper } = await mountAppAt('/plain')
+
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(true)
+  })
 })
 
 describe('shared responsive shell CSS', () => {

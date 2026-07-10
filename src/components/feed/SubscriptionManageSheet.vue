@@ -37,75 +37,161 @@
             @click="checkAllSubscriptionsHealth"
           />
         </div>
+        <p v-if="error" class="manage-error">{{ error }}</p>
       </div>
 
-      <form class="create-group-form" @submit.prevent="submitGroup">
-        <PField label="新建分组">
-          <div class="inline-form">
-            <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
-            <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
-          </div>
-        </PField>
-      </form>
+      <div class="manage-tabs" aria-label="订阅源管理分区">
+        <button
+          v-for="tab in manageTabs"
+          :key="tab.key"
+          type="button"
+          class="manage-tab"
+          :class="{ 'is-active': activeManageTab === tab.key }"
+          :data-test="`subscription-manage-tab-${tab.key}`"
+          @click="activeManageTab = tab.key"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
 
-      <section class="subscription-rules-section">
-        <div class="subscription-rules-header">
-          <div>
-            <h3 class="a-title-xs">规则管理</h3>
-            <p class="a-muted">统一整理新增订阅和已有订阅。</p>
-          </div>
-          <div class="manage-toolbar">
-            <PPress variant="secondary" label="新建规则" :disabled="busy" @click="openCreateRule" />
-            <PPress
-              variant="secondary"
-              label="重算全部订阅"
-              :disabled="busy || !subscriptionRules.length"
-              @click="applyAllRules"
-            />
-          </div>
-        </div>
-
-        <div v-if="ruleApplySummary" class="rule-apply-summary">
-          <p class="a-font-meta">最近一次应用</p>
-          <p class="a-muted">
-            扫描 {{ ruleApplySummary.scanned_count }} · 更新 {{ ruleApplySummary.updated_count }} ·
-            分组 {{ ruleApplySummary.group_changed_count }} · 静音 {{ ruleApplySummary.muted_changed_count }} ·
-            自动已读 {{ ruleApplySummary.auto_mark_read_changed_count }} ·
-            自动稍后阅读 {{ ruleApplySummary.auto_add_reading_list_changed_count }}
-          </p>
-        </div>
-
-        <div v-if="subscriptionRules.length" class="subscription-rule-list">
-          <article v-for="rule in subscriptionRules" :key="rule.id" class="subscription-rule-card">
-            <div class="subscription-rule-main">
-              <div class="subscription-rule-title">
-                <strong>{{ rule.name }}</strong>
-                <span class="a-font-meta">{{ rule.enabled ? '已启用' : '已停用' }}</span>
-              </div>
-              <p class="a-muted">{{ ruleConditionSummary(rule) }}</p>
-              <p class="a-muted">{{ ruleActionSummary(rule) }}</p>
+      <template v-if="activeManageTab === 'sources'">
+        <form class="create-group-form" @submit.prevent="submitGroup">
+          <PField label="新建分组">
+            <div class="inline-form">
+              <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
+              <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
             </div>
-            <div class="subscription-rule-actions">
-              <PPress variant="secondary" label="上移" :disabled="busy" @click="moveRuleUp(rule.id)" />
-              <PPress variant="secondary" label="下移" :disabled="busy" @click="moveRuleDown(rule.id)" />
-              <PPress variant="secondary" label="编辑" :disabled="busy" @click="openEditRule(rule)" />
-              <PPress
-                variant="secondary"
-                label="应用到已有订阅"
+          </PField>
+        </form>
+
+        <div v-if="!subscriptions.length" class="empty-state a-muted">
+          暂无订阅源，点击页面上的 “+ 订阅” 添加。
+        </div>
+
+        <div v-else class="group-list">
+          <section v-for="group in displayGroups" :key="group.id" class="group-section">
+            <div class="group-title">
+              <PInput
+                v-if="!group.virtual"
+                :model-value="draftGroupNames[group.id] ?? group.name"
+                data-test="group-name-input"
+                class="group-name-input"
                 :disabled="busy"
-                @click="applyRule(rule.id)"
+                @input="updateDraftGroupName(group.id, $event)"
+                @blur="submitGroupRename(group)"
+                @keydown.enter.prevent="submitGroupRename(group)"
               />
-              <PPress variant="secondary" label="删除规则" :disabled="busy" @click="confirmDeleteRule(rule.id)" />
+              <span v-else class="a-font-meta">/ {{ group.name }}</span>
+              <PPress
+                v-if="!group.virtual"
+                variant="secondary"
+                label="删除分组"
+                :disabled="busy"
+                @click="confirmDeleteGroup(group.id)"
+              />
             </div>
-          </article>
-        </div>
 
-        <div v-else class="empty-state a-muted">
-          暂无规则，先创建一条。
-        </div>
-      </section>
+            <div v-if="!group.subscriptions.length" class="group-empty a-muted">
+              此分组暂无订阅源
+            </div>
 
-      <section class="filter-rules-section">
+            <div v-else class="subscription-list">
+              <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
+                <div class="subscription-main">
+                  <PInput
+                    :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
+                    class="title-input"
+                    :disabled="busy"
+                    @input="updateDraftTitle(sub.id, $event)"
+                    @blur="submitRename(sub)"
+                    @keydown.enter.prevent="submitRename(sub)"
+                  />
+                  <p class="source-url a-muted">
+                    {{ subscriptionSourceLabel(sub) }}
+                  </p>
+                  <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
+                    <span class="health-dot" aria-hidden="true"></span>
+                    <span>{{ subscriptionHealthLabel(sub) }}</span>
+                    <span v-if="sub.last_checked" class="a-muted">
+                      {{ formatCheckedAt(sub.last_checked) }}
+                    </span>
+                  </div>
+                  <p v-if="sub.error_message" class="health-error">
+                    {{ sub.error_message }}
+                  </p>
+                  <div class="subscription-flags">
+                    <label>
+                      <input
+                        data-test="subscription-flag-muted"
+                        type="checkbox"
+                        :checked="Boolean(sub.is_muted)"
+                        :disabled="busy"
+                        @change="updateSubscriptionFlag(sub.id, 'is_muted', ($event.target as HTMLInputElement).checked)"
+                      />
+                      静音
+                    </label>
+                    <label>
+                      <input
+                        data-test="subscription-flag-auto-read"
+                        type="checkbox"
+                        :checked="Boolean(sub.auto_mark_read)"
+                        :disabled="busy"
+                        @change="updateSubscriptionFlag(sub.id, 'auto_mark_read', ($event.target as HTMLInputElement).checked)"
+                      />
+                      自动已读
+                    </label>
+                    <label>
+                      <input
+                        data-test="subscription-flag-reading-list"
+                        type="checkbox"
+                        :checked="Boolean(sub.auto_add_reading_list)"
+                        :disabled="busy"
+                        @change="updateSubscriptionFlag(sub.id, 'auto_add_reading_list', ($event.target as HTMLInputElement).checked)"
+                      />
+                      稍后阅读
+                    </label>
+                  </div>
+                </div>
+
+                <div class="subscription-actions">
+                  <PSelect
+                    :model-value="sub.subscription_group_id || ''"
+                    :options="groupOptions"
+                    :disabled="busy"
+                    @update:model-value="moveSubscription(sub.id, String($event))"
+                  />
+                  <PPress
+                    variant="secondary"
+                    label="检查"
+                    :disabled="busy || healthChecking"
+                    @click="checkSubscriptionHealth(sub.id)"
+                  />
+                  <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </template>
+
+      <SubscriptionRulesPanel
+        v-else-if="activeManageTab === 'rules'"
+        :groups="groups"
+        :subscriptions="subscriptions"
+        :subscription-rules="subscriptionRules"
+        :rule-apply-summary="ruleApplySummary"
+        :busy="busy"
+        @create-rule="$emit('create-rule')"
+        @edit-rule="$emit('edit-rule', $event)"
+        @save-rule="$emit('save-rule', $event)"
+        @move-rule-up="$emit('move-rule-up', $event)"
+        @move-rule-down="$emit('move-rule-down', $event)"
+        @apply-rule="$emit('apply-rule', $event)"
+        @apply-all-rules="$emit('apply-all-rules')"
+        @delete-rule="$emit('delete-rule', $event)"
+      />
+
+      <section v-else class="filter-rules-section">
         <div class="filter-rules-header">
           <h3 class="a-title-xs">过滤规则</h3>
           <p class="a-muted">在当前设备上隐藏特定来源或关键词命中的条目。</p>
@@ -138,93 +224,7 @@
           </button>
         </div>
       </section>
-
-      <div v-if="!subscriptions.length" class="empty-state a-muted">
-        暂无订阅源，点击页面上的 “+ 订阅” 添加。
-      </div>
-
-      <div v-else class="group-list">
-        <section v-for="group in displayGroups" :key="group.id" class="group-section">
-          <div class="group-title">
-            <PInput
-              v-if="!group.virtual"
-              :model-value="draftGroupNames[group.id] ?? group.name"
-              data-test="group-name-input"
-              class="group-name-input"
-              :disabled="busy"
-              @input="updateDraftGroupName(group.id, $event)"
-              @blur="submitGroupRename(group)"
-              @keydown.enter.prevent="submitGroupRename(group)"
-            />
-            <span v-else class="a-font-meta">/ {{ group.name }}</span>
-            <PPress
-              v-if="!group.virtual"
-              variant="secondary"
-              label="删除分组"
-              :disabled="busy"
-              @click="confirmDeleteGroup(group.id)"
-            />
-          </div>
-
-          <div v-if="!group.subscriptions.length" class="group-empty a-muted">
-            此分组暂无订阅源
-          </div>
-
-          <div v-else class="subscription-list">
-            <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
-              <div class="subscription-main">
-                <PInput
-                  :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
-                  class="title-input"
-                  :disabled="busy"
-                  @input="updateDraftTitle(sub.id, $event)"
-                  @blur="submitRename(sub)"
-                  @keydown.enter.prevent="submitRename(sub)"
-                />
-                <p class="source-url a-muted">
-                  {{ subscriptionSourceLabel(sub) }}
-                </p>
-                <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
-                  <span class="health-dot" aria-hidden="true"></span>
-                  <span>{{ subscriptionHealthLabel(sub) }}</span>
-                  <span v-if="sub.last_checked" class="a-muted">
-                    {{ formatCheckedAt(sub.last_checked) }}
-                  </span>
-                </div>
-                <p v-if="sub.error_message" class="health-error">
-                  {{ sub.error_message }}
-                </p>
-              </div>
-
-              <div class="subscription-actions">
-                <PSelect
-                  :model-value="sub.subscription_group_id || ''"
-                  :options="groupOptions"
-                  :disabled="busy"
-                  @update:model-value="moveSubscription(sub.id, String($event))"
-                />
-                <PPress
-                  variant="secondary"
-                  label="检查"
-                  :disabled="busy || healthChecking"
-                  @click="checkSubscriptionHealth(sub.id)"
-                />
-                <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
     </div>
-
-    <SubscriptionRuleEditorSheet
-      :show="showRuleEditor"
-      :mode="ruleEditorMode"
-      :groups="groups"
-      :rule="editingRule"
-      @close="closeRuleEditor"
-      @submit="submitRuleEditor"
-    />
   </PSheet>
 </template>
 
@@ -233,7 +233,6 @@ import { computed, ref, watch } from 'vue'
 import type {
   ApplySubscriptionRulesSummary,
   FeedSubscriptionRule,
-  FeedSubscriptionRuleMatchType,
   Subscription,
   SubscriptionGroup,
 } from '@/types'
@@ -242,19 +241,8 @@ import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSelect from '@/components/ui/PSelect.vue'
-import SubscriptionRuleEditorSheet from '@/components/feed/SubscriptionRuleEditorSheet.vue'
+import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import type { FeedAutomationRules, FeedFilterRules } from '@/stores/feed'
-
-type RuleEditorPayload = {
-  name: string
-  enabled: boolean
-  match_type: FeedSubscriptionRuleMatchType
-  conditions_json: Record<string, unknown>
-  action_group_id?: string | null
-  action_muted?: boolean | null
-  action_auto_mark_read?: boolean | null
-  action_auto_add_reading_list?: boolean | null
-}
 
 const props = defineProps<{
   show: boolean
@@ -266,12 +254,14 @@ const props = defineProps<{
   automationRules: FeedAutomationRules
   busy?: boolean
   healthChecking?: boolean
+  error?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'create-group', name: string): void
   (e: 'rename-subscription', id: string, title: string): void
+  (e: 'update-subscription', id: string, payload: Partial<Pick<Subscription, 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list'>>): void
   (e: 'move-subscription', id: string, groupId: string): void
   (e: 'delete-subscription', id: string): void
   (e: 'rename-group', id: string, name: string): void
@@ -282,7 +272,7 @@ const emit = defineEmits<{
   (e: 'export-opml'): void
   (e: 'create-rule'): void
   (e: 'edit-rule', id: string): void
-  (e: 'save-rule', payload: { id: string | null; payload: RuleEditorPayload }): void
+  (e: 'save-rule', payload: { id: string | null; payload: SubscriptionRuleSavePayload }): void
   (e: 'move-rule-up', id: string): void
   (e: 'move-rule-down', id: string): void
   (e: 'apply-rule', id: string): void
@@ -297,13 +287,17 @@ const newKeyword = ref('')
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
-const showRuleEditor = ref(false)
-const ruleEditorMode = ref<'create' | 'edit'>('create')
-const editingRule = ref<FeedSubscriptionRule | null>(null)
+const activeManageTab = ref<'sources' | 'rules' | 'keywords'>('sources')
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
 })
+
+const manageTabs = [
+  { key: 'sources', label: '订阅源' },
+  { key: 'rules', label: '规则' },
+  { key: 'keywords', label: '过滤' },
+] as const
 
 const groupOptions = computed(() => [
   { label: '未分类', value: '' },
@@ -324,33 +318,6 @@ const displayGroups = computed(() => [
     subscriptions: props.subscriptions.filter(sub => !sub.subscription_group_id),
   },
 ])
-
-const joinList = (items: unknown[]) => items.map((item) => String(item).trim()).filter(Boolean).join(' / ')
-
-const ruleConditionSummary = (rule: FeedSubscriptionRule) => {
-  if (rule.match_type === 'source_category') {
-    const categories = Array.isArray(rule.conditions_json.categories) ? rule.conditions_json.categories : []
-    return `条件：来源分类 ${joinList(categories)}`
-  }
-  if (rule.match_type === 'source_ids') {
-    const sourceIds = Array.isArray(rule.conditions_json.source_ids) ? rule.conditions_json.source_ids : []
-    return `条件：来源 ${joinList(sourceIds)}`
-  }
-  const keywords = Array.isArray(rule.conditions_json.keywords) ? rule.conditions_json.keywords : []
-  return `条件：关键词 ${joinList(keywords)}`
-}
-
-const ruleActionSummary = (rule: FeedSubscriptionRule) => {
-  const actions: string[] = []
-  if (rule.action_group_id) {
-    const groupName = props.groups.find((group) => group.id === rule.action_group_id)?.name || rule.action_group_id
-    actions.push(`分组到 ${groupName}`)
-  }
-  if (rule.action_muted) actions.push('静音')
-  if (rule.action_auto_mark_read) actions.push('自动已读')
-  if (rule.action_auto_add_reading_list) actions.push('自动稍后阅读')
-  return `动作：${actions.length ? actions.join(' / ') : '无'}`
-}
 
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
@@ -422,6 +389,15 @@ const moveSubscription = (id: string, groupId: string) => {
   emit('move-subscription', id, groupId)
 }
 
+const updateSubscriptionFlag = (
+  id: string,
+  key: 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list',
+  value: boolean,
+) => {
+  if (props.busy) return
+  emit('update-subscription', id, { [key]: value })
+}
+
 const checkSubscriptionHealth = (id: string) => {
   if (props.busy || props.healthChecking) return
   emit('check-subscription-health', id)
@@ -448,61 +424,6 @@ const handleOPMLSelected = (event: Event) => {
 const exportOPML = () => {
   if (props.busy || props.healthChecking || !props.subscriptions.length) return
   emit('export-opml')
-}
-
-const openCreateRule = () => {
-  if (props.busy) return
-  emit('create-rule')
-  ruleEditorMode.value = 'create'
-  editingRule.value = null
-  showRuleEditor.value = true
-}
-
-const openEditRule = (rule: FeedSubscriptionRule) => {
-  if (props.busy) return
-  emit('edit-rule', rule.id)
-  ruleEditorMode.value = 'edit'
-  editingRule.value = rule
-  showRuleEditor.value = true
-}
-
-const closeRuleEditor = () => {
-  showRuleEditor.value = false
-  editingRule.value = null
-}
-
-const submitRuleEditor = (payload: RuleEditorPayload) => {
-  emit('save-rule', {
-    id: editingRule.value?.id || null,
-    payload,
-  })
-  closeRuleEditor()
-}
-
-const moveRuleUp = (id: string) => {
-  if (props.busy) return
-  emit('move-rule-up', id)
-}
-
-const moveRuleDown = (id: string) => {
-  if (props.busy) return
-  emit('move-rule-down', id)
-}
-
-const applyRule = (id: string) => {
-  if (props.busy) return
-  emit('apply-rule', id)
-}
-
-const applyAllRules = () => {
-  if (props.busy || !props.subscriptionRules.length) return
-  emit('apply-all-rules')
-}
-
-const confirmDeleteRule = (id: string) => {
-  if (props.busy) return
-  if (!window.confirm('确定删除这条规则吗？')) return
-  emit('delete-rule', id)
 }
 
 const confirmDelete = (id: string) => {
@@ -537,7 +458,6 @@ const formatCheckedAt = (value: string) => {
 
 watch(() => props.show, (visible) => {
   if (!visible) {
-    closeRuleEditor()
     return
   }
   newGroupName.value = ''
@@ -610,6 +530,40 @@ watch(() => props.filterRules, (rules) => {
 
 .manage-copy {
   margin: 0;
+}
+
+.manage-error {
+  margin: 0.5rem 0 0;
+  color: var(--a-color-danger);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.manage-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--a-color-line-soft);
+}
+
+.manage-tab {
+  border: 0;
+  border-right: 1px solid var(--a-color-line-soft);
+  padding: 0.7rem 0.75rem;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.manage-tab:last-child {
+  border-right: 0;
+}
+
+.manage-tab.is-active {
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
 }
 
 .create-group-form {
@@ -835,6 +789,22 @@ watch(() => props.filterRules, (rules) => {
   margin: 0.5rem 0 0;
   font-size: 0.75rem;
   color: #b91c1c;
+}
+
+.subscription-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  margin-top: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.subscription-flags label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .subscription-actions {

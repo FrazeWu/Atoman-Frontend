@@ -124,14 +124,15 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0 0 0.7rem;
+  padding: 0 0 0.6rem;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  border-bottom: 1px solid var(--a-color-line);
   background: transparent;
   color: var(--a-color-ink);
   text-align: left;
   font: inherit;
   cursor: pointer;
+  transition: border-bottom-color 0.15s ease;
 }
 
 .paper-choice-trigger:focus-visible,
@@ -155,41 +156,41 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% + 0.4rem);
-  z-index: 20;
+  top: calc(100% + 4px);
+  z-index: 50;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 0.65rem 1rem;
-  border-radius: 0px;
-  background: #ffffff; /* pure white */
-  border: 1px solid var(--a-color-line-soft);
-  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.15);
+  padding: 0.25rem;
+  border-radius: var(--a-radius-none, 4px);
+  background: #ffffff;
+  border: 1px solid var(--a-color-line);
+  box-shadow: none;
 }
 
 .paper-choice-option {
   display: grid;
   grid-template-columns: 1rem 1fr;
   gap: 0.45rem;
-  padding: 0.65rem 0;
+  padding: 0.55rem 0.75rem;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
   background: transparent;
   color: var(--a-color-ink);
   text-align: left;
   cursor: pointer;
   font: inherit;
+  border-radius: calc(var(--a-radius-none, 4px) - 1px);
+  transition: background-color 0.15s ease;
 }
 
-.paper-choice-option:last-child {
-  border-bottom: 0;
+.paper-choice-option:hover {
+  background-color: var(--a-color-paper-soft);
 }
 
 .paper-choice-option--active {
-  color: var(--a-color-accent-confirm);
+  color: var(--a-color-ink);
 }
 
 .paper-choice-marker {
-  color: var(--a-color-accent-confirm);
+  color: var(--a-color-ink);
 }
 </style>

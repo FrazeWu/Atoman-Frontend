@@ -76,6 +76,18 @@
   </div>
 
   <RouterLink
+    to="/inbox"
+    class="notif-btn"
+    data-testid="notification-link"
+    :title="notificationRoom.helper"
+    :aria-label="notificationRoom.name"
+  >
+    <Bell class="notif-btn__icon" :size="16" aria-hidden="true" />
+    <span class="notif-btn__text">{{ notificationRoom.name }}</span>
+    <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
+  </RouterLink>
+
+  <RouterLink
     v-if="currentDefaultChannel"
     :to="currentModuleManagePath"
     class="default-channel-link"
@@ -83,19 +95,17 @@
     :title="currentDefaultChannel.name"
     :aria-label="`当前频道：${currentDefaultChannel.name}`"
   >
-    <span class="default-channel-link__icon" aria-hidden="true">◎</span>
     <span class="default-channel-link__text">{{ currentDefaultChannel.name }}</span>
   </RouterLink>
 
   <RouterLink
-    :to="modulePathUrl('feed', '/inbox')"
-    class="notif-btn"
-    :title="notificationRoom.helper"
-    :aria-label="notificationRoom.name"
+    :to="userSettingsPath"
+    class="user-settings-link"
+    data-testid="user-settings-link"
+    title="设置"
+    aria-label="设置"
   >
-    <span class="notif-btn__icon" aria-hidden="true">◌</span>
-    <span class="notif-btn__text">{{ notificationRoom.name }}</span>
-    <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
+    <Settings :size="17" aria-hidden="true" />
   </RouterLink>
 
   <div class="dropdown-wrap" data-dropdown="user">
@@ -106,7 +116,6 @@
     </button>
     <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
       <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
-      <RouterLink :to="modulePathUrl('blog', '/bookmarks')" class="dropdown-item" @click="closeDropdown">收藏</RouterLink>
       <RouterLink
         v-if="currentModuleManagePath && currentDefaultChannel"
         :to="currentModuleManagePath"
@@ -133,8 +142,10 @@ import { modulePathUrl, userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
+import { Bell, Settings } from 'lucide-vue-next'
 import {
-  defaultChannelManagePath,
+  type DefaultChannelModule,
+  channelManagePath,
   isDefaultChannelModule,
   useDefaultChannelsStore,
 } from '@/stores/defaultChannels'
@@ -154,6 +165,7 @@ const searchDraft = ref('')
 const searchWrapRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
+const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
@@ -165,17 +177,24 @@ const currentModule = computed(() => (
     ? siteContext.value.module
     : null
 ))
+const fallbackChannelModules: DefaultChannelModule[] = ['blog', 'podcast', 'video']
 const currentDefaultChannel = computed(() => {
-  if (!currentModule.value) return null
-  const channel = defaultChannelsStore.channelFor(currentModule.value)
-  return channel?.name.trim() ? channel : null
+  const modules = currentModule.value
+    ? [currentModule.value, ...fallbackChannelModules.filter((module) => module !== currentModule.value)]
+    : fallbackChannelModules
+
+  for (const module of modules) {
+    const channel = defaultChannelsStore.channelFor(module)
+    if (channel?.name.trim()) return channel
+  }
+
+  return null
 })
 const currentModuleManagePath = computed(() => (
-  currentModule.value && currentDefaultChannel.value
-    ? defaultChannelManagePath(currentModule.value)
+  currentDefaultChannel.value
+    ? channelManagePath
     : ''
 ))
-
 const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
@@ -268,13 +287,7 @@ const logout = async () => {
   text-decoration: none;
   white-space: nowrap;
   min-width: 0;
-  flex-shrink: 1;
-}
-
-.default-channel-link__icon {
-  display: none;
-  font-size: 1rem;
-  line-height: 1;
+  flex-shrink: 0;
 }
 
 .default-channel-link__text {
@@ -309,8 +322,7 @@ const logout = async () => {
 
 .notif-btn__icon {
   display: none;
-  font-size: 1rem;
-  line-height: 1;
+  flex-shrink: 0;
 }
 
 .topbar-search-wrap {
@@ -318,7 +330,6 @@ const logout = async () => {
   display: flex;
   align-items: center;
   z-index: 120;
-  margin-left: auto;
   margin-right: 0;
   flex: 0 1 clamp(10rem, 24vw, 24rem);
   min-width: 2.25rem;
@@ -503,18 +514,14 @@ const logout = async () => {
   }
 
   .default-channel-link {
-    justify-content: center;
-    width: 2.25rem;
-    min-width: 2.25rem;
+    width: auto;
+    min-width: 0;
+    max-width: 8rem;
     padding: 0;
   }
 
-  .default-channel-link__icon {
-    display: inline-block;
-  }
-
   .default-channel-link__text {
-    display: none;
+    display: block;
   }
 
   .notif-btn {
@@ -523,7 +530,7 @@ const logout = async () => {
   }
 
   .notif-btn__icon {
-    display: inline-block;
+    display: inline-flex;
   }
 
   .notif-btn__text {
@@ -540,15 +547,28 @@ const logout = async () => {
   }
 }
 
-@media (max-width: 820px) {
-  .default-channel-link {
-    display: none;
-  }
-}
-
 .notif-btn:hover {
   color: var(--a-color-fg);
   text-decoration: underline;
+}
+
+.user-settings-link {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-muted);
+  border: none;
+  background: var(--a-color-bg);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.user-settings-link:hover {
+  color: var(--a-color-fg);
+  background: var(--a-color-paper-wash);
+  text-decoration: none;
 }
 
 .notif-count {

@@ -24,6 +24,13 @@ function scopedModuleRoutes(module: keyof typeof moduleRoutes): RouteRecordRaw[]
         }
       }
 
+      if (module === 'blog' && route.path === '/channels') {
+        return {
+          path: `${publicPrefix}${route.path}`,
+          redirect: route.path,
+        }
+      }
+
       return {
         ...route,
         path: `${publicPrefix}${route.path}`,
@@ -44,8 +51,9 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...scopedModuleRoutes('podcast'),
     ...scopedModuleRoutes('video'),
     ...userRoutes,
+    { path: '/channels', component: () => import('@/views/blog/ChannelManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'channel.manage' } } },
     ...channelRoutes,
-    { path: '/inbox', redirect: '/feed/inbox' },
+    { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
     { path: '/settings', redirect: '/posts/settings' },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },

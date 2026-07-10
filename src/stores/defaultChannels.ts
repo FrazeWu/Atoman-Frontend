@@ -16,6 +16,7 @@ export type DefaultChannelSummary = {
 export type DefaultChannelMap = Record<DefaultChannelModule, DefaultChannelSummary | null>
 
 const defaultChannelModules: DefaultChannelModule[] = ['blog', 'podcast', 'video']
+export const channelManagePath = '/channels'
 
 function emptyChannels(): DefaultChannelMap {
   return {
@@ -51,17 +52,6 @@ function normalizeChannelMap(payload: unknown): DefaultChannelMap {
 
 export function isDefaultChannelModule(value: string): value is DefaultChannelModule {
   return defaultChannelModules.includes(value as DefaultChannelModule)
-}
-
-export function defaultChannelManagePath(module: DefaultChannelModule) {
-  switch (module) {
-    case 'blog':
-      return '/posts/channels'
-    case 'video':
-      return '/videos/manage'
-    case 'podcast':
-      return '/podcasts/editor'
-  }
 }
 
 export const useDefaultChannelsStore = defineStore('defaultChannels', () => {

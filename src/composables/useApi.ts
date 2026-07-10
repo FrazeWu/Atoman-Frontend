@@ -186,6 +186,8 @@ export function useApi() {
       follow: (userUuid: string) => `${apiUrl}/users/${userUuid}/follow`,
       followers: (userUuid: string) => `${apiUrl}/users/${userUuid}/followers`,
       following: (userUuid: string) => `${apiUrl}/users/${userUuid}/following`,
+      blocked: `${apiUrl}/users/blocked`,
+      block: (userUuid: string) => `${apiUrl}/users/${userUuid}/block`,
     },
     
     feed: {
@@ -201,8 +203,13 @@ export function useApi() {
     notifications: {
       list: `${apiUrl}/notifications`,
       unreadCount: `${apiUrl}/notifications/unread-count`,
+      unreadCounts: `${apiUrl}/notifications/unread-counts`,
       markRead: (id: string) => `${apiUrl}/notifications/${id}/read`,
+      markCategoryRead: (category: string) => `${apiUrl}/notifications/${category}/read-all`,
       markAllRead: `${apiUrl}/notifications/read-all`,
+      preferences: `${apiUrl}/notifications/preferences`,
+      mutes: `${apiUrl}/notifications/mutes`,
+      mute: (id: string) => `${apiUrl}/notifications/mutes/${id}`,
     },
 
     dm: {

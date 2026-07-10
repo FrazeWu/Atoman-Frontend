@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { DMConversation, DMMessage, DMRealtimePayload } from '@/types'
@@ -15,6 +15,11 @@ export const useDMStore = defineStore('dm', () => {
   const loading = ref(false)
   const total = ref(0)
   let openConversationRequestId = 0
+
+  const activeConversationBlocked = computed(() => {
+    const active = activeConversation.value
+    return Boolean(conversations.value.find((item) => item.other_username === active)?.is_blocked)
+  })
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -67,6 +72,7 @@ export const useDMStore = defineStore('dm', () => {
 
   const sendMessage = async (username: string, content: string, imageUrl = '') => {
     if (!authStore.token) return
+    if (activeConversationBlocked.value) throw new Error('已拉黑此用户')
     const res = await fetch(api.dm.conversation(username), {
       method: 'POST',
       headers: authHeaders(),
@@ -151,6 +157,7 @@ export const useDMStore = defineStore('dm', () => {
     messages,
     loading,
     total,
+    activeConversationBlocked,
     fetchUnreadCount,
     fetchConversations,
     openConversation,

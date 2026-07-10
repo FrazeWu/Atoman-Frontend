@@ -93,7 +93,11 @@ const mountWithRouter = async (
           template: '<header><button class="back" @click="$emit(\'back\')">back</button><slot /><slot name="action" /></header>',
         },
         PEmpty: { template: '<div />' },
-        PInput: { template: '<input />' },
+        PInput: {
+          props: ['modelValue'],
+          emits: ['update:modelValue'],
+          template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+        },
         PSelect: {
           props: ['modelValue', 'options'],
           template: '<select :value="modelValue"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
@@ -137,7 +141,7 @@ describe('forum 路由前缀', () => {
     })
     await flushPromises()
 
-    await wrapper.findComponent({ name: 'ForumTopicFilters' }).vm.$emit('create-topic')
+    await wrapper.findAll('button').find((button) => button.text().includes('发新话题'))!.trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum/new')
 
     await wrapper.get('.p-entry').trigger('click')
@@ -156,14 +160,14 @@ describe('forum 路由前缀', () => {
     })
     await flushPromises()
 
-    await wrapper.get('.back').trigger('click')
+    await wrapper.findAll('button').find((button) => button.text().includes('返回论坛'))!.trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum')
 
     await wrapper.get('.p-entry').trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-2')
 
-    await wrapper.get('input.search-input-wrap').setValue('prefix')
-    await wrapper.get('input.search-input-wrap').trigger('keydown.enter')
+    await wrapper.get('input.forum-search-input').setValue('prefix')
+    await wrapper.get('input.forum-search-input').trigger('keydown.enter')
     expect(replaceSpy).toHaveBeenLastCalledWith({ path: '/forum/search', query: { q: 'prefix' } })
   })
 
@@ -189,18 +193,21 @@ describe('forum 路由前缀', () => {
   })
 
   it('话题页面包屑和分类跳转到 /forum 前缀下', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { items: [], target: { liked: false, like_count: 0, comment_count: 0 } },
+    }), { status: 200 }))
+
     const { wrapper, pushSpy } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
       const forumStore = useForumStore()
       forumStore.loading = false
       forumStore.currentTopic = makeTopic('topic-1')
       vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
     })
     await flushPromises()
 
     expect(wrapper.getComponent(RouterLink).props('to')).toBe('/forum')
 
     await wrapper.get('.category-pill').trigger('click')
-    expect(pushSpy).toHaveBeenLastCalledWith('/forum?category=cat-1')
+    expect(pushSpy).toHaveBeenLastCalledWith('/forum?category_id=cat-1')
   })
 })

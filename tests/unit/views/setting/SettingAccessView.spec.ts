@@ -92,6 +92,25 @@ describe('SettingAccessView section sync', () => {
     expect(wrapper.find('[data-testid="feed-source-panel"]').exists()).toBe(true)
   })
 
+  it('uses unified settings blocks without developer-facing placeholder copy', () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('.settings-center').exists()).toBe(true)
+    expect(wrapper.find('.settings-center__nav').exists()).toBe(true)
+    expect(wrapper.findAll('.settings-block').length).toBeGreaterThan(4)
+    expect(wrapper.text()).not.toContain('后续按同样结构补具体设置')
+  })
+
   it('保存时会带上 podcast 模块可见性', async () => {
     const save = vi.fn(async () => undefined)
     siteAccessState.save = save

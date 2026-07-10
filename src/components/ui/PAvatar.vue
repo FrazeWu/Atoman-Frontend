@@ -31,7 +31,7 @@ const avatarStyle = computed(() => ({
 
 <style scoped>
 .p-avatar {
-  border-radius: 9999px;
+  border-radius: var(--a-radius-none, 4px);
   background: var(--a-color-line-soft);
   display: flex;
   align-items: center;
@@ -49,7 +49,7 @@ const avatarStyle = computed(() => ({
 }
 
 .avatar-fallback {
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-ink-muted);
 }
 

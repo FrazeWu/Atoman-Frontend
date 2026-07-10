@@ -254,20 +254,25 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__search {
   width: 100%;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-line);
   padding: 0.45rem 0.55rem;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
   font: inherit;
   font-size: 0.78rem;
+  outline: none;
+}
+
+.feed-sidebar-sources__search:focus {
+  border-color: var(--a-color-ink);
 }
 
 .feed-sidebar-sources__filter {
   justify-self: start;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-line);
   padding: 0.28rem 0.5rem;
-  background: #ffffff;
-  color: #475569;
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
   cursor: pointer;
   font: inherit;
   font-size: 0.68rem;
@@ -276,10 +281,10 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__all {
   width: 100%;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-line);
   padding: 0.48rem 0.55rem;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
@@ -292,8 +297,8 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__filter.is-active {
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
 }
 
 .feed-sidebar-sources__group {
@@ -306,7 +311,7 @@ function toggleGroup(groupId: string) {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #475569;
+  color: var(--a-color-muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -328,34 +333,35 @@ function toggleGroup(groupId: string) {
   border: 0;
   padding: 0.5rem 0.55rem;
   background: transparent;
-  color: #0f172a;
+  color: var(--a-color-fg);
   text-align: left;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: var(--a-radius-none, 4px);
   transition: all 0.2s;
 }
 
 .feed-sidebar-sources__count {
   min-width: 1.35rem;
   padding: 0.12rem 0.34rem;
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
   font-size: 0.58rem;
   text-align: center;
+  border-radius: var(--a-radius-none, 4px);
 }
 
 .feed-sidebar-sources__health {
-  color: #b45309;
+  color: var(--a-color-accent-destructive);
   font-size: 0.58rem;
   letter-spacing: 0.1em;
 }
 
 .feed-sidebar-sources__health.is-error {
-  color: #b91c1c;
+  color: var(--a-color-danger);
 }
 
 .feed-sidebar-sources__item:hover {
-  background-color: transparent;
+  background-color: var(--a-color-paper-soft);
   color: var(--a-color-ink);
 }
 
@@ -365,7 +371,7 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__item.is-active {
-  background-color: transparent;
+  background-color: var(--a-color-paper-wash);
   box-shadow: none;
   font-weight: 800;
   color: var(--a-color-ink);
@@ -373,8 +379,8 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__badge {
   padding: 0.18rem 0.34rem;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink-muted);
   font-size: 0.58rem;
   letter-spacing: 0.1em;
 }
@@ -390,8 +396,8 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__empty {
   margin: 0;
   padding: 0.75rem 0.55rem;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--a-color-surface);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
 }
 </style>

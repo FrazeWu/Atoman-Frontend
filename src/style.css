@@ -1003,6 +1003,10 @@ body {
   display: none;
 }
 
+.module-mobile-header {
+  display: none;
+}
+
 /* Reset direct child views layout inside sidebar pages */
 .a-main-content > .a-page,
 .a-main-content > .a-page-xl,
@@ -1056,6 +1060,29 @@ body {
     right: 0;
     bottom: 0;
     z-index: 80;
+  }
+  .module-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--a-color-line-soft);
+    padding-bottom: 0.75rem;
+  }
+  .module-mobile-header__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--a-color-ink);
+  }
+  .module-mobile-header__action {
+    border: 1px solid var(--a-color-line-soft);
+    padding: 0.25rem 0.5rem;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--a-color-text);
   }
 }
 

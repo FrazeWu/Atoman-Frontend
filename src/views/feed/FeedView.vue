@@ -126,17 +126,14 @@
             placeholder="搜索标题、来源、摘要"
             aria-label="搜索订阅内容"
           />
-          <button class="feed-search__submit" type="submit">搜索</button>
-          <button
+          <PPress type="submit" label="搜索" />
+          <PPress
             v-if="activeSearchLabel"
-            class="feed-search__clear"
+            variant="secondary"
             data-test="feed-search-clear"
-            type="button"
-            aria-label="清空搜索"
+            label="清空"
             @click="clearSearch"
-          >
-            清空
-          </button>
+          />
         </form>
         <div class="source-type-filters" aria-label="来源类型筛选">
           <PSegmentedControl
@@ -195,8 +192,8 @@
             :summary="item.post.summary"
           >
             <template #visual>
-              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PBadge type="blog">文章</PBadge>
+              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center;flex-shrink:0;min-width:40px">
+                <PBadge type="blog" no-dot>文章</PBadge>
                 <span v-if="!item.is_read" class="unread-dot" />
               </div>
             </template>
@@ -228,9 +225,9 @@
             :summary="stripHtml(item.feed_item.summary || '')"
           >
             <template #visual>
-              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PBadge type="external" fill>外部</PBadge>
-                <PBadge type="external">{{ getExternalBadge(item.feed_item) }}</PBadge>
+              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:center;flex-shrink:0;min-width:40px">
+                <PBadge type="external" no-dot>外部</PBadge>
+                <PBadge type="external" no-dot>{{ getExternalBadge(item.feed_item) }}</PBadge>
                 <span v-if="!item.is_read" class="unread-dot" />
               </div>
             </template>
@@ -1589,37 +1586,20 @@ onUnmounted(() => {
 
 .feed-search__input {
   min-width: 0;
-  height: 2.25rem;
+  height: 40px;
   border: 0;
   border-bottom: 2px solid var(--a-color-ink);
   border-radius: 0;
-  background: var(--a-color-paper);
+  background: var(--a-color-paper-soft);
   color: var(--a-color-ink);
   font: inherit;
-  padding: 0 0.65rem;
+  padding: 0 0.75rem;
   outline: none;
+  box-sizing: border-box;
 }
 
 .feed-search__input:focus {
   border-bottom-color: var(--a-color-accent-confirm);
-}
-
-.feed-search__submit,
-.feed-search__clear {
-  height: 2.25rem;
-  border: 0;
-  border-radius: 0;
-  padding: 0 0.75rem;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  font-family: var(--a-font-meta);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.feed-search__clear {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink);
 }
 
 .filter-toggle-btn {
@@ -1630,20 +1610,21 @@ onUnmounted(() => {
   height: 2.5rem;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--a-color-ink-soft);
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: var(--a-radius-none, 4px);
   transition: all 0.2s;
 }
 
 .filter-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #000;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
 }
 
 .filter-toggle-btn.active {
-  background: rgba(0, 0, 0, 0.08);
-  color: #000;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
+  font-weight: bold;
 }
 
 .feed-loading,

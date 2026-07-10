@@ -1,6 +1,6 @@
 <template>
   <span class="p-badge" :class="[`is-${type}`]">
-    <span class="p-badge-dot" aria-hidden="true" />
+    <span v-if="!noDot" class="p-badge-dot" aria-hidden="true" />
     <slot>{{ label }}</slot>
   </span>
 </template>
@@ -10,6 +10,7 @@ defineProps<{
   type?: 'blog' | 'video' | 'podcast' | 'topic' | 'external' | 'internal' | 'success' | 'warning' | 'danger' | 'info'
   label?: string
   fill?: boolean
+  noDot?: boolean
 }>()
 </script>
 

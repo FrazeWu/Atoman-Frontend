@@ -21,13 +21,13 @@ vi.mock('@/stores/inbox', () => ({
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
-    { path: '/feed/inbox', component: { template: '<div />' } },
+    { path: '/inbox', component: { template: '<div />' } },
     { path: '/login', component: { template: '<div />' } },
   ],
 })
 
 const mountTopbar = async () => {
-  await router.push('/feed/inbox')
+  await router.push('/inbox')
   await router.isReady()
   const wrapper = mount(AppTopbarAuthControls, {
     global: {
@@ -69,10 +69,16 @@ describe('AppTopbarAuthControls search trigger', () => {
 
     const searchTrigger = wrapper.find('[data-testid="topbar-search-pill"]')
     const inboxButton = wrapper.find('.notif-btn')
+    const settingsLink = wrapper.find('[data-testid="user-settings-link"]')
+    const userButton = wrapper.find('.user-btn')
 
     expect(searchTrigger.exists()).toBe(true)
     expect(inboxButton.exists()).toBe(true)
+    expect(settingsLink.exists()).toBe(true)
+    expect(userButton.exists()).toBe(true)
     expect(searchTrigger.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(inboxButton.element.compareDocumentPosition(settingsLink.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(settingsLink.element.compareDocumentPosition(userButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(false)
 
     await searchTrigger.trigger('click')

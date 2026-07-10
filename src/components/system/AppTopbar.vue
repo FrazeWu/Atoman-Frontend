@@ -1,7 +1,16 @@
 <template>
-  <header class="topbar" :class="{ 'topbar--auth': isAuthRoute }">
+  <header class="topbar" :class="{ 'topbar--auth': isAuthRoute, 'is-scrolled': isScrolled }">
     <div class="topbar-inner" :class="{ 'topbar-inner--auth': isAuthRoute }">
       <a href="/" class="brand-link" @click.prevent="handleBrandClick">
+        <button
+          v-if="hasSidebar && !isAuthRoute"
+          class="topbar-collapse-btn"
+          type="button"
+          aria-label="Toggle sidebar"
+          @click.stop="toggleSidebar"
+        >
+          <Menu :size="18" aria-hidden="true" />
+        </button>
         <div class="logo-box">
           <div class="logo-inner"></div>
         </div>
@@ -39,8 +48,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
+import { Menu } from 'lucide-vue-next'
+import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -48,6 +59,9 @@ import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
+
+const { toggleSidebar } = useSidebar()
+const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
 
 const router = useRouter()
 const route = useRoute()
@@ -79,18 +93,64 @@ const siteContext = computed(() => {
 })
 
 const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.value)
+
+// Scroll detection to animate the bottom tick mark
+const isScrolled = ref(false)
+const handleScroll = (e: Event) => {
+  const target = e.target
+  if (target === document || target === window) {
+    isScrolled.value = (window.scrollY || document.documentElement.scrollTop) > 0
+  } else if (target instanceof HTMLElement && target.classList.contains('a-main-content')) {
+    isScrolled.value = target.scrollTop > 0
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+  const mainContent = document.querySelector('.a-main-content')
+  if (mainContent) {
+    isScrolled.value = mainContent.scrollTop > 0
+  } else {
+    isScrolled.value = window.scrollY > 0
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll, { capture: true })
+})
 </script>
 
 <style scoped>
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 100;
   background: var(--a-color-bg);
   height: 56px;
+  transition: background-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease;
+}
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + var(--a-sidebar-width, 0px) / 2);
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 1px;
+  background-color: var(--a-color-ink);
+  z-index: 10;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.topbar.is-scrolled::after {
+  width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
 }
 .topbar--auth {
   background: var(--a-color-bg);
+}
+.topbar.is-scrolled {
+  background: color-mix(in srgb, var(--a-color-bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .topbar-inner {
   padding: 0 2rem 0 0;
@@ -227,7 +287,7 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   gap: 1rem;
   margin-left: auto;
   min-width: 0;
-  flex-shrink: 1;
+  flex-shrink: 0;
   overflow: visible;
 }
 
@@ -278,5 +338,27 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   .nav-link {
     padding: 0 0.625rem;
   }
+}
+
+.topbar-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--a-radius-none, 4px);
+  margin-right: 8px;
+  margin-left: -12px;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.topbar-collapse-btn:hover {
+  background-color: var(--a-color-paper-wash);
 }
 </style>

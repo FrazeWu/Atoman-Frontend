@@ -1,5 +1,5 @@
 <template>
-  <PSurface class="p-empty" tone="soft" :layer="1">
+  <div class="p-empty">
     <p v-if="computedKicker" class="p-empty__kicker">{{ computedKicker }}</p>
     <h2 v-if="computedTitle" class="p-empty__title">{{ computedTitle }}</h2>
     <p v-if="computedDescription" class="p-empty__description">{{ computedDescription }}</p>
@@ -7,13 +7,11 @@
     <div v-if="$slots.action" class="p-empty__action">
       <slot name="action" />
     </div>
-  </PSurface>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-
-import PSurface from './PSurface.vue'
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -41,7 +39,9 @@ const computedKicker = computed(() => (computedTitle.value || computedDescriptio
   display: grid;
   justify-items: start;
   gap: 12px;
-  padding: 34px;
+  padding: 34px 0;
+  border-top: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-line-soft);
 }
 
 .p-empty__kicker,
@@ -52,22 +52,23 @@ const computedKicker = computed(() => (computedTitle.value || computedDescriptio
 
 .p-empty__kicker {
   color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 10px;
-  font-weight: 950;
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .p-empty__title {
   color: var(--a-color-ink);
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 18px;
+  font-weight: 500;
 }
 
 .p-empty__description {
-  color: var(--a-color-ink-muted);
-  line-height: 1.7;
+  color: var(--a-color-ink-soft);
+  line-height: 1.5;
+  font-size: 0.85rem;
 }
 
 .p-empty__action {

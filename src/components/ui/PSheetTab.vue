@@ -27,7 +27,7 @@ defineEmits(['click'])
   position: relative;
   cursor: pointer;
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 0;
+  border-radius: var(--a-radius-none, 4px) 0 0 var(--a-radius-none, 4px);
   border-right: none;
   transition: background-color 0.2s, border-color 0.2s;
   outline: none;
@@ -37,14 +37,14 @@ defineEmits(['click'])
 
 .close-icon {
   font-size: 0.9rem;
-  font-weight: 900;
+  font-weight: 500;
   color: currentColor;
   line-height: 1;
 }
 
 .tab-label {
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -52,8 +52,8 @@ defineEmits(['click'])
 }
 
 .sheet-tab:hover {
-  background-color: #f4ece1;
-  color: #6b4f3a;
-  border-color: #6b4f3a;
+  background-color: var(--a-color-paper-soft);
+  color: var(--a-color-ink);
+  border-color: var(--a-color-line);
 }
 </style>

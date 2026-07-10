@@ -56,9 +56,24 @@ describe('host-scoped route tables', () => {
     const feedPaths = flattenPaths(moduleRoutes.feed)
     const forumPaths = flattenPaths(moduleRoutes.forum)
     expect(feedPaths).toContain('reading-list')
-    expect(feedPaths).toContain('inbox')
+    expect(feedPaths).not.toContain('inbox')
     expect(forumPaths).toContain('topic/:id')
     expect(forumPaths).not.toContain('/forum')
+  })
+
+  it('registers inbox as a top-level route only', () => {
+    const appRoutePaths = paths(buildAppRoutes())
+
+    expect(appRoutePaths).toContain('/inbox')
+    expect(appRoutePaths).not.toContain('/feed/inbox')
+  })
+
+  it('registers channel management as a top-level route', () => {
+    const routes = buildAppRoutes()
+    const appRoutePaths = paths(routes)
+
+    expect(appRoutePaths).toContain('/channels')
+    expect(routes.find((route) => route.path === '/posts/channels')?.redirect).toBe('/channels')
   })
 
   it('registers video detail pages under the video module root', () => {
@@ -71,7 +86,7 @@ describe('host-scoped route tables', () => {
   })
 
   it('defines entity profile routes as aggregation spaces', () => {
-    expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels'])
+    expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels', '/users/:handle/settings'])
     expect(paths(channelRoutes)).toEqual(['/channels/:slug', '/channels/:slug/posts', '/channels/:slug/about'])
   })
 

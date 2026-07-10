@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
+import { getActivePinia } from 'pinia'
 import { useUIStore } from '@/stores/ui'
 
 interface KeyboardListOptions<T> {
@@ -11,7 +12,7 @@ interface KeyboardListOptions<T> {
 
 export function useKeyboardList<T>(options: KeyboardListOptions<T>) {
   const focusedIndex = ref(-1)
-  const uiStore = useUIStore()
+  const uiStore = getActivePinia() ? useUIStore() : null
 
   const scrollToFocused = () => {
     nextTick(() => {
@@ -32,7 +33,7 @@ export function useKeyboardList<T>(options: KeyboardListOptions<T>) {
 
     // 2. Check if this section is currently focused
     const currentSection = options.section || 'content'
-    if (uiStore.focusedSection !== currentSection) return
+    if (uiStore && uiStore.focusedSection !== currentSection) return
 
     const key = e.key.toLowerCase()
 

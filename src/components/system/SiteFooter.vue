@@ -21,11 +21,12 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { appVersion } from '@/config/appVersion'
 import { footbarLinks } from '@/config/moduleRooms'
+import { getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 
-const authStore = useAuthStore()
-const isAdmin = computed(() => isAdminRole(authStore.user?.role))
+const authStore = getActivePinia() ? useAuthStore() : null
+const isAdmin = computed(() => authStore ? isAdminRole(authStore.user?.role) : false)
 </script>
 
 <style scoped>

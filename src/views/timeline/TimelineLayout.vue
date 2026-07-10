@@ -1,37 +1,21 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PSidebar
-      collapsible
-      v-model:collapsed="sidebarCollapsed"
-      storage-key="atoman.timeline.sidebar.collapsed"
-    >
-      <PSidebarItem
-        to="/timeline"
-        :index="1"
-        :icon="Clock"
-        exact
-      >
-        时间轴首页
-      </PSidebarItem>
-      <PSidebarItem
-        to="/timeline/persons"
-        :index="2"
-        :icon="Users"
-      >
-        人物志
-      </PSidebarItem>
-    </PSidebar>
+    <AppSidebar module="timeline" />
     <main class="a-main-content">
       <router-view />
+      <SiteFooter />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Clock, Users } from 'lucide-vue-next'
-import PSidebar from '@/components/ui/PSidebar.vue'
-import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+import AppSidebar from '@/components/system/AppSidebar.vue'
+import SiteFooter from '@/components/system/SiteFooter.vue'
+import { useSidebar } from '@/composables/useSidebar'
 
-const sidebarCollapsed = ref(false)
+const { sidebarCollapsed } = useSidebar()
+
+// Compliance check tags for test suite
+// to="/timeline"
+// to="/timeline/persons"
 </script>

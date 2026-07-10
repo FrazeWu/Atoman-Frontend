@@ -33,10 +33,11 @@ const router = createRouter({
     { path: '/posts', component: { template: '<div />' } },
     { path: '/videos', component: { template: '<div />' } },
     { path: '/podcasts', component: { template: '<div />' } },
-    { path: '/feed/inbox', component: { template: '<div />' } },
+    { path: '/inbox', component: { template: '<div />' } },
     { path: '/posts/bookmarks', component: { template: '<div />' } },
     { path: '/posts/settings', component: { template: '<div />' } },
-    { path: '/posts/channels', component: { template: '<div />' } },
+    { path: '/users/:handle/settings', component: { template: '<div />' } },
+    { path: '/channels', component: { template: '<div />' } },
     { path: '/videos/manage', component: { template: '<div />' } },
     { path: '/podcasts/editor', component: { template: '<div />' } },
     { path: '/login', component: { template: '<div />' } },
@@ -54,8 +55,8 @@ describe('AppTopbarAuthControls', () => {
       if (url.endsWith('/users/me/default-channels')) {
         return new Response(JSON.stringify({ data: defaultChannelsPayload }), { status: 200 })
       }
-      if (url.endsWith('/notifications/unread-count') || url.endsWith('/dm/unread-count')) {
-        return new Response(JSON.stringify({ count: 0 }), { status: 200 })
+      if (url.endsWith('/notifications/unread-counts')) {
+        return new Response(JSON.stringify({ data: { total: 0, items: {} } }), { status: 200 })
       }
       throw new Error(`未 mock fetch: ${url}`)
     })
@@ -71,9 +72,12 @@ describe('AppTopbarAuthControls', () => {
     await wrapper.find('.user-btn').trigger('click')
 
     expect(wrapper.text()).toContain('alice')
-    expect(wrapper.find('a[href="/feed/inbox"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="notification-link"]').attributes('href')).toBe('/inbox')
+    expect(wrapper.find('[data-testid="notification-menu-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="user-settings-link"]').attributes('href')).toBe('/users/alice/settings')
+    expect(wrapper.find('[data-testid="notification-link"]').text()).not.toContain('◌')
     expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/posts/bookmarks"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/posts/bookmarks"]').exists()).toBe(false)
     expect(wrapper.find('a[href="/posts/settings"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/setting"]').exists()).toBe(false)
     expect(wrapper.html()).not.toContain('/blog/bookmarks')
@@ -113,24 +117,24 @@ describe('AppTopbarAuthControls', () => {
     expect(router.currentRoute.value.path).toBe('/login')
   })
 
-  it('shows the current module default channel before notifications in blog and jumps to blog channel management', async () => {
+  it('shows the current module default channel after notifications and jumps to channel management', async () => {
     const wrapper = await mountTopbar('/posts')
 
     const defaultChannelLink = wrapper.find('[data-testid="default-channel-link"]')
     const inboxButton = wrapper.find('.notif-btn')
 
     expect(defaultChannelLink.exists()).toBe(true)
-    expect(defaultChannelLink.text()).toContain('博客默认频道')
-    expect(defaultChannelLink.attributes('href')).toBe('/posts/channels')
-    expect(defaultChannelLink.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(defaultChannelLink.text()).toBe('博客默认频道')
+    expect(defaultChannelLink.attributes('href')).toBe('/channels')
+    expect(inboxButton.element.compareDocumentPosition(defaultChannelLink.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await defaultChannelLink.trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/posts/channels')
+    expect(router.currentRoute.value.path).toBe('/channels')
   })
 
-  it('shows channel management in the user menu for blog and jumps to the same management entry', async () => {
+  it('shows channel management in the user menu for blog and jumps to global channel management', async () => {
     const wrapper = await mountTopbar('/posts')
 
     await wrapper.find('.user-btn').trigger('click')
@@ -138,22 +142,28 @@ describe('AppTopbarAuthControls', () => {
     const menuLink = wrapper.find('[data-testid="channel-manage-link"]')
     expect(menuLink.exists()).toBe(true)
     expect(menuLink.text()).toBe('频道管理')
-    expect(menuLink.attributes('href')).toBe('/posts/channels')
+    expect(menuLink.attributes('href')).toBe('/channels')
 
     await menuLink.trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/posts/channels')
+    expect(router.currentRoute.value.path).toBe('/channels')
   })
 
-  it('hides default channel and channel management entry outside blog, podcast, and video modules', async () => {
-    const wrapper = await mountTopbar('/feed/inbox')
+  it('shows a fallback default channel and channel management entry outside content modules', async () => {
+    const wrapper = await mountTopbar('/inbox')
 
-    expect(wrapper.find('[data-testid="default-channel-link"]').exists()).toBe(false)
+    const defaultChannelLink = wrapper.find('[data-testid="default-channel-link"]')
+    const inboxButton = wrapper.find('.notif-btn')
+
+    expect(defaultChannelLink.exists()).toBe(true)
+    expect(defaultChannelLink.text()).toBe('博客默认频道')
+    expect(defaultChannelLink.attributes('href')).toBe('/channels')
+    expect(inboxButton.element.compareDocumentPosition(defaultChannelLink.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await wrapper.find('.user-btn').trigger('click')
 
-    expect(wrapper.find('[data-testid="channel-manage-link"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="channel-manage-link"]').attributes('href')).toBe('/channels')
   })
 
   it('hides the default channel entry when the current module has no channel name', async () => {
@@ -167,14 +177,24 @@ describe('AppTopbarAuthControls', () => {
           },
         }), { status: 200 })
       }
-      if (url.endsWith('/notifications/unread-count') || url.endsWith('/dm/unread-count')) {
-        return new Response(JSON.stringify({ count: 0 }), { status: 200 })
+      if (url.endsWith('/notifications/unread-counts')) {
+        return new Response(JSON.stringify({ data: { total: 0, items: {} } }), { status: 200 })
       }
       throw new Error(`未 mock fetch: ${url}`)
     })
 
     const wrapper = await mountTopbar('/videos')
 
-    expect(wrapper.find('[data-testid="default-channel-link"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="default-channel-link"]').text()).toContain('博客默认频道')
+  })
+
+  it('routes notification entry directly to inbox without opening a category dropdown', async () => {
+    const wrapper = await mountTopbar('/posts')
+
+    const notificationLink = wrapper.find('[data-testid="notification-link"]')
+
+    expect(notificationLink.attributes('href')).toBe('/inbox')
+    expect(wrapper.find('[data-testid="notification-menu-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="notification-menu-dm"]').exists()).toBe(false)
   })
 })

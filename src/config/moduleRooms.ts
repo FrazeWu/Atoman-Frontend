@@ -103,6 +103,7 @@ export const topbarNavOrder: ModuleRoomKey[] = [
   'music',
   'video',
   'podcast',
+  'forum',
   'debate',
   'timeline',
 ]

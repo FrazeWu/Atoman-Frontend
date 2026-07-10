@@ -188,7 +188,9 @@ const sheetStyle = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.02); /* Extremely subtle tint */
+  background: rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 2999;
   cursor: default;
 }
@@ -229,7 +231,7 @@ const sheetStyle = computed(() => {
 }
 
 .sheet-header-label {
-  font-weight: 900;
+  font-weight: 500;
   letter-spacing: 0.1em;
   color: var(--a-color-muted);
 }
@@ -239,7 +241,7 @@ const sheetStyle = computed(() => {
   border: none;
   color: black;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   letter-spacing: 0.1em;
   cursor: pointer;
   padding: 0.25rem 0.5rem;

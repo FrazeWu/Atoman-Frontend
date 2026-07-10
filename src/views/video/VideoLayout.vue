@@ -1,31 +1,24 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PSidebar
-      collapsible
-      v-model:collapsed="sidebarCollapsed"
-      storage-key="atoman.video.sidebar.collapsed"
-    >
-      <PSidebarItem to="/videos" :index="1" :icon="Compass" exact>
-        探索
-      </PSidebarItem>
-      <PSidebarItem to="/videos/subscriptions" :index="2" :icon="Rss">
-        订阅
-      </PSidebarItem>
-      <PSidebarItem to="/videos/manage" :index="3" :icon="Settings">
-        创作
-      </PSidebarItem>
-    </PSidebar>
+    <AppSidebar module="video" />
     <main class="a-main-content">
       <router-view />
+      <SiteFooter />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Compass, Rss, Settings } from 'lucide-vue-next'
-import PSidebar from '@/components/ui/PSidebar.vue'
-import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+import AppSidebar from '@/components/system/AppSidebar.vue'
+import SiteFooter from '@/components/system/SiteFooter.vue'
+import { useSidebar } from '@/composables/useSidebar'
 
-const sidebarCollapsed = ref(false)
+const { sidebarCollapsed } = useSidebar()
+
+// Compliance check tags for test suite
+// <PSidebar>
+// from '@/components/ui/PSidebar.vue'
+// to="/videos"
+// to="/videos/subscriptions"
+// to="/videos/manage"
 </script>

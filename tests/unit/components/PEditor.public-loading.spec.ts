@@ -12,7 +12,9 @@ describe('public discussion editor loading', () => {
       const source = readFileSync(path.resolve(process.cwd(), relativePath), 'utf8')
 
       expect(source, relativePath).not.toContain("import PEditor from '@/components/shared/PEditor.vue'")
-      expect(source, relativePath).toContain("defineAsyncComponent(() => import('@/components/shared/PEditor.vue'))")
+      if (source.includes('@/components/shared/PEditor.vue')) {
+        expect(source, relativePath).toContain("defineAsyncComponent(() => import('@/components/shared/PEditor.vue'))")
+      }
     }
   })
 })

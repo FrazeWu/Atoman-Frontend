@@ -347,7 +347,8 @@ onMounted(() => {
 }
 
 .music-sidebar-playlists__item:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
+  color: var(--a-color-fg);
 }
 
 .music-sidebar-playlists__item:hover .music-sidebar-playlists__name {
@@ -355,10 +356,10 @@ onMounted(() => {
 }
 
 .music-sidebar-playlists__item.is-active {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
   font-weight: 800;
-  border-left: 2px solid var(--a-color-ink);
-  padding-left: calc(0.5rem - 2px);
+  border-left: none;
+  padding-left: 0.5rem;
 }
 
 .playlist-icon-frame {
@@ -417,13 +418,13 @@ onMounted(() => {
 }
 
 .collapsed-icon-btn:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
   color: var(--a-color-fg);
 }
 
 .collapsed-icon-btn.is-active {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
   color: var(--a-color-ink);
-  border-left: 3px solid var(--a-color-ink);
+  border-left: none;
 }
 </style>

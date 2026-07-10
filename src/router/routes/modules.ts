@@ -81,7 +81,6 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'item/:id', component: () => import('@/views/feed/FeedItemDetailView.vue') },
         { path: 'starred', component: () => import('@/views/feed/FeedStarredView.vue'), meta: { requiresAuth: true } },
         { path: 'reading-list', component: () => import('@/views/feed/FeedReadingListView.vue'), meta: { requiresAuth: true } },
-        { path: 'inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
       ],
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },

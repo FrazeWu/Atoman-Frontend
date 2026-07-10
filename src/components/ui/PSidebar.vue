@@ -1,14 +1,5 @@
 <template>
-  <aside class="p-sidebar" :class="{ 'is-collapsed': isCollapsed }">
-    <div v-if="collapsible" class="p-sidebar-head">
-      <button
-        class="p-sidebar-collapse-btn"
-        type="button"
-        @click="isCollapsed = !isCollapsed"
-      >
-        <Menu :size="24" aria-hidden="true" />
-      </button>
-    </div>
+  <aside class="p-sidebar" :class="{ 'is-collapsed': sidebarCollapsed }">
     <nav class="p-sidebar-nav" :aria-label="ariaLabel">
       <slot />
     </nav>
@@ -19,40 +10,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { Menu } from 'lucide-vue-next'
+import { useSidebar } from '@/composables/useSidebar'
 
-const props = defineProps<{
+defineProps<{
   ariaLabel?: string
-  collapsible?: boolean
-  collapsed?: boolean
-  storageKey?: string
 }>()
 
-const emit = defineEmits<{
-  (e: 'update:collapsed', value: boolean): void
-}>()
-
-const localCollapsed = ref(false)
-
-const isCollapsed = computed({
-  get: () => props.storageKey ? localCollapsed.value : (props.collapsed ?? false),
-  set: (val) => {
-    if (props.storageKey) {
-      localCollapsed.value = val
-      localStorage.setItem(props.storageKey, String(val))
-    }
-    emit('update:collapsed', val)
-  }
-})
-
-onMounted(() => {
-  if (props.storageKey) {
-    const cached = localStorage.getItem(props.storageKey)
-    localCollapsed.value = cached === 'true'
-    emit('update:collapsed', localCollapsed.value)
-  }
-})
+const { sidebarCollapsed } = useSidebar()
 </script>
 
 <style scoped>
@@ -64,49 +28,10 @@ onMounted(() => {
   width: var(--a-sidebar-collapsed-width, 4.5rem);
 }
 
-.p-sidebar-head {
-  display: grid;
-  gap: 0.75rem;
-  align-items: start;
-  min-height: 4rem;
-  position: relative;
-}
-
-.p-sidebar.is-collapsed .p-sidebar-head {
-  justify-items: center;
-}
-
-.p-sidebar.is-collapsed :deep(.p-sidebar-label),
-.p-sidebar.is-collapsed :deep(.p-sidebar-helper) {
-  display: none;
-}
-
-.p-sidebar-collapse-btn {
-  position: absolute;
-  top: 1.25rem;
-  left: 1.25rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  border-radius: 0px; /* Straight corner */
-  transition: background-color 0.2s ease;
-  z-index: 10;
-}
-
-.p-sidebar-collapse-btn:hover {
-  background: var(--a-color-paper-wash);
-}
-
 .p-sidebar-nav {
   display: flex;
   flex-direction: column;
-  padding-top: 1rem;
+  padding-top: 0.5rem;
 }
 
 .p-sidebar-bottom {

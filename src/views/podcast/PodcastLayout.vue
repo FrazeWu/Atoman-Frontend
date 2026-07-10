@@ -11,15 +11,29 @@
         :icon="Mic"
         exact
       >
-        播客大厅
+        探索
+      </PSidebarItem>
+      <PSidebarItem
+        to="/podcasts/subscriptions"
+        :index="2"
+        :icon="ListMusic"
+      >
+        订阅
+      </PSidebarItem>
+      <PSidebarItem
+        to="/podcasts/favorites"
+        :index="3"
+        :icon="Heart"
+      >
+        收藏
       </PSidebarItem>
       <PSidebarItem
         v-if="canPublishPodcast"
-        to="/podcasts/editor"
-        :index="2"
+        to="/podcasts/creator"
+        :index="4"
         :icon="PlusCircle"
       >
-        播客创作
+        创作
       </PSidebarItem>
     </PSidebar>
     <main class="a-main-content">
@@ -30,7 +44,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Mic, PlusCircle } from 'lucide-vue-next'
+import { Heart, ListMusic, Mic, PlusCircle } from 'lucide-vue-next'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'

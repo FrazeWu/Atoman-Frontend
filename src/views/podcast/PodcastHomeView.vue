@@ -9,12 +9,14 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
 import { useApiUrl } from '@/composables/useApi'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
+const player = usePlayerStore()
 const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish'))
 
 const API_URL = useApiUrl()
@@ -79,7 +81,12 @@ function fmtDuration(sec: number) {
 }
 
 function episodeCover(ep: PodcastEpisode) {
-  return ep.episode_cover_url || ep.post?.collections?.[0]?.cover_url || ep.collections?.[0]?.cover_url || ep.channel?.cover_url || ''
+  return ep.episode_cover_url || ep.post?.cover_url || ep.post?.collections?.[0]?.cover_url || ep.collections?.[0]?.cover_url || ep.channel?.cover_url || ''
+}
+
+function playEpisode(ep: PodcastEpisode) {
+  player.setQueueFromPodcastEpisodes(episodes.value)
+  player.playQueuedSong(player.createPodcastEpisodeSong(ep))
 }
 </script>
 
@@ -158,6 +165,7 @@ function episodeCover(ep: PodcastEpisode) {
             时长: {{ fmtDuration(ep.duration_sec) }}
           </span>
           <span style="color:var(--a-color-muted-soft)">{{ new Date(ep.created_at).toLocaleDateString() }}</span>
+          <button class="ph-play" type="button" @click.stop="playEpisode(ep)">播放</button>
         </template>
       </PEntry>
     </div>
@@ -191,5 +199,15 @@ function episodeCover(ep: PodcastEpisode) {
   margin: 0.35rem 0 0;
   color: var(--a-color-muted-soft);
   font-size: 0.85rem;
+}
+
+.ph-play {
+  border: 1px solid var(--a-color-ink);
+  border-radius: 6px;
+  background: var(--a-color-paper);
+  padding: 0.25rem 0.5rem;
+  color: var(--a-color-ink);
+  font-size: 0.75rem;
+  cursor: pointer;
 }
 </style>

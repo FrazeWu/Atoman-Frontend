@@ -1,29 +1,31 @@
 <template>
   <header class="topbar" :class="{ 'topbar--auth': isAuthRoute, 'is-scrolled': isScrolled }">
     <div class="topbar-inner" :class="{ 'topbar-inner--auth': isAuthRoute }">
-      <a href="/" class="brand-link" @click.prevent="handleBrandClick">
+      <div class="brand-link">
         <button
           v-if="hasSidebar && !isAuthRoute"
           class="topbar-collapse-btn"
           type="button"
           aria-label="Toggle sidebar"
-          @click.stop="toggleSidebar"
+          @click="toggleSidebar"
         >
           <Menu :size="18" aria-hidden="true" />
         </button>
-        <div class="logo-box">
-          <div class="logo-inner"></div>
-        </div>
-        <span class="logo-block">
-          <span class="logo-copy">
-            <span class="logo-text">ATOMAN</span>
-            <span class="logo-meta">
-              <span v-if="appVersion" class="logo-version">{{ appVersion }}</span>
-              <span class="logo-notice">测试阶段，不保留用户数据</span>
+        <a href="/" class="brand-logo-link" @click.prevent="handleBrandClick">
+          <div class="logo-box">
+            <div class="logo-inner"></div>
+          </div>
+          <span class="logo-block">
+            <span class="logo-copy">
+              <span class="logo-text">ATOMAN</span>
+              <span class="logo-meta">
+                <span v-if="appVersion" class="logo-version">{{ appVersion }}</span>
+                <span class="logo-notice">测试阶段，不保留用户数据</span>
+              </span>
             </span>
           </span>
-        </span>
-      </a>
+        </a>
+      </div>
 
       <nav v-if="!isAuthRoute" class="nav" data-onboarding-anchor="modules-nav">
         <a
@@ -171,13 +173,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  text-decoration: none;
-  color: var(--a-color-fg);
   flex-shrink: 0;
   /* 与侧边栏等宽，使 nav 左侧与内容区对齐 */
   min-width: var(--a-sidebar-width, 0px);
   padding: 0 2rem;
   box-sizing: border-box;
+}
+.brand-logo-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--a-color-fg);
 }
 .logo-box {
   width: 32px;

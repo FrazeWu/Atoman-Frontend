@@ -1,5 +1,7 @@
 # Music Module Wiki UI/UX Design Spec
 
+> Visual precedence: layout semantics and the multi-level entity flow in this document remain valid. Colors, radius, borders, shadows, typography, icons, focus behavior, and stack mechanics follow [the approved global UI specification](./2026-06-05-flat-paper-ui-design.md). Emoji and dashed-border examples below describe actions only and are not current visual requirements.
+
 ## 1. Overview
 This document outlines the UX and UI redesign for the Music module, bringing the backend wiki-style collaboration features (revision history, 3-way merge conflict resolution, approval workflow) to the frontend. The design strictly adheres to the "Paper & Ink" aesthetic, emphasizing spatial depth, typography, and context retention through stacked sheet interactions.
 
@@ -51,5 +53,5 @@ To maintain context and prevent audio playback interruption, the application rel
 To avoid cluttering the main content flow, the "Discussion" feature is accessed via a right-edge trigger (similar to `PaperIndexTrigger` in the Feed module) or integrated into the Action Bar, sliding out its own drawer. It does not act as a primary tab next to the tracklist.
 
 ## 5. Implementation Notes
-- Requires enhancing the existing `PaperSheet` component or creating a nested drawer manager to handle the `shifted` CSS states (scale, translateX, opacity) cleanly.
+- Extend the existing `PSheet` foundation with the shared semantic stack controller defined by the global UI specification. Module components own music data and actions; the shared controller owns only stack order, navigation, and focus restoration.
 - The global `AudioPlayer` remains fixed at the bottom throughout all drawer transitions.

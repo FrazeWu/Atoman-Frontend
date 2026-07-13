@@ -1,7 +1,7 @@
 <template>
   <footer class="site-footer">
     <div class="site-footer-inner">
-      <RouterLink v-if="isAdmin" to="/setting" class="site-footer-brand">凹凸庵</RouterLink>
+      <RouterLink v-if="isAdmin" to="/site/setting" class="site-footer-brand">凹凸庵</RouterLink>
       <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
       <nav class="site-footer-links" aria-label="站点信息">
         <a

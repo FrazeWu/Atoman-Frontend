@@ -35,7 +35,7 @@ const router = createRouter({
     { path: '/podcasts', component: { template: '<div />' } },
     { path: '/inbox', component: { template: '<div />' } },
     { path: '/posts/bookmarks', component: { template: '<div />' } },
-    { path: '/posts/settings', component: { template: '<div />' } },
+    { path: '/site/setting', component: { template: '<div />' } },
     { path: '/users/:handle/settings', component: { template: '<div />' } },
     { path: '/channels', component: { template: '<div />' } },
     { path: '/videos/manage', component: { template: '<div />' } },
@@ -78,8 +78,8 @@ describe('AppTopbarAuthControls', () => {
     expect(wrapper.find('[data-testid="notification-link"]').text()).not.toContain('◌')
     expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/posts/bookmarks"]').exists()).toBe(false)
-    expect(wrapper.find('a[href="/posts/settings"]').exists()).toBe(true)
-    expect(wrapper.find('a[href="/setting"]').exists()).toBe(false)
+    expect(wrapper.findAll('a[href="/users/alice/settings"]').length).toBeGreaterThan(0)
+    expect(wrapper.find('a[href="/site/setting"]').exists()).toBe(false)
     expect(wrapper.html()).not.toContain('/blog/bookmarks')
   })
 
@@ -91,7 +91,7 @@ describe('AppTopbarAuthControls', () => {
 
     await wrapper.find('.user-btn').trigger('click')
 
-    expect(wrapper.find('a[href="/setting"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/site/setting"]').exists()).toBe(true)
   })
 
   it('waits for logout to finish before redirecting to login', async () => {

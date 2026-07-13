@@ -132,9 +132,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-8 py-20">
-    <div class="mb-8">
-      <h1 class="text-4xl font-black tracking-tighter mb-4">音乐管理</h1>
+  <div class="setting-music-review-panel">
+    <div>
       <div class="admin-tabs">
         <button :class="['admin-tab', activeTab === 'review' ? 'admin-tab-active' : '']" @click="activeTab = 'review'">
           审核队列 ({{ reviewItems.length }})
@@ -156,7 +155,7 @@ onMounted(async () => {
       <div v-else class="entries-list">
         <div v-for="entry in entries" :key="entry.id" class="entry-row">
           <div class="entry-info">
-            <RouterLink :to="entry.type === 'album' ? `/music/album/${entry.id}` : `/music/artist/${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
+            <RouterLink :to="entry.type === 'album' ? `/album/${entry.id}` : `/artist/${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
             <span class="entry-type">{{ entry.type === 'album' ? '专辑' : '艺术家' }}</span>
             <span v-if="entry.album_type" class="entry-album-type">{{ entry.album_type.toUpperCase() }}</span>
           </div>
@@ -191,6 +190,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.setting-music-review-panel { display: grid; gap: 1.25rem; min-width: 0; }
 .admin-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--a-color-line-soft); margin-bottom: 1.5rem; }
 .admin-tab {
   padding: 0.5rem 1.5rem;

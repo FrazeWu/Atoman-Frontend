@@ -103,21 +103,21 @@ describe('router auth guards', () => {
     auth.user = { username: 'member', role: 'user' } as never
     auth.isAuthenticated = true
 
-    await router.push('/setting/feed-fulltext')
+    await router.push('/site/setting')
 
     expect(router.currentRoute.value.path).toBe('/')
   })
 
-  it('redirects admin away from owner-only setting routes', async () => {
+  it('allows admin to open the unified site setting route', async () => {
     const router = await createGuardRouter('music')
     const auth = useAuthStore()
     auth.token = makeToken(3600)
     auth.user = { username: 'admin', role: 'admin' } as never
     auth.isAuthenticated = true
 
-    await router.push('/setting/roles')
+    await router.push('/site/setting')
 
-    expect(router.currentRoute.value.path).toBe('/setting/access')
+    expect(router.currentRoute.value.path).toBe('/site/setting')
   })
 
   it('keeps internal route pushes path-only', async () => {

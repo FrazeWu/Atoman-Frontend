@@ -23,6 +23,11 @@ describe('SiteFooter', () => {
     expect(footbarLinks.find((link) => link.label === '提交 Issue')?.href).toBe('https://github.com/FrazeWu/Atoman/issues')
   })
 
+  it('uses the canonical site setting destination', () => {
+    expect(footerSource).toContain('to="/site/setting"')
+    expect(footerSource).not.toContain('to="/setting"')
+  })
+
   it('registers top-level terms and privacy routes', () => {
     expect(router.resolve('/terms').matched.length).toBeGreaterThan(0)
     expect(router.resolve('/privacy').matched.length).toBeGreaterThan(0)

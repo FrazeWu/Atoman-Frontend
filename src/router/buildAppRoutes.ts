@@ -13,8 +13,7 @@ function scopedModuleRoutes(module: keyof typeof moduleRoutes): RouteRecordRaw[]
       route.path === '/login'
       || route.path === '/register'
       || route.path === '/:pathMatch(.*)*'
-      || route.path === '/setting'
-      || route.path === '/admin/site'
+      || route.path === '/site/setting'
     ))
     .map((route) => {
       if (route.path === '/') {
@@ -55,7 +54,6 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...channelRoutes,
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
-    { path: '/settings', redirect: '/posts/settings' },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ]

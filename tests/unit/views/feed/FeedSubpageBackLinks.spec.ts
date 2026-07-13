@@ -3,7 +3,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedItemDetailView from '@/views/feed/FeedItemDetailView.vue'
-import FeedSettingsView from '@/views/feed/FeedSettingsView.vue'
 import FeedStatsView from '@/views/feed/FeedStatsView.vue'
 
 vi.mock('chart.js/auto', () => ({
@@ -35,7 +34,6 @@ describe('Feed subpage back links', () => {
 
   it.each([
     ['item detail error state', FeedItemDetailView],
-    ['settings', FeedSettingsView],
     ['stats', FeedStatsView],
   ])('points %s back to the feed module root', async (_name, component) => {
     const wrapper = mount(component, { global: { stubs } })

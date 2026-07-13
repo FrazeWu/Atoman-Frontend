@@ -1,9 +1,9 @@
 <template>
   <section class="setting-access settings-center">
     <PSectionHeader
-      title="模块设置中心"
+      title="站点设置"
       kicker="SITE ACCESS"
-      description="先统一决定哪些模块开放，再逐个模块配置已确认的设置项。左侧目录会跟随右侧滚动位置同步切换。"
+      description="管理模块开放状态与站点功能。"
     />
 
     <p v-if="error" class="setting-access__message setting-access__message--error">{{ error }}</p>
@@ -101,6 +101,10 @@
               <SettingFeedSourcePanel :full-text-mode="draft.settings.feed.full_text_mode" />
             </div>
 
+            <div v-else-if="key === 'music'" class="setting-access__module-body">
+              <SettingMusicReviewPanel />
+            </div>
+
             <div v-else-if="key === 'blog'" class="setting-access__module-body">
               <div class="setting-access__setting-block settings-block">
                 <div class="setting-access__setting-copy settings-block__copy">
@@ -153,6 +157,10 @@
       </div>
     </div>
 
+    <PSurface v-if="isOwner" id="site-setting-roles" :layer="1" class="setting-access__section-card settings-center__section-card">
+      <SettingRolesPanel />
+    </PSurface>
+
     <div class="setting-access__actions">
       <PButton variant="secondary" to="/">返回首页</PButton>
       <PButton :loading="saving" loading-text="保存中..." @click="save">保存设置</PButton>
@@ -167,14 +175,18 @@ import PSurface from '@/components/ui/PSurface.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
+import SettingMusicReviewPanel from '@/components/setting/SettingMusicReviewPanel.vue'
+import SettingRolesPanel from '@/components/setting/SettingRolesPanel.vue'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { mergeSiteAccess, type SiteAccess } from '@/config/siteAccess'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { getSectionDomId, resolveActiveSectionByScroll } from '@/views/setting/settingAccessSections'
+import { isOwnerRole } from '@/utils/roles'
+import { getSectionDomId, resolveActiveSectionByScroll, resolveInitialSettingSection } from '@/views/setting/settingAccessSections'
 
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
+const isOwner = isOwnerRole(authStore.user?.role)
 
 const draft = ref<SiteAccess>(mergeSiteAccess(siteAccessStore.access))
 const saving = ref(false)
@@ -275,7 +287,12 @@ async function save() {
 
 onMounted(() => {
   nextTick(() => {
-    syncActiveSection()
+    const initialSection = resolveInitialSettingSection(window.location.hash)
+    if (initialSection) {
+      scrollToSection(initialSection)
+    } else {
+      syncActiveSection()
+    }
   })
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('resize', handleScroll)

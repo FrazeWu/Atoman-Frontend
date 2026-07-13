@@ -9,6 +9,11 @@ export function getSectionDomId(key: ModuleRoomKey) {
   return `module-${key}`
 }
 
+export function resolveInitialSettingSection(hash: string) {
+  const key = hash.replace(/^#module-/, '') as ModuleRoomKey
+  return hash.startsWith('#module-') && key ? key : null
+}
+
 export function resolveActiveSectionByScroll(
   positions: SectionPosition[],
   scrollY: number,

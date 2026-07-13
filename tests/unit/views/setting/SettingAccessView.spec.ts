@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 
-import { resolveActiveSectionByScroll } from '@/views/setting/settingAccessSections'
+import { resolveActiveSectionByScroll, resolveInitialSettingSection } from '@/views/setting/settingAccessSections'
 import SettingAccessView from '@/views/setting/SettingAccessView.vue'
 
 const siteAccessState = {
@@ -34,7 +34,7 @@ const siteAccessState = {
   save: async () => undefined,
 }
 
-const authState = { token: 'admin-token' }
+const authState = { token: 'admin-token', user: { role: 'owner' } }
 
 vi.mock('@/stores/siteAccess', () => ({
   useSiteAccessStore: () => siteAccessState,
@@ -66,6 +66,67 @@ describe('SettingAccessView section sync', () => {
     ] as const
 
     expect(resolveActiveSectionByScroll(positions, 0, 120)).toBe('feed')
+  })
+
+  it('resolves the music section from the route hash', () => {
+    expect(resolveInitialSettingSection('#module-music')).toBe('music')
+    expect(resolveInitialSettingSection('')).toBeNull()
+  })
+
+  it('embeds music review management inside the music section', () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+          SettingMusicReviewPanel: defineComponent({ template: '<div data-testid="music-review-panel">音乐审核面板</div>' }),
+        },
+      },
+    })
+
+    const musicSection = wrapper.get('#module-music')
+    expect(musicSection.find('[data-testid="music-review-panel"]').exists()).toBe(true)
+  })
+
+  it('embeds role management for the owner', () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+          SettingMusicReviewPanel: defineComponent({ template: '<div>音乐审核面板</div>' }),
+          SettingRolesPanel: defineComponent({ template: '<div data-testid="roles-panel">用户权限面板</div>' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="roles-panel"]').exists()).toBe(true)
+  })
+
+  it('hides role management from an admin', () => {
+    authState.user.role = 'admin'
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: true,
+          SettingFeedSourcePanel: true,
+          SettingMusicReviewPanel: true,
+          SettingRolesPanel: defineComponent({ template: '<div data-testid="roles-panel" />' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="roles-panel"]').exists()).toBe(false)
+    authState.user.role = 'owner'
   })
 
   it('feed 模块复用统一的全局订阅源管理面板', () => {

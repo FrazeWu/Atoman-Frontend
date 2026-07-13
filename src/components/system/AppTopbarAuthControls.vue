@@ -125,8 +125,8 @@
       >
         频道管理
       </RouterLink>
-      <RouterLink :to="modulePathUrl('blog', '/settings')" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
-      <RouterLink v-if="showSiteSettings" to="/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
+      <RouterLink :to="userSettingsPath" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
+      <RouterLink v-if="showSiteSettings" to="/site/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
       <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
     </div>
   </div>
@@ -138,7 +138,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
-import { modulePathUrl, userUrl } from '@/router/siteUrls'
+import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'

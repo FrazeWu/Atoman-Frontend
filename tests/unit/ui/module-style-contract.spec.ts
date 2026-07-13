@@ -35,8 +35,8 @@ const shellFiles = [
   'src/components/shared/PEditorRuntime.vue',
   'src/components/setting/SettingFeedSourcePanel.vue',
   'src/views/setting/SettingAccessView.vue',
-  'src/views/setting/SettingLayout.vue',
-  'src/views/setting/SettingMusicReview.vue',
+  'src/components/setting/SettingMusicReviewPanel.vue',
+  'src/components/setting/SettingRolesPanel.vue',
 ]
 const blogFeedFiles = [
   'src/components/blog/CommentSection.vue',

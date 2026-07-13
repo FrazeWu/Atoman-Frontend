@@ -33,7 +33,7 @@
                 :class="{ 'a-toggle-btn-active': following }"
               >{{ following ? '已关注' : '关注' }}</button>
               <button v-if="authStore.isAuthenticated && !isSelf" @click="openDM" class="a-toggle-btn">发私信</button>
-              <PButton v-if="isSelf" :href="modulePathUrl('blog', '/settings')" size="sm" variant="secondary">编辑资料</PButton>
+              <PButton v-if="isSelf" :to="`/users/${profile.username}/settings`" size="sm" variant="secondary">编辑资料</PButton>
             </div>
           </div>
 
@@ -149,7 +149,7 @@ import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
 import { useApi } from '@/composables/useApi'
 import { resolveSiteContext } from '@/router/siteContext'
-import { userUrl, channelUrl, modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel } from '@/types'
 

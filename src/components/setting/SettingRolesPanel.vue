@@ -1,10 +1,10 @@
 <template>
   <section class="setting-roles">
-    <PSectionHeader
-      title="用户权限"
-      kicker="ROLE MANAGEMENT"
-      description="站长可以授予或撤销管理员权限。新注册用户默认都是普通用户。"
-    />
+    <div class="setting-roles__head">
+      <p class="settings-center__kicker">ROLE MANAGEMENT</p>
+      <h2>用户权限</h2>
+      <p>授予或撤销管理员权限。</p>
+    </div>
 
     <div class="setting-roles__toolbar">
       <input
@@ -60,7 +60,6 @@
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PCard from '@/components/ui/PCard.vue'
-import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 

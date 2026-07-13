@@ -16,7 +16,6 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'post/new', component: () => import('@/views/blog/PostEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'post.create' } } },
         { path: 'post/:id/edit', component: () => import('@/views/blog/PostEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'post.create' } } },
         { path: 'bookmarks', component: () => import('@/views/blog/BookmarkView.vue'), meta: { requiresAuth: true } },
-        { path: 'settings', component: () => import('@/views/blog/BlogSettingsView.vue'), meta: { requiresAuth: true } },
       ],
     },
     { path: '/channels', component: () => import('@/views/blog/ChannelManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'channel.manage' } } },
@@ -75,7 +74,6 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         // allow guest view on feed home (tests expect public landing), auth required for subpages
         { path: '', component: () => import('@/views/feed/FeedView.vue') },
         { path: 'explore', component: () => import('@/views/feed/FeedRecommendedView.vue') },
-        { path: 'settings', component: () => import('@/views/feed/FeedSettingsView.vue'), meta: { requiresAuth: true, featureGate: { module: 'feed', feature: 'subscription.manage' } } },
 
         { path: 'stats', component: () => import('@/views/feed/FeedStatsView.vue'), meta: { requiresAuth: true } },
         { path: 'item/:id', component: () => import('@/views/feed/FeedItemDetailView.vue') },

@@ -97,6 +97,15 @@ describe('host-scoped route tables', () => {
     expect(paths(channelRoutes)).toEqual(['/channels/:slug', '/channels/:slug/posts', '/channels/:slug/about'])
   })
 
+  it('registers only the canonical site and user settings routes', () => {
+    const appRoutePaths = paths(buildAppRoutes())
+    expect(paths(settingRoutes)).toEqual(['/site/setting'])
+    expect(appRoutePaths).not.toEqual(expect.arrayContaining(['/setting', '/admin/site', '/settings']))
+    expect(flattenPaths(moduleRoutes.blog)).not.toContain('settings')
+    expect(flattenPaths(moduleRoutes.feed)).not.toContain('settings')
+    expect(paths(userRoutes)).toContain('/users/:handle/settings')
+  })
+
   it('keeps portal routes separate from module routes', () => {
     expect(paths(portalRoutes)).toContain('/')
     expect(paths(portalRoutes)).toContain('/login')
@@ -121,14 +130,6 @@ describe('host-scoped route tables', () => {
     expect(paths(moduleRoutes.feed)).not.toContain('/reading-list')
     expect(paths(moduleRoutes.feed)).not.toContain('/inbox')
     expect(paths(moduleRoutes.forum)).not.toContain('/topic/:id')
-  })
-
-  it('redirects legacy feed setting pages to the unified access settings page', () => {
-    const settingRoot = settingRoutes.find((route) => route.path === '/setting')
-    const children = settingRoot?.children || []
-
-    expect(children.find((route) => route.path === 'feed-fulltext')?.redirect).toBe('/setting/access')
-    expect(children.find((route) => route.path === 'feed-sources')?.redirect).toBe('/setting/access')
   })
 
   it('registers a disabled-module route before the catch-all route', () => {

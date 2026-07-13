@@ -36,17 +36,17 @@ defineProps<{
 
 .p-badge.is-blog .p-badge-dot,
 .p-badge.is-success .p-badge-dot {
-  background-color: #22c55e;
+  background-color: var(--a-color-success);
 }
 
 .p-badge.is-video .p-badge-dot,
 .p-badge.is-warning .p-badge-dot {
-  background-color: #eab308;
+  background-color: var(--a-color-warning);
 }
 
 .p-badge.is-podcast .p-badge-dot,
 .p-badge.is-danger .p-badge-dot {
-  background-color: #ef4444;
+  background-color: var(--a-color-danger);
 }
 
 .p-badge.is-topic .p-badge-dot,

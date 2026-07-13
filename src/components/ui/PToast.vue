@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{
   message: string
   duration?: number
   top?: number
-  type?: 'success' | 'danger' | 'error' | 'info'
+  type?: 'success' | 'warning' | 'danger' | 'error' | 'info'
 }>(), {
   modelValue: undefined,
   show: undefined,
@@ -107,12 +107,16 @@ onUnmounted(clearTimer)
 }
 
 .p-toast--success .p-toast-dot {
-  background-color: #22c55e;
+  background-color: var(--a-color-success);
+}
+
+.p-toast--warning .p-toast-dot {
+  background-color: var(--a-color-warning);
 }
 
 .p-toast--danger .p-toast-dot,
 .p-toast--error .p-toast-dot {
-  background-color: #ef4444;
+  background-color: var(--a-color-danger);
 }
 
 .p-toast-content {
@@ -125,7 +129,7 @@ onUnmounted(clearTimer)
 }
 
 .p-toast-title {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .fade-enter-active,

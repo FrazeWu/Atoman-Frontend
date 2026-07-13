@@ -36,4 +36,16 @@ describe('PToast', () => {
     })
     expect(wrapper.find('.p-toast').classes()).toContain('p-toast--danger')
   })
+
+  it('renders warning toast with correct class', () => {
+    const wrapper = mount(PToast, {
+      props: {
+        message: '需要重试',
+        type: 'warning',
+        modelValue: true,
+      },
+    })
+
+    expect(wrapper.find('.p-toast').classes()).toContain('p-toast--warning')
+  })
 })

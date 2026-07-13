@@ -37,4 +37,15 @@ describe('approved design-system contract', () => {
     expect(source).toContain('color: var(--a-color-danger);')
     expect(source).not.toContain('letter-spacing: 0.05em;')
   })
+
+  it('maps status dots to semantic tokens', () => {
+    const badge = read('src/components/ui/PBadge.vue')
+    const toast = read('src/components/ui/PToast.vue')
+
+    expect(badge).toContain('var(--a-color-success)')
+    expect(badge).toContain('var(--a-color-warning)')
+    expect(badge).toContain('var(--a-color-danger)')
+    expect(toast).toContain('.p-toast--warning .p-toast-dot')
+    expect(toast).toContain('var(--a-color-warning)')
+  })
 })

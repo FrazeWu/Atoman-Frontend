@@ -83,7 +83,7 @@ onMounted(async () => {
 <style scoped>
 .pc-stack { display: grid; gap: 1.5rem; }
 .pc-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.75rem; }
-.pc-card { display: grid; gap: 0.25rem; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; }
+.pc-card { display: grid; gap: 0.25rem; border: 1px solid #e5e7eb; border-radius: 4px; padding: 1rem; }
 .pc-card strong { font-size: 1.5rem; }
 .pc-card span, .pc-state { color: #6b7280; font-size: 0.875rem; }
 .pc-section-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }

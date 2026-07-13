@@ -91,7 +91,7 @@
       v-if="argument.argument_type === 'evidence' && argument.source_url"
       style="margin-top:.5rem;padding:.5rem .75rem;border:1px solid var(--a-border);border-radius:.375rem;font-size:.75rem;margin-bottom:.75rem"
     >
-      <a :href="argument.source_url" target="_blank" rel="noopener noreferrer" style="font-weight:700;display:block;margin-bottom:.2rem">
+      <a :href="argument.source_url" target="_blank" rel="noopener noreferrer" style="font-weight: 500;display:block;margin-bottom:.2rem">
         {{ argument.source_title || argument.source_url }}
       </a>
       <p v-if="argument.source_excerpt" style="color:var(--a-color-muted);margin:0;font-style:italic">

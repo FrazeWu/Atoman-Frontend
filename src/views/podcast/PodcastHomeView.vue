@@ -161,7 +161,7 @@ function playEpisode(ep: PodcastEpisode) {
 
         <template #meta>
           <span v-if="ep.channel" class="a-label a-muted">{{ ep.channel.name }}</span>
-          <span v-if="ep.duration_sec" style="font-weight:700;color:var(--a-color-muted-soft)">
+          <span v-if="ep.duration_sec" style="font-weight: 500;color:var(--a-color-muted-soft)">
             时长: {{ fmtDuration(ep.duration_sec) }}
           </span>
           <span style="color:var(--a-color-muted-soft)">{{ new Date(ep.created_at).toLocaleDateString() }}</span>
@@ -192,7 +192,7 @@ function playEpisode(ep: PodcastEpisode) {
 .ph-recommendations__title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .ph-recommendations__note {

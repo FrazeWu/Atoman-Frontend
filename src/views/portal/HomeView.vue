@@ -261,7 +261,7 @@ const shouldShowYear = (index: number) =>
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   text-decoration: none;
@@ -273,7 +273,7 @@ const shouldShowYear = (index: number) =>
   font-size: 2.5rem;
   font-weight: var(--a-font-weight-black, 900);
   font-style: italic;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   border-left: 4px solid var(--a-color-ink);
   padding-left: 1.25rem;
   line-height: 1.1;
@@ -296,7 +296,7 @@ const shouldShowYear = (index: number) =>
 .search-frame {
   border: var(--a-border);
   background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
-  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  box-shadow: none;
   padding: 0.75rem 0.9rem 0.85rem;
   display: grid;
   gap: 0.55rem;
@@ -311,8 +311,8 @@ const shouldShowYear = (index: number) =>
 .search-frame__context {
   margin: 0;
   font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 .search-frame__eyebrow {
@@ -334,7 +334,7 @@ const shouldShowYear = (index: number) =>
   z-index: 50;
   border: var(--a-border);
   background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
-  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
+  box-shadow: none;
   max-height: 18rem;
   overflow-y: auto;
   padding: 0.45rem 0;
@@ -344,7 +344,7 @@ const shouldShowYear = (index: number) =>
   padding: 0.5rem 0.9rem;
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 .search-dropdown__list {
   display: grid;
@@ -357,7 +357,7 @@ const shouldShowYear = (index: number) =>
   text-align: left;
   padding: 0.75rem 0.9rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   background: transparent;
   color: var(--a-color-fg);
   border: none;
@@ -373,12 +373,12 @@ const shouldShowYear = (index: number) =>
   border-bottom-color: var(--a-color-line-soft);
 }
 .search-item__label {
-  font-weight: 800;
+  font-weight: 500;
 }
 .search-item__meta {
   font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted-soft);
 }
@@ -395,7 +395,7 @@ const shouldShowYear = (index: number) =>
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   background: var(--a-color-paper);
   color: var(--a-color-ink);
   cursor: pointer;
@@ -408,7 +408,7 @@ const shouldShowYear = (index: number) =>
   background: var(--a-color-paper-wash);
 }
 .search-action--primary {
-  font-weight: 800;
+  font-weight: 500;
 }
 
 /* Timeline */
@@ -450,8 +450,8 @@ const shouldShowYear = (index: number) =>
   border: 1px solid var(--a-color-line-soft);
   padding: 0.25rem 1rem;
   font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 .timeline-node {
   position: absolute;
@@ -459,7 +459,7 @@ const shouldShowYear = (index: number) =>
   transform: translateX(-50%);
   width: 16px;
   height: 16px;
-  border-radius: 9999px;
+  border-radius: 4px;
   border: 2px solid var(--a-color-line);
   background: var(--a-color-bg);
   z-index: 20;
@@ -476,7 +476,7 @@ const shouldShowYear = (index: number) =>
   padding: 1.5rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.album-card:hover { border-color: var(--a-color-line); box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+.album-card:hover { border-color: var(--a-color-line); box-shadow: none; }
 .album-card-inner { display: flex; gap: 1.5rem; }
 .album-cover {
   width: 128px;
@@ -490,11 +490,11 @@ const shouldShowYear = (index: number) =>
 .album-title {
   font-size: 1.35rem;
   font-weight: var(--a-font-weight-black, 900);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   line-height: 1.2;
   margin: 0 0 0.25rem;
 }
-.album-artist { font-size: 0.875rem; font-weight: 700; color: var(--a-color-ink-muted); margin: 0 0 0.25rem; }
+.album-artist { font-size: 0.875rem; font-weight: 500; color: var(--a-color-ink-muted); margin: 0 0 0.25rem; }
 .album-date { font-size: 0.75rem; color: var(--a-color-muted); margin: 0 0 0.25rem; }
 .album-tracks { font-size: 0.75rem; color: var(--a-color-muted-soft); margin: 0; }
 .album-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
@@ -504,7 +504,7 @@ const shouldShowYear = (index: number) =>
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   background: var(--a-color-paper);
   cursor: pointer;
   transition: all 0.15s ease;

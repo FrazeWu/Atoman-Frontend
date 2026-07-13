@@ -128,7 +128,7 @@
     <div style="display:flex;flex-direction:column;gap:1rem">
       <div class="a-field">
         <label class="a-field-label">举报类型</label>
-        <p class="a-muted" style="margin:0;font-size:.85rem;font-weight:700">{{ reportModal.targetType === 'topic' ? '帖子' : '回复' }}</p>
+        <p class="a-muted" style="margin:0;font-size:.85rem;font-weight: 500">{{ reportModal.targetType === 'topic' ? '帖子' : '回复' }}</p>
       </div>
       <div class="a-field">
         <label class="a-field-label">举报原因 *</label>
@@ -315,8 +315,8 @@ const toggleFeatured = async () => {
   padding: 4rem 0;
   color: var(--a-color-muted);
   font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-align: center;
   text-transform: uppercase;
 }
@@ -329,8 +329,8 @@ const toggleFeatured = async () => {
 
 .topic-title {
   font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.15;
   margin: 0 0 0.75rem;
 }
@@ -348,7 +348,7 @@ const toggleFeatured = async () => {
   font-size: 0.7rem;
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
   padding: 0.15rem 0.4rem;
   border: var(--a-border);
   border-color: var(--a-color-muted);
@@ -371,7 +371,7 @@ const toggleFeatured = async () => {
   align-items: center;
   gap: 1rem;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   flex-wrap: wrap;
 }
@@ -408,7 +408,7 @@ const toggleFeatured = async () => {
   font-weight: var(--a-font-weight-black);
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -424,16 +424,16 @@ const toggleFeatured = async () => {
 }
 
 .reply-login-text {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   margin: 0 0 1rem;
 }
 
 .reply-form-title {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   margin: 0 0 1rem;
 }
 
@@ -447,10 +447,10 @@ const toggleFeatured = async () => {
 .topic-not-found {
   padding: 4rem 0;
   text-align: center;
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
 }
 
@@ -473,10 +473,10 @@ const toggleFeatured = async () => {
 }
 
 .reply-count-title {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   margin: 0;
   padding-bottom: 0.75rem;
   border-bottom: none;
@@ -509,7 +509,7 @@ const toggleFeatured = async () => {
   border-left: 3px solid var(--a-color-fg);
   margin-bottom: 1rem;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .quote-preview {
@@ -552,10 +552,10 @@ const toggleFeatured = async () => {
 }
 
 .back-link-muted {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-decoration: none;
   color: var(--a-color-muted);
   border-bottom: 1px solid transparent;
@@ -644,7 +644,7 @@ const toggleFeatured = async () => {
 }
 
 .markdown-body :deep(th) {
-  font-weight: 900;
+  font-weight: 500;
   background: var(--a-color-disabled-bg);
 }
 
@@ -671,8 +671,8 @@ const toggleFeatured = async () => {
 .markdown-body :deep(h1),
 .markdown-body :deep(h2),
 .markdown-body :deep(h3) {
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 1.5em 0 0.75em;
   scroll-margin-top: 5rem;
 }

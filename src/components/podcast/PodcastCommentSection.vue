@@ -160,7 +160,7 @@ onMounted(loadComments)
   width: 100%;
   resize: vertical;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 0.75rem;
   color: #111827;
   background: #ffffff;

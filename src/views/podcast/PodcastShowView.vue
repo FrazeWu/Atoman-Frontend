@@ -89,8 +89,8 @@ async function subscribeShow() {
 .ps-state { text-align: center; padding: 6rem 0; color: #9ca3af; }
 .ps-wrap { max-width: 48rem; margin: 0 auto; padding: 2rem 1rem; }
 .ps-header { display: flex; gap: 1.5rem; margin-bottom: 2rem; }
-.ps-cover { width: 8rem; height: 8rem; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-.ps-name { font-size: 1.5rem; font-weight: 700; }
+.ps-cover { width: 8rem; height: 8rem; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+.ps-name { font-size: 1.5rem; font-weight: 500; }
 .ps-desc { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; }
 .ps-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
 .ps-rss { font-size: 0.75rem; color: #9ca3af; display: inline-block; }
@@ -99,7 +99,7 @@ async function subscribeShow() {
 .ps-empty { color: #9ca3af; padding: 2rem 0; }
 .ps-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .ps-ep { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: none; }
-.ps-ep-cover { width: 2.5rem; height: 2.5rem; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.ps-ep-cover { width: 2.5rem; height: 2.5rem; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
 .ps-ep-num { font-size: 0.75rem; color: #9ca3af; width: 3rem; flex-shrink: 0; }
 .ps-ep-title { min-width: 0; flex: 1; font-size: 0.875rem; text-decoration: none; color: inherit; }
 .ps-ep-title:hover { text-decoration: underline; }

@@ -26,15 +26,15 @@ const portalUrl = `${window.location.protocol}//atoman.org/`
   max-width: 560px;
   background: var(--a-color-surface, #fff);
   border: 1px solid var(--a-color-ink, #111);
-  box-shadow: 8px 8px 0 var(--a-color-ink, #111);
+  box-shadow: none;
   padding: 2rem;
 }
 
 .unknown-kicker {
   margin: 0 0 1rem;
   font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .unknown-card h1 {
@@ -45,6 +45,6 @@ const portalUrl = `${window.location.protocol}//atoman.org/`
   display: inline-block;
   margin-top: 1rem;
   color: var(--a-color-ink, #111);
-  font-weight: 900;
+  font-weight: 500;
 }
 </style>

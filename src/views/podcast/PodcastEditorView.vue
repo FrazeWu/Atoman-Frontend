@@ -717,7 +717,7 @@ async function doPublish() {
 .pe-section-title {
   font-family: var(--a-font-serif);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   margin: 0 0 0.25rem 0;
 }
@@ -736,7 +736,7 @@ async function doPublish() {
   color: var(--a-color-ink, #111827);
   padding: 0.45rem 0.75rem;
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -761,7 +761,7 @@ async function doPublish() {
   padding: 0.6rem 0.75rem;
   background: var(--a-color-paper-soft);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 0.8rem;
 }
 .pe-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
@@ -880,7 +880,7 @@ async function doPublish() {
   position: relative;
   width: 100%;
   aspect-ratio: 1/1;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--a-color-paper-soft);
 }

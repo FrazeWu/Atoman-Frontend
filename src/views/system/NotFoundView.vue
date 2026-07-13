@@ -33,22 +33,22 @@ import { moduleUrl } from '@/router/siteUrls'
   border: 1px solid var(--a-color-line-soft);
   padding: 2rem;
   background: #fff;
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .notfound-code {
   margin: 0 0 0.5rem;
   font-size: 4rem;
-  font-weight: 900;
-  letter-spacing: -0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1;
 }
 
 .notfound-title {
   margin: 0;
   font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .notfound-desc {
@@ -70,9 +70,9 @@ import { moduleUrl } from '@/router/siteUrls'
   border: 1px solid var(--a-color-line-soft);
   padding: 0.6rem 1rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   transition: all 0.2s;
 }
 

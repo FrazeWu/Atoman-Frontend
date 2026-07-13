@@ -223,15 +223,15 @@ onMounted(() => {
 
 .person-dates {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   margin-bottom: 0.5rem;
 }
 .person-link {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -240,9 +240,9 @@ onMounted(() => {
 .form-label {
   display: block;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   margin-bottom: 0.4rem;
 }
 </style>

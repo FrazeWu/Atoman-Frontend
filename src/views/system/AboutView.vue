@@ -115,9 +115,9 @@ const techStack = [
   gap: 0.5rem;
   margin-bottom: 2rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--a-color-line-soft);
   text-decoration: none;
   color: #000;
@@ -133,8 +133,8 @@ const techStack = [
 
 .page-title {
   font-size: 3rem;
-  font-weight: 900;
-  letter-spacing: -0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   border-left: 4px solid var(--a-color-line-soft);
   padding-left: 1.5rem;
   margin: 0;
@@ -167,22 +167,22 @@ const techStack = [
   transition: all 0.3s;
 }
 .feature-card:hover {
-  box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.15);
+  box-shadow: none;
 }
 
 .card-label {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: #9ca3af;
   margin-bottom: 0.75rem;
 }
 
 .card-title {
   font-size: 1.25rem;
-  font-weight: 900;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 0 0 0.5rem 0;
 }
 
@@ -201,8 +201,8 @@ const techStack = [
 
 .section-title {
   font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 0 0 1.5rem 0;
 }
 
@@ -222,15 +222,15 @@ const techStack = [
 
 .tech-role {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: #9ca3af;
   margin-bottom: 0.25rem;
 }
 
 .tech-label {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.875rem;
 }
 
@@ -249,7 +249,7 @@ const techStack = [
 }
 
 .contrib-num {
-  font-weight: 900;
+  font-weight: 500;
   color: #000;
   flex-shrink: 0;
 }
@@ -269,10 +269,10 @@ const techStack = [
 .link-btn {
   border: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.5rem;
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-decoration: none;
   color: #000;
   transition: all 0.2s;
@@ -286,9 +286,9 @@ const techStack = [
   border: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.5rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: #9ca3af;
 }
 </style>

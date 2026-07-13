@@ -171,7 +171,7 @@ watch(() => route.query.q, async (q) => {
   margin: 0 0 1.25rem;
   color: var(--a-color-muted);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .search-results-list {
@@ -186,7 +186,7 @@ watch(() => route.query.q, async (q) => {
   gap: 0.75rem;
   color: var(--a-color-muted);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .forum-search-load-more {

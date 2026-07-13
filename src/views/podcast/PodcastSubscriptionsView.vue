@@ -103,7 +103,7 @@ onMounted(async () => {
 .psub-list { display: grid; gap: 0.75rem; }
 .psub-row { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e5e7eb; padding: 0.875rem 0; }
 .psub-main { min-width: 0; }
-.psub-title { color: #111827; font-weight: 700; text-decoration: none; }
+.psub-title { color: #111827; font-weight: 500; text-decoration: none; }
 .psub-title:hover { text-decoration: underline; }
 .psub-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.25rem; color: #6b7280; font-size: 0.75rem; }
 .psub-actions { display: flex; flex: 0 0 auto; gap: 0.5rem; }

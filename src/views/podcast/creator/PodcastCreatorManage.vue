@@ -120,6 +120,6 @@ onMounted(loadEpisodes)
 .pcm-message, .pcm-meta { color: #6b7280; font-size: 0.8125rem; }
 .pcm-list { display: grid; gap: 0.75rem; }
 .pcm-row { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e5e7eb; padding: 0.875rem 0; }
-.pcm-title { color: #111827; font-weight: 700; text-decoration: none; }
+.pcm-title { color: #111827; font-weight: 500; text-decoration: none; }
 .pcm-title:hover { text-decoration: underline; }
 </style>

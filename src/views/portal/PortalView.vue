@@ -245,7 +245,7 @@ onMounted(loadHotContent)
   margin: 0;
   color: var(--a-color-ink);
   font-size: clamp(36px, 7vw, 82px);
-  font-weight: 950;
+  font-weight: 500;
   letter-spacing: 0;
   line-height: 0.95;
 }
@@ -255,8 +255,8 @@ onMounted(loadHotContent)
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -309,8 +309,8 @@ onMounted(loadHotContent)
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -360,8 +360,8 @@ onMounted(loadHotContent)
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -398,7 +398,7 @@ onMounted(loadHotContent)
   flex-shrink: 0;
   color: var(--a-color-ink-soft);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .portal-hot__grid {
@@ -472,7 +472,7 @@ onMounted(loadHotContent)
   padding: 8px 12px;
   color: var(--a-color-ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .portal-hot__rail {

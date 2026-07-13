@@ -230,7 +230,7 @@ const formatTime = (iso: string) => {
   font-size: 0.7rem;
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
 }
 
 .reply-quote-text {
@@ -245,8 +245,8 @@ const formatTime = (iso: string) => {
 .reply-body :deep(h1),
 .reply-body :deep(h2),
 .reply-body :deep(h3) {
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 1.2em 0 0.6em;
 }
 

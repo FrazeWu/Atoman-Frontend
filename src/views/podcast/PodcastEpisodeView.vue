@@ -163,9 +163,9 @@ async function shareEpisode() {
 .pev-error { color: #ef4444; }
 .pev-wrap { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
 .pev-header { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
-.pev-cover { width: 7rem; height: 7rem; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.pev-cover { width: 7rem; height: 7rem; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
 .pev-info { display: flex; flex-direction: column; gap: 0.25rem; }
-.pev-title { font-size: 1.25rem; font-weight: 700; line-height: 1.3; }
+.pev-title { font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
 .pev-show { font-size: 0.875rem; color: #6b7280; text-decoration: none; }
 .pev-show:hover { text-decoration: underline; }
 .pev-meta { display: flex; gap: 0.75rem; font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem; }

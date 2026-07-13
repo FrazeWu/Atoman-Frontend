@@ -128,6 +128,6 @@ watch(activeTab, loadActiveTab)
 .pf-state { color: #6b7280; font-size: 0.875rem; }
 .pf-list { display: grid; gap: 0.75rem; }
 .pf-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e5e7eb; padding: 0.875rem 0; }
-.pf-title { min-width: 0; color: #111827; font-weight: 700; text-decoration: none; }
+.pf-title { min-width: 0; color: #111827; font-weight: 500; text-decoration: none; }
 .pf-title:hover { text-decoration: underline; }
 </style>

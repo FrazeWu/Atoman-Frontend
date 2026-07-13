@@ -81,7 +81,7 @@
 
         <!-- Stats -->
         <template #actions>
-          <div style="display:flex;align-items:center;gap:1rem;font-size:0.72rem;color:var(--a-color-muted);font-weight:700">
+          <div style="display:flex;align-items:center;gap:1rem;font-size:0.72rem;color:var(--a-color-muted);font-weight: 500">
             <span>论点 {{ debate.argument_count || 0 }}</span>
             <span>投票 {{ debate.vote_count || 0 }}</span>
             <span>浏览 {{ debate.view_count || 0 }}</span>

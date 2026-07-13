@@ -397,8 +397,8 @@ const submitCategoryRequest = async () => {
 
 .sidebar-section-label {
   font-size: 0.6rem;
-  font-weight: 900;
-  letter-spacing: 0.15em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted-soft);
   padding: 0.25rem 1.25rem 0.5rem;
@@ -415,7 +415,7 @@ const submitCategoryRequest = async () => {
   gap: 0.6rem;
   padding: 0.55rem 1.25rem;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   color: var(--a-color-muted);
   transition: background 0.12s;
@@ -458,7 +458,7 @@ const submitCategoryRequest = async () => {
 
 .sidebar-item-count {
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-muted-soft);
   background: var(--a-color-disabled-bg);
   padding: 0.1rem 0.4rem;
@@ -505,9 +505,9 @@ const submitCategoryRequest = async () => {
   padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--a-color-disabled-border);
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   line-height: 2.2;
 }
@@ -517,7 +517,7 @@ kbd {
   padding: 0.05em 0.3em;
   border: 1.5px solid var(--a-color-disabled-border);
   font-size: 0.6rem;
-  font-weight: 900;
+  font-weight: 500;
   font-family: monospace;
   background: var(--a-color-surface);
   color: var(--a-color-muted);
@@ -601,7 +601,7 @@ kbd {
   min-height: 2.5rem;
   font-size: 0.8rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
 }
 
 /* Active tag chip */
@@ -770,7 +770,7 @@ kbd {
 
 .tr-title {
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0 0 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -795,7 +795,7 @@ kbd {
 }
 
 .tr-author {
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -804,11 +804,11 @@ kbd {
 }
 
 .tr-bookmarked {
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-fg);
   font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 
 /* Right side */
@@ -834,7 +834,7 @@ kbd {
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -853,12 +853,12 @@ kbd {
   width: 60px;
   text-align: right;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
 .tr-stat-val {
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -885,7 +885,7 @@ kbd {
 
 .topic-entry-stat {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 

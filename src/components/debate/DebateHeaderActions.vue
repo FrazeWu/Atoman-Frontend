@@ -73,7 +73,7 @@ defineEmits<{
   align-items: center;
   gap: 1.5rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   flex-wrap: wrap;
 }

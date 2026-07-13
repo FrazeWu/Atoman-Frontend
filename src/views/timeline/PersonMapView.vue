@@ -5,7 +5,7 @@
       <!-- Back + person info -->
       <div class="panel-header">
         <RouterLink to="/timeline/persons" class="back-link">← 所有人物</RouterLink>
-        <div v-if="loading && !currentPerson" style="padding:2rem;text-align:center;font-weight:700">加载中...</div>
+        <div v-if="loading && !currentPerson" style="padding:2rem;text-align:center;font-weight: 500">加载中...</div>
         <template v-else-if="currentPerson">
           <div class="person-name">{{ currentPerson.name }}</div>
           <div v-if="currentPerson.birth_date || currentPerson.death_date" class="person-years">
@@ -602,9 +602,9 @@ onUnmounted(() => {
 
 .back-link {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   text-decoration: none;
   display: block;
@@ -614,15 +614,15 @@ onUnmounted(() => {
 
 .person-name {
   font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.2;
   margin-bottom: 0.25rem;
 }
 
 .person-years {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   margin-bottom: 0.5rem;
 }
@@ -650,9 +650,9 @@ onUnmounted(() => {
 
 .danger-btn {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: #ef4444;
   background: none;
   border: none;
@@ -680,9 +680,9 @@ onUnmounted(() => {
 
 .locations-title {
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -715,7 +715,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   margin-top: 2px;
 }
 
@@ -725,7 +725,7 @@ onUnmounted(() => {
 }
 
 .loc-info { flex: 1; min-width: 0; }
-.loc-name { font-size: 0.875rem; font-weight: 700; margin-bottom: 2px; }
+.loc-name { font-size: 0.875rem; font-weight: 500; margin-bottom: 2px; }
 .loc-date { font-size: 0.7rem; color: var(--a-color-muted); font-weight: 600; }
 .loc-source {
   font-size: 0.65rem;
@@ -790,12 +790,12 @@ onUnmounted(() => {
   color: var(--a-color-bg);
   padding: 8px 16px;
   font-size: 0.8rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: 4px 4px 0 0 rgba(0,0,0,0.3);
+  box-shadow: none;
   pointer-events: auto;
   white-space: nowrap;
 }
@@ -805,9 +805,9 @@ onUnmounted(() => {
   border: 1px solid rgba(255,255,255,0.5);
   color: var(--a-color-bg);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   padding: 2px 8px;
   cursor: pointer;
   transition: background 0.1s;
@@ -832,7 +832,7 @@ onUnmounted(() => {
 .popup-content {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);
-  box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.15);
+  box-shadow: none;
   padding: 0.75rem 1rem;
   min-width: 160px;
   max-width: 240px;
@@ -852,7 +852,7 @@ onUnmounted(() => {
 }
 .popup-close:hover { color: var(--a-color-fg); }
 
-.popup-name { font-size: 0.875rem; font-weight: 900; margin-bottom: 3px; padding-right: 16px; }
+.popup-name { font-size: 0.875rem; font-weight: 500; margin-bottom: 3px; padding-right: 16px; }
 .popup-date { font-size: 0.7rem; color: var(--a-color-muted); font-weight: 600; }
 .popup-source { font-size: 0.65rem; color: var(--a-color-muted-soft); margin-top: 2px; font-style: italic; }
 .popup-note { font-size: 0.75rem; color: #4b5563; margin-top: 4px; }
@@ -863,9 +863,9 @@ onUnmounted(() => {
 .form-label {
   display: block;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   margin-bottom: 0.4rem;
 }
 
@@ -885,9 +885,9 @@ onUnmounted(() => {
 
 .pick-map-btn {
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   background: none;
   border: 1px solid var(--a-color-line-soft);
   cursor: pointer;
@@ -904,7 +904,7 @@ onUnmounted(() => {
 .picked-coords-hint {
   font-size: 0.7rem;
   color: #059669;
-  font-weight: 700;
+  font-weight: 500;
   margin-top: 0.4rem;
   margin-bottom: 0;
 }
@@ -913,9 +913,9 @@ onUnmounted(() => {
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--a-color-line-soft);
 }
-.a-modal-title { font-size: 1.25rem; font-weight: 900; letter-spacing: -0.03em; }
+.a-modal-title { font-size: 1.25rem; font-weight: 500; letter-spacing: 0; }
 .a-modal-close {
-  background: none; border: none; font-size: 1rem; font-weight: 900;
+  background: none; border: none; font-size: 1rem; font-weight: 500;
   cursor: pointer; padding: 0.25rem 0.5rem; color: var(--a-color-fg);
 }
 .a-modal-body { padding: 1.5rem; overflow-y: auto; max-height: 65vh; }

@@ -387,7 +387,7 @@ onBeforeUnmount(() => {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 28%),
     var(--a-color-bg);
-  box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: none;
 }
 
 .tl-map-stage-note {
@@ -426,7 +426,7 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--a-color-line-soft);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.55;
 }
 
@@ -437,7 +437,7 @@ onBeforeUnmount(() => {
   padding: 0.75rem 0.85rem;
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid var(--a-color-line-soft);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -456,15 +456,15 @@ onBeforeUnmount(() => {
   background: none;
   cursor: pointer;
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .tl-popup-title {
   margin-bottom: 0.25rem;
   padding-right: 1rem;
   font-size: 0.95rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .tl-popup-date,
@@ -484,7 +484,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .tl-map-stage-card {
-    box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+    box-shadow: none;
   }
 
   .tl-map-stage-note {

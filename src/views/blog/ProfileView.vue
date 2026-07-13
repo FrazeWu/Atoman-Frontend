@@ -15,14 +15,14 @@
     <template v-else>
       <!-- Profile header -->
       <div class="a-card" style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;margin-bottom:2rem">
-        <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight:900;flex-shrink:0">
+        <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight: 500;flex-shrink:0">
           {{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}
         </div>
 
         <div style="flex:1">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
             <div>
-              <h1 style="font-size:1.875rem;font-weight:900;letter-spacing:-0.025em">{{ profile.display_name || profile.username }}</h1>
+              <h1 style="font-size:1.875rem;font-weight: 500;letter-spacing:-0.025em">{{ profile.display_name || profile.username }}</h1>
               <p class="a-muted" style="font-size:.875rem">@{{ profile.username }}</p>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -38,7 +38,7 @@
           </div>
 
           <!-- Stats -->
-          <div style="display:flex;gap:1.5rem;font-weight:900;font-size:.875rem;margin-bottom:.75rem;flex-wrap:wrap">
+          <div style="display:flex;gap:1.5rem;font-weight: 500;font-size:.875rem;margin-bottom:.75rem;flex-wrap:wrap">
             <span><span style="font-size:1.25rem">{{ channels.length }}</span> 个频道</span>
             <span><span style="font-size:1.25rem">{{ profile.posts_count ?? 0 }}</span> 篇内容</span>
             <span><span style="font-size:1.25rem">{{ profile.followers_count ?? 0 }}</span> 位关注者</span>
@@ -57,7 +57,7 @@
         <div v-else class="a-grid-2">
           <div v-for="ch in channels" :key="ch.id" class="a-card a-card-hover channel-card">
             <div style="flex:1">
-              <h3 style="font-weight:900;font-size:1.125rem;margin-bottom:.35rem">{{ ch.name }}</h3>
+              <h3 style="font-weight: 500;font-size:1.125rem;margin-bottom:.35rem">{{ ch.name }}</h3>
               <p v-if="ch.description" class="a-muted a-clamp-2" style="font-size:.875rem">{{ ch.description }}</p>
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
@@ -114,7 +114,7 @@
 
             <template #actions>
               <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
+                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
                   <span>♥ {{ post.likes_count || 0 }}</span>
                   <span>💬 {{ post.comments_count || 0 }}</span>
                 </div>
@@ -297,7 +297,7 @@ onMounted(async () => {
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .a-cursor-pointer {
   cursor: pointer;

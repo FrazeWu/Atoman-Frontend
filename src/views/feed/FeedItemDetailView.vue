@@ -187,8 +187,8 @@ onUnmounted(() => {
 .back-link {
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 950;
-  letter-spacing: 0.15em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   text-decoration: none;
   display: inline-block;
@@ -203,11 +203,11 @@ onUnmounted(() => {
 .article-title {
   font-family: var(--a-font-serif);
   font-size: clamp(2.5rem, 5vw, 4rem);
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.1;
   margin-bottom: 1.5rem;
   color: var(--a-color-ink);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .article-meta {
@@ -217,7 +217,7 @@ onUnmounted(() => {
   gap: 1.25rem;
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted-soft);
   margin-bottom: 3rem;
 }
@@ -257,16 +257,16 @@ onUnmounted(() => {
 .player-label {
   font-family: var(--a-font-meta);
   font-size: 0.65rem;
-  font-weight: 950;
+  font-weight: 500;
   margin-bottom: 1.25rem;
   color: var(--a-color-muted);
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 .duration-text {
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-ink);
 }
 
@@ -300,14 +300,14 @@ onUnmounted(() => {
   text-decoration: none;
   font-family: var(--a-font-meta);
   font-size: 0.85rem;
-  font-weight: 950;
-  letter-spacing: 0.15em;
+  font-weight: 500;
+  letter-spacing: 0;
   transition: box-shadow 0.2s;
-  box-shadow: 8px 8px 0 rgba(0,0,0,0.1);
+  box-shadow: none;
 }
 
 .external-btn:hover {
-  box-shadow: 12px 12px 0 rgba(0,0,0,0.15);
+  box-shadow: none;
 }
 
 .feed-loading {

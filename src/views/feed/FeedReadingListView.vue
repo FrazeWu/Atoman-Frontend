@@ -51,7 +51,7 @@
             <span v-else class="a-label a-muted">{{ entry.feed_item.feed_source?.title || 'RSS' }}</span>
             <span v-if="entry.feed_item.author" class="a-label a-muted">· {{ entry.feed_item.author }}</span>
             <span style="color:var(--a-color-muted-soft)">{{ formatDate(entry.feed_item.published_at) }}</span>
-            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight:900">
+            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight: 500">
               添加于 {{ formatDate(entry.created_at) }}
             </span>
           </template>
@@ -394,8 +394,8 @@ onUnmounted(() => {
   padding: 0.25rem 0.5rem;
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);

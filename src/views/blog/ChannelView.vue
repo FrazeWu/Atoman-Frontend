@@ -40,12 +40,12 @@
           <p class="a-label a-muted" style="margin-bottom:.4rem">作者</p>
           <a
             :href="userUrl(channel.user?.username || '')"
-            style="font-weight:900;font-size:1rem;text-decoration:none;color:#000"
+            style="font-weight: 500;font-size:1rem;text-decoration:none;color:#000"
           >{{ channel.user?.display_name || channel.user?.username || '未知作者' }}</a>
         </div>
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">更新时间</p>
-          <p style="font-weight:700;margin:0">{{ formatDate(channel.updated_at) }}</p>
+          <p style="font-weight: 500;margin:0">{{ formatDate(channel.updated_at) }}</p>
         </div>
       </PSurface>
 

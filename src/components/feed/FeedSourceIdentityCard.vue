@@ -144,7 +144,7 @@ const compactCount = (value: number) => {
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
-  border-radius: 8px;
+  border-radius: 4px;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
 }
@@ -158,8 +158,8 @@ const compactCount = (value: number) => {
 .feed-source-card__meta {
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .feed-source-card__avatar {
@@ -167,11 +167,11 @@ const compactCount = (value: number) => {
   place-items: center;
   width: 4.25rem;
   height: 4.25rem;
-  border-radius: 8px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--feed-source-color) 18%, white);
   color: color-mix(in srgb, var(--feed-source-color) 72%, black);
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 500;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 22%, white);
   overflow: hidden;
 }
@@ -204,14 +204,14 @@ const compactCount = (value: number) => {
   color: var(--a-color-muted);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .feed-source-card__copy h3 {
   margin: 0;
   font-size: 1.02rem;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.35;
 }
 
@@ -235,8 +235,8 @@ const compactCount = (value: number) => {
   background: var(--a-color-paper);
   font-family: var(--a-font-meta);
   font-size: 0.74rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
   cursor: pointer;
 }
 
@@ -281,7 +281,7 @@ const compactCount = (value: number) => {
   top: 0.72em;
   width: 0.25rem;
   height: 0.25rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--a-color-muted-soft);
 }
 

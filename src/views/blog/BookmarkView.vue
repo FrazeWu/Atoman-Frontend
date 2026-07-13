@@ -70,7 +70,7 @@
 
             <template #actions>
               <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
+                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
                   <span>♥ {{ bm.post?.likes_count || 0 }}</span>
                   <span>💬 {{ bm.post?.comments_count || 0 }}</span>
                 </div>
@@ -236,7 +236,7 @@ watch(sortMode, () => {
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .sidebar-item {
   width: 100%;
@@ -260,12 +260,12 @@ watch(sortMode, () => {
 .sidebar-item-active {
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink);
-  font-weight: 900;
+  font-weight: 500;
   box-shadow: var(--a-shadow-paper-sm);
 }
 .delete-btn {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   background: none;
   border: none;
   cursor: pointer;

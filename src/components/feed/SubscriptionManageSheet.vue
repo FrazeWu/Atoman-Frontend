@@ -536,7 +536,7 @@ watch(() => props.filterRules, (rules) => {
   margin: 0.5rem 0 0;
   color: var(--a-color-danger);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .manage-tabs {
@@ -554,7 +554,7 @@ watch(() => props.filterRules, (rules) => {
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .manage-tab:last-child {
@@ -720,7 +720,7 @@ watch(() => props.filterRules, (rules) => {
 
 .group-name-input {
   max-width: 18rem;
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.8rem;
 }
 
@@ -738,7 +738,7 @@ watch(() => props.filterRules, (rules) => {
   padding: 1rem;
   background: var(--a-color-paper-wash);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .subscription-main {
@@ -746,7 +746,7 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .title-input {
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .source-url {
@@ -763,13 +763,13 @@ watch(() => props.filterRules, (rules) => {
   gap: 0.5rem;
   margin-top: 0.75rem;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .health-dot {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--a-color-muted);
 }
 
@@ -798,7 +798,7 @@ watch(() => props.filterRules, (rules) => {
   margin-top: 0.75rem;
   color: var(--a-color-muted);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .subscription-flags label {

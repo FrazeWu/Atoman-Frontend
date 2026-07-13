@@ -434,8 +434,8 @@ onUnmounted(() => {
   color: var(--a-color-fg);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .star-group-button.active,
@@ -471,8 +471,8 @@ onUnmounted(() => {
   padding: 0.25rem 0.5rem;
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);

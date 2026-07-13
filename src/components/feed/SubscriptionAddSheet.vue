@@ -279,7 +279,7 @@ watch(() => props.resetKey, () => {
   border: 1px solid var(--a-color-line-soft);
   padding: 0.85rem 1rem;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .resolve-status--muted {
@@ -305,7 +305,7 @@ watch(() => props.resetKey, () => {
 }
 
 .resolved-source__title {
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -351,13 +351,13 @@ watch(() => props.resetKey, () => {
 }
 
 .candidate-option__title {
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.4;
 }
 
 .candidate-option__badge {
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted);
   white-space: nowrap;

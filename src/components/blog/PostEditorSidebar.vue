@@ -276,7 +276,7 @@ details[open] > .settings-summary::before {
   color: var(--a-color-muted);
   font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.4;
   text-align: left;
   cursor: pointer;
@@ -293,7 +293,7 @@ details[open] > .settings-summary::before {
   color: var(--a-color-fg);
   border-left-color: var(--a-color-fg);
   background: var(--a-color-surface);
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .outline-node.has-children {
@@ -357,22 +357,22 @@ details[open] > .settings-summary::before {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .badge-default {
   padding: 0.2rem 0.4rem;
   border: 1.5px solid var(--a-color-border);
   font-size: 0.65rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .col-empty {
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .section-heading-row {

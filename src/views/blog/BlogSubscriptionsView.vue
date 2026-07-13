@@ -79,7 +79,7 @@
 
             <template #actions>
               <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
+                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
                   <span>♥ {{ post.likes_count || 0 }}</span>
                   <span>💬 {{ post.comments_count || 0 }}</span>
                 </div>
@@ -280,7 +280,7 @@ onMounted(() => {
   height: 4.5rem;
   object-fit: cover;
   filter: grayscale(100%);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .blog-subscriptions-layout {
@@ -311,7 +311,7 @@ onMounted(() => {
   padding: 0.65rem 0.75rem;
   text-align: left;
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .subscription-source.active,

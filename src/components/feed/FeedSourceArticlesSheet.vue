@@ -277,7 +277,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   gap: 0.75rem;
   padding: 1rem 1.1rem;
   border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-line-soft));
-  border-radius: 8px;
+  border-radius: 4px;
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--feed-source-color) 34%, white) 0%, transparent 46%),
     linear-gradient(135deg, color-mix(in srgb, var(--feed-source-color) 16%, white) 0%, var(--hero-wash) 100%);
@@ -302,11 +302,11 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   place-items: center;
   width: 3.35rem;
   height: 3.35rem;
-  border-radius: 8px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--feed-source-color) 18%, white);
   color: color-mix(in srgb, var(--feed-source-color) 74%, black);
   font-size: 1.2rem;
-  font-weight: 900;
+  font-weight: 500;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 24%, white);
 }
 
@@ -320,14 +320,14 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   color: color-mix(in srgb, var(--feed-source-color) 72%, black);
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .source-sheet-url {
   color: var(--a-color-fg);
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -336,7 +336,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   margin: 0;
   color: var(--a-color-fg);
   font-size: 1.25rem;
-  font-weight: 900;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
@@ -347,7 +347,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   margin-top: 0.45rem;
   color: var(--a-color-muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .source-sheet-body {
@@ -415,13 +415,13 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   color: var(--a-color-muted-soft);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .source-article-title {
   color: var(--a-color-fg);
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.35;
 }
 

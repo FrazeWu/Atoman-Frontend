@@ -258,7 +258,7 @@ onMounted(() => {
   right: 2rem;
   width: 4rem;
   height: 4rem;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: var(--a-color-fg);
   color: var(--a-color-bg);
   font-size: 2rem;
@@ -270,6 +270,6 @@ onMounted(() => {
   box-shadow: var(--a-shadow-dropdown);
 }
 .a-fab:hover {
-  box-shadow: 7px 7px 0 var(--a-color-fg);
+  box-shadow: none;
 }
 </style>

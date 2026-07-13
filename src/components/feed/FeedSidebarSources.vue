@@ -229,7 +229,7 @@ function toggleGroup(groupId: string) {
   margin: 0;
   color: #334155;
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__manage {
@@ -239,7 +239,7 @@ function toggleGroup(groupId: string) {
   color: #0f172a;
   cursor: pointer;
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__manage:hover {
@@ -276,7 +276,7 @@ function toggleGroup(groupId: string) {
   cursor: pointer;
   font: inherit;
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .feed-sidebar-sources__all {
@@ -288,7 +288,7 @@ function toggleGroup(groupId: string) {
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 500;
   text-align: left;
 }
 
@@ -313,8 +313,8 @@ function toggleGroup(groupId: string) {
   background: transparent;
   color: var(--a-color-muted);
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-align: left;
   cursor: pointer;
 }
@@ -353,7 +353,7 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__health {
   color: var(--a-color-accent-destructive);
   font-size: 0.58rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__health.is-error {
@@ -373,7 +373,7 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__item.is-active {
   background-color: var(--a-color-paper-wash);
   box-shadow: none;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-ink);
 }
 
@@ -382,7 +382,7 @@ function toggleGroup(groupId: string) {
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink-muted);
   font-size: 0.58rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__name {

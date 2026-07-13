@@ -387,7 +387,7 @@ onMounted(async () => {
   cursor: pointer;
   font-family: inherit;
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
   transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
@@ -418,7 +418,7 @@ onMounted(async () => {
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -444,7 +444,7 @@ onMounted(async () => {
   border-bottom: 1px solid var(--a-color-line-soft);
   color: var(--a-color-ink);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .sidebar-list {
@@ -475,7 +475,7 @@ onMounted(async () => {
 }
 
 .sidebar-item.unread .sidebar-item-title {
-  font-weight: 950;
+  font-weight: 500;
   color: var(--a-color-ink);
 }
 
@@ -485,14 +485,14 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 0.5rem;
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .sidebar-item-source {
   margin-top: 0.25rem;
   color: var(--a-color-ink-muted);
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .sidebar-item-body {
@@ -537,7 +537,7 @@ onMounted(async () => {
 .detail-empty strong {
   color: var(--a-color-ink);
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .inbox-empty-state span,
@@ -638,7 +638,7 @@ onMounted(async () => {
   margin: 0 0 1rem;
   color: var(--a-color-muted);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .dm-actions {

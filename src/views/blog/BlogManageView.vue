@@ -88,7 +88,7 @@
       <!-- Master: Collection Selector -->
       <section>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <h2 style="font-size:1.25rem;font-weight:900;margin:0">所有合集</h2>
+          <h2 style="font-size:1.25rem;font-weight: 500;margin:0">所有合集</h2>
           <PPress label="+ 新建合集" variant="secondary" size="sm" @click="showCreateCollectionModal" />
         </div>
 
@@ -114,7 +114,7 @@
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:1rem">
               <div>
                 <div style="display:flex;align-items:center;gap:.75rem">
-                  <h3 style="font-size:1.5rem;font-weight:900;margin:0">{{ selectedCollection.name }}</h3>
+                  <h3 style="font-size:1.5rem;font-weight: 500;margin:0">{{ selectedCollection.name }}</h3>
                   <span class="a-badge">{{ selectedCollection.channelName }}</span>
                 </div>
                 <div style="margin-top:.75rem">
@@ -191,7 +191,7 @@
     <PModal v-if="createCollectionModalVisible" @close="closeCreateCollectionModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
-          <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">创建合集</h3>
+          <h3 style="font-size:1.25rem;font-weight: 500;margin:0 0 1.5rem 0">创建合集</h3>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">合集名称 *</label>
@@ -220,7 +220,7 @@
     <PModal v-if="createModalVisible" @close="closeCreateModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
-          <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">创建频道</h3>
+          <h3 style="font-size:1.25rem;font-weight: 500;margin:0 0 1.5rem 0">创建频道</h3>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">频道名称 *</label>
@@ -652,7 +652,7 @@ onMounted(() => {
 .dashboard-lists h3 {
   margin: 0;
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .dashboard-stats {
@@ -671,7 +671,7 @@ onMounted(() => {
   display: block;
   color: var(--a-color-text-muted);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   margin-bottom: 0.25rem;
 }
 
@@ -705,7 +705,7 @@ onMounted(() => {
   cursor: pointer;
   padding: 0.65rem 0;
   text-align: left;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .dashboard-list-item span:last-child {
@@ -780,7 +780,7 @@ onMounted(() => {
 
 .article-title {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
   margin: 0;
 }
 

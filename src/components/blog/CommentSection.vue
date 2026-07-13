@@ -218,7 +218,7 @@ onMounted(fetchComments)
 .section-title {
   font-size: 1.5rem;
   font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   margin: 0 0 1.5rem;
 }
 .comment-count { color: var(--a-color-muted); font-weight: 500; font-size: 1.125rem; }
@@ -236,7 +236,7 @@ onMounted(fetchComments)
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 .text-input,
@@ -264,7 +264,7 @@ onMounted(fetchComments)
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   border: 1px solid var(--a-color-ink);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -307,7 +307,7 @@ onMounted(fetchComments)
 .comment-avatar {
   width: 28px;
   height: 28px;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: var(--a-color-ink);
   color: var(--a-color-paper);
   font-size: 0.75rem;
@@ -326,7 +326,7 @@ onMounted(fetchComments)
   cursor: pointer;
   font-size: 0.75rem;
   color: #ef4444;
-  font-weight: 700;
+  font-weight: 500;
 }
 .delete-btn:hover { color: #b91c1c; }
 .comment-content {

@@ -45,7 +45,7 @@
 
     <!-- Create/Edit Modal -->
     <PModal v-if="modalVisible" @close="closeModal" size="md">
-      <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">
+      <h3 style="font-size:1.25rem;font-weight: 500;margin:0 0 1.5rem 0">
         {{ modalMode === 'create' ? '创建频道' : '编辑频道' }}
       </h3>
       <div style="display:flex;flex-direction:column;gap:1.5rem">
@@ -70,7 +70,7 @@
 
     <!-- Delete Confirmation Modal -->
     <PModal v-if="deleteModalVisible" @close="closeDeleteModal" size="sm">
-      <h3 style="font-size:1.125rem;font-weight:900;margin:0 0 1rem 0">确认删除频道</h3>
+      <h3 style="font-size:1.125rem;font-weight: 500;margin:0 0 1rem 0">确认删除频道</h3>
       <p style="margin-bottom:1rem">确定要删除频道 <strong>{{ channelToDelete?.name }}</strong> 吗？</p>
       <p style="color:#666;font-size:0.875rem;margin-bottom:1rem">删除后该频道下的内容会按后端规则处理。</p>
       <div>

@@ -59,8 +59,8 @@ defineEmits<{
   border: var(--a-border);
   background: var(--a-color-bg-soft);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -72,8 +72,8 @@ defineEmits<{
   padding: 0.2rem 0.75rem;
   border: var(--a-border);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -101,8 +101,8 @@ defineEmits<{
   border: var(--a-border);
   background: var(--a-color-bg-soft);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 

@@ -1372,10 +1372,10 @@ onBeforeUnmount(() => {
 /* 字数统计 chip */
 .word-count-chip {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   font-family: 'SFMono-Regular', 'Consolas', monospace;
   color: var(--a-color-muted);
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .settings-textarea {
@@ -1397,7 +1397,7 @@ onBeforeUnmount(() => {
 .editor-loading {
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .editor-workspace {
@@ -1430,8 +1430,8 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.6rem;
   border: var(--a-border);
   font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   background: var(--a-color-bg);
 }
 
@@ -1460,8 +1460,8 @@ onBeforeUnmount(() => {
   padding: 0.4rem 0.65rem;
   border: var(--a-border);
   font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   background: var(--a-color-bg);
 }
@@ -1504,8 +1504,8 @@ onBeforeUnmount(() => {
   background: #000;
   color: #fff;
   font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -1513,7 +1513,7 @@ onBeforeUnmount(() => {
 .collab-mode-banner__text {
   margin: 0;
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -1532,8 +1532,8 @@ onBeforeUnmount(() => {
 .title-placeholder {
   padding: 1.5rem 1.5rem 0;
   font-size: clamp(1.75rem, 2.5vw, 2.5rem);
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.12;
   color: var(--a-color-muted-soft);
   pointer-events: none;
@@ -1564,8 +1564,8 @@ onBeforeUnmount(() => {
 
 .draft-recovery-preview strong {
   font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .draft-recovery-preview .a-muted {
@@ -1603,8 +1603,8 @@ onBeforeUnmount(() => {
 
 .draft-manager-card strong {
   font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .draft-manager-card .a-muted {
@@ -1629,7 +1629,7 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
   color: var(--a-color-danger);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.6;
 }
 
@@ -1655,7 +1655,7 @@ onBeforeUnmount(() => {
   color: var(--a-color-muted);
   text-decoration: none;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
@@ -1719,7 +1719,7 @@ onBeforeUnmount(() => {
 
 .cover-empty-state strong {
   font-size: 0.92rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .cover-empty-state .a-muted,
@@ -1737,7 +1737,7 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--a-color-danger);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .options-list {
@@ -1751,7 +1751,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.6rem;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 

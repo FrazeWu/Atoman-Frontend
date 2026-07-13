@@ -31,6 +31,7 @@ const router = createRouter({
   history: createMemoryHistory(),
   routes: [
     { path: '/posts', component: { template: '<div />' } },
+    { path: '/posts/post/new', component: { template: '<div />' } },
     { path: '/videos', component: { template: '<div />' } },
     { path: '/podcasts', component: { template: '<div />' } },
     { path: '/inbox', component: { template: '<div />' } },
@@ -48,12 +49,18 @@ describe('AppTopbarAuthControls', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     const authStore = useAuthStore()
-    authStore.user = { id: 1, username: 'alice', email: 'alice@example.com', role: 'user' }
+    authStore.user = { id: 1, uuid: 'user-1', username: 'alice', email: 'alice@example.com', role: 'user' }
     authStore.isAuthenticated = true
     vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.endsWith('/users/me/default-channels')) {
         return new Response(JSON.stringify({ data: defaultChannelsPayload }), { status: 200 })
+      }
+      if (url.endsWith('/blog/channels?user_id=user-1')) {
+        return new Response(JSON.stringify({ data: [
+          defaultChannelsPayload.blog,
+          { id: 'blog-channel-2', name: '第二频道', slug: 'blog-second' },
+        ] }), { status: 200 })
       }
       if (url.endsWith('/notifications/unread-counts')) {
         return new Response(JSON.stringify({ data: { total: 0, items: {} } }), { status: 200 })
@@ -79,7 +86,7 @@ describe('AppTopbarAuthControls', () => {
     expect(wrapper.find('a[href="/users/alice"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/posts/bookmarks"]').exists()).toBe(false)
     expect(wrapper.findAll('a[href="/users/alice/settings"]').length).toBeGreaterThan(0)
-    expect(wrapper.find('a[href="/site/setting"]').exists()).toBe(false)
+	expect(wrapper.find('a[href="/site/setting"]').exists()).toBe(false)
     expect(wrapper.html()).not.toContain('/blog/bookmarks')
   })
 
@@ -117,21 +124,53 @@ describe('AppTopbarAuthControls', () => {
     expect(router.currentRoute.value.path).toBe('/login')
   })
 
-  it('shows the current module default channel after notifications and jumps to channel management', async () => {
+  it('switches the active blog channel from the topbar', async () => {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return new Response(JSON.stringify({ data: defaultChannelsPayload }), { status: 200 })
+      }
+      if (url.endsWith('/blog/channels?user_id=user-1')) {
+        return new Response(JSON.stringify({ data: [
+          defaultChannelsPayload.blog,
+          { id: 'blog-channel-2', name: '第二频道', slug: 'blog-second' },
+        ] }), { status: 200 })
+      }
+      if (url.endsWith('/users/me/default-channels/blog') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ data: { id: 'blog-channel-2', name: '第二频道', slug: 'blog-second' } }), { status: 200 })
+      }
+      if (url.endsWith('/notifications/unread-counts')) {
+        return new Response(JSON.stringify({ data: { total: 0, items: {} } }), { status: 200 })
+      }
+      throw new Error(`未 mock fetch: ${url}`)
+    })
+
     const wrapper = await mountTopbar('/posts')
 
-    const defaultChannelLink = wrapper.find('[data-testid="default-channel-link"]')
+    const switcher = wrapper.find('[data-testid="blog-channel-switcher"]')
     const inboxButton = wrapper.find('.notif-btn')
 
-    expect(defaultChannelLink.exists()).toBe(true)
-    expect(defaultChannelLink.text()).toBe('博客默认频道')
-    expect(defaultChannelLink.attributes('href')).toBe('/channels')
-    expect(inboxButton.element.compareDocumentPosition(defaultChannelLink.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(switcher.exists()).toBe(true)
+    expect(switcher.text()).toContain('博客默认频道')
+    expect(switcher.attributes('aria-expanded')).toBe('false')
+    expect(inboxButton.element.compareDocumentPosition(switcher.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
-    await defaultChannelLink.trigger('click')
+    await switcher.trigger('click')
+    await flushPromises()
+    expect(switcher.attributes('aria-expanded')).toBe('true')
+
+    await wrapper.find('[data-testid="blog-channel-option-blog-channel-2"]').trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/channels')
+    expect(wrapper.find('[data-testid="blog-channel-switcher"]').text()).toContain('第二频道')
+  })
+
+  it('locks the blog channel switcher in the article editor', async () => {
+    const wrapper = await mountTopbar('/posts/post/new')
+
+    const switcher = wrapper.find('[data-testid="blog-channel-switcher"]')
+    expect(switcher.attributes('disabled')).toBeDefined()
+    expect(switcher.attributes('aria-label')).toContain('编辑文章时不可切换频道')
   })
 
   it('shows channel management in the user menu for blog and jumps to global channel management', async () => {

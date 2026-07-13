@@ -7,6 +7,11 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 
 const routerPush = vi.fn()
+const openPost = vi.fn()
+
+vi.mock('@/composables/useBlogSheets', () => ({
+  useBlogSheets: () => ({ openPost }),
+}))
 
 vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' },
@@ -65,6 +70,7 @@ describe('BlogHomeView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     routerPush.mockReset()
+    openPost.mockReset()
     setActivePinia(createPinia())
   })
 
@@ -90,6 +96,11 @@ describe('BlogHomeView', () => {
 
     expect(wrapper.text()).toContain('Flat Explore Post')
     expect(wrapper.text()).not.toContain('暂无内容')
+
+    await wrapper.findAll('.p-entry').find((entry) => entry.text().includes('Flat Explore Post'))?.trigger('click')
+
+    expect(openPost).toHaveBeenCalledWith('post-flat-1', 'Flat Explore Post')
+    expect(routerPush).not.toHaveBeenCalled()
   })
 
   it('uses feed recommendation target path when opening hot feed item', async () => {
@@ -214,7 +225,7 @@ describe('BlogHomeView', () => {
     const feedEntry = wrapper.findAll('.p-entry').find((entry) => entry.text().includes('Hot Feed Item'))
     await feedEntry?.findAll('.p-clip')[0]?.trigger('click')
 
-    expect(routerPush).toHaveBeenCalledWith('/posts/post/real-post-1')
+    expect(openPost).toHaveBeenCalledWith('real-post-1', 'Hot Blog Post')
     expect(postBookmarkSpy).toHaveBeenCalledWith('real-post-1')
     expect(postBookmarkSpy).not.toHaveBeenCalledWith('recommendation-row-1')
     expect(starSpy).toHaveBeenCalledWith('feed-item-1')

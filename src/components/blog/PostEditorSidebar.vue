@@ -29,21 +29,18 @@
 
     <section class="left-section">
       <span class="a-label">所属合集</span>
-      <div v-if="channelCollections.length > 0" class="collection-list">
-        <label
-          v-for="col in channelCollections"
-          :key="col.id"
-          class="collection-item"
-          :class="{ selected: selectedCollectionIds.includes(col.id) }"
-        >
-          <input
-            type="checkbox"
-            :checked="selectedCollectionIds.includes(col.id)"
-            @change="$emit('toggle-collection', col.id, $event)"
-          />
-          <span class="collection-name">{{ col.name }}</span>
-          <span v-if="col.id === defaultCollectionId" class="badge-default">DEFAULT</span>
-        </label>
+      <div v-if="defaultCollection" class="collection-selection">
+        <div class="default-collection-row" aria-label="默认合集：全部文章">
+          <Check :size="16" aria-hidden="true" />
+          <span>全部文章</span>
+          <span class="badge-default">默认</span>
+        </div>
+        <PSelect
+          :model-value="selectedCollectionId || ''"
+          :options="ordinaryCollectionOptions"
+          label="普通合集"
+          @update:model-value="$emit('select-collection', String($event))"
+        />
       </div>
       <span v-else class="col-empty">暂无可用合集</span>
     </section>
@@ -111,17 +108,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Check } from 'lucide-vue-next'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 type BlogVisibility = 'public' | 'followers' | 'private'
 type SaveTarget = 'draft' | 'published'
 type SidebarCollection = {
   id: string
   name: string
+  is_default?: boolean
 }
 type FlattenedOutlineNode = {
   id: string
@@ -133,12 +133,12 @@ type FlattenedOutlineNode = {
   isActiveBranch: boolean
 }
 
-defineProps<{
+const props = defineProps<{
   mobileOpen: boolean
   saving: SaveTarget | null
   hasDraftManagerAccess: boolean
   channelCollections: SidebarCollection[]
-  selectedCollectionIds: string[]
+  selectedCollectionId?: string
   defaultCollectionId?: string
   summary: string
   visibility: BlogVisibility
@@ -155,7 +155,7 @@ defineEmits<{
   (e: 'save-draft'): void
   (e: 'save-published'): void
   (e: 'open-draft-manager'): void
-  (e: 'toggle-collection', id: string, event: Event): void
+  (e: 'select-collection', id: string): void
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: BlogVisibility): void
   (e: 'update:allowComments', value: boolean): void
@@ -163,6 +163,14 @@ defineEmits<{
   (e: 'remove-cover'): void
   (e: 'jump-to-heading', line: number): void
 }>()
+
+const defaultCollection = computed(() => props.channelCollections.find(collection => collection.is_default))
+const ordinaryCollectionOptions = computed(() => [
+  { label: '仅全部文章', value: '' },
+  ...props.channelCollections
+    .filter(collection => !collection.is_default)
+    .map(collection => ({ label: collection.name, value: collection.id })),
+])
 
 const coverInput = ref<HTMLInputElement | null>(null)
 
@@ -207,6 +215,25 @@ const triggerCoverUpload = () => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.collection-selection {
+  display: grid;
+  gap: 1rem;
+}
+
+.default-collection-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  font-weight: 500;
+}
+
+.default-collection-row .badge-default {
+  margin-left: auto;
 }
 
 .settings-section {

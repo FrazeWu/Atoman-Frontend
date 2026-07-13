@@ -87,8 +87,39 @@
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
   </RouterLink>
 
+  <div v-if="currentDefaultChannel && currentModule === 'blog'" class="dropdown-wrap" data-dropdown="blog-channel">
+    <button
+      class="default-channel-link blog-channel-switcher"
+      type="button"
+      data-testid="blog-channel-switcher"
+      :disabled="isBlogEditorRoute"
+      :aria-expanded="activeDropdown === 'blog-channel'"
+      :aria-label="isBlogEditorRoute
+        ? `当前频道：${currentDefaultChannel.name}，编辑文章时不可切换频道`
+        : `当前频道：${currentDefaultChannel.name}`"
+      @click="toggleDropdown('blog-channel')"
+    >
+      <span class="default-channel-link__text">{{ currentDefaultChannel.name }}</span>
+      <span v-if="!isBlogEditorRoute" class="chevron" :class="{ 'is-open': activeDropdown === 'blog-channel' }">▾</span>
+    </button>
+    <div v-if="activeDropdown === 'blog-channel'" class="dropdown channel-dropdown">
+      <button
+        v-for="channel in blogChannels"
+        :key="channel.id"
+        type="button"
+        class="dropdown-item"
+        :class="{ 'is-active': channel.id === currentDefaultChannel.id }"
+        :data-testid="`blog-channel-option-${channel.id}`"
+        @click="selectBlogChannel(channel.id)"
+      >
+        {{ channel.name }}
+      </button>
+      <RouterLink to="/channels" class="dropdown-item" @click="closeDropdown">频道管理</RouterLink>
+    </div>
+  </div>
+
   <RouterLink
-    v-if="currentDefaultChannel"
+    v-else-if="currentDefaultChannel"
     :to="currentModuleManagePath"
     class="default-channel-link"
     data-testid="default-channel-link"
@@ -137,6 +168,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
+import { useApi } from '@/composables/useApi'
 import { notificationRoom } from '@/config/moduleRooms'
 import { userUrl } from '@/router/siteUrls'
 import { isAdminRole } from '@/utils/roles'
@@ -150,10 +182,12 @@ import {
   useDefaultChannelsStore,
 } from '@/stores/defaultChannels'
 import { resolveSiteContext } from '@/router/siteContext'
+import type { Channel } from '@/types'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const defaultChannelsStore = useDefaultChannelsStore()
+const api = useApi()
 const router = useRouter()
 const route = useRoute()
 const globalSearch = useGlobalSearch()
@@ -164,6 +198,7 @@ const isExpanded = ref(false)
 const searchDraft = ref('')
 const searchWrapRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const blogChannels = ref<Channel[]>([])
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
@@ -195,6 +230,7 @@ const currentModuleManagePath = computed(() => (
     ? channelManagePath
     : ''
 ))
+const isBlogEditorRoute = computed(() => /^\/posts\/post\/(new|[^/]+\/edit)$/.test(route.path))
 const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
@@ -228,6 +264,25 @@ const closeDropdown = () => {
   activeDropdown.value = null
 }
 
+const loadBlogChannels = async () => {
+  const userID = authStore.user?.uuid
+  if (!userID) {
+    blogChannels.value = []
+    return
+  }
+  const res = await fetch(`${api.blog.channels}?user_id=${encodeURIComponent(userID)}`, {
+    headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+  })
+  if (!res.ok) return
+  const payload = await res.json()
+  blogChannels.value = payload.data || []
+}
+
+const selectBlogChannel = async (channelID: string) => {
+  await defaultChannelsStore.setDefaultChannel('blog', channelID)
+  closeDropdown()
+}
+
 const openSearchHref = async (href: string) => {
   showSearch.value = false
   isExpanded.value = false
@@ -248,6 +303,7 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
   void defaultChannelsStore.load()
+  if (currentModule.value === 'blog') void loadBlogChannels()
 })
 
 onBeforeUnmount(() => {
@@ -265,6 +321,10 @@ watch(
     void defaultChannelsStore.load(true)
   },
 )
+
+watch(currentModule, (module) => {
+  if (module === 'blog') void loadBlogChannels()
+})
 
 const logout = async () => {
   await authStore.logout()
@@ -300,6 +360,37 @@ const logout = async () => {
 
 .default-channel-link:hover {
   text-decoration: underline;
+}
+
+.blog-channel-switcher {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  cursor: pointer;
+}
+
+.blog-channel-switcher:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.blog-channel-switcher:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: 2px;
+}
+
+.channel-dropdown {
+  width: min(18rem, calc(100vw - 2rem));
+}
+
+.channel-dropdown .dropdown-item.is-active {
+  font-weight: 500;
+  background: var(--a-color-paper-wash);
+}
+
+.chevron.is-open {
+  transform: rotate(180deg);
 }
 
 .notif-btn {
@@ -544,6 +635,24 @@ const logout = async () => {
 
   .user-btn {
     padding-inline: 0.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .user-settings-link,
+  .dropdown-wrap[data-dropdown="user"] {
+    display: none;
+  }
+
+  .blog-channel-switcher {
+    max-width: 5.5rem;
+    min-height: 2.25rem;
+    padding-inline: 0.45rem;
+  }
+
+  .default-channel-link__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

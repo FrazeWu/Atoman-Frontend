@@ -80,7 +80,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary"
-            @click="$router.push('/posts/post/' + post.id)"
+            @click="blogSheets.openPost(post.id, post.title)"
             class="a-cursor-pointer"
           >
             <template #visual>
@@ -150,6 +150,7 @@ import PToast from '@/components/ui/PToast.vue'
 import { useApi } from '@/composables/useApi'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel } from '@/types'
 
@@ -158,6 +159,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const api = useApi()
+const blogSheets = useBlogSheets()
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)

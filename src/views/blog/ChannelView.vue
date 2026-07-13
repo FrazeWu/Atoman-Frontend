@@ -22,13 +22,8 @@
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
             <PLink
               v-if="isOwner"
-              :href="`/channels/${channel.slug || channel.id}/manage`"
+              href="/posts/manage"
               label="创作"
-            />
-            <PLink
-              v-if="isOwner"
-              :href="`/posts/post/new?channel=${channel.id}`"
-              label="写文章"
             />
           </div>
         </template>
@@ -86,7 +81,7 @@
               :key="post.id"
               :title="post.title"
               :summary="post.summary || summarize(post.content)"
-              @click="$router.push(`/posts/post/${post.id}`)"
+              @click="blogSheets.openPost(post.id, post.title, activeCollectionId || undefined)"
             >
               <template #meta>
                 <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -158,12 +153,14 @@ import PTab from '@/components/ui/PTab.vue'
 import PPress from '@/components/ui/PPress.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 
 const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()
 const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
+const blogSheets = useBlogSheets()
 
 const loading = ref(true)
 const channel = ref<Channel | null>(null)

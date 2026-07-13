@@ -10,6 +10,7 @@
       ]">
         <router-view />
       </main>
+      <BlogSheetStack />
       <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter v-if="!hasSidebar" />
       <AudioPlayer v-if="hasActiveTrack" />
@@ -30,6 +31,7 @@ import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
+const BlogSheetStack = defineAsyncComponent(() => import('@/components/blog/BlogSheetStack.vue'))
 
 const themeOverrides = {
   common: {

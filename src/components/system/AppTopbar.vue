@@ -337,12 +337,12 @@ onBeforeUnmount(() => {
   }
 
   .nav {
-    gap: 0.25rem;
-    overflow-x: auto;
+    display: none;
   }
 
-  .nav-link {
-    padding: 0 0.625rem;
+  .nav-right {
+    gap: 0.35rem;
+    overflow: visible;
   }
 }
 

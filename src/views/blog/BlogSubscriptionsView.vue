@@ -2,7 +2,7 @@
   <div class="a-page-xl blog-subscriptions-page">
     <PPageHeader title="订阅" accent>
       <template #action>
-        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
+        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/manage">创作</PButton>
         <PButton v-else-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>
@@ -50,7 +50,7 @@
             :title="post.title"
             :summary="post.summary"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-            @click="router.push('/posts/post/' + post.id)"
+            @click="blogSheets.openPost(post.id, post.title)"
           >
             <template #visual>
               <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
@@ -114,7 +114,6 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -130,6 +129,7 @@ import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useApi } from '@/composables/useApi'
 import { useKeyboardList } from '@/composables/useKeyboardList'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import { moduleRooms } from '@/config/moduleRooms'
 import type { Post, Subscription, TimelineItem } from '@/types'
 
@@ -137,7 +137,7 @@ import type { Post, Subscription, TimelineItem } from '@/types'
 // to maintain consistency and fulfill requirement
 const _components = { PBadge, PTab }
 
-const router = useRouter()
+const blogSheets = useBlogSheets()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
@@ -177,7 +177,7 @@ const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: posts,
   section: 'content',
   onEnter: (post) => {
-    router.push('/posts/post/' + post.id)
+    blogSheets.openPost(post.id, post.title)
   },
   onAction: (key, post) => {
     switch (key) {

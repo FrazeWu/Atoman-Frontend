@@ -58,7 +58,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary || summarize(post.content)"
-            @click="$router.push(`/posts/post/${post.id}`)"
+            @click="blogSheets.openPost(post.id, post.title, collectionId)"
           >
             <template #meta>
               <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -136,6 +136,7 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSheetStore } from '@/stores/sheet'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 
 const props = defineProps<{
   id?: string
@@ -147,6 +148,7 @@ const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const sheetStore = useSheetStore()
+const blogSheets = useBlogSheets()
 
 const loading = ref(true)
 const collection = ref<Collection | null>(null)

@@ -2,7 +2,7 @@
   <div class="a-page">
     <PPageHeader title="文章" accent>
       <template #action>
-        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
+        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/manage">创作</PButton>
         <PButton v-else to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>
@@ -48,7 +48,7 @@
           :key="item.id"
           :title="item.title"
           :summary="item.summary"
-          @click="$router.push(item.targetPath)"
+          @click="openRecommendedPost(item)"
         >
           <template #visual>
             <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
@@ -150,12 +150,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import type { Post } from '@/types'
 
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const api = useApi()
+const blogSheets = useBlogSheets()
 const route = useRoute()
 const router = useRouter()
 
@@ -193,12 +195,25 @@ const toggleReadingList = (item: BlogHomeListItem) => {
 }
 
 const openPost = (item: BlogHomeListItem) => {
+  if (item.source === 'post') {
+    blogSheets.openPost(item.id, item.title)
+    return
+  }
   void router.push(item.targetPath)
 }
 
 const postIdFromTargetPath = (targetPath: string) => {
   const match = targetPath.match(/^\/posts\/post\/([^/?#]+)/)
   return match?.[1]
+}
+
+const openRecommendedPost = (item: { id: string; title: string; targetPath: string }) => {
+  const postId = postIdFromTargetPath(item.targetPath)
+  if (postId) {
+    blogSheets.openPost(postId, item.title)
+    return
+  }
+  void router.push(item.targetPath)
 }
 
 const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))

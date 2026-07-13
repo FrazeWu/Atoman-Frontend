@@ -26,10 +26,10 @@ describe('useResponsiveShell', () => {
     const tabs = getMobilePrimaryTabs()
 
     expect(tabs.map((tab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
-    expect(tabs.map((tab) => tab.label)).toEqual(['首页/博客', '订阅', '写博客', '更多'])
+    expect(tabs.map((tab) => tab.label)).toEqual(['首页/博客', '订阅', '创作', '更多'])
     expect(tabs[0]?.href).toBe(moduleUrl('blog'))
     expect(tabs[1]?.href).toBe(moduleUrl('feed'))
-    expect(tabs[2]?.href).toBe(modulePathUrl('blog', '/post/new'))
+    expect(tabs[2]?.href).toBe(modulePathUrl('blog', '/manage'))
     expect(tabs[3]?.href).toBeUndefined()
   })
 
@@ -79,7 +79,7 @@ describe('useResponsiveShell', () => {
     const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
 
     expect(tabs).toHaveLength(4)
-    expect(tabs.map((tab) => tab.text())).toEqual(['首页/博客', '订阅', '写博客', '更多'])
+    expect(tabs.map((tab) => tab.text())).toEqual(['首页/博客', '订阅', '创作', '更多'])
     expect(wrapper.get('[data-tab-key="feed"]').classes()).toContain('is-active')
   })
 
@@ -134,6 +134,6 @@ describe('useResponsiveShell', () => {
     await wrapper.get('[data-tab-key="create"]').trigger('click')
 
     expect(navigateModuleWithShutter).toHaveBeenCalledTimes(1)
-    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('blog', '/post/new'))
+    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('blog', '/manage'))
   })
 })

@@ -269,7 +269,7 @@ describe('PostEditorView', () => {
     await flushPromises()
 
     const editorView = wrapper.findComponent(PostEditorView)
-    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1', 'collection-2'])
   })
 
   it('新建文章不得恢复不属于当前频道的非法 query.collection', async () => {
@@ -1101,6 +1101,6 @@ describe('PostEditorView', () => {
     )
 
     const editorView = wrapper.findComponent(PostEditorView)
-    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-3'])
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1', 'collection-3'])
   })
 })

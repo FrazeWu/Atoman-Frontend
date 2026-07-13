@@ -9,7 +9,7 @@
           :saving="saving"
           :has-draft-manager-access="hasDraftManagerAccess"
           :channel-collections="channelCollections"
-          :selected-collection-ids="selectedCollectionIds"
+          :selected-collection-id="selectedNonDefaultCollectionId"
           :default-collection-id="defaultCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
@@ -23,7 +23,7 @@
           @save-draft="save('draft')"
           @save-published="save('published')"
           @open-draft-manager="openDraftManager"
-          @toggle-collection="onCollectionToggle"
+          @select-collection="onCollectionSelect"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
           @update:allowComments="(value) => (form.allow_comments = value)"
@@ -193,6 +193,7 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import type { BlogDraft, Collection } from '@/types'
+import { normalizeBlogCollectionSelection } from '@/utils/blogCollectionSelection'
 
 const route = useRoute()
 const router = useRouter()
@@ -391,6 +392,11 @@ const selectedQueryCollectionId = computed(() => {
 const currentChannelId = ref<string>('')
 
 const defaultCollectionId = computed(() => channelCollections.value.find(c => c.is_default)?.id)
+const selectedNonDefaultCollectionId = computed(() => (
+  channelCollections.value.find(collection => (
+    !collection.is_default && selectedCollectionIds.value.includes(collection.id)
+  ))?.id || ''
+))
 
 const derivedChannelId = computed(() => {
   const col = channelCollections.value.find(c => selectedCollectionIds.value.includes(c.id))
@@ -558,10 +564,10 @@ const recoveryModalText = computed(() => {
 const keepCurrentContentLabel = computed(() => isCollabConflict.value ? '保留协作文档' : '稍后处理')
 
 const ensureDefaultSelection = () => {
-  const def = channelCollections.value.find(c => c.is_default)
-  if (def && !selectedCollectionIds.value.includes(def.id)) {
-    selectedCollectionIds.value = [def.id, ...selectedCollectionIds.value]
-  }
+  selectedCollectionIds.value = normalizeBlogCollectionSelection(
+    channelCollections.value,
+    selectedNonDefaultCollectionId.value,
+  )
 }
 
 const hasMeaningfulDraft = (payload: EditorDraftPayload) => {
@@ -1068,17 +1074,13 @@ const loadChannelCollections = async () => {
     channelCollections.value = data.data || []
     if (!isEdit.value) {
       const queryCollection = selectedQueryCollectionId.value
-      if (queryCollection && channelCollections.value.some(collection => collection.id === queryCollection)) {
-        selectedCollectionIds.value = [queryCollection]
-      } else {
-        const def = channelCollections.value.find(c => c.is_default) || channelCollections.value[0]
-        selectedCollectionIds.value = def ? [def.id] : []
-      }
+      selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, queryCollection)
     }
     if (isEdit.value) {
-      const allowed = channelCollections.value.map(c => c.id)
-      selectedCollectionIds.value = existingCollectionIds.value.filter(id => allowed.includes(id))
-      ensureDefaultSelection()
+      const ordinaryCollection = channelCollections.value.find(collection => (
+        !collection.is_default && existingCollectionIds.value.includes(collection.id)
+      ))
+      selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, ordinaryCollection?.id)
     }
   } catch (e) {
     console.error(e)
@@ -1086,15 +1088,8 @@ const loadChannelCollections = async () => {
   }
 }
 
-const onCollectionToggle = (id: string, event: Event) => {
-  const checked = !!(event.target as HTMLInputElement)?.checked
-  if (checked) {
-    if (!selectedCollectionIds.value.includes(id))
-      selectedCollectionIds.value = [...selectedCollectionIds.value, id]
-  } else {
-    selectedCollectionIds.value = selectedCollectionIds.value.filter(x => x !== id)
-    ensureDefaultSelection()
-  }
+const onCollectionSelect = (id: string) => {
+  selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, id || null)
 }
 
 const uniqueCollectionIds = (ids: string[]) => Array.from(new Set(ids))

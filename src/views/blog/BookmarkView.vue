@@ -46,7 +46,7 @@
             :key="bm.id"
             :title="bm.post?.title"
             :summary="bm.post?.summary"
-            @click="$router.push('/posts/post/' + bm.post?.id)"
+            @click="bm.post && blogSheets.openPost(bm.post.id, bm.post.title)"
             class="a-cursor-pointer"
           >
             <template #visual>
@@ -112,7 +112,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -123,13 +122,14 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { userUrl } from '@/composables/useSubdomainNav'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import type { Bookmark, BookmarkFolder } from '@/types'
 
 type BookmarkSortMode = 'latest' | 'popular'
 
 const authStore = useAuthStore()
 const api = useApi()
-const router = useRouter()
+const blogSheets = useBlogSheets()
 
 const folders = ref<BookmarkFolder[]>([])
 const bookmarks = ref<Bookmark[]>([])

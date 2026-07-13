@@ -81,7 +81,7 @@ describe('borderless white UI contract', () => {
     expect(pSurfaceSource).not.toContain('border-radius: 8px;')
 
     // PVideoCard contract
-    expect(pVideoCardSource).toContain('border-radius: 8px;') // for vc-thumb
+    expect(pVideoCardSource).toContain('border-radius: 4px;') // for vc-thumb and avatar
     expect(pVideoCardSource).toContain('border-radius: 0px;') // for vc-play-count and vc-duration
   })
 

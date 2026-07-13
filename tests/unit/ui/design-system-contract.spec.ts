@@ -26,4 +26,15 @@ describe('approved design-system contract', () => {
     expect(css).not.toContain('--a-color-accent-confirm: var(--a-color-ink)')
     expect(css).not.toContain('--a-color-accent-destructive: #ea580c')
   })
+
+  it('uses semantic colors for shared buttons', () => {
+    const source = read('src/components/ui/PButton.vue')
+
+    expect(source).toContain('background: var(--a-color-primary);')
+    expect(source).toContain('background: var(--a-color-primary-hover);')
+    expect(source).toContain('background: var(--a-color-primary-pressed);')
+    expect(source).toContain('outline: 2px solid var(--a-color-primary);')
+    expect(source).toContain('color: var(--a-color-danger);')
+    expect(source).not.toContain('letter-spacing: 0.05em;')
+  })
 })

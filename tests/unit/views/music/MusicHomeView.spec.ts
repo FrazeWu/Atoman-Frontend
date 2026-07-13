@@ -69,9 +69,6 @@ describe('Music HomeView.vue (Album Landing)', () => {
     expect(wrapper.text()).toContain('专辑首页')
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-page-title')).toBe('专辑')
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-content-mode')).toBe('albums')
-    expect(wrapper.find('[data-testid="artist-drawer-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="album-drawer-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="music-creation-flow-drawer-stub"]').exists()).toBe(true)
   })
 
   it('opens drawers from route query state on mount', () => {

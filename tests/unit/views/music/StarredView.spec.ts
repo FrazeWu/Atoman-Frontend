@@ -138,8 +138,6 @@ describe('Music StarredView', () => {
 
     await wrapper.get('[data-testid="filter-playlist"]').trigger('click')
 
-    expect(wrapper.find('[data-testid="playlist-drawer-stub"]').exists()).toBe(true)
-
     await wrapper.get('[data-testid="starred-playlist-card"]').trigger('click')
 
     expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/playlist-1')

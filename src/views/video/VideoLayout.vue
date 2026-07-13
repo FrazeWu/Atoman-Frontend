@@ -9,11 +9,25 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import AppSidebar from '@/components/system/AppSidebar.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
+import { useAuthStore } from '@/stores/auth'
 
 const { sidebarCollapsed } = useSidebar()
+const authStore = useAuthStore()
+const bookmarks = useVideoBookmarks()
+
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    if (authenticated) void bookmarks.load()
+    else bookmarks.reset()
+  },
+  { immediate: true },
+)
 
 // Compliance check tags for test suite
 // <PSidebar>

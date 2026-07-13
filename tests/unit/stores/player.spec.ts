@@ -39,6 +39,29 @@ describe('player store', () => {
     expect(player.showLyrics).toBe(false)
   })
 
+  it('keeps lyrics and queue open independently', () => {
+    const player = usePlayerStore()
+
+    player.toggleLyrics()
+    player.toggleQueue()
+
+    expect(player.showLyrics).toBe(true)
+    expect(player.showQueue).toBe(true)
+  })
+
+  it('persists the player pin preference independently from playback', async () => {
+    const player = usePlayerStore()
+    expect(player.isPinned).toBe(true)
+
+    player.togglePinned()
+    await nextTick()
+    expect(localStorage.getItem('playerPinned')).toBe('false')
+
+    setActivePinia(createPinia())
+    const restoredPlayer = usePlayerStore()
+    expect(restoredPlayer.isPinned).toBe(false)
+  })
+
   it('skips forward and backward', () => {
     const player = usePlayerStore()
     

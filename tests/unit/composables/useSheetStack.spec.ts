@@ -37,6 +37,16 @@ describe('createSheetStack', () => {
     expect(stack.layers.value.map(item => item.key)).toEqual(['artist:1', 'artist:2'])
   })
 
+  it('returns to an existing lower layer instead of adding a duplicate key', () => {
+    const stack = createSheetStack<TestLayer>()
+    stack.push(layer('artist', '1'))
+    stack.push(layer('album', '2'))
+    stack.push(layer('artist', '1'))
+
+    expect(stack.layers.value.map(item => item.key)).toEqual(['artist:1'])
+    expect(stack.renderLayers.value.map(item => item.key)).toEqual(['artist:1'])
+  })
+
   it('rebuilds the stack from the overflow resolver when the layer limit is reached', () => {
     const resolveOverflow = vi.fn((next: TestLayer) => [
       layer('album', next.payload.id),
@@ -54,6 +64,44 @@ describe('createSheetStack', () => {
 
     expect(resolveOverflow).toHaveBeenCalledOnce()
     expect(stack.layers.value.map(item => item.key)).toEqual(['album:4', 'history:4'])
+  })
+
+  it('ignores another push while the overflow transition is running', async () => {
+    vi.useFakeTimers()
+    const stack = createSheetStack<TestLayer>({
+      maxLayers: 3,
+      resolveOverflow: next => [next],
+      overflowTransitionMs: 300,
+    })
+
+    stack.push(layer('artist', '1'))
+    stack.push(layer('album', '2'))
+    stack.push(layer('history', '3'))
+    stack.push(layer('history', '4'))
+    stack.push(layer('history', '5'))
+    expect(stack.top.value?.key).toBe('history:4')
+
+    await vi.advanceTimersByTimeAsync(300)
+    stack.push(layer('history', '5'))
+    expect(stack.top.value?.key).toBe('history:5')
+    vi.useRealTimers()
+  })
+
+  it('keeps render keys unique when the overflow target already exists below the top', () => {
+    const stack = createSheetStack<TestLayer>({
+      maxLayers: 3,
+      resolveOverflow: next => [next],
+      overflowTransitionMs: 300,
+    })
+
+    stack.push(layer('artist', '1'))
+    stack.push(layer('album', '2'))
+    stack.push(layer('history', '3'))
+    stack.push(layer('album', '2'))
+
+    const keys = stack.renderLayers.value.map(item => item.key)
+    expect(new Set(keys).size).toBe(keys.length)
+    stack.clear()
   })
 
   it('restores trigger focus when the top layer closes', async () => {

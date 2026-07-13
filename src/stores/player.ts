@@ -41,6 +41,11 @@ export const usePlayerStore = defineStore('player', () => {
   const songLibraryLoaded = ref(false);
   const showLyrics = ref(false);
   const showQueue = ref(false);
+  const isPinned = ref(typeof localStorage === 'undefined' || localStorage.getItem('playerPinned') !== 'false');
+
+  watch(isPinned, (value) => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('playerPinned', String(value));
+  });
 
   // Album-based queue
   const queue = ref<Song[]>([]);
@@ -437,12 +442,14 @@ export const usePlayerStore = defineStore('player', () => {
 
   const toggleLyrics = () => {
     showLyrics.value = !showLyrics.value;
-    if (showLyrics.value) showQueue.value = false;
   };
 
   const toggleQueue = () => {
     showQueue.value = !showQueue.value;
-    if (showQueue.value) showLyrics.value = false;
+  };
+
+  const togglePinned = () => {
+    isPinned.value = !isPinned.value;
   };
 
   return {
@@ -480,5 +487,7 @@ export const usePlayerStore = defineStore('player', () => {
     toggleLyrics,
     showQueue,
     toggleQueue,
+    isPinned,
+    togglePinned,
   };
 });

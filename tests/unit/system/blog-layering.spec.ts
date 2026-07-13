@@ -11,3 +11,14 @@ describe('PostEditorView layering', () => {
     expect(source).not.toContain('<div class="meta-chip-group">')
   })
 })
+
+describe('Blog sheet layering', () => {
+  it.each([
+    'BlogCollectionSheet.vue',
+    'BlogPostSheet.vue',
+  ])('marks only the top %s as modal', (file) => {
+    const source = readFileSync(path.resolve(process.cwd(), `src/components/blog/${file}`), 'utf8')
+
+    expect(source).toContain(':is-top-layer="sheets.isTop(layer.key)"')
+  })
+})

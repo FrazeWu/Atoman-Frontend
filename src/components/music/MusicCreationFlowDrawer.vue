@@ -9,7 +9,7 @@ import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
-const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 
 const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
 
@@ -375,6 +375,7 @@ async function completeCreation() {
     width="560px"
     :index="sheetIndex"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     @close="requestClose"

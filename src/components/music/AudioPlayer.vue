@@ -1,5 +1,14 @@
 <template>
-  <div v-if="player.currentSong" class="player">
+  <div
+    v-if="player.currentSong"
+    class="player"
+    :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered }"
+    @mouseenter="revealPlayer"
+    @mouseleave="scheduleAutoHide"
+    @focusin="revealPlayer"
+    @focusout="scheduleAutoHide"
+  >
+    <div v-if="!effectivePinned" class="player-reveal-handle" aria-hidden="true" />
     <div ref="playerInnerRef" class="player-inner" :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }">
       <!-- Left: Identity -->
       <div
@@ -160,6 +169,16 @@
           <List :size="22" />
           <span class="queue-count">{{ player.queue.length || 0 }}</span>
         </button>
+        <button
+          class="player-pin-btn"
+          type="button"
+          :aria-label="player.isPinned ? '取消固定播放器' : '固定播放器'"
+          :title="player.isPinned ? '取消固定播放器' : '固定播放器'"
+          @click="togglePlayerPin"
+        >
+          <PinOff v-if="player.isPinned" :size="20" aria-hidden="true" />
+          <Pin v-else :size="20" aria-hidden="true" />
+        </button>
       </div>
     </div>
   </div>
@@ -218,7 +237,9 @@ import {
   VolumeX,
   Heart,
   Plus,
-  Clock
+  Clock,
+  Pin,
+  PinOff,
 } from 'lucide-vue-next'
 import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
@@ -236,9 +257,49 @@ const playerInfoRef = ref<HTMLElement | null>(null)
 const playerMetaRef = ref<HTMLElement | null>(null)
 const playerControlsRef = ref<HTMLElement | null>(null)
 const isMetaCollapsed = ref(false)
+const isMobileViewport = ref(false)
+const playerHovered = ref(true)
+const effectivePinned = computed(() => player.isPinned || isMobileViewport.value)
 
 let resizeObserver: ResizeObserver | null = null
+let viewportQuery: MediaQueryList | null = null
+let hideTimer: number | null = null
 const META_COLLAPSE_GAP = 12
+
+const clearHideTimer = () => {
+  if (hideTimer === null) return
+  window.clearTimeout(hideTimer)
+  hideTimer = null
+}
+
+const revealPlayer = () => {
+  clearHideTimer()
+  playerHovered.value = true
+}
+
+const scheduleAutoHide = () => {
+  if (effectivePinned.value) return
+  clearHideTimer()
+  hideTimer = window.setTimeout(() => {
+    playerHovered.value = false
+    hideTimer = null
+  }, 500)
+}
+
+const togglePlayerPin = () => {
+  player.togglePinned()
+  playerHovered.value = player.isPinned
+  clearHideTimer()
+}
+
+const syncViewport = () => {
+  isMobileViewport.value = viewportQuery?.matches ?? false
+}
+
+watch(effectivePinned, (pinned) => {
+  document.documentElement.dataset.playerActive = 'true'
+  document.documentElement.dataset.playerPinned = String(pinned)
+}, { immediate: true })
 
 const progressPct = computed(() => {
   if (!player.duration) return 0
@@ -427,6 +488,10 @@ watch(
 )
 
 onMounted(() => {
+  viewportQuery = window.matchMedia?.('(max-width: 767px)') ?? null
+  syncViewport()
+  viewportQuery?.addEventListener('change', syncViewport)
+
   resizeObserver = new ResizeObserver(() => {
     updateMetaCollapse()
   })
@@ -441,6 +506,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearHideTimer()
+  viewportQuery?.removeEventListener('change', syncViewport)
+  delete document.documentElement.dataset.playerActive
+  delete document.documentElement.dataset.playerPinned
   resizeObserver?.disconnect()
   resizeObserver = null
 })
@@ -449,13 +518,28 @@ onBeforeUnmount(() => {
 <style scoped>
 .player {
   position: fixed;
-  bottom: 0;
+  bottom: var(--a-mobile-nav-reserved-height);
   width: 100%;
-  z-index: 2001;
+  z-index: var(--a-z-player, 720);
   background: var(--a-color-paper);
   border-top: 1px solid var(--a-color-line-soft);
-  height: 84px; /* Slightly taller for more air */
-  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+  height: var(--a-player-height);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.player.is-auto-hidden {
+  transform: translateY(calc(100% - 10px));
+}
+
+.player-reveal-handle {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 40px;
+  height: 3px;
+  transform: translateX(-50%);
+  background: var(--a-color-muted-soft);
+  pointer-events: none;
 }
 
 .player-inner {
@@ -857,6 +941,30 @@ onBeforeUnmount(() => {
   background: transparent;
   border: none;
 }
+
+.player-pin-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+  cursor: pointer;
+}
+
+.player-pin-btn:hover,
+.player-pin-btn:focus-visible {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player {
+    transition-duration: 0.01ms;
+  }
+}
 .queue-trigger:hover { 
   color: var(--a-color-ink);
   background: var(--a-color-tape);
@@ -910,11 +1018,11 @@ onBeforeUnmount(() => {
 }
 
 .lyrics-panel {
-  position: fixed; top: 56px; bottom: 84px; left: 0; right: 0;
+  position: fixed; top: var(--a-topbar-height); bottom: var(--a-content-bottom-offset); left: 0; right: 0;
   width: 100%;
-  height: calc(100vh - 84px - 56px); background: var(--a-color-paper);
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset)); background: var(--a-color-paper);
   border-top: 1px solid var(--a-color-line-soft);
-  z-index: 2000; padding: 3rem;
+  z-index: var(--a-z-player-lyrics); padding: 3rem;
   display: flex; flex-direction: column;
 }
 .lyrics-header {
@@ -938,12 +1046,12 @@ onBeforeUnmount(() => {
 }
 
 .queue-panel {
-  position: fixed; top: 56px; bottom: 84px; right: 0;
+  position: fixed; top: var(--a-topbar-height); bottom: var(--a-content-bottom-offset); right: 0;
   width: 420px;
-  height: calc(100vh - 84px - 56px); background: var(--a-color-paper);
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset)); background: var(--a-color-paper);
   border-left: 1px solid var(--a-color-line-soft);
   border-top: 1px solid var(--a-color-line-soft);
-  z-index: 2000; padding: 2rem 3rem;
+  z-index: var(--a-z-player-queue); padding: 2rem 3rem;
   display: flex; flex-direction: column;
 }
 .queue-header {
@@ -1062,5 +1170,76 @@ onBeforeUnmount(() => {
 }
 .track-add-menu-item:hover {
   background-color: var(--a-color-paper-wash);
+}
+
+@media (max-width: 767px) {
+  .player {
+    height: var(--a-mobile-player-height);
+    transform: none !important;
+  }
+
+  .player-reveal-handle,
+  .player-pin-btn,
+  .feature-link,
+  .feature-toggle,
+  .volume-container,
+  .progress-container,
+  .skip-btn,
+  .nav-btn,
+  .player-fav-btn,
+  .player-add-dropdown,
+  .player-add-btn {
+    display: none;
+  }
+
+  .player-inner {
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+  }
+
+  .player-info,
+  .player-info--collapsed {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+    gap: 0.75rem;
+  }
+
+  .cover-wrap {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-meta,
+  .player-meta--collapsed {
+    display: block;
+    min-width: 0;
+    opacity: 1;
+  }
+
+  .player-controls-hub {
+    width: auto;
+    min-width: 0;
+  }
+
+  .ctrl-row {
+    gap: 0;
+  }
+
+  .main-play-btn,
+  .queue-trigger {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-features {
+    margin-left: 0;
+    gap: 0;
+  }
+
+  .queue-panel {
+    width: 100%;
+    padding: 1.25rem 1rem;
+  }
 }
 </style>

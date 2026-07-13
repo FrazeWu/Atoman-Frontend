@@ -26,7 +26,7 @@ import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
-const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeAlbum, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
@@ -243,6 +243,7 @@ watch(
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :index="sheetIndex"
   >
     <div class="drawer-header">

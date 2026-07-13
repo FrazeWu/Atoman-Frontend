@@ -12,7 +12,7 @@ import {
 type MergeTarget = { id: string; label: string; meta: string }
 type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 
-const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 
 const {
   state,
@@ -99,6 +99,7 @@ async function merge() {
     title="合并重复条目"
     :index="layerIndex"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     @close="closeCurrentAction"

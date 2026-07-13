@@ -19,7 +19,7 @@ import {
 } from '@/api/musicV1'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
-const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeArtist, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openNestedAction } = useMusicDrawers()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
@@ -142,6 +142,7 @@ watch(
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :index="layerIndex"
   >
     <template #header>

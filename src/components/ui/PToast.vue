@@ -1,21 +1,23 @@
 <template>
-  <transition name="fade">
-    <div
-      v-if="visible"
-      class="p-toast"
-      :class="type ? `p-toast--${type}` : 'p-toast--info'"
-      :style="{ top: `${resolvedTop}px` }"
-      role="status"
-      @mouseenter="clearTimer"
-      @mouseleave="startTimer"
-    >
-      <span class="p-toast-dot" aria-hidden="true" />
-      <div class="p-toast-content">
-        <strong v-if="title" class="p-toast-title">{{ title }}</strong>
-        <span class="p-toast-message">{{ message }}</span>
+  <Teleport to="body">
+    <transition name="fade">
+      <div
+        v-if="visible"
+        class="p-toast"
+        :class="type ? `p-toast--${type}` : 'p-toast--info'"
+        :style="{ top: `${resolvedTop}px` }"
+        role="status"
+        @mouseenter="clearTimer"
+        @mouseleave="startTimer"
+      >
+        <span class="p-toast-dot" aria-hidden="true" />
+        <div class="p-toast-content">
+          <strong v-if="title" class="p-toast-title">{{ title }}</strong>
+          <span class="p-toast-message">{{ message }}</span>
+        </div>
       </div>
-    </div>
-  </transition>
+    </transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

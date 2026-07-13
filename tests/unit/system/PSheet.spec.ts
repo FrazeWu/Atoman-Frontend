@@ -46,6 +46,45 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.p-sheet-panel').classes()).toContain('is-shifted')
   })
 
+  it('exposes one 32px edge for each sheet above the current layer', () => {
+    const wrapper = mount(PSheet, {
+      props: {
+        show: true,
+        width: '900px',
+        isShifted: true,
+        layerIndex: 0,
+        stackSize: 3,
+      },
+    })
+
+    expect(wrapper.get('.p-sheet-panel').attributes('style')).toContain('--a-sheet-shift: 64px')
+  })
+
+  it('reserves the full stack edge for every custom-width layer', () => {
+    const bottom = mount(PSheet, {
+      props: {
+        show: true,
+        width: '900px',
+        layerIndex: 0,
+        stackSize: 3,
+      },
+    })
+    const top = mount(PSheet, {
+      props: {
+        show: true,
+        width: '900px',
+        layerIndex: 2,
+        stackSize: 3,
+      },
+    })
+
+    for (const wrapper of [bottom, top]) {
+      const style = wrapper.get('.p-sheet-panel').attributes('style')
+      expect(style).toContain('--a-sheet-stack-edge: 64px')
+      expect(style).toContain('max-width: calc(100vw - var(--a-sidebar-width) - 16px - var(--a-sheet-stack-edge))')
+    }
+  })
+
   it('accepts custom width via prop', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, width: '900px' }
@@ -118,8 +157,8 @@ describe('PSheet.vue', () => {
       props: { show: true, index: 1 }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('64px')
-    expect(panel.style.width).toBe('calc(100% - 64px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 64px)')
+    expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 64px)')
 
     const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
     expect(tab.style.top).toBe('88px')
@@ -130,8 +169,8 @@ describe('PSheet.vue', () => {
       props: { show: true }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('32px')
-    expect(panel.style.width).toBe('calc(100% - 32px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 32px)')
+    expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 32px)')
 
     const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
     expect(tab.style.top).toBe('32px')
@@ -164,4 +203,5 @@ describe('PSheet.vue', () => {
     expect(wrapper.get('[aria-label="关闭历史记录"]')).toBeTruthy()
     expect(wrapper.text()).not.toContain('CLOSE')
   })
+
 })

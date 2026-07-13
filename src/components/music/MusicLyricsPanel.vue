@@ -283,9 +283,9 @@ async function handleSaveLyrics(payload: {
 <style scoped>
 .music-lyrics-panel {
   position: fixed;
-  top: 56px;
+  top: var(--a-topbar-height);
   right: 0;
-  bottom: 84px;
+  bottom: var(--a-content-bottom-offset);
   left: 0;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -293,7 +293,7 @@ async function handleSaveLyrics(payload: {
   padding: 1.5rem 2rem 2rem;
   background: color-mix(in srgb, var(--a-color-paper) 94%, #efe5d5 6%);
   border-top: 1px solid var(--a-color-line-soft);
-  z-index: 2000;
+  z-index: var(--a-z-player-lyrics);
 }
 
 .music-lyrics-panel__header {

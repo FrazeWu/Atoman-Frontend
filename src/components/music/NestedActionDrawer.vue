@@ -25,7 +25,7 @@ import {
 } from '@/api/musicV1'
 
 type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
-const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeNestedAction, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
 const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
 const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
@@ -493,6 +493,7 @@ async function submitEdit() {
     width="500px"
     :index="sheetIndex"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
   >

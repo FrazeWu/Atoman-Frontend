@@ -79,6 +79,7 @@ const props = withDefaults(defineProps<{
   isShifted?: boolean
   isTopLayer?: boolean
   layerIndex?: number
+  stackSize?: number
   index?: number
   showBackdrop?: boolean
 }>(), {
@@ -91,6 +92,7 @@ const props = withDefaults(defineProps<{
   isShifted: false,
   isTopLayer: true,
   layerIndex: 0,
+  stackSize: 1,
   showBackdrop: true,
 })
 
@@ -141,16 +143,22 @@ const sheetIndex = computed(() => {
 })
 
 const computedLeft = computed(() => {
-  return `${32 + (sheetIndex.value * 32)}px`
+  return `calc(var(--a-sidebar-width) + ${32 + (sheetIndex.value * 32)}px)`
 })
 
 const computedWidth = computed(() => {
-  return `calc(100% - ${computedLeft.value})`
+  return `calc(100% - var(--a-sidebar-width) - ${32 + (sheetIndex.value * 32)}px)`
 })
 
 const computedHandleTop = computed(() => {
   return `${32 + (sheetIndex.value * 56)}px`
 })
+
+const hasCustomWidth = computed(() => props.width && props.width !== 'min(100%, 480px)')
+const sheetShift = computed(() => (
+  hasCustomWidth.value ? Math.max(0, props.stackSize - props.layerIndex - 1) * 32 : 0
+))
+const sheetStackEdge = computed(() => Math.max(0, props.stackSize - 1) * 32)
 
 const sheetStyle = computed(() => {
   if (props.side === 'bottom') {
@@ -159,17 +167,19 @@ const sheetStyle = computed(() => {
       'max-width': '100%',
       left: 0,
       right: 0,
-      top: 'auto'
+      top: 'auto',
+      '--a-sheet-shift': `${sheetShift.value}px`,
     }
   }
 
-  const hasCustomWidth = props.width && props.width !== 'min(100%, 480px)'
-  if (hasCustomWidth) {
+  if (hasCustomWidth.value) {
     return {
       width: props.width,
-      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
+      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px - var(--a-sheet-stack-edge))',
       top: props.top,
-      right: 0
+      right: 0,
+      '--a-sheet-shift': `${sheetShift.value}px`,
+      '--a-sheet-stack-edge': `${sheetStackEdge.value}px`,
     }
   }
   return {
@@ -177,7 +187,8 @@ const sheetStyle = computed(() => {
     'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
     top: props.top,
     left: computedLeft.value,
-    right: 0
+    right: 0,
+    '--a-sheet-shift': `${sheetShift.value}px`,
   }
 })
 </script>
@@ -188,18 +199,18 @@ const sheetStyle = computed(() => {
 }
 
 .p-sheet-panel.is-shifted {
-  transform: translateX(-10%) scale(0.98);
+  transform: translateX(calc(-1 * var(--a-sheet-shift, 0px)));
   opacity: 0.6;
   pointer-events: none;
 }
 
 .p-sheet-layer {
   position: fixed;
-  bottom: 0;
+  bottom: var(--a-content-bottom-offset);
   background: white;
   display: flex;
   flex-direction: column;
-  z-index: 3000;
+  z-index: var(--a-z-sheet);
 }
 
 .p-sheet-layer.is-right {
@@ -226,11 +237,11 @@ const sheetStyle = computed(() => {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--a-content-bottom-offset);
   background: rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 2999;
+  z-index: var(--a-z-sheet-backdrop);
   cursor: default;
 }
 
@@ -318,6 +329,28 @@ const sheetStyle = computed(() => {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+@media (max-width: 767px) {
+  .p-sheet-layer {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+  }
+
+  .p-sheet-panel.is-shifted {
+    visibility: hidden;
+    transform: none;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-sheet-panel,
+  .fade-enter-active,
+  .fade-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 
 .slide-right-enter-active,

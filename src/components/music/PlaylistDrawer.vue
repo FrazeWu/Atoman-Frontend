@@ -28,7 +28,7 @@ import type { Song } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
-const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closePlaylist, refreshPlaylists, isLayerShifted, isTopLayer } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
@@ -372,6 +372,7 @@ watch(playlist, syncEditForm, { immediate: true })
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :index="layerIndex"
   >
     <template #header>

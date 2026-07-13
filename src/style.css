@@ -76,12 +76,29 @@
   --a-letter-spacing-wide: 0;
   --a-letter-spacing-widest: 0;
 
+  --a-topbar-height: 56px;
+  --a-player-height: 84px;
+  --a-mobile-player-height: 64px;
+  --a-player-reserved-height: 0px;
+  --a-mobile-nav-reserved-height: 0px;
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
+
   --a-z-dropdown: 40;
   --a-z-popover: 45;
-  --a-z-modal-backdrop: 90;
-  --a-z-modal: 100;
-  --a-z-toast: 110;
+  --a-z-navigation: 100;
+  --a-z-sheet-backdrop: 300;
+  --a-z-sheet: 310;
+  --a-z-modal-backdrop: 500;
+  --a-z-modal: 510;
+  --a-z-toast: 600;
+  --a-z-player-lyrics: 700;
+  --a-z-player-queue: 710;
+  --a-z-player: 720;
   --a-sidebar-width: 0px;
+}
+
+html[data-player-active='true'][data-player-pinned='true'] {
+  --a-player-reserved-height: var(--a-player-height);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -90,6 +107,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
+}
+
+body:has(.app-shell.has-sidebar) {
+  --a-sidebar-width: 16rem;
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
 }
 
 /* ─── Layout ─────────────────────────────────────────── */
@@ -854,6 +876,7 @@ body {
 .has-sidebar {
   --a-sidebar-width: 16rem;
   --a-mobile-nav-offset: 0px;
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
 }
 
 .a-module-layout {
@@ -862,7 +885,7 @@ body {
   max-width: none;
   margin: 0;
   padding: 0;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset));
   align-items: flex-start;
   position: relative;
 }
@@ -875,8 +898,8 @@ body {
   padding: 0.5rem 0;
   background-color: var(--a-color-bg);
   position: sticky;
-  top: 56px;
-  height: calc(100vh - 56px);
+  top: var(--a-topbar-height);
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -998,8 +1021,8 @@ body {
   margin: 0 auto;
   /* sticky + 固定高度 + 自身滚动 = 内容区独立滚动 */
   position: sticky;
-  top: 56px;
-  height: calc(100vh - 56px);
+  top: var(--a-topbar-height);
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset));
   overflow-y: auto;
   scroll-padding-bottom: calc(12rem + var(--a-mobile-nav-offset));
   padding: 2.5rem 2rem calc(8rem + var(--a-mobile-nav-offset, 0px));
@@ -1028,6 +1051,9 @@ body {
 }
 
 @media (max-width: 1023px) {
+  body:has(.app-shell.has-sidebar) {
+    --a-sidebar-width: 4.5rem;
+  }
   .has-sidebar {
     --a-sidebar-width: 4.5rem;
   }
@@ -1038,9 +1064,18 @@ body {
 }
 
 @media (max-width: 767px) {
+  body:has(.app-shell.has-sidebar) {
+    --a-sidebar-width: 0px;
+    --a-mobile-nav-reserved-height: calc(64px + env(safe-area-inset-bottom, 0px));
+    --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
+  }
+  html[data-player-active='true'][data-player-pinned] {
+    --a-player-reserved-height: var(--a-mobile-player-height);
+  }
   .has-sidebar {
     --a-sidebar-width: 0px;
     --a-mobile-nav-offset: 5.5rem;
+    --a-mobile-nav-reserved-height: calc(64px + env(safe-area-inset-bottom, 0px));
   }
   .a-module-layout {
     display: block;
@@ -1054,6 +1089,7 @@ body {
   .a-main-content {
     position: static;
     height: auto;
+    min-height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset));
     overflow-y: visible;
     max-width: none;
     padding: 1.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
@@ -1065,7 +1101,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 80;
+    z-index: var(--a-z-navigation);
   }
   .module-mobile-header {
     display: flex;

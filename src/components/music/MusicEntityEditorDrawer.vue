@@ -35,7 +35,7 @@ import type { Artist } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type EditorLayer = Extract<MusicSheetLayer, { kind: 'editor' }>
-const props = withDefaults(defineProps<{ layer?: EditorLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const props = withDefaults(defineProps<{ layer?: EditorLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 
 const router = useRouter()
 const {
@@ -481,6 +481,7 @@ async function finishAlbumCreate() {
     width="560px"
     :index="sheetIndex"
     :layer-index="layerIndex"
+    :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     close-type="header"

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import MusicSheetStack from '@/components/music/MusicSheetStack.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -32,5 +33,44 @@ describe('MusicSheetStack', () => {
       'artist:artist-2',
     ])
     expect(wrapper.get('.album-layer').text()).toBe('album:album-3')
+  })
+
+  it('keeps the new top sheet mounted while the lower path switches', async () => {
+    vi.useFakeTimers()
+    const drawers = useMusicDrawers()
+    const layerStub = {
+      props: ['layer'],
+      template: '<div class="sheet-layer-stub" :data-layer-key="layer.key">{{ layer.key }}</div>',
+    }
+    const wrapper = mount(MusicSheetStack, {
+      global: {
+        stubs: {
+          ArtistDrawer: layerStub,
+          AlbumDrawer: layerStub,
+          PlaylistDrawer: layerStub,
+          MusicEntityEditorDrawer: layerStub,
+          MusicCreationFlowDrawer: layerStub,
+          NestedActionDrawer: layerStub,
+          MusicMergeDrawer: layerStub,
+        },
+      },
+    })
+
+    drawers.openArtist('artist-1')
+    drawers.openAlbum('album-1')
+    drawers.openNestedAction('revise', { albumId: 'album-1' })
+    drawers.openNestedAction('history', { albumId: 'album-1' })
+    await nextTick()
+
+    const selector = '[data-layer-key="action:history:album-1"]'
+    const topBeforeSwitch = wrapper.get(selector).element
+    expect(wrapper.findAll('.sheet-layer-stub')).toHaveLength(4)
+
+    await vi.advanceTimersByTimeAsync(300)
+    await nextTick()
+
+    expect(wrapper.findAll('.sheet-layer-stub')).toHaveLength(2)
+    expect(wrapper.get(selector).element).toBe(topBeforeSwitch)
+    vi.useRealTimers()
   })
 })

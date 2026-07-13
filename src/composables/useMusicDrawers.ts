@@ -154,6 +154,7 @@ const state = ref<DrawerState>({
 const sheetStack = createSheetStack<MusicSheetLayer>({
   maxLayers: 3,
   resolveOverflow: resolveShortestMusicPath,
+  overflowTransitionMs: 300,
 })
 
 watch(sheetStack.layers, (layers) => {
@@ -324,6 +325,7 @@ export function useMusicDrawers() {
     isCreationFlowOpen,
     isMusicEditorOpen,
     layers: sheetStack.layers,
+    renderLayers: sheetStack.renderLayers,
     topLayer: sheetStack.top,
     popLayer: sheetStack.pop,
     popToLayer: sheetStack.popTo,

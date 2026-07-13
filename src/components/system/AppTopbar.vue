@@ -125,9 +125,9 @@ onBeforeUnmount(() => {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--a-z-navigation);
   background: var(--a-color-bg);
-  height: 56px;
+  height: var(--a-topbar-height);
   transition: background-color 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease;
 }
 .topbar::after {

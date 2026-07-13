@@ -72,7 +72,7 @@ const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
 <style scoped>
 .mobile-bottom-nav {
   position: relative;
-  z-index: 60;
+  z-index: var(--a-z-navigation);
 }
 
 .mobile-bottom-nav__bar {

@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .player {
   position: fixed;
-  bottom: var(--a-mobile-nav-reserved-height);
+  bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height));
   width: 100%;
   z-index: var(--a-z-player, 720);
   background: var(--a-color-paper);

@@ -12,7 +12,7 @@
       </main>
       <BlogSheetStack />
       <MobileBottomNav v-if="showMobileBottomNav" />
-      <SiteFooter v-if="!hasSidebar" />
+      <SiteFooter v-if="!isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
     </div>
   </n-config-provider>
@@ -75,7 +75,7 @@ onMounted(() => {
 
 .app-main {
   flex: 1;
-  padding-bottom: 128px;
+  padding-bottom: var(--a-footer-reserved-height);
   background: #fff;
   transition: opacity 0.5s ease, filter 0.5s ease;
 }

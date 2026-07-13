@@ -1,6 +1,7 @@
 import { mount, config } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
+import { nextTick } from 'vue'
 import PSheet from '@/components/ui/PSheet.vue'
 
 config.global.plugins = [createTestingPinia({ stubActions: false })]
@@ -202,6 +203,36 @@ describe('PSheet.vue', () => {
     })
     expect(wrapper.get('[aria-label="关闭历史记录"]')).toBeTruthy()
     expect(wrapper.text()).not.toContain('CLOSE')
+  })
+
+  it('accepts a panel class and height for a constrained bottom sheet', () => {
+    const wrapper = mount(PSheet, {
+      props: {
+        show: true,
+        side: 'bottom',
+        panelClass: 'site-footer-sheet',
+        height: '400px',
+      },
+    })
+    const panel = wrapper.get('.p-sheet-panel')
+    expect(panel.classes()).toContain('site-footer-sheet')
+    expect(panel.attributes('style')).toContain('height: 400px')
+  })
+
+  it('focuses the close control when a header sheet opens', async () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, side: 'bottom', title: '关于' },
+    })
+    document.body.appendChild(wrapper.get('.p-sheet-root').element)
+
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({ show: true })
+    await nextTick()
+
+    const closeButton = document.querySelector('.header-close-btn')
+    expect(closeButton).toBeInstanceOf(HTMLButtonElement)
+    expect(document.activeElement).toBe(closeButton)
+    wrapper.unmount()
   })
 
 })

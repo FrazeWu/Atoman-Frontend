@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '@/App.vue'
 
 const styleSource = readFileSync(resolve(__dirname, '../../../src/style.css'), 'utf8')
+const appSource = readFileSync(resolve(__dirname, '../../../src/App.vue'), 'utf8')
+const playerSource = readFileSync(resolve(__dirname, '../../../src/components/music/AudioPlayer.vue'), 'utf8')
 const getBlock = (selector: string) => {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = styleSource.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'))
@@ -98,16 +100,22 @@ describe('App responsive shell', () => {
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
   })
 
-  it('omits the footer on sidebar module routes', async () => {
+  it('keeps the footer on sidebar module routes', async () => {
     const { wrapper } = await mountAppAt('/')
 
-    expect(wrapper.find('.site-footer-stub').exists()).toBe(false)
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(true)
   })
 
   it('keeps the footer on non-sidebar routes', async () => {
     const { wrapper } = await mountAppAt('/plain')
 
     expect(wrapper.find('.site-footer-stub').exists()).toBe(true)
+  })
+
+  it('omits the footer on auth layout routes', async () => {
+    const { wrapper } = await mountAppAt('/login')
+
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(false)
   })
 })
 
@@ -139,5 +147,25 @@ describe('shared responsive shell CSS', () => {
     expect(mobileBlock).toContain('--a-sidebar-width: 0px;')
     expect(mobileBlock).toContain('--a-mobile-nav-offset: 5.5rem;')
     expect(mobileBlock).toContain('calc(7rem + env(safe-area-inset-bottom))')
+  })
+
+  it('includes the fixed footer in shared bottom offsets', () => {
+    expect(styleSource).toContain('--a-footer-reserved-height: 0px;')
+    expect(styleSource).toContain('var(--a-footer-reserved-height)')
+    expect(styleSource).toContain('body:has(.site-footer)')
+    expect(styleSource).toContain('--a-footer-reserved-height: 88px;')
+    expect(appSource).toContain('padding-bottom: var(--a-footer-reserved-height)')
+    expect(hasSidebarBlock).toContain('var(--a-footer-reserved-height)')
+  })
+
+  it('uses a taller footer only on mobile routes without a sidebar', () => {
+    expect(mobileBlock).toContain('--a-footer-reserved-height: 0px;')
+    expect(mobileBlock).toContain('--a-footer-reserved-height: calc(112px + env(safe-area-inset-bottom, 0px));')
+    expect(mobileBlock).toContain('.app-shell.has-sidebar .site-footer')
+    expect(mobileBlock).toContain('display: none;')
+  })
+
+  it('keeps the fixed player above the footer and mobile navigation', () => {
+    expect(playerSource).toContain('bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height))')
   })
 })

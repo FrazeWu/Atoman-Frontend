@@ -81,7 +81,8 @@
   --a-mobile-player-height: 64px;
   --a-player-reserved-height: 0px;
   --a-mobile-nav-reserved-height: 0px;
-  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
+  --a-footer-reserved-height: 0px;
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
 
   --a-z-dropdown: 40;
   --a-z-popover: 45;
@@ -109,9 +110,14 @@ body {
   color: var(--a-color-fg);
 }
 
+body:has(.site-footer) {
+  --a-footer-reserved-height: 88px;
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
+}
+
 body:has(.app-shell.has-sidebar) {
   --a-sidebar-width: 16rem;
-  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
 }
 
 /* ─── Layout ─────────────────────────────────────────── */
@@ -876,7 +882,7 @@ body:has(.app-shell.has-sidebar) {
 .has-sidebar {
   --a-sidebar-width: 16rem;
   --a-mobile-nav-offset: 0px;
-  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
+  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
 }
 
 .a-module-layout {
@@ -1067,7 +1073,11 @@ body:has(.app-shell.has-sidebar) {
   body:has(.app-shell.has-sidebar) {
     --a-sidebar-width: 0px;
     --a-mobile-nav-reserved-height: calc(64px + env(safe-area-inset-bottom, 0px));
-    --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height));
+    --a-footer-reserved-height: 0px;
+    --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
+  }
+  body:has(.site-footer):not(:has(.app-shell.has-sidebar)) {
+    --a-footer-reserved-height: calc(112px + env(safe-area-inset-bottom, 0px));
   }
   html[data-player-active='true'][data-player-pinned] {
     --a-player-reserved-height: var(--a-mobile-player-height);
@@ -1084,6 +1094,9 @@ body:has(.app-shell.has-sidebar) {
   }
   .p-sidebar,
   .a-sidebar {
+    display: none;
+  }
+  .app-shell.has-sidebar .site-footer {
     display: none;
   }
   .a-main-content {

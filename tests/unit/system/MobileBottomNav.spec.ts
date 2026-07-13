@@ -106,12 +106,41 @@ describe('useResponsiveShell', () => {
 
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('论坛')
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('时间线')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('关于')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('联系我们')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('问题反馈')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('使用条款')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('隐私政策')
     expect(wrapper.findAll('.header-close-btn')).toHaveLength(1)
     expect(wrapper.find('[data-testid="mobile-more-sheet-close"]').exists()).toBe(false)
 
     await wrapper.get('.header-close-btn').trigger('click')
 
     expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(false)
+  })
+
+  it('opens existing footer content from the more sheet', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: { template: '<div />' } },
+      ],
+    })
+
+    await router.push('/')
+    await router.isReady()
+
+    const wrapper = mount(MobileBottomNav, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-tab-key="more"]').trigger('click')
+    await wrapper.get('[data-footer-panel="about"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('.site-footer-sheet').text()).toContain('关于凹凸庵')
   })
 
   it('uses shutter navigation for the create tab target', async () => {

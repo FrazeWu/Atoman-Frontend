@@ -11,7 +11,7 @@
           v-if="show"
           ref="panelRef"
           class="p-sheet-layer p-sheet-panel"
-          :class="[`is-${side}`, { 'is-shifted': isShifted }]"
+          :class="[`is-${side}`, panelClass, { 'is-shifted': isShifted }]"
           :style="sheetStyle"
           role="dialog"
           :aria-modal="isTopLayer ? 'true' : undefined"
@@ -37,6 +37,7 @@
             </slot>
             <button
               v-if="showHeaderClose"
+              ref="closeButtonRef"
               class="header-close-btn"
               type="button"
               :aria-label="`关闭${title}`"
@@ -72,6 +73,8 @@ const props = withDefaults(defineProps<{
   title?: string
   width?: string
   maxWidth?: string
+  height?: string
+  panelClass?: string
   top?: string
   side?: 'left' | 'right' | 'bottom'
   closeType?: 'bookmark' | 'header' | 'both'
@@ -100,13 +103,18 @@ defineEmits(['close'])
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
+const closeButtonRef = ref<HTMLButtonElement | null>(null)
 
 watch(
   () => [props.show, props.isTopLayer] as const,
   async ([show, isTopLayer]) => {
     if (!show || !isTopLayer) return
     await nextTick()
-    panelRef.value?.focus()
+    if (closeButtonRef.value) {
+      closeButtonRef.value.focus()
+    } else {
+      panelRef.value?.focus()
+    }
   },
   { immediate: true },
 )
@@ -165,6 +173,7 @@ const sheetStyle = computed(() => {
     return {
       width: '100%',
       'max-width': '100%',
+      height: props.height,
       left: 0,
       right: 0,
       top: 'auto',

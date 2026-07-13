@@ -119,9 +119,11 @@ export const notificationRoom = {
 } as const
 
 export const footbarLinks = [
-  { label: '关于', href: '/about' },
-  { label: '联系我们', href: 'mailto:hello@atoman.org' },
-  { label: '提交 Issue', href: 'https://github.com/FrazeWu/Atoman/issues' },
-  { label: '使用条款', href: '/terms' },
-  { label: '隐私政策', href: '/privacy' },
+  { label: '关于', panel: 'about', group: 'primary' },
+  { label: '联系我们', panel: 'contact', group: 'primary' },
+  { label: '问题反馈', panel: 'feedback', group: 'primary' },
+  { label: '使用条款', panel: 'terms', group: 'secondary' },
+  { label: '隐私政策', panel: 'privacy', group: 'secondary' },
 ] as const
+
+export type FootbarPanel = typeof footbarLinks[number]['panel']

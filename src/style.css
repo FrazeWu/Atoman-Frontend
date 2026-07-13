@@ -5,10 +5,15 @@
   --a-color-surface: #f8fafc;
   --a-color-muted: #64748b;
   --a-color-muted-soft: #94a3b8;
-  --a-color-danger: #ef4444;
+  --a-color-primary: #2563eb;
+  --a-color-primary-hover: #1d4ed8;
+  --a-color-primary-pressed: #1e40af;
+  --a-color-primary-contrast: #ffffff;
+  --a-color-danger: #dc2626;
   --a-color-danger-bg: #ffffff;
-  --a-color-success: var(--a-color-ink-soft);
+  --a-color-success: #0d9488;
   --a-color-success-bg: #ffffff;
+  --a-color-warning: #ea580c;
   --a-color-disabled-fg: #94a3b8;
   --a-color-disabled-border: #e2e8f0;
   --a-color-disabled-bg: #f1f5f9;
@@ -16,18 +21,18 @@
   --a-color-paper-soft: #f8fafc;
   --a-color-paper-wash: #f1f5f9;
   --a-color-ink: #0f172a;
-  --a-color-ink-muted: #475569;
+  --a-color-ink-muted: #334155;
   --a-color-ink-soft: #64748b;
   --a-color-line: #cbd5e1;
   --a-color-line-soft: #f1f5f9;
   --a-color-tape: rgba(15, 23, 42, 0.04);
-  --a-color-danger-ink: #991b1b;
-  --a-color-danger-line: #ef4444;
+  --a-color-danger-ink: #dc2626;
+  --a-color-danger-line: #fecaca;
 
-  --a-color-accent-confirm: var(--a-color-ink);
-  --a-color-accent-confirm-hover: color-mix(in srgb, var(--a-color-ink) 85%, #000);
-  --a-color-accent-destructive: #ea580c;
-  --a-color-accent-destructive-hover: #c2410c;
+  --a-color-accent-confirm: var(--a-color-primary);
+  --a-color-accent-confirm-hover: var(--a-color-primary-hover);
+  --a-color-accent-destructive: var(--a-color-danger);
+  --a-color-accent-destructive-hover: #b91c1c;
 
 
   --a-border-width: 1px;
@@ -35,7 +40,8 @@
   --a-border-color: var(--a-color-border);
   --a-border: var(--a-border-width) var(--a-border-style) var(--a-border-color);
 
-  --a-radius-none: 4px; /* Change straight corners to 4px unified radius */
+  --a-radius-base: 4px;
+  --a-radius-none: var(--a-radius-base);
 
   /* Hard paper stack shadows - all flat now */
   --a-shadow-button: none;
@@ -61,14 +67,14 @@
   --a-text-lg: 1.125rem;
 
   --a-font-weight-normal: 500;
-  --a-font-weight-strong: 700;
+  --a-font-weight-strong: 500;
   --a-font-weight-black: 500;
   --a-font-meta: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --a-font-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  --a-letter-spacing-tight: -0.03em;
-  --a-letter-spacing-wide: 0.08em;
-  --a-letter-spacing-widest: 0.12em;
+  --a-letter-spacing-tight: 0;
+  --a-letter-spacing-wide: 0;
+  --a-letter-spacing-widest: 0;
 
   --a-z-dropdown: 40;
   --a-z-popover: 45;

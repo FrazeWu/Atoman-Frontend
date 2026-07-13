@@ -473,8 +473,8 @@ onMounted(() => {
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 

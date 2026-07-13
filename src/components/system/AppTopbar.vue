@@ -202,9 +202,9 @@ onBeforeUnmount(() => {
   transform: rotate(45deg);
 }
 .logo-text {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 1.2rem;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 .logo-block {
   min-width: 0;
@@ -223,16 +223,16 @@ onBeforeUnmount(() => {
 }
 .logo-notice {
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   white-space: nowrap;
 }
 .logo-version {
   font-size: 0.52rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   text-transform: uppercase;
 }
@@ -257,13 +257,13 @@ onBeforeUnmount(() => {
   padding: 0 0.75rem;
   border-radius: 0px; /* Straight corner block */
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   text-decoration: none;
   background: transparent;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
-.nav-link-name { font-weight: 900; }
+.nav-link-name { font-weight: 500; }
 .nav-link:hover,
 .nav-link.active {
   color: var(--a-color-fg);
@@ -278,7 +278,7 @@ onBeforeUnmount(() => {
   padding: 0 0.625rem;
   border-radius: 0px; /* Straight corner */
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted-soft);
   text-decoration: none;
   transition: color 0.2s ease, background-color 0.2s ease;

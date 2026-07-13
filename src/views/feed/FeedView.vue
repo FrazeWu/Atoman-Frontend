@@ -245,7 +245,7 @@
                 {{ feedItemSource(item.feed_item)!.title }}
               </button>
               <span v-else class="a-label a-muted">RSS</span>
-              <span v-if="item.feed_item.duration" style="color:var(--a-color-muted-soft);font-weight:700">
+              <span v-if="item.feed_item.duration" style="color:var(--a-color-muted-soft);font-weight: 500">
                 时长: {{ item.feed_item.duration }}
               </span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.feed_item.published_at) }}</span>
@@ -1468,7 +1468,7 @@ onUnmounted(() => {
   color: var(--a-color-text);
   padding: 0.45rem 0.7rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -1483,7 +1483,7 @@ onUnmounted(() => {
   color: var(--a-color-text);
   padding: 0.45rem 0.7rem;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -1644,8 +1644,8 @@ onUnmounted(() => {
   padding: 0.25rem 0.5rem;
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);
@@ -1668,7 +1668,7 @@ onUnmounted(() => {
   color: var(--a-color-fg);
   cursor: pointer;
   font: inherit;
-  font-weight: 800;
+  font-weight: 500;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.16em;

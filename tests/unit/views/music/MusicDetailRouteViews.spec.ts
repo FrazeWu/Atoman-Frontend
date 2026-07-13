@@ -13,6 +13,13 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({
     params: mocks.routeParams,
   }),
+  useRouter: () => ({}),
+}))
+
+vi.mock('@/composables/useMusicSheetRouteSync', () => ({
+  useMusicSheetRouteSync: () => ({
+    syncEntityRoute: (_key: string, open: () => void) => open(),
+  }),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({

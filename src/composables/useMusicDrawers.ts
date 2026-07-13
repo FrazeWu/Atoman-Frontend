@@ -152,7 +152,7 @@ export function useMusicDrawers() {
       key: `artist:${id}`,
       kind: 'artist',
       title: '艺术家详情',
-      route: `/artist/${id}`,
+      route: `/music/artist/${id}`,
       payload: { artistId: id },
     })
   }
@@ -164,7 +164,7 @@ export function useMusicDrawers() {
       key: `album:${id}`,
       kind: 'album',
       title: '专辑详情',
-      route: `/album/${id}`,
+      route: `/music/album/${id}`,
       payload: { albumId: id },
     })
   }
@@ -176,7 +176,7 @@ export function useMusicDrawers() {
       key: `playlist:${id}`,
       kind: 'playlist',
       title: '歌单详情',
-      route: `/playlist/${id}`,
+      route: `/music/playlist/${id}`,
       payload: { playlistId: id },
     })
   }

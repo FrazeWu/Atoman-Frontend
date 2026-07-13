@@ -14,6 +14,9 @@ import AppSidebar from '@/components/system/AppSidebar.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
 import MusicSheetStack from '@/components/music/MusicSheetStack.vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
+import { useRouter } from 'vue-router'
 
 const { sidebarCollapsed } = useSidebar()
+useMusicSheetRouteSync(useRouter())
 </script>

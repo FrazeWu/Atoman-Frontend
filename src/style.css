@@ -102,36 +102,36 @@ body {
 .a-title {
   font-size: 3rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   line-height: 1.05;
 }
 .a-title-lg {
   font-size: 3.75rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   line-height: 1;
 }
 .a-title-xl {
   font-size: 4.5rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   line-height: 1;
 }
 .a-title-sm {
   font-size: 2rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 .a-subtitle {
   font-size: 1.5rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 .a-label {
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-widest);
+  letter-spacing: 0;
 }
 .a-muted {
   color: var(--a-color-muted);
@@ -155,7 +155,7 @@ body {
   font-family: inherit;
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-widest);
+  letter-spacing: 0;
   text-decoration: none;
   transition: transform 0.12s ease, box-shadow 0.12s ease, text-decoration-color 0.12s ease;
   white-space: nowrap;
@@ -221,7 +221,7 @@ body {
   font-weight: var(--a-font-weight-black);
   font-size: var(--a-text-xs);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-widest);
+  letter-spacing: 0;
   border-bottom: var(--a-border);
   text-decoration: none;
   color: var(--a-color-fg);
@@ -286,14 +286,14 @@ body {
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.16em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .settings-center__nav-item strong {
   font-size: 0.96rem;
-  font-weight: 950;
+  font-weight: 500;
   line-height: 1.2;
 }
 
@@ -335,7 +335,7 @@ body {
   margin-top: 0.15rem;
   color: var(--a-color-ink);
   font-size: clamp(1.25rem, 2vw, 1.55rem);
-  font-weight: 950;
+  font-weight: 500;
 }
 
 .settings-center__section-head p {
@@ -371,7 +371,7 @@ body {
 .settings-block__control strong {
   color: var(--a-color-ink);
   font-size: 0.96rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .settings-block__copy small,
@@ -436,7 +436,7 @@ body {
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-widest);
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 .a-field-hint,
@@ -657,7 +657,7 @@ body {
 .p-modal-title {
   font-size: var(--a-text-lg);
   font-weight: 500;
-  letter-spacing: var(--a-letter-spacing-tight);
+  letter-spacing: 0;
 }
 .a-modal-close,
 .p-modal-close {
@@ -830,7 +830,7 @@ body {
   font-size: 0.65rem;
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
   padding: 0.15rem 0.5rem;
   border: var(--a-border);
 }
@@ -895,10 +895,10 @@ body {
 .a-sidebar-label,
 .p-sidebar-label {
   padding: 1rem 2rem 0.5rem;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.3em;
+  letter-spacing: 0;
   color: #adb5bd;
 }
 .a-sidebar-helper,
@@ -973,7 +973,7 @@ body {
   background-color: transparent;
   color: var(--a-color-fg);
   border-left-color: var(--a-color-ink);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .a-sidebar-item.active::before,
@@ -1078,7 +1078,7 @@ body {
   .module-mobile-header__title {
     margin: 0;
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: 500;
     color: var(--a-color-ink);
   }
   .module-mobile-header__action {
@@ -1087,7 +1087,7 @@ body {
     background: transparent;
     cursor: pointer;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--a-color-text);
   }
 }

@@ -282,7 +282,7 @@ const logout = async () => {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   text-decoration: none;
   white-space: nowrap;
@@ -307,7 +307,7 @@ const logout = async () => {
   align-items: center;
   gap: 0.45rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   background: none;
   border: none;
@@ -354,7 +354,7 @@ const logout = async () => {
   padding: 0 0.75rem; /* 取消上下内边距，完全通过 height 居中 */
   margin: 0;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
   white-space: nowrap;
@@ -397,7 +397,7 @@ const logout = async () => {
   padding: 0 0.75rem; /* 移除上下 padding */
   height: 100%; /* 占满父级容器高度 */
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   font-family: inherit;
   min-width: 0;
 }
@@ -439,7 +439,7 @@ const logout = async () => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-fg);
   border-top: none; /* 移除顶部边框，避免双重边框 */
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
   overflow-y: auto;
   min-height: 80px;
   width: 100%;
@@ -481,7 +481,7 @@ const logout = async () => {
   background: none;
   border: none;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -598,7 +598,7 @@ const logout = async () => {
   border-radius: var(--a-radius-none);
   cursor: pointer;
   padding: 0.375rem 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.875rem;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -622,7 +622,7 @@ const logout = async () => {
 }
 
 .user-name {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .chevron {
@@ -652,7 +652,7 @@ const logout = async () => {
   text-align: left;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   text-decoration: none;
   background: none;

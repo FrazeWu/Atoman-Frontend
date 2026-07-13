@@ -410,7 +410,7 @@ const canPublishPodcast = computed(() => siteAccessStore ? siteAccessStore.isFea
 
 .forum-sidebar-tag {
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   padding: 0.2rem 0.45rem;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);

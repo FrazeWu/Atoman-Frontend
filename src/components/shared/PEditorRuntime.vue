@@ -957,7 +957,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.65rem;
   border: 1px solid var(--a-color-ink);
   flex-shrink: 0;
@@ -994,7 +994,7 @@ onBeforeUnmount(() => {
 
 .mode-switch-label {
   font-size: 0.84rem;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .mode-switch-state {
@@ -1008,7 +1008,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-size: 0.72rem;
   font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .mode-switch.active {
@@ -1046,8 +1046,8 @@ onBeforeUnmount(() => {
 
 .tb-row-label {
   font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted);
   margin-right: 0.2rem;
@@ -1066,7 +1066,7 @@ onBeforeUnmount(() => {
   font-weight: var(--a-font-weight-strong, 700);
   font-family: inherit;
   cursor: pointer;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   line-height: 1;
   white-space: nowrap;
   transition: background-color 0.12s ease, color 0.12s ease;
@@ -1120,7 +1120,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 900;
+  font-weight: 500;
   font-size: 1rem;
   color: #000;
   pointer-events: none;
@@ -1174,7 +1174,7 @@ onBeforeUnmount(() => {
   background: var(--a-color-paper);
   border: 1px solid var(--a-color-line-soft);
   min-width: 200px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  box-shadow: none;
   max-height: 200px;
   overflow-y: auto;
 }
@@ -1200,7 +1200,7 @@ onBeforeUnmount(() => {
 
 .mention-name {
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .mention-username {
@@ -1233,7 +1233,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: #1e1e2e;
   border: 1px solid var(--a-color-line-soft);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   color: #cdd6f4;
 }
 
@@ -1293,9 +1293,9 @@ onBeforeUnmount(() => {
   transform: translateX(-50%);
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #9ca3af;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: lowercase;
   pointer-events: none;
 }
@@ -1306,11 +1306,11 @@ onBeforeUnmount(() => {
   border: 1px solid #4b5563;
   color: #9ca3af;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   font-family: inherit;
   padding: 0.2rem 0.55rem;
   cursor: pointer;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   transition: background 150ms, color 150ms;
 }
 
@@ -1324,5 +1324,5 @@ onBeforeUnmount(() => {
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-widest);
+  letter-spacing: 0;
 }

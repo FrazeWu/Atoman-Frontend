@@ -52,8 +52,8 @@ const items = computed(() => getMobileMoreItems())
   color: var(--a-color-muted);
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .mobile-more-sheet__grid {
@@ -76,15 +76,15 @@ const items = computed(() => getMobileMoreItems())
 }
 
 .mobile-more-sheet__item-label {
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .mobile-more-sheet__item-helper {
   color: var(--a-color-muted);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 </style>

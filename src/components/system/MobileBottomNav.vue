@@ -105,8 +105,8 @@ const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
 
 .mobile-bottom-nav__tab-copy {
   font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-align: center;
 }
 @media (min-width: 768px) {

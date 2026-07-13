@@ -201,7 +201,7 @@ const CommentNode = defineComponent({
 
 .comment-thread__submit {
   border: 1px solid var(--a-color-fg);
-  border-radius: 999px;
+  border-radius: 4px;
   padding: 0.45rem 0.9rem;
 }
 

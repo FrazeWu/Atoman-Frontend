@@ -195,9 +195,9 @@ onMounted(async () => {
 .admin-tab {
   padding: 0.5rem 1.5rem;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   border: 1px solid transparent;
   border-bottom: none;
   background: transparent;
@@ -211,7 +211,7 @@ onMounted(async () => {
   border: 1px solid var(--a-color-line-soft);
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   background: var(--a-color-bg);
   cursor: pointer;
 }
@@ -231,23 +231,23 @@ onMounted(async () => {
 .entry-info { display: flex; align-items: center; gap: 0.75rem; }
 .entry-name {
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 500;
   text-decoration: none;
   color: var(--a-color-fg);
 }
 .entry-name:hover { text-decoration: underline; }
 .entry-type {
   font-size: 0.5rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   border: 1px solid var(--a-color-fg);
   padding: 0.125rem 0.375rem;
 }
 .entry-album-type {
   font-size: 0.5rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   border: 1px solid var(--a-color-muted-soft);
   color: var(--a-color-muted);
   padding: 0.125rem 0.375rem;
@@ -255,9 +255,9 @@ onMounted(async () => {
 .entry-meta { display: flex; align-items: center; gap: 0.75rem; }
 .entry-status {
   font-size: 0.5rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   padding: 0.125rem 0.5rem;
   border: 1px solid;
 }

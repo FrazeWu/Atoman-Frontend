@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
 
+const user = {
+  uuid: '7f9c8c54-2e8c-42b0-b61c-e4f52ce4d71f',
+  id: 1,
+  username: 'alice',
+  email: 'alice@example.com',
+  onboarding_completed_at: null,
+}
+
 describe('onboarding store', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -11,140 +19,78 @@ describe('onboarding store', () => {
     setActivePinia(createPinia())
   })
 
-  it('opens onboarding for authenticated user without completion timestamp', () => {
+  const authenticate = () => {
     const auth = useAuthStore()
+    auth.token = 'token'
     auth.isAuthenticated = true
-    auth.user = {
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    }
+    auth.user = { ...user }
+    return auth
+  }
+
+  it('loads enabled RSS recommendations', async () => {
+    authenticate()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      items: [{
+        id: 'recommendation-1',
+        feed_source_id: 'source-1',
+        title: 'Example Feed',
+        category: 'blog',
+        rss_url: 'https://example.com/feed.xml',
+        cover_url: '',
+        health_status: 'healthy',
+        enabled: true,
+        sort_order: 1,
+      }],
+    }), { status: 200 }))
 
     const store = useOnboardingStore()
-    store.initialize(auth.user)
+    await store.loadRecommendations()
 
-    expect(store.isVisible).toBe(true)
-    expect(store.currentStep).toBe('overview')
+    expect(store.recommendations).toHaveLength(1)
+    expect(store.recommendations[0]?.title).toBe('Example Feed')
   })
 
-  it('does not open onboarding for user already completed', () => {
-    const auth = useAuthStore()
-    auth.isAuthenticated = true
-    auth.user = {
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: '2026-06-02T10:00:00Z',
-    }
+  it('records server completion before updating the user', async () => {
+    const auth = authenticate()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      onboarding_completed_at: '2026-07-12T12:00:00Z',
+    }), { status: 200 }))
 
     const store = useOnboardingStore()
     store.initialize(auth.user)
+    const completed = await store.complete()
 
+    expect(completed).toBe(true)
     expect(store.isVisible).toBe(false)
+    expect(auth.user?.onboarding_completed_at).toBe('2026-07-12T12:00:00Z')
   })
 
-  it('resumes the feed subscription step after a cross-module handoff', () => {
-    const auth = useAuthStore()
-    auth.isAuthenticated = true
-    auth.user = {
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    }
-
-    const store = useOnboardingStore()
-    store.initialize(auth.user, 'feed-subscribe')
-
-    expect(store.isVisible).toBe(true)
-    expect(store.currentStep).toBe('feed-subscribe')
-  })
-
-  it('keeps onboarding closed locally when completion request fails', async () => {
+  it('hides locally and queues synchronization when completion fails', async () => {
+    const auth = authenticate()
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
 
-    const auth = useAuthStore()
-    auth.token = 'token'
-    auth.isAuthenticated = true
-    auth.user = {
-      uuid: '7f9c8c54-2e8c-42b0-b61c-e4f52ce4d71f',
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    }
-
     const store = useOnboardingStore()
     store.initialize(auth.user)
-    await store.complete()
+    const completed = await store.complete()
 
+    expect(completed).toBe(false)
     expect(store.isVisible).toBe(false)
-    expect(auth.user?.onboarding_completed_at).toBeTruthy()
-
-    setActivePinia(createPinia())
-    const restoredAuth = useAuthStore()
-    restoredAuth.isAuthenticated = true
-    restoredAuth.user = {
-      uuid: '7f9c8c54-2e8c-42b0-b61c-e4f52ce4d71f',
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    }
-
-    const restoredStore = useOnboardingStore()
-    restoredStore.initialize(restoredAuth.user)
-
-    expect(restoredStore.isVisible).toBe(false)
-    expect(restoredAuth.user?.onboarding_completed_at).toBeTruthy()
+    expect(auth.user?.onboarding_completed_at).toBeNull()
+    expect(localStorage.getItem(`atoman_onboarding_pending:${user.uuid}`)).toBe('1')
   })
 
-  it('marks completion and persists user state', async () => {
+  it('retries a pending completion when initialized again', async () => {
+    const auth = authenticate()
+    localStorage.setItem(`atoman_onboarding_pending:${user.uuid}`, '1')
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      onboarding_completed_at: '2026-06-02T12:00:00Z',
+      onboarding_completed_at: '2026-07-12T13:00:00Z',
     }), { status: 200 }))
-
-    const auth = useAuthStore()
-    auth.token = 'token'
-    auth.isAuthenticated = true
-    auth.user = {
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    }
 
     const store = useOnboardingStore()
     store.initialize(auth.user)
-    await store.complete()
+    await vi.waitFor(() => expect(auth.user?.onboarding_completed_at).toBe('2026-07-12T13:00:00Z'))
 
+    expect(localStorage.getItem(`atoman_onboarding_pending:${user.uuid}`)).toBeNull()
     expect(store.isVisible).toBe(false)
-    expect(auth.user?.onboarding_completed_at).toBe('2026-06-02T12:00:00Z')
-    expect(JSON.parse(localStorage.getItem('user') || '{}').onboarding_completed_at).toBe('2026-06-02T12:00:00Z')
-  })
-
-  it('completes onboarding after first successful subscription in final step', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      onboarding_completed_at: '2026-06-02T12:00:00Z',
-    }), { status: 200 }))
-
-    const auth = useAuthStore()
-    auth.isAuthenticated = true
-    auth.token = 'token'
-    auth.user = {
-      id: 1,
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    }
-
-    const store = useOnboardingStore()
-    store.initialize(auth.user)
-    store.currentStep = 'feed-subscribe'
-    await store.handleSubscriptionSuccess()
-
-    expect(store.isVisible).toBe(false)
-    expect(auth.user?.onboarding_completed_at).toBe('2026-06-02T12:00:00Z')
   })
 })

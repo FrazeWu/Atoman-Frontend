@@ -124,17 +124,16 @@ describe('useMusicDrawers', () => {
     expect(state.value.playlistRefreshToken).toBe(1)
   })
 
-  it('keeps repeated entities and tasks as ordered layers', () => {
+  it('rebuilds the shortest path when opening a fourth sheet', () => {
     const drawers = useMusicDrawers()
     drawers.openArtist('artist-1')
-    drawers.openArtist('artist-2')
-    drawers.openAlbum('album-3')
-    drawers.openNestedAction('history', { albumId: 'album-3' })
+    drawers.openAlbum('album-1')
+    drawers.openNestedAction('revise', { albumId: 'album-1' })
+    drawers.openNestedAction('history', { albumId: 'album-1' })
+
     expect(drawers.layers.value.map(layer => layer.key)).toEqual([
-      'artist:artist-1',
-      'artist:artist-2',
-      'album:album-3',
-      'action:history:album-3',
+      'album:album-1',
+      'action:history:album-1',
     ])
   })
 })

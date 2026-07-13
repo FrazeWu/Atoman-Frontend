@@ -61,6 +61,16 @@ export interface AdminFeedFulltextSourceRow {
   }>
 }
 
+export interface AdminOnboardingFeedRecommendation {
+  id: string
+  feed_source_id: string
+  title: string
+  rss_url: string
+  health_status: string
+  enabled: boolean
+  sort_order: number
+}
+
 export type AdminFeedFulltextItemStatus = 'pending' | 'fetching' | 'retry' | 'success' | 'failed'
 
 export interface AdminFeedFulltextItemRow {
@@ -124,6 +134,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   const health = ref<AdminFeedFulltextHealth | null>(null)
   const settings = ref<AdminFeedFulltextSettings | null>(null)
   const sources = ref<AdminFeedFulltextSourceRow[]>([])
+  const onboardingRecommendations = ref<AdminOnboardingFeedRecommendation[]>([])
   const items = ref<AdminFeedFulltextItemRow[]>([])
   const sourcesMeta = ref<AdminListMeta>({ total: 0, page: 1, limit: 20 })
   const itemsMeta = ref<AdminListMeta>({ total: 0, page: 1, limit: 20 })
@@ -216,6 +227,44 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     } finally {
       loadingItems.value = false
     }
+  }
+
+  async function fetchOnboardingRecommendations(token: string | null) {
+    const response = await fetch(api.admin.feed.onboardingRecommendations, {
+      headers: buildHeaders(token),
+    })
+    if (!response.ok) throw new Error(await parseError(response, '加载新手推荐失败'))
+    const payload = await response.json()
+    onboardingRecommendations.value = payload.items || []
+    return onboardingRecommendations.value
+  }
+
+  async function createOnboardingRecommendation(payload: { feed_source_id: string; enabled: boolean; sort_order: number }, token: string | null) {
+    const response = await fetch(api.admin.feed.onboardingRecommendations, {
+      method: 'POST',
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) throw new Error(await parseError(response, '添加新手推荐失败'))
+    return response.json()
+  }
+
+  async function updateOnboardingRecommendation(id: string, payload: { enabled?: boolean; sort_order?: number }, token: string | null) {
+    const response = await fetch(api.admin.feed.onboardingRecommendation(id), {
+      method: 'PATCH',
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) throw new Error(await parseError(response, '更新新手推荐失败'))
+    return response.json()
+  }
+
+  async function deleteOnboardingRecommendation(id: string, token: string | null) {
+    const response = await fetch(api.admin.feed.onboardingRecommendation(id), {
+      method: 'DELETE',
+      headers: buildHeaders(token),
+    })
+    if (!response.ok) throw new Error(await parseError(response, '移除新手推荐失败'))
   }
 
   async function updateSourceEnabled(sourceId: string, enabled: boolean, token: string | null) {
@@ -346,6 +395,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     health,
     settings,
     sources,
+    onboardingRecommendations,
     items,
     sourcesMeta,
     itemsMeta,
@@ -357,6 +407,10 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     fetchSettings,
     fetchSources,
     fetchItems,
+    fetchOnboardingRecommendations,
+    createOnboardingRecommendation,
+    updateOnboardingRecommendation,
+    deleteOnboardingRecommendation,
     createSource,
     updateSource,
     importGlobalOPML,

@@ -124,6 +124,7 @@ export function useApi() {
       sendVerification: `${apiUrl}/auth/send-verification`,
       verifyEmail: `${apiUrl}/auth/verify-email`,
       onboardingComplete: `${apiUrl}/auth/onboarding/complete`,
+      onboardingRecommendations: `${apiUrl}/feed/onboarding/recommendations`,
     },
 
     settings: {
@@ -136,6 +137,8 @@ export function useApi() {
       feed: {
         sources: `${apiUrl}/admin/feed/sources`,
         source: (sourceId: number | string) => `${apiUrl}/admin/feed/sources/${sourceId}`,
+        onboardingRecommendations: `${apiUrl}/admin/feed/onboarding/recommendations`,
+        onboardingRecommendation: (recommendationId: number | string) => `${apiUrl}/admin/feed/onboarding/recommendations/${recommendationId}`,
         opmlImport: `${apiUrl}/feed/sources/opml/import`,
         opmlExport: `${apiUrl}/feed/sources/opml/export`,
       },

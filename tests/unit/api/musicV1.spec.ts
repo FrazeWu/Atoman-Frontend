@@ -33,6 +33,30 @@ describe('api v1 client', () => {
     vi.unstubAllGlobals()
   })
 
+  it('loads artist revision history through the artist wiki namespace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/revisions/2')) {
+        return new Response(JSON.stringify({ data: { id: 'revision-2', version_number: 2 } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ data: [{ id: 'revision-2', version_number: 2 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }))
+
+    const revisions = await musicV1.listArtistRevisions('artist-1')
+    const revision = await musicV1.getArtistRevision('artist-1', 2)
+
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/artists/artist-1/revisions', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/artists/artist-1/revisions/2', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(revisions[0].version_number).toBe(2)
+    expect(revision.version_number).toBe(2)
+  })
+
   it('unwraps successful data envelopes', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: { id: 'album_uuid', title: 'Album' }, meta: { source: 'test' } }),
@@ -934,5 +958,14 @@ describe('music building-block barrel', () => {
     expect(barrel).toContain('MusicSourcesSection')
     expect(barrel).toContain('MusicReviewNotesSection')
     expect(barrel).toContain('AlbumEditorShell')
+  })
+})
+
+describe('music merge API contract', () => {
+  it('declares merge endpoints as returning review edits', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1.ts'), 'utf8')
+
+    expect(source).toMatch(/mergeMusicArtists\([^\n]+\): Promise<MusicEditSummary>/)
+    expect(source).toMatch(/mergeMusicAlbums\([^\n]+\): Promise<MusicEditSummary>/)
   })
 })

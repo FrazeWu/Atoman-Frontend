@@ -2,7 +2,6 @@
   <n-config-provider :theme-overrides="themeOverrides">
     <div :class="['app-shell', { 'has-sidebar': hasSidebar }]">
       <AppTopbar />
-      <FirstLoginOnboarding />
       <main :class="[
         'app-main', 
         { 'app-main--auth': isAuthRoute },
@@ -24,7 +23,6 @@ import { NConfigProvider } from 'naive-ui'
 import { useRoute } from 'vue-router'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
-import FirstLoginOnboarding from '@/components/onboarding/FirstLoginOnboarding.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useSiteAccessStore } from '@/stores/siteAccess'

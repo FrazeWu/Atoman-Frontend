@@ -108,6 +108,35 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
   }
 }
 
+const artistLayer = (id: string): MusicSheetLayer => ({
+  key: `artist:${id}`,
+  kind: 'artist',
+  title: '艺术家详情',
+  route: `/music/artist/${id}`,
+  payload: { artistId: id },
+})
+
+const albumLayer = (id: string): MusicSheetLayer => ({
+  key: `album:${id}`,
+  kind: 'album',
+  title: '专辑详情',
+  route: `/music/album/${id}`,
+  payload: { albumId: id },
+})
+
+function resolveShortestMusicPath(layer: MusicSheetLayer): MusicSheetLayer[] {
+  if (layer.kind !== 'action') return [layer]
+  if (!layer.payload.data || typeof layer.payload.data !== 'object') return [layer]
+
+  if ('albumId' in layer.payload.data) {
+    return [albumLayer(String(layer.payload.data.albumId)), layer]
+  }
+  if ('artistId' in layer.payload.data) {
+    return [artistLayer(String(layer.payload.data.artistId)), layer]
+  }
+  return [layer]
+}
+
 // Global state singleton
 const state = ref<DrawerState>({
   artistId: null,
@@ -122,7 +151,10 @@ const state = ref<DrawerState>({
   creationFlow: null,
 })
 
-const sheetStack = createSheetStack<MusicSheetLayer>()
+const sheetStack = createSheetStack<MusicSheetLayer>({
+  maxLayers: 3,
+  resolveOverflow: resolveShortestMusicPath,
+})
 
 watch(sheetStack.layers, (layers) => {
   const reversed = [...layers].reverse()
@@ -148,25 +180,13 @@ export function useMusicDrawers() {
   }
 
   const openArtist = (id: string) => {
-    sheetStack.push({
-      key: `artist:${id}`,
-      kind: 'artist',
-      title: '艺术家详情',
-      route: `/music/artist/${id}`,
-      payload: { artistId: id },
-    })
+    sheetStack.push(artistLayer(id))
   }
   const closeArtist = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
   const refreshArtist = () => { state.value.artistRefreshToken += 1 }
   
   const openAlbum = (id: string) => {
-    sheetStack.push({
-      key: `album:${id}`,
-      kind: 'album',
-      title: '专辑详情',
-      route: `/music/album/${id}`,
-      payload: { albumId: id },
-    })
+    sheetStack.push(albumLayer(id))
   }
   const closeAlbum = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
   const refreshAlbum = () => { state.value.albumRefreshToken += 1 }

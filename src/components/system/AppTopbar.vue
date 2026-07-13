@@ -27,14 +27,13 @@
         </a>
       </div>
 
-      <nav v-if="!isAuthRoute" class="nav" data-onboarding-anchor="modules-nav">
+      <nav v-if="!isAuthRoute" class="nav">
         <a
           v-for="room in navRooms"
           :key="room.key"
           :href="moduleUrl(room.key)"
           class="nav-link"
           :class="{ active: isRoomActive(room.key) }"
-          :data-onboarding-anchor="room.key === 'feed' ? 'feed-nav-link' : undefined"
           @click.prevent="navigateTo(room.key)"
         >
           <span class="nav-link-name">{{ room.name }}</span>

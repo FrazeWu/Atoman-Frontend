@@ -9,7 +9,6 @@
           <div style="display:flex;gap:0.75rem;align-items:center">
             <PPress
               v-if="authStore.isAuthenticated"
-              data-onboarding-anchor="feed-subscribe-trigger"
               @click="toggleAddModal"
               :label="showAddModal ? '取消添加' : '+ 订阅'"
               :variant="showAddModal ? 'secondary' : 'primary'"
@@ -67,6 +66,16 @@
       @delete-rule="deleteSubscriptionRule"
       @update-filter-rules="updateFilterRules"
       @update-automation-rules="updateAutomationRules"
+    />
+    <p v-if="onboardingMessage" class="feed-onboarding-message" role="status">{{ onboardingMessage }}</p>
+    <OnboardingFeedRecommendations
+      v-if="showOnboardingRecommendations"
+      :recommendations="onboardingStore.recommendations"
+      :busy="onboardingBusy"
+      :error="onboardingActionError || onboardingStore.recommendationError"
+      :failed-ids="onboardingFailedIds"
+      @subscribe="subscribeOnboardingRecommendations"
+      @skip="skipOnboarding"
     />
     <FeedArticleSheet
       :show="showArticleSheet"
@@ -316,10 +325,11 @@ import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.v
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
+import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFeedRecommendations.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
-import { useOnboardingStore } from '@/stores/onboarding'
+import { useOnboardingStore, type OnboardingFeedRecommendation } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { Filter } from 'lucide-vue-next'
@@ -350,6 +360,20 @@ const feedCopy = {
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
 const subscriptions = computed(() => feedStore.subscriptions)
+const hasExternalRSSSubscription = computed(() => subscriptions.value.some((subscription) => (
+  subscription.feed_source?.source_type === 'external_rss'
+)))
+const onboardingReady = ref(false)
+const onboardingBusy = ref(false)
+const onboardingActionError = ref('')
+const onboardingFailedIds = ref<string[]>([])
+const onboardingMessage = ref('')
+const showOnboardingRecommendations = computed(() => (
+  onboardingReady.value
+  && authStore.isAuthenticated
+  && onboardingStore.isVisible
+  && !hasExternalRSSSubscription.value
+))
 const groups = computed(() => feedStore.groups)
 const starredIds = computed(() => feedStore.starredItemIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
@@ -788,6 +812,44 @@ const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
     addSubscriptionError.value = error instanceof Error ? error.message : '添加失败'
   } finally {
     addingSubscription.value = false
+  }
+}
+
+const subscribeOnboardingRecommendations = async (recommendations: OnboardingFeedRecommendation[]) => {
+  if (!recommendations.length || onboardingBusy.value) return
+  onboardingBusy.value = true
+  onboardingActionError.value = ''
+  onboardingFailedIds.value = []
+  onboardingMessage.value = ''
+  try {
+    const results = await Promise.all(recommendations.map((recommendation) => (
+      feedStore.subscribeToRSS(recommendation.rss_url, recommendation.title)
+    )))
+    const successCount = results.filter(Boolean).length
+    const failedCount = results.length - successCount
+    if (!successCount) {
+      onboardingFailedIds.value = recommendations.map((recommendation) => recommendation.id)
+      onboardingActionError.value = '订阅未成功，请重试。'
+      return
+    }
+
+    await onboardingStore.complete()
+    await Promise.all([feedStore.fetchSubscriptions(), fetchTimeline()])
+    onboardingMessage.value = failedCount
+      ? `已订阅 ${successCount} 个来源，${failedCount} 个未成功`
+      : `已订阅 ${successCount} 个来源`
+  } finally {
+    onboardingBusy.value = false
+  }
+}
+
+const skipOnboarding = async () => {
+  onboardingBusy.value = true
+  onboardingActionError.value = ''
+  try {
+    await onboardingStore.skip()
+  } finally {
+    onboardingBusy.value = false
   }
 }
 
@@ -1415,6 +1477,12 @@ watch([querySourceId, queryGroupId, queryPage, querySearch], async () => {
   await fetchTimeline()
 }, { immediate: true })
 
+watch(hasExternalRSSSubscription, (hasExternalRSS) => {
+  if (hasExternalRSS && onboardingStore.isVisible) {
+    void onboardingStore.complete()
+  }
+})
+
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     showArticleSheet.value = false
@@ -1423,11 +1491,17 @@ const handleKeyDownGlobal = (e: KeyboardEvent) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (authStore.isAuthenticated) {
     void feedStore.fetchStarredIds()
     void feedStore.fetchReadingListIds()
+    if (hasExternalRSSSubscription.value && onboardingStore.isVisible) {
+      await onboardingStore.complete()
+    } else if (onboardingStore.isVisible) {
+      await onboardingStore.loadRecommendations()
+    }
   }
+  onboardingReady.value = true
   window.addEventListener('keydown', handleKeyDownGlobal)
 })
 
@@ -1448,6 +1522,13 @@ onUnmounted(() => {
 
 .feed-page {
   padding-bottom: 12rem;
+}
+
+.feed-onboarding-message {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--a-color-text);
+  background: var(--a-color-surface-soft);
 }
 
 .source-type-filters {

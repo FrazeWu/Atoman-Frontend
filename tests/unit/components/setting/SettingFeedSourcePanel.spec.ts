@@ -11,9 +11,14 @@ const fetchItems = vi.fn().mockResolvedValue([])
 const retryItem = vi.fn().mockResolvedValue(null)
 const importGlobalOPML = vi.fn().mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
 const exportGlobalOPML = vi.fn().mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
+const fetchOnboardingRecommendations = vi.fn().mockResolvedValue([])
+const createOnboardingRecommendation = vi.fn().mockResolvedValue(null)
+const updateOnboardingRecommendation = vi.fn().mockResolvedValue(null)
+const deleteOnboardingRecommendation = vi.fn().mockResolvedValue(null)
 
 const storeState = reactive({
   sources: [] as Array<Record<string, any>>,
+  onboardingRecommendations: [] as Array<Record<string, any>>,
   loadingSources: false,
   fetchSources,
   createSource,
@@ -24,6 +29,10 @@ const storeState = reactive({
   retryItem,
   importGlobalOPML,
   exportGlobalOPML,
+  fetchOnboardingRecommendations,
+  createOnboardingRecommendation,
+  updateOnboardingRecommendation,
+  deleteOnboardingRecommendation,
 })
 
 vi.mock('@/stores/auth', () => ({
@@ -90,6 +99,7 @@ describe('SettingFeedSourcePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storeState.sources = []
+    storeState.onboardingRecommendations = []
     storeState.loadingSources = false
     fetchSources.mockResolvedValue([])
     createSource.mockResolvedValue(null)
@@ -100,6 +110,10 @@ describe('SettingFeedSourcePanel', () => {
     retryItem.mockResolvedValue(null)
     importGlobalOPML.mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
     exportGlobalOPML.mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
+    fetchOnboardingRecommendations.mockResolvedValue([])
+    createOnboardingRecommendation.mockResolvedValue(null)
+    updateOnboardingRecommendation.mockResolvedValue(null)
+    deleteOnboardingRecommendation.mockResolvedValue(null)
   })
 
   it('mounted 后直接加载 feed source 列表', async () => {
@@ -111,6 +125,60 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
 
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(fetchOnboardingRecommendations).toHaveBeenCalledWith('admin-token')
+  })
+
+  it('管理新手推荐的新增、启停和移除', async () => {
+    storeState.sources = [createSourceRow(), createSourceRow({ id: 'source-2', title: '另一个源' })]
+    storeState.onboardingRecommendations = [{
+      id: 'recommendation-1',
+      feed_source_id: 'source-1',
+      title: '示例源',
+      rss_url: 'https://example.com/feed.xml',
+      health_status: 'healthy',
+      enabled: true,
+      sort_order: 0,
+    }]
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-test="onboarding-recommendation-source"]').setValue('source-2')
+    const addButton = wrapper.findAll('button').find((button) => button.text() === '添加推荐')
+    await addButton!.trigger('click')
+    await flushPromises()
+    expect(createOnboardingRecommendation).toHaveBeenCalledWith({
+      feed_source_id: 'source-2',
+      enabled: true,
+      sort_order: 1,
+    }, 'admin-token')
+
+    await wrapper.get('[data-test="onboarding-recommendation-enabled"]').trigger('click')
+    await flushPromises()
+    expect(updateOnboardingRecommendation).toHaveBeenCalledWith('recommendation-1', { enabled: false }, 'admin-token')
+
+    const removeButton = wrapper.findAll('button').find((button) => button.text() === '移除')
+    await removeButton!.trigger('click')
+    await flushPromises()
+    expect(deleteOnboardingRecommendation).toHaveBeenCalledWith('recommendation-1', 'admin-token')
+  })
+
+  it('新手推荐只列出外部 RSS 来源', async () => {
+    storeState.sources = [
+      createSourceRow({ id: 'external-source', title: '外部 RSS' }),
+      createSourceRow({ id: 'internal-source', title: '内部来源', source_type: 'internal_channel' }),
+    ]
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    const options = wrapper.get('[data-test="onboarding-recommendation-source"]').findAll('option')
+    expect(options.map((option) => option.text())).toContain('外部 RSS')
+    expect(options.map((option) => option.text())).not.toContain('内部来源')
   })
 
   it('将状态筛选放在独立滚动框而不是标题操作区内', async () => {

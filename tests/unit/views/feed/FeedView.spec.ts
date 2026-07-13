@@ -3,8 +3,10 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedView from '@/views/feed/FeedView.vue'
+import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFeedRecommendations.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { useOnboardingStore } from '@/stores/onboarding'
 import { usePlayerStore } from '@/stores/player'
 
 const { navigateModuleWithShutter, routerPush, routerReplace, routeQuery } = vi.hoisted(() => ({
@@ -80,6 +82,46 @@ describe('FeedView', () => {
     feedStore.deleteSubscriptionRule = vi.fn().mockResolvedValue(true) as any
     feedStore.reorderSubscriptionRules = vi.fn().mockResolvedValue(true) as any
     feedStore.applySubscriptionRules = vi.fn().mockResolvedValue(true) as any
+  })
+
+  it('subscribes selected onboarding recommendations and completes after one success', async () => {
+    const feedStore = useFeedStore()
+    const onboardingStore = useOnboardingStore()
+    const recommendations = [
+      { id: 'rec-1', feed_source_id: 'source-1', enabled: true, sort_order: 1, title: 'One', category: 'blog', rss_url: 'https://one.example/feed', cover_url: '', health_status: 'healthy' },
+      { id: 'rec-2', feed_source_id: 'source-2', enabled: true, sort_order: 2, title: 'Two', category: 'blog', rss_url: 'https://two.example/feed', cover_url: '', health_status: 'healthy' },
+    ]
+    onboardingStore.isVisible = true
+    onboardingStore.recommendations = recommendations
+    vi.spyOn(onboardingStore, 'loadRecommendations').mockResolvedValue(undefined)
+    const completeSpy = vi.spyOn(onboardingStore, 'complete').mockResolvedValue(true)
+    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToRSS').mockImplementation(async (url) => url.includes('one'))
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PPress: true,
+          PBadge: true,
+          PShortcutHints: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+          FeedSourceArticlesSheet: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    const panel = wrapper.findComponent(OnboardingFeedRecommendations)
+    expect(panel.exists()).toBe(true)
+    panel.vm.$emit('subscribe', recommendations)
+    await flushPromises()
+
+    expect(subscribeSpy).toHaveBeenCalledTimes(2)
+    expect(completeSpy).toHaveBeenCalledOnce()
+    expect(wrapper.text()).toContain('已订阅 1 个来源，1 个未成功')
   })
 
   it('opens internal posts in the feed article sheet', async () => {

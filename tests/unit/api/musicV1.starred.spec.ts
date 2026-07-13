@@ -9,6 +9,7 @@ import {
   getMusicPlaylist,
   listMusicStarred,
   mergeMusicArtists,
+  mergeMusicAlbums,
   musicV1Endpoints,
   listSongBookmarks,
   reorderMusicPlaylistSongs,
@@ -180,8 +181,8 @@ describe('music v1 starred and playlist adapters', () => {
 
   it('merges artists through the music namespace', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { merged: true } }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ data: { id: 'edit-artist', type: 'merge_artist', status: 'open' } }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } },
     )))
 
     const result = await mergeMusicArtists('artist-target', 'artist-source')
@@ -192,7 +193,26 @@ describe('music v1 starred and playlist adapters', () => {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ source_artist_id: 'artist-source' }),
     })
-    expect(result.merged).toBe(true)
+    expect(result.id).toBe('edit-artist')
+    expect(result.status).toBe('open')
+  })
+
+  it('merges albums through the music namespace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'edit-album', type: 'merge_album', status: 'open' } }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await mergeMusicAlbums('album-target', 'album-source')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/albums/album-target/merge', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ source_album_id: 'album-source' }),
+    })
+    expect(result.id).toBe('edit-album')
+    expect(result.status).toBe('open')
   })
 
   it('gets playlist details with songs', async () => {

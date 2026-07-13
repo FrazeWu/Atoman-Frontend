@@ -130,6 +130,25 @@ describe('ArtistDrawer.vue', () => {
     expect(wrapper.text()).toContain('1975')
   })
 
+  it('opens the merge target when the artist is closed with redirect_to', async () => {
+    getMusicArtist.mockResolvedValueOnce({
+      id: '1',
+      name: 'Merged Artist',
+      entry_status: 'closed',
+      redirect_to: 'artist-target',
+    })
+	getMusicArtist.mockResolvedValueOnce({
+		id: 'artist-target',
+		name: 'Target Artist',
+		entry_status: 'open',
+	})
+
+    mount(ArtistDrawer)
+    await vi.dynamicImportSettled()
+
+    expect(musicDrawerMocks.openArtist).toHaveBeenCalledWith('artist-target')
+  })
+
   it('renders current and former members for group artists', async () => {
     const wrapper = mount(ArtistDrawer)
 

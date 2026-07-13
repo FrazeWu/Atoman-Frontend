@@ -1,39 +1,31 @@
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types'
 
-export const onboardingSteps = ['overview', 'modules', 'feed-entry', 'feed-subscribe'] as const
+export type OnboardingFeedRecommendation = {
+  id: string
+  feed_source_id: string
+  enabled: boolean
+  sort_order: number
+  title: string
+  category: string
+  rss_url: string
+  cover_url: string
+  health_status: string
+}
 
-export type OnboardingStep = typeof onboardingSteps[number]
-
-const completedStoragePrefix = 'atoman_onboarding_completed_at:'
+const pendingStoragePrefix = 'atoman_onboarding_pending:'
 
 function resolveUserKey(user: User | null) {
   if (!user) return null
   return user.uuid || user.id?.toString() || user.username
 }
 
-function resolveCompletedStorageKey(user: User | null) {
+function pendingStorageKey(user: User | null) {
   const userKey = resolveUserKey(user)
-  return userKey ? `${completedStoragePrefix}${userKey}` : null
-}
-
-function readLocalCompletedAt(user: User | null) {
-  const key = resolveCompletedStorageKey(user)
-  if (!key) return null
-  return localStorage.getItem(key)
-}
-
-function rememberLocalCompletedAt(user: User | null, completedAt: string) {
-  const key = resolveCompletedStorageKey(user)
-  if (!key) return
-  localStorage.setItem(key, completedAt)
-}
-
-function isOnboardingStep(value: unknown): value is OnboardingStep {
-  return typeof value === 'string' && onboardingSteps.includes(value as OnboardingStep)
+  return userKey ? `${pendingStoragePrefix}${userKey}` : null
 }
 
 export const useOnboardingStore = defineStore('onboarding', () => {
@@ -41,128 +33,109 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   const authStore = useAuthStore()
 
   const isVisible = ref(false)
-  const currentStep = ref<OnboardingStep>('overview')
-  const initialized = ref(false)
-  const initializedForUserKey = ref<string | null>(null)
   const completing = ref(false)
-
-  const stepIndex = computed(() => onboardingSteps.indexOf(currentStep.value))
-  const isLastStep = computed(() => currentStep.value === onboardingSteps[onboardingSteps.length - 1])
+  const loadingRecommendations = ref(false)
+  const recommendations = ref<OnboardingFeedRecommendation[]>([])
+  const recommendationError = ref('')
+  const initializedForUserKey = ref<string | null>(null)
 
   const reset = () => {
     isVisible.value = false
-    currentStep.value = 'overview'
-    initialized.value = false
-    initializedForUserKey.value = null
     completing.value = false
+    loadingRecommendations.value = false
+    recommendations.value = []
+    recommendationError.value = ''
+    initializedForUserKey.value = null
   }
 
-  const applyLocalCompletion = (user: User) => {
-    const completedAt = user.onboarding_completed_at || readLocalCompletedAt(user)
-    if (!completedAt) return null
-
-    rememberLocalCompletedAt(user, completedAt)
-    if (!user.onboarding_completed_at) {
-      authStore.updateUser({ onboarding_completed_at: completedAt })
-    }
-    return completedAt
-  }
-
-  const initialize = (user = authStore.user, handoffStep?: OnboardingStep | null) => {
-    const userKey = resolveUserKey(user)
-    if (!userKey) {
-      reset()
-      return
-    }
-
-    const completedAt = applyLocalCompletion(user)
-    if (completedAt) {
-      initialized.value = true
-      initializedForUserKey.value = userKey
-      isVisible.value = false
-      currentStep.value = 'overview'
-      return
-    }
-
-    const hasHandoffStep = isOnboardingStep(handoffStep)
-    if (initialized.value && initializedForUserKey.value === userKey && !hasHandoffStep) {
-      return
-    }
-
-    initialized.value = true
-    initializedForUserKey.value = userKey
-    currentStep.value = hasHandoffStep ? handoffStep : 'overview'
-    isVisible.value = true
-  }
-
-  const nextStep = () => {
-    const index = onboardingSteps.indexOf(currentStep.value)
-    if (index < 0 || index >= onboardingSteps.length - 1) return
-    currentStep.value = onboardingSteps[index + 1]
-  }
-
-  const skip = async () => {
-    await complete()
-  }
-
-  const complete = async () => {
-    if (completing.value) return
-    if (!authStore.isAuthenticated || !authStore.user) {
-      reset()
-      return
-    }
-
-    const existingCompletedAt = authStore.user.onboarding_completed_at || readLocalCompletedAt(authStore.user)
-    if (existingCompletedAt) {
-      rememberLocalCompletedAt(authStore.user, existingCompletedAt)
-      authStore.updateUser({ onboarding_completed_at: existingCompletedAt })
-      isVisible.value = false
-      return
-    }
-
+  const syncCompletion = async () => {
+    if (!authStore.isAuthenticated || !authStore.user || completing.value) return false
     completing.value = true
-    let completedAt = new Date().toISOString()
-    rememberLocalCompletedAt(authStore.user, completedAt)
-    authStore.updateUser({ onboarding_completed_at: completedAt })
-    isVisible.value = false
     try {
       const response = await fetch(api.auth.onboardingComplete, {
         method: 'POST',
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         credentials: 'include',
       })
+      if (!response.ok) return false
 
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}))
-        completedAt = data.onboarding_completed_at || data.data?.onboarding_completed_at || completedAt
-        rememberLocalCompletedAt(authStore.user, completedAt)
-        authStore.updateUser({ onboarding_completed_at: completedAt })
-      }
+      const data = await response.json().catch(() => ({}))
+      const completedAt = data.onboarding_completed_at || data.data?.onboarding_completed_at
+      if (!completedAt) return false
+
+      const key = pendingStorageKey(authStore.user)
+      if (key) localStorage.removeItem(key)
+      authStore.updateUser({ onboarding_completed_at: completedAt })
+      return true
     } catch {
-      // The user already completed or skipped the guide. Keep this browser session
-      // closed even if the server write cannot be confirmed.
+      return false
     } finally {
       completing.value = false
     }
   }
 
-  const handleSubscriptionSuccess = async () => {
-    if (currentStep.value !== 'feed-subscribe') return
-    await complete()
+  const initialize = (user = authStore.user) => {
+    const userKey = resolveUserKey(user)
+    if (!userKey) {
+      reset()
+      return
+    }
+    initializedForUserKey.value = userKey
+    if (user?.onboarding_completed_at) {
+      isVisible.value = false
+      return
+    }
+
+    const key = pendingStorageKey(user)
+    if (key && localStorage.getItem(key) === '1') {
+      isVisible.value = false
+      void syncCompletion()
+      return
+    }
+    isVisible.value = true
   }
 
+  const loadRecommendations = async () => {
+    if (!authStore.isAuthenticated) return
+    loadingRecommendations.value = true
+    recommendationError.value = ''
+    try {
+      const response = await fetch(api.auth.onboardingRecommendations, {
+        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('加载推荐订阅源失败')
+      const data = await response.json().catch(() => ({}))
+      recommendations.value = Array.isArray(data.items) ? data.items : []
+    } catch (error) {
+      recommendationError.value = error instanceof Error ? error.message : '加载推荐订阅源失败'
+    } finally {
+      loadingRecommendations.value = false
+    }
+  }
+
+  const complete = async () => {
+    if (!authStore.user) return false
+    isVisible.value = false
+    const key = pendingStorageKey(authStore.user)
+    if (key) localStorage.setItem(key, '1')
+    const completed = await syncCompletion()
+    return completed
+  }
+
+  const skip = () => complete()
+  const handleSubscriptionSuccess = () => complete()
+
   return {
-    onboardingSteps,
     isVisible,
-    currentStep,
-    initialized,
     completing,
-    stepIndex,
-    isLastStep,
+    loadingRecommendations,
+    recommendations,
+    recommendationError,
     initialize,
-    nextStep,
-    skip,
+    loadRecommendations,
     complete,
+    skip,
     handleSubscriptionSuccess,
     reset,
   }

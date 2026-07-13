@@ -6,8 +6,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 import {
   listMusicAlbums,
   listMusicArtists,
-  mergeMusicAlbums,
-  mergeMusicArtists,
+  submitMusicEdit,
 } from '@/api/musicV1'
 
 type MergeTarget = { id: string; label: string; meta: string }
@@ -18,10 +17,6 @@ const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: numbe
 const {
   state,
   closeNestedAction,
-  closeArtist,
-  closeAlbum,
-  openArtist,
-  openAlbum,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -46,6 +41,7 @@ const selected = ref<MergeTarget | null>(null)
 const confirming = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 
 async function search() {
   errorMessage.value = ''
@@ -76,21 +72,21 @@ async function search() {
 async function merge() {
   if (!selected.value || !sourceId.value || loading.value) return
   errorMessage.value = ''
+  successMessage.value = ''
   loading.value = true
   try {
-    if (entity.value === 'artist') {
-      await mergeMusicArtists(selected.value.id, sourceId.value)
-      closeCurrentAction()
-      closeArtist()
-      openArtist(selected.value.id)
-    } else {
-      await mergeMusicAlbums(selected.value.id, sourceId.value)
-      closeCurrentAction()
-      closeAlbum()
-      openAlbum(selected.value.id)
-    }
+    const entityType = entity.value
+    await submitMusicEdit({
+      type: entityType === 'artist' ? 'merge_artist' : 'merge_album',
+      entity_type: entityType,
+      entity_id: sourceId.value,
+      changes: { target_id: selected.value.id },
+      reason: entityType === 'artist' ? '合并重复艺术家' : '合并重复专辑',
+    })
+    successMessage.value = '已提交审核'
+    window.setTimeout(closeCurrentAction, 1200)
   } catch {
-    errorMessage.value = '合并失败，请重新选择目标条目'
+    errorMessage.value = '提交失败，请重试'
   } finally {
     loading.value = false
   }
@@ -109,8 +105,9 @@ async function merge() {
   >
     <div class="merge-drawer">
       <p v-if="errorMessage" class="merge-error">{{ errorMessage }}</p>
+      <p v-if="successMessage" role="status">{{ successMessage }}</p>
 
-      <template v-if="!confirming">
+      <template v-if="!successMessage && !confirming">
         <div class="merge-search">
           <input
             v-model="query"
@@ -138,12 +135,12 @@ async function merge() {
         <button data-test="merge-continue" type="button" :disabled="!selected" @click="confirming = true">继续</button>
       </template>
 
-      <template v-else>
-        <p>当前条目将关闭，内容并入目标条目</p>
+      <template v-else-if="!successMessage">
+        <p>审核通过后，当前条目将并入目标条目</p>
         <strong>{{ selected?.label }}</strong>
         <div class="merge-confirm-actions">
           <button type="button" :disabled="loading" @click="confirming = false">返回</button>
-          <button data-test="merge-confirm" type="button" :disabled="loading" @click="merge">确认合并</button>
+          <button data-test="merge-confirm" type="button" :disabled="loading" @click="merge">提交审核</button>
         </div>
       </template>
     </div>

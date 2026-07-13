@@ -244,6 +244,7 @@ export type MusicArtistListItem = {
   play_count?: number
   bookmark_count?: number
   entry_status: MusicEntryStatus
+  redirect_to?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -262,6 +263,7 @@ export type MusicAlbumListItem = {
   bookmark_count?: number
   songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; cover_url?: string; lyrics?: string; status?: string; play_count?: number }>
   entry_status: MusicEntryStatus
+  redirect_to?: string | null
 }
 
 export type MusicSongListItem = {
@@ -604,8 +606,11 @@ export const musicV1Endpoints = {
   artists: () => `${apiV1Base()}/music/artists`,
   artist: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}`,
   artistMerge: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}/merge`,
+  artistRevisions: (artistId: string) => `${apiV1Base()}/artists/${artistId}/revisions`,
+  artistRevision: (artistId: string, version: number) => `${apiV1Base()}/artists/${artistId}/revisions/${version}`,
   albums: () => `${apiV1Base()}/music/albums`,
   album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
+  albumMerge: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}/merge`,
   songLyrics: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics`,
   lyricAnnotations: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations`,
   lyricAnnotation: (songId: string, annotationId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations/${annotationId}`,
@@ -1203,6 +1208,15 @@ export async function listAlbumRevisions(albumId: string): Promise<MusicRevision
   return response.data
 }
 
+export async function listArtistRevisions(artistId: string): Promise<MusicRevisionSummary[]> {
+  const response = await apiGetEnvelope<MusicRevisionSummary[]>(musicV1Endpoints.artistRevisions(artistId))
+  return response.data
+}
+
+export async function getArtistRevision(artistId: string, version: number): Promise<MusicRevisionSummary> {
+  return apiGet<MusicRevisionSummary>(musicV1Endpoints.artistRevision(artistId, version))
+}
+
 export async function getAlbumRevision(albumId: string, version: number): Promise<MusicRevisionSummary> {
   return apiGet<MusicRevisionSummary>(musicV1Endpoints.albumRevision(albumId, version))
 }
@@ -1259,9 +1273,15 @@ export async function updateMusicArtist(artistId: string, input: MusicArtistUpda
   return apiPatchJson<MusicArtistListItem>(musicV1Endpoints.artist(artistId), input)
 }
 
-export async function mergeMusicArtists(targetArtistId: string, sourceArtistId: string): Promise<{ merged: boolean }> {
-  return apiPostJson<{ merged: boolean }>(musicV1Endpoints.artistMerge(targetArtistId), {
+export async function mergeMusicArtists(targetArtistId: string, sourceArtistId: string): Promise<MusicEditSummary> {
+  return apiPostJson<MusicEditSummary>(musicV1Endpoints.artistMerge(targetArtistId), {
     source_artist_id: sourceArtistId,
+  })
+}
+
+export async function mergeMusicAlbums(targetAlbumId: string, sourceAlbumId: string): Promise<MusicEditSummary> {
+  return apiPostJson<MusicEditSummary>(musicV1Endpoints.albumMerge(targetAlbumId), {
+    source_album_id: sourceAlbumId,
   })
 }
 

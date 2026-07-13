@@ -37,6 +37,25 @@ describe('createSheetStack', () => {
     expect(stack.layers.value.map(item => item.key)).toEqual(['artist:1', 'artist:2'])
   })
 
+  it('rebuilds the stack from the overflow resolver when the layer limit is reached', () => {
+    const resolveOverflow = vi.fn((next: TestLayer) => [
+      layer('album', next.payload.id),
+      next,
+    ])
+    const stack = createSheetStack<TestLayer>({
+      maxLayers: 3,
+      resolveOverflow,
+    })
+
+    stack.push(layer('artist', '1'))
+    stack.push(layer('album', '2'))
+    stack.push(layer('history', '3'))
+    stack.push(layer('history', '4'))
+
+    expect(resolveOverflow).toHaveBeenCalledOnce()
+    expect(stack.layers.value.map(item => item.key)).toEqual(['album:4', 'history:4'])
+  })
+
   it('restores trigger focus when the top layer closes', async () => {
     vi.useFakeTimers()
     const trigger = document.createElement('button')

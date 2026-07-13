@@ -10,16 +10,30 @@ export interface BaseSheetLayer {
 
 const activeElement = () => document.activeElement instanceof HTMLElement ? document.activeElement : null
 
-export function createSheetStack<T extends BaseSheetLayer>() {
+interface SheetStackOptions<T> {
+  maxLayers?: number
+  resolveOverflow?: (next: T, current: readonly T[]) => T[]
+}
+
+export function createSheetStack<T extends BaseSheetLayer>(options: SheetStackOptions<T> = {}) {
   const layers = shallowRef<T[]>([])
   const top = computed<T | null>(() => layers.value.at(-1) ?? null)
+  const withFocusTarget = (layer: T) => ({
+    ...layer,
+    returnFocusTo: layer.returnFocusTo ?? activeElement(),
+  }) as T
 
   function push(layer: T) {
     if (top.value?.key === layer.key) return
-    layers.value = [...layers.value, {
-      ...layer,
-      returnFocusTo: layer.returnFocusTo ?? activeElement(),
-    }] as T[]
+    const next = withFocusTarget(layer)
+
+    if (options.maxLayers && layers.value.length >= options.maxLayers) {
+      const resolved = options.resolveOverflow?.(next, layers.value) ?? [next]
+      layers.value = resolved.slice(-options.maxLayers).map(withFocusTarget)
+      return
+    }
+
+    layers.value = [...layers.value, next]
   }
 
   function replaceTop(layer: T) {

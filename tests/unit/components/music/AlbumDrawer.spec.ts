@@ -19,6 +19,7 @@ vi.mock('@/components/ui/PDiscussionFAB.vue', () => ({
 const {
   openNestedAction,
   openMusicEditor,
+  openAlbum,
   getMusicAlbum,
   playAlbum,
   listAlbumBookmarks,
@@ -29,6 +30,7 @@ const {
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   openMusicEditor: vi.fn(),
+  openAlbum: vi.fn(),
   getMusicAlbum: vi.fn(),
   playAlbum: vi.fn(),
   listAlbumBookmarks: vi.fn(),
@@ -45,6 +47,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     isAlbumShifted: { value: false },
     openNestedAction,
     openMusicEditor,
+    openAlbum,
   })
 }))
 
@@ -67,6 +70,7 @@ describe('AlbumDrawer.vue', () => {
   beforeEach(() => {
     openNestedAction.mockReset()
     openMusicEditor.mockReset()
+    openAlbum.mockReset()
     getMusicAlbum.mockReset()
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
@@ -96,6 +100,27 @@ describe('AlbumDrawer.vue', () => {
     const wrapper = mount(AlbumDrawer, {
     })
     expect(wrapper.text()).toContain('Album Notes')
+  })
+
+  it('opens the merge target when the album is closed with redirect_to', async () => {
+    getMusicAlbum.mockResolvedValueOnce({
+      id: '1',
+      title: 'Merged Album',
+      entry_status: 'closed',
+      redirect_to: 'album-target',
+      songs: [],
+    })
+	getMusicAlbum.mockResolvedValueOnce({
+		id: 'album-target',
+		title: 'Target Album',
+		entry_status: 'open',
+		songs: [],
+	})
+
+    mount(AlbumDrawer)
+    await flushPromises()
+
+    expect(openAlbum).toHaveBeenCalledWith('album-target')
   })
 
   it('plays album songs through the player when clicking play album', async () => {

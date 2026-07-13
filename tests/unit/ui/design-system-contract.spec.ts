@@ -48,4 +48,15 @@ describe('approved design-system contract', () => {
     expect(toast).toContain('.p-toast--warning .p-toast-dot')
     expect(toast).toContain('var(--a-color-warning)')
   })
+
+  it('keeps shared headings at 500 and shortcut help flat', () => {
+    const pageHeader = read('src/components/ui/PPageHeader.vue')
+    const sectionHeader = read('src/components/ui/PSectionHeader.vue')
+    const shortcuts = read('src/components/ui/PShortcutHints.vue')
+
+    expect(pageHeader).not.toMatch(/font-weight:\s*(700|800|900|950)/)
+    expect(sectionHeader).not.toMatch(/font-weight:\s*(700|800|900|950)/)
+    expect(shortcuts).not.toContain('box-shadow: 3px 3px')
+    expect(shortcuts).toContain(':focus-within .shortcut-content')
+  })
 })

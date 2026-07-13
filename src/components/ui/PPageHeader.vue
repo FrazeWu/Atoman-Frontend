@@ -52,16 +52,16 @@ withDefaults(defineProps<{
   color: var(--a-color-ink-soft);
   font-family: inherit;
   font-size: 11px;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .p-page-header__title {
   color: var(--a-color-ink);
   font-size: clamp(2.25rem, 5vw, 3.5rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.1;
 }
 

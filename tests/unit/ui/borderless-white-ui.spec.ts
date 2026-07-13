@@ -71,12 +71,14 @@ describe('borderless white UI contract', () => {
     expect(pCardSource).toContain('border: none;')
     expect(pCardSource).toContain('border-bottom: 1.5px dashed var(--a-color-line-soft);')
     expect(pCardSource).toContain('border-left: 3px solid transparent;')
-    expect(pCardSource).toContain('border-radius: 8px;')
+    expect(pCardSource).toContain('border-radius: var(--a-radius-base);')
+    expect(pCardSource).not.toContain('border-radius: 8px;')
     expect(pCardSource).toContain('border-left-color: var(--a-color-ink);')
     expect(pCardSource).toContain('text-decoration: underline !important;')
 
     // PSurface contract
-    expect(pSurfaceSource).toContain('border-radius: 8px;')
+    expect(pSurfaceSource).toContain('border-radius: var(--a-radius-base);')
+    expect(pSurfaceSource).not.toContain('border-radius: 8px;')
 
     // PVideoCard contract
     expect(pVideoCardSource).toContain('border-radius: 8px;') // for vc-thumb

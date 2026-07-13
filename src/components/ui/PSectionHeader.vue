@@ -35,8 +35,8 @@ withDefaults(defineProps<{
   color: var(--a-color-ink-soft);
   font-family: inherit;
   font-size: 11px;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -44,8 +44,8 @@ withDefaults(defineProps<{
   margin: 0;
   color: var(--a-color-ink);
   font-size: clamp(1.75rem, 3.5vw, 2.75rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.1;
 }
 

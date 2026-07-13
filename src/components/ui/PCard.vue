@@ -19,7 +19,7 @@ withDefaults(defineProps<{
   border-left: 3px solid transparent; /* Reserve left border */
   background: var(--a-color-paper);
   padding: 24px;
-  border-radius: 8px; /* 8px roundness */
+  border-radius: var(--a-radius-base);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 

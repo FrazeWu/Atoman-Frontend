@@ -6,12 +6,19 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
+import type { MusicSheetLayer } from './musicSheetTypes'
 
-const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist } = useMusicDrawers()
+type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
+const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number }>(), { layerIndex: 0 })
+
+const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
-const isOpen = computed(() => creationFlow.value !== null)
-const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
+const isOpen = computed(() => props.layer !== undefined || creationFlow.value !== null)
+const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentCreationFlow = () => closeMusicCreationFlow(props.layer?.key)
 
 type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails'
 
@@ -303,7 +310,7 @@ function requestClose() {
   const hasDraft = hasCreationDraft(flow)
 
   if (hasDraft && !window.confirm('确认关闭？未保存的内容将丢失。')) return
-  closeMusicCreationFlow()
+  closeCurrentCreationFlow()
 }
 
 function handlePrimaryAction() {
@@ -350,7 +357,7 @@ async function completeCreation() {
     if (flow.draft.artist.id) {
       refreshArtist()
     }
-    closeMusicCreationFlow()
+    closeCurrentCreationFlow()
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {
@@ -362,7 +369,16 @@ async function completeCreation() {
 </script>
 
 <template>
-  <PSheet :show="isOpen" @close="requestClose" width="560px" :index="sheetIndex">
+  <PSheet
+    :show="isOpen"
+    :title="layer?.title ?? '创建音乐条目'"
+    width="560px"
+    :index="sheetIndex"
+    :layer-index="layerIndex"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    @close="requestClose"
+  >
     <div v-if="creationFlow" class="creation-flow">
       <div class="drawer-header">
         <div class="header-meta">

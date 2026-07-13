@@ -200,11 +200,11 @@ watch(
         <PButton
           variant="secondary"
           dot
-          @click="openNestedAction('merge_artist', { name: artist?.name || '' })"
+          @click="openNestedAction('merge_artist', { artistId, name: artist?.name || '' })"
         >
           合并重复条目
         </PButton>
-        <PButton variant="secondary" dot @click="openNestedAction('artist_history')">
+        <PButton variant="secondary" dot @click="openNestedAction('artist_history', { artistId })">
           版本
         </PButton>
       </div>

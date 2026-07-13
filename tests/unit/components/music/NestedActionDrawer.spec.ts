@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   listMusicArtists: vi.fn(),
   uploadMusicAsset: vi.fn(),
   listAlbumRevisions: vi.fn(),
+  listArtistRevisions: vi.fn(),
   getAlbumRevision: vi.fn(),
   revertAlbumRevision: vi.fn(),
   listAlbumDiscussions: vi.fn(),
@@ -31,6 +32,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: mocks.drawerState,
     closeNestedAction: mocks.closeNestedAction,
     refreshAlbum: mocks.refreshAlbum,
+    isLayerShifted: () => true,
+    isTopLayer: () => false,
   }),
 }))
 
@@ -43,6 +46,7 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
     submitMusicEdit: mocks.submitMusicEdit,
     updateMusicArtist: mocks.updateMusicArtist,
     listAlbumRevisions: mocks.listAlbumRevisions,
+    listArtistRevisions: mocks.listArtistRevisions,
     getAlbumRevision: mocks.getAlbumRevision,
     revertAlbumRevision: mocks.revertAlbumRevision,
     listAlbumDiscussions: mocks.listAlbumDiscussions,
@@ -118,6 +122,7 @@ describe('NestedActionDrawer.vue', () => {
     mocks.listMusicArtists.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.listAlbumRevisions.mockReset()
+    mocks.listArtistRevisions.mockReset()
     mocks.getAlbumRevision.mockReset()
     mocks.revertAlbumRevision.mockReset()
     mocks.listAlbumDiscussions.mockReset()
@@ -147,6 +152,7 @@ describe('NestedActionDrawer.vue', () => {
       created_at: '2026-06-17T00:00:00Z',
     })
     mocks.listAlbumRevisions.mockResolvedValue([])
+    mocks.listArtistRevisions.mockResolvedValue([])
     mocks.updateMusicArtist.mockResolvedValue({
       id: 'artist-1',
       name: 'Revised Artist',
@@ -164,6 +170,45 @@ describe('NestedActionDrawer.vue', () => {
   it('renders when action is present', () => {
     const wrapper = mountDrawer()
     expect(wrapper.html()).toContain('Music Wiki')
+  })
+
+  it('keeps a revision draft when another action becomes globally active', async () => {
+    mocks.drawerState.value = { artistId: null, albumId: 'album-1', nestedAction: 'history', nestedPayload: null }
+    const wrapper = mount(NestedActionDrawer, {
+      props: {
+        layer: {
+          key: 'action:revise:album-1',
+          kind: 'action',
+          title: '修改专辑',
+          payload: { action: 'revise', data: { albumId: 'album-1' } },
+        },
+        layerIndex: 1,
+      },
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+        },
+      },
+    })
+
+    await wrapper.get('[data-test="edit-reason-input"]').setValue('保留这段修订说明')
+    expect(wrapper.get('[data-test="edit-reason-input"]').element.value).toBe('保留这段修订说明')
+  })
+
+  it('loads read-only artist revision history', async () => {
+    mocks.drawerState.value = { artistId: 'artist-1', albumId: null, nestedAction: 'artist_history', nestedPayload: null }
+    mocks.listArtistRevisions.mockResolvedValue([buildRevision({
+      content_type: 'artist',
+      content_id: 'artist-1',
+      edit_summary: '修改艺术家信息',
+    })])
+
+    const wrapper = mountDrawer()
+    await flushPromises()
+
+    expect(mocks.listArtistRevisions).toHaveBeenCalledWith('artist-1')
+    expect(wrapper.text()).toContain('修改艺术家信息')
+    expect(wrapper.text()).not.toContain('恢复到此版本')
   })
 
   it('renders and submits the revise artist wiki edit form', async () => {

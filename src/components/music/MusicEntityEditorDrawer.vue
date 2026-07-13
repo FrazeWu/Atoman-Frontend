@@ -32,6 +32,10 @@ import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import type { Artist } from '@/types'
+import type { MusicSheetLayer } from './musicSheetTypes'
+
+type EditorLayer = Extract<MusicSheetLayer, { kind: 'editor' }>
+const props = withDefaults(defineProps<{ layer?: EditorLayer; layerIndex?: number }>(), { layerIndex: 0 })
 
 const router = useRouter()
 const {
@@ -42,22 +46,28 @@ const {
   openMusicCreationFlow,
   closeMusicCreationFlow,
   setMusicCreationStep,
+  isLayerShifted,
+  isTopLayer,
 } = useMusicDrawers()
 
-const editor = computed(() => state.value.musicEditor)
+const editor = computed(() => props.layer?.payload ?? state.value.musicEditor)
 const creationFlow = computed(() => state.value.creationFlow)
-const isOpen = computed(() => editor.value !== null)
+const isOpen = computed(() => props.layer !== undefined || editor.value !== null)
 const isArtistEditor = computed(() => editor.value?.entity === 'artist')
 const isAlbumEditor = computed(() => editor.value?.entity === 'album')
 const isCreateMode = computed(() => editor.value?.mode === 'create')
 const isEditMode = computed(() => editor.value?.mode === 'edit')
 const isCreateFlowActive = computed(() => isCreateMode.value && creationFlow.value !== null)
 const sheetIndex = computed(() => {
+  if (props.layer) return props.layerIndex
   let count = 0
   if (state.value.artistId !== null) count += 1
   if (state.value.albumId !== null) count += 1
   return count
 })
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentEditor = () => closeMusicEditor(props.layer?.key)
 
 const artistSubmitting = ref(false)
 const artistInitialValue = ref<MusicArtistUpdateInput>({})
@@ -227,7 +237,7 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
       await createMusicArtist(payload)
     }
     refreshArtist()
-    closeMusicEditor()
+    closeCurrentEditor()
   } catch (error) {
     console.error('Failed to submit artist:', error)
     artistErrorMessage.value = '保存艺术家失败'
@@ -332,7 +342,7 @@ async function handleAlbumEditSubmit() {
     }))
 
     refreshAlbum()
-    closeMusicEditor()
+    closeCurrentEditor()
     await router.replace(`/music/album/${current.id}`)
   } catch (error) {
     console.error('Failed to save album edit:', error)
@@ -450,7 +460,7 @@ async function finishAlbumCreate() {
     const result = await commitMusicAlbumImport(importId, buildCommitInput())
     refreshArtist()
     closeMusicCreationFlow()
-    closeMusicEditor()
+    closeCurrentEditor()
     if (result.importId) {
       await router.replace('/music')
     }
@@ -465,7 +475,17 @@ async function finishAlbumCreate() {
 </script>
 
 <template>
-  <PSheet :show="isOpen" @close="closeMusicEditor" width="560px" :index="sheetIndex" close-type="header">
+  <PSheet
+    :show="isOpen"
+    :title="layer?.title ?? sheetTitle"
+    width="560px"
+    :index="sheetIndex"
+    :layer-index="layerIndex"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    close-type="header"
+    @close="closeCurrentEditor"
+  >
     <div class="entity-editor">
       <div class="entity-editor__header">
         <PPageHeader :title="sheetTitle" accent mb="0" />
@@ -478,7 +498,7 @@ async function finishAlbumCreate() {
         <MusicCreationAlbumDetailsStep v-else />
 
         <div class="entity-editor__actions">
-          <PButton variant="secondary" @click="closeMusicEditor">关闭</PButton>
+          <PButton variant="secondary" @click="closeCurrentEditor">关闭</PButton>
           <PButton
             v-if="albumCreateStep !== 'artist'"
             variant="secondary"
@@ -535,7 +555,7 @@ async function finishAlbumCreate() {
           />
 
           <div class="entity-editor__actions">
-            <PButton variant="secondary" :disabled="albumSubmitting" @click="closeMusicEditor">取消</PButton>
+            <PButton variant="secondary" :disabled="albumSubmitting" @click="closeCurrentEditor">取消</PButton>
             <PButton :loading="albumSubmitting" loading-text="正在保存..." @click="handleAlbumEditSubmit">保存全部</PButton>
           </div>
         </template>

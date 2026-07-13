@@ -5,13 +5,16 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import type { MusicSheetLayer } from './musicSheetTypes'
 import {
   buildUpdateAlbumEdit,
   createAlbumDiscussion,
   deleteAlbumDiscussion,
   getAlbumRevision,
+  getArtistRevision,
   listAlbumDiscussions,
   listAlbumRevisions,
+  listArtistRevisions,
   replyAlbumDiscussion,
   revertAlbumRevision,
   submitMusicEdit,
@@ -21,33 +24,48 @@ import {
   type MusicSource,
 } from '@/api/musicV1'
 
-const { state, closeNestedAction, refreshAlbum } = useMusicDrawers()
+type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
+const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const { state, closeNestedAction, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
+const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
+  ? payload.value as Record<string, unknown>
+  : {})
+const albumId = computed(() => String(payloadRecord.value.albumId ?? state.value.albumId ?? '') || null)
+const artistId = computed(() => String(payloadRecord.value.artistId ?? state.value.artistId ?? '') || null)
+const currentAction = computed(() => props.layer?.payload.action ?? state.value.nestedAction)
 const isOpen = computed(() => (
-  state.value.nestedAction === 'revise'
-  || state.value.nestedAction === 'history'
-  || state.value.nestedAction === 'discussion'
-  || state.value.nestedAction === 'revise_artist'
+  currentAction.value === 'revise'
+  || currentAction.value === 'history'
+  || currentAction.value === 'artist_history'
+  || currentAction.value === 'discussion'
+  || currentAction.value === 'revise_artist'
 ))
 const sheetIndex = computed(() => {
+  if (props.layer) return props.layerIndex
   let count = 0
   if (state.value.artistId !== null) count++
   if (state.value.albumId !== null) count++
   return count
 })
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentAction = () => closeNestedAction(props.layer?.key)
 
 const titleMap: Record<string, string> = {
   revise: '修改专辑',
   revise_artist: '修改艺术家',
   history: '版本历史',
+  artist_history: '版本历史',
   discussion: '讨论'
 }
 
-const currentAction = computed(() => state.value.nestedAction)
-const displayTitle = computed(() => titleMap[state.value.nestedAction || ''] || 'Action')
+const displayTitle = computed(() => titleMap[currentAction.value || ''] || 'Action')
 const subtitleMap: Record<string, string> = {
   revise: '补充专辑信息。',
   revise_artist: '',
   history: '查看各个版本的修改内容，并恢复到需要的版本。',
+  artist_history: '查看各个版本的修改内容。',
   discussion: '',
 }
 
@@ -87,8 +105,8 @@ const discussionDraft = ref('')
 const replyDrafts = reactive<Record<string, string>>({})
 const replyingToId = ref<string | null>(null)
 
-const isArtistForm = computed(() => state.value.nestedAction === 'revise_artist')
-const isAlbumForm = computed(() => state.value.nestedAction === 'revise')
+const isArtistForm = computed(() => currentAction.value === 'revise_artist')
+const isAlbumForm = computed(() => currentAction.value === 'revise')
 const canSubmit = computed(() => !submitting.value && (isArtistForm.value || isAlbumForm.value))
 const albumTypeOptions = [
   { label: 'Album', value: 'album' },
@@ -96,7 +114,7 @@ const albumTypeOptions = [
   { label: 'Single', value: 'single' },
 ]
 
-watch(() => state.value.nestedAction, () => {
+watch(() => [currentAction.value, albumId.value, artistId.value] as const, () => {
   errorMessage.value = ''
   successMessage.value = ''
   artistDraft.name = ''
@@ -123,11 +141,14 @@ watch(() => state.value.nestedAction, () => {
   replyingToId.value = null
   for (const key of Object.keys(replyDrafts)) delete replyDrafts[key]
 
-  if (state.value.nestedAction === 'history' && state.value.albumId) {
-    void loadAlbumHistory(state.value.albumId)
+  if (currentAction.value === 'history' && albumId.value) {
+    void loadAlbumHistory(albumId.value)
   }
-  if (state.value.nestedAction === 'discussion' && state.value.albumId) {
-    void loadAlbumDiscussions(state.value.albumId)
+  if (currentAction.value === 'artist_history' && artistId.value) {
+    void loadArtistHistory(artistId.value)
+  }
+  if (currentAction.value === 'discussion' && albumId.value) {
+    void loadAlbumDiscussions(albumId.value)
   }
 }, { immediate: true })
 
@@ -179,8 +200,20 @@ async function loadAlbumHistory(albumId: string) {
   }
 }
 
+async function loadArtistHistory(artistId: string) {
+  revisionLoading.value = true
+  errorMessage.value = ''
+  try {
+    revisions.value = await listArtistRevisions(artistId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
+  } finally {
+    revisionLoading.value = false
+  }
+}
+
 async function handleRevert(version: number) {
-  if (!state.value.albumId) {
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -189,10 +222,10 @@ async function handleRevert(version: number) {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await revertAlbumRevision(state.value.albumId, version, `回滚到版本 v${version}`)
+    await revertAlbumRevision(albumId.value, version, `回滚到版本 v${version}`)
     successMessage.value = `已回滚到版本 v${version}`
     refreshAlbum()
-    await loadAlbumHistory(state.value.albumId)
+    await loadAlbumHistory(albumId.value)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '恢复失败，请稍后重试'
   } finally {
@@ -209,7 +242,7 @@ function toggleReply(discussionId: string) {
 }
 
 async function handleCreateDiscussion() {
-  if (!state.value.albumId) {
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -224,10 +257,10 @@ async function handleCreateDiscussion() {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await createAlbumDiscussion(state.value.albumId, content)
+    await createAlbumDiscussion(albumId.value, content)
     discussionDraft.value = ''
     successMessage.value = '讨论已发布'
-    await loadAlbumDiscussions(state.value.albumId)
+    await loadAlbumDiscussions(albumId.value)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '发布讨论失败'
   } finally {
@@ -236,7 +269,7 @@ async function handleCreateDiscussion() {
 }
 
 async function handleReplyDiscussion(discussionId: string) {
-  if (!state.value.albumId) {
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -251,11 +284,11 @@ async function handleReplyDiscussion(discussionId: string) {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await replyAlbumDiscussion(state.value.albumId, discussionId, content)
+    await replyAlbumDiscussion(albumId.value, discussionId, content)
     replyDrafts[discussionId] = ''
     replyingToId.value = null
     successMessage.value = '回复已发送'
-    await loadAlbumDiscussions(state.value.albumId)
+    await loadAlbumDiscussions(albumId.value)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '发送回复失败'
   } finally {
@@ -264,7 +297,7 @@ async function handleReplyDiscussion(discussionId: string) {
 }
 
 async function handleDeleteDiscussion(discussionId: string) {
-  if (!state.value.albumId) {
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -273,9 +306,9 @@ async function handleDeleteDiscussion(discussionId: string) {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await deleteAlbumDiscussion(state.value.albumId, discussionId)
+    await deleteAlbumDiscussion(albumId.value, discussionId)
     successMessage.value = '讨论已删除'
-    await loadAlbumDiscussions(state.value.albumId)
+    await loadAlbumDiscussions(albumId.value)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '删除讨论失败'
   } finally {
@@ -284,7 +317,26 @@ async function handleDeleteDiscussion(discussionId: string) {
 }
 
 async function viewRevisionDiff(revision: MusicRevisionSummary) {
-  if (!state.value.albumId) {
+	if (currentAction.value === 'artist_history') {
+		if (!artistId.value) {
+			errorMessage.value = '缺少艺术家 ID'
+			return
+		}
+		diffLoading.value = true
+		errorMessage.value = ''
+		try {
+			selectedRevision.value = await getArtistRevision(artistId.value, revision.version_number)
+			previousRevision.value = revision.previous_revision_id
+				? await getArtistRevision(artistId.value, revision.version_number - 1)
+				: null
+		} catch (error) {
+			errorMessage.value = error instanceof Error ? error.message : '加载修改内容失败'
+		} finally {
+			diffLoading.value = false
+		}
+		return
+	}
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -292,9 +344,9 @@ async function viewRevisionDiff(revision: MusicRevisionSummary) {
   diffLoading.value = true
   errorMessage.value = ''
   try {
-    selectedRevision.value = await getAlbumRevision(state.value.albumId, revision.version_number)
+    selectedRevision.value = await getAlbumRevision(albumId.value, revision.version_number)
     previousRevision.value = revision.previous_revision_id
-      ? await getAlbumRevision(state.value.albumId, revision.version_number - 1)
+      ? await getAlbumRevision(albumId.value, revision.version_number - 1)
       : null
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载修改内容失败'
@@ -322,6 +374,19 @@ function summarizeRevisionDiff(current: MusicRevisionSummary | null, previous: M
 
   const currentSnapshot = normalizeSnapshot(current.content_snapshot)
   const previousSnapshot = normalizeSnapshot(previous?.content_snapshot)
+	if (current.content_type === 'artist') {
+		const currentArtist = normalizeSnapshot(currentSnapshot.artist)
+		const previousArtist = normalizeSnapshot(previousSnapshot.artist)
+		const labels: Record<string, string> = {
+			name: '名字',
+			bio: '简介',
+			nationality: '地区',
+			image_url: '头像',
+		}
+		return Object.entries(labels)
+			.filter(([key]) => currentArtist[key] !== previousArtist[key])
+			.map(([key, label]) => `${label}：${String(previousArtist[key] ?? '空')} -> ${String(currentArtist[key] ?? '空')}`)
+	}
   const currentAlbum = normalizeSnapshot(currentSnapshot.album)
   const previousAlbum = normalizeSnapshot(previousSnapshot.album)
   const currentSongs = Array.isArray(currentSnapshot.songs) ? currentSnapshot.songs as Array<Record<string, unknown>> : []
@@ -374,7 +439,7 @@ async function submitEdit() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  const action = state.value.nestedAction
+  const action = currentAction.value
   const reason = isArtistForm.value
     ? trimmed(artistDraft.reason)
     : trimmed(albumDraft.reason)
@@ -386,10 +451,10 @@ async function submitEdit() {
   submitting.value = true
   try {
     if (action === 'revise_artist') {
-      if (!state.value.artistId) {
+      if (!artistId.value) {
         throw new Error('缺少艺术家 ID')
       }
-      await updateMusicArtist(state.value.artistId, {
+      await updateMusicArtist(artistId.value, {
         name: trimmed(artistDraft.name) || undefined,
         bio: trimmed(artistDraft.bio) || undefined,
         image_url: trimmed(artistDraft.imageUrl) || undefined,
@@ -397,10 +462,10 @@ async function submitEdit() {
         birth_year: optionalNumber(artistDraft.birthYear),
       })
     } else if (action === 'revise') {
-      if (!state.value.albumId) {
+      if (!albumId.value) {
         throw new Error('缺少专辑 ID')
       }
-      await submitMusicEdit(buildUpdateAlbumEdit(state.value.albumId, {
+      await submitMusicEdit(buildUpdateAlbumEdit(albumId.value, {
         title: trimmed(albumDraft.title) || undefined,
         release_date: trimmed(albumDraft.releaseDate) || undefined,
         description: trimmed(albumDraft.description) || undefined,
@@ -411,7 +476,7 @@ async function submitEdit() {
     }
 
     successMessage.value = '已保存'
-    closeNestedAction()
+    closeCurrentAction()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {
@@ -423,9 +488,13 @@ async function submitEdit() {
 <template>
   <PSheet
     :show="isOpen"
-    @close="closeNestedAction"
+    :title="layer?.title ?? displayTitle"
+    @close="closeCurrentAction"
     width="500px"
     :index="sheetIndex"
+    :layer-index="layerIndex"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
   >
     <div class="drawer-header">
       <p class="eyebrow">Music Wiki</p>
@@ -670,7 +739,7 @@ async function submitEdit() {
       </form>
 
       <!-- History placeholder -->
-      <div v-else-if="currentAction === 'history'" class="history-panel">
+      <div v-else-if="currentAction === 'history' || currentAction === 'artist_history'" class="history-panel">
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-else-if="revisionLoading" class="history-state">正在加载版本...</p>
         <p v-else-if="!revisions.length" class="history-state">暂无版本历史。</p>
@@ -696,6 +765,7 @@ async function submitEdit() {
               查看修改
             </button>
             <button
+				v-if="currentAction === 'history'"
               class="paper-submit history-revert"
               type="button"
               :data-test="`history-revert-button-${revision.version_number}`"

@@ -314,21 +314,21 @@ watch(
         <PButton
           variant="secondary"
           dot
-          @click="openNestedAction('revise')"
+          @click="openNestedAction('revise', { albumId })"
         >
           修改
         </PButton>
         <PButton
           variant="secondary"
           dot
-          @click="openNestedAction('history')"
+          @click="openNestedAction('history', { albumId })"
         >
           版本
         </PButton>
         <PButton
           variant="secondary"
           dot
-          @click="openNestedAction('merge_album', { title: album?.title || '' })"
+          @click="openNestedAction('merge_album', { albumId, title: album?.title || '' })"
         >
           合并重复条目
         </PButton>
@@ -390,7 +390,7 @@ watch(
         </div>
       </div>
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion')" :count="discussionCount" />
+    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId })" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </PSheet>
 </template>

@@ -44,7 +44,7 @@ const activeTab = ref<(typeof tabs)[number]>('视频')
   background: var(--a-color-paper);
   color: var(--a-color-muted);
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.45rem 0.8rem;
   cursor: pointer;
 }

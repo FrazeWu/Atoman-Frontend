@@ -397,7 +397,7 @@ function handleSeekToTimestamp(value: number) {
   width: 100%;
   aspect-ratio: 16/9;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 8px;
+  border-radius: 4px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 .vd-loading-info { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -440,7 +440,7 @@ function handleSeekToTimestamp(value: number) {
 .vd-player-wrap {
   width: 100%;
   background: #000;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   margin-bottom: 1rem;
 }
@@ -474,7 +474,7 @@ function handleSeekToTimestamp(value: number) {
 /* Info */
 .vd-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.4;
   color: var(--a-color-fg);
   margin: 0 0 0.75rem 0;
@@ -487,7 +487,7 @@ function handleSeekToTimestamp(value: number) {
   margin-bottom: 0.75rem;
 }
 .vd-channel {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   color: var(--a-color-fg);
   text-decoration: none;
@@ -505,7 +505,7 @@ function handleSeekToTimestamp(value: number) {
   color: var(--a-color-fg);
   font: inherit;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.3rem 0.65rem;
   cursor: pointer;
 }
@@ -529,7 +529,7 @@ function handleSeekToTimestamp(value: number) {
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
   background: var(--a-color-surface, #f9fafb);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .vd-desc-text {
   font-size: 0.875rem;
@@ -560,9 +560,9 @@ function handleSeekToTimestamp(value: number) {
 }
 .vd-sidebar-title {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--a-color-muted, #6b7280);
   margin: 0 0 0.75rem 0;
 }
@@ -602,7 +602,7 @@ function handleSeekToTimestamp(value: number) {
   color: var(--a-color-muted, #6b7280);
   padding: 0.5rem 0.75rem;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 8px;
+  border-radius: 4px;
   margin-bottom: 0.5rem;
 }
 </style>

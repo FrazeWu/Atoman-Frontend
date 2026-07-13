@@ -156,7 +156,7 @@ onMounted(async () => {
 .video-subscription-item__title {
   color: var(--a-color-fg);
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .video-subscription-item {

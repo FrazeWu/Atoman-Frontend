@@ -174,7 +174,7 @@ watch(sort, fetchVideos)
 .vh-recommendations__title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .vh-recommendations__note {
@@ -249,7 +249,7 @@ watch(sort, fetchVideos)
   width: 100%;
   aspect-ratio: 16/9;
   background: var(--a-color-surface);
-  border-radius: 8px;
+  border-radius: 4px;
   animation: pulse 1.4s ease-in-out infinite;
 }
 .vh-skel-info {

@@ -1,21 +1,13 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type {
   MusicCreationDraft,
   MusicCreationFlowState,
   MusicCreationFlowStep,
 } from '@/components/music/musicCreationTypes'
+import type { MusicCreationFlowSeed, MusicEditorState, MusicSheetLayer, NestedActionType } from '@/components/music/musicSheetTypes'
+import { createSheetStack } from '@/composables/useSheetStack'
 
-type NestedActionType = 'revise' | 'history' | 'add_album' | 'add_artist' | 'discussion' | 'revise_artist' | null
-
-export type MusicEditorEntity = 'artist' | 'album'
-export type MusicEditorMode = 'create' | 'edit'
-
-export interface MusicEditorState {
-  entity: MusicEditorEntity
-  mode: MusicEditorMode
-  id?: string
-  seed?: Record<string, unknown>
-}
+export type { MusicEditorEntity, MusicEditorMode, MusicEditorState } from '@/components/music/musicSheetTypes'
 
 interface DrawerState {
   artistId: string | null
@@ -28,12 +20,6 @@ interface DrawerState {
   nestedPayload: unknown
   musicEditor: MusicEditorState | null
   creationFlow: MusicCreationFlowState | null
-}
-
-type MusicCreationFlowSeed = {
-  artistId?: string | null
-  artistName?: string
-  artistLegalName?: string
 }
 
 function createEmptyDateParts() {
@@ -136,46 +122,101 @@ const state = ref<DrawerState>({
   creationFlow: null,
 })
 
+const sheetStack = createSheetStack<MusicSheetLayer>()
+
+watch(sheetStack.layers, (layers) => {
+  const reversed = [...layers].reverse()
+  const artist = reversed.find(layer => layer.kind === 'artist')
+  const album = reversed.find(layer => layer.kind === 'album')
+  const playlist = reversed.find(layer => layer.kind === 'playlist')
+  const action = reversed.find(layer => layer.kind === 'action')
+  const editor = reversed.find(layer => layer.kind === 'editor')
+
+  state.value.artistId = artist?.kind === 'artist' ? artist.payload.artistId : null
+  state.value.albumId = album?.kind === 'album' ? album.payload.albumId : null
+  state.value.playlistId = playlist?.kind === 'playlist' ? playlist.payload.playlistId : null
+  state.value.nestedAction = action?.kind === 'action' ? action.payload.action : null
+  state.value.nestedPayload = action?.kind === 'action' ? action.payload.data : null
+  state.value.musicEditor = editor?.kind === 'editor' ? editor.payload : null
+}, { flush: 'sync' })
+
 export function useMusicDrawers() {
-  const openArtist = (id: string) => { state.value.artistId = id }
-  const closeArtist = () => { state.value.artistId = null }
+  const closeLayerAndAbove = (key: string) => {
+    if (!sheetStack.layers.value.some(layer => layer.key === key)) return
+    sheetStack.popTo(key)
+    sheetStack.pop()
+  }
+
+  const openArtist = (id: string) => {
+    sheetStack.push({
+      key: `artist:${id}`,
+      kind: 'artist',
+      title: '艺术家详情',
+      route: `/artist/${id}`,
+      payload: { artistId: id },
+    })
+  }
+  const closeArtist = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
   const refreshArtist = () => { state.value.artistRefreshToken += 1 }
   
-  const openAlbum = (id: string) => { state.value.albumId = id }
-  const closeAlbum = () => { state.value.albumId = null }
+  const openAlbum = (id: string) => {
+    sheetStack.push({
+      key: `album:${id}`,
+      kind: 'album',
+      title: '专辑详情',
+      route: `/album/${id}`,
+      payload: { albumId: id },
+    })
+  }
+  const closeAlbum = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
   const refreshAlbum = () => { state.value.albumRefreshToken += 1 }
 
-  const openPlaylist = (id: string) => { state.value.playlistId = id }
-  const closePlaylist = () => { state.value.playlistId = null }
+  const openPlaylist = (id: string) => {
+    sheetStack.push({
+      key: `playlist:${id}`,
+      kind: 'playlist',
+      title: '歌单详情',
+      route: `/playlist/${id}`,
+      payload: { playlistId: id },
+    })
+  }
+  const closePlaylist = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
   const refreshPlaylists = () => { state.value.playlistRefreshToken += 1 }
   
-  const openNestedAction = (action: NestedActionType, payload: unknown = null) => {
-    state.value.nestedAction = action
-    state.value.nestedPayload = payload
+  const openNestedAction = (action: Exclude<NestedActionType, null>, payload: unknown = null) => {
+    const payloadOwner = payload && typeof payload === 'object'
+      ? ('albumId' in payload ? String(payload.albumId) : 'artistId' in payload ? String(payload.artistId) : null)
+      : null
+    const ownerId = payloadOwner ?? state.value.albumId ?? state.value.artistId ?? 'root'
+    sheetStack.push({
+      key: `action:${action}:${ownerId}`,
+      kind: 'action',
+      title: action === 'history' || action === 'artist_history' ? '历史记录' : '操作',
+      payload: { action, data: payload },
+    })
   }
-  const closeNestedAction = () => {
-    state.value.nestedAction = null
-    state.value.nestedPayload = null
-  }
+  const closeNestedAction = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
 
   const openMusicEditor = (editor: MusicEditorState) => {
     state.value.creationFlow = null
-    state.value.musicEditor = editor
+    sheetStack.push({
+      key: `editor:${editor.entity}:${editor.mode}:${editor.id ?? 'new'}`,
+      kind: 'editor',
+      title: editor.mode === 'create' ? '创建条目' : '修改条目',
+      payload: editor,
+    })
   }
 
-  const closeMusicEditor = () => {
-    state.value.musicEditor = null
+  const closeMusicEditor = (keyOrEvent?: string | Event) => {
     state.value.creationFlow = null
+    const key = typeof keyOrEvent === 'string' ? keyOrEvent : undefined
+    const targetKey = key ?? sheetStack.layers.value.find(layer => layer.kind === 'editor')?.key
+    if (targetKey) closeLayerAndAbove(targetKey)
   }
 
-  const openMusicCreationFlow = (seed?: {
-    artistId?: string | null
-    artistName?: string
-    artistLegalName?: string
-    startStep?: MusicCreationFlowStep
-  }) => {
+  const openMusicCreationFlow = (seed: MusicCreationFlowSeed = {}) => {
     state.value.creationFlow = {
-      step: seed?.startStep ?? 'artist',
+      step: seed.startStep ?? 'artist',
       draft: createEmptyDraft(seed),
       tracksCustomized: false,
       titleCustomized: false,
@@ -183,20 +224,32 @@ export function useMusicDrawers() {
       submitting: false,
       errorMessage: '',
     }
+    sheetStack.push({
+      key: `creation:${seed.artistId ?? 'new'}`,
+      kind: 'creation',
+      title: '创建音乐条目',
+      payload: seed,
+    })
   }
 
   const setMusicCreationStep = (step: MusicCreationFlowStep) => {
     if (state.value.creationFlow) state.value.creationFlow.step = step
   }
 
-  const closeMusicCreationFlow = () => {
+  const closeMusicCreationFlow = (keyOrEvent?: string | Event) => {
     state.value.creationFlow = null
-    if (state.value.musicEditor?.mode === 'create') {
-      state.value.musicEditor = null
-    }
+    const key = typeof keyOrEvent === 'string' ? keyOrEvent : undefined
+    const createEditorKey = !key && state.value.musicEditor?.mode === 'create'
+      ? sheetStack.layers.value.find(layer => layer.kind === 'editor' && layer.payload.mode === 'create')?.key
+      : undefined
+    const targetKey = key
+      ?? createEditorKey
+      ?? sheetStack.layers.value.find(layer => layer.kind === 'creation')?.key
+    if (targetKey) closeLayerAndAbove(targetKey)
   }
   
   const closeAll = () => {
+    sheetStack.clear()
     state.value.artistId = null
     state.value.artistRefreshToken = 0
     state.value.albumId = null
@@ -220,6 +273,8 @@ export function useMusicDrawers() {
     state.value.albumId !== null
     || state.value.nestedAction === 'add_album'
     || state.value.nestedAction === 'revise_artist'
+    || state.value.nestedAction === 'artist_history'
+    || state.value.nestedAction === 'merge_artist'
     || state.value.creationFlow !== null
     || state.value.musicEditor?.entity === 'artist'
     || state.value.musicEditor?.entity === 'album'
@@ -228,6 +283,7 @@ export function useMusicDrawers() {
     state.value.nestedAction === 'revise'
     || state.value.nestedAction === 'history'
     || state.value.nestedAction === 'discussion'
+    || state.value.nestedAction === 'merge_album'
     || (state.value.musicEditor?.entity === 'album' && state.value.musicEditor?.mode === 'edit')
   ))
   const isCreationFlowOpen = computed(() => state.value.creationFlow !== null)
@@ -247,5 +303,11 @@ export function useMusicDrawers() {
     isMainShifted, isArtistShifted, isAlbumShifted,
     isCreationFlowOpen,
     isMusicEditorOpen,
+    layers: sheetStack.layers,
+    topLayer: sheetStack.top,
+    popLayer: sheetStack.pop,
+    popToLayer: sheetStack.popTo,
+    isTopLayer: sheetStack.isTop,
+    isLayerShifted: sheetStack.isShifted,
   }
 }

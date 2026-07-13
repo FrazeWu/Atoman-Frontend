@@ -136,4 +136,32 @@ describe('PSheet.vue', () => {
     const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
     expect(tab.style.top).toBe('32px')
   })
+
+  it('exposes only the top layer as a modal dialog', () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, title: '专辑详情', isTopLayer: true, layerIndex: 2 },
+    })
+    const panel = wrapper.get('.p-sheet-panel')
+    expect(panel.attributes('role')).toBe('dialog')
+    expect(panel.attributes('aria-modal')).toBe('true')
+    expect(panel.attributes('aria-label')).toBe('专辑详情')
+    expect(panel.attributes('data-layer-index')).toBe('2')
+  })
+
+  it('only lets the top layer close with Escape', async () => {
+    const top = mount(PSheet, { props: { show: true, isTopLayer: true } })
+    const shifted = mount(PSheet, { props: { show: true, isTopLayer: false } })
+    await top.get('.p-sheet-panel').trigger('keydown', { key: 'Escape' })
+    await shifted.get('.p-sheet-panel').trigger('keydown', { key: 'Escape' })
+    expect(top.emitted('close')).toHaveLength(1)
+    expect(shifted.emitted('close')).toBeUndefined()
+  })
+
+  it('uses a labelled icon close control', () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, title: '历史记录', closeType: 'header' },
+    })
+    expect(wrapper.get('[aria-label="关闭历史记录"]')).toBeTruthy()
+    expect(wrapper.text()).not.toContain('CLOSE')
+  })
 })

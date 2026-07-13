@@ -3,11 +3,25 @@
     <div class="p-sheet-root">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade">
-        <div v-if="show && showBackdrop" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
+        <div v-if="show && showBackdrop && isTopLayer" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
       </Transition>
 
       <Transition :name="transitionName">
-        <div v-if="show" class="p-sheet-layer p-sheet-panel" :class="[`is-${side}`, { 'is-shifted': isShifted }]" :style="sheetStyle">
+        <div
+          v-if="show"
+          ref="panelRef"
+          class="p-sheet-layer p-sheet-panel"
+          :class="[`is-${side}`, { 'is-shifted': isShifted }]"
+          :style="sheetStyle"
+          role="dialog"
+          :aria-modal="isTopLayer ? 'true' : undefined"
+          :aria-label="title"
+          :aria-hidden="isTopLayer ? undefined : 'true'"
+          :inert="isTopLayer ? undefined : true"
+          :data-layer-index="layerIndex"
+          tabindex="-1"
+          @keydown.esc="isTopLayer && $emit('close')"
+        >
           <!-- Left/Right Edge Close Tab (Taped Component Style) -->
           <PSheetTab 
             v-if="showBookmarkTab"
@@ -21,7 +35,16 @@
             <slot name="header">
               <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
             </slot>
-            <button v-if="showHeaderClose" class="header-close-btn a-font-meta" @click="$emit('close')">CLOSE</button>
+            <button
+              v-if="showHeaderClose"
+              class="header-close-btn"
+              type="button"
+              :aria-label="`关闭${title}`"
+              :title="`关闭${title}`"
+              @click="$emit('close')"
+            >
+              <X :size="18" aria-hidden="true" />
+            </button>
           </div>
           
           <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
@@ -36,8 +59,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
+import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
+import { X } from 'lucide-vue-next'
 import { useSheetStore } from '@/stores/sheet'
 import PSheetTab from './PSheetTab.vue'
 
@@ -53,6 +77,8 @@ const props = withDefaults(defineProps<{
   closeType?: 'bookmark' | 'header' | 'both'
   readingMode?: boolean // If true, adds 720px max-width to content
   isShifted?: boolean
+  isTopLayer?: boolean
+  layerIndex?: number
   index?: number
   showBackdrop?: boolean
 }>(), {
@@ -63,12 +89,25 @@ const props = withDefaults(defineProps<{
   closeType: 'bookmark',
   readingMode: false,
   isShifted: false,
+  isTopLayer: true,
+  layerIndex: 0,
   showBackdrop: true,
 })
 
 defineEmits(['close'])
 
 const slots = useSlots()
+const panelRef = ref<HTMLElement | null>(null)
+
+watch(
+  () => [props.show, props.isTopLayer] as const,
+  async ([show, isTopLayer]) => {
+    if (!show || !isTopLayer) return
+    await nextTick()
+    panelRef.value?.focus()
+  },
+  { immediate: true },
+)
 const effectiveCloseType = computed(() => {
   if (props.side === 'bottom' && props.closeType === 'bookmark') {
     return 'header'
@@ -312,5 +351,30 @@ const sheetStyle = computed(() => {
   transform: translateY(100%);
   box-shadow: none;
   opacity: 0;
+}
+
+@media (max-width: 767px) {
+  .p-sheet-layer {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .p-sheet-panel.is-shifted {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-sheet-panel,
+  .slide-right-enter-active,
+  .slide-right-leave-active,
+  .slide-left-enter-active,
+  .slide-left-leave-active,
+  .slide-up-enter-active,
+  .slide-up-leave-active {
+    transition: none;
+  }
 }
 </style>

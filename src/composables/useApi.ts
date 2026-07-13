@@ -230,6 +230,8 @@ export function useApi() {
       uploadCover: `${apiUrl}/videos/upload-cover`,
       incrementView: (id: string) => `${apiUrl}/videos/${id}/view`,
       recommended: (id: string) => `${apiUrl}/videos/${id}/recommended`,
+      bookmarks: `${apiUrl}/videos/bookmarks`,
+      bookmark: (id: string) => `${apiUrl}/videos/bookmarks/${id}`,
       comments: (id: string) => `${apiUrl}/videos/${id}/comments`,
       comment: (commentId: string) => `${apiUrl}/videos/comments/${commentId}`,
     },

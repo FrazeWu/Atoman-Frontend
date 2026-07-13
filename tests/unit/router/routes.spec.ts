@@ -85,6 +85,13 @@ describe('host-scoped route tables', () => {
     expect(lazyImportPath(detailRoute?.component)).toContain('VideoDetailView.vue')
   })
 
+  it('registers the approved video destinations', () => {
+    const root = moduleRoutes.video.find(route => route.path === '/')
+    const routePaths = root?.children?.map(route => route.path)
+    expect(routePaths).toEqual(expect.arrayContaining(['', 'subscriptions', 'favorites', 'creator']))
+    expect(root?.children?.find(route => route.path === 'manage')?.redirect).toBe('/videos/creator')
+  })
+
   it('defines entity profile routes as aggregation spaces', () => {
     expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels', '/users/:handle/settings'])
     expect(paths(channelRoutes)).toEqual(['/channels/:slug', '/channels/:slug/posts', '/channels/:slug/about'])

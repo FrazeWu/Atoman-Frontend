@@ -149,7 +149,10 @@
       <PSidebarItem to="/videos/subscriptions" :index="2" :icon="Rss">
         订阅
       </PSidebarItem>
-      <PSidebarItem to="/videos/manage" :index="3" :icon="Settings">
+      <PSidebarItem to="/videos/favorites" :index="3" :icon="Bookmark">
+        收藏
+      </PSidebarItem>
+      <PSidebarItem to="/videos/creator" :index="4" :icon="Settings">
         创作
       </PSidebarItem>
     </template>

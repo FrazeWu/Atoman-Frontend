@@ -164,7 +164,9 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       children: [
         { path: '', component: () => import('@/views/video/VideoHomeView.vue') },
         { path: 'subscriptions', component: () => import('@/views/video/VideoSubscriptionsView.vue'), meta: { requiresAuth: true } },
-        { path: 'manage', component: () => import('@/views/video/VideoManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'video', feature: 'video.publish' } } },
+        { path: 'favorites', component: () => import('@/views/video/VideoFavoritesView.vue'), meta: { requiresAuth: true } },
+        { path: 'creator', component: () => import('@/views/video/VideoManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'video', feature: 'video.publish' } } },
+        { path: 'manage', redirect: '/videos/creator' },
         { path: 'upload', component: () => import('@/views/video/VideoEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'video', feature: 'video.publish' } } },
         { path: 'edit/:id', component: () => import('@/views/video/VideoEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'video', feature: 'video.publish' } } },
         { path: 'videos/watch/:id', component: () => import('@/views/video/VideoDetailView.vue') },

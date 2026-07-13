@@ -9,6 +9,7 @@ describe('VideoLayout', () => {
     expect(layoutSource).toContain('<PSidebar')
     expect(layoutSource).toContain('to="/videos"')
     expect(layoutSource).toContain('to="/videos/subscriptions"')
-    expect(layoutSource).toContain('to="/videos/manage"')
+    expect(layoutSource).toContain('to="/videos/favorites"')
+    expect(layoutSource).toContain('to="/videos/creator"')
   })
 })

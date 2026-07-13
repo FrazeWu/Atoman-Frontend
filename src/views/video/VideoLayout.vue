@@ -34,5 +34,6 @@ watch(
 // from '@/components/ui/PSidebar.vue'
 // to="/videos"
 // to="/videos/subscriptions"
-// to="/videos/manage"
+// to="/videos/favorites"
+// to="/videos/creator"
 </script>

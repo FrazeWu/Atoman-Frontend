@@ -884,7 +884,7 @@ async function submitEdit() {
 
 <style scoped>
 .drawer-header { margin: -2.5rem -2.5rem 0; padding: 1.8rem 2rem 1rem; border-bottom: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); }
-.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.78rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
 .title { font-family: var(--a-font-serif); font-size: 1.7rem; margin: 0; }
 .subtitle { margin: 0.55rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 28rem; }
 .drawer-body { margin: 0 -2.5rem; padding: 1.6rem 2rem 2rem; }
@@ -904,11 +904,11 @@ async function submitEdit() {
 .upload-trigger-dot {
   width: 0.45rem;
   height: 0.45rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--a-color-ink) 70%, transparent);
   flex-shrink: 0;
 }
-.section-kicker { margin: 0 0 0.2rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.section-kicker { margin: 0 0 0.2rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
 .section-heading h4 { margin: 0; font-size: 1.05rem; font-family: var(--a-font-serif); }
 .paper-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.4rem; }
 .paper-input-group { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -919,8 +919,8 @@ async function submitEdit() {
   gap: 0.45rem;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-ink-soft);
 }
 .paper-input {
@@ -940,20 +940,20 @@ async function submitEdit() {
 }
 .paper-textarea { resize: vertical; min-height: 6rem; line-height: 1.65; }
 .source-row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1rem; }
-.form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 800; font-size: 0.9rem; }
-.form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 800; font-size: 0.9rem; }
+.form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 500; font-size: 0.9rem; }
+.form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 500; font-size: 0.9rem; }
 .paper-submit {
   width: 100%;
   border: 0;
   border-radius: 0px;
   padding: 0.95rem 1.5rem;
-  font-weight: 800;
+  font-weight: 500;
   background: var(--a-color-accent-confirm);
   color: var(--a-color-paper);
   cursor: pointer;
   font-family: var(--a-font-meta);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   transition: background-color 0.15s ease;
 }
 .paper-submit:hover {
@@ -1000,7 +1000,7 @@ async function submitEdit() {
   font-size: 0.72rem;
   color: var(--a-color-accent-confirm);
   font-family: var(--a-font-meta);
-  font-weight: 800;
+  font-weight: 500;
 }
 .history-state {
   margin: 0;

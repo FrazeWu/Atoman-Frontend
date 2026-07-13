@@ -637,7 +637,7 @@ watch(playlist, syncEditForm, { immediate: true })
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
 }
 
 .cover-collage {
@@ -681,15 +681,15 @@ watch(playlist, syncEditForm, { immediate: true })
 .playlist-eyebrow {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-ink-soft);
 }
 
 .playlist-title {
   font-family: var(--a-font-serif);
   font-size: 2rem;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.1;
   margin: 0.1rem 0;
   overflow: hidden;
@@ -715,7 +715,7 @@ watch(playlist, syncEditForm, { immediate: true })
   gap: 0.4rem;
   font-family: var(--a-font-meta);
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-ink-soft);
 }
 
@@ -804,7 +804,7 @@ watch(playlist, syncEditForm, { immediate: true })
   background: rgba(0, 0, 0, 0.68);
   color: #fff;
   font-size: 0.7rem;
-  border-radius: 999px;
+  border-radius: 4px;
 }
 
 .playlist-edit-actions {
@@ -845,8 +845,8 @@ watch(playlist, syncEditForm, { immediate: true })
   border-bottom: 1px solid var(--a-color-line-soft);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
 }
@@ -924,7 +924,7 @@ watch(playlist, syncEditForm, { immediate: true })
 
 .track-name {
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -951,8 +951,8 @@ watch(playlist, syncEditForm, { immediate: true })
 .badge-no-audio {
   font-family: var(--a-font-meta);
   font-size: 0.62rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   padding: 0.15rem 0.35rem;
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink-soft);
@@ -965,7 +965,7 @@ watch(playlist, syncEditForm, { immediate: true })
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
   padding: 0.2rem 0;
 }
@@ -992,7 +992,7 @@ watch(playlist, syncEditForm, { immediate: true })
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 500;
   cursor: pointer;
   padding: 0.1rem 0.15rem;
 }
@@ -1017,7 +1017,7 @@ watch(playlist, syncEditForm, { immediate: true })
   gap: 0.4rem;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 1.5rem 0.75rem;
   color: var(--a-color-ink-soft);
 }
@@ -1036,6 +1036,6 @@ watch(playlist, syncEditForm, { immediate: true })
   opacity: 0.6;
   font-family: var(--a-font-meta);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 </style>

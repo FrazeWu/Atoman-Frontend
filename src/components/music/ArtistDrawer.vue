@@ -1,6 +1,7 @@
 <!-- web/src/components/music/ArtistDrawer.vue -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -148,9 +149,7 @@ watch(
         <div class="artist-header-profile">
           <img v-if="artist?.image_url" :src="artist.image_url" :alt="artist?.name" class="artist-header-avatar" />
           <div v-else class="artist-header-avatar-placeholder">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
+            <UserRound :size="32" aria-hidden="true" />
           </div>
           <div class="artist-header-info">
             <h2 class="title">{{ artist?.name || `Artist ${artistId}` }}</h2>
@@ -223,9 +222,7 @@ watch(
             <div class="member-avatar">
               <img v-if="member.image_url" :src="member.image_url" :alt="member.name" class="member-avatar-img" />
               <div v-else class="member-avatar-placeholder">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
+                <UserRound :size="20" aria-hidden="true" />
               </div>
             </div>
             <div class="member-info">
@@ -248,9 +245,7 @@ watch(
             <div class="member-avatar">
               <img v-if="member.image_url" :src="member.image_url" :alt="member.name" class="member-avatar-img" />
               <div v-else class="member-avatar-placeholder">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
+                <UserRound :size="20" aria-hidden="true" />
               </div>
             </div>
             <div class="member-info">
@@ -299,17 +294,17 @@ watch(
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
   font-weight: bold;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
 }
-.title { font-family: var(--a-font-serif); font-size: 2.5rem; margin: 0; line-height: 1.1; letter-spacing: -0.025em; }
+.title { font-family: var(--a-font-serif); font-size: 2.5rem; margin: 0; line-height: 1.1; letter-spacing: 0; }
 .artist-meta-line {
   margin: 0.35rem 0 0;
   font-family: var(--a-font-meta);
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-ink-soft);
 }
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
@@ -328,8 +323,8 @@ watch(
 .member-section-title {
   margin: 0 0 0.85rem;
   font-size: 0.95rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 .member-row {
   display: flex;
@@ -359,7 +354,7 @@ watch(
 .member-avatar-placeholder {
   width: 100%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid var(--a-color-line-soft);
 }
 .member-avatar-img {
@@ -379,13 +374,13 @@ watch(
 .member-name {
   font-family: var(--a-font-serif);
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 .member-period {
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-ink-soft);
 }
 .paper-action {
@@ -395,13 +390,13 @@ watch(
   border: 0;
   border-right: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   background: var(--a-color-paper);
   color: var(--a-color-ink);
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -415,7 +410,7 @@ watch(
 .paper-action-dot {
   width: 0.45rem;
   height: 0.45rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: currentColor;
   opacity: 0.6;
 }
@@ -429,12 +424,12 @@ watch(
   margin: 0 0 0.35rem;
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
 }
-.album-list-header h3 { font-size: 1.15rem; font-weight: 900; margin: 0; letter-spacing: -0.02em; }
+.album-list-header h3 { font-size: 1.15rem; font-weight: 500; margin: 0; letter-spacing: 0; }
 .album-row {
   display: flex;
   gap: 1.4rem;
@@ -455,7 +450,7 @@ watch(
   border-left-color: var(--a-color-ink);
 }
 .album-row-left { width: 80px; flex-shrink: 0; text-align: right; padding-top: 0.35rem; }
-.album-year { font-family: var(--a-font-meta); font-size: 1.25rem; font-weight: 900; color: var(--a-color-ink); }
+.album-year { font-family: var(--a-font-meta); font-size: 1.25rem; font-weight: 500; color: var(--a-color-ink); }
 .album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; }
 .album-row-cover {
   width: 80px;
@@ -467,17 +462,17 @@ watch(
   justify-content: center;
   font-family: var(--a-font-meta);
   font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   flex-shrink: 0;
   overflow: hidden;
 }
 .album-row-img { width: 100%; height: 100%; object-fit: cover; }
 .album-row-info { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
-.album-row-title { font-family: var(--a-font-serif); font-size: 1.35rem; font-weight: 900; letter-spacing: -0.015em; }
-.album-row-meta { font-family: var(--a-font-meta); font-size: 0.75rem; color: var(--a-color-ink-soft); text-transform: uppercase; letter-spacing: 0.04em; }
-.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
+.album-row-title { font-family: var(--a-font-serif); font-size: 1.35rem; font-weight: 500; letter-spacing: 0; }
+.album-row-meta { font-family: var(--a-font-meta); font-size: 0.75rem; color: var(--a-color-ink-soft); text-transform: uppercase; letter-spacing: 0; }
+.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 
 .artist-header-profile {
@@ -490,7 +485,7 @@ watch(
 .artist-header-avatar {
   width: 90px;
   height: 90px;
-  border-radius: 8px;
+  border-radius: 4px;
   object-fit: cover;
   border: 1px solid var(--a-color-line-soft);
   flex-shrink: 0;
@@ -499,7 +494,7 @@ watch(
 .artist-header-avatar-placeholder {
   width: 90px;
   height: 90px;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-surface);
   display: flex;

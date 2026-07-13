@@ -409,7 +409,7 @@ watch(
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
   font-weight: bold;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
 }
@@ -431,13 +431,13 @@ watch(
   justify-content: center;
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   overflow: hidden;
   border: 1px solid var(--a-color-line-soft);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 .album-cover-img { width: 100%; height: 100%; object-fit: cover; }
 .album-info {
@@ -450,17 +450,17 @@ watch(
 .album-type {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   margin-bottom: 0.25rem;
 }
 .album-title {
   font-family: var(--a-font-serif);
   font-size: 2.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.15;
   margin: 0 0 0.5rem;
   color: var(--a-color-ink);
@@ -472,7 +472,7 @@ watch(
   margin-bottom: 1.25rem;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-ink-soft);
 }
 .artist-name {
@@ -489,7 +489,7 @@ watch(
   font: inherit;
   color: inherit;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 500;
   transition: color 0.15s ease;
 }
 .artist-link:hover {
@@ -520,13 +520,13 @@ watch(
   border: 1px solid var(--a-color-line-soft);
   border-radius: 99px;
   padding: 0.55rem 1.1rem;
-  font-weight: 800;
+  font-weight: 500;
   background: var(--a-color-paper);
   color: var(--a-color-ink);
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
   transition: all 0.15s ease;
 }
@@ -564,7 +564,7 @@ watch(
 .paper-action-dot {
   width: 0.42rem;
   height: 0.42rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: currentColor;
   opacity: 0.6;
 }
@@ -579,12 +579,12 @@ watch(
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--a-color-line-soft);
   padding-bottom: 0.5rem;
   margin-bottom: 1.25rem;
   color: var(--a-color-ink-soft);
-  font-weight: 800;
+  font-weight: 500;
 }
 .track {
   display: flex;
@@ -650,13 +650,13 @@ watch(
 .track-unavailable {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   text-transform: uppercase;
 }
 .track-empty { color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.875rem; }
 .track-time { font-family: var(--a-font-meta); color: var(--a-color-ink-soft); font-size: 0.8rem; }
-.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
+.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 
 /* Track Playlist Dropdown styles */
@@ -706,7 +706,7 @@ watch(
 .track-add-menu {
   background: var(--a-color-paper);
   border: 1px solid var(--a-color-line-soft);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   padding: 0.4rem 0;
   min-width: 130px;
   max-width: 200px;
@@ -716,7 +716,7 @@ watch(
 .track-add-menu-header {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
   padding: 0.3rem 0.8rem;

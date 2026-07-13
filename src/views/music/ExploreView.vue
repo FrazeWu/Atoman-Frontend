@@ -568,8 +568,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   padding: 0.25rem 0.95rem 0.45rem;
   color: var(--a-color-muted-soft);
   font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -591,7 +591,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
 .search-result__title {
   font-size: 0.98rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -638,8 +638,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .discover-section__title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .discover-layout {
@@ -679,8 +679,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .discover-placeholder__eyebrow {
   margin: 0;
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted-soft);
 }
@@ -688,7 +688,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .discover-placeholder__title {
   margin: 0;
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 

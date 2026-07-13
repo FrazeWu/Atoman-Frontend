@@ -342,7 +342,7 @@ watch(
   font-family: var(--a-font-serif);
   font-size: clamp(3rem, 8vw, 6rem);
   font-style: italic;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 0.9;
 }
 
@@ -358,7 +358,7 @@ watch(
 .empty-paper {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
-  box-shadow: var(--a-shadow-modal);
+  box-shadow: none;
 }
 
 .result-card--interactive {
@@ -388,8 +388,8 @@ watch(
 .empty-paper h2 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .section-heading p,
@@ -444,7 +444,7 @@ watch(
 
 .p-tab--active {
   background: var(--a-color-paper);
-  box-shadow: inset 0 -2px 0 var(--a-color-ink);
+  box-shadow: none;
 }
 
 .empty-paper {
@@ -506,7 +506,7 @@ watch(
 
 .music-title {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--a-color-fg);
   margin: 0 0 0.25rem 0;
@@ -557,7 +557,7 @@ watch(
 }
 
 .playlist-song-title {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .state-line {

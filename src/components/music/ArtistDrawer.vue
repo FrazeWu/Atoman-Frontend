@@ -5,6 +5,8 @@ import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import type { MusicSheetLayer } from './musicSheetTypes'
+import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import {
   getMusicArtist,
   listMusicAlbums,
@@ -15,12 +17,19 @@ import {
   type MusicArtistListItem,
 } from '@/api/musicV1'
 
-const { state, closeArtist, isArtistShifted, openArtist, openAlbum, openMusicEditor } = useMusicDrawers()
-const isOpen = computed(() => state.value.artistId !== null)
+type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
+const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const { state, closeArtist, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openNestedAction } = useMusicDrawers()
+const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
+const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)
 const albums = ref<MusicAlbumListItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
+const redirectMessage = ref('')
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
@@ -62,10 +71,15 @@ async function loadArtist(artistId: string | null) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [artistResponse, albumsResponse] = await Promise.all([
-      getMusicArtist(artistId),
-      listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 }),
-    ])
+    const resolved = await resolveMusicRedirect(artistId, getMusicArtist)
+    const artistResponse = resolved.entity
+    if (resolved.redirected) {
+      redirectMessage.value = '已转到合并后的条目'
+      openArtist(artistResponse.id)
+      return
+    }
+    redirectMessage.value = ''
+    const albumsResponse = await listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 })
     artist.value = artistResponse
     albums.value = artistResponse.albums?.length ? artistResponse.albums : albumsResponse.data
     try {
@@ -88,15 +102,15 @@ async function loadArtist(artistId: string | null) {
 }
 
 async function toggleArtistBookmark() {
-  const artistId = state.value.artistId
-  if (!artistId || bookmarkLoading.value) return
+  const currentArtistId = artistId.value
+  if (!currentArtistId || bookmarkLoading.value) return
   bookmarkLoading.value = true
   try {
     if (isBookmarked.value) {
-      await deleteArtistBookmark(artistId)
+      await deleteArtistBookmark(currentArtistId)
       isBookmarked.value = false
     } else {
-      await createArtistBookmark(artistId)
+      await createArtistBookmark(currentArtistId)
       isBookmarked.value = true
     }
   } catch (error) {
@@ -107,7 +121,7 @@ async function toggleArtistBookmark() {
 }
 
 watch(
-  () => [state.value.artistId, state.value.artistRefreshToken] as const,
+  () => [artistId.value, state.value.artistRefreshToken] as const,
   ([artistId, refreshToken]) => {
     const nextKey = artistId ? `${artistId}:${refreshToken}` : null
     if (nextKey && nextKey === lastLoadKey.value) return
@@ -121,10 +135,13 @@ watch(
 <template>
   <PSheet
     :show="isOpen"
-    @close="closeArtist"
+    :title="layer?.title ?? '艺术家详情'"
+    @close="closeCurrentArtist"
     width="900px"
-    :is-shifted="isArtistShifted"
-    :index="0"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    :layer-index="layerIndex"
+    :index="layerIndex"
   >
     <template #header>
       <div class="drawer-header-content">
@@ -136,7 +153,7 @@ watch(
             </svg>
           </div>
           <div class="artist-header-info">
-            <h2 class="title">{{ artist?.name || `Artist ${state.artistId}` }}</h2>
+            <h2 class="title">{{ artist?.name || `Artist ${artistId}` }}</h2>
             <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
             <p v-if="artistAliases.length" class="artist-meta-line">曾用名：{{ artistAliases.join(' / ') }}</p>
           </div>
@@ -146,6 +163,8 @@ watch(
     </template>
 
     <div class="drawer-body">
+	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
+	  <p v-if="artist?.entry_status === 'closed' && !artist?.redirect_to" class="state-line">该条目已关闭</p>
       <div class="actions">
         <PButton
           variant="secondary"
@@ -159,7 +178,7 @@ watch(
         <PButton
           variant="secondary"
           dot
-          @click="state.artistId && openMusicEditor({ entity: 'artist', mode: 'edit', id: state.artistId })"
+          @click="artistId && openMusicEditor({ entity: 'artist', mode: 'edit', id: artistId })"
         >
           修改艺术家信息
         </PButton>
@@ -170,13 +189,23 @@ watch(
             entity: 'album',
             mode: 'create',
             seed: {
-              artistId: state.artistId || null,
+              artistId: artistId || null,
               artistName: artist?.name || '',
               artistLegalName: artist?.legal_name || '',
             },
           })"
         >
           添加新专辑
+        </PButton>
+        <PButton
+          variant="secondary"
+          dot
+          @click="openNestedAction('merge_artist', { name: artist?.name || '' })"
+        >
+          合并重复条目
+        </PButton>
+        <PButton variant="secondary" dot @click="openNestedAction('artist_history')">
+          版本
         </PButton>
       </div>
 

@@ -25,13 +25,20 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import type { MusicSheetLayer } from './musicSheetTypes'
 
-const { state, closePlaylist, refreshPlaylists } = useMusicDrawers()
+type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
+const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const { state, closePlaylist, refreshPlaylists, isLayerShifted, isTopLayer } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 
-const isOpen = computed(() => state.value.playlistId !== null)
-const editSheetIndex = computed(() => 1)
+const playlistId = computed(() => props.layer?.payload.playlistId ?? state.value.playlistId)
+const isOpen = computed(() => props.layer !== undefined || playlistId.value !== null)
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const editSheetIndex = computed(() => props.layerIndex + 1)
+const closeCurrentPlaylist = () => closePlaylist(props.layer?.key)
 const playlist = ref<MusicPlaylistDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -352,16 +359,20 @@ async function toggleBookmark() {
   }
 }
 
-watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
+watch(playlistId, loadPlaylist, { immediate: true })
 watch(playlist, syncEditForm, { immediate: true })
 </script>
 
 <template>
   <PSheet
     :show="isOpen"
-    @close="closePlaylist"
+    :title="layer?.title ?? '歌单详情'"
+    @close="closeCurrentPlaylist"
     width="680px"
-    :index="0"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    :layer-index="layerIndex"
+    :index="layerIndex"
   >
     <template #header>
       <div class="playlist-header-container">

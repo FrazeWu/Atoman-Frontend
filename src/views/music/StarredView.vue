@@ -3,9 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
-import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
-import PlaylistDrawer from '@/components/music/PlaylistDrawer.vue'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,
@@ -253,9 +250,6 @@ watch(
         </template>
       </div>
     </div>
-    <ArtistDrawer />
-    <AlbumDrawer />
-    <PlaylistDrawer />
   </div>
 </template>
 

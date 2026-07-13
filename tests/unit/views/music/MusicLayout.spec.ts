@@ -59,7 +59,7 @@ describe('MusicLayout.vue', () => {
     expect(wrapper.find('main').classes()).toContain('music-main-content')
   })
 
-  it('mounts artist and album drawers for discover-route sheets', () => {
+  it('mounts one semantic music sheet stack', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [] })
     const wrapper = mount(MusicLayout, {
       global: {
@@ -72,15 +72,11 @@ describe('MusicLayout.vue', () => {
             template: '<div class="sidebar-item" :data-to="to"><slot /></div>',
           },
           MusicSidebarPlaylists: true,
-          ArtistDrawer: { template: '<div data-testid="artist-drawer-stub" />' },
-          AlbumDrawer: { template: '<div data-testid="album-drawer-stub" />' },
-          PlaylistDrawer: { template: '<div data-testid="playlist-drawer-stub" />' },
+          MusicSheetStack: { template: '<div data-testid="music-sheet-stack-stub" />' },
         },
       },
     })
 
-    expect(wrapper.find('[data-testid="artist-drawer-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="album-drawer-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="playlist-drawer-stub"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="music-sheet-stack-stub"]')).toHaveLength(1)
   })
 })

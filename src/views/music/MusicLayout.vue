@@ -5,18 +5,14 @@
       <router-view />
       <SiteFooter />
     </main>
-    <ArtistDrawer />
-    <AlbumDrawer />
-    <PlaylistDrawer />
+    <MusicSheetStack />
   </div>
 </template>
 
 <script setup lang="ts">
 import AppSidebar from '@/components/system/AppSidebar.vue'
 import SiteFooter from '@/components/system/SiteFooter.vue'
-import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
-import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
-import PlaylistDrawer from '@/components/music/PlaylistDrawer.vue'
+import MusicSheetStack from '@/components/music/MusicSheetStack.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
 const { sidebarCollapsed } = useSidebar()

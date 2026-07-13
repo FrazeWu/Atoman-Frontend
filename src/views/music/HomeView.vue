@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
-import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
-import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
-import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
-import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import ExploreView from '@/views/music/ExploreView.vue'
@@ -45,12 +40,6 @@ watch(
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
       <ExploreView page-title="专辑" content-mode="albums" />
     </div>
-
-    <ArtistDrawer />
-    <AlbumDrawer />
-    <MusicCreationFlowDrawer />
-    <MusicEntityEditorDrawer />
-    <NestedActionDrawer />
   </div>
 </template>
 

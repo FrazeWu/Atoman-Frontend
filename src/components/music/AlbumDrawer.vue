@@ -22,14 +22,23 @@ import {
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
+import { resolveMusicRedirect } from '@/utils/musicRedirect'
+import type { MusicSheetLayer } from './musicSheetTypes'
 
-const { state, closeAlbum, isAlbumShifted, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
+type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
+const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number }>(), { layerIndex: 0 })
+const { state, closeAlbum, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
 const player = usePlayerStore()
-const isOpen = computed(() => state.value.albumId !== null)
-const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
+const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
+const isOpen = computed(() => props.layer !== undefined || albumId.value !== null)
+const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isAlbumShifted.value)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentAlbum = () => closeAlbum(props.layer?.key)
 const album = ref<MusicAlbumListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const redirectMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
@@ -162,7 +171,14 @@ async function loadAlbum(albumId: string | null) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const albumResponse = await getMusicAlbum(albumId)
+    const resolved = await resolveMusicRedirect(albumId, getMusicAlbum)
+    const albumResponse = resolved.entity
+    if (resolved.redirected) {
+      redirectMessage.value = '已转到合并后的条目'
+      openAlbum(albumResponse.id)
+      return
+    }
+    redirectMessage.value = ''
     album.value = albumResponse
     try {
       const bookmarksResponse = await listAlbumBookmarks()
@@ -209,11 +225,11 @@ async function toggleAlbumBookmark() {
   }
 }
 
-watch(() => state.value.albumId, loadAlbum, { immediate: true })
+watch(albumId, loadAlbum, { immediate: true })
 watch(
   () => state.value.albumRefreshToken,
   () => {
-    if (state.value.albumId) void loadAlbum(state.value.albumId)
+    if (albumId.value) void loadAlbum(albumId.value)
   },
 )
 </script>
@@ -221,9 +237,12 @@ watch(
 <template>
   <PSheet
     :show="isOpen"
-    @close="closeAlbum"
+    :title="layer?.title ?? '专辑详情'"
+    @close="closeCurrentAlbum"
     width="700px"
-    :is-shifted="isAlbumShifted"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    :layer-index="layerIndex"
     :index="sheetIndex"
   >
     <div class="drawer-header">
@@ -233,6 +252,8 @@ watch(
     </div>
 
     <div class="drawer-body">
+	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
+	  <p v-if="album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载专辑...</p>
 
@@ -243,7 +264,7 @@ watch(
         </div>
         <div class="album-info">
           <div class="album-type">{{ album?.album_type || '专辑' }}</div>
-          <h2 class="album-title">{{ album?.title || `Album ${state.albumId}` }}</h2>
+          <h2 class="album-title">{{ album?.title || `Album ${albumId}` }}</h2>
           <div class="meta-tags">
             <span class="artist-name">
               <template v-for="(artist, index) in album?.artists" :key="artist.id">
@@ -303,6 +324,13 @@ watch(
           @click="openNestedAction('history')"
         >
           版本
+        </PButton>
+        <PButton
+          variant="secondary"
+          dot
+          @click="openNestedAction('merge_album', { title: album?.title || '' })"
+        >
+          合并重复条目
         </PButton>
       </div>
 

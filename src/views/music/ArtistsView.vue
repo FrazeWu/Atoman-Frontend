@@ -14,11 +14,6 @@ import {
   type MusicArtistListItem,
   type MusicRecommendationMode,
 } from '@/api/musicV1'
-import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
-import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
-import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
-import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
-import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
@@ -354,11 +349,6 @@ function handleSearchBlur() {
       </div>
     </div>
 
-    <ArtistDrawer />
-    <AlbumDrawer />
-    <MusicCreationFlowDrawer />
-    <MusicEntityEditorDrawer />
-    <NestedActionDrawer />
   </div>
 </template>
 

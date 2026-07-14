@@ -801,7 +801,7 @@ body {
 .a-main-content {
   flex: 1;
   min-width: 0;
-  max-width: 80rem;
+  max-width: 72rem;
   margin: 0 auto;
   /* sticky + 固定高度 + 自身滚动 = 内容区独立滚动 */
   position: sticky;
@@ -860,6 +860,12 @@ body {
     overflow-y: visible;
     max-width: none;
     padding: 1.5rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  }
+  .a-main-content :where(button, input, select, [role="button"]) {
+    min-height: 44px;
+  }
+  .a-main-content :where(input, select, textarea) {
+    font-size: 16px;
   }
   .mobile-bottom-nav {
     display: grid;

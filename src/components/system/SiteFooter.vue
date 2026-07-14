@@ -1,5 +1,5 @@
 <template>
-  <footer class="site-footer">
+  <footer class="site-footer" :class="{ 'site-footer--mobile-hidden': hideOnMobile }">
     <div class="site-footer-inner">
       <RouterLink v-if="isAdmin" to="/setting" class="site-footer-brand">凹凸庵</RouterLink>
       <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
@@ -26,13 +26,18 @@ import { isAdminRole } from '@/utils/roles'
 
 const authStore = useAuthStore()
 const isAdmin = computed(() => isAdminRole(authStore.user?.role))
+
+withDefaults(defineProps<{
+  hideOnMobile?: boolean
+}>(), {
+  hideOnMobile: false,
+})
 </script>
 
 <style scoped>
 .site-footer {
   border-top: var(--a-border);
   background: var(--a-color-bg);
-  margin-top: auto;
 }
 .site-footer-inner {
   max-width: 1152px;
@@ -82,9 +87,13 @@ const isAdmin = computed(() => isAdminRole(authStore.user?.role))
 }
 
 @media (max-width: 767px) {
+  .site-footer--mobile-hidden {
+    display: none;
+  }
+
   .site-footer-inner {
     align-items: flex-start;
-    padding: 1.25rem 2rem calc(1.25rem + 64px + env(safe-area-inset-bottom, 0px));
+    padding: 1.25rem 2rem;
   }
 }
 </style>

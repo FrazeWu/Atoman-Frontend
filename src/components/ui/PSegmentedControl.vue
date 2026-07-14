@@ -200,4 +200,12 @@ onBeforeUnmount(() => {
 .p-segmented-control-item:focus-visible {
   outline: none;
 }
+
+@media (max-width: 767px) {
+  .p-segmented-control-item {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 0.8rem;
+  }
+}
 </style>

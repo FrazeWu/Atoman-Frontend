@@ -256,4 +256,28 @@ describe('Music HomeView.vue (Artist Discovery)', () => {
     expect(wrapper.text()).toContain('Hot Artist')
     expect(wrapper.text()).not.toContain('艺术家列表加载失败')
   })
+
+  it('does not request personal bookmarks for guests', async () => {
+    const pinia = createTestingPinia({
+      createSpy: vi.fn,
+      initialState: { auth: { isAuthenticated: false } },
+    })
+
+    mount(HomeView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          NestedActionDrawer: true,
+          MusicCreationFlowDrawer: true,
+          PSegmentedControl: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(mocks.listArtistBookmarks).not.toHaveBeenCalled()
+  })
 })

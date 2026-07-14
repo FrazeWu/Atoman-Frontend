@@ -17,6 +17,7 @@
 
       <template #bottom>
         <MusicSidebarPlaylists
+          v-if="authStore.isAuthenticated"
           :collapsed="sidebarCollapsed"
         />
       </template>
@@ -36,6 +37,8 @@ import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'
 import PlaylistDrawer from '@/components/music/PlaylistDrawer.vue'
 import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
+import { useAuthStore } from '@/stores/auth'
 
 const sidebarCollapsed = ref(false)
+const authStore = useAuthStore()
 </script>

@@ -132,6 +132,7 @@ describe('useResponsiveShell', () => {
     })
 
     expect(wrapper.get('[data-tab-key="more"]').classes()).toContain('is-active')
+    expect(wrapper.get('[data-tab-key="more"]').text()).toBe('音乐')
     expect(wrapper.get('[data-tab-key="feed"]').classes()).not.toContain('is-active')
   })
 

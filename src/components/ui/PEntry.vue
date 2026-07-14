@@ -177,4 +177,11 @@ defineEmits(['click'])
   /* Inherit default styles, but ensure it's above the wash background */
   z-index: 2;
 }
+
+@media (max-width: 767px) {
+  .p-entry {
+    margin: 0;
+    padding: 0.875rem 0;
+  }
+}
 </style>

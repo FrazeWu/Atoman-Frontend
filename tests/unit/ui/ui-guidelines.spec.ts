@@ -42,10 +42,51 @@ describe('UI 准则', () => {
   })
 
   it('空状态和管理界面不暴露英文内部文案', () => {
-    expect(read('src/components/ui/PEmpty.vue')).toContain("kicker: '暂无内容'")
+    expect(read('src/components/ui/PEmpty.vue')).toContain("kicker: ''")
     expect(read('src/components/music/MusicSidebarPlaylists.vue')).not.toContain('PLAYLISTS')
     expect(read('src/views/forum/ForumLayout.vue')).not.toMatch(/CATEGORIES|TAGS/)
     expect(read('src/components/music/MusicEditReviewShell.vue')).not.toMatch(/Music edit|approve \/ reject \/ cancel|music edits/)
+  })
+
+  it('移动端主要控件使用至少 44px 的触控高度', () => {
+    const source = read('src/style.css')
+    const button = read('src/components/ui/PButton.vue')
+    const segmentedControl = read('src/components/ui/PSegmentedControl.vue')
+
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.a-main-content :where\(button, input, select, \[role="button"\]\)[\s\S]*?min-height:\s*44px/)
+    expect(button).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-button--sm[\s\S]*?min-height:\s*44px/)
+    expect(segmentedControl).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-segmented-control-item[\s\S]*?min-height:\s*44px/)
+  })
+
+  it('移动端条目不使用超出容器的负边距', () => {
+    const source = read('src/components/ui/PEntry.vue')
+
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-entry[\s\S]*?margin:\s*0/)
+  })
+
+  it('应用提供路由加载占位并在模块页收起移动端页脚', () => {
+    const app = read('src/App.vue')
+    const footer = read('src/components/system/SiteFooter.vue')
+
+    expect(app).toContain('route-loading-state')
+    expect(app).toContain(':hide-on-mobile="hasSidebar"')
+    expect(footer).toContain('site-footer--mobile-hidden')
+  })
+
+  it('门户不在模块列表中重复展示主推内容', () => {
+    const source = read('src/views/portal/PortalView.vue')
+
+    expect(source).toContain('displaySections')
+    expect(source).toContain('!isLeadItem(item)')
+    expect(source).toContain('portal-hot__module-strip')
+    expect(source).not.toContain('font-size: 82px')
+  })
+
+  it('内容首页移动端收敛主推卡片并使用中文类型占位', () => {
+    const source = read('src/views/media/MediaHomeView.vue')
+
+    expect(source).not.toContain('item.kind.toUpperCase()')
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.content-home-feature:not\(:first-child\)[\s\S]*?display:\s*none/)
   })
 
   it('页面不再渲染可见快捷键说明', () => {

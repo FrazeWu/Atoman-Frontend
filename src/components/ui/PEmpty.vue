@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{
   text: '',
   sub: '',
   message: '',
-  kicker: '暂无内容',
+  kicker: '',
 })
 
 const computedTitle = computed(() => props.title || props.text || props.message)
@@ -72,5 +72,12 @@ const computedKicker = computed(() => (computedTitle.value || computedDescriptio
 
 .p-empty__action {
   margin-top: 8px;
+}
+
+@media (max-width: 767px) {
+  .p-empty {
+    gap: 8px;
+    padding: 24px;
+  }
 }
 </style>

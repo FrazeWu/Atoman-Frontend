@@ -57,7 +57,11 @@ const mountAppAt = async (path: string) => {
       stubs: {
         RouterView: { template: '<div class="router-view-stub" />' },
         FirstLoginOnboarding: { template: '<div class="first-login-stub" />' },
-        SiteFooter: { template: '<footer class="site-footer-stub" />' },
+        SiteFooter: {
+          name: 'SiteFooter',
+          props: ['hideOnMobile'],
+          template: '<footer class="site-footer-stub" :data-hide-on-mobile="String(hideOnMobile)" />',
+        },
         AppTopbar: { template: '<header class="topbar-stub" />' },
       },
     },
@@ -84,12 +88,14 @@ describe('App responsive shell', () => {
     const { wrapper } = await mountAppAt('/')
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(true)
+    expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('true')
   })
 
   it('does not mount mobile bottom nav on non-sidebar routes', async () => {
     const { wrapper } = await mountAppAt('/plain')
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
+    expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('false')
   })
 
   it('does not mount mobile bottom nav on auth layout routes', async () => {

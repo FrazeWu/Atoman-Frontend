@@ -37,28 +37,40 @@ const { navigateTo } = useModuleNav()
 const { navigateModuleWithShutter } = useAsyncNavigate()
 const route = useRoute()
 
-const tabs = computed(() => getMobilePrimaryTabs())
 const isMoreOpen = ref(false)
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, route.path))
+const tabs = computed(() => {
+  const context = siteContext.value
+  const currentMoreItem = context.type === 'module'
+    ? getMobileMoreItems().find((item) => item.module === context.module)
+    : undefined
+
+  return getMobilePrimaryTabs().map((tab) => (
+    tab.key === 'more' && currentMoreItem
+      ? { ...tab, label: currentMoreItem.label }
+      : tab
+  ))
+})
 
 const closeMore = () => {
   isMoreOpen.value = false
 }
 
 const isTabActive = (tab: MobilePrimaryTab) => {
+  const context = siteContext.value
   if (tab.key === 'more') {
     return isMoreOpen.value || (
-      siteContext.value.type === 'module'
-      && getMobileMoreItems().some((item) => item.module === siteContext.value.module)
+      context.type === 'module'
+      && getMobileMoreItems().some((item) => item.module === context.module)
     )
   }
   if (tab.key === 'create') return route.path === tab.href
   if (tab.key === 'discover') {
-    return siteContext.value.type === 'module'
-      && siteContext.value.module === 'media'
+    return context.type === 'module'
+      && context.module === 'media'
       && route.path !== modulePathUrl('media', '/create')
   }
-  return siteContext.value.type === 'module' && siteContext.value.module === tab.module
+  return context.type === 'module' && context.module === tab.module
 }
 
 const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {

@@ -26,6 +26,7 @@ import {
   filterArtistRecommendationsByBookmarks,
   MUSIC_RECOMMENDATION_MODE_OPTIONS,
 } from '@/utils/musicRecommendations'
+import { useAuthStore } from '@/stores/auth'
 
 type ArtistFilterTab = 'all' | 'subscribed'
 const activeTab = ref<ArtistFilterTab>('all')
@@ -37,6 +38,7 @@ const tabOptions = [
 ]
 
 const route = useRoute()
+const authStore = useAuthStore()
 const { isMainShifted, openAlbum, closeAlbum, openArtist, closeArtist, openMusicCreationFlow } = useMusicDrawers()
 
 const artists = ref<MusicArtistListItem[]>([])
@@ -110,7 +112,11 @@ async function fetchArtists() {
   errorMessage.value = ''
 
   try {
-    await fetchBookmarks()
+    if (authStore.isAuthenticated) {
+      await fetchBookmarks()
+    } else {
+      starredArtistIds.value = []
+    }
     if (requestId !== activeRequestId) return
 
     if (searchQuery.value.trim()) {

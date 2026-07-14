@@ -9,19 +9,25 @@
         { 'shutter-exit': transition.isExiting },
         { 'shutter-entry': transition.isEntering }
       ]">
-        <router-view />
+        <div v-if="routeLoading" class="route-loading-state" role="status" aria-live="polite">
+          <span>正在加载页面...</span>
+          <div class="route-loading-state__line route-loading-state__line--title" />
+          <div class="route-loading-state__line" />
+          <div class="route-loading-state__panel" />
+        </div>
+        <router-view v-show="!routeLoading" />
       </main>
       <MobileBottomNav v-if="showMobileBottomNav" />
-      <SiteFooter />
+      <SiteFooter :hide-on-mobile="hasSidebar" />
       <AudioPlayer v-if="hasActiveTrack" />
     </div>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import { NConfigProvider } from 'naive-ui'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import FirstLoginOnboarding from '@/components/onboarding/FirstLoginOnboarding.vue'
@@ -43,6 +49,7 @@ const themeOverrides = {
 }
 
 const route = useRoute()
+const router = useRouter()
 const player = usePlayerStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
@@ -52,6 +59,18 @@ const hasSidebar = computed(() => route.matched.some((record) => record.meta.has
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => Boolean(player.currentSong))
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
+const routeLoading = ref(true)
+
+const removeBeforeEach = router.beforeEach(() => {
+  routeLoading.value = true
+})
+const removeAfterEach = router.afterEach(() => {
+  routeLoading.value = false
+})
+
+void router.isReady().finally(() => {
+  routeLoading.value = false
+})
 
 onMounted(() => {
   if (localStorage.getItem('atoman_transition_relay')) {
@@ -62,6 +81,11 @@ onMounted(() => {
     localStorage.removeItem('atoman_transition_relay_basic')
   }
   siteAccessStore.load()
+})
+
+onUnmounted(() => {
+  removeBeforeEach()
+  removeAfterEach()
 })
 </script>
 
@@ -74,10 +98,40 @@ onMounted(() => {
 }
 
 .app-main {
-  flex: 1;
   padding-bottom: 4rem;
   background: #fff;
   transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+.route-loading-state {
+  display: grid;
+  gap: 1rem;
+  width: min(72rem, calc(100% - 2rem));
+  margin: 3rem auto;
+  color: var(--a-color-ink-soft);
+  font-size: var(--a-text-sm);
+  font-weight: var(--a-font-weight-strong);
+}
+
+.route-loading-state__line,
+.route-loading-state__panel {
+  overflow: hidden;
+  background: var(--a-color-paper-wash);
+}
+
+.route-loading-state__line {
+  width: min(28rem, 70%);
+  height: 1rem;
+}
+
+.route-loading-state__line--title {
+  width: min(18rem, 52%);
+  height: 2.75rem;
+}
+
+.route-loading-state__panel {
+  min-height: 14rem;
+  border: 1px solid var(--a-color-line-soft);
 }
 
 /* 出场：内容区原地渐隐 */

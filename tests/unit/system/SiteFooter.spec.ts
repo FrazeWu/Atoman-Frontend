@@ -6,6 +6,7 @@ import { footbarLinks } from '@/config/moduleRooms'
 import router from '@/router'
 
 const footerSource = readFileSync(resolve(__dirname, '../../../src/components/system/SiteFooter.vue'), 'utf8')
+const appSource = readFileSync(resolve(__dirname, '../../../src/App.vue'), 'utf8')
 
 describe('SiteFooter', () => {
   it('renders the brand and all footbar links from config', () => {
@@ -32,5 +33,10 @@ describe('SiteFooter', () => {
     expect(appVersion).toMatch(/^v\d+\.\d+\.\d+/)
     expect(footerSource).toContain('appVersion')
     expect(footerSource).toContain('site-footer-version')
+  })
+
+  it('follows page content instead of being pushed to the viewport bottom', () => {
+    expect(footerSource).not.toMatch(/\.site-footer\s*\{[\s\S]*?margin-top:\s*auto/)
+    expect(appSource).not.toMatch(/\.app-main\s*\{[\s\S]*?flex:\s*1/)
   })
 })

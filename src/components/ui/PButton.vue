@@ -207,4 +207,11 @@ const handleClick = (event: MouseEvent) => {
   opacity: 0.5;
   text-decoration: line-through;
 }
+
+@media (max-width: 767px) {
+  .p-button--sm {
+    min-height: 44px;
+    font-size: 12px;
+  }
+}
 </style>

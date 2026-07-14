@@ -18,6 +18,12 @@ type FeaturedItem =
   | { kind: 'podcast'; id: string; title: string; meta: string; image?: string; episode: PodcastEpisode }
   | { kind: 'video'; id: string; title: string; meta: string; image?: string; video: Video }
 
+const featuredKindLabels: Record<FeaturedItem['kind'], string> = {
+  article: '文章',
+  podcast: '播客',
+  video: '视频',
+}
+
 const api = useApi()
 const router = useRouter()
 const posts = ref<Post[]>([])
@@ -164,7 +170,7 @@ onMounted(loadHome)
         @click="openFeaturedItem(item)"
       >
         <div v-if="item.image" class="content-home-feature__image" :style="{ backgroundImage: `url(${item.image})` }" />
-        <div v-else class="content-home-feature__image content-home-feature__image--empty">{{ item.kind.toUpperCase() }}</div>
+        <div v-else class="content-home-feature__image content-home-feature__image--empty">{{ featuredKindLabels[item.kind] }}</div>
         <div class="content-home-feature__body">
           <PBadge :type="item.kind === 'article' ? 'blog' : item.kind === 'podcast' ? 'podcast' : 'video'">
             {{ item.kind === 'article' ? '文章' : item.kind === 'podcast' ? '播客' : '视频' }}
@@ -366,6 +372,16 @@ onMounted(loadHome)
 
   .content-home-feature--primary {
     min-height: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .content-home-feature:not(:first-child) {
+    display: none;
+  }
+
+  .content-home-feature__image {
+    min-height: 10rem;
   }
 }
 </style>

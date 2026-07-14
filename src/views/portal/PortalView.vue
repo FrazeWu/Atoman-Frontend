@@ -60,7 +60,7 @@
 
       <section class="portal-hot__sections" aria-label="模块热门内容">
         <article
-          v-for="section in visibleSections"
+          v-for="section in displaySections"
           :key="section.module"
           class="portal-hot__section"
         >
@@ -93,6 +93,15 @@
           </div>
         </article>
       </section>
+
+      <nav v-if="!displaySections.length" class="portal-hot__module-strip" aria-label="探索更多模块">
+        <span>探索更多</span>
+        <RouterLink
+          v-for="room in otherRooms"
+          :key="room.key"
+          :to="moduleUrl(room.key)"
+        >{{ room.name }}</RouterLink>
+      </nav>
     </template>
 
     <section v-else class="portal-hot__empty">
@@ -175,7 +184,18 @@ const visibleFeatured = computed(() => (
 
 const leadItem = computed(() => visibleFeatured.value[0])
 const secondaryFeatured = computed(() => visibleFeatured.value.slice(1, 4))
-const hasContent = computed(() => visibleFeatured.value.length > 0 || visibleSections.value.length > 0)
+const displaySections = computed(() => visibleSections.value
+  .map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !isLeadItem(item)),
+  }))
+  .filter((section) => section.items.length > 0))
+const otherRooms = computed(() => visibleRooms.value.filter((room) => room.key !== leadItem.value?.module))
+const hasContent = computed(() => visibleFeatured.value.length > 0 || displaySections.value.length > 0)
+
+function isLeadItem(item: PortalHotItem) {
+  return item.module === leadItem.value?.module && item.id === leadItem.value?.id
+}
 
 async function loadHotContent() {
   loading.value = true
@@ -226,6 +246,7 @@ onMounted(loadHotContent)
 .portal-hot__header,
 .portal-hot__featured,
 .portal-hot__sections,
+.portal-hot__module-strip,
 .portal-hot__loading,
 .portal-hot__empty {
   width: min(1180px, 100%);
@@ -244,7 +265,7 @@ onMounted(loadHotContent)
   max-width: 760px;
   margin: 0;
   color: var(--a-color-ink);
-  font-size: 82px;
+  font-size: 56px;
   font-weight: 950;
   letter-spacing: 0;
   line-height: 0.95;
@@ -323,7 +344,7 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__lead-body h2 {
-  font-size: 52px;
+  font-size: 40px;
   line-height: 1;
 }
 
@@ -374,6 +395,32 @@ onMounted(loadHotContent)
 .portal-hot__sections {
   display: grid;
   gap: 36px;
+}
+
+.portal-hot__module-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  border-top: 1px solid var(--a-color-line-soft);
+  padding-top: 18px;
+}
+
+.portal-hot__module-strip span {
+  color: var(--a-color-ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.portal-hot__module-strip a {
+  color: var(--a-color-ink);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.portal-hot__module-strip a:hover {
+  text-decoration: underline;
 }
 
 .portal-hot__section {

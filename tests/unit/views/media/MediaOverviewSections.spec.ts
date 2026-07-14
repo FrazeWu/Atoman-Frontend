@@ -64,7 +64,7 @@ describe('MediaMixedFeedSection', () => {
 
     const links = wrapper.findAll('a')
     expect(links).toHaveLength(2)
-    expect(links[0]?.attributes('href')).toBe(`/post/post-1`)
+    expect(links[0]?.attributes('href')).toBe('/posts/post/post-1')
     expect(links[1]?.attributes('href')).toBe(modulePathUrl('media', '/podcasts/episode/episode-1'))
   })
 })

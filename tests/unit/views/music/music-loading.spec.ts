@@ -14,7 +14,7 @@ const playerStoreSource = readFileSync(
 describe('music loading boundaries', () => {
   it('does not bootstrap songs from the music home view', () => {
     expect(musicHomeSource).not.toContain('player.fetchSongs()')
-    expect(musicHomeSource).toContain('fetchAlbums()')
+    expect(musicHomeSource).toContain('fetchArtists()')
   })
 
   it('keeps the player audio element lazily created', () => {

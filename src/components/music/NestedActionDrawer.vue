@@ -43,7 +43,7 @@ const titleMap: Record<string, string> = {
 }
 
 const currentAction = computed(() => state.value.nestedAction)
-const displayTitle = computed(() => titleMap[state.value.nestedAction || ''] || 'Action')
+const displayTitle = computed(() => titleMap[state.value.nestedAction || ''] || '操作')
 const subtitleMap: Record<string, string> = {
   revise: '补充专辑信息。',
   revise_artist: '',
@@ -91,9 +91,9 @@ const isArtistForm = computed(() => state.value.nestedAction === 'revise_artist'
 const isAlbumForm = computed(() => state.value.nestedAction === 'revise')
 const canSubmit = computed(() => !submitting.value && (isArtistForm.value || isAlbumForm.value))
 const albumTypeOptions = [
-  { label: 'Album', value: 'album' },
+  { label: '专辑', value: 'album' },
   { label: 'EP', value: 'ep' },
-  { label: 'Single', value: 'single' },
+  { label: '单曲', value: 'single' },
 ]
 
 watch(() => state.value.nestedAction, () => {
@@ -428,7 +428,7 @@ async function submitEdit() {
     :index="sheetIndex"
   >
     <div class="drawer-header">
-      <p class="eyebrow">Music Wiki</p>
+      <p class="eyebrow">音乐资料</p>
       <h3 class="title">{{ displayTitle }}</h3>
       <p v-if="subtitleMap[currentAction || '']" class="subtitle">{{ subtitleMap[currentAction || ''] }}</p>
     </div>
@@ -439,7 +439,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Basic</p>
+              <p class="section-kicker">基础</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -472,7 +472,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Portrait</p>
+              <p class="section-kicker">形象</p>
               <h4>形象信息</h4>
             </div>
           </div>
@@ -491,7 +491,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Archive</p>
+              <p class="section-kicker">档案</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -521,7 +521,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Source</p>
+              <p class="section-kicker">来源</p>
               <h4>来源</h4>
             </div>
           </div>
@@ -568,7 +568,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Basic</p>
+              <p class="section-kicker">基础</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -598,7 +598,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Archive</p>
+              <p class="section-kicker">档案</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -627,7 +627,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Source</p>
+              <p class="section-kicker">来源</p>
               <h4>来源</h4>
             </div>
           </div>
@@ -713,7 +713,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">Diff</p>
+              <p class="section-kicker">修改</p>
               <h4>v{{ selectedRevision.version_number }} 修改内容</h4>
             </div>
           </div>

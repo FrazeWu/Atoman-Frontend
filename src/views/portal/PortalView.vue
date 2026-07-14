@@ -16,7 +16,7 @@
     </section>
 
     <section v-else-if="error" class="portal-hot__empty">
-      <p class="portal-hot__kicker">LOAD FAILED</p>
+      <p class="portal-hot__kicker">加载失败</p>
       <h2>热门内容暂时没有加载出来</h2>
       <p>{{ error }}</p>
       <PButton size="sm" @click="loadHotContent">重试</PButton>
@@ -66,7 +66,7 @@
         >
           <div class="portal-hot__section-head">
             <div>
-              <p class="portal-hot__kicker">{{ section.module.toUpperCase() }}</p>
+              <p class="portal-hot__kicker">{{ moduleLabel(section.module) }}</p>
               <h2>{{ section.title }}</h2>
             </div>
             <RouterLink :to="moduleHomePath(section.module)" class="portal-hot__module-link">
@@ -96,7 +96,7 @@
     </template>
 
     <section v-else class="portal-hot__empty">
-      <p class="portal-hot__kicker">EMPTY</p>
+      <p class="portal-hot__kicker">暂无内容</p>
       <h2>还没有可展示的热门内容</h2>
       <p>可以先从任一模块开始发布、订阅或讨论，首页会自动汇总最活跃的内容。</p>
       <div class="portal-hot__fallback-links">
@@ -244,7 +244,7 @@ onMounted(loadHotContent)
   max-width: 760px;
   margin: 0;
   color: var(--a-color-ink);
-  font-size: clamp(36px, 7vw, 82px);
+  font-size: 82px;
   font-weight: 950;
   letter-spacing: 0;
   line-height: 0.95;
@@ -323,7 +323,7 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__lead-body h2 {
-  font-size: clamp(28px, 4vw, 52px);
+  font-size: 52px;
   line-height: 1;
 }
 
@@ -527,6 +527,14 @@ onMounted(loadHotContent)
 
   .portal-hot__rail {
     grid-template-columns: 1fr;
+  }
+
+  .portal-hot__header h1 {
+    font-size: 36px;
+  }
+
+  .portal-hot__lead-body h2 {
+    font-size: 28px;
   }
 }
 </style>

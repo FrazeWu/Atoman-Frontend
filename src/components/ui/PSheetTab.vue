@@ -1,11 +1,13 @@
 <template>
-  <button class="sheet-tab" aria-label="Close sheet" @click="$emit('click')">
-    <span class="close-icon">✕</span>
+  <button class="sheet-tab" type="button" aria-label="关闭面板" @click="$emit('click')">
+    <X class="close-icon" :size="14" />
     <span class="tab-label">{{ title }}</span>
   </button>
 </template>
 
 <script setup lang="ts">
+import { X } from 'lucide-vue-next'
+
 defineProps<{
   title: string
 }>()

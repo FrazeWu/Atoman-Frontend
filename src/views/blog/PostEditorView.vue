@@ -1519,7 +1519,7 @@ onBeforeUnmount(() => {
 
 .title-placeholder {
   padding: 1.5rem 1.5rem 0;
-  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-size: 2.5rem;
   font-weight: 900;
   letter-spacing: -0.04em;
   line-height: 1.12;
@@ -1802,6 +1802,10 @@ onBeforeUnmount(() => {
 
   .draft-manager-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .title-placeholder {
+    font-size: 1.75rem;
   }
 }
 </style>

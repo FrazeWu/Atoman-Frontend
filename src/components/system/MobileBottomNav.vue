@@ -21,11 +21,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import MobileMoreSheet from '@/components/system/MobileMoreSheet.vue'
-import { getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
+import { getMobileMoreItems, getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
 import { useModuleNav } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { resolveSiteContext } from '@/router/siteContext'
+import { modulePathUrl } from '@/router/siteUrls'
 
 defineOptions({
   name: 'MobileBottomNav',
@@ -33,17 +35,29 @@ defineOptions({
 
 const { navigateTo } = useModuleNav()
 const { navigateModuleWithShutter } = useAsyncNavigate()
+const route = useRoute()
 
 const tabs = computed(() => getMobilePrimaryTabs())
 const isMoreOpen = ref(false)
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
+const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, route.path))
 
 const closeMore = () => {
   isMoreOpen.value = false
 }
 
 const isTabActive = (tab: MobilePrimaryTab) => {
-  if (tab.key === 'more') return isMoreOpen.value
+  if (tab.key === 'more') {
+    return isMoreOpen.value || (
+      siteContext.value.type === 'module'
+      && getMobileMoreItems().some((item) => item.module === siteContext.value.module)
+    )
+  }
+  if (tab.key === 'create') return route.path === tab.href
+  if (tab.key === 'discover') {
+    return siteContext.value.type === 'module'
+      && siteContext.value.module === 'media'
+      && route.path !== modulePathUrl('media', '/create')
+  }
   return siteContext.value.type === 'module' && siteContext.value.module === tab.module
 }
 

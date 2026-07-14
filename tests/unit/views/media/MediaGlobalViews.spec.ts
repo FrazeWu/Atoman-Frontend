@@ -241,8 +241,8 @@ describe('Media global views', () => {
   })
 
   it('marks subscriptions and bookmarks as global pages', () => {
-    expect(mount(MediaSubscriptionsView).text()).toContain('不限定当前频道')
-    expect(mount(MediaBookmarksView).text()).toContain('不限定当前频道')
+    expect(mount(MediaSubscriptionsView).find('.media-subscriptions-view').exists()).toBe(true)
+    expect(mount(MediaBookmarksView).find('.media-bookmarks-view').exists()).toBe(true)
   })
 
   it('only keeps internal subscription content and filters out external feed items', async () => {

@@ -13,6 +13,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   createAlbumBookmark,
   deleteAlbumBookmark,
+  getAlbumDiscussionCount,
   getMusicAlbum,
   getMusicPlaylist,
   listAlbumBookmarks,
@@ -36,6 +37,7 @@ const errorMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
+const discussionCount = ref(0)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
@@ -57,16 +59,6 @@ const editAlbumHref = computed(() => {
   if (!album.value?.id) return modulePathUrl('music', '/')
   return modulePathUrl('music', `/album/${album.value.id}/edit`)
 })
-const discussionCount = computed(() => {
-  const currentAlbum = album.value as (MusicAlbumListItem & {
-    discussion_count?: number
-    open_discussion_count?: number
-  }) | null
-
-  if (!currentAlbum) return undefined
-  return currentAlbum.discussion_count ?? currentAlbum.open_discussion_count
-})
-
 function formatDuration(value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     const minutes = Math.floor(value / 60)
@@ -190,14 +182,22 @@ async function loadAlbum(albumId: string | null) {
   if (!albumId) {
     album.value = null
     isBookmarked.value = false
+    discussionCount.value = 0
     return
   }
 
   loading.value = true
   errorMessage.value = ''
   try {
-    const albumResponse = await getMusicAlbum(albumId)
+    const [albumResponse, albumDiscussionCount] = await Promise.all([
+      getMusicAlbum(albumId),
+      getAlbumDiscussionCount(albumId).catch((error) => {
+        console.error('Failed to fetch album discussion count:', error)
+        return 0
+      }),
+    ])
     album.value = albumResponse
+    discussionCount.value = albumDiscussionCount
     try {
       const bookmarksResponse = await listAlbumBookmarks()
       isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
@@ -262,7 +262,7 @@ watch(
   >
     <div class="drawer-header">
       <div>
-        <div class="kicker">Album Notes</div>
+        <div class="kicker">专辑资料</div>
       </div>
     </div>
 
@@ -273,7 +273,7 @@ watch(
       <div v-else class="album-meta-row">
         <div class="album-cover">
           <img v-if="coverUrl && !isCoverBroken" :src="coverUrl" alt="" class="album-cover-img" @error="handleCoverError" />
-          <span v-else>COVER</span>
+          <span v-else>封面</span>
         </div>
         <div class="album-info">
           <div class="album-type">{{ album?.album_type || '专辑' }}</div>
@@ -290,7 +290,7 @@ watch(
                   {{ artist.name }}
                 </button>
               </template>
-              <template v-if="!album?.artists?.length">Unknown Artist</template>
+              <template v-if="!album?.artists?.length">未知艺术家</template>
             </span>
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
           </div>
@@ -341,7 +341,7 @@ watch(
       </div>
 
       <div class="content-section">
-        <div class="section-title">Tracklist</div>
+        <div class="section-title">曲目</div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="(track, index) in tracks" :key="track.id" class="track">
           <div class="track-main">

@@ -80,7 +80,7 @@
 
         <!-- Abstract -->
         <div v-if="isAcademic && post.summary" class="academic-abstract">
-          <h3 class="abstract-title">Abstract</h3>
+          <h3 class="abstract-title">摘要</h3>
           <p class="abstract-content">{{ post.summary }}</p>
         </div>
 

@@ -69,15 +69,15 @@ async function runReviewAction(action: (id: string, reason: string) => Promise<u
 }
 
 function approve(id: string) {
-  return runReviewAction(approveMusicEdit, id, '通过后台审核')
+  return runReviewAction(approveMusicEdit, id, '已通过')
 }
 
 function reject(id: string) {
-  return runReviewAction(rejectMusicEdit, id, '后台驳回')
+  return runReviewAction(rejectMusicEdit, id, '已驳回')
 }
 
 function cancel(id: string) {
-  return runReviewAction(cancelMusicEdit, id, '后台取消')
+  return runReviewAction(cancelMusicEdit, id, '已取消')
 }
 
 const fetchEntries = async () => {

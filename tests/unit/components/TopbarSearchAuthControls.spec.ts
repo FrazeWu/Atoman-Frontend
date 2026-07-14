@@ -62,14 +62,16 @@ describe('AppTopbarAuthControls search trigger', () => {
   it('renders the search input before the inbox button and opens popover on focus', async () => {
     const wrapper = mountTopbar()
 
-    const searchInput = wrapper.find('.topbar-search-input')
     const inboxButton = wrapper.find('.notif-btn')
 
-    expect(searchInput.exists()).toBe(true)
+    const searchPill = wrapper.get('[data-testid="topbar-search-pill"]')
+    expect(searchPill.exists()).toBe(true)
     expect(inboxButton.exists()).toBe(true)
-    expect(searchInput.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(searchPill.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(false)
 
+    await searchPill.trigger('click')
+    const searchInput = wrapper.get('.topbar-search-input')
     await searchInput.trigger('focus')
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(true)
   })

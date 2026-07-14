@@ -350,7 +350,7 @@ watch(recommendationMode, () => {
 .page-title {
   margin: 0;
   font-family: var(--a-font-serif);
-  font-size: clamp(3rem, 8vw, 6rem);
+  font-size: 6rem;
   font-style: italic;
   font-weight: 900;
   line-height: 0.9;
@@ -571,6 +571,10 @@ watch(recommendationMode, () => {
 @media (max-width: 720px) {
   .playlist-head {
     flex-direction: column;
+  }
+
+  .page-title {
+    font-size: 3rem;
   }
 }
 </style>

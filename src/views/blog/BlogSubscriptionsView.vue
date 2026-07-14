@@ -84,7 +84,6 @@
       <p class="a-muted">加载中...</p>
     </div>
 
-    <PShortcutHints :hints="shortcutHints" />
   </div>
 </template>
 
@@ -99,7 +98,6 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTab from '@/components/ui/PTab.vue'
-import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
@@ -137,15 +135,6 @@ const posts = ref<Post[]>([])
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
-
-const shortcutHints = [
-  { key: 'H', label: '聚焦侧边栏' },
-  { key: 'L', label: '聚焦内容区' },
-  { key: 'J / K', label: '上下切换项目' },
-  { key: 'Enter', label: '打开当前项' },
-  { key: 'S', label: '收藏/取消收藏' },
-  { key: 'L', label: '稍后阅读' }
-]
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: posts,

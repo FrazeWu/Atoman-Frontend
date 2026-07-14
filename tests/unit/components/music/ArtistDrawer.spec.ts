@@ -105,6 +105,31 @@ describe('ArtistDrawer.vue', () => {
     expect(wrapper.text()).toContain('1975')
   })
 
+  it('uses the complete album list response for track counts', async () => {
+    getMusicArtist.mockResolvedValueOnce({
+      id: '1',
+      name: 'Ye',
+      entry_status: 'open',
+      albums: [
+        { id: '1', title: 'The Dark Side of the Moon', release_date: '1973-03-01', entry_status: 'open' },
+      ],
+    })
+
+    const wrapper = mount(ArtistDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
+        },
+      },
+    })
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.findAll('.album-row-meta').map((item) => item.text())).toEqual([
+      '10 首 · 专辑',
+      '5 首 · 专辑',
+    ])
+  })
+
   it('creates an artist bookmark when clicking 订阅 and reflects the state', async () => {
     const wrapper = mount(ArtistDrawer, {
       global: {

@@ -21,7 +21,9 @@
             <slot name="header">
               <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
             </slot>
-            <button v-if="showHeaderClose" class="header-close-btn a-font-meta" @click="$emit('close')">CLOSE</button>
+            <button v-if="showHeaderClose" class="header-close-btn" type="button" aria-label="关闭" title="关闭" @click="$emit('close')">
+              <X :size="16" />
+            </button>
           </div>
           
           <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
@@ -37,6 +39,7 @@
 
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
+import { X } from 'lucide-vue-next'
 import { getActivePinia } from 'pinia'
 import { useSheetStore } from '@/stores/sheet'
 import PSheetTab from './PSheetTab.vue'
@@ -55,7 +58,7 @@ const props = withDefaults(defineProps<{
   isShifted?: boolean
   index?: number
 }>(), {
-  title: 'VIEW',
+  title: '面板',
   width: 'min(100%, 480px)',
   top: '56px',
   side: 'right',

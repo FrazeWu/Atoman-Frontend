@@ -6,6 +6,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useApi } from '@/composables/useApi'
@@ -124,10 +125,16 @@ const loadHome = async () => {
       videoRes.ok ? videoRes.json() : [],
     ])
 
-    const articleRows = Array.isArray(articleData) ? articleData : (articleData.data || articleData || [])
+    const articleRows = Array.isArray(articleData)
+      ? articleData
+      : (Array.isArray(articleData?.data) ? articleData.data : [])
     posts.value = articleRows.map((item: any) => item.post || item).filter(Boolean)
-    episodes.value = Array.isArray(podcastData) ? podcastData : (podcastData.data || podcastData.episodes || [])
-    videos.value = Array.isArray(videoData) ? videoData : (videoData.data || [])
+    episodes.value = Array.isArray(podcastData)
+      ? podcastData
+      : (Array.isArray(podcastData?.data) ? podcastData.data : (Array.isArray(podcastData?.episodes) ? podcastData.episodes : []))
+    videos.value = Array.isArray(videoData)
+      ? videoData
+      : (Array.isArray(videoData?.data) ? videoData.data : [])
   } finally {
     loading.value = false
   }
@@ -176,6 +183,7 @@ onMounted(loadHome)
           <h2>文章</h2>
           <PButton :to="modulePathUrl('media', '/articles')" variant="ghost" size="sm">查看全部</PButton>
         </div>
+        <PEmpty v-if="posts.length === 0" title="暂无文章" />
         <div class="content-home-list">
           <PEntry
             v-for="post in posts.slice(0, 4)"
@@ -211,6 +219,7 @@ onMounted(loadHome)
           <h2>播客</h2>
           <PButton :to="modulePathUrl('media', '/podcasts')" variant="ghost" size="sm">查看全部</PButton>
         </div>
+        <PEmpty v-if="episodes.length === 0" title="暂无播客" />
         <div class="content-home-list">
           <PEntry
             v-for="episode in episodes.slice(0, 4)"
@@ -239,6 +248,7 @@ onMounted(loadHome)
           <h2>视频</h2>
           <PButton :to="modulePathUrl('media', '/videos')" variant="ghost" size="sm">查看全部</PButton>
         </div>
+        <PEmpty v-if="videos.length === 0" title="暂无视频" />
         <div class="content-home-video-grid">
           <PVideoCard
             v-for="video in videos.slice(0, 4)"

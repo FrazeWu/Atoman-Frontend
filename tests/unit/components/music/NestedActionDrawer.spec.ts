@@ -163,7 +163,7 @@ describe('NestedActionDrawer.vue', () => {
 
   it('renders when action is present', () => {
     const wrapper = mountDrawer()
-    expect(wrapper.html()).toContain('Music Wiki')
+    expect(wrapper.html()).toContain('音乐资料')
   })
 
   it('renders and submits the revise artist wiki edit form', async () => {

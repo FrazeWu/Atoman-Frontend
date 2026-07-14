@@ -1,4 +1,4 @@
-import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
+import { apiDeleteJson, apiGet, apiGetEnvelope, apiGetRaw, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -876,7 +876,8 @@ export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylis
   ])
   return {
     ...playlist,
-    songs: (songsResponse.data || []).map((item) => item.song).filter(Boolean),
+    song_count: songsResponse.meta?.total ?? songsResponse.data.length,
+    songs: (songsResponse.data || []).map((item) => item.song ?? item).filter(Boolean),
   }
 }
 
@@ -910,6 +911,13 @@ export async function revertAlbumRevision(albumId: string, version: number, edit
 export async function listAlbumDiscussions(albumId: string): Promise<MusicDiscussion[]> {
   const response = await apiGetEnvelope<MusicDiscussion[]>(musicV1Endpoints.albumDiscussions(albumId))
   return response.data
+}
+
+export async function getAlbumDiscussionCount(albumId: string): Promise<number> {
+  const response = await apiGetRaw<{ data: MusicDiscussion[]; total: number }>(
+    `${musicV1Endpoints.albumDiscussions(albumId)}?limit=1&offset=0`,
+  )
+  return response.total
 }
 
 export async function createAlbumDiscussion(albumId: string, content: string): Promise<MusicDiscussion> {

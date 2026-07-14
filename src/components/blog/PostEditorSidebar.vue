@@ -42,7 +42,7 @@
             @change="$emit('toggle-collection', col.id, $event)"
           />
           <span class="collection-name">{{ col.name }}</span>
-          <span v-if="col.id === defaultCollectionId" class="badge-default">DEFAULT</span>
+          <span v-if="col.id === defaultCollectionId" class="badge-default">默认</span>
         </label>
       </div>
       <span v-else class="col-empty">暂无可用合集</span>

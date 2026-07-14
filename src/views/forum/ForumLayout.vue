@@ -20,7 +20,7 @@
       <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
 
       <!-- Categories section -->
-      <div class="p-sidebar-label">/ CATEGORIES</div>
+      <div class="p-sidebar-label">分类</div>
       <PSidebarItem
         v-for="cat in forumStore.categories"
         :key="cat.id"
@@ -40,7 +40,7 @@
 
       <!-- Tags section -->
       <template v-if="!sidebarCollapsed">
-        <div class="p-sidebar-label">/ TAGS</div>
+        <div class="p-sidebar-label">标签</div>
         <div style="padding:0.5rem 2rem;display:flex;flex-wrap:wrap;gap:0.35rem">
           <button
             v-for="tag in popularTags"
@@ -54,15 +54,6 @@
         </div>
       </template>
 
-      <template #bottom>
-        <!-- Keyboard shortcuts hint -->
-        <div style="padding:1rem 2rem;font-size:0.7rem;color:var(--a-color-muted-soft)">
-          <div style="margin-bottom:0.25rem"><kbd>J</kbd> <kbd>K</kbd> 上下选择</div>
-          <div style="margin-bottom:0.25rem"><kbd>Enter</kbd> 打开话题</div>
-          <div style="margin-bottom:0.25rem"><kbd>N</kbd> 发新话题</div>
-          <div><kbd>/</kbd> 搜索</div>
-        </div>
-      </template>
     </PSidebar>
     <main class="a-main-content">
       <router-view />
@@ -146,13 +137,5 @@ onMounted(async () => {
   background: var(--a-color-fg);
   color: var(--a-color-bg);
   border-color: var(--a-color-fg);
-}
-kbd {
-  font-family: inherit;
-  background: #fff;
-  border: 1px solid var(--a-color-line-soft);
-  padding: 0.1rem 0.3rem;
-  border-radius: 0;
-  font-weight: 900;
 }
 </style>

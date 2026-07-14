@@ -392,13 +392,13 @@ onMounted(() => {
     <div v-else-if="target === 'articles'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
         <div class="section-head">
-          <p class="section-kicker">ARTICLES</p>
+          <p class="section-kicker">文章</p>
           <h2>推荐文章</h2>
         </div>
 
         <PEmpty
           v-if="!visibleArticles.length"
-          kicker="Articles"
+          kicker="文章"
           title="当前没有推荐文章"
           description="等有更多内容和互动信号后，这里会显示文章推荐。"
         />
@@ -454,13 +454,13 @@ onMounted(() => {
     <div v-else-if="target === 'mixed'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
         <div class="section-head">
-          <p class="section-kicker">MIXED OVERVIEW</p>
+          <p class="section-kicker">综合</p>
           <h2>混合推荐</h2>
         </div>
 
         <PEmpty
           v-if="!visibleMixedArticles.length && !visibleMixedChannels.length"
-          kicker="Mixed"
+          kicker="综合"
           title="当前没有混合推荐"
           description="等有更多内容和频道信号后，这里会把站内外推荐一起编排。"
         />
@@ -468,7 +468,7 @@ onMounted(() => {
         <div v-else class="recommend-grid recommend-grid--mixed">
           <section class="recommend-section">
             <div class="section-head">
-              <p class="section-kicker">ARTICLES</p>
+              <p class="section-kicker">文章</p>
               <h2>文章推荐</h2>
             </div>
             <div class="feed-timeline">
@@ -484,7 +484,7 @@ onMounted(() => {
 
           <section class="recommend-section">
             <div class="section-head">
-              <p class="section-kicker">CHANNELS</p>
+              <p class="section-kicker">频道</p>
               <h2>频道推荐</h2>
             </div>
             <div class="card-stack">
@@ -516,13 +516,13 @@ onMounted(() => {
     <div v-else class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
         <div class="section-head">
-          <p class="section-kicker">CHANNELS</p>
+          <p class="section-kicker">频道</p>
           <h2>推荐频道</h2>
         </div>
 
         <PEmpty
           v-if="!visibleChannels.length"
-          kicker="Channels"
+          kicker="频道"
           title="当前没有推荐频道"
           description="等频道侧积累更多更新和质量信号后，这里会显示频道推荐。"
         />

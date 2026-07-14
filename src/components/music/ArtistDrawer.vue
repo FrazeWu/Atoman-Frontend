@@ -56,7 +56,7 @@ async function loadArtist(artistId: string | null) {
       listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 }),
     ])
     artist.value = artistResponse
-    albums.value = artistResponse.albums?.length ? artistResponse.albums : albumsResponse.data
+    albums.value = albumsResponse.data
     try {
       const bookmarksResponse = await listArtistBookmarks()
       isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
@@ -186,7 +186,7 @@ watch(
         <div class="album-row-right">
           <div class="album-row-cover">
             <img v-if="album.cover_url" :src="album.cover_url" alt="" class="album-row-img" />
-            <span v-else>COVER</span>
+            <span v-else>封面</span>
           </div>
           <div class="album-row-info">
             <div class="album-row-title">{{ album.title }}</div>

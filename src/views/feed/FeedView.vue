@@ -81,8 +81,6 @@
       @open-article="openSourceArticle"
     />
 
-    <PShortcutHints :hints="shortcutHints" />
-
     <section class="feed-content">
       <div class="feed-actions">
         <form class="feed-search" data-test="feed-search-form" @submit.prevent="submitSearch">
@@ -273,7 +271,6 @@ import PClip from '@/components/ui/PClip.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
-import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
 const sourceTypeFilterOptions = [
@@ -383,18 +380,6 @@ const themeFilters = computed(() => {
     .slice(0, 6)
     .map(([theme]) => theme)
 })
-
-const shortcutHints = [
-  { key: 'H', label: '聚焦侧边栏' },
-  { key: 'L', label: '聚焦内容区' },
-  { key: 'J / K', label: '上下切换项目' },
-  { key: 'Enter', label: '打开当前项' },
-  { key: 'Esc', label: '关闭面板' },
-  { key: 'M', label: '标记已读/未读' },
-  { key: 'S', label: '收藏/取消收藏' },
-  { key: 'L', label: '稍后阅读' },
-  { key: 'V', label: '查看原文' }
-]
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: visibleTimeline,

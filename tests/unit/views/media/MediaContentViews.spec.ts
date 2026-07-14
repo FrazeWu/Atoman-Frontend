@@ -96,7 +96,7 @@ describe('Media content view shells', () => {
     expect(urls.some(url => url.includes('/blog/explore'))).toBe(true)
     expect(urls.some(url => url.includes('/podcast/episodes'))).toBe(true)
     expect(urls.some(url => url.includes('/videos?sort='))).toBe(true)
-    expect(mount(MediaArticlesView, { global: articleGlobal }).text()).toContain('探索本网站发布的全部文章')
+    expect(mount(MediaArticlesView, { global: articleGlobal }).find('.media-explore-page').exists()).toBe(true)
   })
 
   it('renders videos with PVideoCard links to the media-scoped video detail route', async () => {

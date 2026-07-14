@@ -56,7 +56,7 @@
         <section class="a-card tl-panel-card">
           <div class="tl-panel-head">
             <div>
-              <div class="tl-panel-kicker">COMPARE POOL</div>
+              <div class="tl-panel-kicker">对比</div>
               <h2 class="tl-panel-title">对比池</h2>
             </div>
             <span class="tl-panel-count">{{ compareEvents.length }} 条</span>
@@ -101,7 +101,7 @@
         <section class="a-card tl-panel-card">
           <div class="tl-panel-head">
             <div>
-              <div class="tl-panel-kicker">EVENT SOURCE</div>
+              <div class="tl-panel-kicker">来源</div>
               <h2 class="tl-panel-title">事件来源</h2>
             </div>
             <span class="tl-panel-count">{{ sortedEvents.length }} 条</span>
@@ -162,7 +162,7 @@
         <section v-show="viewMode === 'lanes'" class="tl-stage-pane">
           <div class="tl-stage-head">
             <div>
-              <div class="tl-section-kicker">LANE COMPARE</div>
+              <div class="tl-section-kicker">泳道</div>
               <h2 class="tl-section-title">泳道浏览</h2>
             </div>
             <div class="tl-stage-meta">
@@ -236,7 +236,7 @@
         <section v-if="viewMode === 'map'" class="tl-stage-pane">
           <div class="tl-stage-head">
             <div>
-              <div class="tl-section-kicker">MAP VIEW</div>
+              <div class="tl-section-kicker">地图</div>
               <h2 class="tl-section-title">地图在线查看</h2>
             </div>
             <div class="tl-stage-meta">当前可定位 {{ mapRenderableEvents.length }} 条</div>

@@ -189,4 +189,29 @@ describe('MediaHomeView', () => {
     await wrapper.get('[data-testid="content-home-feature-2"]').trigger('click')
     expect(routerPushMock).toHaveBeenCalledWith('/media/videos/watch/video-1')
   })
+
+  it('treats a null article payload as an empty list', async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/blog/explore')) {
+        return new Response(JSON.stringify({ data: null, message: 'ok' }), { status: 200 })
+      }
+      return new Response('[]', { status: 200 })
+    })
+
+    const wrapper = mount(MediaHomeView, {
+      global: {
+        stubs: {
+          RouterLink: RouterLinkStub,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('暂无文章')
+      expect(wrapper.text()).toContain('暂无播客')
+      expect(wrapper.text()).toContain('暂无视频')
+    })
+  })
 })

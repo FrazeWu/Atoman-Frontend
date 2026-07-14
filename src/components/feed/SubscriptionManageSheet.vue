@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="SUBSCRIPTION_MANAGE"
+    title="订阅源管理"
     close-type="header"
     width="min(100%, 640px)"
     @close="$emit('close')"

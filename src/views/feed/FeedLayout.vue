@@ -30,8 +30,7 @@
       </template>
     </PSidebar>
     <main class="a-main-content">
-      <header class="module-mobile-header">
-        <h1 class="module-mobile-header__title">订阅</h1>
+      <header v-if="authStore.isAuthenticated" class="module-mobile-header">
         <button
           v-if="authStore.isAuthenticated"
           type="button"
@@ -174,13 +173,6 @@ watch(focusedSidebarIndex, (newIndex) => {
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
-  }
-
-  .module-mobile-header__title {
-    margin: 0;
-    font-size: 1.35rem;
-    font-weight: 900;
-    letter-spacing: -0.03em;
   }
 
   .module-mobile-header__action {

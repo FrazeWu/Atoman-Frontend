@@ -166,7 +166,10 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   background: transparent;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
-.nav-link-name { font-weight: 900; }
+.nav-link-name {
+  font-weight: 900;
+  white-space: nowrap;
+}
 .nav-link:hover,
 .nav-link.active {
   color: var(--a-color-fg);
@@ -210,12 +213,7 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
   }
 
   .nav {
-    gap: 0.25rem;
-    overflow-x: auto;
-  }
-
-  .nav-link {
-    padding: 0 0.625rem;
+    display: none;
   }
 }
 </style>

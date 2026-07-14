@@ -2,6 +2,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
+import { createPinia } from 'pinia'
 import MusicLayout from '@/views/music/MusicLayout.vue'
 
 describe('MusicLayout.vue', () => {
@@ -9,11 +10,16 @@ describe('MusicLayout.vue', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [] })
     const wrapper = mount(MusicLayout, {
       global: { 
-        plugins: [router], 
+        plugins: [router, createPinia()],
         stubs: {
           'router-view': true,
           'PSidebar': { template: '<div><slot /></div>' },
-          'PSidebarItem': { template: '<p-sidebar-item-stub><slot /></p-sidebar-item-stub>' }
+          'PSidebarItem': { template: '<p-sidebar-item-stub><slot /></p-sidebar-item-stub>' },
+          PlaylistDrawer: true,
+          ArtistDrawer: true,
+          AlbumDrawer: true,
+          MusicCreationFlowDrawer: true,
+          NestedActionDrawer: true,
         }
       }
     })
@@ -21,6 +27,6 @@ describe('MusicLayout.vue', () => {
     expect(items.length).toBe(3)
     expect(items[0].text()).toContain('探索')
     expect(items[1].text()).toContain('艺术家')
-    expect(items[2].text()).toContain('我的收藏')
+    expect(items[2].text()).toContain('收藏')
   })
 })

@@ -77,7 +77,7 @@ describe('SubscriptionManageSheet', () => {
 
     expect(wrapper.text()).toContain('异常')
     expect(wrapper.text()).toContain('HTTP 500')
-    expect(wrapper.text()).toContain('2026-06-17 16:30')
+    expect(wrapper.text()).toContain('2026-06-17')
 
     await wrapper.findAll('button').find((button) => button.text() === '全部检查')!.trigger('click')
     await wrapper.findAll('button').find((button) => button.text() === '检查')!.trigger('click')

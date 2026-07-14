@@ -128,14 +128,14 @@ const shouldShowYear = (index: number) =>
     <div class="home-header">
       <div class="header-top-row">
         <h1 class="home-title">
-          {{ selectedArtistName ? selectedArtistName.toUpperCase() : 'ATOMAN' }}<br />TIMELINE
+          {{ selectedArtistName || '音乐' }}<br />时间线
         </h1>
         <RouterLink v-if="authStore.isAuthenticated" to="/videos/upload" class="btn-upload">
           上传
         </RouterLink>
       </div>
       <p class="home-subtitle">
-        An interactive archival project. Browse the complete discography of any artist.
+        浏览艺术家的唱片与重要作品。
       </p>
 
       <!-- Artist search -->
@@ -144,7 +144,7 @@ const shouldShowYear = (index: number) =>
           <div class="search-wrap">
             <div class="search-frame">
               <div class="search-frame__head">
-                <span class="search-frame__eyebrow">Artist Search</span>
+                <span class="search-frame__eyebrow">艺术家搜索</span>
                 <span v-if="selectedArtistName" class="search-frame__context">当前：{{ selectedArtistName }}</span>
               </div>
               <PInput

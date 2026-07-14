@@ -472,7 +472,7 @@ watch(() => route.path, () => {
 .auth-title {
   margin: 0;
   font-family: var(--a-font-serif);
-  font-size: clamp(2.2rem, 6vw, 3.55rem);
+  font-size: 3.55rem;
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.05em;

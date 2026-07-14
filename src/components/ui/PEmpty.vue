@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{
   text: '',
   sub: '',
   message: '',
-  kicker: 'Empty Sheet',
+  kicker: '暂无内容',
 })
 
 const computedTitle = computed(() => props.title || props.text || props.message)

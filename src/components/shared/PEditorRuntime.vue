@@ -61,7 +61,7 @@
         <button type="button" class="tb-btn tb-italic" title="斜体" @click="sv_wrap('*', '*', '斜体文字')">I</button>
         <button type="button" class="tb-btn tb-strike" title="删除线" @click="sv_wrap('~~', '~~', '删除线')">S</button>
         <span class="tb-sep" />
-        <button type="button" class="tb-btn" title="引用" @click="sv_wrapLinePrefix('> ', '引用内容')">Quote</button>
+        <button type="button" class="tb-btn" title="引用" aria-label="引用" @click="sv_wrapLinePrefix('> ', '引用内容')"><Quote :size="14" /></button>
         <button type="button" class="tb-btn" title="无序列表" @click="sv_wrapLinePrefix('- ', '列表项')">• 列表</button>
         <button type="button" class="tb-btn" title="有序列表" @click="sv_wrapLinePrefix('1. ', '列表项')">1. 列表</button>
         <button type="button" class="tb-btn" :class="{ active: showLineNumbers }" title="行号" @click="toggleLineNumbers">行号</button>
@@ -128,6 +128,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Quote } from 'lucide-vue-next'
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
 import { Compartment, EditorState, RangeSetBuilder } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'

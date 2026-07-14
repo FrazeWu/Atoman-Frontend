@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="ADD_SUBSCRIPTION"
+    title="添加订阅"
     close-type="header"
     :top="top"
     @close="$emit('close')"

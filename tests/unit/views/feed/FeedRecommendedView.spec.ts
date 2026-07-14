@@ -435,7 +435,7 @@ describe('FeedRecommendedView', () => {
 
     expect(wrapper.text()).toContain('Article Mixed')
     expect(wrapper.text()).toContain('Channel Mixed')
-    expect(wrapper.text()).toContain('MIXED OVERVIEW')
+    expect(wrapper.text()).toContain('综合')
   })
 
   it('does not classify plain articles as videos only because the title contains video keywords', async () => {

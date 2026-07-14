@@ -3,7 +3,7 @@
   <section class="music-sidebar-playlists" :class="{ 'is-collapsed': collapsed }" aria-label="歌单类别">
     <template v-if="!collapsed">
       <header class="music-sidebar-playlists__header">
-        <p class="music-sidebar-playlists__eyebrow a-font-meta">我的歌单 / PLAYLISTS</p>
+        <p class="music-sidebar-playlists__eyebrow a-font-meta">我的歌单</p>
         <button
           type="button"
           class="create-playlist-btn"

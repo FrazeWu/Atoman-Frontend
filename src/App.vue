@@ -1,6 +1,6 @@
 <template>
   <n-config-provider :theme-overrides="themeOverrides">
-    <div :class="['app-shell', { 'has-sidebar': hasSidebar }]">
+    <div :class="['app-shell', { 'has-sidebar': hasSidebar, 'has-active-player': hasActiveTrack }]">
       <AppTopbar />
       <FirstLoginOnboarding />
       <main :class="[
@@ -75,7 +75,7 @@ onMounted(() => {
 
 .app-main {
   flex: 1;
-  padding-bottom: 128px;
+  padding-bottom: 4rem;
   background: #fff;
   transition: opacity 0.5s ease, filter 0.5s ease;
 }
@@ -106,5 +106,23 @@ onMounted(() => {
 .app-main--auth {
   padding-bottom: 0;
   background: #fff;
+}
+
+.has-active-player .app-main {
+  padding-bottom: 9rem;
+}
+
+@media (max-width: 767px) {
+  .app-main {
+    padding-bottom: 5rem;
+  }
+
+  .app-main--auth {
+    padding-bottom: 0;
+  }
+
+  .has-active-player .app-main {
+    padding-bottom: calc(5rem + 72px);
+  }
 }
 </style>

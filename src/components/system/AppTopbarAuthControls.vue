@@ -20,19 +20,13 @@
       data-testid="topbar-search-pill"
       @click.stop="openSearch"
     >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
+      <Search :size="14" aria-hidden="true" />
       <span>搜索...</span>
     </button>
 
     <!-- Expanded search input -->
     <div v-else class="search-box" @click.stop>
-      <svg class="search-box-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
+      <Search class="search-box-icon" :size="14" aria-hidden="true" />
       <input
         ref="searchInputRef"
         v-model="searchDraft"
@@ -45,10 +39,7 @@
         @keydown.escape="closeSearch"
       />
       <button class="search-close-btn" type="button" @click="closeSearch" aria-label="关闭搜索">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
+        <X :size="14" aria-hidden="true" />
       </button>
     </div>
 
@@ -87,7 +78,8 @@
   </div>
 
   <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
-    {{ notificationRoom.name }}
+    <Bell :size="16" aria-hidden="true" />
+    <span class="notif-label">{{ notificationRoom.name }}</span>
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
   </RouterLink>
 
@@ -109,6 +101,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Bell, Search, X } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
@@ -273,6 +266,10 @@ watch(authUserId, ensureMediaChannels)
 }
 
 .notif-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--a-color-muted);
@@ -463,6 +460,53 @@ watch(authUserId, ensureMediaChannels)
   }
 }
 
+@media (max-width: 720px) {
+  .channel-select-wrap {
+    display: none;
+  }
+
+  .topbar-search-wrap {
+    width: 36px;
+    margin-right: 0;
+  }
+
+  .topbar-search-wrap.is-open {
+    position: fixed;
+    top: 56px;
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+    margin: 0;
+  }
+
+  .search-pill {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .search-pill span,
+  .notif-label,
+  .user-name,
+  .chevron {
+    display: none;
+  }
+
+  .notif-btn,
+  .user-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+
+  .notif-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    margin: 0;
+  }
+}
+
 .notif-btn:hover {
   color: var(--a-color-fg);
   text-decoration: underline;
@@ -596,4 +640,3 @@ watch(authUserId, ensureMediaChannels)
   opacity: 0;
 }
 </style>
-

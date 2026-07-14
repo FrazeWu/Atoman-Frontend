@@ -150,7 +150,7 @@
          <span class="close-btn" @click="player.toggleLyrics">关闭</span>
       </div>
       <div class="lyrics-content">
-         <p class="placeholder-text">歌词即将到来</p>
+         <p class="placeholder-text">暂无歌词</p>
          <p class="song-meta">{{ player.currentSong.title }} - {{ artistText }}</p>
       </div>
     </div>
@@ -1002,5 +1002,55 @@ onBeforeUnmount(() => {
 }
 .track-add-menu-item:hover {
   background-color: var(--a-color-paper-wash);
+}
+
+@media (max-width: 767px) {
+  .player {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    height: 72px;
+  }
+
+  .player-inner {
+    gap: 0.75rem;
+    padding: 0 1rem;
+  }
+
+  .player-info {
+    flex: 1 1 auto;
+    max-width: calc(100% - 7rem);
+  }
+
+  .cover-wrap {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-controls-hub {
+    position: static;
+    width: auto;
+    min-width: 0;
+    margin-left: auto;
+    transform: none;
+  }
+
+  .progress-container,
+  .skip-btn,
+  .player-features {
+    display: none;
+  }
+
+  .ctrl-row {
+    gap: 8px;
+  }
+
+  .lyrics-panel,
+  .queue-panel {
+    right: 0;
+    bottom: calc(136px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    width: 100%;
+    height: auto;
+    padding: 1.5rem;
+  }
 }
 </style>

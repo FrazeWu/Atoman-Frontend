@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    title="SOURCE_ITEMS"
+    title="订阅源条目"
     close-type="header"
     @close="$emit('close')"
   >

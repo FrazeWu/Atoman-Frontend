@@ -37,7 +37,7 @@ const isAdmin = computed(() => isAdminRole(authStore.user?.role))
 .site-footer-inner {
   max-width: 1152px;
   margin: 0 auto;
-  padding: 1.25rem 2rem calc(1.25rem + 96px);
+  padding: 1.25rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -79,5 +79,12 @@ const isAdmin = computed(() => isAdminRole(authStore.user?.role))
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-strong);
   white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .site-footer-inner {
+    align-items: flex-start;
+    padding: 1.25rem 2rem calc(1.25rem + 64px + env(safe-area-inset-bottom, 0px));
+  }
 }
 </style>

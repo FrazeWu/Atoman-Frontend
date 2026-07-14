@@ -1,7 +1,7 @@
 <template>
   <main class="unknown-site">
     <section class="unknown-card">
-      <p class="unknown-kicker">UNKNOWN SPACE</p>
+      <p class="unknown-kicker">空间不可用</p>
       <h1>这个空间不存在</h1>
       <p>请检查子域名是否正确，或返回 Atoman 门户。</p>
       <a :href="portalUrl" class="unknown-link">返回门户</a>

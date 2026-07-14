@@ -6,6 +6,7 @@ import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 const {
   openNestedAction,
   getMusicAlbum,
+  getAlbumDiscussionCount,
   playAlbum,
   listAlbumBookmarks,
   createAlbumBookmark,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   getMusicAlbum: vi.fn(),
+  getAlbumDiscussionCount: vi.fn(),
   playAlbum: vi.fn(),
   listAlbumBookmarks: vi.fn(),
   createAlbumBookmark: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 
 vi.mock('@/api/musicV1', () => ({
   getMusicAlbum,
+  getAlbumDiscussionCount,
   listAlbumBookmarks,
   createAlbumBookmark,
   deleteAlbumBookmark,
@@ -51,6 +54,7 @@ describe('AlbumDrawer.vue', () => {
   beforeEach(() => {
     openNestedAction.mockReset()
     getMusicAlbum.mockReset()
+    getAlbumDiscussionCount.mockReset()
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
     createAlbumBookmark.mockReset()
@@ -66,6 +70,7 @@ describe('AlbumDrawer.vue', () => {
         { id: '102', title: 'Second Song', track_number: 2, audio_url: 'https://cdn.test/2.mp3' },
       ],
     })
+    getAlbumDiscussionCount.mockResolvedValue(0)
     listAlbumBookmarks.mockResolvedValue({ data: [] })
     createAlbumBookmark.mockResolvedValue({
       id: 'album-bookmark-1',
@@ -84,7 +89,7 @@ describe('AlbumDrawer.vue', () => {
         },
       },
     })
-    expect(wrapper.text()).toContain('Album Notes')
+    expect(wrapper.text()).toContain('专辑资料')
   })
 
   it('plays album songs through the player when clicking play album', async () => {
@@ -210,7 +215,7 @@ describe('AlbumDrawer.vue', () => {
 
     await flushPromises()
 
-    expect(wrapper.get('[data-test="discussion-fab"]').text()).toBe('讨论')
+    expect(wrapper.get('[data-test="discussion-fab"]').text()).toBe('讨论(0)')
     expect(wrapper.text()).not.toContain('03:45')
     expect(wrapper.find('.track-time').exists()).toBe(false)
   })
@@ -236,13 +241,13 @@ describe('AlbumDrawer.vue', () => {
   })
 
   it('shows discussion count and track durations when real data exists', async () => {
+    getAlbumDiscussionCount.mockResolvedValueOnce(7)
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Test Album',
       release_date: '2024-01-01',
       album_type: 'album',
       entry_status: 'open',
-      discussion_count: 7,
       songs: [
         { id: 'song-1', title: 'First Song', track_number: 1, duration_sec: 125 },
       ],
@@ -331,7 +336,7 @@ describe('AlbumDrawer.vue', () => {
     await wrapper.get('.album-cover-img').trigger('error')
 
     expect(wrapper.find('.album-cover-img').exists()).toBe(false)
-    expect(wrapper.get('.album-cover').text()).toContain('COVER')
+    expect(wrapper.get('.album-cover').text()).toContain('封面')
   })
 
   it('creates an album bookmark when clicking 订阅 and reflects the new state', async () => {

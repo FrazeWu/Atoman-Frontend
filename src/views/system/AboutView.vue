@@ -28,10 +28,10 @@ const techStack = [
       <!-- Features -->
       <div class="features-grid">
         <a :href="moduleUrl('music')" class="feature-card">
-          <div class="card-label">MUSIC</div>
+          <div class="card-label">音乐</div>
           <h2 class="card-title">音乐档案</h2>
           <p class="card-desc">
-            以时间轴方式呈现艺术家的完整唱片目录。支持社区上传、信息修正与管理员审核工作流。
+            以时间轴方式呈现艺术家的唱片目录，支持上传与资料修正。
           </p>
         </a>
 
@@ -44,7 +44,7 @@ const techStack = [
         </a>
 
         <a :href="moduleUrl('feed')" class="feature-card">
-          <div class="card-label">FEED</div>
+          <div class="card-label">订阅</div>
           <h2 class="card-title">订阅聚合</h2>
           <p class="card-desc">
             订阅站内用户频道或任意外部 RSS 源，所有内容聚合为统一时间流。每个用户也生成标准 RSS 源供他人订阅。
@@ -73,15 +73,15 @@ const techStack = [
           </li>
           <li class="contrib-item">
             <span class="contrib-num">02</span>
-            <span class="contrib-text">普通用户上传的音乐进入待审核队列，经管理员批准后对外可见</span>
+            <span class="contrib-text">上传音乐资料，补充艺术家、专辑与曲目信息</span>
           </li>
           <li class="contrib-item">
             <span class="contrib-num">03</span>
-            <span class="contrib-text">发现信息有误？可提交修正申请，同样经审核后生效</span>
+            <span class="contrib-text">发现信息有误时，可直接提交修正</span>
           </li>
           <li class="contrib-item">
             <span class="contrib-num">04</span>
-            <span class="contrib-text">法堂内容由作者自主管理，无需审核即可发布</span>
+            <span class="contrib-text">在个人空间管理文章、合集与订阅</span>
           </li>
         </ul>
       </div>
@@ -96,7 +96,7 @@ const techStack = [
         >
           GitHub →
         </a>
-        <span class="license-badge">GPL License</span>
+        <span class="license-badge">GPL 许可</span>
       </div>
     </div>
   </div>

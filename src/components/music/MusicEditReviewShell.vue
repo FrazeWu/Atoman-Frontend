@@ -1,13 +1,13 @@
 <template>
   <div class="music-edit-review-shell">
-    <PPageHeader title="音乐审核" sub="统一展示 Music edit 队列，并提供 approve / reject / cancel 操作。" kicker="Music Review" accent />
+    <PPageHeader title="音乐审核" sub="查看并处理音乐资料修改。" accent />
 
     <div class="music-edit-review-shell__filters">
       <PSelect v-model="statusModel" label="状态" :options="statusOptions" />
       <PSelect v-model="entityTypeModel" label="实体类型" :options="entityTypeOptions" />
     </div>
 
-    <PEmpty v-if="!items.length" description="当前没有待审核的 music edits" />
+    <PEmpty v-if="!items.length" description="当前没有待审核的修改" />
 
     <div v-else class="music-edit-review-shell__list">
       <PEntry
@@ -67,18 +67,18 @@ const emit = defineEmits<{
 
 const statusOptions = [
   { label: '全部状态', value: '' },
-  { label: 'Open', value: 'open' },
-  { label: 'Applied', value: 'applied' },
-  { label: 'Rejected', value: 'rejected' },
-  { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Reverted', value: 'reverted' },
+  { label: '待处理', value: 'open' },
+  { label: '已通过', value: 'applied' },
+  { label: '已驳回', value: 'rejected' },
+  { label: '已取消', value: 'cancelled' },
+  { label: '已撤销', value: 'reverted' },
 ]
 
 const entityTypeOptions = [
   { label: '全部实体', value: '' },
-  { label: 'Artist', value: 'artist' },
-  { label: 'Album', value: 'album' },
-  { label: 'Song', value: 'song' },
+  { label: '艺术家', value: 'artist' },
+  { label: '专辑', value: 'album' },
+  { label: '歌曲', value: 'song' },
 ]
 
 const statusModel = computed({

@@ -7,8 +7,6 @@
     @close="$emit('close')"
   >
     <div class="mobile-more-sheet" data-testid="mobile-more-sheet">
-      <p class="mobile-more-sheet__eyebrow">MORE</p>
-
       <nav class="mobile-more-sheet__grid" aria-label="更多模块">
         <a
           v-for="item in items"
@@ -17,7 +15,6 @@
           class="mobile-more-sheet__item"
         >
           <span class="mobile-more-sheet__item-label">{{ item.label }}</span>
-          <span class="mobile-more-sheet__item-helper">{{ item.module.toUpperCase() }}</span>
         </a>
       </nav>
     </div>
@@ -66,7 +63,7 @@ const items = computed(() => getMobileMoreItems())
   display: flex;
   min-height: 76px;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.5rem;
   padding: 1rem;
   border: 1px solid var(--a-color-line-soft);

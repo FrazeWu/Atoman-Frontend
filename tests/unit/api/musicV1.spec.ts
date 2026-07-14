@@ -298,6 +298,39 @@ describe('music v1 adapter', () => {
     expect(result).toEqual({ id: 'album_uuid', title: 'Graduation', entry_status: 'open' })
   })
 
+  it('uses playlist song pagination total as the detail song count', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ data: { id: 'playlist_uuid', name: 'Favorites', song_count: 0 } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          data: [{ id: 'playlist_song_uuid', song: { id: 'song_uuid', title: 'Song' } }],
+          meta: { page: 1, page_size: 20, total: 37, has_more: true },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )))
+
+    const result = await musicV1.getMusicPlaylist('playlist_uuid')
+
+    expect(result.song_count).toBe(37)
+    expect(result.songs).toEqual([{ id: 'song_uuid', title: 'Song' }])
+  })
+
+  it('reads the album discussion total from pagination metadata', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: [], total: 7 }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    const getAlbumDiscussionCount = (musicV1 as typeof musicV1 & {
+      getAlbumDiscussionCount?: (albumId: string) => Promise<number>
+    }).getAlbumDiscussionCount
+
+    expect(getAlbumDiscussionCount).toBeTypeOf('function')
+    await expect(getAlbumDiscussionCount?.('album_uuid')).resolves.toBe(7)
+  })
+
   it('builds update album edits with track collection changes', () => {
     const result = buildUpdateAlbumEdit('album_uuid', {
       title: 'Updated Album',

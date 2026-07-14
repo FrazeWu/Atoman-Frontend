@@ -40,14 +40,14 @@
         v-if="(item.enclosure_url && item.enclosure_type?.startsWith('audio/')) || item.duration"
         class="podcast-player-panel"
       >
-        <div class="player-label">AUDIO_ENCLOSURE</div>
+        <div class="player-label">音频</div>
         <div style="display:flex;align-items:center;gap:1.5rem">
           <PPress
             @click="togglePlay"
-            :label="isPlaying ? '⏸ PAUSE' : '▶ PLAY AUDIO'"
+            :label="isPlaying ? '暂停' : '播放音频'"
             :variant="isPlaying ? 'secondary' : 'primary'"
           />
-          <span v-if="item.duration" class="duration-text">DURATION: {{ item.duration }}</span>
+          <span v-if="item.duration" class="duration-text">时长：{{ item.duration }}</span>
         </div>
         <audio
           v-if="item.enclosure_url"
@@ -202,7 +202,7 @@ onUnmounted(() => {
 
 .article-title {
   font-family: var(--a-font-serif);
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: 4rem;
   font-weight: 900;
   line-height: 1.1;
   margin-bottom: 1.5rem;
@@ -313,5 +313,11 @@ onUnmounted(() => {
 .feed-loading {
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 720px) {
+  .article-title {
+    font-size: 2.5rem;
+  }
 }
 </style>

@@ -46,19 +46,21 @@ const closeMore = () => {
 }
 
 const isTabActive = (tab: MobilePrimaryTab) => {
+  const context = siteContext.value
+
   if (tab.key === 'more') {
     return isMoreOpen.value || (
-      siteContext.value.type === 'module'
-      && getMobileMoreItems().some((item) => item.module === siteContext.value.module)
+      context.type === 'module'
+      && getMobileMoreItems().some((item) => item.module === context.module)
     )
   }
   if (tab.key === 'create') return route.path === tab.href
   if (tab.key === 'discover') {
-    return siteContext.value.type === 'module'
-      && siteContext.value.module === 'media'
+    return context.type === 'module'
+      && context.module === 'media'
       && route.path !== modulePathUrl('media', '/create')
   }
-  return siteContext.value.type === 'module' && siteContext.value.module === tab.module
+  return context.type === 'module' && context.module === tab.module
 }
 
 const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {

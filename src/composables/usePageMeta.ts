@@ -10,76 +10,89 @@ export type PageMeta = {
   updatedAt?: string
 }
 
-type Restorer = () => void
+const defaultMeta = [
+  ['name', 'description', 'Atoman 内容社区'],
+  ['property', 'og:type', 'website'],
+  ['property', 'og:title', 'Atoman'],
+  ['property', 'og:description', 'Atoman 内容社区'],
+  ['property', 'og:image', '/favicon.png'],
+  ['name', 'twitter:card', 'summary'],
+  ['name', 'twitter:title', 'Atoman'],
+  ['name', 'twitter:description', 'Atoman 内容社区'],
+  ['name', 'twitter:image', '/favicon.png'],
+] as const
+
+function createMeta(attribute: 'name' | 'property', key: string) {
+  const meta = document.createElement('meta')
+  meta.setAttribute(attribute, key)
+  document.head.append(meta)
+  return meta
+}
+
+function restoreSiteDefaults() {
+  document.head.querySelectorAll('[data-page-meta="article"]').forEach(element => element.remove())
+  document.head.querySelectorAll('link[rel="canonical"], meta[property^="article:"]').forEach(element => element.remove())
+  document.title = 'Atoman'
+
+  for (const [attribute, key, content] of defaultMeta) {
+    const selector = `meta[${attribute}="${key}"]`
+    const meta = document.head.querySelector<HTMLMetaElement>(selector) || createMeta(attribute, key)
+    meta.removeAttribute('data-page-meta')
+    meta.dataset.defaultMeta = ''
+    meta.content = content
+  }
+}
+
+function upsertMeta(attribute: 'name' | 'property', key: string, content: string) {
+  const selector = `meta[${attribute}="${key}"]`
+  const meta = document.head.querySelector<HTMLMetaElement>(selector) || createMeta(attribute, key)
+  meta.removeAttribute('data-default-meta')
+  meta.dataset.pageMeta = 'article'
+  meta.content = content
+}
 
 export function usePageMeta() {
-  let restorers: Restorer[] = []
-
-  const restore = () => {
-    restorers.splice(0).reverse().forEach(run => run())
-    document.title = 'Atoman'
-  }
-
-  const setAttribute = (selector: string, create: () => HTMLElement, attribute: string, value: string) => {
-    let element = document.head.querySelector<HTMLElement>(selector)
-    const created = !element
-    if (!element) {
-      element = create()
-      element.dataset.pageMeta = ''
-      document.head.append(element)
-    }
-    const previous = element.getAttribute(attribute)
-    element.setAttribute(attribute, value)
-    restorers.push(() => {
-      if (created) element?.remove()
-      else if (previous === null) element?.removeAttribute(attribute)
-      else element?.setAttribute(attribute, previous)
-    })
-  }
-
-  const setMeta = (attribute: 'name' | 'property', key: string, content: string) => {
-    setAttribute(`meta[${attribute}="${key}"]`, () => {
-      const meta = document.createElement('meta')
-      meta.setAttribute(attribute, key)
-      return meta
-    }, 'content', content)
-  }
-
   const setPageMeta = (meta: PageMeta) => {
-    restore()
     document.title = `${meta.title} | Atoman`
-    setMeta('name', 'description', meta.description)
-    setAttribute('link[rel="canonical"]', () => {
-      const link = document.createElement('link')
-      link.setAttribute('rel', 'canonical')
-      return link
-    }, 'href', meta.canonical)
-    setMeta('property', 'og:type', 'article')
-    setMeta('property', 'og:title', meta.title)
-    setMeta('property', 'og:description', meta.description)
-    setMeta('property', 'og:url', meta.canonical)
-    setMeta('name', 'twitter:card', meta.image ? 'summary_large_image' : 'summary')
-    setMeta('name', 'twitter:title', meta.title)
-    setMeta('name', 'twitter:description', meta.description)
+    document.querySelector('title')?.setAttribute('data-page-meta', 'article')
+    upsertMeta('name', 'description', meta.description)
+    upsertMeta('property', 'og:type', 'article')
+    upsertMeta('property', 'og:title', meta.title)
+    upsertMeta('property', 'og:description', meta.description)
+    upsertMeta('property', 'og:url', meta.canonical)
+    upsertMeta('name', 'twitter:card', meta.image ? 'summary_large_image' : 'summary')
+    upsertMeta('name', 'twitter:title', meta.title)
+    upsertMeta('name', 'twitter:description', meta.description)
     if (meta.image) {
-      setMeta('property', 'og:image', meta.image)
-      setMeta('name', 'twitter:image', meta.image)
+      upsertMeta('property', 'og:image', meta.image)
+      upsertMeta('name', 'twitter:image', meta.image)
     }
-    if (meta.publishedAt) setMeta('property', 'article:published_time', meta.publishedAt)
-    if (meta.updatedAt) setMeta('property', 'article:modified_time', meta.updatedAt)
+    if (meta.publishedAt) upsertMeta('property', 'article:published_time', meta.publishedAt)
+    if (meta.updatedAt) upsertMeta('property', 'article:modified_time', meta.updatedAt)
 
-    const script = document.createElement('script')
-    script.type = 'application/ld+json'
-    script.dataset.pageMeta = ''
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    if (!canonical) {
+      canonical = document.createElement('link')
+      canonical.rel = 'canonical'
+      document.head.append(canonical)
+    }
+    canonical.dataset.pageMeta = 'article'
+    canonical.href = meta.canonical
+
+    let script = document.head.querySelector<HTMLScriptElement>('script[data-page-meta="article"][type="application/ld+json"]')
+    if (!script) {
+      script = document.createElement('script')
+      script.type = 'application/ld+json'
+      script.dataset.pageMeta = 'article'
+      document.head.append(script)
+    }
     script.textContent = JSON.stringify({
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: meta.title,
       description: meta.description, image: meta.image, author: meta.author ? { '@type': 'Person', name: meta.author } : undefined,
       datePublished: meta.publishedAt, dateModified: meta.updatedAt, mainEntityOfPage: meta.canonical, url: meta.canonical,
     }).replace(/</g, '\\u003c')
-    document.head.append(script)
-    restorers.push(() => script.remove())
   }
 
-  onUnmounted(restore)
-  return { setPageMeta, restorePageMeta: restore }
+  onUnmounted(restoreSiteDefaults)
+  return { setPageMeta, restorePageMeta: restoreSiteDefaults }
 }

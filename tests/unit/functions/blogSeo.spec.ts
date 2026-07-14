@@ -29,8 +29,9 @@ describe('blog SEO helpers', () => {
   it('injects escaped article metadata and script-safe JSON-LD', () => {
     const html = buildArticleHtml('<html><head><title>Atoman</title></head><body></body></html>', post, 'https://atoman.org')
 
-    expect(html).toContain('<title>安全 &lt;标题&gt; &amp; &quot;引号&quot; | Atoman</title>')
+    expect(html).toContain('<title data-page-meta="article">安全 &lt;标题&gt; &amp; &quot;引号&quot; | Atoman</title>')
     expect(html).toContain('property="og:type" content="article"')
+    expect(html).toContain('data-page-meta="article"')
     expect(html).toContain('rel="canonical" href="https://atoman.org/posts/post/post-1"')
     expect(html).toContain('property="article:published_time" content="2026-07-10T08:00:00Z"')
     expect(html).toContain('name="twitter:card" content="summary_large_image"')

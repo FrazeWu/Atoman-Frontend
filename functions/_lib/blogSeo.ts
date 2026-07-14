@@ -33,7 +33,7 @@ const escapeXml = escapeHtml
 const articleUrl = (origin: string, id: string) => `${origin}/posts/post/${encodeURIComponent(id)}`
 
 function metaTag(attribute: 'name' | 'property', key: string, value: string) {
-  return `<meta ${attribute}="${escapeHtml(key)}" content="${escapeHtml(value)}">`
+  return `<meta data-page-meta="article" ${attribute}="${escapeHtml(key)}" content="${escapeHtml(value)}">`
 }
 
 export function buildArticleHtml(html: string, post: BlogSeoPost, origin: string) {
@@ -54,9 +54,9 @@ export function buildArticleHtml(html: string, post: BlogSeoPost, origin: string
   }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
 
   const tags = [
-    `<title>${escapeHtml(title)}</title>`,
+    `<title data-page-meta="article">${escapeHtml(title)}</title>`,
     metaTag('name', 'description', post.description),
-    `<link rel="canonical" href="${escapeHtml(canonical)}">`,
+    `<link data-page-meta="article" rel="canonical" href="${escapeHtml(canonical)}">`,
     metaTag('property', 'og:type', 'article'),
     metaTag('property', 'og:title', post.title),
     metaTag('property', 'og:description', post.description),
@@ -68,7 +68,7 @@ export function buildArticleHtml(html: string, post: BlogSeoPost, origin: string
     metaTag('name', 'twitter:image', image),
     ...(post.published_at ? [metaTag('property', 'article:published_time', post.published_at)] : []),
     metaTag('property', 'article:modified_time', post.updated_at),
-    `<script type="application/ld+json">${jsonLd}</script>`,
+    `<script data-page-meta="article" type="application/ld+json">${jsonLd}</script>`,
   ].join('\n    ')
 
   const cleanHtml = html

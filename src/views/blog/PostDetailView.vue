@@ -237,11 +237,11 @@ const fetchPost = async () => {
   loading.value = true
   errorStatus.value = null
   post.value = null
-  restorePageMeta()
   try {
     const id = postId.value
     if (!id) {
       errorStatus.value = 404
+      restorePageMeta()
       return
     }
     const headers: Record<string, string> = {}
@@ -295,10 +295,12 @@ const fetchPost = async () => {
       }
     } else {
       errorStatus.value = res.status
+      restorePageMeta()
     }
   } catch (e) {
     console.error(e)
     errorStatus.value = 500
+    restorePageMeta()
   } finally {
     loading.value = false
   }

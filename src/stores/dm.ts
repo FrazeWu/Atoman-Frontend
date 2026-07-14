@@ -139,6 +139,16 @@ export const useDMStore = defineStore('dm', () => {
     }
   }
 
+  const resetStore = () => {
+    openConversationRequestId += 1
+    unreadCount.value = 0
+    conversations.value = []
+    activeConversation.value = null
+    messages.value = []
+    loading.value = false
+    total.value = 0
+  }
+
   return {
     unreadCount,
     conversations,
@@ -153,5 +163,6 @@ export const useDMStore = defineStore('dm', () => {
     uploadImage,
     markRead,
     receiveDM,
+    resetStore,
   }
 })

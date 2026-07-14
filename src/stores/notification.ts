@@ -88,6 +88,15 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  const resetStore = () => {
+    unreadCount.value = 0
+    notifications.value = []
+    loading.value = false
+    total.value = 0
+    page.value = 1
+    currentType.value = ''
+  }
+
   return {
     unreadCount,
     notifications,
@@ -100,5 +109,6 @@ export const useNotificationStore = defineStore('notification', () => {
     markRead,
     markAllRead,
     receiveNotification,
+    resetStore,
   }
 })

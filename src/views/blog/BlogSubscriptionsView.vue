@@ -198,7 +198,7 @@ const fetchTimeline = async (append = false) => {
       // timeline returns list of items with { type, post, rss_item, ... }
       const rawData: TimelineItem[] = d.data || []
       const extractedPosts: Post[] = rawData
-        .filter((item) => item.type === 'post' && item.post)
+        .filter((item) => item.type === 'post' && item.post?.channel?.content_type === 'blog')
         .map((item) => item.post as Post)
 
       if (append) {

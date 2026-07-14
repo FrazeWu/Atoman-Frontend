@@ -336,14 +336,16 @@ const REPLY_DRAFT_KEY = () => `reply:${route.params.id}`
 
 let autosaveTimer: ReturnType<typeof setInterval> | null = null
 
-const saveReplyDraft = () => {
+const saveReplyDraft = async () => {
   if (replyContent.value.trim()) {
-    forumStore.saveDraftLocal(REPLY_DRAFT_KEY(), { context_key: REPLY_DRAFT_KEY(), content: replyContent.value })
+    const draft = { context_key: REPLY_DRAFT_KEY(), content: replyContent.value }
+    forumStore.saveDraftLocal(REPLY_DRAFT_KEY(), draft)
+    await forumStore.putDraft(draft)
   }
 }
 
-const clearReplyDraft = () => {
-  forumStore.clearDraftLocal(REPLY_DRAFT_KEY())
+const clearReplyDraft = async () => {
+  await forumStore.deleteDraft(REPLY_DRAFT_KEY())
   replyContent.value = ''
   draftRestored.value = false
 }
@@ -398,7 +400,7 @@ const submitReply = async () => {
     quotedReply.value?.id,
   )
   if (newReply) {
-    clearReplyDraft()
+    await clearReplyDraft()
     clearQuote()
     await forumStore.fetchReplies(route.params.id as string, replySort.value)
   }
@@ -427,7 +429,10 @@ onMounted(async () => {
   ])
 
   // Restore reply draft
-  const draft = forumStore.loadDraftLocal(REPLY_DRAFT_KEY())
+  const serverDraft = authStore.isAuthenticated
+    ? await forumStore.fetchDraft(REPLY_DRAFT_KEY())
+    : null
+  const draft = serverDraft ?? forumStore.loadDraftLocal(REPLY_DRAFT_KEY())
   if (draft?.content) {
     replyContent.value = draft.content
     draftRestored.value = true

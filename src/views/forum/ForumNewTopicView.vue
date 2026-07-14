@@ -105,6 +105,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEditor from '@/components/shared/PEditor.vue'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
+import type { ForumDraft } from '@/types'
 
 const DRAFT_KEY = 'new_topic'
 
@@ -148,22 +149,24 @@ const onTagBackspace = () => {
 
 // ─── Draft persistence ───────────────────────────────────────────────────────
 
-const saveDraft = () => {
+const saveDraft = async () => {
   const { title, content } = parseEditor()
   if (!title && !content) return
-  forumStore.saveDraftLocal(DRAFT_KEY, {
+  const draft: ForumDraft = {
     context_key: DRAFT_KEY,
     title,
     content,
     tags: tags.value.join(','),
-  })
+  }
+  forumStore.saveDraftLocal(DRAFT_KEY, draft)
+  await forumStore.putDraft(draft)
   const now = new Date()
   draftSavedAt.value = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   hasDraft.value = true
 }
 
-const restoreDraft = () => {
-  const draft = forumStore.loadDraftLocal(DRAFT_KEY)
+const restoreDraft = async () => {
+  const draft = await forumStore.fetchDraft(DRAFT_KEY) ?? forumStore.loadDraftLocal(DRAFT_KEY)
   if (!draft) return
   if (draft.content) {
     const titleLine = draft.title ? `# ${draft.title}\n\n` : ''
@@ -175,8 +178,8 @@ const restoreDraft = () => {
   hasDraft.value = true
 }
 
-const clearDraft = () => {
-  forumStore.clearDraftLocal(DRAFT_KEY)
+const clearDraft = async () => {
+  await forumStore.deleteDraft(DRAFT_KEY)
   hasDraft.value = false
   draftSavedAt.value = ''
 }
@@ -230,7 +233,7 @@ const submit = async () => {
       tags: tags.value,
     })
     if (topic) {
-      clearDraft()
+      await clearDraft()
       router.push(`/forum/topic/${topic.id}`)
     }
   } finally {
@@ -251,7 +254,7 @@ onMounted(async () => {
   if (forumStore.categories.length > 0 && !selectedCategoryId.value) {
     selectedCategoryId.value = forumStore.categories[0].id
   }
-  restoreDraft()
+  await restoreDraft()
   startAutosave()
 })
 </script>

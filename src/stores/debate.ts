@@ -452,6 +452,7 @@ export const useDebateStore = defineStore("debate", () => {
     debatesTotal.value = 0;
     currentDebate.value = null;
     argumentList.value = [];
+    userVotes.value = {};
     loading.value = false;
     error.value = null;
   };

@@ -41,7 +41,6 @@
             @click="selectCollection(col.id)"
           >
             <span class="col-name">{{ col.name }}</span>
-            <span class="col-count">{{ col.videos_count || 0 }}</span>
           </button>
         </div>
       </section>
@@ -171,14 +170,13 @@ interface Collection {
   id: string
   name: string
   description?: string
-  videos_count?: number
 }
 
 interface Channel {
   id: string
   name: string
   description?: string
-  collections_count?: number
+  content_type: 'blog' | 'podcast' | 'video'
   collections?: Collection[]
 }
 
@@ -258,7 +256,9 @@ const loadChannels = async () => {
     })
     if (channelsRes.ok) {
       const channelsData = await channelsRes.json()
-      const channelList = channelsData.data || []
+      const channelList: Channel[] = (channelsData.data || []).filter(
+        (channel: Channel) => channel.content_type === 'video',
+      )
       
       // Load collections for each channel
       for (const channel of channelList) {
@@ -348,7 +348,8 @@ const handleCreateChannel = async () => {
       },
       body: JSON.stringify({
         name: formData.value.name.trim(),
-        description: formData.value.description.trim()
+        description: formData.value.description.trim(),
+        content_type: 'video'
       })
     })
 

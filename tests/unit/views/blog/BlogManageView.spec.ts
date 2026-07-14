@@ -36,12 +36,20 @@ describe('BlogManageView', () => {
 
       if (url.includes('/blog/channels?user_id=user-1')) {
         return makeJsonResponse({
-          data: [{ id: 'channel-1', name: '频道一' }],
+          data: [
+            { id: 'channel-1', name: '频道一', content_type: 'blog' },
+            { id: 'channel-podcast', name: '播客频道', content_type: 'podcast' },
+          ],
         })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({
           data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }],
+        })
+      }
+      if (url.includes('/blog/channels/channel-podcast/collections')) {
+        return makeJsonResponse({
+          data: [{ id: 'collection-podcast', name: '播客合集', channel_id: 'channel-podcast' }],
         })
       }
       if (url.includes('/blog/posts/drafts')) {
@@ -100,13 +108,15 @@ describe('BlogManageView', () => {
     expect(wrapper.text()).toContain('已发布文章')
     expect(wrapper.text()).toContain('草稿文章')
     expect(wrapper.text()).toContain('草稿')
+    expect(wrapper.text()).not.toContain('播客合集')
+    expect(wrapper.find('.col-count').exists()).toBe(false)
   })
 
   it('persists collection order when finishing sort mode', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/blog/channels?user_id=user-1')) {
-        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一', content_type: 'blog' }] })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }] })
@@ -180,7 +190,7 @@ describe('BlogManageView', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/blog/channels?user_id=user-1')) {
-        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一', content_type: 'blog' }] })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }] })
@@ -258,7 +268,7 @@ describe('BlogManageView', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.includes('/blog/channels?user_id=user-1')) {
-        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一', content_type: 'blog' }] })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }] })

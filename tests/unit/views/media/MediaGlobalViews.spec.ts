@@ -64,7 +64,16 @@ const timelinePayload = {
         pinned: false,
         created_at: '2026-06-29T08:00:00Z',
         updated_at: '2026-06-29T08:00:00Z',
-        collection: { id: 'collection-podcast', channel_id: 'channel-1', name: '播客', created_at: '2026-06-01T00:00:00Z', updated_at: '2026-06-01T00:00:00Z' },
+        channel: {
+          id: 'channel-podcast-1',
+          user_id: 'user-1',
+          name: '节目频道',
+          slug: 'podcast-channel',
+          content_type: 'podcast',
+          created_at: '2026-06-01T00:00:00Z',
+          updated_at: '2026-06-01T00:00:00Z',
+        },
+        collection: { id: 'collection-podcast', channel_id: 'channel-podcast-1', name: '随笔集', created_at: '2026-06-01T00:00:00Z', updated_at: '2026-06-01T00:00:00Z' },
       },
       published_at: '2026-06-29T08:00:00Z',
       is_read: false,
@@ -90,6 +99,33 @@ const timelinePayload = {
   ],
   meta: { page: 1, page_size: 20, total: 3, has_more: false },
 }
+
+const subscribedVideosPayload = [{
+  id: 'video-1',
+  channel_id: 'channel-video-1',
+  user_id: 'user-1',
+  title: '站内视频',
+  description: '视频简介',
+  storage_type: 'external',
+  video_url: 'https://example.com/video',
+  thumbnail_url: '',
+  duration_sec: 120,
+  visibility: 'public',
+  status: 'published',
+  view_count: 18,
+  tags: [],
+  created_at: '2026-06-28T08:00:00Z',
+  updated_at: '2026-06-28T08:00:00Z',
+  channel: {
+    id: 'channel-video-1',
+    user_id: 'user-1',
+    name: '视频频道',
+    slug: 'video-channel',
+    content_type: 'video',
+    created_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-01T00:00:00Z',
+  },
+}]
 
 const bookmarkPayloads = {
   article: {
@@ -214,6 +250,9 @@ describe('Media global views', () => {
       if (url.endsWith('/feed/timeline')) {
         return new Response(JSON.stringify(timelinePayload), { status: 200 })
       }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify(subscribedVideosPayload), { status: 200 })
+      }
       if (url.endsWith('/blog/bookmarks')) {
         return new Response(JSON.stringify(bookmarkPayloads.article), { status: 200 })
       }
@@ -257,6 +296,7 @@ describe('Media global views', () => {
     }))
     expect(wrapper.text()).toContain('站内文章')
     expect(wrapper.text()).toContain('站内播客')
+    expect(wrapper.text()).toContain('站内视频')
     expect(wrapper.text()).not.toContain('外部视频')
     expect(wrapper.text()).not.toContain('外部视频源')
   })
@@ -278,7 +318,7 @@ describe('Media global views', () => {
     expect(wrapper.text()).not.toContain('站内文章')
 
     await segments.find((item) => item.text() === '视频')!.trigger('click')
-    expect(wrapper.text()).toContain('暂无视频')
+    expect(wrapper.text()).toContain('站内视频')
     expect(wrapper.text()).not.toContain('外部视频')
   })
 

@@ -176,6 +176,27 @@ describe('Music StarredView', () => {
     expect(wrapper.text()).toContain('MAGDALENE')
   })
 
+  it('shows every bookmark even when it is absent from recommendations', async () => {
+    mocks.listRecommendedArtists.mockResolvedValueOnce({ data: [] })
+    mocks.listRecommendedAlbums.mockResolvedValueOnce({ data: [] })
+
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('FKA twigs')
+    expect(wrapper.text()).toContain('MAGDALENE')
+  })
+
+  it('loads song bookmarks and playlists into the starred library', async () => {
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    expect(mocks.listSongBookmarks).toHaveBeenCalledWith()
+    expect(mocks.listMusicPlaylists).toHaveBeenCalledWith()
+    expect(wrapper.text()).toContain('cellophane')
+    expect(wrapper.text()).toContain('夜航歌单')
+  })
+
   it('opens artist and album drawers when clicking starred cards', async () => {
     const wrapper = mount(StarredView)
     await flushPromises()

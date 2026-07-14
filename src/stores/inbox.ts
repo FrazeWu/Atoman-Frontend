@@ -47,6 +47,13 @@ export const useInboxStore = defineStore('inbox', () => {
     }
   }
 
+  const resetUserData = () => {
+    disconnect()
+    notificationStore.resetStore()
+    dmStore.resetStore()
+    initialized.value = false
+  }
+
   const connect = async () => {
     if (!authStore.token || socket) return
     const apiBase = api.url.replace(/\/api\/v1$/, '')
@@ -85,8 +92,7 @@ export const useInboxStore = defineStore('inbox', () => {
 
   const bootstrap = async () => {
     if (!authStore.isAuthenticated) {
-      disconnect()
-      initialized.value = false
+      resetUserData()
       return
     }
     await Promise.all([
@@ -105,5 +111,6 @@ export const useInboxStore = defineStore('inbox', () => {
     bootstrap,
     connect,
     disconnect,
+    resetUserData,
   }
 })

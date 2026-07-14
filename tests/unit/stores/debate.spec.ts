@@ -80,4 +80,13 @@ describe('debate store HTTP contracts', () => {
 
     expect(store.debates.map(debate => debate.id)).toEqual(['debate-1', 'debate-2'])
   })
+
+  it('clears the previous account argument votes when resetting the store', () => {
+    const store = useDebateStore()
+    store.userVotes = { 'argument-1': 1 }
+
+    store.resetStore()
+
+    expect(store.userVotes).toEqual({})
+  })
 })

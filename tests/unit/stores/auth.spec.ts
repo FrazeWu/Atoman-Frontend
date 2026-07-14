@@ -202,17 +202,6 @@ describe('auth store', () => {
     expect(auth.lastAuthError).toBe('无法连接服务器，请检查网络后重试')
   })
 
-  it('maps missing turnstile token errors to a human-readable register message', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      error: 'Turnstile verification is required',
-    }), { status: 403 }))
-
-    const auth = useAuthStore()
-
-    await expect(auth.register('alice', 'alice@example.com', 'secret')).rejects.toThrow('请先完成人机验证')
-    expect(auth.lastAuthError).toBe('请先完成人机验证')
-  })
-
   it('accepts a successful register response with uuid-based user payload', async () => {
     const token = makeToken(3600)
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
@@ -231,7 +220,7 @@ describe('auth store', () => {
     }), { status: 201 }))
 
     const auth = useAuthStore()
-    await auth.register('alice', 'alice@example.com', 'secret', 'secret', '123456', 'turnstile-token')
+    await auth.register('alice', 'alice@example.com', 'secret', 'secret', '123456')
 
     expect(auth.isAuthenticated).toBe(true)
     expect(auth.token).toBe(token)

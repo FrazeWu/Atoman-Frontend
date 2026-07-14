@@ -232,8 +232,7 @@ export const useAuthStore = defineStore('auth', () => {
     email: string,
     password: string,
     passwordConfirm?: string,
-    verificationCode?: string,
-    turnstileToken?: string
+    verificationCode?: string
   ) => {
     lastAuthError.value = null
     try {
@@ -247,7 +246,6 @@ export const useAuthStore = defineStore('auth', () => {
           password,
           password_confirm: passwordConfirm,
           verification_code: verificationCode,
-          turnstile_token: turnstileToken,
         }),
       })
 

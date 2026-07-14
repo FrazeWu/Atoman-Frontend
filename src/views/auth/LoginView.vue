@@ -104,8 +104,7 @@
           />
 
           <TurnstileWidget
-            v-if="turnstileEnabled"
-            :key="turnstileWidgetKey"
+            v-if="showTurnstile"
             ref="turnstileRef"
             :site-key="turnstileSiteKey"
             @verified="turnstileToken = $event"
@@ -148,16 +147,6 @@
             type="password"
             placeholder="再次输入密码"
             :error="fieldErrors.passwordConfirm"
-          />
-
-          <TurnstileWidget
-            v-if="turnstileEnabled"
-            :key="turnstileWidgetKey"
-            ref="turnstileRef"
-            :site-key="turnstileSiteKey"
-            @verified="turnstileToken = $event"
-            @expired="turnstileToken = ''"
-            @error="handleTurnstileError"
           />
 
           <div class="auth-buttons-row">
@@ -204,7 +193,7 @@ import { useApi } from '@/composables/useApi'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
-import { buildRegisterTurnstileKey, shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
+import { shouldRequireTurnstileConfig } from '@/views/auth/turnstileConfig'
 
 const email = ref('')
 const password = ref('')
@@ -229,8 +218,8 @@ const currentStep = ref(1)
 const isRegister = computed(() => route.path === '/register')
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 const turnstileEnabled = computed(() => isRegister.value && import.meta.env.PROD && !!turnstileSiteKey)
+const showTurnstile = computed(() => turnstileEnabled.value && currentStep.value === 1 && !codeSent.value)
 const turnstileConfigMissing = computed(() => shouldRequireTurnstileConfig(isRegister.value, import.meta.env.PROD, turnstileSiteKey))
-const turnstileWidgetKey = computed(() => buildRegisterTurnstileKey(currentStep.value))
 const visibleError = computed(() => errorMsg.value || authStore.lastAuthError || '')
 
 const safeRedirectPath = (redirect: unknown) => {
@@ -291,7 +280,7 @@ const sendVerificationCode = async () => {
     if (!response.ok) throw new Error(data.details || data.error || '发送验证码失败')
     codeSent.value = true
     startCountdown()
-    resetTurnstile()
+    turnstileToken.value = ''
   } catch (error: any) {
     errorMsg.value = error.message || '发送验证码失败'
     resetTurnstile()
@@ -354,17 +343,12 @@ const handleSubmit = async () => {
         loading.value = false
         return
       }
-      if (!requireTurnstileToken()) {
-        loading.value = false
-        return
-      }
       await authStore.register(
         username.value,
         email.value,
         password.value,
         passwordConfirm.value,
-        verificationCode.value,
-        turnstileToken.value
+        verificationCode.value
       )
     } else {
       if (!email.value) {

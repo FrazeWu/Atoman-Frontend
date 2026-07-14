@@ -69,6 +69,7 @@ export type MusicAlbumImportCommitInput = {
     legal_name: string
     stage_names: MusicAlbumImportCommitStageName[]
     birth_place: string
+    image_url?: string
   }
   album: {
     title: string

@@ -215,6 +215,36 @@ describe('MusicCreationFlowDrawer', () => {
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
   })
 
+  it('提交专辑导入时携带艺术家头像地址', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    const flow = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'albumDetails',
+      draft: {
+        ...flow.draft,
+        artist: {
+          ...flow.draft.artist,
+          avatarUrl: ' https://img.test/artist.jpg ',
+        },
+        albumImport: {
+          ...flow.draft.albumImport,
+          status: 'ready',
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
+      artist: expect.objectContaining({
+        image_url: 'https://img.test/artist.jpg',
+      }),
+    }))
+  })
+
   it.each(['uploading', 'extracting'] as const)(
     '%s 状态点击完成不会提交专辑导入',
     async (status) => {

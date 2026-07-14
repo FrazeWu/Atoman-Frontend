@@ -94,6 +94,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
           endDateText: item.endDateText.trim(),
         })),
       birth_place: flow.draft.artist.birthPlace.trim(),
+      image_url: flow.draft.artist.avatarUrl.trim() || undefined,
     },
     album: {
       title: flow.draft.albumDetails.title.trim(),

@@ -174,4 +174,33 @@ describe('LoginView redirect', () => {
     )
 
   })
+
+  it('marks the verification button busy while sending', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    let resolveRequest: ((response: Response) => void) | undefined
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise((resolve) => {
+      resolveRequest = resolve
+    }))
+
+    const wrapper = mount(LoginView, {
+      global: {
+        plugins: [pinia, router],
+      },
+    })
+    await router.push('/register')
+    await flushPromises()
+
+    await wrapper.get('.auth-code-input').setValue('alice@example.com')
+    await wrapper.get('.auth-code-btn-inline').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const button = wrapper.get('.auth-code-btn-inline')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.attributes('aria-busy')).toBe('true')
+
+    resolveRequest?.(new Response(JSON.stringify({ message: 'sent' }), { status: 200 }))
+    await flushPromises()
+  })
 })

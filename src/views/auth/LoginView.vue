@@ -71,12 +71,13 @@
         <!-- REGISTER VIEW - STEP 1 (Email & Verification Code) -->
         <div v-else-if="currentStep === 1" class="auth-step-container">
           <div class="p-field">
-            <label class="email-field-label">
+            <label class="email-field-label" for="register-email">
               <span class="email-field-dot" aria-hidden="true" />
               邮箱地址
             </label>
             <div class="auth-code-input-group" :class="{ 'auth-code-input-group--error': fieldErrors.email }">
               <input
+                id="register-email"
                 v-model="email"
                 type="email"
                 required
@@ -87,6 +88,7 @@
                 type="button"
                 class="auth-code-btn-inline"
                 :disabled="countdown > 0 || sendingCode"
+                :aria-busy="sendingCode"
                 @click="sendVerificationCode"
               >
                 {{ sendingCode ? '发送中...' : (countdown > 0 ? `${countdown}s` : '获取验证码') }}
@@ -588,10 +590,12 @@ watch(() => route.path, () => {
 .auth-code-input-group {
   display: flex;
   align-items: stretch;
+  height: 3rem;
   border: 1px solid var(--a-color-line-soft);
   background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .auth-code-input-group:focus-within {
@@ -604,10 +608,10 @@ watch(() => route.path, () => {
 }
 
 .auth-code-input {
-  flex: 1;
+  flex: 1 1 0;
   border: 0;
   background: transparent;
-  padding: 0.88rem 0.95rem;
+  padding: 0 0.95rem;
   font-size: 0.98rem;
   font-family: inherit;
   color: var(--a-color-fg);
@@ -624,45 +628,48 @@ watch(() => route.path, () => {
 }
 
 .auth-code-btn-inline {
-  align-self: center;
-  margin-right: 0.5rem;
-  height: 2.2rem;
-  padding: 0 1rem;
-  border: 1.5px solid var(--a-color-fg);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
+  align-self: stretch;
+  width: 7rem;
+  min-width: 7rem;
+  min-height: 2.75rem;
+  margin: 1px 1px 1px 0;
+  padding: 0 0.75rem;
+  border: 0;
+  border-left: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 2px 2px 0px var(--a-color-fg);
+  transition: background-color 0.15s ease, color 0.15s ease;
+  box-shadow: none;
   border-radius: 0;
+  touch-action: manipulation;
 }
 
 .auth-code-btn-inline:hover:not(:disabled) {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  box-shadow: 3px 3px 0px var(--a-color-fg);
-  transform: translate(-1px, -1px);
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
 }
 
 .auth-code-btn-inline:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px var(--a-color-fg);
+  background: var(--a-color-line-soft);
+}
+
+.auth-code-btn-inline:focus-visible {
+  outline: 2px solid var(--a-color-fg);
+  outline-offset: -3px;
 }
 
 .auth-code-btn-inline:disabled {
-  border-color: var(--a-color-line-soft);
   background: var(--a-color-paper-wash);
   color: var(--a-color-muted-soft);
-  box-shadow: none;
-  transform: none;
   cursor: not-allowed;
 }
 

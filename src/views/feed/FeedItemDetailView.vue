@@ -202,7 +202,7 @@ onUnmounted(() => {
 
 .article-title {
   font-family: var(--a-font-serif);
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: 4rem;
   font-weight: 500;
   line-height: 1.1;
   margin-bottom: 1.5rem;
@@ -313,5 +313,11 @@ onUnmounted(() => {
 .feed-loading {
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 720px) {
+  .article-title {
+    font-size: 2.5rem;
+  }
 }
 </style>

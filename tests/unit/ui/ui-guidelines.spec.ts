@@ -21,11 +21,27 @@ describe('UI 准则', () => {
     expect(globalStyle).toMatch(/letter-spacing:\s*0\s*!important/)
   })
 
+  it('页面级大标题不随视口连续缩放', () => {
+    const sources = [
+      'src/views/auth/LoginView.vue',
+      'src/views/blog/PostEditorView.vue',
+      'src/views/feed/FeedItemDetailView.vue',
+      'src/views/music/StarredView.vue',
+      'src/views/portal/PortalView.vue',
+    ].map(read)
+
+    for (const source of sources) {
+      expect(source).not.toMatch(/font-size:\s*clamp\([^;]*vw/)
+    }
+  })
+
   it('空状态和管理界面不暴露英文内部文案', () => {
     expect(read('src/components/ui/PEmpty.vue')).toContain("kicker: '暂无内容'")
     expect(read('src/components/music/MusicSidebarPlaylists.vue')).not.toContain('PLAYLISTS')
     expect(read('src/views/forum/ForumLayout.vue')).not.toMatch(/CATEGORIES|TAGS/)
     expect(read('src/components/music/MusicEditReviewShell.vue')).not.toMatch(/Music edit|approve \/ reject \/ cancel|music edits/)
+    expect(read('src/components/setting/SettingFeedSourcePanel.vue')).not.toContain('方便后台识别')
+    expect(read('src/components/setting/SettingMusicReviewPanel.vue')).not.toMatch(/后台审核|后台驳回|后台取消/)
   })
 
   it('页面不再渲染可见快捷键说明', () => {

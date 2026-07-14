@@ -73,7 +73,7 @@
         <PInput
           v-model="draft.title"
           label="订阅源名称"
-          placeholder="可选，方便后台识别"
+          placeholder="输入订阅源名称（可选）"
         />
         <PInput
           v-model="draft.rssUrl"

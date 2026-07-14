@@ -244,7 +244,7 @@ onMounted(loadHotContent)
   max-width: 760px;
   margin: 0;
   color: var(--a-color-ink);
-  font-size: clamp(36px, 7vw, 82px);
+  font-size: 82px;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 0.95;
@@ -323,7 +323,7 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__lead-body h2 {
-  font-size: clamp(28px, 4vw, 52px);
+  font-size: 52px;
   line-height: 1;
 }
 
@@ -527,6 +527,14 @@ onMounted(loadHotContent)
 
   .portal-hot__rail {
     grid-template-columns: 1fr;
+  }
+
+  .portal-hot__header h1 {
+    font-size: 36px;
+  }
+
+  .portal-hot__lead-body h2 {
+    font-size: 28px;
   }
 }
 </style>

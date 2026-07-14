@@ -1,12 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
+import { defineComponent, h } from 'vue'
 
 import LoginView from '@/views/auth/LoginView.vue'
 import {
-  buildRegisterTurnstileKey,
   isRetryableTurnstileError,
   shouldDisplayTurnstileError,
   resolveTurnstileErrorMessage,
@@ -22,6 +20,11 @@ const routes = [
   { path: '/login', component: LoginView },
   { path: '/register', component: LoginView },
 ]
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.useRealTimers()
+})
 
 const mountLogin = async (redirect: string) => {
   const pinia = createPinia()
@@ -74,22 +77,9 @@ describe('LoginView redirect', () => {
     expect(shouldRequireTurnstileConfig(false, true, '')).toBe(false)
   })
 
-  it('uses different turnstile keys for different register steps', () => {
-    expect(buildRegisterTurnstileKey(1)).toBe('register-turnstile-step-1')
-    expect(buildRegisterTurnstileKey(2)).toBe('register-turnstile-step-2')
-    expect(buildRegisterTurnstileKey(1)).not.toBe(buildRegisterTurnstileKey(2))
-  })
-
-  it('renders turnstile in the registration verification step as well as the final submit step', () => {
-    const source = readFileSync(path.resolve(process.cwd(), 'src/views/auth/LoginView.vue'), 'utf8')
-
-    expect(source).toMatch(/REGISTER VIEW - STEP 1[\s\S]*<TurnstileWidget/)
-    expect(source).toMatch(/REGISTER VIEW - STEP 2[\s\S]*<TurnstileWidget/)
-  })
-
-  it('renders turnstile in both register steps for production', () => {
+  it('renders turnstile only before sending the verification code', () => {
     expect(shouldRenderTurnstileForRegisterStep(true, true, '0x4AAAAA', 1)).toBe(true)
-    expect(shouldRenderTurnstileForRegisterStep(true, true, '0x4AAAAA', 2)).toBe(true)
+    expect(shouldRenderTurnstileForRegisterStep(true, true, '0x4AAAAA', 2)).toBe(false)
     expect(shouldRenderTurnstileForRegisterStep(true, false, '0x4AAAAA', 1)).toBe(false)
     expect(shouldRenderTurnstileForRegisterStep(false, true, '0x4AAAAA', 1)).toBe(false)
     expect(shouldRenderTurnstileForRegisterStep(true, true, '', 1)).toBe(false)
@@ -124,5 +114,76 @@ describe('LoginView redirect', () => {
     expect(validateRegisterUsername('music')).toBe('该用户名暂时不可用')
     expect(validateRegisterUsername('media')).toBe('该用户名暂时不可用')
     expect(validateRegisterUsername('-alice')).toBe('用户名只能使用小写字母、数字或连字符')
+  })
+
+  it('uses one turnstile challenge and keeps the completed register button clickable', async () => {
+    vi.useFakeTimers()
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'test-site-key')
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    const authStore = useAuthStore()
+    const register = vi.spyOn(authStore, 'register').mockResolvedValue()
+    const reset = vi.fn()
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/auth/check-email') || url.endsWith('/auth/check-username')) {
+        return new Response(JSON.stringify({ available: true }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ message: 'sent' }), { status: 200 })
+    })
+
+    const TurnstileStub = defineComponent({
+      name: 'TurnstileWidget',
+      emits: ['verified', 'expired', 'error'],
+      setup(_, { emit, expose }) {
+        expose({ reset })
+        return () => h('button', {
+          type: 'button',
+          'data-test': 'turnstile-verify',
+          onClick: () => emit('verified', 'single-token'),
+        })
+      },
+    })
+
+    const wrapper = mount(LoginView, {
+      global: {
+        plugins: [pinia, router],
+        stubs: { TurnstileWidget: TurnstileStub },
+      },
+    })
+    await router.push('/register')
+    await flushPromises()
+
+    await wrapper.findAll('input')[0].setValue('alice@example.com')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    await wrapper.get('[data-test="turnstile-verify"]').trigger('click')
+    await wrapper.get('.auth-code-btn-inline').trigger('click')
+    await flushPromises()
+    await wrapper.findAll('input')[1].setValue('123456')
+    await wrapper.get('.auth-submit').trigger('click')
+
+    expect(wrapper.find('[data-test="turnstile-verify"]').exists()).toBe(false)
+
+    await wrapper.findAll('input')[0].setValue('alice')
+    await wrapper.findAll('input')[1].setValue('secret123')
+    await wrapper.findAll('input')[2].setValue('secret123')
+
+    expect(wrapper.get('.auth-submit-btn').attributes('disabled')).toBeUndefined()
+
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(reset).not.toHaveBeenCalled()
+    expect(register).toHaveBeenCalledWith(
+      'alice',
+      'alice@example.com',
+      'secret123',
+      'secret123',
+      '123456',
+    )
   })
 })

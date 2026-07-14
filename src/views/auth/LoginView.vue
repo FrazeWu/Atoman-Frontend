@@ -108,8 +108,7 @@
           />
 
           <TurnstileWidget
-            v-if="turnstileVisible"
-            :key="turnstileWidgetKey"
+            v-if="turnstileVisible && !codeSent"
             ref="turnstileRef"
             :site-key="turnstileSiteKey"
             @verified="handleTurnstileVerified"
@@ -155,16 +154,6 @@
             :error="fieldErrors.passwordConfirm"
           />
 
-          <TurnstileWidget
-            v-if="turnstileVisible"
-            :key="turnstileWidgetKey"
-            ref="turnstileRef"
-            :site-key="turnstileSiteKey"
-            @verified="handleTurnstileVerified"
-            @expired="handleTurnstileExpired"
-            @error="handleTurnstileError"
-          />
-
           <div class="auth-buttons-row">
             <PButton
               type="button"
@@ -180,7 +169,6 @@
               variant="primary"
               size="lg"
               class="auth-submit-btn"
-              :disabled="!canSubmitRegister"
               :loading="loading"
               loading-text="请稍候..."
           >
@@ -212,7 +200,6 @@ import PButton from '@/components/ui/PButton.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
 import { validateRegisterUsername } from '@/views/auth/registerValidation'
 import {
-  buildRegisterTurnstileKey,
   isRetryableTurnstileError,
   resolveTurnstileErrorMessage,
   shouldDisplayTurnstileError,
@@ -254,7 +241,6 @@ const isRegister = computed(() => route.path === '/register')
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 const turnstileEnabled = computed(() => isRegister.value && import.meta.env.PROD && !!turnstileSiteKey)
 const turnstileConfigMissing = computed(() => shouldRequireTurnstileConfig(isRegister.value, import.meta.env.PROD, turnstileSiteKey))
-const turnstileWidgetKey = computed(() => buildRegisterTurnstileKey(currentStep.value))
 const turnstileVisible = computed(() => shouldRenderTurnstileForRegisterStep(
   isRegister.value,
   import.meta.env.PROD,
@@ -282,15 +268,6 @@ const canSendVerification = computed(() => (
   emailAvailability.value.status === 'available'
   && !emailChecking.value
 ))
-const canSubmitRegister = computed(() => (
-  !loading.value
-  && !usernameChecking.value
-  && usernameAvailability.value.status === 'available'
-  && password.value.length >= 6
-  && password.value === passwordConfirm.value
-  && !!verificationCode.value
-))
-
 const safeRedirectPath = (redirect: unknown) => {
   if (typeof redirect !== 'string') return '/'
   if (!redirect.startsWith('/') || redirect.startsWith('//')) return '/'
@@ -451,7 +428,7 @@ const sendVerificationCode = async () => {
     if (!response.ok) throw new Error(data.details || data.error || '发送验证码失败')
     codeSent.value = true
     startCountdown()
-    resetTurnstile()
+    turnstileToken.value = ''
   } catch (error: any) {
     errorMsg.value = error.message || '发送验证码失败'
     resetTurnstile()
@@ -529,17 +506,12 @@ const handleSubmit = async () => {
         loading.value = false
         return
       }
-      if (!requireTurnstileToken()) {
-        loading.value = false
-        return
-      }
       await authStore.register(
         username.value,
         email.value,
         password.value,
         passwordConfirm.value,
-        verificationCode.value,
-        turnstileToken.value
+        verificationCode.value
       )
     } else {
       if (!email.value) {

@@ -236,6 +236,19 @@ describe('SettingFeedSourcePanel', () => {
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
   })
 
+  it('uses user-facing Chinese source status labels', async () => {
+    storeState.sources = [createSourceRow({ status: 'healthy' })]
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('状态：正常')
+    expect(wrapper.text()).not.toContain('状态：healthy')
+  })
+
   it('点击订阅源后打开条目 sheet 并按 source 拉取条目', async () => {
     storeState.sources = [createSourceRow({
       id: 'source-1',

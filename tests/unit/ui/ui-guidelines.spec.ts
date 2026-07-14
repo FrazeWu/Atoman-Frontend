@@ -141,4 +141,33 @@ describe('UI 准则', () => {
     expect(read('src/components/feed/SubscriptionManageSheet.vue')).not.toContain('SUBSCRIPTION_MANAGE')
     expect(read('src/components/setting/SettingFeedSourceItemsSheet.vue')).not.toContain('SOURCE_ITEMS')
   })
+
+  it('站点管理的内嵌工具不使用嵌套卡片', () => {
+    expect(read('src/components/setting/SettingFeedSourcePanel.vue')).not.toContain('<PSurface')
+    expect(read('src/components/setting/SettingForumModeratorPanel.vue')).not.toContain('<PSurface')
+  })
+
+  it('音乐管理使用统一表格且不使用 emoji 图标', () => {
+    const source = read('src/views/setting/SettingMusicReview.vue')
+    expect(source).toContain('setting-music__entries-table')
+    expect(source).not.toContain('💬')
+  })
+
+  it('管理页在窄屏只保留一个主操作且工具按钮不拉伸', () => {
+    const access = read('src/views/setting/SettingAccessView.vue')
+    const music = read('src/views/setting/SettingMusicReview.vue')
+
+    expect(access).toMatch(/@media \(max-width: 900px\)[\s\S]*?\.setting-access__footer\s*\{[\s\S]*?position:\s*static/)
+    expect(access).toMatch(/@media \(max-width: 640px\)[\s\S]*?\.setting-access__save-top\s*\{[\s\S]*?display:\s*none/)
+    expect(music).toMatch(/\.setting-music__entry-filters[\s\S]*?:deep\(\.p-button\)[\s\S]*?justify-self:\s*start/)
+  })
+
+  it('站点管理不暴露模块键名或强制滚动动画', () => {
+    const access = read('src/views/setting/SettingAccessView.vue')
+    const feed = read('src/components/setting/SettingFeedSourcePanel.vue')
+
+    expect(access).not.toContain('key.toUpperCase()')
+    expect(access).not.toContain("behavior: 'smooth'")
+    expect(feed).not.toContain('external_rss')
+  })
 })

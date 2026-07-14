@@ -26,7 +26,7 @@ test.describe('Authentication', () => {
   })
 
   test('unauthenticated user redirected to login when accessing protected route', async ({ page }) => {
-    await page.goto('/post/new')
+    await page.goto('/posts/post/new')
     await expect(page.locator('.editor-page')).toHaveCount(0)
   })
 

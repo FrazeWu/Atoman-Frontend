@@ -37,7 +37,7 @@
         :key="post.id"
         :title="post.title"
         :summary="post.summary"
-        @click="$router.push('/post/' + post.id)"
+        @click="$router.push('/posts/post/' + post.id)"
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">

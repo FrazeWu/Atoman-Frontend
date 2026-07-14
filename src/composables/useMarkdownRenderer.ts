@@ -190,7 +190,7 @@ function preprocessDirectives(content: string, options?: RenderMarkdownOptions):
     'post',
     /:::post\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.postEmbeds,
-    (id) => `/post/${id}`,
+    (id) => `/posts/post/${id}`,
   )
 
   next = replaceDirective(

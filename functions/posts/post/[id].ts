@@ -1,0 +1,34 @@
+import { buildArticleHtml, resolveApiBase, type BlogSeoPost } from '../../_lib/blogSeo'
+
+type ArticleContext = {
+  request: Request
+  env: { VITE_API_URL?: string }
+  params: { id?: string | string[] }
+  next: () => Promise<Response>
+}
+
+export async function onRequest(context: ArticleContext) {
+  const shell = await context.next()
+  const id = Array.isArray(context.params.id) ? context.params.id[0] : context.params.id
+  if (!id) return shell
+
+  try {
+    const requestUrl = new URL(context.request.url)
+    const apiBase = resolveApiBase(context.env.VITE_API_URL, requestUrl.origin)
+    const response = await fetch(`${apiBase}/blog/seo/posts/${encodeURIComponent(id)}`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) return shell
+
+    const payload = await response.json() as { data?: BlogSeoPost }
+    if (!payload.data) return shell
+    const html = buildArticleHtml(await shell.text(), payload.data, requestUrl.origin)
+    const headers = new Headers(shell.headers)
+    headers.set('content-type', 'text/html; charset=UTF-8')
+    headers.delete('content-length')
+    headers.delete('content-encoding')
+    return new Response(html, { status: shell.status, statusText: shell.statusText, headers })
+  } catch {
+    return shell
+  }
+}

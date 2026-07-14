@@ -19,7 +19,7 @@
     <div v-else-if="errorStatus === 403" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight:900;color:var(--a-color-disabled-border);margin-bottom:1rem">草稿</p>
       <p class="a-muted" style="margin-bottom:1.5rem">该文章尚未发布，请登录后查看或编辑</p>
-      <RouterLink :to="`/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+      <RouterLink :to="`/posts/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
     </div>
 
     <article v-else-if="post" class="post-reading-page">
@@ -65,7 +65,7 @@
           </a>
           <span class="a-label a-muted">发布于 {{ formatDate(post.published_at || post.created_at) }}</span>
           <span class="a-label a-muted">更新于 {{ formatDate(post.updated_at) }}</span>
-          <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
+          <RouterLink v-if="isOwner" :to="`/posts/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
         </div>
 
         <div class="reading-stats" aria-label="文章统计">
@@ -89,7 +89,7 @@
           <button type="button" class="reading-action" :class="{ active: liked }" title="点赞" @click="toggleLike"><Heart :size="17" />{{ likesCount }}</button>
           <button type="button" class="reading-action" :class="{ active: bookmarked }" title="收藏" @click="openBookmarkDialog"><Bookmark :size="17" />收藏</button>
           <button type="button" class="reading-action" :class="{ active: inReadingList }" title="稍后阅读" @click="toggleReadingList"><Clock3 :size="17" />稍后阅读</button>
-          <button type="button" class="reading-action" title="复制链接" @click="copyLink"><Share2 :size="17" />分享</button>
+          <button type="button" class="reading-action" title="分享" @click="sharePost"><Share2 :size="17" />分享</button>
         </div>
 
         <!-- Comments -->
@@ -133,6 +133,7 @@ import { useSiteAccessStore } from '@/stores/siteAccess'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import { usePageMeta } from '@/composables/usePageMeta'
 import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 import { Bookmark, Clock3, Eye, Heart, Library, List, MessageCircle, Share2, Users } from 'lucide-vue-next'
@@ -158,6 +159,7 @@ const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const api = useApi()
 const { renderMarkdown } = useMarkdownRenderer()
+const { setPageMeta, restorePageMeta } = usePageMeta()
 
 const post = ref<Post | null>(null)
 const collectionPosts = ref<Post[]>([])
@@ -234,6 +236,8 @@ const renderedContent = computed(() => {
 const fetchPost = async () => {
   loading.value = true
   errorStatus.value = null
+  post.value = null
+  restorePageMeta()
   try {
     const id = postId.value
     if (!id) {
@@ -248,6 +252,19 @@ const fetchPost = async () => {
       post.value = d.data || d
       likesCount.value = post.value?.likes_count ?? 0
       liked.value = Boolean(post.value?.liked)
+
+      if (post.value) {
+        const description = post.value.summary?.trim() || post.value.content.replace(/[#*`>~_\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 160)
+        setPageMeta({
+          title: post.value.title,
+          description,
+          canonical: `${window.location.origin}/posts/post/${encodeURIComponent(post.value.id)}`,
+          image: post.value.cover_url || `${window.location.origin}/favicon.png`,
+          author: post.value.user?.display_name || post.value.user?.username,
+          publishedAt: post.value.published_at || post.value.created_at,
+          updatedAt: post.value.updated_at,
+        })
+      }
 
       if (post.value?.channel_id) {
         void fetch(`${api.url}/feed/events/read`, {
@@ -360,7 +377,7 @@ const fetchPostEmbeds = async (content: string) => {
             title: embedPost.title,
             summary: embedPost.summary,
             meta: embedPost.channel?.name,
-            href: `/post/${id}`,
+            href: `/posts/post/${id}`,
           } satisfies EmbedData,
         ] as const
       } catch {
@@ -472,14 +489,31 @@ const toggleReadingList = async () => {
   await feedStore.toggleReadingListItem(post.value.id, 'post')
 }
 
+const canonicalUrl = () => `${window.location.origin}/posts/post/${encodeURIComponent(post.value?.id || postId.value)}`
+
 const copyLink = async () => {
   try {
-    await navigator.clipboard.writeText(window.location.href)
+    await navigator.clipboard.writeText(canonicalUrl())
     toastMessage.value = '链接已复制'
   } catch {
     toastMessage.value = '复制失败'
   }
   toastVisible.value = true
+}
+
+const sharePost = async () => {
+  if (!post.value) return
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: post.value.title, text: post.value.summary || '', url: canonicalUrl() })
+      toastMessage.value = '已分享'
+      toastVisible.value = true
+      return
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+    }
+  }
+  await copyLink()
 }
 
 onMounted(fetchPost)

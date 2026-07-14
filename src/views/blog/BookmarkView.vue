@@ -43,7 +43,7 @@
             :key="bm.id"
             :title="bm.post?.title"
             :summary="bm.post?.summary"
-            @click="$router.push('/post/' + bm.post?.id)"
+            @click="$router.push('/posts/post/' + bm.post?.id)"
             class="a-cursor-pointer"
           >
             <template #visual>

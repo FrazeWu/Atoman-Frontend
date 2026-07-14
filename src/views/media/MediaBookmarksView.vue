@@ -228,7 +228,7 @@ onMounted(loadBookmarks)
           v-if="item.kind === 'article'"
           :title="item.post.title"
           :summary="item.post.summary"
-          @click="router.push(`/post/${item.post.id}`)"
+          @click="router.push(`/posts/post/${item.post.id}`)"
         >
           <template #visual>
             <div class="media-bookmarks-visual">

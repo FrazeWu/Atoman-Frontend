@@ -87,8 +87,8 @@
               <p class="a-muted" style="font-size:.8rem">{{ formatDate(post.updated_at) }}</p>
             </div>
             <div style="display:flex;gap:.5rem;flex-shrink:0">
-              <RouterLink :to="`/post/${post.id}/edit`" class="a-btn-outline-sm">编辑</RouterLink>
-              <RouterLink :to="`/post/${post.id}`" class="a-btn-outline-sm">查看</RouterLink>
+              <RouterLink :to="`/posts/post/${post.id}/edit`" class="a-btn-outline-sm">编辑</RouterLink>
+              <RouterLink :to="`/posts/post/${post.id}`" class="a-btn-outline-sm">查看</RouterLink>
             </div>
           </div>
         </div>

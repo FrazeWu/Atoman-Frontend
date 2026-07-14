@@ -87,9 +87,28 @@ describe('SettingAccessView section sync', () => {
     })
 
     const text = wrapper.text()
-    expect(text).toContain('全文抓取策略')
+    expect(text).toContain('全文抓取')
     expect(text).toContain('订阅源管理功能面板 / per_source')
     expect(wrapper.find('[data-testid="feed-source-panel"]').exists()).toBe(true)
+  })
+
+  it('uses a single module flow with an article-style directory', () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSheet: defineComponent({ template: '<div><slot /></div>' }),
+          SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('.setting-access__module-toggle-grid').exists()).toBe(false)
+    expect(wrapper.findAll('.setting-access__section')).toHaveLength(8)
+    expect(wrapper.findAll('.setting-access__toc-link')).toHaveLength(8)
+    expect(wrapper.get('.setting-access__mobile-toc-button').text()).toContain('模块目录')
+    expect(wrapper.get('#module-media').text()).toContain('评论权限')
   })
 
   it('保存时会带上 media 模块可见性', async () => {
@@ -113,9 +132,8 @@ describe('SettingAccessView section sync', () => {
     })
 
     const kanboToggle = wrapper
-      .findAll('label.setting-access__module-toggle-item')
-      .find((item) => item.text().includes('内容'))
-      ?.find('input[type="checkbox"]')
+      .get('#module-media')
+      .find('input.setting-access__module-enabled')
     expect(kanboToggle.exists()).toBe(true)
 
     await kanboToggle!.setValue(false)

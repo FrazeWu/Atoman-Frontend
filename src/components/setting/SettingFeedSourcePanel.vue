@@ -1,9 +1,9 @@
 <template>
-  <PSurface class="setting-feed-panel" :layer="1">
+  <div class="setting-feed-panel">
     <div class="setting-feed-panel__header">
       <div>
         <h3 class="a-subtitle">订阅源管理</h3>
-        <p class="a-muted">仅管理 external_rss 订阅源，支持增改查与手工爬取。</p>
+        <p class="a-muted">管理站点 RSS 订阅源，支持增改查与手工爬取。</p>
       </div>
       <div class="setting-feed-panel__header-actions">
         <PButton
@@ -107,18 +107,16 @@
     <p v-if="error" class="setting-feed-panel__message setting-feed-panel__message--error">{{ error }}</p>
 
     <div v-if="sources.length" class="setting-feed-panel__list">
-      <PSurface
+      <div
         v-for="source in sources"
         :key="source.id"
         class="setting-feed-panel__row"
-        tone="soft"
-        :layer="0"
       >
         <div class="setting-feed-panel__meta">
           <strong @click="openItemsSheet(source)">{{ source.title || '未命名订阅源' }}</strong>
           <small>{{ source.rss_url }}</small>
           <small>
-            状态：{{ source.status || 'healthy' }} ·
+            状态：{{ sourceStatusLabel(source.status) }} ·
             待处理 {{ source.pending_count || 0 }} ·
             重试 {{ source.retry_count || 0 }}
           </small>
@@ -146,7 +144,7 @@
             手工爬取
           </PButton>
         </div>
-      </PSurface>
+      </div>
     </div>
 
     <p v-else class="setting-feed-panel__empty">暂无外部 RSS 订阅源。</p>
@@ -160,7 +158,7 @@
       @close="itemsSheetOpen = false"
       @retry="retryItem"
     />
-  </PSurface>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -169,7 +167,6 @@ import { computed, onMounted, ref } from 'vue'
 import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceItemsSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PSurface from '@/components/ui/PSurface.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminFeedFulltextStore } from '@/stores/adminFeedFulltext'
 import type { FeedSource } from '@/types'
@@ -211,6 +208,12 @@ const statusFilterOptions = [
   { label: '降级', value: 'degraded' },
   { label: '无效', value: 'failing' },
 ] as const
+
+function sourceStatusLabel(status?: string) {
+  if (status === 'degraded') return '降级'
+  if (status === 'failing') return '无效'
+  return '正常'
+}
 
 function sourceFetchOptions() {
   return statusFilter.value
@@ -419,7 +422,6 @@ onMounted(() => {
 .setting-feed-panel {
   display: grid;
   gap: 1rem;
-  padding: 1rem;
 }
 
 .setting-feed-panel__header,
@@ -443,16 +445,12 @@ onMounted(() => {
   max-width: 100%;
   border: 1px solid var(--a-color-line-soft);
   padding: 0.4rem 0.5rem;
-  overflow-x: auto;
-  overflow-y: hidden;
   background: var(--a-color-paper);
-  -webkit-overflow-scrolling: touch;
 }
 
 .setting-feed-panel__filters {
   display: flex;
-  flex-wrap: nowrap;
-  width: fit-content;
+  flex-wrap: wrap;
   gap: 0.35rem;
 }
 
@@ -512,7 +510,8 @@ onMounted(() => {
 }
 
 .setting-feed-panel__row {
-  padding: 0.9rem 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--a-color-line-soft);
 }
 
 .setting-feed-panel__meta {

@@ -1,5 +1,5 @@
 <template>
-  <PSurface class="setting-forum-moderator" :layer="1">
+  <div class="setting-forum-moderator">
     <div class="setting-forum-moderator__header">
       <div>
         <h3 class="a-subtitle">版主管理</h3>
@@ -83,12 +83,10 @@
     <p v-if="error" class="setting-forum-moderator__message setting-forum-moderator__message--error">{{ error }}</p>
 
     <div v-if="assignments.length" class="setting-forum-moderator__list">
-      <PSurface
+      <div
         v-for="assignment in assignments"
         :key="assignment.id"
         class="setting-forum-moderator__row"
-        tone="soft"
-        :layer="0"
       >
         <div class="setting-forum-moderator__meta">
           <strong>{{ assignment.user?.display_name || assignment.user?.username || assignment.user_id }}</strong>
@@ -113,11 +111,11 @@
             删除
           </PButton>
         </div>
-      </PSurface>
+      </div>
     </div>
 
     <p v-else class="setting-forum-moderator__empty">暂未分配任何版主。</p>
-  </PSurface>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -126,7 +124,6 @@ import { computed, onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
-import PSurface from '@/components/ui/PSurface.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 
@@ -368,7 +365,6 @@ onMounted(() => {
 .setting-forum-moderator {
   display: grid;
   gap: 1rem;
-  padding: 1rem;
 }
 
 .setting-forum-moderator__header {
@@ -421,7 +417,8 @@ onMounted(() => {
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
-  padding: 0.9rem 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--a-color-line-soft);
 }
 
 .setting-forum-moderator__meta {

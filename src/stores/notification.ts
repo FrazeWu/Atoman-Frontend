@@ -3,6 +3,40 @@ import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { Notification, NotificationFilterType } from '@/types'
+import type { RouteLocationRaw } from 'vue-router'
+
+const commentNotificationTypes = new Set<Notification['type']>([
+  'comment_reply', 'comment_mention', 'comment_marked', 'comment_like',
+])
+
+export function isCommentNotification(notification: Notification) {
+  return commentNotificationTypes.has(notification.type)
+}
+
+export function commentNotificationLocation(notification: Notification): RouteLocationRaw | null {
+  const { target_kind: kind, resource_id: id, comment_id: commentId, root_id: rootId } = notification.meta
+  if (!kind || !id || !rootId) return null
+  const paths: Partial<Record<NonNullable<typeof kind>, string>> = {
+    blog_post: `/post/${id}`,
+    video: `/videos/watch/${id}`,
+    podcast_episode: `/podcast/episode/${id}`,
+    feed_article: `/feed/item/${id}`,
+    music_artist: `/music/artist/${id}`,
+    music_album: `/music/album/${id}`,
+    forum_topic: `/forum/topic/${id}`,
+    debate: `/debate/${id}`,
+    timeline_person: `/timeline/person/${id}`,
+    music_song: '/music',
+    timeline_event: '/timeline',
+  }
+  const path = paths[kind]
+  if (!path) return null
+  const query: Record<string, string> = {}
+  if (commentId) query.comment_id = commentId
+  if (kind === 'music_song') query.song_id = id
+  if (kind === 'timeline_event') query.event_id = id
+  return { path, query, hash: `#comment-${rootId}` }
+}
 
 export const useNotificationStore = defineStore('notification', () => {
   const api = useApi()
@@ -81,9 +115,19 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   const receiveNotification = (notification: Notification) => {
-    unreadCount.value += 1
+    const existingIndex = notifications.value.findIndex((item) =>
+      item.id === notification.id
+      || Boolean(notification.aggregation_key && !item.read_at && item.aggregation_key === notification.aggregation_key),
+    )
+    const existing = existingIndex >= 0 ? notifications.value[existingIndex] : undefined
+    if (!notification.read_at && (!existing || Boolean(existing.read_at))) unreadCount.value += 1
+
+    if (existingIndex >= 0) {
+      notifications.value.splice(existingIndex, 1, notification)
+      return
+    }
     if (!currentType.value || currentType.value === notification.type) {
-      notifications.value = [notification, ...notifications.value]
+      notifications.value.unshift(notification)
       total.value += 1
     }
   }

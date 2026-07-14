@@ -105,4 +105,23 @@ describe('InboxPage forum 通知跳转', () => {
 
     expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-2')
   })
+
+  it('统一评论通知优先按目标类型跳转并保留评论定位', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      id: 'notice-comment',
+      type: 'comment_mention',
+      source_type: 'comment',
+      source_id: 'child-1',
+      meta: {
+        target_kind: 'video', resource_id: 'video-1', comment_id: 'child-1', root_id: 'root-1',
+      },
+    }))
+
+    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
+
+    expect(pushSpy).toHaveBeenLastCalledWith({
+      path: '/videos/watch/video-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
+    })
+    expect(wrapper.text()).not.toContain('child-1')
+  })
 })

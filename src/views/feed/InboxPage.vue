@@ -112,7 +112,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
-import { useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 import { notificationRoom } from '@/config/moduleRooms'
@@ -149,9 +149,9 @@ const activeTab = computed<InboxTab>(() => {
 const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 
 const notificationTypeByTab: Record<'reply' | 'like' | 'mention', NotificationFilterType> = {
-  reply: 'forum_reply',
-  like: 'forum_like',
-  mention: 'forum_mention',
+  reply: 'comment_reply',
+  like: 'comment_like',
+  mention: 'comment_mention',
 }
 
 const switchTab = async (tab: InboxTab) => {
@@ -224,6 +224,11 @@ const uploadDMImage = async (event: Event) => {
 
 const jumpToNotification = async (notification: Notification) => {
   await notificationStore.markRead(notification.id)
+  if (isCommentNotification(notification)) {
+    const location = commentNotificationLocation(notification)
+    if (location) await router.push(location)
+    return
+  }
   const topicId = notification.meta.topic_id
   if (notification.source_type === 'forum_reply' && topicId) {
     await router.push(`/forum/topic/${topicId}#reply-${notification.source_id}`)
@@ -238,6 +243,16 @@ const jumpToNotification = async (notification: Notification) => {
 const formatNotificationTitle = (notification: Notification) => {
   const actor = notification.actor?.display_name || notification.actor?.username || '有人'
   switch (notification.type) {
+    case 'comment_reply':
+      return `${actor} 回复了你`
+    case 'comment_mention':
+      return `${actor} 提到了你`
+    case 'comment_marked':
+      return `${actor} 标记了你的评论`
+    case 'comment_like':
+      return notification.meta.like_count && notification.meta.like_count > 1
+        ? `${actor} 等 ${notification.meta.like_count} 人赞了你`
+        : `${actor} 赞了你`
     case 'forum_reply':
       return `${actor} 回复了你`
     case 'forum_like':
@@ -252,6 +267,10 @@ const formatNotificationTitle = (notification: Notification) => {
 }
 
 const formatNotificationBody = (notification: Notification) => {
+  if (notification.type === 'comment_reply') return '查看回复'
+  if (notification.type === 'comment_mention') return '查看提及'
+  if (notification.type === 'comment_marked') return '查看标记'
+  if (notification.type === 'comment_like') return '查看点赞'
   return notification.meta.reply_excerpt || notification.meta.topic_title || '查看详情'
 }
 

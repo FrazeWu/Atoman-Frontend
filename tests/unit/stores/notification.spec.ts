@@ -60,4 +60,30 @@ describe('notification store', () => {
 
     expect(store.unreadCount).toBe(7)
   })
+
+  it('replaces unread aggregate notifications without incrementing unread twice', () => {
+    const store = useNotificationStore()
+    store.unreadCount = 1
+    store.notifications = [{ ...makeNotification('like-1', 'comment_like'), aggregation_key: 'comment:1:likes' }]
+
+    store.receiveNotification({
+      ...makeNotification('like-2', 'comment_like'),
+      aggregation_key: 'comment:1:likes',
+      meta: { target_kind: 'blog_post', resource_id: 'post-1', comment_id: 'child', root_id: 'root', like_count: 3 },
+    })
+
+    expect(store.unreadCount).toBe(1)
+    expect(store.total).toBe(0)
+    expect(store.notifications).toHaveLength(1)
+    expect(store.notifications[0]).toMatchObject({ id: 'like-2', meta: { like_count: 3 } })
+  })
+
+  it('replaces duplicate realtime notification ids', () => {
+    const store = useNotificationStore()
+    store.receiveNotification(makeNotification('same', 'comment_reply'))
+    store.receiveNotification({ ...makeNotification('same', 'comment_reply'), meta: { comment_id: 'new' } })
+    expect(store.notifications).toHaveLength(1)
+    expect(store.unreadCount).toBe(1)
+    expect(store.notifications[0]?.meta.comment_id).toBe('new')
+  })
 })

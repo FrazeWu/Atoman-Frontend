@@ -589,15 +589,26 @@ export interface Notification {
   recipient_id: string
   actor_id?: string | null
   actor?: User | null
-  type: 'forum_reply' | 'forum_mention' | 'forum_solved' | 'forum_like'
+  type:
+    | 'forum_reply' | 'forum_mention' | 'forum_solved' | 'forum_like'
+    | 'comment_reply' | 'comment_mention' | 'comment_marked' | 'comment_like'
   source_type: string
   source_id: string
+  aggregation_key?: string | null
   meta: {
     topic_id?: string
     topic_title?: string
     reply_excerpt?: string
     actor_count?: number
     recent_actors?: string[]
+    target_kind?:
+      | 'blog_post' | 'video' | 'podcast_episode' | 'feed_article'
+      | 'music_artist' | 'music_album' | 'music_song' | 'forum_topic'
+      | 'debate' | 'timeline_event' | 'timeline_person'
+    resource_id?: string
+    comment_id?: string
+    root_id?: string
+    like_count?: number
     [key: string]: any
   }
   read_at?: string | null
@@ -643,7 +654,7 @@ export interface DMRealtimePayload {
 }
 
 export type InboxTab = 'reply' | 'like' | 'mention' | 'dm'
-export type NotificationFilterType = '' | 'forum_reply' | 'forum_like' | 'forum_mention'
+export type NotificationFilterType = '' | Notification['type']
 export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====

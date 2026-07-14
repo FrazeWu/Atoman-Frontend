@@ -10,6 +10,8 @@ export function useApiUrl() {
 
 export function useApi() {
   const apiUrl = useApiUrl();
+  const targetPath = (kind: string, resourceId: string) =>
+    `${apiUrl}/discussions/${encodeURIComponent(kind)}/${encodeURIComponent(resourceId)}`
 
   return {
     url: apiUrl,
@@ -167,6 +169,19 @@ export function useApi() {
       unreadCount: `${apiUrl}/notifications/unread-count`,
       markRead: (id: string) => `${apiUrl}/notifications/${id}/read`,
       markAllRead: `${apiUrl}/notifications/read-all`,
+    },
+
+    comments: {
+      roots: (kind: string, resourceId: string) => `${targetPath(kind, resourceId)}/comments`,
+      replies: (rootId: string) => `${apiUrl}/comments/${encodeURIComponent(rootId)}/replies`,
+      comment: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}`,
+      like: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}/like`,
+      report: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}/report`,
+      mark: (kind: string, resourceId: string) => `${targetPath(kind, resourceId)}/pinned-comment`,
+      reports: `${apiUrl}/admin/comment-reports`,
+      moderation: (commentId: string) => `${apiUrl}/admin/comments/${encodeURIComponent(commentId)}/moderation`,
+      mentionUsers: `${apiUrl}/users/search`,
+      upload: `${apiUrl}/uploads`,
     },
 
     dm: {

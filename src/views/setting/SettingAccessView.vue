@@ -478,15 +478,13 @@ onBeforeUnmount(() => {
 }
 
 .setting-access__footer {
-  position: sticky;
-  bottom: 0;
+  position: static;
   align-items: center;
   padding: 0.75rem 0;
   border-top: 1px solid var(--a-color-line);
   background: var(--a-color-bg);
   color: var(--a-color-ink-muted);
   font-size: var(--a-text-xs);
-  z-index: 10;
 }
 
 .setting-access__mobile-toc {
@@ -515,10 +513,6 @@ onBeforeUnmount(() => {
 
   .setting-access__toc {
     display: none;
-  }
-
-  .setting-access__footer {
-    position: static;
   }
 
   .setting-access__mobile-toc-button {

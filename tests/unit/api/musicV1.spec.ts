@@ -318,6 +318,46 @@ describe('music v1 adapter', () => {
     expect(result.songs).toEqual([{ id: 'song_uuid', title: 'Song' }])
   })
 
+  it('updates a playlist through the playlist detail endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'playlist_uuid', name: 'New Name', song_count: 2, is_favorite: false } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    const updateMusicPlaylist = (musicV1 as typeof musicV1 & {
+      updateMusicPlaylist?: (playlistId: string, input: { name: string }) => Promise<unknown>
+    }).updateMusicPlaylist
+
+    expect(updateMusicPlaylist).toBeTypeOf('function')
+    await updateMusicPlaylist?.('playlist_uuid', { name: 'New Name' })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ name: 'New Name' }),
+    })
+  })
+
+  it('deletes a playlist through the playlist detail endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { deleted: true } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    const deleteMusicPlaylist = (musicV1 as typeof musicV1 & {
+      deleteMusicPlaylist?: (playlistId: string) => Promise<unknown>
+    }).deleteMusicPlaylist
+
+    expect(deleteMusicPlaylist).toBeTypeOf('function')
+    await deleteMusicPlaylist?.('playlist_uuid')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: undefined,
+    })
+  })
+
   it('reads the album discussion total from pagination metadata', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: [], total: 7 }),
@@ -648,11 +688,11 @@ describe('music v1 adapter', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/parts/1/complete', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ etag: '"etag-1"' }),
+      body: JSON.stringify({ etag: '"etag-1"', size: 4 }),
     }))
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/parts/2/complete', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ etag: '"etag-2"' }),
+      body: JSON.stringify({ etag: '"etag-2"', size: 4 }),
     }))
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/complete', expect.objectContaining({ method: 'POST' }))
     expect(progress.at(-1)).toMatchObject({ loaded: 8, total: 8 })

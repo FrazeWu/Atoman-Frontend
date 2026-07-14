@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { ForumCategory, ForumTopic, ForumReply, ForumDraft } from '@/types'
+import type { ForumCategory, ForumTopic, ForumReply, ForumDraft, ForumFollow, ForumFollowTargetType } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 
@@ -17,6 +17,9 @@ export const useForumStore = defineStore('forum', () => {
   const replies = ref<ForumReply[]>([])
   const searchResults = ref<ForumTopic[]>([])
   const searchTotal = ref(0)
+  const follows = ref<ForumFollow[]>([])
+  const followsOwnerID = ref<string | null>(null)
+  let followsGeneration = 0
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -60,7 +63,7 @@ export const useForumStore = defineStore('forum', () => {
       if (params.tag) query.set('tag', params.tag)
       if (params.search) query.set('search', params.search)
       if (params.page) query.set('page', String(params.page))
-      if (params.limit) query.set('limit', String(params.limit))
+      if (params.limit) query.set('page_size', String(params.limit))
       const authStore = useAuthStore()
       const res = await fetch(`${api.url}/forum/topics?${query}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
@@ -68,7 +71,7 @@ export const useForumStore = defineStore('forum', () => {
       if (res.ok) {
         const data = await res.json()
         topics.value = data.data || []
-        topicsTotal.value = data.total || 0
+        topicsTotal.value = data.meta?.total || 0
       }
     } catch (e) {
       error.value = 'Failed to fetch topics'
@@ -160,7 +163,7 @@ export const useForumStore = defineStore('forum', () => {
       })
       if (res.ok) {
         const data = await res.json()
-        const liked = data.liked as boolean
+        const liked = data.data?.liked as boolean
         const update = (t: ForumTopic) => {
           if (t.id === id) {
             t.is_liked = liked
@@ -183,7 +186,7 @@ export const useForumStore = defineStore('forum', () => {
       })
       if (res.ok) {
         const data = await res.json()
-        const bookmarked = data.bookmarked as boolean
+        const bookmarked = data.data?.bookmarked as boolean
         const update = (t: ForumTopic) => {
           if (t.id === id) t.is_bookmarked = bookmarked
         }
@@ -254,7 +257,7 @@ export const useForumStore = defineStore('forum', () => {
       })
       if (res.ok) {
         const data = await res.json()
-        const liked = data.liked as boolean
+        const liked = data.data?.liked as boolean
         const reply = replies.value.find((item) => item.id === replyId)
         if (reply) {
           reply.is_liked = liked
@@ -266,6 +269,89 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
+  // ─── Follows ─────────────────────────────────────────────────────────────────
+
+  const currentFollowOwnerID = () => {
+    const authStore = useAuthStore()
+    return authStore.isAuthenticated && authStore.user?.uuid ? authStore.user.uuid : null
+  }
+
+  const ensureFollowOwner = () => {
+    const ownerID = currentFollowOwnerID()
+    if (followsOwnerID.value !== ownerID) {
+      followsOwnerID.value = ownerID
+      follows.value = []
+      followsGeneration++
+    }
+    return ownerID
+  }
+
+  const fetchFollows = async () => {
+    const ownerID = ensureFollowOwner()
+    if (!ownerID) return
+    const generation = ++followsGeneration
+    try {
+      const res = await fetch(`${api.url}/forum/follows`, { headers: authHeaders() })
+      if (res.ok) {
+        const data = await res.json()
+        if (ensureFollowOwner() !== ownerID || followsGeneration !== generation) return
+        follows.value = data.data || []
+      }
+    } catch (e) {
+      ensureFollowOwner()
+      console.error('Failed to fetch follows', e)
+    }
+  }
+
+  const isFollowing = (targetType: ForumFollowTargetType, targetKey: string) => {
+    if (!ensureFollowOwner()) return false
+    return follows.value.some((follow) => follow.target_type === targetType && follow.target_key === targetKey)
+  }
+
+  const followTargetUrl = (targetType: ForumFollowTargetType, targetKey: string) => {
+    const query = new URLSearchParams({ target_key: targetKey })
+    return `${api.url}/forum/follows/${targetType}?${query}`
+  }
+
+  const follow = async (targetType: ForumFollowTargetType, targetKey: string) => {
+    const ownerID = ensureFollowOwner()
+    if (!ownerID) return
+    const res = await fetch(followTargetUrl(targetType, targetKey), {
+      method: 'PUT',
+      headers: authHeaders(),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (ensureFollowOwner() !== ownerID) return
+      followsGeneration++
+      const created = data.data as ForumFollow
+      follows.value = follows.value.filter((item) => item.target_type !== targetType || item.target_key !== targetKey)
+      follows.value.push(created)
+    }
+  }
+
+  const unfollow = async (targetType: ForumFollowTargetType, targetKey: string) => {
+    const ownerID = ensureFollowOwner()
+    if (!ownerID) return
+    const res = await fetch(followTargetUrl(targetType, targetKey), {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+    if (res.ok) {
+      if (ensureFollowOwner() !== ownerID) return
+      followsGeneration++
+      follows.value = follows.value.filter((item) => item.target_type !== targetType || item.target_key !== targetKey)
+    }
+  }
+
+  const toggleFollow = async (targetType: ForumFollowTargetType, targetKey: string) => {
+    if (isFollowing(targetType, targetKey)) {
+      await unfollow(targetType, targetKey)
+    } else {
+      await follow(targetType, targetKey)
+    }
+  }
+
   // ─── Search ──────────────────────────────────────────────────────────────────
 
   const searchTopics = async (q: string, page = 1, limit = 20) => {
@@ -273,14 +359,15 @@ export const useForumStore = defineStore('forum', () => {
     error.value = null
     try {
       const authStore = useAuthStore()
-      const query = new URLSearchParams({ q, page: String(page), limit: String(limit) })
+      const query = new URLSearchParams({ q, page: String(page), page_size: String(limit) })
       const res = await fetch(`${api.url}/forum/search?${query}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
         const data = await res.json()
-        searchResults.value = data.data || []
-        searchTotal.value = data.total || 0
+        const results = data.data || []
+        searchResults.value = page === 1 ? results : [...searchResults.value, ...results]
+        searchTotal.value = data.meta?.total || 0
       }
     } catch (e) {
       error.value = 'Search failed'
@@ -363,6 +450,7 @@ export const useForumStore = defineStore('forum', () => {
     replies,
     searchResults,
     searchTotal,
+    follows,
     loading,
     error,
     fetchCategories,
@@ -377,6 +465,11 @@ export const useForumStore = defineStore('forum', () => {
     createReply,
     deleteReply,
     toggleReplyLike,
+    fetchFollows,
+    isFollowing,
+    follow,
+    unfollow,
+    toggleFollow,
     searchTopics,
     saveDraftLocal,
     loadDraftLocal,

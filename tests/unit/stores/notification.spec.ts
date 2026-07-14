@@ -29,6 +29,23 @@ describe('notification store', () => {
     auth.token = 'token'
   })
 
+  it('reads unread count and list total from wrapped backend responses', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { count: 8 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [makeNotification('reply-1', 'forum_reply')],
+        meta: { page: 1, page_size: 20, total: 23 },
+      }), { status: 200 }))
+
+    const store = useNotificationStore()
+    await store.fetchUnreadCount()
+    await store.fetchNotifications()
+
+    expect(store.unreadCount).toBe(8)
+    expect(store.notifications).toHaveLength(1)
+    expect(store.total).toBe(23)
+  })
+
   it('keeps unread from other notification types when marking one type read', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
 
@@ -47,7 +64,7 @@ describe('notification store', () => {
   })
 
   it('uses backend unread total when mark all read returns it', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ unread_total: 7 }), { status: 200 }))
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ data: { unread_total: 7 } }), { status: 200 }))
 
     const store = useNotificationStore()
     store.unreadCount = 5

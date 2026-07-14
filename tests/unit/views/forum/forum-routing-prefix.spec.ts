@@ -13,6 +13,9 @@ import { useForumStore } from '@/stores/forum'
 import type { ForumCategory, ForumTopic } from '@/types'
 
 vi.mock('@/components/shared/PEditor.vue', () => ({
+  __esModule: true,
+  __isTeleport: false,
+  __isKeepAlive: false,
   default: defineComponent({
     props: ['modelValue'],
     emits: ['update:modelValue'],
@@ -134,6 +137,7 @@ describe('forum 路由前缀', () => {
       forumStore.topicsTotal = 1
       vi.spyOn(forumStore, 'fetchCategories').mockResolvedValue(undefined)
       vi.spyOn(forumStore, 'fetchTopics').mockResolvedValue(undefined)
+      vi.spyOn(forumStore, 'fetchFollows').mockResolvedValue(undefined)
     })
     await flushPromises()
 
@@ -202,5 +206,46 @@ describe('forum 路由前缀', () => {
 
     await wrapper.get('.category-pill').trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum?category=cat-1')
+  })
+
+  it('已登录用户可在话题页面切换关注', async () => {
+    let toggleFollow: ReturnType<typeof vi.spyOn>
+    const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
+      const authStore = useAuthStore()
+      authStore.isAuthenticated = true
+      authStore.token = 'token'
+
+      const forumStore = useForumStore()
+      forumStore.loading = false
+      forumStore.currentTopic = makeTopic('topic-1')
+      vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
+      vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
+      vi.spyOn(forumStore, 'fetchFollows').mockResolvedValue(undefined)
+      toggleFollow = vi.spyOn(forumStore, 'toggleFollow').mockResolvedValue(undefined)
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="forum-topic-follow"]').trigger('click')
+    expect(toggleFollow!).toHaveBeenCalledWith('topic', 'topic-1')
+  })
+
+  it('已登录用户可在论坛首页关注当前分类', async () => {
+    let toggleFollow: ReturnType<typeof vi.spyOn>
+    const { wrapper } = await mountWithRouter(ForumHomeView, '/forum?category_id=cat-1', () => {
+      const authStore = useAuthStore()
+      authStore.isAuthenticated = true
+      authStore.token = 'token'
+
+      const forumStore = useForumStore()
+      forumStore.categories = [forumCategory]
+      vi.spyOn(forumStore, 'fetchCategories').mockResolvedValue(undefined)
+      vi.spyOn(forumStore, 'fetchTopics').mockResolvedValue(undefined)
+      vi.spyOn(forumStore, 'fetchFollows').mockResolvedValue(undefined)
+      toggleFollow = vi.spyOn(forumStore, 'toggleFollow').mockResolvedValue(undefined)
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="forum-filter-follow"]').trigger('click')
+    expect(toggleFollow!).toHaveBeenCalledWith('category', 'cat-1')
   })
 })

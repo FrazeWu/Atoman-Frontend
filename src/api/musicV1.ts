@@ -242,6 +242,7 @@ export type MusicPlaylistSummary = {
   name: string
   description?: string
   song_count: number
+  is_favorite: boolean
 }
 
 export type MusicPlaylistDetail = MusicPlaylistSummary & {
@@ -280,6 +281,10 @@ export type MusicStarredItem = {
 }
 
 export type CreateMusicPlaylistInput = {
+  name: string
+}
+
+export type UpdateMusicPlaylistInput = {
   name: string
 }
 
@@ -571,8 +576,9 @@ export async function completeMusicAlbumImportMultipartPart(
   importId: string,
   partNumber: number,
   etag: string,
+  size: number,
 ): Promise<MusicAlbumImportMultipartPart> {
-  return apiPostJson<MusicAlbumImportMultipartPart>(musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber), { etag })
+  return apiPostJson<MusicAlbumImportMultipartPart>(musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber), { etag, size })
 }
 
 export async function completeMusicAlbumImportMultipart(importId: string): Promise<MusicAlbumImport> {
@@ -642,7 +648,7 @@ export async function uploadMusicAlbumArchiveMultipart(
     const partBody = file.slice(start, end)
     const upload = await createMusicAlbumImportMultipartPartUpload(importId, partNumber)
     const etag = await uploadAlbumArchivePart(upload.uploadUrl, partBody)
-    await completeMusicAlbumImportMultipartPart(importId, partNumber, etag)
+    await completeMusicAlbumImportMultipartPart(importId, partNumber, etag, partBody.size)
 
     loaded += partBody.size
     reportProgress()
@@ -868,6 +874,17 @@ export async function getMusicAlbum(albumId: string): Promise<MusicAlbumListItem
 
 export async function createMusicPlaylist(input: CreateMusicPlaylistInput): Promise<MusicPlaylistDetail> {
   return apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input)
+}
+
+export async function updateMusicPlaylist(
+  playlistId: string,
+  input: UpdateMusicPlaylistInput,
+): Promise<MusicPlaylistSummary> {
+  return apiPatchJson<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId), input)
+}
+
+export async function deleteMusicPlaylist(playlistId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.playlist(playlistId))
 }
 
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {

@@ -193,7 +193,6 @@ const loadDebates = async () => {
 
 const loadMore = async () => {
   currentPage.value++
-  const currentCount = debates.value.length
   await debateStore.fetchDebates({
     status: filterStatus.value as 'open' | 'concluded' | 'archived' | undefined,
     tag: filterTag.value.trim() || undefined,

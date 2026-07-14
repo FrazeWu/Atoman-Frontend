@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest'
 import { beforeEach, vi } from 'vitest'
 
+process.env.TZ = 'Asia/Shanghai'
+
 if (typeof import.meta.env !== 'undefined') {
   import.meta.env.VITE_API_URL = ''
 }

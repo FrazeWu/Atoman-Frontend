@@ -278,7 +278,10 @@ async function onCoverFileChange(e: Event) {
 function validate(): boolean {
   titleError.value = form.value.title.trim() ? '' : '请填写单集标题'
   audioError.value = form.value.audio_url.trim() ? '' : '请先上传音频文件'
-  return !titleError.value && !audioError.value
+  if (!form.value.channel_id) {
+    errorMsg.value = '请选择节目频道'
+  }
+  return !titleError.value && !audioError.value && !!form.value.channel_id
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -343,6 +346,7 @@ async function loadCollections(channelID: string) {
 
 function onChannelChange(value: string) {
   form.value.channel_id = value
+  if (value && errorMsg.value === '请选择节目频道') errorMsg.value = ''
   selectedCollectionId.value = ''
   void loadCollections(value)
 }
@@ -355,10 +359,23 @@ async function loadChannels() {
   )
   if (res.ok) {
     const data = await res.json()
-    channels.value = data.data ?? data
+    const rows: Channel[] = data.data ?? data
+    channels.value = rows.filter(channel => channel.content_type === 'podcast')
     const queryChannelId = selectedChannelFromQuery.value
     if (!form.value.channel_id && queryChannelId && channels.value.some(channel => channel.id === queryChannelId)) {
       form.value.channel_id = queryChannelId
+    }
+    if (!form.value.channel_id) {
+      const defaultRes = await fetch(`${api.url}/users/me/default-channels`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (defaultRes.ok) {
+        const defaultData = await defaultRes.json()
+        const defaultChannelID = defaultData.data?.podcast?.id
+        if (defaultChannelID && channels.value.some(channel => channel.id === defaultChannelID)) {
+          form.value.channel_id = defaultChannelID
+        }
+      }
     }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id
@@ -386,7 +403,7 @@ async function loadEpisode() {
     episode_number: ep.episode_number,
   }
   await loadCollections(ep.channel_id)
-  selectedCollectionId.value = ep.post?.collections?.[0]?.id || ep.collections?.[0]?.id || ''
+  selectedCollectionId.value = ep.post?.collection_id || ep.collections?.[0]?.id || ''
 }
 
 onMounted(async () => {

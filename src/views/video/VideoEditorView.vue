@@ -278,10 +278,23 @@ async function loadChannels() {
   )
   if (res.ok) {
     const data = await res.json()
-    channels.value = data.data ?? data
+    const rows: Channel[] = data.data ?? data
+    channels.value = rows.filter(channel => channel.content_type === 'video')
     const fromQuery = typeof route.query.channel === 'string' ? route.query.channel : ''
     if (!form.value.channel_id && fromQuery && channels.value.some(ch => ch.id === fromQuery)) {
       form.value.channel_id = fromQuery
+    }
+    if (!form.value.channel_id) {
+      const defaultRes = await fetch(`${api.url}/users/me/default-channels`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (defaultRes.ok) {
+        const defaultData = await defaultRes.json()
+        const defaultChannelID = defaultData.data?.video?.id
+        if (defaultChannelID && channels.value.some(channel => channel.id === defaultChannelID)) {
+          form.value.channel_id = defaultChannelID
+        }
+      }
     }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id

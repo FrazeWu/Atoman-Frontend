@@ -152,6 +152,7 @@ export interface Channel {
   user?: User
   name: string
   slug: string
+  content_type: 'blog' | 'podcast' | 'video'
   description?: string
   cover_url?: string
   is_default?: boolean
@@ -177,6 +178,9 @@ export interface Post {
   user?: User
   channel_id?: string
   channel?: Channel
+  collection_id?: string
+  collection?: Collection
+  collection_position?: number
   title: string
   content: string
   summary?: string
@@ -185,7 +189,11 @@ export interface Post {
   visibility: 'public' | 'followers' | 'private'
   allow_comments: boolean
   pinned: boolean
-  collections?: Collection[]
+  published_at?: string
+  view_count?: number
+  liked?: boolean
+  bookmarks_count?: number
+  channel_followers_count?: number
   likes_count?: number
   comments_count?: number
   created_at: string
@@ -204,7 +212,7 @@ export interface BlogDraft {
   visibility: 'public' | 'followers' | 'private'
   allow_comments: boolean
   channel_id?: string
-  collection_ids: string[]
+  collection_id?: string
   created_at: string
   updated_at: string
 }

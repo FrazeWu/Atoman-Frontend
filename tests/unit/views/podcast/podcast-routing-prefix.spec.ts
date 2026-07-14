@@ -80,8 +80,11 @@ describe('podcast routing prefix', () => {
   it('新草稿保存后跳转到 /podcasts/editor/:id', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { podcast: null } })
+      }
       if (url.includes('/blog/channels?')) {
-        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道', content_type: 'podcast' }] })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({ data: [] })
@@ -114,8 +117,11 @@ describe('podcast routing prefix', () => {
   it('新建单集应在合法频道下恢复 query.collection', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { podcast: { id: 'channel-default' } } })
+      }
       if (url.includes('/blog/channels?')) {
-        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道', content_type: 'podcast' }] })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({
@@ -147,8 +153,11 @@ describe('podcast routing prefix', () => {
   it('新建单集不得恢复不属于当前频道的非法 query.collection', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { podcast: { id: 'channel-default' } } })
+      }
       if (url.includes('/blog/channels?')) {
-        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道' }] })
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道', content_type: 'podcast' }] })
       }
       if (url.includes('/blog/channels/channel-1/collections')) {
         return makeJsonResponse({
@@ -175,6 +184,77 @@ describe('podcast routing prefix', () => {
     await flushPromises()
 
     expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('')
+  })
+
+  it('新建单集只保留播客频道并优先选择播客默认频道', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { podcast: { id: 'podcast-2', name: '默认播客', slug: 'podcast-2' } } })
+      }
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [
+          { id: 'blog-1', name: '博客频道', content_type: 'blog' },
+          { id: 'podcast-1', name: '播客频道 1', content_type: 'podcast' },
+          { id: 'podcast-2', name: '播客频道 2', content_type: 'podcast' },
+        ] })
+      }
+      if (url.includes('/blog/channels/podcast-2/collections')) {
+        return makeJsonResponse({ data: [] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(
+      PodcastEditorView,
+      '/podcasts/editor?channel=blog-1',
+      router,
+    )
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.channels.map((channel: { id: string }) => channel.id)).toEqual(['podcast-1', 'podcast-2'])
+    expect(wrapper.vm.$.setupState.form.channel_id).toBe('podcast-2')
+  })
+
+  it('没有播客频道时不得提交草稿', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { podcast: null } })
+      }
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({ data: [{ id: 'blog-1', name: '博客频道', content_type: 'blog' }] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(PodcastEditorView, '/podcasts/editor', router)
+    await flushPromises()
+
+    const form = wrapper.vm.$.setupState.form as { title: string; audio_url: string }
+    form.title = '测试单集'
+    form.audio_url = 'https://cdn.example.com/audio.mp3'
+    await wrapper.vm.$.setupState.saveDraft()
+    await flushPromises()
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringMatching(/\/podcast\/episodes$/),
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(wrapper.vm.$.setupState.errorMsg).toBe('请选择节目频道')
   })
 
   it('单集页频道链接指向 /podcasts/show/:slug', async () => {

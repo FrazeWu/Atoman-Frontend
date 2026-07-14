@@ -262,7 +262,10 @@ onBeforeUnmount(() => {
   background: transparent;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
-.nav-link-name { font-weight: 500; }
+.nav-link-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
 .nav-link:hover,
 .nav-link.active {
   color: var(--a-color-fg);

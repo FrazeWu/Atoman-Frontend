@@ -17,7 +17,7 @@ export type MobileMoreItem = {
 }
 
 const PRIMARY_TABS: MobilePrimaryTab[] = [
-  { key: 'discover', label: '首页/博客', module: 'blog', href: moduleUrl('blog') },
+  { key: 'discover', label: '首页', module: 'blog', href: moduleUrl('blog') },
   { key: 'feed', label: '订阅', module: 'feed', href: moduleUrl('feed') },
   { key: 'create', label: '创作', module: 'blog', href: modulePathUrl('blog', '/manage') },
   { key: 'more', label: '更多' },

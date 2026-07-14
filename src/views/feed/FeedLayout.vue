@@ -2,10 +2,8 @@
   <div class="a-module-layout feed-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <AppSidebar module="feed" />
     <main class="a-main-content">
-      <header class="module-mobile-header">
-        <h1 class="module-mobile-header__title">订阅</h1>
+      <header v-if="authStore.isAuthenticated" class="module-mobile-header">
         <button
-          v-if="authStore.isAuthenticated"
           type="button"
           class="module-mobile-header__action a-font-meta"
           data-testid="feed-mobile-sources-trigger"

@@ -59,7 +59,7 @@ withDefaults(defineProps<{
 
 .p-page-header__title {
   color: var(--a-color-ink);
-  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-size: 3.5rem;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.1;
@@ -74,5 +74,23 @@ withDefaults(defineProps<{
 
 .p-page-header__action {
   flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .p-page-header {
+    align-items: start;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 16px;
+  }
+
+  .p-page-header__title {
+    font-size: 2.25rem;
+  }
+
+  .p-page-header__sub {
+    margin-top: 10px;
+    line-height: 1.6;
+  }
 }
 </style>

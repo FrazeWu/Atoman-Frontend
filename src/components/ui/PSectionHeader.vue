@@ -43,7 +43,7 @@ withDefaults(defineProps<{
 .p-section-header__title {
   margin: 0;
   color: var(--a-color-ink);
-  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  font-size: 2.75rem;
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.1;
@@ -54,5 +54,11 @@ withDefaults(defineProps<{
   margin: 0;
   color: var(--a-color-ink-muted);
   line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .p-section-header__title {
+    font-size: 1.75rem;
+  }
 }
 </style>

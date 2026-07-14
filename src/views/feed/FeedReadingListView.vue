@@ -79,7 +79,6 @@
       />
     </div>
 
-    <PShortcutHints :hints="shortcutHints" />
     <FeedArticleSheet
       :show="showArticleSheet"
       :article="selectedArticle"
@@ -103,7 +102,6 @@ import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PPress from '@/components/ui/PPress.vue'
-import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -149,15 +147,6 @@ const selectedArticleIndex = computed(() => {
 })
 
 const pageRootRef = ref<HTMLElement | null>(null)
-
-const shortcutHints = [
-  { key: 'H', label: '聚焦侧边栏' },
-  { key: 'L', label: '聚焦内容区' },
-  { key: 'J / K', label: '上下切换项目' },
-  { key: 'Enter', label: '打开当前项' },
-  { key: 'Esc', label: '关闭面板' },
-  { key: 'V', label: '查看原文' }
-]
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({
   items,

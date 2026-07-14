@@ -85,7 +85,7 @@ describe('MusicSidebarPlaylists', () => {
     })
     await flushPromises()
 
-    expect(wrapper.text()).toContain('我的歌单 / PLAYLISTS')
+    expect(wrapper.text()).not.toContain('PLAYLISTS')
     expect(wrapper.text()).toContain('收藏的歌单')
     expect(wrapper.text()).toContain('我的歌单')
     expect(wrapper.text()).toContain('bob/公开歌单')

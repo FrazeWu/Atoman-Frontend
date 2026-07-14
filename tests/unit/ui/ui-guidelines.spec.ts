@@ -73,13 +73,16 @@ describe('UI 准则', () => {
     expect(footer).toContain('site-footer--mobile-hidden')
   })
 
-  it('门户不在模块列表中重复展示主推内容', () => {
+  it('门户使用等权推荐网格且不保留超大主推结构', () => {
     const source = read('src/views/portal/PortalView.vue')
 
     expect(source).toContain('displaySections')
-    expect(source).toContain('!isLeadItem(item)')
+    expect(source).toContain('recommendedItemKeys')
+    expect(source).toContain('portal-hot__recommendation-grid')
+    expect(source).toContain('portal-hot__recommendation-card')
     expect(source).toContain('portal-hot__module-strip')
-    expect(source).not.toContain('font-size: 82px')
+    expect(source).not.toContain('portal-hot__featured')
+    expect(source).not.toContain('portal-hot__lead')
   })
 
   it('内容首页移动端收敛主推卡片并使用中文类型占位', () => {

@@ -91,6 +91,10 @@
                   </div>
                   <div class="article-meta">
                     <span>{{ new Date(article.created_at).toLocaleDateString() }}</span>
+                    <span>{{ article.view_count || 0 }} 阅读</span>
+                    <span>{{ article.likes_count || 0 }} 点赞</span>
+                    <span>{{ article.comments_count || 0 }} 评论</span>
+                    <span>{{ article.bookmarks_count || 0 }} 收藏</span>
                   </div>
                 </div>
                 <div class="article-actions">
@@ -107,6 +111,10 @@
                     >↓</button>
                   </template>
                   <template v-else>
+                    <button class="action-btn" @click="router.push(`/posts/post/${article.id}`)">预览</button>
+                    <button class="action-btn" @click="toggleArticleStatus(article)">{{ article.status === 'published' ? '撤回' : '发布' }}</button>
+                    <button class="action-btn" @click="toggleArticlePin(article)">{{ article.pinned ? '取消置顶' : '置顶' }}</button>
+                    <button class="action-btn" @click="openVersions(article)">版本</button>
                     <button class="action-btn" @click="handleArticleAction('edit', article)">编辑</button>
                     <button class="action-btn danger" @click="handleArticleAction('delete', article)">删除</button>
                   </template>
@@ -171,6 +179,29 @@
         </div>
       </div>
     </PModal>
+
+    <PSheet :show="versionPanelVisible" title="版本历史" side="right" width="min(92vw, 420px)" close-type="header" @close="versionPanelVisible = false">
+      <div class="version-list">
+        <p v-if="loadingVersions" class="a-muted">加载中…</p>
+        <p v-else-if="versions.length === 0" class="a-muted">暂无版本</p>
+        <div v-for="version in versions" v-else :key="version.version" class="version-item">
+          <div>
+            <strong>版本 {{ version.version }}</strong>
+            <p>{{ version.title }}</p>
+            <span class="a-muted">{{ new Date(version.created_at).toLocaleString() }}</span>
+          </div>
+          <PPress label="恢复" variant="secondary" size="sm" @click="pendingRestoreVersion = version.version" />
+        </div>
+      </div>
+    </PSheet>
+    <PConfirm
+      :show="pendingRestoreVersion !== null"
+      title="恢复文章版本"
+      message="恢复后会生成一个新版本。"
+      confirm-text="恢复"
+      @cancel="pendingRestoreVersion = null"
+      @confirm="restoreVersion"
+    />
   </div>
 </template>
 
@@ -188,6 +219,8 @@ import { useApi } from '@/composables/useApi'
 import PCard from '@/components/ui/PCard.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PPress from '@/components/ui/PPress.vue'
+import PSheet from '@/components/ui/PSheet.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import type { Post } from '@/types'
 
 interface Collection {
@@ -219,6 +252,11 @@ const articles = ref<any[]>([])
 const loadingArticles = ref(false)
 const isSorting = ref(false)
 const savingOrder = ref(false)
+const versionPanelVisible = ref(false)
+const versionPostId = ref('')
+const versions = ref<Array<{ version: number; title: string; created_at: string }>>([])
+const loadingVersions = ref(false)
+const pendingRestoreVersion = ref<number | null>(null)
 
 const allCollections = computed(() => {
   const list: (Collection & { channelName: string, channelId: string })[] = []
@@ -263,7 +301,7 @@ const fetchArticles = async () => {
   try {
     const headers = { Authorization: `Bearer ${authStore.token}` }
     const [publishedRes, draftsRes] = await Promise.all([
-      fetch(`${api.blog.posts}?collection_id=${selectedCollectionId.value}`, { headers }),
+      fetch(`${api.blog.posts}?collection_id=${selectedCollectionId.value}&page_size=100`, { headers }),
       fetch(api.blog.drafts, { headers }),
     ])
 
@@ -272,7 +310,7 @@ const fetchArticles = async () => {
       : []
     const draftArticles: Post[] = draftsRes.ok
       ? (((await draftsRes.json()).data || []) as Post[]).filter((post) =>
-          (post.collections || []).some((collection) => collection.id === selectedCollectionId.value))
+          post.collection_id === selectedCollectionId.value)
       : []
 
     const merged = [...publishedArticles, ...draftArticles]
@@ -350,6 +388,62 @@ const handleArticleAction = async (action: 'edit' | 'delete', article: any) => {
       }
     }
   }
+}
+
+const mutateArticle = async (url: string) => {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${authStore.token}` },
+  })
+  if (!res.ok) throw new Error('操作失败')
+  await fetchArticles()
+}
+
+const toggleArticleStatus = async (article: Post) => {
+  try {
+    await mutateArticle(article.status === 'published' ? api.blog.postUnpublish(article.id) : api.blog.postPublish(article.id))
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '操作失败')
+  }
+}
+
+const toggleArticlePin = async (article: Post) => {
+  try {
+    await mutateArticle(article.pinned ? api.blog.postUnpin(article.id) : api.blog.postPin(article.id))
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '操作失败')
+  }
+}
+
+const openVersions = async (article: Post) => {
+  versionPostId.value = article.id
+  versionPanelVisible.value = true
+  loadingVersions.value = true
+  try {
+    const res = await fetch(api.blog.postVersions(article.id), {
+      headers: { Authorization: `Bearer ${authStore.token}` },
+    })
+    versions.value = res.ok ? ((await res.json()).data || []) : []
+  } finally {
+    loadingVersions.value = false
+  }
+}
+
+const restoreVersion = async () => {
+  if (pendingRestoreVersion.value === null || !versionPostId.value) return
+  const version = pendingRestoreVersion.value
+  const res = await fetch(api.blog.postVersionRestore(versionPostId.value, version), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${authStore.token}` },
+  })
+  if (!res.ok) {
+    alert('恢复失败')
+    return
+  }
+  pendingRestoreVersion.value = null
+  await fetchArticles()
+  const article = articles.value.find(item => item.id === versionPostId.value)
+  if (article) await openVersions(article)
 }
 
 const persistCollectionOrder = async () => {
@@ -598,7 +692,15 @@ onMounted(() => {
 .article-meta {
   font-size: 0.75rem;
   color: var(--a-color-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
 }
+
+.version-list { display: grid; gap: 0.75rem; padding: 1rem; }
+.version-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--a-color-line-soft); }
+.version-item p { margin: 0.3rem 0; }
+.version-item .a-muted { font-size: 0.75rem; }
 
 .article-actions {
   display: flex;

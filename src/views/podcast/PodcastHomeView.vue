@@ -39,7 +39,7 @@ function fmtDuration(sec: number) {
 }
 
 function episodeCover(ep: PodcastEpisode) {
-  return ep.episode_cover_url || ep.post?.collections?.[0]?.cover_url || ep.collections?.[0]?.cover_url || ep.channel?.cover_url || ''
+  return ep.episode_cover_url || ep.post?.collection?.cover_url || ep.collections?.[0]?.cover_url || ep.channel?.cover_url || ''
 }
 </script>
 

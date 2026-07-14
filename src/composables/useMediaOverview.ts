@@ -32,7 +32,7 @@ export function useMediaOverview() {
     try {
       const api = useApi()
       const channelQuery = channelId ? `channel_id=${encodeURIComponent(channelId)}` : ''
-      const articleUrl = `${api.blog.posts}?${[channelQuery, 'limit=5'].filter(Boolean).join('&')}`
+      const articleUrl = `${api.blog.posts}?${[channelQuery, 'page_size=5'].filter(Boolean).join('&')}`
       const podcastUrl = `${api.podcast.episodes}?${[channelQuery, 'limit=5'].filter(Boolean).join('&')}`
       const videoUrl = `${api.videos.list}?${[channelQuery, 'limit=6'].filter(Boolean).join('&')}`
 

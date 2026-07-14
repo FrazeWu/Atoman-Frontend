@@ -710,7 +710,7 @@ describe('FeedView', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/reading-list'), expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ feed_item_id: 'feed-item-auto-later-1' }),
+      body: JSON.stringify({ target_type: 'feed_item', target_id: 'feed-item-auto-later-1' }),
     }))
     expect(feedStore.readingListItemIds.has('feed-item-auto-later-1')).toBe(true)
     expect(feedStore.readingListItemIds.has('feed-item-normal-2')).toBe(false)

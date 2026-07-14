@@ -22,16 +22,33 @@
       <RouterLink :to="`/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
     </div>
 
-    <!-- Post content -->
-    <article v-else-if="post">
+    <article v-else-if="post" class="post-reading-page">
       <!-- Cover image -->
       <div v-if="post.cover_url" style="width:100%;max-height:20rem;overflow:hidden">
         <img :src="post.cover_url" :alt="post.title" style="width:100%;object-fit:cover;max-height:20rem" />
       </div>
 
-      <div :class="isAcademic ? 'a-page' : 'a-page-md'" style="padding-top:3rem; transition: max-width 0.3s ease;">
-        <!-- Breadcrumb -->
-        <RouterLink to="/" class="a-link">← 文章</RouterLink>
+      <div class="reading-mobile-tools">
+        <button data-test="mobile-collection" type="button" class="reading-icon-button" title="合集" @click="mobilePanel = 'collection'">
+          <Library :size="17" /><span>合集</span>
+        </button>
+        <button v-if="outline.length >= 3" data-test="mobile-toc" type="button" class="reading-icon-button" title="目录" @click="mobilePanel = 'toc'">
+          <List :size="17" /><span>目录</span>
+        </button>
+      </div>
+
+      <div class="reading-layout">
+        <aside data-test="collection-rail" class="reading-rail reading-collection-rail">
+          <CollectionNavigation
+            :post="post"
+            :posts="collectionPosts"
+            :previous-post="previousPost"
+            :next-post="nextPost"
+          />
+        </aside>
+
+        <main class="reading-main">
+          <RouterLink to="/" class="a-link">← 文章</RouterLink>
 
         <!-- Title -->
         <h1 
@@ -41,47 +58,23 @@
           {{ post.title }}
         </h1>
 
-        <!-- Meta -->
-        <div :class="isAcademic ? 'academic-meta' : 'normal-meta'">
-          <template v-if="isAcademic">
-            <span class="academic-author">{{ post.user?.display_name || post.user?.username }}</span>
-            <span class="academic-date">{{ formatDate(post.created_at) }}</span>
-            <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem">
-              <button 
-                @click="isAcademic = false" 
-                class="a-btn a-btn--sm a-btn--secondary"
-                style="border-radius: var(--a-radius-none); font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
-              >
-                📖 极简单栏
-              </button>
-              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
-            </div>
-          </template>
-          <template v-else>
-            <a :href="userUrl(post.user?.username || '')" style="display:flex;align-items:center;gap:.5rem;text-decoration:none">
-              <div style="width:2rem;height:2rem;border-radius:var(--a-radius-none);background:var(--a-color-fg);display:flex;align-items:center;justify-content:center;color:var(--a-color-bg);font-weight:900;font-size:.75rem">
-                {{ (post.user?.display_name || post.user?.username || '?').charAt(0).toUpperCase() }}
-              </div>
-              <span style="font-weight:900;font-size:.875rem">{{ post.user?.display_name || post.user?.username }}</span>
-            </a>
-            <span class="a-label a-muted">{{ formatDate(post.created_at) }}</span>
-            <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
-              <button 
-                @click="isAcademic = true" 
-                class="a-btn a-btn--sm a-btn--secondary"
-                style="border-radius: var(--a-radius-none); font-weight: 700; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
-              >
-                🔬 学术双栏
-              </button>
-              <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
-            </div>
-          </template>
+        <div class="normal-meta">
+          <a :href="userUrl(post.user?.username || '')" class="reading-author">
+            <span class="reading-avatar">{{ (post.user?.display_name || post.user?.username || '?').charAt(0).toUpperCase() }}</span>
+            <strong>{{ post.user?.display_name || post.user?.username }}</strong>
+          </a>
+          <span class="a-label a-muted">发布于 {{ formatDate(post.published_at || post.created_at) }}</span>
+          <span class="a-label a-muted">更新于 {{ formatDate(post.updated_at) }}</span>
+          <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
         </div>
 
-        <!-- Abstract -->
-        <div v-if="isAcademic && post.summary" class="academic-abstract">
-          <h3 class="abstract-title">摘要</h3>
-          <p class="abstract-content">{{ post.summary }}</p>
+        <div class="reading-stats" aria-label="文章统计">
+          <span><Eye :size="15" />{{ post.view_count || 0 }} 阅读</span>
+          <span><Heart :size="15" />{{ likesCount }} 点赞</span>
+          <span><MessageCircle :size="15" />{{ post.comments_count || 0 }} 评论</span>
+          <span><Bookmark :size="15" />{{ post.bookmarks_count || 0 }} 收藏</span>
+          <span><Users :size="15" />{{ post.channel_followers_count || 0 }} 订阅</span>
+          <span>{{ wordCount }} 字</span>
         </div>
 
         <!-- Markdown content -->
@@ -92,24 +85,11 @@
           v-html="renderedContent" 
         />
 
-        <!-- Interaction bar -->
-        <div style="display:flex;align-items:center;gap:1rem;padding:1.5rem 0;margin-bottom:3rem">
-          <button
-            @click="toggleLike"
-            class="a-toggle-btn"
-            :class="{ 'a-toggle-btn-active': liked }"
-          >
-            ♥ {{ likesCount }}
-          </button>
-          <a
-            v-if="post.user?.username"
-            :href="api.feed.rss(post.user.username)"
-            target="_blank"
-            class="a-link"
-            style="margin-left:auto"
-          >
-            RSS ↗
-          </a>
+        <div class="reading-actions">
+          <button type="button" class="reading-action" :class="{ active: liked }" title="点赞" @click="toggleLike"><Heart :size="17" />{{ likesCount }}</button>
+          <button type="button" class="reading-action" :class="{ active: bookmarked }" title="收藏" @click="openBookmarkDialog"><Bookmark :size="17" />收藏</button>
+          <button type="button" class="reading-action" :class="{ active: inReadingList }" title="稍后阅读" @click="toggleReadingList"><Clock3 :size="17" />稍后阅读</button>
+          <button type="button" class="reading-action" title="复制链接" @click="copyLink"><Share2 :size="17" />分享</button>
         </div>
 
         <!-- Comments -->
@@ -119,8 +99,22 @@
           :comment-mode="siteAccessStore.blogCommentMode"
           :post-owner-id="post.user_id"
         />
+        </main>
+
+        <aside v-if="outline.length >= 3" data-test="toc-rail" class="reading-rail reading-toc-rail">
+          <TableOfContents :items="outline" />
+        </aside>
       </div>
     </article>
+
+    <PSheet :show="mobilePanel === 'collection'" side="bottom" title="合集" close-type="header" @close="mobilePanel = null">
+      <CollectionNavigation v-if="post" :post="post" :posts="collectionPosts" :previous-post="previousPost" :next-post="nextPost" />
+    </PSheet>
+    <PSheet :show="mobilePanel === 'toc'" side="bottom" title="目录" close-type="header" @close="mobilePanel = null">
+      <TableOfContents :items="outline" />
+    </PSheet>
+    <PToast v-model="toastVisible" :message="toastMessage" />
+    <BookmarkFolderModal ref="bookmarkModalRef" @changed="onBookmarkChanged" />
   </div>
 </template>
 
@@ -128,15 +122,20 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import CommentSection from '@/components/blog/CommentSection.vue'
-import PConfirm from '@/components/ui/PConfirm.vue'
+import CollectionNavigation from '@/components/blog/CollectionNavigation.vue'
+import TableOfContents from '@/components/blog/TableOfContents.vue'
+import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import PToast from '@/components/ui/PToast.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
+import { Bookmark, Clock3, Eye, Heart, Library, List, MessageCircle, Share2, Users } from 'lucide-vue-next'
 
 type EmbedData = {
   id: string
@@ -156,22 +155,47 @@ const siteAccessStore = useSiteAccessStore()
 
 const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
+const feedStore = useFeedStore()
 const api = useApi()
 const { renderMarkdown } = useMarkdownRenderer()
 
 const post = ref<Post | null>(null)
+const collectionPosts = ref<Post[]>([])
+const mobilePanel = ref<'collection' | 'toc' | null>(null)
 const isAcademic = ref(false)
 const loading = ref(true)
 const errorStatus = ref<number | null>(null)
 const liked = ref(false)
 const likesCount = ref(0)
 const bookmarked = ref(false)
-const showUnbookmarkConfirm = ref(false)
+const currentBookmarkId = ref('')
+const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
+const toastVisible = ref(false)
+const toastMessage = ref('')
 const postEmbeds = ref<Record<string, EmbedData>>({})
 const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
 
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
+const inReadingList = computed(() => !!post.value && feedStore.readingListItemIds.has(post.value.id))
+const wordCount = computed(() => (post.value?.content || '').replace(/```[\s\S]*?```/g, '').replace(/[#*`>~_\[\]()]/g, '').replace(/\s+/g, '').length)
+
+const outline = computed(() => {
+  const items: Array<{ id: string; text: string; level: number }> = []
+  const matches = (post.value?.content || '').matchAll(/^(#{2,6})\s+(.+)$/gm)
+  for (const match of matches) {
+    const text = match[2].replace(/[*_`~\[\]]/g, '').trim()
+    const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}_-]/gu, '')
+    if (text && id) items.push({ id, text, level: match[1].length })
+  }
+  return items
+})
+
+const currentCollectionIndex = computed(() => collectionPosts.value.findIndex(item => item.id === post.value?.id))
+const previousPost = computed(() => currentCollectionIndex.value > 0 ? collectionPosts.value[currentCollectionIndex.value - 1] || null : null)
+const nextPost = computed(() => currentCollectionIndex.value >= 0 && currentCollectionIndex.value < collectionPosts.value.length - 1
+  ? collectionPosts.value[currentCollectionIndex.value + 1] || null
+  : null)
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -223,6 +247,7 @@ const fetchPost = async () => {
       const d = await res.json()
       post.value = d.data || d
       likesCount.value = post.value?.likes_count ?? 0
+      liked.value = Boolean(post.value?.liked)
 
       if (post.value?.channel_id) {
         void fetch(`${api.url}/feed/events/read`, {
@@ -240,7 +265,7 @@ const fetchPost = async () => {
       }
 
       if (post.value) {
-        await fetchEmbeds(post.value.content)
+        await Promise.all([fetchEmbeds(post.value.content), fetchCollectionPosts(post.value.collection_id)])
       }
 
       // Initialize bookmark state
@@ -274,9 +299,27 @@ const fetchBookmarkState = async (postId: string) => {
     if (res.ok) {
       const d = await res.json()
       const items = d.data || []
-      bookmarked.value = items.some((b: { post_id: string }) => b.post_id === postId)
+      const bookmark = items.find((b: { post_id: string }) => b.post_id === postId)
+      bookmarked.value = Boolean(bookmark)
+      currentBookmarkId.value = bookmark?.id || ''
     }
   } catch (e) { console.error(e) }
+}
+
+const fetchCollectionPosts = async (collectionId?: string) => {
+  if (!collectionId) {
+    collectionPosts.value = []
+    return
+  }
+  try {
+    const res = await fetch(`${api.blog.posts}?collection_id=${collectionId}&page_size=100`, { headers: authHeaders() })
+    if (!res.ok) return
+    const payload = await res.json()
+    collectionPosts.value = ((payload.data || []) as Post[]).sort((left, right) =>
+      (left.collection_position || 0) - (right.collection_position || 0))
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 const extractEmbedIds = (content: string, kind: 'post' | 'music' | 'video') => {
@@ -404,6 +447,41 @@ const toggleLike = async () => {
   }
 }
 
+const openBookmarkDialog = () => {
+  if (!authStore.isAuthenticated) {
+    toastMessage.value = '请先登录'
+    toastVisible.value = true
+    return
+  }
+  if (post.value) void bookmarkModalRef.value?.open(post.value.id)
+}
+
+const onBookmarkChanged = ({ saved }: { postId: string; saved: boolean }) => {
+  if (!post.value) return
+  bookmarked.value = saved
+  post.value.bookmarks_count = Math.max(0, (post.value.bookmarks_count || 0) + (saved ? 1 : -1))
+}
+
+const toggleReadingList = async () => {
+  if (!post.value) return
+  if (!authStore.isAuthenticated) {
+    toastMessage.value = '请先登录'
+    toastVisible.value = true
+    return
+  }
+  await feedStore.toggleReadingListItem(post.value.id, 'post')
+}
+
+const copyLink = async () => {
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    toastMessage.value = '链接已复制'
+  } catch {
+    toastMessage.value = '复制失败'
+  }
+  toastVisible.value = true
+}
+
 onMounted(fetchPost)
 onMounted(() => {
   if (!siteAccessStore.loaded) {
@@ -413,6 +491,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.post-reading-page { padding-bottom: 5rem; }
+.reading-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 760px) minmax(150px, 210px);
+  justify-content: center;
+  gap: 2rem;
+  width: min(100% - 2rem, 1320px);
+  margin: 0 auto;
+  padding-top: 2.5rem;
+}
+.reading-main { min-width: 0; }
+.reading-rail { position: sticky; top: 5rem; align-self: start; max-height: calc(100vh - 7rem); overflow-y: auto; padding: 0.25rem; }
+.reading-mobile-tools { display: none; }
+.reading-author { display: flex; align-items: center; gap: 0.5rem; color: inherit; text-decoration: none; }
+.reading-avatar { width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--a-color-fg); color: var(--a-color-bg); font-weight: 900; font-size: 0.75rem; }
+.reading-stats { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; padding-bottom: 1.5rem; color: var(--a-color-muted); font-size: 0.78rem; }
+.reading-stats span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.reading-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1.25rem 0; margin-bottom: 2rem; border-top: 1px solid var(--a-color-line-soft); border-bottom: 1px solid var(--a-color-line-soft); }
+.reading-action, .reading-icon-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; min-height: 2.25rem; padding: 0.4rem 0.65rem; border: 1px solid var(--a-color-line); background: var(--a-color-bg); color: var(--a-color-fg); cursor: pointer; }
+.reading-action.active { background: var(--a-color-fg); color: var(--a-color-bg); }
+
+@media (max-width: 1024px) {
+  .reading-layout { display: block; width: min(100% - 2rem, 760px); }
+  .reading-rail { display: none; }
+  .reading-mobile-tools { display: flex; position: sticky; top: 3.5rem; z-index: 20; justify-content: center; gap: 0.5rem; padding: 0.65rem; background: var(--a-color-bg); border-bottom: 1px solid var(--a-color-line-soft); }
+}
+
 .prose-blog :deep(h1),
 .prose-blog :deep(h2),
 .prose-blog :deep(h3),

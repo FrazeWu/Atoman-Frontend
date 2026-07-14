@@ -64,7 +64,7 @@ const timelinePayload = {
         pinned: false,
         created_at: '2026-06-29T08:00:00Z',
         updated_at: '2026-06-29T08:00:00Z',
-        collections: [{ id: 'collection-podcast', channel_id: 'channel-1', name: '播客', created_at: '2026-06-01T00:00:00Z', updated_at: '2026-06-01T00:00:00Z' }],
+        collection: { id: 'collection-podcast', channel_id: 'channel-1', name: '播客', created_at: '2026-06-01T00:00:00Z', updated_at: '2026-06-01T00:00:00Z' },
       },
       published_at: '2026-06-29T08:00:00Z',
       is_read: false,

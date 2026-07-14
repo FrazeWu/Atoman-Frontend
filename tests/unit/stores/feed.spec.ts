@@ -333,7 +333,7 @@ describe('feed store', () => {
   })
 
   it('uses modular reading-list response data to update saved ids', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { saved: true },
     }), { status: 200 }))
 
@@ -342,6 +342,24 @@ describe('feed store', () => {
 
     expect(result).toBe(true)
     expect(feedStore.readingListItemIds.has('feed-item-1')).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/reading-list'), expect.objectContaining({
+      body: JSON.stringify({ target_type: 'feed_item', target_id: 'feed-item-1' }),
+    }))
+  })
+
+  it('adds internal posts to the unified reading list', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { saved: true },
+    }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    const result = await feedStore.toggleReadingListItem('post-1', 'post')
+
+    expect(result).toBe(true)
+    expect(feedStore.readingListItemIds.has('post-1')).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/reading-list'), expect.objectContaining({
+      body: JSON.stringify({ target_type: 'post', target_id: 'post-1' }),
+    }))
   })
 
   it('marks feed items unread through the v1 feed endpoint', async () => {
@@ -517,5 +535,28 @@ describe('feed store', () => {
     resolveToggle(new Response(JSON.stringify({ data: { saved: true } }), { status: 200 }))
     expect(await result).toBe(true)
     expect(feed.readingListItemIds.has('feed-item-1')).toBe(true)
+  })
+
+  it('loads every reading-list page when building saved item ids', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      target_id: `feed-item-${index + 1}`,
+    }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: firstPage,
+        meta: { page: 1, page_size: 100, total: 101 },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ target_id: 'feed-item-101' }],
+        meta: { page: 2, page_size: 100, total: 101 },
+      }), { status: 200 }))
+
+    const feed = useFeedStore()
+    await feed.fetchReadingListIds()
+
+    expect(feed.readingListItemIds.size).toBe(101)
+    expect(feed.readingListItemIds.has('feed-item-101')).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/reading-list?page=1&limit=100', expect.any(Object))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/feed/reading-list?page=2&limit=100', expect.any(Object))
   })
 })

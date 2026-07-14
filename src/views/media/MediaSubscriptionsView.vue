@@ -37,14 +37,10 @@ const filterOptions: Array<{ label: string; value: SubscriptionFilter }> = [
 ]
 
 const normalizeKind = (post: Post): SubscriptionKind => {
-  const collectionType = post.collections
-    ?.map((collection) => (collection as { type?: unknown }).type)
-    .find((type): type is SubscriptionKind => type === 'podcast' || type === 'video')
+  const collectionType = (post.collection as (typeof post.collection & { type?: unknown }) | undefined)?.type
   if (collectionType === 'podcast' || collectionType === 'video') return collectionType
 
-  const collectionName = (post.collections || [])
-    .map((collection) => collection.name?.trim().toLowerCase() || '')
-    .find(Boolean) || ''
+  const collectionName = post.collection?.name?.trim().toLowerCase() || ''
 
   if (collectionName.includes('podcast') || collectionName.includes('播客')) return 'podcast'
   if (collectionName.includes('video') || collectionName.includes('视频')) return 'video'

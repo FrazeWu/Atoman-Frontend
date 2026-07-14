@@ -51,7 +51,7 @@ describe('BlogManageView', () => {
             title: '草稿文章',
             status: 'draft',
             created_at: '2026-06-18T00:00:00Z',
-            collections: [{ id: 'collection-1', channel_id: 'channel-1' }],
+            collection_id: 'collection-1',
           }],
         })
       }
@@ -200,7 +200,7 @@ describe('BlogManageView', () => {
               title: '草稿文章',
               status: 'draft',
               created_at: '2026-06-17T00:00:00Z',
-              collections: [{ id: 'collection-1', channel_id: 'channel-1' }],
+              collection_id: 'collection-1',
             },
           ],
         })
@@ -252,5 +252,63 @@ describe('BlogManageView', () => {
         body: JSON.stringify({ post_ids: ['draft-1', 'published-1'] }),
       }),
     )
+  })
+
+  it('shows article operations, stats and version history', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?user_id=user-1')) {
+        return makeJsonResponse({ data: [{ id: 'channel-1', name: '频道一' }] })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1' }] })
+      }
+      if (url.includes('/blog/posts?collection_id=collection-1')) {
+        return makeJsonResponse({ data: [{
+          id: 'post-1', title: '管理文章', status: 'published', pinned: false,
+          collection_id: 'collection-1', view_count: 42, likes_count: 6,
+          comments_count: 2, bookmarks_count: 3,
+          created_at: '2026-07-10T00:00:00Z', updated_at: '2026-07-14T00:00:00Z',
+        }] })
+      }
+      if (url.includes('/blog/posts/drafts')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/posts/post-1/versions')) {
+        return makeJsonResponse({ data: [{ version: 2, title: '管理文章', created_at: '2026-07-14T00:00:00Z' }] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(BlogManageView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<div><slot /><slot name="action" /></div>' },
+          PEmpty: { template: '<div><slot /><slot name="action" /></div>' },
+          PModal: { template: '<div><slot /></div>' },
+          PSheet: { props: ['show'], template: '<aside v-if="show"><slot /></aside>' },
+          PConfirm: true,
+          PInput: { template: '<input />' },
+          PTextarea: { template: '<textarea />' },
+          PSelect: { template: '<select />' },
+          PCard: { template: '<div><slot /></div>' },
+          PLink: { props: ['label'], template: '<a>{{ label }}<slot /></a>' },
+          PPress: { props: ['label'], emits: ['click'], template: '<button @click="$emit(\'click\')">{{ label }}<slot /></button>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('42 阅读')
+    expect(wrapper.text()).toContain('6 点赞')
+    expect(wrapper.text()).toContain('2 评论')
+    expect(wrapper.text()).toContain('3 收藏')
+    for (const action of ['预览', '撤回', '置顶', '版本', '编辑', '删除']) {
+      expect(wrapper.findAll('button').map(button => button.text())).toContain(action)
+    }
+
+    await wrapper.findAll('button').find(button => button.text() === '版本')!.trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/blog/posts/post-1/versions'), expect.anything())
+    expect(wrapper.text()).toContain('版本 2')
   })
 })

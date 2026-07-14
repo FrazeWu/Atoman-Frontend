@@ -1,5 +1,6 @@
 <template>
   <div class="a-page-xl blog-subscriptions-page">
+    <BookmarkFolderModal ref="bookmarkModalRef" />
     <PPageHeader title="订阅" accent>
       <template #action>
         <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
@@ -98,6 +99,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTab from '@/components/ui/PTab.vue'
+import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
@@ -117,16 +119,17 @@ const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const uiStore = useUIStore()
 const api = useApi()
+const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.togglePostBookmark(id)
+  void bookmarkModalRef.value?.open(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id)
+  void feedStore.toggleReadingListItem(id, 'post')
 }
 
 const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))

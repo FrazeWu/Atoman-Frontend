@@ -34,12 +34,13 @@
           v-for="col in channelCollections"
           :key="col.id"
           class="collection-item"
-          :class="{ selected: selectedCollectionIds.includes(col.id) }"
+          :class="{ selected: selectedCollectionId === col.id }"
         >
           <input
-            type="checkbox"
-            :checked="selectedCollectionIds.includes(col.id)"
-            @change="$emit('toggle-collection', col.id, $event)"
+            type="radio"
+            name="post-collection"
+            :checked="selectedCollectionId === col.id"
+            @change="$emit('select-collection', col.id)"
           />
           <span class="collection-name">{{ col.name }}</span>
           <span v-if="col.id === defaultCollectionId" class="badge-default">默认</span>
@@ -138,7 +139,7 @@ defineProps<{
   saving: SaveTarget | null
   hasDraftManagerAccess: boolean
   channelCollections: SidebarCollection[]
-  selectedCollectionIds: string[]
+  selectedCollectionId?: string
   defaultCollectionId?: string
   summary: string
   visibility: BlogVisibility
@@ -155,7 +156,7 @@ defineEmits<{
   (e: 'save-draft'): void
   (e: 'save-published'): void
   (e: 'open-draft-manager'): void
-  (e: 'toggle-collection', id: string, event: Event): void
+  (e: 'select-collection', id: string): void
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: BlogVisibility): void
   (e: 'update:allowComments', value: boolean): void

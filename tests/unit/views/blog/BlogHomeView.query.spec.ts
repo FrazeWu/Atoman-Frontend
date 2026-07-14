@@ -21,7 +21,7 @@ describe('BlogHomeView query search', () => {
     mocks.routeQuery = {}
   })
 
-  it('passes route query q to blog explore requests', async () => {
+  it('passes route query q to the paged blog post list', async () => {
     mocks.routeQuery = { q: 'atom' }
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify({ data: [] }), { status: 200 }),
@@ -45,6 +45,6 @@ describe('BlogHomeView query search', () => {
     await flushPromises()
 
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
-    expect(requestedUrls).toContain('/api/v1/blog/explore?page=1&limit=20&q=atom')
+    expect(requestedUrls).toContain('/api/v1/blog/posts?page=1&page_size=20&sort=latest&q=atom')
   })
 })

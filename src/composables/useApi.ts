@@ -64,6 +64,8 @@ export function useApi() {
       postUnpublish: (id: number | string) => `${apiUrl}/blog/posts/${id}/unpublish`,
       postPin: (id: number | string) => `${apiUrl}/blog/posts/${id}/pin`,
       postUnpin: (id: number | string) => `${apiUrl}/blog/posts/${id}/unpin`,
+      postVersions: (id: number | string) => `${apiUrl}/blog/posts/${id}/versions`,
+      postVersionRestore: (id: number | string, version: number) => `${apiUrl}/blog/posts/${id}/versions/${version}/restore`,
       draft: `${apiUrl}/blog/drafts`,
       drafts: `${apiUrl}/blog/posts/drafts`,
       postCollections: (id: number | string) => `${apiUrl}/blog/posts/${id}/collections`,
@@ -77,10 +79,10 @@ export function useApi() {
       likes: `${apiUrl}/blog/likes`,
       postLikesCount: (id: number | string) => `${apiUrl}/blog/posts/${id}/likes/count`,
       
-      explore: `${apiUrl}/blog/explore`,
       bookmarkFolders: `${apiUrl}/blog/bookmark-folders`,
       bookmarkFolder: (id: number | string) => `${apiUrl}/blog/bookmark-folders/${id}`,
       bookmarks: `${apiUrl}/blog/bookmarks`,
+      bookmark: (id: number | string) => `${apiUrl}/blog/bookmarks/${id}`,
     },
     
     auth: {

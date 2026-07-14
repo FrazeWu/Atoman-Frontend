@@ -39,7 +39,7 @@ const fmtDuration = (sec: number) => {
 
 const episodeCover = (episode: PodcastEpisode) => {
   return episode.episode_cover_url
-    || episode.post?.collections?.[0]?.cover_url
+    || episode.post?.collection?.cover_url
     || episode.collections?.[0]?.cover_url
     || episode.channel?.cover_url
     || ''

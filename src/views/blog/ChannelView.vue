@@ -1,6 +1,7 @@
 <template>
   <div class="a-page-xl">
     <PToast v-model="toastVisible" :message="toastMessage" />
+    <BookmarkFolderModal ref="bookmarkModalRef" />
     <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
       <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
     </div>
@@ -148,6 +149,7 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
+import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -164,6 +166,7 @@ const route = useRoute()
 const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
+const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
 
 const loading = ref(true)
 const channel = ref<Channel | null>(null)
@@ -193,11 +196,11 @@ const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.togglePostBookmark(id)
+  void bookmarkModalRef.value?.open(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id)
+  void feedStore.toggleReadingListItem(id, 'post')
 }
 
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
@@ -209,16 +212,14 @@ const channelRssUrl = computed(() => {
 
 const filteredPosts = computed(() => {
   if (activeCollectionId.value === null) return channelPosts.value
-  return channelPosts.value.filter(p =>
-    (p.collections || []).some(c => c.id === activeCollectionId.value)
-  )
+  return channelPosts.value.filter(p => p.collection_id === activeCollectionId.value)
 })
 
 const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
 const summarize = (content: string) =>
   content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\[\]()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
 const postCountByCollection = (cid: string) =>
-  channelPosts.value.filter(p => (p.collections || []).some(c => c.id === cid)).length
+  channelPosts.value.filter(p => p.collection_id === cid).length
 
 const fetchChannel = async () => {
   const url = isSlug.value
@@ -250,6 +251,7 @@ const fetchPosts = async () => {
   const params = new URLSearchParams({ channel_id: channel.value.id, limit: '100' })
   const headers: Record<string, string> = {}
   if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+  params.set('page_size', '100')
   const res = await fetch(`${api.blog.posts}?${params}`, { headers })
   if (res.ok) channelPosts.value = (await res.json()).data || []
 }

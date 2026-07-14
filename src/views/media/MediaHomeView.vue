@@ -47,7 +47,7 @@ const fmtDuration = (sec?: number) => {
 
 const episodeCover = (episode: PodcastEpisode) => (
   episode.episode_cover_url
-  || episode.post?.collections?.[0]?.cover_url
+  || episode.post?.collection?.cover_url
   || episode.collections?.[0]?.cover_url
   || episode.channel?.cover_url
   || ''
@@ -115,7 +115,7 @@ const featuredItems = computed<FeaturedItem[]>(() => {
 const loadHome = async () => {
   loading.value = true
   try {
-    const articleUrl = `${api.blog.explore}?${new URLSearchParams({ page: '1', limit: '6' })}`
+    const articleUrl = `${api.blog.posts}?${new URLSearchParams({ page: '1', page_size: '6', sort: 'latest' })}`
     const podcastUrl = `${api.podcast.episodes}?${new URLSearchParams({ sort: 'latest', limit: '6' })}`
     const videoUrl = `${api.videos.list}?${new URLSearchParams({ sort: 'latest', limit: '6' })}`
 

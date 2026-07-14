@@ -9,7 +9,7 @@
           :saving="saving"
           :has-draft-manager-access="hasDraftManagerAccess"
           :channel-collections="channelCollections"
-          :selected-collection-ids="selectedCollectionIds"
+          :selected-collection-id="selectedCollectionId"
           :default-collection-id="defaultCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
@@ -23,7 +23,7 @@
           @save-draft="save('draft')"
           @save-published="save('published')"
           @open-draft-manager="openDraftManager"
-          @toggle-collection="onCollectionToggle"
+          @select-collection="selectedCollectionId = $event"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
           @update:allowComments="(value) => (form.allow_comments = value)"
@@ -227,7 +227,7 @@ type EditorDraftPayload = {
   visibility: BlogVisibility
   allow_comments: boolean
   channel_id?: string
-  collection_ids: string[]
+  collection_id?: string
 }
 type DraftCandidate = {
   source: 'local' | 'server'
@@ -255,8 +255,7 @@ const shouldEnableCollab = computed(() => Boolean(collabRoomId.value))
 const isCollabEditing = computed(() => shouldEnableCollab.value)
 const contentReady = ref(!route.params.id)
 const channelCollections = ref<Collection[]>([])
-const selectedCollectionIds = ref<string[]>([])
-const existingCollectionIds = ref<string[]>([])
+const selectedCollectionId = ref('')
 const uploading = ref(false)
 const coverUploading = ref(false)
 const error = ref('')
@@ -391,7 +390,7 @@ const currentChannelId = ref<string>('')
 const defaultCollectionId = computed(() => channelCollections.value.find(c => c.is_default)?.id)
 
 const derivedChannelId = computed(() => {
-  const col = channelCollections.value.find(c => selectedCollectionIds.value.includes(c.id))
+  const col = channelCollections.value.find(c => c.id === selectedCollectionId.value)
   return col?.channel_id || ''
 })
 
@@ -414,7 +413,7 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   visibility: form.value.visibility,
   allow_comments: form.value.allow_comments,
   channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || undefined,
-  collection_ids: Array.from(new Set(selectedCollectionIds.value)),
+  collection_id: selectedCollectionId.value || undefined,
 }))
 
 const {
@@ -557,8 +556,8 @@ const keepCurrentContentLabel = computed(() => isCollabConflict.value ? '保留�
 
 const ensureDefaultSelection = () => {
   const def = channelCollections.value.find(c => c.is_default)
-  if (def && !selectedCollectionIds.value.includes(def.id)) {
-    selectedCollectionIds.value = [def.id, ...selectedCollectionIds.value]
+  if (!selectedCollectionId.value && def) {
+    selectedCollectionId.value = def.id
   }
 }
 
@@ -569,7 +568,7 @@ const hasMeaningfulDraft = (payload: EditorDraftPayload) => {
     || payload.summary.trim()
     || payload.cover_url.trim()
     || payload.channel_id
-    || payload.collection_ids.length
+    || payload.collection_id
   )
 }
 
@@ -704,7 +703,7 @@ const blogDraftToPayload = (draft: BlogDraft): EditorDraftPayload => ({
   visibility: draft.visibility || 'public',
   allow_comments: draft.allow_comments,
   channel_id: draft.channel_id,
-  collection_ids: draft.collection_ids || [],
+  collection_id: draft.collection_id || (draft as BlogDraft & { collection_ids?: string[] }).collection_ids?.[0],
 })
 
 const updateEditorChannel = async (channelId?: string) => {
@@ -863,8 +862,8 @@ const applyDraftPayload = async (payload: EditorDraftPayload) => {
     contentSource.value = hasMeaningfulDraft(payload) ? 'manual' : 'empty'
 
     const allowed = new Set(channelCollections.value.map(collection => collection.id))
-    selectedCollectionIds.value = payload.collection_ids.filter(collectionId => allowed.has(collectionId))
-    if (selectedCollectionIds.value.length === 0) {
+    selectedCollectionId.value = payload.collection_id && allowed.has(payload.collection_id) ? payload.collection_id : ''
+    if (!selectedCollectionId.value) {
       ensureDefaultSelection()
     }
 
@@ -1041,15 +1040,14 @@ const loadChannels = async () => {
 const loadChannelCollections = async () => {
   if (!authStore.isAuthenticated) {
     channelCollections.value = []
-    selectedCollectionIds.value = []
-    existingCollectionIds.value = []
+    selectedCollectionId.value = ''
     return
   }
 
   const channelId = selectedChannelId.value || currentChannelId.value
   if (!channelId) {
     channelCollections.value = []
-    selectedCollectionIds.value = []
+    selectedCollectionId.value = ''
     return
   }
 
@@ -1063,55 +1061,21 @@ const loadChannelCollections = async () => {
     if (!isEdit.value) {
       const queryCollection = selectedQueryCollectionId.value
       if (queryCollection && channelCollections.value.some(collection => collection.id === queryCollection)) {
-        selectedCollectionIds.value = [queryCollection]
+        selectedCollectionId.value = queryCollection
       } else {
         const def = channelCollections.value.find(c => c.is_default) || channelCollections.value[0]
-        selectedCollectionIds.value = def ? [def.id] : []
+        selectedCollectionId.value = def?.id || ''
       }
     }
     if (isEdit.value) {
       const allowed = channelCollections.value.map(c => c.id)
-      selectedCollectionIds.value = existingCollectionIds.value.filter(id => allowed.includes(id))
+      if (!allowed.includes(selectedCollectionId.value)) selectedCollectionId.value = ''
       ensureDefaultSelection()
     }
   } catch (e) {
     console.error(e)
     error.value = '加载合集失败'
   }
-}
-
-const onCollectionToggle = (id: string, event: Event) => {
-  const checked = !!(event.target as HTMLInputElement)?.checked
-  if (checked) {
-    if (!selectedCollectionIds.value.includes(id))
-      selectedCollectionIds.value = [...selectedCollectionIds.value, id]
-  } else {
-    selectedCollectionIds.value = selectedCollectionIds.value.filter(x => x !== id)
-    ensureDefaultSelection()
-  }
-}
-
-// ── 同步合集 ─────────────────────────────────────────────
-const syncPostCollections = async (postId: string) => {
-  const target = Array.from(new Set(selectedCollectionIds.value))
-  const existing = Array.from(new Set(existingCollectionIds.value))
-  const toAdd = target.filter(id => !existing.includes(id))
-  const toRemove = existing.filter(id => !target.includes(id))
-  for (const id of toAdd) {
-    const res = await fetch(api.blog.postCollections(postId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders.value },
-      body: JSON.stringify({ collection_id: id }),
-    })
-    if (!res.ok) throw new Error('添加文章合集失败')
-  }
-  for (const id of toRemove) {
-    const res = await fetch(api.blog.postCollection(postId, id), {
-      method: 'DELETE', headers: authHeaders.value,
-    })
-    if (!res.ok) throw new Error('移除文章合集失败')
-  }
-  existingCollectionIds.value = [...target]
 }
 
 // ── 加载文章 ─────────────────────────────────────────────
@@ -1137,13 +1101,12 @@ const loadPost = async () => {
       loadedPostUpdatedAt.value = parseTimestamp(p.updated_at)
       contentSource.value = 'manual'
       if (!selectedChannelId.value) {
-        const fallback = p.channel_id || p.collections?.[0]?.channel_id
+        const fallback = p.channel_id || p.collection?.channel_id
         if (fallback) {
           await router.replace({ path: `/posts/post/${postId}/edit`, query: { channel: fallback } })
         }
       }
-      existingCollectionIds.value = (p.collections || []).map((c: Collection) => c.id)
-      selectedCollectionIds.value = [...existingCollectionIds.value]
+      selectedCollectionId.value = p.collection_id || p.collection?.id || ''
     }
   } catch (e) {
     console.error(e)
@@ -1170,7 +1133,7 @@ const save = async (status: SaveTarget) => {
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || null,
-          collection_ids: Array.from(new Set(selectedCollectionIds.value)),
+          collection_id: selectedCollectionId.value || undefined,
         }),
       })
     } else {
@@ -1180,7 +1143,7 @@ const save = async (status: SaveTarget) => {
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || selectedChannelId.value || undefined,
-          collection_ids: Array.from(new Set(selectedCollectionIds.value)),
+          collection_id: selectedCollectionId.value || undefined,
         }),
       })
     }
@@ -1188,7 +1151,6 @@ const save = async (status: SaveTarget) => {
       const d = await res.json()
       const savedPost = d.data || d
       await clearAllDrafts()
-      if (isEdit.value) await syncPostCollections(String(savedPost.id))
       router.push(`/posts/post/${savedPost.id}`)
     } else {
       const err = await res.json()

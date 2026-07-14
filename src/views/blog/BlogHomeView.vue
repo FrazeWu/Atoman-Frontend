@@ -1,5 +1,6 @@
 <template>
   <div class="a-page">
+    <BookmarkFolderModal ref="bookmarkModalRef" />
     <PPageHeader title="文章" accent>
       <template #action>
         <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/post/new">+ 写文章</PButton>
@@ -102,6 +103,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
@@ -113,16 +115,17 @@ const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const api = useApi()
 const route = useRoute()
+const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.togglePostBookmark(id)
+  void bookmarkModalRef.value?.open(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id)
+  void feedStore.toggleReadingListItem(id, 'post')
 }
 
 const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))
@@ -149,6 +152,7 @@ const typeOptions = [
 const sortOptions = [
   { label: '最新', value: 'latest' },
   { label: '最热', value: 'popular' },
+  { label: '推荐', value: 'recommended' },
 ]
 
 const selectType = (value: string) => {
@@ -169,20 +173,22 @@ const fetchPosts = async (append = false) => {
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
     const isPopular = sortBy.value === 'popular'
+    const isRecommended = sortBy.value === 'recommended'
     const query = new URLSearchParams()
     query.set('page', String(page.value))
-    query.set('limit', '20')
+    query.set('page_size', '20')
+    query.set('sort', 'latest')
     if (activeQuery.value) query.set('q', activeQuery.value)
-    const endpoint = isPopular
-      ? `${api.url}/feed/recommend/articles?mode=hot&page=${page.value}&page_size=20`
-      : `${api.blog.explore}?${query.toString()}`
+    const endpoint = isPopular || isRecommended
+      ? `${api.url}/blog/recommend/posts?mode=${isPopular ? 'hot' : 'featured'}&page=${page.value}&page_size=20`
+      : `${api.blog.posts}?${query.toString()}`
 
     const res = await fetch(endpoint, { headers })
     if (res.ok) {
       const d = await res.json()
       const rawData = d.data || []
       const extractedPosts: Post[] = rawData.map((item: any) => {
-        if (isPopular) {
+        if (isPopular || isRecommended) {
           return {
             id: item.id,
             title: item.title,
@@ -192,8 +198,7 @@ const fetchPosts = async (append = false) => {
             comments_count: 0,
           }
         }
-        if (item.post) return item.post
-        return null
+        return item as Post
       }).filter(Boolean)
 
       if (append) {
@@ -201,9 +206,7 @@ const fetchPosts = async (append = false) => {
       } else {
         posts.value = extractedPosts
       }
-      hasMore.value = isPopular
-        ? Boolean(d.meta?.has_more)
-        : rawData.length === 12
+      hasMore.value = Boolean(d.meta?.has_more)
     }
   } catch (e) {
     console.error(e)
@@ -226,7 +229,7 @@ onMounted(() => {
 })
 
 watch(activeQuery, () => {
-  if (sortBy.value !== 'popular') {
+  if (sortBy.value === 'latest') {
     void fetchPosts()
   }
 })

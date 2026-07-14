@@ -1,6 +1,6 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <PPageHeader title="稍后阅读" sub="你保存的 RSS 阅读队列">
+    <PPageHeader title="稍后阅读" sub="你保存的文章">
       <template #action>
         <RouterLink to="/feed" style="text-decoration:none">
           <PPress variant="secondary" label="← 返回订阅" />
@@ -12,14 +12,14 @@
       <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
     </div>
 
-    <PEmpty v-else-if="!items.length" text="阅读列表为空" sub="在订阅时间线中点击「稍后阅读」保存" />
+    <PEmpty v-else-if="!items.length" text="阅读列表为空" sub="在文章或订阅中点击「稍后阅读」保存" />
 
     <div v-else class="feed-timeline">
-      <template v-for="(entry, index) in items" :key="entry.feed_item_id">
+      <template v-for="(entry, index) in items" :key="`${entry.target_type}:${entry.target_id}`">
         <PEntry
           v-if="entry.feed_item"
           :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-          :is-open="showArticleSheet && selectedArticle?.feed_item?.id === entry.feed_item_id"
+          :is-open="showArticleSheet && selectedArticle?.feed_item?.id === entry.target_id"
           :force-show-actions="true"
           @click="openArticleSheet(entry, index)"
           :title="entry.feed_item.title"
@@ -60,12 +60,35 @@
             <PClip
               active
               label="移除"
-              @click="remove(entry.feed_item_id)"
+              @click="remove(entry.target_type, entry.target_id)"
             />
             <div style="flex:1"></div>
             <a v-if="entry.feed_item.link" :href="entry.feed_item.link" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
               ↗ 原文
             </a>
+          </template>
+        </PEntry>
+
+        <PEntry
+          v-else-if="entry.post"
+          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+          :force-show-actions="true"
+          :title="entry.post.title"
+          :summary="entry.post.summary || ''"
+          @click="router.push(`/posts/post/${entry.post.id}`)"
+        >
+          <template #visual>
+            <PBadge type="blog" fill>站内</PBadge>
+          </template>
+          <template #meta>
+            <span class="a-label a-muted">{{ entry.post.user?.username || entry.post.channel?.name || '文章' }}</span>
+            <span style="color:var(--a-color-muted-soft)">{{ formatDate(entry.post.published_at || entry.post.created_at) }}</span>
+            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight:900">添加于 {{ formatDate(entry.created_at) }}</span>
+          </template>
+          <template #actions>
+            <PClip active label="移除" @click="remove(entry.target_type, entry.target_id)" />
+            <div style="flex:1"></div>
+            <RouterLink :to="`/posts/post/${entry.post.id}`" class="feed-item-external-link" @click.stop>阅读</RouterLink>
           </template>
         </PEntry>
       </template>
@@ -84,7 +107,7 @@
       :article="selectedArticle"
       :is-podcast-playing="selectedArticle?.type === 'feed_item' && selectedArticle.feed_item ? isPodcastPlaying(selectedArticle.feed_item) : false"
       :has-previous="selectedArticleIndex > 0"
-      :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < items.length - 1"
+      :has-next="selectedArticleIndex >= 0 && selectedArticleIndex < rssEntries.length - 1"
       @close="showArticleSheet = false"
       @play-podcast="playFeedItemFromSheet"
       @previous="openPreviousArticle"
@@ -109,12 +132,14 @@ import { useFeedStore } from '@/stores/feed'
 import { usePlayerStore } from '@/stores/player'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import type { FeedItem, TimelineItem } from '@/types'
+import type { FeedItem, Post, TimelineItem } from '@/types'
 import { useApi } from '@/composables/useApi'
 
 interface ReadingListEntry {
-  feed_item_id: string
+  target_type: 'feed_item' | 'post'
+  target_id: string
   feed_item?: FeedItem
+  post?: Post
   created_at: string
 }
 
@@ -140,9 +165,10 @@ const pageLimit = 20
 
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
+const rssEntries = computed(() => items.value.filter(entry => entry.target_type === 'feed_item' && entry.feed_item))
 const selectedArticleIndex = computed(() => {
   if (!selectedArticle.value?.feed_item?.id) return -1
-  return items.value.findIndex((entry) => entry.feed_item_id === selectedArticle.value?.feed_item?.id)
+  return rssEntries.value.findIndex((entry) => entry.target_id === selectedArticle.value?.feed_item?.id)
 })
 
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -187,14 +213,14 @@ const openArticleSheet = (entry: ReadingListEntry, index?: number) => {
 
 const openPreviousArticle = () => {
   if (selectedArticleIndex.value <= 0) return
-  const entry = items.value[selectedArticleIndex.value - 1]
+  const entry = rssEntries.value[selectedArticleIndex.value - 1]
   if (!entry) return
   openArticleSheet(entry, selectedArticleIndex.value - 1)
 }
 
 const openNextArticle = () => {
-  if (selectedArticleIndex.value < 0 || selectedArticleIndex.value >= items.value.length - 1) return
-  const entry = items.value[selectedArticleIndex.value + 1]
+  if (selectedArticleIndex.value < 0 || selectedArticleIndex.value >= rssEntries.value.length - 1) return
+  const entry = rssEntries.value[selectedArticleIndex.value + 1]
   if (!entry) return
   openArticleSheet(entry, selectedArticleIndex.value + 1)
 }
@@ -301,23 +327,23 @@ const fetchItems = async () => {
     return
   }
 
-  const previousIds = items.value.map((item) => item.feed_item_id)
-  const nextIds = nextItems.map((item) => item.feed_item_id)
+  const previousIds = items.value.map((item) => item.target_id)
+  const nextIds = nextItems.map((item) => item.target_id)
   items.value = nextItems
   feedStore.syncReadingListPageIds(previousIds, nextIds)
   totalItems.value = total
   loading.value = false
 }
 
-const remove = async (feedItemId: string) => {
-  const res = await fetch(`${api.url}/feed/reading-list/${feedItemId}`, {
+const remove = async (targetType: ReadingListEntry['target_type'], targetId: string) => {
+  const res = await fetch(`${api.url}/feed/reading-list/${targetType}/${targetId}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })
   if (!res.ok) return
 
   const nextIds = new Set(feedStore.readingListItemIds)
-  nextIds.delete(feedItemId)
+  nextIds.delete(targetId)
   feedStore.readingListItemIds = nextIds
   if (items.value.length === 1 && page.value > 1) {
     await setRoutePage(page.value - 1)

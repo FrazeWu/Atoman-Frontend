@@ -1187,13 +1187,17 @@ export const useFeedStore = defineStore('feed', () => {
     )
   }
 
-  const requestReadingListToggle = async (feedItemId: string, fallback: boolean): Promise<boolean | null> => {
+  const requestReadingListToggle = async (
+    targetId: string,
+    targetType: 'feed_item' | 'post',
+    fallback: boolean,
+  ): Promise<boolean | null> => {
     const authStore = useAuthStore()
     try {
       const res = await fetch(`${api.url}/feed/reading-list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({ feed_item_id: feedItemId }),
+        body: JSON.stringify({ target_type: targetType, target_id: targetId }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -1206,14 +1210,17 @@ export const useFeedStore = defineStore('feed', () => {
     return null
   }
 
-  const toggleReadingListItem = async (feedItemId: string): Promise<boolean | null> => {
+  const toggleReadingListItem = async (
+    targetId: string,
+    targetType: 'feed_item' | 'post' = 'feed_item',
+  ): Promise<boolean | null> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return null
     return enqueueMembershipToggle(
       readingListToggleStates,
       readingListItemIds,
-      feedItemId,
-      (fallback) => requestReadingListToggle(feedItemId, fallback),
+      targetId,
+      (fallback) => requestReadingListToggle(targetId, targetType, fallback),
     )
   }
 
@@ -1224,16 +1231,30 @@ export const useFeedStore = defineStore('feed', () => {
       return
     }
     try {
-      const res = await fetch(`${api.url}/feed/reading-list?limit=500`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (res.ok) {
+      const pageSize = 100
+      const entries: any[] = []
+      for (let page = 1; ; page += 1) {
+        const res = await fetch(`${api.url}/feed/reading-list?page=${page}&limit=${pageSize}`, {
+          headers: { Authorization: `Bearer ${authStore.token}` },
+        })
+        if (!res.ok) return
         const data = await res.json()
-        const ids = (data.data || data.items || [])
-          .map((item: any) => item.feed_item_id as string)
-          .filter(Boolean)
-        readingListItemIds.value = mergePendingMembership(new Set(ids), readingListToggleStates)
+        const pageEntries = Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data.data?.items)
+            ? data.data.items
+            : Array.isArray(data.items)
+              ? data.items
+              : []
+        entries.push(...pageEntries)
+
+        const total = Number(data.meta?.total ?? data.data?.total ?? data.total)
+        if ((Number.isFinite(total) && entries.length >= total) || pageEntries.length < pageSize) break
       }
+      const ids = entries
+        .map((item: any) => item.target_id as string)
+        .filter(Boolean)
+      readingListItemIds.value = mergePendingMembership(new Set(ids), readingListToggleStates)
     } catch (e) {
       console.error('Failed to fetch reading list ids', e)
     }

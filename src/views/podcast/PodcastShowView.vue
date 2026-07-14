@@ -25,7 +25,7 @@ onMounted(async () => {
 })
 
 function episodeCover(ep: PodcastEpisode) {
-  return ep.episode_cover_url || ep.post?.collections?.[0]?.cover_url || ep.collections?.[0]?.cover_url || channel.value?.cover_url || ''
+  return ep.episode_cover_url || ep.post?.collection?.cover_url || ep.collections?.[0]?.cover_url || channel.value?.cover_url || ''
 }
 </script>
 

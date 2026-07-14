@@ -21,8 +21,8 @@ const selectedArticle = ref<TimelineItem | null>(null)
 const loadArticles = async () => {
   loading.value = true
   try {
-    const params = new URLSearchParams({ page: '1', limit: '20' })
-    const res = await fetch(`${api.blog.explore}?${params}`)
+    const params = new URLSearchParams({ page: '1', page_size: '20', sort: 'latest' })
+    const res = await fetch(`${api.blog.posts}?${params}`)
     if (!res.ok) return
     const data = await res.json()
     const rows = data.data || data || []

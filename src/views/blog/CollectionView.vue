@@ -1,5 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
+    <BookmarkFolderModal ref="bookmarkModalRef" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />
       <div class="a-skeleton" style="height:2rem;width:50%" />
@@ -131,6 +132,7 @@ import PPress from '@/components/ui/PPress.vue'
 import PReject from '@/components/ui/PReject.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import type { Collection, Post, Channel } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
@@ -147,6 +149,7 @@ const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const sheetStore = useSheetStore()
+const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
 
 const loading = ref(true)
 const collection = ref<Collection | null>(null)
@@ -168,11 +171,11 @@ const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.togglePostBookmark(id)
+  void bookmarkModalRef.value?.open(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id)
+  void feedStore.toggleReadingListItem(id, 'post')
 }
 
 const isOwner = computed(() => {
@@ -251,13 +254,11 @@ const fetchChannel = async () => {
 const fetchPosts = async () => {
   if (!channelId.value) return
   try {
-    const res = await fetch(`${api.blog.posts}?channel_id=${channelId.value}&limit=100`)
+    const res = await fetch(`${api.blog.posts}?channel_id=${channelId.value}&page_size=100`)
     if (res.ok) {
       const data = await res.json()
       const allPosts = (data.data || []) as Post[]
-      posts.value = allPosts.filter(post => 
-        (post.collections || []).some(c => c.id === collectionId.value)
-      )
+      posts.value = allPosts.filter(post => post.collection_id === collectionId.value)
     }
   } catch (e) {
     console.error('Failed to fetch posts:', e)

@@ -12,7 +12,7 @@ const { routeQuery, routerPush, routerReplace } = vi.hoisted(() => ({
 }))
 
 vi.mock('vue-router', () => ({
-  RouterLink: { template: '<a><slot /></a>' },
+  RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
   useRoute: () => ({ query: routeQuery }),
   useRouter: () => ({ push: routerPush, replace: routerReplace }),
 }))
@@ -35,7 +35,8 @@ describe('FeedReadingListView', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: {
         items: [{
-          feed_item_id: 'feed-item-1',
+          target_type: 'feed_item',
+          target_id: 'feed-item-1',
           created_at: '2026-06-16T00:00:00Z',
           feed_item: {
             id: 'feed-item-1',
@@ -79,7 +80,8 @@ describe('FeedReadingListView', () => {
   it('renders entries from unified reading-list response data', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: [{
-        feed_item_id: 'feed-item-1',
+        target_type: 'feed_item',
+        target_id: 'feed-item-1',
         created_at: '2026-06-16T00:00:00Z',
         feed_item: {
           id: 'feed-item-1',
@@ -118,11 +120,56 @@ describe('FeedReadingListView', () => {
     expect(wrapper.text()).not.toContain('阅读列表为空')
   })
 
+  it('renders internal posts from the unified reading list', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        target_type: 'post',
+        target_id: 'post-1',
+        created_at: '2026-07-14T00:00:00Z',
+        post: {
+          id: 'post-1',
+          user_id: 'user-1',
+          title: '站内稍后读文章',
+          content: '正文',
+          summary: '文章摘要',
+          status: 'published',
+          visibility: 'public',
+          allow_comments: true,
+          pinned: false,
+          created_at: '2026-07-13T00:00:00Z',
+          updated_at: '2026-07-14T00:00:00Z',
+        },
+      }],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
+
+    const wrapper = mount(FeedReadingListView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: { props: ['title', 'summary'], template: '<article><h3>{{ title }}</h3><slot name="actions" /></article>' },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('站内稍后读文章')
+    expect(wrapper.find('a[href="/posts/post/post-1"]').exists()).toBe(true)
+  })
+
   it('supports previous and next navigation inside the reading list article sheet', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: [
         {
-          feed_item_id: 'feed-item-nav-1',
+          target_type: 'feed_item',
+          target_id: 'feed-item-nav-1',
           created_at: '2026-06-16T00:00:00Z',
           feed_item: {
             id: 'feed-item-nav-1',
@@ -138,7 +185,8 @@ describe('FeedReadingListView', () => {
           },
         },
         {
-          feed_item_id: 'feed-item-nav-2',
+          target_type: 'feed_item',
+          target_id: 'feed-item-nav-2',
           created_at: '2026-06-15T00:00:00Z',
           feed_item: {
             id: 'feed-item-nav-2',

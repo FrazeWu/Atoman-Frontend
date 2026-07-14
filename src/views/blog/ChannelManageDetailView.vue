@@ -211,7 +211,7 @@ const fetchPosts = async () => {
   if (!channel.value) return
   loadingPosts.value = true
   try {
-    const res = await fetch(`${api.blog.posts}?channel_id=${channel.value.id}&limit=50`, { headers: authHeader.value })
+    const res = await fetch(`${api.blog.posts}?channel_id=${channel.value.id}&page_size=50`, { headers: authHeader.value })
     if (res.ok) posts.value = (await res.json()).data || []
   } finally { loadingPosts.value = false }
 }

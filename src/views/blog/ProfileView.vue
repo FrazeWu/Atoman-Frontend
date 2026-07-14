@@ -2,6 +2,7 @@
   <ChannelView v-if="resolvedChannelSlug" :entity-handle="resolvedChannelSlug" />
   <div v-else class="a-page" style="padding-bottom:12rem">
     <PToast v-model="toastVisible" :message="toastMessage" />
+    <BookmarkFolderModal ref="bookmarkModalRef" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />
       <div class="a-skeleton" style="height:2rem;width:50%" />
@@ -147,6 +148,7 @@ import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
+import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import { useApi } from '@/composables/useApi'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl, channelUrl, modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
@@ -158,16 +160,17 @@ const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const api = useApi()
+const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void feedStore.togglePostBookmark(id)
+  void bookmarkModalRef.value?.open(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id)
+  void feedStore.toggleReadingListItem(id, 'post')
 }
 
 const profile = ref<UserProfile | null>(null)
@@ -234,7 +237,7 @@ const fetchPosts = async () => {
   if (!profile.value) return
   loadingPosts.value = true
   try {
-    const res = await fetch(`${api.blog.posts}?user_id=${profile.value.uuid}&status=published&limit=8`)
+    const res = await fetch(`${api.blog.posts}?user_id=${profile.value.uuid}&page_size=8`)
     if (res.ok) posts.value = (await res.json()).data || []
   } finally { loadingPosts.value = false }
 }

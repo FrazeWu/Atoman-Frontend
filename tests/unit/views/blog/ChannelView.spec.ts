@@ -26,7 +26,7 @@ describe('ChannelView', () => {
     authStore.isAuthenticated = true
   })
 
-  it('turns 收藏 into 取消收藏 after saving a channel post', async () => {
+  it('turns 收藏 into 取消收藏 after selecting a folder', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)
       if (url.includes('/blog/channels/slug/channel-1') && !url.includes('/collections')) {
@@ -57,6 +57,9 @@ describe('ChannelView', () => {
       if (url.includes('/blog/bookmarks') && init?.method === 'POST') {
         return new Response(JSON.stringify({ data: { id: 'bookmark-1', post_id: 'post-1' } }), { status: 201 })
       }
+      if (url.includes('/blog/bookmark-folders')) {
+        return new Response(JSON.stringify({ data: [{ id: 'folder-1', name: '默认收藏夹' }] }), { status: 200 })
+      }
       if (url.includes('/blog/bookmarks')) {
         return new Response(JSON.stringify({ data: [] }), { status: 200 })
       }
@@ -71,7 +74,7 @@ describe('ChannelView', () => {
         stubs: {
           PEmpty: true,
           PPageHeader: true,
-          PModal: true,
+          PModal: { props: ['title'], template: '<section><h2>{{ title }}</h2><slot /><slot name="footer" /></section>' },
           PToast: true,
           PCard: true,
           PSurface: { template: '<section><slot /></section>' },
@@ -97,6 +100,8 @@ describe('ChannelView', () => {
     expect(saveButton).toBeTruthy()
 
     await saveButton!.trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="bookmark-folder-folder-1"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.findAll('button').map((button) => button.text())).toContain('取消收藏')

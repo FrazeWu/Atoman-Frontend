@@ -72,7 +72,7 @@ export function useGlobalSearch() {
           credentials: 'include',
           headers: { Accept: 'application/json' },
         }).then((res) => res.json()).catch(() => ({ data: [] })),
-        fetch(`${api.blog.posts}?${new URLSearchParams({ q: query.value, limit })}`, {
+        fetch(`${api.blog.posts}?${new URLSearchParams({ q: query.value, page_size: limit })}`, {
           credentials: 'include',
           headers: { Accept: 'application/json' },
         }).then((res) => res.json()).catch(() => []),

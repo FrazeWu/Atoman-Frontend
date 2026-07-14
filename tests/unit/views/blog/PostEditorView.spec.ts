@@ -254,7 +254,7 @@ describe('PostEditorView', () => {
     await flushPromises()
 
     const editorView = wrapper.findComponent(PostEditorView)
-    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
+    expect(editorView.vm.$.setupState.selectedCollectionId).toBe('collection-2')
   })
 
   it('新建文章不得恢复不属于当前频道的非法 query.collection', async () => {
@@ -309,7 +309,7 @@ describe('PostEditorView', () => {
     await flushPromises()
 
     const editorView = wrapper.findComponent(PostEditorView)
-    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1'])
+    expect(editorView.vm.$.setupState.selectedCollectionId).toBe('collection-1')
   })
 
   it('协作文档与草稿冲突时，显示冲突弹窗文案', async () => {
@@ -920,7 +920,7 @@ describe('PostEditorView', () => {
     expect(wrapper.text()).not.toContain('协作文档与草稿内容不一致')
   })
 
-  it('编辑已有文章保存时，会提交当前频道和合集', async () => {
+  it('编辑已有文章保存时，只提交唯一合集', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -953,10 +953,8 @@ describe('PostEditorView', () => {
             allow_comments: true,
             updated_at: '2026-05-19T09:00:00.000Z',
             channel_id: 'channel-1',
-            collections: [
-              { id: 'collection-1', channel_id: 'channel-1' },
-              { id: 'collection-2', channel_id: 'channel-1' },
-            ],
+            collection_id: 'collection-2',
+            collection: { id: 'collection-2', channel_id: 'channel-1' },
           },
         })
       }
@@ -1003,7 +1001,8 @@ describe('PostEditorView', () => {
     expect(putCall).toBeTruthy()
     const body = JSON.parse(String(putCall?.[1]?.body ?? '{}'))
     expect(body.channel_id).toBe('channel-1')
-    expect(body.collection_ids).toEqual(['collection-1', 'collection-2'])
+    expect(body.collection_id).toBe('collection-2')
+    expect(body).not.toHaveProperty('collection_ids')
     expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1')
   })
 
@@ -1069,6 +1068,6 @@ describe('PostEditorView', () => {
     )
 
     const editorView = wrapper.findComponent(PostEditorView)
-    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-3'])
+    expect(editorView.vm.$.setupState.selectedCollectionId).toBe('collection-3')
   })
 })

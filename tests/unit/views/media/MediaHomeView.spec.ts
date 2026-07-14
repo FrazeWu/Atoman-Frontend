@@ -33,11 +33,10 @@ describe('MediaHomeView', () => {
     routerPushMock.mockReset()
     fetchMock.mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/blog/explore')) {
+      if (url.includes('/blog/posts')) {
         return new Response(JSON.stringify({
           data: [
             {
-              post: {
                 id: 'post-1',
                 title: '首页主文章',
                 summary: '文章摘要',
@@ -46,10 +45,8 @@ describe('MediaHomeView', () => {
                 updated_at: '2026-06-22T10:00:00Z',
                 channel: { name: '专栏甲' },
                 user: { username: 'writer-a', display_name: '作者甲' },
-              },
             },
             {
-              post: {
                 id: 'post-2',
                 title: '第二篇文章',
                 summary: '第二篇摘要',
@@ -57,7 +54,6 @@ describe('MediaHomeView', () => {
                 updated_at: '2026-06-22T07:00:00Z',
                 channel: { name: '专栏乙' },
                 user: { username: 'writer-b', display_name: '作者乙' },
-              },
             },
           ],
         }), { status: 200 })
@@ -193,7 +189,7 @@ describe('MediaHomeView', () => {
   it('treats a null article payload as an empty list', async () => {
     fetchMock.mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/blog/explore')) {
+      if (url.includes('/blog/posts')) {
         return new Response(JSON.stringify({ data: null, message: 'ok' }), { status: 200 })
       }
       return new Response('[]', { status: 200 })

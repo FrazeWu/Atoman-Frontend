@@ -93,7 +93,7 @@ describe('Media content view shells', () => {
 
     const urls = fetchMock.mock.calls.map(call => String(call[0]))
     expect(urls.some(url => url.includes('channel_id=channel-should-not-be-used'))).toBe(false)
-    expect(urls.some(url => url.includes('/blog/explore'))).toBe(true)
+    expect(urls.some(url => url.includes('/blog/posts?page=1&page_size=20'))).toBe(true)
     expect(urls.some(url => url.includes('/podcast/episodes'))).toBe(true)
     expect(urls.some(url => url.includes('/videos?sort='))).toBe(true)
     expect(mount(MediaArticlesView, { global: articleGlobal }).find('.media-explore-page').exists()).toBe(true)

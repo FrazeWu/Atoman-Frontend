@@ -195,6 +195,7 @@
             :reply-to-name="selectedParentId ? '该论点' : ''"
             placeholder="阐述你的观点…"
             submit-label="添加"
+			:submitting="createArgumentSaving"
             @cancel="handleCloseArgumentModal"
             @submit="handleCreateArgument"
           />
@@ -421,6 +422,7 @@ const openEditDebateModal = () => {
 
 // Add Argument modal
 const showAddArgumentModal = ref(false)
+const createArgumentSaving = ref(false)
 const newArgument = ref({
   content: '',
   argument_type: 'support' as ArgumentType,
@@ -543,6 +545,8 @@ const handleReopen = async () => {
 }
 
 const handleCreateArgument = async (input: CreateCommentInput) => {
+  if (createArgumentSaving.value) return
+  createArgumentSaving.value = true
   try {
     const payload = {
       content: input.content,
@@ -563,6 +567,8 @@ const handleCreateArgument = async (input: CreateCommentInput) => {
   } catch (error) {
     console.error('Failed to create argument:', error)
     alert('创建论点失败：' + (error as Error).message)
+	} finally {
+	  createArgumentSaving.value = false
   }
 }
 

@@ -97,9 +97,10 @@
       v-if="argument.argument_type === 'evidence' && argument.source_url"
       style="margin-top:.5rem;padding:.5rem .75rem;border:1px solid var(--a-border);border-radius:.375rem;font-size:.75rem;margin-bottom:.75rem"
     >
-      <a :href="argument.source_url" target="_blank" rel="noopener noreferrer" style="font-weight:700;display:block;margin-bottom:.2rem">
+      <a v-if="safeSourceURL" :href="safeSourceURL" target="_blank" rel="noopener noreferrer" style="font-weight:700;display:block;margin-bottom:.2rem">
         {{ argument.source_title || argument.source_url }}
       </a>
+      <strong v-else style="display:block;margin-bottom:.2rem">{{ argument.source_title || '来源' }}</strong>
       <p v-if="argument.source_excerpt" style="color:var(--a-color-muted);margin:0;font-style:italic">
         "{{ argument.source_excerpt }}"
       </p>
@@ -231,6 +232,12 @@ const userVote = computed(() => {
 })
 
 const renderedContent = computed(() => renderCommentMarkdown(props.argument.content).html)
+const safeSourceURL = computed(() => {
+  try {
+    const parsed = new URL(props.argument.source_url || '')
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : ''
+  } catch { return '' }
+})
 
 const quotedAuthorName = computed(() => {
   if (!props.quotedArgument) return ''

@@ -21,4 +21,12 @@ describe('ArgumentNode attachments', () => {
     expect(images[0].attributes('alt')).toBe('论点图片')
     expect(wrapper.get('.argument-images a').attributes('href')).toBe('https://cdn.example/0.png')
   })
+
+  it('does not create a link for an unsafe evidence URL', () => {
+    const wrapper = mount(ArgumentNode, { props: {
+      argument: { id: 'comment-2', debate_id: 'debate-1', user_id: 'user-1', content: 'claim', argument_type: 'evidence', source_url: 'javascript:alert(1)', source_title: 'Bad', vote_count: 0, is_concluded: false, created_at: '2026-01-01', updated_at: '2026-01-01' },
+      debate: { id: 'debate-1', user_id: 'user-1', title: 'Topic', description: '', content: '', status: 'open', tags: [], view_count: 0, argument_count: 1, vote_count: 0, created_at: '2026-01-01', updated_at: '2026-01-01' },
+    }, global: { stubs: { PButton: true } } })
+    expect(wrapper.find('a[href^="javascript:"]').exists()).toBe(false)
+  })
 })

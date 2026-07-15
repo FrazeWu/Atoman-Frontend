@@ -33,7 +33,7 @@ function mountView() {
       PModal: { template: '<div class="modal"><slot /></div>' },
       PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
       PSelect: true, PEmpty: true, DebateHeaderActions: true, DebateConcludeModal: true,
-      CommentComposer: { name: 'CommentComposer', props: ['initialContent', 'initialMentions', 'initialAttachmentIds'], template: '<button class="composer" />' },
+      CommentComposer: { name: 'CommentComposer', props: ['initialContent', 'initialMentions', 'initialAttachmentIds', 'submitting'], template: '<button class="composer" />' },
       ArgumentNode: { name: 'ArgumentNode', props: ['argument'], template: '<button class="argument" />' },
     } },
   })
@@ -47,12 +47,20 @@ describe('DebateTopicView comment composer integration', () => {
   })
 
   it('submits root mention and image data and keeps the draft open on failure', async () => {
+	let resolveCreate!: (value: null) => void
+	debateStore.createArgument.mockReturnValue(new Promise((resolve) => { resolveCreate = resolve }))
     const wrapper = mountView()
     await wrapper.get('button').trigger('click')
     const composer = wrapper.findComponent(CommentComposer)
     composer.vm.$emit('submit', payload)
-    await flushPromises()
+	await wrapper.vm.$nextTick()
     expect(debateStore.createArgument).toHaveBeenCalledWith('debate-1', expect.objectContaining(payload))
+	expect(composer.props('submitting')).toBe(true)
+	composer.vm.$emit('submit', payload)
+	expect(debateStore.createArgument).toHaveBeenCalledTimes(1)
+	resolveCreate(null)
+	await flushPromises()
+	expect(composer.props('submitting')).toBe(false)
     expect(wrapper.findComponent(CommentComposer).exists()).toBe(true)
   })
 

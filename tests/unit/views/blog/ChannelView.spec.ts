@@ -143,4 +143,76 @@ describe('ChannelView', () => {
 
     expect(wrapper.find('a[href="/posts/channel/channel-1/manage"]').exists()).toBe(true)
   })
+
+  it('创建合集被后端拒绝时保留弹窗且不刷新列表', async () => {
+    let collectionLoads = 0
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('/blog/channels/slug/channel-1') && !url.includes('/collections')) {
+        return new Response(JSON.stringify({
+          data: { id: 'channel-1', user_id: 'user-1', name: '频道', slug: 'channel-1' },
+        }), { status: 200 })
+      }
+      if (url.includes('/blog/channels/slug/channel-1/collections')) {
+        collectionLoads += 1
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/blog/channels/channel-1/collections') && init?.method === 'POST') {
+        return new Response(JSON.stringify({
+          error: {
+            code: 'blog.channel_forbidden',
+            message: 'You do not have permission to add collections to this channel',
+            details: null,
+          },
+        }), { status: 403 })
+      }
+      if (url.includes('/blog/posts?')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    const wrapper = mount(ChannelView, {
+      global: {
+        stubs: {
+          BookmarkFolderModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot name="action" /></header>' },
+          PToast: true,
+          PSurface: { template: '<section><slot /></section>' },
+          PTab: true,
+          PEntry: true,
+          PLink: true,
+          PModal: { template: '<section data-test="collection-modal"><slot /><slot name="footer" /></section>' },
+          PClip: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PInput: {
+            props: ['modelValue'],
+            emits: ['update:modelValue'],
+            template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)">',
+          },
+          PTextarea: true,
+          PPress: {
+            props: ['label'],
+            emits: ['click'],
+            template: '<button type="button" @click="$emit(\'click\')">{{ label }}<slot /></button>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text() === '新建合集')!.trigger('click')
+    await wrapper.get('input').setValue('失败合集')
+    await wrapper.findAll('button').find(button => button.text() === '创建')!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="collection-modal"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('创建失败，请重试')
+    expect(collectionLoads).toBe(1)
+  })
 })

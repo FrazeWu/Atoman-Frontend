@@ -125,6 +125,7 @@
       <div style="display:flex;flex-direction:column;gap:1rem">
         <PInput v-model="collectionForm.name" placeholder="合集名称*" />
         <PTextarea v-model="collectionForm.description" placeholder="合集描述（可选）" :rows="3" />
+        <p v-if="collectionSaveError" class="a-error" role="alert">{{ collectionSaveError }}</p>
       </div>
       <div class="modal-actions">
         <PPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
@@ -178,6 +179,7 @@ const collectionModalOpen = ref(false)
 const editingCollection = ref<Collection | null>(null)
 const collectionForm = ref({ name: '', description: '' })
 const collectionSaving = ref(false)
+const collectionSaveError = ref('')
 
 const channelSubscribed = ref(false)
 const channelSubscribeLoading = ref(false)
@@ -259,29 +261,33 @@ const fetchPosts = async () => {
 const openCollectionModal = (collection?: Collection) => {
   editingCollection.value = collection || null
   collectionForm.value = { name: collection?.name || '', description: collection?.description || '' }
+  collectionSaveError.value = ''
   collectionModalOpen.value = true
 }
 
 const saveCollection = async () => {
   if (!collectionForm.value.name.trim() || !channel.value) return
+  collectionSaveError.value = ''
   collectionSaving.value = true
   try {
-    if (editingCollection.value) {
-      await fetch(api.blog.collection(editingCollection.value.id), {
+    const res = editingCollection.value
+      ? await fetch(api.blog.collection(editingCollection.value.id), {
         method: 'PUT',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
       })
-    } else {
-      await fetch(api.blog.channelCollections(channel.value.id), {
+      : await fetch(api.blog.channelCollections(channel.value.id), {
         method: 'POST',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
       })
-    }
+    if (!res.ok) throw new Error('保存合集失败')
     collectionModalOpen.value = false
     await fetchCollections()
-  } catch (e) { console.error(e) } finally { collectionSaving.value = false }
+  } catch (e) {
+    collectionSaveError.value = editingCollection.value ? '更新失败，请重试' : '创建失败，请重试'
+    console.error(e)
+  } finally { collectionSaving.value = false }
 }
 
 const toggleChannelSubscribe = async () => {

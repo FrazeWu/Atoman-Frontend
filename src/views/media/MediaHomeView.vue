@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -32,6 +32,7 @@ const videos = ref<Video[]>([])
 const loading = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
 const showArticleSheet = ref(false)
+let homeLoadSequence = 0
 
 const fmtDate = (value?: string) => {
   if (!value) return ''
@@ -112,24 +113,39 @@ const featuredItems = computed<FeaturedItem[]>(() => {
     .map(({ stamp: _stamp, ...item }) => item)
 })
 
+const readSettledJson = async (result: PromiseSettledResult<Response>) => {
+  if (result.status === 'rejected' || !result.value.ok) return []
+  try {
+    return await result.value.json()
+  } catch {
+    return []
+  }
+}
+
 const loadHome = async () => {
+  const requestSequence = ++homeLoadSequence
+  posts.value = []
+  episodes.value = []
+  videos.value = []
   loading.value = true
   try {
     const articleUrl = `${api.blog.posts}?${new URLSearchParams({ page: '1', page_size: '6', sort: 'latest' })}`
     const podcastUrl = `${api.podcast.episodes}?${new URLSearchParams({ sort: 'latest', limit: '6' })}`
     const videoUrl = `${api.videos.list}?${new URLSearchParams({ sort: 'latest', limit: '6' })}`
 
-    const [articleRes, podcastRes, videoRes] = await Promise.all([
+    const [articleRes, podcastRes, videoRes] = await Promise.allSettled([
       fetch(articleUrl),
       fetch(podcastUrl),
       fetch(videoUrl),
     ])
+    if (requestSequence !== homeLoadSequence) return
 
     const [articleData, podcastData, videoData] = await Promise.all([
-      articleRes.ok ? articleRes.json() : [],
-      podcastRes.ok ? podcastRes.json() : [],
-      videoRes.ok ? videoRes.json() : [],
+      readSettledJson(articleRes),
+      readSettledJson(podcastRes),
+      readSettledJson(videoRes),
     ])
+    if (requestSequence !== homeLoadSequence) return
 
     const articleRows = Array.isArray(articleData)
       ? articleData
@@ -142,11 +158,14 @@ const loadHome = async () => {
       ? videoData
       : (Array.isArray(videoData?.data) ? videoData.data : [])
   } finally {
-    loading.value = false
+    if (requestSequence === homeLoadSequence) loading.value = false
   }
 }
 
 onMounted(loadHome)
+onBeforeUnmount(() => {
+  homeLoadSequence += 1
+})
 </script>
 
 <template>

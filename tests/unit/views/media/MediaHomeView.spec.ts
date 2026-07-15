@@ -1,10 +1,28 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MediaHomeView from '@/views/media/MediaHomeView.vue'
 
 const fetchMock = vi.fn()
 const routerPushMock = vi.fn()
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => { resolve = res })
+  return { promise, resolve }
+}
+
+const batchData = (label: string) => ({
+  article: { data: [{ id: `post-${label}`, title: `${label}文章`, created_at: '2026-07-15T10:00:00Z' }] },
+  podcast: [{ id: `episode-${label}`, post: { title: `${label}播客` }, created_at: '2026-07-15T09:00:00Z' }],
+  video: [{ id: `video-${label}`, title: `${label}视频`, created_at: '2026-07-15T08:00:00Z' }],
+})
+
+const batchResponses = (label: string) => {
+  const data = batchData(label)
+  return [data.article, data.podcast, data.video].map(value => (
+    new Response(JSON.stringify(value), { status: 200 })
+  ))
+}
 const RouterLinkStub = defineComponent({
   props: {
     to: {
@@ -60,8 +78,7 @@ describe('MediaHomeView', () => {
       }
 
       if (url.includes('/podcast/episodes')) {
-        return new Response(JSON.stringify({
-          episodes: [
+        return new Response(JSON.stringify([
             {
               id: 'episode-1',
               duration_sec: 185,
@@ -78,8 +95,7 @@ describe('MediaHomeView', () => {
               post: { title: '第二个播客', summary: '第二个播客摘要' },
               channel: { name: '播客节目 2' },
             },
-          ],
-        }), { status: 200 })
+        ]), { status: 200 })
       }
 
       if (url.includes('/videos')) {
@@ -107,6 +123,93 @@ describe('MediaHomeView', () => {
     vi.stubGlobal('fetch', fetchMock)
   })
 
+  it('keeps loading the current home batch when the previous fetch batch returns first', async () => {
+    const first = [deferred<Response>(), deferred<Response>(), deferred<Response>()]
+    const second = [deferred<Response>(), deferred<Response>(), deferred<Response>()]
+    let callIndex = 0
+    fetchMock.mockImplementation(() => {
+      const index = callIndex++
+      return index < 3 ? first[index].promise : second[index - 3].promise
+    })
+    const wrapper = mount(MediaHomeView, {
+      global: { stubs: { RouterLink: RouterLinkStub, FeedArticleSheet: true } },
+    })
+    await flushPromises()
+
+    const currentLoad = wrapper.vm.$.setupState.loadHome()
+    batchResponses('A').forEach((value, index) => first[index].resolve(value))
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.loading).toBe(true)
+    expect(wrapper.text()).not.toContain('A文章')
+    expect(wrapper.text()).not.toContain('A视频')
+
+    batchResponses('B').forEach((value, index) => second[index].resolve(value))
+    await currentLoad
+    await flushPromises()
+    expect(wrapper.text()).toContain('B文章')
+    expect(wrapper.text()).toContain('B播客')
+    expect(wrapper.text()).toContain('B视频')
+  })
+
+  it('does not let previous delayed JSON overwrite a completed current batch', async () => {
+    const firstJson = [deferred<unknown>(), deferred<unknown>(), deferred<unknown>()]
+    let callIndex = 0
+    fetchMock.mockImplementation(() => {
+      const index = callIndex++
+      if (index < 3) {
+        return Promise.resolve({ ok: true, json: () => firstJson[index].promise })
+      }
+      return Promise.resolve(batchResponses('B')[index - 3])
+    })
+    const wrapper = mount(MediaHomeView, {
+      global: { stubs: { RouterLink: RouterLinkStub, FeedArticleSheet: true } },
+    })
+    await flushPromises()
+
+    await wrapper.vm.$.setupState.loadHome()
+    await flushPromises()
+    expect(wrapper.text()).toContain('B文章')
+    expect(wrapper.text()).toContain('B视频')
+
+    const firstData = batchData('A')
+    ;[firstData.article, firstData.podcast, firstData.video].forEach((value, index) => firstJson[index].resolve(value))
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('B文章')
+    expect(wrapper.text()).toContain('B视频')
+    expect(wrapper.text()).not.toContain('A文章')
+    expect(wrapper.text()).not.toContain('A视频')
+  })
+
+  it('does not update home state when a batch finishes after unmount', async () => {
+    const pending = [deferred<Response>(), deferred<Response>(), deferred<Response>()]
+    let callIndex = 0
+    fetchMock.mockImplementation(() => pending[callIndex++].promise)
+    const wrapper = mount(MediaHomeView, {
+      global: { stubs: { RouterLink: RouterLinkStub, FeedArticleSheet: true } },
+    })
+    await flushPromises()
+    const state = wrapper.vm.$.setupState
+    const before = {
+      posts: [...state.posts],
+      episodes: [...state.episodes],
+      videos: [...state.videos],
+      loading: state.loading,
+    }
+
+    wrapper.unmount()
+    batchResponses('A').forEach((value, index) => pending[index].resolve(value))
+    await flushPromises()
+
+    expect({
+      posts: state.posts,
+      episodes: state.episodes,
+      videos: state.videos,
+      loading: state.loading,
+    }).toEqual(before)
+  })
+
   it('renders a featured hero band plus article podcast and video sections', async () => {
     const wrapper = mount(MediaHomeView, {
       global: {
@@ -132,6 +235,7 @@ describe('MediaHomeView', () => {
     expect(wrapper.text()).toContain('文章')
     expect(wrapper.text()).toContain('播客')
     expect(wrapper.text()).toContain('视频')
+    expect(wrapper.text()).toContain('首页播客单集')
     expect(wrapper.text()).toContain('进入创作')
     expect(wrapper.find('a[href="/media/articles"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/media/podcasts"]').exists()).toBe(true)
@@ -208,6 +312,51 @@ describe('MediaHomeView', () => {
       expect(wrapper.text()).toContain('暂无文章')
       expect(wrapper.text()).toContain('暂无播客')
       expect(wrapper.text()).toContain('暂无视频')
+    })
+  })
+
+  it.each(['network', 'json', 'http'] as const)('keeps successful home sources when podcast has a %s failure', async (failure) => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/blog/posts')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'post-ok',
+            title: '保留的文章',
+            created_at: '2026-07-15T10:00:00Z',
+            updated_at: '2026-07-15T10:00:00Z',
+          }],
+        }), { status: 200 })
+      }
+      if (url.includes('/podcast/episodes')) {
+        if (failure === 'network') throw new Error('offline')
+        if (failure === 'http') return new Response(JSON.stringify({ error: 'failed' }), { status: 500 })
+        return { ok: true, json: async () => { throw new Error('invalid json') } } as Response
+      }
+      if (url.includes('/videos')) {
+        return new Response(JSON.stringify([{
+          id: 'video-ok',
+          title: '保留的视频',
+          created_at: '2026-07-15T09:00:00Z',
+          updated_at: '2026-07-15T09:00:00Z',
+        }]), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaHomeView, {
+      global: {
+        stubs: {
+          RouterLink: RouterLinkStub,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('保留的文章')
+      expect(wrapper.text()).toContain('保留的视频')
+      expect(wrapper.text()).toContain('暂无播客')
     })
   })
 })

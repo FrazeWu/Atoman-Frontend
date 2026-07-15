@@ -435,6 +435,20 @@ describe('feed store', () => {
     }))
   })
 
+  it('merges ids from loaded reading-list pages without deleting unseen ids', () => {
+    const feedStore = useFeedStore()
+    feedStore.readingListItemIds = new Set(['page-1-item'])
+
+    feedStore.mergeReadingListPageIds(['page-2-item'])
+    feedStore.mergeReadingListPageIds(['refreshed-page-2-item'])
+
+    expect(feedStore.readingListItemIds).toEqual(new Set([
+      'page-1-item',
+      'page-2-item',
+      'refreshed-page-2-item',
+    ]))
+  })
+
   it('adds internal posts to the unified reading list', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { saved: true },

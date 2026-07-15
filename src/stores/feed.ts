@@ -1207,9 +1207,8 @@ export const useFeedStore = defineStore('feed', () => {
     )
   }
 
-  const syncReadingListPageIds = (previousIds: string[], nextIds: string[]) => {
+  const mergeReadingListPageIds = (nextIds: string[]) => {
     const next = new Set(readingListItemIds.value)
-    previousIds.forEach((id) => next.delete(id))
     nextIds.forEach((id) => next.add(id))
     readingListItemIds.value = mergePendingMembership(
       next,
@@ -1336,7 +1335,7 @@ export const useFeedStore = defineStore('feed', () => {
     readingListItemIds,
     toggleReadingListItem,
     fetchReadingListIds,
-    syncReadingListPageIds,
+    mergeReadingListPageIds,
     // Channel/Collection subscriptions
     subscribeToChannel,
     unsubscribeFromChannel,

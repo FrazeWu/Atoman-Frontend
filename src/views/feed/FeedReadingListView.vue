@@ -12,6 +12,8 @@
       <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
     </div>
 
+    <PEmpty v-else-if="errorMessage" :text="errorMessage" />
+
     <PEmpty v-else-if="!items.length" text="阅读列表为空" sub="在文章或订阅中点击「稍后阅读」保存" />
 
     <div v-else class="feed-timeline">
@@ -158,10 +160,12 @@ const normalizePage = (value: unknown) => {
 }
 
 const loading = ref(true)
+const errorMessage = ref('')
 const items = ref<ReadingListEntry[]>([])
 const totalItems = ref(0)
 const page = ref(1)
 const pageLimit = 20
+let readingListRequestId = 0
 
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
@@ -306,33 +310,40 @@ const changePage = async (nextPage: number) => {
 
 const fetchItems = async () => {
   if (!authStore.isAuthenticated) return
+  const requestId = ++readingListRequestId
+  const targetPage = page.value
   loading.value = true
-  const res = await fetch(`${api.url}/feed/reading-list?page=${page.value}&limit=${pageLimit}`, {
-    headers: authHeaders(),
-  })
-  if (!res.ok) {
-    loading.value = false
-    return
+  errorMessage.value = ''
+  try {
+    const res = await fetch(`${api.url}/feed/reading-list?page=${targetPage}&limit=${pageLimit}`, {
+      headers: authHeaders(),
+    })
+    if (requestId !== readingListRequestId) return
+    if (!res.ok) throw new Error(`Failed to load reading list (${res.status})`)
+
+    const data = await res.json()
+    if (requestId !== readingListRequestId) return
+    const nextItems: ReadingListEntry[] = Array.isArray(data.data)
+      ? data.data
+      : data.data?.items || data.items || []
+    const total = data.meta?.total ?? data.data?.total ?? data.total ?? 0
+    const totalPages = Math.max(1, Math.ceil(total / pageLimit))
+
+    if (total > 0 && targetPage > totalPages) {
+      await setRoutePage(totalPages, true)
+      return
+    }
+
+    const nextIds = nextItems.map((item) => item.target_id)
+    items.value = nextItems
+    feedStore.mergeReadingListPageIds(nextIds)
+    totalItems.value = total
+  } catch {
+    if (requestId !== readingListRequestId) return
+    errorMessage.value = '稍后阅读加载失败'
+  } finally {
+    if (requestId === readingListRequestId) loading.value = false
   }
-
-  const data = await res.json()
-  const nextItems: ReadingListEntry[] = Array.isArray(data.data)
-    ? data.data
-    : data.data?.items || data.items || []
-  const total = data.meta?.total ?? data.data?.total ?? data.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / pageLimit))
-
-  if (total > 0 && page.value > totalPages) {
-    await setRoutePage(totalPages, true)
-    return
-  }
-
-  const previousIds = items.value.map((item) => item.target_id)
-  const nextIds = nextItems.map((item) => item.target_id)
-  items.value = nextItems
-  feedStore.syncReadingListPageIds(previousIds, nextIds)
-  totalItems.value = total
-  loading.value = false
 }
 
 const remove = async (targetType: ReadingListEntry['target_type'], targetId: string) => {
@@ -372,6 +383,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  readingListRequestId += 1
   window.removeEventListener('keydown', handleKeyDownGlobal)
 })
 </script>

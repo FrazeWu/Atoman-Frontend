@@ -44,7 +44,7 @@ import { RouterLink, RouterView } from 'vue-router'
 import PCard from '@/components/ui/PCard.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import { useAuthStore } from '@/stores/auth'
-import { isOwnerRole } from '@/utils/roles'
+import { isAdminRole, isModeratorRole, isOwnerRole } from '@/utils/roles'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -52,20 +52,30 @@ const authStore = useAuthStore()
 const isAccessHub = computed(() => route.path === '/setting/access')
 
 const navItems = computed(() => {
-  const items = [
-    {
+  const items = []
+
+  if (isAdminRole(authStore.user?.role)) {
+    items.push({
       to: '/setting/access',
       kicker: '01 / ACCESS',
       label: '访问矩阵',
       description: '模块可见性与主要操作权限。',
-    },
-    {
+    }, {
       to: '/setting/music-review',
       kicker: '02 / MUSIC',
       label: '音乐管理',
       description: '审核音乐库编辑请求与条目管理。',
-    },
-  ]
+    })
+  }
+
+  if (isModeratorRole(authStore.user?.role)) {
+    items.push({
+      to: '/setting/comment-moderation',
+      kicker: '03 / COMMENTS',
+      label: '评论审核',
+      description: '处理被举报的评论与回复。',
+    })
+  }
 
   if (isOwnerRole(authStore.user?.role)) {
     items.push({

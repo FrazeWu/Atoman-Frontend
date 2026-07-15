@@ -108,9 +108,14 @@
       <PModal v-model="deleteModalOpen" title="确认删除合集">
         <div style="display:flex;flex-direction:column;gap:1rem">
           <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？此操作不可恢复，但不会删除其中的文章。</p>
+          <p v-if="deleteError" class="a-error">{{ deleteError }}</p>
           <div class="modal-actions">
-            <PPress label="取消" variant="secondary" @click="deleteModalOpen = false" />
-            <PReject label="删除" @click="deleteCollection" />
+            <PPress v-if="!deleteCompletedHref" label="取消" variant="secondary" @click="deleteModalOpen = false" />
+            <PReject
+              :label="deleteCompletedHref ? '返回频道' : (deleting ? '删除中...' : '删除')"
+              :disabled="deleting"
+              @click="deleteCollection"
+            />
           </div>
         </div>
       </PModal>
@@ -119,8 +124,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
@@ -163,6 +168,11 @@ const deleteModalOpen = ref(false)
 const form = ref({ name: '', description: '' })
 const saving = ref(false)
 const saveError = ref('')
+const deleting = ref(false)
+const deleteError = ref('')
+const deleteCompletedHref = ref('')
+const deleteCompletedCollectionId = ref('')
+let deleteRequestToken = 0
 const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
 
@@ -210,6 +220,12 @@ const summarize = (content: string) => {
 }
 
 const fetchCollection = async () => {
+  deleteRequestToken += 1
+  deleting.value = false
+  deleteError.value = ''
+  deleteCompletedHref.value = ''
+  deleteCompletedCollectionId.value = ''
+  deleteModalOpen.value = false
   loading.value = true
   try {
     const res = await fetch(api.blog.collection(collectionId.value))
@@ -304,21 +320,77 @@ const saveCollection = async () => {
 }
 
 const confirmDelete = () => {
+  deleteError.value = deleteCompletedHref.value ? '合集已删除，请返回频道' : ''
   deleteModalOpen.value = true
 }
 
-const deleteCollection = async () => {
-  if (!collection.value) return
-  
+const ownsDeleteRequest = (requestToken: number, targetCollectionId: string) => (
+  requestToken === deleteRequestToken && collection.value?.id === targetCollectionId
+)
+
+const navigateAfterDelete = async (requestToken: number, targetCollectionId: string, targetChannelHref: string) => {
   try {
-    await fetch(api.blog.collection(collection.value.id), {
+    const failure = await router.push(targetChannelHref)
+    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
+    if (failure && isNavigationFailure(failure)) {
+      deleteError.value = '合集已删除，请返回频道'
+      return
+    }
+    deleteModalOpen.value = false
+    deleteCompletedHref.value = ''
+    deleteCompletedCollectionId.value = ''
+  } catch (error) {
+    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
+    console.error('Failed to navigate after deleting collection:', error)
+    deleteError.value = '合集已删除，请返回频道'
+  }
+}
+
+const deleteCollection = async () => {
+  if (!collection.value || deleting.value) return
+  if (deleteCompletedHref.value && deleteCompletedCollectionId.value === collection.value.id) {
+    const targetCollectionId = deleteCompletedCollectionId.value
+    const targetChannelHref = deleteCompletedHref.value
+    const requestToken = ++deleteRequestToken
+    deleteError.value = ''
+    deleting.value = true
+    try {
+      await navigateAfterDelete(requestToken, targetCollectionId, targetChannelHref)
+    } finally {
+      if (ownsDeleteRequest(requestToken, targetCollectionId)) deleting.value = false
+    }
+    return
+  }
+
+  const targetCollectionId = collection.value.id
+  const targetChannelHref = channelHref.value
+  const requestToken = ++deleteRequestToken
+  deleteError.value = ''
+  deleting.value = true
+  try {
+    const res = await fetch(api.blog.collection(targetCollectionId), {
       method: 'DELETE',
       headers: authHeader.value
     })
-    deleteModalOpen.value = false
-    router.push(channelHref.value)
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
+      const responseError = data?.error
+      deleteError.value = typeof responseError === 'string'
+        ? responseError
+        : responseError?.message || '删除失败，请重试'
+      return
+    }
+    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
+    deleteCompletedHref.value = targetChannelHref
+    deleteCompletedCollectionId.value = targetCollectionId
+    await navigateAfterDelete(requestToken, targetCollectionId, targetChannelHref)
   } catch (e) {
+    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
     console.error('Failed to delete collection:', e)
+    deleteError.value = '网络错误，请重试'
+  } finally {
+    if (ownsDeleteRequest(requestToken, targetCollectionId)) deleting.value = false
   }
 }
 
@@ -349,6 +421,10 @@ onMounted(() => {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
+})
+onBeforeUnmount(() => {
+  deleteRequestToken += 1
+  deleting.value = false
 })
 </script>
 

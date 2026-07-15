@@ -30,6 +30,7 @@
     <div v-if="loading" class="a-grid-2">
       <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
     </div>
+    <PEmpty v-else-if="errorMessage" title="内容加载失败" />
     <PEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
     <div v-else>
       <PEntry
@@ -87,13 +88,13 @@
 
     <!-- Load more -->
     <div v-if="hasMore && !loading" style="display:flex;justify-content:center;margin-top:2rem">
-      <PButton outline @click="loadMore">加载更多</PButton>
+      <PButton outline :loading="loadingMore" @click="loadMore">加载更多</PButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
@@ -132,11 +133,14 @@ const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'p
 
 const posts = ref<Post[]>([])
 const loading = ref(true)
+const loadingMore = ref(false)
+const errorMessage = ref('')
 const page = ref(1)
 const hasMore = ref(false)
 const typeFilter = ref('all')
 const sortBy = ref('latest')
 const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
+let postsRequestSequence = 0
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return ''
@@ -161,63 +165,85 @@ const selectType = (value: string) => {
 }
 
 const selectSort = (value: string) => {
-  sortBy.value = value
-  fetchPosts()
+  sortBy.value = activeQuery.value ? 'latest' : value
+  void fetchPosts()
 }
 
-const fetchPosts = async (append = false) => {
-  loading.value = true
-  if (!append) page.value = 1
+const fetchPosts = async (append = false, targetPage = append ? page.value + 1 : 1): Promise<boolean> => {
+  const requestSequence = ++postsRequestSequence
+  if (append) {
+    loadingMore.value = true
+  } else {
+    loading.value = true
+    loadingMore.value = false
+    errorMessage.value = ''
+  }
   try {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const isPopular = sortBy.value === 'popular'
-    const isRecommended = sortBy.value === 'recommended'
+    const isSearching = Boolean(activeQuery.value)
+    const isPopular = !isSearching && sortBy.value === 'popular'
+    const isRecommended = !isSearching && sortBy.value === 'recommended'
     const query = new URLSearchParams()
-    query.set('page', String(page.value))
+    query.set('page', String(targetPage))
     query.set('page_size', '20')
     query.set('sort', 'latest')
     if (activeQuery.value) query.set('q', activeQuery.value)
     const endpoint = isPopular || isRecommended
-      ? `${api.url}/blog/recommend/posts?mode=${isPopular ? 'hot' : 'featured'}&page=${page.value}&page_size=20`
+      ? `${api.url}/blog/recommend/posts?mode=${isPopular ? 'hot' : 'featured'}&page=${targetPage}&page_size=20`
       : `${api.blog.posts}?${query.toString()}`
 
     const res = await fetch(endpoint, { headers })
-    if (res.ok) {
-      const d = await res.json()
-      const rawData = d.data || []
-      const extractedPosts: Post[] = rawData.map((item: any) => {
-        if (isPopular || isRecommended) {
-          return {
-            id: item.id,
-            title: item.title,
-            summary: item.summary,
-            cover_url: item.image_url,
-            likes_count: item.likes_count ?? 0,
-            comments_count: item.comments_count ?? 0,
-          }
-        }
-        return item as Post
-      }).filter(Boolean)
+    if (requestSequence !== postsRequestSequence) return false
+    if (!res.ok) throw new Error(`Failed to load posts: ${res.status}`)
 
-      if (append) {
-        posts.value = [...posts.value, ...extractedPosts]
-      } else {
-        posts.value = extractedPosts
+    const d = await res.json()
+    if (requestSequence !== postsRequestSequence) return false
+
+    const rawData = d.data || []
+    const extractedPosts: Post[] = rawData.map((item: any) => {
+      if (isPopular || isRecommended) {
+        return {
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          cover_url: item.image_url,
+          likes_count: item.likes_count ?? 0,
+          comments_count: item.comments_count ?? 0,
+        }
       }
-      hasMore.value = Boolean(d.meta?.has_more)
+      return item as Post
+    }).filter(Boolean)
+
+    if (append) {
+      posts.value = [...posts.value, ...extractedPosts]
+    } else {
+      posts.value = extractedPosts
     }
+    page.value = targetPage
+    hasMore.value = Boolean(d.meta?.has_more)
+    return true
   } catch (e) {
+    if (requestSequence !== postsRequestSequence) return false
     console.error(e)
+    if (!append) errorMessage.value = '内容加载失败'
+    return false
   } finally {
-    loading.value = false
+    if (requestSequence === postsRequestSequence) {
+      if (append) {
+        loadingMore.value = false
+      } else {
+        loading.value = false
+      }
+    }
   }
 }
 
-const loadMore = () => {
-  page.value++
-  fetchPosts(true)
+const loadMore = async () => {
+  if (loading.value || loadingMore.value || !hasMore.value) return false
+  const targetPage = page.value + 1
+  return fetchPosts(true, targetPage)
 }
 
 onMounted(() => {
@@ -228,10 +254,13 @@ onMounted(() => {
   }
 })
 
-watch(activeQuery, () => {
-  if (sortBy.value === 'latest') {
-    void fetchPosts()
-  }
+watch(activeQuery, (query) => {
+  if (query) sortBy.value = 'latest'
+  void fetchPosts()
+})
+
+onUnmounted(() => {
+  postsRequestSequence++
 })
 </script>
 

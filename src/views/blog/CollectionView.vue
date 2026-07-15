@@ -52,8 +52,9 @@
           <span class="a-muted" style="font-size:.875rem">{{ posts.length }} 篇</span>
         </div>
 
-        <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
-        <div v-else class="post-list">
+        <p v-if="postsLoadError" class="a-error" style="margin-bottom:1rem">{{ postsLoadError }}</p>
+        <PEmpty v-if="!postsLoadError && !posts.length" text="当前合集暂无文章" />
+        <div v-if="posts.length" class="post-list">
           <PEntry
             v-for="post in posts"
             :key="post.id"
@@ -162,12 +163,16 @@ const loading = ref(true)
 const collection = ref<Collection | null>(null)
 const channel = ref<Channel | null>(null)
 const posts = ref<Post[]>([])
+const postsLoadError = ref('')
+let postsRequestSequence = 0
+let collectionRequestSequence = 0
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
 const form = ref({ name: '', description: '' })
 const saving = ref(false)
 const saveError = ref('')
+let saveRequestToken = 0
 const deleting = ref(false)
 const deleteError = ref('')
 const deleteCompletedHref = ref('')
@@ -175,6 +180,7 @@ const deleteCompletedCollectionId = ref('')
 let deleteRequestToken = 0
 const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
+let collectionSubscribeRequestSequence = 0
 
 const collectionId = computed(() => props.id || (typeof route.params.id === 'string' ? route.params.id : ''))
 const channelId = computed(() => collection.value?.channel_id || '')
@@ -219,7 +225,27 @@ const summarize = (content: string) => {
   return text.length > 120 ? text.slice(0, 120) + '...' : text
 }
 
+const invalidateEditSession = () => {
+  saveRequestToken += 1
+  editModalOpen.value = false
+  form.value = { name: '', description: '' }
+  saving.value = false
+  saveError.value = ''
+}
+
 const fetchCollection = async () => {
+  const targetCollectionId = collectionId.value
+  const requestSequence = ++collectionRequestSequence
+  const ownsRequest = () => requestSequence === collectionRequestSequence
+  collectionSubscribeRequestSequence += 1
+  postsRequestSequence += 1
+  collection.value = null
+  channel.value = null
+  posts.value = []
+  postsLoadError.value = ''
+  collectionSubscribed.value = false
+  collectionSubscribeLoading.value = false
+  invalidateEditSession()
   deleteRequestToken += 1
   deleting.value = false
   deleteError.value = ''
@@ -228,29 +254,45 @@ const fetchCollection = async () => {
   deleteModalOpen.value = false
   loading.value = true
   try {
-    const res = await fetch(api.blog.collection(collectionId.value))
+    const res = await fetch(api.blog.collection(targetCollectionId))
+    if (!ownsRequest()) return
     if (res.ok) {
       const data = await res.json()
-      collection.value = data.data
-      if (collection.value?.channel_id) {
-        await fetchChannel()
-        await fetchPosts()
+      if (!ownsRequest()) return
+      const loadedCollection = data.data as Collection
+      let loadedChannel: Channel | null = null
+      if (loadedCollection?.channel_id) {
+        loadedChannel = await fetchChannel(loadedCollection.channel_id)
+        if (!ownsRequest()) return
+      }
+      collection.value = loadedCollection
+      channel.value = loadedChannel
+
+      if (loadedCollection?.channel_id) {
+        await fetchPosts(loadedCollection.id)
+        if (!ownsRequest()) return
       }
 
-      if (authStore.isAuthenticated && collection.value?.id) {
+      if (authStore.isAuthenticated && loadedCollection?.id) {
         collectionSubscribeLoading.value = true
-        collectionSubscribed.value = await feedStore.isSubscribedToCollection(collection.value.id)
+        const subscribed = await feedStore.isSubscribedToCollection(loadedCollection.id)
+        if (!ownsRequest()) return
+        collectionSubscribed.value = subscribed
         collectionSubscribeLoading.value = false
       }
 
-      if (props.id && collection.value) {
-        sheetStore.updateSheetTitle(props.id, 'collection', collection.value.name)
+      if (props.id && ownsRequest()) {
+        sheetStore.updateSheetTitle(targetCollectionId, 'collection', loadedCollection.name)
       }
     }
   } catch (e) {
+    if (!ownsRequest()) return
     console.error('Failed to fetch collection:', e)
   } finally {
-    loading.value = false
+    if (ownsRequest()) {
+      collectionSubscribeLoading.value = false
+      loading.value = false
+    }
   }
 }
 
@@ -258,30 +300,44 @@ watch(collectionId, () => {
   fetchCollection()
 })
 
-const fetchChannel = async () => {
-  if (!channelId.value) return
+const fetchChannel = async (targetChannelId: string): Promise<Channel | null> => {
+  if (!targetChannelId) return null
   try {
-    const res = await fetch(api.blog.channel(channelId.value))
+    const res = await fetch(api.blog.channel(targetChannelId))
     if (res.ok) {
       const data = await res.json()
-      channel.value = data.data
+      return data.data as Channel
     }
   } catch (e) {
     console.error('Failed to fetch channel:', e)
   }
+  return null
 }
 
-const fetchPosts = async () => {
-  if (!channelId.value) return
+const fetchPosts = async (targetCollectionId: string) => {
+  if (!targetCollectionId) return false
+  const requestSequence = ++postsRequestSequence
+  const loadedPosts: Post[] = []
+  let page = 1
+  postsLoadError.value = ''
   try {
-    const res = await fetch(`${api.blog.posts}?channel_id=${channelId.value}&page_size=100`)
-    if (res.ok) {
+    while (true) {
+      const res = await fetch(`${api.blog.posts}?collection_id=${encodeURIComponent(targetCollectionId)}&page_size=100&page=${page}`)
+      if (requestSequence !== postsRequestSequence) return false
+      if (!res.ok) throw new Error(`Failed to fetch collection posts (${res.status})`)
+
       const data = await res.json()
-      const allPosts = (data.data || []) as Post[]
-      posts.value = allPosts.filter(post => post.collection_id === collectionId.value)
+      if (requestSequence !== postsRequestSequence) return false
+      loadedPosts.push(...((data.data || []) as Post[]))
+      if (!data.meta?.has_more) break
+      page += 1
     }
-  } catch (e) {
-    console.error('Failed to fetch posts:', e)
+    posts.value = loadedPosts
+    return true
+  } catch {
+    if (requestSequence !== postsRequestSequence) return false
+    postsLoadError.value = '文章加载失败'
+    return false
   }
 }
 
@@ -296,15 +352,23 @@ const openEditModal = () => {
 
 const saveCollection = async () => {
   if (!form.value.name.trim() || !collection.value) return
+  const targetCollectionId = collection.value.id
+  const payload = { ...form.value }
+  const requestToken = ++saveRequestToken
+  const ownsRequest = () => (
+    requestToken === saveRequestToken
+    && collection.value?.id === targetCollectionId
+  )
 
   saveError.value = ''
   saving.value = true
   try {
-    const res = await fetch(api.blog.collection(collection.value.id), {
+    const res = await fetch(api.blog.collection(targetCollectionId), {
       method: 'PUT',
       headers: { ...authHeader.value, 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
+      body: JSON.stringify(payload)
     })
+    if (!ownsRequest()) return
     if (!res.ok) {
       saveError.value = '保存失败，请重试'
       return
@@ -312,10 +376,11 @@ const saveCollection = async () => {
     editModalOpen.value = false
     await fetchCollection()
   } catch (e) {
+    if (!ownsRequest()) return
     console.error('Failed to save collection:', e)
     saveError.value = '保存失败，请重试'
   } finally {
-    saving.value = false
+    if (ownsRequest()) saving.value = false
   }
 }
 
@@ -396,22 +461,26 @@ const deleteCollection = async () => {
 
 const toggleCollectionSubscribe = async () => {
   if (!collection.value) return
+  const targetCollectionId = collection.value.id
+  const targetSubscribed = collectionSubscribed.value
+  const requestSequence = ++collectionSubscribeRequestSequence
+  const ownsRequest = () => (
+    requestSequence === collectionSubscribeRequestSequence
+    && collection.value?.id === targetCollectionId
+  )
   collectionSubscribeLoading.value = true
   try {
-    let success = false
-    if (collectionSubscribed.value) {
-      success = await feedStore.unsubscribeFromCollection(collection.value.id)
-    } else {
-      success = await feedStore.subscribeToCollection(collection.value.id)
-    }
+    const success = targetSubscribed
+      ? await feedStore.unsubscribeFromCollection(targetCollectionId)
+      : await feedStore.subscribeToCollection(targetCollectionId)
 
-    if (success) {
-      collectionSubscribed.value = !collectionSubscribed.value
-    }
+    if (!ownsRequest()) return
+    if (success) collectionSubscribed.value = !targetSubscribed
   } catch (e) {
+    if (!ownsRequest()) return
     console.error('Failed to toggle collection subscription:', e)
   } finally {
-    collectionSubscribeLoading.value = false
+    if (ownsRequest()) collectionSubscribeLoading.value = false
   }
 }
 
@@ -423,6 +492,10 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => {
+  collectionRequestSequence += 1
+  postsRequestSequence += 1
+  collectionSubscribeRequestSequence += 1
+  invalidateEditSession()
   deleteRequestToken += 1
   deleting.value = false
 })

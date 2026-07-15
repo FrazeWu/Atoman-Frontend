@@ -78,6 +78,23 @@ describe('notification store', () => {
     expect(store.notifications[0]).toMatchObject({ id: 'like-2', meta: { like_count: 3 } })
   })
 
+  it('moves a realtime aggregate update to its newest chronological position', () => {
+    const store = useNotificationStore()
+    store.notifications = [
+      { ...makeNotification('first', 'comment_reply'), created_at: '2026-06-30T05:00:00.000Z' },
+      { ...makeNotification('aggregate-old', 'comment_like'), aggregation_key: 'comment:1:likes', created_at: '2026-06-30T01:00:00.000Z' },
+      { ...makeNotification('last', 'comment_reply'), created_at: '2026-06-30T00:00:00.000Z' },
+    ]
+
+    store.receiveNotification({
+      ...makeNotification('aggregate-new', 'comment_like'),
+      aggregation_key: 'comment:1:likes',
+      created_at: '2026-06-30T06:00:00.000Z',
+    })
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['aggregate-new', 'first', 'last'])
+  })
+
   it('replaces duplicate realtime notification ids', () => {
     const store = useNotificationStore()
     store.receiveNotification(makeNotification('same', 'comment_reply'))
@@ -124,7 +141,7 @@ describe('notification store', () => {
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       expect.stringContaining('type=forum_reply'), expect.stringContaining('type=comment_reply'), expect.stringContaining('type=comment_marked'),
     ])
-    expect(store.notifications.map(({ id }) => id)).toEqual(['new', 'old', 'old-tie', 'marked'])
+    expect(store.notifications.map(({ id }) => id)).toEqual(['new', 'old', 'marked', 'old-tie'])
     expect(store.total).toBe(4)
   })
 })

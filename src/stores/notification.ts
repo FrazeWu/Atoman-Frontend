@@ -10,6 +10,10 @@ const commentNotificationTypes = new Set<Notification['type']>([
   'comment_reply', 'comment_mention', 'comment_marked', 'comment_like',
 ])
 
+const sortNotifications = (items: Notification[]) => [...items].sort((left, right) =>
+  right.created_at.localeCompare(left.created_at) || left.id.localeCompare(right.id),
+)
+
 export function isCommentNotification(notification: Notification) {
   return commentNotificationTypes.has(notification.type)
 }
@@ -82,8 +86,7 @@ export const useNotificationStore = defineStore('notification', () => {
         if (!res.ok) throw new Error('获取通知失败')
         return res.json()
       }))
-      notifications.value = responses.flatMap((data) => data.data || [])
-        .sort((left, right) => right.created_at.localeCompare(left.created_at))
+      notifications.value = sortNotifications(responses.flatMap((data) => data.data || []))
       total.value = responses.reduce((sum, data) => sum + (data.total || 0), 0)
     } finally {
       loading.value = false
@@ -137,10 +140,12 @@ export const useNotificationStore = defineStore('notification', () => {
 
     if (existingIndex >= 0) {
       notifications.value.splice(existingIndex, 1, notification)
+      notifications.value = sortNotifications(notifications.value)
       return
     }
     if ((!currentType.value && !currentTypes.value.length) || currentType.value === notification.type || currentTypes.value.includes(notification.type)) {
       notifications.value.unshift(notification)
+      notifications.value = sortNotifications(notifications.value)
       total.value += 1
     }
   }

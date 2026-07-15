@@ -14,12 +14,46 @@ export function commentCodePointLength(content: string) {
   return Array.from(normalizeCommentMarkdown(content)).length
 }
 
-function sourceWithoutCodeSpans(tokens: Token[]): string {
-  return tokens.map((token) => {
-    if (token.type === 'codespan') return token.raw.replace(/[^\n]/g, ' ')
-    if ('tokens' in token && Array.isArray(token.tokens)) return sourceWithoutCodeSpans(token.tokens)
-    return token.raw
-  }).join('')
+function isEscaped(source: string, index: number) {
+  let slashes = 0
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === '\\'; cursor -= 1) slashes += 1
+  return slashes % 2 === 1
+}
+
+function maskCodeSpans(source: string) {
+  const masked = source.split('')
+  let cursor = 0
+  while (cursor < source.length) {
+    if (source[cursor] !== '`' || isEscaped(source, cursor)) {
+      cursor += 1
+      continue
+    }
+    let openerEnd = cursor
+    while (source[openerEnd] === '`') openerEnd += 1
+    const delimiterLength = openerEnd - cursor
+    let search = openerEnd
+    let closerEnd = -1
+    while (search < source.length) {
+      const closerStart = source.indexOf('`', search)
+      if (closerStart < 0) break
+      let runEnd = closerStart
+      while (source[runEnd] === '`') runEnd += 1
+      if (!isEscaped(source, closerStart) && runEnd - closerStart === delimiterLength) {
+        closerEnd = runEnd
+        break
+      }
+      search = runEnd
+    }
+    if (closerEnd < 0) {
+      cursor = openerEnd
+      continue
+    }
+    for (let index = cursor; index < closerEnd; index += 1) {
+      if (masked[index] !== '\n') masked[index] = ' '
+    }
+    cursor = closerEnd
+  }
+  return masked.join('')
 }
 
 function validateTokens(tokens: Token[]): string | undefined {
@@ -44,7 +78,7 @@ export function validateCommentMarkdown(source: string): { ok: boolean; error?: 
   const tokens = commentMarked.lexer(content)
   const error = validateTokens(tokens)
   if (error) return { ok: false, error }
-  const withoutCodeSpans = sourceWithoutCodeSpans(tokens)
+  const withoutCodeSpans = maskCodeSpans(content)
   if (/~~[\s\S]+?~~/.test(withoutCodeSpans)) return { ok: false, error: 'unsupported_del' }
   if (/^\s*\|?.+\|.+\|?\s*\n\s*\|?\s*:?-{1,}:?\s*\|/m.test(withoutCodeSpans)) {
     return { ok: false, error: 'unsupported_table' }

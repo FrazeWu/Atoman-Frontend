@@ -39,6 +39,12 @@ describe('restricted comment Markdown', () => {
     expect(validateCommentMarkdown('``safe\n|a|b|\n|-|-|``\n\n|a|b|\n|-|-|').error).toBe('unsupported_table')
   })
 
+  it('keeps blockquote source markers when checking table-like text', () => {
+    expect(validateCommentMarkdown('> |a|b|\n> |-|-|')).toEqual({ ok: true })
+    expect(validateCommentMarkdown('|a|b|\n|-|-|')).toEqual({ ok: false, error: 'unsupported_table' })
+    expect(validateCommentMarkdown('> **``~~x~~ | a |``**')).toEqual({ ok: true })
+  })
+
   it('uses an isolated Marked instance and normalizes code points', () => {
     marked.use({ renderer: { strong: () => '<global>polluted</global>' } })
     expect(renderCommentMarkdown('**safe**').html).not.toContain('polluted')

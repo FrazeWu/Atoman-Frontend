@@ -9,6 +9,8 @@
       <div class="a-skeleton" style="height:8rem" />
     </div>
 
+    <PEmpty v-else-if="collectionsLoadError" title="合集加载失败" />
+
     <!-- Empty State -->
     <PEmpty v-else-if="collections.length === 0" title="暂无合集" description="点击下方按钮创建第一个合集" />
 
@@ -79,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -110,8 +112,11 @@ const api = useApi()
 const authStore = useAuthStore()
 
 const loadingCollections = ref(true)
+const collectionsLoadError = ref('')
 const collections = ref<Collection[]>([])
 const channels = ref<Channel[]>([])
+let channelsLoadSequence = 0
+let collectionsLoadSequence = 0
 
 const modalVisible = ref(false)
 const modalMode = ref<'create' | 'edit'>('create')
@@ -126,26 +131,55 @@ const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name
 const channelName = (channelId: string) => channels.value.find((channel) => channel.id === channelId)?.name || ''
 
 const loadChannels = async () => {
+  const requestSequence = ++channelsLoadSequence
+  let loaded = false
+  loadingCollections.value = true
+  collectionsLoadError.value = ''
   try {
     const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+    if (requestSequence !== channelsLoadSequence) return false
+    if (!res.ok) throw new Error(`Failed to load channels (${res.status})`)
+
     const data = await res.json()
+    if (requestSequence !== channelsLoadSequence) return false
     channels.value = (data.data || []).filter((channel: Channel) => channel.content_type === 'blog')
-  } catch (err) {
-    console.error('Failed to load channels:', err)
+    loaded = true
+    return true
+  } catch {
+    if (requestSequence !== channelsLoadSequence) return false
+    collectionsLoadError.value = '合集加载失败'
+    return false
+  } finally {
+    if (requestSequence === channelsLoadSequence && !loaded) {
+      loadingCollections.value = false
+    }
   }
 }
 
 const loadCollections = async () => {
+  const requestSequence = ++collectionsLoadSequence
   loadingCollections.value = true
+  collectionsLoadError.value = ''
   try {
-    const res = await fetch(api.blog.collections)
+    const res = await fetch(api.blog.collections, {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    if (requestSequence !== collectionsLoadSequence) return false
+    if (!res.ok) throw new Error(`Failed to load collections (${res.status})`)
+
     const data = await res.json()
+    if (requestSequence !== collectionsLoadSequence) return false
     const channelIds = new Set(channels.value.map((channel) => channel.id))
     collections.value = (data.data || []).filter((collection: Collection) => channelIds.has(collection.channel_id))
-  } catch (err) {
-    console.error('Failed to load collections:', err)
+    return true
+  } catch {
+    if (requestSequence !== collectionsLoadSequence) return false
+    collectionsLoadError.value = '合集加载失败'
+    return false
   } finally {
-    loadingCollections.value = false
+    if (requestSequence === collectionsLoadSequence) {
+      loadingCollections.value = false
+    }
   }
 }
 
@@ -247,8 +281,15 @@ const executeDelete = async () => {
 }
 
 onMounted(async () => {
-  await loadChannels()
+  const requestSequence = channelsLoadSequence + 1
+  const channelsLoaded = await loadChannels()
+  if (!channelsLoaded || requestSequence !== channelsLoadSequence) return
   await loadCollections()
+})
+
+onUnmounted(() => {
+  channelsLoadSequence++
+  collectionsLoadSequence++
 })
 </script>
 

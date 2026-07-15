@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -15,6 +15,7 @@ const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const videos = ref<Video[]>([])
 const loading = ref(false)
+const errorMessage = ref('')
 const sort = ref<'latest' | 'popular'>('latest')
 const channelId = computed(() => typeof route.query.channel_id === 'string' ? route.query.channel_id : '')
 const canPublishVideo = computed(() => siteAccessStore.isFeatureEnabled('video', 'video.publish'))
@@ -23,14 +24,20 @@ let fetchVideosSeq = 0
 async function fetchVideos() {
   const seq = ++fetchVideosSeq
   loading.value = true
+  errorMessage.value = ''
   try {
     const params = new URLSearchParams({ sort: sort.value })
     if (channelId.value) params.set('channel_id', channelId.value)
     const res = await fetch(`${API_URL}/videos?${params}`)
-    if (res.ok) {
-      const data = await res.json()
-      if (seq === fetchVideosSeq) videos.value = data
-    }
+    if (seq !== fetchVideosSeq) return
+    if (!res.ok) throw new Error(`Failed to load videos (${res.status})`)
+
+    const data = await res.json()
+    if (seq !== fetchVideosSeq) return
+    videos.value = data
+  } catch {
+    if (seq !== fetchVideosSeq) return
+    errorMessage.value = '视频加载失败'
   } finally {
     if (seq === fetchVideosSeq) loading.value = false
   }
@@ -38,6 +45,9 @@ async function fetchVideos() {
 
 onMounted(fetchVideos)
 watch([sort, channelId], fetchVideos)
+onUnmounted(() => {
+  fetchVideosSeq++
+})
 </script>
 
 <template>
@@ -74,6 +84,8 @@ watch([sort, channelId], fetchVideos)
         </div>
       </div>
     </div>
+
+    <div v-else-if="errorMessage" class="vh-empty">{{ errorMessage }}</div>
 
     <div v-else-if="videos.length === 0" class="vh-empty">暂无视频</div>
 

@@ -94,6 +94,7 @@
         <div style="display:flex;flex-direction:column;gap:1rem">
           <PInput v-model="form.name" label="合集名称" placeholder="输入合集名称" />
           <PTextarea v-model="form.description" label="合集描述" placeholder="简短介绍这个合集" :rows="3" />
+          <p v-if="saveError" class="a-error">{{ saveError }}</p>
           <div class="modal-actions">
             <PPress label="取消" variant="secondary" @click="editModalOpen = false" />
             <PPress :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
@@ -161,6 +162,7 @@ const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
 const form = ref({ name: '', description: '' })
 const saving = ref(false)
+const saveError = ref('')
 const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
 
@@ -268,6 +270,7 @@ const fetchPosts = async () => {
 }
 
 const openEditModal = () => {
+  saveError.value = ''
   form.value = {
     name: collection.value?.name || '',
     description: collection.value?.description || ''
@@ -277,18 +280,24 @@ const openEditModal = () => {
 
 const saveCollection = async () => {
   if (!form.value.name.trim() || !collection.value) return
-  
+
+  saveError.value = ''
   saving.value = true
   try {
-    await fetch(api.blog.collection(collection.value.id), {
+    const res = await fetch(api.blog.collection(collection.value.id), {
       method: 'PUT',
       headers: { ...authHeader.value, 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     })
+    if (!res.ok) {
+      saveError.value = '保存失败，请重试'
+      return
+    }
     editModalOpen.value = false
     await fetchCollection()
   } catch (e) {
     console.error('Failed to save collection:', e)
+    saveError.value = '保存失败，请重试'
   } finally {
     saving.value = false
   }

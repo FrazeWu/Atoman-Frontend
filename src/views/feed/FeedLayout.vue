@@ -13,7 +13,6 @@
         </button>
       </header>
       <router-view />
-      <SiteFooter />
     </main>
     <FeedMobileSourcesSheet
       v-if="authStore.isAuthenticated"
@@ -35,7 +34,6 @@ import { computed, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import FeedMobileSourcesSheet from '@/components/feed/FeedMobileSourcesSheet.vue'
 import AppSidebar from '@/components/system/AppSidebar.vue'
-import SiteFooter from '@/components/system/SiteFooter.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'

@@ -3,7 +3,6 @@
     <AppSidebar module="podcast" />
     <main class="a-main-content">
       <router-view />
-      <SiteFooter />
     </main>
   </div>
 </template>
@@ -12,7 +11,6 @@
 import { computed } from 'vue'
 import { Mic, PlusCircle } from 'lucide-vue-next'
 import AppSidebar from '@/components/system/AppSidebar.vue'
-import SiteFooter from '@/components/system/SiteFooter.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 

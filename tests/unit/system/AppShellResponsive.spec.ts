@@ -10,6 +10,16 @@ import App from '@/App.vue'
 const styleSource = readFileSync(resolve(__dirname, '../../../src/style.css'), 'utf8')
 const appSource = readFileSync(resolve(__dirname, '../../../src/App.vue'), 'utf8')
 const playerSource = readFileSync(resolve(__dirname, '../../../src/components/music/AudioPlayer.vue'), 'utf8')
+const moduleLayoutSources = [
+  'blog/BlogLayout.vue',
+  'debate/DebateLayout.vue',
+  'feed/FeedLayout.vue',
+  'forum/ForumLayout.vue',
+  'music/MusicLayout.vue',
+  'podcast/PodcastLayout.vue',
+  'timeline/TimelineLayout.vue',
+  'video/VideoLayout.vue',
+].map((path) => readFileSync(resolve(__dirname, `../../../src/views/${path}`), 'utf8'))
 const getBlock = (selector: string) => {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = styleSource.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'))
@@ -116,6 +126,14 @@ describe('App responsive shell', () => {
     const { wrapper } = await mountAppAt('/login')
 
     expect(wrapper.find('.site-footer-stub').exists()).toBe(false)
+  })
+
+  it('mounts SiteFooter only once from the app shell', () => {
+    expect(appSource).toContain('<SiteFooter v-if="!isAuthRoute" />')
+    for (const source of moduleLayoutSources) {
+      expect(source).not.toContain('<SiteFooter')
+      expect(source).not.toContain("import SiteFooter from '@/components/system/SiteFooter.vue'")
+    }
   })
 })
 

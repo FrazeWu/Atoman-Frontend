@@ -3,7 +3,6 @@
     <AppSidebar module="video" />
     <main class="a-main-content">
       <router-view />
-      <SiteFooter />
     </main>
   </div>
 </template>
@@ -11,7 +10,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import AppSidebar from '@/components/system/AppSidebar.vue'
-import SiteFooter from '@/components/system/SiteFooter.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'

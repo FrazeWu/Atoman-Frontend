@@ -50,6 +50,7 @@
           <h3 class="a-subtitle" style="margin:0">合集管理</h3>
           <PButton size="sm" @click="openCollectionModal()">+ 新建合集</PButton>
         </div>
+        <p v-if="collectionDeleteError" class="a-error" style="margin-bottom:1rem">{{ collectionDeleteError }}</p>
         <PEmpty v-if="!collections.length" title="暂无合集" />
         <div v-else style="display:flex;flex-direction:column;gap:1rem">
           <div v-for="col in collections" :key="col.id" class="a-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
@@ -62,7 +63,13 @@
             </div>
             <div style="display:flex;gap:.5rem;flex-shrink:0">
               <button class="a-btn-outline-sm" @click="openCollectionModal(col)">编辑</button>
-              <button v-if="!col.is_default" class="a-btn-outline-sm" style="color:var(--a-color-danger);border-color:var(--a-color-danger)" @click="confirmDeleteCollection(col)">删除</button>
+              <button
+                v-if="!col.is_default"
+                class="a-btn-outline-sm"
+                style="color:var(--a-color-danger);border-color:var(--a-color-danger)"
+                :disabled="deletingCollectionId !== null"
+                @click="confirmDeleteCollection(col)"
+              >{{ deletingCollectionId === col.id ? '删除中...' : '删除' }}</button>
             </div>
           </div>
         </div>
@@ -178,6 +185,9 @@ const collectionForm = ref({ name: '', description: '' })
 const collectionSaving = ref(false)
 const collectionError = ref('')
 let collectionModalToken = 0
+const deletingCollectionId = ref<string | null>(null)
+const collectionDeleteError = ref('')
+let collectionsRequestToken = 0
 
 const showDeleteChannel = ref(false)
 const deleteConfirmName = ref('')
@@ -207,8 +217,18 @@ const fetchChannel = async () => {
 
 const fetchCollections = async () => {
   if (!channel.value) return
-  const res = await fetch(api.blog.channelCollections(channel.value.id))
-  if (res.ok) collections.value = (await res.json()).data || []
+  const requestToken = ++collectionsRequestToken
+  const channelId = channel.value.id
+  try {
+    const res = await fetch(api.blog.channelCollections(channelId))
+    if (requestToken !== collectionsRequestToken || !res.ok) return
+    const data = await res.json()
+    if (requestToken === collectionsRequestToken) {
+      collections.value = data.data || []
+    }
+  } catch (error) {
+    if (requestToken === collectionsRequestToken) throw error
+  }
 }
 
 const fetchPosts = async () => {
@@ -301,9 +321,33 @@ const saveCollection = async () => {
 }
 
 const confirmDeleteCollection = async (col: Collection) => {
+  if (deletingCollectionId.value !== null) return
   if (!confirm(`确认删除合集「${col.name}」？`)) return
-  await fetch(api.blog.collection(col.id), { method: 'DELETE', headers: authHeader.value })
-  await fetchCollections()
+  collectionDeleteError.value = ''
+  deletingCollectionId.value = col.id
+  try {
+    const res = await fetch(api.blog.collection(col.id), { method: 'DELETE', headers: authHeader.value })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      const responseError = data?.error
+      collectionDeleteError.value = typeof responseError === 'string'
+        ? responseError
+        : responseError?.message || '删除失败，请重试'
+      return
+    }
+    const deletedCollectionId = col.id
+    collections.value = collections.value.filter(collection => collection.id !== deletedCollectionId)
+    try {
+      await fetchCollections()
+    } catch (error) {
+      console.error('Failed to refresh collections after deletion', error)
+    }
+    collections.value = collections.value.filter(collection => collection.id !== deletedCollectionId)
+  } catch {
+    collectionDeleteError.value = '网络错误，请重试'
+  } finally {
+    deletingCollectionId.value = null
+  }
 }
 
 const deleteChannel = async () => {

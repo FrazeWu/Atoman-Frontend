@@ -83,7 +83,7 @@
 
     <!-- Content -->
     <div class="mb-3">
-      <p class="font-medium">{{ argument.content }}</p>
+      <div class="font-medium" v-html="renderedContent" />
     </div>
 
     <!-- Evidence source card -->
@@ -160,6 +160,7 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
+import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
 
 const props = defineProps<{
   argument: Argument
@@ -183,7 +184,7 @@ const localIsFolded = ref(props.argument.is_folded ?? false)
 
 const foldArgument = async () => {
   const note = prompt('折叠理由（可选）：', '') ?? ''
-  const res = await fetch(`${apiBase}/debate/arguments/${props.argument.id}/fold`, {
+  const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
     body: JSON.stringify({ fold_note: note }),
@@ -192,7 +193,7 @@ const foldArgument = async () => {
 }
 
 const unfoldArgument = async () => {
-  const res = await fetch(`${apiBase}/debate/arguments/${props.argument.id}/fold`, {
+  const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
@@ -222,6 +223,8 @@ const canReply = computed(() => {
 const userVote = computed(() => {
   return props.userVotes?.[props.argument.id] ?? null
 })
+
+const renderedContent = computed(() => renderCommentMarkdown(props.argument.content).html)
 
 const quotedAuthorName = computed(() => {
   if (!props.quotedArgument) return ''

@@ -79,7 +79,7 @@ export const useDebateStore = defineStore("debate", () => {
     error.value = null;
     try {
       const authStore = useAuthStore();
-      const res = await fetch(`${api.url}/debate/topics/${debateId}/arguments`, {
+      const res = await fetch(`${api.url}/debates/${debateId}/arguments`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       });
       if (res.ok) {
@@ -246,7 +246,7 @@ export const useDebateStore = defineStore("debate", () => {
 
   const addDebateReference = async (argumentId: string, debateId: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${api.url}/debate/arguments/${argumentId}/debate-reference`, {
+      const res = await fetch(`${api.url}/debate-arguments/${argumentId}/debate-reference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ debate_id: debateId }),
@@ -261,7 +261,7 @@ export const useDebateStore = defineStore("debate", () => {
   const removeDebateReference = async (argumentId: string, debateId: string): Promise<boolean> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/debate-reference/${debateId}`,
+        `${api.url}/debate-arguments/${argumentId}/debate-reference/${debateId}`,
         {
           method: 'DELETE',
           headers: authHeaders(),
@@ -286,11 +286,13 @@ export const useDebateStore = defineStore("debate", () => {
         | "question"
         | "counter";
       parent_id?: string;
+      mentions?: Array<{ user_id: string; start: number; end: number }>;
+      attachment_ids?: string[];
     },
   ): Promise<Argument | null> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/topics/${debateId}/arguments`,
+        `${api.url}/debates/${debateId}/arguments`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -324,11 +326,13 @@ export const useDebateStore = defineStore("debate", () => {
       source_url?: string;
       source_title?: string;
       source_excerpt?: string;
+      mentions?: Array<{ user_id: string; start: number; end: number }>;
+      attachment_ids?: string[];
     },
   ): Promise<Argument | null> => {
     try {
-      const res = await fetch(`${api.url}/debate/arguments/${id}`, {
-        method: "PUT",
+      const res = await fetch(`${api.url}/debate-arguments/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
@@ -347,7 +351,7 @@ export const useDebateStore = defineStore("debate", () => {
 
   const deleteArgument = async (id: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${api.url}/debate/arguments/${id}`, {
+      const res = await fetch(`${api.url}/debate-arguments/${id}`, {
         method: "DELETE",
         headers: authHeaders(),
       });
@@ -364,7 +368,7 @@ export const useDebateStore = defineStore("debate", () => {
   ): Promise<Argument | null> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/vote`,
+        `${api.url}/debate-arguments/${argumentId}/vote`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -389,7 +393,7 @@ export const useDebateStore = defineStore("debate", () => {
   const removeVote = async (argumentId: string): Promise<boolean> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/vote`,
+        `${api.url}/debate-arguments/${argumentId}/vote`,
         {
           method: "DELETE",
           headers: authHeaders(),
@@ -412,7 +416,7 @@ export const useDebateStore = defineStore("debate", () => {
   ): Promise<boolean> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/reference`,
+        `${api.url}/debate-arguments/${argumentId}/reference`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -432,7 +436,7 @@ export const useDebateStore = defineStore("debate", () => {
   ): Promise<boolean> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/reference/${referenceId}`,
+        `${api.url}/debate-arguments/${argumentId}/reference/${referenceId}`,
         {
           method: "DELETE",
           headers: authHeaders(),

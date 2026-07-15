@@ -72,8 +72,8 @@
     <PConfirm
       :show="showDeleteConfirm"
       title="删除评论"
-      message="确定删除这条评论吗？"
-      confirm-text="删除"
+      :message="deleteError || '确定删除这条评论吗？'"
+      :confirm-text="deletePending ? '删除中...' : '删除'"
       cancel-text="取消"
       danger
       @confirm="confirmDeleteComment"
@@ -110,8 +110,12 @@ const guestName = ref('')
 const submitting = ref(false)
 const showDeleteConfirm = ref(false)
 const pendingDeleteCommentId = ref<string | null>(null)
+const deleteError = ref('')
+const deleteSessionId = ref(0)
+const deleteRequestSession = ref<number | null>(null)
 
 const isCommentsClosed = computed(() => !props.allowComments || props.commentMode === 'disabled')
+const deletePending = computed(() => deleteRequestSession.value === deleteSessionId.value)
 const canSubmit = computed(() => {
   if (!newComment.value.trim()) return false
   if (authStore.isAuthenticated) return true
@@ -182,28 +186,41 @@ const deleteComment = async (id: string) => {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
-    if (res.ok) await fetchComments()
+    if (!res.ok) return false
+    await fetchComments()
+    return true
   } catch (e) {
     console.error(e)
+    return false
   }
 }
 
 const requestDeleteComment = (id: string) => {
+  deleteSessionId.value += 1
+  deleteError.value = ''
   pendingDeleteCommentId.value = id
   showDeleteConfirm.value = true
 }
 
 const cancelDeleteComment = () => {
+  deleteSessionId.value += 1
+  deleteError.value = ''
   showDeleteConfirm.value = false
   pendingDeleteCommentId.value = null
 }
 
 const confirmDeleteComment = async () => {
   const id = pendingDeleteCommentId.value
-  cancelDeleteComment()
-  if (id !== null) {
-    await deleteComment(id)
-  }
+  if (id === null) return
+  const sessionId = deleteSessionId.value
+  if (deleteRequestSession.value === sessionId) return
+  deleteError.value = ''
+  deleteRequestSession.value = sessionId
+  const deleted = await deleteComment(id)
+  if (deleteSessionId.value !== sessionId || pendingDeleteCommentId.value !== id) return
+  deleteRequestSession.value = null
+  if (deleted) cancelDeleteComment()
+  else deleteError.value = '删除失败'
 }
 
 onMounted(fetchComments)

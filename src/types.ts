@@ -704,6 +704,8 @@ export interface Argument {
   source_excerpt?: string
   is_folded?: boolean
   fold_note?: string
+  mentions?: Array<{ user_id: string; start: number; end: number }>
+  attachment_ids?: string[]
   created_at: string
   updated_at: string
 }

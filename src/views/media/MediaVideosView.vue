@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -13,16 +13,28 @@ const api = useApi()
 const videos = ref<Video[]>([])
 const loading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
+let videosRequestSequence = 0
 
 const loadVideos = async () => {
+  const requestSequence = ++videosRequestSequence
+  const targetSort = sort.value
+  videos.value = []
   loading.value = true
   try {
-    const params = new URLSearchParams({ sort: sort.value, limit: '40' })
+    const params = new URLSearchParams({ sort: targetSort, limit: '40' })
     const res = await fetch(`${api.videos.list}?${params}`)
-    if (!res.ok) return
-    videos.value = await res.json()
+    if (requestSequence !== videosRequestSequence || sort.value !== targetSort || !res.ok) return
+    const data = await res.json()
+    if (requestSequence === videosRequestSequence && sort.value === targetSort) {
+      videos.value = data
+    }
+  } catch {
+    if (requestSequence !== videosRequestSequence || sort.value !== targetSort) return
+    videos.value = []
   } finally {
-    loading.value = false
+    if (requestSequence === videosRequestSequence && sort.value === targetSort) {
+      loading.value = false
+    }
   }
 }
 
@@ -32,6 +44,9 @@ const changeSort = (nextSort: 'latest' | 'popular') => {
 }
 
 onMounted(loadVideos)
+onBeforeUnmount(() => {
+  videosRequestSequence += 1
+})
 
 const videoPath = (videoId: string) => modulePathUrl('media', `/videos/watch/${videoId}`)
 </script>

@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MediaArticlesView from '@/views/media/MediaArticlesView.vue'
@@ -7,6 +7,19 @@ import MediaVideosView from '@/views/media/MediaVideosView.vue'
 
 const fetchMock = vi.fn()
 const routerPushMock = vi.fn()
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
+
+const videoResponse = (id: string, title: string, status = 200) => new Response(JSON.stringify([{
+  id,
+  title,
+  created_at: '2026-07-15T00:00:00Z',
+}]), { status })
 const RouterLinkStub = defineComponent({
   props: {
     to: {
@@ -115,6 +128,112 @@ describe('Media content view shells', () => {
       expect(wrapper.findComponent({ name: 'PVideoCard' }).exists()).toBe(true)
     })
     expect(wrapper.find('a[href="/media/videos/watch/video-1"]').exists()).toBe(true)
+  })
+
+  it('keeps loading popular videos when the previous latest request returns first', async () => {
+    const latest = deferred<Response>()
+    const popular = deferred<Response>()
+    fetchMock.mockImplementation((input) => (
+      String(input).includes('sort=latest') ? latest.promise : popular.promise
+    ))
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    wrapper.vm.$.setupState.changeSort('popular')
+    latest.resolve(videoResponse('latest-video', '过期最新视频'))
+    await flushPromises()
+
+    expect(wrapper.vm.$.setupState.loading).toBe(true)
+    expect(wrapper.text()).not.toContain('过期最新视频')
+
+    popular.resolve(videoResponse('popular-video', '当前热门视频'))
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前热门视频')
+  })
+
+  it('does not let a delayed latest response overwrite popular videos', async () => {
+    const latest = deferred<Response>()
+    const popular = deferred<Response>()
+    fetchMock.mockImplementation((input) => (
+      String(input).includes('sort=latest') ? latest.promise : popular.promise
+    ))
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+
+    wrapper.vm.$.setupState.changeSort('popular')
+    popular.resolve(videoResponse('popular-video', '当前热门视频'))
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前热门视频')
+
+    latest.resolve(videoResponse('latest-video', '过期最新视频'))
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前热门视频')
+    expect(wrapper.text()).not.toContain('过期最新视频')
+  })
+
+  it('clears latest results when the selected popular request returns non-2xx', async () => {
+    fetchMock.mockImplementation((input) => (
+      String(input).includes('sort=latest')
+        ? Promise.resolve(videoResponse('latest-video', '旧的最新视频'))
+        : Promise.resolve(new Response(JSON.stringify({ error: 'failed' }), { status: 500 }))
+    ))
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('旧的最新视频')
+
+    wrapper.vm.$.setupState.changeSort('popular')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('旧的最新视频')
+    expect(wrapper.text()).toContain('暂无视频')
+  })
+
+  it.each([
+    ['network failure', () => Promise.reject(new Error('network failed'))],
+    ['invalid JSON', () => Promise.resolve({
+      ok: true,
+      json: () => Promise.reject(new Error('invalid JSON')),
+    })],
+  ])('settles the selected popular request after %s', async (_case, failingRequest) => {
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    fetchMock.mockImplementation(failingRequest)
+    wrapper.vm.$.setupState.sort = 'popular'
+
+    await expect(wrapper.vm.$.setupState.loadVideos()).resolves.toBeUndefined()
+
+    expect(wrapper.vm.$.setupState.videos).toEqual([])
+    expect(wrapper.vm.$.setupState.loading).toBe(false)
+    expect(wrapper.text()).toContain('暂无视频')
+  })
+
+  it('does not mutate video state when a response arrives after unmount', async () => {
+    const request = deferred<Response>()
+    fetchMock.mockReturnValue(request.promise)
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    const state = wrapper.vm.$.setupState
+
+    wrapper.unmount()
+    const videosAfterUnmount = state.videos
+    const loadingAfterUnmount = state.loading
+    request.resolve(videoResponse('late-video', '迟到视频'))
+    await flushPromises()
+
+    expect(state.videos).toBe(videosAfterUnmount)
+    expect(state.loading).toBe(loadingAfterUnmount)
+  })
+
+  it('requests the exact initial and selected video sort parameters', async () => {
+    const wrapper = mount(MediaVideosView, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    await flushPromises()
+    wrapper.vm.$.setupState.changeSort('popular')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const [initialUrl, popularUrl] = fetchMock.mock.calls.map(call => new URL(String(call[0]), 'http://localhost'))
+    expect(Object.fromEntries(initialUrl.searchParams)).toEqual({ sort: 'latest', limit: '40' })
+    expect(Object.fromEntries(popularUrl.searchParams)).toEqual({ sort: 'popular', limit: '40' })
   })
 
   it('renders podcast episodes as PEntry rows and opens the media-scoped podcast detail route', async () => {

@@ -358,10 +358,10 @@
     />
 
     <!-- History Modal -->
-    <PModal v-if="historyEvent" @close="historyEvent = null">
+    <PModal v-if="historyEvent" @close="closeHistory">
       <div class="a-modal-header">
         <h2 class="a-modal-title">历史版本 — {{ historyEvent.title }}</h2>
-        <button class="a-modal-close" @click="historyEvent = null">✕</button>
+        <button class="a-modal-close" @click="closeHistory">✕</button>
       </div>
       <div class="a-modal-body">
         <div v-if="loadingHistory" style="color:var(--a-color-muted);font-size:.85rem">加载中...</div>
@@ -386,7 +386,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useTimelineStore } from '@/stores/timeline'
@@ -839,23 +839,43 @@ const closeForm = () => {
 const historyEvent = ref<TimelineEvent | null>(null)
 const historyRevisions = ref<TimelineRevision[]>([])
 const loadingHistory = ref(false)
+let historyRequestSequence = 0
+
+const closeHistory = () => {
+  historyRequestSequence += 1
+  historyEvent.value = null
+  historyRevisions.value = []
+  loadingHistory.value = false
+}
 
 const openHistory = async (event: TimelineEvent) => {
+  const requestSequence = ++historyRequestSequence
+  const targetEventId = event.id
+  const isCurrentRequest = () =>
+    requestSequence === historyRequestSequence && historyEvent.value?.id === targetEventId
+
   historyEvent.value = event
   historyRevisions.value = []
   loadingHistory.value = true
   try {
-    const res = await fetch(`${api.url}/timeline/events/${event.id}/history`, {
+    const res = await fetch(`${api.url}/timeline/events/${targetEventId}/history`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    if (res.ok) {
-      const d = await res.json()
-      historyRevisions.value = d.data || []
-    }
+    if (!isCurrentRequest()) return
+    if (!res.ok) return
+
+    const d = await res.json()
+    if (!isCurrentRequest()) return
+    historyRevisions.value = d.data || []
+  } catch {
+    if (!isCurrentRequest()) return
+    historyRevisions.value = []
   } finally {
-    loadingHistory.value = false
+    if (isCurrentRequest()) loadingHistory.value = false
   }
 }
+
+onBeforeUnmount(closeHistory)
 
 const submitForm = async () => {
   if (!form.value.title || !form.value.event_date || !form.value.location || !form.value.source) return

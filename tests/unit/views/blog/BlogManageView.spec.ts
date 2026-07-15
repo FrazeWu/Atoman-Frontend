@@ -316,6 +316,11 @@ describe('BlogManageView', () => {
       expect(wrapper.findAll('button').map(button => button.text())).toContain(action)
     }
 
+    await wrapper.findAll('button').find(button => button.text() === '预览')!.trigger('click')
+    expect(push).toHaveBeenCalledWith('/posts/post/post-1')
+    await wrapper.findAll('button').find(button => button.text() === '编辑')!.trigger('click')
+    expect(push).toHaveBeenCalledWith('/posts/post/post-1/edit')
+
     await wrapper.findAll('button').find(button => button.text() === '版本')!.trigger('click')
     await flushPromises()
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/blog/posts/post-1/versions'), expect.anything())

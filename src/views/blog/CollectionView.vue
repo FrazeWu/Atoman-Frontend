@@ -19,7 +19,7 @@
             >
               {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
             </PClip>
-            <PLink :href="`/channel/${channelId}`" label="返回频道" />
+            <PLink :href="channelHref" label="返回频道" />
             <PLink
               v-if="isOwner"
               :href="`/posts/post/new?channel=${channelId}&collection=${collection.id}`"
@@ -32,7 +32,7 @@
       <PCard class="collection-meta-card">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">所属频道</p>
-          <PLink :href="`/channel/${channelId}`">
+          <PLink :href="channelHref">
             {{ channel?.name || '加载中...' }}
           </PLink>
         </div>
@@ -59,7 +59,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary || summarize(post.content)"
-            @click="$router.push(`/posts/post/${post.id}`)"
+            @click="router.push(`/posts/post/${post.id}`)"
           >
             <template #meta>
               <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -138,6 +138,7 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSheetStore } from '@/stores/sheet'
+import { channelUrl } from '@/router/siteUrls'
 
 const props = defineProps<{
   id?: string
@@ -165,6 +166,7 @@ const collectionSubscribeLoading = ref(false)
 
 const collectionId = computed(() => props.id || (typeof route.params.id === 'string' ? route.params.id : ''))
 const channelId = computed(() => collection.value?.channel_id || '')
+const channelHref = computed(() => channelUrl(channel.value?.slug || channelId.value))
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
@@ -305,7 +307,7 @@ const deleteCollection = async () => {
       headers: authHeader.value
     })
     deleteModalOpen.value = false
-    router.push(`/channel/${channelId.value}`)
+    router.push(channelHref.value)
   } catch (e) {
     console.error('Failed to delete collection:', e)
   }

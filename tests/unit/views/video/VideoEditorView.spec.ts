@@ -310,4 +310,93 @@ describe('VideoEditorView', () => {
     expect(editorView.vm.$.setupState.channels.map((channel: { id: string }) => channel.id)).toEqual(['video-1', 'video-2'])
     expect(editorView.vm.$.setupState.form.channel_id).toBe('video-2')
   })
+
+  it('使用登录用户 UUID 请求真实频道列表', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { video: null } })
+      }
+      if (url.includes('/blog/channels?user_id=user-uuid-1')) {
+        return makeJsonResponse({ data: [] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/upload', component: VideoEditorView }],
+    })
+    await router.push('/videos/upload')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-uuid-1', username: 'demo', email: 'demo@example.com' }
+    auth.isAuthenticated = true
+
+    mount({ template: '<router-view />' }, { global: { plugins: [router] } })
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/blog/channels?user_id=user-uuid-1'),
+      expect.any(Object),
+    )
+  })
+
+  it('编辑视频时加载视频实际所属频道的合集', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?user_id=user-uuid-1')) {
+        return makeJsonResponse({ data: [
+          { id: 'channel-default', name: '默认频道', content_type: 'video' },
+          { id: 'channel-video', name: '视频频道', content_type: 'video' },
+        ] })
+      }
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { video: { id: 'channel-default' } } })
+      }
+      if (url.includes('/blog/channels/channel-default/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-default', name: '默认合集' }] })
+      }
+      if (url.endsWith('/videos/video-1')) {
+        return makeJsonResponse({
+          id: 'video-1',
+          channel_id: 'channel-video',
+          title: '已有视频',
+          description: '',
+          storage_type: 'external',
+          video_url: 'https://example.com/video',
+          thumbnail_url: '',
+          visibility: 'public',
+          tags: [],
+          collections: [{ id: 'collection-video', name: '视频合集' }],
+        })
+      }
+      if (url.includes('/blog/channels/channel-video/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-video', name: '视频合集' }] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/edit/:id', component: VideoEditorView }],
+    })
+    await router.push('/videos/edit/video-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-uuid-1', username: 'demo', email: 'demo@example.com' }
+    auth.isAuthenticated = true
+
+    const wrapper = mount({ template: '<router-view />' }, { global: { plugins: [router] } })
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(VideoEditorView)
+    expect(editorView.vm.$.setupState.collections.map((collection: { id: string }) => collection.id)).toEqual(['collection-video'])
+  })
 })

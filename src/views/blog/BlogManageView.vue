@@ -366,7 +366,7 @@ const loadChannels = async () => {
 
 const handleArticleAction = async (action: 'edit' | 'delete', article: any) => {
   if (action === 'edit') {
-    router.push(`/post/${article.id}/edit`)
+    router.push(`/posts/post/${article.id}/edit`)
   } else if (action === 'delete') {
     if (confirm(`确定要删除文章《${article.title}》吗？`)) {
       try {

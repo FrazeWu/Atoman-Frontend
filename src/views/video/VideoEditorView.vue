@@ -272,8 +272,10 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 
 async function loadChannels() {
   if (!authStore.user) return
+  const userID = authStore.user.uuid ?? authStore.user.id
+  if (!userID) return
   const res = await fetch(
-    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
+    `${api.url}/blog/channels?user_id=${encodeURIComponent(String(userID))}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } }
   )
   if (res.ok) {
@@ -358,6 +360,7 @@ async function loadVideo() {
     visibility: v.visibility,
     tags: v.tags?.map(t => t.name).join(', ') ?? '',
   }
+  await loadCollections(form.value.channel_id)
   selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
 }
 

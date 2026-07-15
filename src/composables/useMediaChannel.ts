@@ -1,12 +1,18 @@
 import { ref } from 'vue'
 import { apiGetRaw } from '@/api/client'
 import { useApi } from '@/composables/useApi'
-import { useMediaCollections } from '@/composables/useMediaCollections'
+import { useMediaCollections, type MediaCollectionType } from '@/composables/useMediaCollections'
 import type { Channel } from '@/types'
 
 export type MediaChannel = {
   id: string
   name: string
+  contentType: MediaCollectionType
+}
+
+const mediaTypeFromChannel = (contentType: Channel['content_type']): MediaCollectionType => {
+  if (contentType === 'podcast' || contentType === 'video') return contentType
+  return 'article'
 }
 
 const currentMediaChannelId = ref<string | null>(null)
@@ -52,7 +58,11 @@ export function useMediaChannel() {
       const rows: Channel[] = Array.isArray(data) ? data : (data.data || [])
       if (requestId !== latestLoadChannelsRequest) return
 
-      channels.value = rows.map(channel => ({ id: channel.id, name: channel.name }))
+      channels.value = rows.map(channel => ({
+        id: channel.id,
+        name: channel.name,
+        contentType: mediaTypeFromChannel(channel.content_type),
+      }))
       if (!currentMediaChannelId.value && channels.value.length > 0) {
         setCurrentMediaChannel(channels.value[0].id)
       }

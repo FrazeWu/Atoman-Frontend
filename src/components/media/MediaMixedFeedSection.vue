@@ -48,7 +48,7 @@ const visibleItems = computed(() => (
 
 const itemPath = (item: MediaMixedItem) => (
   item.type === 'article'
-    ? `/post/${item.id}`
+    ? modulePathUrl('blog', `/post/${item.id}`)
     : modulePathUrl('media', `/podcasts/episode/${item.id}`)
 )
 </script>

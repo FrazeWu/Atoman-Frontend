@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -9,11 +10,13 @@ import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApiUrl } from '@/composables/useApi'
 
 const API_URL = useApiUrl()
+const route = useRoute()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const videos = ref<Video[]>([])
 const loading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
+const channelId = computed(() => typeof route.query.channel_id === 'string' ? route.query.channel_id : '')
 const canPublishVideo = computed(() => siteAccessStore.isFeatureEnabled('video', 'video.publish'))
 let fetchVideosSeq = 0
 
@@ -21,7 +24,9 @@ async function fetchVideos() {
   const seq = ++fetchVideosSeq
   loading.value = true
   try {
-    const res = await fetch(`${API_URL}/videos?sort=${sort.value}`)
+    const params = new URLSearchParams({ sort: sort.value })
+    if (channelId.value) params.set('channel_id', channelId.value)
+    const res = await fetch(`${API_URL}/videos?${params}`)
     if (res.ok) {
       const data = await res.json()
       if (seq === fetchVideosSeq) videos.value = data
@@ -32,7 +37,7 @@ async function fetchVideos() {
 }
 
 onMounted(fetchVideos)
-watch(sort, fetchVideos)
+watch([sort, channelId], fetchVideos)
 </script>
 
 <template>

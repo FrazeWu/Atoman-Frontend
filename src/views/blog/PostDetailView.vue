@@ -12,14 +12,14 @@
     <div v-else-if="errorStatus === 404" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight:900;color:var(--a-color-disabled-border);margin-bottom:1rem">404</p>
       <p class="a-muted" style="margin-bottom:1.5rem">文章不存在</p>
-      <RouterLink to="/" class="a-link">← 返回文章</RouterLink>
+      <RouterLink :to="modulePathUrl('blog', '/')" class="a-link">← 返回文章</RouterLink>
     </div>
 
     <!-- Draft (only visible to owner) -->
     <div v-else-if="errorStatus === 403" class="a-page-md" style="padding-top:6rem;text-align:center">
       <p style="font-size:3rem;font-weight:900;color:var(--a-color-disabled-border);margin-bottom:1rem">草稿</p>
       <p class="a-muted" style="margin-bottom:1.5rem">该文章尚未发布，请登录后查看或编辑</p>
-      <RouterLink :to="`/post/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+      <RouterLink :to="modulePathUrl('blog', `/post/${postId}/edit`)" class="a-link">去编辑 →</RouterLink>
     </div>
 
     <article v-else-if="post" class="post-reading-page">
@@ -48,7 +48,7 @@
         </aside>
 
         <main class="reading-main">
-          <RouterLink to="/" class="a-link">← 文章</RouterLink>
+          <RouterLink :to="modulePathUrl('blog', '/')" class="a-link">← 文章</RouterLink>
 
         <!-- Title -->
         <h1 
@@ -65,7 +65,7 @@
           </a>
           <span class="a-label a-muted">发布于 {{ formatDate(post.published_at || post.created_at) }}</span>
           <span class="a-label a-muted">更新于 {{ formatDate(post.updated_at) }}</span>
-          <RouterLink v-if="isOwner" :to="`/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
+          <RouterLink v-if="isOwner" :to="modulePathUrl('blog', `/post/${post.id}/edit`)" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
         </div>
 
         <div class="reading-stats" aria-label="文章统计">
@@ -130,7 +130,7 @@ import PToast from '@/components/ui/PToast.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { userUrl } from '@/composables/useSubdomainNav'
+import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import type { Post } from '@/types'
@@ -360,7 +360,7 @@ const fetchPostEmbeds = async (content: string) => {
             title: embedPost.title,
             summary: embedPost.summary,
             meta: embedPost.channel?.name,
-            href: `/post/${id}`,
+            href: `/posts/post/${id}`,
           } satisfies EmbedData,
         ] as const
       } catch {
@@ -393,7 +393,7 @@ const fetchMusicEmbeds = async (content: string) => {
             title: album.title,
             summary: album.release_date ? `发行日期：${album.release_date}` : undefined,
             meta: [album.artists?.map((artist) => artist.name).join(' / '), album.year ? String(album.year) : ''].filter(Boolean).join(' · '),
-            href: `/music/albums/${id}`,
+            href: `/music/album/${id}`,
           } satisfies EmbedData,
         ] as const
       } catch {
@@ -412,17 +412,30 @@ const fetchVideoEmbeds = async (content: string) => {
     return
   }
 
-  videoEmbeds.value = Object.fromEntries(
-    ids.map((id) => [
-      id,
-      {
-        id,
-        title: '引用视频',
-        summary: '视频模块尚未接入真实数据源，当前为可扩展占位。',
-        href: `#video-${id}`,
-      } satisfies EmbedData,
-    ]),
+  const entries = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const res = await fetch(api.videos.get(id), { headers: authHeaders() })
+        if (!res.ok) return null
+        const payload = await res.json()
+        const video = (payload.data || payload) as import('@/types').Video
+        return [
+          id,
+          {
+            id,
+            title: video.title,
+            summary: video.description,
+            meta: video.channel?.name,
+            href: `/videos/watch/${id}`,
+          } satisfies EmbedData,
+        ] as const
+      } catch {
+        return null
+      }
+    }),
   )
+
+  videoEmbeds.value = Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
 }
 
 const fetchEmbeds = async (content: string) => {

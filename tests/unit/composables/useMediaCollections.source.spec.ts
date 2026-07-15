@@ -7,7 +7,7 @@ const source = readFileSync(resolve(process.cwd(), 'src/composables/useMediaColl
 describe('useMediaCollections source', () => {
   it('uses shared raw get helper instead of direct fetch', () => {
     expect(source).toContain("from '@/api/client'")
-    expect(source).toContain('apiGetRaw<BackendMediaCollection[] | { data?: BackendMediaCollection[] }>')
+    expect(source).toContain('apiGetRaw<Collection[] | { data?: Collection[] }>')
     expect(source).not.toContain('await fetch(')
   })
 })

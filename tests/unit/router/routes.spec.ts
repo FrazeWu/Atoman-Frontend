@@ -79,7 +79,7 @@ describe('host-scoped route tables', () => {
   it('registers video detail pages under the video module root', () => {
     const videoRoot = moduleRoutes.video.find((route) => route.path === '/')
     const children = videoRoot?.children || []
-    const detailRoute = children.find((route) => route.path === 'videos/watch/:id')
+    const detailRoute = children.find((route) => route.path === 'watch/:id')
 
     expect(detailRoute).toBeTruthy()
     expect(lazyImportPath(detailRoute?.component)).toContain('VideoDetailView.vue')

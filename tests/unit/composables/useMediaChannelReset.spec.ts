@@ -38,10 +38,10 @@ describe('media channel reset behavior', () => {
 
   it('loads channels with current user id and bearer token when provided', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ id: 'channel-1', name: '我的频道' }] }), { status: 200 }),
+      new Response(JSON.stringify({ data: [{ id: 'channel-1', name: '我的频道', content_type: 'video' }] }), { status: 200 }),
     )
 
-    const { loadChannels } = useMediaChannel()
+    const { channels, loadChannels } = useMediaChannel()
     await loadChannels('token-1', 'user-uuid-1')
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -51,6 +51,7 @@ describe('media channel reset behavior', () => {
         headers: { Accept: 'application/json', Authorization: 'Bearer token-1' },
       },
     )
+    expect(channels.value).toEqual([{ id: 'channel-1', name: '我的频道', contentType: 'video' }])
   })
 
   it('does not load global channels without a current user id', async () => {
@@ -93,12 +94,12 @@ describe('media channel reset behavior', () => {
 
     newRequest.resolve()
     await newLoad
-    expect(channels.value).toEqual([{ id: 'new-channel', name: '新账号频道' }])
+    expect(channels.value).toEqual([{ id: 'new-channel', name: '新账号频道', contentType: 'article' }])
     expect(currentMediaChannelId.value).toBe('new-channel')
 
     oldRequest.resolve()
     await oldLoad
-    expect(channels.value).toEqual([{ id: 'new-channel', name: '新账号频道' }])
+    expect(channels.value).toEqual([{ id: 'new-channel', name: '新账号频道', contentType: 'article' }])
     expect(currentMediaChannelId.value).toBe('new-channel')
   })
 
@@ -112,7 +113,7 @@ describe('media channel reset behavior', () => {
     const { channels, currentMediaChannelId, loadChannels } = useMediaChannel()
     await loadChannels('old-token', 'old-user')
 
-    expect(channels.value).toEqual([{ id: 'old-channel', name: '旧账号频道' }])
+    expect(channels.value).toEqual([{ id: 'old-channel', name: '旧账号频道', contentType: 'article' }])
     expect(currentMediaChannelId.value).toBe('old-channel')
 
     await expect(loadChannels('new-token', 'new-user')).rejects.toThrow('network failed')

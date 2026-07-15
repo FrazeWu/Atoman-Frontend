@@ -228,7 +228,7 @@ onMounted(loadBookmarks)
           v-if="item.kind === 'article'"
           :title="item.post.title"
           :summary="item.post.summary"
-          @click="router.push(`/post/${item.post.id}`)"
+          @click="router.push(`/posts/post/${item.post.id}`)"
         >
           <template #visual>
             <div class="media-bookmarks-visual">
@@ -285,7 +285,7 @@ onMounted(loadBookmarks)
         :key="item.id"
         :title="item.channel.name"
         :summary="item.kind === 'video_channel' ? '视频频道收藏' : '播客节目收藏'"
-        @click="router.push(item.kind === 'video_channel' ? `/videos?channel=${item.channel.id}` : `/podcasts/show/${item.channel.slug}`)"
+        @click="router.push(item.kind === 'video_channel' ? `/videos?channel_id=${encodeURIComponent(item.channel.id)}` : `/podcasts/show/${item.channel.slug}`)"
       >
         <template #visual>
           <div class="media-bookmarks-visual">

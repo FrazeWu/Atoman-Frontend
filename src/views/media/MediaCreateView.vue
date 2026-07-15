@@ -39,18 +39,18 @@ const publishPath = computed(() => {
 const onChannelChange = async (event: Event) => {
   const channelId = (event.target as HTMLSelectElement).value || null
   await switchChannel(channelId, authStore.token)
-  await loadCollections(channelId)
+  await loadCollections(channelId, selectedChannel.value?.contentType ?? 'article')
   await loadOverview(channelId)
 }
 
 onMounted(async () => {
   await loadChannels(authStore.token, authUserId.value)
-  await loadCollections(currentMediaChannelId.value)
+  await loadCollections(currentMediaChannelId.value, selectedChannel.value?.contentType ?? 'article')
   await loadOverview(currentMediaChannelId.value)
 })
 
 watch(currentMediaChannelId, channelId => {
-  void loadCollections(channelId)
+  void loadCollections(channelId, selectedChannel.value?.contentType ?? 'article')
   void loadOverview(channelId)
 })
 </script>

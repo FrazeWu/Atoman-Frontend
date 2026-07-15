@@ -81,7 +81,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary"
-            @click="$router.push('/posts/post/' + post.id)"
+            @click="router.push('/posts/post/' + post.id)"
             class="a-cursor-pointer"
           >
             <template #visual>
@@ -229,7 +229,10 @@ const fetchChannels = async () => {
   if (!profile.value) return
   try {
     const res = await fetch(`${api.blog.channels}?user_id=${profile.value.uuid}`)
-    if (res.ok) channels.value = (await res.json()).data || []
+    if (res.ok) {
+      const rows = ((await res.json()).data || []) as Channel[]
+      channels.value = rows.filter((channel) => channel.content_type === 'blog')
+    }
   } catch (e) { console.error(e) }
 }
 

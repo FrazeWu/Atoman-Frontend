@@ -356,20 +356,21 @@ const { renderMarkdown } = useMarkdownRenderer()
 const debate = computed(() => debateStore.currentDebate)
 const argumentsList = computed(() => debateStore.argumentList)
 const loading = computed(() => debateStore.loading)
+const authUserID = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 
 const selectedParentId = ref<string | null>(null)
 
 const canEdit = computed(() => {
   if (!authStore.isAuthenticated) return false
   if (isAdminRole(authStore.user?.role)) return true
-  return String(debate.value?.user_id) === String(authStore.user?.id)
+  return String(debate.value?.user_id) === String(authUserID.value)
 })
 
 const canConclude = computed(() => {
   if (!authStore.isAuthenticated) return false
   if (debate.value?.status !== 'open') return false
   if (isAdminRole(authStore.user?.role)) return true
-  return String(debate.value?.user_id) === String(authStore.user?.id)
+  return String(debate.value?.user_id) === String(authUserID.value)
 })
 
 const canReopen = computed(() => {

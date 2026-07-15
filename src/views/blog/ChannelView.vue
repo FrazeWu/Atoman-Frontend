@@ -23,7 +23,7 @@
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
             <PLink
               v-if="isOwner"
-              :href="`/channels/${channel.slug || channel.id}/manage`"
+              :href="modulePathUrl('blog', `/channel/${channel.slug || channel.id}/manage`)"
               label="管理"
             />
             <PLink
@@ -159,7 +159,7 @@ import PLink from '@/components/ui/PLink.vue'
 import PTab from '@/components/ui/PTab.vue'
 import PPress from '@/components/ui/PPress.vue'
 import { resolveSiteContext } from '@/router/siteContext'
-import { userUrl } from '@/composables/useSubdomainNav'
+import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 
 const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()

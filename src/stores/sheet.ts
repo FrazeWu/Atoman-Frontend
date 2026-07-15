@@ -14,7 +14,7 @@ export const useSheetStore = defineStore('sheet', () => {
     stack.value.push(sheet)
     
     if (updateHistory) {
-      const url = sheet.type === 'post' ? `/post/${sheet.id}` : `/collection/${sheet.id}`
+      const url = sheet.type === 'post' ? `/posts/post/${sheet.id}` : `/posts/collection/${sheet.id}`
       history.pushState({ isSheet: true, index: stack.value.length - 1 }, '', url)
     }
   }

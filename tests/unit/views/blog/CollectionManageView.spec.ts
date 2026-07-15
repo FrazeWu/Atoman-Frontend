@@ -7,10 +7,11 @@ import { useAuthStore } from '@/stores/auth'
 import CollectionManageView from '@/views/blog/CollectionManageView.vue'
 
 const fetchMock = vi.fn()
+const push = vi.fn()
 let pinia: ReturnType<typeof createPinia>
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
 }))
 
 const modelStub = (tag: 'input' | 'textarea' | 'select') => defineComponent({
@@ -25,6 +26,7 @@ describe('CollectionManageView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     fetchMock.mockReset()
+    push.mockReset()
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/blog/channels?')) {
@@ -113,5 +115,8 @@ describe('CollectionManageView', () => {
     expect(wrapper.text()).toContain('文章频道')
     expect(wrapper.text()).not.toContain('视频合集')
     expect(wrapper.text()).not.toContain('0篇文章')
+
+    await wrapper.get('.a-card').trigger('click')
+    expect(push).toHaveBeenCalledWith('/posts/collection/collection-1')
   })
 })

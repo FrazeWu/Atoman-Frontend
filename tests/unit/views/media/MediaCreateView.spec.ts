@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
@@ -7,10 +7,11 @@ import { useMediaCollections } from '@/composables/useMediaCollections'
 
 const loadChannelsMock = vi.fn()
 const currentMediaChannelIdMock = ref('channel-1')
+const channelsMock = ref([{ id: 'channel-1', name: '我的频道', contentType: 'article' as const }])
 
 vi.mock('@/composables/useMediaChannel', () => ({
   useMediaChannel: () => ({
-    channels: { value: [{ id: 'channel-1', name: '我的频道' }] },
+    channels: channelsMock,
     currentMediaChannelId: currentMediaChannelIdMock,
     switchChannel: vi.fn(),
     loadChannels: loadChannelsMock,
@@ -21,6 +22,7 @@ describe('MediaCreateView', () => {
   beforeEach(() => {
     loadChannelsMock.mockReset()
     currentMediaChannelIdMock.value = 'channel-1'
+    channelsMock.value = [{ id: 'channel-1', name: '我的频道', contentType: 'article' }]
     const { clearSelectionForTest } = useMediaCollections()
     clearSelectionForTest()
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -149,6 +151,41 @@ describe('MediaCreateView', () => {
         ],
       },
     })
+
+    expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('/videos/upload')
+  })
+
+  it('uses the real video channel type for backend collections without a type field', async () => {
+    channelsMock.value = [{ id: 'channel-1', name: '视频频道', contentType: 'video' }]
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/collections')) {
+        return new Response(JSON.stringify({ data: [{ id: 'collection-1', name: '视频合集', channel_id: 'channel-1' }] }), { status: 200 })
+      }
+      return new Response(JSON.stringify([]), { status: 200 })
+    })
+
+    const wrapper = mount(MediaCreateView, {
+      global: {
+        plugins: [createTestingPinia({
+          createSpy: vi.fn,
+          initialState: {
+            auth: {
+              token: 'token-1',
+              user: { uuid: 'user-uuid-1', username: 'alice', email: 'alice@example.com' },
+              isAuthenticated: true,
+            },
+          },
+        })],
+        stubs: ['RouterLink', 'MediaCollectionRail', 'MediaMixedFeedSection', 'MediaVideoCardSection', 'MediaCollectionWorkspace'],
+      },
+    })
+    await flushPromises()
+
+    const { collections, selectCollection } = useMediaCollections()
+    expect(collections.value[0].type).toBe('video')
+    selectCollection(collections.value[0].id, collections.value[0].type, collections.value[0].name)
+    await flushPromises()
 
     expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('/videos/upload')
   })

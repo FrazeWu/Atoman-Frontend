@@ -345,6 +345,10 @@ describe('Media global views', () => {
     expect(wrapper.text()).toContain('文章收藏')
     expect(wrapper.text()).toContain('视频收藏')
     expect(wrapper.text()).toContain('播客收藏')
+
+    await wrapper.findAll('.p-segmented-control-item').find((item) => item.text() === '容器')!.trigger('click')
+    await wrapper.findAll('.p-entry').find((item) => item.text().includes('视频频道'))!.trigger('click')
+    expect(routerPushMock).toHaveBeenCalledWith('/videos?channel_id=channel-video-1')
   })
 
   it('sends auth headers for every bookmark source request', async () => {

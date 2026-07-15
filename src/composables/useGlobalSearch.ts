@@ -97,7 +97,7 @@ export function useGlobalSearch() {
         title: item.title,
         subtitle: trimText(item.summary || item.content),
         meta: item.channel?.name || item.user?.display_name || item.user?.username || '',
-        href: `/post/${item.id}`,
+        href: `/posts/post/${item.id}`,
       }))
 
       const musicItems: GlobalSearchItem[] = [

@@ -190,7 +190,7 @@ function preprocessDirectives(content: string, options?: RenderMarkdownOptions):
     'post',
     /:::post\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.postEmbeds,
-    (id) => `/post/${id}`,
+    (id) => `/posts/post/${id}`,
   )
 
   next = replaceDirective(
@@ -198,7 +198,7 @@ function preprocessDirectives(content: string, options?: RenderMarkdownOptions):
     'music',
     /:::music\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.musicEmbeds,
-    (id) => `/music/albums/${id}`,
+    (id) => `/music/album/${id}`,
   )
 
   next = replaceDirective(
@@ -206,7 +206,7 @@ function preprocessDirectives(content: string, options?: RenderMarkdownOptions):
     'video',
     /:::video\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.videoEmbeds,
-    (id) => `#video-${id}`,
+    (id) => `/videos/watch/${id}`,
   )
 
   return next

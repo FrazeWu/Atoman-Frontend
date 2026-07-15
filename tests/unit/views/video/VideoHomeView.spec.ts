@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import VideoHomeView from '@/views/video/VideoHomeView.vue'
 
+const { routeQuery } = vi.hoisted(() => ({
+  routeQuery: {} as Record<string, string>,
+}))
+
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRoute: () => ({ query: routeQuery }),
+  }
+})
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>((res) => {
@@ -21,6 +33,7 @@ const makeJsonResponse = (data: unknown) =>
 describe('VideoHomeView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
   })
 
   it('忽略 sort 快速切换后的过期视频列表响应', async () => {
@@ -58,5 +71,24 @@ describe('VideoHomeView', () => {
 
     expect(wrapper.text()).toContain('最热视频')
     expect(wrapper.text()).not.toContain('旧的最新视频')
+  })
+
+  it('按收藏的视频频道请求真实筛选结果', async () => {
+    routeQuery.channel_id = 'channel-video-1'
+    const fetchMock = vi.fn(async () => makeJsonResponse([]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    mount(VideoHomeView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PPageHeader: true,
+          PVideoCard: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos?sort=latest&channel_id=channel-video-1')
   })
 })

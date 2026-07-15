@@ -257,6 +257,34 @@ describe('podcast routing prefix', () => {
     expect(wrapper.vm.$.setupState.errorMsg).toBe('请选择节目频道')
   })
 
+  it('使用登录用户 UUID 请求真实频道列表', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { podcast: null } })
+      }
+      if (url.includes('/blog/channels?user_id=user-uuid-1')) {
+        return makeJsonResponse({ data: [] })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-uuid-1', username: 'demo', email: 'demo@example.com' }
+    authStore.isAuthenticated = true
+
+    await mountWithRouter(PodcastEditorView, '/podcasts/editor', router)
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/blog/channels?user_id=user-uuid-1'),
+      expect.any(Object),
+    )
+  })
+
   it('单集页频道链接指向 /podcasts/show/:slug', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => makeJsonResponse({
       id: 'episode-1',

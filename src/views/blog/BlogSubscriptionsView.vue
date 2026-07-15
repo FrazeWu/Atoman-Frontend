@@ -29,7 +29,7 @@
         :title="post.title"
         :summary="post.summary"
         :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-        @click="router.push('/post/' + post.id)"
+        @click="router.push('/posts/post/' + post.id)"
       >
         <template #visual>
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
@@ -143,7 +143,7 @@ const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: posts,
   section: 'content',
   onEnter: (post) => {
-    router.push('/post/' + post.id)
+    router.push('/posts/post/' + post.id)
   },
   onAction: (key, post) => {
     switch (key) {

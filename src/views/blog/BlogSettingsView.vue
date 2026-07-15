@@ -43,20 +43,6 @@
         <PSelect v-model="form.dm_permission" :options="dmPermissionOptions" />
       </div>
 
-      <div style="border-top:2px solid #000;padding-top:1.5rem">
-        <h2 class="a-subtitle" style="margin-bottom:1rem">修改密码</h2>
-        <div style="display:flex;flex-direction:column;gap:1rem">
-          <div class="a-field">
-            <label class="a-field-label">新密码</label>
-            <input v-model="newPassword" type="password" placeholder="留空表示不修改" class="a-input" />
-          </div>
-          <div class="a-field">
-            <label class="a-field-label">确认新密码</label>
-            <input v-model="confirmPassword" type="password" placeholder="再次输入新密码" class="a-input" />
-          </div>
-        </div>
-      </div>
-
       <div v-if="error" class="a-error">{{ error }}</div>
       <div v-if="success" class="a-success">✓ 保存成功</div>
 
@@ -93,8 +79,6 @@ const form = ref({
   dm_permission: 'anyone' as DMPermission,
 })
 
-const newPassword = ref('')
-const confirmPassword = ref('')
 const saving = ref(false)
 const error = ref('')
 const success = ref(false)
@@ -133,17 +117,9 @@ const save = async () => {
   error.value = ''
   success.value = false
 
-  if (newPassword.value && newPassword.value !== confirmPassword.value) {
-    error.value = '两次输入的密码不一致'
-    return
-  }
-
   saving.value = true
   try {
-    const payload: Record<string, string> = { ...form.value }
-    if (newPassword.value) payload.password = newPassword.value
-
-    await fetch(api.users.meSettings, {
+    const settingsRes = await fetch(api.users.meSettings, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -151,6 +127,12 @@ const save = async () => {
       },
       body: JSON.stringify({ dm_permission: form.value.dm_permission })
     })
+    if (!settingsRes.ok) {
+      const settingsError = await settingsRes.json().catch(() => ({}))
+      throw new Error(typeof settingsError.error === 'string' ? settingsError.error : '私信设置保存失败')
+    }
+
+    const { dm_permission: _dmPermission, ...profilePayload } = form.value
 
     const res = await fetch(api.users.settings, {
       method: 'PUT',
@@ -158,7 +140,7 @@ const save = async () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(profilePayload)
     })
 
     if (res.ok) {
@@ -171,8 +153,6 @@ const save = async () => {
         authStore.user.bio = updated.bio
         localStorage.setItem('user', JSON.stringify(authStore.user))
       }
-      newPassword.value = ''
-      confirmPassword.value = ''
       success.value = true
       setTimeout(() => { success.value = false }, 3000)
     } else {
@@ -180,7 +160,7 @@ const save = async () => {
       error.value = err.error || '保存失败'
     }
   } catch (e) {
-    error.value = '网络错误，请重试'
+    error.value = e instanceof Error ? e.message : '网络错误，请重试'
   } finally {
     saving.value = false
   }

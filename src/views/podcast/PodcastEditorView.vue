@@ -353,8 +353,10 @@ function onChannelChange(value: string) {
 
 async function loadChannels() {
   if (!authStore.user) return
+  const userID = authStore.user.uuid ?? authStore.user.id
+  if (!userID) return
   const res = await fetch(
-    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
+    `${api.url}/blog/channels?user_id=${encodeURIComponent(String(userID))}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } },
   )
   if (res.ok) {

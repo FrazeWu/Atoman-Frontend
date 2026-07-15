@@ -177,6 +177,7 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
+const authUserID = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 
 const apiBase = useApi().url
 const localIsFolded = ref(props.argument.is_folded ?? false)
@@ -206,13 +207,13 @@ const canVote = computed(() => {
 const canEdit = computed(() => {
   if (!authStore.isAuthenticated) return false
   if (isAdminRole(authStore.user?.role)) return true
-  return String(props.argument.user_id) === String(authStore.user?.id)
+  return String(props.argument.user_id) === String(authUserID.value)
 })
 
 const canDelete = computed(() => {
   if (!authStore.isAuthenticated) return false
   if (isAdminRole(authStore.user?.role)) return true
-  return String(props.argument.user_id) === String(authStore.user?.id)
+  return String(props.argument.user_id) === String(authUserID.value)
 })
 
 const canReply = computed(() => {

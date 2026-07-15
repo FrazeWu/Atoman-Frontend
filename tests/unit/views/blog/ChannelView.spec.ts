@@ -106,4 +106,41 @@ describe('ChannelView', () => {
 
     expect(wrapper.findAll('button').map((button) => button.text())).toContain('取消收藏')
   })
+
+  it('所有者管理链接使用最终注册的文章空间路由', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/blog/channels/slug/channel-1') && !url.includes('/collections')) {
+        return new Response(JSON.stringify({
+          data: { id: 'channel-1', user_id: 'user-1', name: '频道', slug: 'channel-1' },
+        }), { status: 200 })
+      }
+      if (url.includes('/blog/channels/slug/channel-1/collections')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/blog/posts?')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    const wrapper = mount(ChannelView, {
+      global: {
+        stubs: {
+          BookmarkFolderModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot name="action" /></header>' },
+          PToast: true,
+          PSurface: true,
+          PTab: true,
+          PClip: true,
+          PEntry: true,
+          PLink: { props: ['href', 'label'], template: '<a :href="href">{{ label }}</a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('a[href="/posts/channel/channel-1/manage"]').exists()).toBe(true)
+  })
 })

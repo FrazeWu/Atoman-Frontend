@@ -45,33 +45,29 @@ describe('useMediaCollections', () => {
     expect(collections.value).toEqual([])
   })
 
-  it('keeps backend media collection type when loading collections', async () => {
+  it('uses the real parent channel type when loading collections', async () => {
     apiGetRawMock.mockResolvedValueOnce([
-      { id: 'collection-1', name: '播客合集', type: 'podcast' },
-      { id: 'collection-2', name: '视频合集', type: 'video' },
+      { id: 'collection-1', name: '播客合集', channel_id: 'channel-1' },
     ])
     const { collections, loadCollections } = useMediaCollections()
 
-    await loadCollections('channel-1')
+    await loadCollections('channel-1', 'podcast')
 
     expect(collections.value).toEqual([
       { id: 'collection-1', name: '播客合集', type: 'podcast' },
-      { id: 'collection-2', name: '视频合集', type: 'video' },
     ])
   })
 
-  it('falls back to article when backend collection type is missing or invalid', async () => {
+  it('does not trust a nonexistent backend collection type field', async () => {
     apiGetRawMock.mockResolvedValueOnce([
-      { id: 'collection-1', name: '旧合集' },
-      { id: 'collection-2', name: '未知合集', type: 'audio' },
+      { id: 'collection-1', name: '文章合集', type: 'video' },
     ])
     const { collections, loadCollections } = useMediaCollections()
 
     await loadCollections('channel-1')
 
     expect(collections.value).toEqual([
-      { id: 'collection-1', name: '旧合集', type: 'article' },
-      { id: 'collection-2', name: '未知合集', type: 'article' },
+      { id: 'collection-1', name: '文章合集', type: 'article' },
     ])
   })
 })

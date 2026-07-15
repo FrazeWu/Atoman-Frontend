@@ -10,6 +10,7 @@ export const useTimelineStore = defineStore('timeline', () => {
   const events = ref<TimelineEvent[]>([])
   const eventsTotal = ref(0)
   const currentEvent = ref<TimelineEvent | null>(null)
+  let eventsRequestSequence = 0
 
   const persons = ref<TimelinePerson[]>([])
   const personsTotal = ref(0)
@@ -33,6 +34,9 @@ export const useTimelineStore = defineStore('timeline', () => {
     page?: number
     limit?: number
   } = {}) => {
+    const requestSequence = ++eventsRequestSequence
+    events.value = []
+    eventsTotal.value = 0
     loading.value = true
     error.value = null
     try {
@@ -43,17 +47,23 @@ export const useTimelineStore = defineStore('timeline', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('limit', String(params.limit))
 
-      const res = await fetch(`${api.url}/timeline/events?${query}`)
-      if (res.ok) {
-        const data = await res.json()
-        events.value = data.data || []
-        eventsTotal.value = data.total || 0
-      }
+      const requestUrl = `${api.url}/timeline/events?${query.toString()}`
+      const res = await fetch(requestUrl)
+      if (requestSequence !== eventsRequestSequence) return
+      if (!res.ok) throw new Error('Failed to fetch events')
+
+      const data = await res.json()
+      if (requestSequence !== eventsRequestSequence) return
+      events.value = data.data || []
+      eventsTotal.value = data.total || 0
     } catch (e) {
+      if (requestSequence !== eventsRequestSequence) return
       error.value = 'Failed to fetch events'
       console.error(e)
     } finally {
-      loading.value = false
+      if (requestSequence === eventsRequestSequence) {
+        loading.value = false
+      }
     }
   }
 

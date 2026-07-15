@@ -46,6 +46,35 @@ describe('notification store', () => {
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
   })
 
+  it('only marks notification types whose mark-all requests succeed', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'failed' }), { status: 500 }))
+    const store = useNotificationStore()
+    store.unreadCount = 2
+    store.notifications = [
+      makeNotification('forum', 'forum_reply'),
+      makeNotification('comment', 'comment_reply'),
+    ]
+
+    await store.markAllRead(['forum_reply', 'comment_reply'])
+
+    expect(store.notifications.find(({ id }) => id === 'forum')?.read_at).toBeTruthy()
+    expect(store.notifications.find(({ id }) => id === 'comment')?.read_at).toBeNull()
+    expect(store.unreadCount).toBe(1)
+  })
+
+  it('does not fake local success when every mark-all request fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 500 }))
+    const store = useNotificationStore()
+    store.unreadCount = 1
+    store.notifications = [makeNotification('comment', 'comment_reply')]
+
+    await expect(store.markAllRead(['comment_reply'])).rejects.toThrow('标记通知失败')
+    expect(store.notifications[0]?.read_at).toBeNull()
+    expect(store.unreadCount).toBe(1)
+  })
+
   it('uses backend unread total when mark all read returns it', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ unread_total: 7 }), { status: 200 }))
 
@@ -129,13 +158,13 @@ describe('notification store', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
         { ...makeNotification('old', 'forum_reply'), created_at: '2026-06-30T03:00:00.000Z' },
         { ...makeNotification('old-tie', 'forum_reply'), created_at: '2026-06-30T02:00:00.000Z' },
-      ], total: 2 }), { status: 200 }))
+      ], meta: { total: 2 } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
         { ...makeNotification('new', 'comment_reply'), created_at: '2026-06-30T04:00:00.000Z' },
-      ], total: 1 }), { status: 200 }))
+      ], meta: { total: 1 } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
         { ...makeNotification('marked', 'comment_marked'), created_at: '2026-06-30T02:00:00.000Z' },
-      ], total: 1 }), { status: 200 }))
+      ], meta: { total: 1 } }), { status: 200 }))
     const store = useNotificationStore()
     await store.fetchNotifications(['forum_reply', 'comment_reply', 'comment_marked'], 1)
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
@@ -143,5 +172,30 @@ describe('notification store', () => {
     ])
     expect(store.notifications.map(({ id }) => id)).toEqual(['new', 'old', 'marked', 'old-tie'])
     expect(store.total).toBe(4)
+  })
+
+  it('does not let an old selection overwrite a newer notification request', async () => {
+    let resolveOld!: (value: Response) => void
+    let resolveNew!: (value: Response) => void
+    const oldResponse = new Promise<Response>((resolve) => { resolveOld = resolve })
+    const newResponse = new Promise<Response>((resolve) => { resolveNew = resolve })
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      String(url).includes('forum_reply') ? oldResponse : newResponse,
+    )
+    const store = useNotificationStore()
+
+    const oldRequest = store.fetchNotifications('forum_reply', 1)
+    const newRequest = store.fetchNotifications('comment_reply', 1)
+    resolveOld(new Response(JSON.stringify({ data: [makeNotification('old', 'forum_reply')], meta: { total: 1 } }), { status: 200 }))
+    await oldRequest
+    expect(store.loading).toBe(true)
+    expect(store.notifications).toEqual([])
+
+    resolveNew(new Response(JSON.stringify({ data: [makeNotification('new', 'comment_reply')], meta: { total: 1 } }), { status: 200 }))
+    await newRequest
+    expect(store.loading).toBe(false)
+    expect(store.currentType).toBe('comment_reply')
+    expect(store.notifications.map(({ id }) => id)).toEqual(['new'])
+    expect(store.total).toBe(1)
   })
 })

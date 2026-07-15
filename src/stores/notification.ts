@@ -14,6 +14,11 @@ const sortNotifications = (items: Notification[]) => [...items].sort((left, righ
   right.created_at.localeCompare(left.created_at) || left.id.localeCompare(right.id),
 )
 
+interface NotificationResponse {
+  data: Notification[]
+  meta?: { total?: number }
+}
+
 export function isCommentNotification(notification: Notification) {
   return commentNotificationTypes.has(notification.type)
 }
@@ -54,6 +59,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const page = ref(1)
   const currentType = ref<NotificationFilterType>('')
   const currentTypes = ref<Notification['type'][]>([])
+  let fetchGeneration = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -72,6 +78,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const fetchNotifications = async (type: TypeSelection = currentType.value, nextPage = 1) => {
     if (!authStore.token) return
+    const requestGeneration = ++fetchGeneration
     loading.value = true
     try {
       const types = Array.isArray(type) ? [...type] : type ? [type] : []
@@ -79,17 +86,18 @@ export const useNotificationStore = defineStore('notification', () => {
       currentType.value = Array.isArray(type) ? '' : type as NotificationFilterType
       page.value = nextPage
       const requestedTypes: NotificationFilterType[] = types.length ? types : ['']
-      const responses = await Promise.all(requestedTypes.map(async (requestedType) => {
+      const responses: NotificationResponse[] = await Promise.all(requestedTypes.map(async (requestedType) => {
         const params = new URLSearchParams({ page: String(nextPage) })
         if (requestedType) params.set('type', requestedType)
         const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('获取通知失败')
-        return res.json()
+        return res.json() as Promise<NotificationResponse>
       }))
+      if (requestGeneration !== fetchGeneration) return
       notifications.value = sortNotifications(responses.flatMap((data) => data.data || []))
-      total.value = responses.reduce((sum, data) => sum + (data.total || 0), 0)
+      total.value = responses.reduce((sum, data) => sum + (data.meta?.total || 0), 0)
     } finally {
-      loading.value = false
+      if (requestGeneration === fetchGeneration) loading.value = false
     }
   }
 
@@ -110,20 +118,28 @@ export const useNotificationStore = defineStore('notification', () => {
   const markAllRead = async (type: TypeSelection = currentTypes.value.length ? currentTypes.value : currentType.value) => {
     if (!authStore.token) return
     const types = Array.isArray(type) ? [...type] : type ? [type] : []
-    const responses = []
+    const responses: unknown[] = []
+    const successfulTypes = new Set<NotificationFilterType>()
     for (const requestedType of types.length ? types : ['']) {
       const query = requestedType ? `?type=${encodeURIComponent(requestedType)}` : ''
-      const res = await fetch(`${api.notifications.markAllRead}${query}`, { method: 'PUT', headers: authHeaders() })
-      if (!res.ok) continue
-      responses.push(await res.json().catch(() => null))
+      try {
+        const res = await fetch(`${api.notifications.markAllRead}${query}`, { method: 'PUT', headers: authHeaders() })
+        if (!res.ok) continue
+        successfulTypes.add(requestedType as NotificationFilterType)
+        responses.push(await res.json().catch(() => null))
+      } catch {
+        // Treat network failures like non-2xx responses so other requested types can still succeed.
+      }
     }
-    const selected = new Set(types)
-    const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && (!selected.size || selected.has(item.type))).length
-    const data = responses.at(-1)
+    if (!successfulTypes.size) throw new Error('标记通知失败')
+    const marksAllTypes = successfulTypes.has('')
+    const wasSuccessful = (item: Notification) => marksAllTypes || successfulTypes.has(item.type)
+    const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && wasSuccessful(item)).length
+    const data = responses.at(-1) as Record<string, unknown> | null | undefined
     const nextUnreadCount = data?.unread_total ?? data?.unread_count ?? data?.count
     const readAt = new Date().toISOString()
     notifications.value = notifications.value.map((item) =>
-      !selected.size || selected.has(item.type) ? { ...item, read_at: item.read_at || readAt } : item,
+      wasSuccessful(item) ? { ...item, read_at: item.read_at || readAt } : item,
     )
     unreadCount.value = typeof nextUnreadCount === 'number'
       ? nextUnreadCount

@@ -47,6 +47,25 @@ describe('useComments', () => {
     expect(state.roots.value.map(({ id }) => id)).toEqual(['new'])
   })
 
+  it('does not roll back the new page when an old load-more request fails', async () => {
+    let rejectMore!: (reason: unknown) => void
+    const pendingMore = new Promise<CommentRootList>((_, reject) => { rejectMore = reject })
+    const target = { kind: 'blog_post', resourceId: 'post' } as const
+    const api = client({ listRoots: vi.fn()
+      .mockResolvedValueOnce(roots([comment('oldest')], target, 1, 21))
+      .mockReturnValueOnce(pendingMore)
+      .mockResolvedValueOnce(roots([comment('newest')], target, 1, 1)) })
+    const state = useComments(ref(target), api)
+    await state.load()
+    const loadMore = state.loadMore()
+    await state.setSort('newest')
+    rejectMore(new Error('stale page failed'))
+    await expect(loadMore).rejects.toThrow('stale page failed')
+
+    expect(state.page.value).toBe(1)
+    expect(state.roots.value.map(({ id }) => id)).toEqual(['newest'])
+  })
+
   it('merges and sorts expanded replies into one child array', async () => {
     const root = comment('root', { replies: [comment('child-2', { root_id: 'root', created_at: '2026-01-02T00:00:00Z' })] })
     const api = client({
@@ -111,6 +130,51 @@ describe('useComments', () => {
     expect(state.roots.value[0]?.reply_count).toBe(5)
     expect(state.target.value?.comment_count).toBe(2)
     expect(state.replyState('root')).toMatchObject({ expanded: true, page: 1, hasMore: false })
+  })
+
+  it('ignores a late child creation after switching targets', async () => {
+    let resolveCreate!: (value: CommentDTO) => void
+    const pendingCreate = new Promise<CommentDTO>((resolve) => { resolveCreate = resolve })
+    const target = ref<CommentTargetRef>({ kind: 'blog_post', resourceId: 'old' })
+    const api = client({
+      listRoots: vi.fn()
+        .mockResolvedValueOnce(roots([comment('old-root')], target.value))
+        .mockResolvedValueOnce(roots([comment('new-root')], { kind: 'video', resourceId: 'new' })),
+      create: vi.fn().mockReturnValue(pendingCreate),
+    })
+    const state = useComments(target, api)
+    await state.load()
+    const creation = state.create({ content: 'late', reply_to_id: 'old-root', mentions: [], attachment_ids: [] })
+    target.value = { kind: 'video', resourceId: 'new' }
+    await state.load()
+    resolveCreate(comment('late-child', { root_id: 'old-root' }))
+    await creation
+
+    expect(state.roots.value.map(({ id }) => id)).toEqual(['new-root'])
+    expect(state.target.value).toMatchObject({ resource_id: 'new', comment_count: 1 })
+  })
+
+  it('ignores a late child deletion after switching targets', async () => {
+    let resolveDelete!: (value: { ok: boolean }) => void
+    const pendingDelete = new Promise<{ ok: boolean }>((resolve) => { resolveDelete = resolve })
+    const oldChild = comment('old-child', { root_id: 'old-root' })
+    const target = ref<CommentTargetRef>({ kind: 'blog_post', resourceId: 'old' })
+    const api = client({
+      listRoots: vi.fn()
+        .mockResolvedValueOnce(roots([comment('old-root', { reply_count: 1, replies: [oldChild] })], target.value))
+        .mockResolvedValueOnce(roots([comment('new-root')], { kind: 'video', resourceId: 'new' })),
+      delete: vi.fn().mockReturnValue(pendingDelete),
+    })
+    const state = useComments(target, api)
+    await state.load()
+    const deletion = state.remove('old-child')
+    target.value = { kind: 'video', resourceId: 'new' }
+    await state.load()
+    resolveDelete({ ok: true })
+    await deletion
+
+    expect(state.roots.value.map(({ id }) => id)).toEqual(['new-root'])
+    expect(state.target.value).toMatchObject({ resource_id: 'new', comment_count: 1 })
   })
 
   it('optimistically likes once and rolls back the exact original values on failure', async () => {

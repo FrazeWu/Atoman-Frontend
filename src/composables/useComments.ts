@@ -64,10 +64,10 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
     }
   }
 
-  const load = async (reset = true) => {
+  const load = async (reset = true, pageToLoad?: number) => {
     const requestedTarget = toValue(targetSource)
     const requestedKey = targetKey(requestedTarget)
-    const requestedPage = reset ? 1 : Math.max(1, page.value)
+    const requestedPage = pageToLoad ?? (reset ? 1 : Math.max(1, page.value))
     const requestGeneration = reset ? ++generation : generation
     loading.value = true
     error.value = null
@@ -85,19 +85,13 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
       if (requestGeneration === generation && requestedKey === targetKey(toValue(targetSource))) error.value = caught
       throw caught
     } finally {
-      if (requestGeneration === generation) loading.value = false
+      if (requestGeneration === generation && requestedKey === targetKey(toValue(targetSource))) loading.value = false
     }
   }
 
   const loadMore = async () => {
     if (loading.value || !hasMore.value) return
-    page.value += 1
-    try {
-      await load(false)
-    } catch (caught) {
-      page.value -= 1
-      throw caught
-    }
+    await load(false, Math.max(1, page.value + 1))
   }
 
   const setSort = async (next: typeof sort.value) => {
@@ -131,7 +125,11 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
   }
 
   const create = async (input: CreateCommentInput) => {
-    const created = await client.create(toValue(targetSource), input)
+    const requestedTarget = toValue(targetSource)
+    const requestedKey = targetKey(requestedTarget)
+    const requestGeneration = generation
+    const created = await client.create(requestedTarget, input)
+    if (requestGeneration !== generation || requestedKey !== targetKey(toValue(targetSource))) return created
     if (created.root_id) {
       const root = roots.value.find(({ id }) => id === created.root_id)
       if (root && !root.replies.some(({ id }) => id === created.id)) {
@@ -152,8 +150,11 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
   }
 
   const remove = async (commentId: string) => {
+    const requestedKey = targetKey(toValue(targetSource))
+    const requestGeneration = generation
     const existing = findComment(commentId)
     await client.delete(commentId)
+    if (requestGeneration !== generation || requestedKey !== targetKey(toValue(targetSource))) return
     if (!existing?.root_id) {
       roots.value = roots.value.filter(({ id }) => id !== commentId)
     } else {

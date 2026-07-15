@@ -5,7 +5,8 @@ import { loginViaAPI } from './helpers/auth'
 const AUTH_FILE = './tests/e2e/.auth/admin.json'
 
 async function globalSetup(config: FullConfig) {
-  const browser = await chromium.launch()
+	if (process.env.E2E_SKIP_AUTH === '1') return
+	const browser = await chromium.launch()
   const context = await browser.newContext()
   const page = await context.newPage()
 

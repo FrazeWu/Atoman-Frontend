@@ -17,7 +17,7 @@ export interface TimelineRevisionProposal {
   applied_revision_id?: string | null
 }
 
-export interface TimelineProposalList { items: TimelineRevisionProposal[]; page: number; has_more: boolean }
+export interface TimelineProposalList { items: TimelineRevisionProposal[]; page: number; per_page: number; total: number; has_more: boolean }
 export interface CreateTimelineProposalInput {
   content: string
   evidence: string
@@ -31,8 +31,8 @@ const collection = (kind: TimelineProposalTargetKind, id: string) =>
   `${base}/timeline/${kind === 'event' ? 'events' : 'persons'}/${encodeURIComponent(id)}/revision-proposals`
 
 export const timelineRevisionProposalApi = {
-  list: (kind: TimelineProposalTargetKind, id: string, page = 1) =>
-    apiGet<TimelineProposalList>(`${collection(kind, id)}?page=${page}`),
+  list: (kind: TimelineProposalTargetKind, id: string, page = 1, pageSize = 20) =>
+    apiGet<TimelineProposalList>(`${collection(kind, id)}?page=${page}&page_size=${pageSize}`),
   create: (kind: TimelineProposalTargetKind, id: string, input: CreateTimelineProposalInput) =>
     apiPostJson<TimelineRevisionProposal>(collection(kind, id), input),
   decide: (commentId: string, decision: TimelineProposalDecision) =>

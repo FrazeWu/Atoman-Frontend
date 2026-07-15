@@ -181,7 +181,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) {
       subscriptions.value = []
-      return
+      return false
     }
     try {
       const res = await fetch(`${api.url}/feed/subscriptions`, {
@@ -190,9 +190,12 @@ export const useFeedStore = defineStore('feed', () => {
       if (res.ok) {
         const data = await res.json()
         subscriptions.value = data.data || []
+        return true
       }
+      return false
     } catch (e) {
       console.error('Failed to fetch subscriptions', e)
+      return false
     }
   }
 
@@ -200,7 +203,7 @@ export const useFeedStore = defineStore('feed', () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) {
       groups.value = []
-      return
+      return false
     }
     try {
       const res = await fetch(`${api.url}/feed/groups`, {
@@ -209,9 +212,12 @@ export const useFeedStore = defineStore('feed', () => {
       if (res.ok) {
         const data = await res.json()
         groups.value = data.data || []
+        return true
       }
+      return false
     } catch (e) {
       console.error('Failed to fetch groups', e)
+      return false
     }
   }
 

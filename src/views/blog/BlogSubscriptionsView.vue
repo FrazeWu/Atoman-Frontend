@@ -14,7 +14,7 @@
       </template>
     </PPageHeader>
 
-    <section v-if="authStore.isAuthenticated" class="subscription-filters" aria-label="博客订阅筛选">
+    <section v-if="authStore.isAuthenticated && filtersReady" class="subscription-filters" aria-label="博客订阅筛选">
       <div class="subscription-kinds" role="group" aria-label="来源类别">
         <PTab
           v-for="kind in sourceKinds"
@@ -33,6 +33,7 @@
           type="button"
           class="filter-chip"
           :class="{ 'is-active': !selectedGroupId }"
+          :aria-pressed="!selectedGroupId"
           @click="selectGroup(null)"
         >
           不限分组
@@ -43,6 +44,7 @@
           type="button"
           class="filter-chip"
           :class="{ 'is-active': selectedGroupId === group.id }"
+          :aria-pressed="selectedGroupId === group.id"
           :data-group-id="group.id"
           @click="selectGroup(group.id)"
         >
@@ -57,6 +59,7 @@
           type="button"
           class="source-option"
           :class="{ 'is-active': selectedSourceId === subscription.id }"
+          :aria-pressed="selectedSourceId === subscription.id"
           :data-source-id="subscription.id"
           @click="selectSource(subscription.id)"
         >
@@ -90,10 +93,22 @@
       description="登录后查看订阅内容"
     />
 
+    <PEmpty v-else-if="initializationError" title="加载失败">
+      <template #action>
+        <PButton data-testid="retry-initialization" outline @click="loadSources">重试</PButton>
+      </template>
+    </PEmpty>
+
     <PEmpty
       v-else-if="!visibleSubscriptions.length"
       :title="`暂无${currentKindLabel}订阅`"
     />
+
+    <PEmpty v-else-if="timelineError && !posts.length" title="加载失败">
+      <template #action>
+        <PButton data-testid="retry-timeline" outline @click="retryTimeline">重试</PButton>
+      </template>
+    </PEmpty>
 
     <PEmpty v-else-if="!posts.length" title="暂无更新" />
 
@@ -146,7 +161,10 @@
       </PEntry>
     </div>
 
-    <div v-if="hasMore && !loading" class="load-more-row">
+    <div v-if="timelineError && posts.length && !loading" class="load-more-row">
+      <PButton data-testid="retry-timeline" outline @click="retryTimeline">重试</PButton>
+    </div>
+    <div v-else-if="hasMore && !loading" class="load-more-row">
       <PButton data-testid="load-more" outline @click="loadMore">加载更多</PButton>
     </div>
     <div v-else-if="loading && posts.length" class="load-more-row">
@@ -219,6 +237,9 @@ const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
 const filtersReady = ref(false)
+const initializationError = ref(false)
+const timelineError = ref(false)
+const failedAppendPage = ref<number | null>(null)
 let timelineRequestId = 0
 
 const sourceTitle = (subscription: Subscription) => subscriptionDisplayTitle(subscription)
@@ -291,7 +312,7 @@ const formatDate = (dateStr?: string) => {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
-const fetchTimeline = async (append = false) => {
+const fetchTimeline = async (append = false, targetPage = append ? page.value + 1 : 1) => {
   if (!authStore.isAuthenticated) {
     loading.value = false
     return
@@ -301,9 +322,14 @@ const fetchTimeline = async (append = false) => {
   const sourceType = currentKindConfig.value.sourceType
   const sourceId = selectedSourceId.value
   const groupId = selectedGroupId.value
+  if (!append) {
+    posts.value = []
+    hasMore.value = false
+  }
+  timelineError.value = false
+  failedAppendPage.value = null
   loading.value = true
-  if (!append) page.value = 1
-  const requestPage = page.value
+  const requestPage = targetPage
   try {
     const params = new URLSearchParams({
       content_type: 'blog',
@@ -317,25 +343,39 @@ const fetchTimeline = async (append = false) => {
     const res = await fetch(`${api.feed.timeline}?${params}`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    if (res.ok) {
-      const payload = await res.json()
-      if (requestId !== timelineRequestId) return
-      const nextPosts = ((payload.data || []) as TimelineItem[])
-        .filter((item) => item.type === 'post' && item.post)
-        .map((item) => item.post as Post)
-      posts.value = append ? [...posts.value, ...nextPosts] : nextPosts
-      hasMore.value = payload.meta?.has_more === true
+    if (!res.ok) {
+      if (requestId === timelineRequestId) {
+        timelineError.value = true
+        failedAppendPage.value = append ? requestPage : null
+      }
+      return
     }
+    const payload = await res.json()
+    if (requestId !== timelineRequestId) return
+    const nextPosts = ((payload.data || []) as TimelineItem[])
+      .filter((item) => item.type === 'post' && item.post)
+      .map((item) => item.post as Post)
+    posts.value = append ? [...posts.value, ...nextPosts] : nextPosts
+    page.value = requestPage
+    hasMore.value = payload.meta?.has_more === true
   } catch (error) {
     console.error('Failed to fetch timeline:', error)
+    if (requestId === timelineRequestId) {
+      timelineError.value = true
+      failedAppendPage.value = append ? requestPage : null
+    }
   } finally {
     if (requestId === timelineRequestId) loading.value = false
   }
 }
 
 const loadMore = () => {
-  page.value += 1
-  void fetchTimeline(true)
+  void fetchTimeline(true, page.value + 1)
+}
+
+const retryTimeline = () => {
+  const targetPage = failedAppendPage.value
+  void fetchTimeline(targetPage !== null, targetPage ?? 1)
 }
 
 watch(
@@ -372,15 +412,30 @@ watch(
   { immediate: true },
 )
 
-onMounted(async () => {
+const loadSources = async () => {
+  initializationError.value = false
+  loading.value = true
+  const [subscriptionsLoaded, groupsLoaded] = await Promise.all([
+    feedStore.fetchSubscriptions(),
+    feedStore.fetchGroups(),
+  ])
+  if (subscriptionsLoaded && groupsLoaded) {
+    filtersReady.value = true
+    return
+  }
+  filtersReady.value = false
+  initializationError.value = true
+  loading.value = false
+}
+
+onMounted(() => {
   if (!authStore.isAuthenticated) {
     loading.value = false
     return
   }
   void feedStore.fetchBookmarkedPostIds()
   void feedStore.fetchReadingListIds()
-  await Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
-  filtersReady.value = true
+  void loadSources()
 })
 </script>
 

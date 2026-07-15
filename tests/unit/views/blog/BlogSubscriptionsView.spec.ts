@@ -137,7 +137,7 @@ describe('BlogSubscriptionsView', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     bookmarkOpen.mockReset()
-    fetchMock.mockResolvedValue(timelineResponse())
+    fetchMock.mockImplementation(() => Promise.resolve(timelineResponse()))
     vi.stubGlobal('fetch', fetchMock)
 
     pinia = createPinia()
@@ -153,8 +153,8 @@ describe('BlogSubscriptionsView', () => {
       { id: 'group-people', user_id: 'viewer', name: '人物', created_at: '', updated_at: '' },
       { id: 'group-writing', user_id: 'viewer', name: '写作', created_at: '', updated_at: '' },
     ]
-    vi.spyOn(feedStore, 'fetchSubscriptions').mockResolvedValue(undefined)
-    vi.spyOn(feedStore, 'fetchGroups').mockResolvedValue(undefined)
+    vi.spyOn(feedStore, 'fetchSubscriptions').mockResolvedValue(true)
+    vi.spyOn(feedStore, 'fetchGroups').mockResolvedValue(true)
     vi.spyOn(feedStore, 'fetchBookmarkedPostIds').mockResolvedValue(undefined)
     vi.spyOn(feedStore, 'fetchReadingListIds').mockResolvedValue(undefined)
   })
@@ -168,12 +168,14 @@ describe('BlogSubscriptionsView', () => {
     vi.mocked(feedStore.fetchSubscriptions).mockImplementation(async () => {
       await subscriptionsLoaded.promise
       feedStore.subscriptions = subscriptions
+      return true
     })
     vi.mocked(feedStore.fetchGroups).mockImplementation(async () => {
       await groupsLoaded.promise
       feedStore.groups = [
         { id: 'group-people', user_id: 'viewer', name: '人物', created_at: '', updated_at: '' },
       ]
+      return true
     })
 
     await mountView('/posts/subscriptions?kind=author&group=group-people&source=sub-author')
@@ -196,6 +198,30 @@ describe('BlogSubscriptionsView', () => {
     expect(timelineUrls()).toHaveLength(1)
     expect(timelineUrls()[0]).toContain('group_id=group-people')
     expect(timelineUrls()[0]).toContain('source_id=sub-author')
+  })
+
+  it.each([
+    { failedMethod: 'fetchSubscriptions' as const },
+    { failedMethod: 'fetchGroups' as const },
+  ])('$failedMethod 加载失败时保留 URL 并提供重试', async ({ failedMethod }) => {
+    const feedStore = useFeedStore()
+    vi.mocked(feedStore[failedMethod]).mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    const wrapper = await mountView('/posts/subscriptions?kind=author&group=missing&source=missing&keep=1')
+
+    expect(wrapper.text()).toContain('加载失败')
+    expect(wrapper.text()).not.toContain('暂无作者订阅')
+    expect(router.currentRoute.value.query).toEqual({
+      kind: 'author',
+      group: 'missing',
+      source: 'missing',
+      keep: '1',
+    })
+    expect(timelineUrls()).toHaveLength(0)
+
+    await wrapper.get('[data-testid="retry-initialization"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ kind: 'author', keep: '1' })
+    expect(timelineUrls()).toHaveLength(1)
   })
 
   it.each([
@@ -287,13 +313,18 @@ describe('BlogSubscriptionsView', () => {
   it('分组和单一来源筛选写入 URL，并传给时间线请求', async () => {
     const wrapper = await mountView('/posts/subscriptions?kind=channel')
 
+    expect(wrapper.get('.filter-chip').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-group-id="group-writing"]').attributes('aria-pressed')).toBe('false')
+
     await wrapper.get('[data-group-id="group-writing"]').trigger('click')
     await flushPromises()
+    expect(wrapper.get('[data-group-id="group-writing"]').attributes('aria-pressed')).toBe('true')
     expect(router.currentRoute.value.query).toEqual({ kind: 'channel', group: 'group-writing' })
     expect(timelineUrls().at(-1)).toContain('group_id=group-writing')
 
     await wrapper.get('[data-source-id="sub-channel"]').trigger('click')
     await flushPromises()
+    expect(wrapper.get('[data-source-id="sub-channel"]').attributes('aria-pressed')).toBe('true')
     expect(router.currentRoute.value.query).toEqual({
       kind: 'channel',
       group: 'group-writing',
@@ -301,6 +332,27 @@ describe('BlogSubscriptionsView', () => {
     })
     expect(timelineUrls().at(-1)).toContain('source_type=internal_channel')
     expect(timelineUrls().at(-1)).toContain('source_id=sub-channel')
+  })
+
+  it('切换筛选请求失败时立即清除旧内容和加载更多', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('source_type=internal_user')) {
+        return Promise.resolve(timelineResponse([
+          { type: 'post', post: makePost('post-author', '作者旧文章') },
+        ], true))
+      }
+      return Promise.resolve(new Response(null, { status: 503 }))
+    })
+    const wrapper = await mountView('/posts/subscriptions?kind=author')
+    expect(wrapper.text()).toContain('作者旧文章')
+    expect(wrapper.find('[data-testid="load-more"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="kind-channel"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('作者旧文章')
+    expect(wrapper.text()).toContain('加载失败')
+    expect(wrapper.find('[data-testid="load-more"]').exists()).toBe(false)
   })
 
   it('严格使用 meta.has_more 控制加载更多', async () => {
@@ -312,6 +364,37 @@ describe('BlogSubscriptionsView', () => {
 
     expect(wrapper.text()).toContain('一篇更新')
     expect(wrapper.get('[data-testid="load-more"]').exists()).toBe(true)
+  })
+
+  it('分页失败后不推进页码，重试仍请求同一页且不混入失败数据', async () => {
+    let pageTwoAttempts = 0
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('page=1')) {
+        return Promise.resolve(timelineResponse([
+          { type: 'post', post: makePost('post-1', '第一页文章') },
+        ], true))
+      }
+      pageTwoAttempts += 1
+      if (pageTwoAttempts === 1) return Promise.resolve(new Response(null, { status: 503 }))
+      return Promise.resolve(timelineResponse([
+        { type: 'post', post: makePost('post-2', '第二页文章') },
+      ], false))
+    })
+    const wrapper = await mountView('/posts/subscriptions?kind=author')
+
+    await wrapper.get('[data-testid="load-more"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('第一页文章')
+    expect(wrapper.text()).not.toContain('第二页文章')
+
+    await wrapper.get('[data-testid="retry-timeline"]').trigger('click')
+    await flushPromises()
+
+    const pages = timelineUrls().map((url) => new URL(url, 'http://localhost').searchParams.get('page'))
+    expect(pages).toEqual(['1', '2', '2'])
+    expect(wrapper.text()).toContain('第一页文章')
+    expect(wrapper.text()).toContain('第二页文章')
+    expect(wrapper.findAll('.p-entry')).toHaveLength(2)
   })
 
   it('快速切换类别时只采用最新时间线响应', async () => {
@@ -341,9 +424,9 @@ describe('BlogSubscriptionsView', () => {
   })
 
   it('保留文章点击、键盘打开、收藏和稍后阅读交互', async () => {
-    fetchMock.mockResolvedValue(timelineResponse([
+    fetchMock.mockImplementation(() => Promise.resolve(timelineResponse([
       { type: 'post', post: makePost('post-1', '交互文章') },
-    ]))
+    ])))
     const feedStore = useFeedStore()
     const toggleReadingListItem = vi.spyOn(feedStore, 'toggleReadingListItem').mockResolvedValue(true)
     const uiStore = useUIStore()
@@ -362,6 +445,7 @@ describe('BlogSubscriptionsView', () => {
     expect(router.currentRoute.value.path).toBe('/posts/post/post-1')
 
     await router.replace('/posts/subscriptions?kind=author')
+    await flushPromises()
     await wrapper.get('.p-entry').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/posts/post/post-1')

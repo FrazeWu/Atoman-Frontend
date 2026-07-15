@@ -19,6 +19,46 @@ describe('feed store', () => {
     authenticate()
   })
 
+  it('returns true when subscriptions and groups load successfully', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'sub-1' }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'group-1' }] }), { status: 200 }))
+    const feed = useFeedStore()
+
+    const [subscriptionsLoaded, groupsLoaded] = await Promise.all([
+      feed.fetchSubscriptions(),
+      feed.fetchGroups(),
+    ])
+
+    expect(subscriptionsLoaded).toBe(true)
+    expect(groupsLoaded).toBe(true)
+    expect(feed.subscriptions).toHaveLength(1)
+    expect(feed.groups).toHaveLength(1)
+  })
+
+  it('returns false when subscriptions and groups return non-2xx responses', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+    const feed = useFeedStore()
+
+    const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
+
+    expect(results).toEqual([false, false])
+  })
+
+  it('returns false when subscriptions and groups fail with network errors', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new Error('subscriptions offline'))
+      .mockRejectedValueOnce(new Error('groups offline'))
+    const feed = useFeedStore()
+
+    const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
+
+    expect(results).toEqual([false, false])
+  })
+
   it('adds RSS subscriptions through the v1 feed endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'sub-1' } }), { status: 201 }))

@@ -143,6 +143,8 @@
         />
       </div>
 
+      <p v-if="markAllError" role="alert" class="a-error">{{ markAllError }}</p>
+
       <div v-if="loadingTimeline" class="feed-loading">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
@@ -422,6 +424,7 @@ const loadingTimeline = ref(false)
 const markingAllRead = ref(false)
 const addingSubscription = ref(false)
 const allRead = ref(false)
+const markAllError = ref('')
 const showAddModal = ref(false)
 const showManageSheet = ref(false)
 const manageBusy = ref(false)
@@ -439,6 +442,31 @@ const selectedSource = ref<FeedArticleSource | null>(null)
 const sourceArticles = ref<TimelineItem[]>([])
 const sourceArticlesLoading = ref(false)
 const sourceSubscribeBusy = ref(false)
+let timelineRequestSequence = 0
+let readStateGeneration = 0
+let unreadStateRequestSequence = 0
+const pendingReadMutations = new Set<Promise<unknown>>()
+
+const trackReadMutation = <T>(mutation: Promise<T>) => {
+  const tracked = mutation.finally(() => pendingReadMutations.delete(tracked))
+  pendingReadMutations.add(tracked)
+  return tracked
+}
+
+const waitForReadMutations = async () => {
+  while (pendingReadMutations.size > 0) {
+    await Promise.allSettled([...pendingReadMutations])
+  }
+}
+
+const syncLocalReadState = (item: TimelineItem, nextIsRead: boolean) => {
+  if (item.is_read === nextIsRead) return false
+  item.is_read = nextIsRead
+  readStateGeneration += 1
+  unreadStateRequestSequence += 1
+  if (!nextIsRead) allRead.value = false
+  return true
+}
 
 const headerRef = ref<HTMLElement | null>(null)
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -455,8 +483,8 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
   selectedArticle.value = item
   showArticleSheet.value = true
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
-    item.is_read = true
-    void feedStore.markItemsRead([item.feed_item.id])
+    syncLocalReadState(item, true)
+    void trackReadMutation(feedStore.markItemsRead([item.feed_item.id])).then(refreshAllReadState)
   }
 }
 
@@ -478,8 +506,8 @@ const openSourceArticle = (item: TimelineItem) => {
   selectedArticle.value = item
   showArticleSheet.value = true
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
-    item.is_read = true
-    void feedStore.markItemsRead([item.feed_item.id])
+    syncLocalReadState(item, true)
+    void trackReadMutation(feedStore.markItemsRead([item.feed_item.id])).then(refreshAllReadState)
   }
 }
 
@@ -872,11 +900,12 @@ const toggleReadingList = async (feedItemId: string) => {
 const toggleRead = (item: TimelineItem) => {
   if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item) return
   const id = item.feed_item.id
-  item.is_read = !item.is_read
-  if (item.is_read) {
-    void feedStore.markItemsRead([id])
+  const nextIsRead = !item.is_read
+  if (!syncLocalReadState(item, nextIsRead)) return
+  if (nextIsRead) {
+    void trackReadMutation(feedStore.markItemsRead([id])).then(refreshAllReadState)
   } else {
-    void feedStore.markItemsUnread([id])
+    void trackReadMutation(feedStore.markItemsUnread([id]))
   }
 }
 
@@ -947,7 +976,9 @@ const changePage = async (page: number) => {
   await scrollToTop()
 }
 
-const fetchTimeline = async () => {
+const fetchTimeline = async (refreshUnreadState = true) => {
+  const requestSequence = ++timelineRequestSequence
+  const requestReadStateGeneration = readStateGeneration
   loadingTimeline.value = true
 
   try {
@@ -970,6 +1001,10 @@ const fetchTimeline = async () => {
     const response = await fetch(`${API_URL}/feed/timeline?${params}`, { headers })
     if (response.ok) {
       const data = await response.json()
+      if (
+        requestSequence !== timelineRequestSequence
+        || requestReadStateGeneration !== readStateGeneration
+      ) return
       const items: TimelineItem[] = data.data || []
       const total = data.total ?? data.meta?.total ?? 0
       const totalPages = Math.max(1, Math.ceil(total / pageLimit))
@@ -982,12 +1017,25 @@ const fetchTimeline = async () => {
       timeline.value = items
       totalItems.value = total
       await applyAutomationRules(items)
+      if (refreshUnreadState) void refreshAllReadState()
     }
   } catch (error) {
     console.error(error)
   } finally {
-    loadingTimeline.value = false
+    if (requestSequence === timelineRequestSequence) loadingTimeline.value = false
   }
+}
+
+const refreshAllReadState = async () => {
+  const requestSequence = ++unreadStateRequestSequence
+  const requestReadStateGeneration = readStateGeneration
+  const unreadCount = await feedStore.fetchUnreadFeedItemCount()
+  if (
+    unreadCount === null
+    || requestSequence !== unreadStateRequestSequence
+    || requestReadStateGeneration !== readStateGeneration
+  ) return
+  allRead.value = unreadCount === 0
 }
 
 const applyAutomationRules = async (items: TimelineItem[]) => {
@@ -1012,12 +1060,13 @@ const applyAutomationRules = async (items: TimelineItem[]) => {
       && item.feed_item
       && pendingReadIds.includes(item.feed_item.id)
     ) {
-      item.is_read = true
+      syncLocalReadState(item, true)
     }
   })
 
   if (pendingReadIds.length) {
-    await feedStore.markItemsRead(pendingReadIds)
+    await trackReadMutation(feedStore.markItemsRead(pendingReadIds))
+    await refreshAllReadState()
   }
 
   const pendingReadingListIds = items
@@ -1043,8 +1092,8 @@ const toggleUnreadOnly = () => {
 
 const onItemClick = (item: TimelineItem) => {
   if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
-  item.is_read = true
-  void feedStore.markItemsRead([item.feed_item.id])
+  syncLocalReadState(item, true)
+  void trackReadMutation(feedStore.markItemsRead([item.feed_item.id])).then(refreshAllReadState)
 }
 
 const playPodcast = (feedItem: FeedItem, event: Event) => {
@@ -1063,8 +1112,8 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
     (entry) => entry.type === 'feed_item' && entry.feed_item?.id === feedItem.id,
   )
   if (authStore.isAuthenticated && timelineItem && !timelineItem.is_read) {
-    timelineItem.is_read = true
-    void feedStore.markItemsRead([feedItem.id])
+    syncLocalReadState(timelineItem, true)
+    void trackReadMutation(feedStore.markItemsRead([feedItem.id])).then(refreshAllReadState)
   }
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
@@ -1072,21 +1121,39 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
 }
 
 const toggleAllRead = async () => {
+  if (markingAllRead.value) return
+  markAllError.value = ''
+  const bulkStartGeneration = readStateGeneration
+  const nextAllRead = !allRead.value
   markingAllRead.value = true
   try {
-    if (allRead.value) {
-      await feedStore.markAllFeedUnread()
-      timeline.value.forEach((item) => {
-        if (item.type === 'feed_item') item.is_read = false
-      })
-      allRead.value = false
-    } else {
-      await feedStore.markAllFeedRead()
-      timeline.value.forEach((item) => {
-        if (item.type === 'feed_item') item.is_read = true
-      })
-      allRead.value = true
+    const success = nextAllRead
+      ? await feedStore.markAllFeedRead()
+      : await feedStore.markAllFeedUnread()
+    if (!success) {
+      markAllError.value = '操作失败，请重试'
+      return
     }
+    if (readStateGeneration !== bulkStartGeneration) {
+      while (true) {
+        await waitForReadMutations()
+        const reconciliationGeneration = readStateGeneration
+        await fetchTimeline(false)
+        await waitForReadMutations()
+        await refreshAllReadState()
+        if (
+          pendingReadMutations.size === 0
+          && readStateGeneration === reconciliationGeneration
+        ) break
+      }
+      return
+    }
+    readStateGeneration += 1
+    unreadStateRequestSequence += 1
+    timeline.value.forEach((item) => {
+      if (item.type === 'feed_item') item.is_read = nextAllRead
+    })
+    allRead.value = nextAllRead
   } finally {
     markingAllRead.value = false
   }

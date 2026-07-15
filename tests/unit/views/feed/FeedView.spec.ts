@@ -1687,4 +1687,451 @@ describe('FeedView', () => {
 
     expect(wrapper.get('[data-test="empty-state"]').text()).toContain('没有找到“missing topic”')
   })
+
+  it.each([
+    { action: 'read', initiallyRead: false, status: 200, expectedRead: true },
+    { action: 'read', initiallyRead: false, status: 500, expectedRead: false },
+    { action: 'unread', initiallyRead: true, status: 200, expectedRead: false },
+    { action: 'unread', initiallyRead: true, status: 500, expectedRead: true },
+  ] as const)('keeps item and all-read state server-confirmed when mark-all-$action returns $status', async ({
+    action,
+    initiallyRead,
+    status,
+    expectedRead,
+  }) => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      if (String(input).endsWith(`/feed/timeline/mark-all-${action}`) && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { ok: status === 200 } }), { status })
+      }
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-1',
+            feed_source_id: 'source-1',
+            guid: 'feed-item-1',
+            title: '订阅条目',
+            link: 'https://example.com/item',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: initiallyRead,
+        }],
+        meta: { page: 1, page_size: 20, total: 1, has_more: false },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: {
+            props: ['label', 'loading'],
+            emits: ['click'],
+            template: '<button type="button" :disabled="loading" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    wrapper.vm.$.setupState.allRead = initiallyRead
+    await wrapper.vm.$.setupState.toggleAllRead()
+
+    expect(wrapper.vm.$.setupState.timeline[0].is_read).toBe(expectedRead)
+    expect(wrapper.vm.$.setupState.allRead).toBe(expectedRead)
+  })
+
+  it('ignores a repeated mark-all trigger while the first request is pending and recovers afterward', async () => {
+    let resolveMarkAllRead!: (response: Response) => void
+    const pendingMarkAllRead = new Promise<Response>((resolve) => {
+      resolveMarkAllRead = resolve
+    })
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline/mark-all-read') && init?.method === 'POST') {
+        return pendingMarkAllRead
+      }
+      if (url.endsWith('/feed/timeline/mark-all-unread') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item',
+          feed_item: {
+            id: 'feed-item-1',
+            feed_source_id: 'source-1',
+            guid: 'feed-item-1',
+            title: '订阅条目',
+            link: 'https://example.com/item',
+            published_at: '2026-06-16T00:00:00Z',
+            fetched_at: '2026-06-16T00:00:00Z',
+          },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        }],
+        meta: { page: 1, page_size: 20, total: 1, has_more: false },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: true,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    const first = wrapper.vm.$.setupState.toggleAllRead()
+    const repeated = wrapper.vm.$.setupState.toggleAllRead()
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.filter(([input, init]) => (
+      String(input).endsWith('/feed/timeline/mark-all-read') && init?.method === 'POST'
+    ))).toHaveLength(1)
+
+    resolveMarkAllRead(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }))
+    await Promise.all([first, repeated])
+
+    await wrapper.vm.$.setupState.toggleAllRead()
+    expect(vi.mocked(globalThis.fetch).mock.calls.filter(([input, init]) => (
+      String(input).endsWith('/feed/timeline/mark-all-unread') && init?.method === 'POST'
+    ))).toHaveLength(1)
+    expect(wrapper.vm.$.setupState.timeline[0].is_read).toBe(false)
+    expect(wrapper.vm.$.setupState.allRead).toBe(false)
+  })
+
+  it('uses the global unread probe so initially all-read data triggers mark-all-unread', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('source_type=external_rss') && url.includes('unread_only=true')) {
+        return new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 })
+      }
+      if (url.endsWith('/feed/timeline/mark-all-unread') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item',
+          feed_item: { id: 'feed-item-1', title: '已读条目', link: 'https://example.com/1' },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: true,
+        }],
+        meta: { total: 1 },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true, PPageHeader: true, PSelect: true,
+        PField: true, PClip: true, PPress: true, PBadge: true, SubscriptionAddSheet: true,
+        SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+
+    await wrapper.vm.$.setupState.toggleAllRead()
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.some(([input, init]) => (
+      String(input).endsWith('/feed/timeline/mark-all-unread') && init?.method === 'POST'
+    ))).toBe(true)
+  })
+
+  it('switches the next bulk action to read after one item is marked unread', async () => {
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true, PPageHeader: true, PSelect: true,
+        PField: true, PClip: true, PPress: true, PBadge: true, SubscriptionAddSheet: true,
+        SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+    const item = {
+      type: 'feed_item',
+      feed_item: { id: 'feed-item-1' },
+      published_at: '2026-06-16T00:00:00Z',
+      is_read: true,
+    }
+    wrapper.vm.$.setupState.timeline = [item]
+    wrapper.vm.$.setupState.allRead = true
+
+    wrapper.vm.$.setupState.toggleRead(item)
+    await wrapper.vm.$.setupState.toggleAllRead()
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.some(([input, init]) => (
+      String(input).endsWith('/feed/timeline/mark-all-read') && init?.method === 'POST'
+    ))).toBe(true)
+  })
+
+  it('ignores a timeline response started before a successful bulk mutation', async () => {
+    let resolveStaleTimeline!: (response: Response) => void
+    const staleTimeline = new Promise<Response>((resolve) => { resolveStaleTimeline = resolve })
+    let deferTimeline = false
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline/mark-all-read') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })
+      }
+      if (url.includes('source_type=external_rss') && url.includes('unread_only=true')) {
+        return new Response(JSON.stringify({ data: [{ id: 'feed-item-1' }], meta: { total: 1 } }), { status: 200 })
+      }
+      if (deferTimeline) return staleTimeline
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item', feed_item: { id: 'feed-item-1', title: '条目' },
+          published_at: '2026-06-16T00:00:00Z', is_read: false,
+        }],
+        meta: { total: 1 },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true, PPageHeader: true, PSelect: true,
+        PField: true, PClip: true, PPress: true, PBadge: true, SubscriptionAddSheet: true,
+        SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+
+    deferTimeline = true
+    const pendingLoad = wrapper.vm.$.setupState.fetchTimeline()
+    await wrapper.vm.$.setupState.toggleAllRead()
+    resolveStaleTimeline(new Response(JSON.stringify({
+      data: [{
+        type: 'feed_item', feed_item: { id: 'feed-item-1', title: '旧条目' },
+        published_at: '2026-06-16T00:00:00Z', is_read: false,
+      }],
+      meta: { total: 1 },
+    }), { status: 200 }))
+    await pendingLoad
+
+    expect(wrapper.vm.$.setupState.timeline[0].is_read).toBe(true)
+    expect(wrapper.vm.$.setupState.allRead).toBe(true)
+  })
+
+  it('shows a bulk failure and clears it on the next successful attempt', async () => {
+    let bulkAttempt = 0
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline/mark-all-read') && init?.method === 'POST') {
+        bulkAttempt += 1
+        return new Response(JSON.stringify({ data: { ok: bulkAttempt > 1 } }), {
+          status: bulkAttempt === 1 ? 500 : 200,
+        })
+      }
+      if (url.includes('source_type=external_rss') && url.includes('unread_only=true')) {
+        return new Response(JSON.stringify({ data: [{}], meta: { total: 1 } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item', feed_item: { id: 'feed-item-1', title: '条目' },
+          published_at: '2026-06-16T00:00:00Z', is_read: false,
+        }],
+        meta: { total: 1 },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true,
+        PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+        PSelect: true, PField: true, PClip: true,
+        PPress: { props: ['label'], template: '<button @click="$emit(\'click\')">{{ label }}</button>' },
+        PBadge: true, SubscriptionAddSheet: true, SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+
+    await wrapper.vm.$.setupState.toggleAllRead()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('操作失败，请重试')
+
+    await wrapper.vm.$.setupState.toggleAllRead()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).not.toContain('操作失败，请重试')
+    expect(wrapper.vm.$.setupState.allRead).toBe(true)
+  })
+
+  it.each([
+    'openArticleSheet',
+    'openSourceArticle',
+    'onItemClick',
+    'playFeedItemFromSheet',
+  ] as const)('%s refreshes the authoritative state after reading the last unread item', async (entry) => {
+    let unreadProbeCalls = 0
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('source_type=external_rss') && url.includes('unread_only=true')) {
+        unreadProbeCalls += 1
+        return new Response(JSON.stringify({
+          data: unreadProbeCalls === 1 ? [{}] : [],
+          meta: { total: unreadProbeCalls === 1 ? 1 : 0 },
+        }), { status: 200 })
+      }
+      if (url.endsWith('/feed/timeline/mark-read') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item',
+          feed_item: { id: 'feed-item-1', title: '最后未读', link: 'https://example.com/1' },
+          published_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        }],
+        meta: { total: 1 },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true, PPageHeader: true, PSelect: true,
+        PField: true, PClip: true, PPress: true, PBadge: true, SubscriptionAddSheet: true,
+        SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+    usePlayerStore().playQueuedSong = vi.fn()
+    const item = wrapper.vm.$.setupState.timeline[0]
+
+    if (entry === 'playFeedItemFromSheet') wrapper.vm.$.setupState[entry](item.feed_item)
+    else wrapper.vm.$.setupState[entry](item)
+    await flushPromises()
+
+    expect(item.is_read).toBe(true)
+    expect(wrapper.vm.$.setupState.allRead).toBe(true)
+  })
+
+  it('keeps an implicit article read when an older timeline request finishes later', async () => {
+    let resolveStaleTimeline!: (response: Response) => void
+    const staleTimeline = new Promise<Response>((resolve) => { resolveStaleTimeline = resolve })
+    let deferTimeline = false
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('source_type=external_rss') && url.includes('unread_only=true')) {
+        return new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 })
+      }
+      if (url.endsWith('/feed/timeline/mark-read') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })
+      }
+      if (deferTimeline) return staleTimeline
+      return new Response(JSON.stringify({
+        data: [{
+          type: 'feed_item', feed_item: { id: 'feed-item-1', title: '条目' },
+          published_at: '2026-06-16T00:00:00Z', is_read: false,
+        }],
+        meta: { total: 1 },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true, PPageHeader: true, PSelect: true,
+        PField: true, PClip: true, PPress: true, PBadge: true, SubscriptionAddSheet: true,
+        SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+
+    deferTimeline = true
+    const pendingLoad = wrapper.vm.$.setupState.fetchTimeline()
+    wrapper.vm.$.setupState.openArticleSheet(wrapper.vm.$.setupState.timeline[0])
+    await flushPromises()
+    resolveStaleTimeline(new Response(JSON.stringify({
+      data: [{
+        type: 'feed_item', feed_item: { id: 'feed-item-1', title: '旧条目' },
+        published_at: '2026-06-16T00:00:00Z', is_read: false,
+      }],
+      meta: { total: 1 },
+    }), { status: 200 }))
+    await pendingLoad
+
+    expect(wrapper.vm.$.setupState.timeline[0].is_read).toBe(true)
+  })
+
+  it('reconciles with authoritative state when a single-item toggle happens during a bulk request', async () => {
+    let resolveBulkRead!: (response: Response) => void
+    const pendingBulkRead = new Promise<Response>((resolve) => { resolveBulkRead = resolve })
+    let resolveSingleUnread!: (response: Response) => void
+    const pendingSingleUnread = new Promise<Response>((resolve) => { resolveSingleUnread = resolve })
+    let timelineGetCalls = 0
+    let unreadProbeCalls = 0
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline/mark-all-read') && init?.method === 'POST') return pendingBulkRead
+      if (url.endsWith('/feed/timeline/mark-unread') && init?.method === 'POST') return pendingSingleUnread
+      if (url.includes('source_type=external_rss') && url.includes('unread_only=true')) {
+        unreadProbeCalls += 1
+        return new Response(JSON.stringify({ data: [{}], meta: { total: 1 } }), { status: 200 })
+      }
+      if (!url.includes('/feed/timeline?')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+
+      timelineGetCalls += 1
+      const reconciled = timelineGetCalls > 1
+      return new Response(JSON.stringify({
+        data: [
+          {
+            type: 'feed_item', feed_item: { id: 'feed-item-1', title: '条目一' },
+            published_at: '2026-06-16T00:00:00Z', is_read: reconciled,
+          },
+          {
+            type: 'feed_item', feed_item: { id: 'feed-item-2', title: '条目二' },
+            published_at: '2026-06-15T00:00:00Z', is_read: !reconciled,
+          },
+        ],
+        meta: { total: 2 },
+      }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, {
+      global: { stubs: {
+        PButton: true, PModal: true, PEmpty: true, PPageHeader: true, PSelect: true,
+        PField: true, PClip: true, PPress: true, PBadge: true, SubscriptionAddSheet: true,
+        SubscriptionManageSheet: true, FeedArticleSheet: true,
+      } },
+    })
+    await flushPromises()
+
+    const bulkRead = wrapper.vm.$.setupState.toggleAllRead()
+    wrapper.vm.$.setupState.toggleRead(wrapper.vm.$.setupState.timeline[1])
+    await flushPromises()
+    resolveBulkRead(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }))
+    await flushPromises()
+
+    expect(timelineGetCalls).toBe(1)
+    expect(unreadProbeCalls).toBe(1)
+
+    resolveSingleUnread(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }))
+    await bulkRead
+    await flushPromises()
+
+    expect(timelineGetCalls).toBe(2)
+    expect(unreadProbeCalls).toBe(2)
+    expect(wrapper.vm.$.setupState.timeline.map((item: { is_read: boolean }) => item.is_read)).toEqual([true, false])
+    expect(wrapper.vm.$.setupState.allRead).toBe(false)
+  })
 })

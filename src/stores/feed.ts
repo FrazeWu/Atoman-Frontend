@@ -434,28 +434,49 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
-  const markAllRead = async () => {
+  const markAllRead = async (): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/timeline/mark-all-read`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-all-read`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark all read', e)
     }
+    return false
   }
 
-  const markAllUnread = async () => {
+  const markAllUnread = async (): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/timeline/mark-all-unread`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-all-unread`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark all unread', e)
     }
+    return false
+  }
+
+  const fetchUnreadFeedItemCount = async (): Promise<number | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return null
+    try {
+      const res = await fetch(`${api.url}/feed/timeline?source_type=external_rss&unread_only=true&limit=1`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      const total = data.meta?.total
+      return typeof total === 'number' && Number.isFinite(total) && total >= 0 ? total : null
+    } catch (e) {
+      console.error('Failed to fetch unread feed item count', e)
+    }
+    return null
   }
 
   const subscribeToChannel = async (channelId: string): Promise<boolean> => {
@@ -1289,6 +1310,7 @@ export const useFeedStore = defineStore('feed', () => {
     markItemsUnread,
     markAllFeedRead: markAllRead,
     markAllFeedUnread: markAllUnread,
+    fetchUnreadFeedItemCount,
     // Health check
     healthChecking,
     checkSubscriptionHealth,

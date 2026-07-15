@@ -375,6 +375,82 @@ describe('feed store', () => {
     }))
   })
 
+  it.each([
+    { action: 'read', status: 200, expected: true },
+    { action: 'read', status: 500, expected: false },
+    { action: 'unread', status: 200, expected: true },
+    { action: 'unread', status: 500, expected: false },
+  ] as const)('reports mark-all-$action HTTP $status as $expected', async ({ action, status, expected }) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { ok: expected },
+    }), { status }))
+
+    const feed = useFeedStore()
+    const result = action === 'read'
+      ? await feed.markAllFeedRead()
+      : await feed.markAllFeedUnread()
+
+    expect(result).toBe(expected)
+  })
+
+  it.each(['read', 'unread'] as const)('reports mark-all-$action as failed when the request rejects', async (action) => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
+
+    const feed = useFeedStore()
+    const result = action === 'read'
+      ? await feed.markAllFeedRead()
+      : await feed.markAllFeedUnread()
+
+    expect(result).toBe(false)
+  })
+
+  it('loads the authoritative external RSS unread count with authentication', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: 'feed-item-1' }],
+      meta: { page: 1, page_size: 1, total: 7, has_more: true },
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const result = await feed.fetchUnreadFeedItemCount()
+
+    expect(result).toBe(7)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/feed/timeline?source_type=external_rss&unread_only=true&limit=1',
+      { headers: { Authorization: 'Bearer token' } },
+    )
+  })
+
+  it.each([
+    { total: 0, expected: 0 },
+    { total: null, expected: null },
+    { total: undefined, expected: null },
+    { total: '', expected: null },
+    { total: Number.POSITIVE_INFINITY, expected: null },
+  ])('parses unread total $total as $expected', async ({ total, expected }) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ meta: { total } }),
+    } as Response)
+
+    const feed = useFeedStore()
+    const result = await feed.fetchUnreadFeedItemCount()
+
+    expect(result).toBe(expected)
+  })
+
+  it.each(['read', 'unread'] as const)('posts mark-all-$action with authentication', async (action) => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }))
+
+    const feed = useFeedStore()
+    if (action === 'read') await feed.markAllFeedRead()
+    else await feed.markAllFeedUnread()
+
+    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/feed/timeline/mark-all-${action}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer token' },
+    })
+  })
+
   it('moves provider-created subscriptions into the selected group', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'sub-1' } }), { status: 201 }))

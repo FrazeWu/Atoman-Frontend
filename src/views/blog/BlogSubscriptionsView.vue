@@ -206,7 +206,7 @@ const fetchTimeline = async (append = false) => {
       } else {
         posts.value = extractedPosts
       }
-      hasMore.value = rawData.length === 12
+      hasMore.value = Boolean(d.meta?.has_more)
     }
   } catch (e) {
     console.error('Failed to fetch timeline:', e)

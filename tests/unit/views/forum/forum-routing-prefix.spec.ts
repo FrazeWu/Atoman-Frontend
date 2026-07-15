@@ -103,6 +103,7 @@ const mountWithRouter = async (
         CommentSection: {
           name: 'CommentSection',
           props: ['target', 'noun', 'markLabel'],
+          emits: ['marked-change'],
           template: '<section data-test="forum-comments" />',
         },
         PEntry: {
@@ -223,5 +224,10 @@ describe('forum 路由前缀', () => {
     expect(comments.props('noun')).toBe('回复')
     expect(comments.props('markLabel')).toBe('最佳回答')
     expect('fetchReplies' in forumStore).toBe(false)
+
+    comments.vm.$emit('marked-change', true)
+    expect(forumStore.currentTopic?.is_solved).toBe(true)
+    comments.vm.$emit('marked-change', false)
+    expect(forumStore.currentTopic?.is_solved).toBe(false)
   })
 })

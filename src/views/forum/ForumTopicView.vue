@@ -92,6 +92,7 @@
             :target="{ kind: 'forum_topic', resourceId: forumStore.currentTopic.id }"
             noun="回复"
             mark-label="最佳回答"
+            @marked-change="syncSolvedState"
           />
       </div>
     </template>
@@ -176,6 +177,10 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 const onScroll = () => {
   showBackTop.value = window.scrollY > 300
+}
+
+const syncSolvedState = (marked: boolean) => {
+  if (forumStore.currentTopic) forumStore.currentTopic.is_solved = marked
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────

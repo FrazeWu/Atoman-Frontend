@@ -70,4 +70,22 @@ describe('CommentSection', () => {
     await wrapper.get('[data-test="comment-submit"]').trigger('click')
     await vi.waitFor(() => expect(wrapper.get('textarea').element).toHaveValue(''))
   })
+
+  it('emits marked-change only after mark mutations succeed', async () => {
+	state.mark.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('failed'))
+    state.unmark.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('failed'))
+	const wrapper = mount(CommentSection, { props: { target: { kind: 'forum_topic', resourceId: 'topic-1' } } })
+	const thread = wrapper.findComponent({ name: 'CommentThread' })
+
+	thread.vm.$emit('mark', 'root')
+	await vi.waitFor(() => expect(wrapper.emitted('marked-change')).toEqual([[true]]))
+	thread.vm.$emit('mark', 'root')
+	await Promise.resolve()
+	expect(wrapper.emitted('marked-change')).toEqual([[true]])
+    thread.vm.$emit('unmark')
+    await vi.waitFor(() => expect(wrapper.emitted('marked-change')).toEqual([[true], [false]]))
+    thread.vm.$emit('unmark')
+    await Promise.resolve()
+    expect(wrapper.emitted('marked-change')).toEqual([[true], [false]])
+  })
 })

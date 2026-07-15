@@ -54,8 +54,8 @@
         @like="comments.toggleLike"
         @delete="comments.remove"
         @report="openReport"
-        @mark="comments.mark"
-        @unmark="comments.unmark"
+        @mark="markComment"
+        @unmark="unmarkComment"
         @expand="expandReplies"
         @more-replies="loadMoreReplies"
       />
@@ -96,7 +96,10 @@ const props = withDefaults(defineProps<{
   currentTime: undefined,
 })
 
-defineEmits<{ seek: [seconds: number] }>()
+const emit = defineEmits<{
+  seek: [seconds: number]
+  'marked-change': [marked: boolean]
+}>()
 
 const authStore = useAuthStore()
 const comments = useComments(() => props.target)
@@ -138,6 +141,24 @@ async function createReply(comment: CommentDTO, input: CreateCommentInput) {
 
 async function editComment(comment: CommentDTO, input: CreateCommentInput) {
   await comments.edit(comment.id, input)
+}
+
+async function markComment(commentId: string) {
+  try {
+    await comments.mark(commentId)
+    emit('marked-change', true)
+  } catch {
+    mutationError.value = '设置失败，请重试'
+  }
+}
+
+async function unmarkComment() {
+  try {
+    await comments.unmark()
+    emit('marked-change', false)
+  } catch {
+    mutationError.value = '取消失败，请重试'
+  }
 }
 
 function expandReplies(rootId: string) {

@@ -18,11 +18,17 @@
     </div>
 
     <PEmpty
+      v-else-if="loadError && !posts.length"
+      title="订阅内容加载失败"
+    />
+
+    <PEmpty
       v-else-if="!posts.length"
       title="暂无更新"
     />
 
     <div v-else>
+      <p v-if="loadError" class="a-error" role="alert" style="margin-bottom:1rem">{{ loadError }}</p>
       <PEntry
         v-for="(post, index) in posts"
         :key="post.id"
@@ -89,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
@@ -138,6 +144,8 @@ const posts = ref<Post[]>([])
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
+const loadError = ref('')
+let timelineRequestSequence = 0
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({
   items: posts,
@@ -177,14 +185,16 @@ const formatDate = (dateStr?: string) => {
 const fetchTimeline = async (append = false) => {
   if (!authStore.isAuthenticated) {
     loading.value = false
-    return
+    return false
   }
-
+  if (append && loading.value) return false
+  const requestSequence = ++timelineRequestSequence
+  const targetPage = append ? page.value + 1 : 1
   loading.value = true
-  if (!append) page.value = 1
+  loadError.value = ''
   try {
     const params = new URLSearchParams({
-      page: String(page.value),
+      page: String(targetPage),
       limit: '12',
     })
 
@@ -193,31 +203,35 @@ const fetchTimeline = async (append = false) => {
     }
 
     const res = await fetch(`${api.feed.timeline}?${params}`, { headers })
-    if (res.ok) {
-      const d = await res.json()
-      // timeline returns list of items with { type, post, rss_item, ... }
-      const rawData: TimelineItem[] = d.data || []
-      const extractedPosts: Post[] = rawData
-        .filter((item) => item.type === 'post' && item.post?.channel?.content_type === 'blog')
-        .map((item) => item.post as Post)
+    if (requestSequence !== timelineRequestSequence) return false
+    if (!res.ok) throw new Error(`Failed to fetch timeline (${res.status})`)
 
-      if (append) {
-        posts.value = [...posts.value, ...extractedPosts]
-      } else {
-        posts.value = extractedPosts
-      }
-      hasMore.value = Boolean(d.meta?.has_more)
-    }
-  } catch (e) {
-    console.error('Failed to fetch timeline:', e)
+    const d = await res.json()
+    if (requestSequence !== timelineRequestSequence) return false
+    const rawData: TimelineItem[] = d.data || []
+    const extractedPosts: Post[] = rawData
+      .filter((item) => item.type === 'post' && item.post?.channel?.content_type === 'blog')
+      .map((item) => item.post as Post)
+    const nextPosts = append ? [...posts.value, ...extractedPosts] : extractedPosts
+    const nextHasMore = Boolean(d.meta?.has_more)
+
+    posts.value = nextPosts
+    page.value = targetPage
+    hasMore.value = nextHasMore
+    return true
+  } catch {
+    if (requestSequence !== timelineRequestSequence) return false
+    loadError.value = '订阅内容加载失败'
+    return false
   } finally {
-    loading.value = false
+    if (requestSequence === timelineRequestSequence) {
+      loading.value = false
+    }
   }
 }
 
 const loadMore = () => {
-  page.value++
-  fetchTimeline(true)
+  void fetchTimeline(true)
 }
 
 onMounted(() => {
@@ -226,6 +240,10 @@ onMounted(() => {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
+})
+
+onUnmounted(() => {
+  timelineRequestSequence++
 })
 </script>
 

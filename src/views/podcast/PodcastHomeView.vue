@@ -18,12 +18,17 @@ const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podca
 const API_URL = useApiUrl()
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(false)
+const error = ref('')
 
 onMounted(async () => {
   loading.value = true
+  error.value = ''
   try {
     const res = await fetch(`${API_URL}/podcast/episodes`)
-    if (res.ok) episodes.value = await res.json()
+    if (!res.ok) throw new Error(`Failed to load podcast episodes (${res.status})`)
+    episodes.value = await res.json()
+  } catch {
+    error.value = '加载失败，请重试'
   } finally {
     loading.value = false
   }
@@ -54,6 +59,7 @@ function episodeCover(ep: PodcastEpisode) {
     <div v-if="loading" class="ph-state">
       <div v-for="i in 3" :key="i" class="a-skeleton" style="height: 10rem; margin-bottom: 1.5rem" />
     </div>
+    <div v-else-if="error" class="ph-state">{{ error }}</div>
     <div v-else-if="episodes.length === 0" class="ph-state">暂无节目</div>
 
     <div v-else class="ph-list">

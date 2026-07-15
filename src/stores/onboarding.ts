@@ -20,20 +20,39 @@ function resolveCompletedStorageKey(user: User | null) {
   return userKey ? `${completedStoragePrefix}${userKey}` : null
 }
 
-function readLocalCompletedAt(user: User | null) {
-  const key = resolveCompletedStorageKey(user)
-  if (!key) return null
-  return localStorage.getItem(key)
-}
-
-function rememberLocalCompletedAt(user: User | null, completedAt: string) {
+function clearLegacyCompletedAt(user: User | null) {
   const key = resolveCompletedStorageKey(user)
   if (!key) return
-  localStorage.setItem(key, completedAt)
+  localStorage.removeItem(key)
 }
 
 function isOnboardingStep(value: unknown): value is OnboardingStep {
   return typeof value === 'string' && onboardingSteps.includes(value as OnboardingStep)
+}
+
+function isValidRfc3339DateTime(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(value)
+  if (!match) return false
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText, offsetMinuteText] = match
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const hour = Number(hourText)
+  const minute = Number(minuteText)
+  const second = Number(secondText)
+  const offsetHour = offsetHourText ? Number(offsetHourText) : 0
+  const offsetMinute = offsetMinuteText ? Number(offsetMinuteText) : 0
+
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) return false
+  if (hour > 23 || minute > 59 || second > 59) return false
+  if (offsetHour > 23 || offsetMinute > 59) return false
+
+  return !Number.isNaN(Date.parse(value))
 }
 
 export const useOnboardingStore = defineStore('onboarding', () => {
@@ -45,27 +64,18 @@ export const useOnboardingStore = defineStore('onboarding', () => {
   const initialized = ref(false)
   const initializedForUserKey = ref<string | null>(null)
   const completing = ref(false)
+  let completionRequestSequence = 0
 
   const stepIndex = computed(() => onboardingSteps.indexOf(currentStep.value))
   const isLastStep = computed(() => currentStep.value === onboardingSteps[onboardingSteps.length - 1])
 
   const reset = () => {
+    completionRequestSequence += 1
     isVisible.value = false
     currentStep.value = 'overview'
     initialized.value = false
     initializedForUserKey.value = null
     completing.value = false
-  }
-
-  const applyLocalCompletion = (user: User) => {
-    const completedAt = user.onboarding_completed_at || readLocalCompletedAt(user)
-    if (!completedAt) return null
-
-    rememberLocalCompletedAt(user, completedAt)
-    if (!user.onboarding_completed_at) {
-      authStore.updateUser({ onboarding_completed_at: completedAt })
-    }
-    return completedAt
   }
 
   const initialize = (user = authStore.user, handoffStep?: OnboardingStep | null) => {
@@ -75,7 +85,13 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       return
     }
 
-    const completedAt = applyLocalCompletion(user)
+    clearLegacyCompletedAt(user)
+    if (initializedForUserKey.value && initializedForUserKey.value !== userKey) {
+      completionRequestSequence += 1
+      completing.value = false
+    }
+
+    const completedAt = user.onboarding_completed_at
     if (completedAt) {
       initialized.value = true
       initializedForUserKey.value = userKey
@@ -112,19 +128,16 @@ export const useOnboardingStore = defineStore('onboarding', () => {
       return
     }
 
-    const existingCompletedAt = authStore.user.onboarding_completed_at || readLocalCompletedAt(authStore.user)
+    const existingCompletedAt = authStore.user.onboarding_completed_at
     if (existingCompletedAt) {
-      rememberLocalCompletedAt(authStore.user, existingCompletedAt)
-      authStore.updateUser({ onboarding_completed_at: existingCompletedAt })
       isVisible.value = false
       return
     }
 
+    const userKey = resolveUserKey(authStore.user)
+    if (!userKey) return
+    const requestSequence = ++completionRequestSequence
     completing.value = true
-    let completedAt = new Date().toISOString()
-    rememberLocalCompletedAt(authStore.user, completedAt)
-    authStore.updateUser({ onboarding_completed_at: completedAt })
-    isVisible.value = false
     try {
       const response = await fetch(api.auth.onboardingComplete, {
         method: 'POST',
@@ -132,17 +145,18 @@ export const useOnboardingStore = defineStore('onboarding', () => {
         credentials: 'include',
       })
 
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}))
-        completedAt = data.onboarding_completed_at || data.data?.onboarding_completed_at || completedAt
-        rememberLocalCompletedAt(authStore.user, completedAt)
-        authStore.updateUser({ onboarding_completed_at: completedAt })
-      }
+      if (!response.ok) return
+      const data = await response.json()
+      const completedAt = data.onboarding_completed_at || data.data?.onboarding_completed_at
+      if (!isValidRfc3339DateTime(completedAt)) return
+      if (requestSequence !== completionRequestSequence || resolveUserKey(authStore.user) !== userKey) return
+
+      authStore.updateUser({ onboarding_completed_at: completedAt })
+      isVisible.value = false
     } catch {
-      // The user already completed or skipped the guide. Keep this browser session
-      // closed even if the server write cannot be confirmed.
+      // Keep the current step visible so the user can retry.
     } finally {
-      completing.value = false
+      if (requestSequence === completionRequestSequence) completing.value = false
     }
   }
 

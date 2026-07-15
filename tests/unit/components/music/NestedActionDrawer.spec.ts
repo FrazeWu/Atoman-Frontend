@@ -1,7 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
+import { usePlayerStore } from '@/stores/player'
 
 const mocks = vi.hoisted(() => ({
   drawerState: {
@@ -21,13 +24,7 @@ const mocks = vi.hoisted(() => ({
   listAlbumRevisions: vi.fn(),
   getAlbumRevision: vi.fn(),
   revertAlbumRevision: vi.fn(),
-  currentSong: { id: 'song-1', title: 'Track A' } as {
-    id: string
-    title: string
-    media_kind?: 'music_song' | 'feed_item'
-  } | null,
-  currentTime: 46,
-  seek: vi.fn(),
+  recordMusicSongPlay: vi.fn(),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -49,23 +46,17 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
     listAlbumRevisions: mocks.listAlbumRevisions,
     getAlbumRevision: mocks.getAlbumRevision,
     revertAlbumRevision: mocks.revertAlbumRevision,
+    recordMusicSongPlay: mocks.recordMusicSongPlay,
   }
 })
-
-vi.mock('@/stores/player', () => ({
-  usePlayerStore: () => ({
-    currentSong: mocks.currentSong,
-    currentTime: mocks.currentTime,
-    seek: mocks.seek,
-  }),
-}))
 
 vi.mock('@/components/comment/CommentSection.vue', () => ({
   default: {
     name: 'CommentSection',
     props: ['target', 'noun', 'currentTime'],
     emits: ['seek'],
-    template: '<section data-test="shared-comments" />',
+    data: () => ({ draft: '' }),
+    template: '<section data-test="shared-comments"><input data-test="comment-draft" v-model="draft" /></section>',
   },
 }))
 
@@ -106,7 +97,11 @@ function mountDrawer() {
 }
 
 describe('NestedActionDrawer.vue', () => {
+  let player: ReturnType<typeof usePlayerStore>
+
   beforeEach(() => {
+    setActivePinia(createPinia())
+    player = usePlayerStore()
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'history', nestedPayload: null }
     mocks.closeNestedAction.mockReset()
     mocks.refreshAlbum.mockReset()
@@ -117,9 +112,10 @@ describe('NestedActionDrawer.vue', () => {
     mocks.listAlbumRevisions.mockReset()
     mocks.getAlbumRevision.mockReset()
     mocks.revertAlbumRevision.mockReset()
-    mocks.currentSong = { id: 'song-1', title: 'Track A' }
-    mocks.currentTime = 46
-    mocks.seek.mockReset()
+    mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true })
+    player.currentSong = { id: 'song-1', title: 'Track A' } as any
+    player.currentTime = 46
+    vi.spyOn(player, 'seek')
 
     mocks.listMusicArtists.mockResolvedValue({
       data: [{ id: 'artist-2', name: 'Selected Artist', entry_status: 'open' }],
@@ -169,34 +165,47 @@ describe('NestedActionDrawer.vue', () => {
     expect(comments.props('noun')).toBe('讨论')
     expect(comments.props('currentTime')()).toBe(46)
     comments.vm.$emit('seek', 88)
-    expect(mocks.seek).toHaveBeenCalledWith(88)
+    expect(player.seek).toHaveBeenCalledWith(88)
   })
 
   it('ignores a stale payload and keeps target, time, and seek on the active song', () => {
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
-    mocks.currentSong = { id: 'active-song', title: 'Active Track' }
-    mocks.currentTime = 64
+    player.currentSong = { id: 'active-song', title: 'Active Track' } as any
+    player.currentTime = 64
     const wrapper = mountDrawer()
 
     const comments = wrapper.findComponent(CommentSection)
     expect(comments.props('target')).toEqual({ kind: 'music_song', resourceId: 'active-song' })
     expect(comments.props('currentTime')()).toBe(64)
     comments.vm.$emit('seek', 91)
-    expect(mocks.seek).toHaveBeenCalledWith(91)
+    expect(player.seek).toHaveBeenCalledWith(91)
   })
 
   it('does not render a song discussion without an active song', () => {
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
-    mocks.currentSong = null
+    player.currentSong = null
 
     expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
   })
 
   it('does not render a music song target for a podcast feed item', () => {
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'feed-item-1' } }
-    mocks.currentSong = { id: 'feed-item-1', title: 'Podcast Episode', media_kind: 'feed_item' }
+    player.currentSong = { id: 'feed-item-1', title: 'Podcast Episode', media_kind: 'feed_item' } as any
 
     expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
+  })
+
+  it('recreates the comment composer when the active song changes', async () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: null }
+    player.currentSong = { id: 'song-a', title: 'Song A' } as any
+    const wrapper = mountDrawer()
+
+    await wrapper.get('[data-test="comment-draft"]').setValue('A 的未提交草稿')
+    player.currentSong = { id: 'song-b', title: 'Song B' } as any
+    await nextTick()
+
+    expect(wrapper.findComponent(CommentSection).props('target')).toEqual({ kind: 'music_song', resourceId: 'song-b' })
+    expect(wrapper.get('[data-test="comment-draft"]').element).toHaveProperty('value', '')
   })
 
   it('renders when action is present', () => {

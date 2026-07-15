@@ -1,8 +1,11 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiErrorResponseError } from '@/api/client'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
+
+const albumDrawerState = ref({ albumId: '1' as string | null, albumRefreshToken: 0, artistId: null as string | null })
 
 const {
   openNestedAction,
@@ -26,7 +29,7 @@ const {
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
-    state: { value: { albumId: '1' } },
+    state: albumDrawerState,
     closeAlbum: vi.fn(),
     isAlbumShifted: { value: false },
     openNestedAction
@@ -58,6 +61,7 @@ vi.mock('@/stores/player', () => ({
 
 describe('AlbumDrawer.vue', () => {
   beforeEach(() => {
+    albumDrawerState.value = { albumId: '1', albumRefreshToken: 0, artistId: null }
     openNestedAction.mockReset()
     getMusicAlbum.mockReset()
     playAlbum.mockReset()
@@ -82,6 +86,36 @@ describe('AlbumDrawer.vue', () => {
       created_at: '2026-07-02T00:00:00Z',
     })
     deleteAlbumBookmark.mockResolvedValue({ deleted: true })
+  })
+
+  it('keeps the latest selected album when requests complete out of order', async () => {
+    let resolveFirst!: (value: any) => void
+    let resolveSecond!: (value: any) => void
+    getMusicAlbum.mockImplementation((id: string) => new Promise((resolve) => {
+      if (id === 'album-a') resolveFirst = resolve
+      else resolveSecond = resolve
+    }))
+    albumDrawerState.value = { albumId: 'album-a', albumRefreshToken: 0, artistId: null }
+    const wrapper = mount(AlbumDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          CommentSection: { name: 'CommentSection', props: ['target', 'noun'], template: '<section />' },
+        },
+      },
+    })
+
+    albumDrawerState.value = { albumId: 'album-b', albumRefreshToken: 0, artistId: null }
+    await nextTick()
+    resolveSecond({ id: 'album-b', title: '当前专辑', release_date: '2026-01-01', songs: [] })
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前专辑')
+
+    resolveFirst({ id: 'album-a', title: '过期专辑', release_date: '2025-01-01', songs: [] })
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前专辑')
+    expect(wrapper.text()).not.toContain('过期专辑')
+    expect(wrapper.findComponent(CommentSection).props('target')).toEqual({ kind: 'music_album', resourceId: 'album-b' })
   })
 
   it('renders the shared album discussion surface', async () => {

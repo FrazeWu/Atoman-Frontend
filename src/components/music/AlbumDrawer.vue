@@ -42,6 +42,7 @@ const playlistsLoaded = ref(false)
 const favoriteSongIds = ref<Set<string>>(new Set())
 const toastVisible = ref(false)
 const toastMessage = ref('')
+let loadGeneration = 0
 
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => {
@@ -177,37 +178,50 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 }
 
 async function loadAlbum(albumId: string | null) {
+  const generation = ++loadGeneration
+  const isCurrent = () => generation === loadGeneration && state.value.albumId === albumId
   if (!albumId) {
     album.value = null
     isBookmarked.value = false
+    loading.value = false
+    errorMessage.value = ''
     return
   }
 
   loading.value = true
   errorMessage.value = ''
+  album.value = null
+  isBookmarked.value = false
   try {
-    album.value = await getMusicAlbum(albumId)
+    const albumResponse = await getMusicAlbum(albumId)
+    if (!isCurrent()) return
+    let bookmarked = false
     try {
       const bookmarksResponse = await listAlbumBookmarks()
-      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
+      bookmarked = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
-        isBookmarked.value = false
+        bookmarked = false
       } else {
         throw error
       }
     }
-    isCoverBroken.value = false
 
     await Promise.all([
       playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
       loadFavorites(),
     ])
+    if (!isCurrent()) return
+    album.value = albumResponse
+    isBookmarked.value = bookmarked
+    isCoverBroken.value = false
   } catch (error) {
-    console.error('Failed to fetch album:', error)
-    errorMessage.value = '专辑信息加载失败'
+    if (isCurrent()) {
+      console.error('Failed to fetch album:', error)
+      errorMessage.value = '专辑信息加载失败'
+    }
   } finally {
-    loading.value = false
+    if (isCurrent()) loading.value = false
   }
 }
 

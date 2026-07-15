@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -11,22 +11,35 @@ const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
 const audioRef = ref<HTMLAudioElement | null>(null)
+let loadGeneration = 0
 
-onMounted(async () => {
-  const id = route.params.id as string
+async function loadEpisode(id: string) {
+  const generation = ++loadGeneration
+  const isCurrent = () => generation === loadGeneration && String(route.params.id || '') === id
+  loading.value = true
+  error.value = ''
+  ep.value = null
   try {
     const res = await fetch(`${api.url}/podcast/episodes/${id}`)
+    if (!isCurrent()) return
     if (res.ok) {
-      ep.value = await res.json()
+      const episode = await res.json()
+      if (isCurrent()) ep.value = episode
     } else {
       error.value = '单集不存在'
     }
   } catch {
-    error.value = '加载失败，请重试'
+    if (isCurrent()) error.value = '加载失败，请重试'
   } finally {
-    loading.value = false
+    if (isCurrent()) loading.value = false
   }
-})
+}
+
+watch(
+  () => String(route.params.id || ''),
+  (id) => { if (id) void loadEpisode(id) },
+  { immediate: true },
+)
 
 function fmtDuration(sec: number) {
   if (!sec) return ''

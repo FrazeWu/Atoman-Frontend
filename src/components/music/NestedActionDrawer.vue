@@ -618,6 +618,7 @@ async function submitEdit() {
       <div v-else-if="currentAction === 'discussion'" class="discussion-panel">
         <CommentSection
           v-if="discussionSongId"
+          :key="discussionSongId"
           :target="{ kind: 'music_song', resourceId: discussionSongId }"
           noun="讨论"
           :current-time="() => Math.floor(player.currentTime || 0)"

@@ -8,8 +8,21 @@ const authenticate = () => {
   const auth = useAuthStore()
   auth.isAuthenticated = true
   auth.token = 'token'
-  auth.user = { username: 'fafa', email: 'fafa@example.com' }
+  auth.user = { uuid: 'user-a', username: 'fafa', email: 'fafa@example.com' }
 }
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+const requestCases = [
+  { method: 'fetchSubscriptions' as const, state: 'subscriptions' as const, prefix: 'sub' },
+  { method: 'fetchGroups' as const, state: 'groups' as const, prefix: 'group' },
+]
 
 describe('feed store', () => {
   beforeEach(() => {
@@ -57,6 +70,46 @@ describe('feed store', () => {
     const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
 
     expect(results).toEqual([false, false])
+  })
+
+  it.each(requestCases)('$method ignores an old account response after account switching', async ({ method, state, prefix }) => {
+    const firstResponse = deferred<Response>()
+    const secondResponse = deferred<Response>()
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise)
+    const feed = useFeedStore()
+    const auth = useAuthStore()
+
+    const firstRequest = feed[method]()
+    feed.clearUserState()
+    auth.token = 'token-b'
+    auth.user = { uuid: 'user-b', username: 'second', email: 'second@example.com' }
+    const secondRequest = feed[method]()
+    secondResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-b` }] }), { status: 200 }))
+    expect(await secondRequest).toBe(true)
+
+    firstResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-a` }] }), { status: 200 }))
+    expect(await firstRequest).toBe(false)
+    expect(feed[state].map((item) => item.id)).toEqual([`${prefix}-b`])
+  })
+
+  it.each(requestCases)('$method ignores an older response from the same account', async ({ method, state, prefix }) => {
+    const firstResponse = deferred<Response>()
+    const secondResponse = deferred<Response>()
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise)
+    const feed = useFeedStore()
+
+    const firstRequest = feed[method]()
+    const secondRequest = feed[method]()
+    secondResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-new` }] }), { status: 200 }))
+    expect(await secondRequest).toBe(true)
+
+    firstResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-old` }] }), { status: 200 }))
+    expect(await firstRequest).toBe(false)
+    expect(feed[state].map((item) => item.id)).toEqual([`${prefix}-new`])
   })
 
   it('adds RSS subscriptions through the v1 feed endpoint', async () => {

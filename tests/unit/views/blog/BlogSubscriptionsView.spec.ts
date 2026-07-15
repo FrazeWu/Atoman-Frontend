@@ -228,7 +228,7 @@ describe('BlogSubscriptionsView', () => {
     {
       name: '非法分组',
       url: '/posts/subscriptions?kind=author&group=missing&source=sub-author',
-      query: { kind: 'author', source: 'sub-author' },
+      query: { kind: 'author' },
     },
     {
       name: '跨类别来源',
@@ -238,7 +238,7 @@ describe('BlogSubscriptionsView', () => {
     {
       name: '跨分组来源',
       url: '/posts/subscriptions?kind=author&group=group-writing&source=sub-author',
-      query: { kind: 'author', group: 'group-writing' },
+      query: { kind: 'author' },
     },
     {
       name: '不存在来源',
@@ -307,6 +307,21 @@ describe('BlogSubscriptionsView', () => {
 
     expect(router.currentRoute.value.query).toEqual({ kind: 'channel', keep: '1' })
     expect(timelineUrls().at(-1)).toContain('source_type=internal_channel')
+    expect(timelineUrls().at(-1)).not.toContain('source_id=')
+  })
+
+  it('频道特有分组切到作者时清除 group、source 和 page', async () => {
+    const wrapper = await mountView(
+      '/posts/subscriptions?kind=channel&group=group-writing&source=sub-channel&page=4&keep=1',
+    )
+    expect(timelineUrls().at(-1)).toContain('group_id=group-writing')
+
+    await wrapper.get('[data-testid="kind-author"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toEqual({ kind: 'author', keep: '1' })
+    expect(timelineUrls().at(-1)).toContain('source_type=internal_user')
+    expect(timelineUrls().at(-1)).not.toContain('group_id=')
     expect(timelineUrls().at(-1)).not.toContain('source_id=')
   })
 
@@ -452,9 +467,12 @@ describe('BlogSubscriptionsView', () => {
   })
 
   it('区分没有该类订阅和有来源但暂无文章', async () => {
-    const wrapper = await mountView('/posts/subscriptions?kind=author&group=group-writing')
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = subscriptions.filter((subscription) => subscription.id !== 'sub-author')
+    const wrapper = await mountView('/posts/subscriptions?kind=author')
     expect(wrapper.text()).toContain('暂无作者订阅')
 
+    feedStore.subscriptions = subscriptions
     await router.replace({ path: '/posts/subscriptions', query: { kind: 'author' } })
     await flushPromises()
     expect(wrapper.text()).toContain('暂无更新')

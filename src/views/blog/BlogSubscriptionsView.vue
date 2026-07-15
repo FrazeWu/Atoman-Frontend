@@ -256,7 +256,7 @@ const replaceQuery = (updates: Record<string, string | null>) => {
 const selectKind = (kind: SourceKind) => {
   if (kind === currentKind.value) return
   page.value = 1
-  void replaceQuery({ kind, source: null, page: null })
+  void replaceQuery({ kind, group: null, source: null, page: null })
 }
 
 const selectGroup = (groupId: string | null) => {
@@ -385,14 +385,20 @@ watch(
     if (!ready || !path.endsWith('/subscriptions')) return
     const kind = normalizeKind(rawKind)
     const sourceType = sourceKinds.find((item) => item.value === kind)!.sourceType
-    const groupId = typeof rawGroup === 'string' && feedStore.groups.some((group) => group.id === rawGroup)
+    const groupId = typeof rawGroup === 'string'
+      && feedStore.groups.some((group) => group.id === rawGroup)
+      && feedStore.subscriptions.some((subscription) =>
+        subscription.subscription_group_id === rawGroup
+        && subscription.feed_source?.source_type === sourceType,
+      )
       ? rawGroup
       : null
-    const sourceId = typeof rawSource === 'string' && feedStore.subscriptions.some((subscription) =>
-      subscription.id === rawSource
-      && subscription.feed_source?.source_type === sourceType
-      && (!groupId || subscription.subscription_group_id === groupId),
-    ) ? rawSource : null
+    const sourceId = (rawGroup === undefined || groupId !== null)
+      && typeof rawSource === 'string' && feedStore.subscriptions.some((subscription) =>
+        subscription.id === rawSource
+        && subscription.feed_source?.source_type === sourceType
+        && (!groupId || subscription.subscription_group_id === groupId),
+      ) ? rawSource : null
     const updates: Record<string, string | null> = {}
 
     if (rawKind !== kind) {
@@ -400,7 +406,10 @@ watch(
       updates.source = null
       updates.page = null
     }
-    if (rawGroup !== undefined && rawGroup !== groupId) updates.group = null
+    if (rawGroup !== undefined && rawGroup !== groupId) {
+      updates.group = null
+      updates.source = null
+    }
     if (rawSource !== undefined && rawSource !== sourceId) updates.source = null
 
     if (Object.keys(updates).length) {

@@ -97,8 +97,8 @@
     <PConfirm
       :show="showDeleteConfirm"
       title="删除收藏夹"
-      message="确定删除这个收藏夹吗？"
-      confirm-text="删除"
+      :message="deleteError || '确定删除这个收藏夹吗？'"
+      :confirm-text="deletePending ? '删除中...' : '删除'"
       cancel-text="取消"
       danger
       @confirm="confirmDeleteFolder"
@@ -133,6 +133,9 @@ const showNewFolder = ref(false)
 const newFolderName = ref('')
 const showDeleteConfirm = ref(false)
 const pendingDeleteFolderId = ref<string | null>(null)
+const deleteError = ref('')
+const deleteSessionId = ref(0)
+const deleteRequestSession = ref<number | null>(null)
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
@@ -144,6 +147,7 @@ const filteredBookmarks = computed(() => {
   if (activeFolder.value === null) return bookmarks.value.filter(b => b.post)
   return bookmarks.value.filter(b => b.bookmark_folder_id === activeFolder.value && b.post)
 })
+const deletePending = computed(() => deleteRequestSession.value === deleteSessionId.value)
 
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
 
@@ -183,30 +187,47 @@ const createFolder = async () => {
 
 const deleteFolder = async (id: string) => {
   try {
-    await fetch(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
-    if (activeFolder.value === id) activeFolder.value = null
-    await fetchAll()
+    const res = await fetch(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
+    return res.ok
   } catch (e) {
     console.error(e)
+    return false
   }
 }
 
 const requestDeleteFolder = (id: string) => {
+  deleteSessionId.value += 1
   pendingDeleteFolderId.value = id
+  deleteError.value = ''
   showDeleteConfirm.value = true
 }
 
 const cancelDeleteFolder = () => {
+  deleteSessionId.value += 1
   showDeleteConfirm.value = false
   pendingDeleteFolderId.value = null
+  deleteError.value = ''
 }
 
 const confirmDeleteFolder = async () => {
   const id = pendingDeleteFolderId.value
-  cancelDeleteFolder()
-  if (id !== null) {
-    await deleteFolder(id)
+  if (id === null) return
+  const sessionId = deleteSessionId.value
+  if (deleteRequestSession.value === sessionId) return
+  deleteError.value = ''
+  deleteRequestSession.value = sessionId
+  const deleted = await deleteFolder(id)
+  if (deleteSessionId.value !== sessionId || pendingDeleteFolderId.value !== id) return
+  if (!deleted) {
+    deleteRequestSession.value = null
+    deleteError.value = '删除失败，请重试'
+    return
   }
+  if (activeFolder.value === id) activeFolder.value = null
+  await fetchAll()
+  if (deleteSessionId.value !== sessionId || pendingDeleteFolderId.value !== id) return
+  cancelDeleteFolder()
+  deleteRequestSession.value = null
 }
 
 onMounted(fetchAll)

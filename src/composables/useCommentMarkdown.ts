@@ -5,7 +5,7 @@ const allowedTags = ['p', 'br', 'strong', 'em', 'code', 'a', 'blockquote']
 const commentMarked = new Marked({ gfm: false, breaks: true })
 const validationMarked = new Marked({ gfm: true, breaks: true })
 const allowedTokenTypes = new Set([
-  'paragraph', 'text', 'space', 'strong', 'em', 'codespan', 'link', 'blockquote', 'br',
+  'paragraph', 'text', 'space', 'strong', 'em', 'codespan', 'link', 'blockquote', 'br', 'escape',
 ])
 
 export interface CommentMarkdownResult { ok: boolean; html: string; error?: string }
@@ -36,6 +36,9 @@ function validateTokenTree(value: unknown, inBlockquote = false): string | undef
   }
   if (type === 'link') {
     const href = typeof node.href === 'string' ? node.href : ''
+    const text = typeof node.text === 'string' ? node.text : ''
+    const raw = typeof node.raw === 'string' ? node.raw : ''
+    if (raw.startsWith('<') && raw.endsWith('>') && href === text) return 'unsupported_autolink'
     try {
       const url = new URL(href)
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return 'unsafe_link'

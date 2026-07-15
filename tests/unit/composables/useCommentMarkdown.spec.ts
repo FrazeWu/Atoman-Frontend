@@ -30,6 +30,19 @@ describe('restricted comment Markdown', () => {
     expect(validateCommentMarkdown('``|a|b|\n|-|-|\\``')).toEqual({ ok: true })
   })
 
+  it('allows ordinary backslash-escaped text', () => {
+    expect(validateCommentMarkdown('\\*literal\\*')).toEqual({ ok: true })
+    expect(validateCommentMarkdown('\\`literal\\`')).toEqual({ ok: true })
+  })
+
+  it.each(['<http://example.com>', '<https://example.com>'])('rejects angle-bracket autolinks: %s', (source) => {
+    expect(validateCommentMarkdown(source)).toEqual({ ok: false, error: 'unsupported_autolink' })
+  })
+
+  it('accepts explicit HTTP links', () => {
+    expect(validateCommentMarkdown('[example](https://example.com)')).toEqual({ ok: true })
+  })
+
   it.each([
     '**``~~x~~ | a |``**',
     '*``~~x~~ | a |``*',

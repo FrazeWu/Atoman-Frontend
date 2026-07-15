@@ -76,7 +76,9 @@ export const useDMStore = defineStore('dm', () => {
     if (!res.ok) {
       throw new Error(data.message || data.error || '发送私信失败')
     }
-    messages.value = [...messages.value, data.data]
+    if (activeConversation.value === username) {
+      messages.value = [...messages.value, data.data]
+    }
     await fetchConversations()
     return data.data as DMMessage
   }

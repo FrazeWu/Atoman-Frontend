@@ -75,4 +75,64 @@ describe('dm store', () => {
     }))
     expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/dm/conversations/alice/read', expect.anything())
   })
+
+  it('does not append a delayed sent message to another active conversation', async () => {
+    let resolveSend!: (response: Response) => void
+    const sendResponse = new Promise<Response>((resolve) => {
+      resolveSend = resolve
+    })
+    const sentMessage = makeMessage('alice-sent', 'alice-conversation', 'me')
+    const bobMessage = makeMessage('bob-message', 'bob-conversation', 'bob')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/dm/conversations/alice') && init?.method === 'POST') return sendResponse
+      if (url.endsWith('/dm/conversations') && !init?.method) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url} ${init?.method ?? 'GET'}`)
+    })
+
+    const store = useDMStore()
+    store.activeConversation = 'alice'
+    const send = store.sendMessage('alice', 'late message')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dm/conversations/alice', {
+      method: 'POST',
+      headers: {
+        Authorization: expect.stringMatching(/^Bearer /),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content: 'late message', image_url: '' }),
+    })
+
+    store.activeConversation = 'bob'
+    store.messages = [bobMessage]
+    resolveSend(new Response(JSON.stringify({ data: sentMessage }), { status: 201 }))
+    await send
+
+    expect(store.activeConversation).toBe('bob')
+    expect(store.messages.map((message) => message.id)).toEqual(['bob-message'])
+  })
+
+  it('appends and returns a sent message while its conversation stays active', async () => {
+    const sentMessage = makeMessage('alice-sent', 'alice-conversation', 'me')
+    const existingMessage = makeMessage('alice-existing', 'alice-conversation', 'alice')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: sentMessage }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    const store = useDMStore()
+    store.activeConversation = 'alice'
+    store.messages = [existingMessage]
+
+    const result = await store.sendMessage('alice', 'new message')
+
+    expect(result).toEqual(sentMessage)
+    expect(store.messages.map((message) => message.id)).toEqual(['alice-existing', 'alice-sent'])
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/dm/conversations', {
+      headers: {
+        Authorization: expect.stringMatching(/^Bearer /),
+        'Content-Type': 'application/json',
+      },
+    })
+  })
 })

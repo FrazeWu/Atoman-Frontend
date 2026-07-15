@@ -15,13 +15,14 @@
     </header>
 
     <CommentComposer
-      v-if="authStore.isAuthenticated"
+      v-if="authStore.isAuthenticated && !readonly"
       ref="rootComposer"
       :placeholder="`写下${noun}`"
       :current-time="currentTime"
       :submitting="creating"
       @submit="createRoot"
     />
+    <div v-else-if="readonly" class="comment-section__login">该话题已锁定</div>
     <div v-else class="comment-section__login">
       <MessageSquare :size="18" aria-hidden="true" />
       <span>登录后{{ noun }}</span>
@@ -44,6 +45,7 @@
         :current-user-id="currentUserId"
         :can-mark="Boolean(comments.target.value?.can_mark)"
         :can-delete="Boolean(comments.target.value?.can_mark)"
+        :can-reply="!readonly"
         :marked-comment-id="comments.target.value?.marked_comment_id"
         :mark-label="effectiveMarkLabel"
         :current-time="currentTime"
@@ -52,7 +54,7 @@
         :on-edit="editComment"
         @seek="$emit('seek', $event)"
         @like="comments.toggleLike"
-        @delete="comments.remove"
+        @delete="removeComment"
         @report="openReport"
         @mark="markComment"
         @unmark="unmarkComment"
@@ -90,15 +92,18 @@ const props = withDefaults(defineProps<{
   noun?: '评论' | '讨论' | '回复' | '修订提案'
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
+  readonly?: boolean
 }>(), {
   noun: '评论',
   markLabel: undefined,
   currentTime: undefined,
+  readonly: false,
 })
 
 const emit = defineEmits<{
   seek: [seconds: number]
   'marked-change': [marked: boolean]
+  'count-change': [count: number]
 }>()
 
 const authStore = useAuthStore()
@@ -128,6 +133,7 @@ async function createRoot(input: CreateCommentInput) {
   try {
     await comments.create(input)
     rootComposer.value?.reset()
+    emitCount()
   } catch {
     mutationError.value = '发布失败，请重试'
   } finally {
@@ -137,10 +143,24 @@ async function createRoot(input: CreateCommentInput) {
 
 async function createReply(comment: CommentDTO, input: CreateCommentInput) {
   await comments.create({ ...input, reply_to_id: comment.id })
+  emitCount()
 }
 
 async function editComment(comment: CommentDTO, input: CreateCommentInput) {
   await comments.edit(comment.id, input)
+}
+
+async function removeComment(commentId: string) {
+  try {
+    await comments.remove(commentId)
+    emitCount()
+  } catch {
+    mutationError.value = '删除失败，请重试'
+  }
+}
+
+function emitCount() {
+  if (comments.target.value) emit('count-change', comments.target.value.comment_count)
 }
 
 async function markComment(commentId: string) {

@@ -61,7 +61,7 @@
           <Heart :size="15" :fill="comment.liked ? 'currentColor' : 'none'" />
           <span>{{ comment.like_count || '' }}</span>
         </button>
-        <button type="button" data-test="reply-comment" title="回复" @click="$emit('reply')"><Reply :size="15" /></button>
+        <button v-if="canReply" type="button" data-test="reply-comment" title="回复" @click="$emit('reply')"><Reply :size="15" /></button>
         <button v-if="isOwner" type="button" title="编辑" @click="$emit('edit')"><Pencil :size="15" /></button>
         <button v-if="isOwner || canDelete" type="button" title="删除" data-test="delete-comment" @click="$emit('delete')"><Trash2 :size="15" /></button>
         <button type="button" title="举报" @click="$emit('report')"><Flag :size="15" /></button>
@@ -88,6 +88,7 @@ const props = withDefaults(defineProps<{
   currentUserId?: string
   canMark?: boolean
   canDelete?: boolean
+  canReply?: boolean
   markedCommentId?: string | null
   markLabel?: '置顶' | '最佳回答'
   likePending?: boolean
@@ -97,6 +98,7 @@ const props = withDefaults(defineProps<{
   currentUserId: '',
   canMark: false,
   canDelete: false,
+  canReply: true,
   markedCommentId: null,
   markLabel: '置顶',
   likePending: false,

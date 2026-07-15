@@ -92,7 +92,9 @@
             :target="{ kind: 'forum_topic', resourceId: forumStore.currentTopic.id }"
             noun="回复"
             mark-label="最佳回答"
+            :readonly="forumStore.currentTopic.closed"
             @marked-change="syncSolvedState"
+            @count-change="syncReplyCount"
           />
       </div>
     </template>
@@ -181,6 +183,10 @@ const onScroll = () => {
 
 const syncSolvedState = (marked: boolean) => {
   if (forumStore.currentTopic) forumStore.currentTopic.is_solved = marked
+}
+
+const syncReplyCount = (count: number) => {
+  if (forumStore.currentTopic) forumStore.currentTopic.reply_count = count
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────

@@ -88,4 +88,35 @@ describe('CommentSection', () => {
     await Promise.resolve()
     expect(wrapper.emitted('marked-change')).toEqual([[true], [false]])
   })
+
+  it('keeps locked discussions readable without reply controls', async () => {
+    const auth = useAuthStore()
+    auth.isAuthenticated = true
+    auth.user = { uuid: 'user-1', username: 'alice', email: 'a@example.com', role: 'user' }
+    const wrapper = mount(CommentSection, { props: { target: { kind: 'forum_topic', resourceId: 'topic-1' }, readonly: true } })
+    expect(wrapper.text()).toContain('该话题已锁定')
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'CommentThread' }).props('canReply')).toBe(false)
+  })
+
+  it('emits count changes after successful mutations only', async () => {
+    state.target.value.comment_count = 1
+    state.create.mockImplementationOnce(async () => { state.target.value.comment_count = 2 })
+      .mockRejectedValueOnce(new Error('failed'))
+    state.remove.mockImplementationOnce(async () => { state.target.value.comment_count = 1 })
+      .mockRejectedValueOnce(new Error('failed'))
+    const auth = useAuthStore()
+    auth.isAuthenticated = true
+    auth.user = { uuid: 'user-1', username: 'alice', email: 'a@example.com', role: 'user' }
+    const wrapper = mount(CommentSection, { props: { target: { kind: 'forum_topic', resourceId: 'topic-1' } } })
+
+    await wrapper.get('textarea').setValue('new')
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.emitted('count-change')).toEqual([[2]]))
+    await wrapper.findComponent({ name: 'CommentThread' }).vm.$emit('delete', 'root')
+    await vi.waitFor(() => expect(wrapper.emitted('count-change')).toEqual([[2], [1]]))
+    await wrapper.findComponent({ name: 'CommentThread' }).vm.$emit('delete', 'root')
+    await Promise.resolve()
+    expect(wrapper.emitted('count-change')).toEqual([[2], [1]])
+  })
 })

@@ -24,6 +24,8 @@ const makePost = (id: string, title: string, contentType: 'blog' | 'podcast') =>
   pinned: false,
   created_at: '2026-07-01T00:00:00Z',
   updated_at: '2026-07-01T00:00:00Z',
+  likes_count: contentType === 'blog' ? 7 : 0,
+  comments_count: contentType === 'blog' ? 3 : 0,
   channel: {
     id: `channel-${contentType}`,
     user_id: 'user-1',
@@ -75,5 +77,7 @@ describe('BlogSubscriptionsView', () => {
 
     expect(wrapper.text()).toContain('订阅文章')
     expect(wrapper.text()).not.toContain('订阅播客')
+    expect(wrapper.text()).toContain('♥ 7')
+    expect(wrapper.text()).toContain('💬 3')
   })
 })

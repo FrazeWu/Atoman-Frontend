@@ -106,14 +106,15 @@
     </template>
 
     <!-- Collection Modal -->
-    <PModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
+    <PModal v-if="collectionModalOpen" @close="closeCollectionModal">
       <h3 class="a-subtitle" style="margin-bottom:1.5rem">{{ editingCollection ? '编辑合集' : '新建合集' }}</h3>
       <div style="display:flex;flex-direction:column;gap:1rem">
         <input v-model="collectionForm.name" placeholder="合集名称*" class="a-input" />
         <textarea v-model="collectionForm.description" placeholder="合集描述（可选）" rows="3" class="a-textarea" />
+        <p v-if="collectionError" class="a-error">{{ collectionError }}</p>
       </div>
       <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end">
-        <PButton outline @click="collectionModalOpen = false">取消</PButton>
+        <PButton outline @click="closeCollectionModal">取消</PButton>
         <PButton :disabled="!collectionForm.name.trim() || collectionSaving" @click="saveCollection">
           {{ collectionSaving ? '保存中...' : (editingCollection ? '更新' : '创建') }}
         </PButton>
@@ -175,6 +176,8 @@ const collectionModalOpen = ref(false)
 const editingCollection = ref<Collection | null>(null)
 const collectionForm = ref({ name: '', description: '' })
 const collectionSaving = ref(false)
+const collectionError = ref('')
+let collectionModalToken = 0
 
 const showDeleteChannel = ref(false)
 const deleteConfirmName = ref('')
@@ -237,31 +240,64 @@ const saveInfo = async () => {
 }
 
 const openCollectionModal = (col?: Collection) => {
+  collectionModalToken += 1
   editingCollection.value = col || null
   collectionForm.value = { name: col?.name || '', description: col?.description || '' }
+  collectionSaving.value = false
+  collectionError.value = ''
   collectionModalOpen.value = true
 }
 
+const closeCollectionModal = () => {
+  collectionModalToken += 1
+  collectionModalOpen.value = false
+  editingCollection.value = null
+  collectionSaving.value = false
+  collectionError.value = ''
+}
+
 const saveCollection = async () => {
-  if (!collectionForm.value.name.trim() || !channel.value) return
+  if (!collectionForm.value.name.trim() || !channel.value || collectionSaving.value) return
+  const requestToken = collectionModalToken
+  const editingCollectionId = editingCollection.value?.id
+  collectionError.value = ''
   collectionSaving.value = true
   try {
-    if (editingCollection.value) {
-      await fetch(api.blog.collection(editingCollection.value.id), {
+    let res: Response
+    if (editingCollectionId) {
+      res = await fetch(api.blog.collection(editingCollectionId), {
         method: 'PUT',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value),
       })
     } else {
-      await fetch(api.blog.channelCollections(channel.value.id), {
+      res = await fetch(api.blog.channelCollections(channel.value.id), {
         method: 'POST',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value),
       })
     }
-    collectionModalOpen.value = false
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      if (requestToken !== collectionModalToken) return
+      const responseError = data?.error
+      collectionError.value = typeof responseError === 'string'
+        ? responseError
+        : responseError?.message || '保存失败，请重试'
+      return
+    }
+    if (requestToken !== collectionModalToken) return
+    closeCollectionModal()
     await fetchCollections()
-  } finally { collectionSaving.value = false }
+  } catch {
+    if (requestToken === collectionModalToken) {
+      collectionError.value = '网络错误，请重试'
+    }
+  } finally {
+    if (requestToken === collectionModalToken) {
+      collectionSaving.value = false
+    }
+  }
 }
 
 const confirmDeleteCollection = async (col: Collection) => {

@@ -284,6 +284,7 @@
           :target-id="detailEvent.id"
           target-kind="event"
           :target-owner-id="detailEvent.user_id"
+          :current-coordinates="{ latitude: detailEvent.latitude, longitude: detailEvent.longitude }"
           @decided="refreshDecidedEvent"
         />
       </div>

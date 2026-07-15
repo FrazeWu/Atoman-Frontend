@@ -103,15 +103,43 @@ describe('TimelineRevisionProposal', () => {
 	expect(wrapper.text()).not.toContain('修订提案加载失败')
   })
 
-  it.each([['abc', '请输入有效坐标'], ['91', '纬度必须在 -90 到 90 之间']])('rejects invalid latitude %s locally', async (coordinate, message) => {
+  it('submits both coordinates when adding a location', async () => {
+	const auth = useAuthStore(); auth.isAuthenticated = true; auth.user = { uuid: 'user-1', username: 'u', email: 'u@example.com', role: 'user' }
+	vi.mocked(timelineRevisionProposalApi.create).mockResolvedValue(proposal)
+	const wrapper = mount(TimelineRevisionProposal, { props: { targetKind: 'event', targetId: 'event-1', targetOwnerId: 'owner-1' } })
+	await wrapper.get('[data-test="proposal-field"]').setValue('coordinates')
+	await wrapper.get('[data-test="proposal-latitude"]').setValue('52.52')
+	await wrapper.get('[data-test="proposal-longitude"]').setValue('13.405')
+	await wrapper.get('[data-test="proposal-evidence"]').setValue('map')
+	await wrapper.get('textarea').setValue('coordinate')
+	await wrapper.get('[data-test="comment-submit"]').trigger('click')
+	await vi.waitFor(() => expect(timelineRevisionProposalApi.create).toHaveBeenCalledWith('event', 'event-1', expect.objectContaining({ patch: { latitude: 52.52, longitude: 13.405 } })))
+  })
+
+  it('prefills and clears both existing coordinates', async () => {
+	const auth = useAuthStore(); auth.isAuthenticated = true; auth.user = { uuid: 'user-1', username: 'u', email: 'u@example.com', role: 'user' }
+	vi.mocked(timelineRevisionProposalApi.create).mockResolvedValue(proposal)
+	const wrapper = mount(TimelineRevisionProposal, { props: { targetKind: 'event', targetId: 'event-1', targetOwnerId: 'owner-1', currentCoordinates: { latitude: 48.85, longitude: 2.35 } } })
+	await wrapper.get('[data-test="proposal-field"]').setValue('coordinates')
+	expect(wrapper.get('[data-test="proposal-latitude"]').element).toHaveValue('48.85')
+	expect(wrapper.get('[data-test="proposal-longitude"]').element).toHaveValue('2.35')
+	await wrapper.get('[data-test="proposal-latitude"]').setValue('')
+	await wrapper.get('[data-test="proposal-longitude"]').setValue('')
+	await wrapper.get('[data-test="proposal-evidence"]').setValue('map')
+	await wrapper.get('textarea').setValue('clear')
+	await wrapper.get('[data-test="comment-submit"]').trigger('click')
+	await vi.waitFor(() => expect(timelineRevisionProposalApi.create).toHaveBeenCalledWith('event', 'event-1', expect.objectContaining({ patch: { latitude: null, longitude: null } })))
+  })
+
+  it('rejects one-sided coordinates locally', async () => {
 	const auth = useAuthStore(); auth.isAuthenticated = true; auth.user = { uuid: 'user-1', username: 'u', email: 'u@example.com', role: 'user' }
 	const wrapper = mount(TimelineRevisionProposal, { props: { targetKind: 'event', targetId: 'event-1', targetOwnerId: 'owner-1' } })
-	await wrapper.get('[data-test="proposal-field"]').setValue('latitude')
-	await wrapper.get('[data-test="proposal-value"]').setValue(coordinate)
+	await wrapper.get('[data-test="proposal-field"]').setValue('coordinates')
+	await wrapper.get('[data-test="proposal-latitude"]').setValue('52.52')
 	await wrapper.get('[data-test="proposal-evidence"]').setValue('map')
 	await wrapper.get('textarea').setValue('coordinate')
 	await wrapper.get('[data-test="comment-submit"]').trigger('click')
 	expect(timelineRevisionProposalApi.create).not.toHaveBeenCalled()
-	expect(wrapper.text()).toContain(message)
+	expect(wrapper.text()).toContain('经纬度需要同时填写或同时清空')
   })
 })

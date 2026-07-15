@@ -12,7 +12,11 @@
             <option v-for="option in fieldOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </label>
-        <label>新内容
+        <div v-if="field === 'coordinates'" class="timeline-proposals__coordinates">
+          <label>纬度<input v-model="latitudeValue" class="a-input" data-test="proposal-latitude" placeholder="-90 到 90" /></label>
+          <label>经度<input v-model="longitudeValue" class="a-input" data-test="proposal-longitude" placeholder="-180 到 180" /></label>
+        </div>
+        <label v-else>新内容
           <input v-model="value" class="a-input" data-test="proposal-value" :placeholder="valuePlaceholder" />
         </label>
       </div>
@@ -74,7 +78,7 @@ import { isModeratorRole } from '@/utils/roles'
 
 defineOptions({ name: 'TimelineRevisionProposal' })
 
-const props = defineProps<{ targetKind: TimelineProposalTargetKind; targetId: string; targetOwnerId: string }>()
+const props = defineProps<{ targetKind: TimelineProposalTargetKind; targetId: string; targetOwnerId: string; currentCoordinates?: { latitude?: number | null; longitude?: number | null } }>()
 const emit = defineEmits<{ decided: [proposal: TimelineRevisionProposal] }>()
 const authStore = useAuthStore()
 const proposals = ref<TimelineRevisionProposal[]>([])
@@ -88,6 +92,8 @@ const mutationError = ref('')
 const field = ref('')
 const value = ref('')
 const evidence = ref('')
+const latitudeValue = ref('')
+const longitudeValue = ref('')
 const composer = ref<{ reset: () => void } | null>(null)
 const composerKey = ref(0)
 interface ReplyState { expanded: boolean; page: number; pageSize: number; hasMore: boolean; loading: boolean; items: CommentDTO[] }
@@ -97,7 +103,7 @@ const reportingCommentId = ref('')
 
 const eventFields = [
   ['title', '标题'], ['description', '摘要'], ['content', '正文'], ['event_date', '发生日期'], ['end_date', '结束日期'],
-  ['location', '地点'], ['latitude', '纬度'], ['longitude', '经度'], ['source', '来源'], ['category', '分类'], ['tags', '标签'],
+  ['location', '地点'], ['coordinates', '坐标'], ['source', '来源'], ['category', '分类'], ['tags', '标签'],
 ] as const
 const personFields = [['name', '姓名'], ['bio', '简介'], ['birth_date', '出生日期'], ['death_date', '去世日期'], ['tags', '标签']] as const
 const fieldOptions = computed(() => (props.targetKind === 'event' ? eventFields : personFields).map(([value, label]) => ({ value, label })))
@@ -117,6 +123,8 @@ watch(() => `${props.targetKind}:${props.targetId}`, () => {
   field.value = fieldOptions.value[0]?.value ?? ''
 	value.value = ''
 	evidence.value = ''
+	latitudeValue.value = ''
+	longitudeValue.value = ''
 	mutationError.value = ''
 	submitting.value = false
 	decidingId.value = ''
@@ -129,6 +137,12 @@ watch(() => `${props.targetKind}:${props.targetId}`, () => {
 	Object.keys(replyStates).forEach((key) => delete replyStates[key])
   void load(requestGeneration, requestKey, props.targetKind, props.targetId)
 }, { immediate: true })
+
+watch(field, (next) => {
+	if (next !== 'coordinates') return
+	latitudeValue.value = props.currentCoordinates?.latitude == null ? '' : String(props.currentCoordinates.latitude)
+	longitudeValue.value = props.currentCoordinates?.longitude == null ? '' : String(props.currentCoordinates.longitude)
+})
 
 async function load(requestGeneration = generation, requestKey = targetKey(), kind = props.targetKind, id = props.targetId) {
   loading.value = true
@@ -166,19 +180,22 @@ async function loadMoreRoots() {
 	try { await loadRootPage(rootPage.value + 1, true, requestGeneration, requestKey) } finally { if (isCurrent(requestGeneration, requestKey)) loading.value = false }
 }
 
-function patchValue(): { value: unknown; error: string } {
-  if (field.value === 'tags') return { value: value.value.split(',').map((item) => item.trim()).filter(Boolean), error: '' }
-  if (field.value === 'latitude' || field.value === 'longitude') {
-	const text = value.value.trim()
-	if (text === '') return { value: null, error: '' }
-	const coordinate = Number(text)
-	if (!Number.isFinite(coordinate)) return { value: null, error: '请输入有效坐标' }
-	if (field.value === 'latitude' && (coordinate < -90 || coordinate > 90)) return { value: null, error: '纬度必须在 -90 到 90 之间' }
-	if (field.value === 'longitude' && (coordinate < -180 || coordinate > 180)) return { value: null, error: '经度必须在 -180 到 180 之间' }
-	return { value: coordinate, error: '' }
+function patchValue(): { patch: Record<string, unknown>; error: string } {
+  if (field.value === 'coordinates') {
+	const latitudeText = latitudeValue.value.trim()
+	const longitudeText = longitudeValue.value.trim()
+	if (!latitudeText && !longitudeText) return { patch: { latitude: null, longitude: null }, error: '' }
+	if (!latitudeText || !longitudeText) return { patch: {}, error: '经纬度需要同时填写或同时清空' }
+	const latitude = Number(latitudeText)
+	const longitude = Number(longitudeText)
+	if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return { patch: {}, error: '请输入有效坐标' }
+	if (latitude < -90 || latitude > 90) return { patch: {}, error: '纬度必须在 -90 到 90 之间' }
+	if (longitude < -180 || longitude > 180) return { patch: {}, error: '经度必须在 -180 到 180 之间' }
+	return { patch: { latitude, longitude }, error: '' }
   }
-  if ((field.value === 'end_date' || field.value === 'birth_date' || field.value === 'death_date') && !value.value.trim()) return { value: null, error: '' }
-  return { value: value.value, error: '' }
+  if (field.value === 'tags') return { patch: { tags: value.value.split(',').map((item) => item.trim()).filter(Boolean) }, error: '' }
+  if ((field.value === 'end_date' || field.value === 'birth_date' || field.value === 'death_date') && !value.value.trim()) return { patch: { [field.value]: null }, error: '' }
+  return { patch: { [field.value]: value.value }, error: '' }
 }
 
 async function createProposal(input: CreateCommentInput) {
@@ -189,13 +206,12 @@ async function createProposal(input: CreateCommentInput) {
   const requestKey = targetKey()
   const kind = props.targetKind
   const id = props.targetId
-  const changedField = field.value
   const sourceEvidence = evidence.value.trim()
   submitting.value = true; mutationError.value = ''
   try {
-    await timelineRevisionProposalApi.create(kind, id, { ...input, evidence: sourceEvidence, patch: { [changedField]: changed.value } })
+    await timelineRevisionProposalApi.create(kind, id, { ...input, evidence: sourceEvidence, patch: changed.patch })
     if (!isCurrent(requestGeneration, requestKey)) return
-    value.value = ''; evidence.value = ''; composer.value?.reset(); await reloadPreservingState(requestGeneration, requestKey)
+    value.value = ''; evidence.value = ''; latitudeValue.value = ''; longitudeValue.value = ''; composer.value?.reset(); await reloadPreservingState(requestGeneration, requestKey)
   } catch { if (isCurrent(requestGeneration, requestKey)) mutationError.value = '提案提交失败，请重试' }
   finally { if (isCurrent(requestGeneration, requestKey)) submitting.value = false }
 }
@@ -295,6 +311,7 @@ function displayValue(changed: unknown) { return Array.isArray(changed) ? change
 .timeline-proposals__header span, .timeline-proposals__state { color: var(--a-color-ink-muted); font-size: var(--a-text-sm); }
 .timeline-proposals__composer, .timeline-proposals__list { display: grid; gap: 0.75rem; }
 .timeline-proposals__change { display: grid; grid-template-columns: minmax(9rem, 0.4fr) minmax(0, 1fr); gap: 0.75rem; }
+.timeline-proposals__coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .timeline-proposals label { display: grid; gap: 0.35rem; font-size: var(--a-text-sm); font-weight: 700; }
 .timeline-proposals__item { display: grid; gap: 0.55rem; }
 .timeline-proposals__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.65rem; border: 1px solid var(--a-color-line); background: var(--a-color-paper-soft); font-size: var(--a-text-sm); }

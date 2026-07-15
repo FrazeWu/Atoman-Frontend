@@ -14,6 +14,7 @@ export const useTimelineStore = defineStore('timeline', () => {
   const persons = ref<TimelinePerson[]>([])
   const personsTotal = ref(0)
   const currentPerson = ref<TimelinePerson | null>(null)
+  let personsRequestSequence = 0
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -163,6 +164,9 @@ export const useTimelineStore = defineStore('timeline', () => {
     page?: number
     limit?: number
   } = {}) => {
+    const requestSequence = ++personsRequestSequence
+    persons.value = []
+    personsTotal.value = 0
     loading.value = true
     error.value = null
     try {
@@ -172,16 +176,21 @@ export const useTimelineStore = defineStore('timeline', () => {
       if (params.limit) query.set('limit', String(params.limit))
 
       const res = await fetch(`${api.url}/timeline/persons?${query}`)
+      if (requestSequence !== personsRequestSequence) return
       if (res.ok) {
         const data = await res.json()
+        if (requestSequence !== personsRequestSequence) return
         persons.value = data.data || []
         personsTotal.value = data.total || 0
       }
     } catch (e) {
+      if (requestSequence !== personsRequestSequence) return
       error.value = 'Failed to fetch persons'
       console.error(e)
     } finally {
-      loading.value = false
+      if (requestSequence === personsRequestSequence) {
+        loading.value = false
+      }
     }
   }
 

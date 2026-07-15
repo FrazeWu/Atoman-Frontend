@@ -116,7 +116,7 @@ import { commentNotificationLocation, isCommentNotification, useNotificationStor
 import { useDMStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 import { notificationRoom } from '@/config/moduleRooms'
-import type { InboxTab, Notification, NotificationFilterType } from '@/types'
+import type { InboxTab, Notification } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -148,7 +148,7 @@ const activeTab = computed<InboxTab>(() => {
 
 const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 
-const notificationTypeByTab: Record<'reply' | 'like' | 'mention', NotificationFilterType[]> = {
+const notificationTypeByTab: Record<'reply' | 'like' | 'mention', Notification['type'][]> = {
   reply: ['forum_reply', 'forum_solved', 'comment_reply', 'comment_marked'],
   like: ['forum_like', 'comment_like'],
   mention: ['forum_mention', 'comment_mention'],

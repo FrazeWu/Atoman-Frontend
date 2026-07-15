@@ -14,14 +14,15 @@ export function commentCodePointLength(content: string) {
   return Array.from(normalizeCommentMarkdown(content)).length
 }
 
+function sourceWithoutCodeSpans(tokens: Token[]): string {
+  return tokens.map((token) => {
+    if (token.type === 'codespan') return token.raw.replace(/[^\n]/g, ' ')
+    if ('tokens' in token && Array.isArray(token.tokens)) return sourceWithoutCodeSpans(token.tokens)
+    return token.raw
+  }).join('')
+}
+
 function validateTokens(tokens: Token[]): string | undefined {
-  const inlineSource = tokens.some((token) => ['text', 'codespan', 'link', 'strong', 'em', 'escape', 'br'].includes(token.type))
-    ? tokens.map((token) => token.type === 'codespan'
-      ? token.raw.replace(/[^\n]/g, ' ')
-      : token.raw).join('')
-    : ''
-  if (/~~[\s\S]+?~~/.test(inlineSource)) return 'unsupported_del'
-  if (/^\s*\|?.+\|.+\|?\s*\n\s*\|?\s*:?-{1,}:?\s*\|/m.test(inlineSource)) return 'unsupported_table'
   for (const token of tokens) {
     if (['html', 'image', 'list', 'heading', 'code', 'table', 'del'].includes(token.type)) return `unsupported_${token.type}`
     if (token.type === 'link') {
@@ -40,8 +41,15 @@ function validateTokens(tokens: Token[]): string | undefined {
 export function validateCommentMarkdown(source: string): { ok: boolean; error?: string } {
   const content = normalizeCommentMarkdown(source)
   if (commentCodePointLength(content) > 2000) return { ok: false, error: 'too_long' }
-  const error = validateTokens(commentMarked.lexer(content))
-  return error ? { ok: false, error } : { ok: true }
+  const tokens = commentMarked.lexer(content)
+  const error = validateTokens(tokens)
+  if (error) return { ok: false, error }
+  const withoutCodeSpans = sourceWithoutCodeSpans(tokens)
+  if (/~~[\s\S]+?~~/.test(withoutCodeSpans)) return { ok: false, error: 'unsupported_del' }
+  if (/^\s*\|?.+\|.+\|?\s*\n\s*\|?\s*:?-{1,}:?\s*\|/m.test(withoutCodeSpans)) {
+    return { ok: false, error: 'unsupported_table' }
+  }
+  return { ok: true }
 }
 
 export function renderCommentMarkdown(source: string): CommentMarkdownResult {

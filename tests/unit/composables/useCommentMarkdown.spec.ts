@@ -25,6 +25,15 @@ describe('restricted comment Markdown', () => {
     expect(validateCommentMarkdown('``a\n~~x~~\n|a|b|\n|-|-|``').ok).toBe(true)
   })
 
+  it.each([
+    '**``~~x~~ | a |``**',
+    '*``~~x~~ | a |``*',
+    '[``~~x~~ | a |``](https://example.com)',
+    '> ``a\n~~x~~\n|a|b|\n|-|-|``',
+  ])('ignores restricted markers in nested code span tokens: %s', (source) => {
+    expect(validateCommentMarkdown(source)).toEqual({ ok: true })
+  })
+
   it('still rejects restricted markers outside arbitrary code spans', () => {
     expect(validateCommentMarkdown('``safe ~~x~~`` and ~~bad~~').error).toBe('unsupported_del')
     expect(validateCommentMarkdown('``safe\n|a|b|\n|-|-|``\n\n|a|b|\n|-|-|').error).toBe('unsupported_table')

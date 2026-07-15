@@ -109,15 +109,22 @@ describe('notification store', () => {
 
   it('fetches and combines staged old and unified notification types', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [makeNotification('old', 'forum_reply')], total: 1 }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [makeNotification('new', 'comment_reply')], total: 1 }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [makeNotification('marked', 'comment_marked')], total: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
+        { ...makeNotification('old', 'forum_reply'), created_at: '2026-06-30T03:00:00.000Z' },
+        { ...makeNotification('old-tie', 'forum_reply'), created_at: '2026-06-30T02:00:00.000Z' },
+      ], total: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
+        { ...makeNotification('new', 'comment_reply'), created_at: '2026-06-30T04:00:00.000Z' },
+      ], total: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
+        { ...makeNotification('marked', 'comment_marked'), created_at: '2026-06-30T02:00:00.000Z' },
+      ], total: 1 }), { status: 200 }))
     const store = useNotificationStore()
     await store.fetchNotifications(['forum_reply', 'comment_reply', 'comment_marked'], 1)
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       expect.stringContaining('type=forum_reply'), expect.stringContaining('type=comment_reply'), expect.stringContaining('type=comment_marked'),
     ])
-    expect(store.notifications.map(({ id }) => id)).toEqual(['old', 'new', 'marked'])
-    expect(store.total).toBe(3)
+    expect(store.notifications.map(({ id }) => id)).toEqual(['new', 'old', 'old-tie', 'marked'])
+    expect(store.total).toBe(4)
   })
 })

@@ -68,9 +68,6 @@ describe('useComments', () => {
     const child = comment('child', { root_id: 'root', reply_to_id: 'other' })
     const api = client({
       listRoots: vi.fn().mockResolvedValueOnce(roots([root], { kind: 'blog_post', resourceId: 'post' }))
-        .mockResolvedValueOnce({ ...roots([root], { kind: 'blog_post', resourceId: 'post' }), total_comments: 2, total_replies: 1,
-          target: { kind: 'blog_post', resource_id: 'post', mark_label: '置顶', can_mark: true, comment_count: 2, root_count: 1 } })
-        .mockResolvedValueOnce(roots([root], { kind: 'blog_post', resourceId: 'post' }))
         .mockResolvedValueOnce(roots([], { kind: 'blog_post', resourceId: 'post' })),
       create: vi.fn().mockResolvedValue(child), delete: vi.fn().mockResolvedValue({ ok: true }),
     })
@@ -85,6 +82,35 @@ describe('useComments', () => {
     await state.remove('root')
     expect(state.roots.value).toHaveLength(0)
     expect(state.target.value).toMatchObject({ comment_count: 0, root_count: 0 })
+  })
+
+  it('keeps expanded replies and a new child when the root preview is already full', async () => {
+    const target = { kind: 'blog_post', resourceId: 'post' } as const
+    const preview = [1, 2, 3].map((index) => comment(`child-${index}`, {
+      root_id: 'root', created_at: `2026-01-0${index}T00:00:00Z`,
+    }))
+    const expanded = [...preview, comment('child-4', { root_id: 'root', created_at: '2026-01-04T00:00:00Z' })]
+    const freshRoot = () => comment('root', { reply_count: 4, replies: structuredClone(preview) })
+    const created = comment('child-5', { root_id: 'root', created_at: '2026-01-05T00:00:00Z' })
+    const api = client({
+      listRoots: vi.fn().mockImplementation(() => Promise.resolve(roots([freshRoot()], target))),
+      listReplies: vi.fn().mockResolvedValue({
+        items: structuredClone(expanded), page: 1, per_page: 20, total: 4, has_more: false,
+      }),
+      create: vi.fn().mockResolvedValue(created),
+    })
+    const state = useComments(ref(target), api)
+    await state.load()
+    await state.expandReplies('root')
+    await state.create({ content: 'new', reply_to_id: 'root', mentions: [], attachment_ids: [] })
+
+    expect(api.listRoots).toHaveBeenCalledTimes(1)
+    expect(state.roots.value[0]?.replies.map(({ id }) => id)).toEqual([
+      'child-1', 'child-2', 'child-3', 'child-4', 'child-5',
+    ])
+    expect(state.roots.value[0]?.reply_count).toBe(5)
+    expect(state.target.value?.comment_count).toBe(2)
+    expect(state.replyState('root')).toMatchObject({ expanded: true, page: 1, hasMore: false })
   })
 
   it('optimistically likes once and rolls back the exact original values on failure', async () => {

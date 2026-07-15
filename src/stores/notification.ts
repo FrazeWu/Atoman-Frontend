@@ -83,6 +83,7 @@ export const useNotificationStore = defineStore('notification', () => {
         return res.json()
       }))
       notifications.value = responses.flatMap((data) => data.data || [])
+        .sort((left, right) => right.created_at.localeCompare(left.created_at))
       total.value = responses.reduce((sum, data) => sum + (data.total || 0), 0)
     } finally {
       loading.value = false

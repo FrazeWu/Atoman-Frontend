@@ -138,6 +138,8 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
         root.replies = sortReplies([...root.replies, created])
         root.reply_count += 1
       }
+      if (target.value) target.value.comment_count += 1
+      return created
     }
     await load(true)
     return created
@@ -160,6 +162,8 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
         root.replies = root.replies.filter(({ id }) => id !== commentId)
         root.reply_count = Math.max(0, root.reply_count - 1)
       }
+      if (target.value) target.value.comment_count = Math.max(0, target.value.comment_count - 1)
+      return
     }
     await load(true)
   }

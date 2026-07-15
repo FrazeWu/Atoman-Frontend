@@ -7,6 +7,7 @@ import router from '@/router'
 
 const footerSource = readFileSync(resolve(__dirname, '../../../src/components/system/SiteFooter.vue'), 'utf8')
 const appSource = readFileSync(resolve(__dirname, '../../../src/App.vue'), 'utf8')
+const footerStyle = footerSource.match(/\.site-footer\s*\{([^}]*)\}/)?.[1] ?? ''
 
 describe('SiteFooter', () => {
   it('renders the brand and all footbar links from config', () => {
@@ -35,8 +36,11 @@ describe('SiteFooter', () => {
     expect(footerSource).toContain('site-footer-version')
   })
 
-  it('follows page content instead of being pushed to the viewport bottom', () => {
-    expect(footerSource).not.toMatch(/\.site-footer\s*\{[\s\S]*?margin-top:\s*auto/)
+  it('follows page content instead of floating at the viewport bottom', () => {
+    expect(footerStyle).toContain('position: static')
+    expect(footerStyle).not.toMatch(/position:\s*(?:fixed|sticky)/)
+    expect(footerStyle).not.toMatch(/bottom:\s*0/)
+    expect(footerStyle).not.toMatch(/margin-top:\s*auto/)
     expect(appSource).not.toMatch(/\.app-main\s*\{[\s\S]*?flex:\s*1/)
   })
 })

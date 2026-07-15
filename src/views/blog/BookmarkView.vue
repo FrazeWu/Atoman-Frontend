@@ -36,6 +36,7 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
+        <PEmpty v-else-if="loadError" text="收藏加载失败" />
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
         <div v-else class="a-grid-2">
           <PEntry
@@ -108,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -129,6 +130,8 @@ const folders = ref<BookmarkFolder[]>([])
 const bookmarks = ref<Bookmark[]>([])
 const activeFolder = ref<string | null>(null)
 const loadingPosts = ref(true)
+const loadError = ref('')
+let fetchAllSequence = 0
 const showNewFolder = ref(false)
 const newFolderName = ref('')
 const showDeleteConfirm = ref(false)
@@ -152,18 +155,30 @@ const deletePending = computed(() => deleteRequestSession.value === deleteSessio
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
 
 const fetchAll = async () => {
+  const requestSequence = ++fetchAllSequence
   loadingPosts.value = true
+  loadError.value = ''
   try {
     const [fRes, bRes] = await Promise.all([
       fetch(api.blog.bookmarkFolders, { headers: authHeader.value }),
       fetch(api.blog.bookmarks, { headers: authHeader.value })
     ])
-    if (fRes.ok) folders.value = (await fRes.json()).data || []
-    if (bRes.ok) bookmarks.value = (await bRes.json()).data || []
-  } catch (e) {
-    console.error(e)
+    if (requestSequence !== fetchAllSequence) return false
+    if (!fRes.ok || !bRes.ok) throw new Error('Failed to load bookmarks')
+
+    const [foldersData, bookmarksData] = await Promise.all([fRes.json(), bRes.json()])
+    if (requestSequence !== fetchAllSequence) return false
+    folders.value = foldersData.data || []
+    bookmarks.value = bookmarksData.data || []
+    return true
+  } catch {
+    if (requestSequence !== fetchAllSequence) return false
+    loadError.value = '收藏加载失败'
+    return false
   } finally {
-    loadingPosts.value = false
+    if (requestSequence === fetchAllSequence) {
+      loadingPosts.value = false
+    }
   }
 }
 
@@ -231,6 +246,10 @@ const confirmDeleteFolder = async () => {
 }
 
 onMounted(fetchAll)
+
+onUnmounted(() => {
+  fetchAllSequence++
+})
 </script>
 
 <style scoped>

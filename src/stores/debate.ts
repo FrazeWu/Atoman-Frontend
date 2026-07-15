@@ -15,6 +15,7 @@ export const useDebateStore = defineStore("debate", () => {
   const error = ref<string | null>(null);
   // Track current user's votes on arguments
   const userVotes = ref<Record<string, number>>({});
+  let debatesRequestSequence = 0;
 
   const authHeaders = () => {
     const authStore = useAuthStore();
@@ -29,6 +30,7 @@ export const useDebateStore = defineStore("debate", () => {
       limit?: number;
     } = {},
   ) => {
+    const requestSequence = ++debatesRequestSequence;
     loading.value = true;
     error.value = null;
     try {
@@ -39,17 +41,21 @@ export const useDebateStore = defineStore("debate", () => {
       if (params.limit) query.set("limit", String(params.limit));
 
       const res = await fetch(`${api.url}/debate/topics?${query}`);
-      if (res.ok) {
-        const data = await res.json();
-        const rows = data.data || [];
-        debates.value = (params.page || 1) > 1 ? [...debates.value, ...rows] : rows;
-        debatesTotal.value = data.meta?.total || 0;
-      }
+      if (requestSequence !== debatesRequestSequence) return false;
+      if (!res.ok) throw new Error(`Failed to fetch debates (${res.status})`);
+      const data = await res.json();
+      if (requestSequence !== debatesRequestSequence) return false;
+      const rows = data.data || [];
+      debates.value = (params.page || 1) > 1 ? [...debates.value, ...rows] : rows;
+      debatesTotal.value = data.meta?.total || 0;
+      return true;
     } catch (e) {
+      if (requestSequence !== debatesRequestSequence) return false;
       error.value = "Failed to fetch debates";
       console.error(e);
+      return false;
     } finally {
-      loading.value = false;
+      if (requestSequence === debatesRequestSequence) loading.value = false;
     }
   };
 
@@ -448,6 +454,7 @@ export const useDebateStore = defineStore("debate", () => {
   };
 
   const resetStore = () => {
+    debatesRequestSequence += 1;
     debates.value = [];
     debatesTotal.value = 0;
     currentDebate.value = null;

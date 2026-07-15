@@ -31,6 +31,7 @@
     </div>
 
     <!-- Empty State -->
+    <PEmpty v-else-if="error && debates.length === 0" text="辩题加载失败" />
     <PEmpty v-else-if="debates.length === 0" text="暂无辩论" />
 
     <!-- Debate List -->
@@ -92,7 +93,14 @@
 
     <!-- Load More -->
     <div v-if="debates.length > 0 && debates.length < debatesTotal" class="mt-6 text-center">
-      <PButton outline @click="loadMore">加载更多</PButton>
+      <PButton
+        outline
+        :loading="loading"
+        :disabled="loading"
+        label="加载更多"
+        loading-text="加载中..."
+        @click="loadMore"
+      />
     </div>
 
     <!-- Create Modal -->
@@ -141,9 +149,12 @@ const authStore = useAuthStore()
 const debates = computed(() => debateStore.debates)
 const debatesTotal = computed(() => debateStore.debatesTotal)
 const loading = computed(() => debateStore.loading)
+const error = computed(() => debateStore.error)
 
-const filterStatus = ref('')
+const filterStatus = ref<'' | 'open' | 'concluded' | 'archived'>('')
 const filterTag = ref('')
+const appliedStatus = ref<'' | 'open' | 'concluded' | 'archived'>('')
+const appliedTag = ref('')
 const currentPage = ref(1)
 const limit = 12
 
@@ -182,23 +193,31 @@ const conclusionBadgeStyles: Record<string, any> = {
 }
 
 const loadDebates = async () => {
-  currentPage.value = 1
-  await debateStore.fetchDebates({
-    status: filterStatus.value as 'open' | 'concluded' | 'archived' | undefined,
-    tag: filterTag.value.trim() || undefined,
-    page: currentPage.value,
+  const requestedStatus = filterStatus.value
+  const requestedTag = filterTag.value.trim()
+  const succeeded = await debateStore.fetchDebates({
+    status: requestedStatus || undefined,
+    tag: requestedTag || undefined,
+    page: 1,
     limit,
   })
+  if (succeeded) {
+    currentPage.value = 1
+    appliedStatus.value = requestedStatus
+    appliedTag.value = requestedTag
+  }
 }
 
 const loadMore = async () => {
-  currentPage.value++
-  await debateStore.fetchDebates({
-    status: filterStatus.value as 'open' | 'concluded' | 'archived' | undefined,
-    tag: filterTag.value.trim() || undefined,
-    page: currentPage.value,
+  if (loading.value) return
+  const nextPage = currentPage.value + 1
+  const succeeded = await debateStore.fetchDebates({
+    status: appliedStatus.value || undefined,
+    tag: appliedTag.value || undefined,
+    page: nextPage,
     limit,
   })
+  if (succeeded) currentPage.value = nextPage
 }
 
 const handleCreate = async () => {

@@ -65,6 +65,7 @@
       :reply-to-name="replyingTo.author.display_name || replyingTo.author.username"
       :current-time="currentTime"
       submit-label="回复"
+      :submitting="mutationPending"
       @cancel="replyingTo = null"
       @submit="submitReply"
     />
@@ -73,10 +74,13 @@
       class="comment-thread__composer"
       :initial-content="editing.content"
       :initial-attachment-ids="editing.attachments.map(({ id }) => id)"
+      :initial-mentions="editing.mentions"
       submit-label="保存"
+      :submitting="mutationPending"
       @cancel="editing = null"
       @submit="submitEdit"
     />
+    <p v-if="mutationError" class="comment-thread__error" role="alert">{{ mutationError }}</p>
   </section>
 </template>
 
@@ -104,6 +108,8 @@ const props = withDefaults(defineProps<{
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
   likePending?: (id: string) => boolean
+  onReply?: (comment: CommentDTO, input: CreateCommentInput) => Promise<unknown>
+  onEdit?: (comment: CommentDTO, input: CreateCommentInput) => Promise<unknown>
 }>(), {
   replies: undefined,
   expanded: false,
@@ -117,6 +123,8 @@ const props = withDefaults(defineProps<{
   markLabel: '置顶',
   currentTime: undefined,
   likePending: () => false,
+  onReply: undefined,
+  onEdit: undefined,
 })
 
 const emit = defineEmits<{
@@ -128,26 +136,42 @@ const emit = defineEmits<{
   unmark: []
   expand: [rootId: string]
   'more-replies': [rootId: string]
-  reply: [comment: CommentDTO, input: CreateCommentInput]
-  edit: [comment: CommentDTO, input: CreateCommentInput]
 }>()
 
 const replyingTo = ref<CommentDTO | null>(null)
 const editing = ref<CommentDTO | null>(null)
+const mutationPending = ref(false)
+const mutationError = ref('')
 const allReplies = computed(() => props.replies ?? props.root.replies)
 const visibleReplies = computed(() => props.expanded ? allReplies.value : allReplies.value.slice(0, 3))
 const showExpand = computed(() => !props.expanded && props.root.reply_count > visibleReplies.value.length)
 
-function submitReply(input: CreateCommentInput) {
+async function submitReply(input: CreateCommentInput) {
   if (!replyingTo.value) return
-  emit('reply', replyingTo.value, input)
-  replyingTo.value = null
+  mutationPending.value = true
+  mutationError.value = ''
+  try {
+    await props.onReply?.(replyingTo.value, input)
+    replyingTo.value = null
+  } catch {
+    mutationError.value = '回复失败，请重试'
+  } finally {
+    mutationPending.value = false
+  }
 }
 
-function submitEdit(input: CreateCommentInput) {
+async function submitEdit(input: CreateCommentInput) {
   if (!editing.value) return
-  emit('edit', editing.value, input)
-  editing.value = null
+  mutationPending.value = true
+  mutationError.value = ''
+  try {
+    await props.onEdit?.(editing.value, input)
+    editing.value = null
+  } catch {
+    mutationError.value = '保存失败，请重试'
+  } finally {
+    mutationPending.value = false
+  }
 }
 </script>
 
@@ -157,5 +181,6 @@ function submitEdit(input: CreateCommentInput) {
 .comment-thread__replies { margin-left: clamp(0.75rem, 4vw, 3rem); border-left: 2px solid var(--a-color-line); }
 .comment-thread__expand { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-height: 42px; border: 0; border-top: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); color: var(--a-color-ink); cursor: pointer; }
 .comment-thread__composer { margin: 0.75rem; }
+.comment-thread__error { margin: 0 0.75rem 0.75rem; color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
 @media (max-width: 560px) { .comment-thread__replies { margin-left: 0.5rem; } }
 </style>

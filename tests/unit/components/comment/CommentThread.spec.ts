@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import CommentThread from '@/components/comment/CommentThread.vue'
 import { makeComment } from './fixtures'
@@ -33,5 +33,32 @@ describe('CommentThread', () => {
     })
     expect(wrapper.findAll('[data-test="marked-label"]')).toHaveLength(1)
     expect(wrapper.text()).toContain('最佳回答')
+  })
+
+  it('keeps a reply draft open on failure and closes it only after success', async () => {
+    const onReply = vi.fn().mockRejectedValueOnce(new Error('failed')).mockResolvedValueOnce(undefined)
+    const wrapper = mount(CommentThread, { props: { root: makeComment('root'), authenticated: true, onReply } })
+    await wrapper.get('[data-test="reply-comment"]').trigger('click')
+    await wrapper.get('textarea').setValue('草稿内容')
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await Promise.resolve()
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).exists()).toBe(true)
+    expect(wrapper.get('textarea').element).toHaveValue('草稿内容')
+    expect(wrapper.text()).toContain('回复失败')
+
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'CommentComposer' }).exists()).toBe(false))
+  })
+
+  it('passes existing mentions into the edit composer and preserves it on failure', async () => {
+    const root = makeComment('root', { content: '你好 @alice', mentions: [{ user_id: 'user-1', start: 3, end: 9 }] })
+    const onEdit = vi.fn().mockRejectedValue(new Error('failed'))
+    const wrapper = mount(CommentThread, { props: { root, authenticated: true, currentUserId: 'user-1', onEdit } })
+    await wrapper.get('button[title="编辑"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).props('initialMentions')).toEqual(root.mentions)
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await Promise.resolve()
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).exists()).toBe(true)
+    expect(wrapper.text()).toContain('保存失败')
   })
 })

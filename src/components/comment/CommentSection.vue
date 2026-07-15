@@ -16,6 +16,7 @@
 
     <CommentComposer
       v-if="authStore.isAuthenticated"
+      ref="rootComposer"
       :placeholder="`写下${noun}`"
       :current-time="currentTime"
       :submitting="creating"
@@ -47,6 +48,8 @@
         :mark-label="effectiveMarkLabel"
         :current-time="currentTime"
         :like-pending="(id) => comments.isLikePending(id).value"
+        :on-reply="createReply"
+        :on-edit="editComment"
         @seek="$emit('seek', $event)"
         @like="comments.toggleLike"
         @delete="comments.remove"
@@ -55,8 +58,6 @@
         @unmark="comments.unmark"
         @expand="expandReplies"
         @more-replies="loadMoreReplies"
-        @reply="createReply"
-        @edit="editComment"
       />
     </div>
 
@@ -64,7 +65,8 @@
       加载更多
     </PButton>
 
-    <CommentReportDialog v-model="reportVisible" @submit="submitReport" />
+    <p v-if="mutationError" class="comment-section__error" role="alert">{{ mutationError }}</p>
+    <CommentReportDialog v-model="reportVisible" :on-submit="submitReport" />
   </section>
 </template>
 
@@ -99,6 +101,8 @@ defineEmits<{ seek: [seconds: number] }>()
 const authStore = useAuthStore()
 const comments = useComments(() => props.target)
 const creating = ref(false)
+const mutationError = ref('')
+const rootComposer = ref<{ reset: () => void } | null>(null)
 const reportVisible = ref(false)
 const reportingCommentId = ref('')
 const currentUserId = computed(() => authStore.user?.uuid ?? '')
@@ -117,7 +121,15 @@ watch(() => `${props.target.kind}:${props.target.resourceId}`, () => {
 
 async function createRoot(input: CreateCommentInput) {
   creating.value = true
-  try { await comments.create(input) } finally { creating.value = false }
+  mutationError.value = ''
+  try {
+    await comments.create(input)
+    rootComposer.value?.reset()
+  } catch {
+    mutationError.value = '发布失败，请重试'
+  } finally {
+    creating.value = false
+  }
 }
 
 async function createReply(comment: CommentDTO, input: CreateCommentInput) {

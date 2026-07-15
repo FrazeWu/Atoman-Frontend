@@ -1,5 +1,5 @@
 <template>
-  <form class="comment-composer" @submit.prevent="submit">
+  <form class="comment-composer" @submit.prevent>
     <div v-if="replyToName" class="comment-composer__reply">
       回复 {{ replyToName }}
       <button type="button" title="取消回复" aria-label="取消回复" @click="$emit('cancel')"><X :size="15" /></button>
@@ -64,17 +64,16 @@
         </button>
       </div>
       <span class="comment-composer__count" :class="{ 'is-over': codePointLength > 2000 }">{{ codePointLength }}/2000</span>
-      <PButton
-        type="submit"
-        size="sm"
+      <button
+        type="button"
+        class="comment-composer__submit"
         data-test="comment-submit"
-        :disabled="!canSubmit"
-        :loading="submitting || uploading"
+        :disabled="!canSubmit || submitting || uploading"
         @click.prevent="submit"
       >
         <Send :size="14" aria-hidden="true" />
-        {{ submitLabel }}
-      </PButton>
+        {{ submitting || uploading ? '处理中...' : submitLabel }}
+      </button>
     </div>
   </form>
 </template>
@@ -84,7 +83,6 @@ import { computed, nextTick, ref } from 'vue'
 import { Clock3, Image as ImageIcon, ImagePlus, Send, X } from 'lucide-vue-next'
 
 import PAvatar from '@/components/ui/PAvatar.vue'
-import PButton from '@/components/ui/PButton.vue'
 import { commentApi, type CommentMentionInput, type CreateCommentInput } from '@/api/comments'
 import { commentCodePointLength, validateCommentMarkdown } from '@/composables/useCommentMarkdown'
 import {
@@ -100,6 +98,7 @@ defineOptions({ name: 'CommentComposer' })
 const props = withDefaults(defineProps<{
   initialContent?: string
   initialAttachmentIds?: string[]
+  initialMentions?: CommentMentionInput[]
   replyToName?: string
   placeholder?: string
   submitLabel?: string
@@ -108,6 +107,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   initialContent: '',
   initialAttachmentIds: () => [],
+  initialMentions: () => [],
   replyToName: '',
   placeholder: '写下内容',
   submitLabel: '发布',
@@ -123,9 +123,19 @@ const emit = defineEmits<{
 interface LocalAttachment { id: string; name: string }
 interface SelectedMention { userId: string; username: string }
 
+function selectedFromInput(value: string, inputs: CommentMentionInput[]) {
+  const points = Array.from(normalizeCommentContent(value))
+  return inputs.flatMap((mention) => {
+    const token = points.slice(mention.start, mention.end).join('')
+    return token.startsWith('@') && token.length > 1
+      ? [{ userId: mention.user_id, username: token.slice(1) }]
+      : []
+  })
+}
+
 const content = ref(props.initialContent)
 const attachments = ref<LocalAttachment[]>(props.initialAttachmentIds.map((id) => ({ id, name: '已上传图片' })))
-const selectedMentions = ref<SelectedMention[]>([])
+const selectedMentions = ref<SelectedMention[]>(selectedFromInput(props.initialContent, props.initialMentions))
 const mentionUsers = ref<MentionSearchUser[]>([])
 const mentionRange = ref<{ start: number; end: number } | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -144,6 +154,7 @@ const canSubmit = computed(() => !props.submitting && !uploading.value && !valid
   && (normalizeCommentContent(content.value).length > 0 || attachments.value.length > 0))
 
 async function updateMentionSearch() {
+  const request = ++mentionRequest
   const textarea = textareaRef.value
   if (!textarea) return
   const cursor = textarea.selectionStart
@@ -156,7 +167,6 @@ async function updateMentionSearch() {
   }
   const start = cursor - match[1].length - 1
   mentionRange.value = { start, end: cursor }
-  const request = ++mentionRequest
   try {
     const users = await searchMentionUsers(match[1])
     if (request === mentionRequest) mentionUsers.value = users
@@ -175,6 +185,7 @@ async function selectMention(user: MentionSearchUser) {
   }
   mentionUsers.value = []
   mentionRange.value = null
+  mentionRequest++
   await nextTick()
   const cursor = range.start + token.length
   textareaRef.value?.setSelectionRange(cursor, cursor)
@@ -241,6 +252,18 @@ function submit() {
     attachment_ids: attachments.value.map(({ id }) => id),
   })
 }
+
+function reset() {
+  content.value = props.initialContent
+  attachments.value = props.initialAttachmentIds.map((id) => ({ id, name: '已上传图片' }))
+  selectedMentions.value = selectedFromInput(props.initialContent, props.initialMentions)
+  mentionUsers.value = []
+  mentionRange.value = null
+  imageError.value = ''
+  mentionRequest++
+}
+
+defineExpose({ reset })
 </script>
 
 <style scoped>
@@ -265,6 +288,8 @@ function submit() {
 .comment-composer__tool input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .comment-composer__count { color: var(--a-color-ink-muted); font-family: var(--a-font-meta); font-size: 0.75rem; }
 .comment-composer__count.is-over, .comment-composer__error { color: var(--a-color-accent-destructive); }
+.comment-composer__submit { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-ink); background: var(--a-color-ink); color: var(--a-color-paper); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+.comment-composer__submit:disabled { cursor: not-allowed; opacity: 0.5; }
 .comment-composer__error { margin: 0; font-size: var(--a-text-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @media (max-width: 560px) { .comment-composer { padding: 0.75rem; } .comment-composer__footer { flex-wrap: wrap; } }

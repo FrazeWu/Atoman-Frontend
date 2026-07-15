@@ -53,4 +53,21 @@ describe('CommentSection', () => {
     expect(thread.props('markLabel')).toBe('最佳回答')
     expect(thread.props('canDelete')).toBe(true)
   })
+
+  it('keeps a root draft after failure and resets it after success', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'alice', email: 'a@example.com', role: 'user' }
+    auth.isAuthenticated = true
+    state.create.mockRejectedValueOnce(new Error('failed')).mockResolvedValueOnce(makeComment('created'))
+    const wrapper = mount(CommentSection, { props: { target: { kind: 'blog_post', resourceId: 'post' } } })
+    await wrapper.get('textarea').setValue('根评论草稿')
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await Promise.resolve()
+    expect(wrapper.get('textarea').element).toHaveValue('根评论草稿')
+    expect(wrapper.text()).toContain('发布失败')
+
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.get('textarea').element).toHaveValue(''))
+  })
 })

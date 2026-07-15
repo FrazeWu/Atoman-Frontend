@@ -1,6 +1,6 @@
 <template>
   <PModal :model-value="modelValue" title="举报" size="sm" @update:model-value="$emit('update:modelValue', $event)">
-    <form class="comment-report" @submit.prevent="submit">
+    <form class="comment-report" @submit.prevent>
       <label>
         <span>原因</span>
         <select v-model="reason" required>
@@ -17,14 +17,16 @@
       <p v-if="error" class="comment-report__error" role="alert">{{ error }}</p>
       <div class="comment-report__actions">
         <PButton type="button" size="sm" outline @click="$emit('update:modelValue', false)">取消</PButton>
-        <PButton type="submit" size="sm" data-test="submit-report" @click.prevent="submit">提交</PButton>
+        <button type="button" class="comment-report__submit" data-test="submit-report" :disabled="pending" @click="submit">
+          {{ pending ? '提交中...' : '提交' }}
+        </button>
       </div>
     </form>
   </PModal>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import type { CommentReportReason, ReportCommentInput } from '@/api/comments'
 import PButton from '@/components/ui/PButton.vue'
@@ -33,7 +35,10 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 
 defineOptions({ name: 'CommentReportDialog' })
 
-defineProps<{ modelValue: boolean }>()
+const props = defineProps<{
+  modelValue: boolean
+  onSubmit?: (input: ReportCommentInput) => Promise<unknown>
+}>()
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   submit: [input: ReportCommentInput]
@@ -42,15 +47,40 @@ const emit = defineEmits<{
 const reason = ref<CommentReportReason>('spam')
 const note = ref('')
 const error = ref('')
+const pending = ref(false)
 
-function submit() {
+function reset() {
+  reason.value = 'spam'
+  note.value = ''
+  error.value = ''
+}
+
+watch(() => props.modelValue, (visible, previous) => {
+  if (visible && !previous) reset()
+})
+
+async function submit() {
+  if (pending.value) return
   if (reason.value === 'other' && !note.value.trim()) {
     error.value = '请填写补充说明'
     return
   }
   error.value = ''
-  emit('submit', { reason: reason.value, note: note.value.trim() })
-  emit('update:modelValue', false)
+  const input = { reason: reason.value, note: note.value.trim() }
+  if (!props.onSubmit) {
+    emit('submit', input)
+    return
+  }
+  pending.value = true
+  try {
+    await props.onSubmit(input)
+    reset()
+    emit('update:modelValue', false)
+  } catch {
+    error.value = '举报失败，请重试'
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -59,5 +89,6 @@ function submit() {
 .comment-report label { display: grid; gap: 0.45rem; color: var(--a-color-ink-soft); font-size: var(--a-text-sm); font-weight: 800; }
 .comment-report select { min-height: 42px; padding: 0 0.65rem; border: 1px solid var(--a-color-line); background: var(--a-color-paper); color: var(--a-color-ink); font: inherit; }
 .comment-report__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.comment-report__submit { min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-ink); background: var(--a-color-ink); color: var(--a-color-paper); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
 .comment-report__error { margin: 0; color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
 </style>

@@ -64,4 +64,30 @@ describe('CommentComposer', () => {
     await wrapper.get('[data-test="comment-submit"]').trigger('click')
     expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual({ content: '1:05', mentions: [], attachment_ids: [] })
   })
+
+  it('preserves initial structured mentions when editing unchanged text', async () => {
+    const wrapper = mount(CommentComposer, { props: {
+      initialContent: '你好 @alice', initialMentions: [{ user_id: 'user-1', start: 3, end: 9 }],
+    } })
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({
+      content: '你好 @alice', mentions: [{ user_id: 'user-1', start: 3, end: 9 }],
+    })
+  })
+
+  it('ignores a late mention search after the query is no longer active', async () => {
+    let resolveSearch!: (users: mentions.MentionSearchUser[]) => void
+    vi.spyOn(mentions, 'searchMentionUsers').mockReturnValue(new Promise((resolve) => { resolveSearch = resolve }))
+    const wrapper = mount(CommentComposer)
+    const textarea = wrapper.get('textarea')
+    await textarea.setValue('@ali')
+    ;(textarea.element as HTMLTextAreaElement).setSelectionRange(4, 4)
+    await textarea.trigger('keyup')
+    await textarea.setValue('普通正文')
+    ;(textarea.element as HTMLTextAreaElement).setSelectionRange(4, 4)
+    await textarea.trigger('keyup')
+    resolveSearch([{ uuid: 'late', username: 'alice', display_name: 'Alice', avatar_url: '', role: 'user' }])
+    await Promise.resolve()
+    expect(wrapper.find('[data-test="mention-option"]').exists()).toBe(false)
+  })
 })

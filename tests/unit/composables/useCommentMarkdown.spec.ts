@@ -13,7 +13,7 @@ describe('restricted comment Markdown', () => {
   })
 
   it.each([
-    '<b>raw</b>', '![x](https://x.test/x.png)', '- item', '# heading', '```js\nx\n```',
+    '<b>raw</b>', '![x](https://x.test/x.png)', '- item', '# heading', '---', '```js\nx\n```',
     '|a|b|\n|-|-|\n|1|2|', '~~gone~~', '[bad](javascript:alert(1))', '[relative](/path)',
   ])('rejects unsupported syntax: %s', (source) => {
     expect(validateCommentMarkdown(source).ok).toBe(false)
@@ -23,6 +23,11 @@ describe('restricted comment Markdown', () => {
     expect(validateCommentMarkdown('`~~x~~ | a |`').ok).toBe(true)
     expect(validateCommentMarkdown('``~~x~~ ` | a |``').ok).toBe(true)
     expect(validateCommentMarkdown('``a\n~~x~~\n|a|b|\n|-|-|``').ok).toBe(true)
+  })
+
+  it('treats backslashes as code content rather than escaped closing delimiters', () => {
+    expect(validateCommentMarkdown('`~~x~~\\`')).toEqual({ ok: true })
+    expect(validateCommentMarkdown('``|a|b|\n|-|-|\\``')).toEqual({ ok: true })
   })
 
   it.each([

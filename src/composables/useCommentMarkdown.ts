@@ -1,8 +1,12 @@
 import DOMPurify from 'dompurify'
-import { Marked, type Token } from 'marked'
+import { Marked } from 'marked'
 
 const allowedTags = ['p', 'br', 'strong', 'em', 'code', 'a', 'blockquote']
 const commentMarked = new Marked({ gfm: false, breaks: true })
+const validationMarked = new Marked({ gfm: true, breaks: true })
+const allowedTokenTypes = new Set([
+  'paragraph', 'text', 'space', 'strong', 'em', 'codespan', 'link', 'blockquote', 'br',
+])
 
 export interface CommentMarkdownResult { ok: boolean; html: string; error?: string }
 
@@ -14,76 +18,44 @@ export function commentCodePointLength(content: string) {
   return Array.from(normalizeCommentMarkdown(content)).length
 }
 
-function isEscaped(source: string, index: number) {
-  let slashes = 0
-  for (let cursor = index - 1; cursor >= 0 && source[cursor] === '\\'; cursor -= 1) slashes += 1
-  return slashes % 2 === 1
-}
-
-function maskCodeSpans(source: string) {
-  const masked = source.split('')
-  let cursor = 0
-  while (cursor < source.length) {
-    if (source[cursor] !== '`' || isEscaped(source, cursor)) {
-      cursor += 1
-      continue
+function validateTokenTree(value: unknown, inBlockquote = false): string | undefined {
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const error = validateTokenTree(child, inBlockquote)
+      if (error) return error
     }
-    let openerEnd = cursor
-    while (source[openerEnd] === '`') openerEnd += 1
-    const delimiterLength = openerEnd - cursor
-    let search = openerEnd
-    let closerEnd = -1
-    while (search < source.length) {
-      const closerStart = source.indexOf('`', search)
-      if (closerStart < 0) break
-      let runEnd = closerStart
-      while (source[runEnd] === '`') runEnd += 1
-      if (!isEscaped(source, closerStart) && runEnd - closerStart === delimiterLength) {
-        closerEnd = runEnd
-        break
-      }
-      search = runEnd
-    }
-    if (closerEnd < 0) {
-      cursor = openerEnd
-      continue
-    }
-    for (let index = cursor; index < closerEnd; index += 1) {
-      if (masked[index] !== '\n') masked[index] = ' '
-    }
-    cursor = closerEnd
+    return
   }
-  return masked.join('')
-}
+  if (!value || typeof value !== 'object') return
 
-function validateTokens(tokens: Token[]): string | undefined {
-  for (const token of tokens) {
-    if (['html', 'image', 'list', 'heading', 'code', 'table', 'del'].includes(token.type)) return `unsupported_${token.type}`
-    if (token.type === 'link') {
-      try {
-        const url = new URL(token.href)
-        if (url.protocol !== 'http:' && url.protocol !== 'https:') return 'unsafe_link'
-      } catch {
-        return 'unsafe_link'
-      }
+  const node = value as Record<string, unknown>
+  const type = typeof node.type === 'string' ? node.type : ''
+  const childInBlockquote = inBlockquote || type === 'blockquote'
+  if (type && !allowedTokenTypes.has(type) && !(type === 'table' && inBlockquote)) {
+    return `unsupported_${type}`
+  }
+  if (type === 'link') {
+    const href = typeof node.href === 'string' ? node.href : ''
+    try {
+      const url = new URL(href)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return 'unsafe_link'
+    } catch {
+      return 'unsafe_link'
     }
-    const nested = 'tokens' in token && Array.isArray(token.tokens) ? validateTokens(token.tokens) : undefined
-    if (nested) return nested
+  }
+
+  for (const key of ['tokens', 'children', 'items', 'rows', 'header', 'cells']) {
+    const error = validateTokenTree(node[key], childInBlockquote)
+    if (error) return error
   }
 }
 
 export function validateCommentMarkdown(source: string): { ok: boolean; error?: string } {
   const content = normalizeCommentMarkdown(source)
   if (commentCodePointLength(content) > 2000) return { ok: false, error: 'too_long' }
-  const tokens = commentMarked.lexer(content)
-  const error = validateTokens(tokens)
-  if (error) return { ok: false, error }
-  const withoutCodeSpans = maskCodeSpans(content)
-  if (/~~[\s\S]+?~~/.test(withoutCodeSpans)) return { ok: false, error: 'unsupported_del' }
-  if (/^\s*\|?.+\|.+\|?\s*\n\s*\|?\s*:?-{1,}:?\s*\|/m.test(withoutCodeSpans)) {
-    return { ok: false, error: 'unsupported_table' }
-  }
-  return { ok: true }
+  const tokens = validationMarked.lexer(content)
+  const error = validateTokenTree(tokens)
+  return error ? { ok: false, error } : { ok: true }
 }
 
 export function renderCommentMarkdown(source: string): CommentMarkdownResult {

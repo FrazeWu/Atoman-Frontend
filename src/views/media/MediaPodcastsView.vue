@@ -14,15 +14,20 @@ const api = useApi()
 const router = useRouter()
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(false)
+const error = ref('')
 
 const loadPodcasts = async () => {
   loading.value = true
+  error.value = ''
   try {
     const params = new URLSearchParams({ sort: 'latest', limit: '40' })
     const res = await fetch(`${api.podcast.episodes}?${params}`)
-    if (!res.ok) return
+    if (!res.ok) throw new Error(`Failed to load podcasts (${res.status})`)
     const data = await res.json()
     episodes.value = data.data || data.episodes || data || []
+  } catch {
+    episodes.value = []
+    error.value = '播客加载失败'
   } finally {
     loading.value = false
   }
@@ -60,6 +65,7 @@ const episodePath = (episodeId: string) => modulePathUrl('media', `/podcasts/epi
       </template>
     </PPageHeader>
     <div v-if="loading" class="a-skeleton media-list-skeleton" />
+    <PEmpty v-else-if="error" :text="error" />
     <PEmpty v-else-if="episodes.length === 0" text="暂无播客" />
     <div v-else class="media-podcast-list">
       <PEntry

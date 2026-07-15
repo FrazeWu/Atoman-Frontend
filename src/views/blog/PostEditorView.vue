@@ -3,9 +3,9 @@
     <div class="editor-shell">
       <div v-if="error" class="editor-error a-error">{{ error }}</div>
 
-      <div class="editor-layout">
+      <div class="editor-layout" :class="{ 'is-directory-collapsed': directoryCollapsed }">
         <PostEditorSidebar
-          :mobile-open="mobilePanel === 'outline'"
+          :mobile-open="mobilePanel === 'settings'"
           :saving="saving"
           :has-draft-manager-access="hasDraftManagerAccess"
           :channel-collections="channelCollections"
@@ -17,9 +17,6 @@
           :cover-url="form.cover_url"
           :cover-uploading="coverUploading"
           :cover-upload-error="coverUploadError"
-          :outline-count="outline.length"
-          :flattened-outline="flattenedOutline"
-          :active-heading-line="activeHeadingLine"
           @save-draft="save('draft')"
           @save-published="save('published')"
           @open-draft-manager="openDraftManager"
@@ -29,7 +26,6 @@
           @update:allowComments="(value) => (form.allow_comments = value)"
           @cover-upload="handleCoverUpload"
           @remove-cover="removeCover"
-          @jump-to-heading="jumpToHeading"
         />
         <!-- 主编辑区 -->
         <main class="col-center a-card-sm">
@@ -79,6 +75,17 @@
 
           <div v-else class="editor-loading">加载中…</div>
         </main>
+
+        <PDirectoryNav
+          v-model:collapsed="directoryCollapsed"
+          :items="directoryItems"
+          :active-id="activeDirectoryId"
+          :mobile-open="mobilePanel === 'outline'"
+          empty-text="添加标题后显示目录"
+          aria-label="文档目录"
+          @select="selectDirectoryItem"
+          @close-mobile="mobilePanel = null"
+        />
       </div>
     </div>
 
@@ -188,6 +195,7 @@ import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import { useAutoSave } from '@/composables/useAutoSave'
 import PButton from '@/components/ui/PButton.vue'
+import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
@@ -239,6 +247,7 @@ type EditorSessionState = 'awaiting-collab' | 'collab-conflict' | 'collab-active
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
 const activeHeadingLine = ref<number | null>(null)
 const mobilePanel = ref<'outline' | 'settings' | null>(null)
+const directoryCollapsed = ref(false)
 const editorMode = ref<'normal' | 'split'>('normal')
 const syncScroll = ref(true)
 
@@ -371,8 +380,23 @@ const flattenedOutline = computed((): FlattenedOutlineNode[] => {
     })
 })
 
+const directoryItems = computed(() => flattenedOutline.value.map(item => ({
+  id: String(item.line),
+  label: item.text,
+  depth: item.depth,
+  branch: item.isActiveBranch && item.line !== activeHeadingLine.value,
+})))
+const activeDirectoryId = computed(() => (
+  activeHeadingLine.value === null ? null : String(activeHeadingLine.value)
+))
+
 const jumpToHeading = (line: number) => {
   editorRef.value?.scrollToHeadingLine?.(line)
+}
+
+const selectDirectoryItem = (id: string) => {
+  const line = Number(id)
+  if (Number.isFinite(line)) jumpToHeading(line)
 }
 
 // ── 合集 ─────────────────────────────────────────────────
@@ -1286,10 +1310,14 @@ onBeforeUnmount(() => {
 
 .editor-layout {
   display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) 13.75rem;
   gap: 1rem;
   flex: 1;
   min-height: 0;
+}
+
+.editor-layout.is-directory-collapsed {
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) 3rem;
 }
 
 .editor-mobile-actions {
@@ -1587,57 +1615,6 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
-.toc-section {
-  flex: 1;
-}
-
-.toc-list {
-  overflow-y: auto;
-}
-
-.toc-item {
-  --toc-depth: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 0.65rem;
-  padding: 0.55rem 0.7rem;
-  color: var(--a-color-muted);
-  text-decoration: none;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border-left: 2px solid transparent;
-}
-
-.toc-item:hover {
-  border-left-color: var(--a-color-border);
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-}
-
-.toc-rail {
-  width: calc(var(--toc-depth) * 0.8rem + 1px);
-  min-height: 1.2rem;
-  background-image: repeating-linear-gradient(
-    to right,
-    color-mix(in srgb, var(--a-color-border) 52%, transparent) 0 1px,
-    transparent 1px 0.8rem
-  );
-  background-repeat: no-repeat;
-  opacity: 0.9;
-}
-
-.toc-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .cover-upload-card {
   display: flex;
   flex-direction: column;
@@ -1721,12 +1698,17 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1200px) {
   .editor-layout {
-    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
+    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr) 13.75rem;
+  }
+
+  .editor-layout.is-directory-collapsed {
+    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr) 3rem;
   }
 }
 
-@media (max-width: 960px) {
-  .editor-layout {
+@media (max-width: 1023px) {
+  .editor-layout,
+  .editor-layout.is-directory-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 

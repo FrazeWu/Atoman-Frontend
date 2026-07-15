@@ -97,7 +97,10 @@ describe('SettingAccessView section sync', () => {
       global: {
         stubs: {
           PButton: defineComponent({ template: '<button><slot /></button>' }),
-          PSheet: defineComponent({ template: '<div><slot /></div>' }),
+          PDirectoryNav: defineComponent({
+            props: ['items', 'activeId', 'collapsed', 'mobileOpen'],
+            template: '<aside data-testid="shared-directory" :data-count="items.length" :data-active="activeId" :data-mobile-open="String(mobileOpen)" />',
+          }),
           SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
           SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
         },
@@ -106,9 +109,32 @@ describe('SettingAccessView section sync', () => {
 
     expect(wrapper.find('.setting-access__module-toggle-grid').exists()).toBe(false)
     expect(wrapper.findAll('.setting-access__section')).toHaveLength(8)
-    expect(wrapper.findAll('.setting-access__toc-link')).toHaveLength(8)
-    expect(wrapper.get('.setting-access__mobile-toc-button').text()).toContain('模块目录')
+    expect(wrapper.get('[data-testid="shared-directory"]').attributes('data-count')).toBe('8')
+    expect(wrapper.get('[data-testid="shared-directory"]').attributes('data-active')).toBe('feed')
+    expect(wrapper.find('.setting-access__toc').exists()).toBe(false)
+    expect(wrapper.get('.setting-access__directory-trigger').text()).toContain('目录')
     expect(wrapper.get('#module-media').text()).toContain('评论权限')
+  })
+
+  it('opens the shared directory on mobile', async () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PDirectoryNav: defineComponent({
+            props: ['items', 'activeId', 'collapsed', 'mobileOpen'],
+            template: '<aside data-testid="shared-directory" :data-mobile-open="String(mobileOpen)" />',
+          }),
+          SettingForumModeratorPanel: true,
+          SettingFeedSourcePanel: true,
+        },
+      },
+    })
+
+    const directory = wrapper.get('[data-testid="shared-directory"]')
+    expect(directory.attributes('data-mobile-open')).toBe('false')
+    await wrapper.get('.setting-access__directory-trigger').trigger('click')
+    expect(directory.attributes('data-mobile-open')).toBe('true')
   })
 
   it('保存时会带上 media 模块可见性', async () => {
@@ -137,7 +163,7 @@ describe('SettingAccessView section sync', () => {
     expect(kanboToggle.exists()).toBe(true)
 
     await kanboToggle!.setValue(false)
-    await wrapper.findAll('button').at(-1)!.trigger('click')
+    await wrapper.get('.setting-access__footer button').trigger('click')
 
     expect(save).toHaveBeenCalledTimes(1)
     expect(save.mock.calls[0]?.[0]?.modules?.media?.enabled).toBe(false)

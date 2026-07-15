@@ -82,32 +82,6 @@
       </details>
     </section>
 
-    <section class="left-section toc-panel">
-      <div class="section-heading-row">
-        <span class="a-label">文档目录</span>
-        <span class="a-muted">{{ outlineCount }} 个标题</span>
-      </div>
-      <div v-if="outlineCount === 0" class="col-empty">加入 Markdown 标题后显示</div>
-      <nav v-else class="outline-tree">
-        <button
-          v-for="item in flattenedOutline"
-          :key="item.id"
-          type="button"
-          class="outline-node"
-          :class="{
-            'is-active': item.line === activeHeadingLine,
-            'is-active-branch': item.isActiveBranch,
-            'has-children': item.hasChildren,
-          }"
-          :style="{ '--depth': String(item.depth) }"
-          :title="item.text"
-          @click="$emit('jump-to-heading', item.line)"
-        >
-          <span class="outline-caret" aria-hidden="true">{{ item.hasChildren ? (item.isExpanded ? '⌄' : '›') : '' }}</span>
-          <span class="outline-label">{{ item.text }}</span>
-        </button>
-      </nav>
-    </section>
   </aside>
 </template>
 
@@ -124,16 +98,6 @@ type SidebarCollection = {
   id: string
   name: string
 }
-type FlattenedOutlineNode = {
-  id: string
-  text: string
-  line: number
-  depth: number
-  hasChildren: boolean
-  isExpanded: boolean
-  isActiveBranch: boolean
-}
-
 defineProps<{
   mobileOpen: boolean
   saving: SaveTarget | null
@@ -147,9 +111,6 @@ defineProps<{
   coverUrl: string
   coverUploading: boolean
   coverUploadError: string
-  outlineCount: number
-  flattenedOutline: FlattenedOutlineNode[]
-  activeHeadingLine: number | null
 }>()
 
 defineEmits<{
@@ -162,7 +123,6 @@ defineEmits<{
   (e: 'update:allowComments', value: boolean): void
   (e: 'cover-upload', event: Event): void
   (e: 'remove-cover'): void
-  (e: 'jump-to-heading', line: number): void
 }>()
 
 const coverInput = ref<HTMLInputElement | null>(null)
@@ -258,68 +218,6 @@ details[open] > .settings-summary::before {
   gap: 0.5rem;
 }
 
-.outline-tree {
-  display: flex;
-  flex-direction: column;
-}
-
-.outline-node {
-  --depth: 0;
-  display: grid;
-  grid-template-columns: 1rem minmax(0, 1fr);
-  align-items: start;
-  gap: 0.3rem;
-  padding: 0.4rem 0.5rem;
-  padding-left: calc(0.5rem + var(--depth, 0) * 0.6rem);
-  border: none;
-  border-left: 2px solid transparent;
-  background: transparent;
-  color: var(--a-color-muted);
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.4;
-  text-align: left;
-  cursor: pointer;
-  width: 100%;
-}
-
-.outline-node:hover {
-  color: var(--a-color-fg);
-  border-left-color: var(--a-color-border);
-  background: var(--a-color-surface);
-}
-
-.outline-node.is-active {
-  color: var(--a-color-fg);
-  border-left-color: var(--a-color-fg);
-  background: var(--a-color-surface);
-  font-weight: 900;
-}
-
-.outline-node.has-children {
-  border-left-color: #bbb;
-}
-
-.outline-node.is-active-branch:not(.is-active) {
-  color: var(--a-color-fg);
-  opacity: 0.8;
-}
-
-.outline-caret {
-  color: var(--a-color-muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
-  user-select: none;
-}
-
-.outline-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .hidden-file-input {
   display: none;
 }
@@ -383,7 +281,7 @@ details[open] > .settings-summary::before {
   gap: 0.75rem;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1023px) {
   .editor-sidebar-left {
     position: static;
     max-height: none;

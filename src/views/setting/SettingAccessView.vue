@@ -13,18 +13,17 @@
     <p v-if="error" class="setting-access__message setting-access__message--error" role="alert">{{ error }}</p>
     <p v-else-if="saved" class="setting-access__message" role="status">设置已保存</p>
 
-    <button
-      type="button"
-      class="setting-access__mobile-toc-button"
-      aria-haspopup="dialog"
-      @click="mobileTocOpen = true"
+    <PButton
+      class="setting-access__directory-trigger"
+      variant="secondary"
+      size="sm"
+      @click="mobileDirectoryOpen = true"
     >
-      <List :size="17" aria-hidden="true" />
-      <span>模块目录</span>
-      <strong>{{ moduleRooms[activeSection].name }}</strong>
-    </button>
+      <ListTree :size="16" aria-hidden="true" />
+      目录
+    </PButton>
 
-    <div class="setting-access__layout">
+    <div class="setting-access__layout" :class="{ 'is-directory-collapsed': directoryCollapsed }">
       <div class="setting-access__sections">
         <section
           v-for="(key, index) in moduleNavOrder"
@@ -115,49 +114,24 @@
         </footer>
       </div>
 
-      <nav class="setting-access__toc" aria-label="模块目录">
-        <strong>模块目录</strong>
-        <a
-          v-for="key in moduleNavOrder"
-          :key="key"
-          :href="`#module-${key}`"
-          class="setting-access__toc-link"
-          :class="{ 'is-active': activeSection === key }"
-          :aria-current="activeSection === key ? 'location' : undefined"
-          @click.prevent="scrollToSection(key)"
-        >
-          {{ moduleRooms[key].name }}
-        </a>
-      </nav>
+      <PDirectoryNav
+        v-model:collapsed="directoryCollapsed"
+        :items="directoryItems"
+        :active-id="activeSection"
+        :mobile-open="mobileDirectoryOpen"
+        aria-label="模块目录"
+        @select="scrollToSection"
+        @close-mobile="mobileDirectoryOpen = false"
+      />
     </div>
-
-    <PSheet
-      :show="mobileTocOpen"
-      side="bottom"
-      title="模块目录"
-      close-type="header"
-      @close="mobileTocOpen = false"
-    >
-      <nav class="setting-access__mobile-toc" aria-label="模块目录">
-        <button
-          v-for="key in moduleNavOrder"
-          :key="key"
-          type="button"
-          :class="{ 'is-active': activeSection === key }"
-          @click="scrollToSection(key)"
-        >
-          {{ moduleRooms[key].name }}
-        </button>
-      </nav>
-    </PSheet>
   </section>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { List } from 'lucide-vue-next'
+import { ListTree } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
-import PSheet from '@/components/ui/PSheet.vue'
+import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
@@ -174,7 +148,9 @@ const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
 const activeSection = ref<ModuleRoomKey>('feed')
-const mobileTocOpen = ref(false)
+const directoryCollapsed = ref(false)
+const mobileDirectoryOpen = ref(false)
+const directoryItems = moduleNavOrder.map(key => ({ id: key, label: moduleRooms[key].name }))
 
 const feedFullTextModes = [
   { value: 'per_source', label: '按订阅源设置', description: '由管理员逐个设置全文抓取。' },
@@ -212,7 +188,7 @@ function sectionIndex(index: number) {
 function scrollToSection(key: ModuleRoomKey) {
   document.getElementById(getSectionDomId(key))?.scrollIntoView({ block: 'start' })
   activeSection.value = key
-  mobileTocOpen.value = false
+  mobileDirectoryOpen.value = false
 }
 
 function registerSection(key: ModuleRoomKey, element: Element | { $el?: Element | null } | null) {
@@ -317,15 +293,21 @@ onBeforeUnmount(() => {
   color: var(--a-color-danger-ink);
 }
 
-.setting-access__mobile-toc-button {
+.setting-access__directory-trigger {
   display: none;
+  justify-self: start;
 }
 
 .setting-access__layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 10rem;
-  gap: 3.5rem;
+  grid-template-columns: minmax(0, 1fr) 13.75rem;
+  gap: 2rem;
   align-items: start;
+  transition: grid-template-columns 0.2s ease;
+}
+
+.setting-access__layout.is-directory-collapsed {
+  grid-template-columns: minmax(0, 1fr) 3rem;
 }
 
 .setting-access__sections {
@@ -443,40 +425,6 @@ onBeforeUnmount(() => {
   justify-self: end;
 }
 
-.setting-access__toc {
-  position: sticky;
-  top: 5rem;
-  display: grid;
-  gap: 0.65rem;
-  max-height: calc(100vh - 7rem);
-  overflow-y: auto;
-  padding: 0.25rem 0;
-}
-
-.setting-access__toc > strong {
-  margin-bottom: 0.25rem;
-  font-size: var(--a-text-xs);
-}
-
-.setting-access__toc-link {
-  padding-left: 0.75rem;
-  border-left: 2px solid transparent;
-  color: var(--a-color-ink-soft);
-  font-size: var(--a-text-xs);
-  text-decoration: none;
-}
-
-.setting-access__toc-link:hover,
-.setting-access__toc-link:focus-visible,
-.setting-access__toc-link.is-active {
-  color: var(--a-color-ink);
-}
-
-.setting-access__toc-link.is-active {
-  border-left-color: var(--a-color-ink);
-  font-weight: var(--a-font-weight-strong);
-}
-
 .setting-access__footer {
   position: static;
   align-items: center;
@@ -487,49 +435,14 @@ onBeforeUnmount(() => {
   font-size: var(--a-text-xs);
 }
 
-.setting-access__mobile-toc {
-  display: grid;
-}
-
-.setting-access__mobile-toc button {
-  min-height: 2.75rem;
-  padding: 0 0.75rem;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  background: transparent;
-  color: var(--a-color-ink-soft);
-  text-align: left;
-}
-
-.setting-access__mobile-toc button.is-active {
-  color: var(--a-color-ink);
-  font-weight: var(--a-font-weight-strong);
-}
-
-@media (max-width: 900px) {
-  .setting-access__layout {
+@media (max-width: 1023px) {
+  .setting-access__layout,
+  .setting-access__layout.is-directory-collapsed {
     grid-template-columns: 1fr;
   }
 
-  .setting-access__toc {
-    display: none;
-  }
-
-  .setting-access__mobile-toc-button {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.5rem;
-    min-height: 2.75rem;
-    padding: 0 0.75rem;
-    border: 1px solid var(--a-color-line);
-    background: var(--a-color-bg);
-    color: var(--a-color-ink);
-    text-align: left;
-  }
-
-  .setting-access__mobile-toc-button strong {
-    justify-self: end;
+  .setting-access__directory-trigger {
+    display: inline-flex;
   }
 }
 

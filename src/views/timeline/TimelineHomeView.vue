@@ -280,6 +280,12 @@
         <div v-if="detailEvent.tags?.length" class="tl-tags">
           <span v-for="tag in detailEvent.tags" :key="tag" class="a-badge">{{ tag }}</span>
         </div>
+        <TimelineRevisionProposal
+          :target-id="detailEvent.id"
+          target-kind="event"
+          :target-owner-id="detailEvent.user_id"
+          @decided="refreshDecidedEvent"
+        />
       </div>
       <template #footer>
         <div class="a-modal-footer" v-if="canEdit(detailEvent)">
@@ -402,6 +408,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 import TimelineEventFormSection from '@/components/timeline/TimelineEventFormSection.vue'
+import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProposal.vue'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useApi } from '@/composables/useApi'
 
@@ -794,6 +801,15 @@ const openDetail = (event: TimelineEvent) => {
     activeCompareId.value = event.id
   }
   detailEvent.value = event
+}
+
+const refreshDecidedEvent = async () => {
+  if (!detailEvent.value) return
+  const refreshed = await fetchEventById(detailEvent.value.id)
+  if (!refreshed) return
+  detailEvent.value = refreshed
+  const index = events.value.findIndex(({ id }) => id === refreshed.id)
+  if (index >= 0) events.value[index] = refreshed
 }
 
 const openCreate = () => {

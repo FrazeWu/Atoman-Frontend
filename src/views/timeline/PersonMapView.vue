@@ -55,6 +55,13 @@
           </div>
         </div>
       </div>
+      <TimelineRevisionProposal
+        v-if="currentPerson"
+        target-kind="person"
+        :target-id="currentPerson.id"
+        :target-owner-id="currentPerson.user_id"
+        @decided="store.fetchPerson(currentPerson.id)"
+      />
     </aside>
 
     <!-- Map -->
@@ -244,6 +251,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
+import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProposal.vue'
 
 const route = useRoute()
 const router = useRouter()

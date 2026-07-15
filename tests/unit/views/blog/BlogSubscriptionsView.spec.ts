@@ -5,12 +5,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { useUIStore } from '@/stores/ui'
 import type { Subscription } from '@/types'
 import BlogSubscriptionsView from '@/views/blog/BlogSubscriptionsView.vue'
 
 const fetchMock = vi.fn()
 let pinia: ReturnType<typeof createPinia>
 let router: Router
+const bookmarkOpen = vi.fn()
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
 
 const subscriptions: Subscription[] = [
   {
@@ -91,6 +101,7 @@ async function mountView(url = '/posts/subscriptions') {
     history: createMemoryHistory(),
     routes: [
       { path: '/posts/subscriptions', component: BlogSubscriptionsView },
+      { path: '/posts/post/:id', component: { template: '<div>post</div>' } },
       { path: '/feed', component: { template: '<div>feed</div>' } },
     ],
   })
@@ -101,7 +112,12 @@ async function mountView(url = '/posts/subscriptions') {
     global: {
       plugins: [pinia, router],
       stubs: {
-        BookmarkFolderModal: true,
+        BookmarkFolderModal: {
+          template: '<div />',
+          setup(_: unknown, { expose }: { expose: (value: unknown) => void }) {
+            expose({ open: bookmarkOpen })
+          },
+        },
         PClip: true,
         PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
       },
@@ -120,6 +136,7 @@ function timelineUrls() {
 describe('BlogSubscriptionsView', () => {
   beforeEach(() => {
     fetchMock.mockReset()
+    bookmarkOpen.mockReset()
     fetchMock.mockResolvedValue(timelineResponse())
     vi.stubGlobal('fetch', fetchMock)
 
@@ -140,6 +157,81 @@ describe('BlogSubscriptionsView', () => {
     vi.spyOn(feedStore, 'fetchGroups').mockResolvedValue(undefined)
     vi.spyOn(feedStore, 'fetchBookmarkedPostIds').mockResolvedValue(undefined)
     vi.spyOn(feedStore, 'fetchReadingListIds').mockResolvedValue(undefined)
+  })
+
+  it('等待订阅和分组加载后再保留并请求合法筛选', async () => {
+    const feedStore = useFeedStore()
+    const subscriptionsLoaded = deferred<void>()
+    const groupsLoaded = deferred<void>()
+    feedStore.subscriptions = []
+    feedStore.groups = []
+    vi.mocked(feedStore.fetchSubscriptions).mockImplementation(async () => {
+      await subscriptionsLoaded.promise
+      feedStore.subscriptions = subscriptions
+    })
+    vi.mocked(feedStore.fetchGroups).mockImplementation(async () => {
+      await groupsLoaded.promise
+      feedStore.groups = [
+        { id: 'group-people', user_id: 'viewer', name: '人物', created_at: '', updated_at: '' },
+      ]
+    })
+
+    await mountView('/posts/subscriptions?kind=author&group=group-people&source=sub-author')
+    expect(timelineUrls()).toHaveLength(0)
+    expect(router.currentRoute.value.query).toEqual({
+      kind: 'author',
+      group: 'group-people',
+      source: 'sub-author',
+    })
+
+    subscriptionsLoaded.resolve()
+    groupsLoaded.resolve()
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toEqual({
+      kind: 'author',
+      group: 'group-people',
+      source: 'sub-author',
+    })
+    expect(timelineUrls()).toHaveLength(1)
+    expect(timelineUrls()[0]).toContain('group_id=group-people')
+    expect(timelineUrls()[0]).toContain('source_id=sub-author')
+  })
+
+  it.each([
+    {
+      name: '非法分组',
+      url: '/posts/subscriptions?kind=author&group=missing&source=sub-author',
+      query: { kind: 'author', source: 'sub-author' },
+    },
+    {
+      name: '跨类别来源',
+      url: '/posts/subscriptions?kind=author&source=sub-channel',
+      query: { kind: 'author' },
+    },
+    {
+      name: '跨分组来源',
+      url: '/posts/subscriptions?kind=author&group=group-writing&source=sub-author',
+      query: { kind: 'author', group: 'group-writing' },
+    },
+    {
+      name: '不存在来源',
+      url: '/posts/subscriptions?kind=author&source=missing',
+      query: { kind: 'author' },
+    },
+    {
+      name: '数组参数',
+      url: '/posts/subscriptions?kind=author&group=group-people&group=group-writing&source=sub-author&source=sub-channel',
+      query: { kind: 'author' },
+    },
+  ])('清除$name且不把非法值发给时间线', async ({ url, query }) => {
+    await mountView(url)
+
+    expect(router.currentRoute.value.query).toEqual(query)
+    expect(timelineUrls()).toHaveLength(1)
+    const timelineUrl = timelineUrls()[0] ?? ''
+    if (!('group' in query)) expect(timelineUrl).not.toContain('group_id=')
+    if (!('source' in query)) expect(timelineUrl).not.toContain('source_id=')
   })
 
   it('缺失或非法 kind 时归一为作者，且顶部没有“全部”类别', async () => {
@@ -220,6 +312,59 @@ describe('BlogSubscriptionsView', () => {
 
     expect(wrapper.text()).toContain('一篇更新')
     expect(wrapper.get('[data-testid="load-more"]').exists()).toBe(true)
+  })
+
+  it('快速切换类别时只采用最新时间线响应', async () => {
+    const authorResponse = deferred<Response>()
+    const channelResponse = deferred<Response>()
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('source_type=internal_user')) return authorResponse.promise
+      if (url.includes('source_type=internal_channel')) return channelResponse.promise
+      return Promise.resolve(timelineResponse())
+    })
+    const wrapper = await mountView('/posts/subscriptions?kind=author')
+
+    await wrapper.get('[data-testid="kind-channel"]').trigger('click')
+    await flushPromises()
+    channelResponse.resolve(timelineResponse([
+      { type: 'post', post: makePost('post-channel', '频道新文章') },
+    ]))
+    await flushPromises()
+    authorResponse.resolve(timelineResponse([
+      { type: 'post', post: makePost('post-author', '作者旧文章') },
+    ], true))
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('频道新文章')
+    expect(wrapper.text()).not.toContain('作者旧文章')
+    expect(wrapper.find('[data-testid="load-more"]').exists()).toBe(false)
+  })
+
+  it('保留文章点击、键盘打开、收藏和稍后阅读交互', async () => {
+    fetchMock.mockResolvedValue(timelineResponse([
+      { type: 'post', post: makePost('post-1', '交互文章') },
+    ]))
+    const feedStore = useFeedStore()
+    const toggleReadingListItem = vi.spyOn(feedStore, 'toggleReadingListItem').mockResolvedValue(true)
+    const uiStore = useUIStore()
+    uiStore.focusedSection = 'sidebar'
+    const wrapper = await mountView('/posts/subscriptions?kind=author')
+    uiStore.focusedSection = 'content'
+    await flushPromises()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' }))
+    expect(bookmarkOpen).toHaveBeenCalledWith('post-1')
+    expect(toggleReadingListItem).toHaveBeenCalledWith('post-1', 'post')
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/posts/post/post-1')
+
+    await router.replace('/posts/subscriptions?kind=author')
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/posts/post/post-1')
   })
 
   it('区分没有该类订阅和有来源但暂无文章', async () => {

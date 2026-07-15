@@ -218,6 +218,8 @@ const posts = ref<Post[]>([])
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
+const filtersReady = ref(false)
+let timelineRequestId = 0
 
 const sourceTitle = (subscription: Subscription) => subscriptionDisplayTitle(subscription)
 
@@ -295,23 +297,29 @@ const fetchTimeline = async (append = false) => {
     return
   }
 
+  const requestId = ++timelineRequestId
+  const sourceType = currentKindConfig.value.sourceType
+  const sourceId = selectedSourceId.value
+  const groupId = selectedGroupId.value
   loading.value = true
   if (!append) page.value = 1
+  const requestPage = page.value
   try {
     const params = new URLSearchParams({
       content_type: 'blog',
-      source_type: currentKindConfig.value.sourceType,
-      page: String(page.value),
+      source_type: sourceType,
+      page: String(requestPage),
       limit: '12',
     })
-    if (selectedSourceId.value) params.set('source_id', selectedSourceId.value)
-    if (selectedGroupId.value) params.set('group_id', selectedGroupId.value)
+    if (sourceId) params.set('source_id', sourceId)
+    if (groupId) params.set('group_id', groupId)
 
     const res = await fetch(`${api.feed.timeline}?${params}`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (res.ok) {
       const payload = await res.json()
+      if (requestId !== timelineRequestId) return
       const nextPosts = ((payload.data || []) as TimelineItem[])
         .filter((item) => item.type === 'post' && item.post)
         .map((item) => item.post as Post)
@@ -321,7 +329,7 @@ const fetchTimeline = async (append = false) => {
   } catch (error) {
     console.error('Failed to fetch timeline:', error)
   } finally {
-    loading.value = false
+    if (requestId === timelineRequestId) loading.value = false
   }
 }
 
@@ -331,12 +339,32 @@ const loadMore = () => {
 }
 
 watch(
-  () => [route.query.kind, route.query.group, route.query.source],
-  async ([rawKind]) => {
-    if (!route.path.endsWith('/subscriptions')) return
+  () => [filtersReady.value, route.path, route.query.kind, route.query.group, route.query.source] as const,
+  async ([ready, path, rawKind, rawGroup, rawSource]) => {
+    timelineRequestId += 1
+    if (!ready || !path.endsWith('/subscriptions')) return
     const kind = normalizeKind(rawKind)
+    const sourceType = sourceKinds.find((item) => item.value === kind)!.sourceType
+    const groupId = typeof rawGroup === 'string' && feedStore.groups.some((group) => group.id === rawGroup)
+      ? rawGroup
+      : null
+    const sourceId = typeof rawSource === 'string' && feedStore.subscriptions.some((subscription) =>
+      subscription.id === rawSource
+      && subscription.feed_source?.source_type === sourceType
+      && (!groupId || subscription.subscription_group_id === groupId),
+    ) ? rawSource : null
+    const updates: Record<string, string | null> = {}
+
     if (rawKind !== kind) {
-      await replaceQuery({ kind, source: null, page: null })
+      updates.kind = kind
+      updates.source = null
+      updates.page = null
+    }
+    if (rawGroup !== undefined && rawGroup !== groupId) updates.group = null
+    if (rawSource !== undefined && rawSource !== sourceId) updates.source = null
+
+    if (Object.keys(updates).length) {
+      await replaceQuery(updates)
       return
     }
     await fetchTimeline()
@@ -344,11 +372,15 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => {
-  if (!authStore.isAuthenticated) return
-  void Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
+onMounted(async () => {
+  if (!authStore.isAuthenticated) {
+    loading.value = false
+    return
+  }
   void feedStore.fetchBookmarkedPostIds()
   void feedStore.fetchReadingListIds()
+  await Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchGroups()])
+  filtersReady.value = true
 })
 </script>
 

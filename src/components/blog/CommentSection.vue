@@ -111,6 +111,7 @@ const submitting = ref(false)
 const showDeleteConfirm = ref(false)
 const pendingDeleteCommentId = ref<string | null>(null)
 let commentRequestId = 0
+let postGeneration = 0
 
 const isCommentsClosed = computed(() => !props.allowComments || props.commentMode === 'disabled')
 const canSubmit = computed(() => {
@@ -149,6 +150,8 @@ const fetchComments = async (postId = props.postId) => {
 
 const submitComment = async () => {
   if (!canSubmit.value) return
+  const postId = props.postId
+  const generation = postGeneration
   submitting.value = true
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -161,32 +164,36 @@ const submitComment = async () => {
       body.guest_name = guestName.value.trim()
     }
 
-    const res = await fetch(api.blog.postComments(props.postId), {
+    const res = await fetch(api.blog.postComments(postId), {
       method: 'POST',
       headers,
       body: JSON.stringify(body)
     })
-    if (res.ok) {
+    if (res.ok && generation === postGeneration && postId === props.postId) {
       newComment.value = ''
       if (!authStore.isAuthenticated) {
         guestName.value = ''
       }
-      await fetchComments()
+      await fetchComments(postId)
     }
   } catch (e) {
     console.error(e)
   } finally {
-    submitting.value = false
+    if (generation === postGeneration) submitting.value = false
   }
 }
 
 const deleteComment = async (id: string) => {
+  const postId = props.postId
+  const generation = postGeneration
   try {
     const res = await fetch(`${api.blog.comments}/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
-    if (res.ok) await fetchComments()
+    if (res.ok && generation === postGeneration && postId === props.postId) {
+      await fetchComments(postId)
+    }
   } catch (e) {
     console.error(e)
   }
@@ -211,6 +218,7 @@ const confirmDeleteComment = async () => {
 }
 
 watch(() => props.postId, (postId) => {
+  postGeneration += 1
   comments.value = []
   newComment.value = ''
   guestName.value = ''

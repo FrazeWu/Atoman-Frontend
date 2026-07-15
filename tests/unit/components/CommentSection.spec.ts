@@ -6,6 +6,19 @@ import { useAuthStore } from '@/stores/auth'
 
 const fetchMock = vi.fn()
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+const okResponse = (data: unknown[] = []) => ({
+  ok: true,
+  json: async () => ({ data }),
+})
+
 beforeEach(() => {
   setActivePinia(createPinia())
   fetchMock.mockReset()
@@ -99,5 +112,60 @@ describe('CommentSection', () => {
     expect((wrapper.get('#guest-name').element as HTMLInputElement).value).toBe('')
     expect(wrapper.findComponent({ name: 'PConfirm' }).props('show')).toBe(false)
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('旧文章延迟提交完成后不刷新新文章或清空新输入', async () => {
+    const oldSubmit = deferred<ReturnType<typeof okResponse>>()
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return oldSubmit.promise
+      if (url.includes('post-1')) return Promise.resolve(okResponse())
+      return Promise.resolve(okResponse([
+        { id: 'comment-2', post_id: 'post-2', content: '新文章评论', guest_name: '乙', created_at: '2026-01-02T00:00:00Z' },
+      ]))
+    })
+    const wrapper = mountCommentSection('all')
+    await flushPromises()
+    await wrapper.get('textarea').setValue('旧文章待提交')
+    await wrapper.get('#guest-name').setValue('旧名字')
+    await wrapper.get('.submit-btn').trigger('click')
+
+    await wrapper.setProps({ postId: 'post-2' })
+    await flushPromises()
+    await wrapper.get('textarea').setValue('新文章输入')
+    await wrapper.get('#guest-name').setValue('新名字')
+    oldSubmit.resolve(okResponse())
+    await flushPromises()
+
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('新文章输入')
+    expect((wrapper.get('#guest-name').element as HTMLInputElement).value).toBe('新名字')
+    expect(fetchMock.mock.calls.filter(([_, init]) => !init?.method)).toHaveLength(2)
+  })
+
+  it('旧文章延迟删除完成后不刷新新文章或清除新删除状态', async () => {
+    const authStore = useAuthStore()
+    authStore.user = { uuid: 'user-1', username: 'owner', email: 'owner@example.com' }
+    const oldDelete = deferred<ReturnType<typeof okResponse>>()
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE') return oldDelete.promise
+      const postId = url.includes('post-1') ? 'post-1' : 'post-2'
+      return Promise.resolve(okResponse([
+        { id: `comment-${postId}`, post_id: postId, user_id: 'user-1', content: `${postId} 评论`, created_at: '2026-01-01T00:00:00Z' },
+      ]))
+    })
+    const wrapper = mountCommentSection('all')
+    await flushPromises()
+    await wrapper.get('.delete-btn').trigger('click')
+    wrapper.findComponent({ name: 'PConfirm' }).vm.$emit('confirm')
+    await flushPromises()
+
+    await wrapper.setProps({ postId: 'post-2' })
+    await flushPromises()
+    await wrapper.get('.delete-btn').trigger('click')
+    expect(wrapper.findComponent({ name: 'PConfirm' }).props('show')).toBe(true)
+    oldDelete.resolve(okResponse())
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'PConfirm' }).props('show')).toBe(true)
+    expect(fetchMock.mock.calls.filter(([_, init]) => !init?.method)).toHaveLength(2)
   })
 })

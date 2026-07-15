@@ -188,7 +188,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { isNavigationFailure, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
 import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
@@ -252,6 +252,7 @@ const editorMode = ref<'normal' | 'split'>('normal')
 const syncScroll = ref(true)
 
 const saving = ref<'draft' | 'published' | null>(null)
+const savedPostId = ref<string | null>(null)
 
 // ── 状态 ─────────────────────────────────────────────────
 const isEdit = computed(() => !!route.params.id)
@@ -297,6 +298,7 @@ const form = ref({
 
 let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
 let collabStartupTimer: ReturnType<typeof setTimeout> | null = null
+let saveAbortController: AbortController | null = null
 
 // ── Title-in-editor binding ──────────────────────────────
 const editorBody = computed({
@@ -1029,6 +1031,7 @@ const confirmLeave = async () => {
   pendingLeavePath.value = null
   if (!targetPath) return
 
+  saveAbortController?.abort()
   allowRouteLeaveOnce.value = true
   await router.push(targetPath)
 }
@@ -1141,19 +1144,53 @@ const loadPost = async () => {
 }
 
 // ── 保存 ─────────────────────────────────────────────────
+const navigationErrorMessage = '文章已保存，但跳转失败，请重试'
+
+const navigateToSavedPost = async (postId: string) => {
+  try {
+    allowRouteLeaveOnce.value = true
+    const failure = await router.push(`/posts/post/${postId}`)
+    if (failure && isNavigationFailure(failure)) {
+      error.value = navigationErrorMessage
+      return
+    }
+    savedPostId.value = null
+  } catch (navigationError) {
+    if (isNavigationFailure(navigationError) || navigationError instanceof Error) {
+      error.value = navigationErrorMessage
+      return
+    }
+    throw navigationError
+  }
+}
+
 const save = async (status: SaveTarget) => {
+  if (saving.value) return
+  if (savedPostId.value) {
+    error.value = ''
+    saving.value = status
+    try {
+      await navigateToSavedPost(savedPostId.value)
+    } finally {
+      saving.value = null
+    }
+    return
+  }
   if (!form.value.title.trim()) { error.value = '请输入文章标题'; return }
   if (!form.value.content.trim()) { error.value = '请输入文章内容'; return }
   error.value = ''
   saving.value = status
+  const controller = new AbortController()
+  saveAbortController = controller
   const payload = { ...form.value, status }
+  const editingPostId = isEdit.value ? String(route.params.id || '') : null
   try {
     let res: Response
-    if (isEdit.value) {
-      const postId = String(route.params.id || '')
-      res = await fetch(api.blog.post(postId), {
+    if (editingPostId) {
+      res = await fetch(api.blog.post(editingPostId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        signal: controller.signal,
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || null,
@@ -1164,6 +1201,7 @@ const save = async (status: SaveTarget) => {
       res = await fetch(api.blog.posts, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        signal: controller.signal,
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || selectedChannelId.value || undefined,
@@ -1174,16 +1212,27 @@ const save = async (status: SaveTarget) => {
     if (res.ok) {
       const d = await res.json()
       const savedPost = d.data || d
+      savedPostId.value = editingPostId || String(savedPost.id)
       await clearAllDrafts()
-      router.push(`/posts/post/${savedPost.id}`)
+      if (!controller.signal.aborted) {
+        await navigateToSavedPost(savedPostId.value)
+      }
     } else {
-      const err = await res.json()
-      error.value = err.error || '保存失败，请重试'
+      const data = await res.json().catch(() => null)
+      const responseError = data?.error
+      error.value = typeof responseError === 'string'
+        ? responseError
+        : responseError?.message || '保存失败，请重试'
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '网络错误，请重试'
+    if (!controller.signal.aborted) {
+      error.value = '网络错误，请重试'
+    }
   } finally {
-    saving.value = null
+    if (saveAbortController === controller) {
+      saveAbortController = null
+      saving.value = null
+    }
   }
 }
 
@@ -1275,6 +1324,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  saveAbortController?.abort()
   clearServerSyncTimer()
   clearCollabStartupTimer()
 })

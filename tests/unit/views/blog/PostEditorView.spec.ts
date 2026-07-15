@@ -968,7 +968,7 @@ describe('PostEditorView', () => {
       }
       if (url.includes('/blog/drafts?context_key=')) return new Response(JSON.stringify({ error: 'not found' }), { status: 404 })
       if (url.includes('/blog/posts/post-1') && init?.method === 'PUT') {
-        return makeJsonResponse({ data: { id: 'post-1' } })
+        return makeJsonResponse({ data: {} })
       }
 
       throw new Error(`unexpected fetch: ${url}`)
@@ -1004,6 +1004,317 @@ describe('PostEditorView', () => {
     expect(body.collection_id).toBe('collection-2')
     expect(body).not.toHaveProperty('collection_ids')
     expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1')
+  })
+
+  it('保存失败时显示后端错误并保留编辑内容', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/posts/post/new', component: PostEditorView }],
+    })
+    await router.push('/posts/post/new?channel=channel-1&collection=collection-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    let postAttempt = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1', is_default: true }] })
+      }
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      if (url.includes('/blog/posts') && init?.method === 'POST') {
+        postAttempt += 1
+        if (postAttempt === 3) throw new Error('socket reset by peer')
+        const error = postAttempt === 1
+          ? { code: 'validation.invalid_request', message: '合集不可用' }
+          : '没有权限'
+        return new Response(JSON.stringify({ error }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    await editorControl.emitUpdateModel?.('# 待保存标题\n待保存正文')
+
+    const editor = wrapper.findComponent(PostEditorView).vm.$.setupState
+    await editor.save('published')
+    await flushPromises()
+
+    expect(editor.error).toBe('合集不可用')
+    await editor.save('published')
+    expect(editor.error).toBe('没有权限')
+    await editor.save('published')
+    expect(editor.error).toBe('网络错误，请重试')
+    expect(editorControl.lastModelValue).toBe('# 待保存标题\n待保存正文')
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/new?channel=channel-1&collection=collection-1')
+  })
+
+  it('保存 pending 时防止重复提交，确认离开时取消请求', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts/post/new', component: PostEditorView },
+        { path: '/elsewhere', component: { template: '<div>elsewhere</div>' } },
+      ],
+    })
+    await router.push('/posts/post/new?channel=channel-1&collection=collection-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    let postCount = 0
+    let requestSignal: AbortSignal | undefined
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1', is_default: true }] })
+      }
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      if (url.includes('/blog/posts') && init?.method === 'POST') {
+        postCount += 1
+        requestSignal = init.signal ?? undefined
+        return await new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    await editorControl.emitUpdateModel?.('# 待发布标题\n待发布正文')
+
+    const editor = wrapper.findComponent(PostEditorView).vm.$.setupState
+    void editor.save('published')
+    void editor.save('published')
+    await nextTick()
+    expect(postCount).toBe(1)
+
+    await router.push('/elsewhere')
+    await nextTick()
+    expect(wrapper.text()).toContain('继续离开')
+    await editor.confirmLeave()
+    await flushPromises()
+
+    expect(requestSignal?.aborted).toBe(true)
+    expect(router.currentRoute.value.fullPath).toBe('/elsewhere')
+  })
+
+  it('API 成功但导航失败时，重试只导航不再创建文章', async () => {
+    let rejectNextNavigation = true
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts/post/new', component: PostEditorView },
+        {
+          path: '/posts/post/:id',
+          component: { template: '<div>detail</div>' },
+          beforeEnter: () => {
+            if (!rejectNextNavigation) return true
+            rejectNextNavigation = false
+            return false
+          },
+        },
+      ],
+    })
+    await router.push('/posts/post/new?channel=channel-1&collection=collection-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    let postCount = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1', is_default: true }] })
+      }
+      if (url.includes('/blog/drafts?context_key=') && init?.method === 'DELETE') return makeJsonResponse({ data: null })
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      if (url.includes('/blog/posts') && init?.method === 'POST') {
+        postCount += 1
+        return makeJsonResponse({ data: { id: 'post-created' } })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    await editorControl.emitUpdateModel?.('# 已创建标题\n已创建正文')
+
+    const clearDraftSpy = vi.spyOn(localStorage, 'removeItem')
+    const editor = wrapper.findComponent(PostEditorView).vm.$.setupState
+    const publish = () => editor.save('published')
+    await publish()
+    await flushPromises()
+
+    expect(postCount).toBe(1)
+    expect(router.currentRoute.value.fullPath).toContain('/posts/post/new')
+    expect(editor.error).toBe('文章已保存，但跳转失败，请重试')
+    expect(clearDraftSpy.mock.calls.filter(([key]) => key === 'blog_editor_blog:new')).toHaveLength(1)
+
+    await publish()
+    await flushPromises()
+
+    expect(postCount).toBe(1)
+    expect(clearDraftSpy.mock.calls.filter(([key]) => key === 'blog_editor_blog:new')).toHaveLength(1)
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-created')
+  })
+
+  it('router.push reject 后重试只导航，不重复创建或清理草稿', async () => {
+    let rejectNextNavigation = true
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/posts/post/new', component: PostEditorView },
+        {
+          path: '/posts/post/:id',
+          component: { template: '<div>detail</div>' },
+          beforeEnter: () => {
+            if (!rejectNextNavigation) return true
+            rejectNextNavigation = false
+            throw new Error('router rejected')
+          },
+        },
+      ],
+    })
+    await router.push('/posts/post/new?channel=channel-1&collection=collection-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    let postCount = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1', is_default: true }] })
+      }
+      if (url.includes('/blog/drafts?context_key=') && init?.method === 'DELETE') return makeJsonResponse({ data: null })
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      if (url.includes('/blog/posts') && init?.method === 'POST') {
+        postCount += 1
+        return makeJsonResponse({ data: { id: 'post-created' } })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    await editorControl.emitUpdateModel?.('# 已创建标题\n已创建正文')
+
+    const clearDraftSpy = vi.spyOn(localStorage, 'removeItem')
+    const editor = wrapper.findComponent(PostEditorView).vm.$.setupState
+    await editor.save('published')
+    expect(editor.error).toBe('文章已保存，但跳转失败，请重试')
+
+    await editor.save('published')
+    await flushPromises()
+
+    expect(postCount).toBe(1)
+    expect(clearDraftSpy.mock.calls.filter(([key]) => key === 'blog_editor_blog:new')).toHaveLength(1)
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-created')
+  })
+
+  it('组件卸载时取消 pending 保存请求', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/posts/post/new', component: PostEditorView }],
+    })
+    await router.push('/posts/post/new?channel=channel-1&collection=collection-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    let requestSignal: AbortSignal | undefined
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集', channel_id: 'channel-1', is_default: true }] })
+      }
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      if (url.includes('/blog/posts') && init?.method === 'POST') {
+        requestSignal = init.signal ?? undefined
+        return await new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+    await editorControl.emitUpdateModel?.('# 待发布标题\n待发布正文')
+
+    void wrapper.findComponent(PostEditorView).vm.$.setupState.save('published')
+    await nextTick()
+    wrapper.unmount()
+    await flushPromises()
+
+    expect(requestSignal?.aborted).toBe(true)
   })
 
   it('应当根据 URL 查询参数初始化合集和频道', async () => {

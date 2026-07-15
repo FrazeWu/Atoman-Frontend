@@ -35,12 +35,12 @@ describe('notification store', () => {
     const store = useNotificationStore()
     store.unreadCount = 5
     store.notifications = [
-      makeNotification('reply-1', 'forum_reply'),
-      makeNotification('reply-2', 'forum_reply'),
-      makeNotification('reply-read', 'forum_reply', '2026-06-29T00:00:00.000Z'),
+      makeNotification('reply-1', 'comment_reply'),
+      makeNotification('reply-2', 'comment_reply'),
+      makeNotification('reply-read', 'comment_reply', '2026-06-29T00:00:00.000Z'),
     ]
 
-    await store.markAllRead('forum_reply')
+    await store.markAllRead('comment_reply')
 
     expect(store.unreadCount).toBe(3)
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
@@ -53,14 +53,14 @@ describe('notification store', () => {
     const store = useNotificationStore()
     store.unreadCount = 2
     store.notifications = [
-      makeNotification('forum', 'forum_reply'),
-      makeNotification('comment', 'comment_reply'),
+      makeNotification('reply', 'comment_reply'),
+      makeNotification('mention', 'comment_mention'),
     ]
 
-    await store.markAllRead(['forum_reply', 'comment_reply'])
+    await store.markAllRead(['comment_reply', 'comment_mention'])
 
-    expect(store.notifications.find(({ id }) => id === 'forum')?.read_at).toBeTruthy()
-    expect(store.notifications.find(({ id }) => id === 'comment')?.read_at).toBeNull()
+    expect(store.notifications.find(({ id }) => id === 'reply')?.read_at).toBeTruthy()
+    expect(store.notifications.find(({ id }) => id === 'mention')?.read_at).toBeNull()
     expect(store.unreadCount).toBe(1)
   })
 
@@ -81,11 +81,11 @@ describe('notification store', () => {
     const store = useNotificationStore()
     store.unreadCount = 5
     store.notifications = [
-      makeNotification('reply-1', 'forum_reply'),
-      makeNotification('reply-2', 'forum_reply'),
+      makeNotification('reply-1', 'comment_reply'),
+      makeNotification('reply-2', 'comment_reply'),
     ]
 
-    await store.markAllRead('forum_reply')
+    await store.markAllRead('comment_reply')
 
     expect(store.unreadCount).toBe(7)
   })
@@ -153,24 +153,24 @@ describe('notification store', () => {
     expect(location).toEqual({ path, query: { comment_id: 'child', ...extraQuery }, hash: '#comment-root' })
   })
 
-  it('fetches and combines staged old and unified notification types', async () => {
+  it('fetches and combines unified notification types', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
-        { ...makeNotification('old', 'forum_reply'), created_at: '2026-06-30T03:00:00.000Z' },
-        { ...makeNotification('old-tie', 'forum_reply'), created_at: '2026-06-30T02:00:00.000Z' },
+        { ...makeNotification('reply', 'comment_reply'), created_at: '2026-06-30T03:00:00.000Z' },
+        { ...makeNotification('reply-tie', 'comment_reply'), created_at: '2026-06-30T02:00:00.000Z' },
       ], meta: { total: 2 } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
-        { ...makeNotification('new', 'comment_reply'), created_at: '2026-06-30T04:00:00.000Z' },
+        { ...makeNotification('mention', 'comment_mention'), created_at: '2026-06-30T04:00:00.000Z' },
       ], meta: { total: 1 } }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
         { ...makeNotification('marked', 'comment_marked'), created_at: '2026-06-30T02:00:00.000Z' },
       ], meta: { total: 1 } }), { status: 200 }))
     const store = useNotificationStore()
-    await store.fetchNotifications(['forum_reply', 'comment_reply', 'comment_marked'], 1)
+    await store.fetchNotifications(['comment_reply', 'comment_mention', 'comment_marked'], 1)
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
-      expect.stringContaining('type=forum_reply'), expect.stringContaining('type=comment_reply'), expect.stringContaining('type=comment_marked'),
+      expect.stringContaining('type=comment_reply'), expect.stringContaining('type=comment_mention'), expect.stringContaining('type=comment_marked'),
     ])
-    expect(store.notifications.map(({ id }) => id)).toEqual(['new', 'old', 'marked', 'old-tie'])
+    expect(store.notifications.map(({ id }) => id)).toEqual(['mention', 'reply', 'marked', 'reply-tie'])
     expect(store.total).toBe(4)
   })
 
@@ -180,21 +180,21 @@ describe('notification store', () => {
     const oldResponse = new Promise<Response>((resolve) => { resolveOld = resolve })
     const newResponse = new Promise<Response>((resolve) => { resolveNew = resolve })
     vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
-      String(url).includes('forum_reply') ? oldResponse : newResponse,
+      String(url).includes('comment_reply') ? oldResponse : newResponse,
     )
     const store = useNotificationStore()
 
-    const oldRequest = store.fetchNotifications('forum_reply', 1)
-    const newRequest = store.fetchNotifications('comment_reply', 1)
-    resolveOld(new Response(JSON.stringify({ data: [makeNotification('old', 'forum_reply')], meta: { total: 1 } }), { status: 200 }))
+    const oldRequest = store.fetchNotifications('comment_reply', 1)
+    const newRequest = store.fetchNotifications('comment_mention', 1)
+    resolveOld(new Response(JSON.stringify({ data: [makeNotification('old', 'comment_reply')], meta: { total: 1 } }), { status: 200 }))
     await oldRequest
     expect(store.loading).toBe(true)
     expect(store.notifications).toEqual([])
 
-    resolveNew(new Response(JSON.stringify({ data: [makeNotification('new', 'comment_reply')], meta: { total: 1 } }), { status: 200 }))
+    resolveNew(new Response(JSON.stringify({ data: [makeNotification('new', 'comment_mention')], meta: { total: 1 } }), { status: 200 }))
     await newRequest
     expect(store.loading).toBe(false)
-    expect(store.currentType).toBe('comment_reply')
+    expect(store.currentType).toBe('comment_mention')
     expect(store.notifications.map(({ id }) => id)).toEqual(['new'])
     expect(store.total).toBe(1)
   })

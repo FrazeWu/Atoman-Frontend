@@ -233,11 +233,7 @@ async function save() {
 
   try {
     const nextAccess = mergeSiteAccess(draft.value)
-    const { comment_mode: _legacyCommentMode, ...blogSettings } = nextAccess.settings.blog
-    await siteAccessStore.save({
-      ...nextAccess,
-      settings: { ...nextAccess.settings, blog: blogSettings },
-    }, authStore.token)
+    await siteAccessStore.save(nextAccess, authStore.token)
     saved.value = true
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'

@@ -1,5 +1,4 @@
 import { test, expect } from '../fixtures/base'
-import { ADMIN_EMAIL, ADMIN_PASSWORD } from '../helpers/auth'
 
 test.describe('Blog', () => {
   test('browse blog home page', async ({ page }) => {

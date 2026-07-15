@@ -19,7 +19,7 @@ describe('loginViaAPI', () => {
 
     expect(request.post).toHaveBeenCalledTimes(1)
     expect(request.post).toHaveBeenCalledWith('/api/v1/auth/login', {
-      data: { username: 'admin@atoman.com', password: 'admin123' },
+      data: { username: 'admin', password: 'admin123' },
     })
   })
 })

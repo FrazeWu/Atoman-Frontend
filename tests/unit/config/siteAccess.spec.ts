@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultSiteAccess,
-  getBlogCommentMode,
   getFeedFullTextMode,
   isForumCategoryRequestEnabled,
   getVisibleModuleKeys,
@@ -66,13 +65,13 @@ describe('site access config', () => {
     expect(isModuleFeatureEnabled(access, 'forum', 'topic.create')).toBe(false)
   })
 
-  it('provides structured defaults for feed blog and forum settings', () => {
+  it('provides structured defaults for feed and forum settings', () => {
     const access = mergeSiteAccess(null)
 
     expect(access.settings.feed.allow_manage_sources).toBe(true)
     expect(access.settings.feed.allow_add_source).toBe(true)
     expect(getFeedFullTextMode(access)).toBe('per_source')
-    expect(getBlogCommentMode(access)).toBe('authenticated')
+    expect(access.settings).not.toHaveProperty('blog')
     expect(isForumCategoryRequestEnabled(access)).toBe(true)
     expect(access.settings.forum.moderator_permissions.review_category_request).toBe(true)
     expect(access.settings.forum.moderator_permissions.pin_topic).toBe(true)

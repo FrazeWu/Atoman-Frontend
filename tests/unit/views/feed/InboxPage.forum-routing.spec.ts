@@ -14,13 +14,14 @@ const makeNotification = (overrides: Partial<Notification>): Notification => ({
   recipient_id: 'user-1',
   actor_id: 'user-2',
   actor: { username: 'alice', email: 'alice@example.com' },
-  type: 'forum_reply',
-  source_type: 'forum_reply',
+  type: 'comment_reply',
+  source_type: 'comment_event',
   source_id: 'reply-1',
   meta: {
-    topic_id: 'topic-1',
-    topic_title: '通知跳转',
-    reply_excerpt: '回复内容',
+    target_kind: 'forum_topic',
+    resource_id: 'topic-1',
+    comment_id: 'reply-1',
+    root_id: 'root-1',
   },
   read_at: null,
   created_at: '2026-01-01T00:00:00Z',
@@ -79,31 +80,20 @@ const mountInbox = async (notification: Notification) => {
   return { wrapper, pushSpy }
 }
 
-describe('InboxPage forum 通知跳转', () => {
+describe('InboxPage 统一评论通知跳转', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
   })
 
-  it('回复通知跳转到 /forum/topic/:id 的回复锚点', async () => {
+  it('论坛回复通知跳转到统一评论锚点', async () => {
     const { wrapper, pushSpy } = await mountInbox(makeNotification({}))
 
     await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
 
-    expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-1#reply-reply-1')
-  })
-
-  it('话题通知跳转到 /forum/topic/:id', async () => {
-    const { wrapper, pushSpy } = await mountInbox(makeNotification({
-      id: 'notice-2',
-      source_type: 'forum_topic',
-      source_id: 'topic-2',
-      meta: { topic_title: '新话题' },
-    }))
-
-    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
-
-    expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-2')
+    expect(pushSpy).toHaveBeenLastCalledWith({
+      path: '/forum/topic/topic-1', query: { comment_id: 'reply-1' }, hash: '#comment-root-1',
+    })
   })
 
   it('统一评论通知优先按目标类型跳转并保留评论定位', async () => {
@@ -125,10 +115,10 @@ describe('InboxPage forum 通知跳转', () => {
     expect(wrapper.text()).not.toContain('child-1')
   })
 
-  it('回复标签同时请求旧回复、新回复和标记通知', async () => {
+  it('回复标签只请求统一回复和标记通知', async () => {
     const { wrapper } = await mountInbox(makeNotification({}))
     const store = useNotificationStore()
-    expect(store.fetchNotifications).toHaveBeenCalledWith(['forum_reply', 'forum_solved', 'comment_reply', 'comment_marked'], 1)
+    expect(store.fetchNotifications).toHaveBeenCalledWith(['comment_reply', 'comment_marked'], 1)
     wrapper.unmount()
   })
 })

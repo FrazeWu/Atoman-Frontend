@@ -149,9 +149,9 @@ const activeTab = computed<InboxTab>(() => {
 const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 
 const notificationTypeByTab: Record<'reply' | 'like' | 'mention', Notification['type'][]> = {
-  reply: ['forum_reply', 'forum_solved', 'comment_reply', 'comment_marked'],
-  like: ['forum_like', 'comment_like'],
-  mention: ['forum_mention', 'comment_mention'],
+  reply: ['comment_reply', 'comment_marked'],
+  like: ['comment_like'],
+  mention: ['comment_mention'],
 }
 
 const switchTab = async (tab: InboxTab) => {
@@ -229,15 +229,6 @@ const jumpToNotification = async (notification: Notification) => {
     if (location) await router.push(location)
     return
   }
-  const topicId = notification.meta.topic_id
-  if (notification.source_type === 'forum_reply' && topicId) {
-    await router.push(`/forum/topic/${topicId}#reply-${notification.source_id}`)
-    return
-  }
-  if (notification.source_type === 'forum_topic' && notification.source_id) {
-    await router.push(`/forum/topic/${notification.source_id}`)
-    return
-  }
 }
 
 const formatNotificationTitle = (notification: Notification) => {
@@ -253,14 +244,6 @@ const formatNotificationTitle = (notification: Notification) => {
       return notification.meta.like_count && notification.meta.like_count > 1
         ? `${actor} 等 ${notification.meta.like_count} 人赞了你`
         : `${actor} 赞了你`
-    case 'forum_reply':
-      return `${actor} 回复了你`
-    case 'forum_like':
-      return `${actor} 赞了你`
-    case 'forum_mention':
-      return `${actor} 提到了你`
-    case 'forum_solved':
-      return `${actor} 采纳了你的回复`
     default:
       return '新通知'
   }

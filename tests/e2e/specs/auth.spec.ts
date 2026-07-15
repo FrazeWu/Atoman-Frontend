@@ -1,10 +1,10 @@
 import { test, expect } from '../fixtures/base'
-import { loginViaUI, ADMIN_EMAIL, ADMIN_PASSWORD } from '../helpers/auth'
+import { loginViaUI, ADMIN_USERNAME, ADMIN_PASSWORD } from '../helpers/auth'
 import { expectTextVisible } from '../helpers/common'
 
 test.describe('Authentication', () => {
   test('login with valid credentials redirects to feed', async ({ page }) => {
-    await loginViaUI(page, ADMIN_EMAIL, ADMIN_PASSWORD)
+    await loginViaUI(page, ADMIN_USERNAME, ADMIN_PASSWORD)
     await expectTextVisible(page, 'ATOMAN')
   })
 

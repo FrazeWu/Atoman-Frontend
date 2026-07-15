@@ -20,7 +20,6 @@ const siteAccessState = {
     },
     settings: {
       feed: { full_text_mode: 'per_source' },
-      blog: { comment_mode: 'authenticated' },
       forum: {
         allow_category_request: true,
         moderator_permissions: {
@@ -148,6 +147,6 @@ describe('SettingAccessView section sync', () => {
     expect(wrapper.text()).not.toContain('全部可评论')
     expect(wrapper.text()).not.toContain('关闭评论')
     await wrapper.findAll('button').at(-1)!.trigger('click')
-    expect(save.mock.calls[0]?.[0]?.settings?.blog).not.toHaveProperty('comment_mode')
+    expect(save.mock.calls[0]?.[0]?.settings).not.toHaveProperty('blog')
   })
 })

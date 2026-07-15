@@ -318,19 +318,6 @@ describe('music v1 adapter', () => {
     expect(result.songs).toEqual([{ id: 'song_uuid', title: 'Song' }])
   })
 
-  it('reads the album discussion total from pagination metadata', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: [], total: 7 }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )))
-    const getAlbumDiscussionCount = (musicV1 as typeof musicV1 & {
-      getAlbumDiscussionCount?: (albumId: string) => Promise<number>
-    }).getAlbumDiscussionCount
-
-    expect(getAlbumDiscussionCount).toBeTypeOf('function')
-    await expect(getAlbumDiscussionCount?.('album_uuid')).resolves.toBe(7)
-  })
-
   it('builds update album edits with track collection changes', () => {
     const result = buildUpdateAlbumEdit('album_uuid', {
       title: 'Updated Album',

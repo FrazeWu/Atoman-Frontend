@@ -1,7 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
-  getBlogCommentMode,
   getFeedFullTextMode,
   isForumCategoryRequestEnabled,
   mergeSiteAccess,
@@ -72,7 +71,6 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     Object.keys(access.value.modules).filter((key) => isModuleVisible(key as ModuleRoomKey)) as ModuleRoomKey[]
   ))
 
-  const blogCommentMode = computed(() => getBlogCommentMode(access.value))
   const feedFullTextMode = computed(() => getFeedFullTextMode(access.value))
   const forumCategoryRequestEnabled = computed(() => isForumCategoryRequestEnabled(access.value))
 
@@ -81,7 +79,6 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     loaded,
     loading,
     visibleModuleKeys,
-    blogCommentMode,
     feedFullTextMode,
     forumCategoryRequestEnabled,
     load,

@@ -21,12 +21,19 @@ describe('restricted comment Markdown', () => {
 
   it('does not reject literal restricted markers inside code spans', () => {
     expect(validateCommentMarkdown('`~~x~~ | a |`').ok).toBe(true)
+    expect(validateCommentMarkdown('``~~x~~ ` | a |``').ok).toBe(true)
+    expect(validateCommentMarkdown('``a\n~~x~~\n|a|b|\n|-|-|``').ok).toBe(true)
+  })
+
+  it('still rejects restricted markers outside arbitrary code spans', () => {
+    expect(validateCommentMarkdown('``safe ~~x~~`` and ~~bad~~').error).toBe('unsupported_del')
+    expect(validateCommentMarkdown('``safe\n|a|b|\n|-|-|``\n\n|a|b|\n|-|-|').error).toBe('unsupported_table')
   })
 
   it('uses an isolated Marked instance and normalizes code points', () => {
     marked.use({ renderer: { strong: () => '<global>polluted</global>' } })
     expect(renderCommentMarkdown('**safe**').html).not.toContain('polluted')
-    expect(normalizeCommentMarkdown('e\u0301\r\n')).toBe('é\n')
+    expect(normalizeCommentMarkdown(' \te\u0301\r\n ')).toBe('é')
     expect(commentCodePointLength('😀a')).toBe(2)
   })
 })

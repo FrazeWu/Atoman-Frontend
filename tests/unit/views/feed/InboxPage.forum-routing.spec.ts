@@ -120,8 +120,15 @@ describe('InboxPage forum 通知跳转', () => {
     await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
 
     expect(pushSpy).toHaveBeenLastCalledWith({
-      path: '/videos/watch/video-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
+      path: '/videos/videos/watch/video-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
     })
     expect(wrapper.text()).not.toContain('child-1')
+  })
+
+  it('回复标签同时请求旧回复、新回复和标记通知', async () => {
+    const { wrapper } = await mountInbox(makeNotification({}))
+    const store = useNotificationStore()
+    expect(store.fetchNotifications).toHaveBeenCalledWith(['forum_reply', 'forum_solved', 'comment_reply', 'comment_marked'], 1)
+    wrapper.unmount()
   })
 })

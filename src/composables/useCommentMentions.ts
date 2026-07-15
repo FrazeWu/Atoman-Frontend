@@ -12,7 +12,7 @@ export interface MentionSearchUser {
 }
 
 export function normalizeCommentContent(content: string) {
-  return content.replace(/\r\n?/g, '\n').normalize('NFC')
+  return content.replace(/\r\n?/g, '\n').normalize('NFC').trim()
 }
 
 function assertUTF16Boundary(text: string, offset: number) {

@@ -21,7 +21,7 @@ export type CommentTargetKind =
   | 'timeline_event'
   | 'timeline_person'
 
-export interface CommentTargetRef { kind: CommentTargetKind; resource_id: string }
+export interface CommentTargetRef { kind: CommentTargetKind; resourceId: string }
 export interface CommentUserSummary { id: string; username: string; display_name: string; avatar_url: string }
 export interface CommentMention { user_id: string; start: number; end: number }
 export type CommentMentionInput = CommentMention
@@ -102,11 +102,11 @@ function withQuery(url: string, values: object) {
 
 export const commentApi = {
   listRoots: (target: CommentTargetRef, options: CommentListOptions = {}) =>
-    apiGet<CommentRootList>(withQuery(commentEndpoints.roots(target.kind, target.resource_id), options)),
+    apiGet<CommentRootList>(withQuery(commentEndpoints.roots(target.kind, target.resourceId), options)),
   listReplies: (rootId: string, options: ReplyListOptions = {}) =>
     apiGet<CommentReplyList>(withQuery(commentEndpoints.replies(rootId), options)),
   create: (target: CommentTargetRef, input: CreateCommentInput) =>
-    apiPostJson<CommentDTO>(commentEndpoints.roots(target.kind, target.resource_id), input),
+    apiPostJson<CommentDTO>(commentEndpoints.roots(target.kind, target.resourceId), input),
   edit: (commentId: string, input: EditCommentInput) => apiPatchJson<CommentDTO>(commentEndpoints.comment(commentId), input),
   delete: (commentId: string) => apiDeleteJson<CommentActionResult>(commentEndpoints.comment(commentId)),
   async uploadImage(file: File) {
@@ -120,8 +120,8 @@ export const commentApi = {
   unlike: (commentId: string) => apiDeleteJson<CommentActionResult>(commentEndpoints.like(commentId)),
   report: (commentId: string, input: ReportCommentInput) => apiPutJson<CommentActionResult>(commentEndpoints.report(commentId), input),
   mark: (target: CommentTargetRef, commentId: string) =>
-    apiPutJson<CommentActionResult>(commentEndpoints.mark(target.kind, target.resource_id), { comment_id: commentId }),
-  unmark: (target: CommentTargetRef) => apiDeleteJson<CommentActionResult>(commentEndpoints.mark(target.kind, target.resource_id)),
+    apiPutJson<CommentActionResult>(commentEndpoints.mark(target.kind, target.resourceId), { comment_id: commentId }),
+  unmark: (target: CommentTargetRef) => apiDeleteJson<CommentActionResult>(commentEndpoints.mark(target.kind, target.resourceId)),
   listReports: (options: ReportListOptions = {}) => apiGet<CommentReportQueue>(withQuery(commentEndpoints.reports, options)),
   moderate: (commentId: string, input: ModerateCommentInput) =>
     apiPutJson<CommentActionResult>(commentEndpoints.moderation(commentId), input),

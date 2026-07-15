@@ -10,11 +10,17 @@ describe('comment mentions', () => {
   })
 
   it('normalizes NFC and requires ranges from normalized content', () => {
-    expect(normalizeCommentContent('e\u0301\r\n@明')).toBe('é\n@明')
+    expect(normalizeCommentContent(' \te\u0301\r\n@明\n ')).toBe('é\n@明')
     expect(() => toMentionRange('e\u0301 @明', 3, 5)).toThrow()
     expect(createMentionInput({ uuid: 'u1', username: 'ming', display_name: '明', avatar_url: '', role: 'user' }, { start: 2, end: 4 })).toEqual({
       user_id: 'u1', start: 2, end: 4,
     })
+  })
+
+  it('calculates mention offsets from the final trimmed content', () => {
+    const normalized = normalizeCommentContent('  😀 @阿明  ')
+    expect(normalized).toBe('😀 @阿明')
+    expect(toMentionRange(normalized, 3, 6)).toEqual({ start: 2, end: 5 })
   })
 
   it('searches active mention users with bounded limit', async () => {

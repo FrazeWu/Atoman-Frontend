@@ -12,7 +12,7 @@ const comment = (id: string, overrides: Partial<CommentDTO> = {}): CommentDTO =>
 })
 const roots = (items: CommentDTO[], target: CommentTargetRef, page = 1, totalRoots = items.length): CommentRootList => ({
   items, page, per_page: 20, total_roots: totalRoots, total_comments: items.length, total_replies: 0,
-  target: { ...target, mark_label: '置顶', can_mark: true, comment_count: items.length, root_count: items.length },
+  target: { kind: target.kind, resource_id: target.resourceId, mark_label: '置顶', can_mark: true, comment_count: items.length, root_count: items.length },
 })
 const client = (overrides: Partial<CommentApiClient> = {}) => ({
   listRoots: vi.fn(), listReplies: vi.fn(), create: vi.fn(), edit: vi.fn(), delete: vi.fn(), uploadImage: vi.fn(),
@@ -22,7 +22,7 @@ const client = (overrides: Partial<CommentApiClient> = {}) => ({
 
 describe('useComments', () => {
   it('keeps backend order and merges load-more roots by id', async () => {
-    const target = ref<CommentTargetRef>({ kind: 'blog_post', resource_id: 'post-1' })
+    const target = ref<CommentTargetRef>({ kind: 'blog_post', resourceId: 'post-1' })
     const api = client({ listRoots: vi.fn()
       .mockResolvedValueOnce(roots([comment('marked', { marked: true }), comment('a'), comment('a')], target.value, 1, 21))
       .mockResolvedValueOnce(roots([comment('a'), comment('b'), comment('b')], target.value, 2, 21)) })
@@ -36,13 +36,13 @@ describe('useComments', () => {
   it('does not let an old target request overwrite a new target', async () => {
     let resolveOld!: (value: CommentRootList) => void
     const old = new Promise<CommentRootList>((resolve) => { resolveOld = resolve })
-    const target = ref<CommentTargetRef>({ kind: 'blog_post', resource_id: 'old' })
-    const api = client({ listRoots: vi.fn().mockReturnValueOnce(old).mockResolvedValueOnce(roots([comment('new')], { kind: 'video', resource_id: 'new' })) })
+    const target = ref<CommentTargetRef>({ kind: 'blog_post', resourceId: 'old' })
+    const api = client({ listRoots: vi.fn().mockReturnValueOnce(old).mockResolvedValueOnce(roots([comment('new')], { kind: 'video', resourceId: 'new' })) })
     const state = useComments(target, api)
     const oldLoad = state.load(true)
-    target.value = { kind: 'video', resource_id: 'new' }
+    target.value = { kind: 'video', resourceId: 'new' }
     await state.load(true)
-    resolveOld(roots([comment('old')], { kind: 'blog_post', resource_id: 'old' }))
+    resolveOld(roots([comment('old')], { kind: 'blog_post', resourceId: 'old' }))
     await oldLoad
     expect(state.roots.value.map(({ id }) => id)).toEqual(['new'])
   })
@@ -50,13 +50,13 @@ describe('useComments', () => {
   it('merges and sorts expanded replies into one child array', async () => {
     const root = comment('root', { replies: [comment('child-2', { root_id: 'root', created_at: '2026-01-02T00:00:00Z' })] })
     const api = client({
-      listRoots: vi.fn().mockResolvedValue(roots([root], { kind: 'forum_topic', resource_id: 'topic' })),
+      listRoots: vi.fn().mockResolvedValue(roots([root], { kind: 'forum_topic', resourceId: 'topic' })),
       listReplies: vi.fn().mockResolvedValue({
         items: [comment('child-1', { root_id: 'root', created_at: '2026-01-01T00:00:00Z' }), root.replies[0]],
         page: 1, per_page: 20, total: 2, has_more: false,
       }),
     })
-    const state = useComments(ref({ kind: 'forum_topic', resource_id: 'topic' }), api)
+    const state = useComments(ref({ kind: 'forum_topic', resourceId: 'topic' }), api)
     await state.load(true)
     await state.expandReplies('root')
     expect(state.roots.value[0]!.replies.map(({ id }) => id)).toEqual(['child-1', 'child-2'])
@@ -67,27 +67,34 @@ describe('useComments', () => {
     const root = comment('root')
     const child = comment('child', { root_id: 'root', reply_to_id: 'other' })
     const api = client({
-      listRoots: vi.fn().mockResolvedValue(roots([root], { kind: 'blog_post', resource_id: 'post' })),
+      listRoots: vi.fn().mockResolvedValueOnce(roots([root], { kind: 'blog_post', resourceId: 'post' }))
+        .mockResolvedValueOnce({ ...roots([root], { kind: 'blog_post', resourceId: 'post' }), total_comments: 2, total_replies: 1,
+          target: { kind: 'blog_post', resource_id: 'post', mark_label: '置顶', can_mark: true, comment_count: 2, root_count: 1 } })
+        .mockResolvedValueOnce(roots([root], { kind: 'blog_post', resourceId: 'post' }))
+        .mockResolvedValueOnce(roots([], { kind: 'blog_post', resourceId: 'post' })),
       create: vi.fn().mockResolvedValue(child), delete: vi.fn().mockResolvedValue({ ok: true }),
     })
-    const state = useComments(ref({ kind: 'blog_post', resource_id: 'post' }), api)
+    const state = useComments(ref({ kind: 'blog_post', resourceId: 'post' }), api)
     await state.load(true)
     await state.create({ content: '@x', reply_to_id: 'other', mentions: [], attachment_ids: [] })
     expect(state.roots.value[0]!.replies).toEqual([child])
+    expect(state.target.value?.comment_count).toBe(2)
     await state.remove('child')
     expect(state.roots.value).toHaveLength(1)
+    expect(state.target.value?.comment_count).toBe(1)
     await state.remove('root')
     expect(state.roots.value).toHaveLength(0)
+    expect(state.target.value).toMatchObject({ comment_count: 0, root_count: 0 })
   })
 
   it('optimistically likes once and rolls back the exact original values on failure', async () => {
     let reject!: (reason: unknown) => void
     const pending = new Promise<never>((_, fail) => { reject = fail })
     const api = client({
-      listRoots: vi.fn().mockResolvedValue(roots([comment('root', { liked: false, like_count: 4 })], { kind: 'blog_post', resource_id: 'post' })),
+      listRoots: vi.fn().mockResolvedValue(roots([comment('root', { liked: false, like_count: 4 })], { kind: 'blog_post', resourceId: 'post' })),
       like: vi.fn().mockReturnValue(pending),
     })
-    const state = useComments(ref({ kind: 'blog_post', resource_id: 'post' }), api)
+    const state = useComments(ref({ kind: 'blog_post', resourceId: 'post' }), api)
     await state.load(true)
     const first = state.toggleLike('root')
     const second = state.toggleLike('root')
@@ -99,5 +106,42 @@ describe('useComments', () => {
     await second
     expect(state.roots.value[0]).toMatchObject({ liked: false, like_count: 4 })
     expect(state.isLikePending('root').value).toBe(false)
+  })
+
+  it('reloads after marking so the target summary and server ordering stay authoritative', async () => {
+    const target = { kind: 'forum_topic', resourceId: 'topic' } as const
+    const marked = comment('b', { marked: true })
+    const api = client({
+      listRoots: vi.fn()
+        .mockResolvedValueOnce(roots([comment('a'), comment('b')], target))
+        .mockResolvedValueOnce({ ...roots([marked, comment('a')], target), target: {
+          kind: target.kind, resource_id: target.resourceId, mark_label: '最佳回答', can_mark: true,
+          marked_comment_id: 'b', comment_count: 2, root_count: 2,
+        } }),
+      mark: vi.fn().mockResolvedValue({ ok: true }),
+    })
+    const state = useComments(ref(target), api)
+    await state.load()
+    await state.mark('b')
+    expect(state.roots.value.map(({ id }) => id)).toEqual(['b', 'a'])
+    expect(state.target.value?.marked_comment_id).toBe('b')
+  })
+
+  it('reloads page one after deleting from a full loaded page without skipping the shifted item', async () => {
+    const target = { kind: 'blog_post', resourceId: 'post' } as const
+    const firstPage = Array.from({ length: 20 }, (_, index) => comment(`root-${index + 1}`))
+    const shiftedPage = [...firstPage.slice(1), comment('root-21')]
+    const api = client({
+      listRoots: vi.fn()
+        .mockResolvedValueOnce(roots(firstPage, target, 1, 21))
+        .mockResolvedValueOnce(roots(shiftedPage, target, 1, 20)),
+      delete: vi.fn().mockResolvedValue({ ok: true }),
+    })
+    const state = useComments(ref(target), api)
+    await state.load()
+    await state.remove('root-1')
+    expect(state.roots.value).toHaveLength(20)
+    expect(state.roots.value.at(-1)?.id).toBe('root-21')
+    expect(state.hasMore.value).toBe(false)
   })
 })

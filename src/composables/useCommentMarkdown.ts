@@ -7,7 +7,7 @@ const commentMarked = new Marked({ gfm: false, breaks: true })
 export interface CommentMarkdownResult { ok: boolean; html: string; error?: string }
 
 export function normalizeCommentMarkdown(content: string) {
-  return content.replace(/\r\n?/g, '\n').normalize('NFC')
+  return content.replace(/\r\n?/g, '\n').normalize('NFC').trim()
 }
 
 export function commentCodePointLength(content: string) {
@@ -15,6 +15,13 @@ export function commentCodePointLength(content: string) {
 }
 
 function validateTokens(tokens: Token[]): string | undefined {
+  const inlineSource = tokens.some((token) => ['text', 'codespan', 'link', 'strong', 'em', 'escape', 'br'].includes(token.type))
+    ? tokens.map((token) => token.type === 'codespan'
+      ? token.raw.replace(/[^\n]/g, ' ')
+      : token.raw).join('')
+    : ''
+  if (/~~[\s\S]+?~~/.test(inlineSource)) return 'unsupported_del'
+  if (/^\s*\|?.+\|.+\|?\s*\n\s*\|?\s*:?-{1,}:?\s*\|/m.test(inlineSource)) return 'unsupported_table'
   for (const token of tokens) {
     if (['html', 'image', 'list', 'heading', 'code', 'table', 'del'].includes(token.type)) return `unsupported_${token.type}`
     if (token.type === 'link') {
@@ -33,11 +40,6 @@ function validateTokens(tokens: Token[]): string | undefined {
 export function validateCommentMarkdown(source: string): { ok: boolean; error?: string } {
   const content = normalizeCommentMarkdown(source)
   if (commentCodePointLength(content) > 2000) return { ok: false, error: 'too_long' }
-  const withoutCodeSpans = content.replace(/`[^`\n]*`/g, '')
-  if (/~~[\s\S]+?~~/.test(withoutCodeSpans)) return { ok: false, error: 'unsupported_del' }
-  if (/^\s*\|?.+\|.+\|?\s*\n\s*\|?\s*:?-{1,}:?\s*\|/m.test(withoutCodeSpans)) {
-    return { ok: false, error: 'unsupported_table' }
-  }
   const error = validateTokens(commentMarked.lexer(content))
   return error ? { ok: false, error } : { ok: true }
 }

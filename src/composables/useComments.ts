@@ -13,7 +13,7 @@ import {
 
 interface ReplyPaginationState { expanded: boolean; page: number; pageSize: number; hasMore: boolean; loading: boolean }
 
-const targetKey = (target: CommentTargetRef) => `${target.kind}:${target.resource_id}`
+const targetKey = (target: CommentTargetRef) => `${target.kind}:${target.resourceId}`
 const mergeById = (current: CommentDTO[], incoming: CommentDTO[]) => {
   const seen = new Set(current.map(({ id }) => id))
   const merged = [...current]
@@ -138,9 +138,8 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
         root.replies = sortReplies([...root.replies, created])
         root.reply_count += 1
       }
-    } else {
-      await load(true)
     }
+    await load(true)
     return created
   }
 
@@ -155,13 +154,14 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
     await client.delete(commentId)
     if (!existing?.root_id) {
       roots.value = roots.value.filter(({ id }) => id !== commentId)
-      return
+    } else {
+      const root = roots.value.find(({ id }) => id === existing.root_id)
+      if (root) {
+        root.replies = root.replies.filter(({ id }) => id !== commentId)
+        root.reply_count = Math.max(0, root.reply_count - 1)
+      }
     }
-    const root = roots.value.find(({ id }) => id === existing.root_id)
-    if (root) {
-      root.replies = root.replies.filter(({ id }) => id !== commentId)
-      root.reply_count = Math.max(0, root.reply_count - 1)
-    }
+    await load(true)
   }
 
   const toggleLike = async (commentId: string) => {
@@ -189,16 +189,12 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
 
   const mark = async (commentId: string) => {
     await client.mark(toValue(targetSource), commentId)
-    roots.value.forEach((root) => { root.marked = root.id === commentId })
-    const index = roots.value.findIndex(({ id }) => id === commentId)
-    if (index > 0) roots.value.unshift(roots.value.splice(index, 1)[0]!)
-    if (target.value) target.value.marked_comment_id = commentId
+    await load(true)
   }
 
   const unmark = async () => {
     await client.unmark(toValue(targetSource))
-    roots.value.forEach((root) => { root.marked = false })
-    if (target.value) target.value.marked_comment_id = null
+    await load(true)
   }
 
   return {

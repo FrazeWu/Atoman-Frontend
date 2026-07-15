@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, useNotificationStore } from '@/stores/notification'
 import type { Notification } from '@/types'
 
 const makeNotification = (id: string, type: Notification['type'], read_at: string | null = null): Notification => ({
@@ -85,5 +85,39 @@ describe('notification store', () => {
     expect(store.notifications).toHaveLength(1)
     expect(store.unreadCount).toBe(1)
     expect(store.notifications[0]?.meta.comment_id).toBe('new')
+  })
+
+  it.each([
+    ['blog_post', 'post-1', '/posts/post/post-1', {}],
+    ['video', 'video-1', '/videos/videos/watch/video-1', {}],
+    ['podcast_episode', 'episode-1', '/podcasts/episode/episode-1', {}],
+    ['feed_article', 'article-1', '/feed/item/article-1', {}],
+    ['music_artist', 'artist-1', '/music/artist/artist-1', {}],
+    ['music_album', 'album-1', '/music/album/album-1', {}],
+    ['music_song', 'song-1', '/music', { song_id: 'song-1' }],
+    ['forum_topic', 'topic-1', '/forum/topic/topic-1', {}],
+    ['debate', 'debate-1', '/debate/debate-1', {}],
+    ['timeline_person', 'person-1', '/timeline/person/person-1', {}],
+    ['timeline_event', 'event-1', '/timeline', { event_id: 'event-1' }],
+  ] as const)('builds %s locations through module public paths', (kind, resourceId, path, extraQuery) => {
+    const location = commentNotificationLocation({
+      ...makeNotification(`notice-${kind}`, 'comment_reply'),
+      meta: { target_kind: kind, resource_id: resourceId, comment_id: 'child', root_id: 'root' },
+    })
+    expect(location).toEqual({ path, query: { comment_id: 'child', ...extraQuery }, hash: '#comment-root' })
+  })
+
+  it('fetches and combines staged old and unified notification types', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [makeNotification('old', 'forum_reply')], total: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [makeNotification('new', 'comment_reply')], total: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [makeNotification('marked', 'comment_marked')], total: 1 }), { status: 200 }))
+    const store = useNotificationStore()
+    await store.fetchNotifications(['forum_reply', 'comment_reply', 'comment_marked'], 1)
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining('type=forum_reply'), expect.stringContaining('type=comment_reply'), expect.stringContaining('type=comment_marked'),
+    ])
+    expect(store.notifications.map(({ id }) => id)).toEqual(['old', 'new', 'marked'])
+    expect(store.total).toBe(3)
   })
 })

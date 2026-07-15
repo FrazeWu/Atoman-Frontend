@@ -14,7 +14,7 @@ describe('comment API', () => {
 
   it('encodes target paths, query and sends auth on anonymous GET endpoints', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok({ items: [] }))
-    await commentApi.listRoots({ kind: 'blog/post' as never, resource_id: 'id with space' }, { sort: 'hot', page: 2, page_size: 20 })
+    await commentApi.listRoots({ kind: 'blog/post' as never, resourceId: 'id with space' }, { sort: 'hot', page: 2, page_size: 20 })
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('/api/v1/discussions/blog%2Fpost/id%20with%20space/comments?sort=hot&page=2&page_size=20')
     expect(init).toMatchObject({ credentials: 'include' })
@@ -23,7 +23,7 @@ describe('comment API', () => {
 
   it('uses the backend methods and snake_case JSON bodies', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok({ ok: true }))
-    await commentApi.mark({ kind: 'forum_topic', resource_id: 'topic' }, 'comment-1')
+    await commentApi.mark({ kind: 'forum_topic', resourceId: 'topic' }, 'comment-1')
     expect(fetchMock).toHaveBeenCalledWith(commentEndpoints.mark('forum_topic', 'topic'), expect.objectContaining({
       method: 'PUT',
       body: JSON.stringify({ comment_id: 'comment-1' }),
@@ -43,7 +43,7 @@ describe('comment API', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       error: { code: 'comment.invalid_content', message: 'bad', details: { field: 'content' } },
     }), { status }))
-    const error = await commentApi.create({ kind: 'blog_post', resource_id: 'post' }, {
+    const error = await commentApi.create({ kind: 'blog_post', resourceId: 'post' }, {
       content: 'x', mentions: [], attachment_ids: [],
     }).catch((caught) => caught)
     expect(error).toBeInstanceOf(ApiErrorResponseError)

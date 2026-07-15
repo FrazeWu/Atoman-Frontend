@@ -148,10 +148,10 @@ const activeTab = computed<InboxTab>(() => {
 
 const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 
-const notificationTypeByTab: Record<'reply' | 'like' | 'mention', NotificationFilterType> = {
-  reply: 'comment_reply',
-  like: 'comment_like',
-  mention: 'comment_mention',
+const notificationTypeByTab: Record<'reply' | 'like' | 'mention', NotificationFilterType[]> = {
+  reply: ['forum_reply', 'forum_solved', 'comment_reply', 'comment_marked'],
+  like: ['forum_like', 'comment_like'],
+  mention: ['forum_mention', 'comment_mention'],
 }
 
 const switchTab = async (tab: InboxTab) => {

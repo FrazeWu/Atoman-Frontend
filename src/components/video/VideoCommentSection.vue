@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
-import PConfirm from '@/components/ui/PConfirm.vue'
+import PModal from '@/components/ui/PModal.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
@@ -28,6 +28,13 @@ const newComment = ref('')
 const submitting = ref(false)
 const showDeleteConfirm = ref(false)
 const pendingDeleteId = ref<string | null>(null)
+const pendingDeleteVideoId = ref<string | null>(null)
+const deleting = ref(false)
+let commentsRequestSequence = 0
+let submitRequestSequence = 0
+let deleteRequestSequence = 0
+let loadedVideoId = ''
+let unmounted = false
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('zh-CN')
@@ -43,29 +50,37 @@ function canDelete(c: Comment) {
 }
 
 async function fetchComments() {
+  const requestSequence = ++commentsRequestSequence
+  const targetVideoId = props.videoId
+  if (loadedVideoId !== targetVideoId) comments.value = []
   loading.value = true
   try {
-    const res = await fetch(`${api.url}/videos/${props.videoId}/comments`)
-    if (res.ok) {
-      const d = await res.json()
-      comments.value = d.data || []
-    }
+    const res = await fetch(`${api.url}/videos/${targetVideoId}/comments`)
+    if (!res.ok) return
+    const d = await res.json()
+    if (requestSequence !== commentsRequestSequence || props.videoId !== targetVideoId) return
+    comments.value = d.data || []
+    loadedVideoId = targetVideoId
   } catch {
     // ignore
   } finally {
-    loading.value = false
+    if (requestSequence === commentsRequestSequence && props.videoId === targetVideoId) {
+      loading.value = false
+    }
   }
 }
 
 async function submitComment() {
-  if (!newComment.value.trim()) return
+  if (!newComment.value.trim() || submitting.value) return
+  const requestSequence = ++submitRequestSequence
+  const targetVideoId = props.videoId
   submitting.value = true
   try {
     const body = {
       content: newComment.value,
       ...serializeTimestampComment(extractTimestampFromComment(newComment.value)),
     }
-    const res = await fetch(`${api.url}/videos/${props.videoId}/comments`, {
+    const res = await fetch(`${api.url}/videos/${targetVideoId}/comments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,47 +88,87 @@ async function submitComment() {
       },
       body: JSON.stringify(body),
     })
-    if (res.ok) {
-      newComment.value = ''
-      await fetchComments()
-    }
+    if (
+      !res.ok
+      || unmounted
+      || requestSequence !== submitRequestSequence
+      || props.videoId !== targetVideoId
+    ) return
+    newComment.value = ''
+    await fetchComments()
   } catch {
     // ignore
   } finally {
-    submitting.value = false
+    if (
+      !unmounted
+      && requestSequence === submitRequestSequence
+      && props.videoId === targetVideoId
+    ) submitting.value = false
   }
 }
 
-async function deleteComment(id: string) {
+function requestDelete(id: string) {
+  deleteRequestSequence += 1
+  deleting.value = false
+  pendingDeleteId.value = id
+  pendingDeleteVideoId.value = props.videoId
+  showDeleteConfirm.value = true
+}
+
+function clearDeleteState() {
+  deleteRequestSequence += 1
+  deleting.value = false
+  showDeleteConfirm.value = false
+  pendingDeleteId.value = null
+  pendingDeleteVideoId.value = null
+}
+
+function cancelDelete() {
+  if (deleting.value) return
+  clearDeleteState()
+}
+
+async function confirmDelete() {
+  const id = pendingDeleteId.value
+  const targetVideoId = pendingDeleteVideoId.value
+  if (!id || !targetVideoId || targetVideoId !== props.videoId || deleting.value) return
+  const requestSequence = ++deleteRequestSequence
+  deleting.value = true
+  const ownsRequest = () => (
+    !unmounted
+    && requestSequence === deleteRequestSequence
+    && props.videoId === targetVideoId
+    && pendingDeleteId.value === id
+    && pendingDeleteVideoId.value === targetVideoId
+  )
   try {
     const res = await fetch(`${api.url}/videos/comments/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    if (res.ok) await fetchComments()
+    if (!res.ok || !ownsRequest()) return
+    await fetchComments()
+    if (ownsRequest()) clearDeleteState()
   } catch {
     // ignore
+  } finally {
+    if (ownsRequest()) deleting.value = false
   }
 }
 
-function requestDelete(id: string) {
-  pendingDeleteId.value = id
-  showDeleteConfirm.value = true
-}
-
-function cancelDelete() {
-  showDeleteConfirm.value = false
-  pendingDeleteId.value = null
-}
-
-async function confirmDelete() {
-  const id = pendingDeleteId.value
-  cancelDelete()
-  if (id) await deleteComment(id)
-}
-
 onMounted(fetchComments)
-watch(() => props.videoId, fetchComments)
+watch(() => props.videoId, () => {
+  submitRequestSequence += 1
+  submitting.value = false
+  clearDeleteState()
+  void fetchComments()
+})
+onBeforeUnmount(() => {
+  unmounted = true
+  commentsRequestSequence += 1
+  submitRequestSequence += 1
+  deleteRequestSequence += 1
+})
 </script>
 
 <template>
@@ -181,16 +236,23 @@ watch(() => props.videoId, fetchComments)
       </div>
     </div>
 
-    <PConfirm
+    <PModal
       :show="showDeleteConfirm"
+      size="sm"
       title="删除评论"
-      message="确定删除这条评论吗？"
-      confirm-text="删除"
-      cancel-text="取消"
-      danger
-      @confirm="confirmDelete"
-      @cancel="cancelDelete"
-    />
+      @close="cancelDelete"
+    >
+      <p>确定删除这条评论吗？</p>
+      <template #footer>
+        <PButton label="取消" variant="secondary" :disabled="deleting" @click="cancelDelete" />
+        <PButton
+          :label="deleting ? '删除中...' : '删除'"
+          variant="danger"
+          :disabled="deleting"
+          @click="confirmDelete"
+        />
+      </template>
+    </PModal>
   </div>
 </template>
 

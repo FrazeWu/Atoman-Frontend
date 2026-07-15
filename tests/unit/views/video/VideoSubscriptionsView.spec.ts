@@ -34,11 +34,45 @@ describe('VideoSubscriptionsView', () => {
     const wrapper = mount(VideoSubscriptionsView, { global: { plugins: [pinia] } })
     await flushPromises()
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/videos?subscribed=true&sort=latest')
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos?subscribed=true&sort=latest', {
       headers: { Authorization: 'Bearer token' },
     })
     expect(wrapper.text()).toContain('Subscribed video')
     expect(wrapper.text()).not.toContain('尚未开放')
+  })
+
+  it('shows the empty state for a successful empty subscription', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }))
+
+    const wrapper = mount(VideoSubscriptionsView, { global: { plugins: [pinia] } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('暂无订阅更新')
+    expect(wrapper.text()).not.toContain('订阅内容加载失败')
+  })
+
+  it('handles invalid JSON as a load failure', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not-json', { status: 200 }))
+
+    const wrapper = mount(VideoSubscriptionsView, { global: { plugins: [pinia] } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅内容加载失败')
+    expect(wrapper.text()).not.toContain('暂无订阅更新')
+  })
+
+  it.each([
+    ['401 response', () => Promise.resolve(new Response(null, { status: 401 }))],
+    ['500 response', () => Promise.resolve(new Response(null, { status: 500 }))],
+    ['network rejection', () => Promise.reject(new Error('offline'))],
+  ])('shows a failure state instead of an empty subscription for %s', async (_label, fetchResult) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(fetchResult)
+
+    const wrapper = mount(VideoSubscriptionsView, { global: { plugins: [pinia] } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅内容加载失败')
+    expect(wrapper.text()).not.toContain('暂无订阅更新')
   })
 })

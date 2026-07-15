@@ -31,4 +31,18 @@ describe('debate arguments use comment-core IDs and typed routes', () => {
     await useDebateStore().voteArgument('comment-1', 1)
     expect(fetch).toHaveBeenCalledWith('/api/v1/debate-arguments/comment-1/vote', expect.objectContaining({ method: 'POST' }))
   })
+
+  it('appends argument pages without duplicates and preserves them on failure', async () => {
+	vi.mocked(fetch)
+	  .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'a' }, { id: 'b' }], meta: { page: 1, has_more: true } }), { status: 200 }))
+	  .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'b' }, { id: 'c' }], meta: { page: 2, has_more: false } }), { status: 200 }))
+	  .mockRejectedValueOnce(new Error('offline'))
+	const store = useDebateStore()
+	await store.fetchArguments('debate-1')
+	await store.fetchArguments('debate-1', { reset: false })
+	expect(store.argumentList.map(({ id }) => id)).toEqual(['a', 'b', 'c'])
+	expect(store.argumentsHasMore).toBe(false)
+	await store.fetchArguments('debate-1', { reset: false })
+	expect(store.argumentList.map(({ id }) => id)).toEqual(['a', 'b', 'c'])
+  })
 })

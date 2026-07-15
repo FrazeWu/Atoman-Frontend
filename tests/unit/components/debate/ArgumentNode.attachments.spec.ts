@@ -29,4 +29,14 @@ describe('ArgumentNode attachments', () => {
     }, global: { stubs: { PButton: true } } })
     expect(wrapper.find('a[href^="javascript:"]').exists()).toBe(false)
   })
+
+  it('immediately follows a server fold update from false to true', async () => {
+	const argument = { id: 'comment-3', debate_id: 'debate-1', user_id: 'user-1', content: 'visible claim', argument_type: 'support' as const, vote_count: 0, is_concluded: false, is_folded: false, created_at: '2026-01-01', updated_at: '2026-01-01' }
+	const debate = { id: 'debate-1', user_id: 'user-1', title: 'Topic', description: '', content: '', status: 'open' as const, tags: [], view_count: 0, argument_count: 1, vote_count: 0, created_at: '2026-01-01', updated_at: '2026-01-01' }
+	const wrapper = mount(ArgumentNode, { props: { argument, debate }, global: { stubs: { PButton: true } } })
+	expect(wrapper.text()).toContain('visible claim')
+	await wrapper.setProps({ argument: { ...argument, is_folded: true } })
+	expect(wrapper.text()).toContain('此论点已被管理员折叠')
+	expect(wrapper.text()).not.toContain('visible claim')
+  })
 })

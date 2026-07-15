@@ -11,6 +11,8 @@ export const useDebateStore = defineStore("debate", () => {
   const debatesTotal = ref(0);
   const currentDebate = ref<Debate | null>(null);
   const argumentList = ref<Argument[]>([]);
+	const argumentsPage = ref(0);
+	const argumentsHasMore = ref(false);
   const loading = ref(false);
   const error = ref<string | null>(null);
   // Track current user's votes on arguments
@@ -74,17 +76,26 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
-  const fetchArguments = async (debateId: string) => {
+  const fetchArguments = async (debateId: string, options: { page?: number; reset?: boolean } = {}) => {
+	const requestedPage = options.page ?? (options.reset === false ? argumentsPage.value + 1 : 1)
+	const reset = options.reset !== false
     loading.value = true;
     error.value = null;
     try {
       const authStore = useAuthStore();
-      const res = await fetch(`${api.url}/debates/${debateId}/arguments`, {
+      const res = await fetch(`${api.url}/debates/${debateId}/arguments?page=${requestedPage}&page_size=20`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       });
       if (res.ok) {
         const data = await res.json();
-        argumentList.value = data.data || [];
+		const incoming = (data.data || []) as Argument[]
+		if (reset) argumentList.value = incoming
+		else {
+		  const seen = new Set(argumentList.value.map(({ id }) => id))
+		  argumentList.value = [...argumentList.value, ...incoming.filter(({ id }) => !seen.has(id))]
+		}
+		argumentsPage.value = data.meta?.page ?? requestedPage
+		argumentsHasMore.value = Boolean(data.meta?.has_more)
         userVotes.value = data.user_votes || {};
         return data.data as Argument[];
       } else {
@@ -454,6 +465,8 @@ export const useDebateStore = defineStore("debate", () => {
     debatesTotal.value = 0;
     currentDebate.value = null;
     argumentList.value = [];
+	argumentsPage.value = 0;
+	argumentsHasMore.value = false;
     loading.value = false;
     error.value = null;
   };
@@ -463,6 +476,8 @@ export const useDebateStore = defineStore("debate", () => {
     debatesTotal,
     currentDebate,
     argumentList,
+	argumentsPage,
+	argumentsHasMore,
     loading,
     error,
     userVotes,

@@ -161,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Argument, Debate } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
@@ -188,23 +188,38 @@ const authStore = useAuthStore()
 
 const apiBase = useApi().url
 const localIsFolded = ref(props.argument.is_folded ?? false)
+const foldPending = ref(false)
+let foldPropVersion = 0
+watch(() => props.argument.is_folded, (value) => {
+	foldPropVersion++
+	if (!foldPending.value) localIsFolded.value = value ?? false
+})
 
 const foldArgument = async () => {
-  const note = prompt('折叠理由（可选）：', '') ?? ''
-  const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ fold_note: note }),
-  })
-  if (res.ok) localIsFolded.value = true
+	if (foldPending.value) return
+	foldPending.value = true
+	const startVersion = foldPropVersion
+	const note = prompt('折叠理由（可选）：', '') ?? ''
+	try {
+		const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }, body: JSON.stringify({ fold_note: note }) })
+		localIsFolded.value = res.ok
+	} finally {
+		foldPending.value = false
+		if (foldPropVersion !== startVersion) localIsFolded.value = props.argument.is_folded ?? false
+	}
 }
 
 const unfoldArgument = async () => {
-  const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (res.ok) localIsFolded.value = false
+	if (foldPending.value) return
+	foldPending.value = true
+	const startVersion = foldPropVersion
+	try {
+		const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, { method: 'DELETE', headers: { Authorization: `Bearer ${authStore.token}` } })
+		if (res.ok) localIsFolded.value = false
+	} finally {
+		foldPending.value = false
+		if (foldPropVersion !== startVersion) localIsFolded.value = props.argument.is_folded ?? false
+	}
 }
 
 const canVote = computed(() => {

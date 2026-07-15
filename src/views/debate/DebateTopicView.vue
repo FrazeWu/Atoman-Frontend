@@ -108,6 +108,7 @@
         </div>
 
         <PEmpty v-else message="暂无论点，快来添加第一个论点吧！" />
+		<PButton v-if="debateStore.argumentsHasMore" block outline :disabled="loading" @click="loadMoreArguments">加载更多</PButton>
       </div>
     </template>
 
@@ -487,6 +488,10 @@ const loadDebate = async () => {
   const id = route.params.id as string
   await debateStore.fetchDebate(id)
   await debateStore.fetchArguments(id)
+}
+
+const loadMoreArguments = async () => {
+	await debateStore.fetchArguments(debate.value!.id, { reset: false })
 }
 
 const handleUpdate = async () => {

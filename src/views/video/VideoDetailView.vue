@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
@@ -67,6 +67,22 @@ function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString('zh-CN')
 }
 
+async function incrementViewCount(id: string, seq: number) {
+  try {
+    const response = await fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
+    if (!response.ok) return
+    const payload = await response.json()
+    if (
+      seq !== loadSeq
+      || video.value?.id !== id
+      || typeof payload.view_count !== 'number'
+    ) return
+    video.value.view_count = payload.view_count
+  } catch {
+    // Keep the count from the detail response when synchronization fails.
+  }
+}
+
 async function load(id: string) {
   const seq = ++loadSeq
   loading.value = true
@@ -89,8 +105,7 @@ async function load(id: string) {
       const data = await rRes.json()
       if (seq === loadSeq) recommended.value = data
     }
-    // Fire-and-forget view count increment
-    if (seq === loadSeq) fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
+    if (seq === loadSeq) void incrementViewCount(id, seq)
   } catch {
     if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {
@@ -100,6 +115,9 @@ async function load(id: string) {
 
 onMounted(() => load(route.params.id as string))
 watch(() => route.params.id, (id) => { if (id) load(id as string) })
+onBeforeUnmount(() => {
+  loadSeq += 1
+})
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const currentPlaybackTime = ref(0)

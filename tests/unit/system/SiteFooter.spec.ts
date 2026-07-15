@@ -33,4 +33,8 @@ describe('SiteFooter', () => {
     expect(footerSource).toContain('appVersion')
     expect(footerSource).toContain('site-footer-version')
   })
+
+  it('allows moderators to open settings', () => {
+    expect(footerSource).toContain('isModeratorRole')
+  })
 })

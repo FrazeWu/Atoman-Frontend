@@ -15,4 +15,18 @@ describe('CommentReportDialog', () => {
     expect(wrapper.emitted('submit')).toEqual([[{ reason: 'harassment', note: '补充说明' }]])
     expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
   })
+
+  it('offers every backend reason and requires a note for other', async () => {
+    const wrapper = mount(CommentReportDialog, {
+      props: { modelValue: true }, global: { stubs: { teleport: true } },
+    })
+    expect(wrapper.findAll('option').map((option) => option.attributes('value'))).toEqual([
+      'spam', 'harassment', 'hate', 'sexual', 'violence', 'misinformation', 'other',
+    ])
+    await wrapper.get('select').setValue('other')
+    await wrapper.get('[data-test="submit-report"]').trigger('click')
+    expect(wrapper.emitted('submit')).toBeUndefined()
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    expect(wrapper.text()).toContain('请填写补充说明')
+  })
 })

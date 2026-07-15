@@ -22,6 +22,7 @@ describe('CommentSection', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    state.target.value = { kind: 'blog_post', resource_id: 'post', mark_label: '置顶', can_mark: true, marked_comment_id: null, comment_count: 1, root_count: 1 }
   })
 
   it('shows a login action to guests and the composer to signed-in users', async () => {
@@ -42,5 +43,14 @@ describe('CommentSection', () => {
     expect(state.load).toHaveBeenCalled()
     wrapper.findComponent({ name: 'CommentThread' }).vm.$emit('seek', 65)
     expect(wrapper.emitted('seek')).toEqual([[65]])
+  })
+
+  it('uses the server mark label and grants target-owner deletion', async () => {
+    state.target.value = { ...state.target.value, mark_label: '最佳回答', can_mark: true }
+    const wrapper = mount(CommentSection, { props: { target: { kind: 'forum_topic', resourceId: 'topic-1' } } })
+    await nextTick()
+    const thread = wrapper.findComponent({ name: 'CommentThread' })
+    expect(thread.props('markLabel')).toBe('最佳回答')
+    expect(thread.props('canDelete')).toBe(true)
   })
 })

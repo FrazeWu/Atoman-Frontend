@@ -10,6 +10,7 @@ describe('CommentItem', () => {
     const wrapper = mount(CommentItem, { props: { comment: makeComment('root', { edited_at: editedAt }) } })
     expect(wrapper.get('time[data-test="edited-at"]').attributes('datetime')).toBe(editedAt)
     expect(wrapper.get('time[data-test="edited-at"]').attributes('title')).toBe(editedAt)
+    expect(wrapper.get('time[data-test="edited-at"]').text()).toMatch(/:\d{2}:\d{2}/)
   })
 
   it('folds auto-reported content until explicitly revealed', async () => {
@@ -34,5 +35,13 @@ describe('CommentItem', () => {
     expect(anonymous.find('[data-test="reply-comment"]').exists()).toBe(false)
     const signedIn = mount(CommentItem, { props: { comment: makeComment('root'), authenticated: true } })
     expect(signedIn.find('[data-test="reply-comment"]').exists()).toBe(true)
+  })
+
+  it('allows the target owner to delete any comment', () => {
+    const wrapper = mount(CommentItem, { props: {
+      comment: makeComment('root', { author_id: 'other-user' }), authenticated: true,
+      currentUserId: 'target-owner', canDelete: true,
+    } })
+    expect(wrapper.find('[data-test="delete-comment"]').exists()).toBe(true)
   })
 })

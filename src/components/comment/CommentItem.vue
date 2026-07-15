@@ -63,7 +63,7 @@
         </button>
         <button type="button" data-test="reply-comment" title="回复" @click="$emit('reply')"><Reply :size="15" /></button>
         <button v-if="isOwner" type="button" title="编辑" @click="$emit('edit')"><Pencil :size="15" /></button>
-        <button v-if="isOwner" type="button" title="删除" @click="$emit('delete')"><Trash2 :size="15" /></button>
+        <button v-if="isOwner || canDelete" type="button" title="删除" data-test="delete-comment" @click="$emit('delete')"><Trash2 :size="15" /></button>
         <button type="button" title="举报" @click="$emit('report')"><Flag :size="15" /></button>
         <button v-if="canMark && depth === 0 && !showMarked" type="button" :title="markLabel" @click="$emit('mark')"><Pin :size="15" /></button>
         <button v-if="canMark && depth === 0 && showMarked" type="button" :title="`取消${markLabel}`" @click="$emit('unmark')"><PinOff :size="15" /></button>
@@ -87,6 +87,7 @@ const props = withDefaults(defineProps<{
   authenticated?: boolean
   currentUserId?: string
   canMark?: boolean
+  canDelete?: boolean
   markedCommentId?: string | null
   markLabel?: '置顶' | '最佳回答'
   likePending?: boolean
@@ -95,6 +96,7 @@ const props = withDefaults(defineProps<{
   authenticated: false,
   currentUserId: '',
   canMark: false,
+  canDelete: false,
   markedCommentId: null,
   markLabel: '置顶',
   likePending: false,
@@ -121,7 +123,9 @@ const showMarked = computed(() => props.depth === 0 && (props.markedCommentId
 
 function formatDate(value: string) {
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'short' })
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', {
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
 }
 
 function anchorText(start: number, end: number) {

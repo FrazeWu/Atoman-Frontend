@@ -5,6 +5,7 @@
       :authenticated="authenticated"
       :current-user-id="currentUserId"
       :can-mark="canMark"
+      :can-delete="canDelete"
       :marked-comment-id="markedCommentId"
       :mark-label="markLabel"
       :like-pending="likePending(root.id)"
@@ -26,6 +27,7 @@
         :depth="1"
         :authenticated="authenticated"
         :current-user-id="currentUserId"
+        :can-delete="canDelete"
         :marked-comment-id="markedCommentId"
         :mark-label="markLabel"
         :like-pending="likePending(reply.id)"
@@ -97,6 +99,7 @@ const props = withDefaults(defineProps<{
   authenticated?: boolean
   currentUserId?: string
   canMark?: boolean
+  canDelete?: boolean
   markedCommentId?: string | null
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
@@ -109,6 +112,7 @@ const props = withDefaults(defineProps<{
   authenticated: false,
   currentUserId: '',
   canMark: false,
+  canDelete: false,
   markedCommentId: null,
   markLabel: '置顶',
   currentTime: undefined,

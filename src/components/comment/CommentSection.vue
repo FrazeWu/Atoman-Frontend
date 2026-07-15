@@ -42,6 +42,7 @@
         :authenticated="authStore.isAuthenticated"
         :current-user-id="currentUserId"
         :can-mark="Boolean(comments.target.value?.can_mark)"
+        :can-delete="Boolean(comments.target.value?.can_mark)"
         :marked-comment-id="comments.target.value?.marked_comment_id"
         :mark-label="effectiveMarkLabel"
         :current-time="currentTime"
@@ -89,7 +90,7 @@ const props = withDefaults(defineProps<{
   currentTime?: () => number | null
 }>(), {
   noun: '评论',
-  markLabel: '置顶',
+  markLabel: undefined,
   currentTime: undefined,
 })
 
@@ -102,7 +103,8 @@ const reportVisible = ref(false)
 const reportingCommentId = ref('')
 const currentUserId = computed(() => authStore.user?.uuid ?? '')
 const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`)
-const effectiveMarkLabel = computed(() => props.markLabel || (comments.target.value?.mark_label === '最佳回答' ? '最佳回答' : '置顶'))
+const effectiveMarkLabel = computed(() => props.markLabel
+  ?? (comments.target.value?.mark_label === '最佳回答' ? '最佳回答' : comments.target.value?.mark_label === '置顶' ? '置顶' : '置顶'))
 const sortOptions = [
   { label: '最早', value: 'oldest' as const },
   { label: '最新', value: 'newest' as const },

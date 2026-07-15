@@ -74,8 +74,10 @@ export interface CommentRootList {
 export interface CommentReplyList { items: CommentDTO[]; page: number; per_page: number; total: number; has_more: boolean }
 export interface CreateCommentInput { content: string; reply_to_id?: string | null; mentions: CommentMentionInput[]; attachment_ids: string[] }
 export interface EditCommentInput { content: string; mentions: CommentMentionInput[]; attachment_ids: string[] }
-export interface ReportCommentInput { reason: string; note: string }
-export interface ModerateCommentInput { action: string; report_id?: string | null; reason: string }
+export type CommentReportReason = 'spam' | 'harassment' | 'hate' | 'sexual' | 'violence' | 'misinformation' | 'other'
+export type CommentModerationAction = 'restore' | 'hide' | 'delete' | 'uphold_report' | 'reject_report'
+export interface ReportCommentInput { reason: CommentReportReason; note: string }
+export interface ModerateCommentInput { action: CommentModerationAction; report_id?: string | null; reason: string }
 export interface CommentActionResult { ok: boolean }
 export interface CommentReportQueueItem {
   id: string; reason: string; note: string; status: string; reviewer_id?: string | null

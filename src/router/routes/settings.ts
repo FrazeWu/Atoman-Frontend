@@ -1,4 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { isAdminRole } from '@/utils/roles'
 
 export const settingRoutes: RouteRecordRaw[] = [
   { path: '/admin/site', redirect: '/setting/access' },
@@ -7,7 +9,10 @@ export const settingRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/setting/SettingLayout.vue'),
     meta: { requiresAuth: true, authLayout: true },
     children: [
-      { path: '', redirect: '/setting/access' },
+      {
+        path: '',
+        redirect: () => isAdminRole(useAuthStore().user?.role) ? '/setting/access' : '/setting/comment-moderation',
+      },
       { path: 'access', component: () => import('@/views/setting/SettingAccessView.vue'), meta: { requiresAdmin: true } },
       { path: 'feed-fulltext', redirect: '/setting/access' },
       { path: 'feed-sources', redirect: '/setting/access' },

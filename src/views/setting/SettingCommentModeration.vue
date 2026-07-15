@@ -5,7 +5,7 @@
         <span>03 / COMMENTS</span>
         <h2>评论审核</h2>
       </div>
-      <PButton size="sm" outline :loading="loading" @click="load">刷新</PButton>
+      <PButton size="sm" outline :loading="loading" @click="() => load()">刷新</PButton>
     </header>
 
     <p v-if="error" class="comment-moderation__error" role="alert">{{ error }}</p>
@@ -43,9 +43,14 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Check, Eye, EyeOff, ShieldCheck, Trash2, X } from 'lucide-vue-next'
+import { Eye, EyeOff, ShieldCheck, Trash2, X } from 'lucide-vue-next'
 
-import { commentApi, type CommentReportQueueItem, type CommentTargetKind } from '@/api/comments'
+import {
+  commentApi,
+  type CommentModerationAction,
+  type CommentReportQueueItem,
+  type CommentTargetKind,
+} from '@/api/comments'
 import PButton from '@/components/ui/PButton.vue'
 
 const reports = ref<CommentReportQueueItem[]>([])
@@ -83,7 +88,7 @@ async function load(append = false) {
 
 function loadMore() { return load(true) }
 
-async function moderate(report: CommentReportQueueItem, action: string) {
+async function moderate(report: CommentReportQueueItem, action: CommentModerationAction) {
   processing.value = report.id
   error.value = ''
   try {
@@ -97,7 +102,10 @@ async function moderate(report: CommentReportQueueItem, action: string) {
 }
 
 function reasonLabel(reason: string) {
-  return ({ spam: '垃圾信息', harassment: '骚扰或攻击', misinformation: '虚假信息', other: '其他' } as Record<string, string>)[reason] ?? reason
+  return ({
+    spam: '垃圾信息', harassment: '骚扰或攻击', hate: '仇恨内容', sexual: '色情内容', violence: '暴力内容',
+    misinformation: '虚假信息', other: '其他',
+  } as Record<string, string>)[reason] ?? reason
 }
 
 function targetLabel(kind: CommentTargetKind) {

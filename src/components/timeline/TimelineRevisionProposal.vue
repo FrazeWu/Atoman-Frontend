@@ -19,7 +19,7 @@
       <label>来源依据
         <input v-model="evidence" class="a-input" data-test="proposal-evidence" placeholder="链接、书名或档案来源" />
       </label>
-      <CommentComposer ref="composer" submit-label="提交提案" :submitting="submitting" @submit="createProposal" />
+      <CommentComposer :key="composerKey" ref="composer" submit-label="提交提案" :submitting="submitting" @submit="createProposal" />
       <p v-if="mutationError" class="timeline-proposals__error" role="alert">{{ mutationError }}</p>
     </div>
     <p v-else class="timeline-proposals__state">登录后提交修订提案</p>
@@ -89,6 +89,7 @@ const field = ref('')
 const value = ref('')
 const evidence = ref('')
 const composer = ref<{ reset: () => void } | null>(null)
+const composerKey = ref(0)
 interface ReplyState { expanded: boolean; page: number; pageSize: number; hasMore: boolean; loading: boolean; items: CommentDTO[] }
 const replyStates = reactive<Record<string, ReplyState>>({})
 const reportVisible = ref(false)
@@ -104,23 +105,37 @@ const currentUserId = computed(() => authStore.user?.uuid ?? '')
 const canDecide = computed(() => authStore.isAuthenticated && (currentUserId.value === props.targetOwnerId || isModeratorRole(authStore.user?.role)))
 const valuePlaceholder = computed(() => field.value === 'tags' ? '多个标签用逗号分隔' : '输入修改后的内容')
 const target = computed(() => ({ kind: props.targetKind === 'event' ? 'timeline_event' as const : 'timeline_person' as const, resourceId: props.targetId }))
+let generation = 0
+const targetKey = () => `${props.targetKind}:${props.targetId}`
+const isCurrent = (requestGeneration: number, requestKey: string) => generation === requestGeneration && targetKey() === requestKey
 
-watch(() => `${props.targetKind}:${props.targetId}`, async () => {
+watch(() => `${props.targetKind}:${props.targetId}`, () => {
+  const requestGeneration = ++generation
+  const requestKey = targetKey()
+  composer.value?.reset()
+  composerKey.value += 1
   field.value = fieldOptions.value[0]?.value ?? ''
+	value.value = ''
+	evidence.value = ''
+	mutationError.value = ''
+	submitting.value = false
+	decidingId.value = ''
+	reportVisible.value = false
+	reportingCommentId.value = ''
 	proposals.value = []
 	rootPage.value = 0
 	rootHasMore.value = false
 	total.value = 0
 	Object.keys(replyStates).forEach((key) => delete replyStates[key])
-  await load()
+  void load(requestGeneration, requestKey, props.targetKind, props.targetId)
 }, { immediate: true })
 
-async function load() {
+async function load(requestGeneration = generation, requestKey = targetKey(), kind = props.targetKind, id = props.targetId) {
   loading.value = true
   mutationError.value = ''
-  try { await loadRootPage(1, false) }
-  catch { mutationError.value = '修订提案加载失败' }
-  finally { loading.value = false }
+  try { await loadRootPage(1, false, requestGeneration, requestKey, kind, id) }
+  catch { if (isCurrent(requestGeneration, requestKey)) mutationError.value = '修订提案加载失败' }
+  finally { if (isCurrent(requestGeneration, requestKey)) loading.value = false }
 }
 
 function mergeProposals(current: TimelineRevisionProposal[], incoming: TimelineRevisionProposal[]) {
@@ -129,8 +144,9 @@ function mergeProposals(current: TimelineRevisionProposal[], incoming: TimelineR
 	return [...byId.values()]
 }
 
-async function loadRootPage(page: number, append: boolean) {
-	const result = await timelineRevisionProposalApi.list(props.targetKind, props.targetId, page, 20)
+async function loadRootPage(page: number, append: boolean, requestGeneration = generation, requestKey = targetKey(), kind = props.targetKind, id = props.targetId) {
+	const result = await timelineRevisionProposalApi.list(kind, id, page, 20)
+	if (!isCurrent(requestGeneration, requestKey)) return false
 	for (const proposal of result.items) {
 		const state = replyStates[proposal.comment.id]
 		if (state?.expanded) proposal.comment.replies = state.items
@@ -139,46 +155,69 @@ async function loadRootPage(page: number, append: boolean) {
 	rootPage.value = result.page
 	rootHasMore.value = result.has_more
 	total.value = result.total
+	return true
 }
 
 async function loadMoreRoots() {
 	if (loading.value || !rootHasMore.value) return
+	const requestGeneration = generation
+	const requestKey = targetKey()
 	loading.value = true
-	try { await loadRootPage(rootPage.value + 1, true) } finally { loading.value = false }
+	try { await loadRootPage(rootPage.value + 1, true, requestGeneration, requestKey) } finally { if (isCurrent(requestGeneration, requestKey)) loading.value = false }
 }
 
-function patchValue() {
-  if (field.value === 'tags') return value.value.split(',').map((item) => item.trim()).filter(Boolean)
-  if (field.value === 'latitude' || field.value === 'longitude') return Number(value.value)
-  if ((field.value === 'end_date' || field.value === 'birth_date' || field.value === 'death_date') && !value.value.trim()) return null
-  return value.value
+function patchValue(): { value: unknown; error: string } {
+  if (field.value === 'tags') return { value: value.value.split(',').map((item) => item.trim()).filter(Boolean), error: '' }
+  if (field.value === 'latitude' || field.value === 'longitude') {
+	const text = value.value.trim()
+	if (text === '') return { value: null, error: '' }
+	const coordinate = Number(text)
+	if (!Number.isFinite(coordinate)) return { value: null, error: '请输入有效坐标' }
+	if (field.value === 'latitude' && (coordinate < -90 || coordinate > 90)) return { value: null, error: '纬度必须在 -90 到 90 之间' }
+	if (field.value === 'longitude' && (coordinate < -180 || coordinate > 180)) return { value: null, error: '经度必须在 -180 到 180 之间' }
+	return { value: coordinate, error: '' }
+  }
+  if ((field.value === 'end_date' || field.value === 'birth_date' || field.value === 'death_date') && !value.value.trim()) return { value: null, error: '' }
+  return { value: value.value, error: '' }
 }
 
 async function createProposal(input: CreateCommentInput) {
   if (!field.value || !evidence.value.trim()) { mutationError.value = '请填写修改内容和来源依据'; return }
+  const changed = patchValue()
+  if (changed.error) { mutationError.value = changed.error; return }
+  const requestGeneration = generation
+  const requestKey = targetKey()
+  const kind = props.targetKind
+  const id = props.targetId
+  const changedField = field.value
+  const sourceEvidence = evidence.value.trim()
   submitting.value = true; mutationError.value = ''
   try {
-    await timelineRevisionProposalApi.create(props.targetKind, props.targetId, { ...input, evidence: evidence.value.trim(), patch: { [field.value]: patchValue() } })
-    value.value = ''; evidence.value = ''; composer.value?.reset(); await reloadPreservingState()
-  } catch { mutationError.value = '提案提交失败，请重试' }
-  finally { submitting.value = false }
+    await timelineRevisionProposalApi.create(kind, id, { ...input, evidence: sourceEvidence, patch: { [changedField]: changed.value } })
+    if (!isCurrent(requestGeneration, requestKey)) return
+    value.value = ''; evidence.value = ''; composer.value?.reset(); await reloadPreservingState(requestGeneration, requestKey)
+  } catch { if (isCurrent(requestGeneration, requestKey)) mutationError.value = '提案提交失败，请重试' }
+  finally { if (isCurrent(requestGeneration, requestKey)) submitting.value = false }
 }
 
 async function decide(proposal: TimelineRevisionProposal, decision: TimelineProposalDecision) {
+  const requestGeneration = generation
+  const requestKey = targetKey()
   decidingId.value = proposal.comment.id; mutationError.value = ''
   try {
     const updated = await timelineRevisionProposalApi.decide(proposal.comment.id, decision)
+	if (!isCurrent(requestGeneration, requestKey)) return
 	if (isCompleteProposal(updated)) {
 		const state = replyStates[proposal.comment.id]
 		if (state?.expanded) updated.comment.replies = state.items
 		const index = proposals.value.findIndex(({ comment }) => comment.id === proposal.comment.id)
 		if (index >= 0) proposals.value[index] = updated
 	} else {
-		await reloadPreservingState()
+		await reloadPreservingState(requestGeneration, requestKey)
 	}
     emit('decided', updated)
-  } catch { mutationError.value = '处理失败，请重试' }
-  finally { decidingId.value = '' }
+  } catch { if (isCurrent(requestGeneration, requestKey)) mutationError.value = '处理失败，请重试' }
+  finally { if (isCurrent(requestGeneration, requestKey)) decidingId.value = '' }
 }
 
 async function reply(comment: CommentDTO, input: CreateCommentInput) { await commentApi.create(target.value, { ...input, reply_to_id: comment.id }); await reloadPreservingState() }
@@ -211,22 +250,31 @@ function mergeComments(current: CommentDTO[], incoming: CommentDTO[]) { const by
 async function loadReplyPage(rootId: string, page: number, append: boolean) {
 	const proposal = proposals.value.find(({ comment }) => comment.id === rootId); if (!proposal) return
 	const state = replyState(proposal); state.loading = true
+	const requestGeneration = generation
+	const requestKey = targetKey()
 	try {
 		const result = await commentApi.listReplies(rootId, { page, page_size: state.pageSize })
+		if (!isCurrent(requestGeneration, requestKey)) return
 		state.items = append ? mergeComments(state.items, result.items) : result.items
 		state.page = result.page; state.pageSize = result.per_page; state.hasMore = result.has_more
 		proposal.comment.replies = state.items
-	} finally { state.loading = false }
+	} finally { if (isCurrent(requestGeneration, requestKey)) state.loading = false }
 }
-async function reloadPreservingState() {
+async function reloadPreservingState(requestGeneration = generation, requestKey = targetKey()) {
 	const pages = Math.max(1, rootPage.value)
 	const expandedPages = Object.entries(replyStates).filter(([, state]) => state.expanded).map(([id, state]) => ({ id, pages: Math.max(1, state.page) }))
 	proposals.value = []
-	for (let page = 1; page <= pages; page += 1) await loadRootPage(page, page > 1)
+	for (let page = 1; page <= pages; page += 1) {
+		await loadRootPage(page, page > 1, requestGeneration, requestKey)
+		if (!isCurrent(requestGeneration, requestKey)) return
+	}
 	for (const snapshot of expandedPages) {
 		const proposal = proposals.value.find(({ comment }) => comment.id === snapshot.id); if (!proposal) continue
 		const state = replyState(proposal); state.expanded = true; state.items = []; state.page = 0
-		for (let page = 1; page <= snapshot.pages; page += 1) await loadReplyPage(snapshot.id, page, page > 1)
+		for (let page = 1; page <= snapshot.pages; page += 1) {
+			await loadReplyPage(snapshot.id, page, page > 1)
+			if (!isCurrent(requestGeneration, requestKey)) return
+		}
 	}
 }
 function isCompleteProposal(proposal: TimelineRevisionProposal) {

@@ -78,4 +78,40 @@ describe('TimelineRevisionProposal', () => {
     await vi.waitFor(() => expect(wrapper.findAll('[data-comment-depth="1"]')).toHaveLength(4))
     expect(wrapper.findComponent({ name: 'CommentThread' }).props('expanded')).toBe(true)
   })
+
+  it('clears the composer immediately and ignores a stale target response', async () => {
+	let resolveA!: (value: Awaited<ReturnType<typeof timelineRevisionProposalApi.list>>) => void
+	const delayedA = new Promise<Awaited<ReturnType<typeof timelineRevisionProposalApi.list>>>((resolve) => { resolveA = resolve })
+	const bProposal = { ...proposal, target_id: 'person-b', target_kind: 'timeline_person' as const, comment: makeComment('person-b-root') }
+	vi.mocked(timelineRevisionProposalApi.list).mockImplementation((_kind, id) => id === 'event-a'
+	  ? delayedA
+	  : Promise.resolve({ items: [bProposal], page: 1, per_page: 20, total: 1, has_more: false }))
+	const auth = useAuthStore(); auth.isAuthenticated = true; auth.user = { uuid: 'user-1', username: 'u', email: 'u@example.com', role: 'user' }
+	const wrapper = mount(TimelineRevisionProposal, { props: { targetKind: 'event', targetId: 'event-a', targetOwnerId: 'owner-1' } })
+	await wrapper.get('[data-test="proposal-value"]').setValue('A draft')
+	await wrapper.get('[data-test="proposal-evidence"]').setValue('A evidence')
+	await wrapper.get('textarea').setValue('A comment')
+	await wrapper.setProps({ targetKind: 'person', targetId: 'person-b' })
+	expect(wrapper.get('[data-test="proposal-value"]').element).toHaveValue('')
+	expect(wrapper.get('[data-test="proposal-evidence"]').element).toHaveValue('')
+	expect(wrapper.get('textarea').element).toHaveValue('')
+	expect(wrapper.get('[data-test="proposal-field"]').element).toHaveValue('name')
+	await vi.waitFor(() => expect(wrapper.findComponent({ name: 'CommentThread' }).props('root')).toMatchObject({ id: 'person-b-root' }))
+	resolveA({ items: [{ ...proposal, comment: makeComment('stale-a') }], page: 1, per_page: 20, total: 1, has_more: false })
+	await Promise.resolve()
+	expect(wrapper.findComponent({ name: 'CommentThread' }).props('root')).toMatchObject({ id: 'person-b-root' })
+	expect(wrapper.text()).not.toContain('修订提案加载失败')
+  })
+
+  it.each([['abc', '请输入有效坐标'], ['91', '纬度必须在 -90 到 90 之间']])('rejects invalid latitude %s locally', async (coordinate, message) => {
+	const auth = useAuthStore(); auth.isAuthenticated = true; auth.user = { uuid: 'user-1', username: 'u', email: 'u@example.com', role: 'user' }
+	const wrapper = mount(TimelineRevisionProposal, { props: { targetKind: 'event', targetId: 'event-1', targetOwnerId: 'owner-1' } })
+	await wrapper.get('[data-test="proposal-field"]').setValue('latitude')
+	await wrapper.get('[data-test="proposal-value"]').setValue(coordinate)
+	await wrapper.get('[data-test="proposal-evidence"]').setValue('map')
+	await wrapper.get('textarea').setValue('coordinate')
+	await wrapper.get('[data-test="comment-submit"]').trigger('click')
+	expect(timelineRevisionProposalApi.create).not.toHaveBeenCalled()
+	expect(wrapper.text()).toContain(message)
+  })
 })

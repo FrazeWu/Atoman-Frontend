@@ -54,6 +54,18 @@
             <Heart :size="16" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" />
           </button>
 
+          <button
+            v-if="player.currentSong"
+            type="button"
+            class="player-discussion-btn"
+            data-test="player-song-discussion"
+            title="讨论"
+            aria-label="讨论"
+            @click="openSongDiscussion"
+          >
+            <MessageSquare :size="16" />
+          </button>
+
           <PDropdown v-if="player.currentSong" class="player-add-dropdown" position="right">
             <template #trigger>
               <button class="player-add-btn" type="button" title="添加到歌单">
@@ -196,10 +208,12 @@ import {
   Volume, 
   VolumeX,
   Heart,
-  Plus
+  Plus,
+  MessageSquare,
 } from 'lucide-vue-next'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   listMusicPlaylists,
   addMusicPlaylistSong,
@@ -209,6 +223,7 @@ import {
 } from '@/api/musicV1'
 
 const player = usePlayerStore()
+const { openNestedAction } = useMusicDrawers()
 const playerInnerRef = ref<HTMLElement | null>(null)
 const playerInfoRef = ref<HTMLElement | null>(null)
 const playerMetaRef = ref<HTMLElement | null>(null)
@@ -236,6 +251,11 @@ const coverFallback = computed(() => {
   const firstChar = text.trim().charAt(0)
   return firstChar || 'P'
 })
+
+function openSongDiscussion() {
+  if (!player.currentSong) return
+  openNestedAction('discussion', { songId: String(player.currentSong.id) })
+}
 
 const updateMetaCollapse = () => {
   const playerInner = playerInnerRef.value
@@ -917,7 +937,8 @@ onBeforeUnmount(() => {
 .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); }
 
 /* Player Center Favorite & Add button styles */
-.player-fav-btn {
+.player-fav-btn,
+.player-discussion-btn {
   background: transparent;
   border: 0;
   color: var(--a-color-ink-soft);
@@ -933,7 +954,8 @@ onBeforeUnmount(() => {
 .player-fav-btn.is-active {
   color: #e05e5e !important;
 }
-.player-fav-btn:hover {
+.player-fav-btn:hover,
+.player-discussion-btn:hover {
   background-color: var(--a-color-paper-wash);
 }
 .player-add-dropdown {

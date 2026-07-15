@@ -80,10 +80,6 @@ const selectedRevision = ref<MusicRevisionSummary | null>(null)
 const previousRevision = ref<MusicRevisionSummary | null>(null)
 const diffLoading = ref(false)
 const discussionSongId = computed(() => {
-  const payload = state.value.nestedPayload
-  if (payload && typeof payload === 'object' && 'songId' in payload && typeof payload.songId === 'string') {
-    return payload.songId
-  }
   return player.currentSong?.id ? String(player.currentSong.id) : ''
 })
 

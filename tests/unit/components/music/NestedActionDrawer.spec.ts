@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   listAlbumRevisions: vi.fn(),
   getAlbumRevision: vi.fn(),
   revertAlbumRevision: vi.fn(),
-  currentSong: { id: 'song-1', title: 'Track A' },
+  currentSong: { id: 'song-1', title: 'Track A' } as { id: string; title: string } | null,
   currentTime: 46,
   seek: vi.fn(),
 }))
@@ -166,6 +166,26 @@ describe('NestedActionDrawer.vue', () => {
     expect(comments.props('currentTime')()).toBe(46)
     comments.vm.$emit('seek', 88)
     expect(mocks.seek).toHaveBeenCalledWith(88)
+  })
+
+  it('ignores a stale payload and keeps target, time, and seek on the active song', () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
+    mocks.currentSong = { id: 'active-song', title: 'Active Track' }
+    mocks.currentTime = 64
+    const wrapper = mountDrawer()
+
+    const comments = wrapper.findComponent(CommentSection)
+    expect(comments.props('target')).toEqual({ kind: 'music_song', resourceId: 'active-song' })
+    expect(comments.props('currentTime')()).toBe(64)
+    comments.vm.$emit('seek', 91)
+    expect(mocks.seek).toHaveBeenCalledWith(91)
+  })
+
+  it('does not render a song discussion without an active song', () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
+    mocks.currentSong = null
+
+    expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
   })
 
   it('renders when action is present', () => {

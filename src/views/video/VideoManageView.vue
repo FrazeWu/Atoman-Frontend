@@ -63,6 +63,8 @@
               </div>
             </div>
 
+            <p v-if="deleteError" role="alert" class="a-error">{{ deleteError }}</p>
+
             <!-- Videos List -->
             <div v-if="loadingVideos" style="display:flex;flex-direction:column;gap:1rem">
               <div class="a-skeleton" style="height:3rem" />
@@ -87,7 +89,13 @@
                 </div>
                 <div class="video-actions">
                   <button class="action-btn" @click="handleVideoAction('edit', video)">编辑</button>
-                  <button class="action-btn danger" @click="handleVideoAction('delete', video)">删除</button>
+                  <button
+                    class="action-btn danger"
+                    :disabled="deletingVideoId !== null"
+                    @click="handleVideoAction('delete', video)"
+                  >
+                    {{ deletingVideoId === video.id ? '删除中...' : '删除' }}
+                  </button>
                 </div>
               </div>
             </div>
@@ -191,6 +199,9 @@ const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name
 const selectedCollectionId = ref<string | null>(null)
 const videos = ref<any[]>([])
 const loadingVideos = ref(false)
+const deletingVideoId = ref<string | null>(null)
+const deleteError = ref('')
+let videosRequestSequence = 0
 
 const allCollections = computed(() => {
   const list: (Collection & { channelName: string, channelId: string })[] = []
@@ -218,8 +229,11 @@ const createCollectionModalVisible = ref(false)
 const collectionFormData = ref({ name: '', description: '', channel_id: '' })
 
 const fetchVideos = async () => {
-  if (!selectedCollectionId.value) {
+  const requestSequence = ++videosRequestSequence
+  const collectionId = selectedCollectionId.value
+  if (!collectionId) {
     videos.value = []
+    loadingVideos.value = false
     return
   }
 
@@ -227,22 +241,27 @@ const fetchVideos = async () => {
   try {
     // Note: We use the video list API with collection_id filter
     // We might need to handle owner-view on the backend if not already supported
-    const res = await fetch(`${api.videos.list}?collection_id=${selectedCollectionId.value}`, {
+    const res = await fetch(`${api.videos.list}?collection_id=${collectionId}`, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     if (res.ok) {
       const data = await res.json()
       // The backend returns a list of videos directly or wrapped in data
-      videos.value = Array.isArray(data) ? data : (data.data || [])
+      if (requestSequence === videosRequestSequence && selectedCollectionId.value === collectionId) {
+        videos.value = Array.isArray(data) ? data : (data.data || [])
+      }
     }
   } catch (e) {
     console.error('Failed to fetch videos', e)
   } finally {
-    loadingVideos.value = false
+    if (requestSequence === videosRequestSequence && selectedCollectionId.value === collectionId) {
+      loadingVideos.value = false
+    }
   }
 }
 
 const selectCollection = (id: string) => {
+  deleteError.value = ''
   selectedCollectionId.value = id
   fetchVideos()
 }
@@ -289,22 +308,34 @@ const handleVideoAction = async (action: 'edit' | 'delete', video: any) => {
   if (action === 'edit') {
     router.push(`/videos/edit/${video.id}`)
   } else if (action === 'delete') {
-    if (confirm(`确定要删除视频《${video.title}》吗？`)) {
+    if (deletingVideoId.value === null && confirm(`确定要删除视频《${video.title}》吗？`)) {
+      const deleteCollectionId = selectedCollectionId.value
+      deleteError.value = ''
+      deletingVideoId.value = video.id
       try {
         const res = await fetch(api.videos.delete(video.id), {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authStore.token}` }
         })
         if (res.ok) {
-          fetchVideos()
-          // Update local count if needed
-          loadChannels()
+          if (selectedCollectionId.value === deleteCollectionId) {
+            await fetchVideos()
+            // Update local count if needed
+            loadChannels()
+          }
         } else {
           const err = await res.json()
-          alert(err.error || '删除失败')
+          if (selectedCollectionId.value === deleteCollectionId) {
+            deleteError.value = err.error || '删除失败'
+          }
         }
       } catch (e) {
         console.error('Delete video failed', e)
+        if (selectedCollectionId.value === deleteCollectionId) {
+          deleteError.value = '删除失败，请重试'
+        }
+      } finally {
+        deletingVideoId.value = null
       }
     }
   }

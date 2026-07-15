@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -21,6 +21,8 @@ const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
 const showPublishConfirm = ref(false)
+const publishedVideoId = ref('')
+const publishNavigationFailed = ref(false)
 const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
@@ -388,18 +390,46 @@ async function saveDraft() {
 
 function requestPublish() {
   if (!validate()) return
+  errorMsg.value = ''
   showPublishConfirm.value = true
 }
 
-async function doPublish() {
+function cancelPublish() {
+  if (publishing.value) return
   showPublishConfirm.value = false
+}
+
+async function doPublish() {
+  if (publishing.value) return
   publishing.value = true
   errorMsg.value = ''
   try {
-    const v = await apiSave(buildPayload('published'))
-    router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
-  } catch (e: any) {
-    errorMsg.value = e?.error || '发布失败，请重试'
+    if (!publishedVideoId.value) {
+      try {
+        const video = await apiSave(buildPayload('published'))
+        publishedVideoId.value = isEdit.value ? String(route.params.id) : video.id
+      } catch (error: any) {
+        errorMsg.value = error?.error || '发布失败，请重试'
+        return
+      }
+    }
+
+    try {
+      const failure = await router.push(`/videos/watch/${publishedVideoId.value}`)
+      if (isNavigationFailure(failure)) {
+        publishNavigationFailed.value = true
+        errorMsg.value = '视频已发布，但跳转失败，请重试'
+        showPublishConfirm.value = true
+        return
+      }
+      publishNavigationFailed.value = false
+      showPublishConfirm.value = false
+    } catch (error) {
+      console.error('Failed to navigate after publishing video:', error)
+      publishNavigationFailed.value = true
+      errorMsg.value = '视频已发布，但跳转失败，请重试'
+      showPublishConfirm.value = true
+    }
   } finally {
     publishing.value = false
   }
@@ -582,14 +612,14 @@ async function doPublish() {
     <PConfirm
       :show="showPublishConfirm"
       title="确认发布视频"
-      :message="`《${form.title || '未命名视频'}》将对${
+      :message="errorMsg || `《${form.title || '未命名视频'}》将对${
         form.visibility === 'public' ? '所有人' :
         form.visibility === 'followers' ? '关注者' : '仅自己'
       }可见，发布后观众可立即观看。`"
-      confirm-text="立即发布"
+      :confirm-text="publishNavigationFailed && !publishing ? '查看视频' : publishing ? '发布中...' : '立即发布'"
       cancel-text="再想想"
       @confirm="doPublish"
-      @cancel="showPublishConfirm = false"
+      @cancel="cancelPublish"
     />
   </div>
 </template>

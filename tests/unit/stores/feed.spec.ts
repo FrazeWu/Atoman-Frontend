@@ -332,6 +332,94 @@ describe('feed store', () => {
     expect(feedStore.starredItemIds.has('feed-item-1')).toBe(true)
   })
 
+  it('adds a recommended post bookmark to the default bookmark folder', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/blog/bookmark-folders')) {
+        return new Response(JSON.stringify({
+          data: [
+            { id: 'folder-custom', name: '资料' },
+            { id: 'folder-default', name: '默认收藏夹' },
+          ],
+        }), { status: 200 })
+      }
+      if (url.endsWith('/blog/bookmarks') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { bookmark_folder_id?: string }
+        return new Response(JSON.stringify({ data: { id: 'bookmark-1' } }), {
+          status: body.bookmark_folder_id ? 201 : 400,
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const feedStore = useFeedStore()
+    const result = await feedStore.togglePostBookmark('post-1')
+
+    expect(result).toBe(true)
+    expect(feedStore.bookmarkedPostIds.has('post-1')).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/blog/bookmark-folders', {
+      headers: { Authorization: 'Bearer token' },
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/blog/bookmarks', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ post_id: 'post-1', bookmark_folder_id: 'folder-default' }),
+    }))
+  })
+
+  it('uses the first bookmark folder when there is no default folder', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'folder-first', name: '资料' }, { id: 'folder-second', name: '稍后阅读' }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'bookmark-1' } }), { status: 201 }))
+
+    const feedStore = useFeedStore()
+    const result = await feedStore.togglePostBookmark('post-1')
+
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/blog/bookmarks', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ post_id: 'post-1', bookmark_folder_id: 'folder-first' }),
+    }))
+  })
+
+  it.each([
+    ['empty folder list', () => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))],
+    ['non-2xx folder response', () => Promise.resolve(new Response(null, { status: 500 }))],
+    ['folder request rejection', () => Promise.reject(new Error('offline'))],
+  ])('does not post or change bookmark state for %s', async (_label, foldersResponse) => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(foldersResponse)
+    const feedStore = useFeedStore()
+    feedStore.bookmarkedPostIds = new Set(['existing-post'])
+
+    await expect(feedStore.togglePostBookmark('post-1')).resolves.toBeNull()
+
+    expect(feedStore.bookmarkedPostIds).toEqual(new Set(['existing-post']))
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+  })
+
+  it('removes an existing post bookmark through its bookmark id', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'bookmark-1', post_id: 'post-1' }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { message: 'ok' } }), { status: 200 }))
+    const feedStore = useFeedStore()
+    feedStore.bookmarkedPostIds = new Set(['post-1', 'post-2'])
+
+    const result = await feedStore.togglePostBookmark('post-1')
+
+    expect(result).toBe(false)
+    expect(feedStore.bookmarkedPostIds).toEqual(new Set(['post-2']))
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/blog/bookmarks', {
+      headers: { Authorization: 'Bearer token' },
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/blog/bookmarks/bookmark-1', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer token' },
+    })
+  })
+
   it('uses modular reading-list response data to update saved ids', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { saved: true },

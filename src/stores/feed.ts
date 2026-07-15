@@ -1154,10 +1154,19 @@ export const useFeedStore = defineStore('feed', () => {
         return false
       }
 
+      const foldersRes = await fetch(`${api.url}/blog/bookmark-folders`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!foldersRes.ok) return null
+      const foldersData = await foldersRes.json()
+      const folders = (foldersData.data || []) as Array<{ id: string; name: string }>
+      const folder = folders.find((item) => item.name === '默认收藏夹') || folders[0]
+      if (!folder) return null
+
       const res = await fetch(`${api.url}/blog/bookmarks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({ post_id: postId }),
+        body: JSON.stringify({ post_id: postId, bookmark_folder_id: folder.id }),
       })
       if (res.ok) {
         const newSet = new Set(bookmarkedPostIds.value)

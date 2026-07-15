@@ -82,8 +82,14 @@
     </div>
 
     <!-- Content -->
-    <div class="mb-3">
+    <div v-if="argument.content" class="mb-3">
       <div class="font-medium" v-html="renderedContent" />
+    </div>
+
+    <div v-if="argument.attachments?.length" class="argument-images" aria-label="论点图片">
+      <a v-for="image in argument.attachments.slice(0, 4)" :key="image.id" :href="image.url" target="_blank" rel="noreferrer">
+        <img :src="image.url" alt="论点图片" loading="lazy" />
+      </a>
     </div>
 
     <!-- Evidence source card -->
@@ -280,3 +286,10 @@ const formatDate = (dateString: string) => {
   })
 }
 </script>
+
+<style scoped>
+.argument-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem; max-width: 38rem; }
+.argument-images a { display: block; aspect-ratio: 1; overflow: hidden; border: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-wash); }
+.argument-images img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 560px) { .argument-images { grid-template-columns: 1fr; } }
+</style>

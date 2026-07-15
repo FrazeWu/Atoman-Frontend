@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const argument = {
   id: 'comment-1', debate_id: 'debate-1', user_id: 'user-1', content: '@alice old',
   argument_type: 'support', vote_count: 0, is_concluded: false, created_at: '2026-01-01', updated_at: '2026-01-01',
-  mentions: [{ user_id: 'alice-id', start: 0, end: 6 }], attachment_ids: ['asset-old'],
+  mentions: [{ user_id: 'alice-id', start: 0, end: 6 }],
+  attachments: [{ id: 'asset-old', url: 'https://cdn.example/old.png', content_type: 'image/png', position: 0 }],
 }
 const debateStore = {
   currentDebate: {
@@ -68,7 +69,7 @@ describe('DebateTopicView comment composer integration', () => {
     const editor = wrapper.findComponent(CommentComposer)
     expect(editor.props('initialContent')).toBe(argument.content)
     expect(editor.props('initialMentions')).toEqual(argument.mentions)
-    expect(editor.props('initialAttachmentIds')).toEqual(argument.attachment_ids)
+    expect(editor.props('initialAttachmentIds')).toEqual(['asset-old'])
     editor.vm.$emit('submit', payload)
     await flushPromises()
     expect(debateStore.updateArgument).toHaveBeenCalledWith('comment-1', expect.objectContaining(payload))

@@ -230,7 +230,7 @@
           <CommentComposer
             :initial-content="editArgumentForm.content"
             :initial-mentions="editArgumentTarget?.mentions ?? []"
-            :initial-attachment-ids="editArgumentTarget?.attachment_ids ?? []"
+            :initial-attachment-ids="editArgumentTarget?.attachments?.map(({ id }) => id) ?? []"
             placeholder="阐述你的观点…"
             submit-label="保存"
             :submitting="editArgumentSaving"

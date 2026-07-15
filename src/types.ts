@@ -706,6 +706,7 @@ export interface Argument {
   fold_note?: string
   mentions?: Array<{ user_id: string; start: number; end: number }>
   attachment_ids?: string[]
+  attachments?: Array<{ id: string; url: string; content_type: string; position: number }>
   created_at: string
   updated_at: string
 }

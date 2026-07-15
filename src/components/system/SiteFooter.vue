@@ -36,6 +36,7 @@ withDefaults(defineProps<{
 
 <style scoped>
 .site-footer {
+  position: static;
   border-top: var(--a-border);
   background: var(--a-color-bg);
 }

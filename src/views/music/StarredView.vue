@@ -1,45 +1,40 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import {
-  createArtistBookmark,
   deleteAlbumBookmark,
   deleteArtistBookmark,
   getMusicAlbum,
   getMusicArtist,
   listAlbumBookmarks,
   listArtistBookmarks,
-  listRecommendedAlbums,
-  listRecommendedArtists,
+  listMusicPlaylists,
+  listSongBookmarks,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
-  type MusicRecommendationMode,
+  type MusicPlaylistSummary,
+  type MusicSongBookmark,
   type MusicStarredItem,
 } from '@/api/musicV1'
-import { resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import {
-  filterAlbumRecommendationsByBookmarks,
-  filterArtistRecommendationsByBookmarks,
-  MUSIC_RECOMMENDATION_MODE_OPTIONS,
-} from '@/utils/musicRecommendations'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 
-type StarredFilter = 'all' | 'artist' | 'album'
+type StarredFilter = 'all' | 'artist' | 'album' | 'song' | 'playlist'
 
 const filterOptions: Array<{ label: string; value: StarredFilter; testId: string }> = [
   { label: '全部', value: 'all', testId: 'filter-all' },
   { label: '艺术家', value: 'artist', testId: 'filter-artist' },
   { label: '专辑', value: 'album', testId: 'filter-album' },
+  { label: '单曲', value: 'song', testId: 'filter-song' },
+  { label: '歌单', value: 'playlist', testId: 'filter-playlist' },
 ]
 
 const items = ref<MusicStarredItem[]>([])
 const activeFilter = ref<StarredFilter>('all')
-const recommendationMode = ref<MusicRecommendationMode>('hot')
 const loading = ref(false)
 const errorMessage = ref('')
 
@@ -48,7 +43,7 @@ const filteredItems = computed(() => (
     ? items.value
     : items.value.filter((item) => item.kind === activeFilter.value)
 ))
-const { isMainShifted, openArtist, openAlbum } = useMusicDrawers()
+const { isMainShifted, openArtist, openAlbum, openPlaylist } = useMusicDrawers()
 
 function artistNamesFromItem(item: MusicStarredItem) {
   if (item.artist) return item.artist.name
@@ -64,6 +59,16 @@ function handleItemClick(item: MusicStarredItem) {
 
   if (item.kind === 'album' && item.album?.id) {
     openAlbum(String(item.album.id))
+    return
+  }
+
+  if (item.kind === 'song' && item.song?.album?.id) {
+    openAlbum(String(item.song.album.id))
+    return
+  }
+
+  if (item.kind === 'playlist' && item.playlist?.id) {
+    openPlaylist(String(item.playlist.id))
   }
 }
 
@@ -89,30 +94,20 @@ async function handleToggleAlbumBookmark(albumId: string) {
   }
 }
 
-function albumYearLabel(item: MusicStarredItem) {
-  if (!item.album) return '年份未知'
-  if (typeof item.album.year === 'number' && Number.isFinite(item.album.year) && item.album.year > 0) {
-    return String(item.album.year)
-  }
-  if (item.album.release_date?.trim()) return item.album.release_date.slice(0, 4)
-  return '年份未知'
-}
-
-function artistInitial(name?: string) {
-  const value = name?.trim()
-  return value ? value[0].toUpperCase() : '?'
-}
-
 async function loadStarred() {
   loading.value = true
   errorMessage.value = ''
   try {
     let artistBookmarks: { data: MusicArtistBookmark[] }
     let albumBookmarks: { data: MusicAlbumBookmark[] }
+    let songBookmarks: { data: MusicSongBookmark[] }
+    let playlists: { data: MusicPlaylistSummary[] }
     try {
-      ;[artistBookmarks, albumBookmarks] = await Promise.all([
+      ;[artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
         listArtistBookmarks(),
         listAlbumBookmarks(),
+        listSongBookmarks(),
+        listMusicPlaylists(),
       ])
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
@@ -122,44 +117,37 @@ async function loadStarred() {
       throw error
     }
 
-    const [recommendedArtists, recommendedAlbums] = await Promise.all([
-      listRecommendedArtists(recommendationMode.value),
-      listRecommendedAlbums(recommendationMode.value),
-    ])
-
-    const visibleArtistBookmarks = filterArtistRecommendationsByBookmarks(
-      recommendedArtists.data,
-      artistBookmarks.data as MusicArtistBookmark[],
-    )
-    const visibleAlbumBookmarks = filterAlbumRecommendationsByBookmarks(
-      recommendedAlbums.data,
-      albumBookmarks.data as MusicAlbumBookmark[],
-    )
-
-    const artistBookmarksById = new Map(
-      artistBookmarks.data.map((bookmark: MusicArtistBookmark) => [String(bookmark.artist_id), bookmark]),
-    )
-    const albumBookmarksById = new Map(
-      albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => [String(bookmark.album_id), bookmark]),
-    )
-
     const [artists, albums] = await Promise.all([
-      Promise.all(visibleArtistBookmarks.map((item) => getMusicArtist(item.id))),
-      Promise.all(visibleAlbumBookmarks.map((item) => getMusicAlbum(item.id))),
+      Promise.all(artistBookmarks.data.map((bookmark) => getMusicArtist(bookmark.artist_id))),
+      Promise.all(albumBookmarks.data.map((bookmark) => getMusicAlbum(bookmark.album_id))),
     ])
 
     items.value = [
-      ...visibleArtistBookmarks.map((item, index: number) => ({
-        id: artistBookmarksById.get(item.id)?.id ?? item.id,
+      ...artistBookmarks.data.map((bookmark: MusicArtistBookmark, index: number) => ({
+        id: bookmark.id,
         kind: 'artist' as const,
-        starred_at: artistBookmarksById.get(item.id)?.created_at ?? '',
+        starred_at: bookmark.created_at,
         artist: artists[index],
       })),
-      ...visibleAlbumBookmarks.map((item, index: number) => ({
-        id: albumBookmarksById.get(item.id)?.id ?? item.id,
+      ...albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
+        id: bookmark.id,
         kind: 'album' as const,
-        starred_at: albumBookmarksById.get(item.id)?.created_at ?? '',
+        starred_at: bookmark.created_at,
         album: albums[index],
+      })),
+      ...songBookmarks.data
+        .filter((bookmark) => bookmark.song)
+        .map((bookmark) => ({
+          id: bookmark.id,
+          kind: 'song' as const,
+          starred_at: bookmark.created_at,
+          song: bookmark.song,
+        })),
+      ...playlists.data.map((playlist) => ({
+        id: playlist.id,
+        kind: 'playlist' as const,
+        starred_at: '',
+        playlist,
       })),
     ]
   } catch (error) {
@@ -171,10 +159,6 @@ async function loadStarred() {
 }
 
 onMounted(() => {
-  loadStarred()
-})
-
-watch(recommendationMode, () => {
   loadStarred()
 })
 </script>
@@ -197,20 +181,6 @@ watch(recommendationMode, () => {
           </template>
         </PPageHeader>
       </header>
-
-      <div class="toolbar-row">
-        <div class="toolbar-left">
-          <div class="search-shell search-shell--placeholder" aria-hidden="true" />
-        </div>
-        <div class="toolbar-right">
-          <div class="recommendation-tabs" aria-label="收藏推荐模式">
-            <PSegmentedControl
-              v-model="recommendationMode"
-              :options="MUSIC_RECOMMENDATION_MODE_OPTIONS"
-            />
-          </div>
-        </div>
-      </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载...</p>
@@ -244,14 +214,19 @@ watch(recommendationMode, () => {
 
           <article
             v-else
-            class="result-card"
+            class="result-card result-card--interactive"
+            :data-testid="item.kind === 'song' ? 'starred-song-card' : 'starred-playlist-card'"
             @click="handleItemClick(item)"
           >
             <p class="a-font-meta result-kind">
+              {{ item.kind === 'song' ? '单曲' : '歌单' }}
+            </p>
+            <h2>{{ item.kind === 'song' ? item.song?.title : item.playlist?.name }}</h2>
+            <p class="result-meta">
               {{
                 item.kind === 'song'
-                  ? '单曲'
-                  : '歌单'
+                  ? item.song?.artists?.map((artist) => artist.name).join(' / ')
+                  : `${item.playlist?.song_count ?? 0} 首歌曲`
               }}
             </p>
           </article>

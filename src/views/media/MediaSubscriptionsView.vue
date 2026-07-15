@@ -7,19 +7,30 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
+import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import type { Post, TimelineItem } from '@/types'
+import { modulePathUrl } from '@/router/siteUrls'
+import type { Post, TimelineItem, Video } from '@/types'
 
 type SubscriptionFilter = 'all' | 'article' | 'podcast' | 'video'
 type SubscriptionKind = Exclude<SubscriptionFilter, 'all'>
 
-type InternalSubscriptionItem = {
+type InternalPostSubscriptionItem = {
   id: string
-  kind: SubscriptionKind
+  kind: Exclude<SubscriptionKind, 'video'>
   post: Post
   publishedAt: string
 }
+
+type InternalVideoSubscriptionItem = {
+  id: string
+  kind: 'video'
+  video: Video
+  publishedAt: string
+}
+
+type InternalSubscriptionItem = InternalPostSubscriptionItem | InternalVideoSubscriptionItem
 
 const api = useApi()
 const authStore = useAuthStore()
@@ -36,26 +47,25 @@ const filterOptions: Array<{ label: string; value: SubscriptionFilter }> = [
   { label: '视频', value: 'video' },
 ]
 
-const normalizeKind = (post: Post): SubscriptionKind => {
-  const collectionType = (post.collection as (typeof post.collection & { type?: unknown }) | undefined)?.type
-  if (collectionType === 'podcast' || collectionType === 'video') return collectionType
-
-  const collectionName = post.collection?.name?.trim().toLowerCase() || ''
-
-  if (collectionName.includes('podcast') || collectionName.includes('播客')) return 'podcast'
-  if (collectionName.includes('video') || collectionName.includes('视频')) return 'video'
-  return 'article'
-}
+const normalizePostKind = (post: Post): InternalPostSubscriptionItem['kind'] =>
+  post.channel?.content_type === 'podcast' ? 'podcast' : 'article'
 
 const toInternalItem = (item: TimelineItem): InternalSubscriptionItem | null => {
   if (item.type !== 'post' || !item.post) return null
   return {
     id: item.post.id,
-    kind: normalizeKind(item.post),
+    kind: normalizePostKind(item.post),
     post: item.post,
     publishedAt: item.published_at || item.post.created_at,
   }
 }
+
+const toVideoItem = (video: Video): InternalVideoSubscriptionItem => ({
+  id: video.id,
+  kind: 'video',
+  video,
+  publishedAt: video.created_at,
+})
 
 const loadSubscriptions = async () => {
   if (!authStore.isAuthenticated || !authStore.token) {
@@ -65,20 +75,19 @@ const loadSubscriptions = async () => {
 
   loading.value = true
   try {
-    const res = await fetch(api.feed.timeline, {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    })
-    if (!res.ok) {
-      items.value = []
-      return
-    }
-    const data = await res.json()
-    const rows = Array.isArray(data?.data) ? data.data : []
-    items.value = rows
+    const headers = { Authorization: `Bearer ${authStore.token}` }
+    const [timelineRes, videosRes] = await Promise.all([
+      fetch(api.feed.timeline, { headers }),
+      fetch(`${api.url}/videos?subscribed=true&sort=latest`, { headers }),
+    ])
+    const timelineData = timelineRes.ok ? await timelineRes.json() : null
+    const videosData = videosRes.ok ? await videosRes.json() : []
+    const timelineRows = Array.isArray(timelineData?.data) ? timelineData.data : []
+    const videoRows = Array.isArray(videosData) ? videosData : []
+    const postItems = timelineRows
       .map((item: TimelineItem) => toInternalItem(item))
       .filter((item: InternalSubscriptionItem | null): item is InternalSubscriptionItem => Boolean(item))
+    items.value = [...postItems, ...videoRows.map((video: Video) => toVideoItem(video))]
       .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
   } finally {
     loading.value = false
@@ -135,40 +144,48 @@ onMounted(loadSubscriptions)
     />
 
     <div v-else class="media-subscriptions-list">
-      <PEntry
-        v-for="item in visibleItems"
-        :key="item.id"
-        :title="item.post.title"
-        :summary="item.post.summary"
-        :is-open="showArticleSheet && selectedArticle?.post?.id === item.post.id"
-        @click="openArticleSheet(item.post)"
-      >
-        <template #visual>
-          <div class="media-subscriptions-visual">
-            <PBadge :type="item.kind === 'podcast' ? 'podcast' : item.kind === 'video' ? 'video' : 'blog'">
-              {{ item.kind === 'podcast' ? '播客' : item.kind === 'video' ? '视频' : '文章' }}
-            </PBadge>
-            <img
-              v-if="item.post.cover_url"
-              :src="item.post.cover_url"
-              class="media-subscriptions-cover"
-              :alt="item.post.title"
-            >
-            <PAvatar
-              v-else
-              :src="item.post.user?.avatar_url"
-              :name="authorName(item.post)"
-              size="sm"
-              grayscale
-            />
-          </div>
-        </template>
-        <template #meta>
-          <span v-if="item.post.channel?.name" class="a-label a-muted">《{{ item.post.channel.name }}》</span>
-          <span v-if="authorName(item.post)" class="a-muted">{{ authorName(item.post) }}</span>
-          <span class="a-muted">{{ formatDate(item.publishedAt) }}</span>
-        </template>
-      </PEntry>
+      <template v-for="item in visibleItems" :key="`${item.kind}:${item.id}`">
+        <div v-if="item.kind === 'video'" class="media-subscriptions-video-card">
+          <PVideoCard
+            :video="item.video"
+            :to="modulePathUrl('media', `/videos/watch/${item.video.id}`)"
+          />
+        </div>
+
+        <PEntry
+          v-else
+          :title="item.post.title"
+          :summary="item.post.summary"
+          :is-open="showArticleSheet && selectedArticle?.post?.id === item.post.id"
+          @click="openArticleSheet(item.post)"
+        >
+          <template #visual>
+            <div class="media-subscriptions-visual">
+              <PBadge :type="item.kind === 'podcast' ? 'podcast' : 'blog'">
+                {{ item.kind === 'podcast' ? '播客' : '文章' }}
+              </PBadge>
+              <img
+                v-if="item.post.cover_url"
+                :src="item.post.cover_url"
+                class="media-subscriptions-cover"
+                :alt="item.post.title"
+              >
+              <PAvatar
+                v-else
+                :src="item.post.user?.avatar_url"
+                :name="authorName(item.post)"
+                size="sm"
+                grayscale
+              />
+            </div>
+          </template>
+          <template #meta>
+            <span v-if="item.post.channel?.name" class="a-label a-muted">《{{ item.post.channel.name }}》</span>
+            <span v-if="authorName(item.post)" class="a-muted">{{ authorName(item.post) }}</span>
+            <span class="a-muted">{{ formatDate(item.publishedAt) }}</span>
+          </template>
+        </PEntry>
+      </template>
     </div>
   </div>
 </template>
@@ -199,6 +216,11 @@ onMounted(loadSubscriptions)
   gap: 0.35rem;
   align-items: flex-start;
   flex-shrink: 0;
+}
+
+.media-subscriptions-video-card {
+  max-width: 24rem;
+  padding: 1rem 0;
 }
 
 .media-subscriptions-cover {

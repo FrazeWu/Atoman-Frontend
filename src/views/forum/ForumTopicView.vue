@@ -62,6 +62,15 @@
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
           >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</PButton>
 
+          <PButton
+            v-if="authStore.isAuthenticated"
+            data-testid="forum-topic-follow"
+            @click="forumStore.toggleFollow('topic', forumStore.currentTopic!.id)"
+            outline
+            size="sm"
+            :class="{ 'topic-action-btn-active': forumStore.isFollowing('topic', forumStore.currentTopic.id) }"
+          >{{ forumStore.isFollowing('topic', forumStore.currentTopic.id) ? '已关注' : '关注' }}</PButton>
+
           <!-- Report button (non-owner, authenticated) -->
           <PButton
             v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
@@ -327,14 +336,16 @@ const REPLY_DRAFT_KEY = () => `reply:${route.params.id}`
 
 let autosaveTimer: ReturnType<typeof setInterval> | null = null
 
-const saveReplyDraft = () => {
+const saveReplyDraft = async () => {
   if (replyContent.value.trim()) {
-    forumStore.saveDraftLocal(REPLY_DRAFT_KEY(), { context_key: REPLY_DRAFT_KEY(), content: replyContent.value })
+    const draft = { context_key: REPLY_DRAFT_KEY(), content: replyContent.value }
+    forumStore.saveDraftLocal(REPLY_DRAFT_KEY(), draft)
+    await forumStore.putDraft(draft)
   }
 }
 
-const clearReplyDraft = () => {
-  forumStore.clearDraftLocal(REPLY_DRAFT_KEY())
+const clearReplyDraft = async () => {
+  await forumStore.deleteDraft(REPLY_DRAFT_KEY())
   replyContent.value = ''
   draftRestored.value = false
 }
@@ -389,7 +400,7 @@ const submitReply = async () => {
     quotedReply.value?.id,
   )
   if (newReply) {
-    clearReplyDraft()
+    await clearReplyDraft()
     clearQuote()
     await forumStore.fetchReplies(route.params.id as string, replySort.value)
   }
@@ -411,11 +422,17 @@ const onScroll = () => {
 
 onMounted(async () => {
   const id = route.params.id as string
-  await forumStore.fetchTopic(id)
-  await forumStore.fetchReplies(id)
+  await Promise.all([
+    forumStore.fetchTopic(id),
+    forumStore.fetchReplies(id),
+    authStore.isAuthenticated ? forumStore.fetchFollows() : Promise.resolve(),
+  ])
 
   // Restore reply draft
-  const draft = forumStore.loadDraftLocal(REPLY_DRAFT_KEY())
+  const serverDraft = authStore.isAuthenticated
+    ? await forumStore.fetchDraft(REPLY_DRAFT_KEY())
+    : null
+  const draft = serverDraft ?? forumStore.loadDraftLocal(REPLY_DRAFT_KEY())
   if (draft?.content) {
     replyContent.value = draft.content
     draftRestored.value = true

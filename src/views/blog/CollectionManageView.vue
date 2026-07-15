@@ -26,8 +26,7 @@
             <h3 style="font-size:1.25rem;font-weight:bold;margin-bottom:0.5rem">{{ collection.name }}</h3>
             <p v-if="collection.description" style="color:#666;margin-bottom:1rem">{{ collection.description }}</p>
             <div style="display:flex;gap:1rem;font-size:0.875rem;color:#999">
-              <span>{{ collection.channel_name }}</span>
-              <span>{{ collection.posts_count || 0 }}篇文章</span>
+              <span>{{ channelName(collection.channel_id) }}</span>
             </div>
           </div>
           <div style="display:flex;gap:0.5rem" @click.stop>
@@ -48,9 +47,9 @@
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">合集名称 *</label>
           <PInput v-model="formData.name" placeholder="输入合集名称" />
         </div>
-        <div>
-          <label style="display:block;font-weight:bold;margin-bottom:0.5rem">所属合集 *</label>
-          <PSelect v-model="formData.channel_id" :options="channelOptions" placeholder="选择合集" />
+        <div v-if="modalMode === 'create'">
+          <label style="display:block;font-weight:bold;margin-bottom:0.5rem">所属频道 *</label>
+          <PSelect v-model="formData.channel_id" :options="channelOptions" placeholder="选择频道" />
         </div>
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">描述</label>
@@ -97,13 +96,12 @@ interface Collection {
   name: string
   description?: string
   channel_id: string
-  channel_name: string
-  posts_count?: number
 }
 
 interface Channel {
   id: string
   name: string
+  content_type: 'blog' | 'podcast' | 'video'
 }
 
 const router = useRouter()
@@ -124,12 +122,13 @@ const collectionToDelete = ref<Collection | null>(null)
 const deleting = ref(false)
 
 const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name, value: ch.id })))
+const channelName = (channelId: string) => channels.value.find((channel) => channel.id === channelId)?.name || ''
 
 const loadChannels = async () => {
   try {
     const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
     const data = await res.json()
-    channels.value = data.data || []
+    channels.value = (data.data || []).filter((channel: Channel) => channel.content_type === 'blog')
   } catch (err) {
     console.error('Failed to load channels:', err)
   }
@@ -140,7 +139,8 @@ const loadCollections = async () => {
   try {
     const res = await fetch(api.blog.collections)
     const data = await res.json()
-    collections.value = data.data || []
+    const channelIds = new Set(channels.value.map((channel) => channel.id))
+    collections.value = (data.data || []).filter((collection: Collection) => channelIds.has(collection.channel_id))
   } catch (err) {
     console.error('Failed to load collections:', err)
   } finally {
@@ -182,8 +182,8 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
-    const url = modalMode.value === 'create' 
-      ? api.blog.collections 
+    const url = modalMode.value === 'create'
+      ? api.blog.channelCollections(formData.value.channel_id)
       : api.blog.collection(collectionToDelete.value!.id)
     const method = modalMode.value === 'create' ? 'POST' : 'PUT'
     
@@ -193,7 +193,10 @@ const handleSubmit = async () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`
       },
-      body: JSON.stringify(formData.value)
+      body: JSON.stringify({
+        name: formData.value.name,
+        description: formData.value.description,
+      })
     })
     
     const data = await res.json()
@@ -242,9 +245,9 @@ const executeDelete = async () => {
   }
 }
 
-onMounted(() => {
-  loadChannels()
-  loadCollections()
+onMounted(async () => {
+  await loadChannels()
+  await loadCollections()
 })
 </script>
 

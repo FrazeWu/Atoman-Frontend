@@ -200,7 +200,7 @@ onBeforeUnmount(() => {
 const logout = async () => {
   await authStore.logout()
   closeDropdown()
-  inboxStore.disconnect()
+  inboxStore.resetUserData()
   await router.push('/login')
 }
 

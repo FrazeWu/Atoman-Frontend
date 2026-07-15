@@ -41,7 +41,6 @@
             @click="selectCollection(col.id)"
           >
             <span class="col-name">{{ col.name }}</span>
-            <span class="col-count">{{ col.posts_count || 0 }}</span>
           </button>
         </div>
       </section>
@@ -227,15 +226,13 @@ interface Collection {
   id: string
   name: string
   description?: string
-  posts_count?: number
 }
 
 interface Channel {
   id: string
   name: string
   description?: string
-  collections_count?: number
-  posts_count?: number
+  content_type: 'blog' | 'podcast' | 'video'
   collections?: Collection[]
 }
 
@@ -340,7 +337,9 @@ const loadChannels = async () => {
     const channelsRes = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
     if (channelsRes.ok) {
       const channelsData = await channelsRes.json()
-      const channelList = channelsData.data || []
+      const channelList: Channel[] = (channelsData.data || []).filter(
+        (channel: Channel) => channel.content_type === 'blog',
+      )
 
       // Load collections for each channel
       for (const channel of channelList) {

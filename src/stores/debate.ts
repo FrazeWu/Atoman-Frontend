@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
-import type { Debate, Argument, DebateVote, VoteHistory } from "@/types";
+import type { Debate, Argument, DebateVote } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from '@/composables/useApi'
 
@@ -41,8 +41,9 @@ export const useDebateStore = defineStore("debate", () => {
       const res = await fetch(`${api.url}/debate/topics?${query}`);
       if (res.ok) {
         const data = await res.json();
-        debates.value = data.data || [];
-        debatesTotal.value = data.total || 0;
+        const rows = data.data || [];
+        debates.value = (params.page || 1) > 1 ? [...debates.value, ...rows] : rows;
+        debatesTotal.value = data.meta?.total || 0;
       }
     } catch (e) {
       error.value = "Failed to fetch debates";
@@ -85,7 +86,7 @@ export const useDebateStore = defineStore("debate", () => {
       if (res.ok) {
         const data = await res.json();
         argumentList.value = data.data || [];
-        userVotes.value = data.user_votes || {};
+        userVotes.value = data.meta?.user_votes || {};
         return data.data as Argument[];
       } else {
         error.value = "Failed to fetch arguments";
@@ -214,12 +215,13 @@ export const useDebateStore = defineStore("debate", () => {
     id: string,
   ): Promise<{ conclude_vote_count: number; conclude_threshold: number; auto_concluded: boolean } | null> => {
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/conclude-vote`, {
+      const res = await fetch(`${api.url}/debates/${id}/conclusion-vote`, {
         method: 'POST',
         headers: authHeaders(),
       })
       if (res.ok) {
-        return await res.json()
+        const data = await res.json()
+        return data.data
       } else {
         const error = await res.json()
         throw new Error(error.error || 'Failed to vote to conclude')
@@ -361,10 +363,10 @@ export const useDebateStore = defineStore("debate", () => {
   const voteArgument = async (
     argumentId: string,
     voteType: number,
-  ): Promise<Argument | null> => {
+  ): Promise<DebateVote | null> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/vote`,
+        `${api.url}/debate-arguments/${argumentId}/vote`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -375,7 +377,7 @@ export const useDebateStore = defineStore("debate", () => {
         const data = await res.json();
         // Track user vote locally
         userVotes.value[argumentId] = voteType;
-        return data.data as Argument;
+        return data.data as DebateVote;
       } else {
         const error = await res.json();
         throw new Error(error.error || "Failed to vote");
@@ -389,7 +391,7 @@ export const useDebateStore = defineStore("debate", () => {
   const removeVote = async (argumentId: string): Promise<boolean> => {
     try {
       const res = await fetch(
-        `${api.url}/debate/arguments/${argumentId}/vote`,
+        `${api.url}/debate-arguments/${argumentId}/vote`,
         {
           method: "DELETE",
           headers: authHeaders(),
@@ -450,6 +452,7 @@ export const useDebateStore = defineStore("debate", () => {
     debatesTotal.value = 0;
     currentDebate.value = null;
     argumentList.value = [];
+    userVotes.value = {};
     loading.value = false;
     error.value = null;
   };

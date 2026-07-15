@@ -156,11 +156,12 @@ describe('UI 准则', () => {
     expect(source).not.toContain('💬')
   })
 
-  it('管理页在窄屏只保留一个主操作且工具按钮不拉伸', () => {
+  it('管理页的底部操作跟随文档流，且窄屏只保留一个主操作', () => {
     const access = read('src/views/setting/SettingAccessView.vue')
     const music = read('src/views/setting/SettingMusicReview.vue')
 
-    expect(access).toMatch(/@media \(max-width: 900px\)[\s\S]*?\.setting-access__footer\s*\{[\s\S]*?position:\s*static/)
+    expect(access).toMatch(/\.setting-access__footer\s*\{[^}]*position:\s*static/)
+    expect(access).not.toMatch(/\.setting-access__footer\s*\{[^}]*position:\s*sticky/)
     expect(access).toMatch(/@media \(max-width: 640px\)[\s\S]*?\.setting-access__save-top\s*\{[\s\S]*?display:\s*none/)
     expect(music).toMatch(/\.setting-music__entry-filters[\s\S]*?:deep\(\.p-button\)[\s\S]*?justify-self:\s*start/)
   })

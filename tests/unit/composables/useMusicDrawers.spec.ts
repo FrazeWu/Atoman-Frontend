@@ -81,6 +81,17 @@ describe('useMusicDrawers', () => {
     refreshArtist()
     expect(state.value.artistRefreshToken).toBe(1)
   })
+
+  it('can refresh playlist data explicitly', () => {
+    const { state, refreshPlaylist, closeAll } = useMusicDrawers()
+    expect(state.value.playlistRefreshToken).toBe(0)
+
+    refreshPlaylist()
+    expect(state.value.playlistRefreshToken).toBe(1)
+
+    closeAll()
+    expect(state.value.playlistRefreshToken).toBe(0)
+  })
 })
 
 describe('useMusicDrawers music creation flow', () => {

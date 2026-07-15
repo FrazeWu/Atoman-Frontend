@@ -20,12 +20,12 @@ import {
   listMusicPlaylists,
   addMusicPlaylistSong,
   removeMusicPlaylistSong,
-  createMusicPlaylist,
   type MusicAlbumListItem,
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
+import { findFavoritePlaylist, regularPlaylists } from '@/utils/musicPlaylists'
 
 const { state, closeAlbum, isAlbumShifted, openNestedAction, openArtist } = useMusicDrawers()
 const player = usePlayerStore()
@@ -55,6 +55,7 @@ const tracks = computed(() => [...(album.value?.songs || [])].sort((a, b) => (a.
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
 const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
+const regularPlaylistOptions = computed(() => regularPlaylists(playlists.value))
 const editAlbumHref = computed(() => {
   if (!album.value?.id) return modulePathUrl('music', '/')
   return modulePathUrl('music', `/album/${album.value.id}/edit`)
@@ -113,7 +114,7 @@ async function loadFavorites() {
   try {
     const res = await listMusicPlaylists()
     const list = res.data || []
-    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    const fav = findFavoritePlaylist(list)
     if (fav) {
       const favPlaylistDetail = await getMusicPlaylist(String(fav.id))
       const ids = (favPlaylistDetail.songs || []).map((s) => String(s.id))
@@ -134,11 +135,11 @@ async function toggleTrackFavorite(songId: string) {
   try {
     const res = await listMusicPlaylists()
     const list = res.data || []
-    let fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
+    const fav = findFavoritePlaylist(list)
     if (!fav) {
-      fav = await createMusicPlaylist({ name: '最爱' })
-      // Refresh sidebar/playlists
-      await loadPlaylists()
+      toastMessage.value = '最爱歌单加载失败'
+      toastVisible.value = true
+      return
     }
     const playlistId = String(fav.id)
     const isFav = favoriteSongIds.value.has(songId)
@@ -164,13 +165,6 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
     await addMusicPlaylistSong(playlistId, songId)
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
-    // If the playlist happens to be the favorites playlist, update favoriteSongIds too
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = list.find((p) => p.name === '最爱' || p.name === '我喜欢的单曲' || p.name === '我喜欢')
-    if (fav && String(fav.id) === playlistId) {
-      favoriteSongIds.value.add(songId)
-    }
   } catch (err) {
     console.error('Failed to add song to playlist:', err)
     toastMessage.value = '添加失败'
@@ -380,9 +374,9 @@ watch(
               </template>
               <div class="track-add-menu">
                 <div class="track-add-menu-header">添加到歌单</div>
-                <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
+                <div v-if="!regularPlaylistOptions.length" class="track-add-menu-empty">暂无歌单</div>
                 <button
-                  v-for="p in playlists"
+                  v-for="p in regularPlaylistOptions"
                   :key="p.id"
                   type="button"
                   class="track-add-menu-item"

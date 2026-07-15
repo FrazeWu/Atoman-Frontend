@@ -13,6 +13,8 @@
         :category-options="categoryOptions"
         :active-tag="activeTag"
         :search-query="searchQuery"
+        :active-follow-target="activeFollowTarget"
+        :following="activeFollowTarget ? forumStore.isFollowing(activeFollowTarget.targetType, activeFollowTarget.targetKey) : false"
         @update:active-tab="setTab($event as TabKey)"
         @create-topic="router.push('/forum/new')"
         @request-category="catReqModalOpen = true"
@@ -21,6 +23,7 @@
         @update:search-query="searchQuery = $event"
         @submit-search="doSearch"
         @clear-search="clearSearch"
+        @toggle-follow="forumStore.toggleFollow($event.targetType, $event.targetKey)"
       />
 
       <!-- Loading state -->
@@ -144,6 +147,12 @@ const activeTab = ref<TabKey>('latest')
 const activeTag = computed(() => {
   const t = route.query.tag
   return typeof t === 'string' ? t : ''
+})
+const activeFollowTarget = computed(() => {
+  if (!authStore.isAuthenticated) return null
+  if (activeTag.value) return { targetType: 'tag' as const, targetKey: activeTag.value }
+  if (activeCategoryId.value) return { targetType: 'category' as const, targetKey: activeCategoryId.value }
+  return null
 })
 const page = ref(1)
 const loadingMore = ref(false)
@@ -355,7 +364,10 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 onMounted(async () => {
-  await forumStore.fetchCategories()
+  await Promise.all([
+    forumStore.fetchCategories(),
+    authStore.isAuthenticated ? forumStore.fetchFollows() : Promise.resolve(),
+  ])
   await loadTopics(true)
   window.addEventListener('keydown', handleKeydown)
 })

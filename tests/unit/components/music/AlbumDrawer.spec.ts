@@ -12,6 +12,7 @@ const {
   createAlbumBookmark,
   deleteAlbumBookmark,
   listMusicPlaylists,
+  getMusicPlaylist,
   addMusicPlaylistSong,
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
@@ -22,6 +23,7 @@ const {
   createAlbumBookmark: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
   listMusicPlaylists: vi.fn(() => Promise.resolve({ data: [] })),
+  getMusicPlaylist: vi.fn(() => Promise.resolve({ id: 'favorite', name: '系统歌单', song_count: 0, songs: [] })),
   addMusicPlaylistSong: vi.fn(() => Promise.resolve({})),
 }))
 
@@ -41,6 +43,7 @@ vi.mock('@/api/musicV1', () => ({
   createAlbumBookmark,
   deleteAlbumBookmark,
   listMusicPlaylists,
+  getMusicPlaylist,
   addMusicPlaylistSong,
 }))
 
@@ -59,6 +62,9 @@ describe('AlbumDrawer.vue', () => {
     listAlbumBookmarks.mockReset()
     createAlbumBookmark.mockReset()
     deleteAlbumBookmark.mockReset()
+    listMusicPlaylists.mockReset()
+    getMusicPlaylist.mockReset()
+    addMusicPlaylistSong.mockReset()
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Test Album',
@@ -78,6 +84,9 @@ describe('AlbumDrawer.vue', () => {
       created_at: '2026-07-02T00:00:00Z',
     })
     deleteAlbumBookmark.mockResolvedValue({ deleted: true })
+    listMusicPlaylists.mockResolvedValue({ data: [] })
+    getMusicPlaylist.mockResolvedValue({ id: 'favorite', name: '系统歌单', song_count: 0, songs: [] })
+    addMusicPlaylistSong.mockResolvedValue({})
   })
 
   it('renders correctly', () => {
@@ -121,6 +130,29 @@ describe('AlbumDrawer.vue', () => {
         album: 'Test Album',
       }),
     ])
+  })
+
+  it('shows only regular playlists in the add-to-playlist menu', async () => {
+    listMusicPlaylists.mockResolvedValue({
+      data: [
+        { id: 'favorite', name: '系统歌单', song_count: 0, is_favorite: true },
+        { id: 'regular', name: '通勤', song_count: 0, is_favorite: false },
+      ],
+    })
+
+    const wrapper = mount(AlbumDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+          PDiscussionFAB: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('通勤')
+    expect(wrapper.text()).not.toContain('系统歌单')
   })
 
   it('plays a single track from the album queue at the clicked index', async () => {

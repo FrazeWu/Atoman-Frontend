@@ -575,6 +575,17 @@ export interface ForumDraft {
   updated_at?: string
 }
 
+export type ForumFollowTargetType = 'topic' | 'category' | 'tag'
+
+export interface ForumFollow {
+  id: string
+  user_id: string
+  target_type: ForumFollowTargetType
+  target_key: string
+  created_at: string
+  updated_at: string
+}
+
 // ===== Profile Types =====
 
 export interface UserProfile {

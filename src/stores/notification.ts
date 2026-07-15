@@ -25,7 +25,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const res = await fetch(api.notifications.unreadCount, { headers: authHeaders() })
     if (!res.ok) return
     const data = await res.json()
-    unreadCount.value = data.count || 0
+    unreadCount.value = data.data?.count || 0
   }
 
   const fetchNotifications = async (type: NotificationFilterType = currentType.value, nextPage = 1) => {
@@ -40,7 +40,7 @@ export const useNotificationStore = defineStore('notification', () => {
       if (!res.ok) throw new Error('获取通知失败')
       const data = await res.json()
       notifications.value = data.data || []
-      total.value = data.total || 0
+      total.value = data.meta?.total || 0
     } finally {
       loading.value = false
     }
@@ -70,7 +70,7 @@ export const useNotificationStore = defineStore('notification', () => {
     if (!res.ok) return
     const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && (!type || item.type === type)).length
     const data = await res.json().catch(() => null)
-    const nextUnreadCount = data?.unread_total ?? data?.unread_count ?? data?.count
+    const nextUnreadCount = data?.data?.unread_total ?? data?.data?.unread_count ?? data?.data?.count
     const readAt = new Date().toISOString()
     notifications.value = notifications.value.map((item) =>
       !type || item.type === type ? { ...item, read_at: item.read_at || readAt } : item,
@@ -88,6 +88,15 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  const resetStore = () => {
+    unreadCount.value = 0
+    notifications.value = []
+    loading.value = false
+    total.value = 0
+    page.value = 1
+    currentType.value = ''
+  }
+
   return {
     unreadCount,
     notifications,
@@ -100,5 +109,6 @@ export const useNotificationStore = defineStore('notification', () => {
     markRead,
     markAllRead,
     receiveNotification,
+    resetStore,
   }
 })

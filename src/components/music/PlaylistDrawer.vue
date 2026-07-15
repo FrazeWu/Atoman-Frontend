@@ -1,21 +1,36 @@
 <!-- web/src/components/music/PlaylistDrawer.vue -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
+import { Play, Disc, Music, AlertCircle, Pencil, Trash2, X } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { getMusicPlaylist, type MusicPlaylistDetail, type MusicSongListItem } from '@/api/musicV1'
+import {
+  deleteMusicPlaylist,
+  getMusicPlaylist,
+  removeMusicPlaylistSong,
+  updateMusicPlaylist,
+  type MusicPlaylistDetail,
+  type MusicSongListItem,
+} from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
-const { state, closePlaylist } = useMusicDrawers()
+const { state, closePlaylist, refreshPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
 
 const isOpen = computed(() => state.value.playlistId !== null)
 const playlist = ref<MusicPlaylistDetail | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const isEditingName = ref(false)
+const playlistNameDraft = ref('')
+const playlistNameInput = ref<HTMLInputElement | null>(null)
+const savingName = ref(false)
+const deleteConfirmOpen = ref(false)
+const deletingPlaylist = ref(false)
+const removingSongId = ref<string | null>(null)
 
 async function loadPlaylist(playlistId: string | null) {
   if (!playlistId) {
@@ -86,6 +101,88 @@ function playTrack(track: MusicSongListItem) {
   player.playAlbum(playableSongs.value, index >= 0 ? index : 0)
 }
 
+function startRename() {
+  if (!playlist.value || playlist.value.is_favorite) return
+  playlistNameDraft.value = playlist.value.name
+  isEditingName.value = true
+  void nextTick(() => playlistNameInput.value?.focus())
+}
+
+function cancelRename() {
+  isEditingName.value = false
+  playlistNameDraft.value = playlist.value?.name || ''
+}
+
+async function saveRename() {
+  const current = playlist.value
+  const name = playlistNameDraft.value.trim()
+  if (!current || current.is_favorite || savingName.value) return
+  if (!name) {
+    errorMessage.value = '请输入歌单名称'
+    return
+  }
+  if (name === current.name) {
+    cancelRename()
+    return
+  }
+
+  savingName.value = true
+  errorMessage.value = ''
+  try {
+    const updated = await updateMusicPlaylist(current.id, { name })
+    playlist.value = {
+      ...current,
+      ...updated,
+      song_count: current.song_count,
+      songs: current.songs,
+    }
+    isEditingName.value = false
+    refreshPlaylist()
+  } catch (error) {
+    console.error('Failed to rename playlist:', error)
+    errorMessage.value = '歌单名称保存失败'
+  } finally {
+    savingName.value = false
+  }
+}
+
+async function removeTrack(trackId: string) {
+  const current = playlist.value
+  if (!current || removingSongId.value) return
+
+  removingSongId.value = trackId
+  errorMessage.value = ''
+  try {
+    await removeMusicPlaylistSong(current.id, trackId)
+    await loadPlaylist(current.id)
+    refreshPlaylist()
+  } catch (error) {
+    console.error('Failed to remove playlist song:', error)
+    errorMessage.value = '移除歌曲失败'
+  } finally {
+    removingSongId.value = null
+  }
+}
+
+async function confirmDeletePlaylist() {
+  const current = playlist.value
+  if (!current || current.is_favorite || deletingPlaylist.value) return
+
+  deletingPlaylist.value = true
+  errorMessage.value = ''
+  try {
+    await deleteMusicPlaylist(current.id)
+    deleteConfirmOpen.value = false
+    closePlaylist()
+    refreshPlaylist()
+  } catch (error) {
+    console.error('Failed to delete playlist:', error)
+    errorMessage.value = '删除歌单失败'
+  } finally {
+    deletingPlaylist.value = false
+  }
+}
+
 watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
 </script>
 
@@ -110,7 +207,41 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
 
         <div class="playlist-meta-info">
           <span class="playlist-eyebrow">歌单 / PLAYLIST</span>
-          <h2 class="playlist-title">{{ playlist?.name || '歌单详情' }}</h2>
+          <input
+            v-if="isEditingName"
+            ref="playlistNameInput"
+            v-model="playlistNameDraft"
+            class="playlist-title-input"
+            data-testid="playlist-name-input"
+            :disabled="savingName"
+            @keydown.enter.prevent="saveRename"
+            @keydown.esc.prevent="cancelRename"
+          />
+          <div v-else class="playlist-title-row">
+            <h2 class="playlist-title">{{ playlist?.name || '歌单详情' }}</h2>
+            <div v-if="playlist && !playlist.is_favorite" class="playlist-manage-actions">
+              <button
+                type="button"
+                class="playlist-icon-button"
+                data-testid="playlist-edit"
+                title="重命名歌单"
+                aria-label="重命名歌单"
+                @click="startRename"
+              >
+                <Pencil :size="16" />
+              </button>
+              <button
+                type="button"
+                class="playlist-icon-button playlist-icon-button--danger"
+                data-testid="playlist-delete"
+                title="删除歌单"
+                aria-label="删除歌单"
+                @click="deleteConfirmOpen = true"
+              >
+                <Trash2 :size="16" />
+              </button>
+            </div>
+          </div>
           <p v-if="playlist?.description" class="playlist-description">{{ playlist.description }}</p>
           <div class="playlist-stats">
             <span class="stat-author">Atoman Studio</span>
@@ -187,11 +318,32 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
 
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
+            <button
+              type="button"
+              class="track-remove-button"
+              :data-testid="`playlist-remove-${track.id}`"
+              :disabled="removingSongId === String(track.id)"
+              title="移出歌单"
+              aria-label="移出歌单"
+              @click="removeTrack(String(track.id))"
+            >
+              <X :size="15" />
+            </button>
           </div>
         </div>
       </div>
     </div>
   </PSheet>
+  <PConfirm
+    :show="deleteConfirmOpen"
+    title="删除歌单"
+    :message="`确定删除歌单「${playlist?.name || ''}」吗？`"
+    confirm-text="删除"
+    cancel-text="取消"
+    danger
+    @confirm="confirmDeletePlaylist"
+    @cancel="deleteConfirmOpen = false"
+  />
 </template>
 
 <style scoped>
@@ -271,6 +423,59 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.playlist-title-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-ink);
+  background: transparent;
+  color: var(--a-color-fg);
+  padding: 0.1rem 0;
+  font-family: var(--a-font-serif);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.1;
+  outline: none;
+  min-width: 0;
+}
+
+.playlist-manage-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.playlist-icon-button,
+.track-remove-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+  cursor: pointer;
+}
+
+.playlist-icon-button:hover,
+.track-remove-button:hover {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
+}
+
+.playlist-icon-button--danger:hover {
+  color: var(--a-color-accent-destructive);
 }
 
 .playlist-description {
@@ -350,9 +555,17 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
 }
 
 .col-status {
-  width: 4rem;
+  width: 5rem;
   flex-shrink: 0;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.track-remove-button:disabled {
+  cursor: wait;
+  opacity: 0.45;
 }
 
 /* Track Row */

@@ -79,6 +79,7 @@ import { useRoute } from 'vue-router'
 import { ListMusic, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { sortPlaylistsWithFavoriteFirst } from '@/utils/musicPlaylists'
 
 defineProps<{
   collapsed?: boolean
@@ -95,15 +96,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 async function fetchPlaylists() {
   try {
     const response = await listMusicPlaylists()
-    const list = [...(response.data || [])]
-    list.sort((a, b) => {
-      const aIsFav = a.name === '最爱' || a.name === '我喜欢的单曲' || a.name === '我喜欢'
-      const bIsFav = b.name === '最爱' || b.name === '我喜欢的单曲' || b.name === '我喜欢'
-      if (aIsFav && !bIsFav) return -1
-      if (!aIsFav && bIsFav) return 1
-      return 0
-    })
-    playlists.value = list
+    playlists.value = sortPlaylistsWithFavoriteFirst(response.data || [])
   } catch (error) {
     if (error instanceof ApiErrorResponseError && error.status === 401) {
       playlists.value = []
@@ -172,6 +165,13 @@ watch(
   () => {
     fetchPlaylists()
   }
+)
+
+watch(
+  () => state.value.playlistRefreshToken,
+  () => {
+    fetchPlaylists()
+  },
 )
 
 onMounted(() => {

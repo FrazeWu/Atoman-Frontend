@@ -33,6 +33,14 @@
       </div>
 
       <div class="filter-right">
+        <PButton
+          v-if="activeFollowTarget"
+          data-testid="forum-filter-follow"
+          outline
+          size="sm"
+          :class="{ 'forum-tab-btn-active': following }"
+          @click="$emit('toggle-follow', activeFollowTarget)"
+        >{{ following ? '已关注' : '关注' }}</PButton>
         <div class="search-wrap">
           <PInput
             :model-value="searchQuery"
@@ -62,6 +70,8 @@ defineProps<{
   categoryOptions: Array<{ label: string; value: string | number }>
   activeTag: string
   searchQuery: string
+  activeFollowTarget: { targetType: 'category' | 'tag'; targetKey: string } | null
+  following: boolean
 }>()
 
 defineEmits<{
@@ -73,5 +83,6 @@ defineEmits<{
   (e: 'update:searchQuery', value: string): void
   (e: 'submit-search'): void
   (e: 'clear-search'): void
+  (e: 'toggle-follow', target: { targetType: 'category' | 'tag'; targetKey: string }): void
 }>()
 </script>

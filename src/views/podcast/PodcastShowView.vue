@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode, Channel } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -9,19 +9,48 @@ const route = useRoute()
 const channel = ref<Channel | null>(null)
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(true)
+const error = ref('')
+let loadSequence = 0
 
-onMounted(async () => {
-  const slug = route.params.channelSlug as string
+async function loadShow(slug: string) {
+  const requestSequence = ++loadSequence
+  channel.value = null
+  episodes.value = []
+  error.value = ''
+  loading.value = true
   try {
     const res = await fetch(`${api.url}/podcast/shows/${slug}/episodes`)
-    if (res.ok) {
-      const data = await res.json()
-      channel.value = data.channel
-      episodes.value = data.episodes
+    if (requestSequence !== loadSequence) return
+    if (!res.ok) {
+      error.value = '节目不存在'
+      return
     }
+    const data = await res.json()
+    if (requestSequence !== loadSequence) return
+    channel.value = data.channel
+    episodes.value = data.episodes
+  } catch {
+    if (requestSequence === loadSequence) error.value = '加载失败，请重试'
   } finally {
-    loading.value = false
+    if (requestSequence === loadSequence) loading.value = false
   }
+}
+
+watch(() => route.params.channelSlug, (slug) => {
+  const normalizedSlug = typeof slug === 'string' ? slug.trim() : ''
+  if (!normalizedSlug) {
+    loadSequence += 1
+    channel.value = null
+    episodes.value = []
+    error.value = '节目不存在'
+    loading.value = false
+    return
+  }
+  void loadShow(normalizedSlug)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  loadSequence += 1
 })
 
 function episodeCover(ep: PodcastEpisode) {
@@ -31,6 +60,7 @@ function episodeCover(ep: PodcastEpisode) {
 
 <template>
   <div v-if="loading" class="ps-state">加载中…</div>
+  <div v-else-if="error" class="ps-state">{{ error }}</div>
   <div v-else-if="!channel" class="ps-state">节目不存在</div>
   <div v-else class="ps-wrap">
     <header class="ps-header">

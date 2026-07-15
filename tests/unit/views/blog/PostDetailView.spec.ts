@@ -10,6 +10,34 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { id: 'post-1' } }),
 }))
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => { resolve = res })
+  return { promise, resolve }
+}
+
+const detailStubs = {
+  CommentSection: true,
+  PToast: true,
+  PSheet: true,
+  PModal: true,
+}
+
+const makePostResponse = (id: string, likesCount: number, liked = false) =>
+  new Response(JSON.stringify({ data: {
+    id,
+    user_id: 'author-1',
+    title: `文章 ${id}`,
+    content: '正文',
+    status: 'published',
+    visibility: 'public',
+    allow_comments: true,
+    liked,
+    likes_count: likesCount,
+    created_at: '2026-07-10T08:00:00Z',
+    updated_at: '2026-07-10T08:00:00Z',
+  } }), { status: 200 })
+
 describe('PostDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -145,5 +173,191 @@ describe('PostDetailView', () => {
     )
     expect(wrapper.html()).toContain('真实视频标题')
     expect(wrapper.html()).toContain(`/videos/watch/${videoID}`)
+  })
+
+  it('点赞成功后使用真实计数接口返回的权威数量', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    auth.isAuthenticated = true
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/blog/posts/post-1/likes/count')) {
+        return new Response(JSON.stringify({ data: { count: 12 } }), { status: 200 })
+      }
+      if (url.endsWith('/blog/posts/post-1')) {
+        return new Response(JSON.stringify({ data: {
+          id: 'post-1',
+          user_id: 'author-1',
+          title: '真实计数文章',
+          content: '正文',
+          status: 'published',
+          visibility: 'public',
+          allow_comments: true,
+          liked: false,
+          likes_count: 8,
+          created_at: '2026-07-10T08:00:00Z',
+          updated_at: '2026-07-10T08:00:00Z',
+        } }), { status: 200 })
+      }
+      if (url.endsWith('/blog/likes') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { message: 'ok' } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    const wrapper = mount(PostDetailView, {
+      global: {
+        stubs: {
+          CommentSection: true,
+          PToast: true,
+          PSheet: true,
+          PModal: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('button[title="点赞"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/blog/posts/post-1/likes/count')
+    expect(wrapper.get('button[title="点赞"]').text()).toContain('12')
+  })
+
+  it('点赞请求未完成时重复点击只发送一个 mutation', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    auth.isAuthenticated = true
+    const mutation = deferred<Response>()
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.endsWith('/blog/posts/post-1')) return Promise.resolve(makePostResponse('post-1', 8))
+      if (url.endsWith('/blog/likes') && init?.method === 'POST') return mutation.promise
+      if (url.endsWith('/blog/posts/post-1/likes/count')) {
+        return Promise.resolve(new Response(JSON.stringify({ data: { count: 9 } }), { status: 200 }))
+      }
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    const wrapper = mount(PostDetailView, { global: { stubs: detailStubs } })
+    await flushPromises()
+
+    const likeButton = wrapper.get('button[title="点赞"]')
+    await likeButton.trigger('click')
+    await likeButton.trigger('click')
+
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/blog/likes'))).toHaveLength(1)
+    expect(likeButton.attributes('disabled')).toBeDefined()
+
+    mutation.resolve(new Response(JSON.stringify({ data: { message: 'ok' } }), { status: 200 }))
+    await flushPromises()
+  })
+
+  it('文章 A 的迟到点赞响应不能请求 B 的计数或改写 B 状态', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    auth.isAuthenticated = true
+    const mutationA = deferred<Response>()
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.endsWith('/blog/posts/post-a')) return Promise.resolve(makePostResponse('post-a', 8))
+      if (url.endsWith('/blog/posts/post-b')) return Promise.resolve(makePostResponse('post-b', 20))
+      if (url.endsWith('/blog/likes') && init?.method === 'POST') return mutationA.promise
+      if (url.includes('/likes/count')) {
+        return Promise.resolve(new Response(JSON.stringify({ data: { count: 99 } }), { status: 200 }))
+      }
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    const wrapper = mount(PostDetailView, {
+      props: { id: 'post-a' },
+      global: { stubs: detailStubs },
+    })
+    await flushPromises()
+
+    await wrapper.get('button[title="点赞"]').trigger('click')
+    await wrapper.setProps({ id: 'post-b' })
+    await flushPromises()
+    expect(wrapper.text()).toContain('文章 post-b')
+
+    mutationA.resolve(new Response(JSON.stringify({ data: { message: 'ok' } }), { status: 200 }))
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/likes/count'))).toBe(false)
+    expect(wrapper.get('button[title="点赞"]').text()).toContain('20')
+    expect(wrapper.get('button[title="点赞"]').classes()).not.toContain('active')
+  })
+
+  it('文章 A 的迟到计数响应不能改写文章 B', async () => {
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    auth.isAuthenticated = true
+    const countA = deferred<Response>()
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.endsWith('/blog/posts/post-a/likes/count')) return countA.promise
+      if (url.endsWith('/blog/posts/post-a')) return Promise.resolve(makePostResponse('post-a', 8))
+      if (url.endsWith('/blog/posts/post-b')) return Promise.resolve(makePostResponse('post-b', 20))
+      if (url.endsWith('/blog/likes') && init?.method === 'POST') {
+        return Promise.resolve(new Response(JSON.stringify({ data: { message: 'ok' } }), { status: 200 }))
+      }
+      return Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    })
+
+    const wrapper = mount(PostDetailView, {
+      props: { id: 'post-a' },
+      global: { stubs: detailStubs },
+    })
+    await flushPromises()
+
+    await wrapper.get('button[title="点赞"]').trigger('click')
+    await flushPromises()
+    await wrapper.setProps({ id: 'post-b' })
+    await flushPromises()
+
+    countA.resolve(new Response(JSON.stringify({ data: { count: 99 } }), { status: 200 }))
+    await flushPromises()
+
+    expect(wrapper.get('button[title="点赞"]').text()).toContain('20')
+    expect(wrapper.get('button[title="点赞"]').classes()).not.toContain('active')
+  })
+
+  it.each([
+    { name: 'mutation 失败', mutationStatus: 500, countStatus: 200, countCalls: 0, active: false },
+    { name: 'count 失败', mutationStatus: 200, countStatus: 500, countCalls: 1, active: true },
+  ])('$name 时不改写旧计数', async ({ mutationStatus, countStatus, countCalls, active }) => {
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
+    auth.isAuthenticated = true
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/blog/posts/post-1/likes/count')) {
+        return new Response(JSON.stringify({ data: { count: 99 } }), { status: countStatus })
+      }
+      if (url.endsWith('/blog/posts/post-1')) return makePostResponse('post-1', 8)
+      if (url.endsWith('/blog/likes') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { message: 'ok' } }), { status: mutationStatus })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    const wrapper = mount(PostDetailView, { global: { stubs: detailStubs } })
+    await flushPromises()
+    await wrapper.get('button[title="点赞"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/likes/count'))).toHaveLength(countCalls)
+    expect(wrapper.get('button[title="点赞"]').text()).toContain('8')
+    expect(wrapper.get('button[title="点赞"]').classes().includes('active')).toBe(active)
   })
 })

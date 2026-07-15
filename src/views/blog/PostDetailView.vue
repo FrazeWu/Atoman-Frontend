@@ -86,7 +86,7 @@
         />
 
         <div class="reading-actions">
-          <button type="button" class="reading-action" :class="{ active: liked }" title="点赞" @click="toggleLike"><Heart :size="17" />{{ likesCount }}</button>
+          <button type="button" class="reading-action" :class="{ active: liked }" title="点赞" :disabled="likePending" @click="toggleLike"><Heart :size="17" />{{ likesCount }}</button>
           <button type="button" class="reading-action" :class="{ active: bookmarked }" title="收藏" @click="openBookmarkDialog"><Bookmark :size="17" />收藏</button>
           <button type="button" class="reading-action" :class="{ active: inReadingList }" title="稍后阅读" @click="toggleReadingList"><Clock3 :size="17" />稍后阅读</button>
           <button type="button" class="reading-action" title="复制链接" @click="copyLink"><Share2 :size="17" />分享</button>
@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import CommentSection from '@/components/blog/CommentSection.vue'
 import CollectionNavigation from '@/components/blog/CollectionNavigation.vue'
@@ -167,6 +167,8 @@ const loading = ref(true)
 const errorStatus = ref<number | null>(null)
 const liked = ref(false)
 const likesCount = ref(0)
+const likePending = ref(false)
+let likeRequestToken = 0
 const bookmarked = ref(false)
 const currentBookmarkId = ref('')
 const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
@@ -232,6 +234,8 @@ const renderedContent = computed(() => {
 })
 
 const fetchPost = async () => {
+  likeRequestToken += 1
+  likePending.value = false
   loading.value = true
   errorStatus.value = null
   try {
@@ -443,20 +447,32 @@ const fetchEmbeds = async (content: string) => {
 }
 
 const toggleLike = async () => {
-  if (!authStore.isAuthenticated || !post.value) return
+  if (!authStore.isAuthenticated || !post.value || likePending.value) return
+  const targetPostId = post.value.id
   const method = liked.value ? 'DELETE' : 'POST'
+  const requestToken = ++likeRequestToken
+  likePending.value = true
   try {
     const res = await fetch(api.blog.likes, {
       method,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-      body: JSON.stringify({ target_type: 'post', target_id: post.value.id })
+      body: JSON.stringify({ target_type: 'post', target_id: targetPostId })
     })
     if (res.ok) {
-      liked.value = !liked.value
-      likesCount.value += liked.value ? 1 : -1
+      if (requestToken !== likeRequestToken || post.value?.id !== targetPostId) return
+      liked.value = method === 'POST'
+      const countRes = await fetch(api.blog.postLikesCount(targetPostId))
+      if (countRes.ok) {
+        const data = await countRes.json()
+        if (requestToken !== likeRequestToken || post.value?.id !== targetPostId) return
+        const count = data.data?.count
+        if (typeof count === 'number') likesCount.value = count
+      }
     }
   } catch (e) {
     console.error(e)
+  } finally {
+    if (requestToken === likeRequestToken) likePending.value = false
   }
 }
 
@@ -500,6 +516,10 @@ onMounted(() => {
   if (!siteAccessStore.loaded) {
     siteAccessStore.load()
   }
+})
+onBeforeUnmount(() => {
+  likeRequestToken += 1
+  likePending.value = false
 })
 </script>
 

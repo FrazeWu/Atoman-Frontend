@@ -7,6 +7,7 @@ import {
   mergeSiteAccess,
   type ModuleFeatureKey,
   type SiteAccess,
+  type SiteAccessInput,
 } from '@/config/siteAccess'
 import { useApi } from '@/composables/useApi'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
@@ -38,7 +39,7 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     return pendingLoad
   }
 
-  async function save(nextAccess: SiteAccess, token: string | null) {
+  async function save(nextAccess: SiteAccessInput, token: string | null) {
     const api = useApi()
     const response = await fetch(api.settings.siteAccess, {
       method: 'PUT',

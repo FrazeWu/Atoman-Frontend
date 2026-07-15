@@ -5,7 +5,7 @@ import type { Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
-import VideoCommentSection from '@/components/video/VideoCommentSection.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
 import { useApi } from '@/composables/useApi'
@@ -168,7 +168,7 @@ function handleSeekToTimestamp(value: number) {
   if (video.value?.storage_type === 'local' && videoElement.value) {
     videoElement.value.currentTime = value
     currentPlaybackTime.value = value
-    videoElement.value.play().catch(() => {})
+    videoElement.value.play()?.catch(() => {})
     timestampHint.value = ''
     return
   }
@@ -176,6 +176,10 @@ function handleSeekToTimestamp(value: number) {
   setTimeout(() => {
     if (timestampHint.value) timestampHint.value = ''
   }, 3000)
+}
+
+function getCurrentPlaybackTime() {
+  return video.value?.storage_type === 'local' ? Math.floor(videoElement.value?.currentTime || 0) : null
 }
 </script>
 
@@ -258,11 +262,11 @@ function handleSeekToTimestamp(value: number) {
         <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
 
         <!-- Comment Section (before description) -->
-        <VideoCommentSection
-          :video-id="video.id"
-          :video-owner-id="video.user_id"
+        <CommentSection
+          :target="{ kind: 'video', resourceId: video.id }"
+          :current-time="getCurrentPlaybackTime"
           data-testid="video-comments"
-          @seek-to-timestamp="handleSeekToTimestamp"
+          @seek="handleSeekToTimestamp"
         />
 
         <!-- Tags -->

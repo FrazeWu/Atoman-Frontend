@@ -4,6 +4,15 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { ApiErrorResponseError } from '@/api/client'
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
+
+vi.mock('@/components/comment/CommentSection.vue', () => ({
+  default: {
+    name: 'CommentSection',
+    props: ['target', 'noun'],
+    template: '<section data-test="shared-comments" />',
+  },
+}))
 
 const drawerState = ref({ artistId: '1', artistRefreshToken: 0 })
 const musicDrawerMocks = vi.hoisted(() => ({
@@ -78,6 +87,22 @@ describe('ArtistDrawer.vue', () => {
     listArtistBookmarks.mockResolvedValue({ data: [] })
     createArtistBookmark.mockResolvedValue({ id: 'artist-bookmark-1', artist_id: '1', created_at: '2026-07-02T00:00:00Z' })
     deleteArtistBookmark.mockResolvedValue({ deleted: true })
+  })
+
+  it('renders the shared artist discussion surface', async () => {
+    const wrapper = mount(ArtistDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot name="header" /><slot /></div>' },
+          CommentSection: { name: 'CommentSection', props: ['target', 'noun'], template: '<section />' },
+        },
+      },
+    })
+    await vi.dynamicImportSettled()
+
+    const comments = wrapper.findComponent(CommentSection)
+    expect(comments.props('target')).toEqual({ kind: 'music_artist', resourceId: '1' })
+    expect(comments.props('noun')).toBe('讨论')
   })
 
   it('renders artist information and albums when artistId is present', async () => {

@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   getMusicArtist,
@@ -194,6 +195,12 @@ watch(
           </div>
         </div>
       </div>
+      <CommentSection
+        v-if="artist"
+        class="artist-discussion"
+        :target="{ kind: 'music_artist', resourceId: String(artist.id) }"
+        noun="讨论"
+      />
     </div>
   </PSheet>
 </template>
@@ -220,6 +227,7 @@ watch(
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
+.artist-discussion { margin-top: 2rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-line-soft); align-self: flex-start; }
 .paper-action {
   display: inline-flex;

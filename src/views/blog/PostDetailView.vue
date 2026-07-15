@@ -114,10 +114,7 @@
 
         <!-- Comments -->
         <CommentSection
-          :post-id="post.id"
-          :allow-comments="post.allow_comments"
-          :comment-mode="siteAccessStore.blogCommentMode"
-          :post-owner-id="post.user_id"
+          :target="{ kind: 'blog_post', resourceId: post.id }"
         />
       </div>
     </article>
@@ -127,11 +124,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import CommentSection from '@/components/blog/CommentSection.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -152,7 +148,6 @@ const props = defineProps<{
 
 const route = useRoute()
 const sheetStore = useSheetStore()
-const siteAccessStore = useSiteAccessStore()
 
 const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
@@ -405,11 +400,6 @@ const toggleLike = async () => {
 }
 
 onMounted(fetchPost)
-onMounted(() => {
-  if (!siteAccessStore.loaded) {
-    siteAccessStore.load()
-  }
-})
 </script>
 
 <style scoped>

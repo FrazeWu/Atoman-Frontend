@@ -73,6 +73,8 @@
           </a>
         </div>
       </footer>
+
+      <CommentSection :target="{ kind: 'feed_article', resourceId: item.id }" />
     </article>
   </div>
 </template>
@@ -85,6 +87,7 @@ import DOMPurify from 'dompurify'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PBadge from '@/components/ui/PBadge.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { FeedItem } from '@/types'

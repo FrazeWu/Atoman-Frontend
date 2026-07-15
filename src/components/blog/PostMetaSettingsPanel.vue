@@ -29,18 +29,6 @@
         />
       </div>
     </details>
-
-    <details class="settings-details">
-      <summary class="settings-summary">
-        <span class="a-label">评论设置</span>
-      </summary>
-      <div class="settings-body">
-        <label class="option-check a-card-sm">
-          <input type="checkbox" :checked="allowComments" @change="$emit('update:allowComments', ($event.target as HTMLInputElement).checked)" />
-          <span>允许评论</span>
-        </label>
-      </div>
-    </details>
   </section>
 </template>
 
@@ -51,13 +39,11 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 defineProps<{
   summary: string
   visibility: 'public' | 'followers' | 'private'
-  allowComments: boolean
 }>()
 
 defineEmits<{
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: 'public' | 'followers' | 'private'): void
-  (e: 'update:allowComments', value: boolean): void
 }>()
 
 const visibilityOptions = [

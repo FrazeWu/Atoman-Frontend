@@ -5,7 +5,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { Plus, Play, Heart } from 'lucide-vue-next'
@@ -13,7 +13,6 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   createAlbumBookmark,
   deleteAlbumBookmark,
-  getAlbumDiscussionCount,
   getMusicAlbum,
   getMusicPlaylist,
   listAlbumBookmarks,
@@ -37,7 +36,6 @@ const errorMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
-const discussionCount = ref(0)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
@@ -182,22 +180,13 @@ async function loadAlbum(albumId: string | null) {
   if (!albumId) {
     album.value = null
     isBookmarked.value = false
-    discussionCount.value = 0
     return
   }
 
   loading.value = true
   errorMessage.value = ''
   try {
-    const [albumResponse, albumDiscussionCount] = await Promise.all([
-      getMusicAlbum(albumId),
-      getAlbumDiscussionCount(albumId).catch((error) => {
-        console.error('Failed to fetch album discussion count:', error)
-        return 0
-      }),
-    ])
-    album.value = albumResponse
-    discussionCount.value = albumDiscussionCount
+    album.value = await getMusicAlbum(albumId)
     try {
       const bookmarksResponse = await listAlbumBookmarks()
       isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
@@ -395,8 +384,13 @@ watch(
           </div>
         </div>
       </div>
+      <CommentSection
+        v-if="album"
+        class="album-discussion"
+        :target="{ kind: 'music_album', resourceId: String(album.id) }"
+        noun="讨论"
+      />
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion')" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </PSheet>
 </template>
@@ -420,6 +414,7 @@ watch(
   color: var(--a-color-ink-soft);
 }
 .drawer-body { margin: 0 -2.5rem; padding: 2rem 2.5rem; }
+.album-discussion { margin-top: 2rem; }
 
 .album-meta-row {
   display: flex;

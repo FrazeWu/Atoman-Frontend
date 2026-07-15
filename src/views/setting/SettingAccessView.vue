@@ -97,28 +97,6 @@
               <SettingFeedSourcePanel :full-text-mode="draft.settings.feed.full_text_mode" />
             </div>
 
-            <div v-else-if="key === 'blog'" class="setting-access__module-body">
-              <div class="setting-access__setting-block">
-                <div class="setting-access__setting-copy">
-                  <strong>评论权限</strong>
-                  <small>控制文章评论开放范围。</small>
-                </div>
-                <div class="setting-access__setting-control setting-access__setting-control--stack">
-                  <label
-                    v-for="mode in blogCommentModes"
-                    :key="mode.value"
-                    class="setting-access__radio-row"
-                  >
-                    <input v-model="draft.settings.blog.comment_mode" type="radio" :value="mode.value" />
-                    <div>
-                      <strong>{{ mode.label }}</strong>
-                      <small>{{ mode.description }}</small>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
             <div v-else-if="key === 'forum'" class="setting-access__module-body">
               <label class="setting-access__setting-block">
                 <div class="setting-access__setting-copy">
@@ -177,12 +155,6 @@ const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
 const activeSection = ref<ModuleRoomKey>('feed')
-
-const blogCommentModes = [
-  { value: 'all', label: '全部可评论', description: '游客可匿名评论，已登录用户正常署名。' },
-  { value: 'authenticated', label: '仅登录用户可评论', description: '保持当前默认行为。' },
-  { value: 'disabled', label: '关闭评论', description: '全站文章评论入口关闭。' },
-] as const
 
 const sectionMap = new Map<ModuleRoomKey, HTMLElement>()
 let ticking = false
@@ -260,7 +232,12 @@ async function save() {
   error.value = ''
 
   try {
-    await siteAccessStore.save(mergeSiteAccess(draft.value), authStore.token)
+    const nextAccess = mergeSiteAccess(draft.value)
+    const { comment_mode: _legacyCommentMode, ...blogSettings } = nextAccess.settings.blog
+    await siteAccessStore.save({
+      ...nextAccess,
+      settings: { ...nextAccess.settings, blog: blogSettings },
+    }, authStore.token)
     saved.value = true
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'

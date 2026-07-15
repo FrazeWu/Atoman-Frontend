@@ -3,12 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
 import { useApi } from '@/composables/useApi'
+import CommentSection from '@/components/comment/CommentSection.vue'
 
 const api = useApi()
 const route = useRoute()
 const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
+const audioRef = ref<HTMLAudioElement | null>(null)
 
 onMounted(async () => {
   const id = route.params.id as string
@@ -37,6 +39,16 @@ function fmtDuration(sec: number) {
 
 function episodeCover(episode: PodcastEpisode) {
   return episode.episode_cover_url || episode.post?.collections?.[0]?.cover_url || episode.collections?.[0]?.cover_url || episode.channel?.cover_url || ''
+}
+
+function getCurrentTime() {
+  return Math.floor(audioRef.value?.currentTime || 0)
+}
+
+function seek(seconds: number) {
+  if (!audioRef.value) return
+  audioRef.value.currentTime = seconds
+  void audioRef.value.play()?.catch(() => undefined)
 }
 </script>
 
@@ -68,6 +80,7 @@ function episodeCover(episode: PodcastEpisode) {
 
     <!-- 音频播放器 -->
     <audio
+      ref="audioRef"
       :src="ep.audio_url"
       controls
       class="pev-player"
@@ -79,6 +92,13 @@ function episodeCover(episode: PodcastEpisode) {
       <h2 class="pev-notes-title">节目说明</h2>
       <div class="pev-notes-body">{{ ep.post.content }}</div>
     </div>
+
+    <CommentSection
+      class="pev-comments"
+      :target="{ kind: 'podcast_episode', resourceId: ep.id }"
+      :current-time="getCurrentTime"
+      @seek="seek"
+    />
   </div>
 </template>
 
@@ -97,4 +117,5 @@ function episodeCover(episode: PodcastEpisode) {
 .pev-notes { margin-top: 2rem; }
 .pev-notes-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
 .pev-notes-body { font-size: 0.875rem; color: #4b5563; white-space: pre-wrap; line-height: 1.7; }
+.pev-comments { margin-top: 2rem; }
 </style>

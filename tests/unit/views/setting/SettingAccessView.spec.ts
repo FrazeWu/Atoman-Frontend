@@ -125,4 +125,29 @@ describe('SettingAccessView section sync', () => {
     expect(save.mock.calls[0]?.[0]?.modules?.media?.enabled).toBe(false)
     expect(save.mock.calls[0]?.[1]).toBe('admin-token')
   })
+
+  it('不再显示或提交匿名与关闭评论设置', async () => {
+    const save = vi.fn(async () => undefined)
+    siteAccessState.save = save
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({
+            props: ['loading', 'loadingText', 'to'],
+            emits: ['click'],
+            template: '<button @click="$emit(\'click\')"><slot /></button>',
+          }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: true,
+          SettingFeedSourcePanel: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('全部可评论')
+    expect(wrapper.text()).not.toContain('关闭评论')
+    await wrapper.findAll('button').at(-1)!.trigger('click')
+    expect(save.mock.calls[0]?.[0]?.settings?.blog).not.toHaveProperty('comment_mode')
+  })
 })

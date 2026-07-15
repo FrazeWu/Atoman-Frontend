@@ -52,10 +52,8 @@
       <PostMetaSettingsPanel
         :summary="summary"
         :visibility="visibility"
-        :allow-comments="allowComments"
         @update:summary="$emit('update:summary', $event)"
         @update:visibility="$emit('update:visibility', $event)"
-        @update:allowComments="$emit('update:allowComments', $event)"
       />
 
       <details class="settings-details">
@@ -142,7 +140,6 @@ defineProps<{
   defaultCollectionId?: string
   summary: string
   visibility: BlogVisibility
-  allowComments: boolean
   coverUrl: string
   coverUploading: boolean
   coverUploadError: string
@@ -158,7 +155,6 @@ defineEmits<{
   (e: 'toggle-collection', id: string, event: Event): void
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: BlogVisibility): void
-  (e: 'update:allowComments', value: boolean): void
   (e: 'cover-upload', event: Event): void
   (e: 'remove-cover'): void
   (e: 'jump-to-heading', line: number): void

@@ -155,6 +155,7 @@ const siteAccessStore = useSiteAccessStore()
 const loading = ref(true)
 const error = ref('')
 const hotContent = ref<PortalHotResponse>({ featured: [], sections: [] })
+let hotContentRequestSequence = 0
 
 const visibleRooms = computed(() => (
   moduleNavOrder
@@ -188,6 +189,8 @@ const otherRooms = computed(() => visibleRooms.value)
 const hasContent = computed(() => visibleFeatured.value.length > 0 || displaySections.value.length > 0)
 
 async function loadHotContent() {
+  const requestSequence = ++hotContentRequestSequence
+  const isCurrentRequest = () => requestSequence === hotContentRequestSequence
   loading.value = true
   error.value = ''
   try {
@@ -195,17 +198,20 @@ async function loadHotContent() {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
+    if (!isCurrentRequest()) return
     if (response.status === 404) {
       hotContent.value = { featured: [], sections: [] }
       return
     }
     if (!response.ok) throw new Error('服务端返回异常')
     const payload = await response.json() as { data?: PortalHotResponse }
+    if (!isCurrentRequest()) return
     hotContent.value = payload.data ?? { featured: [], sections: [] }
   } catch (err) {
+    if (!isCurrentRequest()) return
     error.value = err instanceof Error ? err.message : '未知错误'
   } finally {
-    loading.value = false
+    if (isCurrentRequest()) loading.value = false
   }
 }
 

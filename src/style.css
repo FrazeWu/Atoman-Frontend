@@ -113,11 +113,6 @@ body {
   color: var(--a-color-fg);
 }
 
-body:has(.site-footer) {
-  --a-footer-reserved-height: 88px;
-  --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
-}
-
 body:has(.app-shell.has-sidebar) {
   --a-sidebar-width: 16rem;
   --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
@@ -1078,9 +1073,6 @@ body:has(.app-shell.has-sidebar) {
     --a-mobile-nav-reserved-height: calc(64px + env(safe-area-inset-bottom, 0px));
     --a-footer-reserved-height: 0px;
     --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
-  }
-  body:has(.site-footer):not(:has(.app-shell.has-sidebar)) {
-    --a-footer-reserved-height: calc(112px + env(safe-area-inset-bottom, 0px));
   }
   html[data-player-active='true'][data-player-pinned] {
     --a-player-reserved-height: var(--a-mobile-player-height);

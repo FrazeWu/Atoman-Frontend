@@ -74,14 +74,8 @@ onMounted(() => {
 }
 
 .app-main {
-  flex: 1;
-  padding-bottom: var(--a-footer-reserved-height);
   background: #fff;
   transition: opacity 0.5s ease, filter 0.5s ease;
-}
-
-.app-shell.has-sidebar .app-main {
-  padding-bottom: 0;
 }
 
 /* 出场：内容区原地渐隐 */

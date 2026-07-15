@@ -149,18 +149,17 @@ describe('shared responsive shell CSS', () => {
     expect(mobileBlock).toContain('calc(7rem + env(safe-area-inset-bottom))')
   })
 
-  it('includes the fixed footer in shared bottom offsets', () => {
+  it('keeps the document-flow footer out of shared bottom offsets', () => {
     expect(styleSource).toContain('--a-footer-reserved-height: 0px;')
-    expect(styleSource).toContain('var(--a-footer-reserved-height)')
-    expect(styleSource).toContain('body:has(.site-footer)')
-    expect(styleSource).toContain('--a-footer-reserved-height: 88px;')
-    expect(appSource).toContain('padding-bottom: var(--a-footer-reserved-height)')
-    expect(hasSidebarBlock).toContain('var(--a-footer-reserved-height)')
+    expect(styleSource).not.toContain('body:has(.site-footer)')
+    expect(styleSource).not.toContain('--a-footer-reserved-height: 88px;')
+    expect(appSource).not.toContain('padding-bottom: var(--a-footer-reserved-height)')
+    expect(appSource).not.toMatch(/\.app-main\s*\{[^}]*flex:\s*1/)
   })
 
-  it('uses a taller footer only on mobile routes without a sidebar', () => {
+  it('hides the footer on mobile sidebar routes without reserving footer space', () => {
     expect(mobileBlock).toContain('--a-footer-reserved-height: 0px;')
-    expect(mobileBlock).toContain('--a-footer-reserved-height: calc(112px + env(safe-area-inset-bottom, 0px));')
+    expect(mobileBlock).not.toContain('--a-footer-reserved-height: calc(112px + env(safe-area-inset-bottom, 0px));')
     expect(mobileBlock).toContain('.app-shell.has-sidebar .site-footer')
     expect(mobileBlock).toContain('display: none;')
   })

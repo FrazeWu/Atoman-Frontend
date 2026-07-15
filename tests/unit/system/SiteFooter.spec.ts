@@ -55,12 +55,12 @@ describe('SiteFooter', () => {
     expect(footerSource).not.toContain('+ 96px')
   })
 
-  it('stays fixed to the bottom of the main content area', () => {
-    expect(footerSource).toContain('position: fixed')
-    expect(footerSource).toContain('right: 0')
-    expect(footerSource).toContain('bottom: 0')
-    expect(footerSource).toContain('left: var(--a-sidebar-width)')
-    expect(footerSource).toContain('height: var(--a-footer-reserved-height)')
+  it('follows the page content instead of floating at the viewport bottom', () => {
+    expect(footerSource).toContain('position: relative')
+    expect(footerSource).not.toContain('position: fixed')
+    expect(footerSource).not.toContain('bottom: 0')
+    expect(footerSource).not.toContain('left: var(--a-sidebar-width)')
+    expect(footerSource).not.toContain('height: var(--a-footer-reserved-height)')
   })
 
   it('uses the confirmed compact two-row layout', () => {
@@ -97,25 +97,10 @@ describe('SiteFooter', () => {
     expect(footerSource).toContain('var(--a-color-ink) 56px 68px')
   })
 
-  it('enters the glass state when the page scrolls', async () => {
-    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
-    const wrapper = mountFooter()
-
-    Object.defineProperty(window, 'scrollY', { configurable: true, value: 1 })
-    window.dispatchEvent(new Event('scroll'))
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.classes()).toContain('is-scrolled')
-  })
-
-  it('mirrors the topbar glass and divider transitions', () => {
-    expect(footerSource).toContain('.site-footer.is-scrolled {')
-    expect(footerSource).toContain('background: color-mix(in srgb, var(--a-color-bg) 80%, transparent)')
-    expect(footerSource).toContain('backdrop-filter: blur(12px)')
-    expect(footerSource).toContain('.site-footer.is-scrolled::before')
-    expect(footerSource).toContain('width: 75%')
-    expect(footerSource).toContain('.site-footer.is-scrolled::after')
-    expect(footerSource).toContain('@media (prefers-reduced-motion: reduce)')
+  it('does not install a scroll-driven floating footer state', () => {
+    expect(footerSource).not.toContain('isScrolled')
+    expect(footerSource).not.toContain("window.addEventListener('scroll'")
+    expect(footerSource).not.toContain('.site-footer.is-scrolled')
   })
 
   it.each([

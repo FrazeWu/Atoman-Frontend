@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -9,21 +9,43 @@ const route = useRoute()
 const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
+let loadSequence = 0
 
-onMounted(async () => {
-  const id = route.params.id as string
+async function loadEpisode(id: string) {
+  const requestSequence = ++loadSequence
+  ep.value = null
+  error.value = ''
+  loading.value = true
   try {
     const res = await fetch(`${api.url}/podcast/episodes/${id}`)
-    if (res.ok) {
-      ep.value = await res.json()
-    } else {
+    if (requestSequence !== loadSequence) return
+    if (!res.ok) {
       error.value = '单集不存在'
+      return
     }
+    const data = await res.json()
+    if (requestSequence === loadSequence) ep.value = data
   } catch {
-    error.value = '加载失败，请重试'
+    if (requestSequence === loadSequence) error.value = '加载失败，请重试'
   } finally {
-    loading.value = false
+    if (requestSequence === loadSequence) loading.value = false
   }
+}
+
+watch(() => route.params.id, (id) => {
+  const normalizedId = typeof id === 'string' ? id.trim() : ''
+  if (!normalizedId) {
+    loadSequence += 1
+    ep.value = null
+    error.value = '单集不存在'
+    loading.value = false
+    return
+  }
+  void loadEpisode(normalizedId)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  loadSequence += 1
 })
 
 function fmtDuration(sec: number) {

@@ -54,6 +54,8 @@
         <div v-for="i in 2" :key="i" class="a-skeleton" style="height:24rem"></div>
       </div>
 
+      <PEmpty v-else-if="errorMessage" :text="errorMessage" />
+
       <PEmpty v-else-if="!stats || !stats.total_read" text="还没有阅读记录" sub="先去刷一会儿 RSS 再来看统计" />
 
       <div v-else class="stats-charts-grid">
@@ -130,11 +132,13 @@ const periodOptions: Array<{ value: FeedStatsPeriod; label: string }> = [
 const period = ref<FeedStatsPeriod>('day')
 const loading = ref(false)
 const stats = ref<FeedStatsData | null>(null)
+const errorMessage = ref('')
 const trendCanvas = ref<HTMLCanvasElement | null>(null)
 const sourceCanvas = ref<HTMLCanvasElement | null>(null)
 
 let trendChart: Chart | null = null
 let sourceChart: Chart | null = null
+let latestRequestId = 0
 
 const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
 
@@ -149,27 +153,34 @@ const topSourceLabel = computed(() => topSource.value?.title || '暂无数据')
 const topSourceReads = computed(() => topSource.value ? `${topSource.value.count} 篇已读` : '没有可展示的来源')
 
 const selectPeriod = async (value: FeedStatsPeriod) => {
-  if (period.value === value) return
   period.value = value
   await fetchStats()
 }
 
 const fetchStats = async () => {
   if (!authStore.isAuthenticated) return
+  const requestId = ++latestRequestId
   loading.value = true
+  errorMessage.value = ''
   try {
     const params = new URLSearchParams({ period: period.value })
     const res = await fetch(`${api.url}/feed/stats?${params}`, { headers: authHeaders() })
-    if (res.ok) {
-      const data = await res.json()
-      stats.value = data.data || null
-      await nextTick()
-      renderCharts()
-    }
-  } catch (error) {
-    console.error('Failed to fetch feed stats', error)
-  } finally {
+    if (requestId !== latestRequestId) return
+    if (!res.ok) throw new Error(`Failed to load feed stats (${res.status})`)
+    const data = await res.json()
+    if (requestId !== latestRequestId) return
+    stats.value = data.data || null
     loading.value = false
+    await nextTick()
+    if (requestId !== latestRequestId) return
+    renderCharts()
+  } catch {
+    if (requestId !== latestRequestId) return
+    destroyCharts()
+    stats.value = null
+    errorMessage.value = '阅读统计加载失败'
+  } finally {
+    if (requestId === latestRequestId) loading.value = false
   }
 }
 

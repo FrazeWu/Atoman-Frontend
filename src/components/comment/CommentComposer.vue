@@ -125,12 +125,15 @@ interface SelectedMention { userId: string; username: string }
 
 function selectedFromInput(value: string, inputs: CommentMentionInput[]) {
   const points = Array.from(normalizeCommentContent(value))
-  return inputs.flatMap((mention) => {
+  const unique = new Map<string, SelectedMention>()
+  inputs.forEach((mention) => {
     const token = points.slice(mention.start, mention.end).join('')
-    return token.startsWith('@') && token.length > 1
-      ? [{ userId: mention.user_id, username: token.slice(1) }]
-      : []
+    if (token.startsWith('@') && token.length > 1) {
+      const selected = { userId: mention.user_id, username: token.slice(1) }
+      unique.set(`${selected.userId}:${selected.username}`, selected)
+    }
   })
+  return [...unique.values()]
 }
 
 const content = ref(props.initialContent)

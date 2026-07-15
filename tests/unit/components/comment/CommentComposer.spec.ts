@@ -75,6 +75,23 @@ describe('CommentComposer', () => {
     })
   })
 
+  it('recalculates repeated mentions once per token without duplicate ranges', async () => {
+    const wrapper = mount(CommentComposer, { props: {
+      initialContent: '@alice 和 @alice',
+      initialMentions: [
+        { user_id: 'user-1', start: 0, end: 6 },
+        { user_id: 'user-1', start: 9, end: 15 },
+      ],
+    } })
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    expect(wrapper.emitted('submit')?.[0]?.[0]).toMatchObject({
+      mentions: [
+        { user_id: 'user-1', start: 0, end: 6 },
+        { user_id: 'user-1', start: 9, end: 15 },
+      ],
+    })
+  })
+
   it('ignores a late mention search after the query is no longer active', async () => {
     let resolveSearch!: (users: mentions.MentionSearchUser[]) => void
     vi.spyOn(mentions, 'searchMentionUsers').mockReturnValue(new Promise((resolve) => { resolveSearch = resolve }))

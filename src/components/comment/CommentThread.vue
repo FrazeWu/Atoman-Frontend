@@ -61,6 +61,7 @@
 
     <CommentComposer
       v-if="replyingTo"
+      :key="`reply-${replyingTo.id}`"
       class="comment-thread__composer"
       :reply-to-name="replyingTo.author.display_name || replyingTo.author.username"
       :current-time="currentTime"
@@ -71,6 +72,7 @@
     />
     <CommentComposer
       v-if="editing"
+      :key="`edit-${editing.id}`"
       class="comment-thread__composer"
       :initial-content="editing.content"
       :initial-attachment-ids="editing.attachments.map(({ id }) => id)"
@@ -148,13 +150,14 @@ const showExpand = computed(() => !props.expanded && props.root.reply_count > vi
 
 async function submitReply(input: CreateCommentInput) {
   if (!replyingTo.value) return
+  const submitted = replyingTo.value
   mutationPending.value = true
   mutationError.value = ''
   try {
-    await props.onReply?.(replyingTo.value, input)
-    replyingTo.value = null
+    await props.onReply?.(submitted, input)
+    if (replyingTo.value?.id === submitted.id) replyingTo.value = null
   } catch {
-    mutationError.value = '回复失败，请重试'
+    if (replyingTo.value?.id === submitted.id) mutationError.value = '回复失败，请重试'
   } finally {
     mutationPending.value = false
   }
@@ -162,13 +165,14 @@ async function submitReply(input: CreateCommentInput) {
 
 async function submitEdit(input: CreateCommentInput) {
   if (!editing.value) return
+  const submitted = editing.value
   mutationPending.value = true
   mutationError.value = ''
   try {
-    await props.onEdit?.(editing.value, input)
-    editing.value = null
+    await props.onEdit?.(submitted, input)
+    if (editing.value?.id === submitted.id) editing.value = null
   } catch {
-    mutationError.value = '保存失败，请重试'
+    if (editing.value?.id === submitted.id) mutationError.value = '保存失败，请重试'
   } finally {
     mutationPending.value = false
   }

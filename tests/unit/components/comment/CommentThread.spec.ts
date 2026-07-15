@@ -61,4 +61,30 @@ describe('CommentThread', () => {
     expect(wrapper.findComponent({ name: 'CommentComposer' }).exists()).toBe(true)
     expect(wrapper.text()).toContain('保存失败')
   })
+
+  it('switches edit targets and does not close the new editor when an old save finishes', async () => {
+    let resolveSave!: () => void
+    const onEdit = vi.fn().mockReturnValue(new Promise<void>((resolve) => { resolveSave = resolve }))
+    const root = makeComment('root', { content: '根内容', reply_count: 1 })
+    const child = makeComment('child', {
+      root_id: 'root', content: '子内容 @alice',
+      attachments: [{ id: 'asset-2', url: '/2.png', content_type: 'image/png', position: 0 }],
+      mentions: [{ user_id: 'user-1', start: 4, end: 10 }],
+    })
+    const wrapper = mount(CommentThread, {
+      props: { root, replies: [child], expanded: true, authenticated: true, currentUserId: 'user-1', onEdit },
+    })
+    const editButtons = wrapper.findAll('button[title="编辑"]')
+    await editButtons[0].trigger('click')
+    await wrapper.get('[data-test="comment-submit"]').trigger('click')
+    await editButtons[1].trigger('click')
+    expect(wrapper.get('textarea').element).toHaveValue('子内容 @alice')
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).props('initialAttachmentIds')).toEqual(['asset-2'])
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).props('initialMentions')).toEqual(child.mentions)
+
+    resolveSave()
+    await Promise.resolve()
+    expect(wrapper.findComponent({ name: 'CommentComposer' }).exists()).toBe(true)
+    expect(wrapper.get('textarea').element).toHaveValue('子内容 @alice')
+  })
 })

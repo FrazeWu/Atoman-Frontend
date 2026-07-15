@@ -13,6 +13,8 @@
       <div class="a-skeleton" style="height:8rem" />
     </div>
 
+    <PEmpty v-else-if="loadError" title="频道加载失败" />
+
     <!-- Empty State -->
     <PEmpty v-else-if="channels.length === 0" title="暂无频道" description="创建第一个频道，系统会为频道准备默认合集">
       <template #action>
@@ -82,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
@@ -107,7 +109,9 @@ const api = useApi()
 const authStore = useAuthStore()
 
 const loadingChannels = ref(true)
+const loadError = ref('')
 const channels = ref<Channel[]>([])
+let loadChannelsSequence = 0
 
 const modalVisible = ref(false)
 const modalMode = ref<'create' | 'edit'>('create')
@@ -121,26 +125,41 @@ const deleting = ref(false)
 const channelToEdit = ref<Channel | null>(null)
 
 const loadChannels = async () => {
+  const requestSequence = ++loadChannelsSequence
   loadingChannels.value = true
+  loadError.value = ''
   try {
     const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
-    const data = await res.json()
-    channels.value = (data.data || []).filter((channel: Channel) => channel.content_type === 'blog')
+    if (requestSequence !== loadChannelsSequence) return false
+    if (!res.ok) throw new Error(`Failed to load channels (${res.status})`)
 
-    if (channels.value.length === 0) {
+    const data = await res.json()
+    if (requestSequence !== loadChannelsSequence) return false
+    const loadedChannels = (data.data || []).filter((channel: Channel) => channel.content_type === 'blog')
+
+    if (loadedChannels.length === 0) {
       const ensureRes = await fetch(api.blog.channelEnsureDefault, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authStore.token}` }
       })
-      if (ensureRes.ok) {
-        const ensureData = await ensureRes.json()
-        channels.value = [ensureData.data]
-      }
+      if (requestSequence !== loadChannelsSequence) return false
+      if (!ensureRes.ok) throw new Error(`Failed to ensure default channel (${ensureRes.status})`)
+
+      const ensureData = await ensureRes.json()
+      if (requestSequence !== loadChannelsSequence) return false
+      channels.value = [ensureData.data]
+    } else {
+      channels.value = loadedChannels
     }
-  } catch (err) {
-    console.error('Failed to load channels:', err)
+    return true
+  } catch {
+    if (requestSequence !== loadChannelsSequence) return false
+    loadError.value = '频道加载失败'
+    return false
   } finally {
-    loadingChannels.value = false
+    if (requestSequence === loadChannelsSequence) {
+      loadingChannels.value = false
+    }
   }
 }
 
@@ -232,7 +251,11 @@ const executeDelete = async () => {
 }
 
 onMounted(() => {
-  loadChannels()
+  void loadChannels()
+})
+
+onUnmounted(() => {
+  loadChannelsSequence++
 })
 </script>
 

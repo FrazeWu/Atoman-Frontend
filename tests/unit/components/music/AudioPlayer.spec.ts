@@ -7,7 +7,12 @@ const mocks = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   listMusicPlaylists: vi.fn(),
   player: {
-    currentSong: { id: 'song-1', title: 'Track A', audio_url: 'https://example.com/a.mp3' },
+    currentSong: { id: 'song-1', title: 'Track A', audio_url: 'https://example.com/a.mp3' } as {
+      id: string
+      title: string
+      audio_url: string
+      media_kind?: 'music_song' | 'feed_item'
+    },
     currentTime: 12,
     duration: 180,
     isPlaying: false,
@@ -45,6 +50,7 @@ describe('AudioPlayer song discussion', () => {
   beforeEach(() => {
     mocks.openNestedAction.mockReset()
     mocks.listMusicPlaylists.mockResolvedValue({ data: [] })
+    mocks.player.currentSong = { id: 'song-1', title: 'Track A', audio_url: 'https://example.com/a.mp3' }
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       disconnect() {}
@@ -66,5 +72,20 @@ describe('AudioPlayer song discussion', () => {
     await action.trigger('click')
 
     expect(mocks.openNestedAction).toHaveBeenCalledWith('discussion', { songId: 'song-1' })
+  })
+
+  it('does not offer music discussion for a podcast feed item', () => {
+    mocks.player.currentSong = {
+      id: 'feed-item-1',
+      title: 'Podcast Episode',
+      audio_url: 'https://example.com/episode.mp3',
+      media_kind: 'feed_item',
+    }
+
+    const wrapper = mount(AudioPlayer, {
+      global: { stubs: { PDropdown: true, PToast: true } },
+    })
+
+    expect(wrapper.find('[data-test="player-song-discussion"]').exists()).toBe(false)
   })
 })

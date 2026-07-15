@@ -80,6 +80,7 @@ const selectedRevision = ref<MusicRevisionSummary | null>(null)
 const previousRevision = ref<MusicRevisionSummary | null>(null)
 const diffLoading = ref(false)
 const discussionSongId = computed(() => {
+  if (player.currentSong?.media_kind === 'feed_item') return ''
   return player.currentSong?.id ? String(player.currentSong.id) : ''
 })
 

@@ -14,6 +14,7 @@
       <MobileBottomNav v-if="showMobileBottomNav" />
       <SiteFooter />
       <AudioPlayer v-if="hasActiveTrack" />
+      <NestedActionDrawer />
     </div>
   </n-config-provider>
 </template>
@@ -32,6 +33,7 @@ import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
 
 const AudioPlayer = defineAsyncComponent(() => import('@/components/music/AudioPlayer.vue'))
+const NestedActionDrawer = defineAsyncComponent(() => import('@/components/music/NestedActionDrawer.vue'))
 
 const themeOverrides = {
   common: {

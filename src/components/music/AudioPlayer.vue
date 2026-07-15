@@ -55,7 +55,7 @@
           </button>
 
           <button
-            v-if="player.currentSong"
+            v-if="canDiscussCurrentSong"
             type="button"
             class="player-discussion-btn"
             data-test="player-song-discussion"
@@ -251,6 +251,9 @@ const coverFallback = computed(() => {
   const firstChar = text.trim().charAt(0)
   return firstChar || 'P'
 })
+const canDiscussCurrentSong = computed(() => (
+  Boolean(player.currentSong) && player.currentSong?.media_kind !== 'feed_item'
+))
 
 function openSongDiscussion() {
   if (!player.currentSong) return

@@ -117,6 +117,7 @@ describe('player store', () => {
     ] as any)
     const firstSong = player.createPodcastSong(firstFeedItem as any)
     expect(firstSong).not.toBeNull()
+    expect(firstSong?.media_kind).toBe('feed_item')
 
     player.playQueuedSong(firstSong!)
 

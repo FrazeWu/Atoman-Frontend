@@ -59,6 +59,7 @@ export interface Song {
   release_date: string;
   lyrics: string;
   audio_url: string;
+  media_kind?: 'music_song' | 'feed_item';
   audio_source?: 'local' | 's3';
   cover_url: string;
   cover_source?: 'local' | 's3';

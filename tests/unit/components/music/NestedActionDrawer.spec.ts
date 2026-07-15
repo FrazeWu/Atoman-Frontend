@@ -21,7 +21,11 @@ const mocks = vi.hoisted(() => ({
   listAlbumRevisions: vi.fn(),
   getAlbumRevision: vi.fn(),
   revertAlbumRevision: vi.fn(),
-  currentSong: { id: 'song-1', title: 'Track A' } as { id: string; title: string } | null,
+  currentSong: { id: 'song-1', title: 'Track A' } as {
+    id: string
+    title: string
+    media_kind?: 'music_song' | 'feed_item'
+  } | null,
   currentTime: 46,
   seek: vi.fn(),
 }))
@@ -184,6 +188,13 @@ describe('NestedActionDrawer.vue', () => {
   it('does not render a song discussion without an active song', () => {
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
     mocks.currentSong = null
+
+    expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
+  })
+
+  it('does not render a music song target for a podcast feed item', () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'feed-item-1' } }
+    mocks.currentSong = { id: 'feed-item-1', title: 'Podcast Episode', media_kind: 'feed_item' }
 
     expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
   })

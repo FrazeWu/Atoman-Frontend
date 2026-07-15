@@ -102,4 +102,55 @@ describe('BlogHomeView', () => {
     const requestedUrls = fetchMock.mock.calls.map(([input]) => String(input))
     expect(requestedUrls).toContain('/api/v1/blog/recommend/posts?mode=hot&page=1&page_size=20')
   })
+
+  it.each([
+    ['最热', 'hot'],
+    ['推荐', 'featured'],
+  ])('renders real engagement counts for %s recommendations', async (label, mode) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/blog/recommend/posts')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: `post-${mode}`,
+            title: `${label}真实统计`,
+            summary: '摘要',
+            likes_count: 7,
+            comments_count: 4,
+          }],
+          meta: { page: 1, page_size: 20, total: 1, has_more: false },
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [], meta: { has_more: false } }), { status: 200 })
+    })
+
+    const wrapper = mount(BlogHomeView, {
+      global: {
+        stubs: {
+          PAvatar: true,
+          PBadge: true,
+          PButton: true,
+          PClip: true,
+          PEmpty: true,
+          PEntry: {
+            props: ['title'],
+            template: '<article>{{ title }}<slot name="actions" /></article>',
+          },
+          PPageHeader: true,
+          PTab: {
+            props: ['label', 'active'],
+            template: '<button class="p-tab" @click="$emit(\'click\')">{{ label }}</button>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.findAll('.p-tab').find(tab => tab.text() === label)!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(`${label}真实统计`)
+    expect(wrapper.text()).toContain('♥ 7')
+    expect(wrapper.text()).toContain('💬 4')
+  })
 })

@@ -194,8 +194,8 @@ const fetchPosts = async (append = false) => {
             title: item.title,
             summary: item.summary,
             cover_url: item.image_url,
-            likes_count: 0,
-            comments_count: 0,
+            likes_count: item.likes_count ?? 0,
+            comments_count: item.comments_count ?? 0,
           }
         }
         return item as Post

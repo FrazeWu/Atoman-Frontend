@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
@@ -22,6 +22,9 @@ const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
 const showPublishConfirm = ref(false)
+const publishedEpisodeId = ref('')
+const publishNavigationFailed = ref(false)
+const publishNavigationError = '单集已发布，但跳转失败，请重试'
 const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
@@ -417,6 +420,11 @@ onMounted(async () => {
 })
 
 async function saveDraft() {
+  if (publishedEpisodeId.value && publishNavigationFailed.value) {
+    errorMsg.value = publishNavigationError
+    showPublishConfirm.value = true
+    return
+  }
   if (!validate()) return
   savingDraft.value = true
   errorMsg.value = ''
@@ -435,18 +443,46 @@ async function saveDraft() {
 
 function requestPublish() {
   if (!validate()) return
+  errorMsg.value = ''
   showPublishConfirm.value = true
 }
 
-async function doPublish() {
+function cancelPublish() {
+  if (publishing.value || (publishedEpisodeId.value && publishNavigationFailed.value)) return
   showPublishConfirm.value = false
+}
+
+async function doPublish() {
+  if (publishing.value) return
   publishing.value = true
   errorMsg.value = ''
   try {
-    const ep = await apiSave(buildPayload('published'))
-    router.push(`/podcasts/episode/${isEdit.value ? route.params.id : ep.id}`)
-  } catch (e: any) {
-    errorMsg.value = e?.error || '发布失败，请重试'
+    if (!publishedEpisodeId.value) {
+      try {
+        const ep = await apiSave(buildPayload('published'))
+        publishedEpisodeId.value = isEdit.value ? String(route.params.id) : ep.id
+      } catch (e: any) {
+        errorMsg.value = e?.error || '发布失败，请重试'
+        return
+      }
+    }
+
+    try {
+      const failure = await router.push(`/podcasts/episode/${publishedEpisodeId.value}`)
+      if (isNavigationFailure(failure)) {
+        publishNavigationFailed.value = true
+        errorMsg.value = publishNavigationError
+        showPublishConfirm.value = true
+        return
+      }
+      publishNavigationFailed.value = false
+      showPublishConfirm.value = false
+    } catch (e) {
+      console.error('Failed to navigate after publishing podcast episode:', e)
+      publishNavigationFailed.value = true
+      errorMsg.value = publishNavigationError
+      showPublishConfirm.value = true
+    }
   } finally {
     publishing.value = false
   }
@@ -638,11 +674,11 @@ async function doPublish() {
     <PConfirm
       :show="showPublishConfirm"
       title="确认发布单集"
-      :message="`《${form.title || '未命名单集'}》将立即对听众公开，发布后可继续编辑。`"
-      confirm-text="立即发布"
+      :message="errorMsg || `《${form.title || '未命名单集'}》将立即对听众公开，发布后可继续编辑。`"
+      :confirm-text="publishNavigationFailed && !publishing ? '查看单集' : publishing ? '发布中...' : '立即发布'"
       cancel-text="再想想"
       @confirm="doPublish"
-      @cancel="showPublishConfirm = false"
+      @cancel="cancelPublish"
     />
   </div>
 </template>

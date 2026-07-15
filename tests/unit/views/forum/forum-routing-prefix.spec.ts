@@ -100,6 +100,11 @@ const mountWithRouter = async (
         },
         PTextarea: { template: '<textarea />' },
         PModal: { template: '<div><slot /></div>' },
+        CommentSection: {
+          name: 'CommentSection',
+          props: ['target', 'noun', 'markLabel'],
+          template: '<section data-test="forum-comments" />',
+        },
         PEntry: {
           emits: ['click'],
           template: '<article class="p-entry" @click="$emit(\'click\')"><slot name="meta" /><slot name="title" /><slot name="actions" /></article>',
@@ -194,7 +199,6 @@ describe('forum 路由前缀', () => {
       forumStore.loading = false
       forumStore.currentTopic = makeTopic('topic-1')
       vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
     })
     await flushPromises()
 
@@ -202,5 +206,22 @@ describe('forum 路由前缀', () => {
 
     await wrapper.get('.category-pill').trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum?category=cat-1')
+  })
+
+  it('话题页面从统一评论核心渲染回复且不加载旧回复列表', async () => {
+    let forumStore!: ReturnType<typeof useForumStore>
+    const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
+      forumStore = useForumStore()
+      forumStore.loading = false
+      forumStore.currentTopic = makeTopic('topic-1')
+      vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
+    })
+    await flushPromises()
+
+    const comments = wrapper.findComponent({ name: 'CommentSection' })
+    expect(comments.props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-1' })
+    expect(comments.props('noun')).toBe('回复')
+    expect(comments.props('markLabel')).toBe('最佳回答')
+    expect('fetchReplies' in forumStore).toBe(false)
   })
 })

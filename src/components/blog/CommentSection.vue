@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -110,6 +110,7 @@ const guestName = ref('')
 const submitting = ref(false)
 const showDeleteConfirm = ref(false)
 const pendingDeleteCommentId = ref<string | null>(null)
+let commentRequestId = 0
 
 const isCommentsClosed = computed(() => !props.allowComments || props.commentMode === 'disabled')
 const canSubmit = computed(() => {
@@ -128,18 +129,21 @@ const canDelete = (comment: Comment) => {
   return authStore.user.uuid === comment.user_id || authStore.user.uuid === props.postOwnerId || isAdminRole(authStore.user.role)
 }
 
-const fetchComments = async () => {
+const fetchComments = async (postId = props.postId) => {
+  const requestId = ++commentRequestId
   loading.value = true
   try {
-    const res = await fetch(api.blog.postComments(props.postId))
+    const res = await fetch(api.blog.postComments(postId))
     if (res.ok) {
       const d = await res.json()
-      comments.value = d.data || []
+      if (requestId === commentRequestId && postId === props.postId) {
+        comments.value = d.data || []
+      }
     }
   } catch (e) {
     console.error(e)
   } finally {
-    loading.value = false
+    if (requestId === commentRequestId) loading.value = false
   }
 }
 
@@ -206,7 +210,15 @@ const confirmDeleteComment = async () => {
   }
 }
 
-onMounted(fetchComments)
+watch(() => props.postId, (postId) => {
+  comments.value = []
+  newComment.value = ''
+  guestName.value = ''
+  submitting.value = false
+  showDeleteConfirm.value = false
+  pendingDeleteCommentId.value = null
+  void fetchComments(postId)
+}, { immediate: true })
 </script>
 
 <style scoped>

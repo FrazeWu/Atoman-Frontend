@@ -35,6 +35,7 @@ type InternalSubscriptionItem = InternalPostSubscriptionItem | InternalVideoSubs
 const api = useApi()
 const authStore = useAuthStore()
 const loading = ref(false)
+const errorMessage = ref('')
 const items = ref<InternalSubscriptionItem[]>([])
 const activeFilter = ref<SubscriptionFilter>('all')
 const showArticleSheet = ref(false)
@@ -74,21 +75,54 @@ const loadSubscriptions = async () => {
   }
 
   loading.value = true
+  errorMessage.value = ''
   try {
     const headers = { Authorization: `Bearer ${authStore.token}` }
     const [timelineRes, videosRes] = await Promise.all([
       fetch(api.feed.timeline, { headers }),
       fetch(`${api.url}/videos?subscribed=true&sort=latest`, { headers }),
     ])
-    const timelineData = timelineRes.ok ? await timelineRes.json() : null
-    const videosData = videosRes.ok ? await videosRes.json() : []
-    const timelineRows = Array.isArray(timelineData?.data) ? timelineData.data : []
-    const videoRows = Array.isArray(videosData) ? videosData : []
+    if (!timelineRes.ok || !videosRes.ok) throw new Error('Subscription request failed')
+
+    const [timelineData, videosData] = await Promise.all([timelineRes.json(), videosRes.json()])
+    if (
+      !timelineData
+      || typeof timelineData !== 'object'
+      || Array.isArray(timelineData)
+      || !Array.isArray(timelineData.data)
+      || !Array.isArray(videosData)
+    ) {
+      throw new Error('Invalid subscription response')
+    }
+
+    const timelineMeta = timelineData.meta
+    if (
+      !timelineMeta
+      || typeof timelineMeta !== 'object'
+      || Array.isArray(timelineMeta)
+      || !Number.isInteger(timelineMeta.page)
+      || timelineMeta.page < 1
+      || !Number.isInteger(timelineMeta.page_size)
+      || timelineMeta.page_size < 1
+      || timelineMeta.page_size > 100
+      || !Number.isInteger(timelineMeta.total)
+      || timelineMeta.total < 0
+      || typeof timelineMeta.has_more !== 'boolean'
+    ) {
+      throw new Error('Invalid subscription response')
+    }
+
+    const timelineRows = timelineData.data
+    const videoRows = videosData
     const postItems = timelineRows
       .map((item: TimelineItem) => toInternalItem(item))
       .filter((item: InternalSubscriptionItem | null): item is InternalSubscriptionItem => Boolean(item))
     items.value = [...postItems, ...videoRows.map((video: Video) => toVideoItem(video))]
       .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+  } catch (error) {
+    console.error('Failed to load media subscriptions:', error)
+    items.value = []
+    errorMessage.value = '订阅加载失败'
   } finally {
     loading.value = false
   }
@@ -137,6 +171,8 @@ onMounted(loadSubscriptions)
     </section>
 
     <div v-if="loading" class="a-skeleton media-subscriptions-skeleton" />
+
+    <p v-else-if="errorMessage" class="media-subscriptions-error">{{ errorMessage }}</p>
 
     <PEmpty
       v-else-if="visibleItems.length === 0"

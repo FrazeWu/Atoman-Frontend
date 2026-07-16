@@ -100,6 +100,8 @@ const timelinePayload = {
   meta: { page: 1, page_size: 20, total: 3, has_more: false },
 }
 
+const emptyTimelineMeta = { page: 1, page_size: 20, total: 0, has_more: false }
+
 const subscribedVideosPayload = [{
   id: 'video-1',
   channel_id: 'channel-video-1',
@@ -294,11 +296,157 @@ describe('Media global views', () => {
         Authorization: 'Bearer token',
       }),
     }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/videos?subscribed=true&sort=latest', expect.objectContaining({
+      headers: expect.objectContaining({
+        Authorization: 'Bearer token',
+      }),
+    }))
     expect(wrapper.text()).toContain('站内文章')
     expect(wrapper.text()).toContain('站内播客')
     expect(wrapper.text()).toContain('站内视频')
     expect(wrapper.text()).not.toContain('外部视频')
     expect(wrapper.text()).not.toContain('外部视频源')
+  })
+
+  it('shows a load error instead of partial data when a subscription source returns an error', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) {
+        return new Response(JSON.stringify(timelinePayload), { status: 200 })
+      }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify({ error: 'failed' }), { status: 500 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅加载失败')
+    expect(wrapper.text()).not.toContain('站内文章')
+    expect(wrapper.text()).not.toContain('暂无更新')
+  })
+
+  it('shows a load error when a subscription request rejects', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) throw new Error('network unavailable')
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify(subscribedVideosPayload), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅加载失败')
+    expect(wrapper.text()).not.toContain('站内视频')
+    expect(wrapper.text()).not.toContain('暂无更新')
+  })
+
+  it('shows a load error when a subscription source returns invalid JSON', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) {
+        return new Response('{', { status: 200 })
+      }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify(subscribedVideosPayload), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅加载失败')
+    expect(wrapper.text()).not.toContain('站内视频')
+    expect(wrapper.text()).not.toContain('暂无更新')
+  })
+
+  it('shows a load error when a successful subscription response has an invalid envelope', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) {
+        return new Response(JSON.stringify({ data: null, meta: emptyTimelineMeta }), { status: 200 })
+      }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify(subscribedVideosPayload), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅加载失败')
+    expect(wrapper.text()).not.toContain('站内视频')
+    expect(wrapper.text()).not.toContain('暂无更新')
+  })
+
+  it.each([
+    ['missing meta', { data: [] }],
+    ['null meta', { data: [], meta: null }],
+    ['invalid has_more', { data: [], meta: { ...emptyTimelineMeta, has_more: 'false' } }],
+  ])('shows a load error when the timeline response has %s', async (_case, timelineResponse) => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) {
+        return new Response(JSON.stringify(timelineResponse), { status: 200 })
+      }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify(subscribedVideosPayload), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅加载失败')
+    expect(wrapper.text()).not.toContain('站内视频')
+    expect(wrapper.text()).not.toContain('暂无更新')
+  })
+
+  it('shows a load error when the video subscription response is not an array', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) {
+        return new Response(JSON.stringify(timelinePayload), { status: 200 })
+      }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify({ data: subscribedVideosPayload }), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('订阅加载失败')
+    expect(wrapper.text()).not.toContain('站内文章')
+    expect(wrapper.text()).not.toContain('暂无更新')
+  })
+
+  it('shows the true empty state only when every subscription source succeeds with no rows', async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/feed/timeline')) {
+        return new Response(JSON.stringify({ data: [], meta: emptyTimelineMeta }), { status: 200 })
+      }
+      if (url.endsWith('/videos?subscribed=true&sort=latest')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(MediaSubscriptionsView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('暂无更新')
+    expect(wrapper.text()).not.toContain('订阅加载失败')
   })
 
   it('supports all article podcast video filters and shows empty results for missing real data', async () => {

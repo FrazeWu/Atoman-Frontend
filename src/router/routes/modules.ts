@@ -38,7 +38,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'post/new', component: () => import('@/views/blog/PostEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'post.create' } } },
         { path: 'post/:id/edit', component: () => import('@/views/blog/PostEditorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'post.create' } } },
         { path: 'bookmarks', component: () => import('@/views/blog/BookmarkView.vue'), meta: { requiresAuth: true } },
-        { path: 'settings', component: () => import('@/views/blog/BlogSettingsView.vue'), meta: { requiresAuth: true } },
+        { path: 'settings', component: () => import('@/views/blog/UserManagementView.vue'), meta: { requiresAuth: true } },
       ],
     },
     { path: '/channels', component: () => import('@/views/blog/ChannelManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'channel.manage' } } },

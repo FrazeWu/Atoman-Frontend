@@ -1,8 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import BlogSettingsView from '@/views/blog/BlogSettingsView.vue'
+import UserManagementView from '@/views/blog/UserManagementView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const jsonResponse = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
@@ -10,7 +11,7 @@ const jsonResponse = (data: unknown, status = 200) => new Response(JSON.stringif
   headers: { 'Content-Type': 'application/json' },
 })
 
-describe('BlogSettingsView', () => {
+describe('UserManagementView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     const auth = useAuthStore()
@@ -27,7 +28,7 @@ describe('BlogSettingsView', () => {
       throw new Error(`unexpected fetch: ${url}`)
     }))
 
-    const wrapper = mount(BlogSettingsView)
+    const wrapper = mount(UserManagementView)
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('修改密码')
@@ -53,7 +54,7 @@ describe('BlogSettingsView', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const wrapper = mount(BlogSettingsView)
+    const wrapper = mount(UserManagementView)
     await flushPromises()
     await wrapper.find('form').trigger('submit')
     await flushPromises()
@@ -64,5 +65,48 @@ describe('BlogSettingsView', () => {
     )
     expect(wrapper.text()).toContain('Invalid dm_permission')
     expect(wrapper.text()).not.toContain('保存成功')
+  })
+
+  it('使用统一浮动目录组织三个用户管理分区并支持移动端打开', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/settings')) return jsonResponse({ data: { dm_permission: 'anyone' } })
+      if (url.endsWith('/users/me')) return jsonResponse({ data: { display_name: 'Demo' } })
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const wrapper = mount(UserManagementView, {
+      global: {
+        stubs: {
+          PDirectoryNav: defineComponent({
+            props: ['items', 'activeId', 'collapsed', 'mobileOpen'],
+            emits: ['select', 'update:collapsed', 'close-mobile'],
+            template: `
+              <aside
+                data-testid="user-directory"
+                :data-count="items.length"
+                :data-active="activeId"
+                :data-mobile-open="String(mobileOpen)"
+              />
+            `,
+          }),
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('h1').text()).toBe('用户管理')
+    expect(wrapper.findAll('.user-management__section')).toHaveLength(3)
+    expect(wrapper.get('#user-profile').text()).toContain('个人资料')
+    expect(wrapper.get('#user-public').text()).toContain('公开信息')
+    expect(wrapper.get('#user-contact').text()).toContain('联系权限')
+
+    const directory = wrapper.get('[data-testid="user-directory"]')
+    expect(directory.attributes('data-count')).toBe('3')
+    expect(directory.attributes('data-active')).toBe('profile')
+    expect(directory.attributes('data-mobile-open')).toBe('false')
+
+    await wrapper.get('.user-management__directory-trigger').trigger('click')
+    expect(directory.attributes('data-mobile-open')).toBe('true')
   })
 })

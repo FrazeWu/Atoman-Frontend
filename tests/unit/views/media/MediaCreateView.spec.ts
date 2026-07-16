@@ -1,6 +1,6 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createTestingPinia } from '@pinia/testing'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import MediaCreateView from '@/views/media/MediaCreateView.vue'
 import { useMediaCollections } from '@/composables/useMediaCollections'
@@ -8,6 +8,8 @@ import { useMediaCollections } from '@/composables/useMediaCollections'
 const loadChannelsMock = vi.fn()
 const currentMediaChannelIdMock = ref('channel-1')
 const channelsMock = ref([{ id: 'channel-1', name: '我的频道', contentType: 'article' as const }])
+
+enableAutoUnmount(afterEach)
 
 vi.mock('@/composables/useMediaChannel', () => ({
   useMediaChannel: () => ({
@@ -188,5 +190,49 @@ describe('MediaCreateView', () => {
     await flushPromises()
 
     expect(wrapper.getComponent({ name: 'PButton' }).props('to')).toContain('/videos/upload')
+  })
+
+  it('consumes collection loading failures triggered by channel changes', async () => {
+    const requestFailure = new Error('channel collection failure')
+    let channelTwoCollectionRequests = 0
+    const vueErrorHandler = vi.fn()
+    const unhandledRejections: unknown[] = []
+    const onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    mount(MediaCreateView, {
+      global: {
+        config: { errorHandler: vueErrorHandler },
+        plugins: [createTestingPinia({ createSpy: vi.fn })],
+        stubs: [
+          'MediaCollectionRail',
+          'MediaMixedFeedSection',
+          'MediaVideoCardSection',
+          'MediaCollectionWorkspace',
+        ],
+      },
+    })
+
+    try {
+      await flushPromises()
+      vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+        const url = String(input)
+        if (url === '/api/v1/blog/channels/channel-2/collections') {
+          channelTwoCollectionRequests += 1
+          throw requestFailure
+        }
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      })
+
+      currentMediaChannelIdMock.value = 'channel-2'
+      await flushPromises()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(vueErrorHandler).not.toHaveBeenCalled()
+      expect(unhandledRejections).toEqual([])
+      expect(channelTwoCollectionRequests).toBe(1)
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
   })
 })

@@ -17,6 +17,7 @@ const selectedCollectionId = ref<string | null>(null)
 const selectedCollection = ref<MediaCollection | null>(null)
 const collections = ref<MediaCollection[]>([])
 const loadingCollections = ref(false)
+let latestLoadCollectionsRequest = 0
 
 export function useMediaCollections() {
   const selectCollection = (id: string, type: MediaCollectionType = 'article', name = '') => {
@@ -25,15 +26,19 @@ export function useMediaCollections() {
   }
 
   const resetForChannel = (channelId: string | null) => {
+    latestLoadCollectionsRequest += 1
     selectedChannelId.value = channelId
     selectedCollectionId.value = null
     selectedCollection.value = null
     collections.value = []
+    loadingCollections.value = false
   }
 
   const loadCollections = async (channelId: string | null, type: MediaCollectionType = 'article') => {
+    const requestId = ++latestLoadCollectionsRequest
     if (!channelId) {
       collections.value = []
+      loadingCollections.value = false
       return
     }
 
@@ -41,18 +46,23 @@ export function useMediaCollections() {
     try {
       const api = useApi()
       const data = await apiGetRaw<Collection[] | { data?: Collection[] }>(api.blog.channelCollections(channelId))
+      if (requestId !== latestLoadCollectionsRequest) return
       const rows: Collection[] = Array.isArray(data) ? data : (data.data || [])
       collections.value = rows.map(collection => ({
         id: collection.id,
         type,
         name: collection.name,
       }))
+    } catch (error) {
+      if (requestId !== latestLoadCollectionsRequest) return
+      throw error
     } finally {
-      loadingCollections.value = false
+      if (requestId === latestLoadCollectionsRequest) loadingCollections.value = false
     }
   }
 
   const clearSelectionForTest = () => {
+    latestLoadCollectionsRequest += 1
     selectedChannelId.value = null
     selectedCollectionId.value = null
     selectedCollection.value = null

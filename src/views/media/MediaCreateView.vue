@@ -50,7 +50,7 @@ onMounted(async () => {
 })
 
 watch(currentMediaChannelId, channelId => {
-  void loadCollections(channelId, selectedChannel.value?.contentType ?? 'article')
+  void loadCollections(channelId, selectedChannel.value?.contentType ?? 'article').catch(() => undefined)
   void loadOverview(channelId)
 })
 </script>

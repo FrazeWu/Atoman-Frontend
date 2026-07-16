@@ -15,6 +15,8 @@ export const useTimelineStore = defineStore('timeline', () => {
   const persons = ref<TimelinePerson[]>([])
   const personsTotal = ref(0)
   const currentPerson = ref<TimelinePerson | null>(null)
+  const personsLoading = ref(false)
+  const personsError = ref<string | null>(null)
   let personsRequestSequence = 0
 
   const loading = ref(false)
@@ -175,10 +177,9 @@ export const useTimelineStore = defineStore('timeline', () => {
     limit?: number
   } = {}) => {
     const requestSequence = ++personsRequestSequence
-    persons.value = []
-    personsTotal.value = 0
-    loading.value = true
-    error.value = null
+    const page = params.page || 1
+    personsLoading.value = true
+    personsError.value = null
     try {
       const query = new URLSearchParams()
       if (params.search) query.set('search', params.search)
@@ -187,19 +188,29 @@ export const useTimelineStore = defineStore('timeline', () => {
 
       const res = await fetch(`${api.url}/timeline/persons?${query}`)
       if (requestSequence !== personsRequestSequence) return
-      if (res.ok) {
-        const data = await res.json()
-        if (requestSequence !== personsRequestSequence) return
-        persons.value = data.data || []
-        personsTotal.value = data.total || 0
-      }
-    } catch (e) {
+      if (!res.ok) throw new Error('Failed to fetch persons')
+
+      const data = await res.json()
       if (requestSequence !== personsRequestSequence) return
-      error.value = 'Failed to fetch persons'
+      if (!Array.isArray(data?.data) || typeof data.total !== 'number' || typeof data.page !== 'number' || typeof data.limit !== 'number') {
+        throw new Error('Invalid persons response')
+      }
+      if (page === 1) {
+        persons.value = data.data
+      } else {
+        const existingIds = new Set(persons.value.map(person => person.id))
+        persons.value = [...persons.value, ...data.data.filter((person: TimelinePerson) => !existingIds.has(person.id))]
+      }
+      personsTotal.value = data.total
+      return true
+    } catch (e) {
+      if (requestSequence !== personsRequestSequence) return false
+      personsError.value = 'Failed to fetch persons'
       console.error(e)
+      return false
     } finally {
       if (requestSequence === personsRequestSequence) {
-        loading.value = false
+        personsLoading.value = false
       }
     }
   }
@@ -282,7 +293,9 @@ export const useTimelineStore = defineStore('timeline', () => {
         headers: authHeaders(),
       })
       if (res.ok) {
+        const wasListed = persons.value.some((person) => person.id === id)
         persons.value = persons.value.filter((p) => p.id !== id)
+        if (wasListed) personsTotal.value = Math.max(0, personsTotal.value - 1)
       } else {
         const err = await res.json()
         throw new Error(err.error || 'Failed to delete person')
@@ -402,6 +415,8 @@ export const useTimelineStore = defineStore('timeline', () => {
     persons,
     personsTotal,
     currentPerson,
+    personsLoading,
+    personsError,
     loading,
     error,
     fetchEvents,

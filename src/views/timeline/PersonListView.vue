@@ -8,16 +8,17 @@
 
     <!-- Search -->
     <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
-      <PInput v-model="searchText" placeholder="搜索人物姓名…" style="max-width:320px" @keyup.enter="doSearch" />
-      <PButton outline @click="doSearch">搜索</PButton>
+      <PInput v-model="searchText" :disabled="deleting || !!deletingPerson" placeholder="搜索人物姓名…" style="max-width:320px" @keyup.enter="doSearch" />
+      <PButton outline :disabled="deleting || !!deletingPerson" @click="doSearch">搜索</PButton>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" style="padding:4rem;text-align:center">
+    <div v-if="loading && persons.length === 0" style="padding:4rem;text-align:center">
       <p class="font-bold">加载中...</p>
     </div>
 
     <!-- Empty -->
+    <PEmpty v-else-if="error && persons.length === 0" text="人物加载失败，请重试" />
     <PEmpty v-else-if="persons.length === 0" text="暂无历史人物" />
 
     <!-- List -->
@@ -53,11 +54,27 @@
             <span class="person-link">查看地图轨迹 →</span>
             <template v-if="canManage(person)">
               <button class="card-action-btn" @click.stop="startEdit(person)" title="编辑">✎ 编辑</button>
-              <button class="card-action-btn card-action-danger" @click.stop="startDelete(person)" title="删除">✕ 删除</button>
+              <button
+                class="card-action-btn card-action-danger"
+                :disabled="loading || deleting || !!deletingPerson"
+                @click.stop="startDelete(person)"
+                title="删除"
+              >✕ 删除</button>
             </template>
           </div>
         </template>
       </PEntry>
+    </div>
+
+    <div v-if="persons.length > 0 && (paginationInvalidated || persons.length < personsTotal)" style="margin-top:1.5rem;text-align:center">
+      <PButton
+        outline
+        :loading="loading"
+        :disabled="loading || deleting || !!deletingPerson"
+        :label="error || paginationInvalidated ? '加载失败，请重试' : '加载更多'"
+        loading-text="加载中..."
+        @click="loadMore"
+      />
     </div>
 
     <!-- Create/Edit Person Modal -->
@@ -98,8 +115,10 @@
       title="删除人物"
       :message="deletingPerson ? `确定要删除「${deletingPerson.name}」及其所有地点记录吗？此操作不可撤销。` : ''"
       :danger="true"
+      :loading="deleting"
+      loading-text="删除中..."
       @confirm="doDelete"
-      @cancel="deletingPerson = null"
+      @cancel="cancelDelete"
     />
   </div>
 </template>
@@ -125,12 +144,23 @@ const store = useTimelineStore()
 const authStore = useAuthStore()
 const router = useRouter()
 
-const { persons, loading } = storeToRefs(store)
+const {
+  persons,
+  personsTotal,
+  personsLoading: loading,
+  personsError: error,
+} = storeToRefs(store)
 
 const searchText = ref('')
+const appliedSearch = ref('')
+const currentPage = ref(1)
+const paginationInvalidated = ref(false)
+const invalidatedSearch = ref('')
+const limit = 20
 const showForm = ref(false)
 const editingPerson = ref<TimelinePerson | null>(null)
 const deletingPerson = ref<TimelinePerson | null>(null)
+const deleting = ref(false)
 const submitting = ref(false)
 
 const form = ref({ name: '', bio: '', birth_date: '', death_date: '' })
@@ -145,8 +175,47 @@ const formatYear = (d?: string) => {
   return d.slice(0, 4)
 }
 
-const doSearch = () => {
-  store.fetchPersons({ search: searchText.value || undefined })
+const doSearch = async () => {
+  if (deleting.value || deletingPerson.value) return
+  const requestedSearch = searchText.value.trim()
+  const succeeded = await store.fetchPersons({
+    search: requestedSearch || undefined,
+    page: 1,
+    limit,
+  })
+  if (succeeded) {
+    appliedSearch.value = requestedSearch
+    currentPage.value = 1
+    paginationInvalidated.value = false
+  }
+}
+
+const reloadFirstPage = async (search = appliedSearch.value) => {
+  const succeeded = await store.fetchPersons({
+    search: search || undefined,
+    page: 1,
+    limit,
+  })
+  if (succeeded) {
+    appliedSearch.value = search
+    currentPage.value = 1
+    paginationInvalidated.value = false
+  }
+}
+
+const loadMore = async () => {
+  if (loading.value || deleting.value || deletingPerson.value) return
+  if (paginationInvalidated.value) {
+    await reloadFirstPage(invalidatedSearch.value)
+    return
+  }
+  const nextPage = currentPage.value + 1
+  const succeeded = await store.fetchPersons({
+    search: appliedSearch.value || undefined,
+    page: nextPage,
+    limit,
+  })
+  if (succeeded) currentPage.value = nextPage
 }
 
 const startEdit = (p: TimelinePerson) => {
@@ -162,13 +231,30 @@ const startEdit = (p: TimelinePerson) => {
 }
 
 const startDelete = (p: TimelinePerson) => {
+  if (loading.value || deleting.value || deletingPerson.value) return
   deletingPerson.value = p
 }
 
+const cancelDelete = () => {
+  if (!deleting.value) deletingPerson.value = null
+}
+
 const doDelete = async () => {
-  if (!deletingPerson.value) return
-  await store.deletePerson(deletingPerson.value.id)
-  deletingPerson.value = null
+  if (!deletingPerson.value || deleting.value || loading.value) return
+  const personId = deletingPerson.value.id
+  const searchAtDelete = appliedSearch.value
+  deleting.value = true
+  try {
+    await store.deletePerson(personId)
+    deletingPerson.value = null
+    invalidatedSearch.value = searchAtDelete
+    paginationInvalidated.value = true
+    await reloadFirstPage(searchAtDelete)
+  } catch (error) {
+    console.error(error)
+  } finally {
+    deleting.value = false
+  }
 }
 
 const closeForm = () => {
@@ -203,7 +289,7 @@ const submitForm = async () => {
 }
 
 onMounted(() => {
-  store.fetchPersons()
+  void doSearch()
 })
 </script>
 

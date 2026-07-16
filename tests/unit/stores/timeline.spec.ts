@@ -13,11 +13,11 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-const personResponse = (id: string, name: string, total = 1) => new Response(JSON.stringify({
+const personResponse = (id: string, name: string, total = 1, page = 1, limit = 20) => new Response(JSON.stringify({
   data: [{ id, name }],
   total,
-  page: 1,
-  limit: 20,
+  page,
+  limit,
 }), { status: 200 })
 
 const eventResponse = (id: string, title: string, total = 1) => new Response(JSON.stringify({
@@ -176,7 +176,7 @@ describe('timeline store person requests', () => {
     previous.resolve(personResponse('person-old', '旧结果'))
     await previousLoad
 
-    expect(store.loading).toBe(true)
+    expect(store.personsLoading).toBe(true)
     expect(store.persons).toEqual([])
 
     current.resolve(personResponse('person-current', '当前结果'))
@@ -184,7 +184,7 @@ describe('timeline store person requests', () => {
     expect(store.persons.map(person => person.name)).toEqual(['当前结果'])
   })
 
-  it('clears previous persons while the current search is pending', async () => {
+  it('keeps previous persons until the current search succeeds', async () => {
     const current = deferred<Response>()
     vi.mocked(fetch)
       .mockResolvedValueOnce(personResponse('person-old', '旧结果', 9))
@@ -196,12 +196,14 @@ describe('timeline store person requests', () => {
     expect(store.personsTotal).toBe(9)
 
     const currentLoad = store.fetchPersons({ search: 'current' })
-    expect(store.persons).toEqual([])
-    expect(store.personsTotal).toBe(0)
-    expect(store.loading).toBe(true)
+    expect(store.persons.map(person => person.name)).toEqual(['旧结果'])
+    expect(store.personsTotal).toBe(9)
+    expect(store.personsLoading).toBe(true)
 
     current.resolve(personResponse('person-current', '当前结果'))
     await currentLoad
+    expect(store.persons.map(person => person.name)).toEqual(['当前结果'])
+    expect(store.personsTotal).toBe(1)
   })
 
   it('does not let a delayed previous response overwrite the current search', async () => {
@@ -239,8 +241,8 @@ describe('timeline store person requests', () => {
     await previousLoad
 
     expect(store.persons.map(person => person.name)).toEqual(['当前结果'])
-    expect(store.error).toBeNull()
-    expect(store.loading).toBe(false)
+    expect(store.personsError).toBeNull()
+    expect(store.personsLoading).toBe(false)
   })
 
   it('settles loading when the current person search fails', async () => {
@@ -250,7 +252,111 @@ describe('timeline store person requests', () => {
     await store.fetchPersons({ search: 'current' })
 
     expect(store.persons).toEqual([])
-    expect(store.error).toBe('Failed to fetch persons')
+    expect(store.personsError).toBe('Failed to fetch persons')
+    expect(store.personsLoading).toBe(false)
+  })
+
+  it('keeps the committed person list when a replacement search fails', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(personResponse('person-old', '旧结果', 9))
+      .mockResolvedValueOnce(new Response('', { status: 500 }))
+    const store = useTimelineStore()
+
+    await store.fetchPersons({ search: 'old' })
+    await expect(store.fetchPersons({ search: 'current' })).resolves.toBe(false)
+
+    expect(store.persons.map(person => person.name)).toEqual(['旧结果'])
+    expect(store.personsTotal).toBe(9)
+    expect(store.personsError).toBe('Failed to fetch persons')
+  })
+
+  it('appends later person pages using the backend page envelope without duplicate rows', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'person-1', name: 'Ada' }, { id: 'person-2', name: 'Grace' }],
+        total: 3,
+        page: 1,
+        limit: 2,
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 'person-2', name: 'Grace' }, { id: 'person-3', name: 'Katherine' }],
+        total: 3,
+        page: 2,
+        limit: 2,
+      }), { status: 200 }))
+    const store = useTimelineStore()
+
+    await expect(store.fetchPersons({ page: 1, limit: 2 })).resolves.toBe(true)
+    await expect(store.fetchPersons({ page: 2, limit: 2 })).resolves.toBe(true)
+
+    expect(store.persons.map(person => person.id)).toEqual(['person-1', 'person-2', 'person-3'])
+    expect(store.personsTotal).toBe(3)
+    const urls = vi.mocked(fetch).mock.calls.map(call => new URL(String(call[0]), 'http://localhost'))
+    expect(urls.map(url => Object.fromEntries(url.searchParams))).toEqual([
+      { page: '1', limit: '2' },
+      { page: '2', limit: '2' },
+    ])
+  })
+
+  it.each([
+    ['non-2xx response', () => Promise.resolve(new Response('', { status: 500 }))],
+    ['invalid JSON', () => Promise.resolve(new Response('not-json', { status: 200 }))],
+    ['invalid envelope', () => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))],
+  ])('keeps existing persons and reports a later-page %s', async (_case, response) => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(personResponse('person-1', 'Ada', 2))
+      .mockImplementationOnce(response)
+    const store = useTimelineStore()
+
+    await store.fetchPersons({ page: 1, limit: 20 })
+    await expect(store.fetchPersons({ page: 2, limit: 20 })).resolves.toBe(false)
+
+    expect(store.persons.map(person => person.name)).toEqual(['Ada'])
+    expect(store.personsTotal).toBe(2)
+    expect(store.personsError).toBe('Failed to fetch persons')
+    expect(store.personsLoading).toBe(false)
+  })
+
+  it('does not let a completed list request clear an in-flight person detail state', async () => {
+    const listResponse = deferred<Response>()
+    const detailResponse = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(listResponse.promise)
+      .mockReturnValueOnce(detailResponse.promise)
+    const store = useTimelineStore()
+
+    const listLoad = store.fetchPersons()
+    const detailLoad = store.fetchPerson('person-1')
+    expect(store.personsLoading).toBe(true)
+    expect(store.loading).toBe(true)
+
+    listResponse.resolve(personResponse('person-1', 'Ada'))
+    await listLoad
+
+    expect(store.personsLoading).toBe(false)
+    expect(store.loading).toBe(true)
+    expect(store.error).toBeNull()
+
+    detailResponse.reject(new Error('detail failed'))
+    await detailLoad
+
     expect(store.loading).toBe(false)
+    expect(store.error).toBe('Failed to fetch person')
+    expect(store.personsError).toBeNull()
+  })
+
+  it('decrements the current list total after deleting a listed person', async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response('', { status: 200 }))
+    const store = useTimelineStore()
+    store.persons = [
+      { id: 'person-1', name: 'Ada' },
+      { id: 'person-2', name: 'Grace' },
+    ] as never
+    store.personsTotal = 2
+
+    await store.deletePerson('person-1')
+
+    expect(store.persons.map(person => person.id)).toEqual(['person-2'])
+    expect(store.personsTotal).toBe(1)
   })
 })

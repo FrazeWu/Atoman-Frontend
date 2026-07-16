@@ -109,6 +109,15 @@ export async function apiPatchJson<T>(url: string, body: unknown): Promise<T> {
   }))
 }
 
+export async function apiPutJson<T>(url: string, body?: unknown): Promise<T> {
+  return unwrapResponse<T>(await fetch(url, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: withAuthHeaders(jsonHeaders),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }))
+}
+
 export async function apiDeleteJson<T>(url: string, body?: unknown): Promise<T> {
   return unwrapResponse<T>(await fetch(url, {
     method: 'DELETE',

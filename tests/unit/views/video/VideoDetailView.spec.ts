@@ -3,6 +3,11 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import VideoDetailView from '@/views/video/VideoDetailView.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
+
+vi.mock('@/components/comment/CommentSection.vue', () => ({
+  default: { name: 'CommentSection', props: ['target', 'currentTime'], emits: ['seek'], template: '<section />' },
+}))
 
 // stub fetch globally
 beforeEach(() => {
@@ -39,6 +44,43 @@ const makeVideo = (id: string, title: string, viewCount = 0) => ({
 })
 
 describe('VideoDetailView', () => {
+  it('connects the shared comments to the video player time and seek', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'POST' && url.endsWith('/view')) return Promise.resolve(makeJsonResponse({}))
+      if (url.endsWith('/recommended')) return Promise.resolve(makeJsonResponse([]))
+      return Promise.resolve(makeJsonResponse({ ...makeVideo('video-1', '视频'), storage_type: 'local' }))
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/:id', component: VideoDetailView }],
+    })
+    await router.push('/videos/video-1')
+    const wrapper = mount(VideoDetailView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PVideoPlayerShell: { template: '<section><slot name="player" /><slot /></section>' },
+          CommentSection: { name: 'CommentSection', props: ['target', 'currentTime'], emits: ['seek'], template: '<section data-test="shared-comments" />' },
+          VideoContinueList: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    const comments = wrapper.findComponent(CommentSection)
+    expect(comments.props('target')).toEqual({ kind: 'video', resourceId: 'video-1' })
+    const video = wrapper.get('video').element as HTMLVideoElement
+    Object.defineProperty(video, 'currentTime', { value: 42, writable: true })
+    video.play = vi.fn().mockResolvedValue(undefined)
+    expect(comments.props('currentTime')()).toBe(42)
+
+    comments.vm.$emit('seek', 73)
+    await flushPromises()
+    expect(video.currentTime).toBe(73)
+  })
+
   it('mounts without crashing with loading state', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
@@ -112,9 +154,8 @@ describe('VideoDetailView layout', () => {
     expect(PVideoPlayerShell).toBeDefined()
   })
 
-  it('VideoCommentSection component is importable', async () => {
-    const { default: VideoCommentSection } = await import('@/components/video/VideoCommentSection.vue')
-    expect(VideoCommentSection).toBeDefined()
+  it('shared CommentSection component is importable', async () => {
+    expect(CommentSection).toBeDefined()
   })
 })
 

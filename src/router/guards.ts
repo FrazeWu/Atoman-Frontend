@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { onboardingSteps, useOnboardingStore, type OnboardingStep } from '@/stores/onboarding'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { resolveSiteContext } from '@/router/siteContext'
-import { isAdminRole, isOwnerRole } from '@/utils/roles'
+import { isAdminRole, isModeratorRole, isOwnerRole } from '@/utils/roles'
 
 const disabledTarget = { path: '/__disabled__' }
 const publicSystemPaths = new Set(['/login', '/register', '/about', '/terms', '/privacy', disabledTarget.path])
@@ -49,6 +49,9 @@ export function installRouteGuards(router: Router) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
 
+    if (to.meta.requiresModerator && !isModeratorRole(authStore.user?.role)) {
+      return '/'
+    }
     if (to.meta.requiresAdmin && !isAdminRole(authStore.user?.role)) {
       return '/'
     }

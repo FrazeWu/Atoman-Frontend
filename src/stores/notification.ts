@@ -3,6 +3,50 @@ import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { Notification, NotificationFilterType } from '@/types'
+import type { RouteLocationRaw } from 'vue-router'
+import { modulePathUrl } from '@/router/siteUrls'
+
+const commentNotificationTypes = new Set<Notification['type']>([
+  'comment_reply', 'comment_mention', 'comment_marked', 'comment_like',
+])
+
+const sortNotifications = (items: Notification[]) => [...items].sort((left, right) =>
+  right.created_at.localeCompare(left.created_at) || left.id.localeCompare(right.id),
+)
+
+interface NotificationResponse {
+  data: Notification[]
+  meta?: { total?: number }
+}
+
+export function isCommentNotification(notification: Notification) {
+  return commentNotificationTypes.has(notification.type)
+}
+
+export function commentNotificationLocation(notification: Notification): RouteLocationRaw | null {
+  const { target_kind: kind, resource_id: id, comment_id: commentId, root_id: rootId } = notification.meta
+  if (!kind || !id || !rootId) return null
+  const paths: Partial<Record<NonNullable<typeof kind>, string>> = {
+    blog_post: modulePathUrl('blog', `/post/${id}`),
+    video: modulePathUrl('video', `/videos/watch/${id}`),
+    podcast_episode: modulePathUrl('podcast', `/episode/${id}`),
+    feed_article: modulePathUrl('feed', `/item/${id}`),
+    music_artist: modulePathUrl('music', `/artist/${id}`),
+    music_album: modulePathUrl('music', `/album/${id}`),
+    forum_topic: modulePathUrl('forum', `/topic/${id}`),
+    debate: modulePathUrl('debate', `/${id}`),
+    timeline_person: modulePathUrl('timeline', `/person/${id}`),
+    music_song: modulePathUrl('music', '/'),
+    timeline_event: modulePathUrl('timeline', '/'),
+  }
+  const path = paths[kind]
+  if (!path) return null
+  const query: Record<string, string> = {}
+  if (commentId) query.comment_id = commentId
+  if (kind === 'music_song') query.song_id = id
+  if (kind === 'timeline_event') query.event_id = id
+  return { path, query, hash: `#comment-${rootId}` }
+}
 
 export const useNotificationStore = defineStore('notification', () => {
   const api = useApi()
@@ -14,6 +58,8 @@ export const useNotificationStore = defineStore('notification', () => {
   const total = ref(0)
   const page = ref(1)
   const currentType = ref<NotificationFilterType>('')
+  const currentTypes = ref<Notification['type'][]>([])
+  let fetchGeneration = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -28,21 +74,30 @@ export const useNotificationStore = defineStore('notification', () => {
     unreadCount.value = data.data?.count || 0
   }
 
-  const fetchNotifications = async (type: NotificationFilterType = currentType.value, nextPage = 1) => {
+  type TypeSelection = NotificationFilterType | readonly Notification['type'][]
+
+  const fetchNotifications = async (type: TypeSelection = currentType.value, nextPage = 1) => {
     if (!authStore.token) return
+    const requestGeneration = ++fetchGeneration
     loading.value = true
     try {
-      currentType.value = type
+      const types = Array.isArray(type) ? [...type] : type ? [type] : []
+      currentTypes.value = types
+      currentType.value = Array.isArray(type) ? '' : type as NotificationFilterType
       page.value = nextPage
-      const params = new URLSearchParams({ page: String(nextPage) })
-      if (type) params.set('type', type)
-      const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
-      if (!res.ok) throw new Error('获取通知失败')
-      const data = await res.json()
-      notifications.value = data.data || []
-      total.value = data.meta?.total || 0
+      const requestedTypes: NotificationFilterType[] = types.length ? types : ['']
+      const responses: NotificationResponse[] = await Promise.all(requestedTypes.map(async (requestedType) => {
+        const params = new URLSearchParams({ page: String(nextPage) })
+        if (requestedType) params.set('type', requestedType)
+        const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
+        if (!res.ok) throw new Error('获取通知失败')
+        return res.json() as Promise<NotificationResponse>
+      }))
+      if (requestGeneration !== fetchGeneration) return
+      notifications.value = sortNotifications(responses.flatMap((data) => data.data || []))
+      total.value = responses.reduce((sum, data) => sum + (data.meta?.total || 0), 0)
     } finally {
-      loading.value = false
+      if (requestGeneration === fetchGeneration) loading.value = false
     }
   }
 
@@ -60,20 +115,32 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  const markAllRead = async (type: NotificationFilterType = currentType.value) => {
+  const markAllRead = async (type: TypeSelection = currentTypes.value.length ? currentTypes.value : currentType.value) => {
     if (!authStore.token) return
-    const query = type ? `?type=${encodeURIComponent(type)}` : ''
-    const res = await fetch(`${api.notifications.markAllRead}${query}`, {
-      method: 'PUT',
-      headers: authHeaders(),
-    })
-    if (!res.ok) return
-    const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && (!type || item.type === type)).length
-    const data = await res.json().catch(() => null)
-    const nextUnreadCount = data?.data?.unread_total ?? data?.data?.unread_count ?? data?.data?.count
+    const types = Array.isArray(type) ? [...type] : type ? [type] : []
+    const responses: unknown[] = []
+    const successfulTypes = new Set<NotificationFilterType>()
+    for (const requestedType of types.length ? types : ['']) {
+      const query = requestedType ? `?type=${encodeURIComponent(requestedType)}` : ''
+      try {
+        const res = await fetch(`${api.notifications.markAllRead}${query}`, { method: 'PUT', headers: authHeaders() })
+        if (!res.ok) continue
+        successfulTypes.add(requestedType as NotificationFilterType)
+        responses.push(await res.json().catch(() => null))
+      } catch {
+        // Treat network failures like non-2xx responses so other requested types can still succeed.
+      }
+    }
+    if (!successfulTypes.size) throw new Error('标记通知失败')
+    const marksAllTypes = successfulTypes.has('')
+    const wasSuccessful = (item: Notification) => marksAllTypes || successfulTypes.has(item.type)
+    const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && wasSuccessful(item)).length
+    const response = responses.at(-1) as { data?: Record<string, unknown> } | null | undefined
+    const data = response?.data
+    const nextUnreadCount = data?.unread_total ?? data?.unread_count ?? data?.count
     const readAt = new Date().toISOString()
     notifications.value = notifications.value.map((item) =>
-      !type || item.type === type ? { ...item, read_at: item.read_at || readAt } : item,
+      wasSuccessful(item) ? { ...item, read_at: item.read_at || readAt } : item,
     )
     unreadCount.value = typeof nextUnreadCount === 'number'
       ? nextUnreadCount
@@ -81,9 +148,21 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   const receiveNotification = (notification: Notification) => {
-    unreadCount.value += 1
-    if (!currentType.value || currentType.value === notification.type) {
-      notifications.value = [notification, ...notifications.value]
+    const existingIndex = notifications.value.findIndex((item) =>
+      item.id === notification.id
+      || Boolean(notification.aggregation_key && !item.read_at && item.aggregation_key === notification.aggregation_key),
+    )
+    const existing = existingIndex >= 0 ? notifications.value[existingIndex] : undefined
+    if (!notification.read_at && (!existing || Boolean(existing.read_at))) unreadCount.value += 1
+
+    if (existingIndex >= 0) {
+      notifications.value.splice(existingIndex, 1, notification)
+      notifications.value = sortNotifications(notifications.value)
+      return
+    }
+    if ((!currentType.value && !currentTypes.value.length) || currentType.value === notification.type || currentTypes.value.includes(notification.type)) {
+      notifications.value.unshift(notification)
+      notifications.value = sortNotifications(notifications.value)
       total.value += 1
     }
   }

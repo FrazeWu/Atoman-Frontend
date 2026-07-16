@@ -17,7 +17,6 @@ import {
 import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
-import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
 import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
@@ -363,7 +362,6 @@ function handleSearchBlur() {
     <ArtistDrawer />
     <AlbumDrawer />
     <MusicCreationFlowDrawer />
-    <NestedActionDrawer />
   </div>
 </template>
 

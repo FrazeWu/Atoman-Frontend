@@ -13,7 +13,6 @@
           :default-collection-id="defaultCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
-          :allow-comments="form.allow_comments"
           :cover-url="form.cover_url"
           :cover-uploading="coverUploading"
           :cover-upload-error="coverUploadError"
@@ -23,7 +22,6 @@
           @select-collection="selectedCollectionId = $event"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
-          @update:allowComments="(value) => (form.allow_comments = value)"
           @cover-upload="handleCoverUpload"
           @remove-cover="removeCover"
         />
@@ -233,7 +231,6 @@ type EditorDraftPayload = {
   summary: string
   cover_url: string
   visibility: BlogVisibility
-  allow_comments: boolean
   channel_id?: string
   collection_id?: string
 }
@@ -293,7 +290,6 @@ const form = ref({
   summary: '',
   cover_url: '',
   visibility: 'public' as BlogVisibility,
-  allow_comments: true,
 })
 
 let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
@@ -437,7 +433,6 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   summary: form.value.summary,
   cover_url: form.value.cover_url,
   visibility: form.value.visibility,
-  allow_comments: form.value.allow_comments,
   channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || undefined,
   collection_id: selectedCollectionId.value || undefined,
 }))
@@ -727,7 +722,6 @@ const blogDraftToPayload = (draft: BlogDraft): EditorDraftPayload => ({
   summary: draft.summary || '',
   cover_url: draft.cover_url || '',
   visibility: draft.visibility || 'public',
-  allow_comments: draft.allow_comments,
   channel_id: draft.channel_id,
   collection_id: draft.collection_id || (draft as BlogDraft & { collection_ids?: string[] }).collection_ids?.[0],
 })
@@ -882,7 +876,6 @@ const applyDraftPayload = async (payload: EditorDraftPayload) => {
       summary: payload.summary,
       cover_url: payload.cover_url,
       visibility: payload.visibility,
-      allow_comments: payload.allow_comments,
     }
 
     contentSource.value = hasMeaningfulDraft(payload) ? 'manual' : 'empty'
@@ -1123,7 +1116,6 @@ const loadPost = async () => {
         summary: p.summary || '',
         cover_url: p.cover_url || '',
         visibility: p.visibility || 'public',
-        allow_comments: p.allow_comments,
       }
       loadedPostUpdatedAt.value = parseTimestamp(p.updated_at)
       contentSource.value = 'manual'

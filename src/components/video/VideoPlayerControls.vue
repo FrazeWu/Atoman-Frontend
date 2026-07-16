@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { VideoPreviewThumbnail } from '@/types'
-import { formatTimestampLabel } from '@/composables/useVideoTimestamp'
+import { formatTimestampLabel } from '@/composables/useMediaTimeAnchors'
 
 const props = defineProps<{
   videoElement: HTMLVideoElement | null

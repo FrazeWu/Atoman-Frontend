@@ -1,12 +1,15 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiErrorResponseError } from '@/api/client'
 import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
+
+const albumDrawerState = ref({ albumId: '1' as string | null, albumRefreshToken: 0, artistId: null as string | null })
 
 const {
   openNestedAction,
   getMusicAlbum,
-  getAlbumDiscussionCount,
   playAlbum,
   listAlbumBookmarks,
   createAlbumBookmark,
@@ -17,7 +20,6 @@ const {
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   getMusicAlbum: vi.fn(),
-  getAlbumDiscussionCount: vi.fn(),
   playAlbum: vi.fn(),
   listAlbumBookmarks: vi.fn(),
   createAlbumBookmark: vi.fn(),
@@ -29,16 +31,23 @@ const {
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
-    state: { value: { albumId: '1' } },
+    state: albumDrawerState,
     closeAlbum: vi.fn(),
     isAlbumShifted: { value: false },
     openNestedAction
   })
 }))
 
+vi.mock('@/components/comment/CommentSection.vue', () => ({
+  default: {
+    name: 'CommentSection',
+    props: ['target', 'noun'],
+    template: '<section data-test="shared-comments" />',
+  },
+}))
+
 vi.mock('@/api/musicV1', () => ({
   getMusicAlbum,
-  getAlbumDiscussionCount,
   listAlbumBookmarks,
   createAlbumBookmark,
   deleteAlbumBookmark,
@@ -55,9 +64,9 @@ vi.mock('@/stores/player', () => ({
 
 describe('AlbumDrawer.vue', () => {
   beforeEach(() => {
+    albumDrawerState.value = { albumId: '1', albumRefreshToken: 0, artistId: null }
     openNestedAction.mockReset()
     getMusicAlbum.mockReset()
-    getAlbumDiscussionCount.mockReset()
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
     createAlbumBookmark.mockReset()
@@ -76,7 +85,6 @@ describe('AlbumDrawer.vue', () => {
         { id: '102', title: 'Second Song', track_number: 2, audio_url: 'https://cdn.test/2.mp3' },
       ],
     })
-    getAlbumDiscussionCount.mockResolvedValue(0)
     listAlbumBookmarks.mockResolvedValue({ data: [] })
     createAlbumBookmark.mockResolvedValue({
       id: 'album-bookmark-1',
@@ -87,6 +95,52 @@ describe('AlbumDrawer.vue', () => {
     listMusicPlaylists.mockResolvedValue({ data: [] })
     getMusicPlaylist.mockResolvedValue({ id: 'favorite', name: '系统歌单', song_count: 0, songs: [] })
     addMusicPlaylistSong.mockResolvedValue({})
+  })
+
+  it('keeps the latest selected album when requests complete out of order', async () => {
+    let resolveFirst!: (value: any) => void
+    let resolveSecond!: (value: any) => void
+    getMusicAlbum.mockImplementation((id: string) => new Promise((resolve) => {
+      if (id === 'album-a') resolveFirst = resolve
+      else resolveSecond = resolve
+    }))
+    albumDrawerState.value = { albumId: 'album-a', albumRefreshToken: 0, artistId: null }
+    const wrapper = mount(AlbumDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          CommentSection: { name: 'CommentSection', props: ['target', 'noun'], template: '<section />' },
+        },
+      },
+    })
+
+    albumDrawerState.value = { albumId: 'album-b', albumRefreshToken: 0, artistId: null }
+    await nextTick()
+    resolveSecond({ id: 'album-b', title: '当前专辑', release_date: '2026-01-01', songs: [] })
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前专辑')
+
+    resolveFirst({ id: 'album-a', title: '过期专辑', release_date: '2025-01-01', songs: [] })
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前专辑')
+    expect(wrapper.text()).not.toContain('过期专辑')
+    expect(wrapper.findComponent(CommentSection).props('target')).toEqual({ kind: 'music_album', resourceId: 'album-b' })
+  })
+
+  it('renders the shared album discussion surface', async () => {
+    const wrapper = mount(AlbumDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<div><slot /></div>' },
+          CommentSection: { name: 'CommentSection', props: ['target', 'noun'], template: '<section />' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const comments = wrapper.findComponent(CommentSection)
+    expect(comments.props('target')).toEqual({ kind: 'music_album', resourceId: '1' })
+    expect(comments.props('noun')).toBe('讨论')
   })
 
   it('renders correctly', () => {
@@ -247,9 +301,9 @@ describe('AlbumDrawer.vue', () => {
 
     await flushPromises()
 
-    expect(wrapper.get('[data-test="discussion-fab"]').text()).toBe('讨论(0)')
     expect(wrapper.text()).not.toContain('03:45')
     expect(wrapper.find('.track-time').exists()).toBe(false)
+    expect(wrapper.findComponent(CommentSection).props('noun')).toBe('讨论')
   })
 
   it('keeps album details visible when bookmark loading requires login', async () => {
@@ -272,8 +326,7 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('专辑信息加载失败')
   })
 
-  it('shows discussion count and track durations when real data exists', async () => {
-    getAlbumDiscussionCount.mockResolvedValueOnce(7)
+  it('shows track durations when real data exists', async () => {
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Test Album',
@@ -296,7 +349,6 @@ describe('AlbumDrawer.vue', () => {
 
     await flushPromises()
 
-    expect(wrapper.get('[data-test="discussion-fab"]').text()).toBe('讨论(7)')
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
 

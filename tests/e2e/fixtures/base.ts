@@ -1,5 +1,5 @@
 import { test as base, expect, type Page } from '@playwright/test'
-import { loginViaAPI, ADMIN_EMAIL, ADMIN_PASSWORD } from '../helpers/auth'
+import { ADMIN_USERNAME, ADMIN_PASSWORD } from '../helpers/auth'
 
 const AUTH_FILE_ADMIN = './tests/e2e/.auth/admin.json'
 
@@ -35,7 +35,7 @@ export async function setupAdminAuth() {
   const page = await context.newPage()
 
   await page.goto('/login')
-  await page.getByPlaceholder('输入用户名或邮箱').fill(ADMIN_EMAIL)
+  await page.getByPlaceholder('输入用户名或邮箱').fill(ADMIN_USERNAME)
   await page.getByPlaceholder('输入密码').fill(ADMIN_PASSWORD)
   await page.getByRole('button', { name: '登 录' }).click()
   await page.waitForURL(/^(?!\/login)/, { timeout: 10000 })

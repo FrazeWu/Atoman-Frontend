@@ -73,18 +73,21 @@
           </a>
         </div>
       </footer>
+
+      <CommentSection :target="{ kind: 'feed_article', resourceId: item.id }" />
     </article>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PBadge from '@/components/ui/PBadge.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { FeedItem } from '@/types'
@@ -97,6 +100,7 @@ const loading = ref(true)
 const item = ref<FeedItem | null>(null)
 const audioRef = ref<HTMLAudioElement | null>(null)
 const isPlaying = ref(false)
+let loadGeneration = 0
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('zh-CN', {
@@ -150,26 +154,35 @@ const trackOriginalClick = () => {
   reportReadEvent('original_click')
 }
 
-const fetchItem = async () => {
+const fetchItem = async (id: string) => {
+  const generation = ++loadGeneration
+  const isCurrent = () => generation === loadGeneration && String(route.params.id || '') === id
   loading.value = true
+  item.value = null
+  isPlaying.value = false
   try {
-    const res = await fetch(`${api.url}/feed/items/${route.params.id}`, {
+    const res = await fetch(`${api.url}/feed/items/${id}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
 
-    if (res.ok) {
+    if (res.ok && isCurrent()) {
       const data = await res.json()
+      if (!isCurrent()) return
       item.value = data.data
       reportReadEvent('detail_open')
     }
   } catch (e) {
-    console.error('Failed to fetch feed item:', e)
+    if (isCurrent()) console.error('Failed to fetch feed item:', e)
   } finally {
-    loading.value = false
+    if (isCurrent()) loading.value = false
   }
 }
 
-onMounted(fetchItem)
+watch(
+  () => String(route.params.id || ''),
+  (id) => { if (id) void fetchItem(id) },
+  { immediate: true },
+)
 
 onUnmounted(() => {
   if (audioRef.value) {

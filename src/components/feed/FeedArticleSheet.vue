@@ -103,6 +103,7 @@
         </p>
         <div class="prose-blog article-body article-body--external-feed" v-html="renderFeedHTML(feedBodyHtml)"></div>
       </div>
+      <CommentSection :target="{ kind: 'feed_article', resourceId: article.feed_item.id }" />
       
     </template>
   </PSheet>
@@ -114,6 +115,7 @@ import type { FeedItem, TimelineItem } from '@/types'
 import DOMPurify from 'dompurify'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'

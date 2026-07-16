@@ -5,7 +5,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { Plus, Play, Heart } from 'lucide-vue-next'
@@ -13,7 +13,6 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   createAlbumBookmark,
   deleteAlbumBookmark,
-  getAlbumDiscussionCount,
   getMusicAlbum,
   getMusicPlaylist,
   listAlbumBookmarks,
@@ -37,13 +36,13 @@ const errorMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
-const discussionCount = ref(0)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
 const favoriteSongIds = ref<Set<string>>(new Set())
 const toastVisible = ref(false)
 const toastMessage = ref('')
+let loadGeneration = 0
 
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => {
@@ -173,46 +172,50 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 }
 
 async function loadAlbum(albumId: string | null) {
+  const generation = ++loadGeneration
+  const isCurrent = () => generation === loadGeneration && state.value.albumId === albumId
   if (!albumId) {
     album.value = null
     isBookmarked.value = false
-    discussionCount.value = 0
+    loading.value = false
+    errorMessage.value = ''
     return
   }
 
   loading.value = true
   errorMessage.value = ''
+  album.value = null
+  isBookmarked.value = false
   try {
-    const [albumResponse, albumDiscussionCount] = await Promise.all([
-      getMusicAlbum(albumId),
-      getAlbumDiscussionCount(albumId).catch((error) => {
-        console.error('Failed to fetch album discussion count:', error)
-        return 0
-      }),
-    ])
-    album.value = albumResponse
-    discussionCount.value = albumDiscussionCount
+    const albumResponse = await getMusicAlbum(albumId)
+    if (!isCurrent()) return
+    let bookmarked = false
     try {
       const bookmarksResponse = await listAlbumBookmarks()
-      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
+      bookmarked = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
-        isBookmarked.value = false
+        bookmarked = false
       } else {
         throw error
       }
     }
-    isCoverBroken.value = false
 
     await Promise.all([
       playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
       loadFavorites(),
     ])
+    if (!isCurrent()) return
+    album.value = albumResponse
+    isBookmarked.value = bookmarked
+    isCoverBroken.value = false
   } catch (error) {
-    console.error('Failed to fetch album:', error)
-    errorMessage.value = '专辑信息加载失败'
+    if (isCurrent()) {
+      console.error('Failed to fetch album:', error)
+      errorMessage.value = '专辑信息加载失败'
+    }
   } finally {
-    loading.value = false
+    if (isCurrent()) loading.value = false
   }
 }
 
@@ -389,8 +392,13 @@ watch(
           </div>
         </div>
       </div>
+      <CommentSection
+        v-if="album"
+        class="album-discussion"
+        :target="{ kind: 'music_album', resourceId: String(album.id) }"
+        noun="讨论"
+      />
     </div>
-    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion')" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </PSheet>
 </template>
@@ -414,6 +422,7 @@ watch(
   color: var(--a-color-ink-soft);
 }
 .drawer-body { margin: 0 -2.5rem; padding: 2rem 2.5rem; }
+.album-discussion { margin-top: 2rem; }
 
 .album-meta-row {
   display: flex;

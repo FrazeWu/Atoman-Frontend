@@ -321,6 +321,7 @@ export const usePlayerStore = defineStore('player', () => {
       release_date: feedItem.published_at || '',
       lyrics: feedItem.summary || '',
       audio_url: feedItem.enclosure_url || '',
+      media_kind: 'feed_item',
       cover_url: feedItem.image_url || feedItem.feed_source?.cover_url || '',
       status: 'approved' as const,
     };

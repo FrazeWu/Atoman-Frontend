@@ -43,4 +43,8 @@ describe('SiteFooter', () => {
     expect(footerStyle).not.toMatch(/margin-top:\s*auto/)
     expect(appSource).not.toMatch(/\.app-main\s*\{[\s\S]*?flex:\s*1/)
   })
+
+  it('allows moderators to open settings', () => {
+    expect(footerSource).toContain('isModeratorRole')
+  })
 })

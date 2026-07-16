@@ -59,6 +59,7 @@ export interface Song {
   release_date: string;
   lyrics: string;
   audio_url: string;
+  media_kind?: 'music_song' | 'feed_item';
   audio_source?: 'local' | 's3';
   cover_url: string;
   cover_source?: 'local' | 's3';
@@ -132,7 +133,7 @@ export interface User {
   uuid?: string
   username: string
   email: string
-  role?: 'user' | 'admin' | 'owner'
+  role?: 'user' | 'moderator' | 'admin' | 'owner'
   display_name?: string
   avatar_url?: string
   bio?: string
@@ -187,7 +188,6 @@ export interface Post {
   cover_url?: string
   status: 'draft' | 'published'
   visibility: 'public' | 'followers' | 'private'
-  allow_comments: boolean
   pinned: boolean
   published_at?: string
   view_count?: number
@@ -210,24 +210,8 @@ export interface BlogDraft {
   summary?: string
   cover_url?: string
   visibility: 'public' | 'followers' | 'private'
-  allow_comments: boolean
   channel_id?: string
   collection_id?: string
-  created_at: string
-  updated_at: string
-}
-
-export interface Comment {
-  id: string
-  target_type?: 'post' | 'video'
-  target_id?: string
-  post_id?: string
-  user_id?: string | null
-  user?: User
-  guest_name?: string
-  content: string
-  timestamp_sec?: number | null
-  status: 'visible' | 'hidden'
   created_at: string
   updated_at: string
 }
@@ -549,23 +533,6 @@ export interface ForumTopic {
   updated_at: string
 }
 
-export interface ForumReply {
-  id: string
-  topic_id: string
-  user_id: string
-  user?: User
-  parent_reply_id?: string // quoted reply id
-  content: string          // raw Markdown
-  path: string
-  floor_number: number
-  depth?: number
-  is_solved?: boolean
-  like_count: number
-  is_liked: boolean
-  created_at: string
-  updated_at: string
-}
-
 export interface ForumDraft {
   id?: string
   context_key: string
@@ -608,15 +575,24 @@ export interface Notification {
   recipient_id: string
   actor_id?: string | null
   actor?: User | null
-  type: 'forum_reply' | 'forum_mention' | 'forum_solved' | 'forum_like'
+  type: 'comment_reply' | 'comment_mention' | 'comment_marked' | 'comment_like'
   source_type: string
   source_id: string
+  aggregation_key?: string | null
   meta: {
     topic_id?: string
     topic_title?: string
     reply_excerpt?: string
     actor_count?: number
     recent_actors?: string[]
+    target_kind?:
+      | 'blog_post' | 'video' | 'podcast_episode' | 'feed_article'
+      | 'music_artist' | 'music_album' | 'music_song' | 'forum_topic'
+      | 'debate' | 'timeline_event' | 'timeline_person'
+    resource_id?: string
+    comment_id?: string
+    root_id?: string
+    like_count?: number
     [key: string]: any
   }
   read_at?: string | null
@@ -662,7 +638,7 @@ export interface DMRealtimePayload {
 }
 
 export type InboxTab = 'reply' | 'like' | 'mention' | 'dm'
-export type NotificationFilterType = '' | 'forum_reply' | 'forum_like' | 'forum_mention'
+export type NotificationFilterType = '' | Notification['type']
 export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====
@@ -711,6 +687,9 @@ export interface Argument {
   source_excerpt?: string
   is_folded?: boolean
   fold_note?: string
+  mentions?: Array<{ user_id: string; start: number; end: number }>
+  attachment_ids?: string[]
+  attachments?: Array<{ id: string; url: string; content_type: string; position: number }>
   created_at: string
   updated_at: string
 }

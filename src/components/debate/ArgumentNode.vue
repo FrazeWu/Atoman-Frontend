@@ -82,8 +82,14 @@
     </div>
 
     <!-- Content -->
-    <div class="mb-3">
-      <p class="font-medium">{{ argument.content }}</p>
+    <div v-if="argument.content" class="mb-3">
+      <div class="font-medium" v-html="renderedContent" />
+    </div>
+
+    <div v-if="argument.attachments?.length" class="argument-images" aria-label="论点图片">
+      <a v-for="image in argument.attachments.slice(0, 4)" :key="image.id" :href="image.url" target="_blank" rel="noreferrer">
+        <img :src="image.url" alt="论点图片" loading="lazy" />
+      </a>
     </div>
 
     <!-- Evidence source card -->
@@ -91,9 +97,10 @@
       v-if="argument.argument_type === 'evidence' && argument.source_url"
       style="margin-top:.5rem;padding:.5rem .75rem;border:1px solid var(--a-border);border-radius:.375rem;font-size:.75rem;margin-bottom:.75rem"
     >
-      <a :href="argument.source_url" target="_blank" rel="noopener noreferrer" style="font-weight:700;display:block;margin-bottom:.2rem">
+      <a v-if="safeSourceURL" :href="safeSourceURL" target="_blank" rel="noopener noreferrer" style="font-weight:700;display:block;margin-bottom:.2rem">
         {{ argument.source_title || argument.source_url }}
       </a>
+      <strong v-else style="display:block;margin-bottom:.2rem">{{ argument.source_title || '来源' }}</strong>
       <p v-if="argument.source_excerpt" style="color:var(--a-color-muted);margin:0;font-style:italic">
         "{{ argument.source_excerpt }}"
       </p>
@@ -154,12 +161,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Argument, Debate } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
+import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
 
 const props = defineProps<{
   argument: Argument
@@ -181,23 +189,38 @@ const authUserID = computed(() => authStore.user?.uuid ?? authStore.user?.id)
 
 const apiBase = useApi().url
 const localIsFolded = ref(props.argument.is_folded ?? false)
+const foldPending = ref(false)
+let foldPropVersion = 0
+watch(() => props.argument.is_folded, (value) => {
+	foldPropVersion++
+	if (!foldPending.value) localIsFolded.value = value ?? false
+})
 
 const foldArgument = async () => {
-  const note = prompt('折叠理由（可选）：', '') ?? ''
-  const res = await fetch(`${apiBase}/debate/arguments/${props.argument.id}/fold`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ fold_note: note }),
-  })
-  if (res.ok) localIsFolded.value = true
+	if (foldPending.value) return
+	foldPending.value = true
+	const startVersion = foldPropVersion
+	const note = prompt('折叠理由（可选）：', '') ?? ''
+	try {
+		const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }, body: JSON.stringify({ fold_note: note }) })
+		localIsFolded.value = res.ok
+	} finally {
+		foldPending.value = false
+		if (foldPropVersion !== startVersion) localIsFolded.value = props.argument.is_folded ?? false
+	}
 }
 
 const unfoldArgument = async () => {
-  const res = await fetch(`${apiBase}/debate/arguments/${props.argument.id}/fold`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (res.ok) localIsFolded.value = false
+	if (foldPending.value) return
+	foldPending.value = true
+	const startVersion = foldPropVersion
+	try {
+		const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, { method: 'DELETE', headers: { Authorization: `Bearer ${authStore.token}` } })
+		if (res.ok) localIsFolded.value = false
+	} finally {
+		foldPending.value = false
+		if (foldPropVersion !== startVersion) localIsFolded.value = props.argument.is_folded ?? false
+	}
 }
 
 const canVote = computed(() => {
@@ -222,6 +245,14 @@ const canReply = computed(() => {
 
 const userVote = computed(() => {
   return props.userVotes?.[props.argument.id] ?? null
+})
+
+const renderedContent = computed(() => renderCommentMarkdown(props.argument.content).html)
+const safeSourceURL = computed(() => {
+  try {
+    const parsed = new URL(props.argument.source_url || '')
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : ''
+  } catch { return '' }
 })
 
 const quotedAuthorName = computed(() => {
@@ -278,3 +309,10 @@ const formatDate = (dateString: string) => {
   })
 }
 </script>
+
+<style scoped>
+.argument-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 0.75rem; max-width: 38rem; }
+.argument-images a { display: block; aspect-ratio: 1; overflow: hidden; border: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-wash); }
+.argument-images img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 560px) { .argument-images { grid-template-columns: 1fr; } }
+</style>

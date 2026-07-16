@@ -10,6 +10,8 @@ export function useApiUrl() {
 
 export function useApi() {
   const apiUrl = useApiUrl();
+  const targetPath = (kind: string, resourceId: string) =>
+    `${apiUrl}/discussions/${encodeURIComponent(kind)}/${encodeURIComponent(resourceId)}`
 
   return {
     url: apiUrl,
@@ -37,11 +39,9 @@ export function useApi() {
       albumRevision: (id: number | string, version: number | string) => `${apiUrl}/albums/${id}/revisions/${version}`,
       albumRevisionDiff: (id: number | string) => `${apiUrl}/albums/${id}/revisions/diff`,
       albumRevert: (id: number | string, version: number | string) => `${apiUrl}/albums/${id}/revisions/${version}/revert`,
-      albumDiscussions: (id: number | string) => `${apiUrl}/albums/${id}/discussions`,
       albumEntryStatus: (id: number | string) => `${apiUrl}/albums/${id}/entry-status`,
       albumProtection: (id: number | string) => `${apiUrl}/albums/${id}/protection`,
       artistEntryStatus: (id: number | string) => `${apiUrl}/artists/${id}/entry-status`,
-      artistDiscussions: (id: number | string) => `${apiUrl}/artists/${id}/discussions`,
       adminMusicReview: `${apiUrl}/admin/music/entries`,
       adminMusicConfirm: (id: number | string, type: 'album' | 'artist') =>
         type === 'album' ? `${apiUrl}/albums/${id}/entry-status` : `${apiUrl}/artists/${id}/entry-status`,
@@ -72,9 +72,6 @@ export function useApi() {
       postCollection: (id: number | string, collectionId: number | string) => `${apiUrl}/blog/posts/${id}/collections/${collectionId}`,
       collectionPostOrder: (id: number | string) => `${apiUrl}/blog/collections/${id}/posts/order`,
       uploadImage: `${apiUrl}/blog/upload-image`,
-      
-      comments: `${apiUrl}/blog/comments`,
-      postComments: (id: number | string) => `${apiUrl}/blog/posts/${id}/comments`,
       
       likes: `${apiUrl}/blog/likes`,
       postLikesCount: (id: number | string) => `${apiUrl}/blog/posts/${id}/likes/count`,
@@ -171,6 +168,19 @@ export function useApi() {
       markAllRead: `${apiUrl}/notifications/read-all`,
     },
 
+    comments: {
+      roots: (kind: string, resourceId: string) => `${targetPath(kind, resourceId)}/comments`,
+      replies: (rootId: string) => `${apiUrl}/comments/${encodeURIComponent(rootId)}/replies`,
+      comment: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}`,
+      like: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}/like`,
+      report: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}/report`,
+      mark: (kind: string, resourceId: string) => `${targetPath(kind, resourceId)}/pinned-comment`,
+      reports: `${apiUrl}/admin/comment-reports`,
+      moderation: (commentId: string) => `${apiUrl}/admin/comments/${encodeURIComponent(commentId)}/moderation`,
+      mentionUsers: `${apiUrl}/users/search`,
+      upload: `${apiUrl}/uploads`,
+    },
+
     dm: {
       conversations: `${apiUrl}/dm/conversations`,
       conversation: (username: string) => `${apiUrl}/dm/conversations/${username}`,
@@ -189,8 +199,6 @@ export function useApi() {
       uploadCover: `${apiUrl}/videos/upload-cover`,
       incrementView: (id: string) => `${apiUrl}/videos/${id}/view`,
       recommended: (id: string) => `${apiUrl}/videos/${id}/recommended`,
-      comments: (id: string) => `${apiUrl}/videos/${id}/comments`,
-      comment: (commentId: string) => `${apiUrl}/videos/comments/${commentId}`,
     },
 
     podcast: {

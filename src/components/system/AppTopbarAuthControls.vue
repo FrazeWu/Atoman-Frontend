@@ -108,7 +108,7 @@ import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
 import { modulePathUrl, userUrl } from '@/router/siteUrls'
 import { resolveSiteContext } from '@/router/siteContext'
-import { isAdminRole } from '@/utils/roles'
+import { isModeratorRole } from '@/utils/roles'
 import { useMediaChannel } from '@/composables/useMediaChannel'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -130,7 +130,7 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
-const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
+const showSiteSettings = computed(() => isModeratorRole(authStore.user?.role))
 const showMediaChannelSwitch = computed(() => {
   if (typeof window === 'undefined') return false
   const siteContext = resolveSiteContext(window.location.hostname, window.location.search, route.path)

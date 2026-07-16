@@ -91,6 +91,14 @@ describe('AppTopbarAuthControls', () => {
     expect(wrapper.find('a[href="/setting"]').exists()).toBe(true)
   })
 
+  it('shows site settings entry for moderator', async () => {
+    const authStore = useAuthStore()
+    authStore.user = { id: 1, username: 'mod', email: 'mod@example.com', role: 'moderator' }
+    const wrapper = mountTopbar()
+    await wrapper.find('.user-btn').trigger('click')
+    expect(wrapper.find('a[href="/setting"]').exists()).toBe(true)
+  })
+
   it('loads media channels with current user uuid when switch is visible', async () => {
     const authStore = useAuthStore()
     authStore.token = 'token-1'

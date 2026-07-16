@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { ForumCategory, ForumTopic, ForumReply, ForumDraft, ForumFollow, ForumFollowTargetType } from '@/types'
+import type { ForumCategory, ForumTopic, ForumDraft, ForumFollow, ForumFollowTargetType } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 
@@ -14,7 +14,6 @@ export const useForumStore = defineStore('forum', () => {
   const topics = ref<ForumTopic[]>([])
   const topicsTotal = ref(0)
   const currentTopic = ref<ForumTopic | null>(null)
-  const replies = ref<ForumReply[]>([])
   const searchResults = ref<ForumTopic[]>([])
   const searchTotal = ref(0)
   const follows = ref<ForumFollow[]>([])
@@ -198,78 +197,7 @@ export const useForumStore = defineStore('forum', () => {
     }
   }
 
-  // ─── Replies ─────────────────────────────────────────────────────────────────
-
-  const fetchReplies = async (topicId: string, sort: 'oldest' | 'best' = 'oldest') => {
-    try {
-      const authStore = useAuthStore()
-      const res = await fetch(`${api.url}/forum/topics/${topicId}/replies?sort=${sort}`, {
-        headers: authStore.isAuthenticated ? authHeaders() : {},
-      })
-      if (res.ok) {
-        const data = await res.json()
-        replies.value = data.data || []
-      }
-    } catch (e) {
-      console.error('Failed to fetch replies', e)
-    }
-  }
-
-  const createReply = async (
-    topicId: string,
-    content: string,
-    parentReplyId?: string,
-  ): Promise<ForumReply | null> => {
-    try {
-      const body: Record<string, unknown> = { content }
-      if (parentReplyId) body.parent_reply_id = parentReplyId
-      const res = await fetch(`${api.url}/forum/topics/${topicId}/replies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(body),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        return data.data as ForumReply
-      }
-    } catch (e) {
-      console.error('Failed to create reply', e)
-    }
-    return null
-  }
-
-  const deleteReply = async (replyId: string) => {
-    try {
-      await fetch(`${api.url}/forum/replies/${replyId}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      })
-    } catch (e) {
-      console.error('Failed to delete reply', e)
-    }
-  }
-
-  const toggleReplyLike = async (replyId: string) => {
-    try {
-      const res = await fetch(`${api.url}/forum/replies/${replyId}/like`, {
-        method: 'POST',
-        headers: authHeaders(),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const liked = data.data?.liked as boolean
-        const reply = replies.value.find((item) => item.id === replyId)
-        if (reply) {
-          reply.is_liked = liked
-          reply.like_count += liked ? 1 : -1
-        }
-      }
-    } catch (e) {
-      console.error('Failed to toggle reply like', e)
-    }
-  }
-
-  // ─── Follows ─────────────────────────────────────────────────────────────────
+  // ─── Follows ────────────────────────────────────────────────────────────────
 
   const currentFollowOwnerID = () => {
     const authStore = useAuthStore()
@@ -447,7 +375,6 @@ export const useForumStore = defineStore('forum', () => {
     topics,
     topicsTotal,
     currentTopic,
-    replies,
     searchResults,
     searchTotal,
     follows,
@@ -461,10 +388,6 @@ export const useForumStore = defineStore('forum', () => {
     deleteTopic,
     toggleTopicLike,
     toggleTopicBookmark,
-    fetchReplies,
-    createReply,
-    deleteReply,
-    toggleReplyLike,
     fetchFollows,
     isFollowing,
     follow,

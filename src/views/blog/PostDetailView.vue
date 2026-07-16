@@ -94,10 +94,7 @@
 
         <!-- Comments -->
         <CommentSection
-          :post-id="post.id"
-          :allow-comments="post.allow_comments"
-          :comment-mode="siteAccessStore.blogCommentMode"
-          :post-owner-id="post.user_id"
+          :target="{ kind: 'blog_post', resourceId: post.id }"
         />
         </main>
 
@@ -121,7 +118,7 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import CommentSection from '@/components/blog/CommentSection.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import CollectionNavigation from '@/components/blog/CollectionNavigation.vue'
 import TableOfContents from '@/components/blog/TableOfContents.vue'
 import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
@@ -129,7 +126,6 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -151,7 +147,6 @@ const props = defineProps<{
 
 const route = useRoute()
 const sheetStore = useSheetStore()
-const siteAccessStore = useSiteAccessStore()
 
 const postId = computed(() => props.id || String(route.params.id || ''))
 const authStore = useAuthStore()
@@ -512,11 +507,6 @@ const copyLink = async () => {
 }
 
 onMounted(fetchPost)
-onMounted(() => {
-  if (!siteAccessStore.loaded) {
-    siteAccessStore.load()
-  }
-})
 onBeforeUnmount(() => {
   likeRequestToken += 1
   likePending.value = false

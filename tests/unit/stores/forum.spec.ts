@@ -89,16 +89,6 @@ describe('forum store HTTP contracts', () => {
     expect(store.topics[0]).toMatchObject({ like_count: 4, is_liked: true, is_bookmarked: true })
   })
 
-  it('reads reply like state from response data', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ data: { liked: true } }))
-    const store = useForumStore()
-    store.replies = [{ id: 'reply-1', like_count: 2, is_liked: false } as never]
-
-    await store.toggleReplyLike('reply-1')
-
-    expect(store.replies[0]).toMatchObject({ like_count: 3, is_liked: true })
-  })
-
   it('reads follow envelope and switches follow state', async () => {
     const follow = { id: 'follow-1', user_id: 'user-1', target_type: 'tag', target_key: 'Go 语言' }
     const fetchMock = vi.spyOn(globalThis, 'fetch')

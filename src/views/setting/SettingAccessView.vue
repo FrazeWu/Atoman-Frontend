@@ -75,19 +75,6 @@
               </div>
             </template>
 
-            <div v-else-if="key === 'media'" class="setting-access__setting-row setting-access__setting-row--stack">
-              <span>
-                <strong>评论权限</strong>
-                <small>控制文章评论开放范围</small>
-              </span>
-              <div class="setting-access__choice-list">
-                <label v-for="mode in blogCommentModes" :key="mode.value" class="setting-access__choice">
-                  <input v-model="draft.settings.blog.comment_mode" type="radio" :value="mode.value" />
-                  <span><strong>{{ mode.label }}</strong><small>{{ mode.description }}</small></span>
-                </label>
-              </div>
-            </div>
-
             <template v-else-if="key === 'forum'">
               <label class="setting-access__setting-row">
                 <span>
@@ -157,12 +144,6 @@ const feedFullTextModes = [
   { value: 'disabled', label: '关闭全文抓取', description: '所有订阅源都不抓取全文。' },
 ] as const
 
-const blogCommentModes = [
-  { value: 'all', label: '全部用户', description: '游客和已登录用户均可评论。' },
-  { value: 'authenticated', label: '仅登录用户', description: '登录后才可发表评论。' },
-  { value: 'disabled', label: '关闭评论', description: '隐藏文章评论入口。' },
-] as const
-
 const sectionMap = new Map<ModuleRoomKey, HTMLElement>()
 let ticking = false
 
@@ -229,7 +210,8 @@ async function save() {
   error.value = ''
 
   try {
-    await siteAccessStore.save(mergeSiteAccess(draft.value), authStore.token)
+    const nextAccess = mergeSiteAccess(draft.value)
+    await siteAccessStore.save(nextAccess, authStore.token)
     saved.value = true
   } catch (err) {
     error.value = err instanceof Error ? err.message : '保存失败，请重试'

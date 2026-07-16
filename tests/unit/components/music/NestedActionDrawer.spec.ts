@@ -1,6 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import NestedActionDrawer from '@/components/music/NestedActionDrawer.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
+import { usePlayerStore } from '@/stores/player'
 
 const mocks = vi.hoisted(() => ({
   drawerState: {
@@ -20,10 +24,7 @@ const mocks = vi.hoisted(() => ({
   listAlbumRevisions: vi.fn(),
   getAlbumRevision: vi.fn(),
   revertAlbumRevision: vi.fn(),
-  listAlbumDiscussions: vi.fn(),
-  createAlbumDiscussion: vi.fn(),
-  replyAlbumDiscussion: vi.fn(),
-  deleteAlbumDiscussion: vi.fn(),
+  recordMusicSongPlay: vi.fn(),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -45,12 +46,19 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
     listAlbumRevisions: mocks.listAlbumRevisions,
     getAlbumRevision: mocks.getAlbumRevision,
     revertAlbumRevision: mocks.revertAlbumRevision,
-    listAlbumDiscussions: mocks.listAlbumDiscussions,
-    createAlbumDiscussion: mocks.createAlbumDiscussion,
-    replyAlbumDiscussion: mocks.replyAlbumDiscussion,
-    deleteAlbumDiscussion: mocks.deleteAlbumDiscussion,
+    recordMusicSongPlay: mocks.recordMusicSongPlay,
   }
 })
+
+vi.mock('@/components/comment/CommentSection.vue', () => ({
+  default: {
+    name: 'CommentSection',
+    props: ['target', 'noun', 'currentTime'],
+    emits: ['seek'],
+    data: () => ({ draft: '' }),
+    template: '<section data-test="shared-comments"><input data-test="comment-draft" v-model="draft" /></section>',
+  },
+}))
 
 function buildRevision(overrides: Record<string, unknown> = {}) {
   return {
@@ -78,26 +86,6 @@ function buildRevision(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function buildDiscussion(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'discussion-1',
-    album_id: 'album-1',
-    parent_id: null,
-    content: '主讨论内容',
-    created_at: '2026-06-18T00:00:00Z',
-    updated_at: '2026-06-18T00:00:00Z',
-    author_id: 'user-1',
-    author: {
-      id: 'user-1',
-      username: 'alice',
-      display_name: 'Alice',
-    },
-    replies: [],
-    can_delete: true,
-    ...overrides,
-  }
-}
-
 function mountDrawer() {
   return mount(NestedActionDrawer, {
     global: {
@@ -109,7 +97,11 @@ function mountDrawer() {
 }
 
 describe('NestedActionDrawer.vue', () => {
+  let player: ReturnType<typeof usePlayerStore>
+
   beforeEach(() => {
+    setActivePinia(createPinia())
+    player = usePlayerStore()
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'history', nestedPayload: null }
     mocks.closeNestedAction.mockReset()
     mocks.refreshAlbum.mockReset()
@@ -120,10 +112,10 @@ describe('NestedActionDrawer.vue', () => {
     mocks.listAlbumRevisions.mockReset()
     mocks.getAlbumRevision.mockReset()
     mocks.revertAlbumRevision.mockReset()
-    mocks.listAlbumDiscussions.mockReset()
-    mocks.createAlbumDiscussion.mockReset()
-    mocks.replyAlbumDiscussion.mockReset()
-    mocks.deleteAlbumDiscussion.mockReset()
+    mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true })
+    player.currentSong = { id: 'song-1', title: 'Track A' } as any
+    player.currentTime = 46
+    vi.spyOn(player, 'seek')
 
     mocks.listMusicArtists.mockResolvedValue({
       data: [{ id: 'artist-2', name: 'Selected Artist', entry_status: 'open' }],
@@ -155,10 +147,65 @@ describe('NestedActionDrawer.vue', () => {
     })
     mocks.getAlbumRevision.mockResolvedValue(buildRevision())
     mocks.revertAlbumRevision.mockResolvedValue(buildRevision({ is_current: true, version_number: 1 }))
-    mocks.listAlbumDiscussions.mockResolvedValue([])
-    mocks.createAlbumDiscussion.mockResolvedValue(buildDiscussion())
-    mocks.replyAlbumDiscussion.mockResolvedValue(buildDiscussion({ id: 'discussion-2', parent_id: 'discussion-1', can_delete: true }))
-    mocks.deleteAlbumDiscussion.mockResolvedValue({ success: true })
+  })
+
+  it('uses the active song and player time for song discussions', async () => {
+    mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'discussion', nestedPayload: { songId: 'song-1' } }
+    const wrapper = mount(NestedActionDrawer, {
+      global: {
+        stubs: {
+          PSheet: { template: '<section><slot /></section>' },
+          CommentSection: { name: 'CommentSection', props: ['target', 'noun', 'currentTime'], emits: ['seek'], template: '<section />' },
+        },
+      },
+    })
+
+    const comments = wrapper.findComponent(CommentSection)
+    expect(comments.props('target')).toEqual({ kind: 'music_song', resourceId: 'song-1' })
+    expect(comments.props('noun')).toBe('讨论')
+    expect(comments.props('currentTime')()).toBe(46)
+    comments.vm.$emit('seek', 88)
+    expect(player.seek).toHaveBeenCalledWith(88)
+  })
+
+  it('ignores a stale payload and keeps target, time, and seek on the active song', () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
+    player.currentSong = { id: 'active-song', title: 'Active Track' } as any
+    player.currentTime = 64
+    const wrapper = mountDrawer()
+
+    const comments = wrapper.findComponent(CommentSection)
+    expect(comments.props('target')).toEqual({ kind: 'music_song', resourceId: 'active-song' })
+    expect(comments.props('currentTime')()).toBe(64)
+    comments.vm.$emit('seek', 91)
+    expect(player.seek).toHaveBeenCalledWith(91)
+  })
+
+  it('does not render a song discussion without an active song', () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'stale-song' } }
+    player.currentSong = null
+
+    expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
+  })
+
+  it('does not render a music song target for a podcast feed item', () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: { songId: 'feed-item-1' } }
+    player.currentSong = { id: 'feed-item-1', title: 'Podcast Episode', media_kind: 'feed_item' } as any
+
+    expect(mountDrawer().findComponent(CommentSection).exists()).toBe(false)
+  })
+
+  it('recreates the comment composer when the active song changes', async () => {
+    mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'discussion', nestedPayload: null }
+    player.currentSong = { id: 'song-a', title: 'Song A' } as any
+    const wrapper = mountDrawer()
+
+    await wrapper.get('[data-test="comment-draft"]').setValue('A 的未提交草稿')
+    player.currentSong = { id: 'song-b', title: 'Song B' } as any
+    await nextTick()
+
+    expect(wrapper.findComponent(CommentSection).props('target')).toEqual({ kind: 'music_song', resourceId: 'song-b' })
+    expect(wrapper.get('[data-test="comment-draft"]').element).toHaveProperty('value', '')
   })
 
   it('renders when action is present', () => {
@@ -294,57 +341,4 @@ describe('NestedActionDrawer.vue', () => {
     expect(wrapper.text()).toContain('已回滚到版本 v1')
   })
 
-  it('loads album discussions and allows creating a new root discussion', async () => {
-    mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'discussion', nestedPayload: null }
-    mocks.listAlbumDiscussions.mockResolvedValue([
-      buildDiscussion(),
-    ])
-
-    const wrapper = mountDrawer()
-    await flushPromises()
-
-    expect(mocks.listAlbumDiscussions).toHaveBeenCalledWith('album-1')
-    expect(wrapper.text()).toContain('主讨论内容')
-
-    await wrapper.get('[data-test="discussion-create-input"]').setValue('新讨论内容')
-    await wrapper.get('[data-test="discussion-create-submit"]').trigger('submit')
-    await flushPromises()
-
-    expect(mocks.createAlbumDiscussion).toHaveBeenCalledWith('album-1', '新讨论内容')
-    expect(mocks.listAlbumDiscussions).toHaveBeenCalledTimes(2)
-  })
-
-  it('allows replying to an album discussion', async () => {
-    mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'discussion', nestedPayload: null }
-    mocks.listAlbumDiscussions.mockResolvedValue([
-      buildDiscussion(),
-    ])
-
-    const wrapper = mountDrawer()
-    await flushPromises()
-
-    await wrapper.get('[data-test="discussion-reply-toggle-discussion-1"]').trigger('click')
-    await wrapper.get('[data-test="discussion-reply-input-discussion-1"]').setValue('这是一条回复')
-    await wrapper.get('[data-test="discussion-reply-submit-discussion-1"]').trigger('submit')
-    await flushPromises()
-
-    expect(mocks.replyAlbumDiscussion).toHaveBeenCalledWith('album-1', 'discussion-1', '这是一条回复')
-    expect(mocks.listAlbumDiscussions).toHaveBeenCalledTimes(2)
-  })
-
-  it('allows deleting own album discussion entry', async () => {
-    mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'discussion', nestedPayload: null }
-    mocks.listAlbumDiscussions.mockResolvedValue([
-      buildDiscussion(),
-    ])
-
-    const wrapper = mountDrawer()
-    await flushPromises()
-
-    await wrapper.get('[data-test="discussion-delete-button-discussion-1"]').trigger('click')
-    await flushPromises()
-
-    expect(mocks.deleteAlbumDiscussion).toHaveBeenCalledWith('album-1', 'discussion-1')
-    expect(mocks.listAlbumDiscussions).toHaveBeenCalledTimes(2)
-  })
 })

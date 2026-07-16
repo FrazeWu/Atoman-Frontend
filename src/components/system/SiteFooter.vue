@@ -1,7 +1,7 @@
 <template>
   <footer class="site-footer" :class="{ 'site-footer--mobile-hidden': hideOnMobile }">
     <div class="site-footer-inner">
-      <RouterLink v-if="isAdmin" to="/setting" class="site-footer-brand">凹凸庵</RouterLink>
+      <RouterLink v-if="canAccessSettings" to="/setting" class="site-footer-brand">凹凸庵</RouterLink>
       <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
       <nav class="site-footer-links" aria-label="站点信息">
         <a
@@ -22,10 +22,10 @@ import { RouterLink } from 'vue-router'
 import { appVersion } from '@/config/appVersion'
 import { footbarLinks } from '@/config/moduleRooms'
 import { useAuthStore } from '@/stores/auth'
-import { isAdminRole } from '@/utils/roles'
+import { isModeratorRole } from '@/utils/roles'
 
 const authStore = useAuthStore()
-const isAdmin = computed(() => isAdminRole(authStore.user?.role))
+const canAccessSettings = computed(() => isModeratorRole(authStore.user?.role))
 
 withDefaults(defineProps<{
   hideOnMobile?: boolean

@@ -1,12 +1,12 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
-  getBlogCommentMode,
   getFeedFullTextMode,
   isForumCategoryRequestEnabled,
   mergeSiteAccess,
   type ModuleFeatureKey,
   type SiteAccess,
+  type SiteAccessInput,
 } from '@/config/siteAccess'
 import { useApi } from '@/composables/useApi'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
@@ -38,7 +38,7 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     return pendingLoad
   }
 
-  async function save(nextAccess: SiteAccess, token: string | null) {
+  async function save(nextAccess: SiteAccessInput, token: string | null) {
     const api = useApi()
     const response = await fetch(api.settings.siteAccess, {
       method: 'PUT',
@@ -71,7 +71,6 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     Object.keys(access.value.modules).filter((key) => isModuleVisible(key as ModuleRoomKey)) as ModuleRoomKey[]
   ))
 
-  const blogCommentMode = computed(() => getBlogCommentMode(access.value))
   const feedFullTextMode = computed(() => getFeedFullTextMode(access.value))
   const forumCategoryRequestEnabled = computed(() => isForumCategoryRequestEnabled(access.value))
 
@@ -80,7 +79,6 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     loaded,
     loading,
     visibleModuleKeys,
-    blogCommentMode,
     feedFullTextMode,
     forumCategoryRequestEnabled,
     load,

@@ -20,7 +20,6 @@ const siteAccessState = {
     },
     settings: {
       feed: { full_text_mode: 'per_source' },
-      blog: { comment_mode: 'authenticated' },
       forum: {
         allow_category_request: true,
         moderator_permissions: {
@@ -113,7 +112,7 @@ describe('SettingAccessView section sync', () => {
     expect(wrapper.get('[data-testid="shared-directory"]').attributes('data-active')).toBe('feed')
     expect(wrapper.find('.setting-access__toc').exists()).toBe(false)
     expect(wrapper.get('.setting-access__directory-trigger').text()).toContain('目录')
-    expect(wrapper.get('#module-media').text()).toContain('评论权限')
+    expect(wrapper.get('#module-media').text()).not.toContain('关闭评论')
   })
 
   it('opens the shared directory on mobile', async () => {
@@ -168,5 +167,30 @@ describe('SettingAccessView section sync', () => {
     expect(save).toHaveBeenCalledTimes(1)
     expect(save.mock.calls[0]?.[0]?.modules?.media?.enabled).toBe(false)
     expect(save.mock.calls[0]?.[1]).toBe('admin-token')
+  })
+
+  it('不再显示或提交匿名与关闭评论设置', async () => {
+    const save = vi.fn(async () => undefined)
+    siteAccessState.save = save
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({
+            props: ['loading', 'loadingText', 'to'],
+            emits: ['click'],
+            template: '<button @click="$emit(\'click\')"><slot /></button>',
+          }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: true,
+          SettingFeedSourcePanel: true,
+        },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('全部可评论')
+    expect(wrapper.text()).not.toContain('关闭评论')
+    await wrapper.get('.setting-access__footer button').trigger('click')
+    expect(save.mock.calls[0]?.[0]?.settings).not.toHaveProperty('blog')
   })
 })

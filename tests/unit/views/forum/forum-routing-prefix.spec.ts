@@ -103,11 +103,16 @@ const mountWithRouter = async (
         },
         PTextarea: { template: '<textarea />' },
         PModal: { template: '<div><slot /></div>' },
+        CommentSection: {
+          name: 'CommentSection',
+          props: ['target', 'noun', 'markLabel', 'readonly'],
+          emits: ['marked-change', 'count-change'],
+          template: '<section data-test="forum-comments" />',
+        },
         PEntry: {
           emits: ['click'],
           template: '<article class="p-entry" @click="$emit(\'click\')"><slot name="meta" /><slot name="title" /><slot name="actions" /></article>',
         },
-        ForumReplyNode: { template: '<div />' },
         RouterLink,
       },
     },
@@ -229,99 +234,42 @@ describe('forum 路由前缀', () => {
   })
 
   it('话题页面包屑和分类跳转到 /forum 前缀下', async () => {
-    let fetchDraft: ReturnType<typeof vi.spyOn>
     const { wrapper, pushSpy } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
       const forumStore = useForumStore()
       forumStore.loading = false
       forumStore.currentTopic = makeTopic('topic-1')
       vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
-      fetchDraft = vi.spyOn(forumStore, 'fetchDraft').mockResolvedValue(null)
     })
     await flushPromises()
 
-    expect(fetchDraft!).not.toHaveBeenCalled()
     expect(wrapper.getComponent(RouterLink).props('to')).toBe('/forum')
 
     await wrapper.get('.category-pill').trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum?category=cat-1')
   })
 
-  it('话题页从服务端恢复回复草稿并自动同步修改', async () => {
-    vi.useFakeTimers()
-    let fetchDraft: ReturnType<typeof vi.spyOn>
-    let putDraft: ReturnType<typeof vi.spyOn>
+  it('话题页面从统一评论核心渲染回复且不加载旧回复列表', async () => {
+    let forumStore!: ReturnType<typeof useForumStore>
     const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
-      const authStore = useAuthStore()
-      authStore.isAuthenticated = true
-      authStore.token = 'token'
-
-      const forumStore = useForumStore()
+      forumStore = useForumStore()
       forumStore.loading = false
       forumStore.currentTopic = makeTopic('topic-1')
       vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchFollows').mockResolvedValue(undefined)
-      fetchDraft = vi.spyOn(forumStore, 'fetchDraft').mockResolvedValue({
-        context_key: 'reply:topic-1',
-        content: '服务端回复草稿',
-      })
-      putDraft = vi.spyOn(forumStore, 'putDraft').mockResolvedValue(true)
-    })
-
-    expect(fetchDraft!).toHaveBeenCalledWith('reply:topic-1')
-    const editor = wrapper.get('.reply-editor-wrap textarea')
-    expect(editor.element.value).toBe('服务端回复草稿')
-
-    await editor.setValue('修改后的回复')
-    await vi.advanceTimersByTimeAsync(2000)
-
-    expect(putDraft!).toHaveBeenCalledWith(expect.objectContaining({
-      context_key: 'reply:topic-1',
-      content: '修改后的回复',
-    }))
-    wrapper.unmount()
-    vi.useRealTimers()
-  })
-
-  it('已登录用户可在话题页面切换关注', async () => {
-    let toggleFollow: ReturnType<typeof vi.spyOn>
-    const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
-      const authStore = useAuthStore()
-      authStore.isAuthenticated = true
-      authStore.token = 'token'
-
-      const forumStore = useForumStore()
-      forumStore.loading = false
-      forumStore.currentTopic = makeTopic('topic-1')
-      vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchReplies').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchFollows').mockResolvedValue(undefined)
-      toggleFollow = vi.spyOn(forumStore, 'toggleFollow').mockResolvedValue(undefined)
     })
     await flushPromises()
 
-    await wrapper.get('[data-testid="forum-topic-follow"]').trigger('click')
-    expect(toggleFollow!).toHaveBeenCalledWith('topic', 'topic-1')
-  })
+    const comments = wrapper.findComponent({ name: 'CommentSection' })
+    expect(comments.props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-1' })
+    expect(comments.props('noun')).toBe('回复')
+    expect(comments.props('markLabel')).toBe('最佳回答')
+    expect(comments.props('readonly')).toBe(false)
+    expect('fetchReplies' in forumStore).toBe(false)
 
-  it('已登录用户可在论坛首页关注当前分类', async () => {
-    let toggleFollow: ReturnType<typeof vi.spyOn>
-    const { wrapper } = await mountWithRouter(ForumHomeView, '/forum?category_id=cat-1', () => {
-      const authStore = useAuthStore()
-      authStore.isAuthenticated = true
-      authStore.token = 'token'
-
-      const forumStore = useForumStore()
-      forumStore.categories = [forumCategory]
-      vi.spyOn(forumStore, 'fetchCategories').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchTopics').mockResolvedValue(undefined)
-      vi.spyOn(forumStore, 'fetchFollows').mockResolvedValue(undefined)
-      toggleFollow = vi.spyOn(forumStore, 'toggleFollow').mockResolvedValue(undefined)
-    })
-    await flushPromises()
-
-    await wrapper.get('[data-testid="forum-filter-follow"]').trigger('click')
-    expect(toggleFollow!).toHaveBeenCalledWith('category', 'cat-1')
+    comments.vm.$emit('marked-change', true)
+    expect(forumStore.currentTopic?.is_solved).toBe(true)
+    comments.vm.$emit('marked-change', false)
+    expect(forumStore.currentTopic?.is_solved).toBe(false)
+    comments.vm.$emit('count-change', 4)
+    expect(forumStore.currentTopic?.reply_count).toBe(4)
   })
 })

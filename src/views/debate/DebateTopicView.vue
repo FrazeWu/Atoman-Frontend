@@ -108,6 +108,7 @@
         </div>
 
         <PEmpty v-else message="暂无论点，快来添加第一个论点吧！" />
+		<PButton v-if="debateStore.argumentsHasMore" block outline :disabled="loading" @click="loadMoreArguments">加载更多</PButton>
       </div>
     </template>
 
@@ -168,23 +169,12 @@
           <p class="text-sm">{{ selectedParentContent }}</p>
         </div>
 
-        <form @submit.prevent="handleCreateArgument" class="space-y-4">
+        <div class="space-y-4">
           <div class="a-field">
             <label class="a-field-label">论点类型</label>
             <PSelect
               v-model="newArgument.argument_type"
               :options="argumentTypeOptions"
-            />
-          </div>
-          <div class="a-field">
-            <label class="a-field-label">论点内容</label>
-            <PEditor
-              v-model="newArgument.content"
-              mode="normal"
-              :rendering-level="'comment'"
-              :show-mode-toggle="false"
-              :show-sync-scroll-toggle="false"
-              placeholder="阐述你的观点…"
             />
           </div>
           <!-- Evidence source fields - only shown for evidence type -->
@@ -202,11 +192,16 @@
               <textarea v-model="newArgument.source_excerpt" class="a-textarea" rows="2" placeholder="相关引文……" />
             </div>
           </template>
-          <div class="flex justify-end gap-4 mt-6">
-            <PButton outline type="button" @click="handleCloseArgumentModal">取消</PButton>
-            <PButton type="submit">添加</PButton>
-          </div>
-        </form>
+          <CommentComposer
+            :reply-to-name="selectedParentId ? '该论点' : ''"
+            placeholder="阐述你的观点…"
+            submit-label="添加"
+			:submitting="createArgumentSaving"
+            @cancel="handleCloseArgumentModal"
+            @submit="handleCreateArgument"
+          />
+          <PButton outline type="button" @click="handleCloseArgumentModal">取消</PButton>
+        </div>
       </div>
     </PModal>
 
@@ -214,21 +209,10 @@
     <PModal v-if="showEditArgumentModal" @close="showEditArgumentModal = false">
       <div class="p-6">
         <h3 class="a-title-sm mb-6">编辑论点</h3>
-        <form @submit.prevent="handleEditArgumentSubmit" class="space-y-4">
+        <div class="space-y-4">
           <div class="a-field">
             <label class="a-field-label">论点类型</label>
             <PSelect v-model="editArgumentForm.argument_type" :options="argumentTypeOptions" />
-          </div>
-          <div class="a-field">
-            <label class="a-field-label">论点内容</label>
-            <PEditor
-              v-model="editArgumentForm.content"
-              mode="normal"
-              :rendering-level="'comment'"
-              :show-mode-toggle="false"
-              :show-sync-scroll-toggle="false"
-              placeholder="阐述你的观点…"
-            />
           </div>
           <!-- Evidence source fields for edit -->
           <template v-if="editArgumentForm.argument_type === 'evidence'">
@@ -245,13 +229,17 @@
               <textarea v-model="editArgumentForm.source_excerpt" class="a-textarea" rows="2" placeholder="相关引文……" />
             </div>
           </template>
-          <div class="flex justify-end gap-4 mt-6">
-            <PButton outline type="button" @click="showEditArgumentModal = false">取消</PButton>
-            <PButton type="submit" :disabled="editArgumentSaving">
-              {{ editArgumentSaving ? '保存中...' : '保存' }}
-            </PButton>
-          </div>
-        </form>
+          <CommentComposer
+            :initial-content="editArgumentForm.content"
+            :initial-mentions="editArgumentTarget?.mentions ?? []"
+            :initial-attachment-ids="editArgumentTarget?.attachments?.map(({ id }) => id) ?? []"
+            placeholder="阐述你的观点…"
+            submit-label="保存"
+            :submitting="editArgumentSaving"
+            @submit="handleEditArgumentSubmit"
+          />
+          <PButton outline type="button" @click="showEditArgumentModal = false">取消</PButton>
+        </div>
       </div>
     </PModal>
 
@@ -330,7 +318,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
 import { useAuthStore } from '@/stores/auth'
@@ -344,8 +332,8 @@ import DebateConcludeModal from '@/components/debate/DebateConcludeModal.vue'
 import DebateHeaderActions from '@/components/debate/DebateHeaderActions.vue'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import PSelect from '@/components/ui/PSelect.vue'
-
-const PEditor = defineAsyncComponent(() => import('@/components/shared/PEditor.vue'))
+import CommentComposer from '@/components/comment/CommentComposer.vue'
+import type { CreateCommentInput } from '@/api/comments'
 
 const router = useRouter()
 const route = useRoute()
@@ -436,6 +424,7 @@ const openEditDebateModal = () => {
 
 // Add Argument modal
 const showAddArgumentModal = ref(false)
+const createArgumentSaving = ref(false)
 const newArgument = ref({
   content: '',
   argument_type: 'support' as ArgumentType,
@@ -502,6 +491,10 @@ const loadDebate = async () => {
   await debateStore.fetchArguments(id)
 }
 
+const loadMoreArguments = async () => {
+	await debateStore.fetchArguments(debate.value!.id, { reset: false })
+}
+
 const handleUpdate = async () => {
   const tags = tagsInput.value
     .split(',')
@@ -557,10 +550,14 @@ const handleReopen = async () => {
   }
 }
 
-const handleCreateArgument = async () => {
+const handleCreateArgument = async (input: CreateCommentInput) => {
+  if (createArgumentSaving.value) return
+  createArgumentSaving.value = true
   try {
     const payload = {
-      content: newArgument.value.content,
+      content: input.content,
+      mentions: input.mentions,
+      attachment_ids: input.attachment_ids,
       argument_type: newArgument.value.argument_type,
       parent_id: selectedParentId.value || undefined,
       source_url: newArgument.value.source_url || undefined,
@@ -576,6 +573,8 @@ const handleCreateArgument = async () => {
   } catch (error) {
     console.error('Failed to create argument:', error)
     alert('创建论点失败：' + (error as Error).message)
+	} finally {
+	  createArgumentSaving.value = false
   }
 }
 
@@ -612,11 +611,13 @@ const handleCloseArgumentModal = () => {
   }
 }
 
-const handleEditArgumentSubmit = async () => {
+const handleEditArgumentSubmit = async (input: CreateCommentInput) => {
   if (!editArgumentTarget.value) return
   editArgumentSaving.value = true
   const updated = await debateStore.updateArgument(editArgumentTarget.value.id, {
-    content: editArgumentForm.value.content,
+    content: input.content,
+    mentions: input.mentions,
+    attachment_ids: input.attachment_ids,
     argument_type: editArgumentForm.value.argument_type,
     source_url: editArgumentForm.value.source_url || undefined,
     source_title: editArgumentForm.value.source_title || undefined,

@@ -27,15 +27,23 @@
 import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { isOwnerRole } from '@/utils/roles'
+import { isAdminRole, isModeratorRole, isOwnerRole } from '@/utils/roles'
 
 const authStore = useAuthStore()
 
 const navItems = computed(() => {
-  const items = [
-    { to: '/setting/access', label: '全站' },
-    { to: '/setting/music-review', label: '音乐' },
-  ]
+  const items: Array<{ to: string; label: string }> = []
+
+  if (isAdminRole(authStore.user?.role)) {
+    items.push(
+      { to: '/setting/access', label: '全站' },
+      { to: '/setting/music-review', label: '音乐' },
+    )
+  }
+
+  if (isModeratorRole(authStore.user?.role)) {
+    items.push({ to: '/setting/comment-moderation', label: '评论' })
+  }
 
   if (isOwnerRole(authStore.user?.role)) {
     items.splice(1, 0, { to: '/setting/roles', label: '用户' })

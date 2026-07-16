@@ -318,59 +318,6 @@ describe('music v1 adapter', () => {
     expect(result.songs).toEqual([{ id: 'song_uuid', title: 'Song' }])
   })
 
-  it('updates a playlist through the playlist detail endpoint', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { id: 'playlist_uuid', name: 'New Name', song_count: 2, is_favorite: false } }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )))
-    const updateMusicPlaylist = (musicV1 as typeof musicV1 & {
-      updateMusicPlaylist?: (playlistId: string, input: { name: string }) => Promise<unknown>
-    }).updateMusicPlaylist
-
-    expect(updateMusicPlaylist).toBeTypeOf('function')
-    await updateMusicPlaylist?.('playlist_uuid', { name: 'New Name' })
-
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ name: 'New Name' }),
-    })
-  })
-
-  it('deletes a playlist through the playlist detail endpoint', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { deleted: true } }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )))
-    const deleteMusicPlaylist = (musicV1 as typeof musicV1 & {
-      deleteMusicPlaylist?: (playlistId: string) => Promise<unknown>
-    }).deleteMusicPlaylist
-
-    expect(deleteMusicPlaylist).toBeTypeOf('function')
-    await deleteMusicPlaylist?.('playlist_uuid')
-
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: undefined,
-    })
-  })
-
-  it('reads the album discussion total from pagination metadata', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: [], total: 7 }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )))
-    const getAlbumDiscussionCount = (musicV1 as typeof musicV1 & {
-      getAlbumDiscussionCount?: (albumId: string) => Promise<number>
-    }).getAlbumDiscussionCount
-
-    expect(getAlbumDiscussionCount).toBeTypeOf('function')
-    await expect(getAlbumDiscussionCount?.('album_uuid')).resolves.toBe(7)
-  })
-
   it('builds update album edits with track collection changes', () => {
     const result = buildUpdateAlbumEdit('album_uuid', {
       title: 'Updated Album',

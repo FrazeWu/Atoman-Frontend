@@ -1,4 +1,4 @@
-import { apiDeleteJson, apiGet, apiGetEnvelope, apiGetRaw, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
+import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -168,25 +168,6 @@ export type MusicRevisionSummary = {
   status: string
   is_current: boolean
   created_at: string
-}
-
-export type MusicDiscussionAuthor = {
-  id: string
-  username?: string
-  display_name?: string
-}
-
-export type MusicDiscussion = {
-  id: string
-  album_id: string
-  parent_id?: string | null
-  content: string
-  created_at: string
-  updated_at?: string
-  author_id: string
-  author?: MusicDiscussionAuthor
-  replies?: MusicDiscussion[]
-  can_delete?: boolean
 }
 
 export type MusicArtistListItem = {
@@ -414,8 +395,6 @@ export const musicV1Endpoints = {
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,
-  albumDiscussions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/discussions`,
-  albumDiscussion: (albumId: string, discussionId: string) => `${apiV1Base()}/albums/${albumId}/discussions/${discussionId}`,
   albumImports: () => `${apiV1Base()}/music/imports/albums`,
   albumImport: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}`,
   albumImportArchive: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/upload`,
@@ -924,30 +903,6 @@ export async function revertAlbumRevision(albumId: string, version: number, edit
   return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.albumRevert(albumId, version), {
     edit_summary: editSummary,
   })
-}
-
-export async function listAlbumDiscussions(albumId: string): Promise<MusicDiscussion[]> {
-  const response = await apiGetEnvelope<MusicDiscussion[]>(musicV1Endpoints.albumDiscussions(albumId))
-  return response.data
-}
-
-export async function getAlbumDiscussionCount(albumId: string): Promise<number> {
-  const response = await apiGetRaw<{ data: MusicDiscussion[]; total: number }>(
-    `${musicV1Endpoints.albumDiscussions(albumId)}?limit=1&offset=0`,
-  )
-  return response.total
-}
-
-export async function createAlbumDiscussion(albumId: string, content: string): Promise<MusicDiscussion> {
-  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussions(albumId), { content })
-}
-
-export async function replyAlbumDiscussion(albumId: string, discussionId: string, content: string): Promise<MusicDiscussion> {
-  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussion(albumId, discussionId), { content })
-}
-
-export async function deleteAlbumDiscussion(albumId: string, discussionId: string): Promise<{ success: boolean }> {
-  return apiDeleteJson<{ success: boolean }>(musicV1Endpoints.albumDiscussion(albumId, discussionId))
 }
 
 export async function listRecommendedAlbums(mode: MusicRecommendationMode) {

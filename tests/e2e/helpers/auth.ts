@@ -1,11 +1,11 @@
 import { type Page, type APIRequestContext, expect } from '@playwright/test'
 
-const ADMIN_EMAIL = 'admin@atoman.com'
+const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = 'admin123'
 
 export async function loginViaAPI(request: APIRequestContext): Promise<{ token: string; user: any }> {
   const response = await request.post('/api/v1/auth/login', {
-    data: { username: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+    data: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD },
   })
 
   expect(response.ok()).toBeTruthy()
@@ -33,4 +33,4 @@ export async function logoutViaUI(page: Page): Promise<void> {
   await page.waitForURL(/\/login/)
 }
 
-export { ADMIN_EMAIL, ADMIN_PASSWORD }
+export { ADMIN_USERNAME, ADMIN_PASSWORD }

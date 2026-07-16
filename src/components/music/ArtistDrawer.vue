@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   getMusicArtist,
@@ -24,6 +25,7 @@ const errorMessage = ref('')
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
+let loadGeneration = 0
 
 const artistAliases = computed(() => (
   artist.value?.aliases
@@ -40,39 +42,52 @@ function releaseYear(album: MusicAlbumListItem) {
 }
 
 async function loadArtist(artistId: string | null) {
+  const generation = ++loadGeneration
+  const isCurrent = () => generation === loadGeneration && state.value.artistId === artistId
   if (!artistId) {
     artist.value = null
     albums.value = []
     isBookmarked.value = false
     lastLoadKey.value = null
+    loading.value = false
+    errorMessage.value = ''
     return
   }
 
   loading.value = true
   errorMessage.value = ''
+  artist.value = null
+  albums.value = []
+  isBookmarked.value = false
   try {
     const [artistResponse, albumsResponse] = await Promise.all([
       getMusicArtist(artistId),
       listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 }),
     ])
-    artist.value = artistResponse
-    albums.value = albumsResponse.data
+    if (!isCurrent()) return
+    let bookmarked = false
     try {
       const bookmarksResponse = await listArtistBookmarks()
-      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
+      bookmarked = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
-        isBookmarked.value = false
+        bookmarked = false
       } else {
         throw error
       }
     }
+    if (!isCurrent()) return
+    artist.value = artistResponse
+    albums.value = albumsResponse.data
+    isBookmarked.value = bookmarked
   } catch (error) {
-    console.error('Failed to fetch artist:', error)
-    errorMessage.value = '艺术家信息加载失败'
-    lastLoadKey.value = null
+    if (isCurrent()) {
+      console.error('Failed to fetch artist:', error)
+      errorMessage.value = '艺术家信息加载失败'
+      lastLoadKey.value = null
+    }
   } finally {
-    loading.value = false
+    if (isCurrent()) loading.value = false
   }
 }
 
@@ -194,6 +209,12 @@ watch(
           </div>
         </div>
       </div>
+      <CommentSection
+        v-if="artist"
+        class="artist-discussion"
+        :target="{ kind: 'music_artist', resourceId: String(artist.id) }"
+        noun="讨论"
+      />
     </div>
   </PSheet>
 </template>
@@ -220,6 +241,7 @@ watch(
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
+.artist-discussion { margin-top: 2rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-line-soft); align-self: flex-start; }
 .paper-action {
   display: inline-flex;

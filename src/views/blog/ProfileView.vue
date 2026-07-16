@@ -74,6 +74,7 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
         </div>
+        <PEmpty v-else-if="postsError" :title="postsError" data-test="posts-error" />
         <PEmpty v-else-if="!posts.length" title="暂无内容" description="该用户还没有发布内容" />
         <div v-else class="a-grid-2">
           <PEntry
@@ -178,6 +179,7 @@ const channels = ref<Channel[]>([])
 const posts = ref<Post[]>([])
 const loading = ref(true)
 const loadingPosts = ref(true)
+const postsError = ref('')
 const following = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
@@ -239,9 +241,19 @@ const fetchChannels = async () => {
 const fetchPosts = async () => {
   if (!profile.value) return
   loadingPosts.value = true
+  postsError.value = ''
   try {
     const res = await fetch(`${api.blog.posts}?user_id=${profile.value.uuid}&page_size=8`)
-    if (res.ok) posts.value = (await res.json()).data || []
+    if (!res.ok) throw new Error(`Failed to load posts: ${res.status}`)
+
+    const data = await res.json()
+    if (!data || !Array.isArray(data.data) || typeof data.meta?.has_more !== 'boolean') {
+      throw new Error('Invalid posts response')
+    }
+    posts.value = data.data
+  } catch {
+    posts.value = []
+    postsError.value = '内容加载失败，请重试'
   } finally { loadingPosts.value = false }
 }
 

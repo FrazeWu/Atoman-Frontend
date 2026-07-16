@@ -80,7 +80,8 @@
 
         <!-- Right: posts -->
         <main class="post-main">
-          <PEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
+          <p v-if="postsError" data-test="posts-error" class="a-error">{{ postsError }}</p>
+          <PEmpty v-else-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
           <div v-else class="post-list">
             <PEntry
               v-for="post in filteredPosts"
@@ -173,6 +174,7 @@ const loading = ref(true)
 const channel = ref<Channel | null>(null)
 const collections = ref<Collection[]>([])
 const channelPosts = ref<Post[]>([])
+const postsError = ref('')
 const activeCollectionId = ref<string | null>(null)
 
 const collectionModalOpen = ref(false)
@@ -250,12 +252,30 @@ const fetchCollections = async () => {
 
 const fetchPosts = async () => {
   if (!channel.value) return
-  const params = new URLSearchParams({ channel_id: channel.value.id, limit: '100' })
   const headers: Record<string, string> = {}
   if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-  params.set('page_size', '100')
-  const res = await fetch(`${api.blog.posts}?${params}`, { headers })
-  if (res.ok) channelPosts.value = (await res.json()).data || []
+  postsError.value = ''
+  try {
+    const loadedPosts: Post[] = []
+    let page = 1
+    while (true) {
+      const params = new URLSearchParams({
+        channel_id: channel.value.id,
+        page: String(page),
+        page_size: '100',
+      })
+      const res = await fetch(`${api.blog.posts}?${params}`, { headers })
+      if (!res.ok) throw new Error('Failed to load channel posts')
+      const data = await res.json()
+      loadedPosts.push(...(data.data || []))
+      if (!data.meta?.has_more) break
+      page += 1
+    }
+    channelPosts.value = loadedPosts
+  } catch {
+    channelPosts.value = []
+    postsError.value = '内容加载失败，请重试'
+  }
 }
 
 const openCollectionModal = (collection?: Collection) => {
@@ -312,7 +332,8 @@ onMounted(async () => {
   try {
     await fetchChannel()
     if (!channel.value) return
-    void Promise.all([fetchCollections(), fetchPosts()])
+    void fetchCollections().catch(() => undefined)
+    await fetchPosts()
     if (authStore.isAuthenticated) {
       void feedStore.fetchBookmarkedPostIds()
       void feedStore.fetchReadingListIds()

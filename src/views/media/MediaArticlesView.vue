@@ -15,18 +15,32 @@ import type { Post, TimelineItem } from '@/types'
 const api = useApi()
 const posts = ref<Post[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const showArticleSheet = ref(false)
 const selectedArticle = ref<TimelineItem | null>(null)
 
 const loadArticles = async () => {
   loading.value = true
+  loadError.value = ''
   try {
-    const params = new URLSearchParams({ page: '1', page_size: '20', sort: 'latest' })
-    const res = await fetch(`${api.blog.posts}?${params}`)
-    if (!res.ok) return
-    const data = await res.json()
-    const rows = data.data || data || []
-    posts.value = rows.map((item: any) => item.post || item).filter(Boolean)
+    const loadedPosts: Post[] = []
+    let page = 1
+    while (true) {
+      const params = new URLSearchParams({ page: String(page), page_size: '20', sort: 'latest' })
+      const res = await fetch(`${api.blog.posts}?${params}`)
+      if (!res.ok) throw new Error('Failed to load articles')
+      const data = await res.json()
+      if (!data || !Array.isArray(data.data) || typeof data.meta?.has_more !== 'boolean') {
+        throw new Error('Invalid articles response')
+      }
+      loadedPosts.push(...data.data)
+      if (!data.meta.has_more) break
+      page += 1
+    }
+    posts.value = loadedPosts
+  } catch {
+    posts.value = []
+    loadError.value = '文章加载失败，请重试'
   } finally {
     loading.value = false
   }
@@ -65,6 +79,7 @@ onMounted(loadArticles)
       </template>
     </PPageHeader>
     <div v-if="loading" class="a-skeleton media-list-skeleton" />
+    <p v-else-if="loadError" data-test="articles-error" class="a-error">{{ loadError }}</p>
     <PEmpty v-else-if="posts.length === 0" text="暂无文章" />
     <div v-else class="media-article-list">
       <PEntry

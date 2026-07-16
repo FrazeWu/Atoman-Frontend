@@ -42,6 +42,17 @@ const articleGlobal = {
     FeedArticleSheet: FeedArticleSheetStub,
   },
 }
+const mountArticleList = (errorHandler?: (error: unknown) => void) => mount(MediaArticlesView, {
+  global: {
+    config: errorHandler ? { errorHandler } : {},
+    stubs: {
+      RouterLink: true,
+      FeedArticleSheet: FeedArticleSheetStub,
+      PEmpty: { props: ['text'], template: '<div data-test="empty-state">{{ text }}</div>' },
+      PEntry: { props: ['title'], template: '<article>{{ title }}</article>' },
+    },
+  },
+})
 
 vi.mock('@/composables/useMediaChannel', () => ({
   useMediaChannel: () => ({
@@ -71,8 +82,167 @@ describe('Media content view shells', () => {
   beforeEach(() => {
     fetchMock.mockReset()
     routerPushMock.mockReset()
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify([]), { status: 200 }))
+    fetchMock.mockImplementation(async (input) => new Response(JSON.stringify(
+      String(input).includes('/blog/posts')
+        ? { data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } }
+        : [],
+    ), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
+  })
+
+  it('读取全部文章分页并显示第二页内容', async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url === '/api/v1/blog/posts?page=1&page_size=20&sort=latest') {
+        return new Response(JSON.stringify({
+          data: [{ id: 'post-1', title: '第一页文章', created_at: '2026-07-16T00:00:00Z' }],
+          meta: { page: 1, page_size: 20, total: 21, has_more: true },
+        }), { status: 200 })
+      }
+      if (url === '/api/v1/blog/posts?page=2&page_size=20&sort=latest') {
+        return new Response(JSON.stringify({
+          data: [{ id: 'post-21', title: '第二页文章', created_at: '2026-07-15T00:00:00Z' }],
+          meta: { page: 2, page_size: 20, total: 21, has_more: false },
+        }), { status: 200 })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mountArticleList()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('第一页文章')
+    expect(wrapper.text()).toContain('第二页文章')
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+      '/api/v1/blog/posts?page=1&page_size=20&sort=latest',
+      '/api/v1/blog/posts?page=2&page_size=20&sort=latest',
+    ])
+  })
+
+  it('后续文章分页失败时不显示已加载的前页内容', async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url === '/api/v1/blog/posts?page=1&page_size=20&sort=latest') {
+        return new Response(JSON.stringify({
+          data: [{ id: 'post-1', title: '不应残留的第一页文章', created_at: '2026-07-16T00:00:00Z' }],
+          meta: { page: 1, page_size: 20, total: 21, has_more: true },
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'page failed' }), { status: 500 })
+    })
+    const vueErrorHandler = vi.fn()
+    const unhandledRejections: unknown[] = []
+    const onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    try {
+      const wrapper = mountArticleList(vueErrorHandler)
+      await flushPromises()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(wrapper.get('[data-test="articles-error"]').text()).toBe('文章加载失败，请重试')
+      expect(wrapper.text()).not.toContain('不应残留的第一页文章')
+      expect(wrapper.find('[data-test="empty-state"]').exists()).toBe(false)
+      expect(wrapper.vm.$.setupState.posts).toEqual([])
+      expect(vueErrorHandler).not.toHaveBeenCalled()
+      expect(unhandledRejections).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+  })
+
+  it('后续文章分页未完成时保持加载状态', async () => {
+    const pendingSecondPage = deferred<Response>()
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input)
+      if (url === '/api/v1/blog/posts?page=1&page_size=20&sort=latest') {
+        return new Response(JSON.stringify({
+          data: [{ id: 'post-1', title: '第一页文章', created_at: '2026-07-16T00:00:00Z' }],
+          meta: { page: 1, page_size: 20, total: 21, has_more: true },
+        }), { status: 200 })
+      }
+      return pendingSecondPage.promise
+    })
+
+    const wrapper = mountArticleList()
+    await flushPromises()
+
+    expect(wrapper.find('.media-list-skeleton').exists()).toBe(true)
+    expect(wrapper.find('[data-test="empty-state"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="articles-error"]').exists()).toBe(false)
+
+    pendingSecondPage.resolve(new Response(JSON.stringify({
+      data: [{ id: 'post-21', title: '第二页文章', created_at: '2026-07-15T00:00:00Z' }],
+      meta: { page: 2, page_size: 20, total: 21, has_more: false },
+    }), { status: 200 }))
+    await flushPromises()
+
+    expect(wrapper.find('.media-list-skeleton').exists()).toBe(false)
+    expect(wrapper.text()).toContain('第一页文章')
+    expect(wrapper.text()).toContain('第二页文章')
+  })
+
+  it.each([
+    {
+      name: '非 2xx',
+      load: () => Promise.resolve(new Response(JSON.stringify({ error: 'failed' }), { status: 500 })),
+    },
+    {
+      name: '网络失败',
+      load: () => Promise.reject(new Error('offline')),
+    },
+    {
+      name: '无效 JSON',
+      load: () => Promise.resolve(new Response('not-json', { status: 200 })),
+    },
+  ])('文章请求$name时显示失败态而非空态', async ({ load }) => {
+    fetchMock.mockImplementation(load)
+    const vueErrorHandler = vi.fn()
+    const unhandledRejections: unknown[] = []
+    const onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    try {
+      const wrapper = mountArticleList(vueErrorHandler)
+      await flushPromises()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(wrapper.get('[data-test="articles-error"]').text()).toBe('文章加载失败，请重试')
+      expect(wrapper.find('[data-test="empty-state"]').exists()).toBe(false)
+      expect(vueErrorHandler).not.toHaveBeenCalled()
+      expect(unhandledRejections).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+  })
+
+  it.each([
+    { name: '顶层数组', payload: [] },
+    { name: '缺失 meta', payload: { data: [] } },
+    { name: '非法 data', payload: { data: {}, meta: { has_more: false } } },
+    { name: '非法 meta', payload: { data: [], meta: null } },
+    { name: '非法 has_more', payload: { data: [], meta: { has_more: 'false' } } },
+  ])('文章接口返回$name时显示失败态', async ({ payload }) => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(payload), { status: 200 }))
+
+    const wrapper = mountArticleList()
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="articles-error"]').text()).toBe('文章加载失败，请重试')
+    expect(wrapper.find('[data-test="empty-state"]').exists()).toBe(false)
+  })
+
+  it('文章请求成功为空时显示真实空态', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      data: [],
+      meta: { page: 1, page_size: 20, total: 0, has_more: false },
+    }), { status: 200 }))
+
+    const wrapper = mountArticleList()
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="empty-state"]').text()).toBe('暂无文章')
+    expect(wrapper.find('[data-test="articles-error"]').exists()).toBe(false)
   })
 
   it('renders functional page titles', () => {
@@ -255,16 +425,17 @@ describe('Media content view shells', () => {
   })
 
   it('opens articles in the subscription-style right sheet instead of navigating', async () => {
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
-      post: {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({
+      data: [{
         id: 'post-1',
         title: '旧文章详情可达',
         summary: '文章摘要',
         created_at: '2026-01-02T00:00:00Z',
         channel: { name: '专栏' },
         user: { username: 'writer', display_name: '作者' },
-      },
-    }]), { status: 200 }))
+      }],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
 
     const wrapper = mount(MediaArticlesView, {
       global: {
@@ -297,14 +468,15 @@ describe('Media content view shells', () => {
         pathname: '/media',
       },
     })
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify([{
-      post: {
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({
+      data: [{
         id: 'post-1',
         title: '生产链接',
         summary: '文章摘要',
         created_at: '2026-01-02T00:00:00Z',
-      },
-    }]), { status: 200 }))
+      }],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    }), { status: 200 }))
 
     try {
       const wrapper = mount(MediaArticlesView, {

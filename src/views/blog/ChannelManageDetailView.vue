@@ -81,6 +81,7 @@
         <div v-if="loadingPosts" style="display:flex;flex-direction:column;gap:1rem">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:4rem" />
         </div>
+        <p v-else-if="postsError" data-test="posts-error" class="a-error">{{ postsError }}</p>
         <PEmpty v-else-if="!posts.length" title="暂无内容" />
         <div v-else style="display:flex;flex-direction:column;gap:.75rem">
           <div v-for="post in posts" :key="post.id" class="a-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
@@ -167,6 +168,7 @@ const collections = ref<Collection[]>([])
 const posts = ref<Post[]>([])
 const loading = ref(true)
 const loadingPosts = ref(false)
+const postsError = ref('')
 
 const activeTab = ref('info')
 const tabs = [
@@ -234,9 +236,39 @@ const fetchCollections = async () => {
 const fetchPosts = async () => {
   if (!channel.value) return
   loadingPosts.value = true
+  postsError.value = ''
   try {
-    const res = await fetch(`${api.blog.posts}?channel_id=${channel.value.id}&page_size=50`, { headers: authHeader.value })
-    if (res.ok) posts.value = (await res.json()).data || []
+    const channelId = channel.value.id
+    const [publishedPosts, draftPosts] = await Promise.all([
+      (async () => {
+        const loadedPosts: Post[] = []
+        let page = 1
+        while (true) {
+          const res = await fetch(`${api.blog.posts}?channel_id=${channelId}&page_size=50&page=${page}`, { headers: authHeader.value })
+          if (!res.ok) throw new Error('Failed to load published posts')
+          const data = await res.json()
+          loadedPosts.push(...(data.data || []))
+          if (!data.meta?.has_more) return loadedPosts
+          page += 1
+        }
+      })(),
+      (async () => {
+        const res = await fetch(api.blog.drafts, { headers: authHeader.value })
+        if (!res.ok) throw new Error('Failed to load drafts')
+        const data = await res.json()
+        return (data.data || []).filter((post: Post) => post.channel_id === channelId)
+      })(),
+    ])
+    const mergedPosts = [...publishedPosts, ...draftPosts]
+    mergedPosts.sort((left, right) => {
+      const leftTime = Date.parse(left.updated_at || left.created_at || '')
+      const rightTime = Date.parse(right.updated_at || right.created_at || '')
+      return rightTime - leftTime
+    })
+    posts.value = mergedPosts
+  } catch {
+    posts.value = []
+    postsError.value = '内容加载失败，请重试'
   } finally { loadingPosts.value = false }
 }
 

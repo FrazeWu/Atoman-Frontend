@@ -16,11 +16,12 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push, replace }),
 }))
 
-const mountView = () => mount(ChannelManageDetailView, {
+const mountView = (errorHandler?: (error: unknown) => void) => mount(ChannelManageDetailView, {
   global: {
+    config: errorHandler ? { errorHandler } : {},
     plugins: [pinia],
     stubs: {
-      PEmpty: true,
+      PEmpty: { props: ['title'], template: '<div data-test="empty-state">{{ title }}</div>' },
       PPageHeader: { template: '<header><slot name="action" /></header>' },
       PModal: { template: '<section data-test="modal"><slot /></section>' },
       PButton: {
@@ -58,6 +59,9 @@ describe('ChannelManageDetailView', () => {
       if (url.includes('/blog/posts?channel_id=channel-1')) {
         return new Response(JSON.stringify({ data: [] }), { status: 200 })
       }
+      if (url.endsWith('/blog/posts/drafts')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
       if (url.endsWith('/blog/collections/collection-1') && init?.method === 'PUT') {
         return new Response(JSON.stringify({ error: {
           code: 'blog.collection_forbidden',
@@ -74,6 +78,149 @@ describe('ChannelManageDetailView', () => {
     const authStore = useAuthStore()
     authStore.token = 'token'
     authStore.user = { uuid: 'user-1' } as typeof authStore.user
+  })
+
+  it('内容管理同时加载当前频道的已发布文章和草稿', async () => {
+    const initialFetch = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/posts?channel_id=channel-1')) {
+        return Promise.resolve(new Response(JSON.stringify({ data: [{
+          id: 'published-1',
+          channel_id: 'channel-1',
+          title: '已发布文章',
+          status: 'published',
+          updated_at: '2026-07-15T00:00:00Z',
+        }] }), { status: 200 }))
+      }
+      if (url.endsWith('/blog/posts/drafts')) {
+        return Promise.resolve(new Response(JSON.stringify({ data: [
+          {
+            id: 'draft-current',
+            channel_id: 'channel-1',
+            title: '当前频道草稿',
+            status: 'draft',
+            updated_at: '2026-07-16T00:00:00Z',
+          },
+          {
+            id: 'draft-other',
+            channel_id: 'channel-2',
+            title: '其他频道草稿',
+            status: 'draft',
+            updated_at: '2026-07-16T00:00:00Z',
+          },
+        ] }), { status: 200 }))
+      }
+      return initialFetch(input, init)
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text() === '内容')!.trigger('click')
+
+    expect(wrapper.text()).toContain('已发布文章')
+    expect(wrapper.text()).toContain('当前频道草稿')
+    expect(wrapper.text()).not.toContain('其他频道草稿')
+    expect(wrapper.findAll('.manage-section .a-card strong').map(item => item.text())).toEqual([
+      '当前频道草稿',
+      '已发布文章',
+    ])
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/blog/posts/drafts', {
+      headers: { Authorization: 'Bearer token' },
+    })
+  })
+
+  it.each([
+    {
+      name: '非 2xx',
+      loadDrafts: () => Promise.resolve(new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 })),
+    },
+    {
+      name: '网络失败',
+      loadDrafts: () => Promise.reject(new Error('offline')),
+    },
+    {
+      name: '无效 JSON',
+      loadDrafts: () => Promise.resolve(new Response('not-json', { status: 200 })),
+    },
+  ])('草稿请求$name时显示失败态且不显示假完整列表', async ({ loadDrafts }) => {
+    const initialFetch = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/blog/posts?channel_id=channel-1')) {
+        return Promise.resolve(new Response(JSON.stringify({ data: [{
+          id: 'published-1',
+          channel_id: 'channel-1',
+          title: '不应单独显示的已发布文章',
+          status: 'published',
+          updated_at: '2026-07-15T00:00:00Z',
+        }], meta: { page: 1, page_size: 50, total: 1, has_more: false } }), { status: 200 }))
+      }
+      if (url.endsWith('/blog/posts/drafts')) return loadDrafts()
+      return initialFetch(input, init)
+    })
+    const vueErrorHandler = vi.fn()
+    const unhandledRejections: unknown[] = []
+    const onUnhandledRejection = (reason: unknown) => unhandledRejections.push(reason)
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    try {
+      const wrapper = mountView(vueErrorHandler)
+      await flushPromises()
+      await new Promise(resolve => setTimeout(resolve, 0))
+      await wrapper.findAll('button').find(button => button.text() === '内容')!.trigger('click')
+
+      expect(wrapper.get('[data-test="posts-error"]').text()).toBe('内容加载失败，请重试')
+      expect(wrapper.find('[data-test="empty-state"]').exists()).toBe(false)
+      expect(wrapper.text()).not.toContain('不应单独显示的已发布文章')
+      expect(vueErrorHandler).not.toHaveBeenCalled()
+      expect(unhandledRejections).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+  })
+
+  it('内容请求成功且无数据时显示真实空态', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text() === '内容')!.trigger('click')
+
+    expect(wrapper.get('[data-test="empty-state"]').text()).toBe('暂无内容')
+    expect(wrapper.find('[data-test="posts-error"]').exists()).toBe(false)
+  })
+
+  it('读取所有已发布文章分页并包含第二页结果', async () => {
+    const initialFetch = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/v1/blog/posts?channel_id=channel-1&page_size=50&page=1') {
+        return Promise.resolve(new Response(JSON.stringify({
+          data: [{ id: 'published-1', title: '第一页文章', status: 'published', updated_at: '2026-07-16T00:00:00Z' }],
+          meta: { page: 1, page_size: 50, total: 51, has_more: true },
+        }), { status: 200 }))
+      }
+      if (url === '/api/v1/blog/posts?channel_id=channel-1&page_size=50&page=2') {
+        return Promise.resolve(new Response(JSON.stringify({
+          data: [{ id: 'published-51', title: '第二页文章', status: 'published', updated_at: '2026-07-15T00:00:00Z' }],
+          meta: { page: 2, page_size: 50, total: 51, has_more: false },
+        }), { status: 200 }))
+      }
+      return initialFetch(input, init)
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text() === '内容')!.trigger('click')
+
+    expect(wrapper.text()).toContain('第一页文章')
+    expect(wrapper.text()).toContain('第二页文章')
+    const publishedURLs = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter(url => url.includes('/blog/posts?channel_id=channel-1'))
+    expect(publishedURLs).toEqual([
+      '/api/v1/blog/posts?channel_id=channel-1&page_size=50&page=1',
+      '/api/v1/blog/posts?channel_id=channel-1&page_size=50&page=2',
+    ])
   })
 
   it('合集保存被后端拒绝时保留弹窗和输入并显示后端错误', async () => {

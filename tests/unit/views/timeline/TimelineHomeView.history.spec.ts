@@ -1,4 +1,4 @@
-import { mount, type VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,8 +8,10 @@ import { useTimelineStore } from '@/stores/timeline'
 import type { TimelineEvent, TimelineRevision } from '@/types'
 import TimelineHomeView from '@/views/timeline/TimelineHomeView.vue'
 
+const routeState = vi.hoisted(() => ({ query: {} as Record<string, unknown> }))
+
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ query: {} }),
+  useRoute: () => routeState,
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }))
 
@@ -68,10 +70,15 @@ function historyState(wrapper: VueWrapper) {
   return wrapper.vm.$.setupState as HistoryState
 }
 
-function mountView() {
+function mountView(options: {
+  fetchEvents?: (store: ReturnType<typeof useTimelineStore>) => Promise<void>
+} = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
-  vi.spyOn(useTimelineStore(), 'fetchEvents').mockResolvedValue()
+  const timelineStore = useTimelineStore()
+  vi.spyOn(timelineStore, 'fetchEvents').mockImplementation(
+    options.fetchEvents ? () => options.fetchEvents!(timelineStore) : async () => {},
+  )
   const auth = useAuthStore()
   auth.token = 'history-token'
   auth.isAuthenticated = true
@@ -84,7 +91,7 @@ function mountView() {
         PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
         PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
         PModal: { template: '<section class="modal"><slot /><slot name="footer" /></section>' },
-        PEmpty: true,
+        PEmpty: { props: ['text'], template: '<div>{{ text }}</div>' },
         PInput: true,
         PTextarea: true,
         PConfirm: true,
@@ -94,11 +101,12 @@ function mountView() {
       },
     },
   })
-  return { wrapper, state: historyState(wrapper) }
+  return { wrapper, state: historyState(wrapper), store: timelineStore }
 }
 
 describe('TimelineHomeView history requests', () => {
   beforeEach(() => {
+    routeState.query = {}
     vi.mocked(fetch).mockReset()
   })
 
@@ -262,5 +270,59 @@ describe('TimelineHomeView history requests', () => {
     expect(state.historyEvent).toBeNull()
     expect(state.historyRevisions).toEqual([])
     expect(state.loadingHistory).toBe(false)
+  })
+})
+
+describe('TimelineHomeView event list states', () => {
+  it('shows a failure state instead of an empty state when event loading fails', async () => {
+    const { wrapper, store } = mountView()
+    store.error = 'Failed to fetch events'
+    await nextTick()
+
+    expect(wrapper.text()).toContain('历史事件加载失败，请重试')
+    expect(wrapper.text()).not.toContain('暂无历史事件')
+  })
+
+  it('keeps the main loading state above compare content', async () => {
+    const request = deferred<void>()
+    routeState.query = { compare: 'event-a' }
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ data: event('event-a', '事件 A') }), { status: 200 }))
+
+    const { wrapper } = mountView({
+      fetchEvents: async (store) => {
+        store.loading = true
+        await request.promise
+        store.loading = false
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('加载中...')
+    expect(wrapper.find('.tl-shell').exists()).toBe(false)
+
+    request.resolve()
+    await flushPromises()
+  })
+
+  it('keeps a main request failure above compare content', async () => {
+    const request = deferred<void>()
+    routeState.query = { compare: 'event-a' }
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ data: event('event-a', '事件 A') }), { status: 200 }))
+
+    const { wrapper } = mountView({
+      fetchEvents: async (store) => {
+        store.loading = true
+        await request.promise
+        store.loading = false
+        store.error = 'Failed to fetch events'
+      },
+    })
+    await flushPromises()
+    request.resolve()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('历史事件加载失败，请重试')
+    expect(wrapper.text()).not.toContain('暂无历史事件')
+    expect(wrapper.find('.tl-shell').exists()).toBe(false)
   })
 })

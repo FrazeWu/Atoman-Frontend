@@ -45,9 +45,14 @@
       </div>
     </div>
 
-    <div v-if="loading && events.length === 0 && compareIds.length === 0" class="tl-state-block">
+    <div v-if="loading && events.length === 0" class="tl-state-block">
       <p class="font-bold">加载中...</p>
     </div>
+
+    <PEmpty
+      v-else-if="!loading && error && events.length === 0"
+      text="历史事件加载失败，请重试"
+    />
 
     <PEmpty v-else-if="!loading && events.length === 0 && compareIds.length === 0" text="暂无历史事件" />
 
@@ -417,7 +422,7 @@ const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const { events, loading } = storeToRefs(store)
+const { events, loading, error } = storeToRefs(store)
 
 const viewMode = ref<TimelineViewMode>('lanes')
 
@@ -876,6 +881,7 @@ const openHistory = async (event: TimelineEvent) => {
 }
 
 onBeforeUnmount(closeHistory)
+onBeforeUnmount(() => store.cancelEventRequests())
 
 const submitForm = async () => {
   if (!form.value.title || !form.value.event_date || !form.value.location || !form.value.source) return

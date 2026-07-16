@@ -33,31 +33,64 @@ export const useTimelineStore = defineStore('timeline', () => {
     category?: string
     yearStart?: number
     yearEnd?: number
-    page?: number
     limit?: number
   } = {}) => {
     const requestSequence = ++eventsRequestSequence
+    const pageSize = params.limit || 200
     events.value = []
     eventsTotal.value = 0
     loading.value = true
     error.value = null
     try {
-      const query = new URLSearchParams()
-      if (params.category) query.set('category', params.category)
-      if (params.yearStart) query.set('year_start', String(params.yearStart))
-      if (params.yearEnd) query.set('year_end', String(params.yearEnd))
-      if (params.page) query.set('page', String(params.page))
-      if (params.limit) query.set('limit', String(params.limit))
+      const collected: TimelineEvent[] = []
+      const seenIDs = new Set<string>()
+      let page = 1
+      let total: number | null = null
 
-      const requestUrl = `${api.url}/timeline/events?${query.toString()}`
-      const res = await fetch(requestUrl)
-      if (requestSequence !== eventsRequestSequence) return
-      if (!res.ok) throw new Error('Failed to fetch events')
+      while (total === null || collected.length < total) {
+        const query = new URLSearchParams({ page: String(page), limit: String(pageSize) })
+        if (params.category) query.set('category', params.category)
+        if (params.yearStart) query.set('year_start', String(params.yearStart))
+        if (params.yearEnd) query.set('year_end', String(params.yearEnd))
 
-      const data = await res.json()
-      if (requestSequence !== eventsRequestSequence) return
-      events.value = data.data || []
-      eventsTotal.value = data.total || 0
+        const res = await fetch(`${api.url}/timeline/events?${query}`)
+        if (requestSequence !== eventsRequestSequence) return
+        if (!res.ok) throw new Error('Failed to fetch events')
+
+        const data: unknown = await res.json()
+        if (requestSequence !== eventsRequestSequence) return
+        if (
+          typeof data !== 'object' || data === null
+          || !Array.isArray((data as { data?: unknown }).data)
+          || !Number.isInteger((data as { total?: unknown }).total)
+          || (data as { total: number }).total < 0
+          || (data as { page?: unknown }).page !== page
+          || (data as { limit?: unknown }).limit !== pageSize
+        ) {
+          throw new Error('Invalid timeline events response')
+        }
+
+        const response = data as { data: TimelineEvent[]; total: number; page: number; limit: number }
+        if (total !== null && response.total !== total) throw new Error('Timeline events changed while loading')
+        total = response.total
+        for (const event of response.data) {
+          if (!seenIDs.has(event.id)) {
+            seenIDs.add(event.id)
+            collected.push(event)
+          }
+        }
+        if (collected.length > total) throw new Error('Timeline events exceed reported total')
+        if (
+          collected.length < total
+          && (response.data.length < response.limit || page >= Math.ceil(total / response.limit))
+        ) {
+          throw new Error('Incomplete timeline events response')
+        }
+        page++
+      }
+
+      events.value = collected
+      eventsTotal.value = total
     } catch (e) {
       if (requestSequence !== eventsRequestSequence) return
       error.value = 'Failed to fetch events'
@@ -67,6 +100,11 @@ export const useTimelineStore = defineStore('timeline', () => {
         loading.value = false
       }
     }
+  }
+
+  const cancelEventRequests = () => {
+    eventsRequestSequence++
+    loading.value = false
   }
 
   const fetchEvent = async (id: string) => {
@@ -420,6 +458,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading,
     error,
     fetchEvents,
+    cancelEventRequests,
     fetchEvent,
     createEvent,
     updateEvent,

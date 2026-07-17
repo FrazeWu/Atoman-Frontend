@@ -127,6 +127,13 @@ describe('host-scoped route tables', () => {
     expect(children.find((route) => route.path === 'feed-sources')?.redirect).toBe('/setting/access')
   })
 
+  it('registers the community management page under settings', () => {
+    const settingRoot = settingRoutes.find((route) => route.path === '/setting')
+    const community = settingRoot?.children?.find((route) => route.path === 'community')
+    expect(community).toBeTruthy()
+    expect(lazyImportPath(community?.component)).toContain('SettingCommunityView.vue')
+  })
+
   it('registers a disabled-module route before the catch-all route', () => {
     const appRoutePaths = paths(buildAppRoutes())
     const disabledRouteIndex = appRoutePaths.indexOf('/__disabled__')

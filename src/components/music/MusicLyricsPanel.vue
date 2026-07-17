@@ -371,12 +371,18 @@ async function attemptLyricsSave(input: UpdateMusicSongLyricsInput) {
 
 async function confirmLyricsConflict() {
   if (!pendingLyricsInput.value || conflictAnnotationIds.value.length === 0) return
-  const input: UpdateMusicSongLyricsInput = {
-    ...pendingLyricsInput.value,
-    annotation_resolutions: conflictAnnotationIds.value.map((annotationId) => ({
+  const resolutionsByAnnotationId = new Map(
+    (pendingLyricsInput.value.annotation_resolutions ?? []).map((resolution) => [resolution.annotation_id, resolution]),
+  )
+  for (const annotationId of conflictAnnotationIds.value) {
+    resolutionsByAnnotationId.set(annotationId, {
       annotation_id: annotationId,
       action: 'needs_rebind',
-    })),
+    })
+  }
+  const input: UpdateMusicSongLyricsInput = {
+    ...pendingLyricsInput.value,
+    annotation_resolutions: [...resolutionsByAnnotationId.values()],
   }
   conflictAnnotationIds.value = []
   await attemptLyricsSave(input)

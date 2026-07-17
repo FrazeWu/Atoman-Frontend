@@ -452,6 +452,42 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
   })
 
+  it('连续冲突确认会合并之前和本轮的 annotation resolutions', async () => {
+    mocks.save
+      .mockRejectedValueOnce(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'first conflict', {
+        annotation_ids: ['annotation-a'],
+      }))
+      .mockRejectedValueOnce(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'second conflict', {
+        annotation_ids: ['annotation-b', 'annotation-a'],
+      }))
+      .mockResolvedValueOnce(lyricsState.lyrics.value)
+    const wrapper = await mountPanel()
+    await flushPromises()
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-content-input').setValue('连续冲突草稿')
+    await wrapper.get('.drawer-save').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('.conflict-confirm').trigger('click')
+    await flushPromises()
+    expect(mocks.save).toHaveBeenNthCalledWith(2, 'song-1', expect.objectContaining({
+      annotation_resolutions: [
+        { annotation_id: 'annotation-a', action: 'needs_rebind' },
+      ],
+    }))
+    expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(true)
+
+    await wrapper.get('.conflict-confirm').trigger('click')
+    await flushPromises()
+    expect(mocks.save).toHaveBeenNthCalledWith(3, 'song-1', expect.objectContaining({
+      annotation_resolutions: [
+        { annotation_id: 'annotation-a', action: 'needs_rebind' },
+        { annotation_id: 'annotation-b', action: 'needs_rebind' },
+      ],
+    }))
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
+  })
+
   it('取消冲突确认保留歌词编辑器和草稿，其他错误不弹确认', async () => {
     mocks.save.mockRejectedValueOnce(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'conflict', {
       annotation_ids: ['annotation-1'],

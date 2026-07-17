@@ -35,6 +35,10 @@ describe('overlay layer contract', () => {
     expect(mobileNavSource).toContain('z-index: var(--a-z-navigation);')
     expect(lyricEditorSource).toContain('above-player')
     expect(lyricsSource).toMatch(/<PConfirm[\s\S]*above-player/)
+    expect(sheetSource).toMatch(/\.p-sheet-root--above-player \.p-sheet-backdrop\s*\{[^}]*z-index: var\(--a-z-player-sheet-backdrop\);/)
+    expect(sheetSource).toMatch(/\.p-sheet-root--above-player \.p-sheet-layer\s*\{[^}]*z-index: var\(--a-z-player-sheet\);/)
+    expect(styleSource).toMatch(/\.p-modal-backdrop--above-player\s*\{[^}]*z-index: var\(--a-z-player-modal-backdrop\);/)
+    expect(styleSource).toMatch(/\.p-modal-backdrop--above-player \.p-modal\s*\{[^}]*z-index: var\(--a-z-player-modal\);/)
   })
 
   it('reserves content and sheet height only for visible fixed chrome', () => {

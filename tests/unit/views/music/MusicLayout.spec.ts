@@ -8,7 +8,7 @@ import { vi } from 'vitest'
 import MusicLayout from '@/views/music/MusicLayout.vue'
 
 describe('MusicLayout.vue', () => {
-  it('renders only the simplified sidebar items', () => {
+  it('renders the four music library destinations', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [] })
     const wrapper = mount(MusicLayout, {
       global: { 
@@ -26,10 +26,11 @@ describe('MusicLayout.vue', () => {
       }
     })
     const items = wrapper.findAll('p-sidebar-item-stub')
-    expect(items.length).toBe(3)
-    expect(items[0].text()).toContain('探索')
-    expect(items[1].text()).toContain('艺术家')
-    expect(items[2].text()).toContain('收藏')
+    expect(items.length).toBe(4)
+    expect(items[0].text()).toContain('发现')
+    expect(items[1].text()).toContain('专辑')
+    expect(items[2].text()).toContain('艺人')
+    expect(items[3].text()).toContain('收藏')
   })
 
   it('does not render personal playlists for guests', () => {
@@ -51,5 +52,27 @@ describe('MusicLayout.vue', () => {
     })
 
     expect(wrapper.find('[data-testid="personal-playlists"]').exists()).toBe(false)
+  })
+
+  it('renders playback history in the personal area for authenticated users', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [] })
+    const wrapper = mount(MusicLayout, {
+      global: {
+        plugins: [router, createTestingPinia({
+          createSpy: vi.fn,
+          initialState: { auth: { isAuthenticated: true } },
+        })],
+        stubs: {
+          'router-view': true,
+          PSidebar: { template: '<div><slot /><slot name="bottom" /></div>' },
+          PSidebarItem: { template: '<p-sidebar-item-stub><slot /></p-sidebar-item-stub>' },
+          MusicSidebarPlaylists: { template: '<div data-testid="personal-playlists" />' },
+          PlaylistDrawer: true,
+        },
+      },
+    })
+
+    expect(wrapper.get('[data-testid="music-history-link"]').text()).toContain('播放历史')
+    expect(wrapper.find('[data-testid="personal-playlists"]').exists()).toBe(true)
   })
 })

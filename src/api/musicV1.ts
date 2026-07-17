@@ -215,8 +215,15 @@ export type MusicSongListItem = {
   status?: string
   entry_status: MusicEntryStatus
   artists?: Array<{ id: string; name: string }>
-  album?: { id: string; title: string }
+  album?: { id: string; title: string; cover_url?: string }
   position?: number
+}
+
+export type MusicListeningHistory = {
+  id: string
+  play_count: number
+  last_played_at: string
+  song: MusicSongListItem
 }
 
 export type MusicPlaylistSummary = {
@@ -415,6 +422,7 @@ export const musicV1Endpoints = {
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
   playlistSongOrder: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/order`,
   plays: () => `${apiV1Base()}/music/plays`,
+  history: () => `${apiV1Base()}/music/history`,
   discover: (mode: MusicBrowseMode) => `${apiV1Base()}/music/discover?mode=${mode}`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
@@ -945,6 +953,19 @@ export async function reorderMusicPlaylistSongs(playlistId: string, songIds: str
 
 export async function recordMusicSongPlay(songId: string): Promise<{ recorded: boolean }> {
   return apiPostJson<{ recorded: boolean }>(musicV1Endpoints.plays(), { song_id: songId })
+}
+
+export async function listMusicListeningHistory(filters: Pick<MusicListFilters, 'page' | 'page_size'> = {}): Promise<MusicListResponse<MusicListeningHistory>> {
+  const response = await apiGetEnvelope<MusicListeningHistory[], PaginationMeta>(`${musicV1Endpoints.history()}${queryString(filters)}`)
+  return {
+    data: response.data,
+    meta: response.meta ?? {
+      page: filters.page ?? 1,
+      page_size: filters.page_size ?? response.data.length,
+      total: response.data.length,
+      has_more: false,
+    },
+  }
 }
 
 export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {

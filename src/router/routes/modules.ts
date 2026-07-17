@@ -73,6 +73,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'explore', redirect: 'discover' },
         { path: 'artists', component: asyncRouteView(() => import('@/views/music/ArtistsView.vue')) },
         { path: 'starred', component: asyncRouteView(() => import('@/views/music/StarredView.vue')) },
+        { path: 'history', component: asyncRouteView(() => import('@/views/music/HistoryView.vue')), meta: { requiresAuth: true } },
         { path: 'artist/new', component: asyncRouteView(() => import('@/views/music/CreateArtistView.vue')), meta: { requiresAuth: true } },
         { path: 'artist/:artistId', component: asyncRouteView(() => import('@/views/music/MusicArtistRouteView.vue')) },
         { path: 'album/:albumId', component: asyncRouteView(() => import('@/views/music/MusicAlbumRouteView.vue')) },

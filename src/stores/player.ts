@@ -57,7 +57,52 @@ export const usePlayerStore = defineStore('player', () => {
 
   let audio: HTMLAudioElement | null = null;
   let songsRequest: Promise<void> | null = null;
-  let lastReportedSongId: string | null = null;
+  const listeningThresholdMs = 5000;
+  let listeningTimer: ReturnType<typeof setTimeout> | null = null;
+  let listeningStartedAt: number | null = null;
+  let listenedMs = 0;
+  let listeningSongId: string | null = null;
+  let playReported = false;
+
+  const clearListeningTimer = () => {
+    if (listeningTimer !== null) {
+      clearTimeout(listeningTimer);
+      listeningTimer = null;
+    }
+  };
+
+  const pauseListening = () => {
+    if (listeningStartedAt !== null) {
+      listenedMs += Date.now() - listeningStartedAt;
+      listeningStartedAt = null;
+    }
+    clearListeningTimer();
+  };
+
+  const reportCurrentPlay = () => {
+    const songId = currentSong.value?.id ? String(currentSong.value.id) : null;
+    if (!songId || songId !== listeningSongId || playReported) return;
+    playReported = true;
+    listeningStartedAt = null;
+    listeningTimer = null;
+    void recordMusicSongPlay(songId).catch((error) => {
+      console.error('Failed to record music play:', error);
+    });
+  };
+
+  const resumeListening = () => {
+    if (!listeningSongId || playReported || listeningStartedAt !== null) return;
+    listeningStartedAt = Date.now();
+    const remaining = Math.max(0, listeningThresholdMs - listenedMs);
+    listeningTimer = setTimeout(reportCurrentPlay, remaining);
+  };
+
+  const resetListening = (song: Song) => {
+    pauseListening();
+    listenedMs = 0;
+    listeningSongId = String(song.id);
+    playReported = false;
+  };
 
   const ensureAudio = () => {
     if (audio) return audio;
@@ -106,9 +151,11 @@ export const usePlayerStore = defineStore('player', () => {
     player.play()
       .then(() => {
         isPlaying.value = true;
+        resumeListening();
       })
       .catch(() => {
         isPlaying.value = false;
+        pauseListening();
       });
   };
 
@@ -189,6 +236,7 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const startSong = (song: Song) => {
+    resetListening(song);
     const player = ensureAudio();
     player.src = song.audio_url;
     player.volume = volume.value;
@@ -197,15 +245,6 @@ export const usePlayerStore = defineStore('player', () => {
     duration.value = 0;
     attemptPlay(player);
   };
-
-  watch(currentSong, (song) => {
-    const songId = song?.id ? String(song.id) : null
-    if (!songId || songId === lastReportedSongId) return
-    lastReportedSongId = songId
-    void recordMusicSongPlay(songId).catch((error) => {
-      console.error('Failed to record music play:', error)
-    })
-  })
 
   const playSong = (song: Song) => {
     if (currentSong.value?.id === song.id) {
@@ -251,7 +290,11 @@ export const usePlayerStore = defineStore('player', () => {
     if (isPlaying.value) {
       player.pause();
       isPlaying.value = false;
+      pauseListening();
     } else {
+			if (listeningSongId !== String(currentSong.value.id)) {
+				resetListening(currentSong.value);
+			}
       attemptPlay(player);
     }
   };
@@ -271,6 +314,7 @@ export const usePlayerStore = defineStore('player', () => {
     } else if (repeatMode.value === 'one') {
       player.currentTime = 0;
       currentTime.value = 0;
+      resetListening(currentSong.value);
       attemptPlay(player);
       return;
     } else if (repeatMode.value === 'all' || currentIndex < list.length - 1) {

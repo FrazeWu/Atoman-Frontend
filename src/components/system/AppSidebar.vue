@@ -12,6 +12,14 @@
     </PSidebarItem>
 
     <template #bottom>
+      <PSidebarItem
+        v-if="authStore.isAuthenticated"
+        :to="modulePathUrl('music', '/history')"
+        :icon="History"
+        data-testid="music-history-link"
+      >
+        播放历史
+      </PSidebarItem>
       <MusicSidebarPlaylists
         v-if="authStore.isAuthenticated"
         :collapsed="sidebarCollapsed"
@@ -21,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { Compass, Disc3, Star, Users } from 'lucide-vue-next'
+import { Compass, Disc3, History, Star, Users } from 'lucide-vue-next'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 import MusicSidebarPlaylists from '@/components/music/MusicSidebarPlaylists.vue'

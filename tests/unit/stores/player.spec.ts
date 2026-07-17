@@ -3,6 +3,14 @@ import { nextTick } from 'vue'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { usePlayerStore } from '@/stores/player'
 
+const mocks = vi.hoisted(() => ({
+	recordMusicSongPlay: vi.fn(),
+}))
+
+vi.mock('@/api/musicV1', () => ({
+	recordMusicSongPlay: mocks.recordMusicSongPlay,
+}))
+
 // Mock Audio
 const audioInstances: MockAudio[] = []
 
@@ -27,8 +35,45 @@ describe('player store', () => {
     setActivePinia(createPinia())
     vi.restoreAllMocks()
     audioInstances.length = 0
+		mocks.recordMusicSongPlay.mockReset()
+		mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true })
     // localStorage.clear()
   })
+
+	it('records one play only after five seconds of active playback', async () => {
+		vi.useFakeTimers()
+		const player = usePlayerStore()
+		const song = { id: 'song-5s', title: 'Five Seconds', audio_url: 'five.mp3' } as any
+
+		player.playSong(song)
+		await audioInstances[0].play.mock.results[0]?.value
+		await vi.advanceTimersByTimeAsync(4999)
+		expect(mocks.recordMusicSongPlay).not.toHaveBeenCalled()
+
+		await vi.advanceTimersByTimeAsync(1)
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith('song-5s')
+
+		await vi.advanceTimersByTimeAsync(5000)
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
+		vi.useRealTimers()
+	})
+
+	it('records a restored song after five seconds of resumed playback', async () => {
+		vi.useFakeTimers()
+		localStorage.setItem('playbackState', JSON.stringify({
+			song: { id: 'restored-song', title: 'Restored', audio_url: 'restored.mp3' },
+			currentTime: 12,
+		}))
+		const player = usePlayerStore()
+
+		player.togglePlay()
+		await audioInstances[0].play.mock.results[0]?.value
+		await vi.advanceTimersByTimeAsync(5000)
+
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith('restored-song')
+		vi.useRealTimers()
+	})
 
   it('toggles lyrics', () => {
     const player = usePlayerStore()

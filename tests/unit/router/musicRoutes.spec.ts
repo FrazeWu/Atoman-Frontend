@@ -13,5 +13,6 @@ describe('music module routes', () => {
     expect(musicRoutes).toContain("{ path: 'discover', component: asyncRouteView(() => import('@/views/music/ExploreView.vue')) }")
     expect(musicRoutes).toContain("{ path: 'artists', component: asyncRouteView(() => import('@/views/music/ArtistsView.vue')) }")
     expect(musicRoutes).toContain("{ path: 'starred', component: asyncRouteView(() => import('@/views/music/StarredView.vue')) }")
+    expect(musicRoutes).toContain("{ path: 'history', component: asyncRouteView(() => import('@/views/music/HistoryView.vue')), meta: { requiresAuth: true } }")
   })
 })

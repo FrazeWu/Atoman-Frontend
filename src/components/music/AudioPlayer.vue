@@ -157,15 +157,13 @@
   </div>
 
   <Transition name="slide-up">
-    <div v-if="player.showLyrics" class="lyrics-panel">
-      <div class="lyrics-header">
-         <span class="close-btn" @click="player.toggleLyrics">关闭</span>
-      </div>
-      <div class="lyrics-content">
-         <p class="placeholder-text">暂无歌词</p>
-         <p class="song-meta">{{ player.currentSong.title }} - {{ artistText }}</p>
-      </div>
-    </div>
+    <MusicLyricsPanel
+      v-if="player.showLyrics && player.currentSong"
+      :song-title="player.currentSong.title"
+      :artist-text="artistText"
+      :lyrics="player.currentSong.lyrics"
+      @close="player.toggleLyrics"
+    />
   </Transition>
 
   <Transition name="slide-up">
@@ -213,6 +211,7 @@ import {
 } from 'lucide-vue-next'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
+import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
   listMusicPlaylists,
@@ -869,34 +868,14 @@ onBeforeUnmount(() => {
   .volume-container { display: none; }
 }
 
-.lyrics-panel {
-  position: fixed; top: 56px; bottom: 84px; left: 0; right: 0;
-  width: 100%;
-  height: calc(100vh - 84px - 56px); background: var(--a-color-paper);
-  border-top: 1px solid var(--a-color-line-soft);
-  z-index: 2000; padding: 3rem;
-  display: flex; flex-direction: column;
-}
-.lyrics-header {
-  display: flex; justify-content: flex-end; margin-bottom: 2rem;
-}
 .close-btn {
   font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 10px;
   letter-spacing: 0.1em; cursor: pointer; border-bottom: 1px solid var(--a-color-line);
-}
-.lyrics-content {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center;
 }
 .placeholder-text {
   font-family: inherit; font-size: 2rem; font-weight: var(--a-font-weight-black, 900);
   margin-bottom: 1rem; color: var(--a-color-fg);
 }
-.song-meta {
-  font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 0.75rem;
-  text-transform: uppercase; letter-spacing: 0.08em; color: var(--a-color-muted);
-}
-
 .queue-panel {
   position: fixed; top: 56px; bottom: 84px; right: 0;
   width: 420px;
@@ -1065,7 +1044,6 @@ onBeforeUnmount(() => {
     gap: 8px;
   }
 
-  .lyrics-panel,
   .queue-panel {
     right: 0;
     bottom: calc(136px + env(safe-area-inset-bottom, 0px));

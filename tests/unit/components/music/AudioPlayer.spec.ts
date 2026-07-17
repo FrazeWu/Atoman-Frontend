@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
       id: string
       title: string
       audio_url: string
+      lyrics?: string
       media_kind?: 'music_song' | 'feed_item'
     },
     currentTime: 12,
@@ -51,6 +52,7 @@ describe('AudioPlayer song discussion', () => {
     mocks.openNestedAction.mockReset()
     mocks.listMusicPlaylists.mockResolvedValue({ data: [] })
     mocks.player.currentSong = { id: 'song-1', title: 'Track A', audio_url: 'https://example.com/a.mp3' }
+    mocks.player.showLyrics = false
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       disconnect() {}
@@ -87,5 +89,21 @@ describe('AudioPlayer song discussion', () => {
     })
 
     expect(wrapper.find('[data-test="player-song-discussion"]').exists()).toBe(false)
+  })
+
+  it('shows the current song lyrics in the lyrics panel', () => {
+    mocks.player.currentSong = {
+      id: 'song-1',
+      title: 'Track A',
+      audio_url: 'https://example.com/a.mp3',
+      lyrics: 'First line\nSecond line',
+    }
+    mocks.player.showLyrics = true
+
+    const wrapper = mount(AudioPlayer, {
+      global: { stubs: { PDropdown: true, PToast: true } },
+    })
+
+    expect(wrapper.get('[data-testid="lyrics-text"]').element.textContent).toBe('First line\nSecond line')
   })
 })

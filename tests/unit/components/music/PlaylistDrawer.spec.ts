@@ -311,6 +311,48 @@ describe('PlaylistDrawer.vue', () => {
 		])
 	})
 
+	it('persists the latest queued order for every playlist', async () => {
+		mocks.getMusicPlaylist.mockResolvedValueOnce(threeSongPlaylist())
+		const firstRequest = deferred<{ reordered: boolean }>()
+		mocks.reorderMusicPlaylistSongs
+			.mockReturnValueOnce(firstRequest.promise)
+			.mockResolvedValue({ reordered: true })
+		const wrapper = mountDrawer()
+		await flushPromises()
+		const firstSongs = wrapper.vm.$.setupState.playlist.songs
+		void wrapper.vm.$.setupState.persistSongOrder([firstSongs[1], firstSongs[0], firstSongs[2]])
+
+		for (const playlistId of ['playlist-2', 'playlist-3']) {
+			const nextPlaylist = {
+				...threeSongPlaylist(),
+				id: playlistId,
+				songs: threeSongPlaylist().songs.map((song, index) => ({
+					...song,
+					id: `${playlistId}-song-${index + 1}`,
+				})),
+			}
+			mocks.getMusicPlaylist.mockResolvedValueOnce(nextPlaylist)
+			await wrapper.vm.$.setupState.loadPlaylist(playlistId)
+			const songs = wrapper.vm.$.setupState.playlist.songs
+			void wrapper.vm.$.setupState.persistSongOrder([songs[1], songs[0], songs[2]])
+		}
+
+		firstRequest.resolve({ reordered: true })
+		await flushPromises()
+
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenCalledTimes(3)
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenNthCalledWith(2, 'playlist-2', [
+			'playlist-2-song-2',
+			'playlist-2-song-1',
+			'playlist-2-song-3',
+		])
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenNthCalledWith(3, 'playlist-3', [
+			'playlist-3-song-2',
+			'playlist-3-song-1',
+			'playlist-3-song-3',
+		])
+	})
+
 	it('rolls back a failed order to the last server-confirmed order', async () => {
 		mocks.getMusicPlaylist.mockResolvedValue(threeSongPlaylist())
 		mocks.reorderMusicPlaylistSongs

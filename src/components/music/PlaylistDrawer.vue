@@ -38,8 +38,8 @@ const removingSongId = ref<string | null>(null)
 const savingOrder = ref(false)
 const tracksListRef = ref<HTMLElement | null>(null)
 let sortable: Sortable | null = null
-let pendingSongOrder: { playlistId: string; songs: MusicSongListItem[] } | null = null
-let confirmedSongOrder: { playlistId: string; songs: MusicSongListItem[] } | null = null
+const pendingSongOrders = new Map<string, MusicSongListItem[]>()
+const confirmedSongOrders = new Map<string, MusicSongListItem[]>()
 const canManagePlaylist = computed(() => Boolean(
   authStore.user?.uuid
   && playlist.value?.user_id === authStore.user.uuid,
@@ -67,7 +67,6 @@ function initializeSortable() {
 async function loadPlaylist(playlistId: string | null) {
   if (!playlistId) {
     playlist.value = null
-    confirmedSongOrder = null
     return
   }
 
@@ -76,7 +75,7 @@ async function loadPlaylist(playlistId: string | null) {
   try {
     const detail = await getMusicPlaylist(playlistId)
     playlist.value = detail
-		confirmedSongOrder = { playlistId: detail.id, songs: [...detail.songs] }
+		confirmedSongOrders.set(detail.id, [...detail.songs])
 		await nextTick()
 		initializeSortable()
   } catch (error) {
@@ -91,28 +90,30 @@ async function persistSongOrder(nextSongs: MusicSongListItem[]) {
 	const current = playlist.value
 	if (!current || !canManagePlaylist.value) return
 	playlist.value = { ...current, songs: nextSongs }
-	pendingSongOrder = { playlistId: current.id, songs: nextSongs }
+	pendingSongOrders.set(current.id, nextSongs)
 	if (savingOrder.value) return
 
 	savingOrder.value = true
 	errorMessage.value = ''
 	try {
-		while (pendingSongOrder) {
-			const orderToPersist = pendingSongOrder
-			pendingSongOrder = null
+		while (pendingSongOrders.size > 0) {
+			const nextOrder = pendingSongOrders.entries().next().value
+			if (!nextOrder) break
+			const [playlistId, songs] = nextOrder
+			pendingSongOrders.delete(playlistId)
 			try {
-				await reorderMusicPlaylistSongs(orderToPersist.playlistId, orderToPersist.songs.map((song) => String(song.id)))
-				if (playlist.value?.id === orderToPersist.playlistId) {
-					confirmedSongOrder = { playlistId: orderToPersist.playlistId, songs: [...orderToPersist.songs] }
+				await reorderMusicPlaylistSongs(playlistId, songs.map((song) => String(song.id)))
+				confirmedSongOrders.set(playlistId, [...songs])
+				if (playlist.value?.id === playlistId) {
 					errorMessage.value = ''
 				}
 				refreshPlaylist()
 			} catch (error) {
 				console.error('Failed to reorder playlist songs:', error)
-				if (playlist.value?.id === orderToPersist.playlistId) {
-					const hasNewerOrder = pendingSongOrder?.playlistId === orderToPersist.playlistId
-					if (!hasNewerOrder && confirmedSongOrder?.playlistId === orderToPersist.playlistId) {
-						playlist.value = { ...playlist.value, songs: [...confirmedSongOrder.songs] }
+				if (playlist.value?.id === playlistId) {
+					const confirmedOrder = confirmedSongOrders.get(playlistId)
+					if (!pendingSongOrders.has(playlistId) && confirmedOrder) {
+						playlist.value = { ...playlist.value, songs: [...confirmedOrder] }
 					}
 					errorMessage.value = '歌单顺序保存失败'
 				}

@@ -20,6 +20,7 @@
           v-if="isAuthenticated"
           type="button"
           variant="secondary"
+          :disabled="saving || reverting"
           data-testid="lyrics-edit-trigger"
           @click="isLyricEditorOpen = true"
         >
@@ -57,7 +58,7 @@
             v-if="isAuthenticated"
             type="button"
             class="music-lyrics-panel__version-action"
-            :disabled="reverting"
+            :disabled="saving || reverting"
             :data-testid="`lyrics-revert-version-${version.version}`"
             @click="handleRevertVersion(version.version)"
           >
@@ -118,7 +119,7 @@
       :content="lyrics?.content ?? ''"
       :translation="lyrics?.translation ?? ''"
       :format="lyrics?.format ?? 'plain'"
-      :saving="saving"
+      :saving="saving || reverting"
       @close="isLyricEditorOpen = false"
       @save="handleSaveLyrics"
     />
@@ -208,6 +209,7 @@ const conflictAnnotationIds = ref<string[]>([])
 const pendingLyricsSongId = ref('')
 let pendingLyricsSaveGeneration = 0
 let activeLyricsSaveGeneration = 0
+let versionsViewGeneration = 0
 
 const displayModeOptions = [
   { label: '原文', value: 'original' },
@@ -239,6 +241,7 @@ watch(
   () => props.songId,
   (songId) => {
     activeLyricsSaveGeneration += 1
+    versionsViewGeneration += 1
     resetVersions()
     selectedAnnotationIds.value = []
     selectedTextDraft.value = null
@@ -335,6 +338,7 @@ async function handleVoteAnnotation(annotationId: string, vote: 'up' | 'down' | 
 }
 
 async function toggleVersions() {
+  versionsViewGeneration += 1
   versionsVisible.value = !versionsVisible.value
   if (!versionsVisible.value) {
     resetVersions()
@@ -348,11 +352,17 @@ async function toggleVersions() {
 }
 
 async function handleRevertVersion(version: number) {
-  if (!isAuthenticated.value || reverting.value || versionsSongId.value !== props.songId) return
+  if (!isAuthenticated.value || saving.value || reverting.value || versionsSongId.value !== props.songId) return
   const songId = props.songId
+  const viewGeneration = versionsViewGeneration
   try {
     const succeeded = await revertVersion(songId, version, `恢复到第 ${version} 版`)
-    if (succeeded && props.songId === songId && versionsSongId.value === songId) {
+    if (
+      succeeded
+      && props.songId === songId
+      && versionsVisible.value
+      && versionsViewGeneration === viewGeneration
+    ) {
       versionsVisible.value = false
     }
   } catch {
@@ -366,7 +376,7 @@ async function handleSaveLyrics(payload: {
   format: 'plain' | 'lrc'
   editSummary: string
 }) {
-  if (!isAuthenticated.value) return
+  if (!isAuthenticated.value || saving.value || reverting.value) return
   const input: UpdateMusicSongLyricsInput = {
     content: payload.content,
     translation: payload.translation,

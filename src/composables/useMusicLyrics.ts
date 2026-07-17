@@ -64,6 +64,18 @@ export function useMusicLyrics() {
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
 
+  function invalidateContentLoad() {
+    activeLoadRequestId += 1
+    loading.value = false
+  }
+
+  function canApplyMutationResponse(songId: string, response: MusicSongLyrics) {
+    const currentVersion = lyrics.value?.song_id === songId ? lyrics.value.version : undefined
+    return activeSongId.value === songId
+      && response.song_id === songId
+      && (currentVersion === undefined || response.version >= currentVersion)
+  }
+
   async function load(songId: string) {
     if (activeRevertSongId && activeRevertSongId !== songId) {
       activeRevertRequestId += 1
@@ -93,13 +105,17 @@ export function useMusicLyrics() {
   }
 
   async function save(songId: string, input: UpdateMusicSongLyricsInput) {
+    if (saving.value || reverting.value) throw new Error('歌词正在更新')
     const requestId = ++activeSaveRequestId
+    invalidateContentLoad()
     saving.value = true
     errorMessage.value = ''
     try {
       const updatedLyrics = await updateMusicSongLyrics(songId, input)
       if (requestId === activeSaveRequestId && activeSongId.value === songId) {
-        lyrics.value = updatedLyrics
+        invalidateContentLoad()
+        if (canApplyMutationResponse(songId, updatedLyrics)) lyrics.value = updatedLyrics
+        resetVersions()
       }
       return updatedLyrics
     } catch (error) {
@@ -206,23 +222,24 @@ export function useMusicLyrics() {
   }
 
   async function revertVersion(songId: string, version: number, editSummary: string) {
-    if (reverting.value) return false
+    if (saving.value || reverting.value) return false
     if (versionsSongId.value !== songId || !versions.value.some((item) => item.version === version)) {
       throw new Error('版本与当前歌曲不匹配')
     }
     const requestId = ++activeRevertRequestId
     activeRevertSongId = songId
+    invalidateContentLoad()
     reverting.value = true
     versionsErrorMessage.value = ''
     try {
       const updatedLyrics = await revertMusicSongLyricsVersion(songId, version, editSummary)
       if (requestId !== activeRevertRequestId) return false
       if (activeSongId.value === songId || activeSongId.value === '') {
-        activeLoadRequestId += 1
-        loading.value = false
-        errorMessage.value = ''
-        lyrics.value = updatedLyrics
         activeSongId.value = songId
+        invalidateContentLoad()
+        errorMessage.value = ''
+        if (canApplyMutationResponse(songId, updatedLyrics)) lyrics.value = updatedLyrics
+        resetVersions()
       }
       return true
     } catch (error) {

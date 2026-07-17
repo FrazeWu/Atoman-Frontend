@@ -378,6 +378,34 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
   })
 
+  it('恢复进行中禁用歌词编辑入口', async () => {
+    lyricsState.reverting.value = true
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="lyrics-edit-trigger"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
+  })
+
+  it('同歌恢复期间关闭并重开版本列表后不被旧 handler 关闭', async () => {
+    const pendingRevert = deferred<boolean>()
+    mocks.revertVersion.mockReturnValueOnce(pendingRevert.promise)
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    expect(wrapper.find('.music-lyrics-panel__versions').exists()).toBe(true)
+
+    pendingRevert.resolve(true)
+    await flushPromises()
+
+    expect(wrapper.find('.music-lyrics-panel__versions').exists()).toBe(true)
+  })
+
   it('旧歌曲恢复请求完成后不关闭重新打开的当前版本列表', async () => {
     let resolveStaleRevert!: (succeeded: boolean) => void
     mocks.revertVersion.mockImplementationOnce(() => new Promise<boolean>((resolve) => {

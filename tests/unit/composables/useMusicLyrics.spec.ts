@@ -110,6 +110,50 @@ describe('useMusicLyrics', () => {
     expect(composable.saving.value).toBe(false)
   })
 
+  it('does not let an older lyrics load overwrite a successful save', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const pendingLoad = deferred<any>()
+
+    apiMocks.getMusicSongLyrics.mockReturnValueOnce(pendingLoad.promise)
+    apiMocks.updateMusicSongLyrics.mockResolvedValueOnce({
+      song_id: 'song-1', content: 'saved lyrics', lines: [], annotations: [], version: 2,
+    })
+
+    const loadPromise = composable.load('song-1')
+    await composable.save('song-1', {
+      content: 'saved lyrics', translation: '', format: 'plain', edit_summary: 'save',
+    })
+    pendingLoad.resolve({ song_id: 'song-1', content: 'stale lyrics', lines: [], annotations: [], version: 1 })
+    await loadPromise
+
+    expect(composable.lyrics.value?.content).toBe('saved lyrics')
+    expect(composable.errorMessage.value).toBe('')
+    expect(composable.loading.value).toBe(false)
+  })
+
+  it('does not let an older lyrics load failure clear a successful save', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const pendingLoad = deferred<any>()
+
+    apiMocks.getMusicSongLyrics.mockReturnValueOnce(pendingLoad.promise)
+    apiMocks.updateMusicSongLyrics.mockResolvedValueOnce({
+      song_id: 'song-1', content: 'saved lyrics', lines: [], annotations: [], version: 2,
+    })
+
+    const loadPromise = composable.load('song-1')
+    await composable.save('song-1', {
+      content: 'saved lyrics', translation: '', format: 'plain', edit_summary: 'save',
+    })
+    pendingLoad.reject(new Error('stale load failed'))
+    await loadPromise
+
+    expect(composable.lyrics.value?.content).toBe('saved lyrics')
+    expect(composable.errorMessage.value).toBe('')
+    expect(composable.loading.value).toBe(false)
+  })
+
   it('loads and reverts lyric versions', async () => {
     const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
     const composable = useMusicLyrics()
@@ -132,9 +176,62 @@ describe('useMusicLyrics', () => {
 
     expect(apiMocks.listMusicSongLyricsVersions).toHaveBeenCalledWith('song-1')
     expect(apiMocks.revertMusicSongLyricsVersion).toHaveBeenCalledWith('song-1', 1, '恢复到第 1 版')
-    expect(composable.versions.value).toHaveLength(1)
+    expect(composable.versions.value).toEqual([])
+    expect(composable.versionsSongId.value).toBe('')
     expect(reverted).toBe(true)
     expect(composable.lyrics.value?.content).toBe('old')
+  })
+
+  it('rejects save while a revert mutation is pending', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const pendingRevert = deferred<any>()
+
+    apiMocks.getMusicSongLyrics.mockResolvedValueOnce({
+      song_id: 'song-1', content: 'current', lines: [], annotations: [], version: 3,
+    })
+    apiMocks.listMusicSongLyricsVersions.mockResolvedValueOnce([
+      { id: 'version-2', song_id: 'song-1', version: 2, content: 'old' },
+    ])
+    apiMocks.revertMusicSongLyricsVersion.mockReturnValueOnce(pendingRevert.promise)
+
+    await composable.load('song-1')
+    await composable.loadVersions('song-1')
+    const revertPromise = composable.revertVersion('song-1', 2, '恢复到第 2 版')
+
+    await expect(composable.save('song-1', {
+      content: 'competing save', translation: '', format: 'plain', edit_summary: 'save',
+    })).rejects.toThrow('歌词正在更新')
+    expect(apiMocks.updateMusicSongLyrics).not.toHaveBeenCalled()
+
+    pendingRevert.resolve({ song_id: 'song-1', content: 'reverted', lines: [], annotations: [], version: 4 })
+    await revertPromise
+  })
+
+  it('does not replace newer lyrics with a lower-version save response', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+
+    apiMocks.getMusicSongLyrics.mockResolvedValueOnce({
+      song_id: 'song-1', content: 'version five', lines: [], annotations: [], version: 5,
+    })
+    apiMocks.listMusicSongLyricsVersions.mockResolvedValueOnce([
+      { id: 'version-5', song_id: 'song-1', version: 5, content: 'version five' },
+    ])
+    apiMocks.updateMusicSongLyrics.mockResolvedValueOnce({
+      song_id: 'song-1', content: 'version four', lines: [], annotations: [], version: 4,
+    })
+
+    await composable.load('song-1')
+    await composable.loadVersions('song-1')
+    await composable.save('song-1', {
+      content: 'version four', translation: '', format: 'plain', edit_summary: 'save',
+    })
+
+    expect(composable.lyrics.value?.content).toBe('version five')
+    expect(composable.lyrics.value?.version).toBe(5)
+    expect(composable.versions.value).toEqual([])
+    expect(composable.versionsSongId.value).toBe('')
   })
 
   it('keeps the current song versions when an older request succeeds later', async () => {

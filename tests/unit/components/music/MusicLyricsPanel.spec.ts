@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiErrorResponseError } from '@/api/client'
 
 const mocks = vi.hoisted(() => ({
   load: vi.fn(),
@@ -19,6 +20,7 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 const authState = vi.hoisted(() => ({
+  isAuthenticated: true,
   user: null as null | { id?: number | string; uuid?: string; username: string; email: string },
 }))
 
@@ -74,13 +76,16 @@ vi.mock('@/stores/auth', () => ({
 
 vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
   default: {
-    props: ['line', 'annotations', 'active', 'bilingual'],
+    props: ['line', 'annotations', 'active', 'bilingual', 'canSelect'],
     template: `
       <div
-        class="lyrics-line-stub"
+        class="lyrics-line-stub music-lyrics-line"
+        :class="{ 'is-active': active }"
         :data-line-id="line.line_key ?? line.id"
         :data-active="String(active)"
         :data-annotation-count="annotations.length"
+        :data-bilingual="String(bilingual)"
+        :data-can-select="String(canSelect)"
       >
         <span>{{ line.text }}</span>
         <button type="button" class="open-annotations" @click="$emit('open-annotations', { line, annotationIds: annotations.map((item) => item.id) })">
@@ -125,6 +130,32 @@ vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
   },
 }))
 
+vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
+  default: {
+    props: ['modelValue', 'options'],
+    template: `
+      <div class="lyrics-mode-stub" :data-model="modelValue">
+        <button v-for="option in options" :key="option.value" :data-mode="option.value" @click="$emit('update:modelValue', option.value)">
+          {{ option.label }}
+        </button>
+      </div>
+    `,
+  },
+}))
+
+vi.mock('@/components/ui/PConfirm.vue', () => ({
+  default: {
+    props: ['show', 'message', 'loading'],
+    template: `
+      <div v-if="show" class="lyrics-conflict-confirm">
+        <span>{{ message }}</span>
+        <button class="conflict-confirm" @click="$emit('confirm')">确认</button>
+        <button class="conflict-cancel" @click="$emit('cancel')">取消</button>
+      </div>
+    `,
+  },
+}))
+
 async function mountPanel(props?: Record<string, unknown>) {
   const module = await import('@/components/music/MusicLyricsPanel.vue')
   return mount(module.default, {
@@ -140,6 +171,7 @@ async function mountPanel(props?: Record<string, unknown>) {
 
 describe('MusicLyricsPanel.vue', () => {
   beforeEach(() => {
+    authState.isAuthenticated = true
     authState.user = {
       uuid: 'user-1',
       username: 'fafa',
@@ -300,6 +332,130 @@ describe('MusicLyricsPanel.vue', () => {
 
     const actionButtons = wrapper.findAll('.music-annotation-card__actions button')
     expect(actionButtons.map((button) => button.text())).toEqual(['编辑', '删除'])
+  })
+
+  it('匿名用户只读歌词和版本，不触发注释或版本写操作', async () => {
+    authState.isAuthenticated = false
+    authState.user = null
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="lyrics-edit-trigger"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('修正错字')
+    expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(false)
+
+    await wrapper.get('[data-line-id="line-1"] .select-text').trigger('click')
+    expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
+
+    await wrapper.get('[data-line-id="line-1"] .open-annotations').trigger('click')
+    expect(wrapper.find('.music-annotation-card__vote').exists()).toBe(false)
+    expect(wrapper.find('.music-annotation-card__actions').exists()).toBe(false)
+    expect(mocks.voteAnnotation).not.toHaveBeenCalled()
+    expect(mocks.updateAnnotation).not.toHaveBeenCalled()
+    expect(mocks.deleteAnnotation).not.toHaveBeenCalled()
+    expect(mocks.revertVersion).not.toHaveBeenCalled()
+  })
+
+  it('仅有翻译时提供原文和双语切换，并在切歌后恢复双语', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    expect(wrapper.get('.lyrics-mode-stub').text()).toContain('原文')
+    expect(wrapper.get('.lyrics-mode-stub').text()).toContain('双语')
+    expect(wrapper.get('.lyrics-mode-stub').attributes('data-model')).toBe('bilingual')
+    expect(wrapper.get('[data-line-id="line-1"]').attributes('data-bilingual')).toBe('true')
+
+    await wrapper.get('[data-mode="original"]').trigger('click')
+    expect(wrapper.get('[data-line-id="line-1"]').attributes('data-bilingual')).toBe('false')
+
+    await wrapper.setProps({ songId: 'song-2' })
+    await flushPromises()
+    expect(wrapper.get('.lyrics-mode-stub').attributes('data-model')).toBe('bilingual')
+
+    lyricsState.lyrics.value = { ...lyricsState.lyrics.value, translation: '' }
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.lyrics-mode-stub').exists()).toBe(false)
+  })
+
+  it('当前定时行变化后平滑居中滚动，忽略初始、重复和无时间行', async () => {
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+    mocks.currentLine.mockImplementation((time: number) => {
+      if (time === 3) return { line_key: 'line-untimed', text: 'Untimed', translation: '', time_ms: null }
+      return time >= 10 ? lyricsState.lyrics.value.lines[1] : lyricsState.lyrics.value.lines[0]
+    })
+
+    const wrapper = await mountPanel()
+    await flushPromises()
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    await wrapper.setProps({ currentTimeSeconds: 1 })
+    await flushPromises()
+    expect(scrollIntoView).toHaveBeenCalledOnce()
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+
+    await wrapper.setProps({ currentTimeSeconds: 2 })
+    await flushPromises()
+    expect(scrollIntoView).toHaveBeenCalledOnce()
+
+    await wrapper.setProps({ currentTimeSeconds: 3 })
+    await flushPromises()
+    expect(scrollIntoView).toHaveBeenCalledOnce()
+  })
+
+  it('歌词注释冲突经确认后携带全部 needs_rebind resolution 重试', async () => {
+    mocks.save
+      .mockRejectedValueOnce(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'conflict', {
+        annotation_ids: ['annotation-2', 'annotation-1'],
+      }))
+      .mockResolvedValueOnce(lyricsState.lyrics.value)
+    const wrapper = await mountPanel()
+    await flushPromises()
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-save').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('.lyrics-conflict-confirm').text()).toContain('这次修改会影响 2 条注释，保存后将通知作者重新确认。')
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
+
+    await wrapper.get('.conflict-confirm').trigger('click')
+    await flushPromises()
+    expect(mocks.save).toHaveBeenLastCalledWith('song-1', {
+      content: '新的歌词',
+      translation: 'New translation',
+      format: 'plain',
+      edit_summary: '修正歌词',
+      annotation_resolutions: [
+        { annotation_id: 'annotation-2', action: 'needs_rebind' },
+        { annotation_id: 'annotation-1', action: 'needs_rebind' },
+      ],
+    })
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
+  })
+
+  it('取消冲突确认保留歌词编辑器和草稿，其他错误不弹确认', async () => {
+    mocks.save.mockRejectedValueOnce(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'conflict', {
+      annotation_ids: ['annotation-1'],
+    }))
+    const wrapper = await mountPanel()
+    await flushPromises()
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-save').trigger('click')
+    await flushPromises()
+    await wrapper.get('.conflict-cancel').trigger('click')
+
+    expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
+    expect(wrapper.get('.drawer-content').text()).toBe('Neon lights\nMidnight radio')
+
+    mocks.save.mockRejectedValueOnce(new ApiErrorResponseError(500, 'system.internal_error', 'failed'))
+    await wrapper.get('.drawer-save').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
   })
 })
 

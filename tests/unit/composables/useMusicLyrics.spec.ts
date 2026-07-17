@@ -99,4 +99,21 @@ describe('useMusicLyrics', () => {
     expect(reverted.content).toBe('old')
     expect(composable.lyrics.value?.content).toBe('old')
   })
+
+  it('forwards annotation resolutions and preserves conflict errors', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const conflict = new Error('annotation conflict')
+    apiMocks.updateMusicSongLyrics.mockRejectedValueOnce(conflict)
+    const input = {
+      content: 'changed',
+      translation: '',
+      format: 'plain' as const,
+      edit_summary: 'edit',
+      annotation_resolutions: [{ annotation_id: 'ann-1', action: 'needs_rebind' as const }],
+    }
+
+    await expect(composable.save('song-1', input)).rejects.toBe(conflict)
+    expect(apiMocks.updateMusicSongLyrics).toHaveBeenCalledWith('song-1', input)
+  })
 })

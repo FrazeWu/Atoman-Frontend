@@ -23,6 +23,7 @@
 
       <div class="music-annotation-card__meta">
         <button
+          v-if="canWrite"
           type="button"
           class="music-annotation-card__vote"
           :class="{ 'is-active': annotation.viewer_vote === 'up' }"
@@ -31,6 +32,7 @@
           赞 {{ annotation.upvotes }}
         </button>
         <button
+          v-if="canWrite"
           type="button"
           class="music-annotation-card__vote"
           :class="{ 'is-active': annotation.viewer_vote === 'down' }"
@@ -41,7 +43,7 @@
         <span class="music-annotation-card__score">净 {{ annotationScore(annotation) }}</span>
       </div>
 
-      <div v-if="canManageAnnotation(annotation)" class="music-annotation-card__actions">
+      <div v-if="canWrite && canManageAnnotation(annotation)" class="music-annotation-card__actions">
         <PButton
           type="button"
           size="sm"
@@ -64,18 +66,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { MusicLyricsAnnotation, MusicLyricsAnnotationVote } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
-import { useAuthStore } from '@/stores/auth'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   annotations?: MusicLyricsAnnotation[]
+  canWrite?: boolean
+  currentUserIds?: string[]
 }>(), {
   annotations: () => [],
+  canWrite: false,
+  currentUserIds: () => [],
 })
-
-const authStore = useAuthStore()
 
 const emit = defineEmits<{
   vote: [annotationId: string, vote: MusicLyricsAnnotationVote | null]
@@ -91,13 +93,11 @@ function collectIdentityValues(value: Record<string, unknown> | null | undefined
     .map((candidate) => String(candidate))
 }
 
-const currentUserIds = computed(() => collectIdentityValues(authStore.user as Record<string, unknown> | null))
-
 function canManageAnnotation(annotation: MusicLyricsAnnotation) {
-  if (currentUserIds.value.length === 0) return false
+  if (props.currentUserIds.length === 0) return false
 
   const creatorIds = collectIdentityValues(annotation.creator as Record<string, unknown> | null)
-  return creatorIds.some((creatorId) => currentUserIds.value.includes(creatorId))
+  return creatorIds.some((creatorId) => props.currentUserIds.includes(creatorId))
 }
 
 function annotationScore(annotation: MusicLyricsAnnotation) {

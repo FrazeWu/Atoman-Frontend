@@ -12,7 +12,7 @@ test.describe('Blog', () => {
   })
 
   test('create new post as authenticated user', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/post/new')
+    await authenticatedPage.goto('/posts/post/new')
     await authenticatedPage.waitForTimeout(1000)
     // check for key action buttons instead of editor container
     const saveBtn = authenticatedPage.getByRole('button', { name: '存草稿' })
@@ -49,7 +49,7 @@ test.describe('Blog', () => {
   })
 
   test('editor uses the workbench compose workflow', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/post/new')
+    await authenticatedPage.goto('/posts/post/new')
     await authenticatedPage.waitForTimeout(1000)
 
     await authenticatedPage.waitForSelector('.editor-shell', { timeout: 10000 })

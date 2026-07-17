@@ -93,11 +93,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/new', component: PostEditorView },
+        { path: '/posts/post/new', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/new?channel=channel-2')
+    await router.push('/posts/post/new?channel=channel-2')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -331,11 +331,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -416,11 +416,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -502,11 +502,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -576,11 +576,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -656,11 +656,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -721,11 +721,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -781,11 +781,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -859,11 +859,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/:id/edit', component: PostEditorView },
+        { path: '/posts/post/:id/edit', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/post-1/edit?channel=channel-1')
+    await router.push('/posts/post/post-1/edit?channel=channel-1')
     await router.isReady()
 
     const auth = useAuthStore()
@@ -1321,11 +1321,11 @@ describe('PostEditorView', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/post/new', component: PostEditorView },
+        { path: '/posts/post/new', component: PostEditorView },
       ],
     })
 
-    await router.push('/post/new?channel=channel-2&collection=collection-3')
+    await router.push('/posts/post/new?channel=channel-2&collection=collection-3')
     await router.isReady()
 
     const auth = useAuthStore()

@@ -140,10 +140,14 @@ export const useFeedStore = defineStore('feed', () => {
 
 
   let pollInterval: ReturnType<typeof setInterval> | null = null
+  let subscriptionsRequestGeneration = 0
+  let groupsRequestGeneration = 0
 
   // --- Feed Actions ---
 
   const clearUserState = () => {
+    subscriptionsRequestGeneration += 1
+    groupsRequestGeneration += 1
     subscriptions.value = []
     groups.value = []
     starGroups.value = []
@@ -179,39 +183,71 @@ export const useFeedStore = defineStore('feed', () => {
 
   const fetchSubscriptions = async () => {
     const authStore = useAuthStore()
+    const generation = ++subscriptionsRequestGeneration
+    const userId = authStore.user?.uuid
+    const token = authStore.token
     if (!authStore.isAuthenticated) {
       subscriptions.value = []
-      return
+      return false
     }
     try {
       const res = await fetch(`${api.url}/feed/subscriptions`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
+      if (
+        generation !== subscriptionsRequestGeneration
+        || authStore.user?.uuid !== userId
+        || authStore.token !== token
+      ) return false
       if (res.ok) {
         const data = await res.json()
+        if (
+          generation !== subscriptionsRequestGeneration
+          || authStore.user?.uuid !== userId
+          || authStore.token !== token
+        ) return false
         subscriptions.value = data.data || []
+        return true
       }
+      return false
     } catch (e) {
       console.error('Failed to fetch subscriptions', e)
+      return false
     }
   }
 
   const fetchGroups = async () => {
     const authStore = useAuthStore()
+    const generation = ++groupsRequestGeneration
+    const userId = authStore.user?.uuid
+    const token = authStore.token
     if (!authStore.isAuthenticated) {
       groups.value = []
-      return
+      return false
     }
     try {
       const res = await fetch(`${api.url}/feed/groups`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
+      if (
+        generation !== groupsRequestGeneration
+        || authStore.user?.uuid !== userId
+        || authStore.token !== token
+      ) return false
       if (res.ok) {
         const data = await res.json()
+        if (
+          generation !== groupsRequestGeneration
+          || authStore.user?.uuid !== userId
+          || authStore.token !== token
+        ) return false
         groups.value = data.data || []
+        return true
       }
+      return false
     } catch (e) {
       console.error('Failed to fetch groups', e)
+      return false
     }
   }
 

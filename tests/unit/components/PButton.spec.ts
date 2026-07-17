@@ -5,7 +5,7 @@ import PButton from '@/components/ui/PButton.vue'
 
 const router = createRouter({
   history: createMemoryHistory(),
-  routes: [{ path: '/post/new', component: { template: '<div />' } }],
+  routes: [{ path: '/posts/post/new', component: { template: '<div />' } }],
 })
 
 describe('PButton', () => {
@@ -42,7 +42,7 @@ describe('PButton', () => {
     const wrapper = mount(PButton, {
       global: { plugins: [router] },
       props: {
-        to: '/post/new',
+        to: '/posts/post/new',
         label: '写文章',
       },
     })

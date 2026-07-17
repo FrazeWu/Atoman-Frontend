@@ -449,7 +449,7 @@ describe('Media content view shells', () => {
     await vi.waitFor(() => {
       expect(wrapper.find('.p-entry').exists()).toBe(true)
     })
-    expect(wrapper.find('a[href*="/post/post-1"]').exists()).toBe(false)
+    expect(wrapper.find('a[href*="/posts/post/post-1"]').exists()).toBe(false)
     expect(wrapper.get('[data-test="article-sheet"]').attributes('data-show')).toBe('false')
     await wrapper.find('.p-entry').trigger('click')
     expect(routerPushMock).not.toHaveBeenCalled()

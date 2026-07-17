@@ -41,6 +41,9 @@ const makePostResponse = (id: string, likesCount: number, liked = false) =>
 describe('PostDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    document.title = 'Atoman'
+    document.head.querySelectorAll('[data-page-meta]').forEach(element => element.remove())
+    window.history.replaceState({}, '', '/posts/post/post-1')
   })
 
   it('renders collection navigation, table of contents, timestamps and public stats', async () => {
@@ -359,5 +362,62 @@ describe('PostDetailView', () => {
     expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/likes/count'))).toHaveLength(countCalls)
     expect(wrapper.get('button[title="点赞"]').text()).toContain('8')
     expect(wrapper.get('button[title="点赞"]').classes().includes('active')).toBe(active)
+  })
+
+  it('updates article metadata after loading and restores defaults after unmount', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      if (String(input).includes('/blog/posts/post-1')) {
+        return new Response(JSON.stringify({ data: {
+          id: 'post-1', user_id: 'author-1', user: { username: 'alice', display_name: 'Alice' },
+          title: '柏林散步', content: '正文', summary: '文章摘要', cover_url: 'https://assets.example/cover.jpg',
+          status: 'published', visibility: 'public', allow_comments: true, pinned: false,
+          published_at: '2026-07-10T08:00:00Z', created_at: '2026-07-10T08:00:00Z', updated_at: '2026-07-14T09:30:00Z',
+        } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: {} }), { status: 200 })
+    })
+
+    const wrapper = mount(PostDetailView, { global: { stubs: { CommentSection: true, PToast: true, PSheet: true } } })
+    await flushPromises()
+
+    expect(document.title).toBe('柏林散步 | Atoman')
+    expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('文章摘要')
+    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${window.location.origin}/posts/post/post-1`)
+    expect(document.querySelector('meta[property="og:type"]')?.getAttribute('content')).toBe('article')
+    expect(document.querySelector('script[type="application/ld+json"]')?.textContent).toContain('BlogPosting')
+
+    wrapper.unmount()
+    expect(document.title).toBe('Atoman')
+    expect(document.head.querySelector('[data-page-meta]')).toBeNull()
+  })
+
+  it('uses native sharing and falls back to copying when sharing fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => String(input).includes('/blog/posts/post-1')
+      ? new Response(JSON.stringify({ data: {
+          id: 'post-1', user_id: 'author-1', title: '柏林散步', content: '正文', summary: '文章摘要',
+          status: 'published', visibility: 'public', allow_comments: true, pinned: false,
+          created_at: '2026-07-10T08:00:00Z', updated_at: '2026-07-14T09:30:00Z',
+        } }))
+      : new Response(JSON.stringify({ data: {} })))
+    const share = vi.fn().mockResolvedValue(undefined)
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { share, clipboard: { writeText } })
+
+    const wrapper = mount(PostDetailView, { global: { stubs: { CommentSection: true, PToast: true, PSheet: true } } })
+    await flushPromises()
+    await wrapper.get('button[title="分享"]').trigger('click')
+
+    expect(share).toHaveBeenCalledWith({ title: '柏林散步', text: '文章摘要', url: `${window.location.origin}/posts/post/post-1` })
+    expect(writeText).not.toHaveBeenCalled()
+
+    share.mockRejectedValueOnce(new Error('share unavailable'))
+    await wrapper.get('button[title="分享"]').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/posts/post/post-1`)
+
+    share.mockRejectedValueOnce(new DOMException('cancelled', 'AbortError'))
+    await wrapper.get('button[title="分享"]').trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledTimes(1)
   })
 })

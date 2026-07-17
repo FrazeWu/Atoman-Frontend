@@ -8,8 +8,21 @@ const authenticate = () => {
   const auth = useAuthStore()
   auth.isAuthenticated = true
   auth.token = 'token'
-  auth.user = { username: 'fafa', email: 'fafa@example.com' }
+  auth.user = { uuid: 'user-a', username: 'fafa', email: 'fafa@example.com' }
 }
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+const requestCases = [
+  { method: 'fetchSubscriptions' as const, state: 'subscriptions' as const, prefix: 'sub' },
+  { method: 'fetchGroups' as const, state: 'groups' as const, prefix: 'group' },
+]
 
 describe('feed store', () => {
   beforeEach(() => {
@@ -17,6 +30,86 @@ describe('feed store', () => {
     vi.restoreAllMocks()
     setActivePinia(createPinia())
     authenticate()
+  })
+
+  it('returns true when subscriptions and groups load successfully', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'sub-1' }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'group-1' }] }), { status: 200 }))
+    const feed = useFeedStore()
+
+    const [subscriptionsLoaded, groupsLoaded] = await Promise.all([
+      feed.fetchSubscriptions(),
+      feed.fetchGroups(),
+    ])
+
+    expect(subscriptionsLoaded).toBe(true)
+    expect(groupsLoaded).toBe(true)
+    expect(feed.subscriptions).toHaveLength(1)
+    expect(feed.groups).toHaveLength(1)
+  })
+
+  it('returns false when subscriptions and groups return non-2xx responses', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+    const feed = useFeedStore()
+
+    const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
+
+    expect(results).toEqual([false, false])
+  })
+
+  it('returns false when subscriptions and groups fail with network errors', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new Error('subscriptions offline'))
+      .mockRejectedValueOnce(new Error('groups offline'))
+    const feed = useFeedStore()
+
+    const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
+
+    expect(results).toEqual([false, false])
+  })
+
+  it.each(requestCases)('$method ignores an old account response after account switching', async ({ method, state, prefix }) => {
+    const firstResponse = deferred<Response>()
+    const secondResponse = deferred<Response>()
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise)
+    const feed = useFeedStore()
+    const auth = useAuthStore()
+
+    const firstRequest = feed[method]()
+    feed.clearUserState()
+    auth.token = 'token-b'
+    auth.user = { uuid: 'user-b', username: 'second', email: 'second@example.com' }
+    const secondRequest = feed[method]()
+    secondResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-b` }] }), { status: 200 }))
+    expect(await secondRequest).toBe(true)
+
+    firstResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-a` }] }), { status: 200 }))
+    expect(await firstRequest).toBe(false)
+    expect(feed[state].map((item) => item.id)).toEqual([`${prefix}-b`])
+  })
+
+  it.each(requestCases)('$method ignores an older response from the same account', async ({ method, state, prefix }) => {
+    const firstResponse = deferred<Response>()
+    const secondResponse = deferred<Response>()
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(firstResponse.promise)
+      .mockReturnValueOnce(secondResponse.promise)
+    const feed = useFeedStore()
+
+    const firstRequest = feed[method]()
+    const secondRequest = feed[method]()
+    secondResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-new` }] }), { status: 200 }))
+    expect(await secondRequest).toBe(true)
+
+    firstResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-old` }] }), { status: 200 }))
+    expect(await firstRequest).toBe(false)
+    expect(feed[state].map((item) => item.id)).toEqual([`${prefix}-new`])
   })
 
   it('adds RSS subscriptions through the v1 feed endpoint', async () => {

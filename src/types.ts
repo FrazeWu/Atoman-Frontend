@@ -143,6 +143,30 @@ export interface User {
   is_active?: boolean
   created_at?: string
   updated_at?: string
+  forum_trust_level?: number
+}
+
+export interface ForumGroupMember {
+  id: string
+  group_id: string
+  user_id: string
+  user?: User
+}
+
+export interface ForumGroup {
+  id: string
+  name: string
+  description?: string
+  members?: ForumGroupMember[]
+}
+
+export interface ForumCategoryPermission {
+  id: string
+  category_id: string
+  group_id: string
+  can_view: boolean
+  can_create_topic: boolean
+  can_comment: boolean
 }
 
 // ===== Blog Types =====
@@ -575,7 +599,7 @@ export interface Notification {
   recipient_id: string
   actor_id?: string | null
   actor?: User | null
-  type: 'comment_reply' | 'comment_mention' | 'comment_marked' | 'comment_like'
+  type: 'comment_reply' | 'comment_mention' | 'comment_marked' | 'comment_like' | 'forum_topic_comment' | 'forum_follow'
   source_type: string
   source_id: string
   aggregation_key?: string | null
@@ -637,7 +661,7 @@ export interface DMRealtimePayload {
   created_at: string
 }
 
-export type InboxTab = 'reply' | 'like' | 'mention' | 'dm'
+export type InboxTab = 'reply' | 'like' | 'mention' | 'forum' | 'dm'
 export type NotificationFilterType = '' | Notification['type']
 export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 

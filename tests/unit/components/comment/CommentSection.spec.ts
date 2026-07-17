@@ -40,7 +40,7 @@ describe('CommentSection', () => {
 
   it('loads the target and forwards media seek events', async () => {
     const wrapper = mount(CommentSection, { props: { target: { kind: 'video', resourceId: 'video-1' } } })
-    expect(state.load).toHaveBeenCalled()
+    await vi.waitFor(() => expect(state.load).toHaveBeenCalled())
     wrapper.findComponent({ name: 'CommentThread' }).vm.$emit('seek', 65)
     expect(wrapper.emitted('seek')).toEqual([[65]])
   })
@@ -118,5 +118,132 @@ describe('CommentSection', () => {
     await wrapper.findComponent({ name: 'CommentThread' }).vm.$emit('delete', 'root')
     await Promise.resolve()
     expect(wrapper.emitted('count-change')).toEqual([[2], [1]])
+  })
+
+  it('loads root and reply pages before scrolling to a focused child', async () => {
+    const firstRoot = makeComment('first-root')
+    const targetRoot = makeComment('target-root', { reply_count: 2, replies: [] })
+    const targetChild = makeComment('target-child', { root_id: targetRoot.id })
+    const replyState = { expanded: false, page: 0, pageSize: 1, hasMore: true, loading: false }
+    state.roots.value = [firstRoot]
+    state.hasMore.value = true
+    state.load.mockResolvedValue(undefined)
+    state.loadMore.mockImplementation(async () => {
+      state.roots.value.push(targetRoot)
+      state.hasMore.value = false
+    })
+    state.replyState.mockImplementation(() => replyState)
+    state.expandReplies.mockImplementation(async (_rootId: string, page: number) => {
+      replyState.expanded = true
+      replyState.page = page
+      const loadedRoot = state.roots.value.find(({ id }) => id === targetRoot.id)!
+      if (page === 1) {
+        loadedRoot.replies.push(makeComment('other-child', { root_id: targetRoot.id }))
+      } else {
+        loadedRoot.replies.push(targetChild)
+        replyState.hasMore = false
+      }
+    })
+    const scrollIntoView = vi.fn()
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(() => undefined)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView })
+
+    const wrapper = mount(CommentSection, {
+      props: {
+        target: { kind: 'forum_topic', resourceId: 'topic-1' },
+        focusCommentId: targetChild.id,
+        focusRootId: targetRoot.id,
+      },
+    })
+
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce())
+    expect(state.loadMore).toHaveBeenCalledOnce()
+    expect(state.expandReplies).toHaveBeenNthCalledWith(1, targetRoot.id, 1, 1)
+    expect(state.expandReplies).toHaveBeenNthCalledWith(2, targetRoot.id, 2, 1)
+    expect(wrapper.get(`#comment-${targetChild.id}`).exists()).toBe(true)
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    wrapper.unmount()
+  })
+
+  it('expands replies when a focused child is loaded outside the preview', async () => {
+    const targetChild = makeComment('preview-hidden-child', { root_id: 'root' })
+    state.roots.value = [makeComment('root', {
+      reply_count: 4,
+      replies: [
+        makeComment('child-1', { root_id: 'root' }),
+        makeComment('child-2', { root_id: 'root' }),
+        makeComment('child-3', { root_id: 'root' }),
+        targetChild,
+      ],
+    })]
+    state.hasMore.value = false
+    state.load.mockResolvedValue(undefined)
+    const replyState = { expanded: false, page: 0, pageSize: 20, hasMore: true, loading: false }
+    state.replyState.mockImplementation(() => replyState)
+    state.expandReplies.mockImplementation(async () => {
+      replyState.expanded = true
+      state.roots.value[0]!.replies = [...state.roots.value[0]!.replies]
+    })
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView })
+
+    const wrapper = mount(CommentSection, { props: {
+      target: { kind: 'forum_topic', resourceId: 'topic-1' },
+      focusCommentId: targetChild.id,
+      focusRootId: 'root',
+    } })
+
+    await vi.waitFor(() => expect(state.expandReplies).toHaveBeenCalledWith('root', 1, 20))
+    await vi.waitFor(() => expect(wrapper.get(`#comment-${targetChild.id}`).exists()).toBe(true))
+  })
+
+  it('runs the latest focus after an older page load settles', async () => {
+    let releaseLoad!: () => void
+    const pendingLoad = new Promise<void>((resolve) => { releaseLoad = resolve })
+    const nextRoot = makeComment('next-root')
+    state.roots.value = [makeComment('first-root')]
+    state.hasMore.value = true
+    state.load.mockResolvedValue(undefined)
+    state.loadMore.mockImplementation(async () => {
+      if (state.loading.value) return
+      state.loading.value = true
+      await pendingLoad
+      state.roots.value.push(nextRoot)
+      state.hasMore.value = false
+      state.loading.value = false
+    })
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView })
+
+    const wrapper = mount(CommentSection, { props: {
+      target: { kind: 'forum_topic', resourceId: 'topic-1' },
+      focusCommentId: 'old-root', focusRootId: 'old-root',
+    } })
+    await vi.waitFor(() => expect(state.loadMore).toHaveBeenCalledOnce())
+    await wrapper.setProps({ focusCommentId: nextRoot.id, focusRootId: nextRoot.id })
+    await nextTick()
+    releaseLoad()
+
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce())
+    expect(scrollIntoView.mock.instances[0]).toHaveProperty('id', `comment-${nextRoot.id}`)
+  })
+
+  it('falls back to the root when focused reply loading fails', async () => {
+    const root = makeComment('fallback-root', { reply_count: 1, replies: [] })
+    state.roots.value = [root]
+    state.hasMore.value = false
+    state.load.mockResolvedValue(undefined)
+    state.replyState.mockReturnValue({ expanded: false, page: 0, pageSize: 20, hasMore: true, loading: false })
+    state.expandReplies.mockRejectedValue(new Error('reply unavailable'))
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView })
+
+    mount(CommentSection, { props: {
+      target: { kind: 'forum_topic', resourceId: 'topic-1' },
+      focusCommentId: 'missing-child', focusRootId: root.id,
+    } })
+
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce())
+    expect(scrollIntoView.mock.instances[0]).toHaveProperty('id', `comment-${root.id}`)
   })
 })

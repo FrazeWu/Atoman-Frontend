@@ -1,5 +1,5 @@
 <template>
-  <section class="comment-section" :aria-label="noun">
+  <section ref="sectionElement" class="comment-section" :aria-label="noun">
     <header class="comment-section__header">
       <div>
         <span class="comment-section__kicker">DISCUSSION</span>
@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { MessageSquare } from 'lucide-vue-next'
 
 import type { CommentDTO, CommentTargetRef, CreateCommentInput, ReportCommentInput } from '@/api/comments'
@@ -93,11 +93,15 @@ const props = withDefaults(defineProps<{
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
   readonly?: boolean
+  focusCommentId?: string
+  focusRootId?: string
 }>(), {
   noun: '评论',
   markLabel: undefined,
   currentTime: undefined,
   readonly: false,
+  focusCommentId: '',
+  focusRootId: '',
 })
 
 const emit = defineEmits<{
@@ -113,6 +117,7 @@ const mutationError = ref('')
 const rootComposer = ref<{ reset: () => void } | null>(null)
 const reportVisible = ref(false)
 const reportingCommentId = ref('')
+const sectionElement = ref<HTMLElement | null>(null)
 const currentUserId = computed(() => authStore.user?.uuid ?? '')
 const loginTarget = computed(() => `/login?redirect=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`)
 const effectiveMarkLabel = computed(() => props.markLabel
@@ -123,9 +128,72 @@ const sortOptions = [
   { label: '热门', value: 'hot' as const },
 ]
 
-watch(() => `${props.target.kind}:${props.target.resourceId}`, () => {
-  Promise.resolve(comments.load()).catch(() => undefined)
+let focusRequest = 0
+let focusQueue = Promise.resolve()
+
+watch(() => [
+  `${props.target.kind}:${props.target.resourceId}`,
+  props.focusCommentId,
+  props.focusRootId,
+] as const, ([targetKey], previous) => {
+  const request = ++focusRequest
+  const shouldLoad = !previous || previous[0] !== targetKey || comments.page.value === 0
+  focusQueue = focusQueue.catch(() => undefined).then(async () => {
+    if (request !== focusRequest) return
+    try {
+      if (shouldLoad) await comments.load()
+      if (request !== focusRequest) return
+      await focusRequestedComment(request)
+    } catch {
+      // Existing section error state handles root load failures.
+    }
+  })
 }, { immediate: true })
+
+async function focusRequestedComment(request: number) {
+  const commentId = props.focusCommentId
+  const rootId = props.focusRootId || commentId
+  if (!commentId || !rootId) return
+
+  let root = comments.roots.value.find(({ id }) => id === rootId)
+  while (!root && comments.hasMore.value && request === focusRequest) {
+    const previousPage = comments.page.value
+    const previousCount = comments.roots.value.length
+    await comments.loadMore()
+    if (request !== focusRequest) return
+    root = comments.roots.value.find(({ id }) => id === rootId)
+    if (!root && previousPage === comments.page.value && previousCount === comments.roots.value.length) break
+  }
+  if (!root || request !== focusRequest) return
+
+  while (commentId !== root.id) {
+    const state = comments.replyState(root.id)
+    const found = root.replies.some(({ id }) => id === commentId)
+    if (found && state.expanded) break
+    if (state.expanded && !state.hasMore) break
+    const nextPage = state.expanded ? state.page + 1 : 1
+    const previousPage = state.page
+    const previousCount = root.replies.length
+    const previousExpanded = state.expanded
+    try {
+      await comments.expandReplies(root.id, nextPage, state.pageSize)
+    } catch {
+      break
+    }
+    if (request !== focusRequest) return
+    const nextState = comments.replyState(root.id)
+    if (previousPage === nextState.page
+      && previousCount === root.replies.length
+      && previousExpanded === nextState.expanded) break
+  }
+
+  await nextTick()
+  if (request !== focusRequest) return
+  const element = sectionElement.value?.querySelector<HTMLElement>(`#comment-${CSS.escape(commentId)}`)
+    ?? sectionElement.value?.querySelector<HTMLElement>(`#comment-${CSS.escape(root.id)}`)
+  element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  element?.focus({ preventScroll: true })
+}
 
 async function createRoot(input: CreateCommentInput) {
   creating.value = true

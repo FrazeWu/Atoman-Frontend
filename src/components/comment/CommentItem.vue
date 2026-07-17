@@ -1,5 +1,11 @@
 <template>
-  <article class="comment-item" :class="{ 'comment-item--child': depth === 1 }" :data-comment-depth="depth">
+  <article
+    :id="`comment-${comment.id}`"
+    class="comment-item"
+    :class="{ 'comment-item--child': depth === 1 }"
+    :data-comment-depth="depth"
+    tabindex="-1"
+  >
     <header class="comment-item__header">
       <PAvatar :src="comment.author.avatar_url" :name="authorName" :size="depth ? 'xs' : 'sm'" />
       <div class="comment-item__identity">

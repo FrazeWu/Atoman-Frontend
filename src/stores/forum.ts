@@ -31,7 +31,10 @@ export const useForumStore = defineStore('forum', () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${api.url}/forum/categories`)
+      const authStore = useAuthStore()
+      const res = await fetch(`${api.url}/forum/categories`, {
+        headers: authStore.isAuthenticated ? authHeaders() : {},
+      })
       if (res.ok) {
         const data = await res.json()
         categories.value = data.data || []

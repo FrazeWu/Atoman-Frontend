@@ -129,7 +129,7 @@ import { useApiUrl } from '@/composables/useApi'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useUIStore } from '@/stores/ui'
 
-type TabKey = 'latest' | 'top' | 'active' | 'new' | 'bookmarked' | 'featured'
+type TabKey = 'latest' | 'top'
 
 const router = useRouter()
 const route = useRoute()
@@ -174,20 +174,12 @@ const ALL_CATEGORY_VALUE = '__all__'
 
 const tabOptions: Record<TabKey, string> = {
   latest: '最新',
-  active: '最活跃',
   top: '最热',
-  new: '未读',
-  bookmarked: '已收藏',
-  featured: '精选',
 }
 
-const sortMap: Record<TabKey, 'latest' | 'top' | 'active' | 'featured'> = {
+const sortMap: Record<TabKey, 'latest' | 'top'> = {
   latest: 'latest',
-  active: 'active',
   top: 'top',
-  new: 'latest',
-  bookmarked: 'latest',
-  featured: 'featured',
 }
 
 // Popular tags — derived from loaded topics

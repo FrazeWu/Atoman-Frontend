@@ -7,7 +7,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import { modulePathUrl } from '@/router/siteUrls'
 
 const commentNotificationTypes = new Set<Notification['type']>([
-  'comment_reply', 'comment_mention', 'comment_marked', 'comment_like',
+  'comment_reply', 'comment_mention', 'comment_marked', 'comment_like', 'forum_topic_comment',
 ])
 
 const sortNotifications = (items: Notification[]) => [...items].sort((left, right) =>
@@ -46,6 +46,12 @@ export function commentNotificationLocation(notification: Notification): RouteLo
   if (kind === 'music_song') query.song_id = id
   if (kind === 'timeline_event') query.event_id = id
   return { path, query, hash: `#comment-${rootId}` }
+}
+
+export function forumNotificationLocation(notification: Notification): RouteLocationRaw | null {
+  const topicId = notification.meta.topic_id
+  if (!topicId) return null
+  return { path: modulePathUrl('forum', `/topic/${topicId}`) }
 }
 
 export const useNotificationStore = defineStore('notification', () => {
@@ -174,6 +180,7 @@ export const useNotificationStore = defineStore('notification', () => {
     total.value = 0
     page.value = 1
     currentType.value = ''
+    currentTypes.value = []
   }
 
   return {

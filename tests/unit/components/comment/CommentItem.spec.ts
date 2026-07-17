@@ -5,6 +5,11 @@ import CommentItem from '@/components/comment/CommentItem.vue'
 import { makeComment } from './fixtures'
 
 describe('CommentItem', () => {
+  it('exposes a stable focusable DOM anchor', () => {
+    const wrapper = mount(CommentItem, { props: { comment: makeComment('comment-1') } })
+    expect(wrapper.get('article').attributes()).toMatchObject({ id: 'comment-comment-1', tabindex: '-1' })
+  })
+
   it('shows the exact edited timestamp', () => {
     const editedAt = '2026-07-15T09:12:34.567Z'
     const wrapper = mount(CommentItem, { props: { comment: makeComment('root', { edited_at: editedAt }) } })

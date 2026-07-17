@@ -12,6 +12,7 @@ const routes = [
     children: [
       { path: 'access', component: { template: '<div class="child-access">Access</div>' } },
       { path: 'music-review', component: { template: '<div class="child-music">Music</div>' } },
+	  { path: 'community', component: { template: '<div class="child-community">Community</div>' } },
       { path: 'roles', component: { template: '<div class="child-roles">Roles</div>' } },
     ],
   },
@@ -24,6 +25,8 @@ describe('SettingLayout', () => {
       history: createMemoryHistory(),
       routes,
     })
+    const authStore = useAuthStore(pinia)
+    authStore.user = { id: 1, username: 'admin', email: 'admin@example.com', role: 'admin' }
     await router.push('/setting/access')
     await router.isReady()
 
@@ -40,6 +43,7 @@ describe('SettingLayout', () => {
     expect(wrapper.find('.setting-layout__sidebar').exists()).toBe(false)
     expect(wrapper.get('.setting-layout__tabs').text()).toContain('全站')
     expect(wrapper.get('.setting-layout__tabs').text()).toContain('音乐')
+	 expect(wrapper.get('.setting-layout__tabs').text()).toContain('社区')
   })
 
   it('does not expose separate feed setting nav entries', async () => {
@@ -108,5 +112,6 @@ describe('SettingLayout', () => {
     })
 
     expect(wrapper.get('.setting-layout__tabs').text()).not.toContain('用户')
+	 expect(wrapper.get('.setting-layout__tabs').text()).toContain('社区')
   })
 })

@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
-import { commentNotificationLocation, useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import type { Notification } from '@/types'
 
 const makeNotification = (id: string, type: Notification['type'], read_at: string | null = null): Notification => ({
@@ -214,5 +214,66 @@ describe('notification store', () => {
     expect(store.currentType).toBe('comment_mention')
     expect(store.notifications.map(({ id }) => id)).toEqual(['new'])
     expect(store.total).toBe(1)
+  })
+
+  it('accepts forum follow notifications', () => {
+    expect(makeNotification('follow-1', 'forum_follow').type).toBe('forum_follow')
+  })
+
+  it('treats forum topic comments as comment notifications and locates forum follows', () => {
+    const comment = {
+      ...makeNotification('forum-comment', 'forum_topic_comment'),
+      meta: { target_kind: 'forum_topic' as const, resource_id: 'topic-1', comment_id: 'child-1', root_id: 'root-1' },
+    }
+    expect(isCommentNotification(comment)).toBe(true)
+    expect(commentNotificationLocation(comment)).toEqual({
+      path: '/forum/topic/topic-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
+    })
+    expect(forumNotificationLocation({
+      ...makeNotification('follow', 'forum_follow'), meta: { topic_id: 'topic-2', topic_title: 'Topic' },
+    })).toEqual({ path: '/forum/topic/topic-2' })
+  })
+
+  it('inserts realtime forum notifications in the selected forum tab', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+    const store = useNotificationStore()
+    await store.fetchNotifications(['forum_topic_comment', 'forum_follow'], 1)
+
+    store.receiveNotification(makeNotification('live-forum', 'forum_topic_comment'))
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['live-forum'])
+    expect(store.unreadCount).toBe(1)
+  })
+
+  it('marks both forum notification types read', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const store = useNotificationStore()
+    store.unreadCount = 2
+    store.notifications = [
+      makeNotification('topic-comment', 'forum_topic_comment'),
+      makeNotification('new-topic', 'forum_follow'),
+    ]
+
+    await store.markAllRead(['forum_topic_comment', 'forum_follow'])
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining('type=forum_topic_comment'), expect.stringContaining('type=forum_follow'),
+    ])
+    expect(store.notifications.every(({ read_at }) => Boolean(read_at))).toBe(true)
+  })
+
+  it('clears forum realtime filters when resetting the store', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+    const store = useNotificationStore()
+    await store.fetchNotifications(['forum_topic_comment', 'forum_follow'], 1)
+
+    store.resetStore()
+    store.receiveNotification(makeNotification('next-user-reply', 'comment_reply'))
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['next-user-reply'])
   })
 })

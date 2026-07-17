@@ -37,6 +37,7 @@ const navItems = computed(() => {
   if (isAdminRole(authStore.user?.role)) {
     items.push(
       { to: '/setting/access', label: '全站' },
+      { to: '/setting/community', label: '社区' },
       { to: '/setting/music-review', label: '音乐' },
     )
   }
@@ -46,7 +47,7 @@ const navItems = computed(() => {
   }
 
   if (isOwnerRole(authStore.user?.role)) {
-    items.splice(1, 0, { to: '/setting/roles', label: '用户' })
+    items.splice(2, 0, { to: '/setting/roles', label: '用户' })
   }
 
   return items
@@ -136,7 +137,7 @@ const navItems = computed(() => {
 
   .setting-layout__tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(3.5rem, 1fr));
   }
 
   .setting-layout__tab {

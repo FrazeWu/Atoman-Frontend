@@ -17,6 +17,7 @@ export const settingRoutes: RouteRecordRaw[] = [
       { path: 'feed-fulltext', redirect: '/setting/access' },
       { path: 'feed-sources', redirect: '/setting/access' },
       { path: 'music-review', component: () => import('@/views/setting/SettingMusicReview.vue'), meta: { requiresAdmin: true } },
+      { path: 'community', component: () => import('@/views/setting/SettingCommunityView.vue'), meta: { requiresAdmin: true } },
       {
         path: 'comment-moderation',
         component: () => import('@/views/setting/SettingCommentModeration.vue'),

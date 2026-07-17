@@ -105,7 +105,7 @@ const mountWithRouter = async (
         PModal: { template: '<div><slot /></div>' },
         CommentSection: {
           name: 'CommentSection',
-          props: ['target', 'noun', 'markLabel', 'readonly'],
+          props: ['target', 'noun', 'markLabel', 'readonly', 'focusCommentId', 'focusRootId'],
           emits: ['marked-change', 'count-change'],
           template: '<section data-test="forum-comments" />',
         },
@@ -248,6 +248,25 @@ describe('forum 路由前缀', () => {
     expect(pushSpy).toHaveBeenLastCalledWith('/forum?category=cat-1')
   })
 
+  it('话题作者旁显示论坛等级', async () => {
+    const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
+      const forumStore = useForumStore()
+      forumStore.loading = false
+      forumStore.currentTopic = {
+        ...makeTopic('topic-1'),
+        user: {
+          username: 'alice',
+          email: 'alice@example.com',
+          forum_trust_level: 2,
+        },
+      }
+      vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="forum-topic-trust-level"]').text()).toBe('等级 2')
+  })
+
   it('话题页面从统一评论核心渲染回复且不加载旧回复列表', async () => {
     let forumStore!: ReturnType<typeof useForumStore>
     const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
@@ -271,5 +290,25 @@ describe('forum 路由前缀', () => {
     expect(forumStore.currentTopic?.is_solved).toBe(false)
     comments.vm.$emit('count-change', 4)
     expect(forumStore.currentTopic?.reply_count).toBe(4)
+  })
+
+  it('把评论定位参数传给评论区并响应同页路由变化', async () => {
+    const { wrapper, router, pushSpy } = await mountWithRouter(
+      ForumTopicView,
+      '/forum/topic/topic-1?comment_id=child-1#comment-root-1',
+      () => {
+        const forumStore = useForumStore()
+        forumStore.loading = false
+        forumStore.currentTopic = makeTopic('topic-1')
+        vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
+      },
+    )
+    const comments = wrapper.findComponent({ name: 'CommentSection' })
+    expect(comments.props()).toMatchObject({ focusCommentId: 'child-1', focusRootId: 'root-1' })
+
+    pushSpy.mockRestore()
+    await router.push('/forum/topic/topic-1?comment_id=child-2#comment-root-2')
+    await flushPromises()
+    expect(comments.props()).toMatchObject({ focusCommentId: 'child-2', focusRootId: 'root-2' })
   })
 })

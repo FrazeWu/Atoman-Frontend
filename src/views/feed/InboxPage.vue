@@ -112,7 +112,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
-import { commentNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 import { notificationRoom } from '@/config/moduleRooms'
@@ -129,6 +129,7 @@ const tabs: Array<{ key: InboxTab; label: string }> = [
   { key: 'reply', label: '回复我的' },
   { key: 'like', label: '给我的赞' },
   { key: 'mention', label: '@我的' },
+  { key: 'forum', label: '论坛' },
   { key: 'dm', label: '私信' },
 ]
 
@@ -142,16 +143,17 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const activeTab = computed<InboxTab>(() => {
   const tab = route.query.tab
-  if (tab === 'like' || tab === 'mention' || tab === 'dm') return tab
+  if (tab === 'like' || tab === 'mention' || tab === 'forum' || tab === 'dm') return tab
   return 'reply'
 })
 
 const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 
-const notificationTypeByTab: Record<'reply' | 'like' | 'mention', Notification['type'][]> = {
+const notificationTypeByTab: Record<'reply' | 'like' | 'mention' | 'forum', Notification['type'][]> = {
   reply: ['comment_reply', 'comment_marked'],
   like: ['comment_like'],
   mention: ['comment_mention'],
+  forum: ['forum_topic_comment', 'forum_follow'],
 }
 
 const switchTab = async (tab: InboxTab) => {
@@ -229,6 +231,10 @@ const jumpToNotification = async (notification: Notification) => {
     if (location) await router.push(location)
     return
   }
+  if (notification.type === 'forum_follow') {
+    const location = forumNotificationLocation(notification)
+    if (location) await router.push(location)
+  }
 }
 
 const formatNotificationTitle = (notification: Notification) => {
@@ -244,12 +250,19 @@ const formatNotificationTitle = (notification: Notification) => {
       return notification.meta.like_count && notification.meta.like_count > 1
         ? `${actor} 等 ${notification.meta.like_count} 人赞了你`
         : `${actor} 赞了你`
+    case 'forum_topic_comment':
+      return '新评论'
+    case 'forum_follow':
+      return '新帖子'
     default:
       return '新通知'
   }
 }
 
 const formatNotificationBody = (notification: Notification) => {
+  if (notification.type === 'forum_topic_comment' || notification.type === 'forum_follow') {
+    return notification.meta.topic_title || notification.meta.title || '查看帖子'
+  }
   if (notification.type === 'comment_reply') return '查看回复'
   if (notification.type === 'comment_mention') return '查看提及'
   if (notification.type === 'comment_marked') return '查看标记'

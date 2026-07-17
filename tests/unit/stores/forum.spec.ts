@@ -36,6 +36,32 @@ describe('forum store HTTP contracts', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/forum/topics?page=1&page_size=7')
   })
 
+  it('sends category credentials only for authenticated users', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ data: [] }))
+    const store = useForumStore()
+
+    await store.fetchCategories()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/forum/categories', { headers: {} })
+
+    authenticate('user-1')
+    await store.fetchCategories()
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/forum/categories', {
+      headers: { Authorization: 'Bearer token-user-1' },
+    })
+  })
+
+  it('keeps existing categories when the category request fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network unavailable'))
+    const store = useForumStore()
+    const existing = { id: 'category-1', name: 'Existing' }
+    store.categories = [existing as never]
+
+    await store.fetchCategories()
+
+    expect(store.categories).toEqual([existing])
+    expect(store.categoriesLoaded).toBe(true)
+  })
+
   it('reads search totals from meta and sends page_size', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({
       data: [{ id: 'topic-search', title: 'Search result' }],

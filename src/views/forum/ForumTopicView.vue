@@ -39,6 +39,11 @@
         <!-- Meta bar -->
         <div class="topic-meta">
           <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
+          <span
+            v-if="forumStore.currentTopic.user?.forum_trust_level != null"
+            class="a-badge"
+            data-testid="forum-topic-trust-level"
+          >等级 {{ forumStore.currentTopic.user.forum_trust_level }}</span>
           <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
           <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
           <span>{{ forumStore.currentTopic.reply_count }} 回复</span>
@@ -102,6 +107,8 @@
             noun="回复"
             mark-label="最佳回答"
             :readonly="forumStore.currentTopic.closed"
+            :focus-comment-id="focusCommentId"
+            :focus-root-id="focusRootId"
             @marked-change="syncSolvedState"
             @count-change="syncReplyCount"
           />
@@ -149,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
@@ -169,6 +176,8 @@ const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
 
 const showBackTop = ref(false)
+const focusCommentId = computed(() => typeof route.query.comment_id === 'string' ? route.query.comment_id : '')
+const focusRootId = computed(() => route.hash.startsWith('#comment-') ? route.hash.slice('#comment-'.length) : '')
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 

@@ -12,6 +12,12 @@ const allowedApiFiles = new Set([
 ])
 
 describe('API endpoint construction contract', () => {
+  it('uses the same-origin Vite proxy in local development', () => {
+    const exampleEnv = readFileSync(join(projectRoot, '.env.example'), 'utf8')
+
+    expect(exampleEnv).toMatch(/^VITE_API_URL=\/api$/m)
+  })
+
   it('defaults API requests to the versioned backend prefix', () => {
     expect(useApiUrl()).toBe('/api/v1')
   })

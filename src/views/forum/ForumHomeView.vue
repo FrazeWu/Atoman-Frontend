@@ -89,7 +89,7 @@
       </div>
 
       <!-- Load more -->
-      <div v-if="forumStore.topics.length < forumStore.topicsTotal && !forumStore.loading" class="load-more-wrap">
+      <div v-if="hasMore && !forumStore.loading" class="load-more-wrap">
         <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </main>
@@ -128,6 +128,7 @@ import PEntry from '@/components/ui/PEntry.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useUIStore } from '@/stores/ui'
+import type { ForumTopic } from '@/types'
 
 type TabKey = 'latest' | 'top'
 
@@ -156,6 +157,10 @@ const activeFollowTarget = computed(() => {
 })
 const page = ref(1)
 const loadingMore = ref(false)
+const hasMore = ref(false)
+let topicsGeneration = 0
+let loadingGeneration: number | null = null
+let isUnmounted = false
 
 const uiStore = useUIStore()
 
@@ -251,17 +256,49 @@ const avatarInitial = (name?: string) => {
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 
+const invalidateTopicPagination = () => {
+  topicsGeneration++
+  loadingGeneration = null
+  loadingMore.value = false
+  hasMore.value = false
+  return topicsGeneration
+}
+
 const loadTopics = async (resetPage = true) => {
+  const generation = invalidateTopicPagination()
   if (resetPage) {
     page.value = 1
     focusedIndex.value = -1
   }
-  await forumStore.fetchTopics({
-    categoryId: activeCategoryId.value ?? undefined,
-    sort: sortMap[activeTab.value],
-    tag: activeTag.value || undefined,
-    page: page.value,
-  })
+  forumStore.loading = true
+  forumStore.error = null
+  try {
+    const query = new URLSearchParams({
+      sort: sortMap[activeTab.value],
+      page: String(page.value),
+      page_size: '20',
+    })
+    if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
+    if (activeTag.value) query.set('tag', activeTag.value)
+    const res = await fetch(`${API_URL}/forum/topics?${query}`, {
+      headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (!res.ok) return
+    const data: unknown = await res.json()
+    if (generation !== topicsGeneration) return
+    if (!isTopicPageEnvelope(data, page.value)) return
+    forumStore.topics = data.data
+    forumStore.topicsTotal = data.meta.total
+    hasMore.value = data.meta.has_more
+  } catch {
+    if (generation === topicsGeneration) {
+      forumStore.error = 'Failed to fetch topics'
+    }
+  } finally {
+    if (generation === topicsGeneration) {
+      forumStore.loading = false
+    }
+  }
 }
 
 const selectCategory = (id: string | null) => {
@@ -299,24 +336,80 @@ watch(
   { deep: true }
 )
 
-const loadMore = async () => {
-  loadingMore.value = true
-  page.value++
-  const query = new URLSearchParams({
-    page: String(page.value),
-    limit: '20',
-    sort: sortMap[activeTab.value],
-  })
-  if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
-  if (activeTag.value) query.set('tag', activeTag.value)
-  const res = await fetch(`${API_URL}/forum/topics?${query}`, {
-    headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
-  })
-  if (res.ok) {
-    const data = await res.json()
-    forumStore.topics.push(...(data.data || []))
+type TopicPageEnvelope = {
+  data: ForumTopic[]
+  meta: {
+    page: number
+    page_size: number
+    total: number
+    has_more: boolean
   }
-  loadingMore.value = false
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+)
+
+const isTopicPageEnvelope = (value: unknown, expectedPage: number): value is TopicPageEnvelope => {
+  if (!isRecord(value) || !Array.isArray(value.data) || !isRecord(value.meta)) return false
+
+  const { page: responsePage, page_size: pageSize, total, has_more: hasMore } = value.meta
+  if (
+    typeof responsePage !== 'number'
+    || !Number.isInteger(responsePage)
+    || responsePage !== expectedPage
+    || typeof pageSize !== 'number'
+    || !Number.isInteger(pageSize)
+    || pageSize !== 20
+    || typeof total !== 'number'
+    || !Number.isInteger(total)
+    || total < 0
+    || !Object.prototype.hasOwnProperty.call(value.meta, 'has_more')
+    || typeof hasMore !== 'boolean'
+  ) return false
+
+  return true
+}
+
+const loadMore = async () => {
+  const generation = topicsGeneration
+  if (!hasMore.value || loadingGeneration === generation) return
+  loadingGeneration = generation
+  loadingMore.value = true
+  const nextPage = page.value + 1
+  try {
+    const query = new URLSearchParams({
+      page: String(nextPage),
+      page_size: '20',
+      sort: sortMap[activeTab.value],
+    })
+    if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
+    if (activeTag.value) query.set('tag', activeTag.value)
+    const res = await fetch(`${API_URL}/forum/topics?${query}`, {
+      headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    if (!res.ok) return
+    const data: unknown = await res.json()
+    if (generation !== topicsGeneration) return
+    if (!isTopicPageEnvelope(data, nextPage)) return
+    const existingIDs = new Set(forumStore.topics.map(topic => topic.id))
+    const newTopics = data.data.filter((topic) => {
+      if (existingIDs.has(topic.id)) return false
+      existingIDs.add(topic.id)
+      return true
+    })
+    forumStore.topics.push(...newTopics)
+    forumStore.topicsTotal = data.meta.total
+    page.value = nextPage
+    hasMore.value = data.meta.has_more
+  } catch {
+    // Keep the current page available so the user can retry.
+  } finally {
+    if (loadingGeneration === generation) {
+      loadingGeneration = null
+      loadingMore.value = false
+    }
+  }
 }
 
 // ─── Search ──────────────────────────────────────────────────────────────────
@@ -360,11 +453,16 @@ onMounted(async () => {
     forumStore.fetchCategories(),
     authStore.isAuthenticated ? forumStore.fetchFollows() : Promise.resolve(),
   ])
+  if (isUnmounted) return
   await loadTopics(true)
+  if (isUnmounted) return
   window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
+  isUnmounted = true
+  invalidateTopicPagination()
+  forumStore.loading = false
   window.removeEventListener('keydown', handleKeydown)
   if (searchTimer) clearTimeout(searchTimer)
 })

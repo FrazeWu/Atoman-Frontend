@@ -356,6 +356,7 @@ async function attemptLyricsSave(input: UpdateMusicSongLyricsInput) {
     isLyricEditorOpen.value = false
   } catch (error) {
     const annotationIds = error instanceof ApiErrorResponseError
+      && error.status === 409
       && error.code === 'music.annotation_anchor_conflict'
       && Array.isArray(error.details.annotation_ids)
       ? error.details.annotation_ids.filter((id): id is string => typeof id === 'string' && id.length > 0)

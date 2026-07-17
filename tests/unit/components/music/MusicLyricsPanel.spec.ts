@@ -116,12 +116,24 @@ vi.mock('@/components/music/MusicAnnotationEditor.vue', () => ({
 vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
   default: {
     props: ['show', 'content', 'translation', 'format', 'saving'],
+    data() {
+      return { draftContent: '' }
+    },
+    watch: {
+      show: {
+        immediate: true,
+        handler(show: boolean) {
+          if (show) this.draftContent = this.content
+        },
+      },
+    },
     template: `
       <div v-if="show" class="lyric-editor-drawer-stub">
-        <span class="drawer-content">{{ content }}</span>
+        <span class="drawer-content">{{ draftContent }}</span>
+        <input v-model="draftContent" class="drawer-content-input" />
         <span class="drawer-translation">{{ translation }}</span>
         <span class="drawer-format">{{ format }}</span>
-        <button type="button" class="drawer-save" @click="$emit('save', { content: '新的歌词', translation: 'New translation', format: 'plain', editSummary: '修正歌词' })">
+        <button type="button" class="drawer-save" @click="$emit('save', { content: draftContent, translation: 'New translation', format: 'plain', editSummary: '修正歌词' })">
           保存歌词
         </button>
         <button type="button" class="drawer-close" @click="$emit('close')">关闭抽屉</button>
@@ -294,6 +306,7 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.get('.drawer-translation').text()).toBe('霓虹灯\n午夜电台')
     expect(wrapper.get('.drawer-format').text()).toBe('plain')
 
+    await wrapper.get('.drawer-content-input').setValue('新的歌词')
     await wrapper.get('.drawer-save').trigger('click')
 
     expect(mocks.save).toHaveBeenCalledWith('song-1', {
@@ -417,6 +430,7 @@ describe('MusicLyricsPanel.vue', () => {
     const wrapper = await mountPanel()
     await flushPromises()
     await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-content-input').setValue('新的歌词')
     await wrapper.get('.drawer-save').trigger('click')
     await flushPromises()
 
@@ -445,17 +459,35 @@ describe('MusicLyricsPanel.vue', () => {
     const wrapper = await mountPanel()
     await flushPromises()
     await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-content-input').setValue('尚未保存的用户草稿')
     await wrapper.get('.drawer-save').trigger('click')
     await flushPromises()
     await wrapper.get('.conflict-cancel').trigger('click')
 
     expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
-    expect(wrapper.get('.drawer-content').text()).toBe('Neon lights\nMidnight radio')
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
+    expect((wrapper.get('.drawer-content-input').element as HTMLInputElement).value).toBe('尚未保存的用户草稿')
 
     mocks.save.mockRejectedValueOnce(new ApiErrorResponseError(500, 'system.internal_error', 'failed'))
     await wrapper.get('.drawer-save').trigger('click')
     await flushPromises()
     expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
+  })
+
+  it('同冲突 code 和 annotation IDs 但非 409 时不弹确认', async () => {
+    mocks.save.mockRejectedValueOnce(new ApiErrorResponseError(422, 'music.annotation_anchor_conflict', 'invalid', {
+      annotation_ids: ['annotation-1'],
+    }))
+    const wrapper = await mountPanel()
+    await flushPromises()
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-content-input').setValue('不会重试的草稿')
+    await wrapper.get('.drawer-save').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
+    expect(mocks.save).toHaveBeenCalledOnce()
   })
 })
 

@@ -70,6 +70,10 @@ export function useMusicLyrics() {
       activeRevertSongId = ''
       reverting.value = false
     }
+    if (activeSongId.value && activeSongId.value !== songId) {
+      activeSaveRequestId += 1
+      saving.value = false
+    }
     const requestId = ++activeLoadRequestId
     activeSongId.value = songId
     loading.value = true
@@ -94,12 +98,12 @@ export function useMusicLyrics() {
     errorMessage.value = ''
     try {
       const updatedLyrics = await updateMusicSongLyrics(songId, input)
-      if (activeSongId.value === songId) {
+      if (requestId === activeSaveRequestId && activeSongId.value === songId) {
         lyrics.value = updatedLyrics
       }
       return updatedLyrics
     } catch (error) {
-      if (activeSongId.value === songId) {
+      if (requestId === activeSaveRequestId && activeSongId.value === songId) {
         errorMessage.value = '歌词保存失败'
       }
       throw error
@@ -195,13 +199,10 @@ export function useMusicLyrics() {
 
   function resetVersions() {
     activeVersionsRequestId += 1
-    activeRevertRequestId += 1
-    activeRevertSongId = ''
     versions.value = []
     versionsSongId.value = ''
     versionsLoading.value = false
     versionsErrorMessage.value = ''
-    reverting.value = false
   }
 
   async function revertVersion(songId: string, version: number, editSummary: string) {
@@ -217,6 +218,9 @@ export function useMusicLyrics() {
       const updatedLyrics = await revertMusicSongLyricsVersion(songId, version, editSummary)
       if (requestId !== activeRevertRequestId) return false
       if (activeSongId.value === songId || activeSongId.value === '') {
+        activeLoadRequestId += 1
+        loading.value = false
+        errorMessage.value = ''
         lyrics.value = updatedLyrics
         activeSongId.value = songId
       }

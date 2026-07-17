@@ -37,6 +37,16 @@ const lyricsState = {
   versionsLoading: ref(false),
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 const annotationsByLine = computed<Map<string, any[]>>(() => {
   const index = new Map<string, any[]>()
   for (const annotation of lyricsState.lyrics.value?.annotations ?? []) {
@@ -547,6 +557,45 @@ describe('MusicLyricsPanel.vue', () => {
       ],
     })
     expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
+  })
+
+  it('A 歌曲保存迟到冲突在切到 B 后不显示确认也不提交 B', async () => {
+    const pendingSave = deferred<any>()
+    mocks.save.mockReturnValueOnce(pendingSave.promise)
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-content-input').setValue('A 歌曲草稿')
+    await wrapper.get('.drawer-save').trigger('click')
+    expect(mocks.save).toHaveBeenCalledWith('song-1', expect.objectContaining({ content: 'A 歌曲草稿' }))
+
+    await wrapper.setProps({ songId: 'song-2' })
+    pendingSave.reject(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'conflict', {
+      annotation_ids: ['annotation-1'],
+    }))
+    await flushPromises()
+
+    expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
+    expect(mocks.save).toHaveBeenCalledOnce()
+    expect(mocks.save).not.toHaveBeenCalledWith('song-2', expect.anything())
+  })
+
+  it('A 歌曲保存迟到成功不关闭切歌后重新打开的 B 编辑器', async () => {
+    const pendingSave = deferred<any>()
+    mocks.save.mockReturnValueOnce(pendingSave.promise)
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-save').trigger('click')
+    await wrapper.setProps({ songId: 'song-2' })
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+
+    pendingSave.resolve({ song_id: 'song-1', content: 'saved A' })
+    await flushPromises()
+
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
   })
 
   it('连续冲突确认会合并之前和本轮的 annotation resolutions', async () => {

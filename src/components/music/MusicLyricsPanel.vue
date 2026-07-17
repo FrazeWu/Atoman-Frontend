@@ -205,6 +205,9 @@ const displayMode = ref<'original' | 'bilingual'>('bilingual')
 const lyricsLinesElement = ref<HTMLElement | null>(null)
 const pendingLyricsInput = ref<UpdateMusicSongLyricsInput | null>(null)
 const conflictAnnotationIds = ref<string[]>([])
+const pendingLyricsSongId = ref('')
+let pendingLyricsSaveGeneration = 0
+let activeLyricsSaveGeneration = 0
 
 const displayModeOptions = [
   { label: '原文', value: 'original' },
@@ -235,6 +238,7 @@ const showSidebar = computed(() => selectedAnnotations.value.length > 0 || annot
 watch(
   () => props.songId,
   (songId) => {
+    activeLyricsSaveGeneration += 1
     resetVersions()
     selectedAnnotationIds.value = []
     selectedTextDraft.value = null
@@ -243,6 +247,8 @@ watch(
     versionsVisible.value = false
     displayMode.value = 'bilingual'
     pendingLyricsInput.value = null
+    pendingLyricsSongId.value = ''
+    pendingLyricsSaveGeneration = 0
     conflictAnnotationIds.value = []
     void load(songId)
   },
@@ -368,16 +374,22 @@ async function handleSaveLyrics(payload: {
     edit_summary: payload.editSummary,
   }
 
-  await attemptLyricsSave(input)
+  const songId = props.songId
+  const generation = ++activeLyricsSaveGeneration
+  await attemptLyricsSave(songId, generation, input)
 }
 
-async function attemptLyricsSave(input: UpdateMusicSongLyricsInput) {
+async function attemptLyricsSave(songId: string, generation: number, input: UpdateMusicSongLyricsInput) {
   try {
-    await save(props.songId, input)
+    await save(songId, input)
+    if (generation !== activeLyricsSaveGeneration || props.songId !== songId) return
     pendingLyricsInput.value = null
+    pendingLyricsSongId.value = ''
+    pendingLyricsSaveGeneration = 0
     conflictAnnotationIds.value = []
     isLyricEditorOpen.value = false
   } catch (error) {
+    if (generation !== activeLyricsSaveGeneration || props.songId !== songId) return
     const annotationIds = error instanceof ApiErrorResponseError
       && error.status === 409
       && error.code === 'music.annotation_anchor_conflict'
@@ -388,12 +400,21 @@ async function attemptLyricsSave(input: UpdateMusicSongLyricsInput) {
 
     errorMessage.value = ''
     pendingLyricsInput.value = input
+    pendingLyricsSongId.value = songId
+    pendingLyricsSaveGeneration = generation
     conflictAnnotationIds.value = annotationIds
   }
 }
 
 async function confirmLyricsConflict() {
-  if (!pendingLyricsInput.value || conflictAnnotationIds.value.length === 0) return
+  if (
+    !pendingLyricsInput.value
+    || conflictAnnotationIds.value.length === 0
+    || pendingLyricsSongId.value !== props.songId
+    || pendingLyricsSaveGeneration !== activeLyricsSaveGeneration
+  ) return
+  const songId = pendingLyricsSongId.value
+  const generation = pendingLyricsSaveGeneration
   const resolutionsByAnnotationId = new Map(
     (pendingLyricsInput.value.annotation_resolutions ?? []).map((resolution) => [resolution.annotation_id, resolution]),
   )
@@ -408,12 +429,15 @@ async function confirmLyricsConflict() {
     annotation_resolutions: [...resolutionsByAnnotationId.values()],
   }
   conflictAnnotationIds.value = []
-  await attemptLyricsSave(input)
+  await attemptLyricsSave(songId, generation, input)
 }
 
 function cancelLyricsConflict() {
+  if (pendingLyricsSongId.value !== props.songId || pendingLyricsSaveGeneration !== activeLyricsSaveGeneration) return
   conflictAnnotationIds.value = []
   pendingLyricsInput.value = null
+  pendingLyricsSongId.value = ''
+  pendingLyricsSaveGeneration = 0
 }
 </script>
 

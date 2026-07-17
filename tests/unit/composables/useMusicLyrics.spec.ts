@@ -201,7 +201,7 @@ describe('useMusicLyrics', () => {
     expect(composable.errorMessage.value).toBe('')
   })
 
-  it('does not replace lyrics when an old revert succeeds after reset', async () => {
+  it('applies a committed revert after the versions view is reset', async () => {
     const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
     const composable = useMusicLyrics()
     const pendingRevert = deferred<any>()
@@ -219,11 +219,36 @@ describe('useMusicLyrics', () => {
     composable.resetVersions()
 
     pendingRevert.resolve({ song_id: 'song-1', content: 'reverted song one', lines: [], annotations: [] })
-    await revertPromise
+    await expect(revertPromise).resolves.toBe(true)
 
     expect(composable.lyrics.value?.song_id).toBe('song-1')
-    expect(composable.lyrics.value?.content).toBe('song one')
+    expect(composable.lyrics.value?.content).toBe('reverted song one')
     expect(composable.errorMessage.value).toBe('')
+  })
+
+  it('does not let an older lyrics load overwrite a successful revert', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const pendingLoad = deferred<any>()
+    const pendingRevert = deferred<any>()
+
+    apiMocks.getMusicSongLyrics.mockReturnValueOnce(pendingLoad.promise)
+    apiMocks.listMusicSongLyricsVersions.mockResolvedValue([
+      { id: 'song-1-version-1', song_id: 'song-1', version: 1, content: 'old' },
+    ])
+    apiMocks.revertMusicSongLyricsVersion.mockReturnValueOnce(pendingRevert.promise)
+
+    const loadPromise = composable.load('song-1')
+    await composable.loadVersions('song-1')
+    const revertPromise = composable.revertVersion('song-1', 1, '恢复到第 1 版')
+
+    pendingRevert.resolve({ song_id: 'song-1', content: 'reverted song one', lines: [], annotations: [] })
+    await revertPromise
+    pendingLoad.resolve({ song_id: 'song-1', content: 'stale song one', lines: [], annotations: [] })
+    await loadPromise
+
+    expect(composable.lyrics.value?.content).toBe('reverted song one')
+    expect(composable.loading.value).toBe(false)
   })
 
   it('does not let an invalidated revert failure clear or pollute the current revert state', async () => {
@@ -242,6 +267,7 @@ describe('useMusicLyrics', () => {
     await composable.loadVersions('song-1')
     const stalePromise = composable.revertVersion('song-1', 1, '恢复旧歌')
     composable.resetVersions()
+    await composable.load('song-2')
     await composable.loadVersions('song-2')
     const currentPromise = composable.revertVersion('song-2', 1, '恢复当前歌曲')
 

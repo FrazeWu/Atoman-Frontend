@@ -70,6 +70,24 @@ function mountDrawer() {
   })
 }
 
+function deferred<T>() {
+	let resolve!: (value: T) => void
+	const promise = new Promise<T>((done) => { resolve = done })
+	return { promise, resolve }
+}
+
+function threeSongPlaylist() {
+	return {
+		...regularPlaylist(),
+		song_count: 3,
+		songs: [
+			{ ...regularPlaylist().songs[0], id: 'song-1', title: 'First' },
+			{ ...regularPlaylist().songs[0], id: 'song-2', title: 'Second' },
+			{ ...regularPlaylist().songs[0], id: 'song-3', title: 'Third' },
+		],
+	}
+}
+
 describe('PlaylistDrawer.vue', () => {
   beforeEach(() => {
     mocks.state.value.playlistId = 'playlist-1'
@@ -170,15 +188,9 @@ describe('PlaylistDrawer.vue', () => {
 
 	it('reorders favorite playlist songs with accessible controls', async () => {
 		mocks.getMusicPlaylist.mockResolvedValue({
-			...regularPlaylist(),
+			...threeSongPlaylist(),
 			name: '最爱',
 			is_favorite: true,
-			song_count: 3,
-			songs: [
-				{ ...regularPlaylist().songs[0], id: 'song-1', title: 'First' },
-				{ ...regularPlaylist().songs[0], id: 'song-2', title: 'Second' },
-				{ ...regularPlaylist().songs[0], id: 'song-3', title: 'Third' },
-			],
 		})
 		const wrapper = mountDrawer()
 		await flushPromises()
@@ -188,5 +200,48 @@ describe('PlaylistDrawer.vue', () => {
 
 		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenCalledWith('playlist-1', ['song-2', 'song-1', 'song-3'])
 		expect(wrapper.findAll('.track-name').map((node) => node.text())).toEqual(['Second', 'First', 'Third'])
+	})
+
+	it('queues a new order while the previous order request is in progress', async () => {
+		mocks.getMusicPlaylist.mockResolvedValue(threeSongPlaylist())
+		const firstRequest = deferred<{ reordered: boolean }>()
+		mocks.reorderMusicPlaylistSongs
+			.mockReturnValueOnce(firstRequest.promise)
+			.mockResolvedValueOnce({ reordered: true })
+		const wrapper = mountDrawer()
+		await flushPromises()
+		const songs = wrapper.vm.$.setupState.playlist.songs
+
+		void wrapper.vm.$.setupState.persistSongOrder([songs[1], songs[0], songs[2]])
+		void wrapper.vm.$.setupState.persistSongOrder([songs[1], songs[2], songs[0]])
+		await wrapper.vm.$nextTick()
+
+		expect(wrapper.findAll('.track-name').map((node) => node.text())).toEqual(['Second', 'Third', 'First'])
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenCalledTimes(1)
+
+		firstRequest.resolve({ reordered: true })
+		await flushPromises()
+
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenNthCalledWith(2, 'playlist-1', ['song-2', 'song-3', 'song-1'])
+	})
+
+	it('persists only the latest of several orders queued during one request', async () => {
+		mocks.getMusicPlaylist.mockResolvedValue(threeSongPlaylist())
+		const firstRequest = deferred<{ reordered: boolean }>()
+		mocks.reorderMusicPlaylistSongs
+			.mockReturnValueOnce(firstRequest.promise)
+			.mockResolvedValueOnce({ reordered: true })
+		const wrapper = mountDrawer()
+		await flushPromises()
+		const songs = wrapper.vm.$.setupState.playlist.songs
+
+		void wrapper.vm.$.setupState.persistSongOrder([songs[1], songs[0], songs[2]])
+		void wrapper.vm.$.setupState.persistSongOrder([songs[1], songs[2], songs[0]])
+		void wrapper.vm.$.setupState.persistSongOrder([songs[2], songs[1], songs[0]])
+		firstRequest.resolve({ reordered: true })
+		await flushPromises()
+
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenCalledTimes(2)
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenLastCalledWith('playlist-1', ['song-3', 'song-2', 'song-1'])
 	})
 })

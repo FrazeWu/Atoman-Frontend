@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
   push: vi.fn(),
+  openPlaylist: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -35,6 +36,14 @@ vi.mock('vue-router', () => ({
   },
 }))
 
+vi.mock('@/composables/useMusicDrawers', () => ({
+  useMusicDrawers: () => ({
+    openAlbum: vi.fn(),
+    openArtist: vi.fn(),
+    openPlaylist: mocks.openPlaylist,
+  }),
+}))
+
 describe('Music ExploreView.vue', () => {
   beforeEach(() => {
     mocks.listMusicDiscoverFeed.mockReset()
@@ -44,6 +53,7 @@ describe('Music ExploreView.vue', () => {
     mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.push.mockReset()
+    mocks.openPlaylist.mockReset()
 
     mocks.listRecommendedAlbums.mockResolvedValue({
       data: [
@@ -129,6 +139,22 @@ describe('Music ExploreView.vue', () => {
     const reopenedButtons = wrapper.findAll('button.search-result')
     await reopenedButtons[1].trigger('mousedown')
     expect(mocks.push).toHaveBeenCalledWith('/music/artist/artist-1')
+  })
+
+  it('opens a public playlist in the existing playlist drawer', async () => {
+    mocks.listMusicDiscoverFeed.mockResolvedValue({
+      data: [{ id: 'playlist-1', type: 'playlist', title: '通勤歌单', song_count: 3 }],
+      meta: { page: 1, page_size: 48, total: 1, has_more: false },
+    })
+    const wrapper = mount(ExploreView, {
+      global: { stubs: { RouterLink: true, ArtistDrawer: true, AlbumDrawer: true } },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="discover-playlist-card"]').trigger('click')
+
+    expect(mocks.openPlaylist).toHaveBeenCalledWith('playlist-1')
+    expect(mocks.push).not.toHaveBeenCalledWith('/music/playlist/playlist-1')
   })
 
   it('uses the current loading skeleton and empty state', async () => {

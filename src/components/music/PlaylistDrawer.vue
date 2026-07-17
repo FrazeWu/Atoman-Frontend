@@ -36,6 +36,7 @@ const removingSongId = ref<string | null>(null)
 const savingOrder = ref(false)
 const tracksListRef = ref<HTMLElement | null>(null)
 let sortable: Sortable | null = null
+let pendingSongOrder: MusicSongListItem[] | null = null
 
 function initializeSortable() {
   sortable?.destroy()
@@ -79,18 +80,26 @@ async function loadPlaylist(playlistId: string | null) {
 
 async function persistSongOrder(nextSongs: MusicSongListItem[]) {
 	const current = playlist.value
-	if (!current || savingOrder.value) return
-	const previousSongs = [...current.songs]
+	if (!current) return
 	playlist.value = { ...current, songs: nextSongs }
+	pendingSongOrder = nextSongs
+	if (savingOrder.value) return
+
 	savingOrder.value = true
 	errorMessage.value = ''
 	try {
-		await reorderMusicPlaylistSongs(current.id, nextSongs.map((song) => String(song.id)))
-		refreshPlaylist()
-	} catch (error) {
-		console.error('Failed to reorder playlist songs:', error)
-		playlist.value = { ...current, songs: previousSongs }
-		errorMessage.value = '歌单顺序保存失败'
+		while (pendingSongOrder) {
+			const orderToPersist = pendingSongOrder
+			pendingSongOrder = null
+			try {
+				await reorderMusicPlaylistSongs(current.id, orderToPersist.map((song) => String(song.id)))
+				refreshPlaylist()
+				errorMessage.value = ''
+			} catch (error) {
+				console.error('Failed to reorder playlist songs:', error)
+				errorMessage.value = '歌单顺序保存失败'
+			}
+		}
 	} finally {
 		savingOrder.value = false
 		await nextTick()

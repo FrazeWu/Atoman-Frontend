@@ -3,6 +3,7 @@
     :show="show"
     width="560px"
     close-type="header"
+    above-player
     @close="emit('close')"
   >
     <template #header>

@@ -1,6 +1,11 @@
 <template>
   <Teleport to="body">
-    <div v-if="visible" class="p-modal-backdrop" @click.self="handleClose">
+    <div
+      v-if="visible"
+      class="p-modal-backdrop"
+      :class="{ 'p-modal-backdrop--above-player': abovePlayer }"
+      @click.self="handleClose"
+    >
       <div
         ref="dialogRef"
         class="p-modal"
@@ -36,12 +41,14 @@ const props = withDefaults(defineProps<{
   modelValue?: boolean
   show?: boolean
   closable?: boolean
+  abovePlayer?: boolean
 }>(), {
   size: 'md',
   title: '',
   modelValue: undefined,
   show: undefined,
   closable: true,
+  abovePlayer: false,
 })
 
 const emit = defineEmits<{

@@ -122,6 +122,7 @@
     />
 
     <PConfirm
+      above-player
       :show="conflictAnnotationIds.length > 0"
       title="保存歌词"
       :message="conflictMessage"

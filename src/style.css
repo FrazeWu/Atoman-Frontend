@@ -92,6 +92,10 @@
   --a-z-player-lyrics: 700;
   --a-z-player-queue: 710;
   --a-z-player: 720;
+  --a-z-player-sheet-backdrop: 730;
+  --a-z-player-sheet: 740;
+  --a-z-player-modal-backdrop: 750;
+  --a-z-player-modal: 760;
   --a-sidebar-width: 0px;
 }
 
@@ -660,6 +664,12 @@ body:has(.app-shell.has-sidebar) {
   box-shadow: var(--a-shadow-modal);
   z-index: var(--a-z-modal);
   border-radius: var(--a-radius-modal);
+}
+.p-modal-backdrop--above-player {
+  z-index: var(--a-z-player-modal-backdrop);
+}
+.p-modal-backdrop--above-player .p-modal {
+  z-index: var(--a-z-player-modal);
 }
 .a-modal-sm,
 .p-modal-sm { max-width: 24rem; }

@@ -7,6 +7,7 @@ const styleSource = read('src/style.css')
 const sheetSource = read('src/components/ui/PSheet.vue')
 const playerSource = read('src/components/music/AudioPlayer.vue')
 const lyricsSource = read('src/components/music/MusicLyricsPanel.vue')
+const lyricEditorSource = read('src/components/music/MusicLyricEditorDrawer.vue')
 const topbarSource = read('src/components/system/AppTopbar.vue')
 const mobileNavSource = read('src/components/system/MobileBottomNav.vue')
 
@@ -21,6 +22,10 @@ describe('overlay layer contract', () => {
     expect(styleSource).toContain('--a-z-player-lyrics: 700;')
     expect(styleSource).toContain('--a-z-player-queue: 710;')
     expect(styleSource).toContain('--a-z-player: 720;')
+    expect(styleSource).toContain('--a-z-player-sheet-backdrop: 730;')
+    expect(styleSource).toContain('--a-z-player-sheet: 740;')
+    expect(styleSource).toContain('--a-z-player-modal-backdrop: 750;')
+    expect(styleSource).toContain('--a-z-player-modal: 760;')
 
     expect(sheetSource).toContain('z-index: var(--a-z-sheet);')
     expect(playerSource).toContain('z-index: var(--a-z-player-lyrics);')
@@ -28,6 +33,8 @@ describe('overlay layer contract', () => {
     expect(lyricsSource).toContain('z-index: var(--a-z-player-lyrics);')
     expect(topbarSource).toContain('z-index: var(--a-z-navigation);')
     expect(mobileNavSource).toContain('z-index: var(--a-z-navigation);')
+    expect(lyricEditorSource).toContain('above-player')
+    expect(lyricsSource).toMatch(/<PConfirm[\s\S]*above-player/)
   })
 
   it('reserves content and sheet height only for visible fixed chrome', () => {

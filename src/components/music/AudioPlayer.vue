@@ -1193,6 +1193,8 @@ onBeforeUnmount(() => {
   }
 
   .player-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
     gap: 0.75rem;
     padding: 0 0.75rem;
   }
@@ -1202,6 +1204,7 @@ onBeforeUnmount(() => {
     flex: 1 1 auto;
     width: auto;
     max-width: none;
+    overflow: hidden;
     gap: 0.75rem;
   }
 
@@ -1218,6 +1221,8 @@ onBeforeUnmount(() => {
   }
 
   .player-controls-hub {
+    position: static;
+    transform: none;
     width: auto;
     min-width: 0;
   }

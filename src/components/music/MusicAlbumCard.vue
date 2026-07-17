@@ -39,8 +39,7 @@
         </svg>
       </button>
 
-      <!-- Hover Overlay: Play Count and Listener Count -->
-      <div class="hover-overlay">
+      <div class="stats-overlay">
         <div class="stats-row">
           <div class="stat-item">
             <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -137,14 +136,17 @@ const artistNames = computed(() => {
   return '未知艺术家'
 })
 
+function displayYear(value: number | string | undefined) {
+  const year = String(value ?? '').slice(0, 4)
+  const numericYear = Number(year)
+  return Number.isInteger(numericYear) && numericYear >= 1000 ? year : ''
+}
+
 const albumYear = computed(() => {
-  if (props.album.year) return String(props.album.year)
-  if (props.album.release_date?.trim()) {
-    const yearStr = props.album.release_date.slice(0, 4)
-    if (yearStr && !isNaN(Number(yearStr))) {
-      return yearStr
-    }
-  }
+  const storedYear = displayYear(props.album.year)
+  if (storedYear) return storedYear
+  const releaseYear = displayYear(props.album.release_date?.trim())
+  if (releaseYear) return releaseYear
   if (props.album.summary) {
     const parts = props.album.summary.split(' · ')
     if (parts[1]) return parts[1]
@@ -195,19 +197,12 @@ const albumYear = computed(() => {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.08));
 }
 
-/* Hover Overlay */
-.hover-overlay {
+.stats-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  opacity: 0;
-  transition: opacity 0.25s ease;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.18) 32%, transparent 58%);
   z-index: 2;
   pointer-events: none;
-}
-
-.music-album-card:hover .hover-overlay {
-  opacity: 1;
 }
 
 .stats-row {
@@ -319,5 +314,13 @@ const albumYear = computed(() => {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .bookmark-btn {
+    width: 44px;
+    height: 44px;
+    opacity: 1;
+  }
 }
 </style>

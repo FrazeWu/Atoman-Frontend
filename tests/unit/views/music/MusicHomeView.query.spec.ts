@@ -1,66 +1,13 @@
-import { mount, flushPromises } from '@vue/test-utils'
-import { computed, ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createTestingPinia } from '@pinia/testing'
+import { shallowMount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+import ExploreView from '@/views/music/ExploreView.vue'
 import HomeView from '@/views/music/HomeView.vue'
 
-const mocks = vi.hoisted(() => ({
-  listMusicArtists: vi.fn(),
-  openAlbum: vi.fn(),
-  openArtist: vi.fn(),
-  openMusicCreationFlow: vi.fn(),
-  routeQuery: {} as Record<string, string>,
-}))
+describe('Music HomeView query ownership', () => {
+  it('leaves album browsing state to ExploreView', () => {
+    const wrapper = shallowMount(HomeView)
 
-vi.mock('@/api/musicV1', () => ({
-  listMusicArtists: mocks.listMusicArtists,
-}))
-
-vi.mock('@/composables/useMusicDrawers', () => ({
-  useMusicDrawers: () => ({
-    isMainShifted: computed(() => false),
-    openAlbum: mocks.openAlbum,
-    closeAlbum: vi.fn(),
-    openArtist: mocks.openArtist,
-    closeArtist: vi.fn(),
-    openMusicCreationFlow: mocks.openMusicCreationFlow,
-  }),
-}))
-
-vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    query: mocks.routeQuery,
-  }),
-}))
-
-describe('Music HomeView query sync', () => {
-  beforeEach(() => {
-    mocks.routeQuery = { q: 'blur' }
-    mocks.listMusicArtists.mockReset()
-    mocks.listMusicArtists.mockResolvedValue({
-      data: [],
-      meta: { page: 1, page_size: 48, total: 0, has_more: false },
-    })
-  })
-
-  it('uses route query q as initial search keyword', async () => {
-    const pinia = createTestingPinia({ createSpy: vi.fn })
-    const wrapper = mount(HomeView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          RouterLink: true,
-          ArtistDrawer: true,
-          AlbumDrawer: true,
-          NestedActionDrawer: true,
-          MusicCreationFlowDrawer: true,
-        },
-      },
-    })
-
-    await flushPromises()
-
-    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'blur', page: 1, page_size: 48 })
-    expect((wrapper.find('[data-testid="music-search-input"]').element as HTMLInputElement).value).toBe('blur')
+    expect(wrapper.getComponent(ExploreView).exists()).toBe(true)
+    expect(wrapper.find('input').exists()).toBe(false)
   })
 })

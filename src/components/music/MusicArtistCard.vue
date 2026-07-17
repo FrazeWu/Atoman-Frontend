@@ -35,8 +35,7 @@
         </svg>
       </button>
 
-      <!-- Hover Overlay: Play Count and Subscriber Count -->
-      <div class="hover-overlay">
+      <div class="stats-overlay">
         <div class="stats-row">
           <div class="stat-item">
             <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -175,7 +174,7 @@ const formattedSubscribers = computed(() => {
   background: linear-gradient(135deg, var(--a-color-surface), var(--a-color-line-soft));
   text-transform: uppercase;
   font-family: var(--a-font-meta);
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   opacity: 0.85;
 }
 
@@ -216,19 +215,12 @@ const formattedSubscribers = computed(() => {
   background: #fefcf0;
 }
 
-/* Hover Overlay */
-.hover-overlay {
+.stats-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  opacity: 0;
-  transition: opacity 0.25s ease;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.68), rgba(0, 0, 0, 0.18) 32%, transparent 58%);
   z-index: 2;
   pointer-events: none;
-}
-
-.music-artist-card:hover .hover-overlay {
-  opacity: 1;
 }
 
 .stats-row {
@@ -289,5 +281,13 @@ const formattedSubscribers = computed(() => {
   font-weight: 400;
   color: var(--a-color-muted-soft);
   font-size: 0.85rem;
+}
+
+@media (max-width: 767px) {
+  .bookmark-btn {
+    width: 44px;
+    height: 44px;
+    opacity: 1;
+  }
 }
 </style>

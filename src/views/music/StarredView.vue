@@ -2,8 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import ArtistDrawer from '@/components/music/ArtistDrawer.vue'
-import AlbumDrawer from '@/components/music/AlbumDrawer.vue'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,
@@ -20,6 +18,8 @@ import {
   type MusicStarredItem,
 } from '@/api/musicV1'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 
@@ -182,12 +182,16 @@ onMounted(() => {
         </PPageHeader>
       </header>
 
-      <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-      <p v-else-if="loading" class="state-line">正在加载...</p>
-
-      <div v-else-if="!filteredItems.length" class="empty-paper" role="status">
-        <h2>暂无收藏</h2>
+      <PEmpty v-if="errorMessage" :text="errorMessage" role="alert">
+        <template #action>
+          <PButton data-testid="retry-starred" size="sm" @click="loadStarred">重新加载</PButton>
+        </template>
+      </PEmpty>
+      <div v-else-if="loading" class="results music-card-grid--skeleton" role="status" aria-label="正在加载收藏">
+        <div v-for="index in 6" :key="index" class="a-skeleton music-card-skeleton" />
       </div>
+
+      <PEmpty v-else-if="!filteredItems.length" text="暂无收藏" />
 
       <div v-else class="results">
         <template
@@ -233,8 +237,6 @@ onMounted(() => {
         </template>
       </div>
     </div>
-    <ArtistDrawer />
-    <AlbumDrawer />
   </div>
 </template>
 
@@ -247,18 +249,13 @@ onMounted(() => {
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .main-level-1.is-shifted {
   transform: translateX(-10%) scale(0.98);
   opacity: 0.4;
   pointer-events: none;
-}
-
-.page-header {
-  border-left: 4px solid var(--a-color-line-soft);
-  padding-left: 1.25rem;
 }
 
 .toolbar-row {
@@ -374,7 +371,7 @@ onMounted(() => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 900;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .section-heading p,
@@ -446,9 +443,11 @@ onMounted(() => {
 
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1.25rem;
 }
+
+.music-card-skeleton { aspect-ratio: 1; }
 
 .result-kind {
   margin: 0 0 0.85rem;
@@ -551,5 +550,19 @@ onMounted(() => {
   .page-title {
     font-size: 3rem;
   }
+
+  .results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0.75rem;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1100px) {
+  .results { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-level-1,
+  .result-card--interactive { transition: none; }
 }
 </style>

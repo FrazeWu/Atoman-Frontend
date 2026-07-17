@@ -304,7 +304,28 @@ export type MusicAlbumUpdateInput = Partial<MusicAlbumInput>
 
 export type MusicListResponse<T> = ApiList<T>
 
-export type MusicRecommendationMode = 'hot' | 'featured' | 'discover'
+export type MusicBrowseMode = 'hot' | 'featured' | 'latest'
+export type MusicRecommendationMode = MusicBrowseMode | 'discover'
+
+export type MusicDiscoverItem = {
+  type: 'album' | 'artist' | 'playlist'
+  id: string
+  title: string
+  summary?: string
+  image_url?: string
+  target_path: string
+  play_count?: number
+  bookmark_count?: number
+  song_count?: number
+  name?: string
+  legal_name?: string
+  bio?: string
+  cover_url?: string
+  description?: string
+  release_date?: string
+  year?: number
+  artists?: Array<{ id: string; name: string }>
+}
 
 export type MusicRecommendationItem = {
   id: string
@@ -392,6 +413,7 @@ export const musicV1Endpoints = {
   playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
   plays: () => `${apiV1Base()}/music/plays`,
+  discover: (mode: MusicBrowseMode) => `${apiV1Base()}/music/discover?mode=${mode}`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,
@@ -768,6 +790,19 @@ export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<M
     meta: response.meta ?? {
       page: filters.page ?? 1,
       page_size: filters.page_size ?? response.data.length,
+      total: response.data.length,
+      has_more: false,
+    },
+  }
+}
+
+export async function listMusicDiscoverFeed(mode: MusicBrowseMode): Promise<MusicListResponse<MusicDiscoverItem>> {
+  const response = await apiGetEnvelope<MusicDiscoverItem[], PaginationMeta>(musicV1Endpoints.discover(mode))
+  return {
+    data: response.data,
+    meta: response.meta ?? {
+      page: 1,
+      page_size: response.data.length,
       total: response.data.length,
       has_more: false,
     },

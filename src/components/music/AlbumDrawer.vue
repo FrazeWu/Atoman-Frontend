@@ -299,7 +299,6 @@ watch(
         <PButton
           variant="primary"
           :disabled="!playableSongs.length"
-          dot
           @click="playAlbum"
         >
           播放全专
@@ -307,7 +306,6 @@ watch(
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
-          dot
           data-testid="album-bookmark-toggle"
           @click="toggleAlbumBookmark"
         >
@@ -317,20 +315,17 @@ watch(
         <PButton
           variant="secondary"
           :href="editAlbumHref"
-          dot
         >
           编辑
         </PButton>
         <PButton
           variant="secondary"
-          dot
           @click="openNestedAction('revise')"
         >
           修改
         </PButton>
         <PButton
           variant="secondary"
-          dot
           @click="openNestedAction('history')"
         >
           版本
@@ -570,14 +565,6 @@ watch(
   background: var(--a-color-ink-muted);
   border-color: var(--a-color-ink-muted);
 }
-.paper-action-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0.6;
-}
-
 .content-section {
   background: var(--a-color-paper-soft);
   border: 1px solid var(--a-color-line-soft);

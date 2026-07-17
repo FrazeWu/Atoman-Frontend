@@ -222,4 +222,21 @@ describe('Music StarredView', () => {
     expect(wrapper.text()).toContain('暂无收藏')
     expect(wrapper.text()).not.toContain('收藏加载失败')
   })
+
+  it('shows a retry action when starred content fails to load', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.listArtistBookmarks.mockRejectedValueOnce(new Error('network'))
+    const wrapper = mount(StarredView)
+    await flushPromises()
+
+    expect(wrapper.find('.p-empty').exists()).toBe(true)
+    expect(wrapper.text()).toContain('收藏加载失败')
+
+    await wrapper.get('[data-testid="retry-starred"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.listArtistBookmarks).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="starred-artist-card"]').exists()).toBe(true)
+    consoleError.mockRestore()
+  })
 })

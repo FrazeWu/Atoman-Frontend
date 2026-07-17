@@ -7,6 +7,7 @@ export { default as MusicReviewNotesSection } from './MusicReviewNotesSection.vu
 export { default as AlbumEditorShell } from './AlbumEditorShell.vue'
 export { default as MusicAlbumCard } from './MusicAlbumCard.vue'
 export { default as MusicArtistCard } from './MusicArtistCard.vue'
+export { default as MusicPlaylistCard } from './MusicPlaylistCard.vue'
 export type {
   MusicAlbumMetaDraft,
   MusicCoverDraft,

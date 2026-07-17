@@ -154,7 +154,6 @@ watch(
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
-          dot
           data-testid="artist-bookmark-toggle"
           @click="toggleArtistBookmark"
         >
@@ -162,14 +161,12 @@ watch(
         </PButton>
         <PButton
           variant="secondary"
-          dot
           @click="openNestedAction('revise_artist')"
         >
           修改艺术家信息
         </PButton>
         <PButton
           variant="secondary"
-          dot
           @click="openMusicCreationFlow({
             artistId: state.artistId || null,
             artistName: artist?.name || '',
@@ -267,14 +264,6 @@ watch(
   background: var(--a-color-fg);
   color: var(--a-color-bg);
 }
-.paper-action-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0.6;
-}
-
 .album-list-header {
   margin-bottom: 1.5rem;
   padding-bottom: 0.85rem;

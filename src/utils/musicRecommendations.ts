@@ -3,12 +3,19 @@ import type {
   MusicArtistBookmark,
   MusicRecommendationItem,
   MusicRecommendationMode,
+  MusicBrowseMode,
 } from '@/api/musicV1'
 
 export const MUSIC_RECOMMENDATION_MODE_OPTIONS: Array<{ label: string; value: MusicRecommendationMode }> = [
   { label: '热度', value: 'hot' },
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
+]
+
+export const MUSIC_BROWSE_MODE_OPTIONS: Array<{ label: string; value: MusicBrowseMode }> = [
+  { label: '热度', value: 'hot' },
+  { label: '精选', value: 'featured' },
+  { label: '最新', value: 'latest' },
 ]
 
 export function parseRecommendationTargetId(targetPath: string, entity: 'artist' | 'album'): string | null {

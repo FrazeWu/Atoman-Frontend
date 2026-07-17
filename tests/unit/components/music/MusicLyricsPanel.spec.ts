@@ -269,7 +269,7 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.deleteAnnotation.mockResolvedValue({ deleted: true })
     mocks.voteAnnotation.mockResolvedValue(undefined)
     mocks.loadVersions.mockResolvedValue(lyricsState.versions.value)
-    mocks.revertVersion.mockResolvedValue(lyricsState.lyrics.value)
+    mocks.revertVersion.mockResolvedValue(true)
     mocks.currentLine.mockReturnValue(lyricsState.lyrics.value.lines[1])
   })
 
@@ -363,9 +363,38 @@ describe('MusicLyricsPanel.vue', () => {
     await revertButton.trigger('click')
     expect(mocks.revertVersion).toHaveBeenCalledOnce()
 
-    resolveRevert(lyricsState.lyrics.value)
+    resolveRevert(true)
     lyricsState.reverting.value = false
     await flushPromises()
+  })
+
+  it('旧歌曲恢复请求完成后不关闭重新打开的当前版本列表', async () => {
+    let resolveStaleRevert!: (succeeded: boolean) => void
+    mocks.revertVersion.mockImplementationOnce(() => new Promise<boolean>((resolve) => {
+      resolveStaleRevert = resolve
+    }))
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
+
+    await wrapper.setProps({ songId: 'song-2' })
+    lyricsState.versions.value = [{
+      id: 'song-2-version-1',
+      song_id: 'song-2',
+      version: 1,
+      content: 'Song 2 old lyrics',
+    }]
+    lyricsState.versionsSongId.value = 'song-2'
+    lyricsState.reverting.value = false
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    expect(wrapper.find('.music-lyrics-panel__versions').exists()).toBe(true)
+
+    resolveStaleRevert(false)
+    await flushPromises()
+
+    expect(wrapper.find('.music-lyrics-panel__versions').exists()).toBe(true)
   })
 
   it('关闭版本列表会失效请求并且不外溢加载失败', async () => {

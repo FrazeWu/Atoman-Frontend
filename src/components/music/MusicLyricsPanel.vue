@@ -343,9 +343,12 @@ async function toggleVersions() {
 
 async function handleRevertVersion(version: number) {
   if (!isAuthenticated.value || reverting.value || versionsSongId.value !== props.songId) return
+  const songId = props.songId
   try {
-    await revertVersion(props.songId, version, `恢复到第 ${version} 版`)
-    versionsVisible.value = false
+    const succeeded = await revertVersion(songId, version, `恢复到第 ${version} 版`)
+    if (succeeded && props.songId === songId && versionsSongId.value === songId) {
+      versionsVisible.value = false
+    }
   } catch {
     // The composable exposes the current version error inside this panel.
   }

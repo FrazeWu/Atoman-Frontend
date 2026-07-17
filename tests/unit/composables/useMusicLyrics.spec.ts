@@ -98,7 +98,7 @@ describe('useMusicLyrics', () => {
     expect(apiMocks.listMusicSongLyricsVersions).toHaveBeenCalledWith('song-1')
     expect(apiMocks.revertMusicSongLyricsVersion).toHaveBeenCalledWith('song-1', 1, '恢复到第 1 版')
     expect(composable.versions.value).toHaveLength(1)
-    expect(reverted.content).toBe('old')
+    expect(reverted).toBe(true)
     expect(composable.lyrics.value?.content).toBe('old')
   })
 
@@ -246,7 +246,7 @@ describe('useMusicLyrics', () => {
     const currentPromise = composable.revertVersion('song-2', 1, '恢复当前歌曲')
 
     staleRevert.reject(new Error('stale revert failed'))
-    await expect(stalePromise).resolves.toBeUndefined()
+    await expect(stalePromise).resolves.toBe(false)
     expect(composable.reverting.value).toBe(true)
     expect(composable.versionsErrorMessage.value).toBe('')
     expect(composable.errorMessage.value).toBe('')
@@ -269,7 +269,7 @@ describe('useMusicLyrics', () => {
     const firstRevert = composable.revertVersion('song-1', 1, '恢复到第 1 版')
     const duplicateRevert = composable.revertVersion('song-1', 1, '重复恢复')
 
-    await expect(duplicateRevert).resolves.toBeUndefined()
+    await expect(duplicateRevert).resolves.toBe(false)
     expect(apiMocks.revertMusicSongLyricsVersion).toHaveBeenCalledOnce()
     expect(composable.reverting.value).toBe(true)
 

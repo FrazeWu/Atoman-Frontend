@@ -205,7 +205,7 @@ export function useMusicLyrics() {
   }
 
   async function revertVersion(songId: string, version: number, editSummary: string) {
-    if (reverting.value) return
+    if (reverting.value) return false
     if (versionsSongId.value !== songId || !versions.value.some((item) => item.version === version)) {
       throw new Error('版本与当前歌曲不匹配')
     }
@@ -215,14 +215,14 @@ export function useMusicLyrics() {
     versionsErrorMessage.value = ''
     try {
       const updatedLyrics = await revertMusicSongLyricsVersion(songId, version, editSummary)
-      if (requestId !== activeRevertRequestId) return
+      if (requestId !== activeRevertRequestId) return false
       if (activeSongId.value === songId || activeSongId.value === '') {
         lyrics.value = updatedLyrics
         activeSongId.value = songId
       }
-      return updatedLyrics
+      return true
     } catch (error) {
-      if (requestId !== activeRevertRequestId) return
+      if (requestId !== activeRevertRequestId) return false
       versionsErrorMessage.value = '版本恢复失败'
       throw error
     } finally {

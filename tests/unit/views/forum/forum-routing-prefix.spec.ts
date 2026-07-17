@@ -210,4 +210,27 @@ describe('forum 路由前缀', () => {
     await wrapper.get('.category-pill').trigger('click')
     expect(pushSpy).toHaveBeenLastCalledWith('/forum?category_id=cat-1')
   })
+
+  it('话题作者旁显示论坛等级', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { items: [], target: { liked: false, like_count: 0, comment_count: 0 } },
+    }), { status: 200 }))
+
+    const { wrapper } = await mountWithRouter(ForumTopicView, '/forum/topic/topic-1', () => {
+      const forumStore = useForumStore()
+      forumStore.loading = false
+      forumStore.currentTopic = {
+        ...makeTopic('topic-1'),
+        user: {
+          username: 'alice',
+          email: 'alice@example.com',
+          forum_trust_level: 2,
+        },
+      }
+      vi.spyOn(forumStore, 'fetchTopic').mockResolvedValue(undefined)
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="forum-topic-trust-level"]').text()).toBe('等级 2')
+  })
 })

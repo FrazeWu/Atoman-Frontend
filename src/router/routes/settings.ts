@@ -6,4 +6,9 @@ export const settingRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/setting/SettingAccessView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, authLayout: true },
   },
+  {
+    path: '/site/setting/community',
+    component: () => import('@/views/setting/SettingCommunityView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, authLayout: true },
+  },
 ]

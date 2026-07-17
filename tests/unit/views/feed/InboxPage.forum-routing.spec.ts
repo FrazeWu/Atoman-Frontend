@@ -31,7 +31,7 @@ const makeNotification = (overrides: Partial<Notification>): Notification => ({
   ...overrides,
 })
 
-const mountInbox = async (notification: Notification) => {
+const mountInbox = async (notification: Notification, path = '/feed/inbox') => {
   const pinia = createPinia()
   setActivePinia(pinia)
 
@@ -56,6 +56,7 @@ const mountInbox = async (notification: Notification) => {
     ],
   })
   await router.push('/inbox')
+  if (path !== '/feed/inbox') await router.replace(path.replace('/feed/inbox', '/inbox'))
   await router.isReady()
   const pushSpy = vi.spyOn(router, 'push')
   pushSpy.mockResolvedValue(undefined)
@@ -70,7 +71,7 @@ const mountInbox = async (notification: Notification) => {
         },
         PEmpty: { template: '<div />' },
         PPress: { template: '<button />' },
-        PTab: { template: '<button />' },
+        PTab: { props: ['label'], template: '<button>{{ label }}</button>' },
         PBadge: { template: '<span><slot /></span>' },
         PTextarea: { template: '<textarea />' },
       },
@@ -131,5 +132,42 @@ describe('InboxPage forum 通知跳转', () => {
     expect(wrapper.findAll('button').some((button) => button.text().includes('前往来源内容'))).toBe(false)
     expect(wrapper.text()).toContain('来源已不可用')
     expect(pushSpy).not.toHaveBeenCalled()
+  })
+
+  it('论坛标签请求新评论和新帖子通知', async () => {
+    const { wrapper } = await mountInbox(makeNotification({ type: 'forum_topic_comment' }), '/feed/inbox?tab=forum')
+    const store = useNotificationStore()
+    expect(store.fetchNotifications).toHaveBeenCalledWith(['forum_topic_comment', 'forum_follow'], 1)
+    expect(wrapper.text()).toContain('论坛')
+    wrapper.unmount()
+  })
+
+  it('论坛新评论定位到评论并显示帖子标题', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      type: 'forum_topic_comment',
+      meta: {
+        target_kind: 'forum_topic', resource_id: 'topic-1', comment_id: 'reply-1', root_id: 'root-1',
+        topic_id: 'topic-1', topic_title: '统一评论计划',
+      },
+    }), '/feed/inbox?tab=forum')
+
+    expect(wrapper.text()).toContain('新评论')
+    expect(wrapper.text()).toContain('统一评论计划')
+    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
+    expect(pushSpy).toHaveBeenLastCalledWith({
+      path: '/forum/topic/topic-1', query: { comment_id: 'reply-1' }, hash: '#comment-root-1',
+    })
+  })
+
+  it('论坛新帖子兼容旧标题字段并跳转帖子', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      type: 'forum_follow', source_type: 'forum_topic', source_id: 'topic-legacy',
+      meta: { topic_id: 'topic-legacy', title: '旧通知标题' },
+    }), '/feed/inbox?tab=forum')
+
+    expect(wrapper.text()).toContain('新帖子')
+    expect(wrapper.text()).toContain('旧通知标题')
+    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
+    expect(pushSpy).toHaveBeenLastCalledWith({ path: '/forum/topic/topic-legacy' })
   })
 })

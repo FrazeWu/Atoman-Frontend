@@ -99,7 +99,7 @@ describe('host-scoped route tables', () => {
 
   it('registers only the canonical site and user settings routes', () => {
     const appRoutePaths = paths(buildAppRoutes())
-    expect(paths(settingRoutes)).toEqual(['/site/setting'])
+    expect(paths(settingRoutes)).toEqual(['/site/setting', '/site/setting/community'])
     expect(appRoutePaths).not.toEqual(expect.arrayContaining(['/setting', '/admin/site', '/settings']))
     expect(flattenPaths(moduleRoutes.blog)).not.toContain('settings')
     expect(flattenPaths(moduleRoutes.feed)).not.toContain('settings')

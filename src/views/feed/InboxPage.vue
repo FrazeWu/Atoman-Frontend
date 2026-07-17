@@ -153,11 +153,13 @@ import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
-import { useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
 import { useUserBlocksStore } from '@/stores/userBlocks'
 import { useAuthStore } from '@/stores/auth'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
+
+type InboxPageTab = InboxTab | 'forum'
 
 const route = useRoute()
 const router = useRouter()
@@ -167,11 +169,12 @@ const notificationStore = useNotificationStore()
 const dmStore = useDMStore()
 const userBlocksStore = useUserBlocksStore()
 
-const tabs: Array<{ key: InboxTab; label: string }> = [
+const tabs: Array<{ key: InboxPageTab; label: string }> = [
   { key: 'like', label: '点赞' },
   { key: 'interaction', label: '互动' },
   { key: 'mention', label: '@我' },
   { key: 'reply', label: '回复我' },
+  { key: 'forum', label: '论坛' },
   { key: 'collaboration', label: '协作' },
   { key: 'system', label: '系统' },
   { key: 'dm', label: '私信' },
@@ -185,18 +188,19 @@ const dmError = ref('')
 const dmOpenError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const activeTab = computed<InboxTab>(() => {
+const activeTab = computed<InboxPageTab>(() => {
   const tab = route.query.tab
-  if (tab === 'like' || tab === 'interaction' || tab === 'mention' || tab === 'reply' || tab === 'collaboration' || tab === 'system' || tab === 'dm') return tab
-  const firstUnread = tabs.find((item) => notificationStore.unreadCounts[item.key] > 0)
+  if (tab === 'like' || tab === 'interaction' || tab === 'mention' || tab === 'reply' || tab === 'forum' || tab === 'collaboration' || tab === 'system' || tab === 'dm') return tab
+  const firstUnread = tabs.find((item) => item.key !== 'forum' && notificationStore.unreadCounts[item.key] > 0)
   return firstUnread?.key || 'mention'
 })
 
 const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 const activeTabLabel = computed(() => tabs.find((item) => item.key === activeTab.value)?.label || '通知')
-const tabUnreadCount = (tab: InboxTab) => notificationStore.unreadCounts[tab] || 0
+const tabUnreadCount = (tab: InboxPageTab) => tab === 'forum' ? 0 : notificationStore.unreadCounts[tab] || 0
+const forumNotificationTypes: Notification['type'][] = ['forum_topic_comment', 'forum_follow']
 
-const switchTab = async (tab: InboxTab) => {
+const switchTab = async (tab: InboxPageTab) => {
   await router.push({ path: '/inbox', query: { tab } })
 }
 
@@ -215,7 +219,7 @@ const loadTab = async () => {
     return
   }
 
-  await notificationStore.fetchNotifications(activeTab.value as NotificationCategory, 1)
+  await notificationStore.fetchNotifications(activeTab.value === 'forum' ? forumNotificationTypes : activeTab.value as NotificationCategory, 1)
   selectedNotificationId.value = notificationStore.notifications[0]?.id || null
 }
 
@@ -226,7 +230,7 @@ const openNotification = async (id: string) => {
 
 const markCurrentNotificationsRead = async () => {
   if (activeTab.value === 'dm') return
-  await notificationStore.markAllRead(activeTab.value as NotificationCategory)
+  await notificationStore.markAllRead(activeTab.value === 'forum' ? forumNotificationTypes : activeTab.value as NotificationCategory)
 }
 
 const openConversation = async (username: string) => {
@@ -274,6 +278,8 @@ const notificationTargetPath = (notification: Notification) => {
   if (notification.source_url) {
     return notification.source_url
   }
+  if (isCommentNotification(notification)) return commentNotificationLocation(notification)
+  if (notification.type === 'forum_follow') return forumNotificationLocation(notification)
   const topicId = notification.meta.topic_id
   if (notification.source_type === 'forum_reply' && topicId) {
     return `/forum/topic/${topicId}#reply-${notification.source_id}`
@@ -316,6 +322,8 @@ const unblockActiveConversation = async () => {
 
 const formatNotificationTitle = (notification: Notification) => {
   const actor = notification.actor?.display_name || notification.actor?.username || '有人'
+  if (notification.type === 'forum_topic_comment') return '新评论'
+  if (notification.type === 'forum_follow') return '新帖子'
   if (notification.meta.title) return notification.meta.title
   switch (notification.type) {
     case 'forum_reply':
@@ -326,12 +334,29 @@ const formatNotificationTitle = (notification: Notification) => {
       return `${actor} 提到了你`
     case 'forum_solved':
       return `${actor} 采纳了你的回复`
+    case 'comment_reply':
+      return `${actor} 回复了你`
+    case 'comment_mention':
+      return `${actor} 提到了你`
+    case 'comment_marked':
+      return `${actor} 标记了你的评论`
+    case 'comment_like':
+      return notification.meta.like_count && notification.meta.like_count > 1
+        ? `${actor} 等 ${notification.meta.like_count} 人赞了你`
+        : `${actor} 赞了你`
     default:
       return '新通知'
   }
 }
 
 const formatNotificationBody = (notification: Notification) => {
+  if (notification.type === 'forum_topic_comment' || notification.type === 'forum_follow') {
+    return notification.meta.topic_title || notification.meta.title || '查看帖子'
+  }
+  if (notification.type === 'comment_reply') return '查看回复'
+  if (notification.type === 'comment_mention') return '查看提及'
+  if (notification.type === 'comment_marked') return '查看标记'
+  if (notification.type === 'comment_like') return '查看点赞'
   return notification.reason || notification.meta.body || notification.meta.reply_excerpt || notification.meta.topic_title || '查看详情'
 }
 

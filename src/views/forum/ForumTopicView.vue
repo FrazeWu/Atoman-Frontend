@@ -43,6 +43,11 @@
         <div class="topic-meta">
           <div class="topic-meta-text">
             <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
+            <span
+              v-if="forumStore.currentTopic.user?.forum_trust_level != null"
+              class="a-badge"
+              data-testid="forum-topic-trust-level"
+            >等级 {{ forumStore.currentTopic.user.forum_trust_level }}</span>
             <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
             <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
           </div>

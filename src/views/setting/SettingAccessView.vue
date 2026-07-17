@@ -139,6 +139,10 @@
               </label>
 
               <SettingForumModeratorPanel v-if="draft.modules.forum.enabled" />
+
+              <PButton variant="secondary" to="/site/setting/community">
+                社区管理
+              </PButton>
             </div>
 
             <div v-else class="setting-access__module-body">

@@ -2,15 +2,15 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import type { Notification, NotificationCategory } from '@/types'
 
-const makeNotification = (id: string, category: NotificationCategory, read_at: string | null = null): Notification => ({
+const makeNotification = (id: string, category: NotificationCategory, read_at: string | null = null, type = `content.${category}`): Notification => ({
   id,
   recipient_id: 'user-1',
   actor_id: null,
   actor: null,
-  type: `content.${category}`,
+  type,
   category,
   reason: '',
   source_type: category,
@@ -58,5 +58,65 @@ describe('notification store', () => {
     await store.fetchUnreadCounts()
     expect(store.unreadCounts.like).toBe(2)
     expect(store.unreadCount).toBe(9)
+  })
+
+  it('accepts forum follow notifications', () => {
+    expect(makeNotification('follow-1', 'reply', null, 'forum_follow').type).toBe('forum_follow')
+  })
+
+  it('treats forum topic comments as comment notifications and locates forum follows', () => {
+    const comment = {
+      ...makeNotification('forum-comment', 'reply', null, 'forum_topic_comment'),
+      meta: { target_kind: 'forum_topic' as const, resource_id: 'topic-1', comment_id: 'child-1', root_id: 'root-1' },
+    }
+    expect(isCommentNotification(comment)).toBe(true)
+    expect(commentNotificationLocation(comment)).toEqual({
+      path: '/forum/topic/topic-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
+    })
+    expect(forumNotificationLocation({
+      ...makeNotification('follow', 'reply', null, 'forum_follow'), meta: { topic_id: 'topic-2', topic_title: 'Topic' },
+    })).toEqual({ path: '/forum/topic/topic-2' })
+  })
+
+  it('inserts realtime forum notifications in the selected forum tab', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+    const store = useNotificationStore()
+    await store.fetchNotifications(['forum_topic_comment', 'forum_follow'], 1)
+
+    store.receiveNotification(makeNotification('live-forum', 'reply', null, 'forum_topic_comment'))
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['live-forum'])
+    expect(store.unreadCount).toBe(1)
+  })
+
+  it('marks both forum notification types read', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const store = useNotificationStore()
+    store.notifications = [
+      makeNotification('topic-comment', 'reply', null, 'forum_topic_comment'),
+      makeNotification('new-topic', 'reply', null, 'forum_follow'),
+    ]
+
+    await store.markAllRead(['forum_topic_comment', 'forum_follow'])
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining('type=forum_topic_comment'), expect.stringContaining('type=forum_follow'),
+    ])
+    expect(store.notifications.every(({ read_at }) => Boolean(read_at))).toBe(true)
+  })
+
+  it('clears forum realtime filters when resetting the store', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+    const store = useNotificationStore()
+    await store.fetchNotifications(['forum_topic_comment', 'forum_follow'], 1)
+
+    store.resetStore()
+    store.receiveNotification(makeNotification('next-mention', 'mention', null, 'comment_mention'))
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['next-mention'])
   })
 })

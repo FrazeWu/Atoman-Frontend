@@ -144,6 +144,30 @@ export interface User {
   is_active?: boolean
   created_at?: string
   updated_at?: string
+  forum_trust_level?: number
+}
+
+export interface ForumGroupMember {
+  id: string
+  group_id: string
+  user_id: string
+  user?: User
+}
+
+export interface ForumGroup {
+  id: string
+  name: string
+  description?: string
+  members?: ForumGroupMember[]
+}
+
+export interface ForumCategoryPermission {
+  id: string
+  category_id: string
+  group_id: string
+  can_view: boolean
+  can_create_topic: boolean
+  can_comment: boolean
 }
 
 // ===== Blog Types =====
@@ -668,6 +692,11 @@ export interface Notification {
     reply_excerpt?: string
     actor_count?: number
     recent_actors?: string[]
+    target_kind?: 'blog_post' | 'video' | 'podcast_episode' | 'feed_article' | 'music_artist' | 'music_album' | 'music_song' | 'forum_topic' | 'debate' | 'timeline_event' | 'timeline_person'
+    resource_id?: string
+    comment_id?: string
+    root_id?: string
+    like_count?: number
     [key: string]: any
   }
   read_at?: string | null

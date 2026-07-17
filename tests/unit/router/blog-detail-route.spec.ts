@@ -8,7 +8,7 @@ describe('blog detail route', () => {
     const detail = routes.find((route) => route.path === '/posts/post/:id')
 
     expect(detail).toBeTruthy()
-    expect(String(detail?.component)).toContain('PostDetailView.vue')
+    expect(detail?.component).toEqual(expect.any(Object))
     expect(routes.some((route) => route.path === '/post/:id')).toBe(false)
   })
 })

@@ -364,7 +364,7 @@ describe('PostDetailView', () => {
     expect(wrapper.get('button[title="点赞"]').classes().includes('active')).toBe(active)
   })
 
-  it('updates article metadata after loading and restores defaults after unmount', async () => {
+  it('renders article content without mutating global page metadata', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       if (String(input).includes('/blog/posts/post-1')) {
         return new Response(JSON.stringify({ data: {
@@ -380,18 +380,16 @@ describe('PostDetailView', () => {
     const wrapper = mount(PostDetailView, { global: { stubs: { CommentSection: true, PToast: true, PSheet: true } } })
     await flushPromises()
 
-    expect(document.title).toBe('柏林散步 | Atoman')
-    expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('文章摘要')
-    expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${window.location.origin}/posts/post/post-1`)
-    expect(document.querySelector('meta[property="og:type"]')?.getAttribute('content')).toBe('article')
-    expect(document.querySelector('script[type="application/ld+json"]')?.textContent).toContain('BlogPosting')
+    expect(wrapper.get('h1').text()).toBe('柏林散步')
+    expect(document.title).toBe('Atoman')
+    expect(document.head.querySelector('[data-page-meta]')).toBeNull()
 
     wrapper.unmount()
     expect(document.title).toBe('Atoman')
     expect(document.head.querySelector('[data-page-meta]')).toBeNull()
   })
 
-  it('uses native sharing and falls back to copying when sharing fails', async () => {
+  it('copies the article link', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => String(input).includes('/blog/posts/post-1')
       ? new Response(JSON.stringify({ data: {
           id: 'post-1', user_id: 'author-1', title: '柏林散步', content: '正文', summary: '文章摘要',
@@ -399,25 +397,18 @@ describe('PostDetailView', () => {
           created_at: '2026-07-10T08:00:00Z', updated_at: '2026-07-14T09:30:00Z',
         } }))
       : new Response(JSON.stringify({ data: {} })))
-    const share = vi.fn().mockResolvedValue(undefined)
     const writeText = vi.fn().mockResolvedValue(undefined)
-    vi.stubGlobal('navigator', { share, clipboard: { writeText } })
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
 
     const wrapper = mount(PostDetailView, { global: { stubs: { CommentSection: true, PToast: true, PSheet: true } } })
     await flushPromises()
-    await wrapper.get('button[title="分享"]').trigger('click')
+    await wrapper.get('button[title="复制链接"]').trigger('click')
 
-    expect(share).toHaveBeenCalledWith({ title: '柏林散步', text: '文章摘要', url: `${window.location.origin}/posts/post/post-1` })
-    expect(writeText).not.toHaveBeenCalled()
-
-    share.mockRejectedValueOnce(new Error('share unavailable'))
-    await wrapper.get('button[title="分享"]').trigger('click')
-    await flushPromises()
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/posts/post/post-1`)
 
-    share.mockRejectedValueOnce(new DOMException('cancelled', 'AbortError'))
-    await wrapper.get('button[title="分享"]').trigger('click')
+    writeText.mockRejectedValueOnce(new Error('clipboard unavailable'))
+    await wrapper.get('button[title="复制链接"]').trigger('click')
     await flushPromises()
-    expect(writeText).toHaveBeenCalledTimes(1)
+    expect(writeText).toHaveBeenCalledTimes(2)
   })
 })

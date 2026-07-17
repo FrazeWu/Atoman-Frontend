@@ -3,24 +3,24 @@ import { readFileSync } from 'node:fs'
 
 const routerSource = readFileSync(path.resolve(process.cwd(), 'src/router/routes/modules.ts'), 'utf8')
 
-describe('router layout loading', () => {
-  it('keeps top-level module layouts behind route-level dynamic imports', () => {
-    expect(routerSource).not.toContain("import BlogLayout from '@/views/blog/BlogLayout.vue'")
-    expect(routerSource).not.toContain("import FeedLayout from '@/views/feed/FeedLayout.vue'")
-    expect(routerSource).not.toContain("import MusicLayout from '@/views/music/MusicLayout.vue'")
-    expect(routerSource).not.toContain("import ForumLayout from '@/views/forum/ForumLayout.vue'")
-    expect(routerSource).not.toContain("import DebateLayout from '@/views/debate/DebateLayout.vue'")
-    expect(routerSource).not.toContain("import TimelineLayout from '@/views/timeline/TimelineLayout.vue'")
-    expect(routerSource).not.toContain("import PodcastLayout from '@/views/podcast/PodcastLayout.vue'")
-    expect(routerSource).not.toContain("import VideoLayout from '@/views/video/VideoLayout.vue'")
+const layouts = [
+  ['MediaLayout', 'media'], ['BlogLayout', 'blog'], ['MusicLayout', 'music'],
+  ['FeedLayout', 'feed'], ['ForumLayout', 'forum'], ['DebateLayout', 'debate'],
+  ['TimelineLayout', 'timeline'], ['PodcastLayout', 'podcast'], ['VideoLayout', 'video'],
+] as const
 
-    expect(routerSource).toContain("component: () => import('@/views/blog/BlogLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/feed/FeedLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/music/MusicLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/forum/ForumLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/debate/DebateLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/timeline/TimelineLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/podcast/PodcastLayout.vue')")
-    expect(routerSource).toContain("component: () => import('@/views/video/VideoLayout.vue')")
+describe('router layout loading', () => {
+  it('loads module layouts synchronously so navigation chrome renders immediately', () => {
+    for (const [component, directory] of layouts) {
+      expect(routerSource).toContain(`import ${component} from '@/views/${directory}/${component}.vue'`)
+      expect(routerSource).toContain(`component: ${component}`)
+    }
+  })
+
+  it('loads module content through the shared asynchronous wrapper', () => {
+    expect(routerSource).toContain("import { asyncRouteView } from '@/router/asyncRouteView'")
+    expect(routerSource).toContain("component: asyncRouteView(() => import('@/views/music/HomeView.vue'))")
+    expect(routerSource).toContain("component: asyncRouteView(() => import('@/views/feed/FeedView.vue'))")
+    expect(routerSource).toContain("component: asyncRouteView(() => import('@/views/forum/ForumHomeView.vue'))")
   })
 })

@@ -75,6 +75,41 @@ describe('useMusicLyrics', () => {
     expect(composable.saving.value).toBe(false)
   })
 
+  it('ignores a stale save error after switching songs', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const song1Load = deferred<any>()
+    const song2Load = deferred<any>()
+    const song1Save = deferred<any>()
+    const staleError = new Error('stale save failed')
+
+    apiMocks.getMusicSongLyrics
+      .mockReturnValueOnce(song1Load.promise)
+      .mockReturnValueOnce(song2Load.promise)
+    apiMocks.updateMusicSongLyrics.mockReturnValueOnce(song1Save.promise)
+
+    const loadSong1 = composable.load('song-1')
+    song1Load.resolve({ song_id: 'song-1', content: 'song one', lines: [], annotations: [] })
+    await loadSong1
+    const savePromise = composable.save('song-1', {
+      content: 'new one',
+      translation: '',
+      format: 'plain',
+      edit_summary: 'save old song',
+    })
+
+    const loadSong2 = composable.load('song-2')
+    song2Load.resolve({ song_id: 'song-2', content: 'song two', lines: [], annotations: [] })
+    await loadSong2
+    song1Save.reject(staleError)
+    await expect(savePromise).rejects.toBe(staleError)
+
+    expect(composable.lyrics.value?.song_id).toBe('song-2')
+    expect(composable.lyrics.value?.content).toBe('song two')
+    expect(composable.errorMessage.value).toBe('')
+    expect(composable.saving.value).toBe(false)
+  })
+
   it('loads and reverts lyric versions', async () => {
     const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
     const composable = useMusicLyrics()
@@ -248,6 +283,32 @@ describe('useMusicLyrics', () => {
     await loadPromise
 
     expect(composable.lyrics.value?.content).toBe('reverted song one')
+    expect(composable.loading.value).toBe(false)
+  })
+
+  it('does not let an older lyrics load failure overwrite a successful revert', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const pendingLoad = deferred<any>()
+    const pendingRevert = deferred<any>()
+
+    apiMocks.getMusicSongLyrics.mockReturnValueOnce(pendingLoad.promise)
+    apiMocks.listMusicSongLyricsVersions.mockResolvedValue([
+      { id: 'song-1-version-1', song_id: 'song-1', version: 1, content: 'old' },
+    ])
+    apiMocks.revertMusicSongLyricsVersion.mockReturnValueOnce(pendingRevert.promise)
+
+    const loadPromise = composable.load('song-1')
+    await composable.loadVersions('song-1')
+    const revertPromise = composable.revertVersion('song-1', 1, '恢复到第 1 版')
+
+    pendingRevert.resolve({ song_id: 'song-1', content: 'reverted song one', lines: [], annotations: [] })
+    await revertPromise
+    pendingLoad.reject(new Error('stale lyrics failed'))
+    await loadPromise
+
+    expect(composable.lyrics.value?.content).toBe('reverted song one')
+    expect(composable.errorMessage.value).toBe('')
     expect(composable.loading.value).toBe(false)
   })
 

@@ -198,7 +198,8 @@ onBeforeUnmount(() => {
 }
 
 .p-segmented-control-item:focus-visible {
-  outline: none;
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: -2px;
 }
 
 @media (max-width: 767px) {

@@ -6,6 +6,7 @@
     </label>
     <div ref="rootRef" class="p-select-root">
       <button
+        ref="triggerRef"
         type="button"
         class="p-select-trigger"
         :class="[
@@ -13,7 +14,16 @@
           error ? 'p-select-trigger--error' : '',
         ]"
         :disabled="disabled"
+        :aria-label="label || placeholder"
+        aria-haspopup="listbox"
+        :aria-expanded="open"
+        :aria-controls="listboxId"
         @click="toggleOpen"
+        @keydown.down.prevent="openFromKeyboard('first')"
+        @keydown.up.prevent="openFromKeyboard('last')"
+        @keydown.home.prevent="openFromKeyboard('first')"
+        @keydown.end.prevent="openFromKeyboard('last')"
+        @keydown.esc.prevent="closeAndFocusTrigger"
       >
         <span :class="selectedOption ? '' : 'p-select-value--placeholder'">
           {{ selectedOption ? selectedOption.label : placeholder }}
@@ -21,14 +31,19 @@
         <span class="p-select-chevron">▾</span>
       </button>
 
-      <div v-if="open" class="p-select-panel">
+      <div v-if="open" :id="listboxId" class="p-select-panel" role="listbox" :aria-label="label || placeholder">
         <button
-          v-for="option in normalizedOptions"
+          v-for="(option, index) in normalizedOptions"
           :key="String(option.value)"
+          :ref="element => setOptionRef(index, element)"
           type="button"
           class="p-select-option"
           :disabled="option.disabled"
+          role="option"
+          :aria-selected="option.value === modelValue"
+          :tabindex="focusedIndex === index ? 0 : -1"
           @click="selectOption(option)"
+          @keydown="handleOptionKeydown($event, index, option)"
         >
           <span class="p-select-marker">{{ option.value === modelValue ? '•' : '' }}</span>
           <span>{{ option.label }}</span>
@@ -42,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 interface SelectOption {
   label: string
@@ -72,24 +87,94 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number]
 }>()
 
+const instanceId = `p-select-${getCurrentInstance()?.uid ?? 0}`
+const listboxId = `${instanceId}-listbox`
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
+const triggerRef = ref<HTMLButtonElement | null>(null)
+const optionRefs = new Map<number, HTMLButtonElement>()
+const focusedIndex = ref(-1)
 const normalizedOptions = computed(() => props.options ?? [])
 const selectedOption = computed(() => normalizedOptions.value.find(option => option.value === props.modelValue))
 
+const setOptionRef = (index: number, element: unknown) => {
+  if (element instanceof HTMLButtonElement) optionRefs.set(index, element)
+  else optionRefs.delete(index)
+}
+
+const enabledIndexes = () => normalizedOptions.value
+  .map((option, index) => option.disabled ? -1 : index)
+  .filter(index => index >= 0)
+
+const focusOption = async (index: number) => {
+  focusedIndex.value = index
+  await nextTick()
+  optionRefs.get(index)?.focus()
+}
+
 const close = () => {
   open.value = false
+  focusedIndex.value = -1
+}
+
+const closeAndFocusTrigger = async () => {
+  close()
+  await nextTick()
+  triggerRef.value?.focus()
+}
+
+const openFromKeyboard = async (position: 'first' | 'last') => {
+  if (props.disabled) return
+  const indexes = enabledIndexes()
+  if (indexes.length === 0) return
+  open.value = true
+  await focusOption(position === 'first' ? indexes[0] : indexes[indexes.length - 1])
 }
 
 const toggleOpen = () => {
   if (props.disabled) return
   open.value = !open.value
+  if (open.value) {
+    const selectedIndex = normalizedOptions.value.findIndex(option => option.value === props.modelValue && !option.disabled)
+    focusedIndex.value = selectedIndex >= 0 ? selectedIndex : enabledIndexes()[0] ?? -1
+  } else {
+    focusedIndex.value = -1
+  }
 }
 
 const selectOption = (option: SelectOption) => {
   if (option.disabled) return
   emit('update:modelValue', option.value)
-  close()
+  void closeAndFocusTrigger()
+}
+
+const moveOptionFocus = (currentIndex: number, direction: 1 | -1) => {
+  const indexes = enabledIndexes()
+  const position = indexes.indexOf(currentIndex)
+  if (position === -1) return
+  const nextPosition = (position + direction + indexes.length) % indexes.length
+  void focusOption(indexes[nextPosition])
+}
+
+const handleOptionKeydown = (event: KeyboardEvent, index: number, option: SelectOption) => {
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    moveOptionFocus(index, 1)
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    moveOptionFocus(index, -1)
+  } else if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault()
+    const indexes = enabledIndexes()
+    const target = event.key === 'Home' ? indexes[0] : indexes[indexes.length - 1]
+    if (target !== undefined) void focusOption(target)
+  } else if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    selectOption(option)
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    void closeAndFocusTrigger()
+  }
 }
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -150,8 +235,12 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 .p-select-trigger:focus-visible,
 .p-select-trigger--open {
-  outline: none;
   border-bottom-color: var(--a-color-accent-confirm);
+}
+
+.p-select-trigger:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: 2px;
 }
 
 .p-select-trigger--error {
@@ -197,6 +286,12 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   border-bottom: 0;
 }
 
+.p-select-option:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: -2px;
+  background: var(--a-color-paper-wash);
+}
+
 .p-select-marker {
   color: var(--a-color-accent-confirm);
 }
@@ -214,5 +309,12 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 .p-field-hint,
 .p-select-empty {
   color: var(--a-color-ink-soft);
+}
+
+@media (max-width: 767px) {
+  .p-select-trigger,
+  .p-select-option {
+    min-height: 44px;
+  }
 }
 </style>

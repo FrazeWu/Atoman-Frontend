@@ -85,4 +85,10 @@ const onClick = (event: MouseEvent) => {
   cursor: not-allowed;
   opacity: 0.5;
 }
+
+@media (max-width: 767px) {
+  .p-press {
+    min-height: 44px;
+  }
+}
 </style>

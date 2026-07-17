@@ -209,8 +209,12 @@ const handleClick = (event: MouseEvent) => {
 }
 
 @media (max-width: 767px) {
-  .p-button--sm {
+  .p-button--sm,
+  .p-button--md {
     min-height: 44px;
+  }
+
+  .p-button--sm {
     font-size: 12px;
   }
 }

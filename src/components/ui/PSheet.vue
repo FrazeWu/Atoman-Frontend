@@ -3,25 +3,36 @@
     <div class="p-sheet-root">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade">
-        <div v-if="show" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
+        <div v-if="show" class="p-sheet-backdrop" :style="{ top: top }" @click="requestClose" />
       </Transition>
 
       <Transition :name="transitionName">
-        <div v-if="show" class="p-sheet-layer p-sheet-panel" :class="[`is-${side}`, { 'is-shifted': isShifted }]" :style="sheetStyle">
+        <div
+          v-if="show"
+          ref="panelRef"
+          class="p-sheet-layer p-sheet-panel"
+          :class="[`is-${side}`, panelClass, { 'is-shifted': isShifted }]"
+          :style="sheetStyle"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="title"
+          tabindex="-1"
+          @keydown="handleKeydown"
+        >
           <!-- Left/Right Edge Close Tab (Taped Component Style) -->
           <PSheetTab 
             v-if="showBookmarkTab"
             class="sheet-tab-position"
             :style="{ top: computedHandleTop }"
             :title="title" 
-            @click="$emit('close')" 
+            @click="requestClose"
           />
 
           <div v-if="hasHeader" class="sheet-header">
             <slot name="header">
               <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
             </slot>
-            <button v-if="showHeaderClose" class="header-close-btn" type="button" aria-label="关闭" title="关闭" @click="$emit('close')">
+            <button v-if="showHeaderClose" class="header-close-btn" type="button" aria-label="关闭" title="关闭" @click="requestClose">
               <X :size="16" />
             </button>
           </div>
@@ -38,11 +49,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 import { X } from 'lucide-vue-next'
 import { getActivePinia } from 'pinia'
 import { useSheetStore } from '@/stores/sheet'
 import PSheetTab from './PSheetTab.vue'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
@@ -51,6 +63,8 @@ const props = withDefaults(defineProps<{
   title?: string
   width?: string
   maxWidth?: string
+  height?: string
+  panelClass?: string
   top?: string
   side?: 'left' | 'right' | 'bottom'
   closeType?: 'bookmark' | 'header' | 'both'
@@ -60,6 +74,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   title: '面板',
   width: 'min(100%, 480px)',
+  height: undefined,
+  panelClass: '',
   top: '56px',
   side: 'right',
   closeType: 'bookmark',
@@ -67,9 +83,13 @@ const props = withDefaults(defineProps<{
   isShifted: false
 })
 
-defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
 const slots = useSlots()
+const panelRef = ref<HTMLElement | null>(null)
+const isOpen = computed(() => props.show)
+const requestClose = () => emit('close')
+const { handleKeydown } = useDialogFocus(isOpen, panelRef, requestClose)
 const effectiveCloseType = computed(() => {
   if (props.side === 'bottom' && props.closeType === 'bookmark') {
     return 'header'
@@ -119,6 +139,7 @@ const sheetStyle = computed(() => {
     return {
       width: '100%',
       'max-width': '100%',
+      height: props.height,
       left: 0,
       right: 0,
       top: 'auto'
@@ -253,6 +274,12 @@ const sheetStyle = computed(() => {
   opacity: 1;
 }
 
+.header-close-btn:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
 .sheet-content {
   flex: 1;
   overflow-y: auto;
@@ -311,5 +338,12 @@ const sheetStyle = computed(() => {
   transform: translateY(100%);
   box-shadow: none;
   opacity: 0;
+}
+
+@media (max-width: 767px) {
+  .header-close-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 </style>

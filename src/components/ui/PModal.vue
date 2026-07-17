@@ -1,10 +1,19 @@
 <template>
   <Teleport to="body">
     <div v-if="visible" class="p-modal-backdrop" @click.self="handleClose">
-      <div class="p-modal" :class="`p-modal-${size}`" role="dialog" aria-modal="true" :aria-label="title || undefined">
+      <div
+        ref="dialogRef"
+        class="p-modal"
+        :class="`p-modal-${size}`"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title || undefined"
+        tabindex="-1"
+        @keydown="handleKeydown"
+      >
         <div v-if="title || closable" class="p-modal-header">
           <span class="p-modal-title">{{ title }}</span>
-          <button v-if="closable" class="p-modal-close" type="button" @click="handleClose">✕</button>
+          <button v-if="closable" class="p-modal-close" type="button" aria-label="关闭" title="关闭" @click="handleClose">✕</button>
         </div>
         <div class="p-modal-body">
           <slot />
@@ -18,7 +27,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
+import { computed, ref, useSlots } from 'vue'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
@@ -41,6 +51,7 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
+const dialogRef = ref<HTMLElement | null>(null)
 const visible = computed(() => props.modelValue ?? props.show ?? true)
 const hasFooter = computed(() => Boolean(slots.footer))
 
@@ -49,4 +60,6 @@ const handleClose = () => {
   emit('update:show', false)
   emit('close')
 }
+
+const { handleKeydown } = useDialogFocus(visible, dialogRef, handleClose)
 </script>

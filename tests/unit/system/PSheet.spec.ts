@@ -1,4 +1,5 @@
 import { mount, config } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { describe, it, expect } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -52,6 +53,21 @@ describe('PSheet.vue', () => {
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
     expect(panel.style.width).toBe('900px')
+  })
+
+  it('applies custom panel class and bottom-sheet height', () => {
+    const wrapper = mount(PSheet, {
+      props: {
+        show: true,
+        side: 'bottom',
+        panelClass: 'directory-sheet',
+        height: '400px',
+      },
+    })
+
+    const panel = wrapper.get('.p-sheet-panel')
+    expect(panel.classes()).toContain('directory-sheet')
+    expect((panel.element as HTMLElement).style.height).toBe('400px')
   })
 
   it('uses compact content spacing when there is no header bar', () => {
@@ -135,5 +151,48 @@ describe('PSheet.vue', () => {
 
     const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
     expect(tab.style.top).toBe('32px')
+  })
+
+  it('uses modal dialog semantics and closes with Escape', async () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, closeType: 'header', title: 'Inspect' },
+      slots: { default: '<button class="sheet-action">操作</button>' },
+      global: { stubs: { Teleport: true } },
+    })
+    document.body.appendChild(wrapper.element)
+    await nextTick()
+
+    const panel = wrapper.get('.p-sheet-panel')
+    expect(panel.attributes('aria-modal')).toBe('true')
+    expect(panel.attributes('tabindex')).toBe('-1')
+    await panel.trigger('keydown', { key: 'Escape' })
+    expect(wrapper.emitted('close')).toHaveLength(1)
+
+    wrapper.unmount()
+  })
+
+  it('traps Tab focus and restores the previous focus on unmount', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+
+    const wrapper = mount(PSheet, {
+      props: { show: true, closeType: 'header' },
+      slots: { default: '<button class="sheet-action">操作</button>' },
+      global: { stubs: { Teleport: true } },
+    })
+    document.body.appendChild(wrapper.element)
+    await nextTick()
+
+    const focusable = Array.from(document.querySelectorAll('.p-sheet-panel button')) as HTMLElement[]
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    last.focus()
+    await wrapper.get('.p-sheet-panel').trigger('keydown', { key: 'Tab' })
+    expect(document.activeElement).toBe(first)
+
+    wrapper.unmount()
+    expect(document.activeElement).toBe(trigger)
+    trigger.remove()
   })
 })

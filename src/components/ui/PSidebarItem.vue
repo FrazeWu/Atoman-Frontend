@@ -65,7 +65,6 @@ const formattedIndex = computed(() => {
 
 <style scoped>
 .p-sidebar-item {
-  outline: none;
   border-radius: 0px; /* Straight corner */
   background: transparent;
   box-shadow: none;
@@ -75,6 +74,11 @@ const formattedIndex = computed(() => {
 .p-sidebar-item.is-focused {
   background: var(--a-color-paper-wash); /* #f3f4f6 */
   box-shadow: var(--a-shadow-paper-sm);
+}
+.p-sidebar-item:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: -2px;
+  background: var(--a-color-paper-wash);
 }
 .p-sidebar-item.active {
   background: var(--a-color-paper-wash);

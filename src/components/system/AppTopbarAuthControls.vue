@@ -466,7 +466,7 @@ watch(authUserId, ensureMediaChannels)
   }
 
   .topbar-search-wrap {
-    width: 36px;
+    width: 44px;
     margin-right: 0;
   }
 
@@ -480,9 +480,19 @@ watch(authUserId, ensureMediaChannels)
   }
 
   .search-pill {
-    width: 36px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     justify-content: center;
+  }
+
+  .search-box {
+    height: 44px;
+  }
+
+  .search-close-btn {
+    width: 44px;
+    height: 44px;
   }
 
   .search-pill span,
@@ -494,8 +504,8 @@ watch(authUserId, ensureMediaChannels)
 
   .notif-btn,
   .user-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     padding: 0;
   }
 

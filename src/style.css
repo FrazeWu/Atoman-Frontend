@@ -841,6 +841,11 @@ body {
 }
 
 @media (max-width: 767px) {
+  .p-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .has-sidebar {
     --a-sidebar-width: 0px;
     --a-mobile-nav-offset: 5.5rem;

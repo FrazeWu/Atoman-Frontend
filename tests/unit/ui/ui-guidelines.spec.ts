@@ -21,7 +21,7 @@ describe('UI 准则', () => {
     const source = read('src/components/system/AppTopbarAuthControls.vue')
 
     expect(source).not.toContain('<svg')
-    expect(source).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-search-wrap\s*\{[\s\S]*?width:\s*36px/)
+    expect(source).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.topbar-search-wrap\s*\{[\s\S]*?width:\s*44px/)
     expect(source).toMatch(/@media \(max-width: 720px\)[\s\S]*?\.user-name[\s\S]*?display:\s*none/)
   })
 
@@ -51,11 +51,20 @@ describe('UI 准则', () => {
   it('移动端主要控件使用至少 44px 的触控高度', () => {
     const source = read('src/style.css')
     const button = read('src/components/ui/PButton.vue')
+    const press = read('src/components/ui/PPress.vue')
+    const select = read('src/components/ui/PSelect.vue')
     const segmentedControl = read('src/components/ui/PSegmentedControl.vue')
+    const sheet = read('src/components/ui/PSheet.vue')
 
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.a-main-content :where\(button, input, select, \[role="button"\]\)[\s\S]*?min-height:\s*44px/)
     expect(button).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-button--sm[\s\S]*?min-height:\s*44px/)
+    expect(button).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-button--md[\s\S]*?min-height:\s*44px/)
+    expect(press).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-press[\s\S]*?min-height:\s*44px/)
+    expect(select).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-select-trigger[\s\S]*?min-height:\s*44px/)
+    expect(select).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-select-option[\s\S]*?min-height:\s*44px/)
     expect(segmentedControl).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-segmented-control-item[\s\S]*?min-height:\s*44px/)
+    expect(sheet).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.header-close-btn[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px/)
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-modal-close[\s\S]*?min-width:\s*44px;[\s\S]*?min-height:\s*44px/)
   })
 
   it('移动端条目不使用超出容器的负边距', () => {

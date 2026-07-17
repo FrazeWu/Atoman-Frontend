@@ -114,13 +114,12 @@ watch(
 )
 
 function handleSave() {
-  const content = draftContent.value.trim()
   const editSummary = draftEditSummary.value.trim()
-  if (!content || !editSummary) return
+  if (!draftContent.value.trim() || !editSummary) return
 
   emit('save', {
-    content,
-    translation: draftTranslation.value.trim(),
+    content: draftContent.value,
+    translation: draftTranslation.value,
     format: draftFormat.value,
     editSummary,
   })

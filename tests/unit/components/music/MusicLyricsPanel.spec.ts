@@ -29,7 +29,9 @@ const lyricsState = {
   lyrics: ref<any>(null),
   loading: ref(false),
   saving: ref(false),
+  reverting: ref(false),
   errorMessage: ref(''),
+  versionsErrorMessage: ref(''),
   versions: ref<any[]>([]),
   versionsSongId: ref('song-1'),
   versionsLoading: ref(false),
@@ -230,7 +232,9 @@ describe('MusicLyricsPanel.vue', () => {
     }
     lyricsState.loading.value = false
     lyricsState.saving.value = false
+    lyricsState.reverting.value = false
     lyricsState.errorMessage.value = ''
+    lyricsState.versionsErrorMessage.value = ''
     lyricsState.versions.value = [
       {
         id: 'version-2',
@@ -337,6 +341,49 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     expect(mocks.revertVersion).toHaveBeenCalledWith('song-1', 2, '恢复到第 2 版')
+  })
+
+  it('恢复进行中禁用按钮并阻止重复请求', async () => {
+    let resolveRevert!: (value: any) => void
+    mocks.revertVersion.mockImplementationOnce(() => {
+      lyricsState.reverting.value = true
+      return new Promise((resolve) => {
+        resolveRevert = resolve
+      })
+    })
+    const wrapper = await mountPanel()
+    await flushPromises()
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    const revertButton = wrapper.get('[data-testid="lyrics-revert-version-2"]')
+
+    await revertButton.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(revertButton.attributes('disabled')).toBeDefined()
+
+    await revertButton.trigger('click')
+    expect(mocks.revertVersion).toHaveBeenCalledOnce()
+
+    resolveRevert(lyricsState.lyrics.value)
+    lyricsState.reverting.value = false
+    await flushPromises()
+  })
+
+  it('关闭版本列表会失效请求并且不外溢加载失败', async () => {
+    mocks.loadVersions.mockImplementationOnce(async () => {
+      lyricsState.versionsErrorMessage.value = '版本加载失败'
+      throw new Error('versions failed')
+    })
+    const wrapper = await mountPanel()
+    await flushPromises()
+    mocks.resetVersions.mockClear()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('版本加载失败')
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    expect(mocks.resetVersions).toHaveBeenCalledOnce()
+    expect(wrapper.find('.music-lyrics-panel__versions').exists()).toBe(false)
   })
 
   it('切歌时立即失效并关闭旧歌曲版本列表', async () => {

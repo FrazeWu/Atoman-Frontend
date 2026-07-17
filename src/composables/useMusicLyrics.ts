@@ -49,18 +49,27 @@ export function useMusicLyrics() {
   const lyrics = ref<MusicSongLyrics | null>(null)
   const loading = ref(false)
   const saving = ref(false)
+  const reverting = ref(false)
   const versions = ref<MusicSongLyricsVersion[]>([])
   const versionsSongId = ref('')
   const versionsLoading = ref(false)
+  const versionsErrorMessage = ref('')
   const errorMessage = ref('')
   let activeLoadRequestId = 0
   let activeSaveRequestId = 0
   let activeVersionsRequestId = 0
+  let activeRevertRequestId = 0
+  let activeRevertSongId = ''
   const activeSongId = ref('')
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
 
   async function load(songId: string) {
+    if (activeRevertSongId && activeRevertSongId !== songId) {
+      activeRevertRequestId += 1
+      activeRevertSongId = ''
+      reverting.value = false
+    }
     const requestId = ++activeLoadRequestId
     activeSongId.value = songId
     loading.value = true
@@ -166,7 +175,7 @@ export function useMusicLyrics() {
     versions.value = []
     versionsSongId.value = ''
     versionsLoading.value = true
-    errorMessage.value = ''
+    versionsErrorMessage.value = ''
     try {
       const nextVersions = await listMusicSongLyricsVersions(songId)
       if (requestId !== activeVersionsRequestId) return []
@@ -175,7 +184,7 @@ export function useMusicLyrics() {
       return nextVersions
     } catch (error) {
       if (requestId !== activeVersionsRequestId) return []
-      errorMessage.value = '版本加载失败'
+      versionsErrorMessage.value = '版本加载失败'
       throw error
     } finally {
       if (requestId === activeVersionsRequestId) {
@@ -186,29 +195,41 @@ export function useMusicLyrics() {
 
   function resetVersions() {
     activeVersionsRequestId += 1
+    activeRevertRequestId += 1
+    activeRevertSongId = ''
     versions.value = []
     versionsSongId.value = ''
     versionsLoading.value = false
+    versionsErrorMessage.value = ''
+    reverting.value = false
   }
 
   async function revertVersion(songId: string, version: number, editSummary: string) {
+    if (reverting.value) return
     if (versionsSongId.value !== songId || !versions.value.some((item) => item.version === version)) {
       throw new Error('版本与当前歌曲不匹配')
     }
-    saving.value = true
-    errorMessage.value = ''
+    const requestId = ++activeRevertRequestId
+    activeRevertSongId = songId
+    reverting.value = true
+    versionsErrorMessage.value = ''
     try {
       const updatedLyrics = await revertMusicSongLyricsVersion(songId, version, editSummary)
+      if (requestId !== activeRevertRequestId) return
       if (activeSongId.value === songId || activeSongId.value === '') {
         lyrics.value = updatedLyrics
         activeSongId.value = songId
       }
       return updatedLyrics
     } catch (error) {
-      errorMessage.value = '版本恢复失败'
+      if (requestId !== activeRevertRequestId) return
+      versionsErrorMessage.value = '版本恢复失败'
       throw error
     } finally {
-      saving.value = false
+      if (requestId === activeRevertRequestId) {
+        activeRevertSongId = ''
+        reverting.value = false
+      }
     }
   }
 
@@ -229,9 +250,11 @@ export function useMusicLyrics() {
     lyrics,
     loading,
     saving,
+    reverting,
     versions,
     versionsSongId,
     versionsLoading,
+    versionsErrorMessage,
     errorMessage,
     annotationsByLine,
     load,

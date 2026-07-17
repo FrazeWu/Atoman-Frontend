@@ -41,6 +41,7 @@
 
     <div v-if="versionsVisible" class="music-lyrics-panel__versions">
       <p v-if="versionsLoading" class="music-lyrics-panel__placeholder">正在加载版本</p>
+      <p v-else-if="versionsErrorMessage" class="music-lyrics-panel__placeholder">{{ versionsErrorMessage }}</p>
       <p v-else-if="versionsSongId !== songId || !versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
       <div v-else class="music-lyrics-panel__version-list">
         <article
@@ -56,6 +57,7 @@
             v-if="isAuthenticated"
             type="button"
             class="music-lyrics-panel__version-action"
+            :disabled="reverting"
             :data-testid="`lyrics-revert-version-${version.version}`"
             @click="handleRevertVersion(version.version)"
           >
@@ -170,7 +172,9 @@ const {
   lyrics,
   loading,
   saving,
+  reverting,
   errorMessage,
+  versionsErrorMessage,
   annotationsByLine,
   load,
   save,
@@ -326,13 +330,25 @@ async function handleVoteAnnotation(annotationId: string, vote: 'up' | 'down' | 
 
 async function toggleVersions() {
   versionsVisible.value = !versionsVisible.value
-  if (versionsVisible.value) await loadVersions(props.songId)
+  if (!versionsVisible.value) {
+    resetVersions()
+    return
+  }
+  try {
+    await loadVersions(props.songId)
+  } catch {
+    // The composable exposes the current version error inside this panel.
+  }
 }
 
 async function handleRevertVersion(version: number) {
-  if (!isAuthenticated.value || versionsSongId.value !== props.songId) return
-  await revertVersion(props.songId, version, `恢复到第 ${version} 版`)
-  versionsVisible.value = false
+  if (!isAuthenticated.value || reverting.value || versionsSongId.value !== props.songId) return
+  try {
+    await revertVersion(props.songId, version, `恢复到第 ${version} 版`)
+    versionsVisible.value = false
+  } catch {
+    // The composable exposes the current version error inside this panel.
+  }
 }
 
 async function handleSaveLyrics(payload: {

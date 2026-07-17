@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   deleteAnnotation: vi.fn(),
   voteAnnotation: vi.fn(),
   loadVersions: vi.fn(),
+  resetVersions: vi.fn(),
   revertVersion: vi.fn(),
   currentLine: vi.fn(),
 }))
@@ -30,6 +31,7 @@ const lyricsState = {
   saving: ref(false),
   errorMessage: ref(''),
   versions: ref<any[]>([]),
+  versionsSongId: ref('song-1'),
   versionsLoading: ref(false),
 }
 
@@ -54,8 +56,10 @@ vi.mock('@/composables/useMusicLyrics', () => ({
     deleteAnnotation: mocks.deleteAnnotation,
     voteAnnotation: mocks.voteAnnotation,
     versions: lyricsState.versions,
+    versionsSongId: lyricsState.versionsSongId,
     versionsLoading: lyricsState.versionsLoading,
     loadVersions: mocks.loadVersions,
+    resetVersions: mocks.resetVersions,
     revertVersion: mocks.revertVersion,
     currentLine: mocks.currentLine,
   }),
@@ -241,6 +245,7 @@ describe('MusicLyricsPanel.vue', () => {
       },
     ]
     lyricsState.versionsLoading.value = false
+    lyricsState.versionsSongId.value = 'song-1'
 
     mocks.load.mockReset()
     mocks.save.mockReset()
@@ -249,6 +254,7 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.deleteAnnotation.mockReset()
     mocks.voteAnnotation.mockReset()
     mocks.loadVersions.mockReset()
+    mocks.resetVersions.mockReset()
     mocks.revertVersion.mockReset()
     mocks.currentLine.mockReset()
 
@@ -331,6 +337,21 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     expect(mocks.revertVersion).toHaveBeenCalledWith('song-1', 2, '恢复到第 2 版')
+  })
+
+  it('切歌时立即失效并关闭旧歌曲版本列表', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+    mocks.resetVersions.mockClear()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(true)
+
+    await wrapper.setProps({ songId: 'song-2' })
+
+    expect(mocks.resetVersions).toHaveBeenCalledOnce()
+    expect(wrapper.find('.music-lyrics-panel__versions').exists()).toBe(false)
   })
 
   it('作者标识落在 creator.uuid 时仍显示编辑和删除', async () => {

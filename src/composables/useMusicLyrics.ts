@@ -50,10 +50,12 @@ export function useMusicLyrics() {
   const loading = ref(false)
   const saving = ref(false)
   const versions = ref<MusicSongLyricsVersion[]>([])
+  const versionsSongId = ref('')
   const versionsLoading = ref(false)
   const errorMessage = ref('')
   let activeLoadRequestId = 0
   let activeSaveRequestId = 0
+  let activeVersionsRequestId = 0
   const activeSongId = ref('')
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
@@ -160,20 +162,39 @@ export function useMusicLyrics() {
   }
 
   async function loadVersions(songId: string) {
+    const requestId = ++activeVersionsRequestId
+    versions.value = []
+    versionsSongId.value = ''
     versionsLoading.value = true
     errorMessage.value = ''
     try {
-      versions.value = await listMusicSongLyricsVersions(songId)
-      return versions.value
+      const nextVersions = await listMusicSongLyricsVersions(songId)
+      if (requestId !== activeVersionsRequestId) return []
+      versions.value = nextVersions
+      versionsSongId.value = songId
+      return nextVersions
     } catch (error) {
+      if (requestId !== activeVersionsRequestId) return []
       errorMessage.value = '版本加载失败'
       throw error
     } finally {
-      versionsLoading.value = false
+      if (requestId === activeVersionsRequestId) {
+        versionsLoading.value = false
+      }
     }
   }
 
+  function resetVersions() {
+    activeVersionsRequestId += 1
+    versions.value = []
+    versionsSongId.value = ''
+    versionsLoading.value = false
+  }
+
   async function revertVersion(songId: string, version: number, editSummary: string) {
+    if (versionsSongId.value !== songId || !versions.value.some((item) => item.version === version)) {
+      throw new Error('版本与当前歌曲不匹配')
+    }
     saving.value = true
     errorMessage.value = ''
     try {
@@ -209,6 +230,7 @@ export function useMusicLyrics() {
     loading,
     saving,
     versions,
+    versionsSongId,
     versionsLoading,
     errorMessage,
     annotationsByLine,
@@ -219,6 +241,7 @@ export function useMusicLyrics() {
     deleteAnnotation,
     voteAnnotation,
     loadVersions,
+    resetVersions,
     revertVersion,
     currentLine,
   }

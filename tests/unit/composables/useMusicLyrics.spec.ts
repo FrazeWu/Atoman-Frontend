@@ -25,10 +25,12 @@ vi.mock('@/api/musicV1', () => ({
 
 function deferred<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((res) => {
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
     resolve = res
+    reject = rej
   })
-  return { promise, resolve }
+  return { promise, resolve, reject }
 }
 
 describe('useMusicLyrics', () => {
@@ -98,6 +100,118 @@ describe('useMusicLyrics', () => {
     expect(composable.versions.value).toHaveLength(1)
     expect(reverted.content).toBe('old')
     expect(composable.lyrics.value?.content).toBe('old')
+  })
+
+  it('keeps the current song versions when an older request succeeds later', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const song1Versions = deferred<any[]>()
+    const song2Versions = deferred<any[]>()
+
+    apiMocks.listMusicSongLyricsVersions
+      .mockReturnValueOnce(song1Versions.promise)
+      .mockReturnValueOnce(song2Versions.promise)
+
+    const firstLoad = composable.loadVersions('song-1')
+    const secondLoad = composable.loadVersions('song-2')
+    song2Versions.resolve([
+      { id: 'song-2-version-1', song_id: 'song-2', version: 1, content: 'current' },
+    ])
+    await secondLoad
+
+    song1Versions.resolve([
+      { id: 'song-1-version-8', song_id: 'song-1', version: 8, content: 'stale' },
+    ])
+    await firstLoad
+
+    expect(composable.versions.value.map((version) => version.song_id)).toEqual(['song-2'])
+    expect(composable.versionsSongId.value).toBe('song-2')
+    expect(composable.versionsLoading.value).toBe(false)
+    expect(composable.errorMessage.value).toBe('')
+  })
+
+  it('ignores an older version request failure after the current song succeeds', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const song1Versions = deferred<any[]>()
+    const song2Versions = deferred<any[]>()
+
+    apiMocks.listMusicSongLyricsVersions
+      .mockReturnValueOnce(song1Versions.promise)
+      .mockReturnValueOnce(song2Versions.promise)
+
+    const firstLoad = composable.loadVersions('song-1')
+    const secondLoad = composable.loadVersions('song-2')
+    song2Versions.resolve([
+      { id: 'song-2-version-1', song_id: 'song-2', version: 1, content: 'current' },
+    ])
+    await secondLoad
+
+    song1Versions.reject(new Error('stale failure'))
+    await expect(firstLoad).resolves.toEqual([])
+
+    expect(composable.versions.value.map((version) => version.song_id)).toEqual(['song-2'])
+    expect(composable.versionsSongId.value).toBe('song-2')
+    expect(composable.versionsLoading.value).toBe(false)
+    expect(composable.errorMessage.value).toBe('')
+  })
+
+  it('keeps the latest result when the same song is loaded twice concurrently', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const olderVersions = deferred<any[]>()
+    const latestVersions = deferred<any[]>()
+
+    apiMocks.listMusicSongLyricsVersions
+      .mockReturnValueOnce(olderVersions.promise)
+      .mockReturnValueOnce(latestVersions.promise)
+
+    const olderLoad = composable.loadVersions('song-1')
+    const latestLoad = composable.loadVersions('song-1')
+    latestVersions.resolve([
+      { id: 'song-1-version-2', song_id: 'song-1', version: 2, content: 'latest' },
+    ])
+    await latestLoad
+
+    olderVersions.resolve([
+      { id: 'song-1-version-1', song_id: 'song-1', version: 1, content: 'older' },
+    ])
+    await olderLoad
+
+    expect(composable.versions.value.map((version) => version.version)).toEqual([2])
+    expect(composable.versionsSongId.value).toBe('song-1')
+  })
+
+  it('keeps reset state when an invalidated request settles later', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    const pendingVersions = deferred<any[]>()
+    apiMocks.listMusicSongLyricsVersions.mockReturnValueOnce(pendingVersions.promise)
+
+    const pendingLoad = composable.loadVersions('song-1')
+    expect(composable.versionsLoading.value).toBe(true)
+
+    composable.resetVersions()
+    pendingVersions.reject(new Error('invalidated failure'))
+    await expect(pendingLoad).resolves.toEqual([])
+
+    expect(composable.versions.value).toEqual([])
+    expect(composable.versionsSongId.value).toBe('')
+    expect(composable.versionsLoading.value).toBe(false)
+    expect(composable.errorMessage.value).toBe('')
+  })
+
+  it('does not revert a version that was loaded for another song', async () => {
+    const { useMusicLyrics } = await import('@/composables/useMusicLyrics')
+    const composable = useMusicLyrics()
+    apiMocks.listMusicSongLyricsVersions.mockResolvedValue([
+      { id: 'song-1-version-2', song_id: 'song-1', version: 2, content: 'old' },
+    ])
+
+    await composable.loadVersions('song-1')
+
+    await expect(composable.revertVersion('song-2', 2, '恢复到第 2 版')).rejects.toThrow('版本与当前歌曲不匹配')
+    expect(apiMocks.revertMusicSongLyricsVersion).not.toHaveBeenCalled()
   })
 
   it('forwards annotation resolutions and preserves conflict errors', async () => {

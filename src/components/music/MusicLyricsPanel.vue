@@ -41,7 +41,7 @@
 
     <div v-if="versionsVisible" class="music-lyrics-panel__versions">
       <p v-if="versionsLoading" class="music-lyrics-panel__placeholder">正在加载版本</p>
-      <p v-else-if="!versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
+      <p v-else-if="versionsSongId !== songId || !versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
       <div v-else class="music-lyrics-panel__version-list">
         <article
           v-for="version in versions"
@@ -179,8 +179,10 @@ const {
   deleteAnnotation,
   voteAnnotation,
   versions,
+  versionsSongId,
   versionsLoading,
   loadVersions,
+  resetVersions,
   revertVersion,
   currentLine,
 } = useMusicLyrics()
@@ -229,6 +231,7 @@ const showSidebar = computed(() => selectedAnnotations.value.length > 0 || annot
 watch(
   () => props.songId,
   (songId) => {
+    resetVersions()
     selectedAnnotationIds.value = []
     selectedTextDraft.value = null
     editingAnnotation.value = null
@@ -327,7 +330,7 @@ async function toggleVersions() {
 }
 
 async function handleRevertVersion(version: number) {
-  if (!isAuthenticated.value) return
+  if (!isAuthenticated.value || versionsSongId.value !== props.songId) return
   await revertVersion(props.songId, version, `恢复到第 ${version} 版`)
   versionsVisible.value = false
 }

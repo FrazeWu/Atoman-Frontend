@@ -1,7 +1,6 @@
 <template>
   <div class="a-page-xl">
     <PToast v-model="toastVisible" :message="toastMessage" />
-    <BookmarkFolderModal ref="bookmarkModalRef" />
     <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
       <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
     </div>
@@ -23,13 +22,8 @@
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
             <PLink
               v-if="isOwner"
-              :href="modulePathUrl('blog', `/channel/${channel.slug || channel.id}/manage`)"
-              label="管理"
-            />
-            <PLink
-              v-if="isOwner"
-              :href="`/posts/post/new?channel=${channel.id}`"
-              label="写文章"
+              href="/posts/manage"
+              label="创作"
             />
           </div>
         </template>
@@ -41,12 +35,12 @@
           <p class="a-label a-muted" style="margin-bottom:.4rem">作者</p>
           <a
             :href="userUrl(channel.user?.username || '')"
-            style="font-weight:900;font-size:1rem;text-decoration:none;color:#000"
+            style="font-weight: 500;font-size:1rem;text-decoration:none;color:#000"
           >{{ channel.user?.display_name || channel.user?.username || '未知作者' }}</a>
         </div>
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">更新时间</p>
-          <p style="font-weight:700;margin:0">{{ formatDate(channel.updated_at) }}</p>
+          <p style="font-weight: 500;margin:0">{{ formatDate(channel.updated_at) }}</p>
         </div>
       </PSurface>
 
@@ -80,15 +74,14 @@
 
         <!-- Right: posts -->
         <main class="post-main">
-          <p v-if="postsError" data-test="posts-error" class="a-error">{{ postsError }}</p>
-          <PEmpty v-else-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
+          <PEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
           <div v-else class="post-list">
             <PEntry
               v-for="post in filteredPosts"
               :key="post.id"
               :title="post.title"
               :summary="post.summary || summarize(post.content)"
-              @click="$router.push(`/posts/post/${post.id}`)"
+              @click="blogSheets.openPost(post.id, post.title, activeCollectionId || undefined)"
             >
               <template #meta>
                 <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -126,7 +119,6 @@
       <div style="display:flex;flex-direction:column;gap:1rem">
         <PInput v-model="collectionForm.name" placeholder="合集名称*" />
         <PTextarea v-model="collectionForm.description" placeholder="合集描述（可选）" :rows="3" />
-        <p v-if="collectionSaveError" class="a-error" role="alert">{{ collectionSaveError }}</p>
       </div>
       <div class="modal-actions">
         <PPress label="取消" variant="secondary" @click="collectionModalOpen = false" />
@@ -151,7 +143,6 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
-import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -161,27 +152,26 @@ import PLink from '@/components/ui/PLink.vue'
 import PTab from '@/components/ui/PTab.vue'
 import PPress from '@/components/ui/PPress.vue'
 import { resolveSiteContext } from '@/router/siteContext'
-import { modulePathUrl, userUrl } from '@/composables/useSubdomainNav'
+import { userUrl } from '@/composables/useSubdomainNav'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 
 const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()
 const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
-const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
+const blogSheets = useBlogSheets()
 
 const loading = ref(true)
 const channel = ref<Channel | null>(null)
 const collections = ref<Collection[]>([])
 const channelPosts = ref<Post[]>([])
-const postsError = ref('')
 const activeCollectionId = ref<string | null>(null)
 
 const collectionModalOpen = ref(false)
 const editingCollection = ref<Collection | null>(null)
 const collectionForm = ref({ name: '', description: '' })
 const collectionSaving = ref(false)
-const collectionSaveError = ref('')
 
 const channelSubscribed = ref(false)
 const channelSubscribeLoading = ref(false)
@@ -200,11 +190,11 @@ const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void bookmarkModalRef.value?.open(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id, 'post')
+  void feedStore.toggleReadingListItem(id)
 }
 
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
@@ -216,14 +206,16 @@ const channelRssUrl = computed(() => {
 
 const filteredPosts = computed(() => {
   if (activeCollectionId.value === null) return channelPosts.value
-  return channelPosts.value.filter(p => p.collection_id === activeCollectionId.value)
+  return channelPosts.value.filter(p =>
+    (p.collections || []).some(c => c.id === activeCollectionId.value)
+  )
 })
 
 const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
 const summarize = (content: string) =>
   content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\[\]()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
 const postCountByCollection = (cid: string) =>
-  channelPosts.value.filter(p => p.collection_id === cid).length
+  channelPosts.value.filter(p => (p.collections || []).some(c => c.id === cid)).length
 
 const fetchChannel = async () => {
   const url = isSlug.value
@@ -254,60 +246,50 @@ const fetchPosts = async () => {
   if (!channel.value) return
   const headers: Record<string, string> = {}
   if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-  postsError.value = ''
-  try {
-    const loadedPosts: Post[] = []
-    let page = 1
-    while (true) {
-      const params = new URLSearchParams({
-        channel_id: channel.value.id,
-        page: String(page),
-        page_size: '100',
-      })
-      const res = await fetch(`${api.blog.posts}?${params}`, { headers })
-      if (!res.ok) throw new Error('Failed to load channel posts')
-      const data = await res.json()
-      loadedPosts.push(...(data.data || []))
-      if (!data.meta?.has_more) break
-      page += 1
-    }
-    channelPosts.value = loadedPosts
-  } catch {
-    channelPosts.value = []
-    postsError.value = '内容加载失败，请重试'
+  const loadedPosts: Post[] = []
+  for (let page = 1; ; page += 1) {
+    const params = new URLSearchParams({
+      channel_id: channel.value.id,
+      page: String(page),
+      page_size: '100',
+    })
+    const res = await fetch(`${api.blog.posts}?${params}`, { headers })
+    if (!res.ok) throw new Error('Failed to load channel posts')
+    const data = await res.json()
+    loadedPosts.push(...(data.data || []))
+    if (!data.meta?.has_more) break
   }
+  channelPosts.value = loadedPosts
 }
 
 const openCollectionModal = (collection?: Collection) => {
   editingCollection.value = collection || null
   collectionForm.value = { name: collection?.name || '', description: collection?.description || '' }
-  collectionSaveError.value = ''
   collectionModalOpen.value = true
 }
 
 const saveCollection = async () => {
   if (!collectionForm.value.name.trim() || !channel.value) return
-  collectionSaveError.value = ''
   collectionSaving.value = true
   try {
-    const res = editingCollection.value
-      ? await fetch(api.blog.collection(editingCollection.value.id), {
+    let res: Response
+    if (editingCollection.value) {
+      res = await fetch(api.blog.collection(editingCollection.value.id), {
         method: 'PUT',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
       })
-      : await fetch(api.blog.channelCollections(channel.value.id), {
+    } else {
+      res = await fetch(api.blog.channelCollections(channel.value.id), {
         method: 'POST',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
       })
-    if (!res.ok) throw new Error('保存合集失败')
+    }
+    if (!res.ok) return
     collectionModalOpen.value = false
     await fetchCollections()
-  } catch (e) {
-    collectionSaveError.value = editingCollection.value ? '更新失败，请重试' : '创建失败，请重试'
-    console.error(e)
-  } finally { collectionSaving.value = false }
+  } catch (e) { console.error(e) } finally { collectionSaving.value = false }
 }
 
 const toggleChannelSubscribe = async () => {
@@ -332,8 +314,7 @@ onMounted(async () => {
   try {
     await fetchChannel()
     if (!channel.value) return
-    void fetchCollections().catch(() => undefined)
-    await fetchPosts()
+    void Promise.all([fetchCollections(), fetchPosts()])
     if (authStore.isAuthenticated) {
       void feedStore.fetchBookmarkedPostIds()
       void feedStore.fetchReadingListIds()

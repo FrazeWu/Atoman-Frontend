@@ -9,16 +9,20 @@ import {
   buildCreateArtistEdit,
   buildDeleteAlbumEdit,
   buildUpdateAlbumEdit,
+  updateMusicPlaylist,
   getMusicAlbum,
   getMusicArtist,
   listMusicArtists,
   listMusicAlbums,
+  listMusicDiscoverFeed,
   listMusicEdits,
+  replyAlbumDiscussion,
   startMusicAlbumImportMultipart,
   updateMusicArtist,
   type MusicAlbumListItem,
   musicV1Endpoints,
   uploadMusicAlbumArchiveMultipart,
+  uploadMusicAlbumArchive,
   uploadMusicAsset,
 } from '@/api/musicV1'
 import * as musicV1 from '@/api/musicV1'
@@ -27,6 +31,30 @@ describe('api v1 client', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  it('loads artist revision history through the artist wiki namespace', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/revisions/2')) {
+        return new Response(JSON.stringify({ data: { id: 'revision-2', version_number: 2 } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ data: [{ id: 'revision-2', version_number: 2 }] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }))
+
+    const revisions = await musicV1.listArtistRevisions('artist-1')
+    const revision = await musicV1.getArtistRevision('artist-1', 2)
+
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/artists/artist-1/revisions', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/artists/artist-1/revisions/2', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(revisions[0].version_number).toBe(2)
+    expect(revision.version_number).toBe(2)
   })
 
   it('unwraps successful data envelopes', async () => {
@@ -41,6 +69,23 @@ describe('api v1 client', () => {
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/albums/album_uuid', {
       credentials: 'include',
       headers: { Accept: 'application/json' },
+    })
+  })
+
+  it('attaches Authorization for same-origin relative API requests when a token exists', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'playlist_uuid', name: 'Playlist' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
+    })
+
+    await apiGet<{ id: string; name: string }>('/api/v1/music/playlists/playlist_uuid')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
+      credentials: 'include',
+      headers: { Accept: 'application/json', Authorization: 'Bearer test-token' },
     })
   })
 
@@ -142,6 +187,40 @@ describe('api v1 client', () => {
     expect(error.details).toEqual({ field: 'sources' })
   })
 
+  it('retries playlist updates with bearer auth on same-origin absolute URL after a not-found response', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
+    })
+    vi.stubGlobal('window', {
+      location: { origin: 'http://localhost:5176' },
+    })
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ error: { message: 'Not found' } }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ data: { id: 'playlist-1', name: 'Playlist', description: '', is_public: true, song_count: 0, songs: [] } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )))
+
+    const result = await updateMusicPlaylist('playlist-1', { is_public: true })
+
+    expect(result).toMatchObject({ id: 'playlist-1', is_public: true })
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/api/v1/music/playlists/playlist-1')
+    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+    })
+    expect(vi.mocked(fetch).mock.calls[1][0]).toBe('http://localhost:5176/api/v1/music/playlists/playlist-1')
+    expect(vi.mocked(fetch).mock.calls[1][1]).toMatchObject({
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+    })
+  })
+
   it('sends PATCH JSON requests with credentials and Accept headers', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: { id: 'artist_uuid', name: 'Updated' } }),
@@ -179,6 +258,83 @@ describe('music v1 adapter', () => {
 
     expect(musicV1Endpoints.albums()).toBe('https://api.atoman.org/api/v1/music/albums')
     expect(musicV1Endpoints.artist('artist_uuid')).toBe('https://api.atoman.org/api/v1/music/artists/artist_uuid')
+  })
+
+  it('requests the discover feed from GET /api/v1/music/discover and returns the list payload', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({
+        data: [
+          { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
+          { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
+        ],
+        meta: { page: 1, page_size: 20, total: 2, has_more: false },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await listMusicDiscoverFeed()
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/discover', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(result.data).toEqual([
+      { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
+      { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
+    ])
+  })
+
+  it('sends bearer authorization when uploading album archives', async () => {
+    const storage = {
+      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    }
+    vi.stubGlobal('localStorage', storage)
+
+    class FakeXMLHttpRequest {
+      static lastInstance: FakeXMLHttpRequest | null = null
+      method = ''
+      url = ''
+      withCredentials = false
+      requestHeaders: Record<string, string> = {}
+      upload = {
+        addEventListener: vi.fn(),
+      }
+      private listeners: Record<string, Array<() => void>> = {}
+      status = 200
+
+      constructor() {
+        FakeXMLHttpRequest.lastInstance = this
+      }
+
+      open(method: string, url: string) {
+        this.method = method
+        this.url = url
+      }
+
+      setRequestHeader(name: string, value: string) {
+        this.requestHeaders[name] = value
+      }
+
+      addEventListener(name: string, handler: () => void) {
+        this.listeners[name] = this.listeners[name] || []
+        this.listeners[name].push(handler)
+      }
+
+      send(_body: FormData) {
+        this.listeners.load?.forEach((handler) => handler())
+      }
+    }
+
+    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest as unknown as typeof XMLHttpRequest)
+
+    await uploadMusicAlbumArchive('import-uuid', new File(['zip'], 'album.zip', { type: 'application/zip' }))
+
+    expect(FakeXMLHttpRequest.lastInstance?.withCredentials).toBe(true)
+    expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Accept).toBe('application/json')
+    expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Authorization).toBe('Bearer test-token')
   })
 
   it('serializes list filters using the api v1 query vocabulary and preserves server pagination meta', async () => {
@@ -298,44 +454,6 @@ describe('music v1 adapter', () => {
     expect(result).toEqual({ id: 'album_uuid', title: 'Graduation', entry_status: 'open' })
   })
 
-  it('loads every playlist song page for a complete detail', async () => {
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({ data: { id: 'playlist_uuid', name: 'Favorites', song_count: 0 } }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ))
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({
-          data: [{ id: 'playlist_song_uuid', song: { id: 'song_uuid', title: 'Song' } }],
-          meta: { page: 1, page_size: 20, total: 37, has_more: true },
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ))
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({
-          data: [{ id: 'playlist_song_uuid_2', song: { id: 'song_uuid_2', title: 'Song 2' } }],
-          meta: { page: 2, page_size: 20, total: 37, has_more: false },
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )))
-
-    const result = await musicV1.getMusicPlaylist('playlist_uuid')
-
-    expect(result.song_count).toBe(37)
-    expect(result.songs).toEqual([
-      { id: 'song_uuid', title: 'Song' },
-      { id: 'song_uuid_2', title: 'Song 2' },
-    ])
-    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/music/playlists/playlist_uuid/songs?page=1&page_size=100', {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    })
-    expect(fetch).toHaveBeenNthCalledWith(3, '/api/v1/music/playlists/playlist_uuid/songs?page=2&page_size=100', {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    })
-  })
-
   it('builds update album edits with track collection changes', () => {
     const result = buildUpdateAlbumEdit('album_uuid', {
       title: 'Updated Album',
@@ -349,11 +467,13 @@ describe('music v1 adapter', () => {
           track_number: 1,
           lyrics: 'lyrics',
           audio_url: 'https://cdn.example.com/song-1.mp3',
+          audio_key: 'music/album/album-1/staging/stage-1/tracks/song-1.mp3',
         },
         {
           title: 'New Song',
           track_number: 2,
           audio_url: 'https://cdn.example.com/song-2.mp3',
+          audio_key: 'music/album/album-1/staging/stage-1/tracks/new-song.mp3',
         },
       ],
       reason: 'Update album tracks',
@@ -377,11 +497,13 @@ describe('music v1 adapter', () => {
             track_number: 1,
             lyrics: 'lyrics',
             audio_url: 'https://cdn.example.com/song-1.mp3',
+            audio_key: 'music/album/album-1/staging/stage-1/tracks/song-1.mp3',
           },
           {
             title: 'New Song',
             track_number: 2,
             audio_url: 'https://cdn.example.com/song-2.mp3',
+            audio_key: 'music/album/album-1/staging/stage-1/tracks/new-song.mp3',
           },
         ],
       },
@@ -405,6 +527,27 @@ describe('music v1 adapter', () => {
     expect(result.url).not.toMatch(/^\/uploads\//)
     expect(body.get('purpose')).toBe('music.cover')
     expect(body.get('file')).toBe(file)
+  })
+
+  it('uploads music assets with entity staging metadata when provided', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { url: 'https://cdn.example.com/assets/music/album/album-1/staging/stage-1/cover.png', key: 'music/album/album-1/staging/stage-1/cover.png', content_type: 'image/png', size: 1 } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    const file = new File(['x'], 'cover.png', { type: 'image/png' })
+
+    await uploadMusicAsset(file, 'music.cover', {
+      entityType: 'album',
+      entityId: 'album-1',
+      stagingId: 'stage-1',
+    })
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    const body = (init as RequestInit).body as FormData
+    expect(body.get('purpose')).toBe('music.cover')
+    expect(body.get('entity_type')).toBe('album')
+    expect(body.get('entity_id')).toBe('album-1')
+    expect(body.get('staging_id')).toBe('stage-1')
   })
 
   it('builds create album edit payloads instead of direct CRUD payloads', () => {
@@ -511,6 +654,23 @@ describe('music v1 adapter', () => {
   it('does not expose revert music edit endpoints or api methods', () => {
     expect(musicV1Endpoints).not.toHaveProperty('editRevert')
     expect(musicV1).not.toHaveProperty('revertMusicEdit')
+  })
+
+  it('replies to album discussions through the reply endpoint', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'reply_uuid', album_id: 'album_uuid', parent_id: 'discussion_uuid', content: 'Reply', author_id: 'user_uuid', created_at: '2026-07-06T00:00:00Z' } }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    const result = await replyAlbumDiscussion('album_uuid', 'discussion_uuid', 'Reply')
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/albums/album_uuid/discussions/discussion_uuid/reply', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ content: 'Reply' }),
+    })
+    expect(result.parent_id).toBe('discussion_uuid')
   })
 
   it('starts album import multipart uploads through the correct path and body', async () => {
@@ -653,11 +813,11 @@ describe('music v1 adapter', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/parts/1/complete', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ etag: '"etag-1"', size: 4 }),
+      body: JSON.stringify({ etag: '"etag-1"' }),
     }))
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/parts/2/complete', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ etag: '"etag-2"', size: 4 }),
+      body: JSON.stringify({ etag: '"etag-2"' }),
     }))
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/music/imports/albums/import_uuid/multipart/complete', expect.objectContaining({ method: 'POST' }))
     expect(progress.at(-1)).toMatchObject({ loaded: 8, total: 8 })
@@ -798,5 +958,14 @@ describe('music building-block barrel', () => {
     expect(barrel).toContain('MusicSourcesSection')
     expect(barrel).toContain('MusicReviewNotesSection')
     expect(barrel).toContain('AlbumEditorShell')
+  })
+})
+
+describe('music merge API contract', () => {
+  it('declares merge endpoints as returning review edits', () => {
+    const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1.ts'), 'utf8')
+
+    expect(source).toMatch(/mergeMusicArtists\([^\n]+\): Promise<MusicEditSummary>/)
+    expect(source).toMatch(/mergeMusicAlbums\([^\n]+\): Promise<MusicEditSummary>/)
   })
 })

@@ -13,11 +13,25 @@ describe('AppTopbar auth loading', () => {
     expect(topbarSource).toContain('v-if="showAuthControls"')
   })
 
-  it('renders the centralized app version below the brand text', () => {
+  it('renders the configured app version in a left-aligned meta row under the brand text', () => {
     expect(topbarSource).toContain("import { appVersion } from '@/config/appVersion'")
     expect(topbarSource).toContain('class="logo-copy"')
     expect(topbarSource).toContain('v-if="appVersion"')
     expect(topbarSource).toContain('class="logo-version"')
     expect(topbarSource).toContain('flex-direction: column;')
+    expect(topbarSource).toContain('class="logo-meta"')
+    expect(topbarSource).toContain('align-items: flex-start;')
+  })
+
+  it('renders a test-stage notice in the same meta row as the version', () => {
+    expect(topbarSource).toContain('测试阶段，不保留用户数据')
+    expect(topbarSource).toContain('class="logo-notice"')
+    expect(topbarSource).toContain('class="logo-meta"')
+  })
+
+  it('does not clip authenticated dropdown menus in the right side of the topbar', () => {
+    const navRightRule = topbarSource.match(/\.nav-right\s*\{[^}]*\}/)?.[0] || ''
+    expect(navRightRule).toContain('.nav-right')
+    expect(navRightRule).not.toContain('overflow: hidden;')
   })
 })

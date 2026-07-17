@@ -6,14 +6,48 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
+import type { MusicSheetLayer } from './musicSheetTypes'
 
-const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist } = useMusicDrawers()
+type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
+const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
+
+const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
-const isOpen = computed(() => creationFlow.value !== null)
-const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
+const isOpen = computed(() => props.layer !== undefined || creationFlow.value !== null)
+const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentCreationFlow = () => closeMusicCreationFlow(props.layer?.key)
 
 type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails'
+
+function hasDatePartsValue(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return false
+  return !!parts.year.trim() || !!parts.month.trim() || !!parts.day.trim()
+}
+
+function normalizeDatePart(value: string, length: number) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return trimmed.padStart(length, '0')
+}
+
+function formatDateFromParts(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return ''
+
+  const year = parts.year.trim()
+  const month = normalizeDatePart(parts.month, 2)
+  const day = normalizeDatePart(parts.day, 2)
+
+  if (!year || !month || !day) return ''
+  return `${year}-${month}-${day}`
+}
+
+function deriveYearFromParts(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return 0
+  return Number.parseInt(parts.year.trim(), 10) || 0
+}
 
 function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
   const { artist, albumImport, albumDetails, tracks } = flow.draft
@@ -23,9 +57,12 @@ function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
     !!artist.avatarUrl.trim() ||
     !!artist.legalName.trim() ||
     artist.stageNames.some((stageName) => !!stageName.name.trim()) ||
+    artist.members.some((member) => !!member.name.trim()) ||
     !!artist.nationality.trim() ||
     !!artist.birthPlace.trim() ||
-    !!artist.birthDate.trim() ||
+    hasDatePartsValue(artist.birthDateParts) ||
+    hasDatePartsValue(artist.activeStartDateParts) ||
+    hasDatePartsValue(artist.activeEndDateParts) ||
     !!artist.bio.trim() ||
     !!artist.source.trim() ||
     !!albumImport.archiveName.trim() ||
@@ -34,7 +71,8 @@ function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
     albumImport.derivedTracks.length > 0 ||
     !!albumDetails.coverUrl.trim() ||
     !!albumDetails.title.trim() ||
-    !!albumDetails.releaseDate.trim() ||
+    (albumDetails.contributors?.length ?? 0) > 0 ||
+    hasDatePartsValue(albumDetails.releaseDateParts) ||
     !!albumDetails.bio.trim() ||
     !!albumDetails.source.trim() ||
     tracks.length > 0
@@ -67,18 +105,129 @@ const activeStep = computed(() => {
   return stepCopy[step]
 })
 const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDetails')
+const shouldShowFinishButton = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return false
+  return flow.step === 'albumDetails' || (flow.step === 'albumImport' && flow.draft.albumImport.status === 'ready')
+})
 const showFooterActions = computed(() => true)
-const finishButtonLabel = computed(() => (creationFlow.value?.submitting ? '提交中…' : activeStep.value.cta))
-const canSubmitAlbumImport = computed(() => (
-  !isAlbumDetailsStep.value || creationFlow.value?.draft.albumImport.status === 'ready'
-))
+const finishButtonLabel = computed(() => {
+  if (creationFlow.value?.submitting) return '提交中…'
+  return shouldShowFinishButton.value ? '完成' : activeStep.value.cta
+})
+const canGoForward = computed(() => {
+  const flow = creationFlow.value
+  if (!flow) return false
+  if (flow.step === 'artist') {
+    if (flow.draft.artist.kind === 'group') {
+      const namedMembers = flow.draft.artist.members.filter((member) => member.name.trim())
+      const hasMissingJoinDate = namedMembers.some((member) => !member.joinDateParts.year.trim())
+      return !!flow.draft.artist.stageNames[0]?.name.trim()
+        && !!flow.draft.artist.activeStartDateParts?.year.trim()
+        && namedMembers.length >= 2
+        && !hasMissingJoinDate
+        && !!flow.draft.artist.source.trim()
+    }
+
+    return !!flow.draft.artist.avatarUrl.trim()
+      && !!flow.draft.artist.legalName.trim()
+      && !!flow.draft.artist.stageNames[0]?.name.trim()
+      && !!flow.draft.artist.nationality.trim()
+      && !!formatDateFromParts(flow.draft.artist.birthDateParts)
+      && !!flow.draft.artist.source.trim()
+  }
+  if (flow.step === 'albumImport') return flow.draft.albumImport.status === 'ready'
+  return flow.draft.albumImport.status === 'ready'
+})
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
 }).commitMusicAlbumImport
 
+function formatArtistDate(parts?: { year: string; month: string; day: string }) {
+  if (!parts) return ''
+  const year = parts.year.trim()
+  if (!year) return ''
+
+  const month = normalizeDatePart(parts.month, 2)
+  const day = normalizeDatePart(parts.day, 2)
+  if (!month || !day) return year
+  return `${year}-${month}-${day}`
+}
+
+function buildArtistMembers(flow: NonNullable<typeof creationFlow.value>) {
+  return flow.draft.artist.members
+    .filter((member) => member.name.trim())
+    .map((member) => ({
+      artist_id: '',
+      join_date: formatArtistDate(member.joinDateParts),
+      leave_date: formatArtistDate(member.leaveDateParts),
+    }))
+}
+
+function buildNormalizedContributors(flow: NonNullable<typeof creationFlow.value>) {
+  const contributors = [...(flow.draft.albumDetails.contributors ?? [])]
+  if (
+    flow.draft.artist.id
+    && contributors.length === 1
+    && !contributors[0].locked
+    && contributors[0].artistId !== flow.draft.artist.id
+  ) {
+    contributors[0] = {
+      ...contributors[0],
+      id: `contributor-${flow.draft.artist.id}`,
+      artistId: flow.draft.artist.id,
+    }
+  }
+  return contributors
+}
+
+function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): NonNullable<musicApi.MusicAlbumImportCommitInput['artists']> {
+  const activeStartDate = formatArtistDate(flow.draft.artist.activeStartDateParts)
+  const activeEndDate = formatArtistDate(flow.draft.artist.activeEndDateParts)
+  const artistStageNames = flow.draft.artist.stageNames
+    .filter((item) => item.name.trim())
+    .map((item) => ({
+      name: item.name.trim(),
+      isPrimary: item.isPrimary,
+      startDateText: item.startDateText.trim(),
+      endDateText: item.endDateText.trim(),
+    }))
+
+  return buildNormalizedContributors(flow).map((contributor) => {
+    if (!contributor.artistId) {
+      return {
+        artist_id: '',
+        name: contributor.name.trim(),
+        legal_name: flow.draft.artist.legalName.trim(),
+        stage_names: artistStageNames,
+        birth_place: flow.draft.artist.birthPlace.trim(),
+        artist_form: flow.draft.artist.kind,
+        active_start_date: activeStartDate,
+        active_end_date: activeEndDate,
+        members: buildArtistMembers(flow),
+      }
+    }
+
+    return {
+      artist_id: contributor.artistId,
+      name: contributor.name.trim(),
+      legal_name: '',
+      stage_names: [],
+      birth_place: '',
+      artist_form: contributor.kind,
+      active_start_date: '',
+      active_end_date: '',
+        members: [],
+      }
+  })
+}
+
 function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
   const primaryStageName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())
     ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
+  const releaseDate = formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
+  const derivedReleaseYear = deriveYearFromParts(flow.draft.albumDetails.releaseDateParts)
+  const artists = buildContributorPayload(flow)
 
   return {
     ...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
@@ -94,11 +243,12 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
           endDateText: item.endDateText.trim(),
         })),
       birth_place: flow.draft.artist.birthPlace.trim(),
-      image_url: flow.draft.artist.avatarUrl.trim() || undefined,
     },
+    artists,
     album: {
       title: flow.draft.albumDetails.title.trim(),
-      release_year: Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10) || 0,
+      ...(releaseDate ? { release_date: releaseDate } : {}),
+      release_year: derivedReleaseYear || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
         title: track.title.trim(),
         trackNumber: index + 1,
@@ -113,23 +263,23 @@ function syncReadyImportToDraft() {
 
   const { albumImport, albumDetails } = flow.draft
   if (albumImport.status !== 'ready') return
+  const derivedTracks = albumImport.derivedTracks ?? []
 
   if (albumImport.derivedAlbumTitle.trim()) {
-    albumDetails.title = albumImport.derivedAlbumTitle
+    if (!flow.titleCustomized) {
+      albumDetails.title = albumImport.derivedAlbumTitle
+    }
   }
 
-  const nextCover = albumImport.coverUrl.trim() || albumImport.derivedCover.trim()
-  if (nextCover) {
-    albumDetails.coverUrl = nextCover
+  if (!flow.tracksCustomized && (derivedTracks.length > 0 || flow.draft.tracks.length === 0)) {
+    flow.draft.tracks = derivedTracks.map((track, index) => ({
+      id: `import-track-${index + 1}`,
+      sequence: index + 1,
+      title: track.title,
+      audioKey: track.audioKey,
+      origin: track.origin,
+    }))
   }
-
-  flow.draft.tracks = albumImport.derivedTracks.map((track, index) => ({
-    id: `import-track-${index + 1}`,
-    sequence: index + 1,
-    title: track.title,
-    audioKey: track.audioKey,
-    origin: track.origin,
-  }))
 }
 
 watch(
@@ -160,15 +310,15 @@ function requestClose() {
   const hasDraft = hasCreationDraft(flow)
 
   if (hasDraft && !window.confirm('确认关闭？未保存的内容将丢失。')) return
-  closeMusicCreationFlow()
+  closeCurrentCreationFlow()
 }
 
 function handlePrimaryAction() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'artist') {
-    if (!creationFlow.value.draft.artist.legalName.trim()) return
-    setMusicCreationStep('albumDetails')
-  } else if (creationFlow.value.step === 'albumImport') {
+    if (!canGoForward.value) return
+    setMusicCreationStep('albumImport')
+  } else if (creationFlow.value.step === 'albumImport' && creationFlow.value.draft.albumImport.status === 'ready') {
     setMusicCreationStep('albumDetails')
   }
 }
@@ -176,7 +326,7 @@ function handlePrimaryAction() {
 function goBackStep() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'albumDetails') {
-    setMusicCreationStep('artist')
+    setMusicCreationStep('albumImport')
   } else if (creationFlow.value.step === 'albumImport') {
     setMusicCreationStep('artist')
   }
@@ -207,7 +357,7 @@ async function completeCreation() {
     if (flow.draft.artist.id) {
       refreshArtist()
     }
-    closeMusicCreationFlow()
+    closeCurrentCreationFlow()
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {
@@ -219,7 +369,17 @@ async function completeCreation() {
 </script>
 
 <template>
-  <PSheet :show="isOpen" @close="requestClose" width="560px" :index="sheetIndex">
+  <PSheet
+    :show="isOpen"
+    :title="layer?.title ?? '创建音乐条目'"
+    width="560px"
+    :index="sheetIndex"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    @close="requestClose"
+  >
     <div v-if="creationFlow" class="creation-flow">
       <div class="drawer-header">
         <div class="header-meta">
@@ -262,11 +422,11 @@ async function completeCreation() {
             返回上一步
           </button>
           <button
-            :data-testid="isAlbumDetailsStep ? 'music-creation-finish-button' : 'artist-next-button'"
+            :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="paper-submit"
-            :disabled="creationFlow.submitting || !canSubmitAlbumImport"
-            @click="isAlbumDetailsStep ? completeCreation() : handlePrimaryAction()"
+            :disabled="creationFlow.submitting || !canGoForward"
+            @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction()"
           >
             {{ finishButtonLabel }}
           </button>

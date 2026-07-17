@@ -1,15 +1,4 @@
 <template>
-  <div v-if="showMediaChannelSwitch" class="channel-select-wrap">
-    <PSelect
-      :model-value="currentMediaChannelId || ''"
-      :options="[
-        { label: '频道', value: '' },
-        ...channels.map(channel => ({ label: channel.name, value: channel.id }))
-      ]"
-      @update:model-value="onMediaChannelChange"
-    />
-  </div>
-
   <!-- Topbar Search -->
   <div ref="searchWrapRef" class="topbar-search-wrap" :class="{ 'is-open': showSearch }">
     <!-- Collapsed pill: shown when search not active -->
@@ -20,13 +9,19 @@
       data-testid="topbar-search-pill"
       @click.stop="openSearch"
     >
-      <Search :size="14" aria-hidden="true" />
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
       <span>搜索...</span>
     </button>
 
     <!-- Expanded search input -->
     <div v-else class="search-box" @click.stop>
-      <Search class="search-box-icon" :size="14" aria-hidden="true" />
+      <svg class="search-box-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
       <input
         ref="searchInputRef"
         v-model="searchDraft"
@@ -39,7 +34,10 @@
         @keydown.escape="closeSearch"
       />
       <button class="search-close-btn" type="button" @click="closeSearch" aria-label="关闭搜索">
-        <X :size="14" aria-hidden="true" />
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
       </button>
     </div>
 
@@ -77,10 +75,68 @@
     </Transition>
   </div>
 
-  <RouterLink :to="modulePathUrl('feed', '/inbox')" class="notif-btn" :title="notificationRoom.helper">
-    <Bell :size="16" aria-hidden="true" />
-    <span class="notif-label">{{ notificationRoom.name }}</span>
+  <RouterLink
+    to="/inbox"
+    class="notif-btn"
+    data-testid="notification-link"
+    :title="notificationRoom.helper"
+    :aria-label="notificationRoom.name"
+  >
+    <Bell class="notif-btn__icon" :size="16" aria-hidden="true" />
+    <span class="notif-btn__text">{{ notificationRoom.name }}</span>
     <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
+  </RouterLink>
+
+  <div v-if="currentDefaultChannel && currentModule === 'blog'" class="dropdown-wrap" data-dropdown="blog-channel">
+    <button
+      class="default-channel-link blog-channel-switcher"
+      type="button"
+      data-testid="blog-channel-switcher"
+      :disabled="isBlogEditorRoute"
+      :aria-expanded="activeDropdown === 'blog-channel'"
+      :aria-label="isBlogEditorRoute
+        ? `当前频道：${currentDefaultChannel.name}，编辑文章时不可切换频道`
+        : `当前频道：${currentDefaultChannel.name}`"
+      @click="toggleDropdown('blog-channel')"
+    >
+      <span class="default-channel-link__text">{{ currentDefaultChannel.name }}</span>
+      <span v-if="!isBlogEditorRoute" class="chevron" :class="{ 'is-open': activeDropdown === 'blog-channel' }">▾</span>
+    </button>
+    <div v-if="activeDropdown === 'blog-channel'" class="dropdown channel-dropdown">
+      <button
+        v-for="channel in blogChannels"
+        :key="channel.id"
+        type="button"
+        class="dropdown-item"
+        :class="{ 'is-active': channel.id === currentDefaultChannel.id }"
+        :data-testid="`blog-channel-option-${channel.id}`"
+        @click="selectBlogChannel(channel.id)"
+      >
+        {{ channel.name }}
+      </button>
+      <RouterLink to="/channels" class="dropdown-item" @click="closeDropdown">频道管理</RouterLink>
+    </div>
+  </div>
+
+  <RouterLink
+    v-else-if="currentDefaultChannel"
+    :to="currentModuleManagePath"
+    class="default-channel-link"
+    data-testid="default-channel-link"
+    :title="currentDefaultChannel.name"
+    :aria-label="`当前频道：${currentDefaultChannel.name}`"
+  >
+    <span class="default-channel-link__text">{{ currentDefaultChannel.name }}</span>
+  </RouterLink>
+
+  <RouterLink
+    :to="userSettingsPath"
+    class="user-settings-link"
+    data-testid="user-settings-link"
+    title="设置"
+    aria-label="设置"
+  >
+    <Settings :size="17" aria-hidden="true" />
   </RouterLink>
 
   <div class="dropdown-wrap" data-dropdown="user">
@@ -91,9 +147,17 @@
     </button>
     <div v-if="activeDropdown === 'user'" class="dropdown user-dropdown">
       <a :href="userUrl(authStore.user?.username || '')" class="dropdown-item" @click="closeDropdown">我的主页</a>
-      <RouterLink :to="modulePathUrl('blog', '/bookmarks')" class="dropdown-item" @click="closeDropdown">收藏</RouterLink>
-      <RouterLink :to="modulePathUrl('blog', '/settings')" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
-      <RouterLink v-if="showSiteSettings" to="/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
+      <RouterLink
+        v-if="currentModuleManagePath && currentDefaultChannel"
+        :to="currentModuleManagePath"
+        class="dropdown-item"
+        data-testid="channel-manage-link"
+        @click="closeDropdown"
+      >
+        频道管理
+      </RouterLink>
+      <RouterLink :to="userSettingsPath" class="dropdown-item" @click="closeDropdown">编辑资料</RouterLink>
+      <RouterLink v-if="showSiteSettings" to="/site/setting" class="dropdown-item" @click="closeDropdown">站点设置</RouterLink>
       <button class="dropdown-item dropdown-item-danger" @click="logout">退出登录</button>
     </div>
   </div>
@@ -101,24 +165,31 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Bell, Search, X } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
+import { useApi } from '@/composables/useApi'
 import { notificationRoom } from '@/config/moduleRooms'
-import { modulePathUrl, userUrl } from '@/router/siteUrls'
-import { resolveSiteContext } from '@/router/siteContext'
-import { isModeratorRole } from '@/utils/roles'
-import { useMediaChannel } from '@/composables/useMediaChannel'
+import { userUrl } from '@/router/siteUrls'
+import { isAdminRole } from '@/utils/roles'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
-import PSelect from '@/components/ui/PSelect.vue'
 import TopbarSearchSection from '@/components/system/TopbarSearchSection.vue'
+import { Bell, Settings } from 'lucide-vue-next'
+import {
+  type DefaultChannelModule,
+  channelManagePath,
+  isDefaultChannelModule,
+  useDefaultChannelsStore,
+} from '@/stores/defaultChannels'
+import { resolveSiteContext } from '@/router/siteContext'
+import type { Channel } from '@/types'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
+const defaultChannelsStore = useDefaultChannelsStore()
+const api = useApi()
 const router = useRouter()
 const route = useRoute()
-const { channels, currentMediaChannelId, switchChannel, clearChannels, loadChannels } = useMediaChannel()
 const globalSearch = useGlobalSearch()
 
 const activeDropdown = ref<string | null>(null)
@@ -127,16 +198,39 @@ const isExpanded = ref(false)
 const searchDraft = ref('')
 const searchWrapRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
-const lastLoadedMediaChannelUserId = ref<string | number | null>(null)
+const blogChannels = ref<Channel[]>([])
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
-const authUserId = computed(() => authStore.user?.uuid ?? authStore.user?.id)
-const showSiteSettings = computed(() => isModeratorRole(authStore.user?.role))
-const showMediaChannelSwitch = computed(() => {
-  if (typeof window === 'undefined') return false
-  const siteContext = resolveSiteContext(window.location.hostname, window.location.search, route.path)
-  return siteContext.type === 'module' && siteContext.module === 'media'
+const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
+const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
+const siteContext = computed(() => {
+  const queryStart = route.fullPath.indexOf('?')
+  const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
+  return resolveSiteContext(window.location.hostname, search, route.path)
 })
+const currentModule = computed(() => (
+  siteContext.value.type === 'module' && isDefaultChannelModule(siteContext.value.module)
+    ? siteContext.value.module
+    : null
+))
+const fallbackChannelModules: DefaultChannelModule[] = ['blog', 'podcast', 'video']
+const currentDefaultChannel = computed(() => {
+  const modules = currentModule.value
+    ? [currentModule.value, ...fallbackChannelModules.filter((module) => module !== currentModule.value)]
+    : fallbackChannelModules
 
+  for (const module of modules) {
+    const channel = defaultChannelsStore.channelFor(module)
+    if (channel?.name.trim()) return channel
+  }
+
+  return null
+})
+const currentModuleManagePath = computed(() => (
+  currentDefaultChannel.value
+    ? channelManagePath
+    : ''
+))
+const isBlogEditorRoute = computed(() => /^\/posts\/post\/(new|[^/]+\/edit)$/.test(route.path))
 const toggleDropdown = (name: string) => {
   activeDropdown.value = activeDropdown.value === name ? null : name
 }
@@ -170,6 +264,25 @@ const closeDropdown = () => {
   activeDropdown.value = null
 }
 
+const loadBlogChannels = async () => {
+  const userID = authStore.user?.uuid
+  if (!userID) {
+    blogChannels.value = []
+    return
+  }
+  const res = await fetch(`${api.blog.channels}?user_id=${encodeURIComponent(userID)}`, {
+    headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+  })
+  if (!res.ok) return
+  const payload = await res.json()
+  blogChannels.value = payload.data || []
+}
+
+const selectBlogChannel = async (channelID: string) => {
+  await defaultChannelsStore.setDefaultChannel('blog', channelID)
+  closeDropdown()
+}
+
 const openSearchHref = async (href: string) => {
   showSearch.value = false
   isExpanded.value = false
@@ -189,7 +302,8 @@ const handleClickOutside = (e: MouseEvent) => {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   inboxStore.bootstrap()
-  ensureMediaChannels()
+  void defaultChannelsStore.load()
+  if (currentModule.value === 'blog') void loadBlogChannels()
 })
 
 onBeforeUnmount(() => {
@@ -197,81 +311,94 @@ onBeforeUnmount(() => {
   inboxStore.disconnect()
 })
 
+watch(
+  () => authStore.user?.id ?? null,
+  (userId) => {
+    if (!userId || !authStore.isAuthenticated) {
+      defaultChannelsStore.reset()
+      return
+    }
+    void defaultChannelsStore.load(true)
+  },
+)
+
+watch(currentModule, (module) => {
+  if (module === 'blog') void loadBlogChannels()
+})
+
 const logout = async () => {
   await authStore.logout()
   closeDropdown()
-  inboxStore.resetUserData()
+  inboxStore.disconnect()
+  defaultChannelsStore.reset()
   await router.push('/login')
 }
 
-const onMediaChannelChange = (value: string | number) => {
-  const channelId = String(value) || null
-  void switchChannel(channelId, authStore.token)
-}
-
-const ensureMediaChannels = () => {
-  const userId = authUserId.value
-  if (!showMediaChannelSwitch.value) return
-  if (!userId) {
-    lastLoadedMediaChannelUserId.value = null
-    clearChannels()
-    return
-  }
-  if (lastLoadedMediaChannelUserId.value === userId && channels.value.length > 0) return
-
-  void loadChannels(authStore.token, userId)
-    .then(() => {
-      if (authUserId.value === userId) {
-        lastLoadedMediaChannelUserId.value = userId
-      }
-    })
-    .catch(() => {
-      if (lastLoadedMediaChannelUserId.value === userId) {
-        lastLoadedMediaChannelUserId.value = null
-      }
-    })
-}
-
-watch(showMediaChannelSwitch, ensureMediaChannels)
-watch(authUserId, ensureMediaChannels)
 </script>
 
 <style scoped>
-.channel-select-wrap {
-  position: relative;
+.default-channel-link {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-fg);
+  text-decoration: none;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
-.channel-select {
-  min-width: 8rem;
-  max-width: 12rem;
-  border: var(--a-border);
-  border-radius: var(--a-radius-none);
-  padding: 0.35rem 2rem 0.35rem 0.6rem;
+.default-channel-link__text {
+  display: block;
+  min-width: 0;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.default-channel-link:hover {
+  text-decoration: underline;
+}
+
+.blog-channel-switcher {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-size: 0.8rem;
-  font-weight: var(--a-font-weight-strong, 700);
-  appearance: none;
-  -webkit-appearance: none;
   cursor: pointer;
 }
 
-.channel-select-icon {
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
-  color: var(--a-color-ink-soft);
+.blog-channel-switcher:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.blog-channel-switcher:focus-visible {
+  outline: 2px solid var(--a-color-ink);
+  outline-offset: 2px;
+}
+
+.channel-dropdown {
+  width: min(18rem, calc(100vw - 2rem));
+}
+
+.channel-dropdown .dropdown-item.is-active {
+  font-weight: 500;
+  background: var(--a-color-paper-wash);
+}
+
+.chevron.is-open {
+  transform: rotate(180deg);
 }
 
 .notif-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   background: none;
   border: none;
@@ -280,6 +407,13 @@ watch(authUserId, ensureMediaChannels)
   position: relative;
   transition: color 0.2s;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.notif-btn__icon {
+  display: none;
+  flex-shrink: 0;
 }
 
 .topbar-search-wrap {
@@ -287,10 +421,10 @@ watch(authUserId, ensureMediaChannels)
   display: flex;
   align-items: center;
   z-index: 120;
-  margin-left: auto;
-  margin-right: 4rem; /* 向左推开，避免拥挤右边 */
-  flex-shrink: 0;
-  width: 400px; /* 默认就是展开后的大致宽度 */
+  margin-right: 0;
+  flex: 0 1 clamp(10rem, 24vw, 24rem);
+  min-width: 2.25rem;
+  width: auto;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -311,7 +445,7 @@ watch(authUserId, ensureMediaChannels)
   padding: 0 0.75rem; /* 取消上下内边距，完全通过 height 居中 */
   margin: 0;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
   white-space: nowrap;
@@ -354,7 +488,7 @@ watch(authUserId, ensureMediaChannels)
   padding: 0 0.75rem; /* 移除上下 padding */
   height: 100%; /* 占满父级容器高度 */
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   font-family: inherit;
   min-width: 0;
 }
@@ -396,7 +530,7 @@ watch(authUserId, ensureMediaChannels)
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-fg);
   border-top: none; /* 移除顶部边框，避免双重边框 */
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
   overflow-y: auto;
   min-height: 80px;
   width: 100%;
@@ -438,7 +572,7 @@ watch(authUserId, ensureMediaChannels)
   background: none;
   border: none;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -452,74 +586,98 @@ watch(authUserId, ensureMediaChannels)
 
 @media (max-width: 960px) {
   .topbar-search-wrap {
-    width: 200px;
-    margin-right: 1.5rem;
-  }
-  .topbar-search-wrap.is-open {
-    width: 320px;
-  }
-}
-
-@media (max-width: 720px) {
-  .channel-select-wrap {
-    display: none;
-  }
-
-  .topbar-search-wrap {
-    width: 44px;
-    margin-right: 0;
+    flex-basis: 2.25rem;
+    min-width: 2.25rem;
   }
 
   .topbar-search-wrap.is-open {
-    position: fixed;
-    top: 56px;
-    right: 1rem;
-    left: 1rem;
-    width: auto;
-    margin: 0;
+    flex-basis: min(20rem, calc(100vw - 10rem));
+    min-width: min(20rem, calc(100vw - 10rem));
   }
 
   .search-pill {
-    width: 44px;
-    height: 44px;
-    padding: 0;
     justify-content: center;
+    padding: 0;
   }
 
-  .search-box {
-    height: 44px;
+  .search-pill span {
+    display: none;
   }
 
-  .search-close-btn {
-    width: 44px;
-    height: 44px;
+  .default-channel-link {
+    width: auto;
+    min-width: 0;
+    max-width: 8rem;
+    padding: 0;
   }
 
-  .search-pill span,
-  .notif-label,
+  .default-channel-link__text {
+    display: block;
+  }
+
+  .notif-btn {
+    justify-content: center;
+    min-width: 2rem;
+  }
+
+  .notif-btn__icon {
+    display: inline-flex;
+  }
+
+  .notif-btn__text {
+    display: none;
+  }
+
   .user-name,
   .chevron {
     display: none;
   }
 
-  .notif-btn,
   .user-btn {
-    width: 44px;
-    height: 44px;
-    padding: 0;
+    padding-inline: 0.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .user-settings-link,
+  .dropdown-wrap[data-dropdown="user"] {
+    display: none;
   }
 
-  .notif-count {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    margin: 0;
+  .blog-channel-switcher {
+    max-width: 5.5rem;
+    min-height: 2.25rem;
+    padding-inline: 0.45rem;
+  }
+
+  .default-channel-link__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
 .notif-btn:hover {
   color: var(--a-color-fg);
   text-decoration: underline;
+}
+
+.user-settings-link {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-muted);
+  border: none;
+  background: var(--a-color-bg);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.user-settings-link:hover {
+  color: var(--a-color-fg);
+  background: var(--a-color-paper-wash);
+  text-decoration: none;
 }
 
 .notif-count {
@@ -549,9 +707,10 @@ watch(authUserId, ensureMediaChannels)
   border-radius: var(--a-radius-none);
   cursor: pointer;
   padding: 0.375rem 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.875rem;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .user-btn:hover {
@@ -572,7 +731,7 @@ watch(authUserId, ensureMediaChannels)
 }
 
 .user-name {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .chevron {
@@ -602,7 +761,7 @@ watch(authUserId, ensureMediaChannels)
   text-align: left;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   text-decoration: none;
   background: none;

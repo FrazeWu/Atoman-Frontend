@@ -35,7 +35,7 @@ const emit = defineEmits<{
   position: relative;
   width: 100%;
   background: #000;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
 }
 .vps-player:hover :deep(.vpc),

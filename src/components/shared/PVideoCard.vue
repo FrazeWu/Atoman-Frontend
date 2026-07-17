@@ -1,10 +1,27 @@
 <script setup lang="ts">
+import { Clock3, Play } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+
+import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
+import { useAuthStore } from '@/stores/auth'
 import type { Video } from '@/types'
 
 const props = defineProps<{
   video: Video
   to?: string
 }>()
+
+const router = useRouter()
+const authStore = useAuthStore()
+const bookmarks = useVideoBookmarks()
+
+async function toggleWatchLater() {
+  if (!authStore.isAuthenticated) {
+    await router.push('/login')
+    return
+  }
+  await bookmarks.toggle(String(props.video.id))
+}
 
 function fmtDuration(sec: number): string {
   if (!sec) return ''
@@ -30,30 +47,28 @@ const avatarLetter = () =>
 </script>
 
 <template>
-  <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-card">
-    <!-- Thumbnail -->
+  <article class="vc-card">
     <div class="vc-thumb">
-      <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />
-      <div v-else class="vc-thumb-placeholder">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-          <path d="M8 5v14l11-7z"/>
-        </svg>
-      </div>
-      
-      <!-- Overlays -->
-      <div class="vc-overlay-top-right">
-        <span class="vc-watch-later">稍后看</span>
-      </div>
-
-      <div class="vc-overlay-bottom-left">
-        <span class="vc-play-count">▶ {{ fmtViews(video.view_count) }}</span>
-      </div>
-
-      <span v-if="video.duration_sec" class="vc-duration">{{ fmtDuration(video.duration_sec) }}</span>
+      <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link" :aria-label="video.title">
+        <img v-if="video.thumbnail_url" :src="video.thumbnail_url" :alt="video.title" class="vc-img" loading="lazy" />
+        <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
+        <span class="vc-play-count"><Play :size="12" aria-hidden="true" />{{ fmtViews(video.view_count) }}</span>
+        <span v-if="video.duration_sec" class="vc-duration">{{ fmtDuration(video.duration_sec) }}</span>
+      </RouterLink>
+      <button
+        type="button"
+        class="vc-watch-later"
+        :class="{ 'is-active': bookmarks.isBookmarked(String(video.id)) }"
+        :disabled="bookmarks.isPending(String(video.id))"
+        :aria-label="`${bookmarks.isBookmarked(String(video.id)) ? '取消稍后看' : '稍后看'} ${video.title}`"
+        :title="bookmarks.isBookmarked(String(video.id)) ? '取消稍后看' : '稍后看'"
+        @click="toggleWatchLater"
+      >
+        <Clock3 :size="18" aria-hidden="true" />
+      </button>
     </div>
 
-    <!-- Info row: avatar + text -->
-    <div class="vc-info">
+    <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-info">
       <div class="vc-avatar" aria-hidden="true">
         <img v-if="video.channel?.cover_url" :src="video.channel.cover_url" :alt="video.channel.name" />
         <span v-else>{{ avatarLetter() }}</span>
@@ -67,14 +82,13 @@ const avatarLetter = () =>
           </div>
         </div>
       </div>
-    </div>
-  </RouterLink>
+    </RouterLink>
+  </article>
 </template>
 
 <style scoped>
 .vc-card {
   display: block;
-  text-decoration: none;
   color: inherit;
   border: none;
 }
@@ -84,10 +98,12 @@ const avatarLetter = () =>
   position: relative;
   aspect-ratio: 16/9;
   background: var(--a-color-surface);
-  border-radius: 8px; /* 8px rounded thumbnail */
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: none;
 }
-.vc-thumb:hover .vc-img { transform: scale(1.02); }
+.vc-thumb-link { display: block; width: 100%; height: 100%; color: inherit; }
+.vc-card:hover .vc-img { transform: scale(1.02); }
 .vc-img {
   width: 100%;
   height: 100%;
@@ -104,48 +120,42 @@ const avatarLetter = () =>
   color: var(--a-color-muted);
 }
 
-/* Overlays */
-.vc-overlay-top-right {
+.vc-watch-later {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 2;
-}
-
-.vc-watch-later {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
   opacity: 0;
-  background: var(--a-color-bg);
   border: 1px solid var(--a-color-line);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.1s ease;
+  border-radius: 4px;
+  background: var(--a-color-paper);
+  box-shadow: none;
   color: var(--a-color-fg);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
 }
 
-.vc-thumb:hover .vc-watch-later {
+.vc-card:hover .vc-watch-later,
+.vc-card:focus-within .vc-watch-later {
   opacity: 1;
 }
 
-.vc-watch-later:active {
-  transform: translateY(1px);
-  box-shadow: none;
-}
-
-.vc-overlay-bottom-left {
+.vc-play-count {
   position: absolute;
   bottom: 8px;
   left: 8px;
   z-index: 1;
-}
-
-.vc-play-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 2px 6px;
   border-radius: 0px; /* Straight corner */
 }
@@ -157,7 +167,7 @@ const avatarLetter = () =>
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 2px 6px;
   border-radius: 0px; /* Straight corner */
   z-index: 1;
@@ -168,19 +178,21 @@ const avatarLetter = () =>
   display: flex;
   gap: 12px;
   padding: 12px 0 0;
+  color: inherit;
+  text-decoration: none;
 }
 .vc-avatar {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 4px;
   overflow: hidden;
   background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #fff;
 }
 .vc-avatar img {
@@ -191,14 +203,16 @@ const avatarLetter = () =>
 .vc-text { min-width: 0; flex: 1; }
 .vc-title {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.35;
   color: var(--a-color-fg);
   margin: 0 0 0.35rem 0;
   transition: color 0.2s;
 }
 
-.vc-card:hover .vc-title {
+.vc-card:hover .vc-title,
+.vc-card:focus-within .vc-title {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
@@ -214,7 +228,8 @@ const avatarLetter = () =>
 }
 .vc-channel {
   color: var(--a-color-muted);
-  font-weight: 700;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 .vc-stats {
   display: flex;
@@ -222,4 +237,8 @@ const avatarLetter = () =>
   gap: 0.25rem;
 }
 .vc-dot { opacity: 0.5; }
+
+@media (hover: none) {
+  .vc-watch-later { opacity: 1; }
+}
 </style>

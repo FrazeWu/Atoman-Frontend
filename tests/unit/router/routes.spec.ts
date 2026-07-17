@@ -21,10 +21,6 @@ function lazyImportPath(component: unknown) {
   return String(component)
 }
 
-function isAsyncComponent(component: unknown) {
-  return typeof component === 'object' && component !== null
-}
-
 describe('host-scoped route tables', () => {
   it('keeps blog routes relative to the module root', () => {
     const blogPaths = flattenPaths(moduleRoutes.blog)
@@ -36,7 +32,8 @@ describe('host-scoped route tables', () => {
 
   it('keeps music routes relative to the module root', () => {
     const musicPaths = flattenPaths(moduleRoutes.music)
-    expect(musicPaths).toContain('explore')
+    expect(musicPaths).toContain('discover')
+    expect(musicPaths).toContain('artists')
     expect(musicPaths).toContain('starred')
     expect(musicPaths).toContain('artist/:artistId')
     expect(musicPaths).toContain('album/:albumId')
@@ -50,48 +47,63 @@ describe('host-scoped route tables', () => {
     const albumRoute = children.find((route) => route.path === 'album/:albumId')
 
     expect(artistRoute).toBeTruthy()
-    expect(isAsyncComponent(artistRoute?.component)).toBe(true)
+    expect(lazyImportPath(artistRoute?.component)).toContain('MusicArtistRouteView.vue')
     expect(albumRoute).toBeTruthy()
-    expect(isAsyncComponent(albumRoute?.component)).toBe(true)
+    expect(lazyImportPath(albumRoute?.component)).toContain('MusicAlbumRouteView.vue')
   })
 
   it('keeps feed and forum routes short', () => {
     const feedPaths = flattenPaths(moduleRoutes.feed)
     const forumPaths = flattenPaths(moduleRoutes.forum)
     expect(feedPaths).toContain('reading-list')
-    expect(feedPaths).toContain('inbox')
+    expect(feedPaths).not.toContain('inbox')
     expect(forumPaths).toContain('topic/:id')
     expect(forumPaths).not.toContain('/forum')
   })
 
-  it('renders a dedicated public homepage at the content root instead of redirecting to a leaf page', () => {
-    const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
-    const children = contentRoot?.children || []
+  it('registers inbox as a top-level route only', () => {
+    const appRoutePaths = paths(buildAppRoutes())
 
-    expect(children.find((route) => route.path === '')?.component).toBeTruthy()
-    expect(children.find((route) => route.path === '')?.redirect).toBeUndefined()
+    expect(appRoutePaths).toContain('/inbox')
+    expect(appRoutePaths).not.toContain('/feed/inbox')
   })
 
-  it('keeps content detail pages under the media module root', () => {
-    const contentRoot = moduleRoutes.media.find((route) => route.path === '/')
-    const childPaths = paths(contentRoot?.children || [])
+  it('registers channel management as a top-level route', () => {
+    const routes = buildAppRoutes()
+    const appRoutePaths = paths(routes)
 
-    expect(childPaths).toContain('podcasts/episode/:id')
-    expect(childPaths).toContain('videos/watch/:id')
+    expect(appRoutePaths).toContain('/channels')
+    expect(routes.find((route) => route.path === '/posts/channels')?.redirect).toBe('/channels')
   })
 
   it('registers video detail pages under the video module root', () => {
     const videoRoot = moduleRoutes.video.find((route) => route.path === '/')
     const children = videoRoot?.children || []
-    const detailRoute = children.find((route) => route.path === 'watch/:id')
+    const detailRoute = children.find((route) => route.path === 'videos/watch/:id')
 
     expect(detailRoute).toBeTruthy()
-    expect(isAsyncComponent(detailRoute?.component)).toBe(true)
+    expect(lazyImportPath(detailRoute?.component)).toContain('VideoDetailView.vue')
+  })
+
+  it('registers the approved video destinations', () => {
+    const root = moduleRoutes.video.find(route => route.path === '/')
+    const routePaths = root?.children?.map(route => route.path)
+    expect(routePaths).toEqual(expect.arrayContaining(['', 'subscriptions', 'favorites', 'creator']))
+    expect(root?.children?.find(route => route.path === 'manage')?.redirect).toBe('/videos/creator')
   })
 
   it('defines entity profile routes as aggregation spaces', () => {
-    expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels'])
+    expect(paths(userRoutes)).toEqual(['/users/:handle', '/users/:handle/posts', '/users/:handle/channels', '/users/:handle/settings'])
     expect(paths(channelRoutes)).toEqual(['/channels/:slug', '/channels/:slug/posts', '/channels/:slug/about'])
+  })
+
+  it('registers only the canonical site and user settings routes', () => {
+    const appRoutePaths = paths(buildAppRoutes())
+    expect(paths(settingRoutes)).toEqual(['/site/setting', '/site/setting/community'])
+    expect(appRoutePaths).not.toEqual(expect.arrayContaining(['/setting', '/admin/site', '/settings']))
+    expect(flattenPaths(moduleRoutes.blog)).not.toContain('settings')
+    expect(flattenPaths(moduleRoutes.feed)).not.toContain('settings')
+    expect(paths(userRoutes)).toContain('/users/:handle/settings')
   })
 
   it('keeps portal routes separate from module routes', () => {
@@ -105,6 +117,7 @@ describe('host-scoped route tables', () => {
     expect(allModulePaths).not.toContain('/posts')
     expect(allModulePaths).not.toContain('/music')
     expect(allModulePaths).not.toContain('/feed')
+    expect(allModulePaths).not.toContain('/media')
     expect(allModulePaths).not.toContain('/forum')
     expect(allModulePaths).not.toContain('/posts/bookmarks')
     expect(allModulePaths).not.toContain('/music/albums/:albumId')
@@ -117,21 +130,6 @@ describe('host-scoped route tables', () => {
     expect(paths(moduleRoutes.feed)).not.toContain('/reading-list')
     expect(paths(moduleRoutes.feed)).not.toContain('/inbox')
     expect(paths(moduleRoutes.forum)).not.toContain('/topic/:id')
-  })
-
-  it('redirects legacy feed setting pages to the unified access settings page', () => {
-    const settingRoot = settingRoutes.find((route) => route.path === '/setting')
-    const children = settingRoot?.children || []
-
-    expect(children.find((route) => route.path === 'feed-fulltext')?.redirect).toBe('/setting/access')
-    expect(children.find((route) => route.path === 'feed-sources')?.redirect).toBe('/setting/access')
-  })
-
-  it('registers the community management page under settings', () => {
-    const settingRoot = settingRoutes.find((route) => route.path === '/setting')
-    const community = settingRoot?.children?.find((route) => route.path === 'community')
-    expect(community).toBeTruthy()
-    expect(lazyImportPath(community?.component)).toContain('SettingCommunityView.vue')
   })
 
   it('registers a disabled-module route before the catch-all route', () => {

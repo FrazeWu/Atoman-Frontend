@@ -325,15 +325,15 @@ onBeforeUnmount(() => {
 
 .stats-big-value {
   font-size: 2.5rem;
-  font-weight: 950;
-  letter-spacing: -0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1;
   margin-top: 0.5rem;
 }
 
 .stats-small-title {
   font-size: 1.1rem;
-  font-weight: 900;
+  font-weight: 500;
   margin-top: 0.5rem;
   white-space: nowrap;
   overflow: hidden;
@@ -371,16 +371,16 @@ onBeforeUnmount(() => {
 .chart-title {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 950;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .chart-unit {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted-soft);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
 }
 
 .chart-wrap {

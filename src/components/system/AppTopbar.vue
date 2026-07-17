@@ -6,7 +6,7 @@
           v-if="hasSidebar && !isAuthRoute"
           class="topbar-collapse-btn"
           type="button"
-          aria-label="收起或展开侧栏"
+          aria-label="Toggle sidebar"
           @click="toggleSidebar"
         >
           <Menu :size="18" aria-hidden="true" />
@@ -57,20 +57,15 @@ import { useAuthStore } from '@/stores/auth'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
-import { isRoomRouteActive, moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 
 const { toggleSidebar } = useSidebar()
+const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
+
 const router = useRouter()
 const route = useRoute()
-const hasSidebar = computed(() => {
-  const closestSetting = [...route.matched]
-    .reverse()
-    .find(record => typeof record.meta.hasSidebar === 'boolean')
-
-  return closestSetting?.meta.hasSidebar === true
-})
 
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
@@ -91,7 +86,7 @@ const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const showAuthControls = computed(() => authStore.isAuthenticated && !!authStore.user)
 
-const navRooms = computed(() => moduleNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
+const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
   const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
@@ -374,17 +369,5 @@ onBeforeUnmount(() => {
 
 .topbar-collapse-btn:hover {
   background-color: var(--a-color-paper-wash);
-}
-
-.topbar-collapse-btn:focus-visible {
-  outline: 2px solid var(--a-color-ink);
-  outline-offset: 2px;
-}
-
-@media (max-width: 720px) {
-  .topbar-collapse-btn {
-    width: 44px;
-    height: 44px;
-  }
 }
 </style>

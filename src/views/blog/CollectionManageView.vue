@@ -9,8 +9,6 @@
       <div class="a-skeleton" style="height:8rem" />
     </div>
 
-    <PEmpty v-else-if="collectionsLoadError" title="合集加载失败" />
-
     <!-- Empty State -->
     <PEmpty v-else-if="collections.length === 0" title="暂无合集" description="点击下方按钮创建第一个合集" />
 
@@ -21,14 +19,15 @@
         :key="collection.id"
         class="a-card"
         style="cursor:pointer"
-        @click="router.push(modulePathUrl('blog', `/collection/${collection.id}`))"
+        @click="$router.push(`/posts/collection/${collection.id}`)"
       >
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div style="flex:1">
             <h3 style="font-size:1.25rem;font-weight:bold;margin-bottom:0.5rem">{{ collection.name }}</h3>
             <p v-if="collection.description" style="color:#666;margin-bottom:1rem">{{ collection.description }}</p>
             <div style="display:flex;gap:1rem;font-size:0.875rem;color:#999">
-              <span>{{ channelName(collection.channel_id) }}</span>
+              <span>{{ collectionChannelName(collection) }}</span>
+              <span>{{ collection.posts_count || 0 }}篇文章</span>
             </div>
           </div>
           <div style="display:flex;gap:0.5rem" @click.stop>
@@ -49,9 +48,9 @@
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">合集名称 *</label>
           <PInput v-model="formData.name" placeholder="输入合集名称" />
         </div>
-        <div v-if="modalMode === 'create'">
-          <label style="display:block;font-weight:bold;margin-bottom:0.5rem">所属频道 *</label>
-          <PSelect v-model="formData.channel_id" :options="channelOptions" placeholder="选择频道" />
+        <div>
+          <label style="display:block;font-weight:bold;margin-bottom:0.5rem">所属合集 *</label>
+          <PSelect v-model="formData.channel_id" :options="channelOptions" placeholder="选择合集" />
         </div>
         <div>
           <label style="display:block;font-weight:bold;margin-bottom:0.5rem">描述</label>
@@ -81,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -92,19 +91,19 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import { modulePathUrl } from '@/router/siteUrls'
 
 interface Collection {
   id: string
   name: string
   description?: string
   channel_id: string
+  channel_name: string
+  posts_count?: number
 }
 
 interface Channel {
   id: string
   name: string
-  content_type: 'blog' | 'podcast' | 'video'
 }
 
 const router = useRouter()
@@ -112,11 +111,8 @@ const api = useApi()
 const authStore = useAuthStore()
 
 const loadingCollections = ref(true)
-const collectionsLoadError = ref('')
 const collections = ref<Collection[]>([])
 const channels = ref<Channel[]>([])
-let channelsLoadSequence = 0
-let collectionsLoadSequence = 0
 
 const modalVisible = ref(false)
 const modalMode = ref<'create' | 'edit'>('create')
@@ -128,58 +124,30 @@ const collectionToDelete = ref<Collection | null>(null)
 const deleting = ref(false)
 
 const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name, value: ch.id })))
-const channelName = (channelId: string) => channels.value.find((channel) => channel.id === channelId)?.name || ''
+const collectionChannelName = (collection: Collection) => {
+  return collection.channel_name || channels.value.find(channel => channel.id === collection.channel_id)?.name || '未命名频道'
+}
 
 const loadChannels = async () => {
-  const requestSequence = ++channelsLoadSequence
-  let loaded = false
-  loadingCollections.value = true
-  collectionsLoadError.value = ''
   try {
     const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
-    if (requestSequence !== channelsLoadSequence) return false
-    if (!res.ok) throw new Error(`Failed to load channels (${res.status})`)
-
     const data = await res.json()
-    if (requestSequence !== channelsLoadSequence) return false
-    channels.value = (data.data || []).filter((channel: Channel) => channel.content_type === 'blog')
-    loaded = true
-    return true
-  } catch {
-    if (requestSequence !== channelsLoadSequence) return false
-    collectionsLoadError.value = '合集加载失败'
-    return false
-  } finally {
-    if (requestSequence === channelsLoadSequence && !loaded) {
-      loadingCollections.value = false
-    }
+    channels.value = data.data || []
+  } catch (err) {
+    console.error('Failed to load channels:', err)
   }
 }
 
 const loadCollections = async () => {
-  const requestSequence = ++collectionsLoadSequence
   loadingCollections.value = true
-  collectionsLoadError.value = ''
   try {
-    const res = await fetch(api.blog.collections, {
-      headers: { Authorization: `Bearer ${authStore.token}` }
-    })
-    if (requestSequence !== collectionsLoadSequence) return false
-    if (!res.ok) throw new Error(`Failed to load collections (${res.status})`)
-
+    const res = await fetch(api.blog.collections, { headers: { Authorization: `Bearer ${authStore.token}` } })
     const data = await res.json()
-    if (requestSequence !== collectionsLoadSequence) return false
-    const channelIds = new Set(channels.value.map((channel) => channel.id))
-    collections.value = (data.data || []).filter((collection: Collection) => channelIds.has(collection.channel_id))
-    return true
-  } catch {
-    if (requestSequence !== collectionsLoadSequence) return false
-    collectionsLoadError.value = '合集加载失败'
-    return false
+    collections.value = data.data || []
+  } catch (err) {
+    console.error('Failed to load collections:', err)
   } finally {
-    if (requestSequence === collectionsLoadSequence) {
-      loadingCollections.value = false
-    }
+    loadingCollections.value = false
   }
 }
 
@@ -228,10 +196,7 @@ const handleSubmit = async () => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`
       },
-      body: JSON.stringify({
-        name: formData.value.name,
-        description: formData.value.description,
-      })
+      body: JSON.stringify(formData.value)
     })
     
     const data = await res.json()
@@ -280,16 +245,9 @@ const executeDelete = async () => {
   }
 }
 
-onMounted(async () => {
-  const requestSequence = channelsLoadSequence + 1
-  const channelsLoaded = await loadChannels()
-  if (!channelsLoaded || requestSequence !== channelsLoadSequence) return
-  await loadCollections()
-})
-
-onUnmounted(() => {
-  channelsLoadSequence++
-  collectionsLoadSequence++
+onMounted(() => {
+  loadChannels()
+  loadCollections()
 })
 </script>
 
@@ -300,7 +258,7 @@ onUnmounted(() => {
   right: 2rem;
   width: 4rem;
   height: 4rem;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: var(--a-color-fg);
   color: var(--a-color-bg);
   font-size: 2rem;
@@ -312,6 +270,6 @@ onUnmounted(() => {
   box-shadow: var(--a-shadow-dropdown);
 }
 .a-fab:hover {
-  box-shadow: 7px 7px 0 var(--a-color-fg);
+  box-shadow: none;
 }
 </style>

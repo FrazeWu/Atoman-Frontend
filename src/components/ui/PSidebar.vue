@@ -10,31 +10,13 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
 import { useSidebar } from '@/composables/useSidebar'
 
-const props = defineProps<{
+defineProps<{
   ariaLabel?: string
-  collapsed?: boolean
 }>()
 
-const emit = defineEmits<{
-  (e: 'update:collapsed', value: boolean): void
-}>()
-
-const { sidebarCollapsed, setSidebarCollapsed } = useSidebar()
-
-watch(sidebarCollapsed, (collapsed) => {
-  if (props.collapsed !== undefined && props.collapsed !== collapsed) {
-    emit('update:collapsed', collapsed)
-  }
-}, { immediate: true })
-
-watch(() => props.collapsed, (collapsed) => {
-  if (collapsed !== undefined && collapsed !== sidebarCollapsed.value) {
-    setSidebarCollapsed(collapsed)
-  }
-})
+const { sidebarCollapsed } = useSidebar()
 </script>
 
 <style scoped>

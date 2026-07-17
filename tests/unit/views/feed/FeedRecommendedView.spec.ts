@@ -1,8 +1,14 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedRecommendedView from '@/views/feed/FeedRecommendedView.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
+
+const source = readFileSync(resolve(__dirname, '../../../../src/views/feed/FeedRecommendedView.vue'), 'utf8')
 
 const routerPush = vi.fn()
 const routerReplace = vi.fn()
@@ -43,6 +49,132 @@ describe('FeedRecommendedView', () => {
     routeQuery.category = undefined
     routeQuery.theme = undefined
     setActivePinia(createPinia())
+  })
+
+  it('uses the shared segmented control size for category filters', () => {
+    expect(source).not.toContain('.category-segmented-control :deep(.p-segmented-control-item)')
+  })
+
+  it('shows subscribe action for unsubscribed recommended channels and marks them subscribed after click', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'chan-1',
+            title: 'Channel 1',
+            summary: 'Summary Channel 1',
+            target_path: '/feed/channel/1',
+          }],
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'isSubscribedToChannel').mockResolvedValue(false)
+    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToChannel').mockResolvedValue(true)
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: {
+            props: ['title'],
+            template: '<div class="p-empty">{{ title }}</div>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const channelTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '频道')
+    expect(channelTab).toBeDefined()
+    await channelTab?.trigger('click')
+    await flushPromises()
+
+    const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]')
+    expect(subscribeButton.exists()).toBe(true)
+    expect(subscribeButton.text()).toContain('订阅')
+
+    await subscribeButton.trigger('click')
+    await flushPromises()
+
+    expect(subscribeSpy).toHaveBeenCalledWith('chan-1')
+    expect(wrapper.find('[data-test="feed-source-subscribe"]').text()).toContain('已订阅')
+  })
+
+  it('does not trigger a second subscribe for already subscribed recommended channels', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({
+          data: [{
+            id: 'chan-1',
+            title: 'Channel 1',
+            summary: 'Summary Channel 1',
+            target_path: '/feed/channel/1',
+          }],
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'isSubscribedToChannel').mockResolvedValue(true)
+    const subscribeSpy = vi.spyOn(feedStore, 'subscribeToChannel').mockResolvedValue(true)
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: {
+            props: ['title'],
+            template: '<div class="p-empty">{{ title }}</div>',
+          },
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const channelTab = wrapper.findAll('.segmented-option').find((tab) => tab.text() === '频道')
+    expect(channelTab).toBeDefined()
+    await channelTab?.trigger('click')
+    await flushPromises()
+
+    const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]')
+    expect(subscribeButton.exists()).toBe(true)
+    expect(subscribeButton.text()).toContain('已订阅')
+    expect(subscribeButton.attributes('disabled')).toBeDefined()
+
+    await subscribeButton.trigger('click')
+    await flushPromises()
+
+    expect(subscribeSpy).not.toHaveBeenCalled()
   })
 
   it('mounts and defaults to hot mode and fetches recommendations', async () => {
@@ -132,6 +264,39 @@ describe('FeedRecommendedView', () => {
 
     await flushPromises()
     expect(wrapper.text()).toContain('推荐内容加载失败')
+  })
+
+  it('renders four filter groups inside one compact wrap container', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/recommend/themes')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/articles')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/channels')) {
+        return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ error: 'unexpected' }), { status: 404 })
+    })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: true,
+          PEmpty: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    const compactWrap = wrapper.find('[data-test="feed-filter-wrap"]')
+    expect(compactWrap.exists()).toBe(true)
+    expect(compactWrap.findAll('[data-test="feed-filter-group"]')).toHaveLength(4)
   })
 
   it('restores route query and requests themes and recommendations with category and theme', async () => {
@@ -435,7 +600,7 @@ describe('FeedRecommendedView', () => {
 
     expect(wrapper.text()).toContain('Article Mixed')
     expect(wrapper.text()).toContain('Channel Mixed')
-    expect(wrapper.text()).toContain('综合')
+    expect(wrapper.text()).toContain('混合推荐')
   })
 
   it('does not classify plain articles as videos only because the title contains video keywords', async () => {

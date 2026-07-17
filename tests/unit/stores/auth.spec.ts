@@ -202,6 +202,17 @@ describe('auth store', () => {
     expect(auth.lastAuthError).toBe('无法连接服务器，请检查网络后重试')
   })
 
+  it('maps invalid site handle errors to a human-readable register message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      error: 'Invalid site handle',
+    }), { status: 400 }))
+
+    const auth = useAuthStore()
+
+    await expect(auth.register('Alice', 'alice@example.com', 'secret')).rejects.toThrow('用户名只能使用小写字母、数字或连字符')
+    expect(auth.lastAuthError).toBe('用户名只能使用小写字母、数字或连字符')
+  })
+
   it('accepts a successful register response with uuid-based user payload', async () => {
     const token = makeToken(3600)
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({

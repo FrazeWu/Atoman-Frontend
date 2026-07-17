@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultSiteAccess,
+  getBlogCommentMode,
   getFeedFullTextMode,
   isForumCategoryRequestEnabled,
   getVisibleModuleKeys,
@@ -12,8 +13,8 @@ describe('site access config', () => {
   it('defaults every module and feature to enabled', () => {
     const access = mergeSiteAccess(null)
 
-    expect(getVisibleModuleKeys(access)).toEqual(['feed', 'media', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
-    expect(access.modules.media.enabled).toBe(true)
+    expect(getVisibleModuleKeys(access)).toEqual(['feed', 'blog', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
+    expect(access.modules.blog.enabled).toBe(true)
     expect(isModuleFeatureEnabled(access, 'blog', 'post.create')).toBe(true)
     expect(isModuleFeatureEnabled(access, 'podcast', 'podcast.publish')).toBe(true)
     expect(isModuleFeatureEnabled(access, 'video', 'video.publish')).toBe(true)
@@ -65,13 +66,13 @@ describe('site access config', () => {
     expect(isModuleFeatureEnabled(access, 'forum', 'topic.create')).toBe(false)
   })
 
-  it('provides structured defaults for feed and forum settings', () => {
+  it('provides structured defaults for feed blog and forum settings', () => {
     const access = mergeSiteAccess(null)
 
     expect(access.settings.feed.allow_manage_sources).toBe(true)
     expect(access.settings.feed.allow_add_source).toBe(true)
     expect(getFeedFullTextMode(access)).toBe('per_source')
-    expect(access.settings).not.toHaveProperty('blog')
+    expect(getBlogCommentMode(access)).toBe('authenticated')
     expect(isForumCategoryRequestEnabled(access)).toBe(true)
     expect(access.settings.forum.moderator_permissions.review_category_request).toBe(true)
     expect(access.settings.forum.moderator_permissions.pin_topic).toBe(true)

@@ -4,48 +4,68 @@ import PChoiceField from '@/components/ui/PChoiceField.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { usePlayerStore } from '@/stores/player'
+import type { MusicSheetLayer } from './musicSheetTypes'
 import {
   buildUpdateAlbumEdit,
+  createAlbumDiscussion,
+  deleteAlbumDiscussion,
   getAlbumRevision,
+  getArtistRevision,
+  listAlbumDiscussions,
   listAlbumRevisions,
+  listArtistRevisions,
+  replyAlbumDiscussion,
   revertAlbumRevision,
   submitMusicEdit,
   updateMusicArtist,
+  type MusicDiscussion,
   type MusicRevisionSummary,
   type MusicSource,
 } from '@/api/musicV1'
 
-const { state, closeNestedAction, refreshAlbum } = useMusicDrawers()
-const player = usePlayerStore()
+type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
+const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
+const { state, closeNestedAction, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
+const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
+  ? payload.value as Record<string, unknown>
+  : {})
+const albumId = computed(() => String(payloadRecord.value.albumId ?? state.value.albumId ?? '') || null)
+const artistId = computed(() => String(payloadRecord.value.artistId ?? state.value.artistId ?? '') || null)
+const currentAction = computed(() => props.layer?.payload.action ?? state.value.nestedAction)
 const isOpen = computed(() => (
-  state.value.nestedAction === 'revise'
-  || state.value.nestedAction === 'history'
-  || state.value.nestedAction === 'discussion'
-  || state.value.nestedAction === 'revise_artist'
+  currentAction.value === 'revise'
+  || currentAction.value === 'history'
+  || currentAction.value === 'artist_history'
+  || currentAction.value === 'discussion'
+  || currentAction.value === 'revise_artist'
 ))
 const sheetIndex = computed(() => {
+  if (props.layer) return props.layerIndex
   let count = 0
   if (state.value.artistId !== null) count++
   if (state.value.albumId !== null) count++
   return count
 })
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentAction = () => closeNestedAction(props.layer?.key)
 
 const titleMap: Record<string, string> = {
   revise: '修改专辑',
   revise_artist: '修改艺术家',
   history: '版本历史',
+  artist_history: '版本历史',
   discussion: '讨论'
 }
 
-const currentAction = computed(() => state.value.nestedAction)
-const displayTitle = computed(() => titleMap[state.value.nestedAction || ''] || '操作')
+const displayTitle = computed(() => titleMap[currentAction.value || ''] || 'Action')
 const subtitleMap: Record<string, string> = {
   revise: '补充专辑信息。',
   revise_artist: '',
   history: '查看各个版本的修改内容，并恢复到需要的版本。',
+  artist_history: '查看各个版本的修改内容。',
   discussion: '',
 }
 
@@ -79,21 +99,22 @@ const revisions = ref<MusicRevisionSummary[]>([])
 const selectedRevision = ref<MusicRevisionSummary | null>(null)
 const previousRevision = ref<MusicRevisionSummary | null>(null)
 const diffLoading = ref(false)
-const discussionSongId = computed(() => {
-  if (player.currentSong?.media_kind === 'feed_item') return ''
-  return player.currentSong?.id ? String(player.currentSong.id) : ''
-})
+const discussionLoading = ref(false)
+const discussions = ref<MusicDiscussion[]>([])
+const discussionDraft = ref('')
+const replyDrafts = reactive<Record<string, string>>({})
+const replyingToId = ref<string | null>(null)
 
-const isArtistForm = computed(() => state.value.nestedAction === 'revise_artist')
-const isAlbumForm = computed(() => state.value.nestedAction === 'revise')
+const isArtistForm = computed(() => currentAction.value === 'revise_artist')
+const isAlbumForm = computed(() => currentAction.value === 'revise')
 const canSubmit = computed(() => !submitting.value && (isArtistForm.value || isAlbumForm.value))
 const albumTypeOptions = [
-  { label: '专辑', value: 'album' },
+  { label: 'Album', value: 'album' },
   { label: 'EP', value: 'ep' },
-  { label: '单曲', value: 'single' },
+  { label: 'Single', value: 'single' },
 ]
 
-watch(() => state.value.nestedAction, () => {
+watch(() => [currentAction.value, albumId.value, artistId.value] as const, () => {
   errorMessage.value = ''
   successMessage.value = ''
   artistDraft.name = ''
@@ -114,11 +135,41 @@ watch(() => state.value.nestedAction, () => {
   selectedRevision.value = null
   previousRevision.value = null
   diffLoading.value = false
+  discussionLoading.value = false
+  discussions.value = []
+  discussionDraft.value = ''
+  replyingToId.value = null
+  for (const key of Object.keys(replyDrafts)) delete replyDrafts[key]
 
-  if (state.value.nestedAction === 'history' && state.value.albumId) {
-    void loadAlbumHistory(state.value.albumId)
+  if (currentAction.value === 'history' && albumId.value) {
+    void loadAlbumHistory(albumId.value)
+  }
+  if (currentAction.value === 'artist_history' && artistId.value) {
+    void loadArtistHistory(artistId.value)
+  }
+  if (currentAction.value === 'discussion' && albumId.value) {
+    void loadAlbumDiscussions(albumId.value)
   }
 }, { immediate: true })
+
+function normalizeDiscussionList(input: MusicDiscussion[]) {
+  return input.map((item) => ({
+    ...item,
+    replies: Array.isArray(item.replies) ? item.replies : [],
+  }))
+}
+
+async function loadAlbumDiscussions(albumId: string) {
+  discussionLoading.value = true
+  errorMessage.value = ''
+  try {
+    discussions.value = normalizeDiscussionList(await listAlbumDiscussions(albumId))
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载讨论失败'
+  } finally {
+    discussionLoading.value = false
+  }
+}
 
 function trimmed(value: string) {
   return value.trim()
@@ -149,8 +200,20 @@ async function loadAlbumHistory(albumId: string) {
   }
 }
 
+async function loadArtistHistory(artistId: string) {
+  revisionLoading.value = true
+  errorMessage.value = ''
+  try {
+    revisions.value = await listArtistRevisions(artistId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
+  } finally {
+    revisionLoading.value = false
+  }
+}
+
 async function handleRevert(version: number) {
-  if (!state.value.albumId) {
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -159,10 +222,10 @@ async function handleRevert(version: number) {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await revertAlbumRevision(state.value.albumId, version, `回滚到版本 v${version}`)
+    await revertAlbumRevision(albumId.value, version, `回滚到版本 v${version}`)
     successMessage.value = `已回滚到版本 v${version}`
     refreshAlbum()
-    await loadAlbumHistory(state.value.albumId)
+    await loadAlbumHistory(albumId.value)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '恢复失败，请稍后重试'
   } finally {
@@ -170,9 +233,110 @@ async function handleRevert(version: number) {
   }
 }
 
+function formatDiscussionAuthor(discussion: MusicDiscussion) {
+  return discussion.author?.display_name || discussion.author?.username || discussion.author_id
+}
+
+function toggleReply(discussionId: string) {
+  replyingToId.value = replyingToId.value === discussionId ? null : discussionId
+}
+
+async function handleCreateDiscussion() {
+  if (!albumId.value) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  const content = trimmed(discussionDraft.value)
+  if (!content) {
+    errorMessage.value = '请输入讨论内容'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await createAlbumDiscussion(albumId.value, content)
+    discussionDraft.value = ''
+    successMessage.value = '讨论已发布'
+    await loadAlbumDiscussions(albumId.value)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '发布讨论失败'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleReplyDiscussion(discussionId: string) {
+  if (!albumId.value) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  const content = trimmed(replyDrafts[discussionId] || '')
+  if (!content) {
+    errorMessage.value = '请输入回复内容'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await replyAlbumDiscussion(albumId.value, discussionId, content)
+    replyDrafts[discussionId] = ''
+    replyingToId.value = null
+    successMessage.value = '回复已发送'
+    await loadAlbumDiscussions(albumId.value)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '发送回复失败'
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleDeleteDiscussion(discussionId: string) {
+  if (!albumId.value) {
+    errorMessage.value = '缺少专辑 ID'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+  try {
+    await deleteAlbumDiscussion(albumId.value, discussionId)
+    successMessage.value = '讨论已删除'
+    await loadAlbumDiscussions(albumId.value)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '删除讨论失败'
+  } finally {
+    submitting.value = false
+  }
+}
 
 async function viewRevisionDiff(revision: MusicRevisionSummary) {
-  if (!state.value.albumId) {
+	if (currentAction.value === 'artist_history') {
+		if (!artistId.value) {
+			errorMessage.value = '缺少艺术家 ID'
+			return
+		}
+		diffLoading.value = true
+		errorMessage.value = ''
+		try {
+			selectedRevision.value = await getArtistRevision(artistId.value, revision.version_number)
+			previousRevision.value = revision.previous_revision_id
+				? await getArtistRevision(artistId.value, revision.version_number - 1)
+				: null
+		} catch (error) {
+			errorMessage.value = error instanceof Error ? error.message : '加载修改内容失败'
+		} finally {
+			diffLoading.value = false
+		}
+		return
+	}
+  if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
   }
@@ -180,9 +344,9 @@ async function viewRevisionDiff(revision: MusicRevisionSummary) {
   diffLoading.value = true
   errorMessage.value = ''
   try {
-    selectedRevision.value = await getAlbumRevision(state.value.albumId, revision.version_number)
+    selectedRevision.value = await getAlbumRevision(albumId.value, revision.version_number)
     previousRevision.value = revision.previous_revision_id
-      ? await getAlbumRevision(state.value.albumId, revision.version_number - 1)
+      ? await getAlbumRevision(albumId.value, revision.version_number - 1)
       : null
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载修改内容失败'
@@ -210,6 +374,19 @@ function summarizeRevisionDiff(current: MusicRevisionSummary | null, previous: M
 
   const currentSnapshot = normalizeSnapshot(current.content_snapshot)
   const previousSnapshot = normalizeSnapshot(previous?.content_snapshot)
+	if (current.content_type === 'artist') {
+		const currentArtist = normalizeSnapshot(currentSnapshot.artist)
+		const previousArtist = normalizeSnapshot(previousSnapshot.artist)
+		const labels: Record<string, string> = {
+			name: '名字',
+			bio: '简介',
+			nationality: '地区',
+			image_url: '头像',
+		}
+		return Object.entries(labels)
+			.filter(([key]) => currentArtist[key] !== previousArtist[key])
+			.map(([key, label]) => `${label}：${String(previousArtist[key] ?? '空')} -> ${String(currentArtist[key] ?? '空')}`)
+	}
   const currentAlbum = normalizeSnapshot(currentSnapshot.album)
   const previousAlbum = normalizeSnapshot(previousSnapshot.album)
   const currentSongs = Array.isArray(currentSnapshot.songs) ? currentSnapshot.songs as Array<Record<string, unknown>> : []
@@ -262,7 +439,7 @@ async function submitEdit() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  const action = state.value.nestedAction
+  const action = currentAction.value
   const reason = isArtistForm.value
     ? trimmed(artistDraft.reason)
     : trimmed(albumDraft.reason)
@@ -274,10 +451,10 @@ async function submitEdit() {
   submitting.value = true
   try {
     if (action === 'revise_artist') {
-      if (!state.value.artistId) {
+      if (!artistId.value) {
         throw new Error('缺少艺术家 ID')
       }
-      await updateMusicArtist(state.value.artistId, {
+      await updateMusicArtist(artistId.value, {
         name: trimmed(artistDraft.name) || undefined,
         bio: trimmed(artistDraft.bio) || undefined,
         image_url: trimmed(artistDraft.imageUrl) || undefined,
@@ -285,10 +462,10 @@ async function submitEdit() {
         birth_year: optionalNumber(artistDraft.birthYear),
       })
     } else if (action === 'revise') {
-      if (!state.value.albumId) {
+      if (!albumId.value) {
         throw new Error('缺少专辑 ID')
       }
-      await submitMusicEdit(buildUpdateAlbumEdit(state.value.albumId, {
+      await submitMusicEdit(buildUpdateAlbumEdit(albumId.value, {
         title: trimmed(albumDraft.title) || undefined,
         release_date: trimmed(albumDraft.releaseDate) || undefined,
         description: trimmed(albumDraft.description) || undefined,
@@ -299,7 +476,7 @@ async function submitEdit() {
     }
 
     successMessage.value = '已保存'
-    closeNestedAction()
+    closeCurrentAction()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {
@@ -311,12 +488,17 @@ async function submitEdit() {
 <template>
   <PSheet
     :show="isOpen"
-    @close="closeNestedAction"
+    :title="layer?.title ?? displayTitle"
+    @close="closeCurrentAction"
     width="500px"
     :index="sheetIndex"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
   >
     <div class="drawer-header">
-      <p class="eyebrow">音乐资料</p>
+      <p class="eyebrow">Music Wiki</p>
       <h3 class="title">{{ displayTitle }}</h3>
       <p v-if="subtitleMap[currentAction || '']" class="subtitle">{{ subtitleMap[currentAction || ''] }}</p>
     </div>
@@ -327,7 +509,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">基础</p>
+              <p class="section-kicker">Basic</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -360,7 +542,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">形象</p>
+              <p class="section-kicker">Portrait</p>
               <h4>形象信息</h4>
             </div>
           </div>
@@ -379,7 +561,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">档案</p>
+              <p class="section-kicker">Archive</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -409,7 +591,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">来源</p>
+              <p class="section-kicker">Source</p>
               <h4>来源</h4>
             </div>
           </div>
@@ -456,7 +638,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">基础</p>
+              <p class="section-kicker">Basic</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -486,7 +668,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">档案</p>
+              <p class="section-kicker">Archive</p>
               <h4>基本信息</h4>
             </div>
           </div>
@@ -515,7 +697,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">来源</p>
+              <p class="section-kicker">Source</p>
               <h4>来源</h4>
             </div>
           </div>
@@ -558,7 +740,7 @@ async function submitEdit() {
       </form>
 
       <!-- History placeholder -->
-      <div v-else-if="currentAction === 'history'" class="history-panel">
+      <div v-else-if="currentAction === 'history' || currentAction === 'artist_history'" class="history-panel">
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-else-if="revisionLoading" class="history-state">正在加载版本...</p>
         <p v-else-if="!revisions.length" class="history-state">暂无版本历史。</p>
@@ -584,6 +766,7 @@ async function submitEdit() {
               查看修改
             </button>
             <button
+				v-if="currentAction === 'history'"
               class="paper-submit history-revert"
               type="button"
               :data-test="`history-revert-button-${revision.version_number}`"
@@ -601,7 +784,7 @@ async function submitEdit() {
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
-              <p class="section-kicker">修改</p>
+              <p class="section-kicker">Diff</p>
               <h4>v{{ selectedRevision.version_number }} 修改内容</h4>
             </div>
           </div>
@@ -616,14 +799,85 @@ async function submitEdit() {
       </div>
 
       <div v-else-if="currentAction === 'discussion'" class="discussion-panel">
-        <CommentSection
-          v-if="discussionSongId"
-          :key="discussionSongId"
-          :target="{ kind: 'music_song', resourceId: discussionSongId }"
-          noun="讨论"
-          :current-time="() => Math.floor(player.currentTime || 0)"
-          @seek="player.seek"
-        />
+        <form class="discussion-composer" data-test="discussion-create-submit" @submit.prevent="handleCreateDiscussion">
+          <PTextarea
+            v-model="discussionDraft"
+            data-test="discussion-create-input"
+            :rows="4"
+            label="添加讨论"
+            placeholder="写下你对这张专辑的看法"
+          />
+          <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发布</button>
+        </form>
+
+        <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
+        <p v-if="discussionLoading" class="history-state">正在加载讨论...</p>
+        <p v-else-if="!discussions.length" class="history-state">还没有讨论</p>
+
+        <div v-for="discussion in discussions" :key="discussion.id" class="discussion-thread">
+          <div class="discussion-card">
+            <div class="history-item__head">
+              <strong>{{ formatDiscussionAuthor(discussion) }}</strong>
+              <span class="history-meta">{{ formatRevisionTime(discussion.created_at) }}</span>
+            </div>
+            <div class="history-summary">{{ discussion.content }}</div>
+            <div class="history-actions">
+              <button
+                class="paper-action history-diff"
+                type="button"
+                :data-test="`discussion-reply-toggle-${discussion.id}`"
+                @click="toggleReply(discussion.id)"
+              >
+                {{ replyingToId === discussion.id ? '取消回复' : '回复' }}
+              </button>
+              <button
+                v-if="discussion.can_delete"
+                class="paper-action history-diff"
+                type="button"
+                :data-test="`discussion-delete-button-${discussion.id}`"
+                :disabled="submitting"
+                @click="handleDeleteDiscussion(discussion.id)"
+              >
+                删除
+              </button>
+            </div>
+
+            <form
+              v-if="replyingToId === discussion.id"
+              class="discussion-reply-form"
+              :data-test="`discussion-reply-submit-${discussion.id}`"
+              @submit.prevent="handleReplyDiscussion(discussion.id)"
+            >
+              <PTextarea
+                v-model="replyDrafts[discussion.id]"
+                :data-test="`discussion-reply-input-${discussion.id}`"
+                :rows="3"
+                label="回复内容"
+              />
+              <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发送回复</button>
+            </form>
+          </div>
+
+          <div v-for="reply in discussion.replies" :key="reply.id" class="discussion-reply">
+            <div class="history-item__head">
+              <strong>{{ formatDiscussionAuthor(reply) }}</strong>
+              <span class="history-meta">{{ formatRevisionTime(reply.created_at) }}</span>
+            </div>
+            <div class="history-summary">{{ reply.content }}</div>
+            <div v-if="reply.can_delete" class="history-actions">
+              <button
+                class="paper-action history-diff"
+                type="button"
+                :data-test="`discussion-delete-button-${reply.id}`"
+                :disabled="submitting"
+                @click="handleDeleteDiscussion(reply.id)"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </PSheet>
@@ -631,7 +885,7 @@ async function submitEdit() {
 
 <style scoped>
 .drawer-header { margin: -2.5rem -2.5rem 0; padding: 1.8rem 2rem 1rem; border-bottom: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); }
-.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.78rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
 .title { font-family: var(--a-font-serif); font-size: 1.7rem; margin: 0; }
 .subtitle { margin: 0.55rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 28rem; }
 .drawer-body { margin: 0 -2.5rem; padding: 1.6rem 2rem 2rem; }
@@ -651,11 +905,11 @@ async function submitEdit() {
 .upload-trigger-dot {
   width: 0.45rem;
   height: 0.45rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--a-color-ink) 70%, transparent);
   flex-shrink: 0;
 }
-.section-kicker { margin: 0 0 0.2rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.section-kicker { margin: 0 0 0.2rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
 .section-heading h4 { margin: 0; font-size: 1.05rem; font-family: var(--a-font-serif); }
 .paper-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.4rem; }
 .paper-input-group { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -666,8 +920,8 @@ async function submitEdit() {
   gap: 0.45rem;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-ink-soft);
 }
 .paper-input {
@@ -687,20 +941,20 @@ async function submitEdit() {
 }
 .paper-textarea { resize: vertical; min-height: 6rem; line-height: 1.65; }
 .source-row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1rem; }
-.form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 800; font-size: 0.9rem; }
-.form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 800; font-size: 0.9rem; }
+.form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 500; font-size: 0.9rem; }
+.form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 500; font-size: 0.9rem; }
 .paper-submit {
   width: 100%;
   border: 0;
   border-radius: 0px;
   padding: 0.95rem 1.5rem;
-  font-weight: 800;
+  font-weight: 500;
   background: var(--a-color-accent-confirm);
   color: var(--a-color-paper);
   cursor: pointer;
   font-family: var(--a-font-meta);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   transition: background-color 0.15s ease;
 }
 .paper-submit:hover {
@@ -747,7 +1001,7 @@ async function submitEdit() {
   font-size: 0.72rem;
   color: var(--a-color-accent-confirm);
   font-family: var(--a-font-meta);
-  font-weight: 800;
+  font-weight: 500;
 }
 .history-state {
   margin: 0;

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -16,13 +17,12 @@ const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
 const showPublishConfirm = ref(false)
-const publishedVideoId = ref('')
-const publishNavigationFailed = ref(false)
 const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
@@ -46,7 +46,7 @@ const form = ref({
   channel_id: '' as string,
   title: '',
   description: '',
-  storage_type: 'external' as 'local' | 'external',
+  storage_type: 'local' as 'local' | 'external',
   video_url: '',
   thumbnail_url: '',
   visibility: 'public' as 'public' | 'followers' | 'private',
@@ -233,11 +233,17 @@ async function onCoverFileChange(e: Event) {
 // ── Form logic ────────────────────────────────────────────
 
 function validate(): boolean {
+  errorMsg.value = ''
   titleError.value = form.value.title.trim() ? '' : '请填写视频标题'
   urlError.value = form.value.video_url.trim() ? '' : (
     form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
   )
-  return !titleError.value && !urlError.value
+  if (titleError.value || urlError.value) return false
+  if (!form.value.channel_id || selectedCollectionIds.value.length === 0) {
+    errorMsg.value = '请先创建或选择合集'
+    return false
+  }
+  return true
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -274,31 +280,21 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
 
 async function loadChannels() {
   if (!authStore.user) return
-  const userID = authStore.user.uuid ?? authStore.user.id
-  if (!userID) return
+  await defaultChannelsStore.load()
   const res = await fetch(
-    `${api.url}/blog/channels?user_id=${encodeURIComponent(String(userID))}`,
+    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } }
   )
   if (res.ok) {
     const data = await res.json()
-    const rows: Channel[] = data.data ?? data
-    channels.value = rows.filter(channel => channel.content_type === 'video')
+    channels.value = data.data ?? data
     const fromQuery = typeof route.query.channel === 'string' ? route.query.channel : ''
     if (!form.value.channel_id && fromQuery && channels.value.some(ch => ch.id === fromQuery)) {
       form.value.channel_id = fromQuery
     }
-    if (!form.value.channel_id) {
-      const defaultRes = await fetch(`${api.url}/users/me/default-channels`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (defaultRes.ok) {
-        const defaultData = await defaultRes.json()
-        const defaultChannelID = defaultData.data?.video?.id
-        if (defaultChannelID && channels.value.some(channel => channel.id === defaultChannelID)) {
-          form.value.channel_id = defaultChannelID
-        }
-      }
+    const defaultChannelId = defaultChannelsStore.channelFor('video')?.id || ''
+    if (!form.value.channel_id && defaultChannelId && channels.value.some(ch => ch.id === defaultChannelId)) {
+      form.value.channel_id = defaultChannelId
     }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id
@@ -362,7 +358,6 @@ async function loadVideo() {
     visibility: v.visibility,
     tags: v.tags?.map(t => t.name).join(', ') ?? '',
   }
-  await loadCollections(form.value.channel_id)
   selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
 }
 
@@ -390,46 +385,18 @@ async function saveDraft() {
 
 function requestPublish() {
   if (!validate()) return
-  errorMsg.value = ''
   showPublishConfirm.value = true
 }
 
-function cancelPublish() {
-  if (publishing.value) return
-  showPublishConfirm.value = false
-}
-
 async function doPublish() {
-  if (publishing.value) return
+  showPublishConfirm.value = false
   publishing.value = true
   errorMsg.value = ''
   try {
-    if (!publishedVideoId.value) {
-      try {
-        const video = await apiSave(buildPayload('published'))
-        publishedVideoId.value = isEdit.value ? String(route.params.id) : video.id
-      } catch (error: any) {
-        errorMsg.value = error?.error || '发布失败，请重试'
-        return
-      }
-    }
-
-    try {
-      const failure = await router.push(`/videos/watch/${publishedVideoId.value}`)
-      if (isNavigationFailure(failure)) {
-        publishNavigationFailed.value = true
-        errorMsg.value = '视频已发布，但跳转失败，请重试'
-        showPublishConfirm.value = true
-        return
-      }
-      publishNavigationFailed.value = false
-      showPublishConfirm.value = false
-    } catch (error) {
-      console.error('Failed to navigate after publishing video:', error)
-      publishNavigationFailed.value = true
-      errorMsg.value = '视频已发布，但跳转失败，请重试'
-      showPublishConfirm.value = true
-    }
+    const v = await apiSave(buildPayload('published'))
+    router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
+  } catch (e: any) {
+    errorMsg.value = e?.error || '发布失败，请重试'
   } finally {
     publishing.value = false
   }
@@ -612,14 +579,14 @@ async function doPublish() {
     <PConfirm
       :show="showPublishConfirm"
       title="确认发布视频"
-      :message="errorMsg || `《${form.title || '未命名视频'}》将对${
+      :message="`《${form.title || '未命名视频'}》将对${
         form.visibility === 'public' ? '所有人' :
         form.visibility === 'followers' ? '关注者' : '仅自己'
       }可见，发布后观众可立即观看。`"
-      :confirm-text="publishNavigationFailed && !publishing ? '查看视频' : publishing ? '发布中...' : '立即发布'"
+      confirm-text="立即发布"
       cancel-text="再想想"
       @confirm="doPublish"
-      @cancel="cancelPublish"
+      @cancel="showPublishConfirm = false"
     />
   </div>
 </template>
@@ -648,14 +615,14 @@ async function doPublish() {
   padding: 1.25rem 1.5rem;
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .ve-section-title {
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--a-color-muted, #6b7280);
   margin: 0 0 0.25rem 0;
 }
@@ -679,7 +646,7 @@ async function doPublish() {
   padding: 0.6rem 0.75rem;
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 0.8rem;
 }
 .ve-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
@@ -702,7 +669,7 @@ async function doPublish() {
   gap: 0.35rem;
   padding: 2rem 1rem;
   border: 2px dashed var(--a-color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   text-align: center;
@@ -741,7 +708,7 @@ async function doPublish() {
   padding: 1.25rem;
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 /* Cover */
@@ -758,7 +725,7 @@ async function doPublish() {
   width: 100%;
   aspect-ratio: 16/9;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid var(--a-color-border, #e5e7eb);
 }
 
@@ -787,7 +754,7 @@ async function doPublish() {
   overflow: auto;
   padding: 0.25rem;
   border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--a-color-bg, #fff);
 }
 
@@ -808,7 +775,7 @@ async function doPublish() {
   position: relative;
   width: 100%;
   aspect-ratio: 16/9;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--a-color-border, #f3f4f6);
 }
@@ -838,7 +805,7 @@ async function doPublish() {
   width: 100%;
   aspect-ratio: 16/9;
   border: 2px dashed var(--a-color-border, #e5e7eb);
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }

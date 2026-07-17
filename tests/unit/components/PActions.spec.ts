@@ -49,7 +49,7 @@ describe('P action components', () => {
     })
 
     expect(wrapper.text()).toContain('View Channel')
-    expect(wrapper.text()).toContain('→')
+    expect(wrapper.text()).toContain('↗')
     expect(wrapper.findComponent({ name: 'RouterLink' }).exists()).toBe(true)
   })
 

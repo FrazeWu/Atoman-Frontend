@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
@@ -12,19 +12,18 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
 import type { PodcastEpisode, Channel, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
 const showPublishConfirm = ref(false)
-const publishedEpisodeId = ref('')
-const publishNavigationFailed = ref(false)
-const publishNavigationError = '单集已发布，但跳转失败，请重试'
 const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
@@ -51,6 +50,7 @@ const form = ref({
   channel_id: '' as string,
   title: '',
   shownotes: '',
+  visibility: 'public' as 'public' | 'followers' | 'private',
   audio_url: '',
   episode_cover_url: '',
   season_number: 1,
@@ -61,6 +61,12 @@ const channelOptions = computed(() => [
   { label: '请选择节目频道', value: '' },
   ...channels.value.map(ch => ({ label: ch.name, value: ch.id })),
 ])
+
+const visibilityOptions = [
+  { label: '公开', value: 'public' },
+  { label: '仅订阅', value: 'followers' },
+  { label: '私有', value: 'private' },
+]
 
 const selectedCollection = computed(() =>
   collections.value.find(collection => collection.id === selectedCollectionId.value) || null,
@@ -73,6 +79,10 @@ const effectiveCoverLabel = computed(() =>
 )
 const canEditMetadata = computed(() => isEdit.value || uploadStarted.value)
 const audioBusy = computed(() => audioUploading.value || audioProcessing.value)
+const selectedDefaultChannel = computed(() => defaultChannelsStore.channelFor('podcast'))
+const isCurrentDefaultChannel = computed(() => (
+  !!form.value.channel_id && selectedDefaultChannel.value?.id === form.value.channel_id
+))
 
 // ── Upload helpers ─────────────────────────────────────────
 
@@ -281,10 +291,7 @@ async function onCoverFileChange(e: Event) {
 function validate(): boolean {
   titleError.value = form.value.title.trim() ? '' : '请填写单集标题'
   audioError.value = form.value.audio_url.trim() ? '' : '请先上传音频文件'
-  if (!form.value.channel_id) {
-    errorMsg.value = '请选择节目频道'
-  }
-  return !titleError.value && !audioError.value && !!form.value.channel_id
+  return !titleError.value && !audioError.value
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -297,6 +304,7 @@ function buildPayload(status: 'draft' | 'published') {
     season_number: form.value.season_number,
     episode_number: form.value.episode_number,
     status,
+    visibility: form.value.visibility,
     collection_ids: selectedCollectionId.value ? [selectedCollectionId.value] : [],
   }
 }
@@ -349,38 +357,32 @@ async function loadCollections(channelID: string) {
 
 function onChannelChange(value: string) {
   form.value.channel_id = value
-  if (value && errorMsg.value === '请选择节目频道') errorMsg.value = ''
   selectedCollectionId.value = ''
   void loadCollections(value)
 }
 
+async function setCurrentChannelAsDefault() {
+  if (!form.value.channel_id) return
+  await defaultChannelsStore.setDefaultChannel('podcast', form.value.channel_id)
+}
+
 async function loadChannels() {
   if (!authStore.user) return
-  const userID = authStore.user.uuid ?? authStore.user.id
-  if (!userID) return
+  await defaultChannelsStore.load()
   const res = await fetch(
-    `${api.url}/blog/channels?user_id=${encodeURIComponent(String(userID))}`,
+    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
     { headers: { Authorization: `Bearer ${authStore.token}` } },
   )
   if (res.ok) {
     const data = await res.json()
-    const rows: Channel[] = data.data ?? data
-    channels.value = rows.filter(channel => channel.content_type === 'podcast')
+    channels.value = data.data ?? data
     const queryChannelId = selectedChannelFromQuery.value
     if (!form.value.channel_id && queryChannelId && channels.value.some(channel => channel.id === queryChannelId)) {
       form.value.channel_id = queryChannelId
     }
-    if (!form.value.channel_id) {
-      const defaultRes = await fetch(`${api.url}/users/me/default-channels`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (defaultRes.ok) {
-        const defaultData = await defaultRes.json()
-        const defaultChannelID = defaultData.data?.podcast?.id
-        if (defaultChannelID && channels.value.some(channel => channel.id === defaultChannelID)) {
-          form.value.channel_id = defaultChannelID
-        }
-      }
+    const defaultChannelId = defaultChannelsStore.channelFor('podcast')?.id || ''
+    if (!form.value.channel_id && defaultChannelId && channels.value.some(channel => channel.id === defaultChannelId)) {
+      form.value.channel_id = defaultChannelId
     }
     if (!form.value.channel_id && channels.value.length > 0) {
       form.value.channel_id = channels.value[0].id
@@ -402,16 +404,18 @@ async function loadEpisode() {
     channel_id: ep.channel_id,
     title: ep.post?.title || '',
     shownotes: ep.post?.content || '',
+    visibility: ep.post?.visibility || 'public',
     audio_url: ep.audio_url,
     episode_cover_url: ep.episode_cover_url,
     season_number: ep.season_number,
     episode_number: ep.episode_number,
   }
   await loadCollections(ep.channel_id)
-  selectedCollectionId.value = ep.post?.collection_id || ep.collections?.[0]?.id || ''
+  selectedCollectionId.value = ep.post?.collections?.[0]?.id || ep.collections?.[0]?.id || ''
 }
 
 onMounted(async () => {
+  await loadCreatorSettings()
   await loadChannels()
   if (isEdit.value) {
     uploadStarted.value = true
@@ -419,20 +423,28 @@ onMounted(async () => {
   }
 })
 
-async function saveDraft() {
-  if (publishedEpisodeId.value && publishNavigationFailed.value) {
-    errorMsg.value = publishNavigationError
-    showPublishConfirm.value = true
-    return
+async function loadCreatorSettings() {
+  if (isEdit.value) return
+  const res = await fetch(api.podcast.creatorSettings, {
+    headers: { Authorization: `Bearer ${authStore.token}` },
+  }).catch(() => null)
+  if (!res?.ok) return
+  const body = await res.json()
+  if (body.data?.default_visibility) {
+    form.value.visibility = body.data.default_visibility
   }
+}
+
+async function saveDraft() {
   if (!validate()) return
   savingDraft.value = true
   errorMsg.value = ''
   draftSaved.value = false
   try {
     const ep = await apiSave(buildPayload('draft'))
-    if (!isEdit.value) router.replace(`/podcasts/editor/${ep.id}`)
+    void ep
     draftSaved.value = true
+    router.push('/podcasts/creator?tab=manage')
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e: any) {
     errorMsg.value = e?.error || '保存失败，请重试'
@@ -443,46 +455,18 @@ async function saveDraft() {
 
 function requestPublish() {
   if (!validate()) return
-  errorMsg.value = ''
   showPublishConfirm.value = true
 }
 
-function cancelPublish() {
-  if (publishing.value || (publishedEpisodeId.value && publishNavigationFailed.value)) return
-  showPublishConfirm.value = false
-}
-
 async function doPublish() {
-  if (publishing.value) return
+  showPublishConfirm.value = false
   publishing.value = true
   errorMsg.value = ''
   try {
-    if (!publishedEpisodeId.value) {
-      try {
-        const ep = await apiSave(buildPayload('published'))
-        publishedEpisodeId.value = isEdit.value ? String(route.params.id) : ep.id
-      } catch (e: any) {
-        errorMsg.value = e?.error || '发布失败，请重试'
-        return
-      }
-    }
-
-    try {
-      const failure = await router.push(`/podcasts/episode/${publishedEpisodeId.value}`)
-      if (isNavigationFailure(failure)) {
-        publishNavigationFailed.value = true
-        errorMsg.value = publishNavigationError
-        showPublishConfirm.value = true
-        return
-      }
-      publishNavigationFailed.value = false
-      showPublishConfirm.value = false
-    } catch (e) {
-      console.error('Failed to navigate after publishing podcast episode:', e)
-      publishNavigationFailed.value = true
-      errorMsg.value = publishNavigationError
-      showPublishConfirm.value = true
-    }
+    const ep = await apiSave(buildPayload('published'))
+    router.push(`/podcasts/episode/${isEdit.value ? route.params.id : ep.id}`)
+  } catch (e: any) {
+    errorMsg.value = e?.error || '发布失败，请重试'
   } finally {
     publishing.value = false
   }
@@ -576,6 +560,13 @@ async function doPublish() {
               :rows="7"
             />
           </div>
+          <div class="a-field--line">
+            <PSelect
+              v-model="form.visibility"
+              label="可见性"
+              :options="visibilityOptions"
+            />
+          </div>
         </PSurface>
 
         <!-- 归档位置 -->
@@ -588,6 +579,16 @@ async function doPublish() {
               :options="channelOptions"
               @update:model-value="onChannelChange($event as string)"
             />
+          </div>
+          <div v-if="form.channel_id" class="pe-default-channel-row">
+            <button
+              type="button"
+              class="pe-default-channel-btn"
+              :disabled="isCurrentDefaultChannel"
+              @click="setCurrentChannelAsDefault"
+            >
+              {{ isCurrentDefaultChannel ? '当前默认频道' : '设为默认频道' }}
+            </button>
           </div>
 
           <div class="pe-collections">
@@ -674,11 +675,11 @@ async function doPublish() {
     <PConfirm
       :show="showPublishConfirm"
       title="确认发布单集"
-      :message="errorMsg || `《${form.title || '未命名单集'}》将立即对听众公开，发布后可继续编辑。`"
-      :confirm-text="publishNavigationFailed && !publishing ? '查看单集' : publishing ? '发布中...' : '立即发布'"
+      :message="`《${form.title || '未命名单集'}》将立即对听众公开，发布后可继续编辑。`"
+      confirm-text="立即发布"
       cancel-text="再想想"
       @confirm="doPublish"
-      @cancel="cancelPublish"
+      @cancel="showPublishConfirm = false"
     />
   </div>
 </template>
@@ -716,12 +717,33 @@ async function doPublish() {
 .pe-section-title {
   font-family: var(--a-font-serif);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
   margin: 0 0 0.25rem 0;
 }
 
 .pe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+.pe-default-channel-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: -0.25rem;
+}
+
+.pe-default-channel-btn {
+  border: 1px solid var(--a-color-line-soft, #d6d3d1);
+  background: var(--a-color-paper, #fffdf8);
+  color: var(--a-color-ink, #111827);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pe-default-channel-btn:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
 
 .pe-field-label {
   display: block;
@@ -739,7 +761,7 @@ async function doPublish() {
   padding: 0.6rem 0.75rem;
   background: var(--a-color-paper-soft);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 0.8rem;
 }
 .pe-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
@@ -858,7 +880,7 @@ async function doPublish() {
   position: relative;
   width: 100%;
   aspect-ratio: 1/1;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--a-color-paper-soft);
 }

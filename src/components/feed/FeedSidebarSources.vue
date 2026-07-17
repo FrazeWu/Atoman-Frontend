@@ -13,10 +13,49 @@
         </button>
       </header>
 
+      <input
+        v-if="subscriptions.length"
+        v-model="searchQuery"
+        data-test="feed-sidebar-source-search"
+        class="feed-sidebar-sources__search"
+        type="search"
+        placeholder="搜索来源"
+        aria-label="搜索订阅源"
+      />
+
+      <button
+        v-if="subscriptions.length"
+        type="button"
+        data-test="feed-sidebar-all-sources"
+        class="feed-sidebar-sources__all"
+        :class="{ 'is-active': !activeSourceId }"
+        @click="emit('select-all')"
+      >
+        全部订阅
+      </button>
+
+      <button
+        v-if="hasUnreadSources"
+        type="button"
+        data-test="feed-sidebar-unread-only"
+        class="feed-sidebar-sources__filter"
+        :class="{ 'is-active': unreadOnly }"
+        @click="unreadOnly = !unreadOnly"
+      >
+        有未读
+      </button>
+
       <div v-if="visibleGroups.length" class="feed-sidebar-sources__groups">
         <div v-for="group in visibleGroups" :key="group.id" class="feed-sidebar-sources__group">
-          <p class="feed-sidebar-sources__group-title">▱ {{ group.name }}</p>
-          <div class="feed-sidebar-sources__items">
+          <button
+            type="button"
+            class="feed-sidebar-sources__group-title"
+            :data-test="`feed-sidebar-group-${group.id}`"
+            @click="toggleGroup(group.id)"
+          >
+            <span>{{ collapsedGroups.has(group.id) ? '▹' : '▱' }} {{ group.name }}</span>
+          </button>
+          <div v-if="!collapsedGroups.has(group.id)" class="feed-sidebar-sources__items">
             <button
               v-for="sub in group.subscriptions"
               :key="sub.id"
@@ -28,6 +67,20 @@
             >
               <span class="feed-sidebar-sources__badge a-font-meta">{{ sourceBadge(sub) }}</span>
               <span class="feed-sidebar-sources__name">{{ sourceTitle(sub) }}</span>
+              <span
+                v-if="sourceHealthLabel(sub)"
+                class="feed-sidebar-sources__health a-font-meta"
+                :class="`is-${sub.health_status}`"
+              >
+                {{ sourceHealthLabel(sub) }}
+              </span>
+              <span
+                v-if="unreadCount(sub.id) > 0"
+                class="feed-sidebar-sources__count a-font-meta"
+                :data-test="`feed-sidebar-unread-count-${sub.id}`"
+              >
+                {{ unreadCount(sub.id) }}
+              </span>
             </button>
           </div>
         </div>
@@ -39,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { Subscription, SubscriptionGroup } from '@/types'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
@@ -50,17 +103,24 @@ const props = withDefaults(
     groups: SubscriptionGroup[]
     activeSourceId?: string | null
     collapsed?: boolean
+    unreadCounts?: Record<string, number>
   }>(),
   {
     activeSourceId: null,
     collapsed: false,
+    unreadCounts: () => ({}),
   },
 )
 
 const emit = defineEmits<{
   (e: 'select-source', sourceId: string): void
+  (e: 'select-all'): void
   (e: 'manage'): void
 }>()
+
+const searchQuery = ref('')
+const unreadOnly = ref(false)
+const collapsedGroups = ref(new Set<string>())
 
 interface VisibleGroup {
   id: string
@@ -69,16 +129,30 @@ interface VisibleGroup {
 }
 
 const visibleGroups = computed<VisibleGroup[]>(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  const unreadFiltered = unreadOnly.value
+    ? props.subscriptions.filter((sub) => unreadCount(sub.id) > 0)
+    : props.subscriptions
+  const matchingSubscriptions = query
+    ? unreadFiltered.filter((sub) => {
+        const haystack = [
+          sourceTitle(sub),
+          sub.feed_source?.title,
+          sub.feed_source?.rss_url,
+        ].join(' ').toLowerCase()
+        return haystack.includes(query)
+      })
+    : unreadFiltered
   const groupIds = new Set(props.groups.map((group) => group.id))
   const grouped = props.groups
     .map((group) => ({
       id: group.id,
       name: group.name,
-      subscriptions: props.subscriptions.filter((sub) => sub.subscription_group_id === group.id),
+      subscriptions: matchingSubscriptions.filter((sub) => sub.subscription_group_id === group.id),
     }))
     .filter((group) => group.subscriptions.length > 0)
 
-  const unassigned = props.subscriptions.filter(
+  const unassigned = matchingSubscriptions.filter(
     (sub) => !sub.subscription_group_id || !groupIds.has(sub.subscription_group_id),
   )
   if (unassigned.length > 0) {
@@ -104,6 +178,30 @@ function sourceBadge(sub: Subscription): string {
   if (title.includes('周报') || title.includes('newsletter') || rssUrl.includes('newsletter')) return '周报'
 
   return '文章'
+}
+
+function sourceHealthLabel(sub: Subscription): string {
+  if (!sub.health_status || sub.health_status === 'healthy') return ''
+  if (sub.health_status === 'warning') return '警告'
+  return '异常'
+}
+
+const hasUnreadSources = computed(() =>
+  props.subscriptions.some((sub) => unreadCount(sub.id) > 0),
+)
+
+function unreadCount(subscriptionId: string): number {
+  return Math.max(0, props.unreadCounts[subscriptionId] || 0)
+}
+
+function toggleGroup(groupId: string) {
+  const next = new Set(collapsedGroups.value)
+  if (next.has(groupId)) {
+    next.delete(groupId)
+  } else {
+    next.add(groupId)
+  }
+  collapsedGroups.value = next
 }
 </script>
 
@@ -131,7 +229,7 @@ function sourceBadge(sub: Subscription): string {
   margin: 0;
   color: #334155;
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__manage {
@@ -141,7 +239,7 @@ function sourceBadge(sub: Subscription): string {
   color: #0f172a;
   cursor: pointer;
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__manage:hover {
@@ -154,6 +252,55 @@ function sourceBadge(sub: Subscription): string {
   gap: 1rem;
 }
 
+.feed-sidebar-sources__search {
+  width: 100%;
+  border: 1px solid var(--a-color-line);
+  padding: 0.45rem 0.55rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font: inherit;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.feed-sidebar-sources__search:focus {
+  border-color: var(--a-color-ink);
+}
+
+.feed-sidebar-sources__filter {
+  justify-self: start;
+  border: 1px solid var(--a-color-line);
+  padding: 0.28rem 0.5rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.feed-sidebar-sources__all {
+  width: 100%;
+  border: 1px solid var(--a-color-line);
+  padding: 0.48rem 0.55rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.feed-sidebar-sources__all.is-active {
+  background: var(--a-color-paper-wash);
+}
+
+.feed-sidebar-sources__filter.is-active {
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
+}
+
 .feed-sidebar-sources__group {
   display: grid;
   gap: 0.45rem;
@@ -161,10 +308,15 @@ function sourceBadge(sub: Subscription): string {
 
 .feed-sidebar-sources__group-title {
   margin: 0;
-  color: #475569;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--a-color-muted);
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
 }
 
 .feed-sidebar-sources__items {
@@ -174,22 +326,43 @@ function sourceBadge(sub: Subscription): string {
 
 .feed-sidebar-sources__item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.55rem;
   width: 100%;
   border: 0;
   padding: 0.5rem 0.55rem;
   background: transparent;
-  color: #0f172a;
+  color: var(--a-color-fg);
   text-align: left;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: var(--a-radius-none, 4px);
   transition: all 0.2s;
 }
 
+.feed-sidebar-sources__count {
+  min-width: 1.35rem;
+  padding: 0.12rem 0.34rem;
+  background: var(--a-color-ink);
+  color: var(--a-color-paper);
+  font-size: 0.58rem;
+  text-align: center;
+  border-radius: var(--a-radius-none, 4px);
+}
+
+.feed-sidebar-sources__health {
+  color: var(--a-color-accent-destructive);
+  font-size: 0.58rem;
+  letter-spacing: 0;
+}
+
+.feed-sidebar-sources__health.is-error {
+  color: var(--a-color-danger);
+}
+
 .feed-sidebar-sources__item:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: var(--a-color-paper-soft);
+  color: var(--a-color-ink);
 }
 
 .feed-sidebar-sources__item:hover .feed-sidebar-sources__name {
@@ -200,15 +373,16 @@ function sourceBadge(sub: Subscription): string {
 .feed-sidebar-sources__item.is-active {
   background-color: var(--a-color-paper-wash);
   box-shadow: none;
-  font-weight: 800;
+  font-weight: 500;
+  color: var(--a-color-ink);
 }
 
 .feed-sidebar-sources__badge {
   padding: 0.18rem 0.34rem;
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink-muted);
   font-size: 0.58rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 .feed-sidebar-sources__name {
@@ -222,8 +396,8 @@ function sourceBadge(sub: Subscription): string {
 .feed-sidebar-sources__empty {
   margin: 0;
   padding: 0.75rem 0.55rem;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--a-color-surface);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
 }
 </style>

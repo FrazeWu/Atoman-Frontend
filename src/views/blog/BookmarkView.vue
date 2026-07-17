@@ -2,7 +2,10 @@
   <div class="a-page-xl" style="padding-bottom:12rem">
     <div class="a-section-header" style="margin-bottom:2rem">
       <h1 class="a-title a-accent-l">收藏</h1>
-      <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <PSegmentedControl v-model="sortMode" :options="sortOptions" />
+        <PButton size="sm" outline @click="showNewFolder = true">+ 新建收藏夹</PButton>
+      </div>
     </div>
 
     <div style="display:flex;min-height:60vh;gap:2rem">
@@ -36,7 +39,6 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:9rem" />
         </div>
-        <PEmpty v-else-if="loadError" text="收藏加载失败" />
         <PEmpty v-else-if="!filteredBookmarks.length" text="暂无收藏" />
         <div v-else class="a-grid-2">
           <PEntry
@@ -44,7 +46,7 @@
             :key="bm.id"
             :title="bm.post?.title"
             :summary="bm.post?.summary"
-            @click="$router.push('/posts/post/' + bm.post?.id)"
+            @click="bm.post && blogSheets.openPost(bm.post.id, bm.post.title)"
             class="a-cursor-pointer"
           >
             <template #visual>
@@ -68,7 +70,7 @@
 
             <template #actions>
               <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
+                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
                   <span>♥ {{ bm.post?.likes_count || 0 }}</span>
                   <span>💬 {{ bm.post?.comments_count || 0 }}</span>
                 </div>
@@ -98,8 +100,8 @@
     <PConfirm
       :show="showDeleteConfirm"
       title="删除收藏夹"
-      :message="deleteError || '确定删除这个收藏夹吗？'"
-      :confirm-text="deletePending ? '删除中...' : '删除'"
+      message="确定删除这个收藏夹吗？"
+      confirm-text="删除"
       cancel-text="取消"
       danger
       @confirm="confirmDeleteFolder"
@@ -109,36 +111,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { userUrl } from '@/composables/useSubdomainNav'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import type { Bookmark, BookmarkFolder } from '@/types'
+
+type BookmarkSortMode = 'latest' | 'popular'
 
 const authStore = useAuthStore()
 const api = useApi()
-const router = useRouter()
+const blogSheets = useBlogSheets()
 
 const folders = ref<BookmarkFolder[]>([])
 const bookmarks = ref<Bookmark[]>([])
 const activeFolder = ref<string | null>(null)
 const loadingPosts = ref(true)
-const loadError = ref('')
-let fetchAllSequence = 0
 const showNewFolder = ref(false)
 const newFolderName = ref('')
 const showDeleteConfirm = ref(false)
 const pendingDeleteFolderId = ref<string | null>(null)
-const deleteError = ref('')
-const deleteSessionId = ref(0)
-const deleteRequestSession = ref<number | null>(null)
+const sortMode = ref<BookmarkSortMode>('latest')
+let fetchAllSequence = 0
+
+const sortOptions: Array<{ label: string; value: BookmarkSortMode }> = [
+  { label: '最新', value: 'latest' },
+  { label: '最热', value: 'popular' },
+]
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
@@ -150,36 +157,29 @@ const filteredBookmarks = computed(() => {
   if (activeFolder.value === null) return bookmarks.value.filter(b => b.post)
   return bookmarks.value.filter(b => b.bookmark_folder_id === activeFolder.value && b.post)
 })
-const deletePending = computed(() => deleteRequestSession.value === deleteSessionId.value)
 
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
 
 const fetchAll = async () => {
   const requestSequence = ++fetchAllSequence
   loadingPosts.value = true
-  loadError.value = ''
   try {
     const [fRes, bRes] = await Promise.all([
       fetch(api.blog.bookmarkFolders, { headers: authHeader.value }),
-      fetch(api.blog.bookmarks, { headers: authHeader.value })
+      fetch(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
     ])
-    if (requestSequence !== fetchAllSequence) return false
-    if (!fRes.ok || !bRes.ok) throw new Error('Failed to load bookmarks')
-
+    if (requestSequence !== fetchAllSequence || !fRes.ok || !bRes.ok) return false
     const [foldersData, bookmarksData] = await Promise.all([fRes.json(), bRes.json()])
     if (requestSequence !== fetchAllSequence) return false
     folders.value = foldersData.data || []
     bookmarks.value = bookmarksData.data || []
     return true
-  } catch {
-    if (requestSequence !== fetchAllSequence) return false
-    loadError.value = '收藏加载失败'
-    return false
+  } catch (e) {
+    console.error(e)
   } finally {
-    if (requestSequence === fetchAllSequence) {
-      loadingPosts.value = false
-    }
+    if (requestSequence === fetchAllSequence) loadingPosts.value = false
   }
+  return false
 }
 
 const createFolder = async () => {
@@ -203,7 +203,10 @@ const createFolder = async () => {
 const deleteFolder = async (id: string) => {
   try {
     const res = await fetch(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
-    return res.ok
+    if (!res.ok) return false
+    if (activeFolder.value === id) activeFolder.value = null
+    await fetchAll()
+    return true
   } catch (e) {
     console.error(e)
     return false
@@ -211,44 +214,27 @@ const deleteFolder = async (id: string) => {
 }
 
 const requestDeleteFolder = (id: string) => {
-  deleteSessionId.value += 1
   pendingDeleteFolderId.value = id
-  deleteError.value = ''
   showDeleteConfirm.value = true
 }
 
 const cancelDeleteFolder = () => {
-  deleteSessionId.value += 1
   showDeleteConfirm.value = false
   pendingDeleteFolderId.value = null
-  deleteError.value = ''
 }
 
 const confirmDeleteFolder = async () => {
   const id = pendingDeleteFolderId.value
-  if (id === null) return
-  const sessionId = deleteSessionId.value
-  if (deleteRequestSession.value === sessionId) return
-  deleteError.value = ''
-  deleteRequestSession.value = sessionId
-  const deleted = await deleteFolder(id)
-  if (deleteSessionId.value !== sessionId || pendingDeleteFolderId.value !== id) return
-  if (!deleted) {
-    deleteRequestSession.value = null
-    deleteError.value = '删除失败，请重试'
-    return
+  if (id !== null) {
+    const deleted = await deleteFolder(id)
+    if (deleted) cancelDeleteFolder()
   }
-  if (activeFolder.value === id) activeFolder.value = null
-  await fetchAll()
-  if (deleteSessionId.value !== sessionId || pendingDeleteFolderId.value !== id) return
-  cancelDeleteFolder()
-  deleteRequestSession.value = null
 }
 
 onMounted(fetchAll)
 
-onUnmounted(() => {
-  fetchAllSequence++
+watch(sortMode, () => {
+  void fetchAll()
 })
 </script>
 
@@ -260,7 +246,7 @@ onUnmounted(() => {
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .sidebar-item {
   width: 100%;
@@ -284,12 +270,12 @@ onUnmounted(() => {
 .sidebar-item-active {
   background: var(--a-color-paper-wash);
   color: var(--a-color-ink);
-  font-weight: 900;
+  font-weight: 500;
   box-shadow: var(--a-shadow-paper-sm);
 }
 .delete-btn {
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   background: none;
   border: none;
   cursor: pointer;

@@ -53,7 +53,7 @@
             <span v-else class="a-label a-muted">{{ entry.feed_item.feed_source?.title || 'RSS' }}</span>
             <span v-if="entry.feed_item.author" class="a-label a-muted">· {{ entry.feed_item.author }}</span>
             <span style="color:var(--a-color-muted-soft)">{{ formatDate(entry.feed_item.published_at) }}</span>
-            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight:900">
+            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight: 500">
               添加于 {{ formatDate(entry.created_at) }}
             </span>
           </template>
@@ -85,7 +85,7 @@
           <template #meta>
             <span class="a-label a-muted">{{ entry.post.user?.username || entry.post.channel?.name || '文章' }}</span>
             <span style="color:var(--a-color-muted-soft)">{{ formatDate(entry.post.published_at || entry.post.created_at) }}</span>
-            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight:900">添加于 {{ formatDate(entry.created_at) }}</span>
+            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight:500">添加于 {{ formatDate(entry.created_at) }}</span>
           </template>
           <template #actions>
             <PClip active label="移除" @click="remove(entry.target_type, entry.target_id)" />
@@ -143,6 +143,7 @@ interface ReadingListEntry {
   feed_item?: FeedItem
   post?: Post
   created_at: string
+  is_read?: boolean
 }
 
 const route = useRoute()
@@ -206,6 +207,8 @@ watch(items, () => {
 const openArticleSheet = (entry: ReadingListEntry, index?: number) => {
   if (index !== undefined) focusedIndex.value = index
   if (!entry.feed_item) return
+  const wasRead = entry.is_read === true
+  entry.is_read = true
   selectedArticle.value = {
     type: 'feed_item',
     feed_item: entry.feed_item,
@@ -213,6 +216,14 @@ const openArticleSheet = (entry: ReadingListEntry, index?: number) => {
     is_read: true
   }
   showArticleSheet.value = true
+  if (!wasRead) {
+    void markItemsReadAndRefresh([entry.feed_item.id])
+  }
+}
+
+const markItemsReadAndRefresh = async (ids: string[]) => {
+  const success = await feedStore.markItemsRead(ids)
+  if (success) await feedStore.fetchSubscriptions()
 }
 
 const openPreviousArticle = () => {
@@ -323,9 +334,14 @@ const fetchItems = async () => {
 
     const data = await res.json()
     if (requestId !== readingListRequestId) return
-    const nextItems: ReadingListEntry[] = Array.isArray(data.data)
+    const rawItems: Array<ReadingListEntry & { feed_item_id?: string }> = Array.isArray(data.data)
       ? data.data
       : data.data?.items || data.items || []
+    const nextItems: ReadingListEntry[] = rawItems.map((item) => ({
+      ...item,
+      target_type: item.target_type || 'feed_item',
+      target_id: item.target_id || item.feed_item_id || item.feed_item?.id || '',
+    }))
     const total = data.meta?.total ?? data.data?.total ?? data.total ?? 0
     const totalPages = Math.max(1, Math.ceil(total / pageLimit))
 
@@ -410,8 +426,8 @@ onUnmounted(() => {
   padding: 0.25rem 0.5rem;
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);

@@ -1,6 +1,6 @@
 <template>
   <div class="a-page">
-    <PPageHeader title="发布话题">
+    <PPageHeader title="发布话题" sub="选择分类，填写标题和正文">
       <template #action>
         <PButton outline @click="router.back()">取消</PButton>
       </template>
@@ -10,7 +10,7 @@
       <!-- Category picker -->
       <div class="a-field">
         <label class="a-field-label">分类</label>
-        <div v-if="!forumStore.categoriesLoaded" class="a-muted" style="font-size:0.875rem">
+        <div v-if="!forumStore.categoriesLoaded" class="a-muted category-loading">
           加载中...
         </div>
         <div v-else-if="forumStore.categories.length === 0" class="a-muted empty-category-note">
@@ -264,7 +264,7 @@ onMounted(async () => {
   max-width: 860px;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 2.25rem;
 }
 
 .field-label-meta {
@@ -281,6 +281,10 @@ onMounted(async () => {
   padding: 0.5rem 0;
   font-size: 0.875rem;
   font-weight: var(--a-font-weight-strong);
+}
+
+.category-loading {
+  font-size: 0.875rem;
 }
 
 /* Category grid */
@@ -371,6 +375,7 @@ onMounted(async () => {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 </style>

@@ -13,14 +13,20 @@ function scopedModuleRoutes(module: keyof typeof moduleRoutes): RouteRecordRaw[]
       route.path === '/login'
       || route.path === '/register'
       || route.path === '/:pathMatch(.*)*'
-      || route.path === '/setting'
-      || route.path === '/admin/site'
+      || route.path === '/site/setting'
     ))
     .map((route) => {
       if (route.path === '/') {
         return {
           ...route,
           path: publicPrefix,
+        }
+      }
+
+      if (module === 'blog' && route.path === '/channels') {
+        return {
+          path: `${publicPrefix}${route.path}`,
+          redirect: route.path,
         }
       }
 
@@ -36,7 +42,6 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...portalRoutes.filter((route) => route.path !== '/:pathMatch(.*)*'),
     ...settingRoutes,
     ...scopedModuleRoutes('feed'),
-    ...scopedModuleRoutes('media'),
     ...scopedModuleRoutes('music'),
     ...scopedModuleRoutes('forum'),
     ...scopedModuleRoutes('debate'),
@@ -45,10 +50,10 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...scopedModuleRoutes('podcast'),
     ...scopedModuleRoutes('video'),
     ...userRoutes,
+    { path: '/channels', component: () => import('@/views/blog/ChannelManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'channel.manage' } } },
     ...channelRoutes,
-    { path: '/inbox', redirect: '/feed/inbox' },
+    { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
-    { path: '/settings', redirect: '/posts/settings' },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ]

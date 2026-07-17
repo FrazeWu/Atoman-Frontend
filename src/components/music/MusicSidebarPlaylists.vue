@@ -35,7 +35,7 @@
           type="button"
           class="music-sidebar-playlists__item"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
-          @click="openPlaylist(String(playlist.id))"
+          @click="openPlaylistRoute(String(playlist.id))"
         >
           <span class="playlist-icon-frame">
             <ListMusic :size="15" />
@@ -44,6 +44,24 @@
         </button>
         
         <p v-if="!playlists.length && !isCreating" class="music-sidebar-playlists__empty">暂无歌单</p>
+      </div>
+
+      <div v-if="bookmarkedPlaylists.length" class="music-sidebar-playlists__items music-sidebar-playlists__items--bookmarked">
+        <p class="music-sidebar-playlists__eyebrow a-font-meta">收藏的歌单</p>
+        <button
+          v-for="playlist in bookmarkedPlaylists"
+          :key="playlist.id"
+          type="button"
+          class="music-sidebar-playlists__item"
+          :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
+          :data-testid="`bookmarked-playlist-${playlist.id}`"
+          @click="openPlaylistRoute(String(playlist.id))"
+        >
+          <span class="playlist-icon-frame playlist-icon-frame--bookmarked">
+            <Bookmark :size="15" />
+          </span>
+          <span class="music-sidebar-playlists__name">{{ playlistDisplayName(playlist) }}</span>
+        </button>
       </div>
     </template>
     <template v-else>
@@ -63,9 +81,20 @@
           class="collapsed-icon-btn"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
           :title="playlist.name"
-          @click="openPlaylist(String(playlist.id))"
+          @click="openPlaylistRoute(String(playlist.id))"
         >
           <ListMusic :size="20" />
+        </button>
+        <button
+          v-for="playlist in bookmarkedPlaylists"
+          :key="`bookmarked-${playlist.id}`"
+          type="button"
+          class="collapsed-icon-btn"
+          :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
+          :title="playlistDisplayName(playlist)"
+          @click="openPlaylistRoute(String(playlist.id))"
+        >
+          <Bookmark :size="20" />
         </button>
       </div>
     </template>
@@ -75,19 +104,20 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
-import { useRoute } from 'vue-router'
-import { ListMusic, Plus } from 'lucide-vue-next'
-import { listMusicPlaylists, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
+import { useRoute, useRouter } from 'vue-router'
+import { Bookmark, ListMusic, Plus } from 'lucide-vue-next'
+import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { sortPlaylistsWithFavoriteFirst } from '@/utils/musicPlaylists'
 
 defineProps<{
   collapsed?: boolean
 }>()
 
 const playlists = ref<MusicPlaylistSummary[]>([])
+const bookmarkedPlaylists = ref<MusicPlaylistSummary[]>([])
 const route = useRoute()
-const { state, openPlaylist } = useMusicDrawers()
+const router = useRouter()
+const { state } = useMusicDrawers()
 
 const isCreating = ref(false)
 const newPlaylistName = ref('')
@@ -96,7 +126,15 @@ const inputRef = ref<HTMLInputElement | null>(null)
 async function fetchPlaylists() {
   try {
     const response = await listMusicPlaylists()
-    playlists.value = sortPlaylistsWithFavoriteFirst(response.data || [])
+    const list = [...(response.data || [])]
+    list.sort((a, b) => {
+      const aIsFav = a.name === '最爱' || a.name === '我喜欢的单曲' || a.name === '我喜欢'
+      const bIsFav = b.name === '最爱' || b.name === '我喜欢的单曲' || b.name === '我喜欢'
+      if (aIsFav && !bIsFav) return -1
+      if (!aIsFav && bIsFav) return 1
+      return 0
+    })
+    playlists.value = list
   } catch (error) {
     if (error instanceof ApiErrorResponseError && error.status === 401) {
       playlists.value = []
@@ -104,6 +142,30 @@ async function fetchPlaylists() {
     }
     console.error('Failed to fetch sidebar playlists:', error)
   }
+}
+
+async function fetchBookmarkedPlaylists() {
+  try {
+    const response = await listPlaylistBookmarks()
+    bookmarkedPlaylists.value = (response.data || [])
+      .map(bookmark => bookmark.playlist)
+      .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
+  } catch (error) {
+    if (error instanceof ApiErrorResponseError && error.status === 401) {
+      bookmarkedPlaylists.value = []
+      return
+    }
+    console.error('Failed to fetch bookmarked playlists:', error)
+  }
+}
+
+function playlistDisplayName(playlist: MusicPlaylistSummary) {
+  const owner = playlist.owner_username?.trim()
+  return owner ? `${owner}/${playlist.name}` : playlist.name
+}
+
+function openPlaylistRoute(playlistId: string) {
+  router.push(`/music/playlist/${playlistId}`)
 }
 
 function startCreatePlaylist() {
@@ -141,9 +203,9 @@ function handleInputBlur() {
 
 async function createPlaylistWithName(name: string) {
   try {
-    const created = await createMusicPlaylist({ name })
+    const created = await createMusicPlaylist({ name, is_public: false })
     await fetchPlaylists()
-    openPlaylist(String(created.id))
+    await router.push(`/music/playlist/${created.id}`)
   } catch (error) {
     console.error('Failed to create playlist:', error)
   }
@@ -164,6 +226,7 @@ watch(
   () => route.path,
   () => {
     fetchPlaylists()
+    fetchBookmarkedPlaylists()
   }
 )
 
@@ -171,11 +234,13 @@ watch(
   () => state.value.playlistRefreshToken,
   () => {
     fetchPlaylists()
+    fetchBookmarkedPlaylists()
   },
 )
 
 onMounted(() => {
   fetchPlaylists()
+  fetchBookmarkedPlaylists()
 })
 </script>
 
@@ -199,6 +264,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.music-sidebar-playlists__items--bookmarked {
+  border-top: 1px solid var(--a-color-line-soft);
+  padding-top: 0.85rem;
 }
 
 .create-playlist-btn {
@@ -277,7 +347,8 @@ onMounted(() => {
 }
 
 .music-sidebar-playlists__item:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
+  color: var(--a-color-fg);
 }
 
 .music-sidebar-playlists__item:hover .music-sidebar-playlists__name {
@@ -285,10 +356,10 @@ onMounted(() => {
 }
 
 .music-sidebar-playlists__item.is-active {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
   font-weight: 800;
-  border-left: 2px solid var(--a-color-ink);
-  padding-left: calc(0.5rem - 2px);
+  border-left: none;
+  padding-left: 0.5rem;
 }
 
 .playlist-icon-frame {
@@ -347,13 +418,13 @@ onMounted(() => {
 }
 
 .collapsed-icon-btn:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
   color: var(--a-color-fg);
 }
 
 .collapsed-icon-btn.is-active {
-  background-color: var(--a-color-paper-wash);
+  background-color: transparent;
   color: var(--a-color-ink);
-  border-left: 3px solid var(--a-color-ink);
+  border-left: none;
 }
 </style>

@@ -5,44 +5,54 @@ import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { Plus, Play, Heart } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
   createAlbumBookmark,
   deleteAlbumBookmark,
   getMusicAlbum,
-  getMusicPlaylist,
   listAlbumBookmarks,
   listMusicPlaylists,
-  addMusicPlaylistSong,
-  removeMusicPlaylistSong,
   type MusicAlbumListItem,
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
-import { findFavoritePlaylist, regularPlaylists } from '@/utils/musicPlaylists'
+import { resolveMusicRedirect } from '@/utils/musicRedirect'
+import type { MusicSheetLayer } from './musicSheetTypes'
 
-const { state, closeAlbum, isAlbumShifted, openNestedAction, openArtist } = useMusicDrawers()
+type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
+const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
+const { state, closeAlbum, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
 const player = usePlayerStore()
-const isOpen = computed(() => state.value.albumId !== null)
-const sheetIndex = computed(() => state.value.artistId !== null ? 1 : 0)
+const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
+const isOpen = computed(() => props.layer !== undefined || albumId.value !== null)
+const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
+const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isAlbumShifted.value)
+const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
+const closeCurrentAlbum = () => closeAlbum(props.layer?.key)
 const album = ref<MusicAlbumListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const redirectMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
-const favoriteSongIds = ref<Set<string>>(new Set())
 const toastVisible = ref(false)
 const toastMessage = ref('')
-let loadGeneration = 0
+const {
+  favoriteSongIds,
+  loadFavoriteSongs,
+  toggleFavoriteSong,
+  addSongToPlaylist,
+} = useMusicFavoritePlaylist()
 
 const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
 const releaseYear = computed(() => {
@@ -54,11 +64,16 @@ const tracks = computed(() => [...(album.value?.songs || [])].sort((a, b) => (a.
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
 const playableSongs = computed(() => album.value ? buildPlayableSongsFromAlbum(album.value) : [])
 const playableSongIdSet = computed(() => new Set(playableSongs.value.map((song) => String(song.id))))
-const regularPlaylistOptions = computed(() => regularPlaylists(playlists.value))
-const editAlbumHref = computed(() => {
-  if (!album.value?.id) return modulePathUrl('music', '/')
-  return modulePathUrl('music', `/album/${album.value.id}/edit`)
+const discussionCount = computed(() => {
+  const currentAlbum = album.value as (MusicAlbumListItem & {
+    discussion_count?: number
+    open_discussion_count?: number
+  }) | null
+
+  if (!currentAlbum) return undefined
+  return currentAlbum.discussion_count ?? currentAlbum.open_discussion_count
 })
+
 function formatDuration(value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     const minutes = Math.floor(value / 60)
@@ -111,16 +126,7 @@ async function loadPlaylists() {
 
 async function loadFavorites() {
   try {
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = findFavoritePlaylist(list)
-    if (fav) {
-      const favPlaylistDetail = await getMusicPlaylist(String(fav.id))
-      const ids = (favPlaylistDetail.songs || []).map((s) => String(s.id))
-      favoriteSongIds.value = new Set(ids)
-    } else {
-      favoriteSongIds.value = new Set()
-    }
+    await loadFavoriteSongs()
   } catch (err) {
     if (err instanceof ApiErrorResponseError && err.status === 401) {
       favoriteSongIds.value = new Set()
@@ -132,26 +138,10 @@ async function loadFavorites() {
 
 async function toggleTrackFavorite(songId: string) {
   try {
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = findFavoritePlaylist(list)
-    if (!fav) {
-      toastMessage.value = '最爱歌单加载失败'
-      toastVisible.value = true
-      return
-    }
-    const playlistId = String(fav.id)
-    const isFav = favoriteSongIds.value.has(songId)
-    if (isFav) {
-      await removeMusicPlaylistSong(playlistId, songId)
-      favoriteSongIds.value.delete(songId)
-      toastMessage.value = '已从最爱中移除'
-    } else {
-      await addMusicPlaylistSong(playlistId, songId)
-      favoriteSongIds.value.add(songId)
-      toastMessage.value = '已添加到最爱'
-    }
+    const result = await toggleFavoriteSong(songId)
+    toastMessage.value = result.message
     toastVisible.value = true
+    await loadPlaylists()
   } catch (err) {
     console.error('Failed to toggle favorite:', err)
     toastMessage.value = '操作失败'
@@ -161,7 +151,7 @@ async function toggleTrackFavorite(songId: string) {
 
 async function addTrackToPlaylist(playlistId: string, songId: string) {
   try {
-    await addMusicPlaylistSong(playlistId, songId)
+    await addSongToPlaylist(playlistId, songId)
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
   } catch (err) {
@@ -172,50 +162,45 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 }
 
 async function loadAlbum(albumId: string | null) {
-  const generation = ++loadGeneration
-  const isCurrent = () => generation === loadGeneration && state.value.albumId === albumId
   if (!albumId) {
     album.value = null
     isBookmarked.value = false
-    loading.value = false
-    errorMessage.value = ''
     return
   }
 
   loading.value = true
   errorMessage.value = ''
-  album.value = null
-  isBookmarked.value = false
   try {
-    const albumResponse = await getMusicAlbum(albumId)
-    if (!isCurrent()) return
-    let bookmarked = false
+    const resolved = await resolveMusicRedirect(albumId, getMusicAlbum)
+    const albumResponse = resolved.entity
+    if (resolved.redirected) {
+      redirectMessage.value = '已转到合并后的条目'
+      openAlbum(albumResponse.id)
+      return
+    }
+    redirectMessage.value = ''
+    album.value = albumResponse
     try {
       const bookmarksResponse = await listAlbumBookmarks()
-      bookmarked = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
+      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
-        bookmarked = false
+        isBookmarked.value = false
       } else {
         throw error
       }
     }
+    isCoverBroken.value = false
 
     await Promise.all([
       playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
       loadFavorites(),
     ])
-    if (!isCurrent()) return
-    album.value = albumResponse
-    isBookmarked.value = bookmarked
-    isCoverBroken.value = false
   } catch (error) {
-    if (isCurrent()) {
-      console.error('Failed to fetch album:', error)
-      errorMessage.value = '专辑信息加载失败'
-    }
+    console.error('Failed to fetch album:', error)
+    errorMessage.value = '专辑信息加载失败'
   } finally {
-    if (isCurrent()) loading.value = false
+    loading.value = false
   }
 }
 
@@ -240,11 +225,11 @@ async function toggleAlbumBookmark() {
   }
 }
 
-watch(() => state.value.albumId, loadAlbum, { immediate: true })
+watch(albumId, loadAlbum, { immediate: true })
 watch(
   () => state.value.albumRefreshToken,
   () => {
-    if (state.value.albumId) void loadAlbum(state.value.albumId)
+    if (albumId.value) void loadAlbum(albumId.value)
   },
 )
 </script>
@@ -252,29 +237,35 @@ watch(
 <template>
   <PSheet
     :show="isOpen"
-    @close="closeAlbum"
+    :title="layer?.title ?? '专辑详情'"
+    @close="closeCurrentAlbum"
     width="700px"
-    :is-shifted="isAlbumShifted"
+    :is-shifted="shifted"
+    :is-top-layer="topLayer"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
     :index="sheetIndex"
   >
     <div class="drawer-header">
       <div>
-        <div class="kicker">专辑资料</div>
+        <div class="kicker">Album Notes</div>
       </div>
     </div>
 
     <div class="drawer-body">
+	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
+	  <p v-if="album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载专辑...</p>
 
       <div v-else class="album-meta-row">
         <div class="album-cover">
           <img v-if="coverUrl && !isCoverBroken" :src="coverUrl" alt="" class="album-cover-img" @error="handleCoverError" />
-          <span v-else>封面</span>
+          <span v-else>COVER</span>
         </div>
         <div class="album-info">
           <div class="album-type">{{ album?.album_type || '专辑' }}</div>
-          <h2 class="album-title">{{ album?.title || `Album ${state.albumId}` }}</h2>
+          <h2 class="album-title">{{ album?.title || `Album ${albumId}` }}</h2>
           <div class="meta-tags">
             <span class="artist-name">
               <template v-for="(artist, index) in album?.artists" :key="artist.id">
@@ -287,7 +278,7 @@ watch(
                   {{ artist.name }}
                 </button>
               </template>
-              <template v-if="!album?.artists?.length">未知艺术家</template>
+              <template v-if="!album?.artists?.length">Unknown Artist</template>
             </span>
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
           </div>
@@ -299,6 +290,7 @@ watch(
         <PButton
           variant="primary"
           :disabled="!playableSongs.length"
+          dot
           @click="playAlbum"
         >
           播放全专
@@ -306,6 +298,7 @@ watch(
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
+          dot
           data-testid="album-bookmark-toggle"
           @click="toggleAlbumBookmark"
         >
@@ -314,26 +307,36 @@ watch(
         <div class="spacer"></div>
         <PButton
           variant="secondary"
-          :href="editAlbumHref"
+          dot
+          @click="album?.id && openMusicEditor({ entity: 'album', mode: 'edit', id: album.id })"
         >
           编辑
         </PButton>
         <PButton
           variant="secondary"
-          @click="openNestedAction('revise')"
+          dot
+          @click="openNestedAction('revise', { albumId })"
         >
           修改
         </PButton>
         <PButton
           variant="secondary"
-          @click="openNestedAction('history')"
+          dot
+          @click="openNestedAction('history', { albumId })"
         >
           版本
+        </PButton>
+        <PButton
+          variant="secondary"
+          dot
+          @click="openNestedAction('merge_album', { albumId, title: album?.title || '' })"
+        >
+          合并重复条目
         </PButton>
       </div>
 
       <div class="content-section">
-        <div class="section-title">曲目</div>
+        <div class="section-title">Tracklist</div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="(track, index) in tracks" :key="track.id" class="track">
           <div class="track-main">
@@ -372,9 +375,9 @@ watch(
               </template>
               <div class="track-add-menu">
                 <div class="track-add-menu-header">添加到歌单</div>
-                <div v-if="!regularPlaylistOptions.length" class="track-add-menu-empty">暂无歌单</div>
+                <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
                 <button
-                  v-for="p in regularPlaylistOptions"
+                  v-for="p in playlists"
                   :key="p.id"
                   type="button"
                   class="track-add-menu-item"
@@ -387,13 +390,8 @@ watch(
           </div>
         </div>
       </div>
-      <CommentSection
-        v-if="album"
-        class="album-discussion"
-        :target="{ kind: 'music_album', resourceId: String(album.id) }"
-        noun="讨论"
-      />
     </div>
+    <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId })" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </PSheet>
 </template>
@@ -412,12 +410,11 @@ watch(
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
   font-weight: bold;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
 }
 .drawer-body { margin: 0 -2.5rem; padding: 2rem 2.5rem; }
-.album-discussion { margin-top: 2rem; }
 
 .album-meta-row {
   display: flex;
@@ -435,13 +432,13 @@ watch(
   justify-content: center;
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   overflow: hidden;
   border: 1px solid var(--a-color-line-soft);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 .album-cover-img { width: 100%; height: 100%; object-fit: cover; }
 .album-info {
@@ -454,17 +451,17 @@ watch(
 .album-type {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   margin-bottom: 0.25rem;
 }
 .album-title {
   font-family: var(--a-font-serif);
   font-size: 2.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.15;
   margin: 0 0 0.5rem;
   color: var(--a-color-ink);
@@ -476,7 +473,7 @@ watch(
   margin-bottom: 1.25rem;
   font-family: var(--a-font-meta);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-ink-soft);
 }
 .artist-name {
@@ -493,7 +490,7 @@ watch(
   font: inherit;
   color: inherit;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 500;
   transition: color 0.15s ease;
 }
 .artist-link:hover {
@@ -524,13 +521,13 @@ watch(
   border: 1px solid var(--a-color-line-soft);
   border-radius: 99px;
   padding: 0.55rem 1.1rem;
-  font-weight: 800;
+  font-weight: 500;
   background: var(--a-color-paper);
   color: var(--a-color-ink);
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
   transition: all 0.15s ease;
 }
@@ -565,6 +562,14 @@ watch(
   background: var(--a-color-ink-muted);
   border-color: var(--a-color-ink-muted);
 }
+.paper-action-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 4px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
 .content-section {
   background: var(--a-color-paper-soft);
   border: 1px solid var(--a-color-line-soft);
@@ -575,12 +580,12 @@ watch(
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--a-color-line-soft);
   padding-bottom: 0.5rem;
   margin-bottom: 1.25rem;
   color: var(--a-color-ink-soft);
-  font-weight: 800;
+  font-weight: 500;
 }
 .track {
   display: flex;
@@ -646,13 +651,13 @@ watch(
 .track-unavailable {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   text-transform: uppercase;
 }
 .track-empty { color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.875rem; }
 .track-time { font-family: var(--a-font-meta); color: var(--a-color-ink-soft); font-size: 0.8rem; }
-.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 800; }
+.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 
 /* Track Playlist Dropdown styles */
@@ -702,7 +707,7 @@ watch(
 .track-add-menu {
   background: var(--a-color-paper);
   border: 1px solid var(--a-color-line-soft);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   padding: 0.4rem 0;
   min-width: 130px;
   max-width: 200px;
@@ -712,7 +717,7 @@ watch(
 .track-add-menu-header {
   font-family: var(--a-font-meta);
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--a-color-ink-soft);
   padding: 0.3rem 0.8rem;

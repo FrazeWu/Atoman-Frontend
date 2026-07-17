@@ -1,9 +1,12 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type {
+  ApplySubscriptionRulesSummary,
   AutoAddSubscriptionPayload,
   FeedDiscoveryCandidate,
   FeedSourceProvider,
+  FeedSubscriptionRule,
+  FeedSubscriptionRuleMatchType,
   FeedStarGroup,
   ResolvedSubscriptionInput,
   Subscription,
@@ -53,6 +56,46 @@ interface FeedTimelineFetchOptions {
   sourceType?: string
   sourceId?: string | number | null
   unreadOnly?: boolean
+}
+
+interface SubscriptionRulePayload {
+  name: string
+  enabled: boolean
+  match_type: FeedSubscriptionRuleMatchType
+  conditions_json: Record<string, unknown>
+  action_group_id?: string | null
+  action_muted?: boolean | null
+  action_auto_mark_read?: boolean | null
+  action_auto_add_reading_list?: boolean | null
+  position?: number
+}
+
+const hasSubscriptionRuleAction = (payload: Partial<SubscriptionRulePayload>) =>
+  Boolean(payload.action_group_id) ||
+  Boolean(payload.action_muted) ||
+  Boolean(payload.action_auto_mark_read) ||
+  Boolean(payload.action_auto_add_reading_list)
+
+const hasNonEmptyListValue = (value: unknown) =>
+  Array.isArray(value) && value.some((entry) => String(entry).trim().length > 0)
+
+const hasSubscriptionRuleConditions = (payload: Partial<SubscriptionRulePayload>) => {
+  const conditions = payload.conditions_json || {}
+  if (payload.match_type === 'source_category') {
+    return hasNonEmptyListValue(conditions.categories) || String(conditions.category || '').trim().length > 0
+  }
+  if (payload.match_type === 'source_ids') {
+    return hasNonEmptyListValue(conditions.source_ids)
+  }
+  if (payload.match_type === 'keywords') {
+    return hasNonEmptyListValue(conditions.keywords)
+  }
+  return false
+}
+
+interface ApplySubscriptionRulesPayload {
+  rule_id?: string
+  all?: boolean
 }
 
 export interface FeedFilterRules {
@@ -130,9 +173,12 @@ const writeAutomationRules = (rules: FeedAutomationRules) => {
 export const useFeedStore = defineStore('feed', () => {
   // Feed state
   const subscriptions = ref<Subscription[]>([])
+  const subscriptionRules = ref<FeedSubscriptionRule[]>([])
+  const ruleApplySummary = ref<ApplySubscriptionRulesSummary | null>(null)
   const groups = ref<SubscriptionGroup[]>([])
   const starGroups = ref<FeedStarGroup[]>([])
   const timeline = ref<any[]>([])
+  // Legacy local-only rule state kept for gradual migration in a later task.
   const filterRules = ref<FeedFilterRules>(readFilterRules())
   const automationRules = ref<FeedAutomationRules>(readAutomationRules())
   const activeSource = ref<{ type: string; id: string } | null>(null)
@@ -149,6 +195,8 @@ export const useFeedStore = defineStore('feed', () => {
     subscriptionsRequestGeneration += 1
     groupsRequestGeneration += 1
     subscriptions.value = []
+    subscriptionRules.value = []
+    ruleApplySummary.value = null
     groups.value = []
     starGroups.value = []
     timeline.value = []
@@ -209,11 +257,10 @@ export const useFeedStore = defineStore('feed', () => {
         subscriptions.value = data.data || []
         return true
       }
-      return false
     } catch (e) {
       console.error('Failed to fetch subscriptions', e)
-      return false
     }
+    return false
   }
 
   const fetchGroups = async () => {
@@ -244,11 +291,125 @@ export const useFeedStore = defineStore('feed', () => {
         groups.value = data.data || []
         return true
       }
-      return false
     } catch (e) {
       console.error('Failed to fetch groups', e)
-      return false
     }
+    return false
+  }
+
+  const fetchSubscriptionRules = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      subscriptionRules.value = []
+      ruleApplySummary.value = null
+      return
+    }
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        subscriptionRules.value = data.data || []
+      }
+    } catch (e) {
+      console.error('Failed to fetch subscription rules', e)
+    }
+  }
+
+  const createSubscriptionRule = async (payload: SubscriptionRulePayload): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    if (!hasSubscriptionRuleAction(payload)) return false
+    if (!hasSubscriptionRuleConditions(payload)) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to create subscription rule', e)
+    }
+    return false
+  }
+
+  const updateSubscriptionRule = async (id: string, payload: Partial<SubscriptionRulePayload>): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    if (!hasSubscriptionRuleAction(payload)) return false
+    if (!hasSubscriptionRuleConditions(payload)) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to update subscription rule', e)
+    }
+    return false
+  }
+
+  const deleteSubscriptionRule = async (id: string): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to delete subscription rule', e)
+    }
+    return false
+  }
+
+  const reorderSubscriptionRules = async (ruleIds: string[]): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify({ rule_ids: ruleIds }),
+      })
+      if (!res.ok) return false
+      await fetchSubscriptionRules()
+      return true
+    } catch (e) {
+      console.error('Failed to reorder subscription rules', e)
+    }
+    return false
+  }
+
+  const applySubscriptionRules = async (payload: ApplySubscriptionRulesPayload): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) return false
+      const data = await res.json().catch(() => ({}))
+      ruleApplySummary.value = data.data || null
+      await fetchSubscriptions()
+      return true
+    } catch (e) {
+      console.error('Failed to apply subscription rules', e)
+    }
+    return false
   }
 
   const createGroup = async (name: string) => {
@@ -310,7 +471,13 @@ export const useFeedStore = defineStore('feed', () => {
   // Only sets an explicit group UUID; use setSubscriptionGroup or a default group UUID to clear/reset.
   const updateSubscription = async (
     id: string,
-    payload: { title?: string; group_id?: string },
+    payload: {
+      title?: string
+      group_id?: string
+      is_muted?: boolean
+      auto_mark_read?: boolean
+      auto_add_reading_list?: boolean
+    },
   ): Promise<boolean> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
@@ -348,32 +515,38 @@ export const useFeedStore = defineStore('feed', () => {
     return false
   }
 
-  const deleteGroup = async (id: string) => {
+  const deleteGroup = async (id: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/groups/${id}`, {
+      const res = await fetch(`${api.url}/feed/groups/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      if (!res.ok) return false
       await fetchGroups()
       await fetchSubscriptions()
+      return true
     } catch (e) {
       console.error('Failed to delete group', e)
     }
+    return false
   }
 
-  const setSubscriptionGroup = async (subId: string, groupId: string | null) => {
+  const setSubscriptionGroup = async (subId: string, groupId: string | null): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/subscriptions/${subId}/group`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subId}/group`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ group_id: groupId }),
       })
+      if (!res.ok) return false
       await fetchSubscriptions()
+      return true
     } catch (e) {
       console.error('Failed to set subscription group', e)
     }
+    return false
   }
 
   const fetchTimeline = async (
@@ -429,45 +602,82 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
-  const unsubscribe = async (subscriptionId: string) => {
+  const unsubscribe = async (subscriptionId: string): Promise<boolean> => {
     const authStore = useAuthStore()
     try {
-      await fetch(`${api.url}/feed/subscriptions/${subscriptionId}`, {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authStore.token}` },
       })
+      if (!res.ok) return false
       await fetchSubscriptions()
+      return true
     } catch (e) {
       console.error('Failed to unsubscribe', e)
     }
+    return false
   }
 
-  const markItemsRead = async (feedItemIds: string[]) => {
+  const markItemsRead = async (feedItemIds: string[]): Promise<boolean> => {
     const authStore = useAuthStore()
-    if (!feedItemIds.length) return
+    if (!feedItemIds.length) return false
     try {
-      await fetch(`${api.url}/feed/timeline/mark-read`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark items read', e)
     }
+    return false
   }
 
-  const markItemsUnread = async (feedItemIds: string[]) => {
+  const markItemsUnread = async (feedItemIds: string[]): Promise<boolean> => {
     const authStore = useAuthStore()
-    if (!feedItemIds.length) return
+    if (!feedItemIds.length) return false
     try {
-      await fetch(`${api.url}/feed/timeline/mark-unread`, {
+      const res = await fetch(`${api.url}/feed/timeline/mark-unread`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({ feed_item_ids: feedItemIds }),
       })
+      return res.ok
     } catch (e) {
       console.error('Failed to mark items unread', e)
     }
+    return false
+  }
+
+  const markSubscriptionRead = async (subscriptionId: string): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!subscriptionId) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/mark-read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      return res.ok
+    } catch (e) {
+      console.error('Failed to mark subscription read', e)
+    }
+    return false
+  }
+
+  const markSubscriptionUnread = async (subscriptionId: string): Promise<boolean> => {
+    const authStore = useAuthStore()
+    if (!subscriptionId) return false
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/mark-unread`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      return res.ok
+    } catch (e) {
+      console.error('Failed to mark subscription unread', e)
+    }
+    return false
   }
 
   const markAllRead = async (): Promise<boolean> => {
@@ -1190,19 +1400,10 @@ export const useFeedStore = defineStore('feed', () => {
         return false
       }
 
-      const foldersRes = await fetch(`${api.url}/blog/bookmark-folders`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (!foldersRes.ok) return null
-      const foldersData = await foldersRes.json()
-      const folders = (foldersData.data || []) as Array<{ id: string; name: string }>
-      const folder = folders.find((item) => item.name === '默认收藏夹') || folders[0]
-      if (!folder) return null
-
       const res = await fetch(`${api.url}/blog/bookmarks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({ post_id: postId, bookmark_folder_id: folder.id }),
+        body: JSON.stringify({ post_id: postId }),
       })
       if (res.ok) {
         const newSet = new Set(bookmarkedPostIds.value)
@@ -1243,8 +1444,9 @@ export const useFeedStore = defineStore('feed', () => {
     )
   }
 
-  const mergeReadingListPageIds = (nextIds: string[]) => {
+  const syncReadingListPageIds = (previousIds: string[], nextIds: string[]) => {
     const next = new Set(readingListItemIds.value)
+    previousIds.forEach((id) => next.delete(id))
     nextIds.forEach((id) => next.add(id))
     readingListItemIds.value = mergePendingMembership(
       next,
@@ -1252,17 +1454,19 @@ export const useFeedStore = defineStore('feed', () => {
     )
   }
 
-  const requestReadingListToggle = async (
-    targetId: string,
-    targetType: 'feed_item' | 'post',
-    fallback: boolean,
-  ): Promise<boolean | null> => {
+  const mergeReadingListPageIds = (nextIds: string[]) => {
+    const next = new Set(readingListItemIds.value)
+    nextIds.forEach((id) => next.add(id))
+    readingListItemIds.value = mergePendingMembership(next, readingListToggleStates)
+  }
+
+  const requestReadingListToggle = async (feedItemId: string, fallback: boolean): Promise<boolean | null> => {
     const authStore = useAuthStore()
     try {
       const res = await fetch(`${api.url}/feed/reading-list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+        body: JSON.stringify({ feed_item_id: feedItemId }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -1275,17 +1479,14 @@ export const useFeedStore = defineStore('feed', () => {
     return null
   }
 
-  const toggleReadingListItem = async (
-    targetId: string,
-    targetType: 'feed_item' | 'post' = 'feed_item',
-  ): Promise<boolean | null> => {
+  const toggleReadingListItem = async (feedItemId: string): Promise<boolean | null> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return null
     return enqueueMembershipToggle(
       readingListToggleStates,
       readingListItemIds,
-      targetId,
-      (fallback) => requestReadingListToggle(targetId, targetType, fallback),
+      feedItemId,
+      (fallback) => requestReadingListToggle(feedItemId, fallback),
     )
   }
 
@@ -1312,12 +1513,11 @@ export const useFeedStore = defineStore('feed', () => {
               ? data.items
               : []
         entries.push(...pageEntries)
-
         const total = Number(data.meta?.total ?? data.data?.total ?? data.total)
         if ((Number.isFinite(total) && entries.length >= total) || pageEntries.length < pageSize) break
       }
       const ids = entries
-        .map((item: any) => item.target_id as string)
+        .map((item: any) => (item.target_id || item.feed_item_id) as string)
         .filter(Boolean)
       readingListItemIds.value = mergePendingMembership(new Set(ids), readingListToggleStates)
     } catch (e) {
@@ -1328,6 +1528,8 @@ export const useFeedStore = defineStore('feed', () => {
   return {
     // Feed
     subscriptions,
+    subscriptionRules,
+    ruleApplySummary,
     groups,
     starGroups,
     timeline,
@@ -1339,19 +1541,27 @@ export const useFeedStore = defineStore('feed', () => {
     setFilterRules,
     setAutomationRules,
     fetchSubscriptions,
+    fetchSubscriptionRules,
     fetchGroups,
+    createSubscriptionRule,
     createGroup,
     fetchStarGroups,
     createStarGroup,
     updateSubscription,
+    updateSubscriptionRule,
     updateGroup,
+    deleteSubscriptionRule,
     deleteGroup,
+    reorderSubscriptionRules,
+    applySubscriptionRules,
     setSubscriptionGroup,
     fetchTimeline,
     subscribe,
     unsubscribe,
     markItemsRead,
     markItemsUnread,
+    markSubscriptionRead,
+    markSubscriptionUnread,
     markAllFeedRead: markAllRead,
     markAllFeedUnread: markAllUnread,
     fetchUnreadFeedItemCount,
@@ -1371,6 +1581,7 @@ export const useFeedStore = defineStore('feed', () => {
     readingListItemIds,
     toggleReadingListItem,
     fetchReadingListIds,
+    syncReadingListPageIds,
     mergeReadingListPageIds,
     // Channel/Collection subscriptions
     subscribeToChannel,

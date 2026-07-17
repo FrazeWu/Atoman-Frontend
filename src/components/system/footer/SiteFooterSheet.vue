@@ -6,8 +6,13 @@ import PSheet from '@/components/ui/PSheet.vue'
 import SiteAboutContent from './SiteAboutContent.vue'
 import SitePolicyContent from './SitePolicyContent.vue'
 
-const props = defineProps<{ panel: FootbarPanel | null }>()
-defineEmits<{ close: [] }>()
+const props = defineProps<{
+  panel: FootbarPanel | null
+}>()
+
+defineEmits<{
+  close: []
+}>()
 
 const supportEmail = 'support@atoman.org'
 const copied = ref(false)
@@ -56,15 +61,19 @@ async function copyEmail() {
           {{ copied ? '邮箱已复制' : '复制邮箱' }}
         </button>
       </div>
+      <p class="footer-sheet-note">功能异常或改进建议，请使用「问题反馈」。</p>
     </article>
 
     <article v-else-if="panel === 'feedback'" class="footer-sheet-content">
       <h2>问题反馈</h2>
       <p class="footer-sheet-lead">遇到功能异常或有改进建议，请选择合适的反馈方式。</p>
       <div class="footer-feedback-channels">
-        <section>
-          <h3>公开反馈</h3>
-          <p>适合可公开讨论的功能异常和改进建议。</p>
+        <section class="footer-feedback-channel">
+          <div>
+            <h3>公开反馈</h3>
+            <p>适合可公开讨论的功能异常和改进建议。</p>
+            <small>提交到 GitHub Issues</small>
+          </div>
           <a
             class="footer-sheet-action footer-sheet-action--primary"
             data-footer-action="github-issues"
@@ -76,10 +85,17 @@ async function copyEmail() {
             <ExternalLink :size="16" aria-hidden="true" />
           </a>
         </section>
-        <section>
-          <h3>私信站长</h3>
-          <p>适合涉及账号、隐私或希望直接沟通的问题。</p>
-          <a class="footer-sheet-action" data-footer-action="message-owner" href="/inbox?tab=dm&amp;user=fazong">
+        <section class="footer-feedback-channel">
+          <div>
+            <h3>私信站长</h3>
+            <p>适合涉及账号、隐私或希望直接沟通的问题。</p>
+            <small>发送给 @fazong</small>
+          </div>
+          <a
+            class="footer-sheet-action"
+            data-footer-action="message-owner"
+            href="/inbox?tab=dm&amp;user=fazong"
+          >
             <MessageCircle :size="16" aria-hidden="true" />
             发起私信
           </a>
@@ -93,25 +109,163 @@ async function copyEmail() {
 </template>
 
 <style>
-.site-footer-sheet .sheet-content { padding: clamp(1.25rem, 4vw, 2.5rem); overscroll-behavior: contain; }
-.site-footer-sheet .header-close-btn { width: 44px; height: 44px; padding: 0; }
-.footer-sheet-content { color: var(--a-color-fg); }
-.footer-sheet-content h2 { margin: 0; font-size: 2rem; font-weight: var(--a-font-weight-black); line-height: 1.2; }
-.footer-sheet-lead { margin: var(--a-space-5) 0 0; color: var(--a-color-ink-muted); font-size: var(--a-text-md); line-height: 1.75; }
-.footer-sheet-email { display: block; margin-top: var(--a-space-6); padding: var(--a-space-5) 0; border-block: var(--a-border); color: var(--a-color-fg); font-size: 1.875rem; font-weight: var(--a-font-weight-black); overflow-wrap: anywhere; text-decoration: none; }
-.footer-sheet-actions { display: flex; flex-wrap: wrap; gap: var(--a-space-3); margin-top: var(--a-space-5); }
-.footer-sheet-action { display: inline-flex; align-items: center; justify-content: center; gap: var(--a-space-2); min-height: 48px; padding: 0 var(--a-space-5); border: var(--a-border); background: var(--a-color-bg); color: var(--a-color-fg); font: inherit; font-size: var(--a-text-sm); font-weight: var(--a-font-weight-strong); text-decoration: none; cursor: pointer; }
+.site-footer-sheet .sheet-content {
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  overscroll-behavior: contain;
+}
+
+.site-footer-sheet .header-close-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.footer-sheet-content {
+  color: var(--a-color-fg);
+}
+
+.footer-sheet-content h2 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: var(--a-font-weight-black);
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.footer-sheet-lead {
+  margin: var(--a-space-5) 0 0;
+  color: var(--a-color-ink-muted);
+  font-size: var(--a-text-md);
+  line-height: 1.75;
+}
+
+.footer-sheet-email {
+  display: block;
+  margin-top: var(--a-space-6);
+  padding: var(--a-space-5) 0;
+  border-block: var(--a-border);
+  color: var(--a-color-fg);
+  font-size: clamp(1.25rem, 4vw, 1.875rem);
+  font-weight: var(--a-font-weight-black);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.footer-sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--a-space-3);
+  margin-top: var(--a-space-5);
+}
+
+.footer-sheet-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--a-space-2);
+  min-height: 48px;
+  padding: 0 var(--a-space-5);
+  border: var(--a-border);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font: inherit;
+  font-size: var(--a-text-sm);
+  font-weight: var(--a-font-weight-strong);
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .footer-sheet-action--primary,
-.footer-sheet-action:hover { background: var(--a-color-fg); color: var(--a-color-bg); }
-.footer-feedback-channels { margin-top: var(--a-space-6); border-top: var(--a-border); }
-.footer-feedback-channels section { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--a-space-4); padding: var(--a-space-6) 0; border-bottom: var(--a-border); }
-.footer-feedback-channels h3,
-.footer-feedback-channels p { margin: 0; }
-.footer-feedback-channels p { margin-top: var(--a-space-2); color: var(--a-color-ink-muted); font-size: var(--a-text-sm); }
+.footer-sheet-action:hover {
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+}
+
+.footer-sheet-action:focus-visible,
+.footer-sheet-email:focus-visible {
+  outline: 2px solid var(--a-color-fg);
+  outline-offset: 2px;
+}
+
+.footer-sheet-note {
+  margin: var(--a-space-6) 0 0;
+  padding-top: var(--a-space-5);
+  border-top: var(--a-border);
+  color: var(--a-color-muted);
+  font-size: var(--a-text-sm);
+  line-height: 1.6;
+}
+
+.footer-feedback-channels {
+  margin-top: var(--a-space-6);
+  border-top: var(--a-border);
+}
+
+.footer-feedback-channel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--a-space-6);
+  padding: var(--a-space-6) 0;
+  border-bottom: var(--a-border);
+}
+
+.footer-feedback-channel h3,
+.footer-feedback-channel p {
+  margin: 0;
+}
+
+.footer-feedback-channel h3 {
+  font-size: var(--a-text-md);
+  font-weight: var(--a-font-weight-black);
+}
+
+.footer-feedback-channel p {
+  margin-top: var(--a-space-2);
+  color: var(--a-color-ink-muted);
+  font-size: var(--a-text-sm);
+  line-height: 1.6;
+}
+
+.footer-feedback-channel small {
+  display: block;
+  margin-top: var(--a-space-2);
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+}
+
 @media (max-width: 640px) {
-  .site-footer-sheet { height: calc(100dvh - max(2rem, env(safe-area-inset-top))) !important; max-height: calc(100dvh - var(--a-content-bottom-offset)); }
-  .footer-sheet-email { font-size: 1.25rem; }
-  .footer-sheet-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .footer-feedback-channels section { grid-template-columns: 1fr; }
+  .site-footer-sheet {
+    height: calc(100dvh - max(2rem, env(safe-area-inset-top))) !important;
+    max-height: calc(100dvh - var(--a-content-bottom-offset));
+  }
+
+  .footer-sheet-content h2 {
+    font-size: 1.625rem;
+  }
+
+  .footer-sheet-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footer-sheet-action {
+    padding-inline: var(--a-space-3);
+  }
+
+  .footer-feedback-channel {
+    grid-template-columns: 1fr;
+    gap: var(--a-space-4);
+  }
+
+  .footer-feedback-channel .footer-sheet-action {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-footer-sheet {
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>

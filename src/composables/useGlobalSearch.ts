@@ -107,7 +107,7 @@ export function useGlobalSearch() {
           title: item.title,
           subtitle: item.artists?.map((artist) => artist.name).join(' / ') || '专辑',
           meta: '专辑',
-          href: `/music?album=${item.id}`,
+          href: `/music/album/${item.id}`,
         })),
         ...artistRes.data.map((item) => ({
           id: `artist-${item.id}`,
@@ -115,7 +115,7 @@ export function useGlobalSearch() {
           title: item.name,
           subtitle: trimText(item.bio),
           meta: '艺术家',
-          href: `/music?artist=${item.id}`,
+          href: `/music/artist/${item.id}`,
         })),
       ].slice(0, musicLimit)
 

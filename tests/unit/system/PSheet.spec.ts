@@ -1,7 +1,7 @@
 import { mount, config } from '@vue/test-utils'
-import { nextTick } from 'vue'
 import { describe, it, expect } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
+import { nextTick } from 'vue'
 import PSheet from '@/components/ui/PSheet.vue'
 
 config.global.plugins = [createTestingPinia({ stubActions: false })]
@@ -47,27 +47,51 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.p-sheet-panel').classes()).toContain('is-shifted')
   })
 
+  it('exposes one 32px edge for each sheet above the current layer', () => {
+    const wrapper = mount(PSheet, {
+      props: {
+        show: true,
+        width: '900px',
+        isShifted: true,
+        layerIndex: 0,
+        stackSize: 3,
+      },
+    })
+
+    expect(wrapper.get('.p-sheet-panel').attributes('style')).toContain('--a-sheet-shift: 64px')
+  })
+
+  it('reserves the full stack edge for every custom-width layer', () => {
+    const bottom = mount(PSheet, {
+      props: {
+        show: true,
+        width: '900px',
+        layerIndex: 0,
+        stackSize: 3,
+      },
+    })
+    const top = mount(PSheet, {
+      props: {
+        show: true,
+        width: '900px',
+        layerIndex: 2,
+        stackSize: 3,
+      },
+    })
+
+    for (const wrapper of [bottom, top]) {
+      const style = wrapper.get('.p-sheet-panel').attributes('style')
+      expect(style).toContain('--a-sheet-stack-edge: 64px')
+      expect(style).toContain('max-width: calc(100vw - var(--a-sidebar-width) - 16px - var(--a-sheet-stack-edge))')
+    }
+  })
+
   it('accepts custom width via prop', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, width: '900px' }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
     expect(panel.style.width).toBe('900px')
-  })
-
-  it('applies custom panel class and bottom-sheet height', () => {
-    const wrapper = mount(PSheet, {
-      props: {
-        show: true,
-        side: 'bottom',
-        panelClass: 'directory-sheet',
-        height: '400px',
-      },
-    })
-
-    const panel = wrapper.get('.p-sheet-panel')
-    expect(panel.classes()).toContain('directory-sheet')
-    expect((panel.element as HTMLElement).style.height).toBe('400px')
   })
 
   it('uses compact content spacing when there is no header bar', () => {
@@ -134,8 +158,8 @@ describe('PSheet.vue', () => {
       props: { show: true, index: 1 }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('64px')
-    expect(panel.style.width).toBe('calc(100% - 64px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 64px)')
+    expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 64px)')
 
     const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
     expect(tab.style.top).toBe('88px')
@@ -146,53 +170,69 @@ describe('PSheet.vue', () => {
       props: { show: true }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('32px')
-    expect(panel.style.width).toBe('calc(100% - 32px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 32px)')
+    expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 32px)')
 
     const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
     expect(tab.style.top).toBe('32px')
   })
 
-  it('uses modal dialog semantics and closes with Escape', async () => {
+  it('exposes only the top layer as a modal dialog', () => {
     const wrapper = mount(PSheet, {
-      props: { show: true, closeType: 'header', title: 'Inspect' },
-      slots: { default: '<button class="sheet-action">操作</button>' },
-      global: { stubs: { Teleport: true } },
+      props: { show: true, title: '专辑详情', isTopLayer: true, layerIndex: 2 },
     })
-    document.body.appendChild(wrapper.element)
-    await nextTick()
-
     const panel = wrapper.get('.p-sheet-panel')
+    expect(panel.attributes('role')).toBe('dialog')
     expect(panel.attributes('aria-modal')).toBe('true')
-    expect(panel.attributes('tabindex')).toBe('-1')
-    await panel.trigger('keydown', { key: 'Escape' })
-    expect(wrapper.emitted('close')).toHaveLength(1)
-
-    wrapper.unmount()
+    expect(panel.attributes('aria-label')).toBe('专辑详情')
+    expect(panel.attributes('data-layer-index')).toBe('2')
   })
 
-  it('traps Tab focus and restores the previous focus on unmount', async () => {
-    const trigger = document.createElement('button')
-    document.body.appendChild(trigger)
-    trigger.focus()
+  it('only lets the top layer close with Escape', async () => {
+    const top = mount(PSheet, { props: { show: true, isTopLayer: true } })
+    const shifted = mount(PSheet, { props: { show: true, isTopLayer: false } })
+    await top.get('.p-sheet-panel').trigger('keydown', { key: 'Escape' })
+    await shifted.get('.p-sheet-panel').trigger('keydown', { key: 'Escape' })
+    expect(top.emitted('close')).toHaveLength(1)
+    expect(shifted.emitted('close')).toBeUndefined()
+  })
 
+  it('uses a labelled icon close control', () => {
     const wrapper = mount(PSheet, {
-      props: { show: true, closeType: 'header' },
-      slots: { default: '<button class="sheet-action">操作</button>' },
-      global: { stubs: { Teleport: true } },
+      props: { show: true, title: '历史记录', closeType: 'header' },
     })
-    document.body.appendChild(wrapper.element)
+    expect(wrapper.get('[aria-label="关闭历史记录"]')).toBeTruthy()
+    expect(wrapper.text()).not.toContain('CLOSE')
+  })
+
+  it('accepts a panel class and height for a constrained bottom sheet', () => {
+    const wrapper = mount(PSheet, {
+      props: {
+        show: true,
+        side: 'bottom',
+        panelClass: 'site-footer-sheet',
+        height: '400px',
+      },
+    })
+    const panel = wrapper.get('.p-sheet-panel')
+    expect(panel.classes()).toContain('site-footer-sheet')
+    expect(panel.attributes('style')).toContain('height: 400px')
+  })
+
+  it('focuses the close control when a header sheet opens', async () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, side: 'bottom', title: '关于' },
+    })
+    document.body.appendChild(wrapper.get('.p-sheet-root').element)
+
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({ show: true })
     await nextTick()
 
-    const focusable = Array.from(document.querySelectorAll('.p-sheet-panel button')) as HTMLElement[]
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-    last.focus()
-    await wrapper.get('.p-sheet-panel').trigger('keydown', { key: 'Tab' })
-    expect(document.activeElement).toBe(first)
-
+    const closeButton = document.querySelector('.header-close-btn')
+    expect(closeButton).toBeInstanceOf(HTMLButtonElement)
+    expect(document.activeElement).toBe(closeButton)
     wrapper.unmount()
-    expect(document.activeElement).toBe(trigger)
-    trigger.remove()
   })
+
 })

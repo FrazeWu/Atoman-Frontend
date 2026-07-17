@@ -2,7 +2,6 @@
   <ChannelView v-if="resolvedChannelSlug" :entity-handle="resolvedChannelSlug" />
   <div v-else class="a-page" style="padding-bottom:12rem">
     <PToast v-model="toastVisible" :message="toastMessage" />
-    <BookmarkFolderModal ref="bookmarkModalRef" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />
       <div class="a-skeleton" style="height:2rem;width:50%" />
@@ -16,14 +15,14 @@
     <template v-else>
       <!-- Profile header -->
       <div class="a-card" style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;margin-bottom:2rem">
-        <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight:900;flex-shrink:0">
+        <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight: 500;flex-shrink:0">
           {{ (profile.display_name || profile.username).charAt(0).toUpperCase() }}
         </div>
 
         <div style="flex:1">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
             <div>
-              <h1 style="font-size:1.875rem;font-weight:900;letter-spacing:-0.025em">{{ profile.display_name || profile.username }}</h1>
+              <h1 style="font-size:1.875rem;font-weight: 500;letter-spacing:-0.025em">{{ profile.display_name || profile.username }}</h1>
               <p class="a-muted" style="font-size:.875rem">@{{ profile.username }}</p>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -34,12 +33,12 @@
                 :class="{ 'a-toggle-btn-active': following }"
               >{{ following ? '已关注' : '关注' }}</button>
               <button v-if="authStore.isAuthenticated && !isSelf" @click="openDM" class="a-toggle-btn">发私信</button>
-              <PButton v-if="isSelf" :href="modulePathUrl('blog', '/settings')" size="sm" variant="secondary">编辑资料</PButton>
+              <PButton v-if="isSelf" :to="`/users/${profile.username}/settings`" size="sm" variant="secondary">编辑资料</PButton>
             </div>
           </div>
 
           <!-- Stats -->
-          <div style="display:flex;gap:1.5rem;font-weight:900;font-size:.875rem;margin-bottom:.75rem;flex-wrap:wrap">
+          <div style="display:flex;gap:1.5rem;font-weight: 500;font-size:.875rem;margin-bottom:.75rem;flex-wrap:wrap">
             <span><span style="font-size:1.25rem">{{ channels.length }}</span> 个频道</span>
             <span><span style="font-size:1.25rem">{{ profile.posts_count ?? 0 }}</span> 篇内容</span>
             <span><span style="font-size:1.25rem">{{ profile.followers_count ?? 0 }}</span> 位关注者</span>
@@ -58,7 +57,7 @@
         <div v-else class="a-grid-2">
           <div v-for="ch in channels" :key="ch.id" class="a-card a-card-hover channel-card">
             <div style="flex:1">
-              <h3 style="font-weight:900;font-size:1.125rem;margin-bottom:.35rem">{{ ch.name }}</h3>
+              <h3 style="font-weight: 500;font-size:1.125rem;margin-bottom:.35rem">{{ ch.name }}</h3>
               <p v-if="ch.description" class="a-muted a-clamp-2" style="font-size:.875rem">{{ ch.description }}</p>
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap;align-items:center">
@@ -74,7 +73,6 @@
         <div v-if="loadingPosts" class="a-grid-2">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
         </div>
-        <PEmpty v-else-if="postsError" :title="postsError" data-test="posts-error" />
         <PEmpty v-else-if="!posts.length" title="暂无内容" description="该用户还没有发布内容" />
         <div v-else class="a-grid-2">
           <PEntry
@@ -82,7 +80,7 @@
             :key="post.id"
             :title="post.title"
             :summary="post.summary"
-            @click="router.push('/posts/post/' + post.id)"
+            @click="blogSheets.openPost(post.id, post.title)"
             class="a-cursor-pointer"
           >
             <template #visual>
@@ -116,7 +114,7 @@
 
             <template #actions>
               <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight:700">
+                <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
                   <span>♥ {{ post.likes_count || 0 }}</span>
                   <span>💬 {{ post.comments_count || 0 }}</span>
                 </div>
@@ -149,10 +147,10 @@ import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PToast from '@/components/ui/PToast.vue'
-import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import { useApi } from '@/composables/useApi'
 import { resolveSiteContext } from '@/router/siteContext'
-import { userUrl, channelUrl, modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import { userUrl, channelUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import type { UserProfile, Post, Channel } from '@/types'
 
@@ -161,17 +159,17 @@ const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const api = useApi()
-const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
+const blogSheets = useBlogSheets()
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void bookmarkModalRef.value?.open(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id, 'post')
+  void feedStore.toggleReadingListItem(id)
 }
 
 const profile = ref<UserProfile | null>(null)
@@ -179,7 +177,6 @@ const channels = ref<Channel[]>([])
 const posts = ref<Post[]>([])
 const loading = ref(true)
 const loadingPosts = ref(true)
-const postsError = ref('')
 const following = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
@@ -231,29 +228,16 @@ const fetchChannels = async () => {
   if (!profile.value) return
   try {
     const res = await fetch(`${api.blog.channels}?user_id=${profile.value.uuid}`)
-    if (res.ok) {
-      const rows = ((await res.json()).data || []) as Channel[]
-      channels.value = rows.filter((channel) => channel.content_type === 'blog')
-    }
+    if (res.ok) channels.value = (await res.json()).data || []
   } catch (e) { console.error(e) }
 }
 
 const fetchPosts = async () => {
   if (!profile.value) return
   loadingPosts.value = true
-  postsError.value = ''
   try {
-    const res = await fetch(`${api.blog.posts}?user_id=${profile.value.uuid}&page_size=8`)
-    if (!res.ok) throw new Error(`Failed to load posts: ${res.status}`)
-
-    const data = await res.json()
-    if (!data || !Array.isArray(data.data) || typeof data.meta?.has_more !== 'boolean') {
-      throw new Error('Invalid posts response')
-    }
-    posts.value = data.data
-  } catch {
-    posts.value = []
-    postsError.value = '内容加载失败，请重试'
+    const res = await fetch(`${api.blog.posts}?user_id=${profile.value.uuid}&status=published&limit=8`)
+    if (res.ok) posts.value = (await res.json()).data || []
   } finally { loadingPosts.value = false }
 }
 
@@ -287,7 +271,7 @@ const toggleFollow = async () => {
 }
 
 const openDM = () => {
-  router.push({ path: '/feed/inbox', query: { tab: 'dm', user: username.value } })
+  router.push({ path: '/inbox', query: { tab: 'dm', user: username.value } })
 }
 
 onMounted(async () => {
@@ -315,7 +299,7 @@ onMounted(async () => {
   border: 1px solid var(--a-color-line-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .a-cursor-pointer {
   cursor: pointer;

@@ -51,6 +51,8 @@ export interface Album {
 
 export interface Song {
   id: number | string;
+  source_type?: 'music' | 'podcast_episode' | 'feed_podcast'
+  source_id?: string
   title: string;
   artist: string;
   album: string;
@@ -177,7 +179,7 @@ export interface Channel {
   user?: User
   name: string
   slug: string
-  content_type: 'blog' | 'podcast' | 'video'
+  content_type?: 'blog' | 'podcast' | 'video'
   description?: string
   cover_url?: string
   is_default?: boolean
@@ -212,7 +214,9 @@ export interface Post {
   cover_url?: string
   status: 'draft' | 'published'
   visibility: 'public' | 'followers' | 'private'
+  allow_comments: boolean
   pinned: boolean
+  collections?: Collection[]
   published_at?: string
   view_count?: number
   liked?: boolean
@@ -234,10 +238,51 @@ export interface BlogDraft {
   summary?: string
   cover_url?: string
   visibility: 'public' | 'followers' | 'private'
+  allow_comments: boolean
   channel_id?: string
   collection_id?: string
+  collection_ids: string[]
   created_at: string
   updated_at: string
+}
+
+export interface Comment {
+  id: string
+  target_type?: 'post' | 'video' | 'podcast_episode'
+  target_id?: string
+  post_id?: string
+  user_id?: string | null
+  user?: User
+  guest_name?: string
+  content: string
+  timestamp_sec?: number | null
+  status: 'visible' | 'hidden'
+  created_at: string
+  updated_at: string
+}
+
+export type InteractionModule = 'blog' | 'forum' | 'videos'
+export type InteractionTargetType = 'post' | 'forum_topic' | 'video'
+
+export interface InteractionUserRef {
+  id?: string | number
+  uuid?: string
+  username: string
+  display_name?: string
+  avatar_url?: string
+}
+
+export interface InteractionComment {
+  id: string
+  content: string
+  created_at: string
+  user_id?: string | null
+  root_comment_id?: string | null
+  parent_comment_id?: string | null
+  reply_to_user?: InteractionUserRef | null
+  user?: InteractionUserRef | null
+  replies?: InteractionComment[]
+  timestamp_sec?: number | null
 }
 
 export interface Like {
@@ -400,10 +445,40 @@ export interface Subscription {
   title?: string
   subscription_group_id?: string
   subscription_group?: SubscriptionGroup
+  is_muted?: boolean
+  auto_mark_read?: boolean
+  auto_add_reading_list?: boolean
   health_status?: 'healthy' | 'warning' | 'error'
   error_message?: string
   last_checked?: string
+  unread_count?: number
   created_at: string
+}
+
+export type FeedSubscriptionRuleMatchType = 'source_category' | 'source_ids' | 'keywords'
+
+export interface FeedSubscriptionRule {
+  id: string
+  name: string
+  enabled: boolean
+  position: number
+  match_type: FeedSubscriptionRuleMatchType
+  conditions_json: Record<string, unknown>
+  action_group_id?: string | null
+  action_muted?: boolean | null
+  action_auto_mark_read?: boolean | null
+  action_auto_add_reading_list?: boolean | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ApplySubscriptionRulesSummary {
+  scanned_count: number
+  updated_count: number
+  group_changed_count: number
+  muted_changed_count: number
+  auto_mark_read_changed_count: number
+  auto_add_reading_list_changed_count: number
 }
 
 export interface FeedItem {
@@ -461,6 +536,7 @@ export interface StarredFeedItem {
   source_site_url?: string
   source_image_url?: string
   group_id?: string | null
+  is_read?: boolean
 }
 
 // Unified timeline item returned by GET /api/feed/timeline
@@ -557,6 +633,23 @@ export interface ForumTopic {
   updated_at: string
 }
 
+export interface ForumReply {
+  id: string
+  topic_id: string
+  user_id: string
+  user?: User
+  parent_reply_id?: string // quoted reply id
+  content: string          // raw Markdown
+  path: string
+  floor_number: number
+  depth?: number
+  is_solved?: boolean
+  like_count: number
+  is_liked: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface ForumDraft {
   id?: string
   context_key: string
@@ -594,25 +687,35 @@ export interface UserProfile {
   created_at: string
 }
 
+export type NotificationCategory = 'like' | 'interaction' | 'mention' | 'reply' | 'collaboration' | 'system'
+export type InboxTab = NotificationCategory | 'dm'
+export type NotificationFilterType = NotificationCategory
+
 export interface Notification {
   id: string
   recipient_id: string
   actor_id?: string | null
   actor?: User | null
-  type: 'comment_reply' | 'comment_mention' | 'comment_marked' | 'comment_like' | 'forum_topic_comment' | 'forum_follow'
+  latest_actor?: User | null
+  type: string
+  category: NotificationCategory
+  reason: string
   source_type: string
   source_id: string
+  source_url?: string
+  aggregate_key?: string
   aggregation_key?: string | null
+  actor_count: number
   meta: {
+    title?: string
+    body?: string
+    source_label?: string
     topic_id?: string
     topic_title?: string
     reply_excerpt?: string
     actor_count?: number
     recent_actors?: string[]
-    target_kind?:
-      | 'blog_post' | 'video' | 'podcast_episode' | 'feed_article'
-      | 'music_artist' | 'music_album' | 'music_song' | 'forum_topic'
-      | 'debate' | 'timeline_event' | 'timeline_person'
+    target_kind?: 'blog_post' | 'video' | 'podcast_episode' | 'feed_article' | 'music_artist' | 'music_album' | 'music_song' | 'forum_topic' | 'debate' | 'timeline_event' | 'timeline_person'
     resource_id?: string
     comment_id?: string
     root_id?: string
@@ -631,6 +734,34 @@ export interface DMConversation {
   last_message_at?: string | null
   preview: string
   unread_count: number
+  is_blocked?: boolean
+}
+
+export interface NotificationUnreadCounts {
+  total: number
+  items: Record<InboxTab, number>
+}
+
+export interface NotificationPreference {
+  id?: string
+  category: NotificationCategory
+  event_type: string
+  enabled: boolean
+}
+
+export interface NotificationMute {
+  id: string
+  source_type: string
+  source_id: string
+  reason: string
+  created_at: string
+}
+
+export interface BlockedUser {
+  id: string
+  blocked_id: string
+  blocked?: User
+  created_at: string
 }
 
 export interface DMMessage {
@@ -661,8 +792,6 @@ export interface DMRealtimePayload {
   created_at: string
 }
 
-export type InboxTab = 'reply' | 'like' | 'mention' | 'forum' | 'dm'
-export type NotificationFilterType = '' | Notification['type']
 export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====
@@ -819,6 +948,26 @@ export interface PodcastEpisode {
   episode_number: number
   created_at: string
   updated_at: string
+}
+
+export interface PodcastEpisodeProgress {
+  id: string
+  user_id: string
+  episode_id: string
+  episode?: PodcastEpisode
+  position_sec: number
+  duration_sec: number
+  completed: boolean
+  last_played_at?: string
+}
+
+export interface PodcastListenLater {
+  id: string
+  user_id: string
+  episode_id: string
+  episode?: PodcastEpisode
+  position: number
+  created_at: string
 }
 
 export interface VideoTag {

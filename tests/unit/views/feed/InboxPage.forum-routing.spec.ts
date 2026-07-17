@@ -14,14 +14,16 @@ const makeNotification = (overrides: Partial<Notification>): Notification => ({
   recipient_id: 'user-1',
   actor_id: 'user-2',
   actor: { username: 'alice', email: 'alice@example.com' },
-  type: 'comment_reply',
-  source_type: 'comment_event',
+  type: 'forum_reply',
+  category: 'reply',
+  reason: '回复内容',
+  source_type: 'forum_reply',
   source_id: 'reply-1',
+  actor_count: 1,
   meta: {
-    target_kind: 'forum_topic',
-    resource_id: 'topic-1',
-    comment_id: 'reply-1',
-    root_id: 'root-1',
+    topic_id: 'topic-1',
+    topic_title: '通知跳转',
+    reply_excerpt: '回复内容',
   },
   read_at: null,
   created_at: '2026-01-01T00:00:00Z',
@@ -49,11 +51,12 @@ const mountInbox = async (notification: Notification, path = '/feed/inbox') => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/feed/inbox', component: { template: '<div />' } },
+      { path: '/inbox', component: { template: '<div />' } },
       { path: '/forum/topic/:id', component: { template: '<div />' } },
     ],
   })
-  await router.push(path)
+  await router.push('/inbox')
+  if (path !== '/feed/inbox') await router.replace(path.replace('/feed/inbox', '/inbox'))
   await router.isReady()
   const pushSpy = vi.spyOn(router, 'push')
   pushSpy.mockResolvedValue(undefined)
@@ -80,46 +83,55 @@ const mountInbox = async (notification: Notification, path = '/feed/inbox') => {
   return { wrapper, pushSpy }
 }
 
-describe('InboxPage 统一评论通知跳转', () => {
+describe('InboxPage forum 通知跳转', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
   })
 
-  it('论坛回复通知跳转到统一评论锚点', async () => {
+  it('回复通知跳转到 /forum/topic/:id 的回复锚点', async () => {
     const { wrapper, pushSpy } = await mountInbox(makeNotification({}))
 
     await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
 
-    expect(pushSpy).toHaveBeenLastCalledWith({
-      path: '/forum/topic/topic-1', query: { comment_id: 'reply-1' }, hash: '#comment-root-1',
-    })
+    expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-1#reply-reply-1')
   })
 
-  it('统一评论通知优先按目标类型跳转并保留评论定位', async () => {
+  it('话题通知跳转到 /forum/topic/:id', async () => {
     const { wrapper, pushSpy } = await mountInbox(makeNotification({
-      id: 'notice-comment',
-      type: 'comment_mention',
-      source_type: 'comment',
-      source_id: 'child-1',
-      meta: {
-        target_kind: 'video', resource_id: 'video-1', comment_id: 'child-1', root_id: 'root-1',
-      },
+      id: 'notice-2',
+      source_type: 'forum_topic',
+      source_id: 'topic-2',
+      meta: { topic_title: '新话题' },
     }))
 
     await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
 
-    expect(pushSpy).toHaveBeenLastCalledWith({
-      path: '/videos/videos/watch/video-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
-    })
-    expect(wrapper.text()).not.toContain('child-1')
+    expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-2')
   })
 
-  it('回复标签只请求统一回复和标记通知', async () => {
-    const { wrapper } = await mountInbox(makeNotification({}))
-    const store = useNotificationStore()
-    expect(store.fetchNotifications).toHaveBeenCalledWith(['comment_reply', 'comment_marked'], 1)
-    wrapper.unmount()
+  it('优先使用 source_url 跳转到来源', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      id: 'notice-3',
+      source_url: '/forum/topic/topic-3#reply-reply-3',
+    }))
+
+    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
+
+    expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-3#reply-reply-3')
+  })
+
+  it('没有可用来源时不显示跳转按钮', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      id: 'notice-4',
+      source_type: 'music_lyrics',
+      source_id: 'lyrics-1',
+      meta: {},
+    }))
+
+    expect(wrapper.findAll('button').some((button) => button.text().includes('前往来源内容'))).toBe(false)
+    expect(wrapper.text()).toContain('来源已不可用')
+    expect(pushSpy).not.toHaveBeenCalled()
   })
 
   it('论坛标签请求新评论和新帖子通知', async () => {

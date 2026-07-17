@@ -50,7 +50,7 @@ defineEmits<{
 .topbar-search-section__header h3 {
   margin: 0;
   font-size: 0.82rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .topbar-search-section__more {
@@ -58,7 +58,7 @@ defineEmits<{
   background: transparent;
   color: var(--a-color-muted);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -80,7 +80,7 @@ defineEmits<{
 
 .topbar-search-section__title {
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 

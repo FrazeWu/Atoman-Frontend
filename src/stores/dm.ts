@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { DMConversation, DMMessage, DMRealtimePayload } from '@/types'
@@ -15,6 +15,11 @@ export const useDMStore = defineStore('dm', () => {
   const loading = ref(false)
   const total = ref(0)
   let openConversationRequestId = 0
+
+  const activeConversationBlocked = computed(() => {
+    const active = activeConversation.value
+    return Boolean(conversations.value.find((item) => item.other_username === active)?.is_blocked)
+  })
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -67,6 +72,7 @@ export const useDMStore = defineStore('dm', () => {
 
   const sendMessage = async (username: string, content: string, imageUrl = '') => {
     if (!authStore.token) return
+    if (activeConversationBlocked.value) throw new Error('已拉黑此用户')
     const res = await fetch(api.dm.conversation(username), {
       method: 'POST',
       headers: authHeaders(),
@@ -114,8 +120,13 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const receiveDM = (payload: DMRealtimePayload) => {
-    const active = activeConversation.value === payload.sender_username
-    if (!active) {
+    const currentUserIds = new Set([
+      authStore.user?.uuid,
+      authStore.user?.id === undefined ? undefined : String(authStore.user.id),
+    ].filter((id): id is string => Boolean(id)))
+    const isOwnMessage = currentUserIds.has(payload.sender_id)
+    const active = !isOwnMessage && activeConversation.value === payload.sender_username
+    if (!active && !isOwnMessage) {
       unreadCount.value += 1
     }
 
@@ -123,7 +134,7 @@ export const useDMStore = defineStore('dm', () => {
     if (existingConversation) {
       existingConversation.preview = payload.content || '[图片]'
       existingConversation.last_message_at = payload.created_at
-      if (!active) existingConversation.unread_count += 1
+      if (!active && !isOwnMessage) existingConversation.unread_count += 1
       conversations.value = [existingConversation, ...conversations.value.filter((item) => item.conversation_id !== payload.conversation_id)]
     }
 
@@ -158,6 +169,7 @@ export const useDMStore = defineStore('dm', () => {
     messages,
     loading,
     total,
+    activeConversationBlocked,
     fetchUnreadCount,
     fetchConversations,
     openConversation,

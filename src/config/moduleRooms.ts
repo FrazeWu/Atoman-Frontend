@@ -1,6 +1,5 @@
 export type ModuleRoomKey =
   | 'feed'
-  | 'media'
   | 'music'
   | 'blog'
   | 'forum'
@@ -29,14 +28,6 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     helper: 'RSS 与更新流',
     homepageSub: '聚合你感兴趣的 RSS 订阅源与内容更新。',
   },
-  media: {
-    key: 'media',
-    homePath: '/',
-    publicPathSegment: 'media',
-    name: '内容',
-    helper: '文章、播客、视频',
-    homepageSub: '统一管理频道内的文章、播客与视频创作。',
-  },
   music: {
     key: 'music',
     homePath: '/',
@@ -49,7 +40,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     key: 'blog',
     homePath: '/',
     publicPathSegment: 'posts',
-    name: '文章',
+    name: '博客',
     helper: '内容视图',
     homepageSub: '',
   },
@@ -97,13 +88,24 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 
 export const moduleNavOrder: ModuleRoomKey[] = [
   'feed',
-  'media',
+  'blog',
   'music',
   'forum',
   'debate',
   'timeline',
   'podcast',
   'video',
+]
+
+export const topbarNavOrder: ModuleRoomKey[] = [
+  'feed',
+  'blog',
+  'music',
+  'video',
+  'podcast',
+  'forum',
+  'debate',
+  'timeline',
 ]
 
 export const isRoomRouteActive = (key: ModuleRoomKey, context: SiteContext) => (

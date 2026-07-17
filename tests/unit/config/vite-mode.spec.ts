@@ -7,11 +7,11 @@ const packageJson = JSON.parse(
 
 describe('vite mode scripts', () => {
   it('loads the dev env file when running the dev server', () => {
-    expect(packageJson.scripts.dev).toContain('--mode dev')
+    expect(packageJson.scripts.dev).toContain('--mode development')
   })
 
   it('loads the prod env file when building for production', () => {
-    expect(packageJson.scripts.build).toContain('--mode prod')
+    expect(packageJson.scripts.build).toContain('--mode production')
   })
 
   it('keeps vite on a Cloudflare Pages compatible major version', () => {

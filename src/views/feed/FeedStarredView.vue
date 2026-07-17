@@ -195,6 +195,8 @@ watch(items, () => {
 
 const openArticleSheet = (item: StarredFeedItem, index?: number) => {
   if (index !== undefined) focusedIndex.value = index
+  const wasRead = item.is_read === true
+  item.is_read = true
   // Convert StarredFeedItem to TimelineItem for FeedArticleSheet
   selectedArticle.value = {
     type: 'feed_item',
@@ -210,6 +212,14 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
     is_read: true
   }
   showArticleSheet.value = true
+  if (!wasRead) {
+    void markItemsReadAndRefresh([item.id])
+  }
+}
+
+const markItemsReadAndRefresh = async (ids: string[]) => {
+  const success = await feedStore.markItemsRead(ids)
+  if (success) await feedStore.fetchSubscriptions()
 }
 
 const openPreviousArticle = () => {
@@ -413,8 +423,8 @@ onUnmounted(() => {
   color: var(--a-color-fg);
   font-family: var(--a-font-meta);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .star-group-button.active,
@@ -450,8 +460,8 @@ onUnmounted(() => {
   padding: 0.25rem 0.5rem;
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);

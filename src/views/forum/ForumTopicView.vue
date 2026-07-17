@@ -1,6 +1,6 @@
 <template>
-  <div class="a-page-xl" style="padding-bottom:8rem">
-    <div v-if="forumStore.loading" style="padding:4rem 0;text-align:center;font-weight:900;letter-spacing:.1em;font-size:.75rem;text-transform:uppercase">
+  <div class="a-page-xl topic-page">
+    <div v-if="forumStore.loading" class="topic-loading">
       加载中...
     </div>
 
@@ -13,19 +13,22 @@
           v-if="forumStore.currentTopic.category"
           class="a-badge category-pill"
           :style="{ borderColor: forumStore.currentTopic.category.color, color: forumStore.currentTopic.category.color }"
-          @click="router.push(`/forum?category=${forumStore.currentTopic.category_id}`)"
+          @click="router.push(`/forum?category_id=${forumStore.currentTopic.category_id}`)"
         >{{ forumStore.currentTopic.category.name }}</span>
       </div>
 
       <!-- Topic header -->
       <div class="topic-header">
         <h1 class="topic-title">
-          <span v-if="forumStore.currentTopic.pinned" class="badge-pinned">置顶</span>
-          <span v-if="forumStore.currentTopic.featured" class="badge-featured">精华</span>
-          <span v-if="forumStore.currentTopic.closed" class="badge-closed">已关闭</span>
-          <span v-if="forumStore.currentTopic.is_solved" class="badge-solved">✓ 已解决</span>
           {{ forumStore.currentTopic.title }}
         </h1>
+
+        <div class="topic-status-row">
+          <span v-if="forumStore.currentTopic.pinned" class="topic-status-badge">置顶</span>
+          <span v-if="forumStore.currentTopic.featured" class="topic-status-badge">精华</span>
+          <span v-if="forumStore.currentTopic.closed" class="topic-status-badge topic-status-muted">已关闭</span>
+          <span v-if="forumStore.currentTopic.is_solved" class="topic-status-badge topic-status-solved">已解决</span>
+        </div>
 
         <!-- Tags -->
         <div v-if="(forumStore.currentTopic.tags || []).length > 0" class="topic-tag-row">
@@ -38,25 +41,24 @@
 
         <!-- Meta bar -->
         <div class="topic-meta">
-          <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
-          <span
-            v-if="forumStore.currentTopic.user?.forum_trust_level != null"
-            class="a-badge"
-            data-testid="forum-topic-trust-level"
-          >等级 {{ forumStore.currentTopic.user.forum_trust_level }}</span>
-          <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
-          <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
-          <span>{{ forumStore.currentTopic.reply_count }} 回复</span>
-
-          <!-- Like button -->
-          <PButton
-            v-if="authStore.isAuthenticated"
-            @click="forumStore.toggleTopicLike(forumStore.currentTopic!.id)"
-            outline
-            size="sm"
-            :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_liked }"
-          >{{ forumStore.currentTopic.is_liked ? '已赞' : '点赞' }} {{ forumStore.currentTopic.like_count }}</PButton>
-          <span v-else>{{ forumStore.currentTopic.like_count }} 赞</span>
+          <div class="topic-meta-text">
+            <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
+            <span
+              v-if="forumStore.currentTopic.user?.forum_trust_level != null"
+              class="a-badge"
+              data-testid="forum-topic-trust-level"
+            >等级 {{ forumStore.currentTopic.user.forum_trust_level }}</span>
+            <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
+            <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
+          </div>
+          <InteractionBar
+            :liked="interactions.liked.value"
+            :like-count="interactions.likeCount.value"
+            :comment-count="interactions.commentCount.value"
+            :disabled="!authStore.isAuthenticated"
+            @like="interactions.like"
+            @unlike="interactions.unlike"
+          />
 
           <!-- Bookmark button -->
           <PButton
@@ -66,15 +68,6 @@
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
           >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</PButton>
-
-          <PButton
-            v-if="authStore.isAuthenticated"
-            data-testid="forum-topic-follow"
-            @click="forumStore.toggleFollow('topic', forumStore.currentTopic!.id)"
-            outline
-            size="sm"
-            :class="{ 'topic-action-btn-active': forumStore.isFollowing('topic', forumStore.currentTopic.id) }"
-          >{{ forumStore.isFollowing('topic', forumStore.currentTopic.id) ? '已关注' : '关注' }}</PButton>
 
           <!-- Report button (non-owner, authenticated) -->
           <PButton
@@ -102,16 +95,21 @@
             v-html="renderMarkdown(forumStore.currentTopic.content)"
           />
 
-          <CommentSection
-            :target="{ kind: 'forum_topic', resourceId: forumStore.currentTopic.id }"
-            noun="回复"
-            mark-label="最佳回答"
-            :readonly="forumStore.currentTopic.closed"
-            :focus-comment-id="focusCommentId"
-            :focus-root-id="focusRootId"
-            @marked-change="syncSolvedState"
-            @count-change="syncReplyCount"
-          />
+          <div class="reply-form-root">
+            <div v-if="commentNotice" class="reply-login-notice">
+              <p class="reply-login-text">{{ commentNotice }}</p>
+              <PButton v-if="!authStore.isAuthenticated && !forumStore.currentTopic.closed" to="/login">登录</PButton>
+            </div>
+            <CommentThread
+              :items="interactions.comments.value"
+              :loading="interactions.loadingComments.value"
+              :submitting="interactions.submittingComment.value"
+              :can-comment="canComment"
+              :can-delete="canDeleteComment"
+              :submit-action="submitComment"
+              @delete="interactions.deleteComment"
+            />
+          </div>
       </div>
     </template>
 
@@ -135,7 +133,7 @@
     <div style="display:flex;flex-direction:column;gap:1rem">
       <div class="a-field">
         <label class="a-field-label">举报类型</label>
-        <p class="a-muted" style="margin:0;font-size:.85rem;font-weight:700">帖子</p>
+        <p class="a-muted" style="margin:0;font-size:.85rem;font-weight: 500">{{ reportModal.targetType === 'topic' ? '帖子' : '回复' }}</p>
       </div>
       <div class="a-field">
         <label class="a-field-label">举报原因 *</label>
@@ -156,28 +154,53 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
-import { isAdminRole } from '@/utils/roles'
+import { isAdminRole, isModeratorRole } from '@/utils/roles'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import InteractionBar from '@/components/shared/InteractionBar.vue'
+import CommentThread from '@/components/shared/CommentThread.vue'
 import { useApi } from '@/composables/useApi'
+import { useInteractions } from '@/composables/useInteractions'
+import type { InteractionComment } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
-
+const topicId = computed(() => String(route.params.id || ''))
+const interactions = useInteractions('forum', 'forum_topic', topicId)
 const showBackTop = ref(false)
-const focusCommentId = computed(() => typeof route.query.comment_id === 'string' ? route.query.comment_id : '')
-const focusRootId = computed(() => route.hash.startsWith('#comment-') ? route.hash.slice('#comment-'.length) : '')
+const canComment = computed(() => Boolean(forumStore.currentTopic && !forumStore.currentTopic.closed && authStore.isAuthenticated))
+const commentNotice = computed(() => {
+  if (forumStore.currentTopic?.closed) return '该话题已关闭'
+  if (!authStore.isAuthenticated) return '登录后即可参与讨论'
+  return ''
+})
+const canDeleteComment = (comment: InteractionComment) => {
+  if (!authStore.user) return false
+  const authIDs = new Set([
+    authStore.user.uuid,
+    authStore.user.id === undefined ? undefined : String(authStore.user.id),
+  ].filter((id): id is string => Boolean(id)))
+  const commentIDs = [
+    comment.user_id ?? undefined,
+    comment.user?.uuid,
+    comment.user?.id === undefined ? undefined : String(comment.user.id),
+  ].filter((id): id is string => Boolean(id))
+  return (
+    commentIDs.some((id) => authIDs.has(id)) ||
+    authStore.user.uuid === forumStore.currentTopic?.user_id ||
+    isModeratorRole(authStore.user.role)
+  )
+}
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -193,25 +216,34 @@ const formatTime = (iso: string) => {
   return d.toLocaleDateString('zh-CN')
 }
 
+const submitComment = async (payload: { content: string; parentCommentId?: string }) => {
+  await interactions.createComment(payload.content, payload.parentCommentId)
+}
+
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 const onScroll = () => {
   showBackTop.value = window.scrollY > 300
 }
 
-const syncSolvedState = (marked: boolean) => {
-  if (forumStore.currentTopic) forumStore.currentTopic.is_solved = marked
-}
-
-const syncReplyCount = (count: number) => {
-  if (forumStore.currentTopic) forumStore.currentTopic.reply_count = count
+const loadTopic = async () => {
+  await forumStore.fetchTopic(topicId.value)
+  if (forumStore.currentTopic) {
+    interactions.liked.value = forumStore.currentTopic.is_liked
+    interactions.likeCount.value = forumStore.currentTopic.like_count
+    interactions.commentCount.value = forumStore.currentTopic.reply_count
+    await interactions.fetchComments()
+  }
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
+watch(topicId, () => {
+  void loadTopic()
+})
+
 onMounted(async () => {
-  const id = route.params.id as string
-  await forumStore.fetchTopic(id)
+  await loadTopic()
   window.addEventListener('scroll', onScroll)
 })
 
@@ -221,7 +253,7 @@ onBeforeUnmount(() => {
 
 // Report & Featured
 const api = useApi()
-const reportModal = ref<{ show: boolean; targetType: 'topic'; targetId: string }>(
+const reportModal = ref<{ show: boolean; targetType: 'topic' | 'reply'; targetId: string }>(
   { show: false, targetType: 'topic', targetId: '' },
 )
 const reportForm = ref({ reason: '', note: '' })
@@ -233,7 +265,7 @@ const reportReasonOptions = [
   { label: '其他', value: 'other' },
 ]
 
-const openReportModal = (targetType: 'topic', targetId: string) => {
+const openReportModal = (targetType: 'topic' | 'reply', targetId: string) => {
   reportModal.value = { show: true, targetType, targetId }
   reportForm.value = { reason: '', note: '' }
   reportFeedback.value = ''
@@ -276,85 +308,83 @@ const toggleFeatured = async () => {
     topic.featured = !topic.featured
   }
 }
-
 </script>
 
 <style scoped>
 /* ── Topic header ─────────────────────────────────────────────────────────── */
+.topic-page {
+  padding-bottom: 8rem;
+}
+
+.topic-loading {
+  padding: 4rem 0;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .topic-header {
   margin-bottom: 2rem;
+  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  padding-bottom: 1.5rem;
 }
 
 .topic-title {
   font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.15;
   margin: 0 0 0.75rem;
 }
 
-.badge-pinned {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  margin-right: 0.6rem;
-  vertical-align: middle;
+.topic-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
-.badge-closed {
-  display: inline-block;
+.topic-status-badge {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.7rem;
   font-weight: var(--a-font-weight-black);
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  border-color: var(--a-color-disabled-border);
-  color: var(--a-color-muted-soft);
-  margin-right: 0.6rem;
-  vertical-align: middle;
-}
-
-.badge-solved {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  border-color: var(--a-color-success);
-  color: var(--a-color-bg);
-  background: var(--a-color-success);
-  margin-right: 0.6rem;
-  vertical-align: middle;
-}
-
-.badge-featured {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: var(--a-font-weight-black);
-  text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
   padding: 0.15rem 0.4rem;
   border: var(--a-border);
   border-color: var(--a-color-muted);
   color: var(--a-color-fg);
-  margin-right: 0.6rem;
-  vertical-align: middle;
+}
+
+.topic-status-muted {
+  border-color: var(--a-color-disabled-border);
+  color: var(--a-color-muted-soft);
+}
+
+.topic-status-solved {
+  border-color: var(--a-color-success);
+  background: var(--a-color-success);
+  color: var(--a-color-bg);
 }
 
 .topic-meta {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
+  flex-wrap: wrap;
+}
+
+.topic-meta-text {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
@@ -383,7 +413,7 @@ const toggleFeatured = async () => {
   font-weight: var(--a-font-weight-black);
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -399,16 +429,16 @@ const toggleFeatured = async () => {
 }
 
 .reply-login-text {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   margin: 0 0 1rem;
 }
 
 .reply-form-title {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   margin: 0 0 1rem;
 }
 
@@ -422,10 +452,10 @@ const toggleFeatured = async () => {
 .topic-not-found {
   padding: 4rem 0;
   text-align: center;
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
 }
 
@@ -448,10 +478,10 @@ const toggleFeatured = async () => {
 }
 
 .reply-count-title {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   margin: 0;
   padding-bottom: 0.75rem;
   border-bottom: none;
@@ -484,7 +514,7 @@ const toggleFeatured = async () => {
   border-left: 3px solid var(--a-color-fg);
   margin-bottom: 1rem;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .quote-preview {
@@ -527,10 +557,10 @@ const toggleFeatured = async () => {
 }
 
 .back-link-muted {
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-decoration: none;
   color: var(--a-color-muted);
   border-bottom: 1px solid transparent;
@@ -619,7 +649,7 @@ const toggleFeatured = async () => {
 }
 
 .markdown-body :deep(th) {
-  font-weight: 900;
+  font-weight: 500;
   background: var(--a-color-disabled-bg);
 }
 
@@ -646,8 +676,8 @@ const toggleFeatured = async () => {
 .markdown-body :deep(h1),
 .markdown-body :deep(h2),
 .markdown-body :deep(h3) {
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 1.5em 0 0.75em;
   scroll-margin-top: 5rem;
 }

@@ -3,19 +3,21 @@ import { describe, expect, it } from 'vitest'
 import MusicAlbumCard from '@/components/music/MusicAlbumCard.vue'
 
 describe('MusicAlbumCard', () => {
-  it('does not display the backend zero-date year', () => {
+  it('resolves cover_s3_key through the configured public asset base instead of localhost', () => {
+    const env = import.meta.env as ImportMetaEnv
+    env.VITE_R2_PUBLIC_BASE_URL = 'https://assets.atoman.org'
+
     const wrapper = mount(MusicAlbumCard, {
       props: {
         album: {
           id: 'album-1',
-          title: 'Unknown Year Album',
-          release_date: '0001-01-01T00:00:00Z',
-          artists: [{ name: 'Artist' }],
+          title: 'Album One',
+          cover_s3_key: 'music/covers/album-1.jpg',
         },
       },
     })
 
-    expect(wrapper.text()).toContain('未知年份')
-    expect(wrapper.text()).not.toContain('0001')
+    const image = wrapper.get('img')
+    expect(image.attributes('src')).toBe('https://assets.atoman.org/music/covers/album-1.jpg')
   })
 })

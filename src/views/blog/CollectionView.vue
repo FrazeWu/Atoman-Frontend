@@ -1,6 +1,5 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <BookmarkFolderModal ref="bookmarkModalRef" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />
       <div class="a-skeleton" style="height:2rem;width:50%" />
@@ -19,7 +18,7 @@
             >
               {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
             </PClip>
-            <PLink :href="channelHref" label="返回频道" />
+            <PLink :href="`/posts/channel/${channelId}`" label="返回频道" />
             <PLink
               v-if="isOwner"
               :href="`/posts/post/new?channel=${channelId}&collection=${collection.id}`"
@@ -32,13 +31,13 @@
       <PCard class="collection-meta-card">
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">所属频道</p>
-          <PLink :href="channelHref">
+          <PLink :href="`/posts/channel/${channelId}`">
             {{ channel?.name || '加载中...' }}
           </PLink>
         </div>
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">文章数量</p>
-          <p style="font-weight:900;margin:0">{{ posts.length }}篇</p>
+          <p style="font-weight: 500;margin:0">{{ posts.length }}篇</p>
         </div>
         <div v-if="isOwner" class="paper-actions-row">
           <PClip label="编辑" @click="openEditModal" />
@@ -52,15 +51,14 @@
           <span class="a-muted" style="font-size:.875rem">{{ posts.length }} 篇</span>
         </div>
 
-        <p v-if="postsLoadError" class="a-error" style="margin-bottom:1rem">{{ postsLoadError }}</p>
-        <PEmpty v-if="!postsLoadError && !posts.length" text="当前合集暂无文章" />
-        <div v-if="posts.length" class="post-list">
+        <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
+        <div v-else class="post-list">
           <PEntry
             v-for="post in posts"
             :key="post.id"
             :title="post.title"
             :summary="post.summary || summarize(post.content)"
-            @click="router.push(`/posts/post/${post.id}`)"
+            @click="blogSheets.openPost(post.id, post.title, collectionId)"
           >
             <template #meta>
               <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
@@ -95,7 +93,6 @@
         <div style="display:flex;flex-direction:column;gap:1rem">
           <PInput v-model="form.name" label="合集名称" placeholder="输入合集名称" />
           <PTextarea v-model="form.description" label="合集描述" placeholder="简短介绍这个合集" :rows="3" />
-          <p v-if="saveError" class="a-error">{{ saveError }}</p>
           <div class="modal-actions">
             <PPress label="取消" variant="secondary" @click="editModalOpen = false" />
             <PPress :disabled="!form.name.trim() || saving" :loading="saving" loading-text="保存中..." @click="saveCollection">
@@ -109,14 +106,9 @@
       <PModal v-model="deleteModalOpen" title="确认删除合集">
         <div style="display:flex;flex-direction:column;gap:1rem">
           <p>确定要删除合集<strong>{{ collection.name }}</strong>吗？此操作不可恢复，但不会删除其中的文章。</p>
-          <p v-if="deleteError" class="a-error">{{ deleteError }}</p>
           <div class="modal-actions">
-            <PPress v-if="!deleteCompletedHref" label="取消" variant="secondary" @click="deleteModalOpen = false" />
-            <PReject
-              :label="deleteCompletedHref ? '返回频道' : (deleting ? '删除中...' : '删除')"
-              :disabled="deleting"
-              @click="deleteCollection"
-            />
+            <PPress label="取消" variant="secondary" @click="deleteModalOpen = false" />
+            <PReject label="删除" @click="deleteCollection" />
           </div>
         </div>
       </PModal>
@@ -125,8 +117,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PModal from '@/components/ui/PModal.vue'
@@ -139,13 +131,12 @@ import PPress from '@/components/ui/PPress.vue'
 import PReject from '@/components/ui/PReject.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import BookmarkFolderModal from '@/components/blog/BookmarkFolderModal.vue'
 import type { Collection, Post, Channel } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useSheetStore } from '@/stores/sheet'
-import { channelUrl } from '@/router/siteUrls'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 
 const props = defineProps<{
   id?: string
@@ -157,45 +148,33 @@ const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const sheetStore = useSheetStore()
-const bookmarkModalRef = ref<InstanceType<typeof BookmarkFolderModal> | null>(null)
+const blogSheets = useBlogSheets()
 
 const loading = ref(true)
 const collection = ref<Collection | null>(null)
 const channel = ref<Channel | null>(null)
 const posts = ref<Post[]>([])
-const postsLoadError = ref('')
-let postsRequestSequence = 0
-let collectionRequestSequence = 0
 
 const editModalOpen = ref(false)
 const deleteModalOpen = ref(false)
 const form = ref({ name: '', description: '' })
 const saving = ref(false)
-const saveError = ref('')
-let saveRequestToken = 0
-const deleting = ref(false)
-const deleteError = ref('')
-const deleteCompletedHref = ref('')
-const deleteCompletedCollectionId = ref('')
-let deleteRequestToken = 0
 const collectionSubscribed = ref(false)
 const collectionSubscribeLoading = ref(false)
-let collectionSubscribeRequestSequence = 0
 
 const collectionId = computed(() => props.id || (typeof route.params.id === 'string' ? route.params.id : ''))
 const channelId = computed(() => collection.value?.channel_id || '')
-const channelHref = computed(() => channelUrl(channel.value?.slug || channelId.value))
 const authHeader = computed(() => ({ Authorization: `Bearer ${authStore.token}` }))
 
 const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => {
-  void bookmarkModalRef.value?.open(id)
+  void feedStore.togglePostBookmark(id)
 }
 
 const toggleReadingList = (id: string) => {
-  void feedStore.toggleReadingListItem(id, 'post')
+  void feedStore.toggleReadingListItem(id)
 }
 
 const isOwner = computed(() => {
@@ -209,11 +188,11 @@ const formatDate = (dateStr: string) => {
   const now = new Date()
   const diff = now.getTime() - d.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+
   if (days === 0) return '今天'
   if (days === 1) return '昨天'
   if (days < 7) return `${days}天前`
-  
+
   const month = d.getMonth() + 1
   const day = d.getDate()
   const year = d.getFullYear()
@@ -225,74 +204,32 @@ const summarize = (content: string) => {
   return text.length > 120 ? text.slice(0, 120) + '...' : text
 }
 
-const invalidateEditSession = () => {
-  saveRequestToken += 1
-  editModalOpen.value = false
-  form.value = { name: '', description: '' }
-  saving.value = false
-  saveError.value = ''
-}
-
 const fetchCollection = async () => {
-  const targetCollectionId = collectionId.value
-  const requestSequence = ++collectionRequestSequence
-  const ownsRequest = () => requestSequence === collectionRequestSequence
-  collectionSubscribeRequestSequence += 1
-  postsRequestSequence += 1
-  collection.value = null
-  channel.value = null
-  posts.value = []
-  postsLoadError.value = ''
-  collectionSubscribed.value = false
-  collectionSubscribeLoading.value = false
-  invalidateEditSession()
-  deleteRequestToken += 1
-  deleting.value = false
-  deleteError.value = ''
-  deleteCompletedHref.value = ''
-  deleteCompletedCollectionId.value = ''
-  deleteModalOpen.value = false
   loading.value = true
   try {
-    const res = await fetch(api.blog.collection(targetCollectionId))
-    if (!ownsRequest()) return
+    const res = await fetch(api.blog.collection(collectionId.value))
     if (res.ok) {
       const data = await res.json()
-      if (!ownsRequest()) return
-      const loadedCollection = data.data as Collection
-      let loadedChannel: Channel | null = null
-      if (loadedCollection?.channel_id) {
-        loadedChannel = await fetchChannel(loadedCollection.channel_id)
-        if (!ownsRequest()) return
-      }
-      collection.value = loadedCollection
-      channel.value = loadedChannel
-
-      if (loadedCollection?.channel_id) {
-        await fetchPosts(loadedCollection.id)
-        if (!ownsRequest()) return
+      collection.value = data.data
+      if (collection.value?.channel_id) {
+        await fetchChannel()
+        await fetchPosts()
       }
 
-      if (authStore.isAuthenticated && loadedCollection?.id) {
+      if (authStore.isAuthenticated && collection.value?.id) {
         collectionSubscribeLoading.value = true
-        const subscribed = await feedStore.isSubscribedToCollection(loadedCollection.id)
-        if (!ownsRequest()) return
-        collectionSubscribed.value = subscribed
+        collectionSubscribed.value = await feedStore.isSubscribedToCollection(collection.value.id)
         collectionSubscribeLoading.value = false
       }
 
-      if (props.id && ownsRequest()) {
-        sheetStore.updateSheetTitle(targetCollectionId, 'collection', loadedCollection.name)
+      if (props.id && collection.value) {
+        sheetStore.updateSheetTitle(props.id, 'collection', collection.value.name)
       }
     }
   } catch (e) {
-    if (!ownsRequest()) return
     console.error('Failed to fetch collection:', e)
   } finally {
-    if (ownsRequest()) {
-      collectionSubscribeLoading.value = false
-      loading.value = false
-    }
+    loading.value = false
   }
 }
 
@@ -300,49 +237,37 @@ watch(collectionId, () => {
   fetchCollection()
 })
 
-const fetchChannel = async (targetChannelId: string): Promise<Channel | null> => {
-  if (!targetChannelId) return null
+const fetchChannel = async () => {
+  if (!channelId.value) return
   try {
-    const res = await fetch(api.blog.channel(targetChannelId))
+    const res = await fetch(api.blog.channel(channelId.value))
     if (res.ok) {
       const data = await res.json()
-      return data.data as Channel
+      channel.value = data.data
     }
   } catch (e) {
     console.error('Failed to fetch channel:', e)
   }
-  return null
 }
 
-const fetchPosts = async (targetCollectionId: string) => {
-  if (!targetCollectionId) return false
-  const requestSequence = ++postsRequestSequence
-  const loadedPosts: Post[] = []
-  let page = 1
-  postsLoadError.value = ''
+const fetchPosts = async () => {
+  if (!collectionId.value) return
   try {
-    while (true) {
-      const res = await fetch(`${api.blog.posts}?collection_id=${encodeURIComponent(targetCollectionId)}&page_size=100&page=${page}`)
-      if (requestSequence !== postsRequestSequence) return false
+    const loadedPosts: Post[] = []
+    for (let page = 1; ; page += 1) {
+      const res = await fetch(`${api.blog.posts}?collection_id=${encodeURIComponent(collectionId.value)}&page_size=100&page=${page}`)
       if (!res.ok) throw new Error(`Failed to fetch collection posts (${res.status})`)
-
       const data = await res.json()
-      if (requestSequence !== postsRequestSequence) return false
       loadedPosts.push(...((data.data || []) as Post[]))
       if (!data.meta?.has_more) break
-      page += 1
     }
     posts.value = loadedPosts
-    return true
-  } catch {
-    if (requestSequence !== postsRequestSequence) return false
-    postsLoadError.value = '文章加载失败'
-    return false
+  } catch (e) {
+    console.error('Failed to fetch posts:', e)
   }
 }
 
 const openEditModal = () => {
-  saveError.value = ''
   form.value = {
     name: collection.value?.name || '',
     description: collection.value?.description || ''
@@ -352,135 +277,62 @@ const openEditModal = () => {
 
 const saveCollection = async () => {
   if (!form.value.name.trim() || !collection.value) return
-  const targetCollectionId = collection.value.id
-  const payload = { ...form.value }
-  const requestToken = ++saveRequestToken
-  const ownsRequest = () => (
-    requestToken === saveRequestToken
-    && collection.value?.id === targetCollectionId
-  )
 
-  saveError.value = ''
   saving.value = true
   try {
-    const res = await fetch(api.blog.collection(targetCollectionId), {
+    const res = await fetch(api.blog.collection(collection.value.id), {
       method: 'PUT',
       headers: { ...authHeader.value, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(form.value)
     })
-    if (!ownsRequest()) return
-    if (!res.ok) {
-      saveError.value = '保存失败，请重试'
-      return
-    }
+    if (!res.ok) return
     editModalOpen.value = false
     await fetchCollection()
   } catch (e) {
-    if (!ownsRequest()) return
     console.error('Failed to save collection:', e)
-    saveError.value = '保存失败，请重试'
   } finally {
-    if (ownsRequest()) saving.value = false
+    saving.value = false
   }
 }
 
 const confirmDelete = () => {
-  deleteError.value = deleteCompletedHref.value ? '合集已删除，请返回频道' : ''
   deleteModalOpen.value = true
 }
 
-const ownsDeleteRequest = (requestToken: number, targetCollectionId: string) => (
-  requestToken === deleteRequestToken && collection.value?.id === targetCollectionId
-)
-
-const navigateAfterDelete = async (requestToken: number, targetCollectionId: string, targetChannelHref: string) => {
-  try {
-    const failure = await router.push(targetChannelHref)
-    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
-    if (failure && isNavigationFailure(failure)) {
-      deleteError.value = '合集已删除，请返回频道'
-      return
-    }
-    deleteModalOpen.value = false
-    deleteCompletedHref.value = ''
-    deleteCompletedCollectionId.value = ''
-  } catch (error) {
-    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
-    console.error('Failed to navigate after deleting collection:', error)
-    deleteError.value = '合集已删除，请返回频道'
-  }
-}
-
 const deleteCollection = async () => {
-  if (!collection.value || deleting.value) return
-  if (deleteCompletedHref.value && deleteCompletedCollectionId.value === collection.value.id) {
-    const targetCollectionId = deleteCompletedCollectionId.value
-    const targetChannelHref = deleteCompletedHref.value
-    const requestToken = ++deleteRequestToken
-    deleteError.value = ''
-    deleting.value = true
-    try {
-      await navigateAfterDelete(requestToken, targetCollectionId, targetChannelHref)
-    } finally {
-      if (ownsDeleteRequest(requestToken, targetCollectionId)) deleting.value = false
-    }
-    return
-  }
+  if (!collection.value) return
 
-  const targetCollectionId = collection.value.id
-  const targetChannelHref = channelHref.value
-  const requestToken = ++deleteRequestToken
-  deleteError.value = ''
-  deleting.value = true
   try {
-    const res = await fetch(api.blog.collection(targetCollectionId), {
+    const res = await fetch(api.blog.collection(collection.value.id), {
       method: 'DELETE',
       headers: authHeader.value
     })
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
-      const responseError = data?.error
-      deleteError.value = typeof responseError === 'string'
-        ? responseError
-        : responseError?.message || '删除失败，请重试'
-      return
-    }
-    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
-    deleteCompletedHref.value = targetChannelHref
-    deleteCompletedCollectionId.value = targetCollectionId
-    await navigateAfterDelete(requestToken, targetCollectionId, targetChannelHref)
+    if (!res.ok) return
+    deleteModalOpen.value = false
+    router.push(`/posts/channel/${channelId.value}`)
   } catch (e) {
-    if (!ownsDeleteRequest(requestToken, targetCollectionId)) return
     console.error('Failed to delete collection:', e)
-    deleteError.value = '网络错误，请重试'
-  } finally {
-    if (ownsDeleteRequest(requestToken, targetCollectionId)) deleting.value = false
   }
 }
 
 const toggleCollectionSubscribe = async () => {
   if (!collection.value) return
-  const targetCollectionId = collection.value.id
-  const targetSubscribed = collectionSubscribed.value
-  const requestSequence = ++collectionSubscribeRequestSequence
-  const ownsRequest = () => (
-    requestSequence === collectionSubscribeRequestSequence
-    && collection.value?.id === targetCollectionId
-  )
   collectionSubscribeLoading.value = true
   try {
-    const success = targetSubscribed
-      ? await feedStore.unsubscribeFromCollection(targetCollectionId)
-      : await feedStore.subscribeToCollection(targetCollectionId)
+    let success = false
+    if (collectionSubscribed.value) {
+      success = await feedStore.unsubscribeFromCollection(collection.value.id)
+    } else {
+      success = await feedStore.subscribeToCollection(collection.value.id)
+    }
 
-    if (!ownsRequest()) return
-    if (success) collectionSubscribed.value = !targetSubscribed
+    if (success) {
+      collectionSubscribed.value = !collectionSubscribed.value
+    }
   } catch (e) {
-    if (!ownsRequest()) return
     console.error('Failed to toggle collection subscription:', e)
   } finally {
-    if (ownsRequest()) collectionSubscribeLoading.value = false
+    collectionSubscribeLoading.value = false
   }
 }
 
@@ -490,14 +342,6 @@ onMounted(() => {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchReadingListIds()
   }
-})
-onBeforeUnmount(() => {
-  collectionRequestSequence += 1
-  postsRequestSequence += 1
-  collectionSubscribeRequestSequence += 1
-  invalidateEditSession()
-  deleteRequestToken += 1
-  deleting.value = false
 })
 </script>
 

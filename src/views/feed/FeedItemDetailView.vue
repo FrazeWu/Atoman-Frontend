@@ -40,14 +40,14 @@
         v-if="(item.enclosure_url && item.enclosure_type?.startsWith('audio/')) || item.duration"
         class="podcast-player-panel"
       >
-        <div class="player-label">音频</div>
+        <div class="player-label">AUDIO_ENCLOSURE</div>
         <div style="display:flex;align-items:center;gap:1.5rem">
           <PPress
             @click="togglePlay"
-            :label="isPlaying ? '暂停' : '播放音频'"
+            :label="isPlaying ? '⏸ PAUSE' : '▶ PLAY AUDIO'"
             :variant="isPlaying ? 'secondary' : 'primary'"
           />
-          <span v-if="item.duration" class="duration-text">时长：{{ item.duration }}</span>
+          <span v-if="item.duration" class="duration-text">DURATION: {{ item.duration }}</span>
         </div>
         <audio
           v-if="item.enclosure_url"
@@ -73,21 +73,18 @@
           </a>
         </div>
       </footer>
-
-      <CommentSection :target="{ kind: 'feed_article', resourceId: item.id }" />
     </article>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
 
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PBadge from '@/components/ui/PBadge.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { FeedItem } from '@/types'
@@ -100,7 +97,6 @@ const loading = ref(true)
 const item = ref<FeedItem | null>(null)
 const audioRef = ref<HTMLAudioElement | null>(null)
 const isPlaying = ref(false)
-let loadGeneration = 0
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('zh-CN', {
@@ -154,35 +150,26 @@ const trackOriginalClick = () => {
   reportReadEvent('original_click')
 }
 
-const fetchItem = async (id: string) => {
-  const generation = ++loadGeneration
-  const isCurrent = () => generation === loadGeneration && String(route.params.id || '') === id
+const fetchItem = async () => {
   loading.value = true
-  item.value = null
-  isPlaying.value = false
   try {
-    const res = await fetch(`${api.url}/feed/items/${id}`, {
+    const res = await fetch(`${api.url}/feed/items/${route.params.id}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
 
-    if (res.ok && isCurrent()) {
+    if (res.ok) {
       const data = await res.json()
-      if (!isCurrent()) return
       item.value = data.data
       reportReadEvent('detail_open')
     }
   } catch (e) {
-    if (isCurrent()) console.error('Failed to fetch feed item:', e)
+    console.error('Failed to fetch feed item:', e)
   } finally {
-    if (isCurrent()) loading.value = false
+    loading.value = false
   }
 }
 
-watch(
-  () => String(route.params.id || ''),
-  (id) => { if (id) void fetchItem(id) },
-  { immediate: true },
-)
+onMounted(fetchItem)
 
 onUnmounted(() => {
   if (audioRef.value) {
@@ -200,8 +187,8 @@ onUnmounted(() => {
 .back-link {
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 950;
-  letter-spacing: 0.15em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   text-decoration: none;
   display: inline-block;
@@ -216,11 +203,11 @@ onUnmounted(() => {
 .article-title {
   font-family: var(--a-font-serif);
   font-size: 4rem;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.1;
   margin-bottom: 1.5rem;
   color: var(--a-color-ink);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .article-meta {
@@ -230,7 +217,7 @@ onUnmounted(() => {
   gap: 1.25rem;
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted-soft);
   margin-bottom: 3rem;
 }
@@ -270,16 +257,16 @@ onUnmounted(() => {
 .player-label {
   font-family: var(--a-font-meta);
   font-size: 0.65rem;
-  font-weight: 950;
+  font-weight: 500;
   margin-bottom: 1.25rem;
   color: var(--a-color-muted);
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
 }
 
 .duration-text {
   font-family: var(--a-font-meta);
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-ink);
 }
 
@@ -313,14 +300,14 @@ onUnmounted(() => {
   text-decoration: none;
   font-family: var(--a-font-meta);
   font-size: 0.85rem;
-  font-weight: 950;
-  letter-spacing: 0.15em;
+  font-weight: 500;
+  letter-spacing: 0;
   transition: box-shadow 0.2s;
-  box-shadow: 8px 8px 0 rgba(0,0,0,0.1);
+  box-shadow: none;
 }
 
 .external-btn:hover {
-  box-shadow: 12px 12px 0 rgba(0,0,0,0.15);
+  box-shadow: none;
 }
 
 .feed-loading {

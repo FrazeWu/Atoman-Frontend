@@ -3,6 +3,8 @@
 Date: 2026-05-29
 Status: Draft approved for planning
 
+Visual precedence: component boundaries and API responsibilities in this document remain valid. Visual tokens, icons, focus behavior, and Sheet stack mechanics follow [the approved global UI specification](./2026-06-05-flat-paper-ui-design.md). In particular, the former text-only close-control rule is superseded: familiar close and back actions may use Lucide icon-only controls with a Tooltip and `aria-label`.
+
 ## 1. Background
 
 Atoman's frontend has accumulated large view files and repeated UI patterns across modules. The most visible pressure points are:
@@ -437,7 +439,7 @@ Design intent:
 - Section components show local field errors and upload errors.
 - Empty track lists use `AEmpty` plus a lightweight action to add or upload tracks.
 - Destructive actions continue to use confirmation or explicit secondary actions, depending on whether the flow is a local draft removal or a submitted wiki edit.
-- Close controls should use text such as `CLOSE`, not icon-only `✕`, where modal/sheet design allows.
+- Close and back controls follow the global icon rule: familiar Lucide icons may appear without visible text when a Tooltip and `aria-label` are present.
 - Backgrounds and surfaces must remain pure white or approved cold-gray wash; avoid warm/yellow backgrounds.
 
 ## 11. Testing and Acceptance

@@ -72,8 +72,9 @@ const formattedIndex = computed(() => {
 }
 .p-sidebar-item:hover,
 .p-sidebar-item.is-focused {
-  background: var(--a-color-paper-wash); /* #f3f4f6 */
-  box-shadow: var(--a-shadow-paper-sm);
+  background: transparent;
+  box-shadow: none;
+  color: var(--a-color-ink);
 }
 .p-sidebar-item:focus-visible {
   outline: 2px solid var(--a-color-ink);
@@ -81,8 +82,9 @@ const formattedIndex = computed(() => {
   background: var(--a-color-paper-wash);
 }
 .p-sidebar-item.active {
-  background: var(--a-color-paper-wash);
+  background: transparent;
   color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
+  box-shadow: none;
+  font-weight: 700;
 }
 </style>

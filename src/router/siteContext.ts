@@ -12,6 +12,7 @@ const modulePathSegments = Object.fromEntries(
 ) as Record<string, ModuleRoomKey>
 
 const slugPattern = /^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]$/
+const blogShortPathSegments = new Set(['post', 'channel', 'collection'])
 
 function contextFromLabel(label: string): SiteContext {
   if (moduleSubdomains.includes(label as ModuleRoomKey)) {
@@ -49,6 +50,10 @@ function pathnameContext(pathname: string): SiteContext | null {
   const moduleFromPath = modulePathSegments[first]
   if (moduleFromPath) {
     return { type: 'module', module: moduleFromPath }
+  }
+
+  if (blogShortPathSegments.has(first)) {
+    return { type: 'module', module: 'blog' }
   }
 
   if ((first === 'users' || first === 'channels') && second) {

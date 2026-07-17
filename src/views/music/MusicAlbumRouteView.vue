@@ -1,23 +1,24 @@
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import HomeView from '@/views/music/HomeView.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
 
 const route = useRoute()
-const { openAlbum, closeAll } = useMusicDrawers()
+const { openAlbum } = useMusicDrawers()
+const { syncEntityRoute } = useMusicSheetRouteSync(useRouter())
 
 watch(
   () => route.params.albumId,
   (albumId) => {
-    if (typeof albumId === 'string' && albumId) openAlbum(albumId)
+    if (typeof albumId === 'string' && albumId) {
+      syncEntityRoute(`album:${albumId}`, () => openAlbum(albumId))
+    }
   },
   { immediate: true },
 )
 
-onBeforeUnmount(() => {
-  closeAll()
-})
 </script>
 
 <template>

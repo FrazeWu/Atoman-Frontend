@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { isRoomRouteActive, moduleNavOrder, moduleRooms, notificationRoom } from '@/config/moduleRooms'
+import { isRoomRouteActive, moduleRooms, notificationRoom, topbarNavOrder } from '@/config/moduleRooms'
 import type { SiteContext } from '@/router/siteContext'
 
 const topbarSource = readFileSync(resolve(__dirname, '../../../src/components/system/AppTopbar.vue'), 'utf8')
@@ -9,10 +9,10 @@ const topbarSource = readFileSync(resolve(__dirname, '../../../src/components/sy
 describe('AppTopbar room names', () => {
   it('renders room navigation from the shared config', () => {
     expect(topbarSource).toContain('v-for="room in navRooms"')
-    expect(topbarSource).toContain('moduleNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key])')
+    expect(topbarSource).toContain('topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key])')
     expect(topbarSource).not.toContain('to="/blog"')
 
-    for (const key of moduleNavOrder) {
+    for (const key of topbarNavOrder) {
       expect(moduleRooms[key].name.length).toBeLessThanOrEqual(3)
       expect(moduleRooms[key].helper.length).toBeGreaterThan(0)
     }

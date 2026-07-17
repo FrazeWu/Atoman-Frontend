@@ -18,25 +18,17 @@ vi.mock('@/stores/inbox', () => ({
   }),
 }))
 
-vi.mock('@/composables/useMediaChannel', () => ({
-  useMediaChannel: () => ({
-    channels: ref([]),
-    currentMediaChannelId: ref(null),
-    switchChannel: vi.fn(),
-    clearChannels: vi.fn(),
-    loadChannels: vi.fn(),
-  }),
-}))
-
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
-    { path: '/feed/inbox', component: { template: '<div />' } },
+    { path: '/inbox', component: { template: '<div />' } },
     { path: '/login', component: { template: '<div />' } },
   ],
 })
 
-const mountTopbar = () => {
+const mountTopbar = async () => {
+  await router.push('/inbox')
+  await router.isReady()
   const wrapper = mount(AppTopbarAuthControls, {
     global: {
       plugins: [router],
@@ -53,26 +45,43 @@ describe('AppTopbarAuthControls search trigger', () => {
     authStore.user = { id: 1, username: 'alice', email: 'alice@example.com', role: 'user' }
     authStore.isAuthenticated = true
     authStore.token = 'token'
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/users/me/default-channels')) {
+        return new Response(JSON.stringify({
+          data: {
+            blog: { id: 'blog-channel-1', name: '博客默认频道', slug: 'blog-default' },
+            podcast: null,
+            video: null,
+          },
+        }), { status: 200 })
+      }
+      throw new Error(`未 mock fetch: ${url}`)
+    })
   })
 
   afterEach(() => {
     mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount())
   })
 
-  it('renders the search input before the inbox button and opens popover on focus', async () => {
-    const wrapper = mountTopbar()
+  it('renders the search trigger before the inbox button and opens the dropdown on click', async () => {
+    const wrapper = await mountTopbar()
 
+    const searchTrigger = wrapper.find('[data-testid="topbar-search-pill"]')
     const inboxButton = wrapper.find('.notif-btn')
+    const settingsLink = wrapper.find('[data-testid="user-settings-link"]')
+    const userButton = wrapper.find('.user-btn')
 
-    const searchPill = wrapper.get('[data-testid="topbar-search-pill"]')
-    expect(searchPill.exists()).toBe(true)
+    expect(searchTrigger.exists()).toBe(true)
     expect(inboxButton.exists()).toBe(true)
-    expect(searchPill.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(settingsLink.exists()).toBe(true)
+    expect(userButton.exists()).toBe(true)
+    expect(searchTrigger.element.compareDocumentPosition(inboxButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(inboxButton.element.compareDocumentPosition(settingsLink.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(settingsLink.element.compareDocumentPosition(userButton.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(false)
 
-    await searchPill.trigger('click')
-    const searchInput = wrapper.get('.topbar-search-input')
-    await searchInput.trigger('focus')
+    await searchTrigger.trigger('click')
     expect(wrapper.find('[data-testid="topbar-search-dropdown"]').exists()).toBe(true)
   })
 })

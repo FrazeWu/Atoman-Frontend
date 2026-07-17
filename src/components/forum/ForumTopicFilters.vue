@@ -2,21 +2,15 @@
   <section class="forum-topic-filters">
     <div class="tab-bar">
       <div class="tab-bar-left">
-        <PButton
+        <PTab
           v-for="(label, key) in tabOptions"
           :key="key"
-          outline
-          size="sm"
           class="forum-tab-btn"
-          :class="{ 'forum-tab-btn-active': activeTab === key }"
+          :active="activeTab === key"
           @click="$emit('update:activeTab', key as string)"
         >
           {{ label }}
-        </PButton>
-      </div>
-      <div class="tab-bar-right">
-        <PButton v-if="canCreateTopic" outline size="sm" @click="$emit('create-topic')">发新话题</PButton>
-        <PButton v-if="canRequestCategory" outline size="sm" @click="$emit('request-category')">申请分类</PButton>
+        </PTab>
       </div>
     </div>
 
@@ -57,15 +51,13 @@
 </template>
 
 <script setup lang="ts">
-import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PTab from '@/components/ui/PTab.vue'
 
 defineProps<{
   activeTab: string
   tabOptions: Record<string, string>
-  canCreateTopic: boolean
-  canRequestCategory: boolean
   selectedCategoryValue: string
   categoryOptions: Array<{ label: string; value: string | number }>
   activeTag: string
@@ -76,8 +68,6 @@ defineProps<{
 
 defineEmits<{
   (e: 'update:activeTab', value: string): void
-  (e: 'create-topic'): void
-  (e: 'request-category'): void
   (e: 'update:selectedCategoryValue', value: string): void
   (e: 'clear-tag'): void
   (e: 'update:searchQuery', value: string): void
@@ -86,3 +76,97 @@ defineEmits<{
   (e: 'toggle-follow', target: { targetType: 'category' | 'tag'; targetKey: string }): void
 }>()
 </script>
+
+<style scoped>
+.forum-topic-filters {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  padding-bottom: 1rem;
+}
+
+.tab-bar,
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tab-bar-left,
+.filter-left,
+.filter-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.forum-tab-btn {
+  padding-inline: 0.25rem;
+}
+
+.forum-category-select {
+  min-width: 12rem;
+}
+
+.forum-category-select :deep(.p-field),
+.search-wrap :deep(.p-field) {
+  gap: 0;
+}
+
+.search-wrap {
+  position: relative;
+}
+
+.search-input {
+  width: min(260px, 62vw);
+}
+
+.search-input :deep(.p-input) {
+  padding-right: 2rem;
+}
+
+.search-clear {
+  position: absolute;
+  right: 0;
+  top: 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0;
+}
+
+.active-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tag-chip-close {
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+}
+
+@media (max-width: 720px) {
+  .tab-bar,
+  .filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-input,
+  .forum-category-select {
+    width: 100%;
+  }
+}
+</style>

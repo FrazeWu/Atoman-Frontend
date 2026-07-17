@@ -8,6 +8,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '@/App.vue'
 
 const styleSource = readFileSync(resolve(__dirname, '../../../src/style.css'), 'utf8')
+const appSource = readFileSync(resolve(__dirname, '../../../src/App.vue'), 'utf8')
+const playerSource = readFileSync(resolve(__dirname, '../../../src/components/music/AudioPlayer.vue'), 'utf8')
+const moduleLayoutSources = [
+  'blog/BlogLayout.vue',
+  'debate/DebateLayout.vue',
+  'feed/FeedLayout.vue',
+  'forum/ForumLayout.vue',
+  'music/MusicLayout.vue',
+  'podcast/PodcastLayout.vue',
+  'timeline/TimelineLayout.vue',
+  'video/VideoLayout.vue',
+].map((path) => readFileSync(resolve(__dirname, `../../../src/views/${path}`), 'utf8'))
 const getBlock = (selector: string) => {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = styleSource.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'))
@@ -38,14 +50,6 @@ const makeRouter = () => createRouter({
   history: createMemoryHistory(),
   routes: [
     { path: '/', component: { template: '<div>sidebar route</div>' }, meta: { hasSidebar: true } },
-    {
-      path: '/module',
-      component: { template: '<router-view />' },
-      meta: { hasSidebar: true },
-      children: [
-        { path: 'settings', component: { template: '<div>standalone settings</div>' }, meta: { hasSidebar: false } },
-      ],
-    },
     { path: '/plain', component: { template: '<div>plain route</div>' } },
     { path: '/login', component: { template: '<div>login route</div>' }, meta: { authLayout: true } },
   ],
@@ -65,11 +69,7 @@ const mountAppAt = async (path: string) => {
       stubs: {
         RouterView: { template: '<div class="router-view-stub" />' },
         FirstLoginOnboarding: { template: '<div class="first-login-stub" />' },
-        SiteFooter: {
-          name: 'SiteFooter',
-          props: ['hideOnMobile'],
-          template: '<footer class="site-footer-stub" :data-hide-on-mobile="String(hideOnMobile)" />',
-        },
+        SiteFooter: { template: '<footer class="site-footer-stub" />' },
         AppTopbar: { template: '<header class="topbar-stub" />' },
       },
     },
@@ -96,27 +96,44 @@ describe('App responsive shell', () => {
     const { wrapper } = await mountAppAt('/')
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(true)
-    expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('true')
   })
 
   it('does not mount mobile bottom nav on non-sidebar routes', async () => {
     const { wrapper } = await mountAppAt('/plain')
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
-    expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('false')
-  })
-
-  it('allows a child route to opt out of its parent module sidebar', async () => {
-    const { wrapper } = await mountAppAt('/module/settings')
-
-    expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
-    expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('false')
   })
 
   it('does not mount mobile bottom nav on auth layout routes', async () => {
     const { wrapper } = await mountAppAt('/login')
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
+  })
+
+  it('keeps the footer on sidebar module routes', async () => {
+    const { wrapper } = await mountAppAt('/')
+
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(true)
+  })
+
+  it('keeps the footer on non-sidebar routes', async () => {
+    const { wrapper } = await mountAppAt('/plain')
+
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(true)
+  })
+
+  it('omits the footer on auth layout routes', async () => {
+    const { wrapper } = await mountAppAt('/login')
+
+    expect(wrapper.find('.site-footer-stub').exists()).toBe(false)
+  })
+
+  it('mounts SiteFooter only once from the app shell', () => {
+    expect(appSource).toContain('<SiteFooter v-if="!isAuthRoute" />')
+    for (const source of moduleLayoutSources) {
+      expect(source).not.toContain('<SiteFooter')
+      expect(source).not.toContain("import SiteFooter from '@/components/system/SiteFooter.vue'")
+    }
   })
 })
 
@@ -148,5 +165,24 @@ describe('shared responsive shell CSS', () => {
     expect(mobileBlock).toContain('--a-sidebar-width: 0px;')
     expect(mobileBlock).toContain('--a-mobile-nav-offset: 5.5rem;')
     expect(mobileBlock).toContain('calc(7rem + env(safe-area-inset-bottom))')
+  })
+
+  it('keeps the document-flow footer out of shared bottom offsets', () => {
+    expect(styleSource).toContain('--a-footer-reserved-height: 0px;')
+    expect(styleSource).not.toContain('body:has(.site-footer)')
+    expect(styleSource).not.toContain('--a-footer-reserved-height: 88px;')
+    expect(appSource).not.toContain('padding-bottom: var(--a-footer-reserved-height)')
+    expect(appSource).not.toMatch(/\.app-main\s*\{[^}]*flex:\s*1/)
+  })
+
+  it('hides the footer on mobile sidebar routes without reserving footer space', () => {
+    expect(mobileBlock).toContain('--a-footer-reserved-height: 0px;')
+    expect(mobileBlock).not.toContain('--a-footer-reserved-height: calc(112px + env(safe-area-inset-bottom, 0px));')
+    expect(mobileBlock).toContain('.app-shell.has-sidebar .site-footer')
+    expect(mobileBlock).toContain('display: none;')
+  })
+
+  it('keeps the fixed player above the footer and mobile navigation', () => {
+    expect(playerSource).toContain('bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height))')
   })
 })

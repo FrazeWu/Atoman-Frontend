@@ -1,109 +1,91 @@
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AudioPlayer from '@/components/music/AudioPlayer.vue'
+import { usePlayerStore } from '@/stores/player'
 
-const mocks = vi.hoisted(() => ({
-  openNestedAction: vi.fn(),
+const musicApi = vi.hoisted(() => ({
   listMusicPlaylists: vi.fn(),
-  player: {
-    currentSong: { id: 'song-1', title: 'Track A', audio_url: 'https://example.com/a.mp3' } as {
-      id: string
-      title: string
-      audio_url: string
-      lyrics?: string
-      media_kind?: 'music_song' | 'feed_item'
-    },
-    currentTime: 12,
-    duration: 180,
-    isPlaying: false,
-    playbackMode: 'loop',
-    volume: 1,
-    queue: [],
-    showQueue: false,
-    showLyrics: false,
-    skip: vi.fn(),
-    playPrevious: vi.fn(),
-    togglePlay: vi.fn(),
-    playNext: vi.fn(),
-    seek: vi.fn(),
-    setVolume: vi.fn(),
-    cyclePlaybackMode: vi.fn(),
-    toggleQueue: vi.fn(),
-    toggleLyrics: vi.fn(),
-    playQueuedSong: vi.fn(),
-  },
+  recordMusicSongPlay: vi.fn(),
 }))
 
-vi.mock('@/stores/player', () => ({ usePlayerStore: () => mocks.player }))
-vi.mock('@/composables/useMusicDrawers', () => ({
-  useMusicDrawers: () => ({ openNestedAction: mocks.openNestedAction }),
+vi.mock('@/composables/useApi', () => ({
+  useApiUrl: () => '',
+  useApi: () => ({ url: '', podcast: {} }),
 }))
+
 vi.mock('@/api/musicV1', () => ({
-  listMusicPlaylists: mocks.listMusicPlaylists,
-  addMusicPlaylistSong: vi.fn(),
-  removeMusicPlaylistSong: vi.fn(),
-  createMusicPlaylist: vi.fn(),
-  getMusicPlaylist: vi.fn(),
+  listMusicPlaylists: musicApi.listMusicPlaylists,
+  recordMusicSongPlay: musicApi.recordMusicSongPlay,
 }))
 
-describe('AudioPlayer song discussion', () => {
+vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
+  useMusicFavoritePlaylist: () => ({
+    favoriteSongIds: { __v_isRef: true, value: new Set<string>() },
+    loadFavoriteSongs: vi.fn().mockResolvedValue(undefined),
+    toggleFavoriteSong: vi.fn(),
+    addSongToPlaylist: vi.fn(),
+  }),
+}))
+
+class ResizeObserverStub {
+  observe() {}
+  disconnect() {}
+}
+
+describe('AudioPlayer', () => {
   beforeEach(() => {
-    mocks.openNestedAction.mockReset()
-    mocks.listMusicPlaylists.mockResolvedValue({ data: [] })
-    mocks.player.currentSong = { id: 'song-1', title: 'Track A', audio_url: 'https://example.com/a.mp3' }
-    mocks.player.showLyrics = false
-    vi.stubGlobal('ResizeObserver', class {
-      observe() {}
-      disconnect() {}
-    })
+    setActivePinia(createPinia())
+    document.documentElement.removeAttribute('data-player-active')
+    document.documentElement.removeAttribute('data-player-pinned')
+    vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+    musicApi.listMusicPlaylists.mockResolvedValue({ data: [] })
+    musicApi.recordMusicSongPlay.mockResolvedValue(undefined)
   })
 
-  it('opens discussion for the currently playing song', async () => {
+  it('unpinns, auto-hides, reveals on hover, and pins again', async () => {
+    vi.useFakeTimers()
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1',
+      title: 'Song 1',
+      artist: 'Artist 1',
+      audio_url: '/song-1.mp3',
+    } as any
+
     const wrapper = mount(AudioPlayer, {
       global: {
         stubs: {
+          MusicLyricsPanel: true,
           PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
           PToast: true,
         },
       },
     })
 
-    const action = wrapper.get('[data-test="player-song-discussion"]')
-    expect(action.attributes('title')).toBe('讨论')
-    await action.trigger('click')
+    expect(wrapper.get('[aria-label="取消固定播放器"]').exists()).toBe(true)
+    expect(document.documentElement.dataset.playerPinned).toBe('true')
 
-    expect(mocks.openNestedAction).toHaveBeenCalledWith('discussion', { songId: 'song-1' })
-  })
+    await wrapper.get('[aria-label="取消固定播放器"]').trigger('click')
+    expect(wrapper.get('.player').classes()).toContain('is-auto-hidden')
+    expect(document.documentElement.dataset.playerPinned).toBe('false')
 
-  it('does not offer music discussion for a podcast feed item', () => {
-    mocks.player.currentSong = {
-      id: 'feed-item-1',
-      title: 'Podcast Episode',
-      audio_url: 'https://example.com/episode.mp3',
-      media_kind: 'feed_item',
-    }
+    await wrapper.get('.player').trigger('mouseenter')
+    expect(wrapper.get('.player').classes()).not.toContain('is-auto-hidden')
 
-    const wrapper = mount(AudioPlayer, {
-      global: { stubs: { PDropdown: true, PToast: true } },
-    })
+    await wrapper.get('.player').trigger('mouseleave')
+    await vi.advanceTimersByTimeAsync(499)
+    expect(wrapper.get('.player').classes()).not.toContain('is-auto-hidden')
+    await vi.advanceTimersByTimeAsync(1)
+    expect(wrapper.get('.player').classes()).toContain('is-auto-hidden')
 
-    expect(wrapper.find('[data-test="player-song-discussion"]').exists()).toBe(false)
-  })
+    await wrapper.get('.player').trigger('mouseenter')
+    await wrapper.get('[aria-label="固定播放器"]').trigger('click')
+    expect(wrapper.get('.player').classes()).not.toContain('is-auto-hidden')
+    expect(document.documentElement.dataset.playerPinned).toBe('true')
 
-  it('shows the current song lyrics in the lyrics panel', () => {
-    mocks.player.currentSong = {
-      id: 'song-1',
-      title: 'Track A',
-      audio_url: 'https://example.com/a.mp3',
-      lyrics: 'First line\nSecond line',
-    }
-    mocks.player.showLyrics = true
-
-    const wrapper = mount(AudioPlayer, {
-      global: { stubs: { PDropdown: true, PToast: true } },
-    })
-
-    expect(wrapper.get('[data-testid="lyrics-text"]').element.textContent).toBe('First line\nSecond line')
+    wrapper.unmount()
+    vi.useRealTimers()
   })
 })

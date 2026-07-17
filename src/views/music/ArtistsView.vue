@@ -18,6 +18,7 @@ import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import {
   filterArtistRecommendationsByBookmarks,
   MUSIC_RECOMMENDATION_MODE_OPTIONS,
@@ -35,8 +36,14 @@ const tabOptions = [
 const route = useRoute()
 const {
   isMainShifted,
+  openAlbum,
+  closeAlbum,
   openArtist,
+  closeArtist,
   openMusicCreationFlow,
+  closeMusicCreationFlow,
+  openMusicEditor,
+  closeMusicEditor,
 } = useMusicDrawers()
 
 const artists = ref<MusicArtistListItem[]>([])
@@ -50,6 +57,17 @@ let activeRequestId = 0
 let activeSearchRequestId = 0
 
 const starredArtistIds = ref<string[]>([])
+const { applyRouteSelection } = useMusicRouteSelection({
+  openAlbum,
+  closeAlbum,
+  openArtist,
+  closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
+  openMusicEditor,
+  closeMusicEditor,
+})
+
 async function fetchBookmarks() {
   try {
     const response = await listArtistBookmarks()
@@ -199,6 +217,7 @@ onMounted(() => {
   }
   fetchArtists()
   fetchSearchResults()
+  applyRouteSelection(route.query)
 })
 
 watch(searchQuery, () => {
@@ -213,6 +232,7 @@ watch(
     if (routeQuery !== searchQuery.value) {
       searchQuery.value = routeQuery
     }
+    applyRouteSelection(route.query)
   },
 )
 
@@ -284,6 +304,7 @@ function handleSearchBlur() {
             </SearchSurface>
           </div>
           <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow()">
+            <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
           </button>
         </div>
@@ -309,6 +330,7 @@ function handleSearchBlur() {
             data-testid="empty-add-artist"
             @click="openMusicCreationFlow()"
           >
+            <span class="paper-action-dot" aria-hidden="true" />
             添加艺术家
           </button>
         </div>
@@ -398,6 +420,13 @@ function handleSearchBlur() {
   z-index: 100;
 }
 
+.paper-action-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  flex-shrink: 0;
+}
 .search-dropdown__hint {
   margin: 0;
   padding: 0.55rem 0.95rem;

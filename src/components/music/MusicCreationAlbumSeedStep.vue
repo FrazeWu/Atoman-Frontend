@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import {
+  uploadMusicAsset,
   createMusicAlbumImport,
   type MusicAlbumImport,
   uploadMusicAlbumArchiveMultipart,
@@ -9,15 +10,21 @@ import {
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 const { state, setMusicCreationStep } = useMusicDrawers()
 const archiveInputRef = ref<HTMLInputElement | null>(null)
+const coverInputRef = ref<HTMLInputElement | null>(null)
 
 const creationFlow = computed(() => state.value.creationFlow)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
+const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
 const uploading = ref(false)
 const errorMessage = ref('')
+const coverUploading = ref(false)
+const coverErrorMessage = ref('')
 const resolvedCoverUrl = computed(() => albumImportDraft.value?.coverUrl || albumImportDraft.value?.derivedCover || '')
 
 function formatUploadSpeed(bytesPerSecond: number) {
@@ -27,6 +34,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
 
 function applyImportSnapshot(snapshot: MusicAlbumImport) {
   if (!creationFlow.value) return
+  const derivedTracks = snapshot.derivedTracks ?? []
 
   creationFlow.value.draft.albumImport.importId = snapshot.importId
   creationFlow.value.draft.albumImport.status = snapshot.status
@@ -37,12 +45,12 @@ function applyImportSnapshot(snapshot: MusicAlbumImport) {
   creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
   creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
   creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
-  creationFlow.value.draft.albumImport.derivedTracks = snapshot.derivedTracks
+  creationFlow.value.draft.albumImport.derivedTracks = derivedTracks
   creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
   creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
   creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
   creationFlow.value.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover || creationFlow.value.draft.albumDetails.coverUrl
-  creationFlow.value.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+  creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
     id: `import-track-${index + 1}`,
     sequence: index + 1,
     title: track.title,
@@ -87,6 +95,28 @@ function removeTrack(trackId: string) {
   renumberTracks()
 }
 
+async function onCoverChange(event: Event) {
+  if (!albumDetailsDraft.value) return
+
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  coverUploading.value = true
+  coverErrorMessage.value = ''
+
+  try {
+    const asset = await uploadMusicAsset(file, 'music.cover')
+    albumDetailsDraft.value.coverAsset = asset
+    albumDetailsDraft.value.coverUrl = asset.url
+  } catch (error) {
+    coverErrorMessage.value = error instanceof Error ? error.message : '封面上传失败'
+  } finally {
+    coverUploading.value = false
+    input.value = ''
+  }
+}
+
 async function handleArchiveChange(event: Event) {
   if (!creationFlow.value || !albumImportDraft.value) return
 
@@ -106,7 +136,6 @@ async function handleArchiveChange(event: Event) {
     albumImportDraft.value.archiveName = file.name
     albumImportDraft.value.uploadProgress = 0
     albumImportDraft.value.uploadSpeed = 0
-    setMusicCreationStep('albumDetails')
 
     const snapshot = await uploadMusicAlbumArchiveMultipart(session.importId, file, {
       onProgress(progress) {
@@ -116,6 +145,7 @@ async function handleArchiveChange(event: Event) {
           ? Math.round((progress.loaded / progress.total) * 100)
           : 0
         albumImportDraft.value.uploadSpeed = progress.bytesPerSecond
+        setMusicCreationStep('albumDetails')
       },
     })
 
@@ -289,6 +319,118 @@ async function handleArchiveChange(event: Event) {
               />
             </div>
             <strong v-else>等待上传</strong>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="albumDetailsDraft" class="album-card album-card--soft">
+        <div class="card-header">
+          <div>
+            <p class="card-kicker">专辑信息</p>
+            <p class="card-copy">在这一步直接完成封面、标题、日期和简介。</p>
+          </div>
+        </div>
+
+        <div class="field-stack">
+          <div class="field-group">
+            <input
+              ref="coverInputRef"
+              data-testid="album-details-cover-input"
+              type="file"
+              accept="image/*"
+              :disabled="coverUploading"
+              style="display: none"
+              @change="onCoverChange"
+            />
+            <div class="p-field">
+              <label class="p-field-label">
+                <span class="p-field-dot" aria-hidden="true" />
+                封面
+              </label>
+              <div
+                class="custom-file-picker"
+                :class="{ 'is-disabled': coverUploading }"
+                @click="coverInputRef?.click()"
+              >
+                <div class="file-picker-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                </div>
+                <div class="file-picker-text">
+                  <span class="file-picker-title">
+                    {{ albumDetailsDraft.coverUrl ? '已选择封面图片' : '点击或拖拽上传专辑封面' }}
+                  </span>
+                  <span class="file-picker-subtitle">支持 JPG, PNG 格式</span>
+                </div>
+                <PButton
+                  type="button"
+                  variant="secondary"
+                  :disabled="coverUploading"
+                  @click.stop="coverInputRef?.click()"
+                >
+                  {{ albumDetailsDraft.coverUrl ? '重新选择' : '浏览文件' }}
+                </PButton>
+              </div>
+            </div>
+            <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
+            <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+          </div>
+
+          <div class="field-group">
+            <PInput
+              v-model="albumDetailsDraft.title"
+              data-testid="album-details-title-input"
+              type="text"
+              label="专辑名"
+              placeholder="输入专辑名"
+            />
+          </div>
+
+          <div class="field-grid field-grid--duo">
+            <div class="field-group">
+              <PInput
+                v-model="albumDetailsDraft.releaseDate"
+                data-testid="album-details-date-input"
+                type="date"
+                label="发行日期"
+              />
+            </div>
+
+            <div class="field-group">
+              <PSelect
+                v-model="albumDetailsDraft.type"
+                data-testid="album-details-type-input"
+                label="类型"
+                :options="[
+                  { label: '专辑', value: 'album' },
+                  { label: 'EP', value: 'ep' },
+                  { label: '单曲', value: 'single' },
+                ]"
+              />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <PTextarea
+              v-model="albumDetailsDraft.bio"
+              data-testid="album-details-bio-input"
+              :rows="4"
+              label="简介"
+              placeholder="补充专辑简介"
+            />
+          </div>
+
+          <div class="field-group">
+            <PInput
+              v-model="albumDetailsDraft.source"
+              data-testid="album-details-source-input"
+              type="text"
+              label="来源"
+              placeholder="填写专辑信息来源"
+            />
           </div>
         </div>
       </section>

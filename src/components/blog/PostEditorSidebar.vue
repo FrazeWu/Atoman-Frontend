@@ -29,22 +29,18 @@
 
     <section class="left-section">
       <span class="a-label">所属合集</span>
-      <div v-if="channelCollections.length > 0" class="collection-list">
-        <label
-          v-for="col in channelCollections"
-          :key="col.id"
-          class="collection-item"
-          :class="{ selected: selectedCollectionId === col.id }"
-        >
-          <input
-            type="radio"
-            name="post-collection"
-            :checked="selectedCollectionId === col.id"
-            @change="$emit('select-collection', col.id)"
-          />
-          <span class="collection-name">{{ col.name }}</span>
-          <span v-if="col.id === defaultCollectionId" class="badge-default">默认</span>
-        </label>
+      <div v-if="defaultCollection" class="collection-selection">
+        <div class="default-collection-row" aria-label="默认合集：全部文章">
+          <Check :size="16" aria-hidden="true" />
+          <span>全部文章</span>
+          <span class="badge-default">默认</span>
+        </div>
+        <PSelect
+          :model-value="selectedCollectionId || ''"
+          :options="ordinaryCollectionOptions"
+          label="普通合集"
+          @update:model-value="$emit('select-collection', String($event))"
+        />
       </div>
       <span v-else class="col-empty">暂无可用合集</span>
     </section>
@@ -53,8 +49,10 @@
       <PostMetaSettingsPanel
         :summary="summary"
         :visibility="visibility"
+        :allow-comments="allowComments"
         @update:summary="$emit('update:summary', $event)"
         @update:visibility="$emit('update:visibility', $event)"
+        @update:allowComments="$emit('update:allowComments', $event)"
       />
 
       <details class="settings-details">
@@ -80,23 +78,62 @@
       </details>
     </section>
 
+    <section class="left-section toc-panel">
+      <div class="section-heading-row">
+        <span class="a-label">文档目录</span>
+        <span class="a-muted">{{ outlineCount }} 个标题</span>
+      </div>
+      <div v-if="outlineCount === 0" class="col-empty">加入 Markdown 标题后显示</div>
+      <nav v-else class="outline-tree">
+        <button
+          v-for="item in flattenedOutline"
+          :key="item.id"
+          type="button"
+          class="outline-node"
+          :class="{
+            'is-active': item.line === activeHeadingLine,
+            'is-active-branch': item.isActiveBranch,
+            'has-children': item.hasChildren,
+          }"
+          :style="{ '--depth': String(item.depth) }"
+          :title="item.text"
+          @click="$emit('jump-to-heading', item.line)"
+        >
+          <span class="outline-caret" aria-hidden="true">{{ item.hasChildren ? (item.isExpanded ? '⌄' : '›') : '' }}</span>
+          <span class="outline-label">{{ item.text }}</span>
+        </button>
+      </nav>
+    </section>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { Check } from 'lucide-vue-next'
 
 import PostCoverField from '@/components/blog/PostCoverField.vue'
 import PostMetaSettingsPanel from '@/components/blog/PostMetaSettingsPanel.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 
 type BlogVisibility = 'public' | 'followers' | 'private'
 type SaveTarget = 'draft' | 'published'
 type SidebarCollection = {
   id: string
   name: string
+  is_default?: boolean
 }
-defineProps<{
+type FlattenedOutlineNode = {
+  id: string
+  text: string
+  line: number
+  depth: number
+  hasChildren: boolean
+  isExpanded: boolean
+  isActiveBranch: boolean
+}
+
+const props = defineProps<{
   mobileOpen: boolean
   saving: SaveTarget | null
   hasDraftManagerAccess: boolean
@@ -105,9 +142,13 @@ defineProps<{
   defaultCollectionId?: string
   summary: string
   visibility: BlogVisibility
+  allowComments: boolean
   coverUrl: string
   coverUploading: boolean
   coverUploadError: string
+  outlineCount: number
+  flattenedOutline: FlattenedOutlineNode[]
+  activeHeadingLine: number | null
 }>()
 
 defineEmits<{
@@ -117,9 +158,19 @@ defineEmits<{
   (e: 'select-collection', id: string): void
   (e: 'update:summary', value: string): void
   (e: 'update:visibility', value: BlogVisibility): void
+  (e: 'update:allowComments', value: boolean): void
   (e: 'cover-upload', event: Event): void
   (e: 'remove-cover'): void
+  (e: 'jump-to-heading', line: number): void
 }>()
+
+const defaultCollection = computed(() => props.channelCollections.find(collection => collection.is_default))
+const ordinaryCollectionOptions = computed(() => [
+  { label: '仅全部文章', value: '' },
+  ...props.channelCollections
+    .filter(collection => !collection.is_default)
+    .map(collection => ({ label: collection.name, value: collection.id })),
+])
 
 const coverInput = ref<HTMLInputElement | null>(null)
 
@@ -164,6 +215,25 @@ const triggerCoverUpload = () => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.collection-selection {
+  display: grid;
+  gap: 1rem;
+}
+
+.default-collection-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--a-color-line-soft);
+  font-weight: 500;
+}
+
+.default-collection-row .badge-default {
+  margin-left: auto;
 }
 
 .settings-section {
@@ -214,6 +284,68 @@ details[open] > .settings-summary::before {
   gap: 0.5rem;
 }
 
+.outline-tree {
+  display: flex;
+  flex-direction: column;
+}
+
+.outline-node {
+  --depth: 0;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  padding-left: calc(0.5rem + var(--depth, 0) * 0.6rem);
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--a-color-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.outline-node:hover {
+  color: var(--a-color-fg);
+  border-left-color: var(--a-color-border);
+  background: var(--a-color-surface);
+}
+
+.outline-node.is-active {
+  color: var(--a-color-fg);
+  border-left-color: var(--a-color-fg);
+  background: var(--a-color-surface);
+  font-weight: 500;
+}
+
+.outline-node.has-children {
+  border-left-color: #bbb;
+}
+
+.outline-node.is-active-branch:not(.is-active) {
+  color: var(--a-color-fg);
+  opacity: 0.8;
+}
+
+.outline-caret {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  user-select: none;
+}
+
+.outline-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hidden-file-input {
   display: none;
 }
@@ -252,22 +384,22 @@ details[open] > .settings-summary::before {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .badge-default {
   padding: 0.2rem 0.4rem;
   border: 1.5px solid var(--a-color-border);
   font-size: 0.65rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .col-empty {
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .section-heading-row {
@@ -277,7 +409,7 @@ details[open] > .settings-summary::before {
   gap: 0.75rem;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 960px) {
   .editor-sidebar-left {
     position: static;
     max-height: none;

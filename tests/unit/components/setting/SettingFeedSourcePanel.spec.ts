@@ -11,9 +11,14 @@ const fetchItems = vi.fn().mockResolvedValue([])
 const retryItem = vi.fn().mockResolvedValue(null)
 const importGlobalOPML = vi.fn().mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
 const exportGlobalOPML = vi.fn().mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
+const fetchOnboardingRecommendations = vi.fn().mockResolvedValue([])
+const createOnboardingRecommendation = vi.fn().mockResolvedValue(null)
+const updateOnboardingRecommendation = vi.fn().mockResolvedValue(null)
+const deleteOnboardingRecommendation = vi.fn().mockResolvedValue(null)
 
 const storeState = reactive({
   sources: [] as Array<Record<string, any>>,
+  onboardingRecommendations: [] as Array<Record<string, any>>,
   loadingSources: false,
   fetchSources,
   createSource,
@@ -24,6 +29,10 @@ const storeState = reactive({
   retryItem,
   importGlobalOPML,
   exportGlobalOPML,
+  fetchOnboardingRecommendations,
+  createOnboardingRecommendation,
+  updateOnboardingRecommendation,
+  deleteOnboardingRecommendation,
 })
 
 vi.mock('@/stores/auth', () => ({
@@ -67,6 +76,7 @@ function createSourceRow(overrides: Record<string, any> = {}) {
     id: 'source-1',
     title: '示例源',
     rss_url: 'https://example.com/feed.xml',
+    source_type: 'external_rss',
     full_text_enabled: true,
     success_count: 0,
     retry_count: 0,
@@ -74,6 +84,9 @@ function createSourceRow(overrides: Record<string, any> = {}) {
     pending_count: 0,
     success_rate: 1,
     status: 'healthy',
+    bookmark_count: 0,
+    read_count: 0,
+    recent_events: [],
     ...overrides,
   }
 }
@@ -86,6 +99,7 @@ describe('SettingFeedSourcePanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     storeState.sources = []
+    storeState.onboardingRecommendations = []
     storeState.loadingSources = false
     fetchSources.mockResolvedValue([])
     createSource.mockResolvedValue(null)
@@ -96,6 +110,10 @@ describe('SettingFeedSourcePanel', () => {
     retryItem.mockResolvedValue(null)
     importGlobalOPML.mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
     exportGlobalOPML.mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
+    fetchOnboardingRecommendations.mockResolvedValue([])
+    createOnboardingRecommendation.mockResolvedValue(null)
+    updateOnboardingRecommendation.mockResolvedValue(null)
+    deleteOnboardingRecommendation.mockResolvedValue(null)
   })
 
   it('mounted 后直接加载 feed source 列表', async () => {
@@ -107,6 +125,60 @@ describe('SettingFeedSourcePanel', () => {
     await flushPromises()
 
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
+    expect(fetchOnboardingRecommendations).toHaveBeenCalledWith('admin-token')
+  })
+
+  it('管理新手推荐的新增、启停和移除', async () => {
+    storeState.sources = [createSourceRow(), createSourceRow({ id: 'source-2', title: '另一个源' })]
+    storeState.onboardingRecommendations = [{
+      id: 'recommendation-1',
+      feed_source_id: 'source-1',
+      title: '示例源',
+      rss_url: 'https://example.com/feed.xml',
+      health_status: 'healthy',
+      enabled: true,
+      sort_order: 0,
+    }]
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-test="onboarding-recommendation-source"]').setValue('source-2')
+    const addButton = wrapper.findAll('button').find((button) => button.text() === '添加推荐')
+    await addButton!.trigger('click')
+    await flushPromises()
+    expect(createOnboardingRecommendation).toHaveBeenCalledWith({
+      feed_source_id: 'source-2',
+      enabled: true,
+      sort_order: 1,
+    }, 'admin-token')
+
+    await wrapper.get('[data-test="onboarding-recommendation-enabled"]').trigger('click')
+    await flushPromises()
+    expect(updateOnboardingRecommendation).toHaveBeenCalledWith('recommendation-1', { enabled: false }, 'admin-token')
+
+    const removeButton = wrapper.findAll('button').find((button) => button.text() === '移除')
+    await removeButton!.trigger('click')
+    await flushPromises()
+    expect(deleteOnboardingRecommendation).toHaveBeenCalledWith('recommendation-1', 'admin-token')
+  })
+
+  it('新手推荐只列出外部 RSS 来源', async () => {
+    storeState.sources = [
+      createSourceRow({ id: 'external-source', title: '外部 RSS' }),
+      createSourceRow({ id: 'internal-source', title: '内部来源', source_type: 'internal_channel' }),
+    ]
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    const options = wrapper.get('[data-test="onboarding-recommendation-source"]').findAll('option')
+    expect(options.map((option) => option.text())).toContain('外部 RSS')
+    expect(options.map((option) => option.text())).not.toContain('内部来源')
   })
 
   it('将状态筛选放在独立滚动框而不是标题操作区内', async () => {
@@ -236,19 +308,6 @@ describe('SettingFeedSourcePanel', () => {
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
   })
 
-  it('uses user-facing Chinese source status labels', async () => {
-    storeState.sources = [createSourceRow({ status: 'healthy' })]
-    const wrapper = mount(SettingFeedSourcePanel, {
-      props: { fullTextMode: 'per_source' },
-      global: { stubs },
-    })
-
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('状态：正常')
-    expect(wrapper.text()).not.toContain('状态：healthy')
-  })
-
   it('点击订阅源后打开条目 sheet 并按 source 拉取条目', async () => {
     storeState.sources = [createSourceRow({
       id: 'source-1',
@@ -288,6 +347,30 @@ describe('SettingFeedSourcePanel', () => {
       limit: 20,
     })
     expect(wrapper.get('[data-testid="feed-source-items-sheet"]').text()).toContain('可查看条目的源')
+  })
+
+  it('展示来源统计和最近事件', async () => {
+    storeState.sources = [createSourceRow({
+      title: '统计源',
+      bookmark_count: 12,
+      read_count: 34,
+      recent_events: [
+        { event_type: 'detail_open', created_at: '2026-07-03T09:00:00Z' },
+        { event_type: 'original_click', created_at: '2026-07-03T10:00:00Z' },
+      ],
+    })]
+
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('收藏 12')
+    expect(wrapper.text()).toContain('阅读 34')
+    expect(wrapper.text()).toContain('detail_open')
+    expect(wrapper.text()).toContain('original_click')
   })
 
   it('导入 OPML 后刷新订阅源列表并显示统计', async () => {

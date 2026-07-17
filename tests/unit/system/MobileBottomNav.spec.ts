@@ -27,9 +27,9 @@ describe('useResponsiveShell', () => {
 
     expect(tabs.map((tab) => tab.key)).toEqual(['discover', 'feed', 'create', 'more'])
     expect(tabs.map((tab) => tab.label)).toEqual(['首页', '订阅', '创作', '更多'])
-    expect(tabs[0]?.href).toBe(moduleUrl('media'))
+    expect(tabs[0]?.href).toBe(moduleUrl('blog'))
     expect(tabs[1]?.href).toBe(moduleUrl('feed'))
-    expect(tabs[2]?.href).toBe(modulePathUrl('media', '/create'))
+    expect(tabs[2]?.href).toBe(modulePathUrl('blog', '/manage'))
     expect(tabs[3]?.href).toBeUndefined()
   })
 
@@ -106,6 +106,11 @@ describe('useResponsiveShell', () => {
 
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('论坛')
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('时间线')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('关于')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('联系我们')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('问题反馈')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('使用条款')
+    expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('隐私政策')
     expect(wrapper.findAll('.header-close-btn')).toHaveLength(1)
     expect(wrapper.find('[data-testid="mobile-more-sheet-close"]').exists()).toBe(false)
 
@@ -114,15 +119,15 @@ describe('useResponsiveShell', () => {
     expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(false)
   })
 
-  it('marks more active on a secondary module route', async () => {
+  it('opens existing footer content from the more sheet', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/music', component: { template: '<div />' } },
+        { path: '/', component: { template: '<div />' } },
       ],
     })
 
-    await router.push('/music')
+    await router.push('/')
     await router.isReady()
 
     const wrapper = mount(MobileBottomNav, {
@@ -131,37 +136,11 @@ describe('useResponsiveShell', () => {
       },
     })
 
-    expect(wrapper.get('[data-tab-key="more"]').classes()).toContain('is-active')
-    expect(wrapper.get('[data-tab-key="more"]').text()).toBe('音乐')
-    expect(wrapper.get('[data-tab-key="feed"]').classes()).not.toContain('is-active')
-  })
-
-  it('distinguishes the media home and create routes', async () => {
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/media', component: { template: '<div />' } },
-        { path: '/media/create', component: { template: '<div />' } },
-      ],
-    })
-
-    await router.push('/media')
-    await router.isReady()
-
-    const wrapper = mount(MobileBottomNav, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.get('[data-tab-key="discover"]').classes()).toContain('is-active')
-    expect(wrapper.get('[data-tab-key="create"]').classes()).not.toContain('is-active')
-
-    await router.push('/media/create')
+    await wrapper.get('[data-tab-key="more"]').trigger('click')
+    await wrapper.get('[data-footer-panel="about"]').trigger('click')
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.get('[data-tab-key="discover"]').classes()).not.toContain('is-active')
-    expect(wrapper.get('[data-tab-key="create"]').classes()).toContain('is-active')
+    expect(wrapper.get('.site-footer-sheet').text()).toContain('关于凹凸庵')
   })
 
   it('uses shutter navigation for the create tab target', async () => {
@@ -184,6 +163,6 @@ describe('useResponsiveShell', () => {
     await wrapper.get('[data-tab-key="create"]').trigger('click')
 
     expect(navigateModuleWithShutter).toHaveBeenCalledTimes(1)
-    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('media', '/create'))
+    expect(navigateModuleWithShutter).toHaveBeenCalledWith(modulePathUrl('blog', '/manage'))
   })
 })

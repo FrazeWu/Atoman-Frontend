@@ -164,7 +164,7 @@ describe('FeedSourceArticlesSheet', () => {
 
     expect(wrapper.text()).toContain('状态正常')
     expect(wrapper.text()).toContain('共 2 篇')
-    expect(wrapper.text()).toContain('2026-06-17')
+    expect(wrapper.text()).toContain('2026-06-17 16:30')
 
     await wrapper.get('[data-test="source-search-input"]').setValue('AI')
 

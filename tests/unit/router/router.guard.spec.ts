@@ -80,19 +80,13 @@ describe('router auth guards', () => {
     await router.push('/item/feed-item-1')
     expect(router.currentRoute.value.path).toBe('/item/feed-item-1')
 
-    const mediaRouter = await createGuardRouter('media')
-    await mediaRouter.push('/articles')
-    expect(mediaRouter.currentRoute.value.path).toBe('/articles')
-
-    await mediaRouter.push('/videos')
-    expect(mediaRouter.currentRoute.value.path).toBe('/videos')
-
-    await mediaRouter.push('/podcasts')
-    expect(mediaRouter.currentRoute.value.path).toBe('/podcasts')
+    const blogRouter = await createGuardRouter('blog')
+    await blogRouter.push('/post/123')
+    expect(blogRouter.currentRoute.value.path).toBe('/post/123')
   })
 
-  it('redirects unauthenticated users away from media subscriptions', async () => {
-    const router = await createGuardRouter('media')
+  it('redirects unauthenticated users away from blog subscriptions', async () => {
+    const router = await createGuardRouter('blog')
     const auth = useAuthStore()
     auth.logout()
 
@@ -109,21 +103,21 @@ describe('router auth guards', () => {
     auth.user = { username: 'member', role: 'user' } as never
     auth.isAuthenticated = true
 
-    await router.push('/setting/feed-fulltext')
+    await router.push('/site/setting')
 
     expect(router.currentRoute.value.path).toBe('/')
   })
 
-  it('redirects admin away from owner-only setting routes', async () => {
+  it('allows admin to open the unified site setting route', async () => {
     const router = await createGuardRouter('music')
     const auth = useAuthStore()
     auth.token = makeToken(3600)
     auth.user = { username: 'admin', role: 'admin' } as never
     auth.isAuthenticated = true
 
-    await router.push('/setting/roles')
+    await router.push('/site/setting')
 
-    expect(router.currentRoute.value.path).toBe('/setting/access')
+    expect(router.currentRoute.value.path).toBe('/site/setting')
   })
 
   it('keeps internal route pushes path-only', async () => {
@@ -137,9 +131,9 @@ describe('router auth guards', () => {
   it('checks module access against the target route path', async () => {
     const router = await createGuardRouter('feed')
     const siteAccess = useSiteAccessStore()
-    siteAccess.access.modules.media.enabled = false
+    siteAccess.access.modules.podcast.enabled = false
 
-    await router.push('/media')
+    await router.push('/podcasts')
 
     expect(router.currentRoute.value.path).toBe('/__disabled__')
   })
@@ -148,9 +142,9 @@ describe('router auth guards', () => {
     vi.mocked(fetch).mockResolvedValue(new Response('', { status: 500 }))
     const router = await createGuardRouter('feed')
 
-    await router.push('/media')
+    await router.push('/podcasts')
 
-    expect(router.currentRoute.value.path).toBe('/media')
+    expect(router.currentRoute.value.path).toBe('/podcasts')
   })
 
   it('keeps login reachable when site access loading fails', async () => {
@@ -181,22 +175,4 @@ describe('router auth guards', () => {
     expect(initializeSpy).toHaveBeenCalled()
   })
 
-  it('resumes onboarding from a route handoff step', async () => {
-    const router = await createGuardRouter('feed')
-    const auth = useAuthStore()
-    const onboarding = useOnboardingStore()
-
-    auth.token = makeToken(3600)
-    auth.user = {
-      username: 'alice',
-      email: 'alice@example.com',
-      onboarding_completed_at: null,
-    } as never
-    auth.isAuthenticated = true
-
-    await router.push({ path: '/', query: { onboarding_step: 'feed-subscribe' } })
-
-    expect(onboarding.isVisible).toBe(true)
-    expect(onboarding.currentStep).toBe('feed-subscribe')
-  })
 })

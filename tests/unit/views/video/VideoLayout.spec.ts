@@ -5,9 +5,11 @@ import { describe, expect, it } from 'vitest'
 const layoutSource = readFileSync(resolve(__dirname, '../../../../src/views/video/VideoLayout.vue'), 'utf8')
 
 describe('VideoLayout', () => {
-  it('keeps video sidebar links under the videos module prefix', () => {
+  it('restores the video sidebar entries under /videos', () => {
+    expect(layoutSource).toContain('<PSidebar')
     expect(layoutSource).toContain('to="/videos"')
     expect(layoutSource).toContain('to="/videos/subscriptions"')
-    expect(layoutSource).toContain('to="/videos/manage"')
+    expect(layoutSource).toContain('to="/videos/favorites"')
+    expect(layoutSource).toContain('to="/videos/creator"')
   })
 })

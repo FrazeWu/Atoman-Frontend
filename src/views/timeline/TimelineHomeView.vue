@@ -385,7 +385,7 @@
             style="border:var(--a-border);padding:.75rem;display:flex;flex-direction:column;gap:.25rem"
           >
             <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:.75rem;font-weight:700">{{ rev.title }}</span>
+              <span style="font-size:.75rem;font-weight: 500">{{ rev.title }}</span>
               <span style="font-size:.65rem;color:var(--a-color-muted)">{{ formatDatetime(rev.created_at) }}</span>
             </div>
             <div style="font-size:.7rem;color:var(--a-color-muted)">编辑者: {{ rev.editor?.display_name || rev.editor?.username || rev.editor_id }}</div>
@@ -1100,9 +1100,9 @@ onMounted(() => {
 
 .filter-label {
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -1124,7 +1124,7 @@ onMounted(() => {
     linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 32%),
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.035) 0, rgba(0, 0, 0, 0.035) 1px, transparent 1px, transparent 18px),
     var(--a-color-bg);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .tl-toolbar-batch {
@@ -1136,9 +1136,9 @@ onMounted(() => {
 
 .tl-toolbar-batch-count {
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -1156,9 +1156,9 @@ onMounted(() => {
   cursor: pointer;
   padding: 0.6rem 1.05rem;
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .tl-mode-btn:last-child {
@@ -1198,7 +1198,7 @@ onMounted(() => {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 28%),
     var(--a-color-bg);
-  box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 1);
+  box-shadow: none;
 }
 
 .tl-panel-head,
@@ -1214,9 +1214,9 @@ onMounted(() => {
 .tl-section-kicker {
   margin-bottom: 0.35rem;
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -1224,8 +1224,8 @@ onMounted(() => {
 .tl-section-title {
   margin: 0;
   font-size: 1.4rem;
-  font-weight: 900;
-  letter-spacing: -0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1;
 }
 
@@ -1239,9 +1239,9 @@ onMounted(() => {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -1277,9 +1277,9 @@ onMounted(() => {
   color: var(--a-color-bg);
   cursor: pointer;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   padding: 0.55rem 0.8rem;
 }
 
@@ -1319,19 +1319,19 @@ onMounted(() => {
   padding: 1rem;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .tl-compare-item:hover,
 .tl-source-item:hover {
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .tl-compare-item-active,
 .tl-source-item-active {
   transform: translate(-3px, -3px);
-  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .tl-source-item-compared,
@@ -1374,7 +1374,7 @@ onMounted(() => {
   height: 2rem;
   border: 1px solid var(--a-color-line-soft);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 500;
   flex-shrink: 0;
 }
 
@@ -1398,8 +1398,8 @@ onMounted(() => {
 .tl-lane-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .tl-compare-range,
@@ -1431,9 +1431,9 @@ onMounted(() => {
   width: 4.5rem;
   flex-shrink: 0;
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -1443,9 +1443,9 @@ onMounted(() => {
 
 .tl-card-date {
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 
@@ -1486,16 +1486,16 @@ onMounted(() => {
 .tl-card-category {
   display: inline-block;
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   border: 1px solid var(--a-color-line-soft);
   padding: 2px 6px;
 }
 
 .tl-card-loc {
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -1506,9 +1506,9 @@ onMounted(() => {
   padding: 0.15rem 0.45rem;
   border: 1px solid var(--a-color-fg);
   font-size: 0.62rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--a-color-fg);
 }
 
@@ -1521,8 +1521,8 @@ onMounted(() => {
 .tl-empty-title {
   margin-bottom: 0.5rem;
   font-size: 1.1rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .tl-lane-board {
@@ -1556,8 +1556,8 @@ onMounted(() => {
 
 .tl-lane-ruler-label {
   font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
+  font-weight: 500;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -1612,10 +1612,10 @@ onMounted(() => {
   width: 100%;
   min-width: 1.25rem;
   height: 1rem;
-  border-radius: 999px;
+  border-radius: 4px;
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-bg);
-  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .tl-lane-bar-active {
@@ -1626,7 +1626,7 @@ onMounted(() => {
   width: 1rem;
   height: 1rem;
   min-width: 1rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--a-color-fg);
   box-shadow: 0 0 0 4px var(--a-color-bg), 0 0 0 6px var(--a-color-fg);
   transform: translateX(-50%);
@@ -1635,8 +1635,8 @@ onMounted(() => {
 .tl-lane-bar-caption {
   margin-top: 0.6rem;
   font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  font-weight: 500;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -1650,9 +1650,9 @@ onMounted(() => {
   padding: 0;
   cursor: pointer;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-fg);
 }
 
@@ -1689,7 +1689,7 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid var(--a-color-line-soft);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.55;
 }
 
@@ -1699,7 +1699,7 @@ onMounted(() => {
   padding: 0.75rem 0.85rem;
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid var(--a-color-line-soft);
-  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.15);
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -1718,13 +1718,13 @@ onMounted(() => {
   background: none;
   cursor: pointer;
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .tl-popup-title {
   font-size: 0.95rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
   margin-bottom: 0.25rem;
   padding-right: 1rem;
 }
@@ -1743,7 +1743,7 @@ onMounted(() => {
 
 .tl-detail-meta {
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
   margin-bottom: 0.75rem;
   display: flex;
@@ -1754,9 +1754,9 @@ onMounted(() => {
 
 .tl-badge {
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   border: 1px solid var(--a-color-line-soft);
   padding: 2px 6px;
   color: var(--a-color-fg);
@@ -1772,9 +1772,9 @@ onMounted(() => {
 
 .tl-field-label {
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--a-color-muted);
   flex-shrink: 0;
 }
@@ -1811,9 +1811,9 @@ onMounted(() => {
 .form-label {
   display: block;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   margin-bottom: 0.4rem;
 }
 
@@ -1831,7 +1831,7 @@ onMounted(() => {
   background: #fef2f2;
   color: #991b1b;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.5;
 }
 
@@ -1845,15 +1845,15 @@ onMounted(() => {
 
 .a-modal-title {
   font-size: 1.25rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .a-modal-close {
   background: none;
   border: none;
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 500;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   color: var(--a-color-fg);
@@ -1892,7 +1892,7 @@ onMounted(() => {
   .tl-mode-switch,
   .tl-source-item,
   .tl-compare-item {
-    box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 1);
+    box-shadow: none;
   }
 
   .tl-mode-switch {

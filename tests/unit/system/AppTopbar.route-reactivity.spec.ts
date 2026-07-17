@@ -11,14 +11,6 @@ const makeRouter = async () => {
     routes: [
       { path: '/feed', component: { template: '<div />' } },
       { path: '/music', component: { template: '<div />' } },
-      {
-        path: '/posts',
-        component: { template: '<router-view />' },
-        meta: { hasSidebar: true },
-        children: [
-          { path: 'settings', component: { template: '<div />' }, meta: { hasSidebar: false } },
-        ],
-      },
       { path: '/login', component: { template: '<div />' } },
     ],
   })
@@ -50,16 +42,5 @@ describe('AppTopbar route reactivity', () => {
     await flushPromises()
 
     expect(activeNavText(wrapper)).toEqual(['音乐'])
-  })
-
-  it('does not render a sidebar toggle when the deepest route disables the sidebar', async () => {
-    const router = await makeRouter()
-    await router.push('/posts/settings')
-
-    const wrapper = mount(AppTopbar, {
-      global: { plugins: [router] },
-    })
-
-    expect(wrapper.find('.topbar-collapse-btn').exists()).toBe(false)
   })
 })

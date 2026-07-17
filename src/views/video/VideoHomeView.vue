@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, onMounted, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
@@ -10,49 +11,106 @@ import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApiUrl } from '@/composables/useApi'
 
 const API_URL = useApiUrl()
-const route = useRoute()
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const videos = ref<Video[]>([])
+const recommendedVideos = ref<Array<{
+  id: string
+  title: string
+  thumbnail_url?: string
+  created_at?: string
+  view_count?: number
+}>>([])
 const loading = ref(false)
-const errorMessage = ref('')
+const recommendationLoading = ref(false)
 const sort = ref<'latest' | 'popular'>('latest')
-const channelId = computed(() => typeof route.query.channel_id === 'string' ? route.query.channel_id : '')
+const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
+const recommendationOptions = [
+  { label: '热度', value: 'hot' },
+  { label: '精选', value: 'featured' },
+  { label: '探索', value: 'discover' },
+]
 const canPublishVideo = computed(() => siteAccessStore.isFeatureEnabled('video', 'video.publish'))
 let fetchVideosSeq = 0
 
 async function fetchVideos() {
   const seq = ++fetchVideosSeq
   loading.value = true
-  errorMessage.value = ''
   try {
-    const params = new URLSearchParams({ sort: sort.value })
-    if (channelId.value) params.set('channel_id', channelId.value)
-    const res = await fetch(`${API_URL}/videos?${params}`)
-    if (seq !== fetchVideosSeq) return
-    if (!res.ok) throw new Error(`Failed to load videos (${res.status})`)
-
-    const data = await res.json()
-    if (seq !== fetchVideosSeq) return
-    videos.value = data
-  } catch {
-    if (seq !== fetchVideosSeq) return
-    errorMessage.value = '视频加载失败'
+    const res = await fetch(`${API_URL}/videos?sort=${sort.value}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (seq === fetchVideosSeq) videos.value = data
+    }
   } finally {
     if (seq === fetchVideosSeq) loading.value = false
   }
 }
 
-onMounted(fetchVideos)
-watch([sort, channelId], fetchVideos)
-onUnmounted(() => {
-  fetchVideosSeq++
+async function fetchRecommendedVideos() {
+  recommendationLoading.value = true
+  try {
+    const res = await fetch(`${API_URL}/videos/recommend/items?mode=${recommendationMode.value}&page=1&page_size=8`)
+    if (!res.ok) {
+      recommendedVideos.value = []
+      return
+    }
+    const data = await res.json()
+    recommendedVideos.value = Array.isArray(data.data)
+      ? data.data.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          thumbnail_url: item.image_url,
+          created_at: '',
+          view_count: 0,
+        }))
+      : []
+  } finally {
+    recommendationLoading.value = false
+  }
+}
+
+onMounted(() => {
+  void fetchVideos()
+  void fetchRecommendedVideos()
 })
+watch(sort, fetchVideos)
 </script>
 
 <template>
   <div class="vh-wrap">
     <PPageHeader title="视频" accent mb="1.5rem" />
+
+    <section class="vh-recommendations" aria-label="视频推荐">
+      <div class="vh-recommendations__header">
+        <div>
+          <h2 class="vh-recommendations__title">推荐</h2>
+          <p class="vh-recommendations__note">按热度、精选、探索切换当前视频推荐。</p>
+        </div>
+        <PSegmentedControl
+          v-model="recommendationMode"
+          :options="recommendationOptions"
+          @change="() => void fetchRecommendedVideos()"
+        />
+      </div>
+
+      <div v-if="recommendationLoading" class="vh-grid">
+        <div v-for="i in 4" :key="i" class="vh-skel">
+          <div class="vh-skel-thumb" />
+          <div class="vh-skel-info">
+            <div class="vh-skel-avatar" />
+            <div class="vh-skel-lines">
+              <div class="vh-skel-line" style="width:85%" />
+              <div class="vh-skel-line" style="width:55%" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <PEmpty v-else-if="recommendedVideos.length === 0" title="暂无推荐" description="稍后再来看新的视频推荐。" />
+      <div v-else class="vh-grid vh-grid--recommendation">
+        <PVideoCard v-for="video in recommendedVideos" :key="video.id" :video="video as Video" />
+      </div>
+    </section>
 
     <!-- Sticky filter bar (YouTube style) -->
     <div class="vh-bar">
@@ -85,8 +143,6 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-else-if="errorMessage" class="vh-empty">{{ errorMessage }}</div>
-
     <div v-else-if="videos.length === 0" class="vh-empty">暂无视频</div>
 
     <div v-else class="vh-grid">
@@ -100,6 +156,31 @@ onUnmounted(() => {
   max-width: 90rem;
   margin: 0 auto;
   padding: 0 1.5rem 6rem;
+}
+
+.vh-recommendations {
+  margin-bottom: 2rem;
+}
+
+.vh-recommendations__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.vh-recommendations__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.vh-recommendations__note {
+  margin: 0.35rem 0 0;
+  color: var(--a-color-muted-soft);
+  font-size: 0.85rem;
 }
 
 
@@ -168,7 +249,7 @@ onUnmounted(() => {
   width: 100%;
   aspect-ratio: 16/9;
   background: var(--a-color-surface);
-  border-radius: 8px;
+  border-radius: 4px;
   animation: pulse 1.4s ease-in-out infinite;
 }
 .vh-skel-info {

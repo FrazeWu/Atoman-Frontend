@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 
-import { resolveActiveSectionByScroll } from '@/views/setting/settingAccessSections'
+import { resolveActiveSectionByScroll, resolveInitialSettingSection } from '@/views/setting/settingAccessSections'
 import SettingAccessView from '@/views/setting/SettingAccessView.vue'
 
 const siteAccessState = {
@@ -20,6 +20,7 @@ const siteAccessState = {
     },
     settings: {
       feed: { full_text_mode: 'per_source' },
+      blog: { comment_mode: 'authenticated' },
       forum: {
         allow_category_request: true,
         moderator_permissions: {
@@ -33,7 +34,7 @@ const siteAccessState = {
   save: async () => undefined,
 }
 
-const authState = { token: 'admin-token' }
+const authState = { token: 'admin-token', user: { role: 'owner' } }
 
 vi.mock('@/stores/siteAccess', () => ({
   useSiteAccessStore: () => siteAccessState,
@@ -67,6 +68,67 @@ describe('SettingAccessView section sync', () => {
     expect(resolveActiveSectionByScroll(positions, 0, 120)).toBe('feed')
   })
 
+  it('resolves the music section from the route hash', () => {
+    expect(resolveInitialSettingSection('#module-music')).toBe('music')
+    expect(resolveInitialSettingSection('')).toBeNull()
+  })
+
+  it('embeds music review management inside the music section', () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+          SettingMusicReviewPanel: defineComponent({ template: '<div data-testid="music-review-panel">音乐审核面板</div>' }),
+        },
+      },
+    })
+
+    const musicSection = wrapper.get('#module-music')
+    expect(musicSection.find('[data-testid="music-review-panel"]').exists()).toBe(true)
+  })
+
+  it('embeds role management for the owner', () => {
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+          SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
+          SettingMusicReviewPanel: defineComponent({ template: '<div>音乐审核面板</div>' }),
+          SettingRolesPanel: defineComponent({ template: '<div data-testid="roles-panel">用户权限面板</div>' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="roles-panel"]').exists()).toBe(true)
+  })
+
+  it('hides role management from an admin', () => {
+    authState.user.role = 'admin'
+    const wrapper = mount(SettingAccessView, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button><slot /></button>' }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
+          SettingForumModeratorPanel: true,
+          SettingFeedSourcePanel: true,
+          SettingMusicReviewPanel: true,
+          SettingRolesPanel: defineComponent({ template: '<div data-testid="roles-panel" />' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="roles-panel"]').exists()).toBe(false)
+    authState.user.role = 'owner'
+  })
+
   it('feed 模块复用统一的全局订阅源管理面板', () => {
     const wrapper = mount(SettingAccessView, {
       global: {
@@ -86,57 +148,31 @@ describe('SettingAccessView section sync', () => {
     })
 
     const text = wrapper.text()
-    expect(text).toContain('全文抓取')
+    expect(text).toContain('全文抓取策略')
     expect(text).toContain('订阅源管理功能面板 / per_source')
     expect(wrapper.find('[data-testid="feed-source-panel"]').exists()).toBe(true)
   })
 
-  it('uses a single module flow with an article-style directory', () => {
+  it('uses unified settings blocks without developer-facing placeholder copy', () => {
     const wrapper = mount(SettingAccessView, {
       global: {
         stubs: {
           PButton: defineComponent({ template: '<button><slot /></button>' }),
-          PDirectoryNav: defineComponent({
-            props: ['items', 'activeId', 'collapsed', 'mobileOpen'],
-            template: '<aside data-testid="shared-directory" :data-count="items.length" :data-active="activeId" :data-mobile-open="String(mobileOpen)" />',
-          }),
+          PSurface: defineComponent({ template: '<section><slot /></section>' }),
+          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
           SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
           SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源管理功能面板</div>' }),
         },
       },
     })
 
-    expect(wrapper.find('.setting-access__module-toggle-grid').exists()).toBe(false)
-    expect(wrapper.findAll('.setting-access__section')).toHaveLength(8)
-    expect(wrapper.get('[data-testid="shared-directory"]').attributes('data-count')).toBe('8')
-    expect(wrapper.get('[data-testid="shared-directory"]').attributes('data-active')).toBe('feed')
-    expect(wrapper.find('.setting-access__toc').exists()).toBe(false)
-    expect(wrapper.get('.setting-access__directory-trigger').text()).toContain('目录')
-    expect(wrapper.get('#module-media').text()).not.toContain('关闭评论')
+    expect(wrapper.find('.settings-center').exists()).toBe(true)
+    expect(wrapper.find('.settings-center__nav').exists()).toBe(true)
+    expect(wrapper.findAll('.settings-block').length).toBeGreaterThan(4)
+    expect(wrapper.text()).not.toContain('后续按同样结构补具体设置')
   })
 
-  it('opens the shared directory on mobile', async () => {
-    const wrapper = mount(SettingAccessView, {
-      global: {
-        stubs: {
-          PButton: defineComponent({ template: '<button><slot /></button>' }),
-          PDirectoryNav: defineComponent({
-            props: ['items', 'activeId', 'collapsed', 'mobileOpen'],
-            template: '<aside data-testid="shared-directory" :data-mobile-open="String(mobileOpen)" />',
-          }),
-          SettingForumModeratorPanel: true,
-          SettingFeedSourcePanel: true,
-        },
-      },
-    })
-
-    const directory = wrapper.get('[data-testid="shared-directory"]')
-    expect(directory.attributes('data-mobile-open')).toBe('false')
-    await wrapper.get('.setting-access__directory-trigger').trigger('click')
-    expect(directory.attributes('data-mobile-open')).toBe('true')
-  })
-
-  it('保存时会带上 media 模块可见性', async () => {
+  it('保存时会带上 podcast 模块可见性', async () => {
     const save = vi.fn(async () => undefined)
     siteAccessState.save = save
 
@@ -156,41 +192,17 @@ describe('SettingAccessView section sync', () => {
       },
     })
 
-    const kanboToggle = wrapper
-      .get('#module-media')
-      .find('input.setting-access__module-enabled')
-    expect(kanboToggle.exists()).toBe(true)
+    const podcastToggle = wrapper
+      .findAll('label.setting-access__module-toggle-item')
+      .find((item) => item.text().includes('播客'))
+      ?.find('input[type="checkbox"]')
+    expect(podcastToggle.exists()).toBe(true)
 
-    await kanboToggle!.setValue(false)
-    await wrapper.get('.setting-access__footer button').trigger('click')
+    await podcastToggle!.setValue(false)
+    await wrapper.findAll('button').at(-1)!.trigger('click')
 
     expect(save).toHaveBeenCalledTimes(1)
-    expect(save.mock.calls[0]?.[0]?.modules?.media?.enabled).toBe(false)
+    expect(save.mock.calls[0]?.[0]?.modules?.podcast?.enabled).toBe(false)
     expect(save.mock.calls[0]?.[1]).toBe('admin-token')
-  })
-
-  it('不再显示或提交匿名与关闭评论设置', async () => {
-    const save = vi.fn(async () => undefined)
-    siteAccessState.save = save
-    const wrapper = mount(SettingAccessView, {
-      global: {
-        stubs: {
-          PButton: defineComponent({
-            props: ['loading', 'loadingText', 'to'],
-            emits: ['click'],
-            template: '<button @click="$emit(\'click\')"><slot /></button>',
-          }),
-          PSurface: defineComponent({ template: '<section><slot /></section>' }),
-          PSectionHeader: defineComponent({ template: '<header><slot /></header>' }),
-          SettingForumModeratorPanel: true,
-          SettingFeedSourcePanel: true,
-        },
-      },
-    })
-
-    expect(wrapper.text()).not.toContain('全部可评论')
-    expect(wrapper.text()).not.toContain('关闭评论')
-    await wrapper.get('.setting-access__footer button').trigger('click')
-    expect(save.mock.calls[0]?.[0]?.settings).not.toHaveProperty('blog')
   })
 })

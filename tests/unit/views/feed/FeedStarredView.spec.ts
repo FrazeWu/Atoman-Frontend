@@ -245,4 +245,106 @@ describe('FeedStarredView', () => {
     expect(wrapper.get('[data-test="sheet-title"]').text()).toBe('收藏第二篇')
     expect(wrapper.find('[data-test="sheet-prev"]').exists()).toBe(true)
   })
+
+  it('marks an unread starred item as read when opening it', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        items: [{
+          id: 'feed-item-star-unread-1',
+          feed_source_id: 'source-1',
+          guid: 'feed-item-star-unread-1',
+          title: '未读收藏',
+          link: 'https://example.com/unread-star',
+          summary: '摘要',
+          author: '作者',
+          source_title: '收藏来源',
+          published_at: '2026-06-16T00:00:00Z',
+          fetched_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        }],
+        total: 1,
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    const markItemsRead = vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(true)
+    const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions')
+
+    const wrapper = mount(FeedStarredView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: {
+            props: ['title', 'summary'],
+            template: '<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
+          },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedTimelineFooter: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+
+    expect(markItemsRead).toHaveBeenCalledWith(['feed-item-star-unread-1'])
+    expect(fetchSubscriptions).toHaveBeenCalled()
+  })
+
+  it('does not refresh subscriptions when marking a starred item read fails', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        items: [{
+          id: 'feed-item-star-read-fail-1',
+          feed_source_id: 'source-1',
+          guid: 'feed-item-star-read-fail-1',
+          title: '标记失败收藏',
+          link: 'https://example.com/read-fail-star',
+          summary: '摘要',
+          author: '作者',
+          source_title: '收藏来源',
+          published_at: '2026-06-16T00:00:00Z',
+          fetched_at: '2026-06-16T00:00:00Z',
+          is_read: false,
+        }],
+        total: 1,
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(false)
+    const fetchSubscriptions = vi.spyOn(feedStore, 'fetchSubscriptions')
+
+    const wrapper = mount(FeedStarredView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PEmpty: true,
+          PEntry: {
+            props: ['title', 'summary'],
+            template: '<article class="p-entry" @click="$emit(\'click\')"><h3>{{ title }}</h3><slot name="actions" /></article>',
+          },
+          PBadge: true,
+          PClip: true,
+          PPress: true,
+          PShortcutHints: true,
+          FeedArticleSheet: true,
+          FeedTimelineFooter: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+
+    expect(feedStore.markItemsRead).toHaveBeenCalledWith(['feed-item-star-read-fail-1'])
+    expect(fetchSubscriptions).not.toHaveBeenCalled()
+  })
 })

@@ -15,6 +15,7 @@ export type ModuleFeatureKey =
   | 'video.publish'
 
 export type FeedFullTextMode = 'disabled' | 'per_source'
+export type BlogCommentMode = 'all' | 'authenticated' | 'disabled'
 
 export type ModuleAccess = {
   enabled: boolean
@@ -26,6 +27,9 @@ export type SiteAccessSettings = {
     allow_manage_sources: boolean
     allow_add_source: boolean
     full_text_mode: FeedFullTextMode
+  }
+  blog: {
+    comment_mode: BlogCommentMode
   }
   forum: {
     allow_category_request: boolean
@@ -52,6 +56,7 @@ type SiteAccessSettingsInput = Partial<{
     allow_manage_sources: boolean
     allow_add_source: boolean
   }>
+  blog: Partial<SiteAccessSettings['blog']>
   forum: Partial<{
     allow_category_request: boolean
     moderator_permissions: Partial<SiteAccessSettings['forum']['moderator_permissions']>
@@ -68,7 +73,6 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
   feed: [
     { key: 'subscription.manage', label: '订阅管理' },
   ],
-  media: [],
   music: [
     { key: 'music.submit', label: '提交音乐资料' },
     { key: 'music.review', label: '音乐审核' },
@@ -116,6 +120,9 @@ const buildDefaultSettings = (): SiteAccessSettings => ({
     allow_add_source: true,
     full_text_mode: 'per_source',
   },
+  blog: {
+    comment_mode: 'authenticated',
+  },
   forum: {
     allow_category_request: true,
     moderator_permissions: {
@@ -155,6 +162,12 @@ export function mergeSiteAccess(input: SiteAccessInput): SiteAccess {
       ...input.settings.feed,
     }
   }
+  if (input?.settings?.blog) {
+    settings.blog = {
+      ...settings.blog,
+      ...input.settings.blog,
+    }
+  }
   if (input?.settings?.forum) {
     settings.forum = {
       ...settings.forum,
@@ -190,6 +203,10 @@ export function isModuleVisible(access: SiteAccess, module: ModuleRoomKey): bool
 export function isModuleFeatureEnabled(access: SiteAccess, module: ModuleRoomKey, feature: ModuleFeatureKey): boolean {
   if (!isModuleVisible(access, module)) return false
   return access.modules[module]?.features?.[feature] ?? true
+}
+
+export function getBlogCommentMode(access: SiteAccess): BlogCommentMode {
+  return access.settings.blog.comment_mode
 }
 
 export function getFeedFullTextMode(access: SiteAccess): FeedFullTextMode {

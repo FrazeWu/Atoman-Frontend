@@ -3,19 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   filterAlbumRecommendationsByBookmarks,
   filterArtistRecommendationsByBookmarks,
-  MUSIC_BROWSE_MODE_OPTIONS,
   parseRecommendationTargetId,
 } from '@/utils/musicRecommendations'
 
 describe('musicRecommendations', () => {
-  it('uses the same browse modes on every music index page', () => {
-    expect(MUSIC_BROWSE_MODE_OPTIONS).toEqual([
-      { label: '热度', value: 'hot' },
-      { label: '精选', value: 'featured' },
-      { label: '最新', value: 'latest' },
-    ])
-  })
-
   it('parses entity ids from recommendation target paths', () => {
     expect(parseRecommendationTargetId('/music/artist/artist-1', 'artist')).toBe('artist-1')
     expect(parseRecommendationTargetId('/music/album/album-1?foo=bar', 'album')).toBe('album-1')

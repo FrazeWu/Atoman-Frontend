@@ -223,14 +223,15 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0 0 0.72rem;
+  padding: 0 0 0.6rem;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  border-bottom: 1px solid var(--a-color-line);
   background: transparent;
   color: var(--a-color-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-bottom-color 0.15s ease;
 }
 
 .p-select-trigger:focus-visible,
@@ -256,34 +257,34 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% + 0.4rem);
-  z-index: 20;
+  top: calc(100% + 4px);
+  z-index: 50;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 0.65rem 1rem;
-  border-radius: 0px; /* Straight corner */
-  background: #ffffff; /* Pure white */
-  border: 1px solid var(--a-color-line-soft); /* 1px border */
-  box-shadow: none; /* No shadow */
+  padding: 0.25rem;
+  border-radius: var(--a-radius-none, 4px);
+  background: #ffffff;
+  border: 1px solid var(--a-color-line);
+  box-shadow: none;
 }
 
 .p-select-option {
   display: grid;
   grid-template-columns: 1rem 1fr;
   gap: 0.45rem;
-  padding: 0.65rem 0;
+  padding: 0.55rem 0.75rem;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
   background: transparent;
   color: var(--a-color-ink);
   text-align: left;
   cursor: pointer;
   font: inherit;
+  border-radius: calc(var(--a-radius-none, 4px) - 1px);
+  transition: background-color 0.15s ease;
 }
 
-.p-select-option:last-child {
-  border-bottom: 0;
+.p-select-option:hover {
+  background-color: var(--a-color-paper-soft);
 }
 
 .p-select-option:focus-visible {
@@ -293,7 +294,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-select-marker {
-  color: var(--a-color-accent-confirm);
+  color: var(--a-color-ink);
 }
 
 .p-select-empty,

@@ -3,40 +3,10 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
-
-vi.mock('@/components/comment/CommentSection.vue', () => ({
-  default: { name: 'CommentSection', props: ['target'], template: '<section />' },
-}))
 
 describe('FeedArticleSheet', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-  })
-
-  it('uses the same existing feed item id as the detail page', () => {
-    const wrapper = mount(FeedArticleSheet, {
-      props: {
-        show: true,
-        article: {
-          type: 'feed_item', published_at: '2026-07-01T00:00:00Z', is_read: false,
-          feed_item: {
-            id: 'feed-item-1', feed_source_id: 'source-1', guid: 'guid-1', title: '文章',
-            link: 'https://example.com/article', summary: '摘要', author: '作者',
-            published_at: '2026-07-01T00:00:00Z', fetched_at: '2026-07-01T00:00:00Z',
-          },
-        },
-      },
-      global: {
-        stubs: {
-          PSheet: { template: '<section><slot /></section>' },
-          PBadge: true,
-          CommentSection: { name: 'CommentSection', props: ['target'], template: '<section />' },
-        },
-      },
-    })
-
-    expect(wrapper.findComponent(CommentSection).props('target')).toEqual({ kind: 'feed_article', resourceId: 'feed-item-1' })
   })
 
   it('sanitizes external feed HTML before rendering it', () => {

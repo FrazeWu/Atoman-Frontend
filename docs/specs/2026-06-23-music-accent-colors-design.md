@@ -1,12 +1,14 @@
 # Atoman 音乐模块双点睛色与高密度排版重构设计规范
 
+> 视觉优先级：本文件的 Primary 绿色和“删除/警告共用橙色”规则已由[全局 UI 规范](./2026-06-05-flat-paper-ui-design.md)取代。当前 Primary 统一使用明晰蓝；绿色只用于成功与播放进度；红色用于破坏性动作；橙色用于警告、待处理和可恢复异常。其余音乐模块的高密度排版与播放器语义继续有效，但圆角、边界、阴影、字重和图标仍以全局规范为准。
+
 本规范旨在根据 Atoman 网站的“扁平纸叠（Flat Paper-Stacking）”设计体系，对音乐模块进行精致化与高密度重构。我们引入了邮差绿与朱红橘双点睛色系统，精细化排版字号层级，收敛边框对比度，以塑造如 Cloudflare Dashboard 般的专业和高端质感。
 
 ---
 
 ## 1. 核心点睛色与 CSS 变量 (Brand Accent Colors)
 
-我们在全局 [style.css](file:///root/Atoman/Atoman-Frontend/src/style.css) 的 `:root` 变量中定义以下语义化变量：
+我们在全局 [style.css](../../src/style.css) 的 `:root` 变量中定义以下语义化变量：
 
 ```css
 :root {
@@ -15,8 +17,8 @@
   /* Atoman 语义化点睛色 */
   --a-color-accent-confirm: #0d9488;           /* 邮差绿 (Postman Green) - 确认/正常/建设性动作 */
   --a-color-accent-confirm-hover: #0f766e;     /* Hover 加深 */
-  --a-color-accent-destructive: #ea580c;       /* 朱红橘 (Vermilion Orange) - 删除/警告/破坏性动作 */
-  --a-color-accent-destructive-hover: #c2410c; /* Hover 加深 */
+  --a-color-warning: #ea580c;                  /* 警告、待处理和可恢复异常 */
+  --a-color-danger: #dc2626;                   /* 删除、驳回等破坏性动作 */
 }
 ```
 
@@ -38,21 +40,21 @@
 ## 3. 组件级重映射规范 (Component Refactor Mapping)
 
 ### 3.1 动作按钮与交互状态
-* **确认类核心动作**（如提交编辑、创建艺术家、确认保存）：
+* **成功与进度状态**：
   * `.paper-submit`：
-    * 背景色：`var(--a-color-accent-confirm)`。
-    * 悬浮态（`:hover`）：`var(--a-color-accent-confirm-hover)`。
+    * 背景色：`var(--a-color-primary)`。
+    * 悬浮态（`:hover`）：`var(--a-color-primary-hover)`。
     * 文字颜色：`var(--a-color-paper)`。
   * `.form-success`：文字颜色映射为 `var(--a-color-accent-confirm)`。
   * `.section-dot`（正常/审核通过态）：背景映射为 `color-mix(in srgb, var(--a-color-accent-confirm) 72%, transparent)`。
-  * `PButton[variant="primary"]` / `a-btn--primary`：继承并采用这一绿色高亮体系。
-* **删除与警示类动作**（如驳回、取消、移除音轨、清空）：
+  * `PButton[variant="primary"]` / `a-btn--primary` 不继承绿色，统一使用全局 Primary 明晰蓝。
+* **删除与警示类动作**：
   * `.track-action--danger` / `PReject` (Hover 态) / `a-btn--danger`：
-    * 文字或背景映射为 `var(--a-color-accent-destructive)`。
-  * `.form-error` / `.error-message` / `.state-line--error`：文字颜色映射为 `var(--a-color-accent-destructive)`。
-  * `.section-dot`（争议/被驳回/草稿态）：背景映射为 `color-mix(in srgb, var(--a-color-accent-destructive) 72%, transparent)`。
+    * 删除、驳回等破坏性动作映射为 `var(--a-color-danger)`。
+  * `.form-error` / `.error-message` / `.state-line--error` 按后果映射为 Danger 或 Warning。
+  * 待处理、可恢复异常映射为 `var(--a-color-warning)`；“取消”默认保持普通次级动作。
 * **次级普通按钮 Hover 点睛**：
-  * `.paper-action:hover`：背景色从原本的黑白颠倒修改为 `color-mix(in srgb, var(--a-color-paper-wash) 78%, var(--a-color-paper))` 并搭配邮差绿的微调，或根据动作属性应用对应的 `confirm`/`destructive` 高亮背景。
+  * `.paper-action:hover`：使用全局冷灰 Hover 背景；只有明确的成功、警告或危险动作才附加对应语义色。
 
 ### 3.2 音乐播放器 (Audio Player)
 * **播放进度与音量填充**：

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
@@ -9,47 +10,51 @@ import {
   getMusicArtist,
   listAlbumBookmarks,
   listArtistBookmarks,
-  listMusicPlaylists,
-  listSongBookmarks,
+  listPlaylistBookmarks,
+  type MusicPlaylistSummary,
   type MusicAlbumBookmark,
   type MusicArtistBookmark,
-  type MusicPlaylistSummary,
-  type MusicSongBookmark,
   type MusicStarredItem,
 } from '@/api/musicV1'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PButton from '@/components/ui/PButton.vue'
-import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { MusicAlbumCard, MusicArtistCard } from '@/components/music'
 
-type StarredFilter = 'all' | 'artist' | 'album' | 'song' | 'playlist'
+type StarredFilter = 'album' | 'artist' | 'playlist'
+type StarredSortMode = 'latest' | 'popular'
 
-const filterOptions: Array<{ label: string; value: StarredFilter; testId: string }> = [
-  { label: '全部', value: 'all', testId: 'filter-all' },
-  { label: '艺术家', value: 'artist', testId: 'filter-artist' },
-  { label: '专辑', value: 'album', testId: 'filter-album' },
-  { label: '单曲', value: 'song', testId: 'filter-song' },
-  { label: '歌单', value: 'playlist', testId: 'filter-playlist' },
+const filterOptions: Array<{ label: string; value: StarredFilter; testid: string }> = [
+  { label: '收藏专辑', value: 'album', testid: 'filter-album' },
+  { label: '收藏艺人', value: 'artist', testid: 'filter-artist' },
+  { label: '收藏歌单', value: 'playlist', testid: 'filter-playlist' },
 ]
 
-const items = ref<MusicStarredItem[]>([])
-const activeFilter = ref<StarredFilter>('all')
+const artistItems = ref<MusicStarredItem[]>([])
+const albumItems = ref<MusicStarredItem[]>([])
+const playlistItems = ref<MusicPlaylistSummary[]>([])
+const activeFilter = ref<StarredFilter>('album')
+const sortMode = ref<StarredSortMode>('latest')
 const loading = ref(false)
 const errorMessage = ref('')
 
-const filteredItems = computed(() => (
-  activeFilter.value === 'all'
-    ? items.value
-    : items.value.filter((item) => item.kind === activeFilter.value)
-))
-const { isMainShifted, openArtist, openAlbum, openPlaylist } = useMusicDrawers()
+const sortOptions: Array<{ label: string; value: StarredSortMode }> = [
+  { label: '最新', value: 'latest' },
+  { label: '最热', value: 'popular' },
+]
+const router = useRouter()
 
-function artistNamesFromItem(item: MusicStarredItem) {
-  if (item.artist) return item.artist.name
-  if (item.album?.artists?.length) return item.album.artists.map((artist) => artist.name).join(' / ')
-  return ''
-}
+const filteredItems = computed(() => {
+  if (activeFilter.value === 'artist') return artistItems.value
+  if (activeFilter.value === 'playlist') return []
+  return albumItems.value
+})
+const isPlaylistFilter = computed(() => activeFilter.value === 'playlist')
+const hasVisibleItems = computed(() => (
+  isPlaylistFilter.value
+    ? playlistItems.value.length > 0
+    : filteredItems.value.length > 0
+))
+const { state, isMainShifted, openArtist, openAlbum } = useMusicDrawers()
 
 function handleItemClick(item: MusicStarredItem) {
   if (item.kind === 'artist' && item.artist?.id) {
@@ -59,23 +64,17 @@ function handleItemClick(item: MusicStarredItem) {
 
   if (item.kind === 'album' && item.album?.id) {
     openAlbum(String(item.album.id))
-    return
   }
+}
 
-  if (item.kind === 'song' && item.song?.album?.id) {
-    openAlbum(String(item.song.album.id))
-    return
-  }
-
-  if (item.kind === 'playlist' && item.playlist?.id) {
-    openPlaylist(String(item.playlist.id))
-  }
+function handlePlaylistClick(playlistId: string) {
+  router.push(`/music/playlist/${playlistId}`)
 }
 
 async function handleToggleArtistBookmark(artistId: string) {
   try {
     await deleteArtistBookmark(artistId)
-    items.value = items.value.filter(
+    artistItems.value = artistItems.value.filter(
       (item) => !(item.kind === 'artist' && String(item.artist?.id) === artistId)
     )
   } catch (e) {
@@ -86,7 +85,7 @@ async function handleToggleArtistBookmark(artistId: string) {
 async function handleToggleAlbumBookmark(albumId: string) {
   try {
     await deleteAlbumBookmark(albumId)
-    items.value = items.value.filter(
+    albumItems.value = albumItems.value.filter(
       (item) => !(item.kind === 'album' && String(item.album?.id) === albumId)
     )
   } catch (e) {
@@ -100,56 +99,50 @@ async function loadStarred() {
   try {
     let artistBookmarks: { data: MusicArtistBookmark[] }
     let albumBookmarks: { data: MusicAlbumBookmark[] }
-    let songBookmarks: { data: MusicSongBookmark[] }
-    let playlists: { data: MusicPlaylistSummary[] }
+    let playlistsResponse: { data: Array<{ playlist?: MusicPlaylistSummary }> }
     try {
-      ;[artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
-        listArtistBookmarks(),
-        listAlbumBookmarks(),
-        listSongBookmarks(),
-        listMusicPlaylists(),
+      ;[artistBookmarks, albumBookmarks, playlistsResponse] = await Promise.all([
+        listArtistBookmarks({ sort: sortMode.value }),
+        listAlbumBookmarks({ sort: sortMode.value }),
+        listPlaylistBookmarks({ sort: sortMode.value }),
       ])
     } catch (error) {
       if (error instanceof ApiErrorResponseError && error.status === 401) {
-        items.value = []
+        artistItems.value = []
+        albumItems.value = []
+        playlistItems.value = []
         return
       }
       throw error
     }
 
+    const artistBookmarksById = new Map(
+      artistBookmarks.data.map((bookmark: MusicArtistBookmark) => [String(bookmark.artist_id), bookmark]),
+    )
+    const albumBookmarksById = new Map(
+      albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => [String(bookmark.album_id), bookmark]),
+    )
+
     const [artists, albums] = await Promise.all([
-      Promise.all(artistBookmarks.data.map((bookmark) => getMusicArtist(bookmark.artist_id))),
-      Promise.all(albumBookmarks.data.map((bookmark) => getMusicAlbum(bookmark.album_id))),
+      Promise.all(artistBookmarks.data.map((bookmark: MusicArtistBookmark) => getMusicArtist(bookmark.artist_id))),
+      Promise.all(albumBookmarks.data.map((bookmark: MusicAlbumBookmark) => getMusicAlbum(bookmark.album_id))),
     ])
 
-    items.value = [
-      ...artistBookmarks.data.map((bookmark: MusicArtistBookmark, index: number) => ({
-        id: bookmark.id,
-        kind: 'artist' as const,
-        starred_at: bookmark.created_at,
-        artist: artists[index],
-      })),
-      ...albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
-        id: bookmark.id,
-        kind: 'album' as const,
-        starred_at: bookmark.created_at,
-        album: albums[index],
-      })),
-      ...songBookmarks.data
-        .filter((bookmark) => bookmark.song)
-        .map((bookmark) => ({
-          id: bookmark.id,
-          kind: 'song' as const,
-          starred_at: bookmark.created_at,
-          song: bookmark.song,
-        })),
-      ...playlists.data.map((playlist) => ({
-        id: playlist.id,
-        kind: 'playlist' as const,
-        starred_at: '',
-        playlist,
-      })),
-    ]
+    artistItems.value = artistBookmarks.data.map((bookmark: MusicArtistBookmark, index: number) => ({
+      id: bookmark.id,
+      kind: 'artist' as const,
+      starred_at: artistBookmarksById.get(String(bookmark.artist_id))?.created_at ?? '',
+      artist: artists[index],
+    }))
+    albumItems.value = albumBookmarks.data.map((bookmark: MusicAlbumBookmark, index: number) => ({
+      id: bookmark.id,
+      kind: 'album' as const,
+      starred_at: albumBookmarksById.get(String(bookmark.album_id))?.created_at ?? '',
+      album: albums[index],
+    }))
+    playlistItems.value = playlistsResponse.data
+      .map(bookmark => bookmark.playlist)
+      .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
   } catch (error) {
     console.error('Failed to load music starred items:', error)
     errorMessage.value = '收藏加载失败'
@@ -161,6 +154,17 @@ async function loadStarred() {
 onMounted(() => {
   loadStarred()
 })
+
+watch(sortMode, () => {
+  loadStarred()
+})
+
+watch(
+  () => state.value.playlistRefreshToken,
+  () => {
+    loadStarred()
+  },
+)
 </script>
 
 <template>
@@ -182,19 +186,47 @@ onMounted(() => {
         </PPageHeader>
       </header>
 
-      <PEmpty v-if="errorMessage" :text="errorMessage" role="alert">
-        <template #action>
-          <PButton data-testid="retry-starred" size="sm" @click="loadStarred">重新加载</PButton>
-        </template>
-      </PEmpty>
-      <div v-else-if="loading" class="results music-card-grid--skeleton" role="status" aria-label="正在加载收藏">
-        <div v-for="index in 6" :key="index" class="a-skeleton music-card-skeleton" />
+      <div class="toolbar-row">
+        <div class="toolbar-left">
+          <div class="search-shell search-shell--placeholder" aria-hidden="true" />
+        </div>
+        <div class="toolbar-right">
+          <div class="recommendation-tabs" aria-label="收藏排序">
+            <PSegmentedControl
+              v-model="sortMode"
+              :options="sortOptions"
+            />
+          </div>
+        </div>
       </div>
 
-      <PEmpty v-else-if="!filteredItems.length" text="暂无收藏" />
+      <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+      <p v-else-if="loading" class="state-line">正在加载...</p>
+
+      <div v-else-if="!hasVisibleItems" class="empty-paper" role="status">
+        <h2>暂无收藏</h2>
+      </div>
 
       <div v-else class="results">
+        <template v-if="isPlaylistFilter">
+          <article
+            v-for="playlist in playlistItems"
+            :key="playlist.id"
+            class="result-card result-card--interactive playlist-card"
+            data-testid="starred-playlist-card"
+            @click="handlePlaylistClick(String(playlist.id))"
+          >
+            <p class="a-font-meta result-kind">歌单</p>
+            <div class="playlist-head">
+              <h2>{{ playlist.name }}</h2>
+              <span class="playlist-count">{{ playlist.song_count }} 首</span>
+            </div>
+            <p v-if="playlist.description" class="result-meta">{{ playlist.description }}</p>
+          </article>
+        </template>
+
         <template
+          v-else
           v-for="item in filteredItems"
           :key="`${item.kind}-${item.id}`"
         >
@@ -215,25 +247,6 @@ onMounted(() => {
             @click="handleItemClick(item)"
             @toggle-bookmark="handleToggleArtistBookmark(String(item.artist.id))"
           />
-
-          <article
-            v-else
-            class="result-card result-card--interactive"
-            :data-testid="item.kind === 'song' ? 'starred-song-card' : 'starred-playlist-card'"
-            @click="handleItemClick(item)"
-          >
-            <p class="a-font-meta result-kind">
-              {{ item.kind === 'song' ? '单曲' : '歌单' }}
-            </p>
-            <h2>{{ item.kind === 'song' ? item.song?.title : item.playlist?.name }}</h2>
-            <p class="result-meta">
-              {{
-                item.kind === 'song'
-                  ? item.song?.artists?.map((artist) => artist.name).join(' / ')
-                  : `${item.playlist?.song_count ?? 0} 首歌曲`
-              }}
-            </p>
-          </article>
         </template>
       </div>
     </div>
@@ -249,13 +262,18 @@ onMounted(() => {
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .main-level-1.is-shifted {
   transform: translateX(-10%) scale(0.98);
   opacity: 0.4;
   pointer-events: none;
+}
+
+.page-header {
+  border-left: 4px solid var(--a-color-line-soft);
+  padding-left: 1.25rem;
 }
 
 .toolbar-row {
@@ -324,7 +342,7 @@ onMounted(() => {
   font-family: var(--a-font-serif);
   font-size: 6rem;
   font-style: italic;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 0.9;
 }
 
@@ -340,7 +358,7 @@ onMounted(() => {
 .empty-paper {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
-  box-shadow: var(--a-shadow-modal);
+  box-shadow: none;
 }
 
 .result-card--interactive {
@@ -370,7 +388,7 @@ onMounted(() => {
 .empty-paper h2 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 900;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
@@ -426,7 +444,7 @@ onMounted(() => {
 
 .p-tab--active {
   background: var(--a-color-paper);
-  box-shadow: inset 0 -2px 0 var(--a-color-ink);
+  box-shadow: none;
 }
 
 .empty-paper {
@@ -443,11 +461,9 @@ onMounted(() => {
 
 .results {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
   gap: 1.25rem;
 }
-
-.music-card-skeleton { aspect-ratio: 1; }
 
 .result-kind {
   margin: 0 0 0.85rem;
@@ -490,7 +506,7 @@ onMounted(() => {
 
 .music-title {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--a-color-fg);
   margin: 0 0 0.25rem 0;
@@ -509,6 +525,16 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.playlist-card {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.playlist-count {
+  color: var(--a-color-muted);
+  white-space: nowrap;
 }
 
 .playlist-songs {
@@ -531,7 +557,7 @@ onMounted(() => {
 }
 
 .playlist-song-title {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .state-line {
@@ -550,19 +576,5 @@ onMounted(() => {
   .page-title {
     font-size: 3rem;
   }
-
-  .results {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem 0.75rem;
-  }
-}
-
-@media (min-width: 721px) and (max-width: 1100px) {
-  .results { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .main-level-1,
-  .result-card--interactive { transition: none; }
 }
 </style>

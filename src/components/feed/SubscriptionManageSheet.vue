@@ -37,18 +37,161 @@
             @click="checkAllSubscriptionsHealth"
           />
         </div>
+        <p v-if="error" class="manage-error">{{ error }}</p>
       </div>
 
-      <form class="create-group-form" @submit.prevent="submitGroup">
-        <PField label="新建分组">
-          <div class="inline-form">
-            <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
-            <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
-          </div>
-        </PField>
-      </form>
+      <div class="manage-tabs" aria-label="订阅源管理分区">
+        <button
+          v-for="tab in manageTabs"
+          :key="tab.key"
+          type="button"
+          class="manage-tab"
+          :class="{ 'is-active': activeManageTab === tab.key }"
+          :data-test="`subscription-manage-tab-${tab.key}`"
+          @click="activeManageTab = tab.key"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
 
-      <section class="filter-rules-section">
+      <template v-if="activeManageTab === 'sources'">
+        <form class="create-group-form" @submit.prevent="submitGroup">
+          <PField label="新建分组">
+            <div class="inline-form">
+              <PInput v-model="newGroupName" placeholder="例如：技术观察" :disabled="busy" />
+              <PPress variant="secondary" label="创建" :disabled="busy" @click="submitGroup" />
+            </div>
+          </PField>
+        </form>
+
+        <div v-if="!subscriptions.length" class="empty-state a-muted">
+          暂无订阅源，点击页面上的 “+ 订阅” 添加。
+        </div>
+
+        <div v-else class="group-list">
+          <section v-for="group in displayGroups" :key="group.id" class="group-section">
+            <div class="group-title">
+              <PInput
+                v-if="!group.virtual"
+                :model-value="draftGroupNames[group.id] ?? group.name"
+                data-test="group-name-input"
+                class="group-name-input"
+                :disabled="busy"
+                @input="updateDraftGroupName(group.id, $event)"
+                @blur="submitGroupRename(group)"
+                @keydown.enter.prevent="submitGroupRename(group)"
+              />
+              <span v-else class="a-font-meta">/ {{ group.name }}</span>
+              <PPress
+                v-if="!group.virtual"
+                variant="secondary"
+                label="删除分组"
+                :disabled="busy"
+                @click="confirmDeleteGroup(group.id)"
+              />
+            </div>
+
+            <div v-if="!group.subscriptions.length" class="group-empty a-muted">
+              此分组暂无订阅源
+            </div>
+
+            <div v-else class="subscription-list">
+              <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
+                <div class="subscription-main">
+                  <PInput
+                    :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
+                    class="title-input"
+                    :disabled="busy"
+                    @input="updateDraftTitle(sub.id, $event)"
+                    @blur="submitRename(sub)"
+                    @keydown.enter.prevent="submitRename(sub)"
+                  />
+                  <p class="source-url a-muted">
+                    {{ subscriptionSourceLabel(sub) }}
+                  </p>
+                  <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
+                    <span class="health-dot" aria-hidden="true"></span>
+                    <span>{{ subscriptionHealthLabel(sub) }}</span>
+                    <span v-if="sub.last_checked" class="a-muted">
+                      {{ formatCheckedAt(sub.last_checked) }}
+                    </span>
+                  </div>
+                  <p v-if="sub.error_message" class="health-error">
+                    {{ sub.error_message }}
+                  </p>
+                  <div class="subscription-flags">
+                    <label>
+                      <input
+                        data-test="subscription-flag-muted"
+                        type="checkbox"
+                        :checked="Boolean(sub.is_muted)"
+                        :disabled="busy"
+                        @change="updateSubscriptionFlag(sub.id, 'is_muted', ($event.target as HTMLInputElement).checked)"
+                      />
+                      静音
+                    </label>
+                    <label>
+                      <input
+                        data-test="subscription-flag-auto-read"
+                        type="checkbox"
+                        :checked="Boolean(sub.auto_mark_read)"
+                        :disabled="busy"
+                        @change="updateSubscriptionFlag(sub.id, 'auto_mark_read', ($event.target as HTMLInputElement).checked)"
+                      />
+                      自动已读
+                    </label>
+                    <label>
+                      <input
+                        data-test="subscription-flag-reading-list"
+                        type="checkbox"
+                        :checked="Boolean(sub.auto_add_reading_list)"
+                        :disabled="busy"
+                        @change="updateSubscriptionFlag(sub.id, 'auto_add_reading_list', ($event.target as HTMLInputElement).checked)"
+                      />
+                      稍后阅读
+                    </label>
+                  </div>
+                </div>
+
+                <div class="subscription-actions">
+                  <PSelect
+                    :model-value="sub.subscription_group_id || ''"
+                    :options="groupOptions"
+                    :disabled="busy"
+                    @update:model-value="moveSubscription(sub.id, String($event))"
+                  />
+                  <PPress
+                    variant="secondary"
+                    label="检查"
+                    :disabled="busy || healthChecking"
+                    @click="checkSubscriptionHealth(sub.id)"
+                  />
+                  <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </template>
+
+      <SubscriptionRulesPanel
+        v-else-if="activeManageTab === 'rules'"
+        :groups="groups"
+        :subscriptions="subscriptions"
+        :subscription-rules="subscriptionRules"
+        :rule-apply-summary="ruleApplySummary"
+        :busy="busy"
+        @create-rule="$emit('create-rule')"
+        @edit-rule="$emit('edit-rule', $event)"
+        @save-rule="$emit('save-rule', $event)"
+        @move-rule-up="$emit('move-rule-up', $event)"
+        @move-rule-down="$emit('move-rule-down', $event)"
+        @apply-rule="$emit('apply-rule', $event)"
+        @apply-all-rules="$emit('apply-all-rules')"
+        @delete-rule="$emit('delete-rule', $event)"
+      />
+
+      <section v-else class="filter-rules-section">
         <div class="filter-rules-header">
           <h3 class="a-title-xs">过滤规则</h3>
           <p class="a-muted">在当前设备上隐藏特定来源或关键词命中的条目。</p>
@@ -80,181 +223,45 @@
             <span class="a-font-meta">移除关键词</span>
           </button>
         </div>
-
-        <div v-if="mutedSubscriptions.length" class="muted-list">
-          <p class="a-font-meta muted-list-title">已静音来源</p>
-          <div class="rule-chip-list">
-            <button
-              v-for="sub in mutedSubscriptions"
-              :key="sub.id"
-              type="button"
-              class="rule-chip"
-              data-test="muted-source-chip"
-              @click="toggleMuteSource(sub)"
-            >
-              <span>{{ subscriptionTitle(sub) }}</span>
-              <span class="a-font-meta">取消静音</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="autoReadSubscriptions.length" class="muted-list">
-          <p class="a-font-meta muted-list-title">自动已读来源</p>
-          <div class="rule-chip-list">
-            <button
-              v-for="sub in autoReadSubscriptions"
-              :key="`auto-read-${sub.id}`"
-              type="button"
-              class="rule-chip"
-              data-test="auto-read-source-chip"
-              @click="toggleAutoReadSource(sub)"
-            >
-              <span>{{ subscriptionTitle(sub) }}</span>
-              <span class="a-font-meta">取消自动已读</span>
-            </button>
-          </div>
-        </div>
-
-        <div v-if="autoReadingListSubscriptions.length" class="muted-list">
-          <p class="a-font-meta muted-list-title">自动稍后阅读来源</p>
-          <div class="rule-chip-list">
-            <button
-              v-for="sub in autoReadingListSubscriptions"
-              :key="`auto-reading-list-${sub.id}`"
-              type="button"
-              class="rule-chip"
-              data-test="auto-reading-list-source-chip"
-              @click="toggleAutoReadingListSource(sub)"
-            >
-              <span>{{ subscriptionTitle(sub) }}</span>
-              <span class="a-font-meta">取消自动稍后阅读</span>
-            </button>
-          </div>
-        </div>
       </section>
-
-      <div v-if="!subscriptions.length" class="empty-state a-muted">
-        暂无订阅源，点击页面上的 “+ 订阅” 添加。
-      </div>
-
-      <div v-else class="group-list">
-        <section v-for="group in displayGroups" :key="group.id" class="group-section">
-          <div class="group-title">
-            <PInput
-              v-if="!group.virtual"
-              :model-value="draftGroupNames[group.id] ?? group.name"
-              data-test="group-name-input"
-              class="group-name-input"
-              :disabled="busy"
-              @input="updateDraftGroupName(group.id, $event)"
-              @blur="submitGroupRename(group)"
-              @keydown.enter.prevent="submitGroupRename(group)"
-            />
-            <span v-else class="a-font-meta">/ {{ group.name }}</span>
-            <PPress
-              v-if="!group.virtual"
-              variant="secondary"
-              label="删除分组"
-              :disabled="busy"
-              @click="confirmDeleteGroup(group.id)"
-            />
-          </div>
-
-          <div v-if="!group.subscriptions.length" class="group-empty a-muted">
-            此分组暂无订阅源
-          </div>
-
-          <div v-else class="subscription-list">
-            <div v-for="sub in group.subscriptions" :key="sub.id" class="subscription-card">
-              <div class="subscription-main">
-                <PInput
-                  :model-value="draftTitles[sub.id] ?? subscriptionTitle(sub)"
-                  class="title-input"
-                  :disabled="busy"
-                  @input="updateDraftTitle(sub.id, $event)"
-                  @blur="submitRename(sub)"
-                  @keydown.enter.prevent="submitRename(sub)"
-                />
-                <p class="source-url a-muted">
-                  {{ subscriptionSourceLabel(sub) }}
-                </p>
-                <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
-                  <span class="health-dot" aria-hidden="true"></span>
-                  <span>{{ subscriptionHealthLabel(sub) }}</span>
-                  <span v-if="sub.last_checked" class="a-muted">
-                    {{ formatCheckedAt(sub.last_checked) }}
-                  </span>
-                </div>
-                <p v-if="sub.error_message" class="health-error">
-                  {{ sub.error_message }}
-                </p>
-              </div>
-
-              <div class="subscription-actions">
-                <PSelect
-                  :model-value="sub.subscription_group_id || ''"
-                  :options="groupOptions"
-                  :disabled="busy"
-                  @update:model-value="moveSubscription(sub.id, String($event))"
-                />
-                <PPress
-                  variant="secondary"
-                  label="检查"
-                  :disabled="busy || healthChecking"
-                  @click="checkSubscriptionHealth(sub.id)"
-                />
-                <PPress
-                  variant="secondary"
-                  :label="isMutedSource(sub) ? '取消静音' : '静音来源'"
-                  :disabled="busy"
-                  @click="toggleMuteSource(sub)"
-                />
-                <PPress
-                  variant="secondary"
-                  :label="isAutoReadSource(sub) ? '取消自动已读' : '自动已读'"
-                  :disabled="busy"
-                  @click="toggleAutoReadSource(sub)"
-                />
-                <PPress
-                  variant="secondary"
-                  :label="isAutoReadingListSource(sub) ? '取消自动稍后阅读' : '自动稍后阅读'"
-                  :disabled="busy"
-                  @click="toggleAutoReadingListSource(sub)"
-                />
-                <PPress variant="secondary" label="删除" :disabled="busy" @click="confirmDelete(sub.id)" />
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
     </div>
   </PSheet>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { Subscription, SubscriptionGroup } from '@/types'
+import type {
+  ApplySubscriptionRulesSummary,
+  FeedSubscriptionRule,
+  Subscription,
+  SubscriptionGroup,
+} from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import type { FeedAutomationRules, FeedFilterRules } from '@/stores/feed'
 
 const props = defineProps<{
   show: boolean
   subscriptions: Subscription[]
   groups: SubscriptionGroup[]
+  subscriptionRules: FeedSubscriptionRule[]
+  ruleApplySummary: ApplySubscriptionRulesSummary | null
   filterRules: FeedFilterRules
   automationRules: FeedAutomationRules
   busy?: boolean
   healthChecking?: boolean
+  error?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'create-group', name: string): void
   (e: 'rename-subscription', id: string, title: string): void
+  (e: 'update-subscription', id: string, payload: Partial<Pick<Subscription, 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list'>>): void
   (e: 'move-subscription', id: string, groupId: string): void
   (e: 'delete-subscription', id: string): void
   (e: 'rename-group', id: string, name: string): void
@@ -263,6 +270,14 @@ const emit = defineEmits<{
   (e: 'check-all-subscriptions-health'): void
   (e: 'import-opml', file: File): void
   (e: 'export-opml'): void
+  (e: 'create-rule'): void
+  (e: 'edit-rule', id: string): void
+  (e: 'save-rule', payload: { id: string | null; payload: SubscriptionRuleSavePayload }): void
+  (e: 'move-rule-up', id: string): void
+  (e: 'move-rule-down', id: string): void
+  (e: 'apply-rule', id: string): void
+  (e: 'apply-all-rules'): void
+  (e: 'delete-rule', id: string): void
   (e: 'update-filter-rules', rules: FeedFilterRules): void
   (e: 'update-automation-rules', rules: FeedAutomationRules): void
 }>()
@@ -272,18 +287,22 @@ const newKeyword = ref('')
 const draftTitles = ref<Record<string, string>>({})
 const draftGroupNames = ref<Record<string, string>>({})
 const opmlInputRef = ref<HTMLInputElement | null>(null)
+const activeManageTab = ref<'sources' | 'rules' | 'keywords'>('sources')
 const localFilterRules = ref<FeedFilterRules>({
   mutedSourceIds: [...props.filterRules.mutedSourceIds],
   hiddenKeywords: [...props.filterRules.hiddenKeywords],
 })
-const localAutomationRules = ref<FeedAutomationRules>({
-  autoMarkReadSourceIds: [...props.automationRules.autoMarkReadSourceIds],
-  autoAddReadingListSourceIds: [...props.automationRules.autoAddReadingListSourceIds],
-})
 
-const groupOptions = computed(() =>
-  props.groups.map(group => ({ label: group.name, value: group.id })),
-)
+const manageTabs = [
+  { key: 'sources', label: '订阅源' },
+  { key: 'rules', label: '规则' },
+  { key: 'keywords', label: '过滤' },
+] as const
+
+const groupOptions = computed(() => [
+  { label: '未分类', value: '' },
+  ...props.groups.map(group => ({ label: group.name, value: group.id })),
+])
 
 const displayGroups = computed(() => [
   ...props.groups.map(group => ({
@@ -300,40 +319,11 @@ const displayGroups = computed(() => [
   },
 ])
 
-const mutedSubscriptions = computed(() => {
-  const mutedSourceIds = new Set(localFilterRules.value.mutedSourceIds)
-  return props.subscriptions.filter((sub) => {
-    const sourceId = sub.feed_source?.id || sub.feed_source_id
-    return Boolean(sourceId && mutedSourceIds.has(sourceId))
-  })
-})
-
-const autoReadSubscriptions = computed(() => {
-  const sourceIds = new Set(localAutomationRules.value.autoMarkReadSourceIds)
-  return props.subscriptions.filter((sub) => {
-    const sourceId = sub.feed_source?.id || sub.feed_source_id
-    return Boolean(sourceId && sourceIds.has(sourceId))
-  })
-})
-
-const autoReadingListSubscriptions = computed(() => {
-  const sourceIds = new Set(localAutomationRules.value.autoAddReadingListSourceIds)
-  return props.subscriptions.filter((sub) => {
-    const sourceId = sub.feed_source?.id || sub.feed_source_id
-    return Boolean(sourceId && sourceIds.has(sourceId))
-  })
-})
-
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
 
 const subscriptionSourceLabel = (sub: Subscription) =>
   sub.feed_source?.title || sub.title || sub.feed_source?.rss_url || 'RSS'
-
-const isMutedSource = (sub: Subscription) => {
-  const sourceId = sub.feed_source?.id || sub.feed_source_id
-  return Boolean(sourceId && localFilterRules.value.mutedSourceIds.includes(sourceId))
-}
 
 const emitFilterRules = (rules: FeedFilterRules) => {
   localFilterRules.value = {
@@ -341,29 +331,6 @@ const emitFilterRules = (rules: FeedFilterRules) => {
     hiddenKeywords: [...rules.hiddenKeywords],
   }
   emit('update-filter-rules', rules)
-}
-
-const emitAutomationRules = (rules: FeedAutomationRules) => {
-  localAutomationRules.value = {
-    autoMarkReadSourceIds: [...rules.autoMarkReadSourceIds],
-    autoAddReadingListSourceIds: [...rules.autoAddReadingListSourceIds],
-  }
-  emit('update-automation-rules', rules)
-}
-
-const toggleMuteSource = (sub: Subscription) => {
-  if (props.busy) return
-  const sourceId = sub.feed_source?.id || sub.feed_source_id
-  if (!sourceId) return
-
-  const mutedSourceIds = new Set(localFilterRules.value.mutedSourceIds)
-  if (mutedSourceIds.has(sourceId)) mutedSourceIds.delete(sourceId)
-  else mutedSourceIds.add(sourceId)
-
-  emitFilterRules({
-    mutedSourceIds: Array.from(mutedSourceIds),
-    hiddenKeywords: localFilterRules.value.hiddenKeywords,
-  })
 }
 
 const submitKeyword = () => {
@@ -386,45 +353,6 @@ const removeKeyword = (keyword: string) => {
   })
 }
 
-const isAutoReadSource = (sub: Subscription) => {
-  const sourceId = sub.feed_source?.id || sub.feed_source_id
-  return Boolean(sourceId && localAutomationRules.value.autoMarkReadSourceIds.includes(sourceId))
-}
-
-const isAutoReadingListSource = (sub: Subscription) => {
-  const sourceId = sub.feed_source?.id || sub.feed_source_id
-  return Boolean(sourceId && localAutomationRules.value.autoAddReadingListSourceIds.includes(sourceId))
-}
-
-const toggleAutoReadSource = (sub: Subscription) => {
-  if (props.busy) return
-  const sourceId = sub.feed_source?.id || sub.feed_source_id
-  if (!sourceId) return
-
-  const next = new Set(localAutomationRules.value.autoMarkReadSourceIds)
-  if (next.has(sourceId)) next.delete(sourceId)
-  else next.add(sourceId)
-
-  emitAutomationRules({
-    autoMarkReadSourceIds: Array.from(next),
-    autoAddReadingListSourceIds: localAutomationRules.value.autoAddReadingListSourceIds,
-  })
-}
-
-const toggleAutoReadingListSource = (sub: Subscription) => {
-  if (props.busy) return
-  const sourceId = sub.feed_source?.id || sub.feed_source_id
-  if (!sourceId) return
-
-  const next = new Set(localAutomationRules.value.autoAddReadingListSourceIds)
-  if (next.has(sourceId)) next.delete(sourceId)
-  else next.add(sourceId)
-
-  emitAutomationRules({
-    autoMarkReadSourceIds: localAutomationRules.value.autoMarkReadSourceIds,
-    autoAddReadingListSourceIds: Array.from(next),
-  })
-}
 
 const updateDraftTitle = (id: string, event: Event) => {
   draftTitles.value[id] = (event.target as HTMLInputElement).value
@@ -458,8 +386,16 @@ const submitGroupRename = (group: { id: string; name: string; virtual?: boolean 
 
 const moveSubscription = (id: string, groupId: string) => {
   if (props.busy) return
-  if (!groupId) return
   emit('move-subscription', id, groupId)
+}
+
+const updateSubscriptionFlag = (
+  id: string,
+  key: 'is_muted' | 'auto_mark_read' | 'auto_add_reading_list',
+  value: boolean,
+) => {
+  if (props.busy) return
+  emit('update-subscription', id, { [key]: value })
 }
 
 const checkSubscriptionHealth = (id: string) => {
@@ -521,16 +457,14 @@ const formatCheckedAt = (value: string) => {
 }
 
 watch(() => props.show, (visible) => {
-  if (!visible) return
+  if (!visible) {
+    return
+  }
   newGroupName.value = ''
   newKeyword.value = ''
   localFilterRules.value = {
     mutedSourceIds: [...props.filterRules.mutedSourceIds],
     hiddenKeywords: [...props.filterRules.hiddenKeywords],
-  }
-  localAutomationRules.value = {
-    autoMarkReadSourceIds: [...props.automationRules.autoMarkReadSourceIds],
-    autoAddReadingListSourceIds: [...props.automationRules.autoAddReadingListSourceIds],
   }
   draftTitles.value = Object.fromEntries(
     props.subscriptions.map(sub => [sub.id, subscriptionTitle(sub)]),
@@ -568,13 +502,6 @@ watch(() => props.filterRules, (rules) => {
     hiddenKeywords: [...rules.hiddenKeywords],
   }
 }, { deep: true })
-
-watch(() => props.automationRules, (rules) => {
-  localAutomationRules.value = {
-    autoMarkReadSourceIds: [...rules.autoMarkReadSourceIds],
-    autoAddReadingListSourceIds: [...rules.autoAddReadingListSourceIds],
-  }
-}, { deep: true })
 </script>
 
 <style scoped>
@@ -605,6 +532,40 @@ watch(() => props.automationRules, (rules) => {
   margin: 0;
 }
 
+.manage-error {
+  margin: 0.5rem 0 0;
+  color: var(--a-color-danger);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.manage-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--a-color-line-soft);
+}
+
+.manage-tab {
+  border: 0;
+  border-right: 1px solid var(--a-color-line-soft);
+  padding: 0.7rem 0.75rem;
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.manage-tab:last-child {
+  border-right: 0;
+}
+
+.manage-tab.is-active {
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+}
+
 .create-group-form {
   padding-bottom: 1.5rem;
   border-bottom: 1px dashed var(--a-color-line-soft);
@@ -616,6 +577,75 @@ watch(() => props.automationRules, (rules) => {
   gap: 1rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px dashed var(--a-color-line-soft);
+}
+
+.subscription-rules-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px dashed var(--a-color-line-soft);
+}
+
+.subscription-rules-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.subscription-rules-header h3,
+.subscription-rules-header p,
+.rule-apply-summary p {
+  margin: 0;
+}
+
+.rule-apply-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+}
+
+.subscription-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.subscription-rule-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper-wash);
+}
+
+.subscription-rule-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.subscription-rule-main p {
+  margin: 0;
+}
+
+.subscription-rule-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.subscription-rule-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
 }
 
 .filter-rules-header {
@@ -690,7 +720,7 @@ watch(() => props.automationRules, (rules) => {
 
 .group-name-input {
   max-width: 18rem;
-  font-weight: 900;
+  font-weight: 500;
   font-size: 0.8rem;
 }
 
@@ -708,7 +738,7 @@ watch(() => props.automationRules, (rules) => {
   padding: 1rem;
   background: var(--a-color-paper-wash);
   border: 1px solid var(--a-color-line-soft);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .subscription-main {
@@ -716,7 +746,7 @@ watch(() => props.automationRules, (rules) => {
 }
 
 .title-input {
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .source-url {
@@ -733,13 +763,13 @@ watch(() => props.automationRules, (rules) => {
   gap: 0.5rem;
   margin-top: 0.75rem;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .health-dot {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--a-color-muted);
 }
 
@@ -759,6 +789,22 @@ watch(() => props.automationRules, (rules) => {
   margin: 0.5rem 0 0;
   font-size: 0.75rem;
   color: #b91c1c;
+}
+
+.subscription-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  margin-top: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.subscription-flags label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .subscription-actions {

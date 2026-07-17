@@ -40,14 +40,15 @@ const onClick = (event: MouseEvent) => {
   min-height: 34px;
   padding: 8px 12px;
   border: 1px solid var(--a-color-line);
+  border-radius: var(--a-radius-none, 4px);
   background: var(--a-color-paper);
   color: var(--a-color-ink);
   font-family: inherit;
   font-size: 10px;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .p-clip:not(:disabled) {
@@ -55,12 +56,17 @@ const onClick = (event: MouseEvent) => {
 }
 
 .p-clip:not(:disabled):hover,
-.p-clip:not(:disabled):focus-visible,
+.p-clip:not(:disabled):focus-visible {
+  outline: none;
+  background: var(--a-color-paper-soft);
+  color: var(--a-color-ink);
+}
+
 .p-clip.is-active:not(:disabled) {
   outline: none;
-  transform: translateY(-1px);
   background: var(--a-color-ink);
   color: var(--a-color-paper);
+  border-color: var(--a-color-ink);
 }
 
 .p-clip:disabled {

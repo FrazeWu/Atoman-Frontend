@@ -2,7 +2,7 @@
   <button
     class="p-press"
     :class="{ 'p-press--secondary': variant === 'secondary' }"
-    type="button"
+    :type="type"
     :disabled="disabled || loading"
     @click="onClick"
   >
@@ -17,12 +17,14 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   loading?: boolean
   loadingText?: string
+  type?: 'button' | 'submit' | 'reset'
 }>(), {
   label: '',
   variant: 'primary',
   disabled: false,
   loading: false,
   loadingText: '处理中...',
+  type: 'button',
 })
 
 const emit = defineEmits<{

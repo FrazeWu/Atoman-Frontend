@@ -1,44 +1,6 @@
 <template>
   <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
-    <PSidebar
-      collapsible
-      v-model:collapsed="sidebarCollapsed"
-      storage-key="atoman.debate.sidebar.collapsed"
-    >
-      <PSidebarItem
-        to="/debate"
-        :index="1"
-        :icon="MessageSquare"
-        :active="!$route.query.status"
-        exact
-      >
-        全部辩论
-      </PSidebarItem>
-      <PSidebarItem
-        to="/debate?status=open"
-        :index="2"
-        :icon="Play"
-        :active="$route.query.status === 'open'"
-      >
-        进行中
-      </PSidebarItem>
-      <PSidebarItem
-        to="/debate?status=concluded"
-        :index="3"
-        :icon="CheckCircle"
-        :active="$route.query.status === 'concluded'"
-      >
-        已结题
-      </PSidebarItem>
-      <PSidebarItem
-        to="/debate?status=archived"
-        :index="4"
-        :icon="Archive"
-        :active="$route.query.status === 'archived'"
-      >
-        已归档
-      </PSidebarItem>
-    </PSidebar>
+    <AppSidebar module="debate" />
     <main class="a-main-content">
       <router-view />
     </main>
@@ -46,10 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { MessageSquare, Play, CheckCircle, Archive } from 'lucide-vue-next'
-import PSidebar from '@/components/ui/PSidebar.vue'
-import PSidebarItem from '@/components/ui/PSidebarItem.vue'
+import AppSidebar from '@/components/system/AppSidebar.vue'
+import { useSidebar } from '@/composables/useSidebar'
 
-const sidebarCollapsed = ref(false)
+const { sidebarCollapsed } = useSidebar()
 </script>

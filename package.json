@@ -1,12 +1,12 @@
 {
   "name": "atoman",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
-    "dev": "bun --bun vite --mode dev",
+    "dev": "bun --bun vite --mode development",
     "type-check": "vue-tsc --noEmit --pretty false",
-    "build": "bun --bun vite build --mode prod",
+    "build": "bun --bun vite build --mode production",
     "preview": "bun --bun vite preview",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",

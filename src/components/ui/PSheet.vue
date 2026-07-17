@@ -3,7 +3,7 @@
     <div class="p-sheet-root">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade">
-        <div v-if="show" class="p-sheet-backdrop" :style="{ top: top }" @click="requestClose" />
+        <div v-if="show && showBackdrop && isTopLayer" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
       </Transition>
 
       <Transition :name="transitionName">
@@ -14,29 +14,40 @@
           :class="[`is-${side}`, panelClass, { 'is-shifted': isShifted }]"
           :style="sheetStyle"
           role="dialog"
-          aria-modal="true"
+          :aria-modal="isTopLayer ? 'true' : undefined"
           :aria-label="title"
+          :aria-hidden="isTopLayer ? undefined : 'true'"
+          :inert="isTopLayer ? undefined : true"
+          :data-layer-index="layerIndex"
           tabindex="-1"
-          @keydown="handleKeydown"
+          @keydown.esc="isTopLayer && $emit('close')"
         >
           <!-- Left/Right Edge Close Tab (Taped Component Style) -->
-          <PSheetTab 
+          <PSheetTab
             v-if="showBookmarkTab"
             class="sheet-tab-position"
             :style="{ top: computedHandleTop }"
-            :title="title" 
-            @click="requestClose"
+            :title="title"
+            @click="$emit('close')"
           />
 
           <div v-if="hasHeader" class="sheet-header">
             <slot name="header">
               <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
             </slot>
-            <button v-if="showHeaderClose" class="header-close-btn" type="button" aria-label="关闭" title="关闭" @click="requestClose">
-              <X :size="16" />
+            <button
+              v-if="showHeaderClose"
+              ref="closeButtonRef"
+              class="header-close-btn"
+              type="button"
+              :aria-label="`关闭${title}`"
+              :title="`关闭${title}`"
+              @click="$emit('close')"
+            >
+              <X :size="18" aria-hidden="true" />
             </button>
           </div>
-          
+
           <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
             <div :class="{ 'sheet-content-inner': readingMode }">
               <slot />
@@ -49,12 +60,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useSlots } from 'vue'
-import { X } from 'lucide-vue-next'
+import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
+import { X } from 'lucide-vue-next'
 import { useSheetStore } from '@/stores/sheet'
 import PSheetTab from './PSheetTab.vue'
-import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
@@ -70,26 +80,44 @@ const props = withDefaults(defineProps<{
   closeType?: 'bookmark' | 'header' | 'both'
   readingMode?: boolean // If true, adds 720px max-width to content
   isShifted?: boolean
+  isTopLayer?: boolean
+  layerIndex?: number
+  stackSize?: number
   index?: number
+  showBackdrop?: boolean
 }>(), {
-  title: '面板',
+  title: 'VIEW',
   width: 'min(100%, 480px)',
-  height: undefined,
-  panelClass: '',
   top: '56px',
   side: 'right',
   closeType: 'bookmark',
   readingMode: false,
-  isShifted: false
+  isShifted: false,
+  isTopLayer: true,
+  layerIndex: 0,
+  stackSize: 1,
+  showBackdrop: true,
 })
 
-const emit = defineEmits<{ close: [] }>()
+defineEmits(['close'])
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
-const isOpen = computed(() => props.show)
-const requestClose = () => emit('close')
-const { handleKeydown } = useDialogFocus(isOpen, panelRef, requestClose)
+const closeButtonRef = ref<HTMLButtonElement | null>(null)
+
+watch(
+  () => [props.show, props.isTopLayer] as const,
+  async ([show, isTopLayer]) => {
+    if (!show || !isTopLayer) return
+    await nextTick()
+    if (closeButtonRef.value) {
+      closeButtonRef.value.focus()
+    } else {
+      panelRef.value?.focus()
+    }
+  },
+  { immediate: true },
+)
 const effectiveCloseType = computed(() => {
   if (props.side === 'bottom' && props.closeType === 'bookmark') {
     return 'header'
@@ -123,16 +151,22 @@ const sheetIndex = computed(() => {
 })
 
 const computedLeft = computed(() => {
-  return `${32 + (sheetIndex.value * 32)}px`
+  return `calc(var(--a-sidebar-width) + ${32 + (sheetIndex.value * 32)}px)`
 })
 
 const computedWidth = computed(() => {
-  return `calc(100% - ${computedLeft.value})`
+  return `calc(100% - var(--a-sidebar-width) - ${32 + (sheetIndex.value * 32)}px)`
 })
 
 const computedHandleTop = computed(() => {
   return `${32 + (sheetIndex.value * 56)}px`
 })
+
+const hasCustomWidth = computed(() => props.width && props.width !== 'min(100%, 480px)')
+const sheetShift = computed(() => (
+  hasCustomWidth.value ? Math.max(0, props.stackSize - props.layerIndex - 1) * 32 : 0
+))
+const sheetStackEdge = computed(() => Math.max(0, props.stackSize - 1) * 32)
 
 const sheetStyle = computed(() => {
   if (props.side === 'bottom') {
@@ -142,17 +176,19 @@ const sheetStyle = computed(() => {
       height: props.height,
       left: 0,
       right: 0,
-      top: 'auto'
+      top: 'auto',
+      '--a-sheet-shift': `${sheetShift.value}px`,
     }
   }
 
-  const hasCustomWidth = props.width && props.width !== 'min(100%, 480px)'
-  if (hasCustomWidth) {
+  if (hasCustomWidth.value) {
     return {
       width: props.width,
-      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
+      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px - var(--a-sheet-stack-edge))',
       top: props.top,
-      right: 0
+      right: 0,
+      '--a-sheet-shift': `${sheetShift.value}px`,
+      '--a-sheet-stack-edge': `${sheetStackEdge.value}px`,
     }
   }
   return {
@@ -160,7 +196,8 @@ const sheetStyle = computed(() => {
     'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
     top: props.top,
     left: computedLeft.value,
-    right: 0
+    right: 0,
+    '--a-sheet-shift': `${sheetShift.value}px`,
   }
 })
 </script>
@@ -171,18 +208,18 @@ const sheetStyle = computed(() => {
 }
 
 .p-sheet-panel.is-shifted {
-  transform: translateX(-10%) scale(0.98);
+  transform: translateX(calc(-1 * var(--a-sheet-shift, 0px)));
   opacity: 0.6;
   pointer-events: none;
 }
 
 .p-sheet-layer {
   position: fixed;
-  bottom: 0;
+  bottom: var(--a-content-bottom-offset);
   background: white;
   display: flex;
   flex-direction: column;
-  z-index: 3000;
+  z-index: var(--a-z-sheet);
 }
 
 .p-sheet-layer.is-right {
@@ -209,9 +246,11 @@ const sheetStyle = computed(() => {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.02); /* Extremely subtle tint */
-  z-index: 2999;
+  bottom: var(--a-content-bottom-offset);
+  background: rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: var(--a-z-sheet-backdrop);
   cursor: default;
 }
 
@@ -251,7 +290,7 @@ const sheetStyle = computed(() => {
 }
 
 .sheet-header-label {
-  font-weight: 900;
+  font-weight: 500;
   letter-spacing: 0.1em;
   color: var(--a-color-muted);
 }
@@ -261,7 +300,7 @@ const sheetStyle = computed(() => {
   border: none;
   color: black;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 500;
   letter-spacing: 0.1em;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
@@ -271,12 +310,6 @@ const sheetStyle = computed(() => {
 }
 
 .header-close-btn:hover {
-  opacity: 1;
-}
-
-.header-close-btn:focus-visible {
-  outline: 2px solid var(--a-color-ink);
-  outline-offset: 2px;
   opacity: 1;
 }
 
@@ -305,6 +338,28 @@ const sheetStyle = computed(() => {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+@media (max-width: 767px) {
+  .p-sheet-layer {
+    width: 100% !important;
+    max-width: 100% !important;
+    left: 0 !important;
+  }
+
+  .p-sheet-panel.is-shifted {
+    visibility: hidden;
+    transform: none;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-sheet-panel,
+  .fade-enter-active,
+  .fade-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 
 .slide-right-enter-active,
@@ -341,9 +396,27 @@ const sheetStyle = computed(() => {
 }
 
 @media (max-width: 767px) {
-  .header-close-btn {
-    min-width: 44px;
-    min-height: 44px;
+  .p-sheet-layer {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .p-sheet-panel.is-shifted {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-sheet-panel,
+  .slide-right-enter-active,
+  .slide-right-leave-active,
+  .slide-left-enter-active,
+  .slide-left-leave-active,
+  .slide-up-enter-active,
+  .slide-up-leave-active {
+    transition: none;
   }
 }
 </style>

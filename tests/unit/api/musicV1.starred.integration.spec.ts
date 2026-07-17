@@ -20,7 +20,7 @@ describe('music starred api contract', () => {
 
     await getMusicPlaylist('playlist-1')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist-1/songs?page=1&page_size=100', expect.anything())
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist-1/songs', expect.anything())
   })
 
   it('does not rely on a nonexistent aggregated /music/starred endpoint', async () => {

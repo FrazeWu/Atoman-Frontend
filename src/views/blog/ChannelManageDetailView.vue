@@ -8,9 +8,9 @@
     <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或您没有权限管理" />
 
     <template v-else>
-      <PPageHeader :title="`管理：${channel.name}`" accent>
+      <PPageHeader :title="`创作：${channel.name}`" accent>
         <template #action>
-          <RouterLink :to="channelUrl(channel.slug || channel.id)" class="a-btn-outline-sm">← 查看频道</RouterLink>
+          <RouterLink :to="`/posts/channel/${channel.slug || channel.id}`" class="a-btn-outline-sm">← 查看频道</RouterLink>
         </template>
       </PPageHeader>
 
@@ -32,7 +32,7 @@
           <div>
             <label class="a-label" style="margin-bottom:.4rem;display:block">Slug（URL标识）</label>
             <input v-model="infoForm.slug" class="a-input" placeholder="my-channel" />
-            <p class="a-muted" style="font-size:.8rem;margin-top:.25rem">访问路径：/channels/{{ infoForm.slug || channel.slug }}</p>
+            <p class="a-muted" style="font-size:.8rem;margin-top:.25rem">访问路径：/posts/channel/{{ infoForm.slug || channel.slug }}</p>
           </div>
           <div>
             <label class="a-label" style="margin-bottom:.4rem;display:block">简介</label>
@@ -50,7 +50,6 @@
           <h3 class="a-subtitle" style="margin:0">合集管理</h3>
           <PButton size="sm" @click="openCollectionModal()">+ 新建合集</PButton>
         </div>
-        <p v-if="collectionDeleteError" class="a-error" style="margin-bottom:1rem">{{ collectionDeleteError }}</p>
         <PEmpty v-if="!collections.length" title="暂无合集" />
         <div v-else style="display:flex;flex-direction:column;gap:1rem">
           <div v-for="col in collections" :key="col.id" class="a-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
@@ -63,13 +62,7 @@
             </div>
             <div style="display:flex;gap:.5rem;flex-shrink:0">
               <button class="a-btn-outline-sm" @click="openCollectionModal(col)">编辑</button>
-              <button
-                v-if="!col.is_default"
-                class="a-btn-outline-sm"
-                style="color:var(--a-color-danger);border-color:var(--a-color-danger)"
-                :disabled="deletingCollectionId !== null"
-                @click="confirmDeleteCollection(col)"
-              >{{ deletingCollectionId === col.id ? '删除中...' : '删除' }}</button>
+              <button v-if="!col.is_default" class="a-btn-outline-sm" style="color:var(--a-color-danger);border-color:var(--a-color-danger)" @click="confirmDeleteCollection(col)">删除</button>
             </div>
           </div>
         </div>
@@ -81,7 +74,6 @@
         <div v-if="loadingPosts" style="display:flex;flex-direction:column;gap:1rem">
           <div v-for="i in 4" :key="i" class="a-skeleton" style="height:4rem" />
         </div>
-        <p v-else-if="postsError" data-test="posts-error" class="a-error">{{ postsError }}</p>
         <PEmpty v-else-if="!posts.length" title="暂无内容" />
         <div v-else style="display:flex;flex-direction:column;gap:.75rem">
           <div v-for="post in posts" :key="post.id" class="a-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
@@ -106,7 +98,7 @@
       <section v-if="activeTab === 'danger'" class="manage-section">
         <h3 class="a-subtitle" style="margin-bottom:1.5rem;color:var(--a-color-danger)">危险操作</h3>
         <div class="a-card" style="border-color:var(--a-color-danger)">
-          <h4 style="font-weight:900;margin-bottom:.5rem">删除频道</h4>
+          <h4 style="font-weight: 500;margin-bottom:.5rem">删除频道</h4>
           <p class="a-muted" style="margin-bottom:1rem;font-size:.875rem">删除后所有内容将被永久删除，此操作不可恢复。</p>
           <PButton variant="danger" @click="showDeleteChannel = true">删除频道</PButton>
         </div>
@@ -114,15 +106,14 @@
     </template>
 
     <!-- Collection Modal -->
-    <PModal v-if="collectionModalOpen" @close="closeCollectionModal">
+    <PModal v-if="collectionModalOpen" @close="collectionModalOpen = false">
       <h3 class="a-subtitle" style="margin-bottom:1.5rem">{{ editingCollection ? '编辑合集' : '新建合集' }}</h3>
       <div style="display:flex;flex-direction:column;gap:1rem">
         <input v-model="collectionForm.name" placeholder="合集名称*" class="a-input" />
         <textarea v-model="collectionForm.description" placeholder="合集描述（可选）" rows="3" class="a-textarea" />
-        <p v-if="collectionError" class="a-error">{{ collectionError }}</p>
       </div>
       <div style="display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end">
-        <PButton outline @click="closeCollectionModal">取消</PButton>
+        <PButton outline @click="collectionModalOpen = false">取消</PButton>
         <PButton :disabled="!collectionForm.name.trim() || collectionSaving" @click="saveCollection">
           {{ collectionSaving ? '保存中...' : (editingCollection ? '更新' : '创建') }}
         </PButton>
@@ -156,7 +147,6 @@ import PButton from '@/components/ui/PButton.vue'
 import type { Channel, Collection, Post } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import { channelUrl, modulePathUrl } from '@/router/siteUrls'
 
 const route = useRoute()
 const router = useRouter()
@@ -168,7 +158,6 @@ const collections = ref<Collection[]>([])
 const posts = ref<Post[]>([])
 const loading = ref(true)
 const loadingPosts = ref(false)
-const postsError = ref('')
 
 const activeTab = ref('info')
 const tabs = [
@@ -185,11 +174,6 @@ const collectionModalOpen = ref(false)
 const editingCollection = ref<Collection | null>(null)
 const collectionForm = ref({ name: '', description: '' })
 const collectionSaving = ref(false)
-const collectionError = ref('')
-let collectionModalToken = 0
-const deletingCollectionId = ref<string | null>(null)
-const collectionDeleteError = ref('')
-let collectionsRequestToken = 0
 
 const showDeleteChannel = ref(false)
 const deleteConfirmName = ref('')
@@ -212,44 +196,31 @@ const fetchChannel = async () => {
     }
     // Verify ownership
     if (channel.value.user_id !== authStore.user?.uuid) {
-      router.push(channelUrl(slug.value))
+      router.push(`/posts/channel/${slug.value}`)
     }
   }
 }
 
 const fetchCollections = async () => {
   if (!channel.value) return
-  const requestToken = ++collectionsRequestToken
-  const channelId = channel.value.id
-  try {
-    const res = await fetch(api.blog.channelCollections(channelId))
-    if (requestToken !== collectionsRequestToken || !res.ok) return
-    const data = await res.json()
-    if (requestToken === collectionsRequestToken) {
-      collections.value = data.data || []
-    }
-  } catch (error) {
-    if (requestToken === collectionsRequestToken) throw error
-  }
+  const res = await fetch(api.blog.channelCollections(channel.value.id))
+  if (res.ok) collections.value = (await res.json()).data || []
 }
 
 const fetchPosts = async () => {
   if (!channel.value) return
   loadingPosts.value = true
-  postsError.value = ''
   try {
     const channelId = channel.value.id
     const [publishedPosts, draftPosts] = await Promise.all([
       (async () => {
         const loadedPosts: Post[] = []
-        let page = 1
-        while (true) {
+        for (let page = 1; ; page += 1) {
           const res = await fetch(`${api.blog.posts}?channel_id=${channelId}&page_size=50&page=${page}`, { headers: authHeader.value })
           if (!res.ok) throw new Error('Failed to load published posts')
           const data = await res.json()
           loadedPosts.push(...(data.data || []))
           if (!data.meta?.has_more) return loadedPosts
-          page += 1
         }
       })(),
       (async () => {
@@ -259,16 +230,8 @@ const fetchPosts = async () => {
         return (data.data || []).filter((post: Post) => post.channel_id === channelId)
       })(),
     ])
-    const mergedPosts = [...publishedPosts, ...draftPosts]
-    mergedPosts.sort((left, right) => {
-      const leftTime = Date.parse(left.updated_at || left.created_at || '')
-      const rightTime = Date.parse(right.updated_at || right.created_at || '')
-      return rightTime - leftTime
-    })
-    posts.value = mergedPosts
-  } catch {
-    posts.value = []
-    postsError.value = '内容加载失败，请重试'
+    posts.value = [...publishedPosts, ...draftPosts].sort((left, right) =>
+      Date.parse(right.updated_at || right.created_at || '') - Date.parse(left.updated_at || left.created_at || ''))
   } finally { loadingPosts.value = false }
 }
 
@@ -285,39 +248,25 @@ const saveInfo = async () => {
       const newSlug = infoForm.value.slug
       channel.value = (await res.json()).data || channel.value
       if (newSlug && newSlug !== slug.value) {
-        router.replace(modulePathUrl('blog', `/channel/${newSlug}/manage`))
+        router.replace(`/posts/channel/${newSlug}/manage`)
       }
     }
   } finally { infoSaving.value = false }
 }
 
 const openCollectionModal = (col?: Collection) => {
-  collectionModalToken += 1
   editingCollection.value = col || null
   collectionForm.value = { name: col?.name || '', description: col?.description || '' }
-  collectionSaving.value = false
-  collectionError.value = ''
   collectionModalOpen.value = true
 }
 
-const closeCollectionModal = () => {
-  collectionModalToken += 1
-  collectionModalOpen.value = false
-  editingCollection.value = null
-  collectionSaving.value = false
-  collectionError.value = ''
-}
-
 const saveCollection = async () => {
-  if (!collectionForm.value.name.trim() || !channel.value || collectionSaving.value) return
-  const requestToken = collectionModalToken
-  const editingCollectionId = editingCollection.value?.id
-  collectionError.value = ''
+  if (!collectionForm.value.name.trim() || !channel.value) return
   collectionSaving.value = true
   try {
     let res: Response
-    if (editingCollectionId) {
-      res = await fetch(api.blog.collection(editingCollectionId), {
+    if (editingCollection.value) {
+      res = await fetch(api.blog.collection(editingCollection.value.id), {
         method: 'PUT',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value),
@@ -329,57 +278,17 @@ const saveCollection = async () => {
         body: JSON.stringify(collectionForm.value),
       })
     }
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      if (requestToken !== collectionModalToken) return
-      const responseError = data?.error
-      collectionError.value = typeof responseError === 'string'
-        ? responseError
-        : responseError?.message || '保存失败，请重试'
-      return
-    }
-    if (requestToken !== collectionModalToken) return
-    closeCollectionModal()
+    if (!res.ok) return
+    collectionModalOpen.value = false
     await fetchCollections()
-  } catch {
-    if (requestToken === collectionModalToken) {
-      collectionError.value = '网络错误，请重试'
-    }
-  } finally {
-    if (requestToken === collectionModalToken) {
-      collectionSaving.value = false
-    }
-  }
+  } finally { collectionSaving.value = false }
 }
 
 const confirmDeleteCollection = async (col: Collection) => {
-  if (deletingCollectionId.value !== null) return
   if (!confirm(`确认删除合集「${col.name}」？`)) return
-  collectionDeleteError.value = ''
-  deletingCollectionId.value = col.id
-  try {
-    const res = await fetch(api.blog.collection(col.id), { method: 'DELETE', headers: authHeader.value })
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      const responseError = data?.error
-      collectionDeleteError.value = typeof responseError === 'string'
-        ? responseError
-        : responseError?.message || '删除失败，请重试'
-      return
-    }
-    const deletedCollectionId = col.id
-    collections.value = collections.value.filter(collection => collection.id !== deletedCollectionId)
-    try {
-      await fetchCollections()
-    } catch (error) {
-      console.error('Failed to refresh collections after deletion', error)
-    }
-    collections.value = collections.value.filter(collection => collection.id !== deletedCollectionId)
-  } catch {
-    collectionDeleteError.value = '网络错误，请重试'
-  } finally {
-    deletingCollectionId.value = null
-  }
+  const res = await fetch(api.blog.collection(col.id), { method: 'DELETE', headers: authHeader.value })
+  if (!res.ok) return
+  await fetchCollections()
 }
 
 const deleteChannel = async () => {
@@ -387,7 +296,7 @@ const deleteChannel = async () => {
   deleting.value = true
   try {
     const res = await fetch(api.blog.channel(channel.value.id), { method: 'DELETE', headers: authHeader.value })
-    if (res.ok) router.push(modulePathUrl('blog', '/'))
+    if (res.ok) router.push('/')
   } finally { deleting.value = false }
 }
 
@@ -411,9 +320,9 @@ onMounted(async () => {
 .manage-tab {
   padding: .625rem 1.25rem;
   font-size: .8125rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: .05em;
+  letter-spacing: 0;
   border: none;
   background: none;
   cursor: pointer;

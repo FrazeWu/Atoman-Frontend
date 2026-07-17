@@ -21,27 +21,27 @@ defineEmits(['click'])
   background: var(--a-color-ink);
   border: 1px solid var(--a-color-ink);
   border-right: none;
-  border-radius: 0px; /* Straight corner */
-  box-shadow: -2px 2px 0px rgba(0, 0, 0, 0.15); /* Hard shadow */
+  border-radius: var(--a-radius-none, 4px) 0 0 var(--a-radius-none, 4px);
+  box-shadow: none;
   z-index: 1005;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 .discussion-fab:hover {
-  transform: translate(-4px, -50%); /* Displaces left */
-  background: #6b4f3a;
-  border-color: #6b4f3a;
+  transform: translate(-2px, -50%);
+  background: var(--a-color-ink-muted);
+  border-color: var(--a-color-ink-muted);
 }
 .fab-label {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-family: var(--a-font-meta);
+  font-family: inherit;
   font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.2em;
+  font-weight: 500;
+  letter-spacing: 0.15em;
   color: var(--a-color-paper);
 }
 </style>

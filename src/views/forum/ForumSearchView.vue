@@ -1,29 +1,28 @@
 <template>
-  <div class="a-page-xl" style="padding-bottom:6rem">
-    <PPageHeader title="搜索结果" :sub="searchQuery ? `「${searchQuery}」的搜索结果` : ''"
-      @back="router.push('/forum')" />
+  <div class="a-page-xl forum-search-page">
+    <PPageHeader title="搜索结果" :sub="searchQuery ? `「${searchQuery}」的搜索结果` : ''">
+      <template #action>
+        <PButton outline @click="router.push('/forum')">返回论坛</PButton>
+      </template>
+    </PPageHeader>
 
-    <!-- Search bar -->
-    <div style="margin-bottom:2rem">
-      <div style="position:relative;max-width:600px;display:flex;gap:.75rem">
-        <input
-          v-model="localQuery"
-          type="text"
-          placeholder="搜索话题..."
-          class="search-input-wrap"
-          @keydown.enter="doSearch"
-        />
-        <PButton @click="doSearch">搜索</PButton>
-      </div>
+    <div class="forum-search-bar">
+      <PInput
+        v-model="localQuery"
+        type="text"
+        placeholder="搜索话题"
+        class="forum-search-input"
+        @keydown.enter="doSearch"
+      />
+      <PButton @click="doSearch">搜索</PButton>
     </div>
 
-    <div v-if="forumStore.loading" style="display:flex;flex-direction:column;gap:1rem">
-      <div v-for="i in 5" :key="i" style="height:5rem;border:1px solid var(--a-color-line-soft);background:var(--a-color-paper-soft)" />
+    <div v-if="forumStore.loading" class="forum-search-skeletons">
+      <div v-for="i in 5" :key="i" class="forum-search-skeleton a-skeleton" />
     </div>
 
     <template v-else>
-      <!-- Result count -->
-      <p v-if="searchQuery" style="font-size:.8rem;font-weight:700;color:var(--a-color-muted);margin:0 0 1.25rem">
+      <p v-if="searchQuery" class="forum-search-count">
         找到 {{ forumStore.searchTotal }} 条结果
       </p>
 
@@ -60,7 +59,7 @@
 
           <!-- Stats -->
           <template #actions>
-            <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.72rem;color:var(--a-color-muted);font-weight:700">
+            <div class="forum-search-entry-actions">
               <span>回复 {{ topic.reply_count }}</span>
               <span>点赞 {{ topic.like_count }}</span>
             </div>
@@ -69,7 +68,7 @@
       </div>
 
       <!-- Load more -->
-      <div v-if="forumStore.searchResults.length < forumStore.searchTotal" style="margin-top:1.5rem;text-align:center">
+      <div v-if="forumStore.searchResults.length < forumStore.searchTotal" class="forum-search-load-more">
         <PButton outline @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
     </template>
@@ -84,6 +83,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
+import PInput from '@/components/ui/PInput.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -141,22 +141,63 @@ watch(() => route.query.q, async (q) => {
 </script>
 
 <style scoped>
-.search-input-wrap {
+.forum-search-page {
+  padding-bottom: 6rem;
+}
+
+.forum-search-bar {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  max-width: 640px;
+  margin-bottom: 2rem;
+}
+
+.forum-search-input {
   flex: 1;
 }
-.search-input-wrap {
-  padding: 0.75rem 1rem;
-  border: var(--a-border);
-  border-radius: var(--a-radius-none);
-  background: var(--a-color-bg);
-  font-size: 0.9rem;
-  font-weight: 500;
-  font-family: inherit;
-  outline: none;
-  color: var(--a-color-ink);
+
+.forum-search-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
-.search-input-wrap:focus {
-  border-color: var(--a-color-fg);
-  box-shadow: inset 0 0 0 1px var(--a-color-fg);
+
+.forum-search-skeleton {
+  height: 5rem;
+}
+
+.forum-search-count {
+  margin: 0 0 1.25rem;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.forum-search-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.forum-search-load-more {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .forum-search-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 </style>

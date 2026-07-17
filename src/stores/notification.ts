@@ -1,22 +1,35 @@
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import type { Notification, NotificationFilterType } from '@/types'
+import type { InboxTab, Notification, NotificationCategory, NotificationPreference } from '@/types'
 import type { RouteLocationRaw } from 'vue-router'
 import { modulePathUrl } from '@/router/siteUrls'
 
+const notificationCategories: InboxTab[] = ['like', 'interaction', 'mention', 'reply', 'collaboration', 'system', 'dm']
 const commentNotificationTypes = new Set<Notification['type']>([
   'comment_reply', 'comment_mention', 'comment_marked', 'comment_like', 'forum_topic_comment',
 ])
+type NotificationSelection = NotificationCategory | readonly Notification['type'][]
 
-const sortNotifications = (items: Notification[]) => [...items].sort((left, right) =>
-  right.created_at.localeCompare(left.created_at) || left.id.localeCompare(right.id),
-)
+function isTypeSelection(selection: NotificationSelection): selection is readonly Notification['type'][] {
+  return Array.isArray(selection)
+}
 
-interface NotificationResponse {
-  data: Notification[]
-  meta?: { total?: number }
+const emptyUnreadCounts = (): Record<InboxTab, number> => ({
+  like: 0,
+  interaction: 0,
+  mention: 0,
+  reply: 0,
+  collaboration: 0,
+  system: 0,
+  dm: 0,
+})
+
+export function forumNotificationLocation(notification: Notification): RouteLocationRaw | null {
+  const topicId = notification.meta.topic_id
+  if (!topicId) return null
+  return { path: modulePathUrl('forum', `/topic/${topicId}`) }
 }
 
 export function isCommentNotification(notification: Notification) {
@@ -26,7 +39,7 @@ export function isCommentNotification(notification: Notification) {
 export function commentNotificationLocation(notification: Notification): RouteLocationRaw | null {
   const { target_kind: kind, resource_id: id, comment_id: commentId, root_id: rootId } = notification.meta
   if (!kind || !id || !rootId) return null
-  const paths: Partial<Record<NonNullable<typeof kind>, string>> = {
+  const paths: Record<string, string> = {
     blog_post: modulePathUrl('blog', `/post/${id}`),
     video: modulePathUrl('video', `/videos/watch/${id}`),
     podcast_episode: modulePathUrl('podcast', `/episode/${id}`),
@@ -48,62 +61,64 @@ export function commentNotificationLocation(notification: Notification): RouteLo
   return { path, query, hash: `#comment-${rootId}` }
 }
 
-export function forumNotificationLocation(notification: Notification): RouteLocationRaw | null {
-  const topicId = notification.meta.topic_id
-  if (!topicId) return null
-  return { path: modulePathUrl('forum', `/topic/${topicId}`) }
-}
-
 export const useNotificationStore = defineStore('notification', () => {
   const api = useApi()
   const authStore = useAuthStore()
 
-  const unreadCount = ref(0)
+  const unreadCounts = ref<Record<InboxTab, number>>(emptyUnreadCounts())
+  const unreadCount = computed(() => notificationCategories.reduce((sum, key) => sum + (unreadCounts.value[key] || 0), 0))
   const notifications = ref<Notification[]>([])
   const loading = ref(false)
   const total = ref(0)
   const page = ref(1)
-  const currentType = ref<NotificationFilterType>('')
+  const currentCategory = ref<InboxTab>('mention')
+  const currentType = currentCategory
   const currentTypes = ref<Notification['type'][]>([])
-  let fetchGeneration = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
     'Content-Type': 'application/json',
   })
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCounts = async () => {
     if (!authStore.token) return
-    const res = await fetch(api.notifications.unreadCount, { headers: authHeaders() })
+    const res = await fetch(api.notifications.unreadCounts, { headers: authHeaders() })
     if (!res.ok) return
     const data = await res.json()
-    unreadCount.value = data.data?.count || 0
+    const payload = data.data || data
+    unreadCounts.value = { ...unreadCounts.value, ...(payload.items || {}) }
   }
 
-  type TypeSelection = NotificationFilterType | readonly Notification['type'][]
+  const fetchUnreadCount = fetchUnreadCounts
 
-  const fetchNotifications = async (type: TypeSelection = currentType.value, nextPage = 1) => {
+  const fetchNotifications = async (selection: NotificationSelection = currentCategory.value as NotificationCategory, nextPage = 1) => {
     if (!authStore.token) return
-    const requestGeneration = ++fetchGeneration
     loading.value = true
     try {
-      const types = Array.isArray(type) ? [...type] : type ? [type] : []
-      currentTypes.value = types
-      currentType.value = Array.isArray(type) ? '' : type as NotificationFilterType
       page.value = nextPage
-      const requestedTypes: NotificationFilterType[] = types.length ? types : ['']
-      const responses: NotificationResponse[] = await Promise.all(requestedTypes.map(async (requestedType) => {
-        const params = new URLSearchParams({ page: String(nextPage) })
-        if (requestedType) params.set('type', requestedType)
+      if (isTypeSelection(selection)) {
+        currentTypes.value = [...selection]
+        const responses = await Promise.all(selection.map(async (type) => {
+          const params = new URLSearchParams({ page: String(nextPage), type })
+          const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
+          if (!res.ok) throw new Error('获取通知失败')
+          return res.json()
+        }))
+        notifications.value = responses.flatMap((data) => data.data || [])
+          .sort((left, right) => right.created_at.localeCompare(left.created_at))
+        total.value = responses.reduce((sum, data) => sum + (data.meta?.total ?? data.total ?? 0), 0)
+      } else {
+        currentTypes.value = []
+        currentCategory.value = selection
+        const params = new URLSearchParams({ page: String(nextPage), category: selection })
         const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('获取通知失败')
-        return res.json() as Promise<NotificationResponse>
-      }))
-      if (requestGeneration !== fetchGeneration) return
-      notifications.value = sortNotifications(responses.flatMap((data) => data.data || []))
-      total.value = responses.reduce((sum, data) => sum + (data.meta?.total || 0), 0)
+        const data = await res.json()
+        notifications.value = data.data || []
+        total.value = data.meta?.total ?? data.total ?? 0
+      }
     } finally {
-      if (requestGeneration === fetchGeneration) loading.value = false
+      loading.value = false
     }
   }
 
@@ -117,84 +132,95 @@ export const useNotificationStore = defineStore('notification', () => {
     const target = notifications.value.find((item) => item.id === id)
     if (target && !target.read_at) {
       target.read_at = new Date().toISOString()
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
+      unreadCounts.value[target.category] = Math.max(0, (unreadCounts.value[target.category] || 0) - 1)
     }
   }
 
-  const markAllRead = async (type: TypeSelection = currentTypes.value.length ? currentTypes.value : currentType.value) => {
+  const markAllRead = async (selection: NotificationSelection = currentTypes.value.length ? currentTypes.value : currentCategory.value as NotificationCategory) => {
     if (!authStore.token) return
-    const types = Array.isArray(type) ? [...type] : type ? [type] : []
-    const responses: unknown[] = []
-    const successfulTypes = new Set<NotificationFilterType>()
-    for (const requestedType of types.length ? types : ['']) {
-      const query = requestedType ? `?type=${encodeURIComponent(requestedType)}` : ''
-      try {
-        const res = await fetch(`${api.notifications.markAllRead}${query}`, { method: 'PUT', headers: authHeaders() })
-        if (!res.ok) continue
-        successfulTypes.add(requestedType as NotificationFilterType)
-        responses.push(await res.json().catch(() => null))
-      } catch {
-        // Treat network failures like non-2xx responses so other requested types can still succeed.
-      }
+    if (isTypeSelection(selection)) {
+      await Promise.all(selection.map((type) => fetch(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
+        method: 'PUT', headers: authHeaders(),
+      })))
+    } else {
+      const res = await fetch(api.notifications.markCategoryRead(selection), { method: 'PUT', headers: authHeaders() })
+      if (!res.ok) return
     }
-    if (!successfulTypes.size) throw new Error('标记通知失败')
-    const marksAllTypes = successfulTypes.has('')
-    const wasSuccessful = (item: Notification) => marksAllTypes || successfulTypes.has(item.type)
-    const unreadMarkedRead = notifications.value.filter((item) => !item.read_at && wasSuccessful(item)).length
-    const response = responses.at(-1) as { data?: Record<string, unknown> } | null | undefined
-    const data = response?.data
-    const nextUnreadCount = data?.unread_total ?? data?.unread_count ?? data?.count
     const readAt = new Date().toISOString()
+    const matches = (item: Notification) => isTypeSelection(selection) ? selection.includes(item.type) : item.category === selection
     notifications.value = notifications.value.map((item) =>
-      wasSuccessful(item) ? { ...item, read_at: item.read_at || readAt } : item,
+      matches(item) ? { ...item, read_at: item.read_at || readAt } : item,
     )
-    unreadCount.value = typeof nextUnreadCount === 'number'
-      ? nextUnreadCount
-      : Math.max(0, unreadCount.value - unreadMarkedRead)
+    if (!isTypeSelection(selection)) unreadCounts.value[selection] = 0
   }
 
   const receiveNotification = (notification: Notification) => {
-    const existingIndex = notifications.value.findIndex((item) =>
-      item.id === notification.id
-      || Boolean(notification.aggregation_key && !item.read_at && item.aggregation_key === notification.aggregation_key),
-    )
-    const existing = existingIndex >= 0 ? notifications.value[existingIndex] : undefined
-    if (!notification.read_at && (!existing || Boolean(existing.read_at))) unreadCount.value += 1
-
-    if (existingIndex >= 0) {
-      notifications.value.splice(existingIndex, 1, notification)
-      notifications.value = sortNotifications(notifications.value)
-      return
-    }
-    if ((!currentType.value && !currentTypes.value.length) || currentType.value === notification.type || currentTypes.value.includes(notification.type)) {
-      notifications.value.unshift(notification)
-      notifications.value = sortNotifications(notifications.value)
+    unreadCounts.value[notification.category] = (unreadCounts.value[notification.category] || 0) + 1
+    if (currentTypes.value.includes(notification.type) || (!currentTypes.value.length && currentCategory.value === notification.category)) {
+      notifications.value = [notification, ...notifications.value]
       total.value += 1
     }
   }
 
+  const savePreference = async (category: NotificationCategory, eventType: string, enabled: boolean) => {
+    if (!authStore.token) return
+    const res = await fetch(api.notifications.preferences, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ items: [{ category, event_type: eventType, enabled }] }),
+    })
+    if (!res.ok) throw new Error('保存通知设置失败')
+  }
+
+  const savePreferences = async (items: NotificationPreference[]) => {
+    if (!authStore.token) return
+    const res = await fetch(api.notifications.preferences, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ items }),
+    })
+    if (!res.ok) throw new Error('保存通知设置失败')
+  }
+
+  const createMute = async (sourceType: string, sourceId: string, reason: string) => {
+    if (!authStore.token) return
+    const res = await fetch(api.notifications.mutes, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ source_type: sourceType, source_id: sourceId, reason }),
+    })
+    if (!res.ok) throw new Error('不再提醒失败')
+    return await res.json()
+  }
+
   const resetStore = () => {
-    unreadCount.value = 0
+    unreadCounts.value = emptyUnreadCounts()
     notifications.value = []
     loading.value = false
     total.value = 0
     page.value = 1
-    currentType.value = ''
+    currentCategory.value = 'mention'
     currentTypes.value = []
   }
 
   return {
     unreadCount,
+    unreadCounts,
     notifications,
     loading,
     total,
     page,
+    currentCategory,
     currentType,
+    fetchUnreadCounts,
     fetchUnreadCount,
     fetchNotifications,
     markRead,
     markAllRead,
     receiveNotification,
+    savePreference,
+    savePreferences,
+    createMute,
     resetStore,
   }
 })

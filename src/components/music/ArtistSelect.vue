@@ -34,9 +34,9 @@
 
       <div class="dropdown-section">
         <div class="dropdown-divider" />
-        <RouterLink :to="addArtistUrl" class="add-artist-link" @mousedown.prevent>
-          没找到艺术家？前往新增页面
-        </RouterLink>
+        <button type="button" class="add-artist-link" @mousedown.prevent="handleAddArtist">
+          没找到艺术家？直接新增
+        </button>
       </div>
 
       <div v-if="!filtered.length && !query.trim()" class="dropdown-empty">输入关键字搜索</div>
@@ -46,10 +46,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import PInput from '@/components/ui/PInput.vue'
 import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
-import { modulePathUrl } from '@/router/siteUrls'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import type { Artist } from '@/types'
 
 const props = defineProps<{
@@ -63,6 +62,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: Artist[]): void
 }>()
 
+const { openMusicEditor } = useMusicDrawers()
 const wrapRef = ref<HTMLElement | null>(null)
 const query = ref('')
 const open = ref(false)
@@ -78,15 +78,19 @@ const filtered = computed(() => {
     .slice(0, 8)
 })
 
-const addArtistUrl = computed(() => {
-  const name = query.value.trim()
-  return `${modulePathUrl('music', '/artist/new')}${name ? `?name=${encodeURIComponent(name)}` : ''}`
-})
-
 const select = (a: Artist) => {
   if (props.disabled) return
   emit('update:modelValue', [...selected.value, a])
   query.value = ''
+}
+
+function handleAddArtist() {
+  const name = query.value.trim()
+  openMusicEditor({
+    entity: 'artist',
+    mode: 'create',
+    seed: name ? { name } : undefined,
+  })
 }
 
 const remove = (id: string | number) => {

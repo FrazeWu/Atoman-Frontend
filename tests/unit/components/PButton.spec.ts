@@ -5,7 +5,7 @@ import PButton from '@/components/ui/PButton.vue'
 
 const router = createRouter({
   history: createMemoryHistory(),
-  routes: [{ path: '/posts/post/new', component: { template: '<div />' } }],
+  routes: [{ path: '/post/new', component: { template: '<div />' } }],
 })
 
 describe('PButton', () => {
@@ -42,7 +42,7 @@ describe('PButton', () => {
     const wrapper = mount(PButton, {
       global: { plugins: [router] },
       props: {
-        to: '/posts/post/new',
+        to: '/post/new',
         label: '写文章',
       },
     })
@@ -61,5 +61,16 @@ describe('PButton', () => {
 
     expect(wrapper.find('.p-button-dot').exists()).toBe(false)
     expect(wrapper.get('.p-button').classes()).toContain('p-button--secondary')
+  })
+
+  it('renders dot when dot prop is true', () => {
+    const wrapper = mount(PButton, {
+      props: {
+        label: '保存',
+        dot: true,
+      },
+    })
+
+    expect(wrapper.find('.p-button-dot').exists()).toBe(true)
   })
 })

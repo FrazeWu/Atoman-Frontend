@@ -254,11 +254,11 @@ const emitPlayPodcast = () => {
 .article-title {
   font-family: inherit;
   font-size: 2.25rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.15;
   margin-bottom: 1rem;
   color: var(--a-color-fg);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .article-subtitle-meta {
@@ -283,8 +283,8 @@ const emitPlayPodcast = () => {
   border: 1px solid var(--a-color-line-soft);
   color: var(--a-color-muted);
   font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .read-original-link {
@@ -294,7 +294,7 @@ const emitPlayPodcast = () => {
   font-weight: var(--a-font-weight-strong, 700);
   color: var(--a-color-muted);
   text-decoration: none;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--a-color-line-soft);
   transition: all 0.15s ease;

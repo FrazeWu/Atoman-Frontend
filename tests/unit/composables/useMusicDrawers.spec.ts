@@ -37,6 +37,27 @@ describe('useMusicDrawers', () => {
     expect(state.value.nestedAction).toBeNull()
   })
 
+  it('manages unified music editor state', () => {
+    const { state, openMusicEditor, closeMusicEditor } = useMusicDrawers()
+
+    openMusicEditor({ entity: 'artist', mode: 'create', seed: { name: 'Ye' } })
+    expect(state.value.musicEditor).toEqual({
+      entity: 'artist',
+      mode: 'create',
+      seed: { name: 'Ye' },
+    })
+
+    openMusicEditor({ entity: 'album', mode: 'edit', id: 'album-1' })
+    expect(state.value.musicEditor).toEqual({
+      entity: 'album',
+      mode: 'edit',
+      id: 'album-1',
+    })
+
+    closeMusicEditor()
+    expect(state.value.musicEditor).toBeNull()
+  })
+
   it('computes shifted states correctly', () => {
     const { isMainShifted, isArtistShifted, isAlbumShifted, openArtist, openAlbum, openNestedAction } = useMusicDrawers()
     
@@ -61,6 +82,20 @@ describe('useMusicDrawers', () => {
     expect(isMainShifted.value).toBe(true)
   })
 
+  it('computes shifted states correctly with unified music editor', () => {
+    const { isMainShifted, isArtistShifted, isAlbumShifted, openMusicEditor } = useMusicDrawers()
+
+    openMusicEditor({ entity: 'artist', mode: 'create' })
+    expect(isMainShifted.value).toBe(true)
+    expect(isArtistShifted.value).toBe(true)
+    expect(isAlbumShifted.value).toBe(false)
+
+    openMusicEditor({ entity: 'album', mode: 'edit', id: 'album-1' })
+    expect(isMainShifted.value).toBe(true)
+    expect(isArtistShifted.value).toBe(true)
+    expect(isAlbumShifted.value).toBe(true)
+  })
+
   it('computes isArtistShifted correctly with add_album', () => {
     const { isArtistShifted, openNestedAction } = useMusicDrawers()
     expect(isArtistShifted.value).toBe(false)
@@ -82,15 +117,24 @@ describe('useMusicDrawers', () => {
     expect(state.value.artistRefreshToken).toBe(1)
   })
 
-  it('can refresh playlist data explicitly', () => {
-    const { state, refreshPlaylist, closeAll } = useMusicDrawers()
+  it('can refresh playlist lists explicitly', () => {
+    const { state, refreshPlaylists } = useMusicDrawers()
     expect(state.value.playlistRefreshToken).toBe(0)
-
-    refreshPlaylist()
+    refreshPlaylists()
     expect(state.value.playlistRefreshToken).toBe(1)
+  })
 
-    closeAll()
-    expect(state.value.playlistRefreshToken).toBe(0)
+  it('rebuilds the shortest path when opening a fourth sheet', () => {
+    const drawers = useMusicDrawers()
+    drawers.openArtist('artist-1')
+    drawers.openAlbum('album-1')
+    drawers.openNestedAction('revise', { albumId: 'album-1' })
+    drawers.openNestedAction('history', { albumId: 'album-1' })
+
+    expect(drawers.layers.value.map(layer => layer.key)).toEqual([
+      'album:album-1',
+      'action:history:album-1',
+    ])
   })
 })
 
@@ -110,29 +154,97 @@ describe('useMusicDrawers music creation flow', () => {
 
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
     expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-7')
+    expect(drawers.state.value.creationFlow?.draft.artist.kind).toBe('person')
+    expect(drawers.state.value.creationFlow?.draft.artist.members).toEqual([])
+    expect(drawers.state.value.creationFlow?.draft.artist.birthDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.activeStartDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.activeEndDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.stageNames[0]).toMatchObject({
+      startDateParts: {
+        year: '',
+        month: '',
+        day: '',
+      },
+      endDateParts: {
+        year: '',
+        month: '',
+        day: '',
+      },
+    })
     expect(drawers.state.value.creationFlow?.draft.albumSeed.title).toBe('')
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.releaseDateParts).toEqual({
+      year: '',
+      month: '',
+      day: '',
+    })
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([
+      {
+        id: 'contributor-artist-7',
+        artistId: 'artist-7',
+        name: '',
+        avatarUrl: '',
+        kind: 'person',
+        locked: false,
+      },
+    ])
+    expect('name' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
+    expect('country' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
+    expect('birthday' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
 
     expect(drawers.isMainShifted.value).toBe(true)
     expect(drawers.isArtistShifted.value).toBe(true)
+  })
+
+  it('opens standalone artist-first flow with empty contributors and reusable member draft structure', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicCreationFlow()
+
+    expect(drawers.state.value.creationFlow?.draft.artist.members).toEqual([])
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([])
   })
 
   it('clears the creation flow draft when closeMusicCreationFlow is called', () => {
     const drawers = useMusicDrawers()
 
     drawers.openMusicCreationFlow()
-    drawers.state.value.creationFlow!.draft.artist.name = 'Kanye West'
+    drawers.state.value.creationFlow!.draft.artist.legalName = 'Kanye West'
     drawers.closeMusicCreationFlow()
 
     expect(drawers.state.value.creationFlow).toBeNull()
   })
-})
-  it('can open the creation flow directly on albumSeed while preserving seeded artist context', () => {
+
+  it('clears creationFlow together when closing the music editor', () => {
     const drawers = useMusicDrawers()
 
-    drawers.openMusicCreationFlow({ artistId: 'artist-9', startStep: 'albumSeed' })
+    drawers.openMusicEditor({ entity: 'artist', mode: 'create' })
+    drawers.openMusicCreationFlow()
+    drawers.closeMusicEditor()
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumSeed')
-    expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-9')
-    expect(drawers.state.value.creationFlow?.draft.albumSeed.title).toBe('')
-    expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([])
+    expect(drawers.state.value.musicEditor).toBeNull()
+    expect(drawers.state.value.creationFlow).toBeNull()
   })
+
+  it('clears create-mode musicEditor when closing the creation flow', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openMusicEditor({ entity: 'artist', mode: 'create' })
+    drawers.openMusicCreationFlow()
+    drawers.closeMusicCreationFlow()
+
+    expect(drawers.state.value.creationFlow).toBeNull()
+    expect(drawers.state.value.musicEditor).toBeNull()
+  })
+})

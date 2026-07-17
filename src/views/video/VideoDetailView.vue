@@ -1,18 +1,38 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { Video } from '@/types'
+import type { InteractionComment, Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
+import { extractTimestampFromComment, serializeTimestampComment } from '@/composables/useVideoTimestamp'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
-import CommentSection from '@/components/comment/CommentSection.vue'
+import InteractionBar from '@/components/shared/InteractionBar.vue'
+import CommentThread from '@/components/shared/CommentThread.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
 import { useApi } from '@/composables/useApi'
+import { useInteractions } from '@/composables/useInteractions'
+import { useAuthStore } from '@/stores/auth'
+import { isModeratorRole } from '@/utils/roles'
+
+type VideoDetailResponse = Video & {
+  liked?: boolean
+  is_liked?: boolean
+  viewer_liked?: boolean
+  like_count?: number
+  likes_count?: number
+  LikeCount?: number
+  comment_count?: number
+  comments_count?: number
+  CommentCount?: number
+}
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+const videoId = computed(() => String(route.params.id || ''))
+const interactions = useInteractions('videos', 'video', videoId)
 
 const video = ref<Video | null>(null)
 const recommended = ref<Video[]>([])
@@ -67,20 +87,40 @@ function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString('zh-CN')
 }
 
-async function incrementViewCount(id: string, seq: number) {
-  try {
-    const response = await fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
-    if (!response.ok) return
-    const payload = await response.json()
-    if (
-      seq !== loadSeq
-      || video.value?.id !== id
-      || typeof payload.view_count !== 'number'
-    ) return
-    video.value.view_count = payload.view_count
-  } catch {
-    // Keep the count from the detail response when synchronization fails.
-  }
+const canComment = computed(() => authStore.isAuthenticated)
+const commentNotice = computed(() => authStore.isAuthenticated ? '' : '登录后即可评论')
+
+const canDeleteComment = (comment: InteractionComment) => {
+  if (!authStore.user) return false
+  const authIDs = new Set([
+    authStore.user.uuid,
+    authStore.user.id === undefined ? undefined : String(authStore.user.id),
+  ].filter((id): id is string => Boolean(id)))
+  const commentIDs = [
+    comment.user_id ?? undefined,
+    comment.user?.uuid,
+    comment.user?.id === undefined ? undefined : String(comment.user.id),
+  ].filter((id): id is string => Boolean(id))
+  return (
+    commentIDs.some((id) => authIDs.has(id)) ||
+    authStore.user.uuid === video.value?.user_id ||
+    isModeratorRole(authStore.user.role)
+  )
+}
+
+async function submitComment(payload: { content: string; parentCommentId?: string }) {
+  const timestamp = serializeTimestampComment(extractTimestampFromComment(payload.content))
+  await interactions.createComment(
+    payload.content,
+    payload.parentCommentId,
+    timestamp.timestamp_sec === null ? undefined : timestamp,
+  )
+}
+
+function syncInteractionState(detail: VideoDetailResponse) {
+  interactions.liked.value = detail.liked ?? detail.is_liked ?? detail.viewer_liked ?? false
+  interactions.likeCount.value = detail.like_count ?? detail.likes_count ?? detail.LikeCount ?? 0
+  interactions.commentCount.value = detail.comment_count ?? detail.comments_count ?? detail.CommentCount ?? 0
 }
 
 async function load(id: string) {
@@ -99,13 +139,17 @@ async function load(id: string) {
     ])
     if (seq !== loadSeq) return
     if (!vRes.ok) { error.value = '视频不存在'; return }
-    video.value = await vRes.json()
+    const detail = await vRes.json() as VideoDetailResponse
     if (seq !== loadSeq) return
+    video.value = detail
+    syncInteractionState(detail)
     if (rRes.ok) {
       const data = await rRes.json()
       if (seq === loadSeq) recommended.value = data
     }
-    if (seq === loadSeq) void incrementViewCount(id, seq)
+    if (seq === loadSeq) await interactions.fetchComments()
+    // Fire-and-forget view count increment
+    if (seq === loadSeq) fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
   } catch {
     if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {
@@ -113,11 +157,8 @@ async function load(id: string) {
   }
 }
 
-onMounted(() => load(route.params.id as string))
+onMounted(() => load(videoId.value))
 watch(() => route.params.id, (id) => { if (id) load(id as string) })
-onBeforeUnmount(() => {
-  loadSeq += 1
-})
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const currentPlaybackTime = ref(0)
@@ -171,6 +212,21 @@ async function copyVideoLink() {
   }
 }
 
+async function shareVideo() {
+  if (!video.value || video.value.visibility !== 'public') return
+  try {
+    const shareUrl = window.location.href
+    if (navigator.share) {
+      await navigator.share({ title: video.value.title, url: shareUrl })
+    } else {
+      await navigator.clipboard.writeText(shareUrl)
+    }
+    await fetch(`${api.url}/videos/${video.value.id}/share`, { method: 'POST' })
+  } catch {
+    // The user may cancel native share.
+  }
+}
+
 function toggleTheaterMode() {
   theaterMode.value = !theaterMode.value
   saveStoredTheaterMode(theaterMode.value)
@@ -186,7 +242,7 @@ function handleSeekToTimestamp(value: number) {
   if (video.value?.storage_type === 'local' && videoElement.value) {
     videoElement.value.currentTime = value
     currentPlaybackTime.value = value
-    videoElement.value.play()?.catch(() => {})
+    videoElement.value.play().catch(() => {})
     timestampHint.value = ''
     return
   }
@@ -194,10 +250,6 @@ function handleSeekToTimestamp(value: number) {
   setTimeout(() => {
     if (timestampHint.value) timestampHint.value = ''
   }, 3000)
-}
-
-function getCurrentPlaybackTime() {
-  return video.value?.storage_type === 'local' ? Math.floor(videoElement.value?.currentTime || 0) : null
 }
 </script>
 
@@ -274,18 +326,41 @@ function getCurrentPlaybackTime() {
             <span>{{ fmtDate(video.created_at) }}</span>
             <span v-if="video.duration_sec">{{ fmtDuration(video.duration_sec) }}</span>
           </div>
+          <button
+            v-if="video.visibility === 'public'"
+            type="button"
+            class="vd-share"
+            data-testid="video-share"
+            @click="shareVideo"
+          >
+            分享
+          </button>
         </div>
 
         <!-- Timestamp hint -->
         <p v-if="timestampHint" class="vd-timestamp-hint">{{ timestampHint }}</p>
 
-        <!-- Comment Section (before description) -->
-        <CommentSection
-          :target="{ kind: 'video', resourceId: video.id }"
-          :current-time="getCurrentPlaybackTime"
-          data-testid="video-comments"
-          @seek="handleSeekToTimestamp"
-        />
+        <!-- Interactions and comments -->
+        <div class="vd-interactions" data-testid="video-comments">
+          <InteractionBar
+            :liked="interactions.liked.value"
+            :like-count="interactions.likeCount.value"
+            :comment-count="interactions.commentCount.value"
+            :disabled="!authStore.isAuthenticated"
+            @like="interactions.like"
+            @unlike="interactions.unlike"
+          />
+          <p v-if="commentNotice" class="vd-comment-notice">{{ commentNotice }}</p>
+          <CommentThread
+            :items="interactions.comments.value"
+            :loading="interactions.loadingComments.value"
+            :submitting="interactions.submittingComment.value"
+            :can-comment="canComment"
+            :can-delete="canDeleteComment"
+            :submit-action="submitComment"
+            @delete="interactions.deleteComment"
+          />
+        </div>
 
         <!-- Tags -->
         <div v-if="video.tags && video.tags.length" class="vd-tags">
@@ -322,7 +397,7 @@ function getCurrentPlaybackTime() {
   width: 100%;
   aspect-ratio: 16/9;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 8px;
+  border-radius: 4px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 .vd-loading-info { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -365,7 +440,7 @@ function getCurrentPlaybackTime() {
 .vd-player-wrap {
   width: 100%;
   background: #000;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   margin-bottom: 1rem;
 }
@@ -399,7 +474,7 @@ function getCurrentPlaybackTime() {
 /* Info */
 .vd-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.4;
   color: var(--a-color-fg);
   margin: 0 0 0.75rem 0;
@@ -412,7 +487,7 @@ function getCurrentPlaybackTime() {
   margin-bottom: 0.75rem;
 }
 .vd-channel {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   color: var(--a-color-fg);
   text-decoration: none;
@@ -423,6 +498,16 @@ function getCurrentPlaybackTime() {
   gap: 0.75rem;
   font-size: 0.8rem;
   color: var(--a-color-muted, #6b7280);
+}
+.vd-share {
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+  color: var(--a-color-fg);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
 }
 .vd-tags {
   display: flex;
@@ -444,7 +529,7 @@ function getCurrentPlaybackTime() {
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
   background: var(--a-color-surface, #f9fafb);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .vd-desc-text {
   font-size: 0.875rem;
@@ -456,6 +541,18 @@ function getCurrentPlaybackTime() {
   line-height: 1.6;
 }
 
+.vd-interactions {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.vd-comment-notice {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--a-color-muted, #6b7280);
+}
+
 /* Sidebar */
 .vd-sidebar {
   width: 22rem;
@@ -463,9 +560,9 @@ function getCurrentPlaybackTime() {
 }
 .vd-sidebar-title {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--a-color-muted, #6b7280);
   margin: 0 0 0.75rem 0;
 }
@@ -505,7 +602,7 @@ function getCurrentPlaybackTime() {
   color: var(--a-color-muted, #6b7280);
   padding: 0.5rem 0.75rem;
   background: var(--a-color-surface, #f3f4f6);
-  border-radius: 8px;
+  border-radius: 4px;
   margin-bottom: 0.5rem;
 }
 </style>

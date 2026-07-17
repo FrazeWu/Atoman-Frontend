@@ -155,7 +155,6 @@ const siteAccessStore = useSiteAccessStore()
 const loading = ref(true)
 const error = ref('')
 const hotContent = ref<PortalHotResponse>({ featured: [], sections: [] })
-let hotContentRequestSequence = 0
 
 const visibleRooms = computed(() => (
   moduleNavOrder
@@ -189,8 +188,6 @@ const otherRooms = computed(() => visibleRooms.value)
 const hasContent = computed(() => visibleFeatured.value.length > 0 || displaySections.value.length > 0)
 
 async function loadHotContent() {
-  const requestSequence = ++hotContentRequestSequence
-  const isCurrentRequest = () => requestSequence === hotContentRequestSequence
   loading.value = true
   error.value = ''
   try {
@@ -198,20 +195,17 @@ async function loadHotContent() {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
-    if (!isCurrentRequest()) return
     if (response.status === 404) {
       hotContent.value = { featured: [], sections: [] }
       return
     }
     if (!response.ok) throw new Error('服务端返回异常')
     const payload = await response.json() as { data?: PortalHotResponse }
-    if (!isCurrentRequest()) return
     hotContent.value = payload.data ?? { featured: [], sections: [] }
   } catch (err) {
-    if (!isCurrentRequest()) return
     error.value = err instanceof Error ? err.message : '未知错误'
   } finally {
-    if (isCurrentRequest()) loading.value = false
+    loading.value = false
   }
 }
 
@@ -262,7 +256,7 @@ onMounted(loadHotContent)
   margin: 0;
   color: var(--a-color-ink);
   font-size: 40px;
-  font-weight: 900;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.1;
 }
@@ -272,8 +266,8 @@ onMounted(loadHotContent)
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 950;
-  letter-spacing: 0.18em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -337,8 +331,8 @@ onMounted(loadHotContent)
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -374,8 +368,8 @@ onMounted(loadHotContent)
   color: var(--a-color-ink-soft);
   font-family: var(--a-font-meta);
   font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -396,13 +390,13 @@ onMounted(loadHotContent)
 .portal-hot__module-strip span {
   color: var(--a-color-ink-soft);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .portal-hot__module-strip a {
   color: var(--a-color-ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -432,7 +426,7 @@ onMounted(loadHotContent)
   flex-shrink: 0;
   color: var(--a-color-ink-soft);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .portal-hot__grid {
@@ -506,7 +500,7 @@ onMounted(loadHotContent)
   padding: 8px 12px;
   color: var(--a-color-ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .portal-hot__card-skeleton {

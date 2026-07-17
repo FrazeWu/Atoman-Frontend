@@ -8,7 +8,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 type TurnstileOptions = {
   sitekey: string
   callback?: (token: string) => void
-  'error-callback'?: () => void
+  'error-callback'?: (errorCode?: string) => void
   'expired-callback'?: () => void
   theme?: 'light' | 'dark' | 'auto'
   size?: 'normal' | 'compact' | 'flexible'
@@ -34,7 +34,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   verified: [token: string]
   expired: []
-  error: []
+  error: [errorCode?: string]
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -76,7 +76,7 @@ async function renderWidget() {
       'refresh-expired': 'auto',
       callback: (token) => emit('verified', token),
       'expired-callback': () => emit('expired'),
-      'error-callback': () => emit('error'),
+      'error-callback': (errorCode) => emit('error', errorCode),
     })
   } catch {
     emit('error')

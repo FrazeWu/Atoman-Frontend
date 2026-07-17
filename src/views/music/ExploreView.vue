@@ -2,28 +2,28 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import {
   createAlbumBookmark,
   createArtistBookmark,
+  createPlaylistBookmark,
   deleteAlbumBookmark,
   deleteArtistBookmark,
+  deletePlaylistBookmark,
   listAlbumBookmarks,
   listArtistBookmarks,
+  listPlaylistBookmarks,
   listMusicDiscoverFeed,
   listMusicAlbums,
   listMusicArtists,
-  listRecommendedAlbums,
   type MusicDiscoverItem,
   type MusicAlbumListItem,
   type MusicArtistListItem,
-  type MusicBrowseMode,
+  type MusicPlaylistSummary,
   type MusicRecommendationItem,
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { MUSIC_BROWSE_MODE_OPTIONS } from '@/utils/musicRecommendations'
 
 const props = withDefaults(defineProps<{
   pageTitle?: string
@@ -34,23 +34,23 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
+const { openAlbum, openArtist } = useMusicDrawers()
 const loading = ref(false)
-const browseMode = ref<MusicBrowseMode>('hot')
 const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
 const discoverArtists = ref<MusicRecommendationItem[]>([])
-const discoverPlaylists = ref<MusicDiscoverItem[]>([])
+const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
-const albumItems = ref<Array<MusicAlbumListItem | MusicRecommendationItem>>([])
+const albumItems = ref<MusicAlbumListItem[]>([])
 let activeSearchRequestId = 0
 
 const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
+const starredPlaylistIds = ref<string[]>([])
 
 async function fetchAlbumBookmarks() {
   try {
@@ -67,6 +67,15 @@ async function fetchArtistBookmarks() {
     starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
   } catch (e) {
     console.error('Failed to fetch artist bookmarks:', e)
+  }
+}
+
+async function fetchPlaylistBookmarks() {
+  try {
+    const response = await listPlaylistBookmarks()
+    starredPlaylistIds.value = response.data.map((b: any) => String(b.playlist_id))
+  } catch (e) {
+    console.error('Failed to fetch playlist bookmarks:', e)
   }
 }
 
@@ -118,14 +127,39 @@ async function handleToggleArtistBookmark(artistId: string) {
   }
 }
 
+async function handleTogglePlaylistBookmark(playlistId: string) {
+  const isCurrentlyBookmarked = starredPlaylistIds.value.includes(playlistId)
+  try {
+    if (isCurrentlyBookmarked) {
+      await deletePlaylistBookmark(playlistId)
+      starredPlaylistIds.value = starredPlaylistIds.value.filter(id => id !== playlistId)
+      discoverPlaylists.value = discoverPlaylists.value.map((item) => {
+        if (String(item.id) !== playlistId) return item
+        return { ...item, bookmark_count: Math.max(0, (item.bookmark_count ?? 0) - 1) }
+      })
+      return
+    }
+
+    await createPlaylistBookmark(playlistId)
+    starredPlaylistIds.value.push(playlistId)
+    discoverPlaylists.value = discoverPlaylists.value.map((item) => {
+      if (String(item.id) !== playlistId) return item
+      return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
+    })
+  } catch (e) {
+    console.error('Failed to toggle playlist bookmark:', e)
+  }
+}
+
 async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
     const [feedResponse] = await Promise.all([
-      listMusicDiscoverFeed(browseMode.value),
+      listMusicDiscoverFeed(),
       fetchAlbumBookmarks(),
       fetchArtistBookmarks(),
+      fetchPlaylistBookmarks(),
     ])
     applyDiscoverFeed(feedResponse.data ?? [])
   } catch (error) {
@@ -169,6 +203,18 @@ function applyDiscoverFeed(items: MusicDiscoverItem[]) {
 
   discoverPlaylists.value = items
     .filter((item) => item.type === 'playlist')
+    .map((item) => ({
+      id: item.id,
+      name: item.title,
+      description: item.description || item.summary,
+      cover_url: item.cover_url || item.image_url,
+      song_count: item.song_count,
+      owner_username: item.owner_username,
+      is_public: true,
+      is_favorite: false,
+      play_count: item.play_count,
+      bookmark_count: item.bookmark_count,
+    }))
 }
 
 async function fetchAlbumIndex() {
@@ -176,7 +222,7 @@ async function fetchAlbumIndex() {
   errorMessage.value = ''
   try {
     const [response] = await Promise.all([
-      listRecommendedAlbums(browseMode.value),
+      listMusicAlbums({ page: 1, page_size: 48, sort: 'hot' }),
       fetchAlbumBookmarks(),
     ])
     albumItems.value = response.data
@@ -232,13 +278,16 @@ function artistCardItem(item: MusicRecommendationItem) {
   }
 }
 
-function playlistCardItem(item: MusicDiscoverItem) {
+function playlistCardItem(item: MusicPlaylistSummary) {
   return {
     id: item.id,
-    title: item.title,
-    description: item.description || item.summary,
-    cover_url: item.cover_url || item.image_url,
+    title: item.name,
+    description: item.description,
+    cover_url: item.cover_url,
     song_count: item.song_count,
+    owner_username: item.owner_username,
+    play_count: item.play_count,
+    bookmark_count: item.bookmark_count,
   }
 }
 
@@ -250,8 +299,8 @@ function openDiscoverArtist(artist: MusicRecommendationItem) {
   openArtist(String(artist.id))
 }
 
-function openDiscoverPlaylist(playlist: MusicDiscoverItem) {
-  openPlaylist(String(playlist.id))
+function openDiscoverPlaylist(playlist: MusicPlaylistSummary) {
+  router.push(`/music/playlist/${playlist.id}`)
 }
 
 function openAlbumResult(album: MusicAlbumListItem) {
@@ -281,14 +330,6 @@ watch(searchQuery, () => {
 })
 
 onMounted(() => {
-  if (props.contentMode === 'albums') {
-    fetchAlbumIndex()
-    return
-  }
-  fetchDiscoverFeed()
-})
-
-watch(browseMode, () => {
   if (props.contentMode === 'albums') {
     fetchAlbumIndex()
     return
@@ -363,13 +404,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           </SearchSurface>
         </div>
       </div>
-      <div class="toolbar-right">
-        <PSegmentedControl
-          v-model="browseMode"
-          :options="MUSIC_BROWSE_MODE_OPTIONS"
-          :aria-label="`${pageTitle}排序`"
-        />
-      </div>
     </div>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
@@ -419,8 +453,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
               :key="item.id"
               class="discover-layout__item"
               :playlist="playlistCardItem(item)"
+              :is-bookmarked="starredPlaylistIds.includes(String(item.id))"
               data-testid="discover-playlist-card"
               @click="openDiscoverPlaylist(item)"
+              @toggle-bookmark="handleTogglePlaylistBookmark(String(item.id))"
             />
           </template>
           <template v-else>
@@ -430,6 +466,21 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             >
               <p class="discover-placeholder__eyebrow">Playlist</p>
               <h3 class="discover-placeholder__title">暂无公开歌单</h3>
+              <p class="discover-placeholder__copy">这里会保留歌单高块结构，等公开歌单接入后直接落位。</p>
+            </article>
+            <article
+              class="discover-layout__item discover-layout__playlist-placeholder"
+              data-testid="discover-playlist-placeholder"
+            >
+              <p class="discover-placeholder__eyebrow">Playlist</p>
+              <h3 class="discover-placeholder__title discover-placeholder__title--compact">留给精选歌单</h3>
+            </article>
+            <article
+              class="discover-layout__item discover-layout__playlist-placeholder"
+              data-testid="discover-playlist-placeholder"
+            >
+              <p class="discover-placeholder__eyebrow">Playlist</p>
+              <h3 class="discover-placeholder__title discover-placeholder__title--compact">留给场景歌单</h3>
             </article>
           </template>
         </div>
@@ -475,12 +526,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   align-items: center;
   gap: 1rem;
   flex: 1 1 auto;
-}
-
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
 }
 
 .search-shell {
@@ -662,8 +707,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
 @media (max-width: 720px) {
   .toolbar-row,
-  .toolbar-left,
-  .toolbar-right {
+  .toolbar-left {
     flex-direction: column;
     align-items: stretch;
   }

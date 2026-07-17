@@ -60,40 +60,40 @@ defineEmits(['click'])
   display: block;
   text-decoration: none;
   color: inherit;
-  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-line-soft);
   padding: 0.75rem 1.5rem;
   margin: 0 -1.5rem;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  border-radius: var(--a-radius-none, 0px);
+  transition: all 0.15s ease;
+  border-radius: var(--a-radius-none, 4px);
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  border-left: 4px solid transparent;
+  border-left: 2px solid transparent;
   outline: none;
 }
 .p-entry:last-child {
   border-bottom: none;
 }
 .p-entry:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: var(--a-color-paper-soft);
+  border-left-color: var(--a-color-ink);
 }
 .p-entry.is-open {
   background-color: var(--a-color-paper-soft);
-  box-shadow: inset -4px 0 0 var(--a-color-accent-confirm);
+  border-left-color: var(--a-color-ink);
   border-bottom-color: transparent;
 }
 .p-entry.is-focused {
-  background-color: var(--a-color-paper-wash);
-  border-left-color: var(--a-color-accent-confirm);
+  background-color: var(--a-color-paper-soft);
+  border-left-color: var(--a-color-ink);
 }
 
-/* 2. Read State Weakening */
+/* 2. Read State Weakening (Disabled - items do not turn grey) */
 .p-entry.is-read {
-  opacity: 0.6;
+  opacity: 1;
 }
 .p-entry.is-read .feed-entry-title {
-  color: var(--a-color-muted);
-  font-weight: 500;
+  color: inherit;
 }
 
 /* Underline logic: trigger only on specific element hover */
@@ -102,7 +102,7 @@ defineEmits(['click'])
   width: fit-content;
   font-family: var(--a-font-serif);
   font-size: 1.15rem; /* Slightly smaller for tighter layout */
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.3;
   margin-bottom: 0;
   color: var(--a-color-fg);
@@ -113,7 +113,7 @@ defineEmits(['click'])
 .p-entry.is-open .feed-entry-title {
   color: var(--a-color-ink);
   text-decoration: underline;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 1px;
 }
 
 /* Meta links / source links hover effect */
@@ -157,7 +157,7 @@ defineEmits(['click'])
   padding-left: 2rem;
   background: linear-gradient(to right, transparent, var(--a-color-paper-wash) 40%);
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   z-index: 5;
 }
@@ -165,7 +165,6 @@ defineEmits(['click'])
 .p-entry:hover .feed-entry-actions,
 .p-entry.force-show-actions .feed-entry-actions {
   opacity: 1;
-  pointer-events: auto;
 }
 
 .p-entry.is-open .feed-entry-actions {
@@ -176,12 +175,5 @@ defineEmits(['click'])
 :deep(.p-clip) {
   /* Inherit default styles, but ensure it's above the wash background */
   z-index: 2;
-}
-
-@media (max-width: 767px) {
-  .p-entry {
-    margin: 0;
-    padding: 0.875rem 0;
-  }
 }
 </style>

@@ -6,11 +6,11 @@
       "localStorage": [
         {
           "name": "token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODQzMzc3NDYsInJvbGUiOiJvd25lciIsInVzZXJfaWQiOiIwMTllZDVjOS0yZjhlLTdjZjgtOWJiYS02YzVhNTQzZjY4YjMiLCJ1c2VybmFtZSI6ImFkbWluIn0.i9kBQUUZW5bEzJHfHJbyqh7M1xCYEeeL9Kh6MLjCr0k"
+          "value": "mocked-jwt-token"
         },
         {
           "name": "user",
-          "value": "{\"avatar_url\":\"\",\"display_name\":\"\",\"email\":\"admin@atoman.com\",\"id\":4,\"is_active\":true,\"onboarding_completed_at\":\"2026-06-18T01:22:26.722Z\",\"role\":\"owner\",\"username\":\"admin\",\"uuid\":\"019ed5c9-2f8e-7cf8-9bba-6c5a543f68b3\"}"
+          "value": "{\"uuid\":\"019f3f6c-38ae-7d8e-84db-44841287b73d\",\"username\":\"admin\",\"email\":\"admin@atoman.com\",\"role\":\"admin\",\"onboarding_completed_at\":\"2026-07-08T02:15:36.514Z\"}"
         }
       ]
     }

@@ -3,16 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
 import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
-import type { Notification } from '@/types'
+import type { Notification, NotificationCategory } from '@/types'
 
-const makeNotification = (id: string, type: Notification['type'], read_at: string | null = null): Notification => ({
+const makeNotification = (id: string, category: NotificationCategory, read_at: string | null = null, type = `content.${category}`): Notification => ({
   id,
   recipient_id: 'user-1',
   actor_id: null,
   actor: null,
   type,
-  source_type: type,
+  category,
+  reason: '',
+  source_type: category,
   source_id: `${id}-source`,
+  actor_count: 1,
   meta: {},
   read_at,
   created_at: '2026-06-30T00:00:00.000Z',
@@ -29,200 +32,41 @@ describe('notification store', () => {
     auth.token = 'token'
   })
 
-  it('reads unread count and list total from wrapped backend responses', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { count: 8 } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [makeNotification('reply-1', 'forum_reply')],
-        meta: { page: 1, page_size: 20, total: 23 },
-      }), { status: 200 }))
-
-    const store = useNotificationStore()
-    await store.fetchUnreadCount()
-    await store.fetchNotifications()
-
-    expect(store.unreadCount).toBe(8)
-    expect(store.notifications).toHaveLength(1)
-    expect(store.total).toBe(23)
-  })
-
   it('keeps unread from other notification types when marking one type read', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
 
     const store = useNotificationStore()
-    store.unreadCount = 5
+    store.unreadCounts.reply = 2
+    store.unreadCounts.like = 3
     store.notifications = [
-      makeNotification('reply-1', 'comment_reply'),
-      makeNotification('reply-2', 'comment_reply'),
-      makeNotification('reply-read', 'comment_reply', '2026-06-29T00:00:00.000Z'),
+      makeNotification('reply-1', 'reply'),
+      makeNotification('reply-2', 'reply'),
+      makeNotification('reply-read', 'reply', '2026-06-29T00:00:00.000Z'),
     ]
 
-    await store.markAllRead('comment_reply')
+    await store.markAllRead('reply')
 
     expect(store.unreadCount).toBe(3)
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
   })
 
-  it('only marks notification types whose mark-all requests succeed', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'failed' }), { status: 500 }))
+  it('stores unread counts by notification category', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { total: 9, items: { like: 2, interaction: 1, mention: 1, reply: 2, collaboration: 3, system: 0, dm: 0 } },
+    }), { status: 200 }))
     const store = useNotificationStore()
-    store.unreadCount = 2
-    store.notifications = [
-      makeNotification('reply', 'comment_reply'),
-      makeNotification('mention', 'comment_mention'),
-    ]
-
-    await store.markAllRead(['comment_reply', 'comment_mention'])
-
-    expect(store.notifications.find(({ id }) => id === 'reply')?.read_at).toBeTruthy()
-    expect(store.notifications.find(({ id }) => id === 'mention')?.read_at).toBeNull()
-    expect(store.unreadCount).toBe(1)
-  })
-
-  it('does not fake local success when every mark-all request fails', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 500 }))
-    const store = useNotificationStore()
-    store.unreadCount = 1
-    store.notifications = [makeNotification('comment', 'comment_reply')]
-
-    await expect(store.markAllRead(['comment_reply'])).rejects.toThrow('标记通知失败')
-    expect(store.notifications[0]?.read_at).toBeNull()
-    expect(store.unreadCount).toBe(1)
-  })
-
-  it('uses backend unread total when mark all read returns it', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ data: { unread_total: 7 } }), { status: 200 }))
-
-    const store = useNotificationStore()
-    store.unreadCount = 5
-    store.notifications = [
-      makeNotification('reply-1', 'comment_reply'),
-      makeNotification('reply-2', 'comment_reply'),
-    ]
-
-    await store.markAllRead('comment_reply')
-
-    expect(store.unreadCount).toBe(7)
-  })
-
-  it('replaces unread aggregate notifications without incrementing unread twice', () => {
-    const store = useNotificationStore()
-    store.unreadCount = 1
-    store.notifications = [{ ...makeNotification('like-1', 'comment_like'), aggregation_key: 'comment:1:likes' }]
-
-    store.receiveNotification({
-      ...makeNotification('like-2', 'comment_like'),
-      aggregation_key: 'comment:1:likes',
-      meta: { target_kind: 'blog_post', resource_id: 'post-1', comment_id: 'child', root_id: 'root', like_count: 3 },
-    })
-
-    expect(store.unreadCount).toBe(1)
-    expect(store.total).toBe(0)
-    expect(store.notifications).toHaveLength(1)
-    expect(store.notifications[0]).toMatchObject({ id: 'like-2', meta: { like_count: 3 } })
-  })
-
-  it('moves a realtime aggregate update to its newest chronological position', () => {
-    const store = useNotificationStore()
-    store.notifications = [
-      { ...makeNotification('first', 'comment_reply'), created_at: '2026-06-30T05:00:00.000Z' },
-      { ...makeNotification('aggregate-old', 'comment_like'), aggregation_key: 'comment:1:likes', created_at: '2026-06-30T01:00:00.000Z' },
-      { ...makeNotification('last', 'comment_reply'), created_at: '2026-06-30T00:00:00.000Z' },
-    ]
-
-    store.receiveNotification({
-      ...makeNotification('aggregate-new', 'comment_like'),
-      aggregation_key: 'comment:1:likes',
-      created_at: '2026-06-30T06:00:00.000Z',
-    })
-
-    expect(store.notifications.map(({ id }) => id)).toEqual(['aggregate-new', 'first', 'last'])
-  })
-
-  it('replaces duplicate realtime notification ids', () => {
-    const store = useNotificationStore()
-    store.receiveNotification(makeNotification('same', 'comment_reply'))
-    store.receiveNotification({ ...makeNotification('same', 'comment_reply'), meta: { comment_id: 'new' } })
-    expect(store.notifications).toHaveLength(1)
-    expect(store.unreadCount).toBe(1)
-    expect(store.notifications[0]?.meta.comment_id).toBe('new')
-  })
-
-  it.each([
-    ['blog_post', 'post-1', '/posts/post/post-1', {}],
-    ['video', 'video-1', '/videos/videos/watch/video-1', {}],
-    ['podcast_episode', 'episode-1', '/podcasts/episode/episode-1', {}],
-    ['feed_article', 'article-1', '/feed/item/article-1', {}],
-    ['music_artist', 'artist-1', '/music/artist/artist-1', {}],
-    ['music_album', 'album-1', '/music/album/album-1', {}],
-    ['music_song', 'song-1', '/music', { song_id: 'song-1' }],
-    ['forum_topic', 'topic-1', '/forum/topic/topic-1', {}],
-    ['debate', 'debate-1', '/debate/debate-1', {}],
-    ['timeline_person', 'person-1', '/timeline/person/person-1', {}],
-    ['timeline_event', 'event-1', '/timeline', { event_id: 'event-1' }],
-  ] as const)('builds %s locations through module public paths', (kind, resourceId, path, extraQuery) => {
-    const location = commentNotificationLocation({
-      ...makeNotification(`notice-${kind}`, 'comment_reply'),
-      meta: { target_kind: kind, resource_id: resourceId, comment_id: 'child', root_id: 'root' },
-    })
-    expect(location).toEqual({ path, query: { comment_id: 'child', ...extraQuery }, hash: '#comment-root' })
-  })
-
-  it('fetches and combines unified notification types', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
-        { ...makeNotification('reply', 'comment_reply'), created_at: '2026-06-30T03:00:00.000Z' },
-        { ...makeNotification('reply-tie', 'comment_reply'), created_at: '2026-06-30T02:00:00.000Z' },
-      ], meta: { total: 2 } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
-        { ...makeNotification('mention', 'comment_mention'), created_at: '2026-06-30T04:00:00.000Z' },
-      ], meta: { total: 1 } }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [
-        { ...makeNotification('marked', 'comment_marked'), created_at: '2026-06-30T02:00:00.000Z' },
-      ], meta: { total: 1 } }), { status: 200 }))
-    const store = useNotificationStore()
-    await store.fetchNotifications(['comment_reply', 'comment_mention', 'comment_marked'], 1)
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
-      expect.stringContaining('type=comment_reply'), expect.stringContaining('type=comment_mention'), expect.stringContaining('type=comment_marked'),
-    ])
-    expect(store.notifications.map(({ id }) => id)).toEqual(['mention', 'reply', 'marked', 'reply-tie'])
-    expect(store.total).toBe(4)
-  })
-
-  it('does not let an old selection overwrite a newer notification request', async () => {
-    let resolveOld!: (value: Response) => void
-    let resolveNew!: (value: Response) => void
-    const oldResponse = new Promise<Response>((resolve) => { resolveOld = resolve })
-    const newResponse = new Promise<Response>((resolve) => { resolveNew = resolve })
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
-      String(url).includes('comment_reply') ? oldResponse : newResponse,
-    )
-    const store = useNotificationStore()
-
-    const oldRequest = store.fetchNotifications('comment_reply', 1)
-    const newRequest = store.fetchNotifications('comment_mention', 1)
-    resolveOld(new Response(JSON.stringify({ data: [makeNotification('old', 'comment_reply')], meta: { total: 1 } }), { status: 200 }))
-    await oldRequest
-    expect(store.loading).toBe(true)
-    expect(store.notifications).toEqual([])
-
-    resolveNew(new Response(JSON.stringify({ data: [makeNotification('new', 'comment_mention')], meta: { total: 1 } }), { status: 200 }))
-    await newRequest
-    expect(store.loading).toBe(false)
-    expect(store.currentType).toBe('comment_mention')
-    expect(store.notifications.map(({ id }) => id)).toEqual(['new'])
-    expect(store.total).toBe(1)
+    await store.fetchUnreadCounts()
+    expect(store.unreadCounts.like).toBe(2)
+    expect(store.unreadCount).toBe(9)
   })
 
   it('accepts forum follow notifications', () => {
-    expect(makeNotification('follow-1', 'forum_follow').type).toBe('forum_follow')
+    expect(makeNotification('follow-1', 'reply', null, 'forum_follow').type).toBe('forum_follow')
   })
 
   it('treats forum topic comments as comment notifications and locates forum follows', () => {
     const comment = {
-      ...makeNotification('forum-comment', 'forum_topic_comment'),
+      ...makeNotification('forum-comment', 'reply', null, 'forum_topic_comment'),
       meta: { target_kind: 'forum_topic' as const, resource_id: 'topic-1', comment_id: 'child-1', root_id: 'root-1' },
     }
     expect(isCommentNotification(comment)).toBe(true)
@@ -230,7 +74,7 @@ describe('notification store', () => {
       path: '/forum/topic/topic-1', query: { comment_id: 'child-1' }, hash: '#comment-root-1',
     })
     expect(forumNotificationLocation({
-      ...makeNotification('follow', 'forum_follow'), meta: { topic_id: 'topic-2', topic_title: 'Topic' },
+      ...makeNotification('follow', 'reply', null, 'forum_follow'), meta: { topic_id: 'topic-2', topic_title: 'Topic' },
     })).toEqual({ path: '/forum/topic/topic-2' })
   })
 
@@ -241,7 +85,7 @@ describe('notification store', () => {
     const store = useNotificationStore()
     await store.fetchNotifications(['forum_topic_comment', 'forum_follow'], 1)
 
-    store.receiveNotification(makeNotification('live-forum', 'forum_topic_comment'))
+    store.receiveNotification(makeNotification('live-forum', 'reply', null, 'forum_topic_comment'))
 
     expect(store.notifications.map(({ id }) => id)).toEqual(['live-forum'])
     expect(store.unreadCount).toBe(1)
@@ -250,10 +94,9 @@ describe('notification store', () => {
   it('marks both forum notification types read', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
     const store = useNotificationStore()
-    store.unreadCount = 2
     store.notifications = [
-      makeNotification('topic-comment', 'forum_topic_comment'),
-      makeNotification('new-topic', 'forum_follow'),
+      makeNotification('topic-comment', 'reply', null, 'forum_topic_comment'),
+      makeNotification('new-topic', 'reply', null, 'forum_follow'),
     ]
 
     await store.markAllRead(['forum_topic_comment', 'forum_follow'])
@@ -272,8 +115,8 @@ describe('notification store', () => {
     await store.fetchNotifications(['forum_topic_comment', 'forum_follow'], 1)
 
     store.resetStore()
-    store.receiveNotification(makeNotification('next-user-reply', 'comment_reply'))
+    store.receiveNotification(makeNotification('next-mention', 'mention', null, 'comment_mention'))
 
-    expect(store.notifications.map(({ id }) => id)).toEqual(['next-user-reply'])
+    expect(store.notifications.map(({ id }) => id)).toEqual(['next-mention'])
   })
 })

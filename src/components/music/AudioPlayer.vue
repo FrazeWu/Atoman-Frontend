@@ -1,5 +1,14 @@
 <template>
-  <div v-if="player.currentSong" class="player">
+  <div
+    v-if="player.currentSong"
+    class="player"
+    :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered }"
+    @mouseenter="revealPlayer"
+    @mouseleave="scheduleAutoHide"
+    @focusin="revealPlayer"
+    @focusout="scheduleAutoHide"
+  >
+    <div v-if="!effectivePinned" class="player-reveal-handle" aria-hidden="true" />
     <div ref="playerInnerRef" class="player-inner" :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }">
       <!-- Left: Identity -->
       <div
@@ -44,7 +53,7 @@
           <span class="skip-btn" @click="player.skip(5)">+5S</span>
           
           <button
-            v-if="player.currentSong"
+            v-if="player.currentSong && !isPodcast"
             type="button"
             class="player-fav-btn"
             :class="{ 'is-active': favoriteSongIds.has(String(player.currentSong.id)) }"
@@ -54,19 +63,7 @@
             <Heart :size="16" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" />
           </button>
 
-          <button
-            v-if="canDiscussCurrentSong"
-            type="button"
-            class="player-discussion-btn"
-            data-test="player-song-discussion"
-            title="讨论"
-            aria-label="讨论"
-            @click="openSongDiscussion"
-          >
-            <MessageSquare :size="16" />
-          </button>
-
-          <PDropdown v-if="player.currentSong" class="player-add-dropdown" position="right">
+          <PDropdown v-if="player.currentSong && !isPodcast" class="player-add-dropdown" position="right">
             <template #trigger>
               <button class="player-add-btn" type="button" title="添加到歌单">
                 <Plus :size="16" />
@@ -74,9 +71,9 @@
             </template>
             <div class="track-add-menu">
               <div class="track-add-menu-header">添加到歌单</div>
-              <div v-if="!regularPlaylistOptions.length" class="track-add-menu-empty">暂无歌单</div>
+              <div v-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
               <button
-                v-for="p in regularPlaylistOptions"
+                v-for="p in playlists"
                 :key="p.id"
                 type="button"
                 class="track-add-menu-item"
@@ -86,6 +83,26 @@
               </button>
             </div>
           </PDropdown>
+
+          <button
+            v-if="isPodcastEpisode"
+            type="button"
+            class="player-fav-btn"
+            title="收藏单集"
+            @click="addPodcastBookmark"
+          >
+            <Heart :size="16" />
+          </button>
+
+          <button
+            v-if="isPodcastEpisode"
+            type="button"
+            class="player-add-btn"
+            title="稍后听"
+            @click="addPodcastListenLater"
+          >
+            <Clock :size="16" />
+          </button>
         </div>
         <div class="progress-container">
           <span class="time-stamp">{{ formatTime(player.currentTime) }}</span>
@@ -108,7 +125,7 @@
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
-        <div class="feature-link" @click="player.toggleLyrics">词</div>
+        <div class="feature-link" @click="player.toggleLyrics">{{ featureLabel }}</div>
         
         <div class="feature-toggle" @click="player.cyclePlaybackMode()">
           <div v-if="player.playbackMode === 'single'" class="repeat-one-wrapper">
@@ -152,6 +169,16 @@
           <List :size="22" />
           <span class="queue-count">{{ player.queue.length || 0 }}</span>
         </button>
+        <button
+          class="player-pin-btn"
+          type="button"
+          :aria-label="player.isPinned ? '取消固定播放器' : '固定播放器'"
+          :title="player.isPinned ? '取消固定播放器' : '固定播放器'"
+          @click="togglePlayerPin"
+        >
+          <PinOff v-if="player.isPinned" :size="20" aria-hidden="true" />
+          <Pin v-else :size="20" aria-hidden="true" />
+        </button>
       </div>
     </div>
   </div>
@@ -159,9 +186,10 @@
   <Transition name="slide-up">
     <MusicLyricsPanel
       v-if="player.showLyrics && player.currentSong"
+      :song-id="String(player.currentSong.id)"
       :song-title="player.currentSong.title"
       :artist-text="artistText"
-      :lyrics="player.currentSong.lyrics"
+      :current-time-seconds="player.currentTime"
       @close="player.toggleLyrics"
     />
   </Transition>
@@ -197,6 +225,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { usePlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
 import { 
   Repeat, 
   Shuffle, 
@@ -207,31 +237,69 @@ import {
   VolumeX,
   Heart,
   Plus,
-  MessageSquare,
+  Clock,
+  Pin,
+  PinOff,
 } from 'lucide-vue-next'
+import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
-import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
-import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
   listMusicPlaylists,
-  addMusicPlaylistSong,
-  removeMusicPlaylistSong,
-  getMusicPlaylist,
-  type MusicPlaylistSummary,
 } from '@/api/musicV1'
-import { findFavoritePlaylist, regularPlaylists } from '@/utils/musicPlaylists'
 
 const player = usePlayerStore()
-const { openNestedAction } = useMusicDrawers()
+const authStore = useAuthStore()
+const api = useApi()
 const playerInnerRef = ref<HTMLElement | null>(null)
 const playerInfoRef = ref<HTMLElement | null>(null)
 const playerMetaRef = ref<HTMLElement | null>(null)
 const playerControlsRef = ref<HTMLElement | null>(null)
 const isMetaCollapsed = ref(false)
+const isMobileViewport = ref(false)
+const playerHovered = ref(true)
+const effectivePinned = computed(() => player.isPinned || isMobileViewport.value)
 
 let resizeObserver: ResizeObserver | null = null
+let viewportQuery: MediaQueryList | null = null
+let hideTimer: number | null = null
 const META_COLLAPSE_GAP = 12
+
+const clearHideTimer = () => {
+  if (hideTimer === null) return
+  window.clearTimeout(hideTimer)
+  hideTimer = null
+}
+
+const revealPlayer = () => {
+  clearHideTimer()
+  playerHovered.value = true
+}
+
+const scheduleAutoHide = () => {
+  if (effectivePinned.value) return
+  clearHideTimer()
+  hideTimer = window.setTimeout(() => {
+    playerHovered.value = false
+    hideTimer = null
+  }, 500)
+}
+
+const togglePlayerPin = () => {
+  player.togglePinned()
+  playerHovered.value = player.isPinned
+  clearHideTimer()
+}
+
+const syncViewport = () => {
+  isMobileViewport.value = viewportQuery?.matches ?? false
+}
+
+watch(effectivePinned, (pinned) => {
+  document.documentElement.dataset.playerActive = 'true'
+  document.documentElement.dataset.playerPinned = String(pinned)
+}, { immediate: true })
 
 const progressPct = computed(() => {
   if (!player.duration) return 0
@@ -251,14 +319,14 @@ const coverFallback = computed(() => {
   const firstChar = text.trim().charAt(0)
   return firstChar || 'P'
 })
-const canDiscussCurrentSong = computed(() => (
-  Boolean(player.currentSong) && player.currentSong?.media_kind !== 'feed_item'
-))
 
-function openSongDiscussion() {
-  if (!player.currentSong) return
-  openNestedAction('discussion', { songId: String(player.currentSong.id) })
-}
+const isPodcast = computed(() =>
+  player.currentSong?.source_type === 'podcast_episode'
+  || player.currentSong?.source_type === 'feed_podcast'
+)
+
+const isPodcastEpisode = computed(() => player.currentSong?.source_type === 'podcast_episode')
+const featureLabel = computed(() => isPodcast.value ? '说明' : '词')
 
 const updateMetaCollapse = () => {
   const playerInner = playerInnerRef.value
@@ -266,12 +334,16 @@ const updateMetaCollapse = () => {
   isMetaCollapsed.value = playerInner.getBoundingClientRect().width <= 760
 }
 
-const playlists = ref<MusicPlaylistSummary[]>([])
-const regularPlaylistOptions = computed(() => regularPlaylists(playlists.value))
+const playlists = ref<any[]>([])
 const playlistsLoaded = ref(false)
-const favoriteSongIds = ref<Set<string>>(new Set())
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const {
+  favoriteSongIds,
+  loadFavoriteSongs,
+  toggleFavoriteSong,
+  addSongToPlaylist,
+} = useMusicFavoritePlaylist()
 
 async function loadPlaylists() {
   try {
@@ -290,16 +362,7 @@ async function loadPlaylists() {
 
 async function loadFavorites() {
   try {
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = findFavoritePlaylist(list)
-    if (fav) {
-      const favPlaylistDetail = await getMusicPlaylist(String(fav.id))
-      const ids = (favPlaylistDetail.songs || []).map((s) => String(s.id))
-      favoriteSongIds.value = new Set(ids)
-    } else {
-      favoriteSongIds.value = new Set()
-    }
+    await loadFavoriteSongs()
   } catch (err) {
     console.error('Failed to load favorites in AudioPlayer:', err)
   }
@@ -307,26 +370,10 @@ async function loadFavorites() {
 
 async function toggleTrackFavorite(songId: string) {
   try {
-    const res = await listMusicPlaylists()
-    const list = res.data || []
-    const fav = findFavoritePlaylist(list)
-    if (!fav) {
-      toastMessage.value = '最爱歌单加载失败'
-      toastVisible.value = true
-      return
-    }
-    const playlistId = String(fav.id)
-    const isFav = favoriteSongIds.value.has(songId)
-    if (isFav) {
-      await removeMusicPlaylistSong(playlistId, songId)
-      favoriteSongIds.value.delete(songId)
-      toastMessage.value = '已从最爱中移除'
-    } else {
-      await addMusicPlaylistSong(playlistId, songId)
-      favoriteSongIds.value.add(songId)
-      toastMessage.value = '已添加到最爱'
-    }
+    const result = await toggleFavoriteSong(songId)
+    toastMessage.value = result.message
     toastVisible.value = true
+    await loadPlaylists()
   } catch (err) {
     console.error('Failed to toggle favorite:', err)
     toastMessage.value = '操作失败'
@@ -334,9 +381,63 @@ async function toggleTrackFavorite(songId: string) {
   }
 }
 
+async function addPodcastBookmark() {
+  const episodeId = player.currentSong?.source_id
+  if (!episodeId) return
+  if (!authStore.token) {
+    toastMessage.value = '请先登录'
+    toastVisible.value = true
+    return
+  }
+  try {
+    const res = await fetch(api.podcast.bookmarks, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({ episode_id: episodeId }),
+    })
+    if (!res.ok) throw new Error('bookmark failed')
+    toastMessage.value = '已收藏'
+    toastVisible.value = true
+  } catch (err) {
+    console.error('Failed to bookmark podcast episode:', err)
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  }
+}
+
+async function addPodcastListenLater() {
+  const episodeId = player.currentSong?.source_id
+  if (!episodeId) return
+  if (!authStore.token) {
+    toastMessage.value = '请先登录'
+    toastVisible.value = true
+    return
+  }
+  try {
+    const res = await fetch(api.podcast.listenLater, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authStore.token}`,
+      },
+      body: JSON.stringify({ episode_id: episodeId }),
+    })
+    if (!res.ok) throw new Error('listen later failed')
+    toastMessage.value = '已加入稍后听'
+    toastVisible.value = true
+  } catch (err) {
+    console.error('Failed to add podcast listen later:', err)
+    toastMessage.value = '操作失败'
+    toastVisible.value = true
+  }
+}
+
 async function addTrackToPlaylist(playlistId: string, songId: string) {
   try {
-    await addMusicPlaylistSong(playlistId, songId)
+    await addSongToPlaylist(playlistId, songId)
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
   } catch (err) {
@@ -349,6 +450,7 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 watch(
   () => player.currentSong?.id,
   async (newId) => {
+    if (isPodcast.value) return
     if (newId) {
       if (!playlistsLoaded.value) {
         await loadPlaylists()
@@ -386,6 +488,10 @@ watch(
 )
 
 onMounted(() => {
+  viewportQuery = window.matchMedia?.('(max-width: 767px)') ?? null
+  syncViewport()
+  viewportQuery?.addEventListener('change', syncViewport)
+
   resizeObserver = new ResizeObserver(() => {
     updateMetaCollapse()
   })
@@ -400,6 +506,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  clearHideTimer()
+  viewportQuery?.removeEventListener('change', syncViewport)
+  delete document.documentElement.dataset.playerActive
+  delete document.documentElement.dataset.playerPinned
   resizeObserver?.disconnect()
   resizeObserver = null
 })
@@ -408,13 +518,28 @@ onBeforeUnmount(() => {
 <style scoped>
 .player {
   position: fixed;
-  bottom: 0;
+  bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height));
   width: 100%;
-  z-index: 2001;
+  z-index: var(--a-z-player, 720);
   background: var(--a-color-paper);
   border-top: 1px solid var(--a-color-line-soft);
-  height: 84px; /* Slightly taller for more air */
-  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+  height: var(--a-player-height);
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.player.is-auto-hidden {
+  transform: translateY(calc(100% - 10px));
+}
+
+.player-reveal-handle {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 40px;
+  height: 3px;
+  transform: translateX(-50%);
+  background: var(--a-color-muted-soft);
+  pointer-events: none;
 }
 
 .player-inner {
@@ -816,6 +941,30 @@ onBeforeUnmount(() => {
   background: transparent;
   border: none;
 }
+
+.player-pin-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+  cursor: pointer;
+}
+
+.player-pin-btn:hover,
+.player-pin-btn:focus-visible {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player {
+    transition-duration: 0.01ms;
+  }
+}
 .queue-trigger:hover { 
   color: var(--a-color-ink);
   background: var(--a-color-tape);
@@ -868,21 +1017,41 @@ onBeforeUnmount(() => {
   .volume-container { display: none; }
 }
 
+.lyrics-panel {
+  position: fixed; top: var(--a-topbar-height); bottom: var(--a-content-bottom-offset); left: 0; right: 0;
+  width: 100%;
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset)); background: var(--a-color-paper);
+  border-top: 1px solid var(--a-color-line-soft);
+  z-index: var(--a-z-player-lyrics); padding: 3rem;
+  display: flex; flex-direction: column;
+}
+.lyrics-header {
+  display: flex; justify-content: flex-end; margin-bottom: 2rem;
+}
 .close-btn {
   font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 10px;
   letter-spacing: 0.1em; cursor: pointer; border-bottom: 1px solid var(--a-color-line);
+}
+.lyrics-content {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
 }
 .placeholder-text {
   font-family: inherit; font-size: 2rem; font-weight: var(--a-font-weight-black, 900);
   margin-bottom: 1rem; color: var(--a-color-fg);
 }
+.song-meta {
+  font-family: inherit; font-weight: var(--a-font-weight-strong, 700); font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--a-color-muted);
+}
+
 .queue-panel {
-  position: fixed; top: 56px; bottom: 84px; right: 0;
+  position: fixed; top: var(--a-topbar-height); bottom: var(--a-content-bottom-offset); right: 0;
   width: 420px;
-  height: calc(100vh - 84px - 56px); background: var(--a-color-paper);
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset)); background: var(--a-color-paper);
   border-left: 1px solid var(--a-color-line-soft);
   border-top: 1px solid var(--a-color-line-soft);
-  z-index: 2000; padding: 2rem 3rem;
+  z-index: var(--a-z-player-queue); padding: 2rem 3rem;
   display: flex; flex-direction: column;
 }
 .queue-header {
@@ -916,8 +1085,7 @@ onBeforeUnmount(() => {
 .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); }
 
 /* Player Center Favorite & Add button styles */
-.player-fav-btn,
-.player-discussion-btn {
+.player-fav-btn {
   background: transparent;
   border: 0;
   color: var(--a-color-ink-soft);
@@ -933,8 +1101,7 @@ onBeforeUnmount(() => {
 .player-fav-btn.is-active {
   color: #e05e5e !important;
 }
-.player-fav-btn:hover,
-.player-discussion-btn:hover {
+.player-fav-btn:hover {
   background-color: var(--a-color-paper-wash);
 }
 .player-add-dropdown {
@@ -1007,18 +1174,35 @@ onBeforeUnmount(() => {
 
 @media (max-width: 767px) {
   .player {
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    height: 72px;
+    height: var(--a-mobile-player-height);
+    transform: none !important;
+  }
+
+  .player-reveal-handle,
+  .player-pin-btn,
+  .feature-link,
+  .feature-toggle,
+  .volume-container,
+  .progress-container,
+  .skip-btn,
+  .nav-btn,
+  .player-fav-btn,
+  .player-add-dropdown,
+  .player-add-btn {
+    display: none;
   }
 
   .player-inner {
     gap: 0.75rem;
-    padding: 0 1rem;
+    padding: 0 0.75rem;
   }
 
-  .player-info {
+  .player-info,
+  .player-info--collapsed {
     flex: 1 1 auto;
-    max-width: calc(100% - 7rem);
+    width: auto;
+    max-width: none;
+    gap: 0.75rem;
   }
 
   .cover-wrap {
@@ -1026,31 +1210,36 @@ onBeforeUnmount(() => {
     height: 44px;
   }
 
-  .player-controls-hub {
-    position: static;
-    width: auto;
+  .player-meta,
+  .player-meta--collapsed {
+    display: block;
     min-width: 0;
-    margin-left: auto;
-    transform: none;
+    opacity: 1;
   }
 
-  .progress-container,
-  .skip-btn,
-  .player-features {
-    display: none;
+  .player-controls-hub {
+    width: auto;
+    min-width: 0;
   }
 
   .ctrl-row {
-    gap: 8px;
+    gap: 0;
+  }
+
+  .main-play-btn,
+  .queue-trigger {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-features {
+    margin-left: 0;
+    gap: 0;
   }
 
   .queue-panel {
-    right: 0;
-    bottom: calc(136px + env(safe-area-inset-bottom, 0px));
-    left: 0;
     width: 100%;
-    height: auto;
-    padding: 1.5rem;
+    padding: 1.25rem 1rem;
   }
 }
 </style>

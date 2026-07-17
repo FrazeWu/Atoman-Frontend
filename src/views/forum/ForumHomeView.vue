@@ -1,14 +1,29 @@
 <template>
   <div class="forum-page">
-    <!-- ── Main content ──────────────────────────────────────────────────── -->
     <main class="forum-main">
-      <PPageHeader title="论坛" accent sub="坐下来发帖、回复、搜索和闲谈。" mb="1.5rem" />
+      <PPageHeader title="论坛" accent sub="浏览话题，参与讨论" mb="1.5rem">
+        <template #action>
+          <div class="forum-header-actions">
+            <PButton
+              v-if="authStore.isAuthenticated && canCreateTopic"
+              @click="router.push('/forum/new')"
+            >
+              发新话题
+            </PButton>
+            <PButton
+              v-if="authStore.isAuthenticated && canRequestCategory"
+              outline
+              @click="catReqModalOpen = true"
+            >
+              申请分类
+            </PButton>
+          </div>
+        </template>
+      </PPageHeader>
 
       <ForumTopicFilters
         :active-tab="activeTab"
         :tab-options="tabOptions"
-        :can-create-topic="authStore.isAuthenticated && canCreateTopic"
-        :can-request-category="authStore.isAuthenticated && canRequestCategory"
         :selected-category-value="selectedCategoryValue"
         :category-options="categoryOptions"
         :active-tag="activeTag"
@@ -16,8 +31,6 @@
         :active-follow-target="activeFollowTarget"
         :following="activeFollowTarget ? forumStore.isFollowing(activeFollowTarget.targetType, activeFollowTarget.targetKey) : false"
         @update:active-tab="setTab($event as TabKey)"
-        @create-topic="router.push('/forum/new')"
-        @request-category="catReqModalOpen = true"
         @update:selected-category-value="selectedCategoryValue = String($event)"
         @clear-tag="clearTag"
         @update:search-query="searchQuery = $event"
@@ -69,18 +82,17 @@
             {{ topic.title }}
           </template>
 
-          <!-- Participant avatars & reply/view stats -->
           <template #actions>
-            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+            <div class="topic-entry-actions">
               <div class="tr-avatars">
                 <div class="tr-avatar tr-avatar-op" :title="topic.user?.display_name || topic.user?.username">
                   {{ avatarInitial(topic.user?.display_name || topic.user?.username) }}
                 </div>
               </div>
-              <span style="font-size:0.72rem;color:var(--a-color-muted);font-weight:700">
+              <span class="topic-entry-stat">
                 回复 {{ topic.reply_count }} · 浏览 {{ formatCount(topic.view_count) }}
               </span>
-              <span v-if="topic.last_reply_at" style="font-size:0.72rem;color:var(--a-color-muted-soft)">
+              <span v-if="topic.last_reply_at" class="topic-entry-last">
                 最后回复: {{ formatTime(topic.last_reply_at) }}
               </span>
             </div>
@@ -97,13 +109,13 @@
 
   <!-- Category Request Modal -->
   <PModal v-if="catReqModalOpen" @close="catReqModalOpen = false" size="md">
-    <h3 class="a-subtitle" style="margin-bottom:1.25rem">申请新分类</h3>
-    <div style="display:flex;flex-direction:column;gap:1rem">
+    <h3 class="a-subtitle forum-modal-title">申请新分类</h3>
+    <div class="forum-modal-fields">
       <PInput v-model="catReqForm.name" label="分类名称 *" placeholder="分类名称" />
       <PTextarea v-model="catReqForm.description" label="描述" :rows="3" placeholder="分类用途说明" />
       <PTextarea v-model="catReqForm.reason" label="申请理由 *" :rows="4" placeholder="说明为什么需要此分区" />
     </div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+    <div class="forum-modal-actions">
       <PButton outline @click="catReqModalOpen = false">取消</PButton>
       <PButton @click="submitCategoryRequest">提交申请</PButton>
     </div>
@@ -120,7 +132,6 @@ import ForumTopicFilters from '@/components/forum/ForumTopicFilters.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -174,7 +185,6 @@ const { focusedIndex } = useKeyboardList({
 })
 const searchQuery = ref('')
 const topicListRef = ref<HTMLElement | null>(null)
-const searchInputRef = ref<HTMLInputElement | null>(null)
 const ALL_CATEGORY_VALUE = '__all__'
 
 const tabOptions: Record<TabKey, string> = {
@@ -186,20 +196,6 @@ const sortMap: Record<TabKey, 'latest' | 'top'> = {
   latest: 'latest',
   top: 'top',
 }
-
-// Popular tags — derived from loaded topics
-const popularTags = computed(() => {
-  const tagCount: Record<string, number> = {}
-  forumStore.topics.forEach((t) => {
-    ;(t.tags || []).forEach((tag) => {
-      tagCount[tag] = (tagCount[tag] || 0) + 1
-    })
-  })
-  return Object.entries(tagCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12)
-    .map(([tag]) => tag)
-})
 
 const categoryOptions = computed(() => [
   { label: '全部分类', value: ALL_CATEGORY_VALUE },
@@ -227,20 +223,6 @@ const formatTime = (iso: string) => {
   const days = Math.floor(hours / 24)
   if (days < 30) return `${days} 天前`
   return d.toLocaleDateString('zh-CN')
-}
-
-const formatTimeShort = (iso: string) => {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const now = Date.now()
-  const diff = now - d.getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins}分`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}时`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}天`
-  return d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
 }
 
 const formatCount = (n: number) => {
@@ -422,13 +404,6 @@ const doSearch = () => {
   }
 }
 
-const onSearchInput = () => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    if (searchQuery.value.trim().length >= 2) doSearch()
-  }, 500)
-}
-
 const clearSearch = () => {
   searchQuery.value = ''
   if (searchTimer) clearTimeout(searchTimer)
@@ -444,7 +419,7 @@ const handleKeydown = (e: KeyboardEvent) => {
     if (authStore.isAuthenticated) router.push('/forum/new')
   } else if (e.key === '/') {
     e.preventDefault()
-    searchInputRef.value?.focus()
+    document.querySelector<HTMLInputElement>('.forum-topic-filters input')?.focus()
   }
 }
 
@@ -524,8 +499,8 @@ const submitCategoryRequest = async () => {
 
 .sidebar-section-label {
   font-size: 0.6rem;
-  font-weight: 900;
-  letter-spacing: 0.15em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--a-color-muted-soft);
   padding: 0.25rem 1.25rem 0.5rem;
@@ -542,7 +517,7 @@ const submitCategoryRequest = async () => {
   gap: 0.6rem;
   padding: 0.55rem 1.25rem;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   color: var(--a-color-muted);
   transition: background 0.12s;
@@ -585,7 +560,7 @@ const submitCategoryRequest = async () => {
 
 .sidebar-item-count {
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-muted-soft);
   background: var(--a-color-disabled-bg);
   padding: 0.1rem 0.4rem;
@@ -632,9 +607,9 @@ const submitCategoryRequest = async () => {
   padding: 0.75rem 1.25rem;
   border-top: 1px solid var(--a-color-disabled-border);
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   color: var(--a-color-muted-soft);
   line-height: 2.2;
 }
@@ -644,7 +619,7 @@ kbd {
   padding: 0.05em 0.3em;
   border: 1.5px solid var(--a-color-disabled-border);
   font-size: 0.6rem;
-  font-weight: 900;
+  font-weight: 500;
   font-family: monospace;
   background: var(--a-color-surface);
   color: var(--a-color-muted);
@@ -728,7 +703,7 @@ kbd {
   min-height: 2.5rem;
   font-size: 0.8rem;
   font-weight: var(--a-font-weight-black);
-  letter-spacing: var(--a-letter-spacing-wide);
+  letter-spacing: 0;
 }
 
 /* Active tag chip */
@@ -897,7 +872,7 @@ kbd {
 
 .tr-title {
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0 0 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -922,7 +897,7 @@ kbd {
 }
 
 .tr-author {
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -931,11 +906,11 @@ kbd {
 }
 
 .tr-bookmarked {
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-fg);
   font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 
 /* Right side */
@@ -961,7 +936,7 @@ kbd {
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -980,12 +955,12 @@ kbd {
   width: 60px;
   text-align: right;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
 .tr-stat-val {
-  font-weight: 900;
+  font-weight: 500;
   color: var(--a-color-muted);
 }
 
@@ -999,6 +974,41 @@ kbd {
 .load-more-wrap {
   padding: 1.5rem;
   text-align: center;
+}
+
+.forum-header-actions,
+.topic-entry-actions,
+.forum-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.topic-entry-stat {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--a-color-muted);
+}
+
+.topic-entry-last {
+  font-size: 0.72rem;
+  color: var(--a-color-muted-soft);
+}
+
+.forum-modal-title {
+  margin-bottom: 1.25rem;
+}
+
+.forum-modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.forum-modal-actions {
+  justify-content: flex-end;
+  margin-top: 1.5rem;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */

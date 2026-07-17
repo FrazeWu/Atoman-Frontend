@@ -1,111 +1,236 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { mount, flushPromises } from '@vue/test-utils'
+import { computed, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createTestingPinia } from '@pinia/testing'
+import { ApiErrorResponseError } from '@/api/client'
 import ArtistsView from '@/views/music/ArtistsView.vue'
 
+vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<div data-testid="artist-drawer-stub" />' } }))
+vi.mock('@/components/music/AlbumDrawer.vue', () => ({ default: { template: '<div data-testid="album-drawer-stub" />' } }))
+vi.mock('@/components/music/NestedActionDrawer.vue', () => ({ default: { template: '<div data-testid="nested-action-drawer-stub" />' } }))
+vi.mock('@/components/music/MusicEntityEditorDrawer.vue', () => ({ default: { template: '<div data-testid="music-entity-editor-drawer-stub" />' } }))
+vi.mock('@/components/music/MusicCreationFlowDrawer.vue', () => ({ default: { template: '<div data-testid="music-creation-flow-drawer-stub" />' } }))
+vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
+  default: { props: ['options'], template: '<div><button v-for="o in options" :key="o.value">{{ o.label }}</button></div>' },
+}))
+
 const mocks = vi.hoisted(() => ({
-  listRecommendedArtists: vi.fn(),
   listMusicArtists: vi.fn(),
-  getMusicArtist: vi.fn(),
+  listRecommendedArtists: vi.fn(),
   listArtistBookmarks: vi.fn(),
+  getMusicArtist: vi.fn(),
+  openAlbum: vi.fn(),
+  openArtist: vi.fn(),
+  openNestedAction: vi.fn(),
+  openMusicEditor: vi.fn(),
+  openMusicCreationFlow: vi.fn(),
+  drawerStateValue: {
+    artistId: null as string | null,
+    albumId: null as string | null,
+    nestedAction: null as string | null,
+    nestedPayload: null as unknown,
+    musicEditor: null as unknown,
+    creationFlow: null as unknown,
+  },
+  routeQuery: {} as Record<string, string>,
 }))
 
 vi.mock('@/api/musicV1', () => ({
-  listRecommendedArtists: mocks.listRecommendedArtists,
   listMusicArtists: mocks.listMusicArtists,
+  listRecommendedArtists: mocks.listRecommendedArtists,
   getMusicArtist: mocks.getMusicArtist,
   listArtistBookmarks: mocks.listArtistBookmarks,
-  createArtistBookmark: vi.fn(),
-  deleteArtistBookmark: vi.fn(),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
-  useMusicDrawers: () => ({ openArtist: vi.fn(), isMainShifted: { value: false }, openMusicCreationFlow: vi.fn() }),
+  useMusicDrawers: () => ({
+    state: ref(mocks.drawerStateValue),
+    isMainShifted: computed(() => false),
+    openAlbum: mocks.openAlbum,
+    openArtist: mocks.openArtist,
+    openNestedAction: mocks.openNestedAction,
+    openMusicEditor: mocks.openMusicEditor,
+    openMusicCreationFlow: mocks.openMusicCreationFlow,
+    closeMusicCreationFlow: vi.fn(),
+    setMusicCreationStep: vi.fn(),
+    isCreationFlowOpen: computed(() => false),
+    closeAlbum: vi.fn(),
+    closeArtist: vi.fn(),
+    closeMusicEditor: vi.fn(),
+  }),
 }))
 
-async function mountArtistsView(stubs: Record<string, unknown> = {}) {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: '/', component: { template: '<div />' } }],
-  })
-  await router.push('/')
-  await router.isReady()
-
-  return mount(ArtistsView, {
-    global: {
-      plugins: [router],
-      stubs: {
-        ArtistDrawer: true,
-        AlbumDrawer: true,
-        MusicCreationFlowDrawer: true,
-        NestedActionDrawer: true,
-        ...stubs,
-      },
-    },
-  })
-}
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    query: mocks.routeQuery,
+  }),
+}))
 
 describe('Music ArtistsView.vue', () => {
   beforeEach(() => {
-    mocks.listRecommendedArtists.mockReset()
+    vi.useFakeTimers()
     mocks.listMusicArtists.mockReset()
-    mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
+    mocks.listRecommendedArtists.mockReset()
+    mocks.listArtistBookmarks.mockReset()
+    mocks.getMusicArtist.mockReset()
+    mocks.openAlbum.mockReset()
+    mocks.openArtist.mockReset()
+    mocks.openNestedAction.mockReset()
+    mocks.openMusicEditor.mockReset()
+    mocks.openMusicCreationFlow.mockReset()
+    mocks.drawerStateValue = {
+      artistId: null,
+      albumId: null,
+      nestedAction: null,
+      nestedPayload: null,
+      musicEditor: null,
+      creationFlow: null,
+    }
+    mocks.routeQuery = {}
     mocks.listRecommendedArtists.mockResolvedValue({
-      data: [{ id: 'artist-1', title: 'Artist One', target_path: '/music/artist/artist-1' }],
+      data: [
+        {
+          id: 'artist-1',
+          target_path: '/music?artist=artist-1',
+        },
+      ],
     })
-    mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Artist One' })
+    mocks.getMusicArtist.mockResolvedValue({
+      id: 'artist-1',
+      name: 'Hot Artist',
+      nationality: 'UK',
+      bio: 'Artist bio',
+    })
+    mocks.listMusicArtists.mockResolvedValue({
+      data: [
+        {
+          id: 'artist-1',
+          name: 'Hot Artist',
+          nationality: 'UK',
+          bio: 'Artist bio',
+        },
+      ],
+      meta: { page: 1, page_size: 48, total: 1, has_more: false },
+    })
+    mocks.listArtistBookmarks.mockResolvedValue({ data: [] })
   })
 
-  it('renders the current artist filters and recommendation modes', async () => {
-    const wrapper = await mountArtistsView({
-      PPageHeader: { props: ['title'], template: '<div><h1>{{ title }}</h1><slot name="action" /></div>' },
-      PSegmentedControl: { props: ['options'], template: '<div><span v-for="o in options" :key="o.value">{{ o.label }}</span></div>' },
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('loads artists by default and renders an artist grid', async () => {
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(ArtistsView, {
+      global: {
+        plugins: [pinia],
+      },
     })
     await flushPromises()
 
     expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('hot')
-    expect(wrapper.text()).toContain('热度')
-    expect(wrapper.text()).toContain('精选')
-    expect(wrapper.text()).toContain('探索')
-    expect(wrapper.text()).toContain('全部')
-    expect(wrapper.text()).toContain('已订阅')
+    expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')
+    expect(wrapper.find('h1').text()).toContain('艺术家')
+    expect(wrapper.find('.search-input').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
-    expect(wrapper.get('.paper-action').text()).toContain('添加艺术家')
+    expect(wrapper.text()).toContain('Hot Artist')
   })
 
-  it('searches within artists', async () => {
-    mocks.listMusicArtists.mockResolvedValue({ data: [], meta: { page: 1, page_size: 48, total: 0, has_more: false } })
-    const wrapper = await mountArtistsView()
+  it('opens artist drawers from artist cards', async () => {
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(ArtistsView, {
+      global: {
+        plugins: [pinia],
+      },
+    })
     await flushPromises()
 
-    await wrapper.get('input[placeholder="搜索艺术家..."]').setValue('demo')
-    await flushPromises()
-    expect(mocks.listMusicArtists).toHaveBeenLastCalledWith({ q: 'demo', page: 1, page_size: 48 })
+    await wrapper.find('[data-testid="artist-card"]').trigger('click')
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
   })
 
-  it('uses the current loading skeleton and empty state', async () => {
-    mocks.listRecommendedArtists.mockReturnValue(new Promise(() => {}))
-    const loadingWrapper = await mountArtistsView()
-    await loadingWrapper.vm.$nextTick()
+  it('shows search results in dropdown and opens artist from there', async () => {
+    mocks.listRecommendedArtists.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'artist-1',
+          target_path: '/music?artist=artist-1',
+        },
+      ],
+    })
+    mocks.getMusicArtist.mockResolvedValueOnce({
+      id: 'artist-1',
+      name: 'Default Artist',
+      nationality: 'UK',
+      bio: 'Default bio',
+    })
+    mocks.listMusicArtists.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'artist-2',
+          name: 'Ye',
+          legal_name: 'Kanye',
+          bio: 'Search bio',
+        },
+      ],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    })
 
-    expect(loadingWrapper.get('.state-line').text()).toBe('正在加载艺术家...')
-
-    loadingWrapper.unmount()
-    mocks.listRecommendedArtists.mockResolvedValue({ data: [] })
-    const emptyWrapper = await mountArtistsView()
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(ArtistsView, {
+      global: {
+        plugins: [pinia],
+      },
+    })
     await flushPromises()
 
-    expect(emptyWrapper.find('.empty-state').exists()).toBe(true)
-    expect(emptyWrapper.text()).toContain('没有匹配的艺术家')
+    const input = wrapper.find('input[placeholder="搜索艺术家..."]')
+    await input.trigger('focus')
+    await input.setValue('kanye')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="music-search-dropdown"]').exists()).toBe(true)
+    expect(mocks.listMusicArtists).toHaveBeenCalledWith({ q: 'kanye', page: 1, page_size: 20 })
+    expect(wrapper.findAll('[data-testid="artist-card"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Hot Artist')
+    expect(wrapper.text()).toContain('Ye')
+
+    await wrapper.find('[data-testid="music-search-result"]').trigger('mousedown')
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-2')
   })
 
-  it('shows the artist loading error', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    mocks.listRecommendedArtists.mockRejectedValueOnce(new Error('network'))
-    const wrapper = await mountArtistsView()
+  it('offers wiki edit actions when no artists match', async () => {
+    mocks.listRecommendedArtists.mockResolvedValueOnce({
+      data: [],
+    })
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(ArtistsView, {
+      global: {
+        plugins: [pinia],
+      },
+    })
     await flushPromises()
 
-    expect(wrapper.get('.state-line--error').text()).toBe('艺术家列表加载失败')
-    consoleError.mockRestore()
+    await wrapper.find('[data-testid="empty-add-artist"]').trigger('click')
+
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1)
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith()
+  })
+
+  it('keeps artist recommendations visible when bookmarks require login', async () => {
+    mocks.listArtistBookmarks.mockRejectedValueOnce(
+      new ApiErrorResponseError(401, 'auth.unauthorized', 'Login required'),
+    )
+
+    const pinia = createTestingPinia({ createSpy: vi.fn })
+    const wrapper = mount(ArtistsView, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Hot Artist')
+    expect(wrapper.text()).not.toContain('艺术家列表加载失败')
   })
 })

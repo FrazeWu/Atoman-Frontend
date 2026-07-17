@@ -9,10 +9,12 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue'
 import AppSidebar from '@/components/system/AppSidebar.vue'
+import MusicSheetStack from '@/components/music/MusicSheetStack.vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
+import { useRouter } from 'vue-router'
 
-const MusicSheetStack = defineAsyncComponent(() => import('@/components/music/MusicSheetStack.vue'))
 const { sidebarCollapsed } = useSidebar()
+useMusicSheetRouteSync(useRouter())
 </script>

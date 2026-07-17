@@ -117,19 +117,23 @@ const handleClick = (event: MouseEvent) => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid var(--a-color-ink);
-  border-radius: var(--a-radius-none, 0px);
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-base);
+  background: var(--a-color-primary);
+  color: var(--a-color-primary-contrast);
   cursor: pointer;
   font-family: inherit;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1;
   text-decoration: none;
-  text-transform: uppercase;
-  transition: transform 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
   white-space: nowrap;
+}
+
+.p-button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
 }
 
 .p-button-dot {
@@ -159,22 +163,30 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button--primary {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-primary);
+  color: var(--a-color-primary-contrast);
+  border-color: var(--a-color-primary);
+}
+
+.p-button--primary:hover:not(.p-button--disabled) {
+  background: var(--a-color-primary-hover);
+  border-color: var(--a-color-primary-hover);
+}
+
+.p-button--primary:active:not(.p-button--disabled) {
+  background: var(--a-color-primary-pressed);
+  border-color: var(--a-color-primary-pressed);
 }
 
 .p-button--secondary {
-  border: 0;
-  border-bottom: 2px solid var(--a-color-line);
-  background: transparent;
-  color: var(--a-color-ink-soft);
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-ink);
+  border-color: transparent;
 }
 
 .p-button--secondary:hover:not(.p-button--disabled) {
-  background: #f4ece1;
-  color: #6b4f3a;
-  border-bottom-color: #6b4f3a;
+  background: var(--a-color-disabled-border);
+  color: var(--a-color-ink);
 }
 
 .p-button--ghost {
@@ -183,10 +195,14 @@ const handleClick = (event: MouseEvent) => {
   color: var(--a-color-ink);
 }
 
+.p-button--ghost:hover:not(.p-button--disabled) {
+  background: var(--a-color-paper-soft);
+}
+
 .p-button--danger {
   border-color: var(--a-color-danger-line);
   background: var(--a-color-paper);
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 .p-button--danger:hover:not(.p-button--disabled) {
@@ -205,7 +221,6 @@ const handleClick = (event: MouseEvent) => {
 .p-button--disabled {
   cursor: not-allowed;
   opacity: 0.5;
-  text-decoration: line-through;
 }
 
 @media (max-width: 767px) {

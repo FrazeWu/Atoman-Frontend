@@ -6,14 +6,8 @@ import { appVersion } from '@/config/appVersion'
 import { footbarLinks, type FootbarPanel } from '@/config/moduleRooms'
 import { createSheetStack } from '@/composables/useSheetStack'
 import { useAuthStore } from '@/stores/auth'
-import { isModeratorRole } from '@/utils/roles'
+import { isAdminRole } from '@/utils/roles'
 import SiteFooterSheet from './footer/SiteFooterSheet.vue'
-
-withDefaults(defineProps<{
-  hideOnMobile?: boolean
-}>(), {
-  hideOnMobile: false,
-})
 
 type FooterSheetLayer = {
   key: FootbarPanel
@@ -24,7 +18,7 @@ type FooterSheetLayer = {
 
 const pinia = getActivePinia()
 const authStore = pinia ? useAuthStore(pinia) : null
-const canAccessSettings = computed(() => authStore ? isModeratorRole(authStore.user?.role) : false)
+const isAdmin = computed(() => authStore ? isAdminRole(authStore.user?.role) : false)
 const copyrightYear = new Date().getFullYear()
 const primaryLinks = footbarLinks.filter(link => link.group === 'primary')
 const secondaryLinks = footbarLinks.filter(link => link.group === 'secondary')
@@ -37,10 +31,10 @@ function openPanel(panel: FootbarPanel, label: string) {
 </script>
 
 <template>
-  <footer class="site-footer" :class="{ 'site-footer--mobile-hidden': hideOnMobile }">
+  <footer class="site-footer">
     <div class="site-footer-inner">
       <div class="site-footer-row site-footer-primary">
-        <RouterLink v-if="canAccessSettings" to="/setting" class="site-footer-brand">凹凸庵</RouterLink>
+        <RouterLink v-if="isAdmin" to="/site/setting" class="site-footer-brand">凹凸庵</RouterLink>
         <span v-else class="site-footer-brand site-footer-brand--disabled" title="需要管理员权限">凹凸庵</span>
         <nav class="site-footer-links" aria-label="站点信息">
           <button
@@ -132,9 +126,20 @@ function openPanel(panel: FootbarPanel, label: string) {
   font-weight: var(--a-font-weight-black);
   text-decoration: none;
 }
-.site-footer-brand:hover { text-decoration: underline; }
-.site-footer-brand--disabled { color: var(--a-color-muted); cursor: not-allowed; opacity: 0.45; }
-.site-footer-brand--disabled:hover { text-decoration: none; }
+
+.site-footer-brand:hover {
+  text-decoration: underline;
+}
+
+.site-footer-brand--disabled {
+  color: var(--a-color-muted);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.site-footer-brand--disabled:hover {
+  text-decoration: none;
+}
 
 .site-footer-links,
 .site-footer-meta {
@@ -156,20 +161,49 @@ function openPanel(panel: FootbarPanel, label: string) {
   font-weight: var(--a-font-weight-strong);
   cursor: pointer;
 }
-.site-footer-link:hover { color: var(--a-color-fg); text-decoration: underline; }
-.site-footer-link:focus-visible,
-.site-footer-brand:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 2px; }
 
-.site-footer-secondary { color: var(--a-color-muted); font-size: var(--a-text-xs); }
+.site-footer-link:hover {
+  color: var(--a-color-fg);
+  text-decoration: underline;
+}
+
+.site-footer-link:focus-visible,
+.site-footer-brand:focus-visible {
+  outline: 2px solid var(--a-color-fg);
+  outline-offset: 2px;
+}
+
+.site-footer-secondary {
+  margin-top: 0;
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+}
+
 .site-footer-link--meta,
-.site-footer-version { color: var(--a-color-muted); font-size: var(--a-text-xs); white-space: nowrap; }
-.site-footer-version { font-weight: var(--a-font-weight-strong); }
+.site-footer-version {
+  color: var(--a-color-muted);
+  font-size: var(--a-text-xs);
+  white-space: nowrap;
+}
+
+.site-footer-version {
+  font-weight: var(--a-font-weight-strong);
+}
 
 @media (max-width: 767px) {
-  .site-footer--mobile-hidden { display: none; }
-  .site-footer-inner { padding: 0 var(--a-space-5) env(safe-area-inset-bottom, 0px); }
-  .site-footer-row { gap: var(--a-space-4); }
+  .site-footer-inner {
+    padding: 0 var(--a-space-5) env(safe-area-inset-bottom, 0px);
+  }
+
+  .site-footer-row {
+    gap: var(--a-space-4);
+  }
+
   .site-footer-links,
-  .site-footer-meta { justify-content: flex-end; gap: var(--a-space-3); }
+  .site-footer-meta {
+    justify-content: flex-end;
+    gap: var(--a-space-3);
+  }
 }
+
 </style>

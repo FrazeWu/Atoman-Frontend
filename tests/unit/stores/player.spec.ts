@@ -84,6 +84,29 @@ describe('player store', () => {
     expect(player.showLyrics).toBe(false)
   })
 
+  it('keeps lyrics and queue open independently', () => {
+    const player = usePlayerStore()
+
+    player.toggleLyrics()
+    player.toggleQueue()
+
+    expect(player.showLyrics).toBe(true)
+    expect(player.showQueue).toBe(true)
+  })
+
+  it('persists the player pin preference independently from playback', async () => {
+    const player = usePlayerStore()
+    expect(player.isPinned).toBe(true)
+
+    player.togglePinned()
+    await nextTick()
+    expect(localStorage.getItem('playerPinned')).toBe('false')
+
+    setActivePinia(createPinia())
+    const restoredPlayer = usePlayerStore()
+    expect(restoredPlayer.isPinned).toBe(false)
+  })
+
   it('skips forward and backward', () => {
     const player = usePlayerStore()
     
@@ -238,6 +261,28 @@ describe('player store', () => {
 
     expect(restoredPlayer.currentSong?.id).toBe(1)
     expect(restoredPlayer.isPlaying).toBe(false)
+  })
+
+  it('persists and restores the active queue', async () => {
+    localStorage.clear()
+    const player = usePlayerStore()
+    const firstSong = { id: 'song-1', title: 'Song 1', audio_url: 'song-1.mp3' } as any
+    const secondSong = { id: 'song-2', title: 'Song 2', audio_url: 'song-2.mp3' } as any
+
+    player.playAlbum([firstSong, secondSong], 1)
+    await nextTick()
+
+    const savedState = JSON.parse(localStorage.getItem('playbackState') || '{}')
+    expect(savedState.queue.map((song: any) => song.id)).toEqual(['song-1', 'song-2'])
+
+    setActivePinia(createPinia())
+    const restoredPlayer = usePlayerStore()
+
+    expect(restoredPlayer.currentSong?.id).toBe('song-2')
+    expect(restoredPlayer.queue.map((song) => song.id)).toEqual(['song-1', 'song-2'])
+
+    restoredPlayer.playPrevious()
+    expect(restoredPlayer.currentSong?.id).toBe('song-1')
   })
 
   it('does not mark playSong as playing when audio play fails', async () => {

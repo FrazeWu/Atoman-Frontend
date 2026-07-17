@@ -82,7 +82,7 @@ defineEmits<{
 
 .cover-empty-state strong {
   font-size: 0.92rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .cover-empty-state .a-muted,
@@ -100,6 +100,6 @@ defineEmits<{
   margin: 0;
   color: var(--a-color-danger);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 </style>

@@ -168,8 +168,8 @@ const submitJump = () => {
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   transition: all 0.15s ease;
 }
 
@@ -206,8 +206,8 @@ const submitJump = () => {
 .feed-jump-label,
 .feed-jump-total {
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-muted);
 }
 

@@ -3,27 +3,33 @@
     <div class="editor-shell">
       <div v-if="error" class="editor-error a-error">{{ error }}</div>
 
-      <div class="editor-layout" :class="{ 'is-directory-collapsed': directoryCollapsed }">
+      <div class="editor-layout">
         <PostEditorSidebar
-          :mobile-open="mobilePanel === 'settings'"
+          :mobile-open="mobilePanel === 'outline'"
           :saving="saving"
           :has-draft-manager-access="hasDraftManagerAccess"
           :channel-collections="channelCollections"
-          :selected-collection-id="selectedCollectionId"
+          :selected-collection-id="selectedNonDefaultCollectionId"
           :default-collection-id="defaultCollectionId"
           :summary="form.summary"
           :visibility="form.visibility"
+          :allow-comments="form.allow_comments"
           :cover-url="form.cover_url"
           :cover-uploading="coverUploading"
           :cover-upload-error="coverUploadError"
+          :outline-count="outline.length"
+          :flattened-outline="flattenedOutline"
+          :active-heading-line="activeHeadingLine"
           @save-draft="save('draft')"
           @save-published="save('published')"
           @open-draft-manager="openDraftManager"
-          @select-collection="selectedCollectionId = $event"
+          @select-collection="onCollectionSelect"
           @update:summary="(value) => (form.summary = value)"
           @update:visibility="(value) => (form.visibility = value)"
+          @update:allowComments="(value) => (form.allow_comments = value)"
           @cover-upload="handleCoverUpload"
           @remove-cover="removeCover"
+          @jump-to-heading="jumpToHeading"
         />
         <!-- 主编辑区 -->
         <main class="col-center a-card-sm">
@@ -73,17 +79,6 @@
 
           <div v-else class="editor-loading">加载中…</div>
         </main>
-
-        <PDirectoryNav
-          v-model:collapsed="directoryCollapsed"
-          :items="directoryItems"
-          :active-id="activeDirectoryId"
-          :mobile-open="mobilePanel === 'outline'"
-          empty-text="添加标题后显示目录"
-          aria-label="文档目录"
-          @select="selectDirectoryItem"
-          @close-mobile="mobilePanel = null"
-        />
       </div>
     </div>
 
@@ -186,23 +181,25 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue'
-import { isNavigationFailure, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
 import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import { useAutoSave } from '@/composables/useAutoSave'
 import PButton from '@/components/ui/PButton.vue'
-import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import type { BlogDraft, Collection } from '@/types'
+import { normalizeBlogCollectionSelection } from '@/utils/blogCollectionSelection'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 // ── 布局 ─────────────────────────────────────────────────
 type OutlineItem = {
@@ -231,8 +228,9 @@ type EditorDraftPayload = {
   summary: string
   cover_url: string
   visibility: BlogVisibility
+  allow_comments: boolean
   channel_id?: string
-  collection_id?: string
+  collection_ids: string[]
 }
 type DraftCandidate = {
   source: 'local' | 'server'
@@ -244,7 +242,6 @@ type EditorSessionState = 'awaiting-collab' | 'collab-conflict' | 'collab-active
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
 const activeHeadingLine = ref<number | null>(null)
 const mobilePanel = ref<'outline' | 'settings' | null>(null)
-const directoryCollapsed = ref(false)
 const editorMode = ref<'normal' | 'split'>('normal')
 const syncScroll = ref(true)
 
@@ -262,7 +259,8 @@ const shouldEnableCollab = computed(() => Boolean(collabRoomId.value))
 const isCollabEditing = computed(() => shouldEnableCollab.value)
 const contentReady = ref(!route.params.id)
 const channelCollections = ref<Collection[]>([])
-const selectedCollectionId = ref('')
+const selectedCollectionIds = ref<string[]>([])
+const existingCollectionIds = ref<string[]>([])
 const uploading = ref(false)
 const coverUploading = ref(false)
 const error = ref('')
@@ -290,11 +288,11 @@ const form = ref({
   summary: '',
   cover_url: '',
   visibility: 'public' as BlogVisibility,
+  allow_comments: true,
 })
 
 let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
 let collabStartupTimer: ReturnType<typeof setTimeout> | null = null
-let saveAbortController: AbortController | null = null
 
 // ── Title-in-editor binding ──────────────────────────────
 const editorBody = computed({
@@ -378,23 +376,8 @@ const flattenedOutline = computed((): FlattenedOutlineNode[] => {
     })
 })
 
-const directoryItems = computed(() => flattenedOutline.value.map(item => ({
-  id: String(item.line),
-  label: item.text,
-  depth: item.depth,
-  branch: item.isActiveBranch && item.line !== activeHeadingLine.value,
-})))
-const activeDirectoryId = computed(() => (
-  activeHeadingLine.value === null ? null : String(activeHeadingLine.value)
-))
-
 const jumpToHeading = (line: number) => {
   editorRef.value?.scrollToHeadingLine?.(line)
-}
-
-const selectDirectoryItem = (id: string) => {
-  const line = Number(id)
-  if (Number.isFinite(line)) jumpToHeading(line)
 }
 
 // ── 合集 ─────────────────────────────────────────────────
@@ -410,9 +393,14 @@ const selectedQueryCollectionId = computed(() => {
 const currentChannelId = ref<string>('')
 
 const defaultCollectionId = computed(() => channelCollections.value.find(c => c.is_default)?.id)
+const selectedNonDefaultCollectionId = computed(() => (
+  channelCollections.value.find(collection => (
+    !collection.is_default && selectedCollectionIds.value.includes(collection.id)
+  ))?.id || ''
+))
 
 const derivedChannelId = computed(() => {
-  const col = channelCollections.value.find(c => c.id === selectedCollectionId.value)
+  const col = channelCollections.value.find(c => selectedCollectionIds.value.includes(c.id))
   return col?.channel_id || ''
 })
 
@@ -433,8 +421,9 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   summary: form.value.summary,
   cover_url: form.value.cover_url,
   visibility: form.value.visibility,
+  allow_comments: form.value.allow_comments,
   channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || undefined,
-  collection_id: selectedCollectionId.value || undefined,
+  collection_ids: Array.from(new Set(selectedCollectionIds.value)),
 }))
 
 const {
@@ -576,10 +565,10 @@ const recoveryModalText = computed(() => {
 const keepCurrentContentLabel = computed(() => isCollabConflict.value ? '保留协作文档' : '稍后处理')
 
 const ensureDefaultSelection = () => {
-  const def = channelCollections.value.find(c => c.is_default)
-  if (!selectedCollectionId.value && def) {
-    selectedCollectionId.value = def.id
-  }
+  selectedCollectionIds.value = normalizeBlogCollectionSelection(
+    channelCollections.value,
+    selectedNonDefaultCollectionId.value,
+  )
 }
 
 const hasMeaningfulDraft = (payload: EditorDraftPayload) => {
@@ -589,7 +578,7 @@ const hasMeaningfulDraft = (payload: EditorDraftPayload) => {
     || payload.summary.trim()
     || payload.cover_url.trim()
     || payload.channel_id
-    || payload.collection_id
+    || payload.collection_ids.length
   )
 }
 
@@ -722,8 +711,9 @@ const blogDraftToPayload = (draft: BlogDraft): EditorDraftPayload => ({
   summary: draft.summary || '',
   cover_url: draft.cover_url || '',
   visibility: draft.visibility || 'public',
+  allow_comments: draft.allow_comments,
   channel_id: draft.channel_id,
-  collection_id: draft.collection_id || (draft as BlogDraft & { collection_ids?: string[] }).collection_ids?.[0],
+  collection_ids: draft.collection_ids || [],
 })
 
 const updateEditorChannel = async (channelId?: string) => {
@@ -876,13 +866,14 @@ const applyDraftPayload = async (payload: EditorDraftPayload) => {
       summary: payload.summary,
       cover_url: payload.cover_url,
       visibility: payload.visibility,
+      allow_comments: payload.allow_comments,
     }
 
     contentSource.value = hasMeaningfulDraft(payload) ? 'manual' : 'empty'
 
     const allowed = new Set(channelCollections.value.map(collection => collection.id))
-    selectedCollectionId.value = payload.collection_id && allowed.has(payload.collection_id) ? payload.collection_id : ''
-    if (!selectedCollectionId.value) {
+    selectedCollectionIds.value = payload.collection_ids.filter(collectionId => allowed.has(collectionId))
+    if (selectedCollectionIds.value.length === 0) {
       ensureDefaultSelection()
     }
 
@@ -1024,7 +1015,6 @@ const confirmLeave = async () => {
   pendingLeavePath.value = null
   if (!targetPath) return
 
-  saveAbortController?.abort()
   allowRouteLeaveOnce.value = true
   await router.push(targetPath)
 }
@@ -1038,6 +1028,7 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 const loadChannels = async () => {
   if (!authStore.isAuthenticated) return
   try {
+    await defaultChannelsStore.load()
     const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, {
       headers: authHeaders.value,
     })
@@ -1046,7 +1037,10 @@ const loadChannels = async () => {
       if (selectedChannelId.value) {
         currentChannelId.value = selectedChannelId.value
       } else if (!isEdit.value) {
-        const fallbackChannelId = data.data?.[0]?.id || ''
+        const defaultChannelId = defaultChannelsStore.channelFor('blog')?.id || ''
+        const fallbackChannelId = data.data?.find((channel: { id?: string }) => channel.id === defaultChannelId)?.id
+          || data.data?.[0]?.id
+          || ''
         if (fallbackChannelId) {
           await updateEditorChannel(fallbackChannelId)
         }
@@ -1060,14 +1054,15 @@ const loadChannels = async () => {
 const loadChannelCollections = async () => {
   if (!authStore.isAuthenticated) {
     channelCollections.value = []
-    selectedCollectionId.value = ''
+    selectedCollectionIds.value = []
+    existingCollectionIds.value = []
     return
   }
 
   const channelId = selectedChannelId.value || currentChannelId.value
   if (!channelId) {
     channelCollections.value = []
-    selectedCollectionId.value = ''
+    selectedCollectionIds.value = []
     return
   }
 
@@ -1080,22 +1075,51 @@ const loadChannelCollections = async () => {
     channelCollections.value = data.data || []
     if (!isEdit.value) {
       const queryCollection = selectedQueryCollectionId.value
-      if (queryCollection && channelCollections.value.some(collection => collection.id === queryCollection)) {
-        selectedCollectionId.value = queryCollection
-      } else {
-        const def = channelCollections.value.find(c => c.is_default) || channelCollections.value[0]
-        selectedCollectionId.value = def?.id || ''
-      }
+      selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, queryCollection)
     }
     if (isEdit.value) {
-      const allowed = channelCollections.value.map(c => c.id)
-      if (!allowed.includes(selectedCollectionId.value)) selectedCollectionId.value = ''
-      ensureDefaultSelection()
+      const ordinaryCollection = channelCollections.value.find(collection => (
+        !collection.is_default && existingCollectionIds.value.includes(collection.id)
+      ))
+      selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, ordinaryCollection?.id)
     }
   } catch (e) {
     console.error(e)
     error.value = '加载合集失败'
   }
+}
+
+const onCollectionSelect = (id: string) => {
+  selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, id || null)
+}
+
+const uniqueCollectionIds = (ids: string[]) => Array.from(new Set(ids))
+
+const diffCollectionIds = (targetIds: string[], existingIds: string[]) => ({
+  toAdd: targetIds.filter(id => !existingIds.includes(id)),
+  toRemove: existingIds.filter(id => !targetIds.includes(id)),
+})
+
+// ── 同步合集 ─────────────────────────────────────────────
+const syncPostCollections = async (postId: string) => {
+  const target = uniqueCollectionIds(selectedCollectionIds.value)
+  const existing = uniqueCollectionIds(existingCollectionIds.value)
+  const { toAdd, toRemove } = diffCollectionIds(target, existing)
+  for (const id of toAdd) {
+    const res = await fetch(api.blog.postCollections(postId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders.value },
+      body: JSON.stringify({ collection_id: id }),
+    })
+    if (!res.ok) throw new Error('添加文章合集失败')
+  }
+  for (const id of toRemove) {
+    const res = await fetch(api.blog.postCollection(postId, id), {
+      method: 'DELETE', headers: authHeaders.value,
+    })
+    if (!res.ok) throw new Error('移除文章合集失败')
+  }
+  existingCollectionIds.value = [...target]
 }
 
 // ── 加载文章 ─────────────────────────────────────────────
@@ -1116,16 +1140,18 @@ const loadPost = async () => {
         summary: p.summary || '',
         cover_url: p.cover_url || '',
         visibility: p.visibility || 'public',
+        allow_comments: p.allow_comments,
       }
       loadedPostUpdatedAt.value = parseTimestamp(p.updated_at)
       contentSource.value = 'manual'
       if (!selectedChannelId.value) {
-        const fallback = p.channel_id || p.collection?.channel_id
+        const fallback = p.channel_id || p.collections?.[0]?.channel_id
         if (fallback) {
           await router.replace({ path: `/posts/post/${postId}/edit`, query: { channel: fallback } })
         }
       }
-      selectedCollectionId.value = p.collection_id || p.collection?.id || ''
+      existingCollectionIds.value = (p.collections || []).map((c: Collection) => c.id)
+      selectedCollectionIds.value = [...existingCollectionIds.value]
     }
   } catch (e) {
     console.error(e)
@@ -1136,95 +1162,58 @@ const loadPost = async () => {
 }
 
 // ── 保存 ─────────────────────────────────────────────────
-const navigationErrorMessage = '文章已保存，但跳转失败，请重试'
-
-const navigateToSavedPost = async (postId: string) => {
-  try {
-    allowRouteLeaveOnce.value = true
-    const failure = await router.push(`/posts/post/${postId}`)
-    if (failure && isNavigationFailure(failure)) {
-      error.value = navigationErrorMessage
-      return
-    }
-    savedPostId.value = null
-  } catch (navigationError) {
-    if (isNavigationFailure(navigationError) || navigationError instanceof Error) {
-      error.value = navigationErrorMessage
-      return
-    }
-    throw navigationError
-  }
-}
-
 const save = async (status: SaveTarget) => {
   if (saving.value) return
   if (savedPostId.value) {
-    error.value = ''
-    saving.value = status
-    try {
-      await navigateToSavedPost(savedPostId.value)
-    } finally {
-      saving.value = null
-    }
+    allowRouteLeaveOnce.value = true
+    await router.push(`/posts/post/${savedPostId.value}`)
     return
   }
   if (!form.value.title.trim()) { error.value = '请输入文章标题'; return }
   if (!form.value.content.trim()) { error.value = '请输入文章内容'; return }
   error.value = ''
   saving.value = status
-  const controller = new AbortController()
-  saveAbortController = controller
   const payload = { ...form.value, status }
-  const editingPostId = isEdit.value ? String(route.params.id || '') : null
   try {
     let res: Response
-    if (editingPostId) {
-      res = await fetch(api.blog.post(editingPostId), {
+    if (isEdit.value) {
+      const postId = String(route.params.id || '')
+      res = await fetch(api.blog.post(postId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        signal: controller.signal,
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || null,
-          collection_id: selectedCollectionId.value || undefined,
+          collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
         }),
       })
     } else {
       res = await fetch(api.blog.posts, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        signal: controller.signal,
         body: JSON.stringify({
           ...payload,
           channel_id: derivedChannelId.value || selectedChannelId.value || undefined,
-          collection_id: selectedCollectionId.value || undefined,
+          collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
         }),
       })
     }
     if (res.ok) {
       const d = await res.json()
       const savedPost = d.data || d
-      savedPostId.value = editingPostId || String(savedPost.id)
+      savedPostId.value = String(savedPost.id)
       await clearAllDrafts()
-      if (!controller.signal.aborted) {
-        await navigateToSavedPost(savedPostId.value)
-      }
+      if (isEdit.value) await syncPostCollections(String(savedPost.id))
+      allowRouteLeaveOnce.value = true
+      await router.push(`/posts/post/${savedPost.id}`)
     } else {
-      const data = await res.json().catch(() => null)
-      const responseError = data?.error
-      error.value = typeof responseError === 'string'
-        ? responseError
-        : responseError?.message || '保存失败，请重试'
+      const err = await res.json()
+      error.value = err.error || '保存失败，请重试'
     }
   } catch (e) {
-    if (!controller.signal.aborted) {
-      error.value = '网络错误，请重试'
-    }
+    error.value = e instanceof Error ? e.message : '网络错误，请重试'
   } finally {
-    if (saveAbortController === controller) {
-      saveAbortController = null
-      saving.value = null
-    }
+    saving.value = null
   }
 }
 
@@ -1316,7 +1305,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
-  saveAbortController?.abort()
   clearServerSyncTimer()
   clearCollabStartupTimer()
 })
@@ -1352,14 +1340,10 @@ onBeforeUnmount(() => {
 
 .editor-layout {
   display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) 13.75rem;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
   gap: 1rem;
   flex: 1;
   min-height: 0;
-}
-
-.editor-layout.is-directory-collapsed {
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) 3rem;
 }
 
 .editor-mobile-actions {
@@ -1392,10 +1376,10 @@ onBeforeUnmount(() => {
 /* 字数统计 chip */
 .word-count-chip {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   font-family: 'SFMono-Regular', 'Consolas', monospace;
   color: var(--a-color-muted);
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .settings-textarea {
@@ -1417,7 +1401,7 @@ onBeforeUnmount(() => {
 .editor-loading {
   color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .editor-workspace {
@@ -1450,8 +1434,8 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.6rem;
   border: var(--a-border);
   font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   background: var(--a-color-bg);
 }
 
@@ -1480,8 +1464,8 @@ onBeforeUnmount(() => {
   padding: 0.4rem 0.65rem;
   border: var(--a-border);
   font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   background: var(--a-color-bg);
 }
@@ -1524,8 +1508,8 @@ onBeforeUnmount(() => {
   background: #000;
   color: #fff;
   font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0;
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -1533,7 +1517,7 @@ onBeforeUnmount(() => {
 .collab-mode-banner__text {
   margin: 0;
   font-size: 0.84rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -1552,8 +1536,8 @@ onBeforeUnmount(() => {
 .title-placeholder {
   padding: 1.5rem 1.5rem 0;
   font-size: 2.5rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 500;
+  letter-spacing: 0;
   line-height: 1.12;
   color: var(--a-color-muted-soft);
   pointer-events: none;
@@ -1584,8 +1568,8 @@ onBeforeUnmount(() => {
 
 .draft-recovery-preview strong {
   font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .draft-recovery-preview .a-muted {
@@ -1623,8 +1607,8 @@ onBeforeUnmount(() => {
 
 .draft-manager-card strong {
   font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .draft-manager-card .a-muted {
@@ -1649,12 +1633,63 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
   color: var(--a-color-danger);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.6;
 }
 
 .leave-confirm-body .a-muted {
   margin: 0;
+}
+
+.toc-section {
+  flex: 1;
+}
+
+.toc-list {
+  overflow-y: auto;
+}
+
+.toc-item {
+  --toc-depth: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  color: var(--a-color-muted);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid transparent;
+}
+
+.toc-item:hover {
+  border-left-color: var(--a-color-border);
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
+}
+
+.toc-rail {
+  width: calc(var(--toc-depth) * 0.8rem + 1px);
+  min-height: 1.2rem;
+  background-image: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--a-color-border) 52%, transparent) 0 1px,
+    transparent 1px 0.8rem
+  );
+  background-repeat: no-repeat;
+  opacity: 0.9;
+}
+
+.toc-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cover-upload-card {
@@ -1688,7 +1723,7 @@ onBeforeUnmount(() => {
 
 .cover-empty-state strong {
   font-size: 0.92rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .cover-empty-state .a-muted,
@@ -1706,7 +1741,7 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--a-color-danger);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .options-list {
@@ -1720,7 +1755,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.6rem;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -1740,17 +1775,12 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1200px) {
   .editor-layout {
-    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr) 13.75rem;
-  }
-
-  .editor-layout.is-directory-collapsed {
-    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr) 3rem;
+    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
   }
 }
 
-@media (max-width: 1023px) {
-  .editor-layout,
-  .editor-layout.is-directory-collapsed {
+@media (max-width: 960px) {
+  .editor-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 

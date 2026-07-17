@@ -18,22 +18,19 @@ withDefaults(defineProps<{
 .p-surface {
   border: 1px solid var(--a-color-line-soft);
   background: var(--a-color-paper);
-  border-radius: 8px; /* 8px roundness */
+  border-radius: var(--a-radius-base);
 }
 
 .p-surface--soft {
   background: var(--a-color-paper-soft);
 }
 
-.p-surface--layer-0 {
+.p-surface--layer-0,
+.p-surface--layer-1 {
   box-shadow: none;
 }
 
-.p-surface--layer-1 {
-  box-shadow: var(--a-shadow-paper-sm);
-}
-
 .p-surface--layer-2 {
-  box-shadow: var(--a-shadow-paper-lg);
+  box-shadow: none;
 }
 </style>

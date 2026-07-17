@@ -1,5 +1,5 @@
-import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
-import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
+import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
+import type { ApiList, ApiSuccess, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
 export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
@@ -62,6 +62,24 @@ export type MusicAlbumImportCommitTrack = {
   trackNumber: number
 }
 
+export type MusicAlbumImportCommitMember = {
+  artist_id: string
+  join_date: string
+  leave_date: string
+}
+
+export type MusicAlbumImportCommitArtist = {
+  artist_id: string
+  name: string
+  legal_name: string
+  stage_names: MusicAlbumImportCommitStageName[]
+  birth_place: string
+  artist_form: 'person' | 'group'
+  active_start_date: string
+  active_end_date: string
+  members: MusicAlbumImportCommitMember[]
+}
+
 export type MusicAlbumImportCommitInput = {
   artist_id?: string
   artist: {
@@ -69,10 +87,11 @@ export type MusicAlbumImportCommitInput = {
     legal_name: string
     stage_names: MusicAlbumImportCommitStageName[]
     birth_place: string
-    image_url?: string
   }
+  artists?: MusicAlbumImportCommitArtist[]
   album: {
     title: string
+    release_date?: string
     release_year: number
     tracks: MusicAlbumImportCommitTrack[]
   }
@@ -145,9 +164,13 @@ export type MusicEditSummary = {
   entity_type: MusicEntityType
   entity_id?: string
   submitted_by: string
+  reason: string
+  payload: Record<string, unknown>
+  changes: Record<string, unknown>
+  sources: MusicSource[]
   auto_applied: boolean
   votable: boolean
-  votes: { yes: number; no: number }
+  votes?: { yes: number; no: number }
   created_at: string
 }
 
@@ -170,6 +193,25 @@ export type MusicRevisionSummary = {
   created_at: string
 }
 
+export type MusicDiscussionAuthor = {
+  id: string
+  username?: string
+  display_name?: string
+}
+
+export type MusicDiscussion = {
+  id: string
+  album_id: string
+  parent_id?: string | null
+  content: string
+  created_at: string
+  updated_at?: string
+  author_id: string
+  author?: MusicDiscussionAuthor
+  replies?: MusicDiscussion[]
+  can_delete?: boolean
+}
+
 export type MusicArtistListItem = {
   id: string
   name: string
@@ -180,11 +222,29 @@ export type MusicArtistListItem = {
   birth_date?: string
   birth_year?: number
   death_year?: number
+  artist_form?: 'person' | 'group'
   members?: string
+  member_groups?: {
+    current: Array<{
+      artist_id: string
+      name: string
+      image_url?: string
+      join_date?: string
+      leave_date?: string
+    }>
+    former: Array<{
+      artist_id: string
+      name: string
+      image_url?: string
+      join_date?: string
+      leave_date?: string
+    }>
+  }
   aliases?: Array<{ id?: string; alias: string; is_main_name?: boolean }>
   play_count?: number
   bookmark_count?: number
   entry_status: MusicEntryStatus
+  redirect_to?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -203,6 +263,7 @@ export type MusicAlbumListItem = {
   bookmark_count?: number
   songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; cover_url?: string; lyrics?: string; status?: string; play_count?: number }>
   entry_status: MusicEntryStatus
+  redirect_to?: string | null
 }
 
 export type MusicSongListItem = {
@@ -228,12 +289,16 @@ export type MusicListeningHistory = {
 
 export type MusicPlaylistSummary = {
   id: string
-  user_id?: string
   name: string
   description?: string
+  cover_url?: string
   song_count: number
+  user_id?: string
+  owner_username?: string
   is_public?: boolean
   is_favorite: boolean
+  play_count?: number
+  bookmark_count?: number
 }
 
 export type MusicPlaylistDetail = MusicPlaylistSummary & {
@@ -261,6 +326,13 @@ export type MusicSongBookmark = {
   song?: MusicSongListItem
 }
 
+export type MusicPlaylistBookmark = {
+  id: string
+  playlist_id: string
+  created_at: string
+  playlist?: MusicPlaylistSummary
+}
+
 export type MusicStarredItem = {
   id: string
   kind: MusicStarredKind
@@ -273,10 +345,16 @@ export type MusicStarredItem = {
 
 export type CreateMusicPlaylistInput = {
   name: string
+  description?: string
+  cover_url?: string
+  is_public?: boolean
 }
 
 export type UpdateMusicPlaylistInput = {
-  name: string
+  name?: string
+  description?: string
+  cover_url?: string
+  is_public?: boolean
 }
 
 export type MusicAlbumTrackEditInput = {
@@ -317,26 +395,6 @@ export type MusicListResponse<T> = ApiList<T>
 export type MusicBrowseMode = 'hot' | 'featured' | 'latest'
 export type MusicRecommendationMode = MusicBrowseMode | 'discover'
 
-export type MusicDiscoverItem = {
-  type: 'album' | 'artist' | 'playlist'
-  id: string
-  title: string
-  summary?: string
-  image_url?: string
-  target_path: string
-  play_count?: number
-  bookmark_count?: number
-  song_count?: number
-  name?: string
-  legal_name?: string
-  bio?: string
-  cover_url?: string
-  description?: string
-  release_date?: string
-  year?: number
-  artists?: Array<{ id: string; name: string }>
-}
-
 export type MusicRecommendationItem = {
   id: string
   title: string
@@ -347,6 +405,44 @@ export type MusicRecommendationItem = {
   play_count?: number
   bookmark_count?: number
 }
+
+export type MusicDiscoverItemType = 'album' | 'artist' | 'playlist'
+
+export type MusicDiscoverAlbumItem = MusicRecommendationItem & {
+  type: 'album'
+  cover_url?: string
+  cover_s3_key?: string
+  release_date?: string
+  year?: number | string
+  artists?: Array<{ id: string; name: string }>
+}
+
+export type MusicDiscoverArtistItem = MusicArtistListItem & {
+  type: 'artist'
+  title?: string
+  summary?: string
+  target_path: string
+}
+
+export type MusicDiscoverPlaylistItem = {
+  type: 'playlist'
+  id: string
+  title: string
+  description?: string
+  summary?: string
+  cover_url?: string
+  image_url?: string
+  song_count: number
+  owner_username?: string
+  play_count?: number
+  bookmark_count?: number
+  target_path: string
+}
+
+export type MusicDiscoverItem =
+  | MusicDiscoverAlbumItem
+  | MusicDiscoverArtistItem
+  | MusicDiscoverPlaylistItem
 
 export type MusicListFilters = {
   q?: string
@@ -367,6 +463,29 @@ export type MusicEditFilters = {
   page?: number
   page_size?: number
   sort?: string
+}
+
+export type MusicUploadTarget = {
+  entityType: 'artist' | 'album' | 'playlist'
+  entityId: string
+  stagingId: string
+}
+
+type PaginationFallbackFilters = Pick<MusicListFilters, 'page' | 'page_size'>
+
+function listResponseWithPaginationFallback<T>(
+  response: ApiSuccess<T[], PaginationMeta>,
+  filters: PaginationFallbackFilters = {},
+): MusicListResponse<T> {
+  return {
+    data: response.data,
+    meta: response.meta ?? {
+      page: filters.page ?? 1,
+      page_size: filters.page_size ?? response.data.length,
+      total: response.data.length,
+      has_more: false,
+    },
+  }
 }
 
 export type AlbumEditDraft = {
@@ -393,6 +512,92 @@ export type ArtistEditDraft = {
   sources: MusicSource[]
 }
 
+export type MusicLyricsFormat = 'plain' | 'lrc'
+export type MusicLyricsAnnotationVote = 'up' | 'down'
+export type MusicLyricsViewerVote = MusicLyricsAnnotationVote | 'none'
+export type MusicLyricsAnnotationStatus = 'active' | 'deleted' | 'needs_rebind'
+
+export type MusicSongLyricsLine = {
+  line_key?: string
+  line_index?: number
+  time_ms?: number | null
+  id?: string
+  text: string
+  translation: string
+  startTimeMs?: number | null
+  endTimeMs?: number | null
+  lineNumber?: number
+}
+
+export type MusicLyricsAnnotation = {
+  id: string
+  song_id?: string
+  line_key?: string
+  line_id?: string
+  body: string
+  selected_text: string
+  start_offset: number
+  end_offset: number
+  creator?: {
+    id: string
+    username: string
+  }
+  upvotes: number
+  downvotes: number
+  net_score?: number
+  viewer_vote?: MusicLyricsViewerVote
+  current_user_vote?: MusicLyricsAnnotationVote | null
+  status: MusicLyricsAnnotationStatus
+  created_at: string
+  updated_at: string
+}
+
+export type MusicSongLyricsVersion = {
+  id: string
+  song_id: string
+  version: number
+  content: string
+  translation: string
+  format: MusicLyricsFormat
+  edit_summary: string
+  created_at: string
+  created_by: string
+  updated_by?: string
+}
+
+export type UpdateMusicSongLyricsInput = {
+  content: string
+  translation: string
+  format: MusicLyricsFormat
+  edit_summary: string
+}
+
+export type CreateMusicLyricsAnnotationInput = {
+  line_key: string
+  selected_text: string
+  start_offset: number
+  end_offset: number
+  body: string
+}
+
+export type UpdateMusicLyricsAnnotationInput = {
+  body: string
+}
+
+export type MusicSongLyrics = {
+  id: string
+  song_id: string
+  format: MusicLyricsFormat
+  content: string
+  translation: string
+  edit_summary: string
+  updated_at: string
+  updated_by?: string
+  lines: MusicSongLyricsLine[]
+  annotations: MusicLyricsAnnotation[]
+  version: number
+}
+
 function apiV1Base() {
   return useApiUrl()
 }
@@ -410,25 +615,39 @@ export const musicV1Endpoints = {
   uploads: () => `${apiV1Base()}/uploads`,
   artists: () => `${apiV1Base()}/music/artists`,
   artist: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}`,
+  artistMerge: (artistId: string) => `${apiV1Base()}/music/artists/${artistId}/merge`,
+  artistRevisions: (artistId: string) => `${apiV1Base()}/artists/${artistId}/revisions`,
+  artistRevision: (artistId: string, version: number) => `${apiV1Base()}/artists/${artistId}/revisions/${version}`,
   albums: () => `${apiV1Base()}/music/albums`,
   album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
+  albumMerge: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}/merge`,
+  songLyrics: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics`,
+  lyricAnnotations: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations`,
+  lyricAnnotation: (songId: string, annotationId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations/${annotationId}`,
+  lyricAnnotationVote: (songId: string, annotationId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations/${annotationId}/votes`,
+  songLyricsVersions: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/versions`,
+  songLyricsVersionRevert: (songId: string, version: number) => `${apiV1Base()}/music/songs/${songId}/lyrics/versions/${version}/revert`,
   artistBookmarks: () => `${apiV1Base()}/music/bookmarks/artists`,
   artistBookmark: (artistId: string) => `${apiV1Base()}/music/bookmarks/artists/${artistId}`,
   albumBookmarks: () => `${apiV1Base()}/music/bookmarks/albums`,
   albumBookmark: (albumId: string) => `${apiV1Base()}/music/bookmarks/albums/${albumId}`,
   songBookmarks: () => `${apiV1Base()}/music/bookmarks/songs`,
   songBookmark: (songId: string) => `${apiV1Base()}/music/bookmarks/songs/${songId}`,
+  playlistBookmarks: () => `${apiV1Base()}/music/bookmarks/playlists`,
+  playlistBookmark: (playlistId: string) => `${apiV1Base()}/music/bookmarks/playlists/${playlistId}`,
   playlists: () => `${apiV1Base()}/music/playlists`,
   playlist: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}`,
   playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
+  playlistSongsOrder: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/order`,
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
-  playlistSongOrder: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/order`,
   plays: () => `${apiV1Base()}/music/plays`,
   history: () => `${apiV1Base()}/music/history`,
-  discover: (mode: MusicBrowseMode) => `${apiV1Base()}/music/discover?mode=${mode}`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,
+  albumDiscussions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/discussions`,
+  albumDiscussion: (albumId: string, discussionId: string) => `${apiV1Base()}/albums/${albumId}/discussions/${discussionId}`,
+  albumDiscussionReply: (albumId: string, discussionId: string) => `${apiV1Base()}/albums/${albumId}/discussions/${discussionId}/reply`,
   albumImports: () => `${apiV1Base()}/music/imports/albums`,
   albumImport: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}`,
   albumImportArchive: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/upload`,
@@ -437,6 +656,7 @@ export const musicV1Endpoints = {
   albumImportMultipartPartComplete: (importId: string, partNumber: number) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/parts/${partNumber}/complete`,
   albumImportMultipartComplete: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/complete`,
   albumImportCommit: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/commit`,
+  discover: (mode?: MusicBrowseMode) => `${apiV1Base()}/music/discover${mode ? `?mode=${mode}` : ''}`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
   recommendArtists: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/artists?mode=${mode}`,
   edits: () => `${apiV1Base()}/music/edits`,
@@ -534,10 +754,16 @@ export function buildDeleteAlbumEdit(albumId: string, reason: string): MusicEdit
 export async function uploadMusicAsset(
   file: File,
   purpose: Extract<UploadPurpose, 'music.cover' | 'music.audio'>,
+  target?: MusicUploadTarget,
 ): Promise<UploadAsset> {
   const form = new FormData()
   form.append('file', file)
   form.append('purpose', purpose)
+  if (target) {
+    form.append('entity_type', target.entityType)
+    form.append('entity_id', target.entityId)
+    form.append('staging_id', target.stagingId)
+  }
   return apiPostMultipart<UploadAsset>(musicV1Endpoints.uploads(), form)
 }
 
@@ -589,9 +815,8 @@ export async function completeMusicAlbumImportMultipartPart(
   importId: string,
   partNumber: number,
   etag: string,
-  size: number,
 ): Promise<MusicAlbumImportMultipartPart> {
-  return apiPostJson<MusicAlbumImportMultipartPart>(musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber), { etag, size })
+  return apiPostJson<MusicAlbumImportMultipartPart>(musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber), { etag })
 }
 
 export async function completeMusicAlbumImportMultipart(importId: string): Promise<MusicAlbumImport> {
@@ -661,7 +886,7 @@ export async function uploadMusicAlbumArchiveMultipart(
     const partBody = file.slice(start, end)
     const upload = await createMusicAlbumImportMultipartPartUpload(importId, partNumber)
     const etag = await uploadAlbumArchivePart(upload.uploadUrl, partBody)
-    await completeMusicAlbumImportMultipartPart(importId, partNumber, etag, partBody.size)
+    await completeMusicAlbumImportMultipartPart(importId, partNumber, etag)
 
     loaded += partBody.size
     reportProgress()
@@ -797,32 +1022,11 @@ export function buildAlbumEditFromCreationFlow(
 
 export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicAlbumListItem>> {
   const response = await apiGetEnvelope<MusicAlbumListItem[], PaginationMeta>(`${musicV1Endpoints.albums()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
 }
 
-export async function listMusicDiscoverFeed(mode: MusicBrowseMode): Promise<MusicListResponse<MusicDiscoverItem>> {
-  const response = await apiGetEnvelope<MusicDiscoverItem[], PaginationMeta>(musicV1Endpoints.discover(mode))
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: 1,
-      page_size: response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
-}
-
-export async function listArtistBookmarks() {
-  return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(musicV1Endpoints.artistBookmarks())
+export async function listArtistBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicArtistBookmark[], PaginationMeta>(`${musicV1Endpoints.artistBookmarks()}${queryString(filters)}`)
 }
 
 export async function createArtistBookmark(artistId: string): Promise<MusicArtistBookmark> {
@@ -833,8 +1037,8 @@ export async function deleteArtistBookmark(artistId: string): Promise<{ deleted:
   return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.artistBookmark(artistId))
 }
 
-export async function listAlbumBookmarks() {
-  return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(musicV1Endpoints.albumBookmarks())
+export async function listAlbumBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicAlbumBookmark[], PaginationMeta>(`${musicV1Endpoints.albumBookmarks()}${queryString(filters)}`)
 }
 
 export async function createAlbumBookmark(albumId: string): Promise<MusicAlbumBookmark> {
@@ -845,20 +1049,36 @@ export async function deleteAlbumBookmark(albumId: string): Promise<{ deleted: b
   return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.albumBookmark(albumId))
 }
 
-export async function listSongBookmarks() {
-  return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(musicV1Endpoints.songBookmarks())
+export async function listSongBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(`${musicV1Endpoints.songBookmarks()}${queryString(filters)}`)
 }
 
-export async function listMusicPlaylists() {
-  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(musicV1Endpoints.playlists())
+export async function listPlaylistBookmarks(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicPlaylistBookmark[], PaginationMeta>(`${musicV1Endpoints.playlistBookmarks()}${queryString(filters)}`)
+}
+
+export async function createPlaylistBookmark(playlistId: string): Promise<MusicPlaylistBookmark> {
+  return apiPostJson<MusicPlaylistBookmark>(musicV1Endpoints.playlistBookmarks(), { playlist_id: playlistId })
+}
+
+export async function deletePlaylistBookmark(playlistId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.playlistBookmark(playlistId))
+}
+
+export async function listMusicPlaylists(filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(`${musicV1Endpoints.playlists()}${queryString(filters)}`)
+}
+
+export async function listPublicMusicPlaylists(filters: Pick<MusicListFilters, 'page' | 'page_size'> = {}) {
+  return apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(`${musicV1Endpoints.playlists()}/public${queryString(filters)}`)
 }
 
 export async function listMusicStarred(): Promise<MusicStarredItem[]> {
-  const [artistBookmarks, albumBookmarks, songBookmarks, playlists] = await Promise.all([
+  const [artistBookmarks, albumBookmarks, songBookmarks, playlistBookmarks] = await Promise.all([
     listArtistBookmarks(),
     listAlbumBookmarks(),
     listSongBookmarks(),
-    listMusicPlaylists(),
+    listPlaylistBookmarks(),
   ])
 
   const [artists, albums] = await Promise.all([
@@ -885,11 +1105,11 @@ export async function listMusicStarred(): Promise<MusicStarredItem[]> {
       starred_at: bookmark.created_at,
       song: bookmark.song,
     })),
-    ...playlists.data.map((playlist: MusicPlaylistSummary) => ({
-      id: playlist.id,
+    ...playlistBookmarks.data.map((bookmark: MusicPlaylistBookmark) => ({
+      id: bookmark.id,
       kind: 'playlist' as const,
-      starred_at: '',
-      playlist,
+      starred_at: bookmark.created_at,
+      playlist: bookmark.playlist,
     })),
   ]
 }
@@ -902,11 +1122,20 @@ export async function createMusicPlaylist(input: CreateMusicPlaylistInput): Prom
   return apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input)
 }
 
-export async function updateMusicPlaylist(
-  playlistId: string,
-  input: UpdateMusicPlaylistInput,
-): Promise<MusicPlaylistSummary> {
-  return apiPatchJson<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId), input)
+export async function updateMusicPlaylist(playlistId: string, input: UpdateMusicPlaylistInput): Promise<MusicPlaylistDetail> {
+  try {
+    return await apiPatchJson<MusicPlaylistDetail>(musicV1Endpoints.playlist(playlistId), input)
+  } catch (error) {
+    const shouldRetryWithBearer = (
+      error instanceof ApiErrorResponseError
+      && error.status === 404
+      && typeof window !== 'undefined'
+    )
+    if (!shouldRetryWithBearer) throw error
+
+    const absoluteUrl = new URL(musicV1Endpoints.playlist(playlistId), window.location.origin).toString()
+    return apiPatchJson<MusicPlaylistDetail>(absoluteUrl, input)
+  }
 }
 
 export async function deleteMusicPlaylist(playlistId: string): Promise<{ deleted: boolean }> {
@@ -914,30 +1143,19 @@ export async function deleteMusicPlaylist(playlistId: string): Promise<{ deleted
 }
 
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {
-  const pageSize = 100
-  const [playlist, firstSongsResponse] = await Promise.all([
+  const [playlist, songsResponse] = await Promise.all([
     apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
-    apiGetEnvelope<any[], PaginationMeta>(`${musicV1Endpoints.playlistSongs(playlistId)}?page=1&page_size=${pageSize}`),
+    apiGetEnvelope<any[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
   ])
-  const songItems = [...(firstSongsResponse.data || [])]
-  let page = 1
-  let hasMore = firstSongsResponse.meta?.has_more === true
-  while (hasMore) {
-    page += 1
-    const response = await apiGetEnvelope<any[], PaginationMeta>(
-      `${musicV1Endpoints.playlistSongs(playlistId)}?page=${page}&page_size=${pageSize}`,
-    )
-    songItems.push(...(response.data || []))
-    hasMore = response.meta?.has_more === true
-  }
   return {
     ...playlist,
-    song_count: firstSongsResponse.meta?.total ?? songItems.length,
-    songs: songItems.map((item) => {
-      const song = item.song ?? item
-      const position = item.position ?? item.song?.position
-      return position === undefined ? song : { ...song, position }
-    }).filter(Boolean),
+    songs: (songsResponse.data || [])
+      .map((item) => item.song)
+      .filter(Boolean)
+      .map((song) => ({
+        ...song,
+        cover_url: song.cover_url || song.album?.cover_url || '',
+      })),
   }
 }
 
@@ -950,29 +1168,71 @@ export async function removeMusicPlaylistSong(playlistId: string, songId: string
 }
 
 export async function reorderMusicPlaylistSongs(playlistId: string, songIds: string[]): Promise<{ reordered: boolean }> {
-  return apiPutJson<{ reordered: boolean }>(musicV1Endpoints.playlistSongOrder(playlistId), { song_ids: songIds })
+  return apiPatchJson<{ reordered: boolean }>(musicV1Endpoints.playlistSongsOrder(playlistId), { song_ids: songIds })
 }
 
 export async function recordMusicSongPlay(songId: string): Promise<{ recorded: boolean }> {
   return apiPostJson<{ recorded: boolean }>(musicV1Endpoints.plays(), { song_id: songId })
 }
 
-export async function listMusicListeningHistory(filters: Pick<MusicListFilters, 'page' | 'page_size'> = {}): Promise<MusicListResponse<MusicListeningHistory>> {
+export async function listMusicListeningHistory(
+  filters: Pick<MusicListFilters, 'page' | 'page_size'> = {},
+): Promise<MusicListResponse<MusicListeningHistory>> {
   const response = await apiGetEnvelope<MusicListeningHistory[], PaginationMeta>(`${musicV1Endpoints.history()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
+}
+
+export async function getMusicSongLyrics(songId: string): Promise<MusicSongLyrics> {
+  return apiGet<MusicSongLyrics>(musicV1Endpoints.songLyrics(songId))
+}
+
+export async function updateMusicSongLyrics(songId: string, input: UpdateMusicSongLyricsInput): Promise<MusicSongLyrics> {
+  return apiPutJson<MusicSongLyrics>(musicV1Endpoints.songLyrics(songId), input)
+}
+
+export async function createMusicLyricsAnnotation(songId: string, input: CreateMusicLyricsAnnotationInput): Promise<MusicLyricsAnnotation> {
+  return apiPostJson<MusicLyricsAnnotation>(musicV1Endpoints.lyricAnnotations(songId), input)
+}
+
+export async function updateMusicLyricsAnnotation(songId: string, annotationId: string, input: UpdateMusicLyricsAnnotationInput): Promise<MusicLyricsAnnotation> {
+  return apiPatchJson<MusicLyricsAnnotation>(musicV1Endpoints.lyricAnnotation(songId, annotationId), input)
+}
+
+export async function deleteMusicLyricsAnnotation(songId: string, annotationId: string): Promise<{ deleted: boolean }> {
+  return apiDeleteJson<{ deleted: boolean }>(musicV1Endpoints.lyricAnnotation(songId, annotationId))
+}
+
+export async function voteMusicLyricsAnnotation(
+  songId: string,
+  annotationId: string,
+  vote: MusicLyricsAnnotationVote | null,
+): Promise<MusicLyricsAnnotation> {
+  return apiPostJson<MusicLyricsAnnotation>(musicV1Endpoints.lyricAnnotationVote(songId, annotationId), { vote: vote ?? 'none' })
+}
+
+export async function listMusicSongLyricsVersions(songId: string): Promise<MusicSongLyricsVersion[]> {
+  const response = await apiGetEnvelope<MusicSongLyricsVersion[]>(musicV1Endpoints.songLyricsVersions(songId))
+  return response.data
+}
+
+export async function revertMusicSongLyricsVersion(songId: string, version: number, editSummary: string): Promise<MusicSongLyrics> {
+  return apiPostJson<MusicSongLyrics>(musicV1Endpoints.songLyricsVersionRevert(songId, version), {
+    edit_summary: editSummary,
+  })
 }
 
 export async function listAlbumRevisions(albumId: string): Promise<MusicRevisionSummary[]> {
   const response = await apiGetEnvelope<MusicRevisionSummary[]>(musicV1Endpoints.albumRevisions(albumId))
   return response.data
+}
+
+export async function listArtistRevisions(artistId: string): Promise<MusicRevisionSummary[]> {
+  const response = await apiGetEnvelope<MusicRevisionSummary[]>(musicV1Endpoints.artistRevisions(artistId))
+  return response.data
+}
+
+export async function getArtistRevision(artistId: string, version: number): Promise<MusicRevisionSummary> {
+  return apiGet<MusicRevisionSummary>(musicV1Endpoints.artistRevision(artistId, version))
 }
 
 export async function getAlbumRevision(albumId: string, version: number): Promise<MusicRevisionSummary> {
@@ -985,8 +1245,29 @@ export async function revertAlbumRevision(albumId: string, version: number, edit
   })
 }
 
+export async function listAlbumDiscussions(albumId: string): Promise<MusicDiscussion[]> {
+  const response = await apiGetEnvelope<MusicDiscussion[]>(musicV1Endpoints.albumDiscussions(albumId))
+  return response.data
+}
+
+export async function createAlbumDiscussion(albumId: string, content: string): Promise<MusicDiscussion> {
+  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussions(albumId), { content })
+}
+
+export async function replyAlbumDiscussion(albumId: string, discussionId: string, content: string): Promise<MusicDiscussion> {
+  return apiPostJson<MusicDiscussion>(musicV1Endpoints.albumDiscussionReply(albumId, discussionId), { content })
+}
+
+export async function deleteAlbumDiscussion(albumId: string, discussionId: string): Promise<{ success: boolean }> {
+  return apiDeleteJson<{ success: boolean }>(musicV1Endpoints.albumDiscussion(albumId, discussionId))
+}
+
 export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
   return apiGetEnvelope<MusicRecommendationItem[]>(musicV1Endpoints.recommendAlbums(mode))
+}
+
+export async function listMusicDiscoverFeed(mode?: MusicBrowseMode) {
+  return apiGetEnvelope<MusicDiscoverItem[], PaginationMeta>(musicV1Endpoints.discover(mode))
 }
 
 export async function listRecommendedArtists(mode: MusicRecommendationMode) {
@@ -995,15 +1276,7 @@ export async function listRecommendedArtists(mode: MusicRecommendationMode) {
 
 export async function listMusicArtists(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicArtistListItem>> {
   const response = await apiGetEnvelope<MusicArtistListItem[], PaginationMeta>(`${musicV1Endpoints.artists()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
 }
 
 export async function getMusicArtist(artistId: string): Promise<MusicArtistListItem & { albums?: MusicAlbumListItem[] }> {
@@ -1018,21 +1291,25 @@ export async function updateMusicArtist(artistId: string, input: MusicArtistUpda
   return apiPatchJson<MusicArtistListItem>(musicV1Endpoints.artist(artistId), input)
 }
 
+export async function mergeMusicArtists(targetArtistId: string, sourceArtistId: string): Promise<MusicEditSummary> {
+  return apiPostJson<MusicEditSummary>(musicV1Endpoints.artistMerge(targetArtistId), {
+    source_artist_id: sourceArtistId,
+  })
+}
+
+export async function mergeMusicAlbums(targetAlbumId: string, sourceAlbumId: string): Promise<MusicEditSummary> {
+  return apiPostJson<MusicEditSummary>(musicV1Endpoints.albumMerge(targetAlbumId), {
+    source_album_id: sourceAlbumId,
+  })
+}
+
 export async function submitMusicEdit(request: MusicEditRequest): Promise<MusicEditSummary> {
   return apiPostJson<MusicEditSummary>(musicV1Endpoints.edits(), request)
 }
 
 export async function listMusicEdits(filters: MusicEditFilters = {}): Promise<MusicListResponse<MusicEditSummary>> {
   const response = await apiGetEnvelope<MusicEditSummary[], PaginationMeta>(`${musicV1Endpoints.edits()}${queryString(filters)}`)
-  return {
-    data: response.data,
-    meta: response.meta ?? {
-      page: filters.page ?? 1,
-      page_size: filters.page_size ?? response.data.length,
-      total: response.data.length,
-      has_more: false,
-    },
-  }
+  return listResponseWithPaginationFallback(response, filters)
 }
 
 export async function voteMusicEdit(editId: string, vote: 'yes' | 'no', comment = ''): Promise<MusicEditSummary> {

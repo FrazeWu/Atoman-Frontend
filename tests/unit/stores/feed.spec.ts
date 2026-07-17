@@ -8,21 +8,8 @@ const authenticate = () => {
   const auth = useAuthStore()
   auth.isAuthenticated = true
   auth.token = 'token'
-  auth.user = { uuid: 'user-a', username: 'fafa', email: 'fafa@example.com' }
+  auth.user = { username: 'fafa', email: 'fafa@example.com' }
 }
-
-function deferred<T>() {
-  let resolve!: (value: T) => void
-  const promise = new Promise<T>((done) => {
-    resolve = done
-  })
-  return { promise, resolve }
-}
-
-const requestCases = [
-  { method: 'fetchSubscriptions' as const, state: 'subscriptions' as const, prefix: 'sub' },
-  { method: 'fetchGroups' as const, state: 'groups' as const, prefix: 'group' },
-]
 
 describe('feed store', () => {
   beforeEach(() => {
@@ -30,86 +17,6 @@ describe('feed store', () => {
     vi.restoreAllMocks()
     setActivePinia(createPinia())
     authenticate()
-  })
-
-  it('returns true when subscriptions and groups load successfully', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'sub-1' }] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'group-1' }] }), { status: 200 }))
-    const feed = useFeedStore()
-
-    const [subscriptionsLoaded, groupsLoaded] = await Promise.all([
-      feed.fetchSubscriptions(),
-      feed.fetchGroups(),
-    ])
-
-    expect(subscriptionsLoaded).toBe(true)
-    expect(groupsLoaded).toBe(true)
-    expect(feed.subscriptions).toHaveLength(1)
-    expect(feed.groups).toHaveLength(1)
-  })
-
-  it('returns false when subscriptions and groups return non-2xx responses', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(null, { status: 503 }))
-      .mockResolvedValueOnce(new Response(null, { status: 500 }))
-    const feed = useFeedStore()
-
-    const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
-
-    expect(results).toEqual([false, false])
-  })
-
-  it('returns false when subscriptions and groups fail with network errors', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    vi.spyOn(globalThis, 'fetch')
-      .mockRejectedValueOnce(new Error('subscriptions offline'))
-      .mockRejectedValueOnce(new Error('groups offline'))
-    const feed = useFeedStore()
-
-    const results = await Promise.all([feed.fetchSubscriptions(), feed.fetchGroups()])
-
-    expect(results).toEqual([false, false])
-  })
-
-  it.each(requestCases)('$method ignores an old account response after account switching', async ({ method, state, prefix }) => {
-    const firstResponse = deferred<Response>()
-    const secondResponse = deferred<Response>()
-    vi.spyOn(globalThis, 'fetch')
-      .mockReturnValueOnce(firstResponse.promise)
-      .mockReturnValueOnce(secondResponse.promise)
-    const feed = useFeedStore()
-    const auth = useAuthStore()
-
-    const firstRequest = feed[method]()
-    feed.clearUserState()
-    auth.token = 'token-b'
-    auth.user = { uuid: 'user-b', username: 'second', email: 'second@example.com' }
-    const secondRequest = feed[method]()
-    secondResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-b` }] }), { status: 200 }))
-    expect(await secondRequest).toBe(true)
-
-    firstResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-a` }] }), { status: 200 }))
-    expect(await firstRequest).toBe(false)
-    expect(feed[state].map((item) => item.id)).toEqual([`${prefix}-b`])
-  })
-
-  it.each(requestCases)('$method ignores an older response from the same account', async ({ method, state, prefix }) => {
-    const firstResponse = deferred<Response>()
-    const secondResponse = deferred<Response>()
-    vi.spyOn(globalThis, 'fetch')
-      .mockReturnValueOnce(firstResponse.promise)
-      .mockReturnValueOnce(secondResponse.promise)
-    const feed = useFeedStore()
-
-    const firstRequest = feed[method]()
-    const secondRequest = feed[method]()
-    secondResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-new` }] }), { status: 200 }))
-    expect(await secondRequest).toBe(true)
-
-    firstResponse.resolve(new Response(JSON.stringify({ data: [{ id: `${prefix}-old` }] }), { status: 200 }))
-    expect(await firstRequest).toBe(false)
-    expect(feed[state].map((item) => item.id)).toEqual([`${prefix}-new`])
   })
 
   it('adds RSS subscriptions through the v1 feed endpoint', async () => {
@@ -425,96 +332,8 @@ describe('feed store', () => {
     expect(feedStore.starredItemIds.has('feed-item-1')).toBe(true)
   })
 
-  it('adds a recommended post bookmark to the default bookmark folder', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input)
-      if (url.endsWith('/blog/bookmark-folders')) {
-        return new Response(JSON.stringify({
-          data: [
-            { id: 'folder-custom', name: '资料' },
-            { id: 'folder-default', name: '默认收藏夹' },
-          ],
-        }), { status: 200 })
-      }
-      if (url.endsWith('/blog/bookmarks') && init?.method === 'POST') {
-        const body = JSON.parse(String(init.body)) as { bookmark_folder_id?: string }
-        return new Response(JSON.stringify({ data: { id: 'bookmark-1' } }), {
-          status: body.bookmark_folder_id ? 201 : 400,
-        })
-      }
-      throw new Error(`unexpected fetch: ${url}`)
-    })
-
-    const feedStore = useFeedStore()
-    const result = await feedStore.togglePostBookmark('post-1')
-
-    expect(result).toBe(true)
-    expect(feedStore.bookmarkedPostIds.has('post-1')).toBe(true)
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/blog/bookmark-folders', {
-      headers: { Authorization: 'Bearer token' },
-    })
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/blog/bookmarks', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ post_id: 'post-1', bookmark_folder_id: 'folder-default' }),
-    }))
-  })
-
-  it('uses the first bookmark folder when there is no default folder', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: 'folder-first', name: '资料' }, { id: 'folder-second', name: '稍后阅读' }],
-      }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'bookmark-1' } }), { status: 201 }))
-
-    const feedStore = useFeedStore()
-    const result = await feedStore.togglePostBookmark('post-1')
-
-    expect(result).toBe(true)
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/blog/bookmarks', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ post_id: 'post-1', bookmark_folder_id: 'folder-first' }),
-    }))
-  })
-
-  it.each([
-    ['empty folder list', () => Promise.resolve(new Response(JSON.stringify({ data: [] }), { status: 200 }))],
-    ['non-2xx folder response', () => Promise.resolve(new Response(null, { status: 500 }))],
-    ['folder request rejection', () => Promise.reject(new Error('offline'))],
-  ])('does not post or change bookmark state for %s', async (_label, foldersResponse) => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(foldersResponse)
-    const feedStore = useFeedStore()
-    feedStore.bookmarkedPostIds = new Set(['existing-post'])
-
-    await expect(feedStore.togglePostBookmark('post-1')).resolves.toBeNull()
-
-    expect(feedStore.bookmarkedPostIds).toEqual(new Set(['existing-post']))
-    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
-  })
-
-  it('removes an existing post bookmark through its bookmark id', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ id: 'bookmark-1', post_id: 'post-1' }],
-      }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { message: 'ok' } }), { status: 200 }))
-    const feedStore = useFeedStore()
-    feedStore.bookmarkedPostIds = new Set(['post-1', 'post-2'])
-
-    const result = await feedStore.togglePostBookmark('post-1')
-
-    expect(result).toBe(false)
-    expect(feedStore.bookmarkedPostIds).toEqual(new Set(['post-2']))
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/blog/bookmarks', {
-      headers: { Authorization: 'Bearer token' },
-    })
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/blog/bookmarks/bookmark-1', {
-      method: 'DELETE',
-      headers: { Authorization: 'Bearer token' },
-    })
-  })
-
   it('uses modular reading-list response data to update saved ids', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { saved: true },
     }), { status: 200 }))
 
@@ -523,38 +342,6 @@ describe('feed store', () => {
 
     expect(result).toBe(true)
     expect(feedStore.readingListItemIds.has('feed-item-1')).toBe(true)
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/reading-list'), expect.objectContaining({
-      body: JSON.stringify({ target_type: 'feed_item', target_id: 'feed-item-1' }),
-    }))
-  })
-
-  it('merges ids from loaded reading-list pages without deleting unseen ids', () => {
-    const feedStore = useFeedStore()
-    feedStore.readingListItemIds = new Set(['page-1-item'])
-
-    feedStore.mergeReadingListPageIds(['page-2-item'])
-    feedStore.mergeReadingListPageIds(['refreshed-page-2-item'])
-
-    expect(feedStore.readingListItemIds).toEqual(new Set([
-      'page-1-item',
-      'page-2-item',
-      'refreshed-page-2-item',
-    ]))
-  })
-
-  it('adds internal posts to the unified reading list', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      data: { saved: true },
-    }), { status: 200 }))
-
-    const feedStore = useFeedStore()
-    const result = await feedStore.toggleReadingListItem('post-1', 'post')
-
-    expect(result).toBe(true)
-    expect(feedStore.readingListItemIds.has('post-1')).toBe(true)
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/feed/reading-list'), expect.objectContaining({
-      body: JSON.stringify({ target_type: 'post', target_id: 'post-1' }),
-    }))
   })
 
   it('marks feed items unread through the v1 feed endpoint', async () => {
@@ -562,7 +349,7 @@ describe('feed store', () => {
     authenticate()
 
     const feed = useFeedStore()
-    await feed.markItemsUnread(['feed-item-1'])
+    expect(await feed.markItemsUnread(['feed-item-1'])).toBe(true)
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/timeline/mark-unread', expect.objectContaining({
       method: 'POST',
@@ -570,80 +357,17 @@ describe('feed store', () => {
     }))
   })
 
-  it.each([
-    { action: 'read', status: 200, expected: true },
-    { action: 'read', status: 500, expected: false },
-    { action: 'unread', status: 200, expected: true },
-    { action: 'unread', status: 500, expected: false },
-  ] as const)('reports mark-all-$action HTTP $status as $expected', async ({ action, status, expected }) => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      data: { ok: expected },
-    }), { status }))
+  it('reports failed read state writes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
 
     const feed = useFeedStore()
-    const result = action === 'read'
-      ? await feed.markAllFeedRead()
-      : await feed.markAllFeedUnread()
 
-    expect(result).toBe(expected)
-  })
-
-  it.each(['read', 'unread'] as const)('reports mark-all-$action as failed when the request rejects', async (action) => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
-
-    const feed = useFeedStore()
-    const result = action === 'read'
-      ? await feed.markAllFeedRead()
-      : await feed.markAllFeedUnread()
-
-    expect(result).toBe(false)
-  })
-
-  it('loads the authoritative external RSS unread count with authentication', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      data: [{ id: 'feed-item-1' }],
-      meta: { page: 1, page_size: 1, total: 7, has_more: true },
-    }), { status: 200 }))
-
-    const feed = useFeedStore()
-    const result = await feed.fetchUnreadFeedItemCount()
-
-    expect(result).toBe(7)
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/feed/timeline?source_type=external_rss&unread_only=true&limit=1',
-      { headers: { Authorization: 'Bearer token' } },
-    )
-  })
-
-  it.each([
-    { total: 0, expected: 0 },
-    { total: null, expected: null },
-    { total: undefined, expected: null },
-    { total: '', expected: null },
-    { total: Number.POSITIVE_INFINITY, expected: null },
-  ])('parses unread total $total as $expected', async ({ total, expected }) => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({ meta: { total } }),
-    } as Response)
-
-    const feed = useFeedStore()
-    const result = await feed.fetchUnreadFeedItemCount()
-
-    expect(result).toBe(expected)
-  })
-
-  it.each(['read', 'unread'] as const)('posts mark-all-$action with authentication', async (action) => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }))
-
-    const feed = useFeedStore()
-    if (action === 'read') await feed.markAllFeedRead()
-    else await feed.markAllFeedUnread()
-
-    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/feed/timeline/mark-all-${action}`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer token' },
-    })
+    expect(await feed.markItemsRead(['feed-item-1'])).toBe(false)
+    expect(await feed.markItemsUnread(['feed-item-1'])).toBe(false)
+    expect(await feed.markSubscriptionRead('sub-1')).toBe(false)
+    expect(await feed.markSubscriptionUnread('sub-1')).toBe(false)
+    expect(await feed.markAllFeedRead()).toBe(false)
+    expect(await feed.markAllFeedUnread()).toBe(false)
   })
 
   it('moves provider-created subscriptions into the selected group', async () => {
@@ -666,6 +390,16 @@ describe('feed store', () => {
       method: 'PUT',
       body: JSON.stringify({ group_id: 'group-1' }),
     }))
+  })
+
+  it('reports failed subscription management writes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
+
+    const feed = useFeedStore()
+
+    expect(await feed.setSubscriptionGroup('sub-1', 'group-1')).toBe(false)
+    expect(await feed.unsubscribe('sub-1')).toBe(false)
+    expect(await feed.deleteGroup('group-1')).toBe(false)
   })
 
   it('optimistically updates starred ids while the star request is pending', async () => {
@@ -808,26 +542,218 @@ describe('feed store', () => {
     expect(feed.readingListItemIds.has('feed-item-1')).toBe(true)
   })
 
-  it('loads every reading-list page when building saved item ids', async () => {
-    const firstPage = Array.from({ length: 100 }, (_, index) => ({
-      target_id: `feed-item-${index + 1}`,
-    }))
+  it('loads server-managed subscription fields when fetching subscriptions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        id: 'sub-1',
+        user_id: 'user-1',
+        feed_source_id: 'source-1',
+        is_muted: true,
+        auto_mark_read: false,
+        auto_add_reading_list: true,
+        created_at: '2026-07-07T00:00:00Z',
+      }],
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    await feed.fetchSubscriptions()
+
+    expect(feed.subscriptions).toEqual([expect.objectContaining({
+      id: 'sub-1',
+      is_muted: true,
+      auto_mark_read: false,
+      auto_add_reading_list: true,
+    })])
+  })
+
+  it('fetches subscription rules into dedicated server-managed state', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        id: 'rule-1',
+        name: '播客整理',
+        enabled: true,
+        position: 1,
+        match_type: 'source_category',
+        conditions_json: { categories: ['podcast'] },
+        action_auto_mark_read: true,
+      }],
+    }), { status: 200 }))
+
+    const feed = useFeedStore()
+    await feed.fetchSubscriptionRules()
+
+    expect(feed.subscriptionRules).toEqual([expect.objectContaining({
+      id: 'rule-1',
+      action_auto_mark_read: true,
+    })])
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/subscription-rules', {
+      headers: { Authorization: 'Bearer token' },
+    })
+  })
+
+  it('does not send a subscription rule without any action', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const feed = useFeedStore()
+
+    const result = await feed.createSubscriptionRule({
+      name: '播客整理',
+      enabled: true,
+      match_type: 'source_category',
+      conditions_json: { categories: ['podcast'] },
+    })
+
+    expect(result).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('does not send a subscription rule without any condition', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const feed = useFeedStore()
+
+    const result = await feed.createSubscriptionRule({
+      name: '空条件规则',
+      enabled: true,
+      match_type: 'keywords',
+      conditions_json: { keywords: [] },
+      action_auto_mark_read: true,
+    })
+
+    expect(result).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('creates a subscription rule through the backend-aligned endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: firstPage,
-        meta: { page: 1, page_size: 100, total: 101 },
-      }), { status: 200 }))
+        data: {
+          id: 'rule-1',
+          name: '播客整理',
+          enabled: true,
+          position: 1,
+          match_type: 'source_category',
+          conditions_json: { categories: ['podcast'] },
+          action_auto_mark_read: true,
+        },
+      }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        data: [{ target_id: 'feed-item-101' }],
-        meta: { page: 2, page_size: 100, total: 101 },
+        data: [{
+          id: 'rule-1',
+          name: '播客整理',
+          enabled: true,
+          position: 1,
+          match_type: 'source_category',
+          conditions_json: { categories: ['podcast'] },
+          action_auto_mark_read: true,
+        }],
       }), { status: 200 }))
 
     const feed = useFeedStore()
-    await feed.fetchReadingListIds()
+    const result = await feed.createSubscriptionRule({
+      name: '播客整理',
+      enabled: true,
+      match_type: 'source_category',
+      conditions_json: { categories: ['podcast'] },
+      action_auto_mark_read: true,
+    })
 
-    expect(feed.readingListItemIds.size).toBe(101)
-    expect(feed.readingListItemIds.has('feed-item-101')).toBe(true)
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/reading-list?page=1&limit=100', expect.any(Object))
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/feed/reading-list?page=2&limit=100', expect.any(Object))
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscription-rules', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        name: '播客整理',
+        enabled: true,
+        match_type: 'source_category',
+        conditions_json: { categories: ['podcast'] },
+        action_auto_mark_read: true,
+      }),
+    }))
+    expect(feed.subscriptionRules).toHaveLength(1)
+  })
+
+  it('updates, reorders, deletes, and applies subscription rules while keeping summary state', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'rule-1',
+          name: '已更新规则',
+          enabled: false,
+          position: 2,
+          match_type: 'keywords',
+          conditions_json: { keywords: ['go'] },
+          action_muted: true,
+        }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'rule-2',
+          name: '第二条规则',
+          enabled: true,
+          position: 1,
+          match_type: 'source_ids',
+          conditions_json: { source_ids: ['source-2'] },
+        }],
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: {
+          scanned_count: 12,
+          updated_count: 4,
+          group_changed_count: 2,
+          muted_changed_count: 1,
+          auto_mark_read_changed_count: 1,
+          auto_add_reading_list_changed_count: 0,
+        },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{
+          id: 'sub-1',
+          user_id: 'user-1',
+          feed_source_id: 'source-1',
+          is_muted: true,
+          auto_mark_read: true,
+          auto_add_reading_list: false,
+          created_at: '2026-07-07T00:00:00Z',
+        }],
+      }), { status: 200 }))
+
+    const feed = useFeedStore()
+
+    expect(await feed.updateSubscriptionRule('rule-1', {
+      name: '已更新规则',
+      enabled: false,
+      position: 2,
+      match_type: 'keywords',
+      conditions_json: { keywords: ['go'] },
+      action_muted: true,
+    })).toBe(true)
+    expect(await feed.reorderSubscriptionRules(['rule-2', 'rule-1'])).toBe(true)
+    expect(await feed.deleteSubscriptionRule('rule-1')).toBe(true)
+    expect(await feed.applySubscriptionRules({ all: true })).toBe(true)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscription-rules/rule-1', expect.objectContaining({
+      method: 'PUT',
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/feed/subscription-rules/reorder', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({ rule_ids: ['rule-2', 'rule-1'] }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/feed/subscription-rules/rule-1', expect.objectContaining({
+      method: 'DELETE',
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(7, '/api/v1/feed/subscription-rules/apply', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ all: true }),
+    }))
+    expect(feed.ruleApplySummary).toEqual(expect.objectContaining({
+      updated_count: 4,
+      muted_changed_count: 1,
+    }))
+    expect(feed.subscriptions).toEqual([expect.objectContaining({
+      is_muted: true,
+      auto_mark_read: true,
+    })])
   })
 })

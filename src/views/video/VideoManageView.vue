@@ -1,6 +1,6 @@
 <template>
   <div class="a-page" style="padding-bottom:12rem">
-    <PPageHeader title="视频管理">
+    <PPageHeader title="视频创作">
       <template #action>
         <div class="paper-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
@@ -28,7 +28,7 @@
       <!-- Master: Collection Selector -->
       <section>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <h2 style="font-size:1.25rem;font-weight:900;margin:0">所有合集</h2>
+          <h2 style="font-size:1.25rem;font-weight: 500;margin:0">所有合集</h2>
           <PPress label="+ 新建合集" variant="secondary" size="sm" @click="showCreateCollectionModal" />
         </div>
         
@@ -41,6 +41,7 @@
             @click="selectCollection(col.id)"
           >
             <span class="col-name">{{ col.name }}</span>
+            <span class="col-count">{{ col.videos_count || 0 }}</span>
           </button>
         </div>
       </section>
@@ -53,8 +54,17 @@
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-bottom:1rem">
               <div>
                 <div style="display:flex;align-items:center;gap:.75rem">
-                  <h3 style="font-size:1.5rem;font-weight:900;margin:0">{{ selectedCollection.name }}</h3>
+                  <h3 style="font-size:1.5rem;font-weight: 500;margin:0">{{ selectedCollection.name }}</h3>
                   <span class="a-badge">{{ selectedCollection.channelName }}</span>
+                </div>
+                <div style="margin-top:.75rem">
+                  <PPress
+                    size="sm"
+                    variant="secondary"
+                    :label="isDefaultChannel ? '当前默认频道' : '设为默认频道'"
+                    :disabled="isDefaultChannel || settingDefaultChannel"
+                    @click="handleSetDefaultChannel"
+                  />
                 </div>
                 <p v-if="selectedCollection.description" class="a-muted" style="margin:.5rem 0 0 0">{{ selectedCollection.description }}</p>
               </div>
@@ -62,8 +72,6 @@
                 <PPress label="上传视频" @click="router.push(`/videos/upload?channel=${selectedCollection.channelId}&collection=${selectedCollection.id}`)" />
               </div>
             </div>
-
-            <p v-if="deleteError" role="alert" class="a-error">{{ deleteError }}</p>
 
             <!-- Videos List -->
             <div v-if="loadingVideos" style="display:flex;flex-direction:column;gap:1rem">
@@ -89,13 +97,7 @@
                 </div>
                 <div class="video-actions">
                   <button class="action-btn" @click="handleVideoAction('edit', video)">编辑</button>
-                  <button
-                    class="action-btn danger"
-                    :disabled="deletingVideoId !== null"
-                    @click="handleVideoAction('delete', video)"
-                  >
-                    {{ deletingVideoId === video.id ? '删除中...' : '删除' }}
-                  </button>
+                  <button class="action-btn danger" @click="handleVideoAction('delete', video)">删除</button>
                 </div>
               </div>
             </div>
@@ -108,7 +110,7 @@
     <PModal v-if="createCollectionModalVisible" @close="closeCreateCollectionModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
-          <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">创建合集</h3>
+          <h3 style="font-size:1.25rem;font-weight: 500;margin:0 0 1.5rem 0">创建合集</h3>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">合集名称 *</label>
@@ -137,7 +139,7 @@
     <PModal v-if="createModalVisible" @close="closeCreateModal" size="md">
       <div style="display:flex;flex-direction:column;gap:1.5rem">
         <div>
-          <h3 style="font-size:1.25rem;font-weight:900;margin:0 0 1.5rem 0">创建频道</h3>
+          <h3 style="font-size:1.25rem;font-weight: 500;margin:0 0 1.5rem 0">创建频道</h3>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <div>
               <label style="display:block;font-weight:bold;margin-bottom:0.5rem">频道名称 *</label>
@@ -172,25 +174,28 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PPress from '@/components/ui/PPress.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useDefaultChannelsStore } from '@/stores/defaultChannels'
 import { useApi } from '@/composables/useApi'
 
 interface Collection {
   id: string
   name: string
   description?: string
+  videos_count?: number
 }
 
 interface Channel {
   id: string
   name: string
   description?: string
-  content_type: 'blog' | 'podcast' | 'video'
+  collections_count?: number
   collections?: Collection[]
 }
 
 const authStore = useAuthStore()
 const api = useApi()
 const router = useRouter()
+const defaultChannelsStore = useDefaultChannelsStore()
 
 const loadingChannels = ref(false)
 const channels = ref<Channel[]>([])
@@ -199,9 +204,7 @@ const channelOptions = computed(() => channels.value.map(ch => ({ label: ch.name
 const selectedCollectionId = ref<string | null>(null)
 const videos = ref<any[]>([])
 const loadingVideos = ref(false)
-const deletingVideoId = ref<string | null>(null)
-const deleteError = ref('')
-let videosRequestSequence = 0
+const settingDefaultChannel = ref(false)
 
 const allCollections = computed(() => {
   const list: (Collection & { channelName: string, channelId: string })[] = []
@@ -219,6 +222,10 @@ const selectedCollection = computed(() => {
   return allCollections.value.find(c => c.id === selectedCollectionId.value) || null
 })
 
+const isDefaultChannel = computed(() => {
+  return defaultChannelsStore.channelFor('video')?.id === selectedCollection.value?.channelId
+})
+
 // Create channel modal state
 const createModalVisible = ref(false)
 const formData = ref({ name: '', description: '' })
@@ -229,11 +236,8 @@ const createCollectionModalVisible = ref(false)
 const collectionFormData = ref({ name: '', description: '', channel_id: '' })
 
 const fetchVideos = async () => {
-  const requestSequence = ++videosRequestSequence
-  const collectionId = selectedCollectionId.value
-  if (!collectionId) {
+  if (!selectedCollectionId.value) {
     videos.value = []
-    loadingVideos.value = false
     return
   }
 
@@ -241,29 +245,38 @@ const fetchVideos = async () => {
   try {
     // Note: We use the video list API with collection_id filter
     // We might need to handle owner-view on the backend if not already supported
-    const res = await fetch(`${api.videos.list}?collection_id=${collectionId}`, {
+    const res = await fetch(`${api.videos.list}?collection_id=${selectedCollectionId.value}`, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     if (res.ok) {
       const data = await res.json()
       // The backend returns a list of videos directly or wrapped in data
-      if (requestSequence === videosRequestSequence && selectedCollectionId.value === collectionId) {
-        videos.value = Array.isArray(data) ? data : (data.data || [])
-      }
+      videos.value = Array.isArray(data) ? data : (data.data || [])
     }
   } catch (e) {
     console.error('Failed to fetch videos', e)
   } finally {
-    if (requestSequence === videosRequestSequence && selectedCollectionId.value === collectionId) {
-      loadingVideos.value = false
-    }
+    loadingVideos.value = false
   }
 }
 
 const selectCollection = (id: string) => {
-  deleteError.value = ''
   selectedCollectionId.value = id
   fetchVideos()
+}
+
+const handleSetDefaultChannel = async () => {
+  if (!selectedCollection.value || isDefaultChannel.value || settingDefaultChannel.value) return
+
+  settingDefaultChannel.value = true
+  try {
+    await defaultChannelsStore.setDefaultChannel('video', selectedCollection.value.channelId)
+  } catch (error) {
+    console.error('Failed to set default video channel', error)
+    alert('设置默认频道失败，请重试')
+  } finally {
+    settingDefaultChannel.value = false
+  }
 }
 
 const loadChannels = async () => {
@@ -275,9 +288,7 @@ const loadChannels = async () => {
     })
     if (channelsRes.ok) {
       const channelsData = await channelsRes.json()
-      const channelList: Channel[] = (channelsData.data || []).filter(
-        (channel: Channel) => channel.content_type === 'video',
-      )
+      const channelList = channelsData.data || []
       
       // Load collections for each channel
       for (const channel of channelList) {
@@ -308,34 +319,22 @@ const handleVideoAction = async (action: 'edit' | 'delete', video: any) => {
   if (action === 'edit') {
     router.push(`/videos/edit/${video.id}`)
   } else if (action === 'delete') {
-    if (deletingVideoId.value === null && confirm(`确定要删除视频《${video.title}》吗？`)) {
-      const deleteCollectionId = selectedCollectionId.value
-      deleteError.value = ''
-      deletingVideoId.value = video.id
+    if (confirm(`确定要删除视频《${video.title}》吗？`)) {
       try {
         const res = await fetch(api.videos.delete(video.id), {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${authStore.token}` }
         })
         if (res.ok) {
-          if (selectedCollectionId.value === deleteCollectionId) {
-            await fetchVideos()
-            // Update local count if needed
-            loadChannels()
-          }
+          fetchVideos()
+          // Update local count if needed
+          loadChannels()
         } else {
           const err = await res.json()
-          if (selectedCollectionId.value === deleteCollectionId) {
-            deleteError.value = err.error || '删除失败'
-          }
+          alert(err.error || '删除失败')
         }
       } catch (e) {
         console.error('Delete video failed', e)
-        if (selectedCollectionId.value === deleteCollectionId) {
-          deleteError.value = '删除失败，请重试'
-        }
-      } finally {
-        deletingVideoId.value = null
       }
     }
   }
@@ -379,8 +378,7 @@ const handleCreateChannel = async () => {
       },
       body: JSON.stringify({
         name: formData.value.name.trim(),
-        description: formData.value.description.trim(),
-        content_type: 'video'
+        description: formData.value.description.trim()
       })
     })
 
@@ -531,7 +529,7 @@ onMounted(() => {
 
 .video-title {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
   margin: 0;
 }
 

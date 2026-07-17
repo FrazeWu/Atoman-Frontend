@@ -36,6 +36,7 @@ type RecommendationItem = {
   read_count?: number
   update_frequency_label?: string
   last_published_at?: string
+  subscribed?: boolean
   recent_items?: Array<{ id: string; title: string }>
 }
 
@@ -79,6 +80,7 @@ const theme = ref(ALL_THEME)
 const themes = ref<FeedRecommendationTheme[]>([])
 const themesLoading = ref(false)
 const loading = ref(false)
+const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
@@ -197,6 +199,15 @@ async function fetchRecommendations() {
 
     articles.value = Array.isArray(articlePayload.data) ? articlePayload.data : []
     channels.value = Array.isArray(channelPayload.data) ? channelPayload.data : []
+    if (authStore.isAuthenticated && channels.value.length) {
+      const subscribedStates = await Promise.all(
+        channels.value.map((item) => feedStore.isSubscribedToChannel(item.id)),
+      )
+      channels.value = channels.value.map((item, index) => ({
+        ...item,
+        subscribed: subscribedStates[index] ?? false,
+      }))
+    }
     totalArticles.value = articlePayload.meta?.total ?? articlePayload.total ?? articles.value.length
     totalChannels.value = channelPayload.meta?.total ?? channelPayload.total ?? channels.value.length
   } catch (error) {
@@ -280,6 +291,31 @@ function channelMetadataText(item: RecommendationItem) {
   return bits.filter(Boolean).join(' · ')
 }
 
+function isChannelSubscribeBusy(channelId: string) {
+  return subscribingChannelIds.value.includes(channelId)
+}
+
+async function subscribeRecommendedChannel(item: RecommendationItem) {
+  if (!authStore.isAuthenticated || item.subscribed || isChannelSubscribeBusy(item.id)) return
+
+  subscribingChannelIds.value = [...subscribingChannelIds.value, item.id]
+  try {
+    const success = await feedStore.subscribeToChannel(item.id)
+    if (!success) {
+      errorMessage.value = '订阅失败，请重试'
+      return
+    }
+
+    channels.value = channels.value.map((channel) => (
+      channel.id === item.id
+        ? { ...channel, subscribed: true }
+        : channel
+    ))
+  } finally {
+    subscribingChannelIds.value = subscribingChannelIds.value.filter((id) => id !== item.id)
+  }
+}
+
 const visibleChannels = computed(() => {
   return channels.value
 })
@@ -352,30 +388,29 @@ onMounted(() => {
       <template #action><PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
     </PPageHeader>
 
-    <div class="filters-stack">
-      <div class="filter-row" aria-label="订阅推荐模式">
+    <div class="filters-wrap" data-test="feed-filter-wrap">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐模式">
         <PSegmentedControl
           v-model="mode"
           :options="modeOptions"
         />
       </div>
 
-      <div class="filter-row" aria-label="订阅推荐对象">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐对象">
         <PSegmentedControl
           v-model="target"
           :options="targetOptions"
         />
       </div>
 
-      <div class="filter-row" aria-label="内容类型筛选">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="内容类型筛选">
         <PSegmentedControl
           v-model="category"
           :options="categoryOptions"
-          class="category-segmented-control"
         />
       </div>
 
-      <div class="filter-row" aria-label="主题筛选">
+      <div class="filter-group" data-test="feed-filter-group" aria-label="主题筛选">
         <PSegmentedControl
           v-model="theme"
           :options="themeOptions"
@@ -491,7 +526,7 @@ onMounted(() => {
               <FeedSourceIdentityCard
                 v-for="item in visibleMixedChannels"
                 :key="item.id"
-                :source="toRecommendedSource(item)"
+                :source="{ ...toRecommendedSource(item), subscribed: Boolean(item.subscribed) }"
                 :color="buildSourceColor(item.title || item.id)"
                 :avatar-label="buildSourceAvatarLabel(item.title)"
                 :display-url="''"
@@ -499,13 +534,15 @@ onMounted(() => {
                 :eyebrow="channelMetricLabel(item)"
                 :summary-text="channelSummaryText(item)"
                 :metadata-text="channelMetadataText(item)"
-                :show-subscribe="false"
+                :subscribe-busy="isChannelSubscribeBusy(item.id)"
+                :show-subscribe="authStore.isAuthenticated"
                 :show-previews="true"
                 :show-meta="false"
                 compact
                 variant="recommend"
                 data-test="channel-card"
                 @select="openTarget(item.target_path)"
+                @subscribe="subscribeRecommendedChannel(item)"
               />
             </div>
           </section>
@@ -531,7 +568,7 @@ onMounted(() => {
           <FeedSourceIdentityCard
             v-for="item in visibleChannels"
             :key="item.id"
-            :source="toRecommendedSource(item)"
+            :source="{ ...toRecommendedSource(item), subscribed: Boolean(item.subscribed) }"
             :color="buildSourceColor(item.title || item.id)"
             :avatar-label="buildSourceAvatarLabel(item.title)"
             :display-url="''"
@@ -539,13 +576,15 @@ onMounted(() => {
             :eyebrow="channelMetricLabel(item)"
             :summary-text="channelSummaryText(item)"
             :metadata-text="channelMetadataText(item)"
-            :show-subscribe="false"
+            :subscribe-busy="isChannelSubscribeBusy(item.id)"
+            :show-subscribe="authStore.isAuthenticated"
             :show-previews="true"
             :show-meta="false"
             compact
             variant="recommend"
             data-test="channel-card"
             @select="openTarget(item.target_path)"
+            @subscribe="subscribeRecommendedChannel(item)"
           />
         </div>
 
@@ -569,23 +608,42 @@ onMounted(() => {
   padding-bottom: 6rem;
 }
 
-.filters-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.filter-row {
+.filters-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
-  align-items: center;
+  gap: 0.75rem 1rem;
+  align-items: flex-start;
 }
 
-.category-segmented-control :deep(.p-segmented-control-item) {
-  min-height: 24px;
-  padding: 0 10px;
-  font-size: 10px;
+.filter-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.filter-group + .filter-group {
+  position: relative;
+}
+
+.filter-group + .filter-group::before {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  width: 1px;
+  height: 1.5rem;
+  background: var(--a-color-line-soft);
+  transform: translateY(-50%);
+}
+
+.filter-group :deep(.p-segmented-control) {
+  width: auto;
+}
+
+@media (max-width: 720px) {
+  .filter-group + .filter-group::before {
+    display: none;
+  }
 }
 
 .state-line {
@@ -627,7 +685,7 @@ onMounted(() => {
   color: var(--a-color-muted);
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  letter-spacing: 0.18em;
+  letter-spacing: 0;
 }
 
 .card-stack {
@@ -662,8 +720,8 @@ onMounted(() => {
   padding: 0.25rem 0.5rem;
   font-family: var(--a-font-meta);
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-line-soft);

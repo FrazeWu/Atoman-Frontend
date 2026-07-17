@@ -43,7 +43,7 @@ defineProps<{
   align-items: center;
   justify-content: center;
   cursor: help;
-  border-radius: 0px; /* Straight corner */
+  border-radius: var(--a-radius-base);
   transition: all 0.2s ease;
 }
 .shortcut-trigger:hover {
@@ -60,14 +60,15 @@ defineProps<{
   border: 1px solid var(--a-color-line);
   padding: 1.25rem;
   width: 14rem;
-  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.15); /* Hard shadow */
-  border-radius: 0px; /* Straight corner */
+  box-shadow: none;
+  border-radius: var(--a-radius-base);
   opacity: 0;
   visibility: hidden;
   transform: translateY(10px);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
-.shortcut-info-wrap:hover .shortcut-content {
+.shortcut-info-wrap:hover .shortcut-content,
+.shortcut-info-wrap:focus-within .shortcut-content {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -99,7 +100,7 @@ defineProps<{
   font-family: var(--a-font-meta);
   background: var(--a-color-paper-wash);
   padding: 0.1rem 0.35rem;
-  border-radius: 0px; /* Straight corner */
+  border-radius: var(--a-radius-base);
   border: 1px solid var(--a-color-line-soft);
   min-width: 1.2rem;
   text-align: center;

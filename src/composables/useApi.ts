@@ -8,9 +8,29 @@ export function useApiUrl() {
   return `${normalizedBaseUrl}/api/v1`
 }
 
+export function useWebSocketUrl(path: string) {
+  const apiUrl = useApiUrl()
+
+  if (apiUrl.startsWith('http://') || apiUrl.startsWith('https://')) {
+    const url = new URL(apiUrl)
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    url.pathname = path
+    url.search = ''
+    url.hash = ''
+    return url.toString()
+  }
+
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}${path}`
+  }
+
+  return path
+}
+
 export function useApi() {
   const apiUrl = useApiUrl();
-  const targetPath = (kind: string, resourceId: string) =>
+  const discussionTarget = (kind: string, resourceId: string) =>
     `${apiUrl}/discussions/${encodeURIComponent(kind)}/${encodeURIComponent(resourceId)}`
 
   return {
@@ -49,14 +69,16 @@ export function useApi() {
       albumRevision: (id: number | string, version: number | string) => `${apiUrl}/albums/${id}/revisions/${version}`,
       albumRevisionDiff: (id: number | string) => `${apiUrl}/albums/${id}/revisions/diff`,
       albumRevert: (id: number | string, version: number | string) => `${apiUrl}/albums/${id}/revisions/${version}/revert`,
+      albumDiscussions: (id: number | string) => `${apiUrl}/albums/${id}/discussions`,
       albumEntryStatus: (id: number | string) => `${apiUrl}/albums/${id}/entry-status`,
       albumProtection: (id: number | string) => `${apiUrl}/albums/${id}/protection`,
       artistEntryStatus: (id: number | string) => `${apiUrl}/artists/${id}/entry-status`,
+      artistDiscussions: (id: number | string) => `${apiUrl}/artists/${id}/discussions`,
       adminMusicReview: `${apiUrl}/admin/music/entries`,
       adminMusicConfirm: (id: number | string, type: 'album' | 'artist') =>
         type === 'album' ? `${apiUrl}/albums/${id}/entry-status` : `${apiUrl}/artists/${id}/entry-status`,
     },
-    
+
     blog: {
       channels: `${apiUrl}/blog/channels`,
       channel: (id: number | string) => `${apiUrl}/blog/channels/${id}`,
@@ -67,7 +89,7 @@ export function useApi() {
       channelArticleRssBySlug: (slug: string) => `${apiUrl}/blog/channels/slug/${slug}/rss/article`,
       collections: `${apiUrl}/blog/collections`,
       collection: (id: number | string) => `${apiUrl}/blog/collections/${id}`,
-      
+
       posts: `${apiUrl}/blog/posts`,
       post: (id: number | string) => `${apiUrl}/blog/posts/${id}`,
       postPublish: (id: number | string) => `${apiUrl}/blog/posts/${id}/publish`,
@@ -82,23 +104,42 @@ export function useApi() {
       postCollection: (id: number | string, collectionId: number | string) => `${apiUrl}/blog/posts/${id}/collections/${collectionId}`,
       collectionPostOrder: (id: number | string) => `${apiUrl}/blog/collections/${id}/posts/order`,
       uploadImage: `${apiUrl}/blog/upload-image`,
-      
+
+      comments: `${apiUrl}/blog/comments`,
+      postComments: (id: number | string) => `${apiUrl}/blog/posts/${id}/comments`,
+
       likes: `${apiUrl}/blog/likes`,
       postLikesCount: (id: number | string) => `${apiUrl}/blog/posts/${id}/likes/count`,
-      
+
+      explore: `${apiUrl}/blog/explore`,
       bookmarkFolders: `${apiUrl}/blog/bookmark-folders`,
       bookmarkFolder: (id: number | string) => `${apiUrl}/blog/bookmark-folders/${id}`,
       bookmarks: `${apiUrl}/blog/bookmarks`,
       bookmark: (id: number | string) => `${apiUrl}/blog/bookmarks/${id}`,
     },
-    
+
+    interactions: {
+      blogLikes: `${apiUrl}/blog/likes`,
+      blogPostComments: (postId: number | string) => `${apiUrl}/blog/posts/${postId}/comments`,
+      blogComment: (commentId: number | string) => `${apiUrl}/blog/comments/${commentId}`,
+      forumLikes: `${apiUrl}/forum/likes`,
+      forumTopicComments: (topicId: number | string) => `${apiUrl}/forum/topics/${topicId}/comments`,
+      forumComment: (commentId: number | string) => `${apiUrl}/forum/comments/${commentId}`,
+      videoLikes: `${apiUrl}/videos/likes`,
+      videoComments: (videoId: number | string) => `${apiUrl}/videos/${videoId}/comments`,
+      videoComment: (commentId: number | string) => `${apiUrl}/videos/comments/${commentId}`,
+    },
+
     auth: {
       register: `${apiUrl}/auth/register`,
       login: `${apiUrl}/auth/login`,
       session: `${apiUrl}/auth/session`,
+      checkEmail: `${apiUrl}/auth/check-email`,
+      checkUsername: `${apiUrl}/auth/check-username`,
       sendVerification: `${apiUrl}/auth/send-verification`,
       verifyEmail: `${apiUrl}/auth/verify-email`,
       onboardingComplete: `${apiUrl}/auth/onboarding/complete`,
+      onboardingRecommendations: `${apiUrl}/feed/onboarding/recommendations`,
     },
 
     settings: {
@@ -111,6 +152,8 @@ export function useApi() {
       feed: {
         sources: `${apiUrl}/admin/feed/sources`,
         source: (sourceId: number | string) => `${apiUrl}/admin/feed/sources/${sourceId}`,
+        onboardingRecommendations: `${apiUrl}/admin/feed/onboarding/recommendations`,
+        onboardingRecommendation: (recommendationId: number | string) => `${apiUrl}/admin/feed/onboarding/recommendations/${recommendationId}`,
         opmlImport: `${apiUrl}/feed/sources/opml/import`,
         opmlExport: `${apiUrl}/feed/sources/opml/export`,
       },
@@ -147,20 +190,24 @@ export function useApi() {
       access: `${apiUrl}/site/access`,
       resolve: (handle: string) => `${apiUrl}/site/resolve/${encodeURIComponent(handle)}`,
     },
-    
+
     users: {
       search: `${apiUrl}/users/search`,
       me: `${apiUrl}/users/me`,
       settings: `${apiUrl}/users/me`,          // profile update (display_name, bio, etc)
       meSettings: `${apiUrl}/users/me/settings`,
+      meDefaultChannels: `${apiUrl}/users/me/default-channels`,
+      meDefaultChannel: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/users/me/default-channels/${module}`,
       profile: (username: string) => `${apiUrl}/users/by-username/${username}`,
       roles: `${apiUrl}/users/roles`,
       role: (userUuid: string) => `${apiUrl}/users/${userUuid}/role`,
       follow: (userUuid: string) => `${apiUrl}/users/${userUuid}/follow`,
       followers: (userUuid: string) => `${apiUrl}/users/${userUuid}/followers`,
       following: (userUuid: string) => `${apiUrl}/users/${userUuid}/following`,
+      blocked: `${apiUrl}/users/blocked`,
+      block: (userUuid: string) => `${apiUrl}/users/${userUuid}/block`,
     },
-    
+
     feed: {
       subscriptions: `${apiUrl}/feed/subscriptions`,
       subscription: (id: number) => `${apiUrl}/feed/subscriptions/${id}`,
@@ -174,17 +221,22 @@ export function useApi() {
     notifications: {
       list: `${apiUrl}/notifications`,
       unreadCount: `${apiUrl}/notifications/unread-count`,
+      unreadCounts: `${apiUrl}/notifications/unread-counts`,
       markRead: (id: string) => `${apiUrl}/notifications/${id}/read`,
+      markCategoryRead: (category: string) => `${apiUrl}/notifications/${category}/read-all`,
       markAllRead: `${apiUrl}/notifications/read-all`,
+      preferences: `${apiUrl}/notifications/preferences`,
+      mutes: `${apiUrl}/notifications/mutes`,
+      mute: (id: string) => `${apiUrl}/notifications/mutes/${id}`,
     },
 
     comments: {
-      roots: (kind: string, resourceId: string) => `${targetPath(kind, resourceId)}/comments`,
+      roots: (kind: string, resourceId: string) => `${discussionTarget(kind, resourceId)}/comments`,
       replies: (rootId: string) => `${apiUrl}/comments/${encodeURIComponent(rootId)}/replies`,
       comment: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}`,
       like: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}/like`,
       report: (commentId: string) => `${apiUrl}/comments/${encodeURIComponent(commentId)}/report`,
-      mark: (kind: string, resourceId: string) => `${targetPath(kind, resourceId)}/pinned-comment`,
+      mark: (kind: string, resourceId: string) => `${discussionTarget(kind, resourceId)}/pinned-comment`,
       reports: `${apiUrl}/admin/comment-reports`,
       moderation: (commentId: string) => `${apiUrl}/admin/comments/${encodeURIComponent(commentId)}/moderation`,
       mentionUsers: `${apiUrl}/users/search`,
@@ -209,12 +261,32 @@ export function useApi() {
       uploadCover: `${apiUrl}/videos/upload-cover`,
       incrementView: (id: string) => `${apiUrl}/videos/${id}/view`,
       recommended: (id: string) => `${apiUrl}/videos/${id}/recommended`,
+      bookmarks: `${apiUrl}/videos/bookmarks`,
+      bookmark: (id: string) => `${apiUrl}/videos/bookmarks/${id}`,
+      comments: (id: string) => `${apiUrl}/videos/${id}/comments`,
+      comment: (commentId: string) => `${apiUrl}/videos/comments/${commentId}`,
     },
 
     podcast: {
       episodes: `${apiUrl}/podcast/episodes`,
       episode: (id: string) => `${apiUrl}/podcast/episodes/${id}`,
       showEpisodes: (channelSlug: string) => `${apiUrl}/podcast/shows/${channelSlug}/episodes`,
+      bookmarks: `${apiUrl}/podcast/bookmarks`,
+      bookmark: (id: string) => `${apiUrl}/podcast/bookmarks/${id}`,
+      showBookmarks: `${apiUrl}/podcast/show-bookmarks`,
+      showBookmark: (id: string) => `${apiUrl}/podcast/show-bookmarks/${id}`,
+      listenLater: `${apiUrl}/podcast/listen-later`,
+      listenLaterItem: (id: string) => `${apiUrl}/podcast/listen-later/${id}`,
+      progress: `${apiUrl}/podcast/progress`,
+      episodeProgress: (id: string) => `${apiUrl}/podcast/episodes/${id}/progress`,
+      comments: (id: string) => `${apiUrl}/podcast/episodes/${id}/comments`,
+      comment: (id: string) => `${apiUrl}/podcast/comments/${id}`,
+      subscriptionEpisodes: `${apiUrl}/podcast/subscriptions/episodes`,
+      creatorDashboard: `${apiUrl}/podcast/creator/dashboard`,
+      creatorEpisodes: `${apiUrl}/podcast/creator/episodes`,
+      creatorAnalytics: `${apiUrl}/podcast/creator/analytics`,
+      creatorComments: `${apiUrl}/podcast/creator/comments`,
+      creatorSettings: `${apiUrl}/podcast/creator/settings`,
       uploadAudio: `${apiUrl}/podcast/upload-audio`,
       uploadCover: `${apiUrl}/podcast/upload-cover`,
     },

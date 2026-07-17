@@ -103,6 +103,49 @@
       </div>
     </div>
 
+    <section class="setting-feed-panel__recommendations" aria-labelledby="onboarding-recommendations-admin-title">
+      <div class="setting-feed-panel__recommendations-header">
+        <div>
+          <h4 id="onboarding-recommendations-admin-title">新手推荐</h4>
+          <p class="a-muted">最多启用 5 个 RSS 来源。</p>
+        </div>
+        <div class="setting-feed-panel__recommendations-add">
+          <select v-model="recommendationSourceId" data-test="onboarding-recommendation-source" aria-label="选择推荐订阅源">
+            <option value="">选择订阅源</option>
+            <option v-for="source in availableRecommendationSources" :key="source.id" :value="source.id">
+              {{ source.title || source.rss_url }}
+            </option>
+          </select>
+          <PButton size="sm" :disabled="!recommendationSourceId" @click="addRecommendation">添加推荐</PButton>
+        </div>
+      </div>
+
+      <div v-if="recommendations.length" class="setting-feed-panel__recommendation-list">
+        <div v-for="(recommendation, index) in recommendations" :key="recommendation.id" class="setting-feed-panel__recommendation-row">
+          <div class="setting-feed-panel__meta">
+            <strong>{{ recommendation.title }}</strong>
+            <small>{{ recommendation.rss_url }}</small>
+            <small>状态：{{ recommendation.health_status || 'healthy' }}</small>
+          </div>
+          <div class="setting-feed-panel__row-actions">
+            <label class="setting-feed-panel__toggle">
+              <span>启用</span>
+              <input
+                data-test="onboarding-recommendation-enabled"
+                type="checkbox"
+                :checked="recommendation.enabled"
+                @click.prevent="setRecommendationEnabled(recommendation.id, !recommendation.enabled)"
+              />
+            </label>
+            <PButton size="sm" variant="secondary" :disabled="index === 0" @click="moveRecommendation(index, -1)">上移</PButton>
+            <PButton size="sm" variant="secondary" :disabled="index === recommendations.length - 1" @click="moveRecommendation(index, 1)">下移</PButton>
+            <PButton size="sm" variant="secondary" @click="removeRecommendation(recommendation.id)">移除</PButton>
+          </div>
+        </div>
+      </div>
+      <p v-else class="setting-feed-panel__empty">暂无新手推荐。</p>
+    </section>
+
     <p v-if="message" class="setting-feed-panel__message">{{ message }}</p>
     <p v-if="error" class="setting-feed-panel__message setting-feed-panel__message--error">{{ error }}</p>
 
@@ -119,6 +162,15 @@
             状态：{{ sourceStatusLabel(source.status) }} ·
             待处理 {{ source.pending_count || 0 }} ·
             重试 {{ source.retry_count || 0 }}
+          </small>
+          <small>
+            收藏 {{ source.bookmark_count || 0 }} · 阅读 {{ source.read_count || 0 }}
+          </small>
+          <small v-if="source.recent_events?.length" class="setting-feed-panel__events">
+            最近事件：
+            <span v-for="event in source.recent_events" :key="`${source.id}-${event.event_type}-${event.created_at}`">
+              {{ event.event_type }}
+            </span>
           </small>
         </div>
 
@@ -168,8 +220,11 @@ import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceI
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useAdminFeedFulltextStore } from '@/stores/adminFeedFulltext'
-import type { FeedSource } from '@/types'
+import {
+  useAdminFeedFulltextStore,
+  type AdminFeedFulltextSourceRow,
+  type AdminOnboardingFeedRecommendation,
+} from '@/stores/adminFeedFulltext'
 
 const props = defineProps<{
   fullTextMode: 'disabled' | 'per_source'
@@ -192,15 +247,24 @@ const syncingSourceIds = ref(new Set<string>())
 const itemsSheetOpen = ref(false)
 const itemsSheetLoading = ref(false)
 const itemsSheetError = ref('')
-const selectedSource = ref<FeedSource | null>(null)
+const selectedSource = ref<AdminFeedFulltextSourceRow | null>(null)
 const selectedSourceItems = ref([])
 const opmlInput = ref<HTMLInputElement | null>(null)
 const draft = ref({
   title: '',
   rssUrl: '',
 })
+const recommendationSourceId = ref('')
 
-const sources = computed(() => adminFeedFulltextStore.sources as FeedSource[])
+const sources = computed(() => adminFeedFulltextStore.sources as AdminFeedFulltextSourceRow[])
+const recommendations = computed(() => (
+  adminFeedFulltextStore.onboardingRecommendations as AdminOnboardingFeedRecommendation[]
+).slice().sort((a, b) => a.sort_order - b.sort_order))
+const recommendedSourceIds = computed(() => new Set(recommendations.value.map((item) => item.feed_source_id)))
+const availableRecommendationSources = computed(() => sources.value.filter((source) => (
+  source.source_type === 'external_rss'
+  && !recommendedSourceIds.value.has(source.id)
+)))
 const canSubmit = computed(() => draft.value.rssUrl.trim().length > 0)
 const statusFilterOptions = [
   { label: '全部', value: '' },
@@ -234,11 +298,77 @@ async function refresh() {
   loading.value = true
   error.value = ''
   try {
-    await adminFeedFulltextStore.fetchSources(authStore.token, sourceFetchOptions())
+    await Promise.all([
+      adminFeedFulltextStore.fetchSources(authStore.token, sourceFetchOptions()),
+      adminFeedFulltextStore.fetchOnboardingRecommendations(authStore.token),
+    ])
   } catch (err) {
     error.value = err instanceof Error ? err.message : '加载订阅源失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function refreshRecommendations() {
+  if (!authStore.token) return
+  await adminFeedFulltextStore.fetchOnboardingRecommendations(authStore.token)
+}
+
+async function addRecommendation() {
+  if (!authStore.token || !recommendationSourceId.value) return
+  error.value = ''
+  try {
+    const nextOrder = recommendations.value.length
+      ? Math.max(...recommendations.value.map((item) => item.sort_order)) + 1
+      : 0
+    await adminFeedFulltextStore.createOnboardingRecommendation({
+      feed_source_id: recommendationSourceId.value,
+      enabled: true,
+      sort_order: nextOrder,
+    }, authStore.token)
+    recommendationSourceId.value = ''
+    await refreshRecommendations()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '添加新手推荐失败'
+  }
+}
+
+async function setRecommendationEnabled(id: string, enabled: boolean) {
+  if (!authStore.token) return
+  error.value = ''
+  try {
+    await adminFeedFulltextStore.updateOnboardingRecommendation(id, { enabled }, authStore.token)
+    await refreshRecommendations()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '更新新手推荐失败'
+  }
+}
+
+async function moveRecommendation(index: number, offset: -1 | 1) {
+  if (!authStore.token) return
+  const current = recommendations.value[index]
+  const target = recommendations.value[index + offset]
+  if (!current || !target) return
+  error.value = ''
+  try {
+    await Promise.all([
+      adminFeedFulltextStore.updateOnboardingRecommendation(current.id, { sort_order: target.sort_order }, authStore.token),
+      adminFeedFulltextStore.updateOnboardingRecommendation(target.id, { sort_order: current.sort_order }, authStore.token),
+    ])
+    await refreshRecommendations()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '调整推荐顺序失败'
+  }
+}
+
+async function removeRecommendation(id: string) {
+  if (!authStore.token) return
+  error.value = ''
+  try {
+    await adminFeedFulltextStore.deleteOnboardingRecommendation(id, authStore.token)
+    await refreshRecommendations()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '移除新手推荐失败'
   }
 }
 
@@ -323,7 +453,7 @@ async function exportOPML() {
   }
 }
 
-function startEdit(source: FeedSource) {
+function startEdit(source: AdminFeedFulltextSourceRow) {
   editingId.value = source.id
   draft.value = {
     title: source.title || '',
@@ -331,7 +461,7 @@ function startEdit(source: FeedSource) {
   }
 }
 
-async function openItemsSheet(source: FeedSource) {
+async function openItemsSheet(source: AdminFeedFulltextSourceRow) {
   if (!authStore.token) return
 
   selectedSource.value = source
@@ -353,7 +483,7 @@ async function openItemsSheet(source: FeedSource) {
   }
 }
 
-async function toggleSource(source: FeedSource) {
+async function toggleSource(source: AdminFeedFulltextSourceRow) {
   if (!authStore.token || props.fullTextMode !== 'per_source') return
 
   const next = new Set(pendingSourceIds.value)
@@ -463,8 +593,8 @@ onMounted(() => {
   cursor: pointer;
   font-family: var(--a-font-meta);
   font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 500;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -481,9 +611,43 @@ onMounted(() => {
 
 .setting-feed-panel__editor,
 .setting-feed-panel__list,
-.setting-feed-panel__meta {
+.setting-feed-panel__meta,
+.setting-feed-panel__recommendations,
+.setting-feed-panel__recommendation-list {
   display: grid;
   gap: 0.75rem;
+}
+
+.setting-feed-panel__recommendations {
+  padding-top: 1rem;
+  border-top: 1px solid var(--a-color-line-soft);
+}
+
+.setting-feed-panel__recommendations-header,
+.setting-feed-panel__recommendation-row,
+.setting-feed-panel__recommendations-add {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.setting-feed-panel__recommendations-header h4,
+.setting-feed-panel__recommendations-header p {
+  margin: 0;
+}
+
+.setting-feed-panel__recommendations-add select {
+  min-width: 220px;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-paper);
+  color: var(--a-color-ink);
+}
+
+.setting-feed-panel__recommendation-row {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--a-color-line-soft);
 }
 
 .setting-feed-panel__editor-grid {
@@ -556,9 +720,21 @@ onMounted(() => {
   }
 
   .setting-feed-panel__header,
-  .setting-feed-panel__row {
+  .setting-feed-panel__row,
+  .setting-feed-panel__recommendations-header,
+  .setting-feed-panel__recommendation-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .setting-feed-panel__recommendations-add {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .setting-feed-panel__recommendations-add select {
+    min-width: 0;
+    width: 100%;
   }
 
   .setting-feed-panel__header-actions,

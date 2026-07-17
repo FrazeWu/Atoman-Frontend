@@ -1,18 +1,23 @@
 <template>
-  <transition name="fade">
-    <div
-      v-if="visible"
-      class="p-toast"
-      :class="type ? `p-toast--${type}` : 'p-toast--info'"
-      :style="{ top: `${resolvedTop}px` }"
-      role="status"
-      @mouseenter="clearTimer"
-      @mouseleave="startTimer"
-    >
-      <strong v-if="title">{{ title }}</strong>
-      <span>{{ message }}</span>
-    </div>
-  </transition>
+  <Teleport to="body">
+    <transition name="fade">
+      <div
+        v-if="visible"
+        class="p-toast"
+        :class="type ? `p-toast--${type}` : 'p-toast--info'"
+        :style="{ top: `${resolvedTop}px` }"
+        role="status"
+        @mouseenter="clearTimer"
+        @mouseleave="startTimer"
+      >
+        <span class="p-toast-dot" aria-hidden="true" />
+        <div class="p-toast-content">
+          <strong v-if="title" class="p-toast-title">{{ title }}</strong>
+          <span class="p-toast-message">{{ message }}</span>
+        </div>
+      </div>
+    </transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -25,7 +30,7 @@ const props = withDefaults(defineProps<{
   message: string
   duration?: number
   top?: number
-  type?: 'success' | 'danger' | 'error' | 'info'
+  type?: 'success' | 'warning' | 'danger' | 'error' | 'info'
 }>(), {
   modelValue: undefined,
   show: undefined,
@@ -76,34 +81,57 @@ onUnmounted(clearTimer)
   position: fixed;
   left: 50%;
   z-index: var(--a-z-toast);
-  display: grid;
-  gap: 4px;
-  min-width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
   max-width: 80vw;
   transform: translateX(-50%);
-  border-radius: 0px; /* Straight corner */
-  padding: 10px 18px;
-  text-align: center;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.12); /* Hard shadow */
-}
-
-.p-toast--info {
+  border-radius: var(--a-radius-none, 4px);
+  padding: 8px 14px;
   background: #ffffff;
   color: var(--a-color-ink);
   border: 1px solid var(--a-color-line);
+  box-shadow: none;
+  transition: top 0.3s ease;
 }
 
-.p-toast--success {
-  background: #f0fdf4; /* Morandi pale green */
-  color: #166534; /* Dark green */
-  border: 1px solid #166534;
+.p-toast-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
 }
 
-.p-toast--danger,
-.p-toast--error {
-  background: #fef2f2; /* Morandi pale red */
-  color: #991b1b; /* Dark red */
-  border: 1px solid #991b1b;
+.p-toast--info .p-toast-dot {
+  background-color: var(--a-color-ink-soft);
+}
+
+.p-toast--success .p-toast-dot {
+  background-color: var(--a-color-success);
+}
+
+.p-toast--warning .p-toast-dot {
+  background-color: var(--a-color-warning);
+}
+
+.p-toast--danger .p-toast-dot,
+.p-toast--error .p-toast-dot {
+  background-color: var(--a-color-danger);
+}
+
+.p-toast-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.p-toast-title {
+  font-weight: 500;
 }
 
 .fade-enter-active,

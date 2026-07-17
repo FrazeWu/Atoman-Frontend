@@ -14,23 +14,22 @@ const cssBlock = (css: string, selector: string) => {
 describe('borderless white UI contract', () => {
   it('keeps the app topbar borderless and uses non-moving nav feedback with straight corners', () => {
     const source = read('src/components/system/AppTopbar.vue')
-    const navLinkBlock = cssBlock(source, '.nav-link')
 
     expect(source).not.toMatch(/border-bottom:\s*1px/)
     expect(source).not.toMatch(/border-bottom-color/)
-    expect(navLinkBlock).not.toMatch(/transform:\s*translate/)
+    expect(source).not.toMatch(/\.nav-link.*transform:\s*translate/)
     expect(source).toContain('box-shadow')
     expect(source).toContain('background: var(--a-color-paper-wash)')
     expect(source).toContain('border-radius: 0px')
   })
 
-  it('keeps sidebar focus visible with a flat wash background and non-structural shadow feedback', () => {
+  it('keeps sidebar focus visible with transparent background and non-structural shadow feedback', () => {
     const source = read('src/components/ui/PSidebarItem.vue')
 
     expect(source).not.toContain('box-shadow: inset 4px 0 0')
     expect(source).not.toMatch(/border-left\s*:/)
-    expect(source).toContain('background: var(--a-color-paper-wash)')
-    expect(source).toContain('box-shadow: var(--a-shadow-paper-sm)')
+    expect(source).toContain('background: transparent')
+    expect(source).toContain('box-shadow: none')
   })
 
   it('enforces borderless/bottom-border-only tabs and removes the old active indicator block', () => {
@@ -72,32 +71,33 @@ describe('borderless white UI contract', () => {
     expect(pCardSource).toContain('border: none;')
     expect(pCardSource).toContain('border-bottom: 1.5px dashed var(--a-color-line-soft);')
     expect(pCardSource).toContain('border-left: 3px solid transparent;')
-    expect(pCardSource).toContain('border-radius: 8px;')
+    expect(pCardSource).toContain('border-radius: var(--a-radius-base);')
+    expect(pCardSource).not.toContain('border-radius: 8px;')
     expect(pCardSource).toContain('border-left-color: var(--a-color-ink);')
     expect(pCardSource).toContain('text-decoration: underline !important;')
 
     // PSurface contract
-    expect(pSurfaceSource).toContain('border-radius: 8px;')
+    expect(pSurfaceSource).toContain('border-radius: var(--a-radius-base);')
+    expect(pSurfaceSource).not.toContain('border-radius: 8px;')
 
     // PVideoCard contract
-    expect(pVideoCardSource).toContain('border-radius: 8px;') // for vc-thumb
+    expect(pVideoCardSource).toContain('border-radius: 4px;') // for vc-thumb and avatar
     expect(pVideoCardSource).toContain('border-radius: 0px;') // for vc-play-count and vc-duration
   })
 
-  it('uses kraft-paper hover accents for secondary buttons and stacked sheet affordances', () => {
+  it('uses flat slate-grey accents for buttons, FAB, and sheet tabs', () => {
     const pButtonSource = read('src/components/ui/PButton.vue')
     const fabSource = read('src/components/ui/PDiscussionFAB.vue')
     const sheetTabSource = read('src/components/ui/PSheetTab.vue')
 
-    expect(pButtonSource).toContain('background: #f4ece1;')
-    expect(pButtonSource).toContain('color: #6b4f3a;')
-    expect(pButtonSource).toContain('border-bottom-color: #6b4f3a;')
+    expect(pButtonSource).toContain('background: var(--a-color-paper-wash);')
+    expect(pButtonSource).toContain('background: var(--a-color-disabled-border);')
 
-    expect(fabSource).toContain('background: #6b4f3a;')
-    expect(fabSource).toContain('border-color: #6b4f3a;')
+    expect(fabSource).toContain('background: var(--a-color-ink);')
+    expect(fabSource).toContain('background: var(--a-color-ink-muted);')
 
-    expect(sheetTabSource).toContain('background-color: #f4ece1;')
-    expect(sheetTabSource).toContain('color: #6b4f3a;')
-    expect(sheetTabSource).toContain('border-color: #6b4f3a;')
+    expect(sheetTabSource).toContain('background-color: var(--a-color-paper-soft);')
+    expect(sheetTabSource).toContain('color: var(--a-color-ink);')
+    expect(sheetTabSource).toContain('border-color: var(--a-color-line);')
   })
 })

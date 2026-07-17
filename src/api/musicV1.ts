@@ -228,9 +228,11 @@ export type MusicListeningHistory = {
 
 export type MusicPlaylistSummary = {
   id: string
+  user_id?: string
   name: string
   description?: string
   song_count: number
+  is_public?: boolean
   is_favorite: boolean
 }
 

@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   removeMusicPlaylistSong: vi.fn(),
 	reorderMusicPlaylistSongs: vi.fn(),
   playAlbum: vi.fn(),
+  auth: {
+    user: { uuid: 'owner-1' } as { uuid: string } | null,
+  },
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -39,12 +42,18 @@ vi.mock('@/stores/player', () => ({
   usePlayerStore: () => ({ playAlbum: mocks.playAlbum }),
 }))
 
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => mocks.auth,
+}))
+
 const regularPlaylist = () => ({
   id: 'playlist-1',
   name: '通勤',
   description: '',
   song_count: 1,
   is_favorite: false,
+  is_public: false,
+  user_id: 'owner-1',
   songs: [{
     id: 'song-1',
     title: 'Morning Track',
@@ -72,8 +81,12 @@ function mountDrawer() {
 
 function deferred<T>() {
 	let resolve!: (value: T) => void
-	const promise = new Promise<T>((done) => { resolve = done })
-	return { promise, resolve }
+	let reject!: (reason?: unknown) => void
+	const promise = new Promise<T>((done, fail) => {
+		resolve = done
+		reject = fail
+	})
+	return { promise, resolve, reject }
 }
 
 function threeSongPlaylist() {
@@ -92,6 +105,7 @@ describe('PlaylistDrawer.vue', () => {
   beforeEach(() => {
     mocks.state.value.playlistId = 'playlist-1'
     mocks.state.value.playlistRefreshToken = 0
+    mocks.auth.user = { uuid: 'owner-1' }
     mocks.closePlaylist.mockReset()
     mocks.refreshPlaylist.mockReset()
     mocks.getMusicPlaylist.mockReset()
@@ -129,6 +143,23 @@ describe('PlaylistDrawer.vue', () => {
     expect(wrapper.find('[data-testid="playlist-edit"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="playlist-delete"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="playlist-remove-song-1"]').exists()).toBe(true)
+  })
+
+  it('renders a public playlist as read-only for a non-owner', async () => {
+    mocks.auth.user = null
+    mocks.getMusicPlaylist.mockResolvedValue({
+      ...threeSongPlaylist(),
+      is_public: true,
+      user_id: 'another-user',
+    })
+    const wrapper = mountDrawer()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="playlist-edit"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="playlist-delete"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="playlist-remove-song-1"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="playlist-move-song-1-down"]').exists()).toBe(false)
+    expect(wrapper.find('.track-drag-handle').exists()).toBe(false)
   })
 
   it('renames a regular playlist inline', async () => {
@@ -243,5 +274,60 @@ describe('PlaylistDrawer.vue', () => {
 
 		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenCalledTimes(2)
 		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenLastCalledWith('playlist-1', ['song-3', 'song-2', 'song-1'])
+	})
+
+	it('uses the queued order playlist id after switching playlists during a request', async () => {
+		mocks.getMusicPlaylist.mockResolvedValueOnce(threeSongPlaylist())
+		const firstRequest = deferred<{ reordered: boolean }>()
+		mocks.reorderMusicPlaylistSongs
+			.mockReturnValueOnce(firstRequest.promise)
+			.mockResolvedValueOnce({ reordered: true })
+		const wrapper = mountDrawer()
+		await flushPromises()
+		const firstSongs = wrapper.vm.$.setupState.playlist.songs
+		void wrapper.vm.$.setupState.persistSongOrder([firstSongs[1], firstSongs[0], firstSongs[2]])
+
+		const secondPlaylist = {
+			...threeSongPlaylist(),
+			id: 'playlist-2',
+			name: '夜跑',
+			songs: threeSongPlaylist().songs.map((song, index) => ({
+				...song,
+				id: `playlist-2-song-${index + 1}`,
+			})),
+		}
+		mocks.getMusicPlaylist.mockResolvedValueOnce(secondPlaylist)
+		await wrapper.vm.$.setupState.loadPlaylist('playlist-2')
+		const secondSongs = wrapper.vm.$.setupState.playlist.songs
+		void wrapper.vm.$.setupState.persistSongOrder([secondSongs[1], secondSongs[0], secondSongs[2]])
+
+		firstRequest.resolve({ reordered: true })
+		await flushPromises()
+
+		expect(mocks.reorderMusicPlaylistSongs).toHaveBeenNthCalledWith(2, 'playlist-2', [
+			'playlist-2-song-2',
+			'playlist-2-song-1',
+			'playlist-2-song-3',
+		])
+	})
+
+	it('rolls back a failed order to the last server-confirmed order', async () => {
+		mocks.getMusicPlaylist.mockResolvedValue(threeSongPlaylist())
+		mocks.reorderMusicPlaylistSongs
+			.mockResolvedValueOnce({ reordered: true })
+			.mockRejectedValueOnce(new Error('network'))
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+		const wrapper = mountDrawer()
+		await flushPromises()
+		const songs = wrapper.vm.$.setupState.playlist.songs
+
+		await wrapper.vm.$.setupState.persistSongOrder([songs[1], songs[0], songs[2]])
+		const confirmedSongs = wrapper.vm.$.setupState.playlist.songs
+		await wrapper.vm.$.setupState.persistSongOrder([confirmedSongs[0], confirmedSongs[2], confirmedSongs[1]])
+		await flushPromises()
+
+		expect(wrapper.vm.$.setupState.playlist.songs.map((song: { title: string }) => song.title)).toEqual(['Second', 'First', 'Third'])
+		expect(wrapper.text()).toContain('歌单顺序保存失败')
+		consoleError.mockRestore()
 	})
 })

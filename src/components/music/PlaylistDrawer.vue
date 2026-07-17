@@ -17,10 +17,12 @@ import {
   type MusicSongListItem,
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 
 const { state, closePlaylist, refreshPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
+const authStore = useAuthStore()
 
 const isOpen = computed(() => state.value.playlistId !== null)
 const playlist = ref<MusicPlaylistDetail | null>(null)
@@ -36,12 +38,17 @@ const removingSongId = ref<string | null>(null)
 const savingOrder = ref(false)
 const tracksListRef = ref<HTMLElement | null>(null)
 let sortable: Sortable | null = null
-let pendingSongOrder: MusicSongListItem[] | null = null
+let pendingSongOrder: { playlistId: string; songs: MusicSongListItem[] } | null = null
+let confirmedSongOrder: { playlistId: string; songs: MusicSongListItem[] } | null = null
+const canManagePlaylist = computed(() => Boolean(
+  authStore.user?.uuid
+  && playlist.value?.user_id === authStore.user.uuid,
+))
 
 function initializeSortable() {
   sortable?.destroy()
   sortable = null
-  if (!tracksListRef.value || !playlist.value?.songs?.length) return
+  if (!tracksListRef.value || !playlist.value?.songs?.length || !canManagePlaylist.value) return
   sortable = Sortable.create(tracksListRef.value, {
     animation: 150,
     handle: '.track-drag-handle',
@@ -60,6 +67,7 @@ function initializeSortable() {
 async function loadPlaylist(playlistId: string | null) {
   if (!playlistId) {
     playlist.value = null
+    confirmedSongOrder = null
     return
   }
 
@@ -68,6 +76,7 @@ async function loadPlaylist(playlistId: string | null) {
   try {
     const detail = await getMusicPlaylist(playlistId)
     playlist.value = detail
+		confirmedSongOrder = { playlistId: detail.id, songs: [...detail.songs] }
 		await nextTick()
 		initializeSortable()
   } catch (error) {
@@ -80,9 +89,9 @@ async function loadPlaylist(playlistId: string | null) {
 
 async function persistSongOrder(nextSongs: MusicSongListItem[]) {
 	const current = playlist.value
-	if (!current) return
+	if (!current || !canManagePlaylist.value) return
 	playlist.value = { ...current, songs: nextSongs }
-	pendingSongOrder = nextSongs
+	pendingSongOrder = { playlistId: current.id, songs: nextSongs }
 	if (savingOrder.value) return
 
 	savingOrder.value = true
@@ -92,12 +101,21 @@ async function persistSongOrder(nextSongs: MusicSongListItem[]) {
 			const orderToPersist = pendingSongOrder
 			pendingSongOrder = null
 			try {
-				await reorderMusicPlaylistSongs(current.id, orderToPersist.map((song) => String(song.id)))
+				await reorderMusicPlaylistSongs(orderToPersist.playlistId, orderToPersist.songs.map((song) => String(song.id)))
+				if (playlist.value?.id === orderToPersist.playlistId) {
+					confirmedSongOrder = { playlistId: orderToPersist.playlistId, songs: [...orderToPersist.songs] }
+					errorMessage.value = ''
+				}
 				refreshPlaylist()
-				errorMessage.value = ''
 			} catch (error) {
 				console.error('Failed to reorder playlist songs:', error)
-				errorMessage.value = '歌单顺序保存失败'
+				if (playlist.value?.id === orderToPersist.playlistId) {
+					const hasNewerOrder = pendingSongOrder?.playlistId === orderToPersist.playlistId
+					if (!hasNewerOrder && confirmedSongOrder?.playlistId === orderToPersist.playlistId) {
+						playlist.value = { ...playlist.value, songs: [...confirmedSongOrder.songs] }
+					}
+					errorMessage.value = '歌单顺序保存失败'
+				}
 			}
 		}
 	} finally {
@@ -109,7 +127,7 @@ async function persistSongOrder(nextSongs: MusicSongListItem[]) {
 
 function moveTrack(index: number, offset: -1 | 1) {
 	const songs = playlist.value?.songs
-	if (!songs) return
+	if (!songs || !canManagePlaylist.value) return
 	const target = index + offset
 	if (target < 0 || target >= songs.length) return
 	const next = [...songs]
@@ -170,7 +188,7 @@ function playTrack(track: MusicSongListItem) {
 }
 
 function startRename() {
-  if (!playlist.value || playlist.value.is_favorite) return
+  if (!playlist.value || playlist.value.is_favorite || !canManagePlaylist.value) return
   playlistNameDraft.value = playlist.value.name
   isEditingName.value = true
   void nextTick(() => playlistNameInput.value?.focus())
@@ -184,7 +202,7 @@ function cancelRename() {
 async function saveRename() {
   const current = playlist.value
   const name = playlistNameDraft.value.trim()
-  if (!current || current.is_favorite || savingName.value) return
+  if (!current || current.is_favorite || savingName.value || !canManagePlaylist.value) return
   if (!name) {
     errorMessage.value = '请输入歌单名称'
     return
@@ -216,7 +234,7 @@ async function saveRename() {
 
 async function removeTrack(trackId: string) {
   const current = playlist.value
-  if (!current || removingSongId.value) return
+  if (!current || removingSongId.value || !canManagePlaylist.value) return
 
   removingSongId.value = trackId
   errorMessage.value = ''
@@ -234,7 +252,7 @@ async function removeTrack(trackId: string) {
 
 async function confirmDeletePlaylist() {
   const current = playlist.value
-  if (!current || current.is_favorite || deletingPlaylist.value) return
+  if (!current || current.is_favorite || deletingPlaylist.value || !canManagePlaylist.value) return
 
   deletingPlaylist.value = true
   errorMessage.value = ''
@@ -288,7 +306,7 @@ onBeforeUnmount(() => sortable?.destroy())
           />
           <div v-else class="playlist-title-row">
             <h2 class="playlist-title">{{ playlist?.name || '歌单详情' }}</h2>
-            <div v-if="playlist && !playlist.is_favorite" class="playlist-manage-actions">
+            <div v-if="canManagePlaylist && playlist && !playlist.is_favorite" class="playlist-manage-actions">
               <button
                 type="button"
                 class="playlist-icon-button"
@@ -360,7 +378,7 @@ onBeforeUnmount(() => sortable?.destroy())
           :data-song-id="track.id"
         >
           <div class="col-index">
-            <button class="track-drag-handle" type="button" title="拖动排序" aria-label="拖动排序">
+            <button v-if="canManagePlaylist" class="track-drag-handle" type="button" title="拖动排序" aria-label="拖动排序">
               <GripVertical :size="15" />
             </button>
             <button
@@ -391,6 +409,7 @@ onBeforeUnmount(() => sortable?.destroy())
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
             <button
+              v-if="canManagePlaylist"
               type="button"
               class="track-order-button"
               :data-testid="`playlist-move-${track.id}-up`"
@@ -402,6 +421,7 @@ onBeforeUnmount(() => sortable?.destroy())
               <ChevronUp :size="15" />
             </button>
             <button
+              v-if="canManagePlaylist"
               type="button"
               class="track-order-button"
               :data-testid="`playlist-move-${track.id}-down`"
@@ -413,6 +433,7 @@ onBeforeUnmount(() => sortable?.destroy())
               <ChevronDown :size="15" />
             </button>
             <button
+              v-if="canManagePlaylist"
               type="button"
               class="track-remove-button"
               :data-testid="`playlist-remove-${track.id}`"

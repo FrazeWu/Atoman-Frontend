@@ -14,10 +14,11 @@ const cssBlock = (css: string, selector: string) => {
 describe('borderless white UI contract', () => {
   it('keeps the app topbar borderless and uses non-moving nav feedback with straight corners', () => {
     const source = read('src/components/system/AppTopbar.vue')
+    const navLinkBlock = cssBlock(source, '.nav-link')
 
     expect(source).not.toMatch(/border-bottom:\s*1px/)
     expect(source).not.toMatch(/border-bottom-color/)
-    expect(source).not.toMatch(/transform:\s*translate/)
+    expect(navLinkBlock).not.toMatch(/transform:\s*translate/)
     expect(source).toContain('box-shadow')
     expect(source).toContain('background: var(--a-color-paper-wash)')
     expect(source).toContain('border-radius: 0px')

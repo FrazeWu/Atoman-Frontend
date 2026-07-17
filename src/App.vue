@@ -57,7 +57,13 @@ const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const { checkRelay } = useTransitionRelay()
 
-const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))
+const hasSidebar = computed(() => {
+  const closestSetting = [...route.matched]
+    .reverse()
+    .find(record => typeof record.meta.hasSidebar === 'boolean')
+
+  return closestSetting?.meta.hasSidebar === true
+})
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => Boolean(player.currentSong))
 const showMobileBottomNav = computed(() => hasSidebar.value && !isAuthRoute.value)
@@ -100,6 +106,7 @@ onUnmounted(() => {
 }
 
 .app-main {
+  flex: 1;
   padding-bottom: 4rem;
   background: #fff;
   transition: opacity 0.5s ease, filter 0.5s ease;

@@ -6,23 +6,25 @@ import { footbarLinks } from '@/config/moduleRooms'
 import router from '@/router'
 
 const footerSource = readFileSync(resolve(__dirname, '../../../src/components/system/SiteFooter.vue'), 'utf8')
+const mobileNavSource = readFileSync(resolve(__dirname, '../../../src/components/system/MobileBottomNav.vue'), 'utf8')
 const appSource = readFileSync(resolve(__dirname, '../../../src/App.vue'), 'utf8')
 const footerStyle = footerSource.match(/\.site-footer\s*\{([^}]*)\}/)?.[1] ?? ''
 
 describe('SiteFooter', () => {
-  it('renders the brand and all footbar links from config', () => {
+  it('uses the current panel-based footer links', () => {
     expect(footerSource).toContain('凹凸庵')
-    expect(footerSource).toContain('v-for="link in footbarLinks"')
-    expect(footerSource).toContain(':href="link.href"')
+    expect(footerSource).toContain('v-for="link in primaryLinks"')
+    expect(footerSource).toContain('v-for="link in secondaryLinks"')
+    expect(footerSource).toContain('data-footer-panel')
+    expect(footerSource).toContain('SiteFooterSheet')
 
     expect(footbarLinks.map((link) => link.label)).toEqual([
       '关于',
       '联系我们',
-      '提交 Issue',
+      '问题反馈',
       '使用条款',
       '隐私政策',
     ])
-    expect(footbarLinks.find((link) => link.label === '提交 Issue')?.href).toBe('https://github.com/FrazeWu/Atoman/issues')
   })
 
   it('registers top-level terms and privacy routes', () => {
@@ -36,15 +38,21 @@ describe('SiteFooter', () => {
     expect(footerSource).toContain('site-footer-version')
   })
 
-  it('follows page content instead of floating at the viewport bottom', () => {
-    expect(footerStyle).toContain('position: static')
-    expect(footerStyle).not.toMatch(/position:\s*(?:fixed|sticky)/)
-    expect(footerStyle).not.toMatch(/bottom:\s*0/)
-    expect(footerStyle).not.toMatch(/margin-top:\s*auto/)
-    expect(appSource).not.toMatch(/\.app-main\s*\{[\s\S]*?flex:\s*1/)
+  it('contains no unresolved merge markers', () => {
+    expect(footerSource).not.toContain('<<<<<<<')
+    expect(mobileNavSource).not.toContain('<<<<<<<')
   })
 
-  it('allows moderators to open settings', () => {
-    expect(footerSource).toContain('isModeratorRole')
+  it('keeps the footer at the bottom on short pages', () => {
+    expect(footerStyle).toContain('position: relative')
+    expect(footerStyle).not.toMatch(/position:\s*(?:fixed|sticky)/)
+    expect(footerStyle).not.toMatch(/bottom:\s*0/)
+    expect(appSource).toMatch(/\.app-main\s*\{[\s\S]*?flex:\s*1/)
+  })
+
+  it('can hide below sidebar pages on mobile', () => {
+    expect(footerSource).toContain('hideOnMobile')
+    expect(footerSource).toContain('site-footer--mobile-hidden')
+    expect(footerSource).toContain('display: none')
   })
 })

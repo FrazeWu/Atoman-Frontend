@@ -43,7 +43,7 @@ describe('module room naming config', () => {
     expect(footbarLinks.map((link) => link.label)).toEqual([
       '关于',
       '联系我们',
-      '提交 Issue',
+      '问题反馈',
       '使用条款',
       '隐私政策',
     ])

@@ -38,6 +38,14 @@ const makeRouter = () => createRouter({
   history: createMemoryHistory(),
   routes: [
     { path: '/', component: { template: '<div>sidebar route</div>' }, meta: { hasSidebar: true } },
+    {
+      path: '/module',
+      component: { template: '<router-view />' },
+      meta: { hasSidebar: true },
+      children: [
+        { path: 'settings', component: { template: '<div>standalone settings</div>' }, meta: { hasSidebar: false } },
+      ],
+    },
     { path: '/plain', component: { template: '<div>plain route</div>' } },
     { path: '/login', component: { template: '<div>login route</div>' }, meta: { authLayout: true } },
   ],
@@ -93,6 +101,13 @@ describe('App responsive shell', () => {
 
   it('does not mount mobile bottom nav on non-sidebar routes', async () => {
     const { wrapper } = await mountAppAt('/plain')
+
+    expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
+    expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('false')
+  })
+
+  it('allows a child route to opt out of its parent module sidebar', async () => {
+    const { wrapper } = await mountAppAt('/module/settings')
 
     expect(wrapper.findComponent({ name: 'MobileBottomNav' }).exists()).toBe(false)
     expect(wrapper.get('.site-footer-stub').attributes('data-hide-on-mobile')).toBe('false')

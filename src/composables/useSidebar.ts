@@ -3,10 +3,14 @@ import { ref } from 'vue'
 const sidebarCollapsed = ref(localStorage.getItem('atoman.global.sidebar.collapsed') === 'true')
 
 export function useSidebar() {
-  const toggleSidebar = () => {
-    sidebarCollapsed.value = !sidebarCollapsed.value
-    localStorage.setItem('atoman.global.sidebar.collapsed', String(sidebarCollapsed.value))
+  const setSidebarCollapsed = (collapsed: boolean) => {
+    sidebarCollapsed.value = collapsed
+    localStorage.setItem('atoman.global.sidebar.collapsed', String(collapsed))
   }
 
-  return { sidebarCollapsed, toggleSidebar }
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed.value)
+  }
+
+  return { sidebarCollapsed, setSidebarCollapsed, toggleSidebar }
 }

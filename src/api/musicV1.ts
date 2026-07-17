@@ -1,4 +1,4 @@
-import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart } from './client'
+import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
 import type { ApiList, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { useApiUrl } from '@/composables/useApi'
 
@@ -216,6 +216,7 @@ export type MusicSongListItem = {
   entry_status: MusicEntryStatus
   artists?: Array<{ id: string; name: string }>
   album?: { id: string; title: string }
+  position?: number
 }
 
 export type MusicPlaylistSummary = {
@@ -412,6 +413,7 @@ export const musicV1Endpoints = {
   playlist: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}`,
   playlistSongs: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs`,
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
+  playlistSongOrder: (playlistId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/order`,
   plays: () => `${apiV1Base()}/music/plays`,
   discover: (mode: MusicBrowseMode) => `${apiV1Base()}/music/discover?mode=${mode}`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
@@ -902,14 +904,30 @@ export async function deleteMusicPlaylist(playlistId: string): Promise<{ deleted
 }
 
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {
-  const [playlist, songsResponse] = await Promise.all([
+  const pageSize = 100
+  const [playlist, firstSongsResponse] = await Promise.all([
     apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
-    apiGetEnvelope<any[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
+    apiGetEnvelope<any[], PaginationMeta>(`${musicV1Endpoints.playlistSongs(playlistId)}?page=1&page_size=${pageSize}`),
   ])
+  const songItems = [...(firstSongsResponse.data || [])]
+  let page = 1
+  let hasMore = firstSongsResponse.meta?.has_more === true
+  while (hasMore) {
+    page += 1
+    const response = await apiGetEnvelope<any[], PaginationMeta>(
+      `${musicV1Endpoints.playlistSongs(playlistId)}?page=${page}&page_size=${pageSize}`,
+    )
+    songItems.push(...(response.data || []))
+    hasMore = response.meta?.has_more === true
+  }
   return {
     ...playlist,
-    song_count: songsResponse.meta?.total ?? songsResponse.data.length,
-    songs: (songsResponse.data || []).map((item) => item.song ?? item).filter(Boolean),
+    song_count: firstSongsResponse.meta?.total ?? songItems.length,
+    songs: songItems.map((item) => {
+      const song = item.song ?? item
+      const position = item.position ?? item.song?.position
+      return position === undefined ? song : { ...song, position }
+    }).filter(Boolean),
   }
 }
 
@@ -919,6 +937,10 @@ export async function addMusicPlaylistSong(playlistId: string, songId: string): 
 
 export async function removeMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
   return apiDeleteJson<any>(musicV1Endpoints.playlistSong(playlistId, songId))
+}
+
+export async function reorderMusicPlaylistSongs(playlistId: string, songIds: string[]): Promise<{ reordered: boolean }> {
+  return apiPutJson<{ reordered: boolean }>(musicV1Endpoints.playlistSongOrder(playlistId), { song_ids: songIds })
 }
 
 export async function recordMusicSongPlay(songId: string): Promise<{ recorded: boolean }> {

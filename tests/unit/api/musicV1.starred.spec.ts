@@ -126,7 +126,7 @@ describe('music v1 starred and playlist adapters', () => {
           },
         }), { status: 200, headers: { 'Content-Type': 'application/json' } })
       }
-      if (url === '/api/v1/music/playlists/playlist-1/songs') {
+      if (url === '/api/v1/music/playlists/playlist-1/songs?page=1&page_size=100') {
         return new Response(JSON.stringify({
           data: [
             { id: 'song-1', title: 'cellophane', track_number: 1, audio_url: '', entry_status: 'open' },
@@ -139,7 +139,7 @@ describe('music v1 starred and playlist adapters', () => {
 
     const result = await getMusicPlaylist('playlist-1')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist-1/songs', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist-1/songs?page=1&page_size=100', {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })

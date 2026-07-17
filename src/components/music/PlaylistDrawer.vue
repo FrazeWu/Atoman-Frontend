@@ -1,7 +1,8 @@
 <!-- web/src/components/music/PlaylistDrawer.vue -->
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
-import { Play, Disc, Music, AlertCircle, Pencil, Trash2, X } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import Sortable from 'sortablejs'
+import { Play, Disc, Music, AlertCircle, Pencil, Trash2, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -10,6 +11,7 @@ import {
   deleteMusicPlaylist,
   getMusicPlaylist,
   removeMusicPlaylistSong,
+  reorderMusicPlaylistSongs,
   updateMusicPlaylist,
   type MusicPlaylistDetail,
   type MusicSongListItem,
@@ -31,6 +33,28 @@ const savingName = ref(false)
 const deleteConfirmOpen = ref(false)
 const deletingPlaylist = ref(false)
 const removingSongId = ref<string | null>(null)
+const savingOrder = ref(false)
+const tracksListRef = ref<HTMLElement | null>(null)
+let sortable: Sortable | null = null
+
+function initializeSortable() {
+  sortable?.destroy()
+  sortable = null
+  if (!tracksListRef.value || !playlist.value?.songs?.length) return
+  sortable = Sortable.create(tracksListRef.value, {
+    animation: 150,
+    handle: '.track-drag-handle',
+    ghostClass: 'track-row--ghost',
+    onEnd: (event) => {
+      if (event.oldIndex === undefined || event.newIndex === undefined || event.oldIndex === event.newIndex) return
+      const next = [...(playlist.value?.songs || [])]
+      const [moved] = next.splice(event.oldIndex, 1)
+      if (!moved) return
+      next.splice(event.newIndex, 0, moved)
+      void persistSongOrder(next)
+    },
+  })
+}
 
 async function loadPlaylist(playlistId: string | null) {
   if (!playlistId) {
@@ -43,12 +67,47 @@ async function loadPlaylist(playlistId: string | null) {
   try {
     const detail = await getMusicPlaylist(playlistId)
     playlist.value = detail
+		await nextTick()
+		initializeSortable()
   } catch (error) {
     console.error('Failed to fetch playlist details:', error)
     errorMessage.value = '歌单信息加载失败'
   } finally {
     loading.value = false
   }
+}
+
+async function persistSongOrder(nextSongs: MusicSongListItem[]) {
+	const current = playlist.value
+	if (!current || savingOrder.value) return
+	const previousSongs = [...current.songs]
+	playlist.value = { ...current, songs: nextSongs }
+	savingOrder.value = true
+	errorMessage.value = ''
+	try {
+		await reorderMusicPlaylistSongs(current.id, nextSongs.map((song) => String(song.id)))
+		refreshPlaylist()
+	} catch (error) {
+		console.error('Failed to reorder playlist songs:', error)
+		playlist.value = { ...current, songs: previousSongs }
+		errorMessage.value = '歌单顺序保存失败'
+	} finally {
+		savingOrder.value = false
+		await nextTick()
+		initializeSortable()
+	}
+}
+
+function moveTrack(index: number, offset: -1 | 1) {
+	const songs = playlist.value?.songs
+	if (!songs) return
+	const target = index + offset
+	if (target < 0 || target >= songs.length) return
+	const next = [...songs]
+	const [moved] = next.splice(index, 1)
+	if (!moved) return
+	next.splice(target, 0, moved)
+	void persistSongOrder(next)
 }
 
 const playableSongs = computed<Song[]>(() => {
@@ -184,6 +243,7 @@ async function confirmDeletePlaylist() {
 }
 
 watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
+onBeforeUnmount(() => sortable?.destroy())
 </script>
 
 <template>
@@ -258,7 +318,6 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
         <PButton
           variant="primary"
           :disabled="!playableSongs.length"
-          dot
           @click="playPlaylist"
         >
           播放歌单
@@ -283,14 +342,18 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
           <p>此歌单暂无曲目</p>
         </div>
         
+        <div v-else ref="tracksListRef" class="tracks-list">
         <div
-          v-else
           v-for="(track, index) in playlist.songs"
           :key="track.id"
           class="track-row"
           :class="{ 'is-disabled': !track.audio_url }"
+          :data-song-id="track.id"
         >
           <div class="col-index">
+            <button class="track-drag-handle" type="button" title="拖动排序" aria-label="拖动排序">
+              <GripVertical :size="15" />
+            </button>
             <button
               class="row-play-btn"
               type="button"
@@ -320,6 +383,28 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
             <button
               type="button"
+              class="track-order-button"
+              :data-testid="`playlist-move-${track.id}-up`"
+              :disabled="index === 0 || savingOrder"
+              title="上移"
+              aria-label="上移"
+              @click="moveTrack(index, -1)"
+            >
+              <ChevronUp :size="15" />
+            </button>
+            <button
+              type="button"
+              class="track-order-button"
+              :data-testid="`playlist-move-${track.id}-down`"
+              :disabled="index === playlist.songs.length - 1 || savingOrder"
+              title="下移"
+              aria-label="下移"
+              @click="moveTrack(index, 1)"
+            >
+              <ChevronDown :size="15" />
+            </button>
+            <button
+              type="button"
               class="track-remove-button"
               :data-testid="`playlist-remove-${track.id}`"
               :disabled="removingSongId === String(track.id)"
@@ -330,6 +415,7 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
               <X :size="15" />
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -538,9 +624,11 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
 }
 
 .col-index {
-  width: 2.5rem;
+  width: 4.5rem;
   flex-shrink: 0;
   text-align: center;
+  display: flex;
+  align-items: center;
 }
 
 .col-title {
@@ -555,7 +643,7 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
 }
 
 .col-status {
-  width: 5rem;
+  width: 6.5rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -563,8 +651,45 @@ watch(() => state.value.playlistId, loadPlaylist, { immediate: true })
   gap: 0.35rem;
 }
 
-.track-remove-button:disabled {
+.track-remove-button:disabled,
+.track-order-button:disabled {
   cursor: wait;
+  opacity: 0.45;
+}
+
+.track-drag-handle,
+.track-order-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-ink-soft);
+}
+
+.track-drag-handle {
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.track-drag-handle:active {
+  cursor: grabbing;
+}
+
+.track-order-button {
+  cursor: pointer;
+}
+
+.track-order-button:hover:not(:disabled),
+.track-drag-handle:hover {
+  background: var(--a-color-paper-wash);
+  color: var(--a-color-fg);
+}
+
+.track-row--ghost {
   opacity: 0.45;
 }
 

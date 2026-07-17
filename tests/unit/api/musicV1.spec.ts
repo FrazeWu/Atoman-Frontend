@@ -298,7 +298,7 @@ describe('music v1 adapter', () => {
     expect(result).toEqual({ id: 'album_uuid', title: 'Graduation', entry_status: 'open' })
   })
 
-  it('uses playlist song pagination total as the detail song count', async () => {
+  it('loads every playlist song page for a complete detail', async () => {
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(new Response(
         JSON.stringify({ data: { id: 'playlist_uuid', name: 'Favorites', song_count: 0 } }),
@@ -310,12 +310,30 @@ describe('music v1 adapter', () => {
           meta: { page: 1, page_size: 20, total: 37, has_more: true },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          data: [{ id: 'playlist_song_uuid_2', song: { id: 'song_uuid_2', title: 'Song 2' } }],
+          meta: { page: 2, page_size: 20, total: 37, has_more: false },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       )))
 
     const result = await musicV1.getMusicPlaylist('playlist_uuid')
 
     expect(result.song_count).toBe(37)
-    expect(result.songs).toEqual([{ id: 'song_uuid', title: 'Song' }])
+    expect(result.songs).toEqual([
+      { id: 'song_uuid', title: 'Song' },
+      { id: 'song_uuid_2', title: 'Song 2' },
+    ])
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/music/playlists/playlist_uuid/songs?page=1&page_size=100', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(fetch).toHaveBeenNthCalledWith(3, '/api/v1/music/playlists/playlist_uuid/songs?page=2&page_size=100', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
   })
 
   it('builds update album edits with track collection changes', () => {

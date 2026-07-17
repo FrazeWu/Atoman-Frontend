@@ -1,5 +1,5 @@
 <template>
-  <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
+  <div v-if="hasSidebar" class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
     <PSidebar
       collapsible
       v-model:collapsed="sidebarCollapsed"
@@ -19,13 +19,17 @@
       <router-view />
     </main>
   </div>
+  <router-view v-else />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { Compass, Rss, Settings } from 'lucide-vue-next'
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
 
 const sidebarCollapsed = ref(false)
+const route = useRoute()
+const hasSidebar = computed(() => route.meta.hasSidebar !== false)
 </script>

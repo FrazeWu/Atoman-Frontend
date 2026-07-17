@@ -48,7 +48,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'post/new', component: asyncRouteView(() => import('@/views/blog/PostEditorView.vue')), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'post.create' } } },
         { path: 'post/:id/edit', component: asyncRouteView(() => import('@/views/blog/PostEditorView.vue')), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'post.create' } } },
         { path: 'bookmarks', component: asyncRouteView(() => import('@/views/blog/BookmarkView.vue')), meta: { requiresAuth: true } },
-        { path: 'settings', component: asyncRouteView(() => import('@/views/blog/UserManagementView.vue')), meta: { requiresAuth: true } },
+        { path: 'settings', component: asyncRouteView(() => import('@/views/blog/UserManagementView.vue')), meta: { requiresAuth: true, hasSidebar: false } },
       ],
     },
     { path: '/channels', component: asyncRouteView(() => import('@/views/blog/ChannelManageView.vue')), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'channel.manage' } } },

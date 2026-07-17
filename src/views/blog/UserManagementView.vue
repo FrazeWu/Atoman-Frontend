@@ -450,6 +450,12 @@ onBeforeUnmount(() => {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .user-management__page-head .a-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+
   .user-management__field--wide {
     grid-column: auto;
   }

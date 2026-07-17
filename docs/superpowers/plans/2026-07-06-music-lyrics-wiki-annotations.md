@@ -70,9 +70,9 @@ Expected: output shows the current conflict marker lines.
 Open `Atoman-Frontend/src/components/music/AlbumDrawer.vue` and remove only these marker lines:
 
 ```text
-<<<<<<< HEAD
-=======
->>>>>>> 09d01c6 (refactor: unify music editor drawer flows)
+"<<<<<<< HEAD"
+"======="
+">>>>>>> 09d01c6 (refactor: unify music editor drawer flows)"
 ```
 
 Keep both real imports when both names are used by the file:

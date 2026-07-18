@@ -14,10 +14,10 @@ afterEach(() => {
 describe('OAuth API service', () => {
   it('keeps only supported providers returned by the backend', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      providers: ['google', 'apple', 'unknown', 'github', 'microsoft'],
+      providers: ['google', 'unknown', 'github', 'microsoft'],
     }), { status: 200 }))
 
-    await expect(listOAuthProviders()).resolves.toEqual(['google', 'apple', 'github', 'microsoft'])
+    await expect(listOAuthProviders()).resolves.toEqual(['google', 'github', 'microsoft'])
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/oauth/providers', { credentials: 'include' })
   })
 

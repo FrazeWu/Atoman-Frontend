@@ -64,7 +64,7 @@ describe('OAuth pending views', () => {
 
   it('binds an existing account after password confirmation', async () => {
     vi.mocked(getPendingOAuth).mockResolvedValue({
-      provider: 'apple', stage: 'confirm_account', email: 'a***@example.com',
+      provider: 'microsoft', stage: 'confirm_account', email: 'a***@example.com',
     })
     vi.mocked(confirmOAuthAccount).mockResolvedValue({ returnTo: '/forum' })
     const pinia = createPinia()

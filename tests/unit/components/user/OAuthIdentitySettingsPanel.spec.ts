@@ -28,7 +28,7 @@ const PConfirmStub = defineComponent({
 describe('OAuthIdentitySettingsPanel', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(listOAuthProviders).mockResolvedValue(['google', 'apple', 'github', 'microsoft'])
+    vi.mocked(listOAuthProviders).mockResolvedValue(['google', 'github', 'microsoft'])
     vi.mocked(listOAuthIdentities).mockResolvedValue([
       { provider: 'github', email: 'alice@example.com', last_login_at: null },
     ])
@@ -42,7 +42,7 @@ describe('OAuthIdentitySettingsPanel', () => {
     })
     await flushPromises()
 
-    expect(wrapper.findAll('[data-test^="oauth-identity-"]')).toHaveLength(4)
+    expect(wrapper.findAll('[data-test^="oauth-identity-"]')).toHaveLength(3)
     expect(wrapper.get('[data-test="oauth-link-google"]').attributes('href'))
       .toBe('/api/v1/auth/oauth/google/start?purpose=link&return_to=%2Fusers%2Falice%2Fsettings')
     expect(wrapper.get('[data-test="oauth-identity-github"]').text()).toContain('alice@example.com')

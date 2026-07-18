@@ -6,7 +6,7 @@ import { listOAuthProviders } from '@/services/oauth'
 
 vi.mock('@/services/oauth', () => ({
   oauthProviderLabels: {
-    google: 'Google', apple: 'Apple', github: 'GitHub', microsoft: 'Microsoft',
+    google: 'Google', github: 'GitHub', microsoft: 'Microsoft',
   },
   listOAuthProviders: vi.fn(),
   oauthStartURL: (provider: string, options: { purpose: string; returnTo: string }) =>
@@ -15,7 +15,7 @@ vi.mock('@/services/oauth', () => ({
 
 describe('OAuthProviderButtons', () => {
   beforeEach(() => {
-    vi.mocked(listOAuthProviders).mockResolvedValue(['google', 'apple', 'github', 'microsoft'])
+    vi.mocked(listOAuthProviders).mockResolvedValue(['google', 'github', 'microsoft'])
   })
 
   it('renders configured providers as accessible authorization links', async () => {
@@ -23,7 +23,7 @@ describe('OAuthProviderButtons', () => {
     await flushPromises()
 
     const buttons = wrapper.findAll('[data-test^="oauth-provider-"]:not([data-test="oauth-provider-list"])')
-    expect(buttons).toHaveLength(4)
+    expect(buttons).toHaveLength(3)
     expect(wrapper.get('[data-test="oauth-provider-google"]').attributes()).toMatchObject({
       href: '/api/v1/auth/oauth/google/start?purpose=login&return_to=%2Fforum',
       'aria-label': '使用 Google 继续',

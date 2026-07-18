@@ -1,12 +1,11 @@
 import { useApiUrl } from '@/composables/useApi'
 
-export const oauthProviders = ['google', 'apple', 'github', 'microsoft'] as const
+export const oauthProviders = ['google', 'github', 'microsoft'] as const
 export type OAuthProvider = typeof oauthProviders[number]
 export type OAuthPurpose = 'login' | 'link'
 
 export const oauthProviderLabels: Record<OAuthProvider, string> = {
   google: 'Google',
-  apple: 'Apple',
   github: 'GitHub',
   microsoft: 'Microsoft',
 }

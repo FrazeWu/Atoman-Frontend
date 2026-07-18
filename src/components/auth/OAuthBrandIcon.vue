@@ -12,14 +12,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { faMicrosoft } from '@fortawesome/free-brands-svg-icons'
-import { siApple, siGithub, siGoogle } from 'simple-icons'
+import { siGithub, siGoogle } from 'simple-icons'
 
 import type { OAuthProvider } from '@/services/oauth'
 
 const props = defineProps<{ provider: OAuthProvider }>()
 const providerIcons = {
   google: { path: siGoogle.path, hex: siGoogle.hex, viewBox: '0 0 24 24' },
-  apple: { path: siApple.path, hex: siApple.hex, viewBox: '0 0 24 24' },
   github: { path: siGithub.path, hex: siGithub.hex, viewBox: '0 0 24 24' },
   microsoft: {
     path: faMicrosoft.icon[4] as string,

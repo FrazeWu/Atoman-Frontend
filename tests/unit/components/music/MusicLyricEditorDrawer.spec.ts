@@ -59,6 +59,11 @@ afterEach(() => {
 })
 
 describe('MusicLyricEditorDrawer.vue', () => {
+  it('defaults the current playback time to zero', () => {
+    const wrapper = mountDrawer()
+    expect(wrapper.props('currentTimeSeconds')).toBe(0)
+  })
+
   it('gives the sheet an accessible lyric editor title', () => {
     const wrapper = mountDrawer()
     expect(wrapper.get('[role="dialog"]').attributes('aria-label')).toBe('编辑歌词')

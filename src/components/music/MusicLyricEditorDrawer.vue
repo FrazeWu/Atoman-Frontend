@@ -27,16 +27,19 @@ const props = withDefaults(defineProps<{
   format?: MusicLyricsFormat
   saving?: boolean
   songTitle?: string
+  currentTimeSeconds?: number
 }>(), {
   content: '',
   translation: '',
   format: 'plain',
   saving: false,
   songTitle: '',
+  currentTimeSeconds: 0,
 })
 
 const emit = defineEmits<{
   close: []
+  seek: [timeSeconds: number]
   save: [payload: {
     content: string
     translation: string

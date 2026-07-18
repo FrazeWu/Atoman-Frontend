@@ -91,6 +91,49 @@ describe('AudioPlayer', () => {
     vi.useRealTimers()
   })
 
+  it('passes playback time to the lyrics panel and seeks when the panel emits', async () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1',
+      title: 'Song 1',
+      artist: 'Artist 1',
+      audio_url: '/song-1.mp3',
+    } as any
+    player.currentTime = 12.345
+    player.showLyrics = true
+    const seek = vi.spyOn(player, 'seek').mockImplementation(() => undefined)
+
+    const wrapper = mount(AudioPlayer, {
+      global: {
+        stubs: {
+          MusicLyricsPanel: {
+            props: ['currentTimeSeconds'],
+            emits: ['close', 'seek'],
+            template: `
+              <button
+                type="button"
+                class="lyrics-panel-seek-stub"
+                :data-current-time-seconds="currentTimeSeconds"
+                @click="$emit('seek', 27.125)"
+              >
+                定位
+              </button>
+            `,
+          },
+          PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+          PToast: true,
+        },
+      },
+    })
+
+    expect(wrapper.get('.lyrics-panel-seek-stub').attributes('data-current-time-seconds')).toBe('12.345')
+    await wrapper.get('.lyrics-panel-seek-stub').trigger('click')
+    expect(seek).toHaveBeenCalledOnce()
+    expect(seek).toHaveBeenCalledWith(27.125)
+
+    wrapper.unmount()
+  })
+
   it('reserves separate mobile columns for metadata, playback, and queue controls', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/music/AudioPlayer.vue'), 'utf8')
 

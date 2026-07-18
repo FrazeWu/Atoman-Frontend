@@ -118,6 +118,20 @@ export function useApi() {
       bookmark: (id: number | string) => `${apiUrl}/blog/bookmarks/${id}`,
     },
 
+    studio: {
+      state: `${apiUrl}/studio/state`,
+      channels: `${apiUrl}/studio/channels`,
+      channel: (id: string) => `${apiUrl}/studio/channels/${id}`,
+      dashboard: `${apiUrl}/studio/dashboard`,
+      contents: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/contents`,
+      collections: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/collections`,
+      collection: (module: 'blog' | 'podcast' | 'video', id: string) => `${apiUrl}/studio/${module}/collections/${id}`,
+      analytics: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/analytics`,
+      interactions: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/interactions`,
+      settings: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/settings`,
+      share: (module: 'blog' | 'podcast' | 'video', id: string) => `${apiUrl}/studio/${module}/contents/${id}/share`,
+    },
+
     interactions: {
       blogLikes: `${apiUrl}/blog/likes`,
       blogPostComments: (postId: number | string) => `${apiUrl}/blog/posts/${postId}/comments`,
@@ -270,6 +284,7 @@ export function useApi() {
     podcast: {
       episodes: `${apiUrl}/podcast/episodes`,
       episode: (id: string) => `${apiUrl}/podcast/episodes/${id}`,
+      playback: (id: string) => `${apiUrl}/podcast/episodes/${id}/playback`,
       showEpisodes: (channelSlug: string) => `${apiUrl}/podcast/shows/${channelSlug}/episodes`,
       bookmarks: `${apiUrl}/podcast/bookmarks`,
       bookmark: (id: string) => `${apiUrl}/podcast/bookmarks/${id}`,

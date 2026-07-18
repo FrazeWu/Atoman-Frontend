@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { ArrowDownUp, Download, FileSearch, Plus } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
+import { ArrowDownUp, Clock3, Download, FileSearch, Plus, SkipForward } from 'lucide-vue-next'
 import type { MusicLyricsFormat } from '@/api/musicV1'
 import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
@@ -10,6 +10,7 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import {
   createMusicLyricDraftRow,
+  formatMusicLyricTime,
   parseBilingualLrcDraft,
   parseMusicLyricDraft,
   serializeMusicLyricDraft,
@@ -54,6 +55,7 @@ const formatOptions = [
 ] satisfies Array<{ label: string, value: MusicLyricsFormat, testid: string }>
 
 const rows = ref<MusicLyricDraftRow[]>([])
+const selectedRowId = ref('')
 const draftFormat = ref<MusicLyricsFormat>('plain')
 const draftEditSummary = ref('')
 const originalImportFile = ref<File | null>(null)
@@ -63,6 +65,7 @@ const importError = ref('')
 const exportError = ref('')
 const originalInput = ref<HTMLInputElement | null>(null)
 const translationInput = ref<HTMLInputElement | null>(null)
+const rowEditorRoot = ref<HTMLElement | null>(null)
 let importGeneration = 0
 
 const validationIssues = computed(() => validateMusicLyricDraft(rows.value, draftFormat.value))
@@ -75,12 +78,15 @@ const canSave = computed(() => (
   && !props.saving
 ))
 const exportBaseName = computed(() => props.songTitle.trim() || 'lyrics')
+const currentTimeMs = computed(() => Math.round(props.currentTimeSeconds * 100) * 10)
+const hasSelectedRow = computed(() => rows.value.some(row => row.id === selectedRowId.value))
 
 watch(
   () => [props.show, props.content, props.translation, props.format] as const,
   ([show, content, translation, format]) => {
     importGeneration += 1
     if (!show) {
+      selectedRowId.value = ''
       importPreview.value = null
       importError.value = ''
       return
@@ -88,6 +94,7 @@ watch(
 
     draftFormat.value = format ?? 'plain'
     rows.value = parseMusicLyricDraft(content ?? '', translation ?? '', draftFormat.value)
+    selectedRowId.value = rows.value.find(row => row.timeMs === null)?.id ?? rows.value[0]?.id ?? ''
     draftEditSummary.value = ''
     originalImportFile.value = null
     translationImportFile.value = null
@@ -102,12 +109,50 @@ watch(
 
 function addRow() {
   if (props.saving) return
-  rows.value = [...rows.value, createMusicLyricDraftRow()]
+  const row = createMusicLyricDraftRow()
+  rows.value = [...rows.value, row]
+  selectedRowId.value = row.id
 }
 
 function sortRows() {
   if (props.saving || draftFormat.value !== 'lrc') return
   rows.value = sortMusicLyricDraftRows(rows.value)
+}
+
+function handleRowsUpdate(nextRows: MusicLyricDraftRow[]) {
+  const oldIndex = rows.value.findIndex(row => row.id === selectedRowId.value)
+  rows.value = nextRows
+
+  if (nextRows.some(row => row.id === selectedRowId.value)) return
+  if (nextRows.length === 0) {
+    selectedRowId.value = ''
+    return
+  }
+
+  const fallbackIndex = oldIndex < 0 ? 0 : Math.min(oldIndex, nextRows.length - 1)
+  selectedRowId.value = nextRows[fallbackIndex]!.id
+}
+
+function writeCurrentTime() {
+  if (draftFormat.value !== 'lrc' || props.saving || !hasSelectedRow.value) return
+  rows.value = rows.value.map(row => (
+    row.id === selectedRowId.value ? { ...row, timeMs: currentTimeMs.value } : row
+  ))
+}
+
+async function writeCurrentTimeAndSelectNext() {
+  if (draftFormat.value !== 'lrc' || props.saving || !hasSelectedRow.value) return
+  const selectedIndex = rows.value.findIndex(row => row.id === selectedRowId.value)
+  writeCurrentTime()
+
+  const nextRow = rows.value[selectedIndex + 1]
+  if (!nextRow) return
+
+  selectedRowId.value = nextRow.id
+  await nextTick()
+  rowEditorRoot.value
+    ?.querySelector<HTMLInputElement>(`[data-testid="lyric-original-${nextRow.id}"]`)
+    ?.focus()
 }
 
 function selectImportFile(kind: 'original' | 'translation', event: Event) {
@@ -192,6 +237,7 @@ function confirmImport() {
   ) return
 
   rows.value = importPreview.value.rows
+  selectedRowId.value = rows.value[0]?.id ?? ''
   draftFormat.value = 'lrc'
   importPreview.value = null
 }
@@ -267,12 +313,51 @@ function handleSave() {
         </div>
       </div>
 
-      <MusicLyricsRowEditor
-        v-model:rows="rows"
-        :format="draftFormat"
-        :issues="validationIssues"
-        :disabled="saving"
-      />
+      <div v-if="draftFormat === 'lrc'" class="music-lyric-editor-drawer__timing">
+        <div class="music-lyric-editor-drawer__current-time">
+          <span>当前时间</span>
+          <output data-testid="lyrics-current-time" aria-label="当前播放时间">
+            {{ formatMusicLyricTime(currentTimeMs) }}
+          </output>
+        </div>
+        <div class="music-lyric-editor-drawer__timing-actions">
+          <PButton
+            data-testid="lyrics-write-current-time"
+            type="button"
+            variant="secondary"
+            aria-label="写入当前播放时间"
+            :disabled="saving || !hasSelectedRow"
+            @click="writeCurrentTime"
+          >
+            <Clock3 :size="17" aria-hidden="true" />
+            写入时间
+          </PButton>
+          <PButton
+            data-testid="lyrics-write-current-time-next"
+            type="button"
+            variant="secondary"
+            aria-label="写入当前播放时间并选择下一行"
+            :disabled="saving || !hasSelectedRow"
+            @click="writeCurrentTimeAndSelectNext"
+          >
+            <SkipForward :size="17" aria-hidden="true" />
+            写入并下一行
+          </PButton>
+        </div>
+      </div>
+
+      <div ref="rowEditorRoot" class="music-lyric-editor-drawer__row-editor">
+        <MusicLyricsRowEditor
+          :rows="rows"
+          :format="draftFormat"
+          :issues="validationIssues"
+          :disabled="saving"
+          :selected-row-id="selectedRowId"
+          @update:rows="handleRowsUpdate"
+          @select-row="selectedRowId = $event"
+          @seek="emit('seek', $event)"
+        />
+      </div>
 
       <section class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
         <div class="music-lyric-editor-drawer__file-grid">
@@ -405,6 +490,44 @@ function handleSave() {
   flex-wrap: wrap;
 }
 
+.music-lyric-editor-drawer__timing {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.music-lyric-editor-drawer__row-editor {
+  min-width: 0;
+}
+
+.music-lyric-editor-drawer__current-time {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.music-lyric-editor-drawer__current-time output {
+  color: var(--a-color-text);
+  font-size: 1rem;
+}
+
+.music-lyric-editor-drawer__timing-actions {
+  display: flex;
+  min-width: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.music-lyric-editor-drawer__timing-actions :deep(.p-button) {
+  min-height: 44px;
+}
+
 .music-lyric-editor-drawer__import {
   display: grid;
   min-width: 0;
@@ -471,6 +594,19 @@ function handleSave() {
 
   .music-lyric-editor-drawer__file-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .music-lyric-editor-drawer__timing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .music-lyric-editor-drawer__timing-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .music-lyric-editor-drawer__timing-actions :deep(.p-button) {
+    width: 100%;
   }
 }
 </style>

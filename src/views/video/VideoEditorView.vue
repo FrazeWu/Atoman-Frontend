@@ -15,16 +15,21 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Upload, Video as VideoIcon } from 
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
+import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
+import { useContentLifecycle } from '@/composables/useContentLifecycle'
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const studio = useStudioStore()
+const lifecycle = useContentLifecycle()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
+const scheduling = ref(false)
+const scheduledAt = ref('')
 const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
@@ -427,6 +432,26 @@ async function doPublish() {
     publishing.value = false
   }
 }
+
+async function schedulePublish() {
+  if (!validate('published')) return
+  const publishAt = new Date(scheduledAt.value)
+  if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    errorMsg.value = '请选择未来的发布时间'
+    return
+  }
+  scheduling.value = true
+  errorMsg.value = ''
+  try {
+    const video = await apiSave(buildPayload('draft'))
+    await lifecycle.schedule('video', video.id, publishAt.toISOString())
+    await router.push({ path: '/studio/video/content', query: { status: 'scheduled' } })
+  } catch (e: any) {
+    errorMsg.value = e?.error?.message || e?.error || e?.message || '设置失败，请重试'
+  } finally {
+    scheduling.value = false
+  }
+}
 </script>
 
 <template>
@@ -605,6 +630,13 @@ async function doPublish() {
 
           <p v-if="errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
           <p v-if="draftSaved" class="ve-saved" aria-live="polite">草稿已保存</p>
+
+          <ContentScheduleControl
+            v-model="scheduledAt"
+            :busy="scheduling"
+            :disabled="publishing || savingDraft || videoUploading"
+            @schedule="schedulePublish"
+          />
 
           <div class="ve-step-actions">
             <PButton variant="secondary" @click="goPrevious">

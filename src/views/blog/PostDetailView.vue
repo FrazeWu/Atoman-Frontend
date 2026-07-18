@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
@@ -164,6 +164,7 @@ import { isModeratorRole } from '@/utils/roles'
 import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 import { useFeedStore } from '@/stores/feed'
+import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
 type EmbedData = {
   id: string
@@ -194,6 +195,7 @@ const api = useApi()
 const { renderMarkdown } = useMarkdownRenderer()
 const { setPageMeta, restorePageMeta } = usePageMeta()
 const interactions = useInteractions('blog', 'post', postId)
+const lifecycle = useContentLifecycle()
 
 const post = ref<Post | null>(null)
 const isAcademic = ref(false)
@@ -204,6 +206,30 @@ const showUnbookmarkConfirm = ref(false)
 const postEmbeds = ref<Record<string, EmbedData>>({})
 const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
+let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
+
+const readingSource = () => typeof route.query.source === 'string' ? route.query.source : 'direct'
+const trackReadingProgress = () => {
+  if (!post.value || !consumptionTracker) return
+  const scrollable = document.documentElement.scrollHeight - window.innerHeight
+  const progress = scrollable > 0 ? window.scrollY / scrollable : 1
+  consumptionTracker.update(progress)
+}
+
+const startReadingTracking = (contentID: string) => {
+  consumptionTracker = createContentConsumptionTracker({
+    onEvent: event => void lifecycle.recordEvent({ module: 'blog', content_id: contentID, event, source: readingSource() }).catch(() => undefined),
+    onProgress: progress => {
+      if (!authStore.token) return
+      void lifecycle.saveProgress({
+        module: 'blog', content_id: contentID, position_sec: 0, duration_sec: 0,
+        progress, completed: progress >= 0.95, source: readingSource(),
+      }).catch(() => undefined)
+    },
+  })
+  consumptionTracker.open()
+  trackReadingProgress()
+}
 
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const isInReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
@@ -261,6 +287,7 @@ const fetchPost = async () => {
       const d = await res.json()
       const detail = (d.data || d) as PostDetailResponse
       post.value = detail
+      startReadingTracking(detail.id)
       interactions.liked.value = detail.liked ?? detail.is_liked ?? false
       interactions.likeCount.value = detail.likes_count ?? detail.like_count ?? 0
       interactions.commentCount.value = detail.comments_count ?? detail.comment_count ?? 0
@@ -470,7 +497,11 @@ const fetchEmbeds = async (content: string) => {
   await Promise.all([fetchPostEmbeds(content), fetchMusicEmbeds(content), fetchVideoEmbeds(content)])
 }
 
-onMounted(fetchPost)
+onMounted(() => {
+  window.addEventListener('scroll', trackReadingProgress, { passive: true })
+  void fetchPost()
+})
+onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 </script>
 
 <style scoped>

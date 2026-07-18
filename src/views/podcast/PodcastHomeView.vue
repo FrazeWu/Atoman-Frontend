@@ -8,6 +8,7 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
+import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 
 type RecommendedEpisode = {
   id: string
@@ -90,6 +91,8 @@ function playEpisode(ep: PodcastEpisode) {
   <div class="a-page-lg ph-page">
     <PPageHeader title="播客" accent mb="2rem">
     </PPageHeader>
+
+    <ContentContinueSection module="podcast" />
 
     <section class="ph-recommendations" aria-labelledby="ph-recommendations-title">
       <div class="ph-section-header">

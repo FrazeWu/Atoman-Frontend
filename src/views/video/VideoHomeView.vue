@@ -6,6 +6,7 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import type { Video } from '@/types'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApiUrl } from '@/composables/useApi'
+import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 
 const API_URL = useApiUrl()
 const videos = ref<Video[]>([])
@@ -74,6 +75,8 @@ watch(sort, fetchVideos)
 <template>
   <div class="vh-wrap">
     <PPageHeader title="视频" accent mb="1.5rem" />
+
+    <ContentContinueSection module="video" />
 
     <section class="vh-recommendations" aria-label="视频推荐">
       <div class="vh-recommendations__header">

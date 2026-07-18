@@ -14,16 +14,21 @@ import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
 import type { PodcastEpisode, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useStudioStore } from '@/stores/studio'
+import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
+import { useContentLifecycle } from '@/composables/useContentLifecycle'
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const studio = useStudioStore()
+const lifecycle = useContentLifecycle()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
+const scheduling = ref(false)
+const scheduledAt = ref('')
 const showPublishConfirm = ref(false)
 const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
@@ -468,6 +473,26 @@ async function doPublish() {
     publishing.value = false
   }
 }
+
+async function schedulePublish() {
+  if (!validate('published')) return
+  const publishAt = new Date(scheduledAt.value)
+  if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    errorMsg.value = '请选择未来的发布时间'
+    return
+  }
+  scheduling.value = true
+  errorMsg.value = ''
+  try {
+    const episode = await apiSave(buildPayload('draft'))
+    await lifecycle.schedule('podcast', episode.id, publishAt.toISOString())
+    await router.push({ path: '/studio/podcast/content', query: { status: 'scheduled' } })
+  } catch (e: any) {
+    errorMsg.value = e?.error?.message || e?.error || e?.message || '设置失败，请重试'
+  } finally {
+    scheduling.value = false
+  }
+}
 </script>
 
 <template>
@@ -643,6 +668,13 @@ async function doPublish() {
       <PSelect v-model="form.visibility" label="可见范围" :options="visibilityOptions" />
       <p v-if="errorMsg" class="pe-error" role="alert">{{ errorMsg }}</p>
       <p v-if="draftSaved" class="pe-saved" aria-live="polite">草稿已保存</p>
+
+      <ContentScheduleControl
+        v-model="scheduledAt"
+        :busy="scheduling"
+        :disabled="publishing || savingDraft || audioBusy || !form.audio_url"
+        @schedule="schedulePublish"
+      />
 
       <div class="pe-step-actions">
         <PButton variant="secondary" @click="goPrevious">

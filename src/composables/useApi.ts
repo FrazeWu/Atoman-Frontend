@@ -1,6 +1,6 @@
 export function useApiUrl() {
   const configuredUrl = import.meta.env.VITE_API_URL?.trim()
-  const baseUrl = configuredUrl || '/api/v1'
+  const baseUrl = configuredUrl && configuredUrl !== 'undefined' ? configuredUrl : '/api/v1'
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '')
 
   if (normalizedBaseUrl.endsWith('/api/v1')) return normalizedBaseUrl
@@ -130,6 +130,15 @@ export function useApi() {
       interactions: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/interactions`,
       settings: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/studio/${module}/settings`,
       share: (module: 'blog' | 'podcast' | 'video', id: string) => `${apiUrl}/studio/${module}/contents/${id}/share`,
+    },
+
+    content: {
+      events: `${apiUrl}/content/events`,
+      progress: `${apiUrl}/content/progress`,
+      progressItem: (module: 'blog' | 'podcast' | 'video', id: string) => `${apiUrl}/content/progress/${module}/${id}`,
+      continue: `${apiUrl}/content/continue`,
+      notificationPreferences: `${apiUrl}/content/notification-preferences`,
+      schedule: (module: 'blog' | 'podcast' | 'video', id: string) => `${apiUrl}/content/${module}/${id}/schedule`,
     },
 
     interactions: {
@@ -287,7 +296,6 @@ export function useApi() {
       bookmark: (id: string) => `${apiUrl}/podcast/bookmarks/${id}`,
       showBookmarks: `${apiUrl}/podcast/show-bookmarks`,
       showBookmark: (id: string) => `${apiUrl}/podcast/show-bookmarks/${id}`,
-	  listenLater: `${apiUrl}/podcast/listen-later`,
       comments: (id: string) => `${discussionTarget('podcast_episode', id)}/comments`,
       comment: (id: string) => `${apiUrl}/comments/${encodeURIComponent(id)}`,
       uploadAudio: `${apiUrl}/podcast/upload-audio`,

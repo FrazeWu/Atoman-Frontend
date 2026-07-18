@@ -138,6 +138,8 @@ export function useApi() {
       checkUsername: `${apiUrl}/auth/check-username`,
       sendVerification: `${apiUrl}/auth/send-verification`,
       verifyEmail: `${apiUrl}/auth/verify-email`,
+      passwordResetSendCode: `${apiUrl}/auth/password-reset/send-code`,
+      passwordReset: `${apiUrl}/auth/password-reset`,
       onboardingComplete: `${apiUrl}/auth/onboarding/complete`,
       onboardingRecommendations: `${apiUrl}/feed/onboarding/recommendations`,
     },

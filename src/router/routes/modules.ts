@@ -26,6 +26,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     { path: '/post/:id', component: () => import('@/views/blog/PostDetailView.vue') },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   music: [
@@ -63,6 +64,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   feed: [
@@ -84,6 +86,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   forum: [
@@ -101,6 +104,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   debate: [
@@ -116,6 +120,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   timeline: [
@@ -132,6 +137,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   podcast: [
@@ -152,6 +158,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
   video: [
@@ -174,6 +181,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     { path: '/watch/:id', redirect: (to) => `/videos/watch/${to.params.id}` },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
+    { path: '/forgot-password', component: () => import('@/views/auth/ForgotPasswordView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ],
 }

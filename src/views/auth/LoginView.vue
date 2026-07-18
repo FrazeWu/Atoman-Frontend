@@ -40,6 +40,9 @@
 
         <!-- LOGIN VIEW -->
         <div v-if="!isRegister" class="auth-step-container">
+          <div v-if="route.query.reset === 'success'" class="auth-success" role="status">
+            密码已重置，请重新登录
+          </div>
           <PInput
             v-model="email"
             label="用户名或邮箱"
@@ -54,6 +57,10 @@
             placeholder="输入密码"
             :error="fieldErrors.password"
           />
+
+          <div class="auth-password-actions">
+            <RouterLink to="/forgot-password" class="toggle-link" data-test="forgot-password-link">忘记密码</RouterLink>
+          </div>
 
           <PButton
             type="submit"
@@ -925,6 +932,19 @@ watch(username, (value) => {
   color: var(--a-color-accent-destructive);
   font-size: 0.85rem;
   transition: all 0.2s;
+}
+
+.auth-success {
+  border-left: 3px solid var(--a-color-success);
+  background: var(--a-color-surface-muted);
+  padding: 0.75rem;
+  color: var(--a-color-text);
+  font-size: 0.875rem;
+}
+
+.auth-password-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .error-text {

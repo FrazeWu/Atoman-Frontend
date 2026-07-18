@@ -54,6 +54,16 @@ const mountLogin = async (redirect: string) => {
 }
 
 describe('LoginView redirect', () => {
+  it('links to password reset from the login form', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/login')
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } })
+
+    expect(wrapper.get('[data-test="forgot-password-link"]').attributes('href')).toBe('/forgot-password')
+  })
+
   it('keeps safe same-site relative redirects after login', async () => {
     const router = await mountLogin('/feed?tab=inbox')
 

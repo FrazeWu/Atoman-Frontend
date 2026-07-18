@@ -53,12 +53,12 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       comment: api.interactions.blogComment,
     },
     forum: {
-      likes: api.interactions.forumLikes,
+      topicLike: api.interactions.forumTopicLike(currentTargetId()),
       comments: api.interactions.forumTopicComments(currentTargetId()),
       comment: api.interactions.forumComment,
     },
     videos: {
-      likes: api.interactions.videoLikes,
+      likes: undefined,
       comments: api.interactions.videoComments(currentTargetId()),
       comment: api.interactions.videoComment,
     },
@@ -96,6 +96,23 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
 
   const like = async () => {
     const selectedEndpoints = endpoints()
+    if (moduleName === 'forum') {
+      const response = await fetch(selectedEndpoints.topicLike, {
+        method: 'POST',
+        headers: headers(),
+        credentials: 'include',
+      })
+      const payload = await readJson(response)
+      const nextLiked = payload.data && typeof payload.data === 'object'
+        ? (payload.data as { liked?: unknown }).liked
+        : undefined
+      if (typeof nextLiked === 'boolean') {
+        liked.value = nextLiked
+        likeCount.value = Math.max(0, likeCount.value + (nextLiked ? 1 : -1))
+      }
+      return
+    }
+    if (!selectedEndpoints.likes) return
     const response = await fetch(selectedEndpoints.likes, {
       method: 'POST',
       headers: headers(),
@@ -108,6 +125,23 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
 
   const unlike = async () => {
     const selectedEndpoints = endpoints()
+    if (moduleName === 'forum') {
+      const response = await fetch(selectedEndpoints.topicLike, {
+        method: 'POST',
+        headers: headers(),
+        credentials: 'include',
+      })
+      const payload = await readJson(response)
+      const nextLiked = payload.data && typeof payload.data === 'object'
+        ? (payload.data as { liked?: unknown }).liked
+        : undefined
+      if (typeof nextLiked === 'boolean') {
+        liked.value = nextLiked
+        likeCount.value = Math.max(0, likeCount.value + (nextLiked ? 1 : -1))
+      }
+      return
+    }
+    if (!selectedEndpoints.likes) return
     const response = await fetch(selectedEndpoints.likes, {
       method: 'DELETE',
       headers: headers(),
@@ -145,7 +179,7 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     try {
       const body = {
         content,
-        ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+        ...(parentCommentId ? { [moduleName === 'forum' ? 'reply_to_id' : 'parent_comment_id']: parentCommentId } : {}),
         ...(options?.timestamp_sec !== undefined ? { timestamp_sec: options.timestamp_sec } : {}),
       }
       const response = await fetch(endpoints().comments, {

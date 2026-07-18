@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import type { Channel, PodcastEpisode, PodcastListenLater } from '@/types'
+import type { Channel, PodcastEpisode } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
@@ -18,7 +18,7 @@ const player = usePlayerStore()
 const activeTab = ref<TabKey>('episodes')
 const episodeBookmarks = ref<EpisodeBookmark[]>([])
 const showBookmarks = ref<ShowBookmark[]>([])
-const listenLaterRows = ref<PodcastListenLater[]>([])
+const listenLaterRows = ref<EpisodeBookmark[]>([])
 const loading = ref(false)
 
 const tabs: Array<{ key: TabKey; label: string }> = [
@@ -53,7 +53,7 @@ async function loadActiveTab() {
       const data = await res.json()
       showBookmarks.value = Array.isArray(data?.data) ? data.data : []
     } else if (activeTab.value === 'listenLater') {
-      const res = await fetch(api.podcast.listenLater, { headers: headers() })
+      const res = await fetch(api.podcast.bookmarks, { headers: headers() })
       const data = await res.json()
       listenLaterRows.value = Array.isArray(data?.data) ? data.data : []
     }

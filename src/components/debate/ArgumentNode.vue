@@ -183,7 +183,7 @@ const localIsFolded = ref(props.argument.is_folded ?? false)
 
 const foldArgument = async () => {
   const note = prompt('折叠理由（可选）：', '') ?? ''
-  const res = await fetch(`${apiBase}/debate/arguments/${props.argument.id}/fold`, {
+  const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
     body: JSON.stringify({ fold_note: note }),
@@ -192,7 +192,7 @@ const foldArgument = async () => {
 }
 
 const unfoldArgument = async () => {
-  const res = await fetch(`${apiBase}/debate/arguments/${props.argument.id}/fold`, {
+  const res = await fetch(`${apiBase}/debate-arguments/${props.argument.id}/fold`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${authStore.token}` },
   })

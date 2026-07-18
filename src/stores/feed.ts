@@ -110,6 +110,9 @@ export interface FeedAutomationRules {
 
 const FEED_FILTER_RULES_STORAGE_KEY = 'atoman.feed.filter-rules'
 const FEED_AUTOMATION_RULES_STORAGE_KEY = 'atoman.feed.automation-rules'
+// The backend has no registered subscription-rules routes yet. Keep these actions
+// local no-ops until a real API is available instead of issuing guaranteed 404s.
+const SUBSCRIPTION_RULES_AVAILABLE = false
 
 const normalizeRuleList = (value: unknown) => {
   if (!Array.isArray(value)) return []
@@ -298,26 +301,12 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   const fetchSubscriptionRules = async () => {
-    const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) {
-      subscriptionRules.value = []
-      ruleApplySummary.value = null
-      return
-    }
-    try {
-      const res = await fetch(`${api.url}/feed/subscription-rules`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        subscriptionRules.value = data.data || []
-      }
-    } catch (e) {
-      console.error('Failed to fetch subscription rules', e)
-    }
+    subscriptionRules.value = []
+    ruleApplySummary.value = null
   }
 
   const createSubscriptionRule = async (payload: SubscriptionRulePayload): Promise<boolean> => {
+    if (!SUBSCRIPTION_RULES_AVAILABLE) return false
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     if (!hasSubscriptionRuleAction(payload)) return false
@@ -338,6 +327,7 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   const updateSubscriptionRule = async (id: string, payload: Partial<SubscriptionRulePayload>): Promise<boolean> => {
+    if (!SUBSCRIPTION_RULES_AVAILABLE) return false
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     if (!hasSubscriptionRuleAction(payload)) return false
@@ -358,6 +348,7 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   const deleteSubscriptionRule = async (id: string): Promise<boolean> => {
+    if (!SUBSCRIPTION_RULES_AVAILABLE) return false
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
@@ -375,6 +366,7 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   const reorderSubscriptionRules = async (ruleIds: string[]): Promise<boolean> => {
+    if (!SUBSCRIPTION_RULES_AVAILABLE) return false
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {
@@ -393,6 +385,7 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   const applySubscriptionRules = async (payload: ApplySubscriptionRulesPayload): Promise<boolean> => {
+    if (!SUBSCRIPTION_RULES_AVAILABLE) return false
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
     try {

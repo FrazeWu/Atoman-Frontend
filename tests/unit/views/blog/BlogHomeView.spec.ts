@@ -74,15 +74,15 @@ describe('BlogHomeView', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders flat posts returned by blog explore', async () => {
+  it('renders flat posts returned by the blog posts endpoint', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/blog/explore')) {
+      if (url.includes('/blog/posts')) {
         return new Response(JSON.stringify({
           data: [{
             id: 'post-flat-1',
             title: 'Flat Explore Post',
-            summary: 'From flat /blog/explore response',
+            summary: 'From flat /blog/posts response',
             created_at: '2026-07-06T00:00:00Z',
           }],
         }), { status: 200 })
@@ -101,6 +101,10 @@ describe('BlogHomeView', () => {
 
     expect(openPost).toHaveBeenCalledWith('post-flat-1', 'Flat Explore Post')
     expect(routerPush).not.toHaveBeenCalled()
+
+    const requestedUrls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([input]) => String(input))
+    expect(requestedUrls).toContain('/api/v1/blog/posts?page=1&page_size=20')
+    expect(requestedUrls.some((url) => url.includes('/blog/explore'))).toBe(false)
   })
 
   it('uses feed recommendation target path when opening hot feed item', async () => {
@@ -235,7 +239,7 @@ describe('BlogHomeView', () => {
   it('keeps load-more visible when latest page returns the requested limit', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
-      if (url.includes('/blog/explore')) {
+      if (url.includes('/blog/posts')) {
         return new Response(JSON.stringify({
           data: Array.from({ length: 20 }, (_, index) => ({
             id: `post-${index + 1}`,

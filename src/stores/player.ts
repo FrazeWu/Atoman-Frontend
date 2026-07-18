@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from '@/types';
 import { useApi } from '@/composables/useApi'
 import { recordMusicSongPlay } from '@/api/musicV1'
-import { useAuthStore } from '@/stores/auth'
+import { readPodcastProgress, writePodcastProgress } from '@/composables/usePodcastProgress'
 
 const api = useApi();
 
@@ -71,7 +71,6 @@ export const usePlayerStore = defineStore('player', () => {
 
   let audio: HTMLAudioElement | null = null;
   let songsRequest: Promise<void> | null = null;
-  let lastPodcastProgressSyncAt = 0;
   const listeningThresholdMs = 5000;
   let listeningTimer: ReturnType<typeof setTimeout> | null = null;
   let listeningStartedAt: number | null = null;
@@ -123,13 +122,13 @@ export const usePlayerStore = defineStore('player', () => {
     const nextAudio = new Audio();
     nextAudio.addEventListener('timeupdate', () => {
       currentTime.value = nextAudio.currentTime;
-      syncPodcastProgress();
+      savePodcastProgress();
     });
     nextAudio.addEventListener('durationchange', () => {
       duration.value = Number.isFinite(nextAudio.duration) ? nextAudio.duration : 0;
     });
     nextAudio.addEventListener('ended', () => {
-      syncPodcastProgress(true);
+      savePodcastProgress(true);
       playNext();
     });
     nextAudio.volume = volume.value;
@@ -255,13 +254,16 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const startSong = (song: Song) => {
-    syncPodcastProgress(true);
+    savePodcastProgress();
     resetListening(song);
     const player = ensureAudio();
     player.src = song.audio_url;
     player.volume = volume.value;
     currentSong.value = song;
-    currentTime.value = 0;
+    const savedProgress = song.source_type === 'podcast_episode' && song.source_id
+      ? readPodcastProgress(song.source_id)
+      : null;
+    currentTime.value = savedProgress?.completed ? 0 : savedProgress?.position_sec || 0;
     duration.value = 0;
     attemptPlay(player);
   };
@@ -308,7 +310,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     if (isPlaying.value) {
-      syncPodcastProgress(true);
+      savePodcastProgress();
       player.pause();
       isPlaying.value = false;
       pauseListening();
@@ -429,34 +431,19 @@ export const usePlayerStore = defineStore('player', () => {
     queue.value = episodes.map(createPodcastEpisodeSong);
   };
 
-  function syncPodcastProgress(force = false) {
+  function savePodcastProgress(completed = false) {
     const song = currentSong.value;
     if (song?.source_type !== 'podcast_episode' || !song.source_id) return;
-
-    const authStore = useAuthStore();
-    if (!authStore.token) return;
-
-    const now = Date.now();
-    if (!force && now - lastPodcastProgressSyncAt < 15_000) return;
-    lastPodcastProgressSyncAt = now;
-
     const playerDuration = audio?.duration;
     const durationSec = Number.isFinite(playerDuration)
       ? Math.floor(playerDuration || 0)
       : Math.floor(duration.value || 0);
-
-    void fetch(api.podcast.episodeProgress(song.source_id), {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify({
-        position_sec: Math.floor(audio?.currentTime ?? currentTime.value),
-        duration_sec: durationSec,
-      }),
-    }).catch((error) => {
-      console.error('Failed to sync podcast progress:', error);
+    writePodcastProgress({
+      episode_id: song.source_id,
+      position_sec: Math.floor(audio?.currentTime ?? currentTime.value),
+      duration_sec: durationSec,
+      completed,
+      last_played_at: new Date().toISOString(),
     });
   }
 

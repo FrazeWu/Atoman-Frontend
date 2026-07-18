@@ -87,6 +87,7 @@
                 <PButton variant="secondary" @click="muteNotificationType(selectedNotification)">不再提醒此类</PButton>
                 <PButton variant="secondary" @click="muteNotificationSource(selectedNotification)">不再提醒此内容</PButton>
               </div>
+              <p v-if="notificationActionMessage" class="a-muted">{{ notificationActionMessage }}</p>
             </div>
             <div v-else class="detail-empty">
               <strong>选择一条通知</strong>
@@ -186,6 +187,7 @@ const dmImageUrl = ref('')
 const dmSending = ref(false)
 const dmError = ref('')
 const dmOpenError = ref('')
+const notificationActionMessage = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const activeTab = computed<InboxPageTab>(() => {
@@ -295,11 +297,15 @@ const notificationSourceLabel = (notification: Notification) => {
 }
 
 const muteNotificationType = async (notification: Notification) => {
-  await notificationStore.savePreference(notification.category, notification.type, false)
+  notificationActionMessage.value = (await notificationStore.savePreference(notification.category, notification.type, false))
+    ? ''
+    : '通知偏好暂不可用'
 }
 
 const muteNotificationSource = async (notification: Notification) => {
-  await notificationStore.createMute(notification.source_type, notification.source_id, notification.reason)
+  notificationActionMessage.value = (await notificationStore.createMute(notification.source_type, notification.source_id, notification.reason))
+    ? ''
+    : '内容静音暂不可用'
 }
 
 const activeConversationItem = computed(() => (

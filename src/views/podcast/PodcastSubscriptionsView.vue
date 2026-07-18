@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import type { PodcastEpisode, PodcastEpisodeProgress } from '@/types'
 import { useApi } from '@/composables/useApi'
+import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -44,7 +45,7 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 async function listenLater(ep: PodcastEpisode) {
-  const res = await fetch(api.podcast.listenLater, {
+  const res = await fetch(api.podcast.bookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers() },
     body: JSON.stringify({ episode_id: ep.id }),
@@ -55,14 +56,24 @@ async function listenLater(ep: PodcastEpisode) {
 onMounted(async () => {
   loading.value = true
   try {
-    const [episodeRes, progressRes] = await Promise.all([
-      fetch(api.podcast.subscriptionEpisodes, { headers: headers() }),
-      fetch(api.podcast.progress, { headers: headers() }),
-    ])
-    const episodeData = await episodeRes.json()
-    const progressData = await progressRes.json()
-    episodes.value = Array.isArray(episodeData?.data) ? episodeData.data : []
-    progressRows.value = Array.isArray(progressData?.data) ? progressData.data : []
+    const subscriptionsRes = await fetch(api.podcast.showBookmarks, { headers: headers() })
+    const subscriptionsData = await subscriptionsRes.json()
+    const shows = Array.isArray(subscriptionsData?.data) ? subscriptionsData.data : []
+    const episodeResponses = await Promise.all(shows
+      .map((show: { channel?: { slug?: string } }) => show.channel?.slug)
+      .filter((slug): slug is string => Boolean(slug))
+      .map((slug) => fetch(api.podcast.showEpisodes(slug))))
+    const episodeData = await Promise.all(episodeResponses.map((response) => response.json()))
+    episodes.value = episodeData.flatMap((data) => Array.isArray(data?.episodes) ? data.episodes : [])
+    progressRows.value = listPodcastProgress().map((record) => ({
+      id: record.episode_id,
+      user_id: '',
+      episode_id: record.episode_id,
+      position_sec: record.position_sec,
+      duration_sec: record.duration_sec,
+      completed: record.completed,
+      last_played_at: record.last_played_at,
+    }))
   } finally {
     loading.value = false
   }

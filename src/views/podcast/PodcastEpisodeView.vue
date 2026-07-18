@@ -92,7 +92,7 @@ async function listenLater() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await fetch(api.podcast.listenLater, {
+  const res = await fetch(api.podcast.bookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
     body: JSON.stringify({ episode_id: ep.value.id }),

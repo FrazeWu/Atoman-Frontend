@@ -33,7 +33,7 @@ describe('notification store', () => {
   })
 
   it('keeps unread from other notification types when marking one type read', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
 
     const store = useNotificationStore()
     store.unreadCounts.reply = 2
@@ -46,6 +46,7 @@ describe('notification store', () => {
 
     await store.markAllRead('reply')
 
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/read-all?type=reply', expect.objectContaining({ method: 'PUT' }))
     expect(store.unreadCount).toBe(3)
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
   })
@@ -123,5 +124,16 @@ describe('notification store', () => {
     store.receiveNotification(makeNotification('next-mention', 'mention', null, 'comment_mention'))
 
     expect(store.notifications.map(({ id }) => id)).toEqual(['next-mention'])
+  })
+
+  it('does not call unregistered notification preference or mute endpoints', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const store = useNotificationStore()
+
+    await expect(store.savePreferences([{ category: 'like', event_type: 'content.liked', enabled: false }])).resolves.toBe(false)
+    await expect(store.savePreference('like', 'content.liked', false)).resolves.toBe(false)
+    await expect(store.createMute('blog_post', 'post-1', 'reason')).resolves.toBe(false)
+
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

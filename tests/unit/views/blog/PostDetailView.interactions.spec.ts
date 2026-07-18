@@ -42,11 +42,11 @@ const InteractionBarStub = defineComponent({
   },
 })
 
-const CommentThreadStub = defineComponent({
-  name: 'CommentThread',
-  props: ['items', 'canComment', 'canDelete', 'loading', 'submitting', 'submitAction'],
-  emits: ['delete'],
-  template: '<section data-test="comment-thread" />',
+const CommentSectionStub = defineComponent({
+  name: 'CommentSection',
+  props: ['target', 'noun', 'readonly', 'canDelete'],
+  emits: ['count-change'],
+  template: '<section data-test="unified-comment-section" />',
 })
 
 async function mountPostDetail() {
@@ -75,7 +75,7 @@ async function mountPostDetail() {
       stubs: {
         RouterLink,
         InteractionBar: InteractionBarStub,
-        CommentThread: CommentThreadStub,
+        CommentSection: CommentSectionStub,
       },
     },
   })
@@ -126,42 +126,40 @@ describe('PostDetailView shared interactions', () => {
     }))
   })
 
-  it('渲染共享互动栏和评论线程，并用响应式 post id 初始化 useInteractions', async () => {
+  it('渲染统一评论组件并传入博客评论目标', async () => {
     const wrapper = await mountPostDetail()
 
     expect(mocks.useInteractions).toHaveBeenCalledWith('blog', 'post', expect.any(Object))
     expect(mocks.useInteractions.mock.calls[0][2].value).toBe('post-1')
     expect(mocks.interactions.liked.value).toBe(true)
     expect(mocks.interactions.likeCount.value).toBe(7)
-    expect(mocks.interactions.fetchComments).toHaveBeenCalledTimes(1)
+    expect(mocks.interactions.fetchComments).not.toHaveBeenCalled()
     expect(wrapper.find('[data-test="interaction-bar"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="comment-thread"]').exists()).toBe(true)
-    expect(wrapper.findComponent(CommentThreadStub).props('canComment')).toBe(true)
+    expect(wrapper.find('[data-test="unified-comment-section"]').exists()).toBe(true)
+    expect(wrapper.findComponent(CommentSectionStub).props('target')).toEqual({
+      kind: 'blog_post',
+      resourceId: 'post-1',
+    })
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes('/site/access'))).toBe(false)
   })
 
-  it('只允许评论作者、文章作者或管理员删除评论', async () => {
+  it('将文章作者和版主的删除权限传给统一评论组件', async () => {
     const wrapper = await mountPostDetail()
-    const canDelete = wrapper.findComponent(CommentThreadStub).props('canDelete') as (comment: {
-      user_id?: string | null
-      user?: { id?: string | number; uuid?: string }
-    }) => boolean
-
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+    const commentSection = wrapper.findComponent(CommentSectionStub)
+    expect(commentSection.props('canDelete')).toBe(true)
 
     const authStore = useAuthStore()
     authStore.user = { id: 42, uuid: 'reader-1', username: 'reader', email: 'reader@example.com' }
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(false)
-    expect(canDelete({ user: { id: 'reader-1' } })).toBe(true)
-    expect(canDelete({ user_id: 'reader-1' })).toBe(true)
-    expect(canDelete({ user: { uuid: 'reader-1' } })).toBe(true)
-    expect(canDelete({ user: { id: 42 } })).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(commentSection.props('canDelete')).toBe(false)
 
     authStore.user = { uuid: 'mod-1', username: 'mod', email: 'mod@example.com', role: 'moderator' }
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(commentSection.props('canDelete')).toBe(true)
 
     authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(commentSection.props('canDelete')).toBe(true)
   })
 
   it('提供收藏、稍后阅读和分享动作', async () => {

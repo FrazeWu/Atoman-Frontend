@@ -44,7 +44,7 @@
         :authenticated="authStore.isAuthenticated"
         :current-user-id="currentUserId"
         :can-mark="Boolean(comments.target.value?.can_mark)"
-        :can-delete="Boolean(comments.target.value?.can_mark)"
+        :can-delete="props.canDelete ?? Boolean(comments.target.value?.can_mark)"
         :can-reply="!readonly"
         :marked-comment-id="comments.target.value?.marked_comment_id"
         :mark-label="effectiveMarkLabel"
@@ -93,6 +93,7 @@ const props = withDefaults(defineProps<{
   markLabel?: '置顶' | '最佳回答'
   currentTime?: () => number | null
   readonly?: boolean
+  canDelete?: boolean
   focusCommentId?: string
   focusRootId?: string
 }>(), {
@@ -100,6 +101,7 @@ const props = withDefaults(defineProps<{
   markLabel: undefined,
   currentTime: undefined,
   readonly: false,
+  canDelete: undefined,
   focusCommentId: '',
   focusRootId: '',
 })

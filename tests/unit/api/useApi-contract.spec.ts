@@ -46,6 +46,9 @@ describe('API endpoint construction contract', () => {
     expect(api.v1.forum.categories).toBe('http://localhost:8080/api/v1/forum/categories')
     expect(api.admin.feed.opmlImport).toBe('http://localhost:8080/api/v1/feed/sources/opml/import')
     expect(api.admin.feed.opmlExport).toBe('http://localhost:8080/api/v1/feed/sources/opml/export')
+    expect(api.auth.onboardingRecommendations).toBe('http://localhost:8080/api/v1/feed/onboarding/recommendations')
+    expect(api.admin.feed.onboardingRecommendations).toBe('http://localhost:8080/api/v1/admin/feed/onboarding/recommendations')
+    expect(api.admin.feed.onboardingRecommendation('recommendation-1')).toBe('http://localhost:8080/api/v1/admin/feed/onboarding/recommendations/recommendation-1')
 
     env.VITE_API_URL = undefined as unknown as string
   })
@@ -77,6 +80,16 @@ describe('API endpoint construction contract', () => {
     expect(api).not.toHaveProperty('music.artistRevisions')
     expect(api).not.toHaveProperty('music.artistAliases')
     expect(api).not.toHaveProperty('music.songAnnotations')
+  })
+
+  it('does not expose unregistered podcast progress and aggregation endpoints', () => {
+    const api = useApi()
+
+    expect(api.podcast).not.toHaveProperty('listenLater')
+    expect(api.podcast).not.toHaveProperty('listenLaterItem')
+    expect(api.podcast).not.toHaveProperty('progress')
+    expect(api.podcast).not.toHaveProperty('episodeProgress')
+    expect(api.podcast).not.toHaveProperty('subscriptionEpisodes')
   })
 
   it('keeps VITE_API_URL access centralized in useApi helpers', () => {

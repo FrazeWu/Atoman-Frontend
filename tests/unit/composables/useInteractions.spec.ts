@@ -71,6 +71,38 @@ describe('useInteractions', () => {
     expect(interactions.liked.value).toBe(true)
   })
 
+  it('uses unified Forum discussion comments and topic like endpoints', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { items: [], target: { comment_count: 0 } } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { liked: true } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { ok: true } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: { items: [], target: { comment_count: 1 } } }),
+      })
+
+    const interactions = useInteractions('forum', 'forum_topic', 'topic-1')
+    await interactions.fetchComments()
+    await interactions.like()
+    await interactions.createComment('reply', 'comment-1')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/discussions/forum_topic/topic-1/comments', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/forum/topics/topic-1/like', expect.objectContaining({ method: 'POST' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/discussions/forum_topic/topic-1/comments', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ content: 'reply', reply_to_id: 'comment-1' }),
+    }))
+  })
+
   it('uses the latest reactive target id', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -117,23 +149,26 @@ describe('useInteractions', () => {
     })
     await firstFetch
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/videos/video-a/comments', expect.anything())
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/videos/video-b/comments', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/discussions/video/video-a/comments', expect.anything())
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/discussions/video/video-b/comments', expect.anything())
     expect(interactions.comments.value.map((comment) => comment.id)).toEqual(['comment-b'])
     expect(interactions.commentCount.value).toBe(1)
   })
 
-  it('deletes comments through module delete endpoint', async () => {
+  it('uses unified video comment endpoints and does not call the removed video like endpoint', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: {} }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) })
 
     const interactions = useInteractions('videos', 'video', 'video-1')
     await interactions.deleteComment('comment-1')
+    await interactions.like()
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/videos/comments/comment-1', expect.objectContaining({
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/comments/comment-1', expect.objectContaining({
       method: 'DELETE',
       credentials: 'include',
     }))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/videos/likes', expect.anything())
   })
 })

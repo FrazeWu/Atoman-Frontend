@@ -59,9 +59,9 @@ describe('music v1 starred and playlist adapters', () => {
 		expect(musicV1Endpoints.playlistBookmark('playlist-1')).toBe('/api/v1/music/bookmarks/playlists/playlist-1')
     expect(musicV1Endpoints.playlists()).toBe('/api/v1/music/playlists')
     expect(musicV1Endpoints.playlistSongs('playlist-1')).toBe('/api/v1/music/playlists/playlist-1/songs')
-    expect(musicV1Endpoints.artistMerge('artist-target')).toBe('/api/v1/music/artists/artist-target/merge')
+    expect(musicV1Endpoints.artistMerge('artist-target')).toBe('/api/v1/admin/artists/artist-target/merge')
     expect(musicV1Endpoints.albumRevisions('album-1')).toBe('/api/v1/albums/album-1/revisions')
-    expect(musicV1Endpoints.albumDiscussions('album-1')).toBe('/api/v1/albums/album-1/discussions')
+    expect(musicV1Endpoints.albumDiscussions('album-1')).toBe('/api/v1/discussions/music_album/album-1/comments')
   })
 
   it('lists bookmarks and playlists through existing music endpoints', async () => {
@@ -206,7 +206,7 @@ describe('music v1 starred and playlist adapters', () => {
     const result = await reorderMusicPlaylistSongs('playlist-1', ['song-2', 'song-1'])
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist-1/songs/order', {
-      method: 'PATCH',
+      method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ song_ids: ['song-2', 'song-1'] }),
@@ -214,7 +214,7 @@ describe('music v1 starred and playlist adapters', () => {
     expect(result.reordered).toBe(true)
   })
 
-  it('merges artists through the music namespace', async () => {
+  it('merges artists through the admin endpoint with the backend payload', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: { id: 'edit-artist', type: 'merge_artist', status: 'open' } }),
       { status: 201, headers: { 'Content-Type': 'application/json' } },
@@ -222,11 +222,11 @@ describe('music v1 starred and playlist adapters', () => {
 
     const result = await mergeMusicArtists('artist-target', 'artist-source')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists/artist-target/merge', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/admin/artists/artist-target/merge', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ source_artist_id: 'artist-source' }),
+      body: JSON.stringify({ source_id: 'artist-source' }),
     })
     expect(result.id).toBe('edit-artist')
     expect(result.status).toBe('open')

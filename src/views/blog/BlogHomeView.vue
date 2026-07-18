@@ -312,11 +312,11 @@ const fetchPosts = async (append = false) => {
     const isPopular = sortBy.value === 'popular'
     const query = new URLSearchParams()
     query.set('page', String(targetPage))
-    query.set('limit', String(PAGE_SIZE))
+    query.set('page_size', String(PAGE_SIZE))
     if (activeQuery.value) query.set('q', activeQuery.value)
     const endpoint = isPopular
       ? `${api.url}/feed/recommend/articles?mode=hot&page=${targetPage}&page_size=${PAGE_SIZE}`
-      : `${api.blog.explore}?${query.toString()}`
+      : `${api.blog.posts}?${query.toString()}`
 
     const res = await fetch(endpoint, { headers })
     if (requestSequence !== postsRequestSequence) return false

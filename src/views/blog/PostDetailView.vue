@@ -138,14 +138,11 @@
         <div v-if="commentNotice" class="comment-notice">
           {{ commentNotice }}
         </div>
-        <CommentThread
-          :items="interactions.comments.value"
-          :loading="interactions.loadingComments.value"
-          :submitting="interactions.submittingComment.value"
-          :can-comment="canComment"
-          :can-delete="canDeleteComment"
-          :submit-action="submitComment"
-          @delete="interactions.deleteComment"
+        <CommentSection
+          v-else
+          :target="{ kind: 'blog_post', resourceId: postId }"
+          :can-delete="canDeleteAllComments"
+          @count-change="interactions.commentCount.value = $event"
         />
       </div>
     </article>
@@ -156,7 +153,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
-import CommentThread from '@/components/shared/CommentThread.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
@@ -164,7 +161,7 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useInteractions } from '@/composables/useInteractions'
 import { isModeratorRole } from '@/utils/roles'
-import type { InteractionComment, Post } from '@/types'
+import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 import { useFeedStore } from '@/stores/feed'
 
@@ -210,31 +207,8 @@ const videoEmbeds = ref<Record<string, EmbedData>>({})
 
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const isInReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
-const canComment = computed(() =>
-  Boolean(post.value?.allow_comments && authStore.isAuthenticated),
-)
-const commentNotice = computed(() => {
-  if (!post.value?.allow_comments) return '评论已关闭'
-  if (!authStore.isAuthenticated) return '登录后即可评论'
-  return ''
-})
-const canDeleteComment = (comment: InteractionComment) => {
-  if (!authStore.user) return false
-  const authIDs = new Set([
-    authStore.user.uuid,
-    authStore.user.id === undefined ? undefined : String(authStore.user.id),
-  ].filter((id): id is string => Boolean(id)))
-  const commentIDs = [
-    comment.user_id ?? undefined,
-    comment.user?.uuid,
-    comment.user?.id === undefined ? undefined : String(comment.user.id),
-  ].filter((id): id is string => Boolean(id))
-  return (
-    commentIDs.some((id) => authIDs.has(id)) ||
-    authStore.user.uuid === post.value?.user_id ||
-    isModeratorRole(authStore.user.role)
-  )
-}
+const commentNotice = computed(() => post.value?.allow_comments ? '' : '评论已关闭')
+const canDeleteAllComments = computed(() => Boolean(isOwner.value || isModeratorRole(authStore.user?.role)))
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -332,7 +306,6 @@ const fetchPost = async () => {
         sheetStore.updateSheetTitle(props.id, 'post', post.value.title)
       }
 
-      await interactions.fetchComments()
     } else {
       errorStatus.value = res.status
       restorePageMeta()
@@ -495,10 +468,6 @@ const fetchVideoEmbeds = async (content: string) => {
 
 const fetchEmbeds = async (content: string) => {
   await Promise.all([fetchPostEmbeds(content), fetchMusicEmbeds(content), fetchVideoEmbeds(content)])
-}
-
-const submitComment = async (payload: { content: string; parentCommentId?: string }) => {
-  await interactions.createComment(payload.content, payload.parentCommentId)
 }
 
 onMounted(fetchPost)

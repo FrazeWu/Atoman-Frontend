@@ -160,6 +160,20 @@ describe('VideoDetailView shared interactions', () => {
     expect(wrapper.find('[data-test="comment-thread"]').exists()).toBe(true)
   })
 
+  it('分享视频时只使用客户端分享能力，不请求不存在的 share 接口', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+
+    const { wrapper } = await mountVideoDetail()
+    await wrapper.get('[data-testid="video-share"]').trigger('click')
+
+    expect(share).toHaveBeenCalledWith({ title: '当前视频', url: window.location.href })
+    expect(vi.mocked(fetch)).not.toHaveBeenCalledWith(
+      '/api/v1/videos/video-1/share',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
   it('路由 id 快速切换时忽略过期详情响应', async () => {
     const firstVideo = deferred<Response>()
     const firstRecommended = deferred<Response>()

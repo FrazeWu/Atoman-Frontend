@@ -221,7 +221,6 @@ async function shareVideo() {
     } else {
       await navigator.clipboard.writeText(shareUrl)
     }
-    await fetch(`${api.url}/videos/${video.value.id}/share`, { method: 'POST' })
   } catch {
     // The user may cancel native share.
   }
@@ -346,7 +345,7 @@ function handleSeekToTimestamp(value: number) {
             :liked="interactions.liked.value"
             :like-count="interactions.likeCount.value"
             :comment-count="interactions.commentCount.value"
-            :disabled="!authStore.isAuthenticated"
+            :disabled="true"
             @like="interactions.like"
             @unlike="interactions.unlike"
           />

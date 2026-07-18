@@ -16,6 +16,9 @@ import {
   listMusicAlbums,
   listMusicDiscoverFeed,
   listMusicEdits,
+  createAlbumDiscussion,
+  deleteAlbumDiscussion,
+  listAlbumDiscussions,
   replyAlbumDiscussion,
   startMusicAlbumImportMultipart,
   updateMusicArtist,
@@ -656,21 +659,56 @@ describe('music v1 adapter', () => {
     expect(musicV1).not.toHaveProperty('revertMusicEdit')
   })
 
-  it('replies to album discussions through the reply endpoint', async () => {
+  it('uses unified comment endpoints for album discussion replies', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { id: 'reply_uuid', album_id: 'album_uuid', parent_id: 'discussion_uuid', content: 'Reply', author_id: 'user_uuid', created_at: '2026-07-06T00:00:00Z' } }),
+      JSON.stringify({ data: { id: 'reply_uuid', author_id: 'user_uuid', reply_to_id: 'discussion_uuid', content: 'Reply', rendered_html: '<p>Reply</p>', status: 'visible', like_count: 0, reply_count: 0, hot_score: 0, created_at: '2026-07-06T00:00:00Z', marked: false, liked: false, mentions: [], attachments: [], time_anchors: [], replies: [], author: { id: 'user_uuid', username: 'tester', display_name: 'Tester', avatar_url: '' } } }),
       { status: 201, headers: { 'Content-Type': 'application/json' } },
     )))
 
     const result = await replyAlbumDiscussion('album_uuid', 'discussion_uuid', 'Reply')
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/albums/album_uuid/discussions/discussion_uuid/reply', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/discussions/music_album/album_uuid/comments', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ content: 'Reply' }),
+      body: JSON.stringify({ content: 'Reply', reply_to_id: 'discussion_uuid', mentions: [], attachment_ids: [] }),
     })
     expect(result.parent_id).toBe('discussion_uuid')
+  })
+
+  it('uses unified comment endpoints for album discussions and deletion', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'DELETE') {
+        return new Response(JSON.stringify({ data: { ok: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (init?.method === 'POST') {
+        return new Response(JSON.stringify({ data: { id: 'root_uuid', author_id: 'user_uuid', content: 'Root', rendered_html: '<p>Root</p>', status: 'visible', like_count: 0, reply_count: 0, hot_score: 0, created_at: '2026-07-06T00:00:00Z', marked: false, liked: false, mentions: [], attachments: [], time_anchors: [], replies: [], author: { id: 'user_uuid', username: 'tester', display_name: 'Tester', avatar_url: '' } } }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ data: { items: [], page: 1, per_page: 20, total_roots: 0, total_comments: 0, total_replies: 0, target: { kind: 'music_album', resource_id: 'album_uuid' } } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listAlbumDiscussions('album_uuid')
+    await createAlbumDiscussion('album_uuid', 'Root')
+    const result = await deleteAlbumDiscussion('album_uuid', 'comment_uuid')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/discussions/music_album/album_uuid/comments', {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/discussions/music_album/album_uuid/comments', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ content: 'Root', mentions: [], attachment_ids: [] }),
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/comments/comment_uuid', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    })
+    expect(result).toEqual({ success: true })
   })
 
   it('starts album import multipart uploads through the correct path and body', async () => {

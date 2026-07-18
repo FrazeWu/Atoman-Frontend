@@ -48,6 +48,10 @@ describe('onboarding store', () => {
 
     expect(store.recommendations).toHaveLength(1)
     expect(store.recommendations[0]?.title).toBe('Example Feed')
+    expect(fetch).toHaveBeenCalledWith('/api/v1/feed/onboarding/recommendations', expect.objectContaining({
+      credentials: 'include',
+      headers: { Authorization: 'Bearer token' },
+    }))
   })
 
   it('records server completion before updating the user', async () => {

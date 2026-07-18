@@ -143,7 +143,10 @@ export const useNotificationStore = defineStore('notification', () => {
         method: 'PUT', headers: authHeaders(),
       })))
     } else {
-      const res = await fetch(api.notifications.markCategoryRead(selection), { method: 'PUT', headers: authHeaders() })
+      const res = await fetch(`${api.notifications.markAllRead}?type=${encodeURIComponent(selection)}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+      })
       if (!res.ok) return
     }
     const readAt = new Date().toISOString()
@@ -163,34 +166,22 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   const savePreference = async (category: NotificationCategory, eventType: string, enabled: boolean) => {
-    if (!authStore.token) return
-    const res = await fetch(api.notifications.preferences, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify({ items: [{ category, event_type: eventType, enabled }] }),
-    })
-    if (!res.ok) throw new Error('保存通知设置失败')
+    void category
+    void eventType
+    void enabled
+    return false
   }
 
   const savePreferences = async (items: NotificationPreference[]) => {
-    if (!authStore.token) return
-    const res = await fetch(api.notifications.preferences, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify({ items }),
-    })
-    if (!res.ok) throw new Error('保存通知设置失败')
+    void items
+    return false
   }
 
   const createMute = async (sourceType: string, sourceId: string, reason: string) => {
-    if (!authStore.token) return
-    const res = await fetch(api.notifications.mutes, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ source_type: sourceType, source_id: sourceId, reason }),
-    })
-    if (!res.ok) throw new Error('不再提醒失败')
-    return await res.json()
+    void sourceType
+    void sourceId
+    void reason
+    return false
   }
 
   const resetStore = () => {

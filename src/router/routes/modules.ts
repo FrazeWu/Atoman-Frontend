@@ -147,7 +147,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       component: () => import('@/views/podcast/PodcastLayout.vue'),
       meta: { hasSidebar: true },
       children: [
-        { path: '', component: () => import('@/views/podcast/PodcastHomeView.vue') },
+        { path: '', component: () => import('../../views/podcast/PodcastHomeView.vue') },
         { path: 'subscriptions', component: () => import('@/views/podcast/PodcastSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'favorites', component: () => import('@/views/podcast/PodcastFavoritesView.vue'), meta: { requiresAuth: true } },
         { path: 'creator', component: () => import('@/views/podcast/PodcastCreatorView.vue'), meta: { requiresAuth: true, featureGate: { module: 'podcast', feature: 'podcast.publish' } } },

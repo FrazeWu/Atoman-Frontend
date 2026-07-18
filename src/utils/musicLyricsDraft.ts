@@ -28,12 +28,12 @@ export type MusicLyricDraftSerialized = {
 let nextLocalRowId = 0
 
 export function createMusicLyricDraftRow(
-  partial: Partial<MusicLyricDraftRow> = {},
+  partial: Partial<Omit<MusicLyricDraftRow, 'id'>> = {},
 ): MusicLyricDraftRow {
   nextLocalRowId += 1
 
   return {
-    id: partial.id ?? `music-lyric-row-${nextLocalRowId}`,
+    id: `music-lyric-row-${nextLocalRowId}`,
     timeMs: partial.timeMs ?? null,
     original: partial.original ?? '',
     translation: partial.translation ?? '',
@@ -41,8 +41,6 @@ export function createMusicLyricDraftRow(
 }
 
 function splitPhysicalLines(value: string): string[] {
-  if (value === '') return []
-
   return value
     .split('\n')
     .map((line) => line.endsWith('\r') ? line.slice(0, -1) : line)
@@ -52,20 +50,17 @@ export function parseMusicLyricDraft(
   content: string,
   translation: string,
   format: MusicLyricDraftFormat,
-): MusicLyricDraftParseResult {
-  if (format === 'lrc') return parseBilingualLrcDraft(content, translation)
+): MusicLyricDraftRow[] {
+  if (format === 'lrc') return parseBilingualLrcDraft(content, translation).rows
 
   const originalLines = splitPhysicalLines(content)
   const translationLines = splitPhysicalLines(translation)
   const lineCount = Math.max(originalLines.length, translationLines.length)
 
-  return {
-    rows: Array.from({ length: lineCount }, (_, index) => createMusicLyricDraftRow({
-      original: originalLines[index] ?? '',
-      translation: translationLines[index] ?? '',
-    })),
-    issues: [],
-  }
+  return Array.from({ length: lineCount }, (_, index) => createMusicLyricDraftRow({
+    original: originalLines[index] ?? '',
+    translation: translationLines[index] ?? '',
+  }))
 }
 
 export function serializeMusicLyricDraft(

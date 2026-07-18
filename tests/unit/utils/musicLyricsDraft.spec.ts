@@ -11,17 +11,18 @@ import {
 
 describe('musicLyricsDraft', () => {
   it('aligns plain original and translation by physical line', () => {
-    const result = parseMusicLyricDraft(
+    const rows = parseMusicLyricDraft(
       'Alpha\nBeta\nGamma',
       '甲\n\n丙',
       'plain',
     )
 
-    expect(result.rows.map(({ original, translation }) => ({ original, translation }))).toEqual([
+    expect(rows.map(({ original, translation }) => ({ original, translation }))).toEqual([
       { original: 'Alpha', translation: '甲' },
       { original: 'Beta', translation: '' },
       { original: 'Gamma', translation: '丙' },
     ])
+    expect(new Set(rows.map((row) => row.id)).size).toBe(rows.length)
   })
 
   it('creates a unique local id for each row', () => {
@@ -31,6 +32,24 @@ describe('musicLyricsDraft', () => {
     expect(first.id).not.toBe(second.id)
     expect(first.id).not.toBe('')
     expect(second.id).not.toBe('')
+  })
+
+  it('always creates the row id internally', () => {
+    // @ts-expect-error id is generated internally and is not accepted as input
+    const row = createMusicLyricDraftRow({ id: 'external-id' })
+
+    expect(row.id).not.toBe('external-id')
+  })
+
+  it('parses empty plain strings as one physical row', () => {
+    const rows = parseMusicLyricDraft('', '', 'plain')
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      timeMs: null,
+      original: '',
+      translation: '',
+    })
   })
 
   it('keeps a trailing empty translation line when serializing plain rows', () => {
@@ -58,6 +77,7 @@ describe('musicLyricsDraft', () => {
 
   it('provides empty typed placeholders for bilingual LRC support', () => {
     expect(parseBilingualLrcDraft()).toEqual({ rows: [], issues: [] })
+    expect(parseMusicLyricDraft('[00:01.00]Alpha', '', 'lrc')).toEqual([])
     expect(serializeBilingualLrcDraft([])).toEqual({ content: '', translation: '' })
   })
 })

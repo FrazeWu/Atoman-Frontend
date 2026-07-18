@@ -10,7 +10,7 @@
         <p>{{ config.itemLabel }}</p>
       </div>
       <div class="dashboard-section__actions">
-        <RouterLink :to="`/studio/${section.module}/new`" class="dashboard-action dashboard-action--primary">
+		<RouterLink v-if="canCreate" :to="`/studio/${section.module}/new`" class="dashboard-action dashboard-action--primary">
           <Plus :size="16" aria-hidden="true" />
           <span>{{ config.createLabel }}</span>
         </RouterLink>
@@ -21,7 +21,10 @@
       </div>
     </header>
 
-    <p v-if="section.error" class="dashboard-section__error" role="alert">{{ section.error }}</p>
+    <div v-if="section.error" class="dashboard-section__error" role="alert">
+      <p>{{ section.error }}</p>
+      <button type="button" data-testid="retry-dashboard-section" @click="$emit('retry')">重试</button>
+    </div>
     <template v-else>
       <dl class="dashboard-metrics">
         <div v-for="metric in visibleMetrics" :key="metric.key" :data-metric="metric.key">
@@ -49,7 +52,7 @@
           <p v-if="!section.issues.length" class="dashboard-empty">暂无问题</p>
           <ul v-else>
             <li v-for="issue in section.issues" :key="issue.code">
-              <RouterLink :to="`/studio/${section.module}/content?issue=${issue.code}`">
+			  <RouterLink :to="issueRoute(issue.code)">
                 {{ issueText(issue.code, issue.count) }}
               </RouterLink>
             </li>
@@ -66,7 +69,8 @@ import { RouterLink } from 'vue-router'
 import { List, Plus } from 'lucide-vue-next'
 import type { StudioDashboardSection, StudioModule } from '@/types'
 
-const props = defineProps<{ section: StudioDashboardSection }>()
+const props = withDefaults(defineProps<{ section: StudioDashboardSection; canCreate?: boolean }>(), { canCreate: true })
+defineEmits<{ retry: [] }>()
 
 const moduleConfig: Record<StudioModule, { label: string; itemLabel: string; createLabel: string }> = {
   blog: { label: '博客', itemLabel: '文章', createLabel: '写文章' },
@@ -75,15 +79,22 @@ const moduleConfig: Record<StudioModule, { label: string; itemLabel: string; cre
 }
 
 const metricLabels: Record<string, string> = {
-  contents: '内容',
-  published: '已发布',
-  drafts: '草稿',
-  views: '浏览',
-  plays: '播放',
+  view: '阅读',
+  play: '播放',
+  complete: '完播',
+  comment: '评论',
+  like: '点赞',
+  bookmark: '收藏',
+  share: '分享',
 }
 
 const config = computed(() => moduleConfig[props.section.module])
-const visibleMetrics = computed(() => ['contents', 'published', 'drafts', props.section.module === 'podcast' ? 'plays' : 'views'].map(key => ({
+const metricKeys: Record<StudioModule, string[]> = {
+  blog: ['view', 'comment', 'like', 'bookmark', 'share'],
+  podcast: ['play', 'complete', 'comment', 'bookmark', 'share'],
+  video: ['play', 'comment', 'like', 'bookmark', 'share'],
+}
+const visibleMetrics = computed(() => metricKeys[props.section.module].map(key => ({
   key,
   label: metricLabels[key],
   value: props.section.metrics[key] ?? 0,
@@ -107,8 +118,14 @@ function issueText(code: string, count: number) {
     missing_audio: `${count} 个单集缺少音频`,
     processing_failed: `${count} 个视频处理失败`,
     external_unplayable: `${count} 个外链不可播放`,
+    unreplied_comment: `${count} 条评论待回复`,
   }
   return labels[code] ?? `${count} 条待处理`
+}
+
+function issueRoute(code: string) {
+  if (code === 'unreplied_comment') return `/studio/${props.section.module}/interactions?unreplied=true`
+  return `/studio/${props.section.module}/content?issue=${code}`
 }
 </script>
 
@@ -154,7 +171,7 @@ function issueText(code: string, count: number) {
 
 .dashboard-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 0;
   border-block: 1px solid var(--a-color-border-soft);
 }
@@ -171,7 +188,10 @@ function issueText(code: string, count: number) {
 .dashboard-section li a { min-height: 2.75rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--a-color-fg); text-decoration: none; }
 .dashboard-section li a:hover { text-decoration: underline; }
 .dashboard-section time, .dashboard-empty { color: var(--a-color-muted); font-size: 0.8125rem; }
-.dashboard-section__error { margin: 0; padding: 1rem; border: 1px solid var(--a-color-danger); color: var(--a-color-danger); }
+.dashboard-section__error { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid var(--a-color-danger); color: var(--a-color-danger); }
+.dashboard-section__error p { margin: 0; }
+.dashboard-section__error button { min-height: 2.75rem; padding: 0 0.875rem; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+.dashboard-section__error button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
 @media (max-width: 700px) {
   .dashboard-section__header { align-items: flex-start; }

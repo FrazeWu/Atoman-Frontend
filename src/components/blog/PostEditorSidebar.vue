@@ -4,7 +4,7 @@
       <span class="a-label">发布</span>
       <div class="publish-actions">
         <PButton
-          variant="secondary"
+		  :variant="preferredStatus === 'draft' ? 'primary' : 'secondary'"
           block
           :loading="saving === 'draft'"
           :disabled="!!saving"
@@ -14,7 +14,7 @@
           存草稿
         </PButton>
         <PButton
-          variant="primary"
+		  :variant="preferredStatus === 'published' ? 'primary' : 'secondary'"
           block
           :loading="saving === 'published'"
           :disabled="!!saving"
@@ -136,6 +136,7 @@ type FlattenedOutlineNode = {
 const props = defineProps<{
   mobileOpen: boolean
   saving: SaveTarget | null
+	preferredStatus: SaveTarget
   hasDraftManagerAccess: boolean
   channelCollections: SidebarCollection[]
   selectedCollectionId?: string

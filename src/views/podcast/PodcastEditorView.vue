@@ -25,6 +25,7 @@ const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
 const showPublishConfirm = ref(false)
+const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
@@ -405,6 +406,18 @@ async function loadEpisode() {
   maxStep.value = 2
 }
 
+function applyCreationDefaults() {
+  const settings = studio.settings.podcast
+  preferredPublishStatus.value = settings?.default_publish_status || 'published'
+  if (settings?.default_visibility) {
+    form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
+  }
+  if (selectedCollectionFromQuery.value) return
+  if (settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)) {
+    selectedCollectionId.value = settings.default_collection_id
+  }
+}
+
 onMounted(async () => {
   await studio.loadState()
   if (isEdit.value) {
@@ -413,14 +426,8 @@ onMounted(async () => {
     return
   }
   form.value.channel_id = studio.currentChannel?.id || ''
-  await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('podcast')])
-  const settings = studio.settings.podcast
-  if (settings?.default_visibility) {
-    form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
-  }
-  if (!selectedCollectionId.value && settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)) {
-    selectedCollectionId.value = settings.default_collection_id
-  }
+	await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('podcast')])
+	applyCreationDefaults()
 })
 
 async function saveDraft() {
@@ -643,8 +650,8 @@ async function doPublish() {
           上一步
         </PButton>
         <div class="pe-publish-actions">
-          <PButton
-            variant="secondary"
+		  <PButton
+			:variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
             :loading="savingDraft"
             loading-text="保存中…"
             :disabled="publishing || audioBusy || !form.audio_url"
@@ -652,7 +659,8 @@ async function doPublish() {
           >
             保存草稿
           </PButton>
-          <PButton
+		  <PButton
+			:variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
             :loading="publishing"
             loading-text="发布中…"
             :disabled="savingDraft || audioBusy || !form.audio_url"

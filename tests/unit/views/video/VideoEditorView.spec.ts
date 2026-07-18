@@ -28,7 +28,7 @@ const makeJsonResponse = (data: unknown) => new Response(JSON.stringify(data), {
   headers: { 'Content-Type': 'application/json' },
 })
 
-async function setup(path = '/studio/video/new?collection=collection-2') {
+async function setup(path = '/studio/video/new?collection=collection-2', defaultStatus: 'draft' | 'published' = 'published') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -56,6 +56,10 @@ async function setup(path = '/studio/video/new?collection=collection-2') {
     { id: 'collection-1', channel_id: 'channel-1', content_type: 'video', name: '默认合集', description: '', cover_url: '', is_default: true, created_at: '', updated_at: '' },
     { id: 'collection-2', channel_id: 'channel-1', content_type: 'video', name: '专题', description: '', cover_url: '', is_default: false, created_at: '', updated_at: '' },
   ]
+	studio.settings.video = {
+	  channel_id: 'channel-1', module: 'video', default_collection_id: defaultStatus === 'draft' ? 'collection-1' : null,
+	  default_visibility: defaultStatus === 'draft' ? 'private' : 'public', default_publish_status: defaultStatus, autoplay_enabled: false,
+	}
   const wrapper = mount(VideoEditorView, { global: { plugins: [pinia, router] } })
   await flushPromises()
   return { wrapper, router, studio }
@@ -91,6 +95,13 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.form.channel_id).toBe('channel-1')
     expect(wrapper.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
     expect(wrapper.text()).not.toContain('关联频道')
+  })
+
+  it('applies Studio creation defaults', async () => {
+    const { wrapper } = await setup('/studio/video/new', 'draft')
+    expect(wrapper.vm.$.setupState.form.visibility).toBe('private')
+    expect(wrapper.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1'])
+    expect(wrapper.vm.$.setupState.preferredPublishStatus).toBe('draft')
   })
 
   it('keeps the uploaded video when automatic cover extraction fails', async () => {

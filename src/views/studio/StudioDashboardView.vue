@@ -14,10 +14,13 @@
     </div>
     <p v-else-if="!studio.dashboard" class="studio-dashboard__state">暂无内容</p>
     <div v-else class="studio-dashboard__sections">
+      <p v-if="retryError" class="studio-dashboard__retry-error" role="alert">{{ retryError }}</p>
       <StudioDashboardSection
         v-for="section in orderedSections"
         :key="section.module"
         :section="section"
+		:can-create="canCreate(section.module)"
+        @retry="retrySection"
       />
     </div>
   </section>
@@ -27,12 +30,24 @@
 import { computed, onMounted, ref } from 'vue'
 import StudioDashboardSection from '@/components/studio/StudioDashboardSection.vue'
 import { useStudioStore } from '@/stores/studio'
+import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { StudioDashboardSection as DashboardSection, StudioModule } from '@/types'
 
 const studio = useStudioStore()
+const siteAccess = useSiteAccessStore()
 const loading = ref(true)
 const error = ref('')
+const retryError = ref('')
 const modules: StudioModule[] = ['blog', 'podcast', 'video']
+const publishingFeature = {
+  blog: 'post.create',
+  podcast: 'podcast.publish',
+  video: 'video.publish',
+} as const
+
+function canCreate(module: StudioModule) {
+  return siteAccess.isFeatureEnabled(module, publishingFeature[module])
+}
 
 const orderedSections = computed(() => modules.map((module): DashboardSection => (
   studio.dashboard?.sections.find(section => section.module === module) ?? {
@@ -61,6 +76,15 @@ async function load() {
   }
 }
 
+async function retrySection() {
+  retryError.value = ''
+  try {
+    await studio.loadDashboard()
+  } catch (cause) {
+    retryError.value = cause instanceof Error ? cause.message : '重试失败'
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -70,6 +94,7 @@ onMounted(load)
 .studio-dashboard__header h1 { margin: 0; font-size: 1.5rem; }
 .studio-dashboard__header p { margin: 0; color: var(--a-color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
 .studio-dashboard__sections { display: grid; }
+.studio-dashboard__retry-error { margin: 0 0 1rem; color: var(--a-color-danger); }
 .studio-dashboard__state { margin: 2rem 0; }
 .studio-dashboard__state button { min-height: 2.75rem; border: 1px solid var(--a-color-fg); background: var(--a-color-bg); color: var(--a-color-fg); padding: 0 1rem; cursor: pointer; }
 .studio-dashboard__state button:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 2px; }

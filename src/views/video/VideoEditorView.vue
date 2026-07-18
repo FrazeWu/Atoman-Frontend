@@ -26,6 +26,7 @@ const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
 const publishing = ref(false)
 const showPublishConfirm = ref(false)
+const preferredPublishStatus = ref<'draft' | 'published'>('published')
 const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
@@ -378,7 +379,8 @@ onMounted(async () => {
   }
   form.value.channel_id = studio.currentChannel?.id || ''
   await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('video')])
-  const settings = studio.settings.video
+	const settings = studio.settings.video
+	preferredPublishStatus.value = settings?.default_publish_status || 'published'
   if (settings?.default_visibility) {
     form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
   }
@@ -610,8 +612,8 @@ async function doPublish() {
               上一步
             </PButton>
             <div class="ve-publish-actions">
-              <PButton
-                variant="secondary"
+		  <PButton
+			:variant="preferredPublishStatus === 'draft' ? 'primary' : 'secondary'"
                 :loading="savingDraft"
                 loading-text="保存中…"
                 :disabled="publishing || videoUploading"
@@ -619,7 +621,8 @@ async function doPublish() {
               >
                 保存草稿
               </PButton>
-              <PButton
+		  <PButton
+			:variant="preferredPublishStatus === 'published' ? 'primary' : 'secondary'"
                 :loading="publishing"
                 loading-text="发布中…"
                 :disabled="savingDraft || videoUploading"

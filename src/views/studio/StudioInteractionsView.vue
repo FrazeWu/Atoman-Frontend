@@ -104,7 +104,7 @@ const error = ref('')
 const replyingID = ref('')
 const replyDraft = ref('')
 const pendingDelete = ref<StudioInteractionItem | null>(null)
-const filters = reactive({ unreplied: false, anchored: false, page: 1 })
+const filters = reactive({ unreplied: route.query.unreplied === 'true', anchored: false, page: 1 })
 const pagination = computed(() => studio.interactionPagination[module.value])
 const deleteModalOpen = computed({
   get: () => pendingDelete.value !== null,
@@ -116,8 +116,8 @@ function target(item: StudioInteractionItem): CommentTargetRef {
 }
 
 function contentPath(item: StudioInteractionItem) {
-  if (module.value === 'blog') return `/post/${item.content_id}`
-  if (module.value === 'podcast') return `/podcast/episode/${item.content_id}`
+	if (module.value === 'blog') return `/posts/post/${item.content_id}`
+	if (module.value === 'podcast') return `/podcasts/episode/${item.content_id}`
   return `/videos/watch/${item.content_id}`
 }
 

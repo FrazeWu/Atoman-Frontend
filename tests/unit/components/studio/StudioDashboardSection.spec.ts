@@ -10,7 +10,7 @@ describe('StudioDashboardSection', () => {
   it('shows independent metrics three recent items actionable issues and module routes', () => {
     const section: DashboardSection = {
       module: 'blog',
-      metrics: { contents: 9, published: 6, drafts: 3, views: 108 },
+      metrics: { view: 108, comment: 7, like: 6, bookmark: 5, share: 4 },
       recent: Array.from({ length: 4 }, (_, index) => ({
         id: `post-${index + 1}`,
         module: 'blog' as const,
@@ -38,5 +38,7 @@ describe('StudioDashboardSection', () => {
     expect(wrapper.text()).toContain('3 篇草稿')
     expect(wrapper.find('a[href="/studio/blog/new"]').exists()).toBe(true)
     expect(wrapper.find('a[href="/studio/blog/content"]').exists()).toBe(true)
+    expect(wrapper.find('[data-metric="view"]').text()).toContain('108')
+    expect(wrapper.find('[data-metric="comment"]').text()).toContain('7')
   })
 })

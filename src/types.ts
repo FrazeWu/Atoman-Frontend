@@ -240,6 +240,7 @@ export interface StudioContentFilters {
   status: '' | StudioPublishStatus
   visibility: '' | StudioVisibility
   collection_id: string
+	issue?: string
   page: number
 }
 
@@ -260,6 +261,7 @@ export interface StudioContentItem {
   collections: StudioCollectionSummary[]
   duration_sec?: number
   view_count: number
+	metrics?: Record<string, number>
   processing_status?: string
   published_at?: string
   created_at: string

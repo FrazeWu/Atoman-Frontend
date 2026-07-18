@@ -30,7 +30,9 @@ test.describe('Unified Studio', () => {
         return fulfill({ data: {
           channel_subscriber_count: 24,
           sections: ['blog', 'podcast', 'video'].map(module => ({
-            module, metrics: { contents: 0, published: 0, drafts: 0, views: 0, plays: 0 }, recent: [], issues: [],
+			module,
+			metrics: { view: 12, play: 12, complete: 8, comment: 3, like: 4, bookmark: 5, share: 6 },
+			recent: [], issues: [],
           })),
         } })
       }
@@ -51,8 +53,17 @@ test.describe('Unified Studio', () => {
         return fulfill({ data: [] })
       }
       if (/^\/api\/v1\/studio\/(blog|podcast|video)\/contents$/.test(path)) {
-        return fulfill({ data: [], meta: { page: Number(url.searchParams.get('page') || 1), page_size: 20, total: 0, has_more: false } })
+		const module = path.split('/')[4]
+		const data = module === 'blog' ? [{
+		  id: 'post-1', module: 'blog', channel_id: 'channel-1', title: '浏览器测试文章', summary: '', cover_url: '',
+		  status: 'published', visibility: 'public', collections: [{ id: 'collection-default', name: '全部文章' }],
+		  view_count: 12, metrics: { view: 12, comment: 3, like: 4, bookmark: 5, share: 6 },
+		  published_at: '2026-07-18T00:00:00Z', created_at: '2026-07-18T00:00:00Z', updated_at: '2026-07-18T00:00:00Z',
+		}] : []
+		return fulfill({ data, meta: { page: Number(url.searchParams.get('page') || 1), page_size: 20, total: data.length, has_more: false } })
       }
+	  if (path === '/api/v1/blog/posts/post-1/unpublish' && method === 'POST') return fulfill({ id: 'post-1', status: 'draft' })
+	  if (path === '/api/v1/studio/blog/contents/post-1/share' && method === 'POST') return fulfill({ data: { path: '/posts/post/post-1' } })
       if (/^\/api\/v1\/studio\/(blog|podcast|video)\/settings$/.test(path)) {
         const module = path.split('/')[5]
         return fulfill({ data: {
@@ -85,10 +96,19 @@ test.describe('Unified Studio', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
     await expect(page.locator('[data-testid="studio-dashboard-section"]')).toHaveCount(3)
     await expect(page.locator('[data-testid="studio-channel-selector"] select')).toHaveValue('channel-1')
+	await expect(page.locator('[data-module="blog"] [data-metric="view"]')).toContainText('12')
+	await expect(page.locator('[data-module="podcast"] [data-metric="complete"]')).toContainText('8')
 
     const blogSection = page.locator('[data-testid="studio-dashboard-section"][data-module="blog"]')
     await blogSection.getByRole('link', { name: '管理' }).click()
     await expect(page).toHaveURL(/\/studio\/blog\/content$/)
+	await expect(page.getByText('浏览器测试文章')).toBeVisible()
+	for (const label of ['阅读', '评论', '点赞', '收藏', '分享', '发布时间']) {
+	  await expect(page.getByRole('columnheader', { name: label })).toBeVisible()
+	}
+	await page.getByRole('button', { name: '转为草稿' }).click()
+	await expect(page.getByRole('status')).toContainText('已转为草稿')
+	await expect(page.getByRole('button', { name: '分享' })).toBeVisible()
 
     await page.getByTestId('manage-collections').click()
     await page.getByTestId('new-collection').click()
@@ -128,6 +148,10 @@ test.describe('Unified Studio', () => {
     await expect(page.getByRole('heading', { name: '内容' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('studio-desktop.png'), fullPage: true })
     await page.setViewportSize({ width: 390, height: 844 })
+    const pageOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )
+    expect(pageOverflow).toBe(false)
     await page.getByRole('button', { name: '打开创作中心导航' }).click()
     await page.screenshot({ path: testInfo.outputPath('studio-mobile.png'), fullPage: true })
   })

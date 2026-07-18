@@ -21,6 +21,25 @@ const PModal = {
 }
 
 describe('StudioInteractionsView', () => {
+  it('applies the unreplied filter from the dashboard route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/studio/:module/interactions', component: { template: '<div />' } }],
+    })
+    await router.push('/studio/podcast/interactions?unreplied=true')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    const store = useStudioStore(pinia)
+    store.loaded = true
+    store.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+
+    const wrapper = mount(StudioInteractionsView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+
+    expect(store.loadInteractions).toHaveBeenCalledWith('podcast', { unreplied: true, anchored: false, page: 1 })
+    expect((wrapper.get('[data-testid="unreplied-filter"]').element as HTMLInputElement).checked).toBe(true)
+  })
+
   it('filters unreplied and anchored comments and reuses the comment API', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
@@ -45,6 +64,7 @@ describe('StudioInteractionsView', () => {
     await flushPromises()
 
     expect(store.loadInteractions).toHaveBeenCalledWith('podcast', { unreplied: false, anchored: false, page: 1 })
+	expect(wrapper.get('a[href="/podcasts/episode/episode-1"]').exists()).toBe(true)
 
     await wrapper.find('[data-testid="unreplied-filter"]').setValue(true)
     await wrapper.find('[data-testid="anchored-filter"]').setValue(true)

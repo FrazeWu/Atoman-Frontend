@@ -12,7 +12,7 @@ const makeJsonResponse = (data: unknown) => new Response(JSON.stringify(data), {
   headers: { 'Content-Type': 'application/json' },
 })
 
-async function setup(path = '/studio/podcast/new?collection=collection-2') {
+async function setup(path = '/studio/podcast/new?collection=collection-2', defaultStatus: 'draft' | 'published' = 'published') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -42,7 +42,7 @@ async function setup(path = '/studio/podcast/new?collection=collection-2') {
   ]
   studio.settings.podcast = {
     channel_id: 'channel-1', module: 'podcast', default_collection_id: null,
-    default_visibility: 'public', default_publish_status: 'published', autoplay_enabled: false,
+	default_visibility: defaultStatus === 'draft' ? 'private' : 'public', default_publish_status: defaultStatus, autoplay_enabled: false,
   }
   const wrapper = mount(PodcastEditorView, { global: { plugins: [pinia, router] } })
   await flushPromises()
@@ -53,7 +53,6 @@ describe('PodcastEditorView Studio integration', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      if (url.endsWith('/podcast/creator/settings')) return makeJsonResponse({ data: {} })
       if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
       if (url.endsWith('/podcast/episodes') && init?.method === 'POST') return makeJsonResponse({ id: 'episode-1' })
@@ -67,6 +66,15 @@ describe('PodcastEditorView Studio integration', () => {
     expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-2')
     expect(wrapper.text()).not.toContain('节目频道 *')
     expect(wrapper.find('.pe-default-channel-row').exists()).toBe(false)
+  })
+
+  it('applies Studio visibility collection and preferred publish status defaults', async () => {
+    const { wrapper, studio } = await setup('/studio/podcast/new', 'draft')
+    studio.settings.podcast!.default_collection_id = 'collection-1'
+    await wrapper.vm.$.setupState.applyCreationDefaults()
+    expect(wrapper.vm.$.setupState.form.visibility).toBe('private')
+    expect(wrapper.vm.$.setupState.selectedCollectionId).toBe('collection-1')
+    expect(wrapper.vm.$.setupState.preferredPublishStatus).toBe('draft')
   })
 
   it('keeps the media information and publish steps inside Studio', async () => {

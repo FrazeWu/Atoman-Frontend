@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
-import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson } from '@/api/client'
+import { apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPutJson } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type {
@@ -39,7 +39,8 @@ function appendQuery(url: string, values: Record<string, string | number | boole
 }
 
 export const useStudioStore = defineStore('studio', () => {
-  const api = useApi().studio
+	const endpoints = useApi()
+	const api = endpoints.studio
   const auth = useAuthStore()
 
   const currentChannel = ref<StudioChannel | null>(null)
@@ -141,6 +142,7 @@ export const useStudioStore = defineStore('studio', () => {
       status: filters.status,
       visibility: filters.visibility,
       collection_id: filters.collection_id,
+	  issue: filters.issue,
       page: filters.page,
     }))
     contents.value[module] = response.data ?? []
@@ -195,6 +197,33 @@ export const useStudioStore = defineStore('studio', () => {
     })
   }
 
+  async function updateContentStatus(module: StudioModule, item: StudioContentItem, status: 'draft' | 'published') {
+    if (module === 'blog') {
+      const url = status === 'published' ? endpoints.blog.postPublish(item.id) : endpoints.blog.postUnpublish(item.id)
+      await apiPostJson<unknown>(url, {})
+      return
+    }
+    const url = module === 'podcast' ? endpoints.podcast.episode(item.id) : endpoints.videos.update(item.id)
+    await apiPutJson<unknown>(url, { status })
+  }
+
+  async function deleteContent(module: StudioModule, id: string) {
+    const url = module === 'blog'
+      ? endpoints.blog.post(id)
+      : module === 'podcast'
+        ? endpoints.podcast.episode(id)
+        : endpoints.videos.delete(id)
+    await apiDeleteJson<unknown>(url)
+  }
+
+  async function shareContent(module: StudioModule, id: string) {
+    return apiPostJson<{ path: string }>(appendQuery(api.share(module, id), { channel_id: channelID() }), {})
+  }
+
+  async function reprocessVideo(id: string) {
+    await apiPostJson<unknown>(endpoints.videos.reprocess(id), {})
+  }
+
   watch(
     () => auth.isAuthenticated,
     (isAuthenticated) => {
@@ -229,6 +258,10 @@ export const useStudioStore = defineStore('studio', () => {
     loadInteractions,
     loadSettings,
     saveSettings,
+	updateContentStatus,
+	deleteContent,
+	shareContent,
+	reprocessVideo,
     reset,
   }
 })

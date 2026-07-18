@@ -3,6 +3,7 @@
     <header class="studio-content__heading">
       <h2>内容</h2>
       <PButton
+		v-if="canCreate"
         data-testid="create-content"
         :to="createRoute"
         size="sm"
@@ -83,7 +84,15 @@
       :module="module"
       :pagination="studio.contentPagination[module]"
       @page="changePage"
+	  @status="updateStatus"
+	  @share="shareContent"
+	  @delete="pendingDelete = $event"
+	  @reupload="openReupload"
+	  @reprocess="reprocessVideo"
     />
+
+	<p v-if="actionMessage" class="studio-content__feedback" role="status">{{ actionMessage }}</p>
+	<p v-if="actionError" class="studio-content__feedback studio-content__feedback--error" role="alert">{{ actionError }}</p>
 
     <StudioCollectionSheet
       :show="collectionSheetOpen"
@@ -91,6 +100,17 @@
       @close="collectionSheetOpen = false"
       @changed="reloadContents"
     />
+
+	<PConfirm
+	  :show="pendingDelete !== null"
+	  title="删除内容"
+	  :message="`确定删除《${pendingDelete?.title || ''}》吗？此操作不可恢复。`"
+	  confirm-text="删除"
+	  danger
+	  :loading="mutationBusy"
+	  @confirm="confirmDelete"
+	  @cancel="pendingDelete = null"
+	/>
   </section>
 </template>
 
@@ -102,20 +122,29 @@ import { useRoute, useRouter } from 'vue-router'
 import StudioCollectionSheet from '@/components/studio/StudioCollectionSheet.vue'
 import StudioContentTable from '@/components/studio/StudioContentTable.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioContentFilters, StudioModule } from '@/types'
+import { useSiteAccessStore } from '@/stores/siteAccess'
+import type { StudioContentFilters, StudioContentItem, StudioModule, StudioPublishStatus } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const studio = useStudioStore()
+const siteAccess = useSiteAccessStore()
 const module = computed(() => route.params.module as StudioModule)
 const config = computed(() => studioModules[module.value])
+const publishingFeature = { blog: 'post.create', podcast: 'podcast.publish', video: 'video.publish' } as const
+const canCreate = computed(() => siteAccess.isFeatureEnabled(module.value, publishingFeature[module.value]))
 const loading = ref(true)
 const error = ref('')
 const collectionSheetOpen = ref(false)
 const searchQuery = ref('')
 const ready = ref(false)
+const mutationBusy = ref(false)
+const pendingDelete = ref<StudioContentItem | null>(null)
+const actionMessage = ref('')
+const actionError = ref('')
 
 function queryString(value: unknown) {
   return typeof value === 'string' ? value : ''
@@ -135,6 +164,7 @@ const filters = computed<StudioContentFilters>(() => ({
     ? queryString(route.query.visibility) as StudioContentFilters['visibility']
     : '',
   collection_id: queryString(route.query.collection_id),
+	...(queryString(route.query.issue) ? { issue: queryString(route.query.issue) } : {}),
   page: queryPage(route.query.page),
 }))
 
@@ -171,6 +201,52 @@ async function changePage(page: number) {
 async function reloadContents() {
   if (!studio.currentChannel) return
   await studio.loadContents(module.value, filters.value)
+}
+
+async function runMutation(action: () => Promise<void>, success: string) {
+  mutationBusy.value = true
+  actionError.value = ''
+  actionMessage.value = ''
+  try {
+    await action()
+    await reloadContents()
+    actionMessage.value = success
+  } catch (cause) {
+    actionError.value = cause instanceof Error ? cause.message : '操作失败'
+  } finally {
+    mutationBusy.value = false
+  }
+}
+
+async function updateStatus(item: StudioContentItem, status: StudioPublishStatus) {
+  await runMutation(() => studio.updateContentStatus(module.value, item, status), status === 'published' ? '已发布' : '已转为草稿')
+}
+
+async function shareContent(item: StudioContentItem) {
+  actionError.value = ''
+  try {
+    const result = await studio.shareContent(module.value, item.id)
+    const url = new URL(result.path, window.location.origin).toString()
+    await navigator.clipboard?.writeText(url)
+    actionMessage.value = '分享地址已复制'
+  } catch (cause) {
+    actionError.value = cause instanceof Error ? cause.message : '分享失败'
+  }
+}
+
+async function confirmDelete() {
+  const item = pendingDelete.value
+  if (!item) return
+  await runMutation(() => studio.deleteContent(module.value, item.id), '已删除')
+  pendingDelete.value = null
+}
+
+async function openReupload(item: StudioContentItem) {
+  await router.push({ path: `/studio/${module.value}/${item.id}/edit`, query: { replace: module.value === 'podcast' ? 'audio' : 'video' } })
+}
+
+async function reprocessVideo(item: StudioContentItem) {
+  await runMutation(() => studio.reprocessVideo(item.id), '已重新提交处理')
 }
 
 async function loadPage(loadCollections = false) {
@@ -215,7 +291,7 @@ watch(module, () => {
 </script>
 
 <style scoped>
-.studio-content { display: grid; gap: 1rem; }
+.studio-content { min-width: 0; max-width: 100%; display: grid; gap: 1rem; }
 .studio-content__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .studio-content h2, .studio-content__message { margin: 0; }
 .studio-content h2 { font-size: 1.125rem; }
@@ -229,6 +305,8 @@ watch(module, () => {
 .studio-content__icon-button { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; }
 .studio-content__icon-button:hover { background: var(--a-color-surface-muted); }
 .studio-content__message { color: var(--a-color-muted); padding: 2rem 0; }
+.studio-content__feedback { margin: 0; color: var(--a-color-muted); }
+.studio-content__feedback--error { color: var(--a-color-danger); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 900px) {
   .studio-content__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }

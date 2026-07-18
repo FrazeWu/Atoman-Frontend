@@ -7,6 +7,7 @@
         <PostEditorSidebar
           :mobile-open="mobilePanel === 'outline'"
           :saving="saving"
+		  :preferred-status="preferredPublishStatus"
           :has-draft-manager-access="hasDraftManagerAccess"
           :channel-collections="channelCollections"
           :selected-collection-id="selectedNonDefaultCollectionId"
@@ -246,6 +247,7 @@ const editorMode = ref<'normal' | 'split'>('normal')
 const syncScroll = ref(true)
 
 const saving = ref<'draft' | 'published' | null>(null)
+const preferredPublishStatus = ref<SaveTarget>('published')
 const savedPostId = ref<string | null>(null)
 
 // ── 状态 ─────────────────────────────────────────────────
@@ -1023,12 +1025,20 @@ const loadChannelCollections = async () => {
   }
 
   try {
-    await studio.loadCollections('blog')
-    channelCollections.value = studio.collections.blog
-    if (!isEdit.value) {
-      const queryCollection = selectedQueryCollectionId.value
-      selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, queryCollection)
-    }
+	  await Promise.all([studio.loadCollections('blog'), studio.loadSettings('blog')])
+	  channelCollections.value = studio.collections.blog
+	  if (!isEdit.value) {
+		const queryCollection = selectedQueryCollectionId.value
+		const settings = studio.settings.blog
+		preferredPublishStatus.value = settings?.default_publish_status || 'published'
+		if (settings?.default_visibility) {
+		  form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
+		}
+		selectedCollectionIds.value = normalizeBlogCollectionSelection(
+		  channelCollections.value,
+		  queryCollection || settings?.default_collection_id || null,
+		)
+	  }
     if (isEdit.value) {
       const ordinaryCollection = channelCollections.value.find(collection => (
         !collection.is_default && existingCollectionIds.value.includes(collection.id)

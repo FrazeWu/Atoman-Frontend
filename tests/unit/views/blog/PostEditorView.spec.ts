@@ -96,6 +96,7 @@ describe('PostEditorView', () => {
       { id: 'collection-3', channel_id: 'channel-1', content_type: 'blog', name: '查询参数合集', description: '', cover_url: '', is_default: false, created_at: '', updated_at: '' },
     ]
     vi.spyOn(studio, 'loadCollections').mockResolvedValue()
+	vi.spyOn(studio, 'loadSettings').mockResolvedValue()
     editorControl.reset()
     vi.useRealTimers()
   })
@@ -1156,5 +1157,32 @@ describe('PostEditorView', () => {
     const postCall = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/blog/posts') && init?.method === 'POST')
     expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({ channel_id: 'channel-1', status: 'draft' })
     expect(router.currentRoute.value.fullPath).toBe('/studio/blog/content?collection_id=collection-2')
+  })
+
+  it('新文章应用 Studio 创作默认值', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/studio/blog/new', component: PostEditorView }] })
+    await router.push('/studio/blog/new')
+    await router.isReady()
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+    const studio = useStudioStore()
+    studio.settings.blog = {
+      channel_id: 'channel-1', module: 'blog', default_collection_id: 'collection-2',
+      default_visibility: 'private', default_publish_status: 'draft', autoplay_enabled: false,
+    }
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      throw new Error(`unexpected fetch: ${String(input)}`)
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, { global: { plugins: [router] } })
+    await flushPromises()
+    const editor = wrapper.findComponent(PostEditorView)
+    expect(studio.loadSettings).toHaveBeenCalledWith('blog')
+    expect(editor.vm.$.setupState.form.visibility).toBe('private')
+    expect(editor.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1', 'collection-2'])
+    expect(editor.vm.$.setupState.preferredPublishStatus).toBe('draft')
   })
 })

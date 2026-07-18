@@ -170,13 +170,50 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(document.body.querySelector<HTMLButtonElement>('[data-testid="lyrics-import-confirm"]')?.disabled).toBe(true)
   })
 
-  it('shows a file read error and keeps the draft', async () => {
+  it('names the original file when reading it fails and keeps the draft', async () => {
     const wrapper = mountDrawer()
-    await chooseFile(wrapper, '原文 LRC', fileWithText('broken.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
+    await chooseFile(wrapper, '原文 LRC', fileWithText('broken-original.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
 
     await buttonByText(wrapper, '预览导入').trigger('click')
-    await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败：broken-original.lrc'))
     expect(wrapper.findAll<HTMLInputElement>('[data-testid^="lyric-original-"]')[0]!.element.value).toBe('Alpha')
+  })
+
+  it('names the translation file when reading it fails', async () => {
+    const wrapper = mountDrawer()
+    await chooseFile(wrapper, '原文 LRC', fileWithText('original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha')))
+    await chooseFile(wrapper, '翻译 LRC', fileWithText('broken-translation.lrc', vi.fn().mockRejectedValue(new Error('failed'))))
+
+    await buttonByText(wrapper, '预览导入').trigger('click')
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain('读取 LRC 文件失败：broken-translation.lrc'))
+  })
+
+  it('adds the original filename and physical line to original parse errors', async () => {
+    const wrapper = mountDrawer()
+    await chooseFile(
+      wrapper,
+      '原文 LRC',
+      fileWithText('broken-original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha\nnot-lrc')),
+    )
+
+    await buttonByText(wrapper, '预览导入').trigger('click')
+
+    await vi.waitFor(() => expect(document.body.textContent).toContain('broken-original.lrc 第 2 行'))
+  })
+
+  it('adds the translation filename and physical line to translation parse errors', async () => {
+    const wrapper = mountDrawer()
+    await chooseFile(wrapper, '原文 LRC', fileWithText('original.lrc', vi.fn().mockResolvedValue('[00:01.00]Alpha')))
+    await chooseFile(
+      wrapper,
+      '翻译 LRC',
+      fileWithText('broken-translation.lrc', vi.fn().mockResolvedValue('[00:01.00]甲\nnot-lrc')),
+    )
+
+    await buttonByText(wrapper, '预览导入').trigger('click')
+
+    await vi.waitFor(() => expect(document.body.textContent).toContain('broken-translation.lrc 第 2 行'))
   })
 
   it('exports original and translated LRC files with the song title', async () => {
@@ -205,6 +242,32 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(buttonByText(wrapper, '导出翻译').attributes('disabled')).toBeDefined()
     await buttonByText(wrapper, '导出原文').trigger('click')
     expect(downloadTextFile).not.toHaveBeenCalled()
+  })
+
+  it('shows download failures, clears them after success, and resets them when reopened', async () => {
+    const wrapper = mountDrawer({
+      content: '[00:01.00]Alpha',
+      translation: '[00:01.00]甲',
+      format: 'lrc',
+    })
+    vi.mocked(downloadTextFile).mockImplementationOnce(() => {
+      throw new Error('download failed')
+    })
+
+    await buttonByText(wrapper, '导出原文').trigger('click')
+    expect(wrapper.get('[role="alert"]').text()).toContain('导出歌词失败，请重试')
+
+    await buttonByText(wrapper, '导出原文').trigger('click')
+    expect(wrapper.text()).not.toContain('导出歌词失败，请重试')
+
+    vi.mocked(downloadTextFile).mockImplementationOnce(() => {
+      throw new Error('download failed again')
+    })
+    await buttonByText(wrapper, '导出翻译').trigger('click')
+    expect(wrapper.text()).toContain('导出歌词失败，请重试')
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({ show: true })
+    expect(wrapper.text()).not.toContain('导出歌词失败，请重试')
   })
 
   it('does not show LRC export actions in plain mode', () => {

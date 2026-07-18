@@ -57,6 +57,7 @@ const originalImportFile = ref<File | null>(null)
 const translationImportFile = ref<File | null>(null)
 const importPreview = ref<MusicLyricDraftParseResult | null>(null)
 const importError = ref('')
+const exportError = ref('')
 const originalInput = ref<HTMLInputElement | null>(null)
 const translationInput = ref<HTMLInputElement | null>(null)
 
@@ -83,6 +84,7 @@ watch(
     translationImportFile.value = null
     importPreview.value = null
     importError.value = ''
+    exportError.value = ''
     if (originalInput.value) originalInput.value.value = ''
     if (translationInput.value) translationInput.value.value = ''
   },
@@ -111,23 +113,50 @@ function selectImportFile(kind: 'original' | 'translation', event: Event) {
 async function previewImport() {
   if (props.saving || !originalImportFile.value) return
 
+  const originalFile = originalImportFile.value
+  let original: string
   try {
-    const original = await originalImportFile.value.text()
-    const translation = translationImportFile.value
-      ? await translationImportFile.value.text()
-      : ''
+    original = await originalFile.text()
+  } catch {
+    importPreview.value = null
+    importError.value = `读取 LRC 文件失败：${originalFile.name}`
+    return
+  }
+
+  const translationFile = translationImportFile.value
+  let translation = ''
+  if (translationFile) {
+    try {
+      translation = await translationFile.text()
+    } catch {
+      importPreview.value = null
+      importError.value = `读取 LRC 文件失败：${translationFile.name}`
+      return
+    }
+  }
+
+  try {
     const parsed = parseBilingualLrcDraft(original, translation)
+    const locatedParseIssues = parsed.issues.map((issue) => {
+      const fileName = issue.source === 'translation'
+        ? (translationFile?.name ?? '翻译 LRC')
+        : originalFile.name
+      const location = issue.sourceLine === undefined
+        ? fileName
+        : `${fileName} 第 ${issue.sourceLine} 行`
+      return { ...issue, message: `${location}：${issue.message}` }
+    })
     importPreview.value = {
       rows: parsed.rows,
       issues: [
-        ...parsed.issues,
+        ...locatedParseIssues,
         ...validateMusicLyricDraft(parsed.rows, 'lrc'),
       ],
     }
     importError.value = ''
   } catch {
     importPreview.value = null
-    importError.value = '读取 LRC 文件失败'
+    importError.value = `解析 LRC 文件失败：${originalFile.name}`
   }
 }
 
@@ -151,10 +180,15 @@ function confirmImport() {
 function exportLyrics(kind: 'original' | 'translation') {
   if (draftFormat.value !== 'lrc' || hasBlockingIssues.value || props.saving) return
   const serialized = serializeMusicLyricDraft(rows.value, 'lrc')
-  if (kind === 'original') {
-    downloadTextFile(exportBaseName.value, serialized.content, '.lrc')
-  } else {
-    downloadTextFile(exportBaseName.value, serialized.translation, '-translation.lrc')
+  try {
+    if (kind === 'original') {
+      downloadTextFile(exportBaseName.value, serialized.content, '.lrc')
+    } else {
+      downloadTextFile(exportBaseName.value, serialized.translation, '-translation.lrc')
+    }
+    exportError.value = ''
+  } catch {
+    exportError.value = '导出歌词失败，请重试'
   }
 }
 
@@ -279,6 +313,9 @@ function handleSave() {
         </div>
         <p v-if="importError" class="music-lyric-editor-drawer__read-error" role="alert">
           {{ importError }}
+        </p>
+        <p v-if="exportError" class="music-lyric-editor-drawer__read-error" role="alert">
+          {{ exportError }}
         </p>
       </section>
 

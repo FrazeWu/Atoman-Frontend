@@ -44,16 +44,19 @@
               </div>
             </div>
 
-            <div v-if="item.key === 'general'" class="settings-block">
-              <div class="settings-block__copy">
-                <strong>账号</strong>
-                <small>当前登录身份</small>
+            <template v-if="item.key === 'general'">
+              <div class="settings-block">
+                <div class="settings-block__copy">
+                  <strong>账号</strong>
+                  <small>当前登录身份</small>
+                </div>
+                <div class="settings-block__control settings-block__control--stack">
+                  <strong>{{ authStore.user?.display_name || authStore.user?.username }}</strong>
+                  <small>@{{ authStore.user?.username }}</small>
+                </div>
               </div>
-              <div class="settings-block__control settings-block__control--stack">
-                <strong>{{ authStore.user?.display_name || authStore.user?.username }}</strong>
-                <small>@{{ authStore.user?.username }}</small>
-              </div>
-            </div>
+              <OAuthIdentitySettingsPanel :return-to="route.fullPath" />
+            </template>
 
             <SubscriptionRulesPanel
               v-else-if="item.key === 'feed'"
@@ -91,6 +94,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
+import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'

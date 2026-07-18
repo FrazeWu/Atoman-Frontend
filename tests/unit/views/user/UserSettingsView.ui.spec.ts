@@ -32,12 +32,14 @@ describe('UserSettingsView UI', () => {
           PSurface: defineComponent({ template: '<section><slot /></section>' }),
           SubscriptionRulesPanel: defineComponent({ template: '<div class="settings-block">订阅规则</div>' }),
           UserBlogSettingsPanel: defineComponent({ template: '<div class="settings-block">博客资料</div>' }),
+          OAuthIdentitySettingsPanel: defineComponent({ template: '<div class="oauth-identities">登录方式</div>' }),
         },
       },
     })
 
     expect(wrapper.find('.settings-center').exists()).toBe(true)
     expect(wrapper.find('.settings-center__nav').exists()).toBe(true)
+    expect(wrapper.find('.oauth-identities').exists()).toBe(true)
     expect(wrapper.findAll('.settings-block').length).toBeGreaterThanOrEqual(3)
   })
 })

@@ -16,14 +16,7 @@
         size="lg"
         block
       >
-        <svg
-          class="oauth-providers__icon"
-          :style="{ color: `#${providerIcons[provider].hex}` }"
-          :viewBox="providerIcons[provider].viewBox"
-          aria-hidden="true"
-        >
-          <path :d="providerIcons[provider].path" fill="currentColor" />
-        </svg>
+        <OAuthBrandIcon :provider="provider" />
         <span>{{ oauthProviderLabels[provider] }}</span>
       </PButton>
     </div>
@@ -33,9 +26,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { faMicrosoft } from '@fortawesome/free-brands-svg-icons'
-import { siApple, siGithub, siGoogle } from 'simple-icons'
 
+import OAuthBrandIcon from '@/components/auth/OAuthBrandIcon.vue'
 import PButton from '@/components/ui/PButton.vue'
 import {
   listOAuthProviders,
@@ -54,16 +46,6 @@ const props = withDefaults(defineProps<{
 })
 
 const providers = ref<OAuthProvider[]>([])
-const providerIcons = {
-  google: { path: siGoogle.path, hex: siGoogle.hex, viewBox: '0 0 24 24' },
-  apple: { path: siApple.path, hex: siApple.hex, viewBox: '0 0 24 24' },
-  github: { path: siGithub.path, hex: siGithub.hex, viewBox: '0 0 24 24' },
-  microsoft: {
-    path: faMicrosoft.icon[4] as string,
-    hex: '5E5E5E',
-    viewBox: `0 0 ${faMicrosoft.icon[0]} ${faMicrosoft.icon[1]}`,
-  },
-} satisfies Record<OAuthProvider, { path: string; hex: string; viewBox: string }>
 
 onMounted(async () => {
   try {
@@ -89,12 +71,6 @@ onMounted(async () => {
 .oauth-providers__grid :deep(.p-button) {
   min-width: 0;
   padding-inline: 1rem;
-}
-
-.oauth-providers__icon {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
 }
 
 .oauth-providers__divider {

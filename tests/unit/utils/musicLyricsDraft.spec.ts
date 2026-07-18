@@ -274,6 +274,21 @@ describe('musicLyricsDraft', () => {
     })
   })
 
+  it('preserves sparse repeated-time translations across an LRC round trip', () => {
+    const rows = [
+      createMusicLyricDraftRow({ timeMs: 1000, original: 'One A', translation: '' }),
+      createMusicLyricDraftRow({ timeMs: 1000, original: 'One B', translation: '乙' }),
+      createMusicLyricDraftRow({ timeMs: 1000, original: 'One C', translation: '' }),
+      createMusicLyricDraftRow({ timeMs: 2000, original: 'Two', translation: '' }),
+    ]
+
+    const serialized = serializeBilingualLrcDraft(rows)
+
+    expect(serialized.translation).toBe('[00:01.00]\n[00:01.00]乙')
+    expect(parseBilingualLrcDraft(serialized.content, serialized.translation).rows.map((row) => row.translation))
+      .toEqual(['', '乙', '', ''])
+  })
+
   it('serializes null times with a zero timestamp fallback', () => {
     const rows = [
       createMusicLyricDraftRow({ timeMs: null, original: 'Untimed', translation: '未计时' }),

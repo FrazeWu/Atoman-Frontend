@@ -126,14 +126,32 @@ export function parseBilingualLrcDraft(
 export function serializeBilingualLrcDraft(
   rows: readonly MusicLyricDraftRow[],
 ): MusicLyricDraftSerialized {
+  const translationOccurrences = new Map<number, number>()
+  const lastTranslatedOccurrence = new Map<number, number>()
+
+  for (const row of rows) {
+    const timeMs = row.timeMs ?? 0
+    const occurrence = translationOccurrences.get(timeMs) ?? 0
+    translationOccurrences.set(timeMs, occurrence + 1)
+    if (row.translation !== '') lastTranslatedOccurrence.set(timeMs, occurrence)
+  }
+
+  translationOccurrences.clear()
+  const translationLines: string[] = []
+  for (const row of rows) {
+    const timeMs = row.timeMs ?? 0
+    const occurrence = translationOccurrences.get(timeMs) ?? 0
+    translationOccurrences.set(timeMs, occurrence + 1)
+    const lastOccurrence = lastTranslatedOccurrence.get(timeMs)
+    if (lastOccurrence === undefined || occurrence > lastOccurrence) continue
+    translationLines.push(`[${formatMusicLyricTime(timeMs)}]${row.translation}`)
+  }
+
   return {
     content: rows
       .map((row) => `[${formatMusicLyricTime(row.timeMs ?? 0)}]${row.original}`)
       .join('\n'),
-    translation: rows
-      .filter((row) => row.translation !== '')
-      .map((row) => `[${formatMusicLyricTime(row.timeMs ?? 0)}]${row.translation}`)
-      .join('\n'),
+    translation: translationLines.join('\n'),
   }
 }
 

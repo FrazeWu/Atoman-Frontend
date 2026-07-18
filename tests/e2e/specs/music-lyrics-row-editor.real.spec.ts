@@ -10,9 +10,9 @@ const sourceSongTitle = process.env.MUSIC_LYRICS_E2E_SONG_TITLE ?? ''
 const sourceSongId = process.env.MUSIC_LYRICS_E2E_SOURCE_SONG_ID ?? ''
 
 const descendingOriginal = '[00:02.00]Two\n[00:01.00]One A\n[00:01.00]One B'
-const descendingTranslation = '[00:02.00]二\n[00:01.00]一甲\n[00:01.00]一乙'
+const descendingTranslation = '[00:02.00]二\n[00:01.00]一甲\n[00:01.00]'
 const sortedOriginal = '[00:01.00]One A\n[00:01.00]One B\n[00:02.00]Two'
-const sortedTranslation = '[00:01.00]一甲\n[00:01.00]一乙\n[00:02.00]二'
+const sortedTranslation = '[00:01.00]一甲\n[00:01.00]\n[00:02.00]二'
 
 type LocalAuthFixture = {
   token: string
@@ -154,7 +154,7 @@ async function runWorkflow(
   const translationDownload = await translationDownloadPromise
   expect(translationDownload.suggestedFilename()).toBe(`${safeSongTitle}-translation.lrc`)
   const translationStream = await translationDownload.createReadStream()
-  expect(await readDownload(translationStream)).toBe('[00:01.00]一乙\n[00:01.00]二\n[00:03.00]一甲')
+  expect(await readDownload(translationStream)).toBe('[00:01.00]\n[00:01.00]二\n[00:03.00]一甲')
   await page.screenshot({ path: testInfo.outputPath('lyrics-row-editor-desktop.png'), fullPage: true })
 
   await page.getByTestId('lyrics-edit-summary').fill('导入逐行歌词')
@@ -170,7 +170,7 @@ async function runWorkflow(
   const savedLyricLines = page.locator('.music-lyrics-panel__lines > .music-lyrics-line')
   await expect(savedLyricLines).toHaveCount(3)
   await expect(savedLyricLines.nth(0).locator('.music-lyrics-line__text')).toHaveText('One B')
-  await expect(savedLyricLines.nth(0).locator('.music-lyrics-line__translation')).toHaveText('一乙')
+  await expect(savedLyricLines.nth(0).locator('.music-lyrics-line__translation')).toHaveCount(0)
   await expect(savedLyricLines.nth(1).locator('.music-lyrics-line__text')).toHaveText('Two')
   await expect(savedLyricLines.nth(1).locator('.music-lyrics-line__translation')).toHaveText('二')
   await expect(savedLyricLines.nth(2).locator('.music-lyrics-line__text')).toHaveText('One A')

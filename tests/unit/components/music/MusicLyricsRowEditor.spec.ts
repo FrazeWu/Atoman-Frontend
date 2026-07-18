@@ -88,6 +88,20 @@ describe('MusicLyricsRowEditor', () => {
     expect(lastRows(wrapper)[0].timeMs).toBe(3_250)
   })
 
+  it('为每行时间、原文和翻译输入提供稳定可访问名称', () => {
+    const wrapper = mountEditor({ format: 'lrc' })
+
+    rows.forEach((row, index) => {
+      const lineNumber = index + 1
+      expect(wrapper.get(`[data-testid="lyric-time-${row.id}"]`).attributes('aria-label'))
+        .toBe(`时间，第 ${lineNumber} 行`)
+      expect(wrapper.get(`[data-testid="lyric-original-${row.id}"]`).attributes('aria-label'))
+        .toBe(`原文，第 ${lineNumber} 行`)
+      expect(wrapper.get(`[data-testid="lyric-translation-${row.id}"]`).attributes('aria-label'))
+        .toBe(`翻译，第 ${lineNumber} 行`)
+    })
+  })
+
   it('保留非空非法时间原文、显示错误并发射 null', async () => {
     const wrapper = mountEditor({ format: 'lrc' })
     const timeInput = wrapper.get('[data-testid="lyric-time-first"]')
@@ -96,6 +110,8 @@ describe('MusicLyricsRowEditor', () => {
 
     expect((timeInput.element as HTMLInputElement).value).toBe('not-a-time')
     expect(wrapper.text()).toContain('时间格式无效')
+    expect(wrapper.get('#lyric-time-error-first').text()).toBe('时间格式无效')
+    expect(timeInput.attributes('aria-describedby')).toBe('lyric-time-error-first')
     expect(lastRows(wrapper)[0].timeMs).toBeNull()
   })
 
@@ -188,6 +204,41 @@ describe('MusicLyricsRowEditor', () => {
     expect(wrapper.text()).not.toContain('不属于任何行')
   })
 
+  it('用稳定 id 将原文、时间、翻译和通用行 issue 关联到对应输入', () => {
+    const wrapper = mountEditor({
+      format: 'lrc',
+      issues: [
+        { severity: 'error', code: 'empty_original', message: '原文不能为空', rowIndex: 0 },
+        { severity: 'error', code: 'missing_time', message: 'LRC 歌词需要时间', rowIndex: 0 },
+        {
+          severity: 'warning',
+          code: 'translation_note',
+          message: '检查翻译',
+          rowIndex: 1,
+          source: 'translation',
+        },
+        { severity: 'warning', code: 'custom_row_issue', message: '检查这一行', rowIndex: 2 },
+      ],
+    })
+
+    expect(wrapper.get('#lyric-issue-first-0').text()).toBe('原文不能为空')
+    expect(wrapper.get('#lyric-issue-first-1').text()).toBe('LRC 歌词需要时间')
+    expect(wrapper.get('[data-testid="lyric-original-first"]').attributes('aria-describedby'))
+      .toBe('lyric-issue-first-0')
+    expect(wrapper.get('[data-testid="lyric-time-first"]').attributes('aria-describedby'))
+      .toBe('lyric-issue-first-1')
+
+    expect(wrapper.get('#lyric-issue-second-0').text()).toBe('检查翻译')
+    expect(wrapper.get('[data-testid="lyric-translation-second"]').attributes('aria-describedby'))
+      .toBe('lyric-issue-second-0')
+
+    expect(wrapper.get('#lyric-issue-third-0').text()).toBe('检查这一行')
+    for (const field of ['time', 'original', 'translation']) {
+      expect(wrapper.get(`[data-testid="lyric-${field}-third"]`).attributes('aria-describedby'))
+        .toBe('lyric-issue-third-0')
+    }
+  })
+
   it('锁定桌面网格、44px 操作按钮和移动端防溢出 CSS', () => {
     const mobileMedia = /@media\s*\(max-width:\s*767px\)\s*\{/.exec(componentSource)
     expect(mobileMedia).toBeTruthy()
@@ -216,5 +267,16 @@ describe('MusicLyricsRowEditor', () => {
     expect(cssRule('.lyric-input', desktopCss)).toMatch(/width:\s*100%;/)
     expect(cssRule('.lyric-input', desktopCss)).toMatch(/min-width:\s*0;/)
     expect(cssRule('.lyric-input', desktopCss)).toMatch(/box-sizing:\s*border-box;/)
+  })
+
+  it('只使用项目 a-color 颜色令牌并保留 fallback', () => {
+    expect(componentSource).not.toMatch(/var\(--color-/)
+    expect(componentSource).toMatch(/var\(--a-color-muted,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-border-soft,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-bg,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-text,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-primary,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-danger,\s*#[0-9a-f]{6}\)/i)
+    expect(componentSource).toMatch(/var\(--a-color-warning,\s*#[0-9a-f]{6}\)/i)
   })
 })

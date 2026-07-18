@@ -91,6 +91,33 @@ function deleteRow(index: number) {
 function issuesForRow(rowIndex: number) {
   return props.issues.filter((issue) => issue.rowIndex === rowIndex)
 }
+
+type LyricInputField = 'time' | 'original' | 'translation'
+
+function issueId(rowId: string, issueIndex: number) {
+  return `lyric-issue-${rowId}-${issueIndex}`
+}
+
+function issueTargetsField(issue: MusicLyricDraftIssue, field: LyricInputField) {
+  if (issue.source) return issue.source === field
+  if (issue.code.includes('time')) return field === 'time'
+  if (issue.code.includes('original')) return field === 'original'
+  if (issue.code.includes('translation')) return field === 'translation'
+  return true
+}
+
+function describedByForField(
+  rowId: string,
+  rowIndex: number,
+  field: LyricInputField,
+) {
+  const ids = issuesForRow(rowIndex)
+    .map((issue, issueIndex) => issueTargetsField(issue, field) ? issueId(rowId, issueIndex) : null)
+    .filter((id): id is string => id !== null)
+
+  if (field === 'time' && isInvalidTime(rowId)) ids.push(`lyric-time-error-${rowId}`)
+  return ids.length > 0 ? ids.join(' ') : undefined
+}
 </script>
 
 <template>
@@ -129,11 +156,18 @@ function issuesForRow(rowIndex: number) {
           type="text"
           inputmode="decimal"
           placeholder="00:00.00"
+          :aria-label="`时间，第 ${index + 1} 行`"
           :aria-invalid="isInvalidTime(row.id)"
+          :aria-describedby="describedByForField(row.id, index, 'time')"
           :disabled="disabled"
           @input="updateTime(index, $event)"
         />
-        <span v-if="isInvalidTime(row.id)" class="lyric-time-error" role="alert">
+        <span
+          v-if="isInvalidTime(row.id)"
+          :id="`lyric-time-error-${row.id}`"
+          class="lyric-time-error"
+          role="alert"
+        >
           时间格式无效
         </span>
       </label>
@@ -146,6 +180,8 @@ function issuesForRow(rowIndex: number) {
           class="lyric-input"
           type="text"
           placeholder="原文"
+          :aria-label="`原文，第 ${index + 1} 行`"
+          :aria-describedby="describedByForField(row.id, index, 'original')"
           :disabled="disabled"
           @input="emitRowUpdate(index, { original: ($event.target as HTMLInputElement).value })"
         />
@@ -159,6 +195,8 @@ function issuesForRow(rowIndex: number) {
           class="lyric-input"
           type="text"
           placeholder="翻译"
+          :aria-label="`翻译，第 ${index + 1} 行`"
+          :aria-describedby="describedByForField(row.id, index, 'translation')"
           :disabled="disabled"
           @input="emitRowUpdate(index, { translation: ($event.target as HTMLInputElement).value })"
         />
@@ -202,7 +240,8 @@ function issuesForRow(rowIndex: number) {
 
       <ul v-if="issuesForRow(index).length" class="lyric-issues">
         <li
-          v-for="issue in issuesForRow(index)"
+          v-for="(issue, issueIndex) in issuesForRow(index)"
+          :id="issueId(row.id, issueIndex)"
           :key="`${issue.code}-${issue.message}`"
           class="lyric-issue"
           :class="`lyric-issue--${issue.severity}`"
@@ -235,19 +274,19 @@ function issuesForRow(rowIndex: number) {
 
 .lyric-grid-header {
   padding: 0 0.75rem 0.5rem;
-  color: var(--color-text-secondary, #60646c);
+  color: var(--a-color-muted, #60646c);
   font-size: 0.8125rem;
   font-weight: 600;
 }
 
 .lyric-row {
   padding: 0.75rem;
-  border-top: 1px solid var(--color-border, #e4e4e7);
+  border-top: 1px solid var(--a-color-border-soft, #e4e4e7);
 }
 
 .lyric-index {
   padding-top: 0.75rem;
-  color: var(--color-text-secondary, #60646c);
+  color: var(--a-color-muted, #60646c);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -260,7 +299,7 @@ function issuesForRow(rowIndex: number) {
 
 .mobile-label {
   display: none;
-  color: var(--color-text-secondary, #60646c);
+  color: var(--a-color-muted, #60646c);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -271,16 +310,16 @@ function issuesForRow(rowIndex: number) {
   height: 44px;
   box-sizing: border-box;
   padding: 0 0.75rem;
-  border: 1px solid var(--color-border, #d4d4d8);
+  border: 1px solid var(--a-color-border, #d4d4d8);
   border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #18181b);
+  background: var(--a-color-bg, #ffffff);
+  color: var(--a-color-text, #18181b);
   font: inherit;
 }
 
 .lyric-input:focus-visible,
 .lyric-action:focus-visible {
-  outline: 2px solid var(--color-primary, #2563eb);
+  outline: 2px solid var(--a-color-primary, #2563eb);
   outline-offset: 2px;
 }
 
@@ -290,7 +329,7 @@ function issuesForRow(rowIndex: number) {
 
 .lyric-time-error,
 .lyric-issue--error {
-  color: var(--color-danger, #b42318);
+  color: var(--a-color-danger, #b42318);
 }
 
 .lyric-time-error,
@@ -310,15 +349,15 @@ function issuesForRow(rowIndex: number) {
   height: 44px;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--color-border, #d4d4d8);
+  border: 1px solid var(--a-color-border, #d4d4d8);
   border-radius: 6px;
-  background: var(--color-surface, #fff);
-  color: var(--color-text-secondary, #52525b);
+  background: var(--a-color-bg, #ffffff);
+  color: var(--a-color-muted, #52525b);
   cursor: pointer;
 }
 
 .lyric-action--danger {
-  color: var(--color-danger, #b42318);
+  color: var(--a-color-danger, #b42318);
 }
 
 .lyric-action:disabled,
@@ -337,7 +376,7 @@ function issuesForRow(rowIndex: number) {
 }
 
 .lyric-issue--warning {
-  color: var(--color-warning-text, #8a4b08);
+  color: var(--a-color-warning, #8a4b08);
 }
 
 @media (max-width: 767px) {

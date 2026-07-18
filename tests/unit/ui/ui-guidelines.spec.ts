@@ -82,6 +82,19 @@ describe('UI 准则', () => {
     expect(sidebar).not.toMatch(/CATEGORIES|TAGS|<kbd>|上下选择|打开话题/)
   })
 
+  it('认证页面统一使用原有 24px 网格背景', () => {
+    const sources = [
+      read('src/views/auth/LoginView.vue'),
+      read('src/views/auth/ForgotPasswordView.vue'),
+    ]
+
+    for (const source of sources) {
+      expect(source).toContain('linear-gradient(var(--a-color-surface-muted) 1px, transparent 1px)')
+      expect(source).toContain('linear-gradient(90deg, var(--a-color-surface-muted) 1px, transparent 1px)')
+      expect(source).toContain('background-size: 24px 24px')
+    }
+  })
+
   it('论坛侧栏只显示有内容的分类与标签分组', () => {
     const source = read('src/components/system/AppSidebar.vue')
 

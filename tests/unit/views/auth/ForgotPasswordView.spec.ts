@@ -14,6 +14,19 @@ describe('ForgotPasswordView', () => {
     vi.unstubAllEnvs()
   })
 
+  it('uses the login card shell and registration step pattern', async () => {
+    vi.stubEnv('PROD', false)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/forgot-password')
+    const wrapper = mount(ForgotPasswordView, { global: { plugins: [router] } })
+
+    expect(wrapper.get('.auth-page').exists()).toBe(true)
+    expect(wrapper.get('.auth-card.auth-card--register').exists()).toBe(true)
+    expect(wrapper.get('.auth-steps-indicator').exists()).toBe(true)
+    expect(wrapper.get('.auth-code-input-group').exists()).toBe(true)
+    expect(wrapper.get('.auth-footer').exists()).toBe(true)
+  })
+
   it('sends a reset code and resets the password before returning to login', async () => {
     vi.stubEnv('PROD', false)
     const fetchMock = vi.spyOn(globalThis, 'fetch')

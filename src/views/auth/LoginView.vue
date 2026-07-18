@@ -629,6 +629,11 @@ watch(username, (value) => {
   justify-content: center;
   padding: 4rem 1.5rem 6rem;
   background-color: var(--a-color-surface);
+  background-image:
+    linear-gradient(var(--a-color-surface-muted) 1px, transparent 1px),
+    linear-gradient(90deg, var(--a-color-surface-muted) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
   min-height: calc(100vh - 56px);
 }
 

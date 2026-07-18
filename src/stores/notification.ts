@@ -86,7 +86,7 @@ export const useNotificationStore = defineStore('notification', () => {
     if (!res.ok) return
     const data = await res.json()
     const payload = data.data || data
-    unreadCounts.value = { ...unreadCounts.value, ...(payload.items || {}) }
+    unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
   }
 
   const fetchUnreadCount = fetchUnreadCounts

@@ -50,14 +50,19 @@ describe('notification store', () => {
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
   })
 
-  it('stores unread counts by notification category', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
-      data: { total: 9, items: { like: 2, interaction: 1, mention: 1, reply: 2, collaboration: 3, system: 0, dm: 0 } },
+  it('replaces unread counts from the categorized API contract', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: { total: 4, items: { like: 2, reply: 1, dm: 1 } },
     }), { status: 200 }))
     const store = useNotificationStore()
+    store.unreadCounts.mention = 7
     await store.fetchUnreadCounts()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/unread-counts', expect.anything())
     expect(store.unreadCounts.like).toBe(2)
-    expect(store.unreadCount).toBe(9)
+    expect(store.unreadCounts.mention).toBe(0)
+    expect(store.unreadCounts.dm).toBe(1)
+    expect(store.unreadCount).toBe(4)
   })
 
   it('accepts forum follow notifications', () => {

@@ -11,15 +11,15 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PCreationSteps from '@/components/ui/PCreationSteps.vue'
 import { ArrowLeft, ArrowRight, CheckCircle2, Headphones, Upload } from 'lucide-vue-next'
 import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
-import type { PodcastEpisode, Channel, Collection } from '@/types'
+import type { PodcastEpisode, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
-import { useDefaultChannelsStore } from '@/stores/defaultChannels'
+import { useStudioStore } from '@/stores/studio'
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const defaultChannelsStore = useDefaultChannelsStore()
+const studio = useStudioStore()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
@@ -29,12 +29,8 @@ const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
 const audioError = ref('')
-const channels = ref<Channel[]>([])
 const collections = ref<Collection[]>([])
 const selectedCollectionId = ref('')
-const selectedChannelFromQuery = computed(() => (
-  typeof route.query.channel === 'string' ? route.query.channel : ''
-))
 const selectedCollectionFromQuery = computed(() => (
   typeof route.query.collection === 'string' ? route.query.collection : ''
 ))
@@ -65,11 +61,6 @@ const form = ref({
   episode_number: 1,
 })
 
-const channelOptions = computed(() => [
-  { label: '请选择节目频道', value: '' },
-  ...channels.value.map(ch => ({ label: ch.name, value: ch.id })),
-])
-
 const visibilityOptions = [
   { label: '公开', value: 'public' },
   { label: '仅订阅', value: 'followers' },
@@ -86,11 +77,6 @@ const effectiveCoverLabel = computed(() =>
   form.value.episode_cover_url ? '单集封面' : selectedCollection.value?.cover_url ? '合集封面' : '',
 )
 const audioBusy = computed(() => audioUploading.value || audioProcessing.value)
-const selectedDefaultChannel = computed(() => defaultChannelsStore.channelFor('podcast'))
-const isCurrentDefaultChannel = computed(() => (
-  !!form.value.channel_id && selectedDefaultChannel.value?.id === form.value.channel_id
-))
-
 // ── Upload helpers ─────────────────────────────────────────
 
 function uploadWithProgress(
@@ -311,8 +297,13 @@ function validateInformation(): boolean {
   return true
 }
 
-function validate(): boolean {
-  return validateMedia() && validateInformation()
+function validate(status: 'draft' | 'published'): boolean {
+  if (!validateMedia() || !validateInformation()) return false
+  if (status === 'published' && !selectedCollectionId.value) {
+    errorMsg.value = '请先选择合集'
+    return false
+  }
+  return true
 }
 
 function goNext() {
@@ -368,14 +359,8 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Podcas
 async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
-
-  const res = await fetch(`${api.url}/blog/channels/${channelID}/collections`, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (!res.ok) return
-
-  const data = await res.json()
-  collections.value = data.data ?? data
+  await studio.loadCollections('podcast')
+  collections.value = studio.collections.podcast
   if (isEdit.value) {
     if (selectedCollectionId.value && !collections.value.some(collection => collection.id === selectedCollectionId.value)) {
       selectedCollectionId.value = ''
@@ -394,44 +379,6 @@ async function loadCollections(channelID: string) {
   }
 }
 
-function onChannelChange(value: string) {
-  form.value.channel_id = value
-  selectedCollectionId.value = ''
-  void loadCollections(value)
-}
-
-async function setCurrentChannelAsDefault() {
-  if (!form.value.channel_id) return
-  await defaultChannelsStore.setDefaultChannel('podcast', form.value.channel_id)
-}
-
-async function loadChannels() {
-  if (!authStore.user) return
-  await defaultChannelsStore.load()
-  const res = await fetch(
-    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
-    { headers: { Authorization: `Bearer ${authStore.token}` } },
-  )
-  if (res.ok) {
-    const data = await res.json()
-    channels.value = data.data ?? data
-    const queryChannelId = selectedChannelFromQuery.value
-    if (!form.value.channel_id && queryChannelId && channels.value.some(channel => channel.id === queryChannelId)) {
-      form.value.channel_id = queryChannelId
-    }
-    const defaultChannelId = defaultChannelsStore.channelFor('podcast')?.id || ''
-    if (!form.value.channel_id && defaultChannelId && channels.value.some(channel => channel.id === defaultChannelId)) {
-      form.value.channel_id = defaultChannelId
-    }
-    if (!form.value.channel_id && channels.value.length > 0) {
-      form.value.channel_id = channels.value[0].id
-    }
-    if (form.value.channel_id) {
-      await loadCollections(form.value.channel_id)
-    }
-  }
-}
-
 async function loadEpisode() {
   const id = route.params.id as string
   const res = await fetch(`${api.url}/podcast/episodes/${id}`, {
@@ -439,6 +386,9 @@ async function loadEpisode() {
   })
   if (!res.ok) return
   const ep: PodcastEpisode = await res.json()
+  if (ep.channel_id && studio.currentChannel?.id !== ep.channel_id) {
+    await studio.selectChannel(ep.channel_id)
+  }
   form.value = {
     channel_id: ep.channel_id,
     title: ep.post?.title || '',
@@ -456,36 +406,35 @@ async function loadEpisode() {
 }
 
 onMounted(async () => {
-  await loadCreatorSettings()
-  await loadChannels()
+  await studio.loadState()
   if (isEdit.value) {
     uploadStarted.value = true
     await loadEpisode()
+    return
+  }
+  form.value.channel_id = studio.currentChannel?.id || ''
+  await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('podcast')])
+  const settings = studio.settings.podcast
+  if (settings?.default_visibility) {
+    form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
+  }
+  if (!selectedCollectionId.value && settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)) {
+    selectedCollectionId.value = settings.default_collection_id
   }
 })
 
-async function loadCreatorSettings() {
-  if (isEdit.value) return
-  const res = await fetch(api.podcast.creatorSettings, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  }).catch(() => null)
-  if (!res?.ok) return
-  const body = await res.json()
-  if (body.data?.default_visibility) {
-    form.value.visibility = body.data.default_visibility
-  }
-}
-
 async function saveDraft() {
-  if (!validate()) return
+  if (!validate('draft')) return
   savingDraft.value = true
   errorMsg.value = ''
   draftSaved.value = false
   try {
-    const ep = await apiSave(buildPayload('draft'))
-    void ep
+    await apiSave(buildPayload('draft'))
     draftSaved.value = true
-    router.push('/podcasts/creator?tab=manage')
+    await router.push({
+      path: '/studio/podcast/content',
+      query: selectedCollectionId.value ? { collection_id: selectedCollectionId.value } : undefined,
+    })
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e: any) {
     errorMsg.value = e?.error || '保存失败，请重试'
@@ -495,7 +444,7 @@ async function saveDraft() {
 }
 
 function requestPublish() {
-  if (!validate()) return
+  if (!validate('published')) return
   showPublishConfirm.value = true
 }
 
@@ -598,29 +547,9 @@ async function doPublish() {
         <!-- 归档位置 -->
         <section class="pe-section">
           <h2 class="pe-section-title">归档位置</h2>
-          <div class="a-field--line">
-            <PSelect
-              label="节目频道 *"
-              :model-value="form.channel_id"
-              :options="channelOptions"
-              @update:model-value="onChannelChange($event as string)"
-            />
-          </div>
-          <div v-if="form.channel_id" class="pe-default-channel-row">
-            <button
-              type="button"
-              class="pe-default-channel-btn"
-              :disabled="isCurrentDefaultChannel"
-              @click="setCurrentChannelAsDefault"
-            >
-              {{ isCurrentDefaultChannel ? '当前默认频道' : '设为默认频道' }}
-            </button>
-          </div>
-
           <div class="pe-collections">
             <label class="pe-field-label">加入合集</label>
-            <div v-if="!form.channel_id" class="pe-collections-empty">请先选择节目频道</div>
-            <div v-else-if="collections.length === 0" class="pe-collections-empty">当前频道暂无合集</div>
+            <div v-if="collections.length === 0" class="pe-collections-empty">当前频道暂无合集</div>
             <div v-else class="pe-collections-list">
               <label v-for="collection in collections" :key="collection.id" class="pe-collection-item">
                 <input
@@ -905,7 +834,7 @@ async function doPublish() {
 .pe-progress-track {
   height: 4px;
   background: var(--a-color-border-soft);
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   overflow: hidden;
 }
 .pe-progress-bar {

@@ -26,8 +26,9 @@ test.describe('Authentication', () => {
   })
 
   test('unauthenticated user redirected to login when accessing protected route', async ({ page }) => {
-    await page.goto('/posts/post/new')
-    await expect(page.locator('.editor-page')).toHaveCount(0)
+    await page.goto('/studio')
+    await expect(page).toHaveURL(/\/login/)
+    await expect(page.locator('.studio-layout')).toHaveCount(0)
   })
 
   test('unauthenticated user redirected to login when accessing forum new topic', async ({ page }) => {

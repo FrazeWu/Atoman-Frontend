@@ -2,8 +2,7 @@
   <div class="a-page">
     <PPageHeader title="文章" accent>
       <template #action>
-        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/manage">创作</PButton>
-        <PButton v-else to="/login" outline>登录</PButton>
+        <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>
 
@@ -147,14 +146,12 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import type { Post } from '@/types'
 
 const authStore = useAuthStore()
-const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const api = useApi()
 const blogSheets = useBlogSheets()
@@ -216,7 +213,6 @@ const openRecommendedPost = (item: { id: string; title: string; targetPath: stri
   void router.push(item.targetPath)
 }
 
-const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))
 
 const posts = ref<BlogHomeListItem[]>([])
 const recommendedPosts = ref<Array<{

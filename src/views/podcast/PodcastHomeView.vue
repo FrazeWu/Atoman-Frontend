@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { Headphones, Play, Plus } from 'lucide-vue-next'
+import { Headphones, Play } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useApiUrl } from '@/composables/useApi'
-import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { PodcastEpisode } from '@/types'
 
 type RecommendedEpisode = {
@@ -21,11 +18,7 @@ type RecommendedEpisode = {
   imageUrl: string
 }
 
-const router = useRouter()
-const authStore = useAuthStore()
-const siteAccessStore = useSiteAccessStore()
 const player = usePlayerStore()
-const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish'))
 
 const API_URL = useApiUrl()
 const episodes = ref<PodcastEpisode[]>([])
@@ -96,16 +89,6 @@ function playEpisode(ep: PodcastEpisode) {
 <template>
   <div class="a-page-lg ph-page">
     <PPageHeader title="播客" accent mb="2rem">
-      <template #action>
-        <PButton
-          v-if="authStore.isAuthenticated && canPublishPodcast"
-          size="sm"
-          @click="router.push('/podcasts/editor')"
-        >
-          <Plus :size="16" aria-hidden="true" />
-          发布单集
-        </PButton>
-      </template>
     </PPageHeader>
 
     <section class="ph-recommendations" aria-labelledby="ph-recommendations-title">

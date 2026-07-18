@@ -19,5 +19,4 @@ const { sidebarCollapsed } = useSidebar()
 // to="/posts"
 // to="/posts/subscriptions"
 // to="/posts/bookmarks"
-// to="/posts/manage"
 </script>

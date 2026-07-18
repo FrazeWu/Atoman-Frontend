@@ -191,12 +191,169 @@ export interface Collection {
   id: string
   channel_id: string
   channel?: Channel
+  content_type?: 'blog' | 'podcast' | 'video'
   name: string
   is_default?: boolean
   description?: string
   cover_url?: string
   created_at: string
   updated_at: string
+}
+
+export type StudioModule = 'blog' | 'podcast' | 'video'
+export type StudioVisibility = 'public' | 'subscribers' | 'private'
+export type StudioPublishStatus = 'published' | 'draft'
+
+export interface StudioChannel {
+  id: string
+  name: string
+  slug: string
+  description: string
+  cover_url: string
+}
+
+export interface StudioState {
+  current_channel: StudioChannel | null
+  channels: StudioChannel[]
+}
+
+export interface StudioCollection {
+  id: string
+  channel_id: string
+  content_type: StudioModule
+  name: string
+  description: string
+  cover_url: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface StudioCollectionInput {
+  name: string
+  description?: string
+  cover_url?: string
+}
+
+export interface StudioContentFilters {
+  q: string
+  status: '' | StudioPublishStatus
+  visibility: '' | StudioVisibility
+  collection_id: string
+  page: number
+}
+
+export interface StudioCollectionSummary {
+  id: string
+  name: string
+}
+
+export interface StudioContentItem {
+  id: string
+  module: StudioModule
+  channel_id: string
+  title: string
+  summary: string
+  cover_url: string
+  status: StudioPublishStatus
+  visibility: StudioVisibility
+  collections: StudioCollectionSummary[]
+  duration_sec?: number
+  view_count: number
+  processing_status?: string
+  published_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface StudioContentIssue {
+  code: string
+  count: number
+}
+
+export interface StudioDashboardSection {
+  module: StudioModule
+  metrics: Record<string, number>
+  recent: StudioContentItem[]
+  issues: StudioContentIssue[]
+  error?: string
+}
+
+export interface StudioDashboard {
+  channel_subscriber_count: number
+  sections: StudioDashboardSection[]
+}
+
+export interface StudioPagination {
+  page: number
+  page_size: number
+  total: number
+  has_more?: boolean
+}
+
+export interface StudioAnalyticsPoint {
+  date: string
+  metrics: Record<string, number>
+}
+
+export interface StudioAnalyticsContentMetric {
+  id: string
+  title: string
+  metrics: Record<string, number>
+}
+
+export interface StudioAnalytics {
+  range: 7 | 28 | 90
+  from: string
+  to: string
+  totals: Record<string, number>
+  trend: StudioAnalyticsPoint[]
+  top: StudioAnalyticsContentMetric[]
+}
+
+export interface StudioInteractionFilters {
+  unreplied: boolean
+  anchored: boolean
+  page: number
+}
+
+export interface StudioInteractionAuthor {
+  id: string
+  username: string
+  display_name: string
+  avatar_url: string
+}
+
+export interface StudioTimeAnchor {
+  start: number
+  end: number
+  seconds: number
+}
+
+export interface StudioInteractionItem {
+  id: string
+  content_id: string
+  content_title: string
+  target_kind: string
+  author: StudioInteractionAuthor
+  content: string
+  reply_count: number
+  replied: boolean
+  pinned: boolean
+  time_anchors: StudioTimeAnchor[]
+  created_at: string
+}
+
+export interface StudioSettingsInput {
+  default_collection_id: string | null
+  default_visibility: StudioVisibility
+  default_publish_status: StudioPublishStatus
+  autoplay_enabled: boolean
+}
+
+export interface StudioSettings extends StudioSettingsInput {
+  channel_id: string
+  module: StudioModule
 }
 
 export interface Post {

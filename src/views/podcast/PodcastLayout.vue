@@ -8,14 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Mic, PlusCircle } from 'lucide-vue-next'
 import AppSidebar from '@/components/system/AppSidebar.vue'
 import { useSidebar } from '@/composables/useSidebar'
-import { useSiteAccessStore } from '@/stores/siteAccess'
-
-const siteAccessStore = useSiteAccessStore()
-const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish'))
 
 const { sidebarCollapsed } = useSidebar()
 

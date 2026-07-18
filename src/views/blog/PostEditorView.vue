@@ -191,7 +191,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import { useDefaultChannelsStore } from '@/stores/defaultChannels'
+import { useStudioStore } from '@/stores/studio'
 import type { BlogDraft, Collection } from '@/types'
 import { normalizeBlogCollectionSelection } from '@/utils/blogCollectionSelection'
 
@@ -199,7 +199,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
-const defaultChannelsStore = useDefaultChannelsStore()
+const studio = useStudioStore()
 
 // ── 布局 ─────────────────────────────────────────────────
 type OutlineItem = {
@@ -381,16 +381,12 @@ const jumpToHeading = (line: number) => {
 }
 
 // ── 合集 ─────────────────────────────────────────────────
-const selectedChannelId = computed(() => {
-  const raw = route.query.channel
-  return typeof raw === 'string' && raw ? raw : ''
-})
 const selectedQueryCollectionId = computed(() => {
   const raw = route.query.collection
   return typeof raw === 'string' && raw ? raw : ''
 })
 
-const currentChannelId = ref<string>('')
+const currentChannelId = computed(() => studio.currentChannel?.id || '')
 
 const defaultCollectionId = computed(() => channelCollections.value.find(c => c.is_default)?.id)
 const selectedNonDefaultCollectionId = computed(() => (
@@ -411,7 +407,6 @@ const authHeaders = computed(() => {
   }
   return headers
 })
-const editorRoutePath = computed(() => isEdit.value ? `/posts/post/${String(route.params.id || '')}/edit` : '/posts/post/new')
 const draftContextKey = computed(() => isEdit.value ? `blog:post:${String(route.params.id || '')}` : 'blog:new')
 const draftPayload = computed<EditorDraftPayload>(() => ({
   context_key: draftContextKey.value,
@@ -422,7 +417,7 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
   cover_url: form.value.cover_url,
   visibility: form.value.visibility,
   allow_comments: form.value.allow_comments,
-  channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || undefined,
+  channel_id: currentChannelId.value || derivedChannelId.value || undefined,
   collection_ids: Array.from(new Set(selectedCollectionIds.value)),
 }))
 
@@ -715,19 +710,6 @@ const blogDraftToPayload = (draft: BlogDraft): EditorDraftPayload => ({
   channel_id: draft.channel_id,
   collection_ids: draft.collection_ids || [],
 })
-
-const updateEditorChannel = async (channelId?: string) => {
-  if (channelId) {
-    await router.replace({ path: editorRoutePath.value, query: { channel: channelId } })
-    currentChannelId.value = channelId
-    return
-  }
-
-  if (!isEdit.value && selectedChannelId.value) {
-    await router.replace({ path: editorRoutePath.value })
-  }
-  currentChannelId.value = ''
-}
 
 const setPendingDraftCandidate = (candidate: DraftCandidate | null) => {
   pendingDraftCandidate.value = candidate
@@ -1025,32 +1007,6 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
   event.returnValue = ''
 }
 
-const loadChannels = async () => {
-  if (!authStore.isAuthenticated) return
-  try {
-    await defaultChannelsStore.load()
-    const res = await fetch(`${api.blog.channels}?user_id=${authStore.user?.uuid}`, {
-      headers: authHeaders.value,
-    })
-    if (res.ok) {
-      const data = await res.json()
-      if (selectedChannelId.value) {
-        currentChannelId.value = selectedChannelId.value
-      } else if (!isEdit.value) {
-        const defaultChannelId = defaultChannelsStore.channelFor('blog')?.id || ''
-        const fallbackChannelId = data.data?.find((channel: { id?: string }) => channel.id === defaultChannelId)?.id
-          || data.data?.[0]?.id
-          || ''
-        if (fallbackChannelId) {
-          await updateEditorChannel(fallbackChannelId)
-        }
-      }
-    }
-  } catch (e) {
-    console.error(e)
-  }
-}
-
 const loadChannelCollections = async () => {
   if (!authStore.isAuthenticated) {
     channelCollections.value = []
@@ -1059,7 +1015,7 @@ const loadChannelCollections = async () => {
     return
   }
 
-  const channelId = selectedChannelId.value || currentChannelId.value
+  const channelId = currentChannelId.value
   if (!channelId) {
     channelCollections.value = []
     selectedCollectionIds.value = []
@@ -1067,12 +1023,8 @@ const loadChannelCollections = async () => {
   }
 
   try {
-    const res = await fetch(api.blog.channelCollections(channelId), {
-      headers: authHeaders.value,
-    })
-    if (!res.ok) { error.value = '加载合集失败'; return }
-    const data = await res.json()
-    channelCollections.value = data.data || []
+    await studio.loadCollections('blog')
+    channelCollections.value = studio.collections.blog
     if (!isEdit.value) {
       const queryCollection = selectedQueryCollectionId.value
       selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, queryCollection)
@@ -1144,11 +1096,9 @@ const loadPost = async () => {
       }
       loadedPostUpdatedAt.value = parseTimestamp(p.updated_at)
       contentSource.value = 'manual'
-      if (!selectedChannelId.value) {
-        const fallback = p.channel_id || p.collections?.[0]?.channel_id
-        if (fallback) {
-          await router.replace({ path: `/posts/post/${postId}/edit`, query: { channel: fallback } })
-        }
+      const contentChannelId = p.channel_id || p.collections?.[0]?.channel_id
+      if (contentChannelId && studio.currentChannel?.id !== contentChannelId) {
+        await studio.selectChannel(contentChannelId)
       }
       existingCollectionIds.value = (p.collections || []).map((c: Collection) => c.id)
       selectedCollectionIds.value = [...existingCollectionIds.value]
@@ -1166,11 +1116,13 @@ const save = async (status: SaveTarget) => {
   if (saving.value) return
   if (savedPostId.value) {
     allowRouteLeaveOnce.value = true
-    await router.push(`/posts/post/${savedPostId.value}`)
+    await router.push(`/post/${savedPostId.value}`)
     return
   }
   if (!form.value.title.trim()) { error.value = '请输入文章标题'; return }
   if (!form.value.content.trim()) { error.value = '请输入文章内容'; return }
+  if (!currentChannelId.value) { error.value = '请先创建频道'; return }
+  if (status === 'published' && selectedCollectionIds.value.length === 0) { error.value = '请先选择合集'; return }
   error.value = ''
   saving.value = status
   const payload = { ...form.value, status }
@@ -1183,7 +1135,7 @@ const save = async (status: SaveTarget) => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({
           ...payload,
-          channel_id: derivedChannelId.value || currentChannelId.value || selectedChannelId.value || null,
+          channel_id: currentChannelId.value,
           collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
         }),
       })
@@ -1193,7 +1145,7 @@ const save = async (status: SaveTarget) => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({
           ...payload,
-          channel_id: derivedChannelId.value || selectedChannelId.value || undefined,
+          channel_id: currentChannelId.value,
           collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
         }),
       })
@@ -1205,7 +1157,14 @@ const save = async (status: SaveTarget) => {
       await clearAllDrafts()
       if (isEdit.value) await syncPostCollections(String(savedPost.id))
       allowRouteLeaveOnce.value = true
-      await router.push(`/posts/post/${savedPost.id}`)
+      if (status === 'draft') {
+        await router.push({
+          path: '/studio/blog/content',
+          query: selectedNonDefaultCollectionId.value ? { collection_id: selectedNonDefaultCollectionId.value } : undefined,
+        })
+      } else {
+        await router.push(`/post/${savedPost.id}`)
+      }
     } else {
       const err = await res.json()
       error.value = err.error || '保存失败，请重试'
@@ -1271,7 +1230,7 @@ watch(currentDraftSignature, () => {
   scheduleServerDraftSync()
 })
 
-watch(() => selectedChannelId.value, loadChannelCollections)
+watch(() => currentChannelId.value, loadChannelCollections)
 
 onBeforeRouteLeave((to) => {
   if (allowRouteLeaveOnce.value) {
@@ -1287,7 +1246,7 @@ onBeforeRouteLeave((to) => {
 // ── 初始化 ───────────────────────────────────────────────
 onMounted(async () => {
   window.addEventListener('beforeunload', handleBeforeUnload)
-  await loadChannels()
+  await studio.loadState()
   await loadPost()
   await loadChannelCollections()
   draftWatchEnabled.value = true

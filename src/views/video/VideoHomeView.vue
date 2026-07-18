@@ -1,18 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import type { Video } from '@/types'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import { useApiUrl } from '@/composables/useApi'
 
 const API_URL = useApiUrl()
-const authStore = useAuthStore()
-const siteAccessStore = useSiteAccessStore()
 const videos = ref<Video[]>([])
 const recommendedVideos = ref<Array<{
   id: string
@@ -30,7 +25,6 @@ const recommendationOptions = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
-const canPublishVideo = computed(() => siteAccessStore.isFeatureEnabled('video', 'video.publish'))
 let fetchVideosSeq = 0
 
 async function fetchVideos() {
@@ -124,7 +118,6 @@ watch(sort, fetchVideos)
         >{{ s.label }}</button>
       </div>
       <div class="vh-bar-action">
-        <PButton v-if="authStore.isAuthenticated && canPublishVideo" to="/videos/upload" variant="primary" size="sm">+ 上传</PButton>
       </div>
     </div>
 

@@ -101,4 +101,17 @@ describe('UI 准则', () => {
     expect(source).toContain('v-if="forumStore.categories.length > 0"')
     expect(source).toContain('v-if="!sidebarCollapsed && popularTags.length > 0"')
   })
+
+  it('Studio 图标按钮具有可访问名称且页面不嵌套装饰卡片', () => {
+    const content = read('src/views/studio/StudioContentView.vue')
+    const collections = read('src/components/studio/StudioCollectionSheet.vue')
+    const channels = read('src/views/studio/StudioChannelView.vue')
+
+    expect(content).toMatch(/data-testid="manage-collections"[\s\S]*?aria-label="管理合集"[\s\S]*?title="管理合集"/)
+    expect(collections).toMatch(/:aria-label="`编辑\$\{collection\.name\}`"/)
+    expect(channels).toMatch(/:aria-label="`删除\$\{channel\.name\}`"/)
+    for (const source of [content, collections, channels]) {
+      expect(source).not.toMatch(/a-card|<PCard/)
+    }
+  })
 })

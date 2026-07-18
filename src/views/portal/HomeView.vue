@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
-import { useAuthStore } from '@/stores/auth'
 import { listMusicArtists } from '@/api/musicV1'
 import PInput from '@/components/ui/PInput.vue'
 
 const player = usePlayerStore()
-const authStore = useAuthStore()
 player.fetchSongs()
 
 interface ArtistOption { id: string; name: string }
@@ -130,9 +127,6 @@ const shouldShowYear = (index: number) =>
         <h1 class="home-title">
           {{ selectedArtistName || '音乐' }}<br />时间线
         </h1>
-        <RouterLink v-if="authStore.isAuthenticated" to="/videos/upload" class="btn-upload">
-          上传
-        </RouterLink>
       </div>
       <p class="home-subtitle">
         浏览艺术家的唱片与重要作品。

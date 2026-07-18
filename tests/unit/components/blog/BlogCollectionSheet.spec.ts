@@ -6,12 +6,6 @@ import BlogCollectionSheet from '@/components/blog/BlogCollectionSheet.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { BlogCollectionLayer } from '@/components/blog/blogSheetTypes'
 
-const push = vi.fn()
-
-vi.mock('vue-router', () => ({
-  useRouter: () => ({ push }),
-}))
-
 const layer: BlogCollectionLayer = {
   key: 'collection:collection-1',
   kind: 'collection',
@@ -27,8 +21,6 @@ describe('BlogCollectionSheet', () => {
     const auth = useAuthStore()
     auth.token = 'token'
     auth.isAuthenticated = true
-    push.mockReset()
-
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.endsWith('/blog/collections/collection-1')) {
@@ -79,15 +71,13 @@ describe('BlogCollectionSheet', () => {
 
     expect(wrapper.text()).toContain('草稿文章')
     expect(wrapper.text()).not.toContain('已发布文章')
-    expect(push).not.toHaveBeenCalled()
   })
 
-  it('opens the editor with the current channel and collection', async () => {
+  it('does not expose creator actions from a public collection sheet', async () => {
     const wrapper = mountSheet()
     await flushPromises()
 
-    await wrapper.find('[data-test="write-post"]').trigger('click')
-
-    expect(push).toHaveBeenCalledWith('/posts/post/new?channel=channel-1&collection=collection-1')
+    expect(wrapper.find('[data-test="write-post"]').exists()).toBe(false)
+    expect(wrapper.find('.collection-post-edit').exists()).toBe(false)
   })
 })

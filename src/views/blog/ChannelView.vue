@@ -20,11 +20,6 @@
               {{ channelSubscribeLoading ? '处理中...' : (channelSubscribed ? '已订阅' : '订阅') }}
             </PClip>
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
-            <PLink
-              v-if="isOwner"
-              href="/posts/manage"
-              label="创作"
-            />
           </div>
         </template>
       </PPageHeader>
@@ -50,7 +45,6 @@
         <aside class="collection-sidebar">
           <div class="section-headline">
             <h2 class="a-subtitle" style="margin:0;font-size:.875rem">合集</h2>
-            <PClip v-if="isOwner" label="新建合集" @click="openCollectionModal()" />
           </div>
 
           <div class="collection-list">
@@ -100,11 +94,6 @@
                     @click="toggleReadingList(post.id)"
                   />
                   <PLink :href="`/posts/post/${post.id}`" label="查看" />
-                  <PLink
-                    v-if="isOwner"
-                    :href="`/posts/post/${post.id}/edit`"
-                    label="编辑"
-                  />
                 </div>
               </template>
             </PEntry>

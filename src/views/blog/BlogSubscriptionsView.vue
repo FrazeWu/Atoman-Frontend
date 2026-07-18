@@ -2,8 +2,7 @@
   <div class="a-page-xl blog-subscriptions-page">
     <PPageHeader title="订阅" accent>
       <template #action>
-        <PButton v-if="authStore.isAuthenticated && canCreatePost" to="/posts/manage">创作</PButton>
-        <PButton v-else-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
+        <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
       </template>
     </PPageHeader>
 
@@ -122,7 +121,6 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTab from '@/components/ui/PTab.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useApi } from '@/composables/useApi'
@@ -137,7 +135,6 @@ const _components = { PBadge, PTab }
 
 const blogSheets = useBlogSheets()
 const authStore = useAuthStore()
-const siteAccessStore = useSiteAccessStore()
 const feedStore = useFeedStore()
 const uiStore = useUIStore()
 const api = useApi()
@@ -155,7 +152,6 @@ const toggleReadingList = (id: string) => {
   void feedStore.toggleReadingListItem(id)
 }
 
-const canCreatePost = computed(() => siteAccessStore.isFeatureEnabled('blog', 'post.create'))
 
 const posts = ref<Post[]>([])
 const loading = ref(true)

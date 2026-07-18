@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
+import * as musicLyricsDraft from '@/utils/musicLyricsDraft'
 import { downloadTextFile } from '@/utils/textDownload'
 import componentSource from '@/components/music/MusicLyricEditorDrawer.vue?raw'
 
@@ -81,8 +82,13 @@ describe('MusicLyricEditorDrawer.vue', () => {
   })
 
   it('selects the first untimed row, falls back to the first timed row, and resets on reopen', async () => {
+    const parseDraft = vi.spyOn(musicLyricsDraft, 'parseMusicLyricDraft').mockReturnValueOnce([
+      { id: 'timed-first', timeMs: 1000, original: 'Timed', translation: '' },
+      { id: 'untimed-second', timeMs: null, original: 'Untimed', translation: '' },
+    ])
     const untimed = mountDrawer({ content: 'Alpha\nBeta', format: 'plain' })
-    expect(selectedRowId(untimed)).toBe(draftRows(untimed)[0]!.id)
+    expect(selectedRowId(untimed)).toBe('untimed-second')
+    parseDraft.mockRestore()
 
     const timed = mountDrawer({ content: '[00:01.00]Alpha\n[00:02.00]Beta', format: 'lrc' })
     expect(selectedRowId(timed)).toBe(draftRows(timed)[0]!.id)
@@ -180,6 +186,19 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).trigger('focus')
     await wrapper.get(`[data-testid="lyric-delete-${ids[0]}"]`).trigger('click')
 
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+  })
+
+  it('keeps the same row selected while editing and moving it', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]A\n[00:02.00]B\n[00:03.00]C', format: 'lrc' })
+    const ids = draftRows(wrapper).map(row => row.id)
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).trigger('focus')
+
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).setValue('B edited')
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+
+    await wrapper.get(`[data-testid="lyric-move-down-${ids[1]}"]`).trigger('click')
+    expect(draftRows(wrapper).map(row => row.id)).toEqual([ids[0], ids[2], ids[1]])
     expect(selectedRowId(wrapper)).toBe(ids[1])
   })
 

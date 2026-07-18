@@ -3,12 +3,13 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PPress from '@/components/ui/PPress.vue'
-import PSurface from '@/components/ui/PSurface.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PCreationSteps from '@/components/ui/PCreationSteps.vue'
+import { ArrowLeft, ArrowRight, CheckCircle2, Headphones, Upload } from 'lucide-vue-next'
 import PodcastCoverPanel from '@/components/podcast/PodcastCoverPanel.vue'
 import type { PodcastEpisode, Channel, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -37,6 +38,13 @@ const selectedChannelFromQuery = computed(() => (
 const selectedCollectionFromQuery = computed(() => (
   typeof route.query.collection === 'string' ? route.query.collection : ''
 ))
+const currentStep = ref(isEdit.value ? 2 : 1)
+const maxStep = ref(isEdit.value ? 2 : 1)
+const creationSteps = [
+  { value: 1, label: '媒体', description: '选择来源并上传' },
+  { value: 2, label: '信息', description: '填写内容资料' },
+  { value: 3, label: '发布', description: '检查并确认' },
+]
 
 // Upload state
 const audioUploadProgress = ref(0)   // 0-100, -1 = error
@@ -77,7 +85,6 @@ const effectiveCoverURL = computed(() =>
 const effectiveCoverLabel = computed(() =>
   form.value.episode_cover_url ? '单集封面' : selectedCollection.value?.cover_url ? '合集封面' : '',
 )
-const canEditMetadata = computed(() => isEdit.value || uploadStarted.value)
 const audioBusy = computed(() => audioUploading.value || audioProcessing.value)
 const selectedDefaultChannel = computed(() => defaultChannelsStore.channelFor('podcast'))
 const isCurrentDefaultChannel = computed(() => (
@@ -288,10 +295,42 @@ async function onCoverFileChange(e: Event) {
 
 // ── Form logic ─────────────────────────────────────────────
 
-function validate(): boolean {
-  titleError.value = form.value.title.trim() ? '' : '请填写单集标题'
+function validateMedia(): boolean {
   audioError.value = form.value.audio_url.trim() ? '' : '请先上传音频文件'
-  return !titleError.value && !audioError.value
+  return !audioError.value
+}
+
+function validateInformation(): boolean {
+  errorMsg.value = ''
+  titleError.value = form.value.title.trim() ? '' : '请填写单集标题'
+  if (titleError.value) return false
+  if (!form.value.channel_id) {
+    errorMsg.value = '请选择节目频道'
+    return false
+  }
+  return true
+}
+
+function validate(): boolean {
+  return validateMedia() && validateInformation()
+}
+
+function goNext() {
+  if (currentStep.value === 1) {
+    if (!validateMedia()) return
+    maxStep.value = Math.max(maxStep.value, 2)
+    currentStep.value = 2
+    return
+  }
+  if (currentStep.value === 2) {
+    if (!validateInformation()) return
+    maxStep.value = 3
+    currentStep.value = 3
+  }
+}
+
+function goPrevious() {
+  currentStep.value = Math.max(1, currentStep.value - 1)
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -412,6 +451,8 @@ async function loadEpisode() {
   }
   await loadCollections(ep.channel_id)
   selectedCollectionId.value = ep.post?.collections?.[0]?.id || ep.collections?.[0]?.id || ''
+  currentStep.value = 2
+  maxStep.value = 2
 }
 
 onMounted(async () => {
@@ -475,73 +516,65 @@ async function doPublish() {
 
 <template>
   <div class="pe-wrap">
-    <PPageHeader :title="isEdit ? '编辑单集' : '发布新单集'" accent />
+    <PPageHeader :title="isEdit ? '编辑单集' : '发布新单集'" accent mb="1.5rem" />
 
-    <PSurface v-if="!canEditMetadata" tone="default" :layer="1" class="pe-gate">
-      <h2 class="pe-section-title">上传节目音频</h2>
-      <label class="pe-drop-zone pe-source-card">
+    <PCreationSteps
+      v-model="currentStep"
+      :steps="creationSteps"
+      :max-step="maxStep"
+      class="pe-steps"
+    />
+
+    <section v-if="currentStep === 1" class="pe-gate">
+      <div class="pe-step-heading">
+        <div>
+          <h2 class="pe-section-title">上传节目音频</h2>
+          <p>可直接上传音频，也可以从视频中提取音轨。</p>
+        </div>
+        <Headphones :size="22" aria-hidden="true" />
+      </div>
+
+      <div v-if="form.audio_url && !audioBusy" class="pe-uploaded">
+        <CheckCircle2 :size="18" aria-hidden="true" />
+        <span class="pe-uploaded-name">音频已上传</span>
+        <button type="button" class="pe-reupload" @click="form.audio_url = ''; maxStep = 1">重新上传</button>
+      </div>
+      <div v-else-if="audioBusy" class="pe-uploading-box">
+        <span class="pe-uploading-label">{{ uploadStage || '处理中' }} {{ audioUploadProgress }}%</span>
+      </div>
+      <label v-else class="pe-drop-zone pe-source-card">
         <input
           type="file"
           accept="audio/mpeg,audio/ogg,audio/wav,audio/aac,audio/x-m4a,audio/webm,video/mp4,video/webm,video/quicktime,.mp3,.ogg,.wav,.aac,.m4a,.flac,.webm,.mp4,.mov"
           class="pe-file-hidden"
           @change="onMediaFileChange"
         />
-        <span class="pe-source-icon">♪</span>
-        <span class="pe-drop-hint">选择或拖拽音频/视频文件</span>
-        <span class="pe-drop-sub">支持音频 MP3、AAC、M4A、OGG、WAV、FLAC、WebM，也支持上传 MP4、MOV、WebM 视频提取音频</span>
+        <Upload :size="30" aria-hidden="true" />
+        <span class="pe-drop-hint">选择音频或视频文件</span>
+        <span class="pe-drop-sub">支持 MP3、AAC、M4A、OGG、WAV、FLAC、WebM、MP4 和 MOV</span>
       </label>
-      <p v-if="audioError" class="pe-field-error">{{ audioError }}</p>
-    </PSurface>
 
-    <div v-else class="pe-layout">
+      <div v-if="audioBusy" class="pe-progress-track" role="progressbar" :aria-valuenow="audioUploadProgress" aria-valuemin="0" aria-valuemax="100">
+        <div class="pe-progress-bar" :style="{ width: audioUploadProgress + '%' }" />
+      </div>
+      <div v-if="form.audio_url && !audioBusy" class="pe-audio-preview">
+        <audio :src="form.audio_url" controls preload="none" />
+      </div>
+      <p v-if="audioError" class="pe-field-error" role="alert">{{ audioError }}</p>
+
+      <div class="pe-step-actions pe-step-actions--end">
+        <PButton data-testid="creator-next" @click="goNext">
+          下一步
+          <ArrowRight :size="16" aria-hidden="true" />
+        </PButton>
+      </div>
+    </section>
+
+    <div v-else-if="currentStep === 2" class="pe-layout">
       <!-- 左栏 -->
       <div class="pe-main">
-        <!-- 音频文件 -->
-        <PSurface tone="default" :layer="1" class="pe-section">
-          <h2 class="pe-section-title">音频文件</h2>
-
-          <!-- 已上传 -->
-          <div v-if="form.audio_url && !audioUploading" class="pe-uploaded">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--a-color-success,#166534);flex-shrink:0">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-            </svg>
-            <span class="pe-uploaded-name">音频已上传</span>
-            <button type="button" class="pe-reupload" @click="form.audio_url = ''">重新上传</button>
-          </div>
-
-          <!-- 未上传 / 上传中 -->
-          <template v-else>
-            <div v-if="audioBusy" class="pe-uploading-box">
-              <span class="pe-uploading-label">{{ uploadStage || '处理中' }} {{ audioUploadProgress }}%</span>
-            </div>
-            <label v-else class="pe-drop-zone pe-source-card">
-              <input
-                type="file"
-                accept="audio/mpeg,audio/ogg,audio/wav,audio/aac,audio/x-m4a,audio/webm,video/mp4,video/webm,video/quicktime,.mp3,.ogg,.wav,.aac,.m4a,.flac,.webm,.mp4,.mov"
-                class="pe-file-hidden"
-                @change="onMediaFileChange"
-              />
-              <span class="pe-source-icon">♪</span>
-              <span class="pe-drop-hint">重新选择音频/视频文件</span>
-              <span class="pe-drop-sub">音频直接上传；视频会先提取为 WebM 音频</span>
-            </label>
-
-            <!-- 进度条 -->
-            <div v-if="audioBusy" class="pe-progress-track">
-              <div class="pe-progress-bar" :style="{ width: audioUploadProgress + '%' }" />
-            </div>
-
-            <p v-if="audioError" class="pe-field-error">{{ audioError }}</p>
-          </template>
-
-          <!-- 音频预览 -->
-          <div v-if="form.audio_url && !audioUploading" class="pe-audio-preview">
-            <audio :src="form.audio_url" controls preload="none" style="width:100%" />
-          </div>
-        </PSurface>
-
         <!-- 基本信息 -->
-        <PSurface tone="default" :layer="1" class="pe-section">
+        <section class="pe-section">
           <h2 class="pe-section-title">基本信息</h2>
           <div class="a-field--line">
             <PInput
@@ -560,17 +593,10 @@ async function doPublish() {
               :rows="7"
             />
           </div>
-          <div class="a-field--line">
-            <PSelect
-              v-model="form.visibility"
-              label="可见性"
-              :options="visibilityOptions"
-            />
-          </div>
-        </PSurface>
+        </section>
 
         <!-- 归档位置 -->
-        <PSurface tone="default" :layer="1" class="pe-section">
+        <section class="pe-section">
           <h2 class="pe-section-title">归档位置</h2>
           <div class="a-field--line">
             <PSelect
@@ -607,10 +633,10 @@ async function doPublish() {
               </label>
             </div>
           </div>
-        </PSurface>
+        </section>
 
         <!-- 单集编号 -->
-        <PSurface tone="default" :layer="1" class="pe-section">
+        <section class="pe-section">
           <h2 class="pe-section-title">单集编号</h2>
           <div class="pe-row">
             <div class="a-field--line">
@@ -630,48 +656,85 @@ async function doPublish() {
               />
             </div>
           </div>
-        </PSurface>
+        </section>
+
+        <p v-if="errorMsg" class="pe-error" role="alert">{{ errorMsg }}</p>
+        <div class="pe-step-actions">
+          <PButton variant="secondary" @click="goPrevious">
+            <ArrowLeft :size="16" aria-hidden="true" />
+            上一步
+          </PButton>
+          <PButton data-testid="creator-next" @click="goNext">
+            下一步
+            <ArrowRight :size="16" aria-hidden="true" />
+          </PButton>
+        </div>
       </div>
 
-      <!-- 右栏：发布面板 -->
-      <PSurface tone="default" :layer="1" class="pe-panel">
+      <aside class="pe-panel" aria-label="单集封面">
         <PodcastCoverPanel
           :effective-cover-u-r-l="effectiveCoverURL"
           :effective-cover-label="effectiveCoverLabel"
           :cover-uploading="coverUploading"
           @cover-file-change="onCoverFileChange"
         />
+      </aside>
+    </div>
 
-        <!-- 全局错误 / 成功 -->
-        <p v-if="errorMsg" class="pe-error">{{ errorMsg }}</p>
-        <p v-if="draftSaved" class="pe-saved">草稿已保存</p>
+    <section v-else class="pe-publish-step">
+      <div class="pe-step-heading">
+        <div>
+          <h2 class="pe-section-title">检查并发布</h2>
+          <p>确认单集信息和可见范围后发布。</p>
+        </div>
+      </div>
 
-        <!-- 操作按钮 -->
-        <div class="pe-panel-actions">
-          <PPress
+      <div class="pe-review">
+        <div class="pe-review-media">
+          <img v-if="effectiveCoverURL" :src="effectiveCoverURL" :alt="form.title" />
+          <Headphones v-else :size="32" aria-hidden="true" />
+        </div>
+        <div class="pe-review-content">
+          <h3>{{ form.title || '未命名单集' }}</h3>
+          <p v-if="form.shownotes">{{ form.shownotes }}</p>
+          <dl>
+            <div><dt>单集</dt><dd>第 {{ form.season_number }} 季 · 第 {{ form.episode_number }} 集</dd></div>
+            <div><dt>合集</dt><dd>{{ selectedCollection?.name || '未加入合集' }}</dd></div>
+          </dl>
+        </div>
+      </div>
+
+      <PSelect v-model="form.visibility" label="可见范围" :options="visibilityOptions" />
+      <p v-if="errorMsg" class="pe-error" role="alert">{{ errorMsg }}</p>
+      <p v-if="draftSaved" class="pe-saved" aria-live="polite">草稿已保存</p>
+
+      <div class="pe-step-actions">
+        <PButton variant="secondary" @click="goPrevious">
+          <ArrowLeft :size="16" aria-hidden="true" />
+          上一步
+        </PButton>
+        <div class="pe-publish-actions">
+          <PButton
             variant="secondary"
-            class="w-full"
             :loading="savingDraft"
             loading-text="保存中…"
             :disabled="publishing || audioBusy || !form.audio_url"
             @click="saveDraft"
           >
             保存草稿
-          </PPress>
-          <PPress
-            class="w-full"
+          </PButton>
+          <PButton
             :loading="publishing"
             loading-text="发布中…"
             :disabled="savingDraft || audioBusy || !form.audio_url"
             @click="requestPublish"
           >
             立即发布
-          </PPress>
+          </PButton>
         </div>
-      </PSurface>
-    </div>
+      </div>
+    </section>
 
-    <!-- 发布确认弹窗 -->
     <PConfirm
       :show="showPublishConfirm"
       title="确认发布单集"
@@ -686,40 +749,63 @@ async function doPublish() {
 
 <style scoped>
 .pe-wrap {
-  max-width: 60rem;
+  max-width: 58rem;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 6rem;
 }
 
-.pe-layout {
-  display: grid;
-  grid-template-columns: 1fr 17rem;
-  gap: 1.5rem;
-  align-items: start;
-  margin-top: 1.5rem;
+.pe-steps {
+  margin-bottom: 2rem;
 }
 
-.pe-main { display: flex; flex-direction: column; gap: 1.5rem; }
+.pe-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+.pe-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.5rem;
+}
 
 .pe-gate {
-  max-width: 40rem;
-  margin: 1.5rem auto 0;
-  padding: 1.5rem;
+  display: grid;
+  max-width: 44rem;
+  margin: 0 auto;
+  gap: 1.25rem;
 }
 
 .pe-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
+  gap: 1.25rem;
+  padding: 0 0 1.5rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .pe-section-title {
-  font-family: var(--a-font-sans);
+  margin: 0;
+  color: var(--a-color-text);
   font-size: 1.125rem;
-  font-weight: 500;
-  color: var(--a-color-fg);
-  margin: 0 0 0.25rem 0;
+  font-weight: 600;
+}
+
+.pe-step-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--a-color-text-secondary);
+}
+
+.pe-step-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--a-color-muted);
+  font-size: 0.875rem;
 }
 
 .pe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -731,9 +817,11 @@ async function doPublish() {
 }
 
 .pe-default-channel-btn {
-  border: 1px solid var(--a-color-border-soft, #d6d3d1);
-  background: var(--a-color-bg, #fffdf8);
-  color: var(--a-color-text, #111827);
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
   padding: 0.45rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -759,31 +847,25 @@ async function doPublish() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-success);
+  font-size: 0.875rem;
 }
 .pe-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
 .pe-reupload {
-  font-size: 0.75rem;
-  color: var(--a-color-muted);
+  min-height: 40px;
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  text-decoration: underline;
 }
-.pe-reupload:hover { color: var(--a-color-fg); }
+.pe-reupload:hover { color: var(--a-color-text); }
 
 .pe-source-card {
   min-height: 13rem;
-}
-
-.pe-source-icon {
-  font-size: 1.75rem;
-  line-height: 1;
-  color: var(--a-color-muted);
 }
 
 .pe-drop-zone {
@@ -791,16 +873,20 @@ async function doPublish() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   padding: 2rem 1rem;
-  border: 1px solid var(--a-color-border);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   text-align: center;
 }
 .pe-drop-zone:hover:not(.pe-drop-zone--uploading) {
-  border-color: var(--a-color-fg);
+  border-color: var(--a-color-text-secondary);
   background: var(--a-color-surface);
+  color: var(--a-color-text);
 }
 .pe-drop-zone--uploading { cursor: default; opacity: 0.7; }
 .pe-drop-hint { font-size: 0.875rem; font-weight: 500; color: var(--a-color-fg); }
@@ -812,33 +898,35 @@ async function doPublish() {
   align-items: center;
   justify-content: center;
   min-height: 7rem;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
 }
 
 .pe-progress-track {
   height: 4px;
   background: var(--a-color-border-soft);
+  border-radius: 999px;
   overflow: hidden;
 }
 .pe-progress-bar {
   height: 100%;
-  background: var(--a-color-fg);
+  border-radius: inherit;
+  background: var(--a-color-primary);
   transition: width 0.2s ease;
 }
 
 .pe-field-error { font-size: 0.8rem; color: var(--a-color-danger); margin: 0; }
 
-.pe-audio-preview { margin-top: 0.25rem; }
+.pe-audio-preview audio {
+  display: block;
+  width: 100%;
+}
 
-/* ── Publish panel ── */
 .pe-panel {
   position: sticky;
   top: 5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
+  padding-left: 2rem;
+  border-left: 1px solid var(--a-color-border-soft);
 }
 
 /* Cover */
@@ -855,7 +943,8 @@ async function doPublish() {
   max-height: 10rem;
   overflow: auto;
   border: 1px solid var(--a-color-border-soft);
-  padding: 0.375rem;
+  border-radius: var(--a-radius-control);
+  padding: 0.5rem;
 }
 
 .pe-collection-item {
@@ -874,76 +963,127 @@ async function doPublish() {
   padding: 0.625rem 0;
 }
 
-.pe-cover-section { display: flex; flex-direction: column; gap: 0.375rem; }
-
-.pe-cover-preview {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1/1;
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--a-color-surface);
-}
-.pe-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pe-cover-source {
-  position: absolute;
-  left: 0.5rem;
-  bottom: 0.5rem;
-  padding: 0.125rem 0.375rem;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  font-size: 0.6875rem;
-}
-.pe-cover-reupload {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.45);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.pe-cover-preview:hover .pe-cover-reupload { opacity: 1; }
-
-.pe-cover-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  width: 100%;
-  aspect-ratio: 1/1;
-  border: 1px solid var(--a-color-border);
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-.pe-cover-empty:hover:not(.pe-cover-empty--uploading) {
-  border-color: var(--a-color-fg);
-}
-.pe-cover-empty--uploading { cursor: default; opacity: 0.6; }
-.pe-cover-hint { font-size: 0.75rem; color: var(--a-color-muted); }
-.pe-cover-sub { font-size: 0.7rem; color: var(--a-color-muted); margin: 0; }
-
 .pe-file-hidden {
   position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
-.pe-panel-actions { display: flex; flex-direction: column; gap: 0.625rem; }
+.pe-publish-step {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.pe-step-actions,
+.pe-publish-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+}
+
+.pe-step-actions {
+  justify-content: space-between;
+}
+
+.pe-step-actions--end {
+  justify-content: flex-end;
+}
+
+.pe-review {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.pe-review-media {
+  display: flex;
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+}
+
+.pe-review-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pe-review-content {
+  display: grid;
+  gap: var(--a-space-3);
+}
+
+.pe-review-content h3,
+.pe-review-content p,
+.pe-review-content dl {
+  margin: 0;
+}
+
+.pe-review-content h3 {
+  font-size: 1.25rem;
+}
+
+.pe-review-content p {
+  color: var(--a-color-text-secondary);
+  line-height: 1.6;
+}
+
+.pe-review-content dl {
+  display: grid;
+  gap: var(--a-space-2);
+  font-size: 0.875rem;
+}
+
+.pe-review-content dl div {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+}
+
+.pe-review-content dt {
+  color: var(--a-color-muted);
+}
+
+.pe-review-content dd {
+  margin: 0;
+}
 
 .pe-error { font-size: 0.8rem; color: var(--a-color-danger); margin: 0; }
 .pe-saved { font-size: 0.8rem; color: var(--a-color-success); margin: 0; }
 
 @media (max-width: 768px) {
   .pe-layout { grid-template-columns: 1fr; }
-  .pe-panel { position: static; order: -1; }
+  .pe-panel {
+    position: static;
+    padding: 0 0 1.5rem;
+    border-left: 0;
+    border-bottom: 1px solid var(--a-color-border-soft);
+  }
+
+  .pe-review {
+    grid-template-columns: 6rem minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .pe-publish-actions {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .pe-publish-step > .pe-step-actions {
+    position: sticky;
+    z-index: calc(var(--a-z-navigation) - 1);
+    bottom: var(--a-mobile-nav-reserved-height);
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--a-color-border-soft);
+    background: var(--a-color-bg);
+  }
 }
 </style>

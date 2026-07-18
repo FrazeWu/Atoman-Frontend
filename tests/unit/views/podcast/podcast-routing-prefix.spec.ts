@@ -83,6 +83,72 @@ describe('podcast routing prefix', () => {
     expect(push).toHaveBeenCalledWith('/podcasts/editor')
   })
 
+  it('新建播客按媒体、信息、发布三步推进', async () => {
+    const router = makeRouter('/podcasts/editor', PodcastEditorView)
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(PodcastEditorView, '/podcasts/editor', router)
+    await flushPromises()
+
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
+    expect(wrapper.text()).not.toContain('基本信息')
+
+    wrapper.vm.$.setupState.form.audio_url = 'https://cdn.example.com/audio.mp3'
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.text()).toContain('基本信息')
+
+    wrapper.vm.$.setupState.form.title = '三步播客'
+    wrapper.vm.$.setupState.form.channel_id = 'channel-1'
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('发布')
+    expect(wrapper.get('.pe-review').text()).toContain('三步播客')
+    expect(wrapper.text()).toContain('保存草稿')
+    expect(wrapper.text()).toContain('立即发布')
+  })
+
+  it('编辑已有播客直接进入信息步骤', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/podcast/episodes/episode-1')) {
+        return makeJsonResponse({
+          id: 'episode-1',
+          channel_id: '',
+          audio_url: 'https://cdn.example.com/audio.mp3',
+          episode_cover_url: '',
+          season_number: 1,
+          episode_number: 1,
+          post: { title: '已有播客', content: '', collections: [] },
+          collections: [],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/podcasts/editor/:id', component: PodcastEditorView }],
+    })
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.user = { id: 'user-1' } as never
+    authStore.isAuthenticated = true
+
+    const wrapper = await mountWithRouter(PodcastEditorView, '/podcasts/editor/episode-1', router)
+    await flushPromises()
+
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.text()).toContain('基本信息')
+  })
+
   it('新草稿保存后跳转到 /podcasts/editor/:id', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)

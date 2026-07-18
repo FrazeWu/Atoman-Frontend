@@ -71,4 +71,52 @@ describe('PodcastHomeView', () => {
     const requestedAfterSwitch = fetchMock.mock.calls.map(([input]) => String(input))
     expect(requestedAfterSwitch).toContain('/api/v1/podcast/recommend/episodes?mode=featured&page=1&page_size=8')
   })
+
+  it('renders recommendations and latest episodes as modern media surfaces', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/podcast/recommend/episodes')) {
+        return makeJsonResponse({
+          data: [{
+            id: 'recommended-1',
+            title: '推荐单集',
+            summary: '推荐摘要',
+            image_url: 'https://cdn.example.com/recommended.jpg',
+            target_path: '/podcasts/episode/recommended-1',
+            score_label: '本周精选',
+          }],
+        })
+      }
+      if (url.endsWith('/podcast/episodes')) {
+        return makeJsonResponse([{
+          id: 'episode-1',
+          duration_sec: 1800,
+          created_at: '2026-07-17T00:00:00Z',
+          episode_cover_url: 'https://cdn.example.com/episode.jpg',
+          channel: { name: '声音频道' },
+          post: { title: '最新单集', summary: '单集摘要' },
+        }])
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+
+    const wrapper = mount(PodcastHomeView, {
+      global: {
+        stubs: {
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+          PPageHeader: { template: '<header><slot name="action" /></header>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.ph-recommendation-card')).toHaveLength(1)
+    expect(wrapper.findAll('.ph-episode-row')).toHaveLength(1)
+    expect(wrapper.get('.ph-episode-cover img').attributes('src')).toBe('https://cdn.example.com/episode.jpg')
+    expect(wrapper.find('.p-badge-dot').exists()).toBe(false)
+    expect(wrapper.get('[aria-label="播放最新单集"]').exists()).toBe(true)
+  })
 })

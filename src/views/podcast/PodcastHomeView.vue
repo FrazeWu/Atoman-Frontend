@@ -1,17 +1,25 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PEntry from '@/components/ui/PEntry.vue'
-import PBadge from '@/components/ui/PBadge.vue'
-import PPress from '@/components/ui/PPress.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import { Headphones, Play, Plus } from 'lucide-vue-next'
+import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useSiteAccessStore } from '@/stores/siteAccess'
-import { usePlayerStore } from '@/stores/player'
-import type { PodcastEpisode } from '@/types'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useApiUrl } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
+import { usePlayerStore } from '@/stores/player'
+import { useSiteAccessStore } from '@/stores/siteAccess'
+import type { PodcastEpisode } from '@/types'
+
+type RecommendedEpisode = {
+  id: string
+  title: string
+  summary: string
+  targetPath: string
+  scoreLabel: string
+  imageUrl: string
+}
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -22,13 +30,7 @@ const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podca
 const API_URL = useApiUrl()
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(false)
-const recommendedEpisodes = ref<Array<{
-  id: string
-  title: string
-  summary: string
-  targetPath: string
-  scoreLabel: string
-}>>([])
+const recommendedEpisodes = ref<RecommendedEpisode[]>([])
 const recommendationLoading = ref(false)
 const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
 const recommendationOptions = [
@@ -64,6 +66,7 @@ async function fetchRecommendedEpisodes() {
           summary: item.summary,
           targetPath: item.target_path,
           scoreLabel: item.score_label,
+          imageUrl: item.image_url || item.episode_cover_url || item.channel_cover_url || '',
         }))
       : []
   } finally {
@@ -91,18 +94,25 @@ function playEpisode(ep: PodcastEpisode) {
 </script>
 
 <template>
-  <div class="a-page-md">
-    <PPageHeader title="播客" accent>
+  <div class="a-page-lg ph-page">
+    <PPageHeader title="播客" accent mb="2rem">
       <template #action>
-        <PPress v-if="authStore.isAuthenticated && canPublishPodcast" @click="router.push('/podcasts/editor')" label="+ 发布节目" />
+        <PButton
+          v-if="authStore.isAuthenticated && canPublishPodcast"
+          size="sm"
+          @click="router.push('/podcasts/editor')"
+        >
+          <Plus :size="16" aria-hidden="true" />
+          发布单集
+        </PButton>
       </template>
     </PPageHeader>
 
-    <section class="ph-recommendations" aria-label="播客推荐">
-      <div class="ph-recommendations__header">
+    <section class="ph-recommendations" aria-labelledby="ph-recommendations-title">
+      <div class="ph-section-header">
         <div>
-          <h2 class="ph-recommendations__title">推荐</h2>
-          <p class="ph-recommendations__note">按热度、精选、探索切换当前播客推荐。</p>
+          <h2 id="ph-recommendations-title">推荐</h2>
+          <p>发现值得收听的新单集。</p>
         </div>
         <PSegmentedControl
           v-model="recommendationMode"
@@ -111,103 +121,303 @@ function playEpisode(ep: PodcastEpisode) {
         />
       </div>
 
-      <div v-if="recommendationLoading" class="ph-state">
-        <div v-for="i in 2" :key="i" class="a-skeleton" style="height: 8rem; margin-bottom: 1rem" />
+      <div v-if="recommendationLoading" class="ph-recommendation-grid" aria-label="正在加载推荐">
+        <div v-for="i in 2" :key="i" class="a-skeleton ph-recommendation-skeleton" />
       </div>
-      <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" description="稍后再来看新的播客推荐。" />
-      <div v-else class="ph-list">
-        <PEntry
+      <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" />
+      <div v-else class="ph-recommendation-grid">
+        <RouterLink
           v-for="item in recommendedEpisodes"
           :key="item.id"
-          :title="item.title"
-          :summary="item.summary"
-          @click="router.push(item.targetPath)"
+          :to="item.targetPath"
+          class="ph-recommendation-card"
         >
-          <template #visual>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PBadge type="podcast">播客</PBadge>
-            </div>
-          </template>
-          <template #meta>
-            <span class="a-label a-muted">{{ item.scoreLabel }}</span>
-          </template>
-        </PEntry>
+          <div class="ph-recommendation-cover">
+            <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" loading="lazy" />
+            <Headphones v-else :size="28" aria-hidden="true" />
+          </div>
+          <div class="ph-recommendation-content">
+            <span class="ph-score">{{ item.scoreLabel }}</span>
+            <h3>{{ item.title }}</h3>
+            <p v-if="item.summary">{{ item.summary }}</p>
+          </div>
+        </RouterLink>
       </div>
     </section>
 
-    <div v-if="loading" class="ph-state">
-      <div v-for="i in 3" :key="i" class="a-skeleton" style="height: 10rem; margin-bottom: 1.5rem" />
-    </div>
-    <div v-else-if="episodes.length === 0" class="ph-state">暂无节目</div>
+    <section class="ph-latest" aria-labelledby="ph-latest-title">
+      <div class="ph-section-header ph-section-header--compact">
+        <div>
+          <h2 id="ph-latest-title">最新单集</h2>
+          <p>最近发布的播客内容。</p>
+        </div>
+      </div>
 
-    <div v-else class="ph-list">
-      <PEntry
-        v-for="ep in episodes"
-        :key="ep.id"
-        :title="ep.post?.title || '未命名单集'"
-        :summary="ep.post?.summary"
-        @click="router.push(`/podcasts/episode/${ep.id}`)"
-      >
-        <template #visual>
-          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="podcast">播客</PBadge>
-            <img
-              v-if="episodeCover(ep)"
-              :src="episodeCover(ep)"
-              style="width:5rem;height:5rem;object-fit:cover;border:1px solid var(--a-color-border-soft);filter:grayscale(100%);flex-shrink:0;border-radius:4px;margin-top:0.25rem"
-            />
+      <div v-if="loading" class="ph-episode-list" aria-label="正在加载单集">
+        <div v-for="i in 3" :key="i" class="a-skeleton ph-episode-skeleton" />
+      </div>
+      <PEmpty v-else-if="episodes.length === 0" title="暂无单集" />
+      <div v-else class="ph-episode-list">
+        <article v-for="ep in episodes" :key="ep.id" class="ph-episode-row">
+          <div class="ph-episode-cover">
+            <img v-if="episodeCover(ep)" :src="episodeCover(ep)" :alt="ep.post?.title || '单集封面'" loading="lazy" />
+            <Headphones v-else :size="24" aria-hidden="true" />
           </div>
-        </template>
-
-        <template #meta>
-          <span v-if="ep.channel" class="a-label a-muted">{{ ep.channel.name }}</span>
-          <span v-if="ep.duration_sec" style="font-weight: 500;color:var(--a-color-muted-soft)">
-            时长: {{ fmtDuration(ep.duration_sec) }}
-          </span>
-          <span style="color:var(--a-color-muted-soft)">{{ new Date(ep.created_at).toLocaleDateString() }}</span>
-          <button class="ph-play" type="button" @click.stop="playEpisode(ep)">播放</button>
-        </template>
-      </PEntry>
-    </div>
+          <div class="ph-episode-content">
+            <div class="ph-episode-meta">
+              <span v-if="ep.channel">{{ ep.channel.name }}</span>
+              <span v-if="ep.duration_sec">{{ fmtDuration(ep.duration_sec) }}</span>
+              <time :datetime="ep.created_at">{{ new Date(ep.created_at).toLocaleDateString() }}</time>
+            </div>
+            <RouterLink :to="`/podcasts/episode/${ep.id}`" class="ph-episode-title">
+              {{ ep.post?.title || '未命名单集' }}
+            </RouterLink>
+            <p v-if="ep.post?.summary">{{ ep.post.summary }}</p>
+          </div>
+          <PButton
+            variant="ghost"
+            size="sm"
+            class="ph-play"
+            :aria-label="`播放${ep.post?.title || '未命名单集'}`"
+            :title="`播放${ep.post?.title || '未命名单集'}`"
+            @click="playEpisode(ep)"
+          >
+            <Play :size="17" fill="currentColor" aria-hidden="true" />
+          </PButton>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.ph-state { padding: 4rem 0; color: #9ca3af; }
-.ph-list { display: flex; flex-direction: column; }
-
-.ph-recommendations {
-  margin-bottom: 2rem;
+.ph-page {
+  padding-bottom: 5rem;
 }
 
-.ph-recommendations__header {
+.ph-recommendations,
+.ph-latest {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.ph-latest {
+  margin-top: 3rem;
+}
+
+.ph-section-header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
+  gap: 1.5rem;
 }
 
-.ph-recommendations__title {
+.ph-section-header h2,
+.ph-section-header p {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
 }
 
-.ph-recommendations__note {
-  margin: 0.35rem 0 0;
-  color: var(--a-color-muted-soft);
-  font-size: 0.85rem;
+.ph-section-header h2 {
+  color: var(--a-color-text);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.ph-section-header p {
+  margin-top: 0.35rem;
+  color: var(--a-color-muted);
+  font-size: 0.875rem;
+}
+
+.ph-recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ph-recommendation-card {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  min-height: 7rem;
+  overflow: hidden;
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface-muted);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ph-recommendation-card:hover {
+  background: var(--a-color-surface);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.ph-recommendation-card:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+.ph-recommendation-cover,
+.ph-episode-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--a-color-disabled-bg);
+  color: var(--a-color-muted);
+}
+
+.ph-recommendation-cover img,
+.ph-episode-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ph-recommendation-content {
+  display: grid;
+  align-content: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.ph-score {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.ph-recommendation-content h3,
+.ph-recommendation-content p {
+  margin: 0;
+}
+
+.ph-recommendation-content h3 {
+  color: var(--a-color-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.ph-recommendation-content p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--a-color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ph-recommendation-skeleton {
+  min-height: 7rem;
+  border-radius: var(--a-radius-card);
+}
+
+.ph-episode-list {
+  display: grid;
+}
+
+.ph-episode-row {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) 40px;
+  gap: 1rem;
+  align-items: center;
+  min-height: 7rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.ph-episode-cover {
+  width: 5rem;
+  aspect-ratio: 1;
+  border-radius: var(--a-radius-control);
+}
+
+.ph-episode-content {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+}
+
+.ph-episode-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.ph-episode-title {
+  width: fit-content;
+  color: var(--a-color-text);
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ph-episode-title:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.ph-episode-content > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--a-color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .ph-play {
-  border: 1px solid var(--a-color-text);
-  border-radius: 6px;
-  background: var(--a-color-bg);
-  padding: 0.25rem 0.5rem;
-  color: var(--a-color-text);
-  font-size: 0.75rem;
-  cursor: pointer;
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+.ph-episode-skeleton {
+  height: 7rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+@media (max-width: 760px) {
+  .ph-section-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ph-recommendation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ph-recommendation-card {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+
+  .ph-episode-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr) 40px;
+    gap: 0.75rem;
+  }
+
+  .ph-episode-cover {
+    width: 4.5rem;
+  }
+}
+
+@media (max-width: 440px) {
+  .ph-episode-row {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+
+  .ph-episode-cover {
+    width: 4rem;
+  }
+
+  .ph-play {
+    grid-column: 2;
+    justify-self: end;
+  }
 }
 </style>

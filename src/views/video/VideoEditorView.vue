@@ -9,6 +9,9 @@ import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PCreationSteps from '@/components/ui/PCreationSteps.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload, Video as VideoIcon } from 'lucide-vue-next'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Channel, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -33,6 +36,13 @@ const selectedCollectionIds = ref<string[]>([])
 const selectedCollectionFromQuery = computed(() => (
   typeof route.query.collection === 'string' ? route.query.collection : ''
 ))
+const currentStep = ref(isEdit.value ? 2 : 1)
+const maxStep = ref(isEdit.value ? 2 : 1)
+const creationSteps = [
+  { value: 1, label: '媒体', description: '选择来源并上传' },
+  { value: 2, label: '信息', description: '填写内容资料' },
+  { value: 3, label: '发布', description: '检查并确认' },
+]
 
 // Upload state
 const videoUploadProgress = ref(0)   // 0-100, -1 = error
@@ -59,9 +69,17 @@ const channelOptions = computed(() => [
 ])
 
 const storageOptions = [
-  { label: '外部链接（YouTube / Bilibili / 其他）', value: 'external' },
-  { label: '本地上传（S3/MinIO）', value: 'local' },
+  { label: '本地上传', value: 'local' },
+  { label: '外部链接', value: 'external' },
 ]
+
+function onStorageTypeChange(value: 'local' | 'external') {
+  if (value === form.value.storage_type) return
+  form.value.storage_type = value
+  form.value.video_url = ''
+  urlError.value = ''
+  maxStep.value = 1
+}
 
 const visibilityOptions = [
   { label: '公开', value: 'public' },
@@ -232,18 +250,44 @@ async function onCoverFileChange(e: Event) {
 
 // ── Form logic ────────────────────────────────────────────
 
-function validate(): boolean {
-  errorMsg.value = ''
-  titleError.value = form.value.title.trim() ? '' : '请填写视频标题'
+function validateMedia(): boolean {
   urlError.value = form.value.video_url.trim() ? '' : (
     form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
   )
-  if (titleError.value || urlError.value) return false
+  return !urlError.value
+}
+
+function validateInformation(): boolean {
+  errorMsg.value = ''
+  titleError.value = form.value.title.trim() ? '' : '请填写视频标题'
+  if (titleError.value) return false
   if (!form.value.channel_id || selectedCollectionIds.value.length === 0) {
     errorMsg.value = '请先创建或选择合集'
     return false
   }
   return true
+}
+
+function validate(): boolean {
+  return validateMedia() && validateInformation()
+}
+
+function goNext() {
+  if (currentStep.value === 1) {
+    if (!validateMedia()) return
+    maxStep.value = Math.max(maxStep.value, 2)
+    currentStep.value = 2
+    return
+  }
+  if (currentStep.value === 2) {
+    if (!validateInformation()) return
+    maxStep.value = 3
+    currentStep.value = 3
+  }
+}
+
+function goPrevious() {
+  currentStep.value = Math.max(1, currentStep.value - 1)
 }
 
 function buildPayload(status: 'draft' | 'published') {
@@ -358,7 +402,10 @@ async function loadVideo() {
     visibility: v.visibility,
     tags: v.tags?.map(t => t.name).join(', ') ?? '',
   }
+  await loadCollections(v.channel_id ?? '')
   selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
+  currentStep.value = 2
+  maxStep.value = 2
 }
 
 onMounted(async () => {
@@ -405,13 +452,20 @@ async function doPublish() {
 
 <template>
   <div class="ve-wrap">
-    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent />
+    <PPageHeader :title="isEdit ? '编辑视频' : '上传视频'" accent mb="1.5rem" />
 
-    <div class="ve-layout">
+    <PCreationSteps
+      v-model="currentStep"
+      :steps="creationSteps"
+      :max-step="maxStep"
+      class="ve-steps"
+    />
+
+    <div class="ve-layout" :class="{ 've-layout--single': currentStep !== 2 }">
       <!-- 左栏 -->
       <div class="ve-main">
         <!-- 基本信息 -->
-        <section class="ve-section">
+        <section v-if="currentStep === 2" class="ve-section">
           <h2 class="ve-section-title">基本信息</h2>
           <PInput
             v-model="form.title"
@@ -435,14 +489,20 @@ async function doPublish() {
         </section>
 
         <!-- 视频来源 -->
-        <section class="ve-section">
-          <h2 class="ve-section-title">视频来源</h2>
+        <section v-if="currentStep === 1" class="ve-section">
+          <div class="ve-step-heading">
+            <div>
+              <h2 class="ve-section-title">选择视频来源</h2>
+              <p>上传视频文件，或填写可直接访问的视频链接。</p>
+            </div>
+            <VideoIcon :size="22" aria-hidden="true" />
+          </div>
 
-          <PSelect
-            label="来源类型"
+          <PSegmentedControl
             :model-value="form.storage_type"
             :options="storageOptions"
-            @update:model-value="form.storage_type = $event as 'local' | 'external'; form.video_url = ''; urlError = ''"
+            aria-label="视频来源"
+            @update:model-value="onStorageTypeChange($event as 'local' | 'external')"
           />
 
           <!-- 外部链接 -->
@@ -462,11 +522,9 @@ async function doPublish() {
 
             <!-- 已上传 -->
             <div v-if="form.video_url && !videoUploading" class="ve-uploaded">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--a-color-success,#10b981);flex-shrink:0">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-              </svg>
+              <CheckCircle2 :size="18" aria-hidden="true" />
               <span class="ve-uploaded-name">视频已上传</span>
-              <button type="button" class="ve-reupload" @click="form.video_url = ''">重新上传</button>
+              <button type="button" class="ve-reupload" @click="form.video_url = ''; maxStep = 1">重新上传</button>
             </div>
 
             <!-- 未上传 / 上传中 -->
@@ -479,12 +537,10 @@ async function doPublish() {
                   :disabled="videoUploading"
                   @change="onVideoFileChange"
                 />
-                <svg v-if="!videoUploading" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.35">
-                  <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
-                </svg>
-                <span v-if="!videoUploading" class="ve-drop-hint">点击选择或拖拽视频文件</span>
-                <span v-if="!videoUploading" class="ve-drop-sub">支持 MP4、WebM、MOV，最大 2 GB</span>
-                <span v-if="videoUploading" class="ve-uploading-label">上传中 {{ videoUploadProgress }}%…</span>
+                <Upload v-if="!videoUploading" :size="30" aria-hidden="true" />
+                <span v-if="!videoUploading" class="ve-drop-hint">选择视频文件</span>
+                <span v-if="!videoUploading" class="ve-drop-sub">MP4、WebM 或 MOV，最大 2 GB</span>
+                <span v-if="videoUploading" class="ve-uploading-label">上传中 {{ videoUploadProgress }}%</span>
               </label>
 
               <!-- 进度条 -->
@@ -495,10 +551,19 @@ async function doPublish() {
               <p v-if="urlError" class="ve-field-error">{{ urlError }}</p>
             </template>
           </div>
+
+          <p v-if="errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
+
+          <div class="ve-step-actions ve-step-actions--end">
+            <PButton data-testid="creator-next" @click="goNext">
+              下一步
+              <ArrowRight :size="16" aria-hidden="true" />
+            </PButton>
+          </div>
         </section>
 
         <!-- 频道 -->
-        <section class="ve-section">
+        <section v-if="currentStep === 2" class="ve-section">
           <h2 class="ve-section-title">关联频道</h2>
           <PSelect
             label="频道"
@@ -523,10 +588,82 @@ async function doPublish() {
             </div>
           </div>
         </section>
+
+        <p v-if="currentStep === 2 && errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
+
+        <div v-if="currentStep === 2" class="ve-step-actions">
+          <PButton variant="secondary" @click="goPrevious">
+            <ArrowLeft :size="16" aria-hidden="true" />
+            上一步
+          </PButton>
+          <PButton data-testid="creator-next" @click="goNext">
+            下一步
+            <ArrowRight :size="16" aria-hidden="true" />
+          </PButton>
+        </div>
+
+        <section v-if="currentStep === 3" class="ve-section ve-publish-step">
+          <div class="ve-step-heading">
+            <div>
+              <h2 class="ve-section-title">检查并发布</h2>
+              <p>确认展示信息和可见范围后发布。</p>
+            </div>
+          </div>
+
+          <div class="ve-review">
+            <div class="ve-review-media">
+              <img v-if="form.thumbnail_url" :src="form.thumbnail_url" :alt="form.title" />
+              <VideoIcon v-else :size="32" aria-hidden="true" />
+            </div>
+            <div class="ve-review-content">
+              <h3>{{ form.title || '未命名视频' }}</h3>
+              <p v-if="form.description">{{ form.description }}</p>
+              <dl>
+                <div><dt>来源</dt><dd>{{ form.storage_type === 'local' ? '本地上传' : '外部链接' }}</dd></div>
+                <div><dt>合集</dt><dd>{{ selectedCollectionIds.length }} 个</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <PSelect
+            label="可见范围"
+            :model-value="form.visibility"
+            :options="visibilityOptions"
+            @update:model-value="form.visibility = $event as 'public' | 'followers' | 'private'"
+          />
+
+          <p v-if="errorMsg" class="ve-error" role="alert">{{ errorMsg }}</p>
+          <p v-if="draftSaved" class="ve-saved" aria-live="polite">草稿已保存</p>
+
+          <div class="ve-step-actions">
+            <PButton variant="secondary" @click="goPrevious">
+              <ArrowLeft :size="16" aria-hidden="true" />
+              上一步
+            </PButton>
+            <div class="ve-publish-actions">
+              <PButton
+                variant="secondary"
+                :loading="savingDraft"
+                loading-text="保存中…"
+                :disabled="publishing || videoUploading"
+                @click="saveDraft"
+              >
+                保存草稿
+              </PButton>
+              <PButton
+                :loading="publishing"
+                loading-text="发布中…"
+                :disabled="savingDraft || videoUploading"
+                @click="requestPublish"
+              >
+                立即发布
+              </PButton>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <!-- 右栏：发布面板 -->
-      <aside class="ve-panel">
+      <aside v-if="currentStep === 2" class="ve-panel" aria-label="视频封面">
         <VideoCoverPanel
           :generated-cover-ready="generatedCoverReady"
           :generated-cover-preview="generatedCoverPreview"
@@ -535,43 +672,6 @@ async function doPublish() {
           @use-generated-cover="useGeneratedCover"
           @cover-file-change="onCoverFileChange"
         />
-
-        <!-- 可见范围 -->
-        <PSelect
-          label="可见范围"
-          :model-value="form.visibility"
-          :options="visibilityOptions"
-          @update:model-value="form.visibility = $event as 'public' | 'followers' | 'private'"
-        />
-
-        <!-- 全局错误 / 成功 -->
-        <p v-if="errorMsg" class="ve-error">{{ errorMsg }}</p>
-        <p v-if="draftSaved" class="ve-saved">草稿已保存</p>
-
-        <!-- 操作按钮 -->
-        <div class="ve-panel-actions">
-          <PButton
-            variant="secondary"
-            block
-            :loading="savingDraft"
-            loading-text="保存中…"
-            :disabled="publishing || videoUploading"
-            @click="saveDraft"
-          >
-            保存草稿
-          </PButton>
-          <PButton
-            variant="primary"
-            block
-            size="lg"
-            :loading="publishing"
-            loading-text="发布中…"
-            :disabled="savingDraft || videoUploading"
-            @click="requestPublish"
-          >
-            立即发布
-          </PButton>
-        </div>
       </aside>
     </div>
 
@@ -593,38 +693,60 @@ async function doPublish() {
 
 <style scoped>
 .ve-wrap {
-  max-width: 64rem;
+  max-width: 58rem;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 6rem;
 }
 
-.ve-layout {
-  display: grid;
-  grid-template-columns: 1fr 18rem;
-  gap: 1.5rem;
-  align-items: start;
-  margin-top: 1.5rem;
+.ve-steps {
+  margin-bottom: 2rem;
 }
 
-.ve-main { display: flex; flex-direction: column; gap: 1.5rem; }
+.ve-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+.ve-layout--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ve-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.5rem;
+}
 
 .ve-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 4px;
+  gap: 1.25rem;
+  padding: 0 0 1.5rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .ve-section-title {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  color: var(--a-color-muted, #6b7280);
-  margin: 0 0 0.25rem 0;
+  margin: 0;
+  color: var(--a-color-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.ve-step-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--a-color-text-secondary);
+}
+
+.ve-step-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--a-color-muted);
+  font-size: 0.875rem;
 }
 
 /* Field label (matches PInput label style) */
@@ -644,100 +766,69 @@ async function doPublish() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-success);
+  font-size: 0.875rem;
 }
 .ve-uploaded-name { flex: 1; color: var(--a-color-fg); font-weight: 500; }
 .ve-reupload {
-  font-size: 0.75rem;
-  color: var(--a-color-muted);
+  min-height: 40px;
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  text-decoration: underline;
 }
-.ve-reupload:hover { color: var(--a-color-fg); }
+.ve-reupload:hover { color: var(--a-color-text); }
 
 .ve-drop-zone {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  min-height: 180px;
   padding: 2rem 1rem;
-  border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 4px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   text-align: center;
 }
 .ve-drop-zone:hover:not(.ve-drop-zone--uploading) {
-  border-color: var(--a-color-accent, #6366f1);
+  border-color: var(--a-color-text-secondary);
   background: var(--a-color-surface);
+  color: var(--a-color-text);
 }
 .ve-drop-zone--uploading { cursor: default; opacity: 0.7; }
 .ve-drop-hint { font-size: 0.875rem; font-weight: 500; color: var(--a-color-fg); }
 .ve-drop-sub { font-size: 0.75rem; color: var(--a-color-muted); }
-.ve-uploading-label { font-size: 0.875rem; font-weight: 600; color: var(--a-color-accent, #6366f1); }
+.ve-uploading-label { font-size: 0.875rem; font-weight: 600; color: var(--a-color-text); }
 
 .ve-progress-track {
   height: 4px;
-  background: var(--a-color-border, #e5e7eb);
-  border-radius: 0px;
+  background: var(--a-color-border-soft);
+  border-radius: 999px;
   overflow: hidden;
 }
 .ve-progress-bar {
   height: 100%;
-  background: var(--a-color-accent, #6366f1);
-  border-radius: 0px;
+  background: var(--a-color-primary);
+  border-radius: inherit;
   transition: width 0.2s ease;
 }
 
 .ve-field-error { font-size: 0.8rem; color: var(--a-color-danger, #ef4444); margin: 0; }
 
-/* ── Publish panel ── */
 .ve-panel {
   position: sticky;
   top: 5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.25rem;
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 4px;
-}
-
-/* Cover */
-.ve-cover-section { display: flex; flex-direction: column; gap: 0.375rem; }
-
-.ve-auto-cover-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 0.375rem;
-}
-
-.ve-auto-cover-preview {
-  width: 100%;
-  aspect-ratio: 16/9;
-  object-fit: cover;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border, #e5e7eb);
-}
-
-.ve-auto-cover-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.ve-auto-cover-tip {
-  font-size: 0.75rem;
-  color: var(--a-color-muted, #6b7280);
+  padding-left: 2rem;
+  border-left: 1px solid var(--a-color-border-soft);
 }
 
 .ve-collections {
@@ -752,10 +843,10 @@ async function doPublish() {
   gap: 0.375rem;
   max-height: 12rem;
   overflow: auto;
-  padding: 0.25rem;
-  border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 4px;
-  background: var(--a-color-bg, #fff);
+  padding: 0.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
 }
 
 .ve-collection-item {
@@ -771,65 +862,126 @@ async function doPublish() {
   color: var(--a-color-muted, #6b7280);
 }
 
-.ve-cover-preview {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16/9;
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--a-color-border, #f3f4f6);
-}
-.ve-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ve-cover-reupload {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.45);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.ve-cover-preview:hover .ve-cover-reupload { opacity: 1; }
-
-.ve-cover-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  width: 100%;
-  aspect-ratio: 16/9;
-  border: 1px solid var(--a-color-border, #e5e7eb);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.ve-cover-empty:hover:not(.ve-cover-empty--uploading) {
-  border-color: var(--a-color-accent, #6366f1);
-}
-.ve-cover-empty--uploading { cursor: default; opacity: 0.6; }
-.ve-cover-hint { font-size: 0.75rem; color: var(--a-color-muted); }
-
 .ve-file-hidden {
   position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
-.ve-panel-actions { display: flex; flex-direction: column; gap: 0.625rem; }
+.ve-step-actions,
+.ve-publish-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+}
+
+.ve-step-actions {
+  justify-content: space-between;
+}
+
+.ve-step-actions--end {
+  justify-content: flex-end;
+}
+
+.ve-review {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.ve-review-media {
+  display: flex;
+  aspect-ratio: 16 / 9;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+}
+
+.ve-review-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ve-review-content h3,
+.ve-review-content p,
+.ve-review-content dl {
+  margin: 0;
+}
+
+.ve-review-content {
+  display: grid;
+  gap: var(--a-space-3);
+}
+
+.ve-review-content h3 {
+  font-size: 1.25rem;
+}
+
+.ve-review-content p {
+  color: var(--a-color-text-secondary);
+  line-height: 1.6;
+}
+
+.ve-review-content dl {
+  display: grid;
+  gap: var(--a-space-2);
+  font-size: 0.875rem;
+}
+
+.ve-review-content dl div {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+}
+
+.ve-review-content dt {
+  color: var(--a-color-muted);
+}
+
+.ve-review-content dd {
+  margin: 0;
+}
 
 .ve-error { font-size: 0.8rem; color: var(--a-color-danger, #ef4444); margin: 0; }
 .ve-saved { font-size: 0.8rem; color: var(--a-color-success, #10b981); margin: 0; }
 
 @media (max-width: 768px) {
   .ve-layout { grid-template-columns: 1fr; }
-  .ve-panel { position: static; order: -1; }
+  .ve-panel {
+    position: static;
+    padding: 0 0 1.5rem;
+    border-left: 0;
+    border-bottom: 1px solid var(--a-color-border-soft);
+  }
+
+  .ve-review {
+    grid-template-columns: 8rem minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .ve-step-actions {
+    align-items: stretch;
+  }
+
+  .ve-publish-actions {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .ve-publish-step > .ve-step-actions {
+    position: sticky;
+    z-index: calc(var(--a-z-navigation) - 1);
+    bottom: var(--a-mobile-nav-reserved-height);
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--a-color-border-soft);
+    background: var(--a-color-bg);
+  }
 }
 </style>

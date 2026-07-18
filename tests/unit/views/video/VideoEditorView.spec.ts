@@ -101,10 +101,6 @@ describe('VideoEditorView', () => {
 
     await flushPromises()
 
-    const storageSelect = wrapper.findComponent({ name: 'PSelect' })
-    await storageSelect.vm.$emit('update:modelValue', 'local')
-    await flushPromises()
-
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', {
@@ -121,6 +117,161 @@ describe('VideoEditorView', () => {
     expect(wrapper.text()).not.toContain('视频上传失败')
     expect(wrapper.text()).not.toContain('无法读取视频内容')
     expect(wrapper.text()).toContain('自动封面生成失败，可手动上传封面')
+  })
+
+  it('新建视频按媒体、信息、发布三步推进', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/upload', component: VideoEditorView }],
+    })
+    await router.push('/videos/upload')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(VideoEditorView)
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
+    expect(wrapper.text()).not.toContain('基本信息')
+
+    editorView.vm.$.setupState.form.video_url = 'https://example.com/video.mp4'
+    await wrapper.get('[data-testid="mode-local"]').trigger('click')
+    expect(editorView.vm.$.setupState.form.video_url).toBe('https://example.com/video.mp4')
+
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.text()).toContain('基本信息')
+
+    editorView.vm.$.setupState.form.title = '三步视频'
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+    expect(wrapper.get('[role="alert"]').text()).toBe('请先创建或选择合集')
+
+    editorView.vm.$.setupState.form.channel_id = 'channel-1'
+    editorView.vm.$.setupState.selectedCollectionIds = ['collection-1']
+    await wrapper.get('[data-testid="creator-next"]').trigger('click')
+
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('发布')
+    expect(wrapper.get('.ve-review').text()).toContain('三步视频')
+    expect(wrapper.text()).toContain('保存草稿')
+    expect(wrapper.text()).toContain('立即发布')
+  })
+
+  it('编辑已有视频直接进入信息步骤', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      }
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.endsWith('/videos/video-1')) {
+        return makeJsonResponse({
+          id: 'video-1',
+          channel_id: '',
+          title: '已有视频',
+          description: '',
+          storage_type: 'external',
+          video_url: 'https://example.com/video',
+          thumbnail_url: '',
+          visibility: 'public',
+          tags: [],
+          collections: [],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/edit/:id', component: VideoEditorView }],
+    })
+    await router.push('/videos/edit/video-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
+    expect(wrapper.text()).toContain('基本信息')
+  })
+
+  it('编辑已有视频时加载该视频所属频道的合集', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) {
+        return makeJsonResponse({
+          data: {
+            blog: null,
+            podcast: null,
+            video: { id: 'channel-1', name: '默认频道' },
+          },
+        })
+      }
+      if (url.includes('/blog/channels?')) {
+        return makeJsonResponse({
+          data: [
+            { id: 'channel-1', name: '默认频道' },
+            { id: 'channel-2', name: '视频频道' },
+          ],
+        })
+      }
+      if (url.includes('/blog/channels/channel-1/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-1', name: '默认合集' }] })
+      }
+      if (url.includes('/blog/channels/channel-2/collections')) {
+        return makeJsonResponse({ data: [{ id: 'collection-2', name: '视频合集' }] })
+      }
+      if (url.endsWith('/videos/video-1')) {
+        return makeJsonResponse({
+          id: 'video-1',
+          channel_id: 'channel-2',
+          title: '已有视频',
+          description: '',
+          storage_type: 'external',
+          video_url: 'https://example.com/video',
+          thumbnail_url: '',
+          visibility: 'public',
+          tags: [],
+          collections: [{ id: 'collection-2', name: '视频合集' }],
+        })
+      }
+      throw new Error(`unexpected fetch: ${url}`)
+    }))
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/videos/edit/:id', component: VideoEditorView }],
+    })
+    await router.push('/videos/edit/video-1')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { id: 'user-1', uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(VideoEditorView)
+    expect(editorView.vm.$.setupState.form.channel_id).toBe('channel-2')
+    expect(editorView.vm.$.setupState.collections.map((item: { id: string }) => item.id)).toEqual(['collection-2'])
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-2'])
   })
 
   it('新建视频草稿保存后跳转到带 videos 前缀的编辑页', async () => {
@@ -170,6 +321,8 @@ describe('VideoEditorView', () => {
     editorView.vm.$.setupState.form.storage_type = 'external'
     editorView.vm.$.setupState.form.title = 'Draft video'
     editorView.vm.$.setupState.form.video_url = 'https://example.com/video'
+    editorView.vm.$.setupState.currentStep = 3
+    await flushPromises()
 
     const saveButton = wrapper.findAll('button').find(button => button.text() === '保存草稿')
     expect(saveButton).toBeTruthy()

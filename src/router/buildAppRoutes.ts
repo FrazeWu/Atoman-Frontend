@@ -3,6 +3,7 @@ import { channelRoutes, userRoutes } from '@/router/routes/entities'
 import { moduleRoutes } from '@/router/routes/modules'
 import { portalRoutes } from '@/router/routes/portal'
 import { settingRoutes } from '@/router/routes/settings'
+import { studioRoutes } from '@/router/routes/studio'
 import { moduleRooms } from '@/config/moduleRooms'
 
 function scopedModuleRoutes(module: keyof typeof moduleRoutes): RouteRecordRaw[] {
@@ -20,13 +21,6 @@ function scopedModuleRoutes(module: keyof typeof moduleRoutes): RouteRecordRaw[]
         return {
           ...route,
           path: publicPrefix,
-        }
-      }
-
-      if (module === 'blog' && route.path === '/channels') {
-        return {
-          path: `${publicPrefix}${route.path}`,
-          redirect: route.path,
         }
       }
 
@@ -49,8 +43,8 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     ...scopedModuleRoutes('blog'),
     ...scopedModuleRoutes('podcast'),
     ...scopedModuleRoutes('video'),
+	...studioRoutes,
     ...userRoutes,
-    { path: '/channels', component: () => import('@/views/blog/ChannelManageView.vue'), meta: { requiresAuth: true, featureGate: { module: 'blog', feature: 'channel.manage' } } },
     ...channelRoutes,
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },

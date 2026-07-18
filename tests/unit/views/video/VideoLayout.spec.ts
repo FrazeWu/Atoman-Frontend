@@ -10,6 +10,6 @@ describe('VideoLayout', () => {
     expect(layoutSource).toContain('to="/videos"')
     expect(layoutSource).toContain('to="/videos/subscriptions"')
     expect(layoutSource).toContain('to="/videos/favorites"')
-    expect(layoutSource).toContain('to="/videos/creator"')
+    expect(layoutSource).not.toContain('to="/videos/creator"')
   })
 })

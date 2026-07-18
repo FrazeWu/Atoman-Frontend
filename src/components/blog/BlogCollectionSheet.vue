@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Pencil, Plus } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
 
 import PSheet from '@/components/ui/PSheet.vue'
-import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { useApi } from '@/composables/useApi'
@@ -24,7 +21,6 @@ const props = withDefaults(defineProps<{
 
 const api = useApi()
 const authStore = useAuthStore()
-const router = useRouter()
 const sheets = useBlogSheets()
 
 const collection = ref<Collection | null>(null)
@@ -77,14 +73,6 @@ async function loadCollection() {
   }
 }
 
-function openEditor() {
-  void router.push(`/posts/post/new?channel=${channelId.value}&collection=${collectionId.value}`)
-}
-
-function editPost(post: Post) {
-  void router.push(`/posts/post/${post.id}/edit?channel=${channelId.value}&collection=${collectionId.value}`)
-}
-
 watch(collectionId, () => void loadCollection(), { immediate: true })
 </script>
 
@@ -108,10 +96,6 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
           <h2>{{ collection?.is_default ? '全部文章' : (collection?.name || layer.title) }}</h2>
           <p v-if="collection?.description" class="a-muted">{{ collection.description }}</p>
         </div>
-        <PButton data-test="write-post" @click="openEditor">
-          <Plus :size="16" aria-hidden="true" />
-          写文章
-        </PButton>
       </div>
     </template>
 
@@ -147,10 +131,6 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
             <p v-if="post.summary" class="a-muted">{{ post.summary }}</p>
             <span class="collection-post-date">{{ new Date(post.updated_at || post.created_at).toLocaleDateString('zh-CN') }}</span>
           </div>
-          <button class="collection-post-edit" type="button" :aria-label="`编辑《${post.title}》`" @click.stop="editPost(post)">
-            <Pencil :size="16" aria-hidden="true" />
-            <span>编辑</span>
-          </button>
         </article>
       </div>
     </div>

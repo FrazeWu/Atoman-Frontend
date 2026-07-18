@@ -33,5 +33,4 @@ watch(
 // to="/videos"
 // to="/videos/subscriptions"
 // to="/videos/favorites"
-// to="/videos/creator"
 </script>

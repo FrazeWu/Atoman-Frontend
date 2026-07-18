@@ -10,6 +10,6 @@ describe('BlogLayout', () => {
     expect(layoutSource).toContain('to="/posts"')
     expect(layoutSource).toContain('to="/posts/subscriptions"')
     expect(layoutSource).toContain('to="/posts/bookmarks"')
-    expect(layoutSource).toContain('to="/posts/manage"')
+    expect(layoutSource).not.toContain('to="/posts/manage"')
   })
 })

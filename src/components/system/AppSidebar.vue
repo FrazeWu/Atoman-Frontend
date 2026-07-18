@@ -138,9 +138,6 @@
       <PSidebarItem to="/podcasts" :index="1" :icon="Mic" exact>
         播客大厅
       </PSidebarItem>
-      <PSidebarItem v-if="canPublishPodcast" to="/podcasts/editor" :index="2" :icon="PlusCircle">
-        播客创作
-      </PSidebarItem>
     </template>
 
     <!-- 8. VIDEO MODULE SIDEBAR -->
@@ -153,9 +150,6 @@
       </PSidebarItem>
       <PSidebarItem to="/videos/favorites" :index="3" :icon="Bookmark">
         收藏
-      </PSidebarItem>
-      <PSidebarItem to="/videos/creator" :index="4" :icon="Settings">
-        创作
       </PSidebarItem>
     </template>
 
@@ -185,8 +179,8 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
-  Rss, Compass, Bookmark, Star, Settings, Disc3, Users,
-  MessageSquare, Folder, Play, CheckCircle, Archive, Clock, Mic, PlusCircle
+  Rss, Compass, Bookmark, Star, Disc3, Users,
+  MessageSquare, Folder, Play, CheckCircle, Archive, Clock, Mic
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'
@@ -198,7 +192,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useUIStore } from '@/stores/ui'
 import { useForumStore } from '@/stores/forum'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardList } from '@/composables/useKeyboardList'
@@ -215,7 +208,6 @@ const authStore = pinia ? useAuthStore() : null
 const feedStore = pinia ? useFeedStore() : null
 const uiStore = pinia ? useUIStore() : null
 const forumStore = pinia ? useForumStore() : null
-const siteAccessStore = pinia ? useSiteAccessStore() : null
 
 // Safe route retrieval
 let route: any = null
@@ -338,7 +330,6 @@ const blogNavItems = [
   { to: '/posts', label: '探索', icon: Compass, exact: true },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },
-  { to: '/posts/manage', label: '创作', icon: Settings },
 ]
 
 // 4. Music Navigation Items
@@ -391,7 +382,6 @@ watch(
 )
 
 // 6. Podcast Logic
-const canPublishPodcast = computed(() => siteAccessStore ? siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish') : false)
 </script>
 
 <style scoped>

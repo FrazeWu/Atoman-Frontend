@@ -19,11 +19,6 @@
               {{ collectionSubscribeLoading ? '处理中...' : (collectionSubscribed ? '已订阅' : '订阅合集') }}
             </PClip>
             <PLink :href="`/posts/channel/${channelId}`" label="返回频道" />
-            <PLink
-              v-if="isOwner"
-              :href="`/posts/post/new?channel=${channelId}&collection=${collection.id}`"
-              label="写文章"
-            />
           </div>
         </template>
       </PPageHeader>
@@ -38,10 +33,6 @@
         <div>
           <p class="a-label a-muted" style="margin-bottom:.4rem">文章数量</p>
           <p style="font-weight: 500;margin:0">{{ posts.length }}篇</p>
-        </div>
-        <div v-if="isOwner" class="ui-actions-row">
-          <PClip label="编辑" @click="openEditModal" />
-          <PReject label="删除" @click="confirmDelete" />
         </div>
       </PCard>
 
@@ -77,11 +68,6 @@
                   @click="toggleReadingList(post.id)"
                 />
                 <PLink :href="`/posts/post/${post.id}`" label="查看" />
-                <PLink
-                  v-if="isOwner"
-                  :href="`/posts/post/${post.id}/edit?channel=${channelId}`"
-                  label="编辑"
-                />
               </div>
             </template>
           </PEntry>

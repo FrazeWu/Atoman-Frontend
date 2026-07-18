@@ -4,20 +4,14 @@ import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
-import PPress from '@/components/ui/PPress.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useSiteAccessStore } from '@/stores/siteAccess'
 import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
 import { useApiUrl } from '@/composables/useApi'
 
 const router = useRouter()
-const authStore = useAuthStore()
-const siteAccessStore = useSiteAccessStore()
 const player = usePlayerStore()
-const canPublishPodcast = computed(() => siteAccessStore.isFeatureEnabled('podcast', 'podcast.publish'))
 
 const API_URL = useApiUrl()
 const episodes = ref<PodcastEpisode[]>([])
@@ -94,7 +88,6 @@ function playEpisode(ep: PodcastEpisode) {
   <div class="a-page-md">
     <PPageHeader title="播客" accent>
       <template #action>
-        <PPress v-if="authStore.isAuthenticated && canPublishPodcast" @click="router.push('/podcasts/editor')" label="+ 发布节目" />
       </template>
     </PPageHeader>
 

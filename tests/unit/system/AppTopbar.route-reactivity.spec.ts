@@ -9,6 +9,7 @@ const makeRouter = async () => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
+      { path: '/', component: { template: '<div />' } },
       { path: '/feed', component: { template: '<div />' } },
       { path: '/music', component: { template: '<div />' } },
       { path: '/login', component: { template: '<div />' } },
@@ -42,5 +43,21 @@ describe('AppTopbar route reactivity', () => {
     await flushPromises()
 
     expect(activeNavText(wrapper)).toEqual(['音乐'])
+  })
+
+  it('navigates the ATOMAN brand to the portal root', async () => {
+    const router = await makeRouter()
+    await router.push('/music')
+
+    const wrapper = mount(AppTopbar, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('.brand-logo-link').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
   })
 })

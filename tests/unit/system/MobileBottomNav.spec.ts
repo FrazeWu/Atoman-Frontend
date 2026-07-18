@@ -59,11 +59,12 @@ describe('useResponsiveShell', () => {
     expect(secondMoreItems[0]?.label).toBe('音乐')
   })
 
-  it('renders four primary tabs and marks the active module route', async () => {
+  it('leaves the portal unselected and reacts to module route changes', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
         { path: '/', component: { template: '<div />' } },
+        { path: '/feed', component: { template: '<div />' } },
       ],
     })
 
@@ -80,7 +81,15 @@ describe('useResponsiveShell', () => {
 
     expect(tabs).toHaveLength(4)
     expect(tabs.map((tab) => tab.text())).toEqual(['首页', '订阅', '创作', '更多'])
+    expect(wrapper.find('.mobile-bottom-nav__tab.is-active').exists()).toBe(false)
+
+    await router.push('/feed')
+    await wrapper.vm.$nextTick()
     expect(wrapper.get('[data-tab-key="feed"]').classes()).toContain('is-active')
+
+    await router.push('/')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.mobile-bottom-nav__tab.is-active').exists()).toBe(false)
   })
 
   it('opens and closes the more sheet from the more tab', async () => {

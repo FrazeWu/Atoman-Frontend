@@ -21,6 +21,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import MobileMoreSheet from '@/components/system/MobileMoreSheet.vue'
 import { getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
 import { useModuleNav } from '@/composables/useSubdomainNav'
@@ -33,10 +34,15 @@ defineOptions({
 
 const { navigateTo } = useModuleNav()
 const { navigateModuleWithShutter } = useAsyncNavigate()
+const route = useRoute()
 
 const tabs = computed(() => getMobilePrimaryTabs())
 const isMoreOpen = ref(false)
-const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search))
+const siteContext = computed(() => {
+  const queryStart = route.fullPath.indexOf('?')
+  const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
+  return resolveSiteContext(window.location.hostname, search, route.path)
+})
 
 const closeMore = () => {
   isMoreOpen.value = false

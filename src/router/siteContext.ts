@@ -96,13 +96,14 @@ function productionSubdomainLabel(hostname: string) {
 }
 
 export function resolveSiteContext(hostname: string, search = '', pathname?: string): SiteContext {
+  const isPortalPath = pathname === '/' || pathname === ''
   if (typeof pathname === 'string') {
     const pathContext = pathnameContext(pathname)
     if (pathContext) return pathContext
   }
 
   if (isLocalHost(hostname) || isIPv4Host(hostname)) {
-    return { type: 'module', module: 'feed' }
+    return isPortalPath ? { type: 'portal' } : { type: 'module', module: 'feed' }
   }
   void search
   const subdomainLabel = productionSubdomainLabel(hostname)
@@ -110,5 +111,5 @@ export function resolveSiteContext(hostname: string, search = '', pathname?: str
     return contextFromLabel(subdomainLabel)
   }
 
-  return { type: 'module', module: 'feed' }
+  return isPortalPath ? { type: 'portal' } : { type: 'module', module: 'feed' }
 }

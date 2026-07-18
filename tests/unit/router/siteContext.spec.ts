@@ -34,12 +34,14 @@ describe('resolveSiteContext', () => {
     })
   })
 
-  it('defaults root and www root to feed module context', () => {
-    expect(resolveSiteContext('www.atoman.org', '', '/')).toEqual({ type: 'module', module: 'feed' })
-    expect(resolveSiteContext('atoman.org', '', '/')).toEqual({ type: 'module', module: 'feed' })
+  it('maps root and www root to portal context', () => {
+    expect(resolveSiteContext('www.atoman.org', '', '/')).toEqual({ type: 'portal' })
+    expect(resolveSiteContext('atoman.org', '', '/')).toEqual({ type: 'portal' })
+    expect(resolveSiteContext('localhost', '', '/')).toEqual({ type: 'portal' })
   })
 
   it('maps production subdomains to module, entity, or unknown context', () => {
+    expect(resolveSiteContext('feed.atoman.org', '', '/')).toEqual({ type: 'module', module: 'feed' })
     expect(resolveSiteContext('media.atoman.org', '', '/')).not.toEqual({ type: 'module', module: 'podcast' })
     expect(resolveSiteContext('u-alice.atoman.org', '', '/')).toEqual({
       type: 'entity',

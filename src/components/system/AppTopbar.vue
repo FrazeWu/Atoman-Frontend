@@ -75,11 +75,8 @@ const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/sy
 const handleBrandClick = () => {
   if (sheetStore.stack.length > 0) {
     sheetStore.clearStack(true)
-  } else {
-    // Navigate to current context root
-    const context = resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname)
-    router.push(context.type === 'module' ? moduleUrl(context.module) : '/feed')
   }
+  void router.push('/')
 }
 
 const authStore = useAuthStore()

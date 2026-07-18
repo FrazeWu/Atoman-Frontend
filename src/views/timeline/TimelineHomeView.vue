@@ -1078,8 +1078,14 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
-  store.fetchEvents({ limit: 200 })
+onMounted(async () => {
+  void store.fetchEvents({ limit: 200 })
+
+  const eventId = typeof route.query.event === 'string' ? route.query.event : ''
+  if (eventId) {
+    const event = await fetchEventById(eventId)
+    if (event) openDetail(event)
+  }
 
   if (route.query.create === 'event' && authStore.isAuthenticated) {
     openCreate()

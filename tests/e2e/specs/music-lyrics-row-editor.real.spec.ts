@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import type { APIRequestContext, Page } from '@playwright/test'
+import type { APIRequestContext, Locator, Page } from '@playwright/test'
 import { expect, test } from '../fixtures/base'
 import { sanitizeDownloadName } from '../../../src/utils/textDownload'
 
@@ -130,9 +130,38 @@ async function runWorkflow(
   await expect(editor.locator('[data-testid^="lyric-original-"]').first()).toHaveValue('One A')
   await expect(page.getByText('存在重复时间')).toBeVisible()
 
-  const firstTime = editor.locator('[data-testid^="lyric-time-"]').nth(0)
-  const thirdTime = editor.locator('[data-testid^="lyric-time-"]').nth(2)
+  const progress = page.getByRole('slider', { name: '播放进度' })
+  const lyricRows = editor.locator('.lyric-row')
+  const originalInputs = editor.locator('[data-testid^="lyric-original-"]')
+  const timeInputs = editor.locator('[data-testid^="lyric-time-"]')
+  const currentTime = page.getByTestId('lyrics-current-time')
+
+  await pausePlayback(page)
+  await setRangeValue(progress, 4.2)
+  await originalInputs.nth(0).focus()
+  await expect(lyricRows.nth(0)).toHaveClass(/is-selected/)
+  await expect(lyricRows.nth(0)).toHaveAttribute('aria-current', 'true')
+  await expect(currentTime).toHaveText('00:04.20')
+  await page.getByTestId('lyrics-write-current-time').click()
+  await expect(timeInputs.nth(0)).toHaveValue('00:04.20')
+
+  await setRangeValue(progress, 5.3)
+  await originalInputs.nth(1).focus()
+  await page.getByTestId('lyrics-write-current-time-next').click()
+  await expect(timeInputs.nth(1)).toHaveValue('00:05.30')
+  await expect(lyricRows.nth(2)).toHaveAttribute('aria-current', 'true')
+  await expect(originalInputs.nth(2)).toBeFocused()
+
+  const firstSeek = lyricRows.nth(0).locator('[data-testid^="lyric-seek-"]')
+  await firstSeek.click()
+  await expect(progress).toHaveValue('4.2')
+  await expect(currentTime).toHaveText('00:04.20')
+
+  const firstTime = timeInputs.nth(0)
+  const secondTime = timeInputs.nth(1)
+  const thirdTime = timeInputs.nth(2)
   await firstTime.fill('00:03.00')
+  await secondTime.fill('00:01.00')
   await thirdTime.fill('00:01.00')
   await expect(page.getByText('时间不能早于上一行').first()).toBeVisible()
   await expect(page.getByTestId('lyrics-save')).toBeDisabled()
@@ -140,6 +169,7 @@ async function runWorkflow(
   await page.getByRole('button', { name: '按时间排序' }).click()
   await expect(page.getByText('时间不能早于上一行')).toHaveCount(0)
   await expect(page.getByText('存在重复时间')).toBeVisible()
+  await assertDesktopTimingLayout(page)
 
   const safeSongTitle = sanitizeDownloadName(songTitle)
   const originalDownloadPromise = page.waitForEvent('download')
@@ -325,6 +355,66 @@ async function readDownload(stream: NodeJS.ReadableStream): Promise<string> {
   return Buffer.concat(chunks).toString('utf8')
 }
 
+async function setRangeValue(slider: Locator, value: number) {
+  await slider.evaluate((element, nextValue) => {
+    const input = element as HTMLInputElement
+    input.value = String(nextValue)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  }, value)
+  await expect(slider).toHaveValue(String(value))
+}
+
+async function pausePlayback(page: Page) {
+  const toggle = page.locator('.main-play-btn')
+  if ((await toggle.textContent())?.trim() !== '暂停') return
+
+  await toggle.evaluate(element => (element as HTMLButtonElement).click())
+  await expect(toggle).toHaveText('播放')
+}
+
+async function assertDesktopTimingLayout(page: Page) {
+  const currentTime = page.getByTestId('lyrics-current-time')
+  const writeTime = page.getByTestId('lyrics-write-current-time')
+  const writeTimeNext = page.getByTestId('lyrics-write-current-time-next')
+  const firstSeek = page.locator('.lyric-row').first().locator('[data-testid^="lyric-seek-"]')
+
+  await expect(currentTime).toBeVisible()
+  await expect(writeTime).toBeVisible()
+  await expect(writeTimeNext).toBeVisible()
+  await expect(firstSeek).toBeVisible()
+
+  const layout = await page.evaluate(() => {
+    const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect()
+    return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      currentTime: rect('[data-testid="lyrics-current-time"]'),
+      timingButtons: [
+        rect('[data-testid="lyrics-write-current-time"]'),
+        rect('[data-testid="lyrics-write-current-time-next"]'),
+      ],
+      seek: rect('.lyric-row [data-testid^="lyric-seek-"]'),
+      player: rect('.player'),
+      controls: rect('.player-controls-hub'),
+    }
+  })
+
+  expect(layout.currentTime).toBeTruthy()
+  expect(layout.player).toBeTruthy()
+  expect(layout.controls).toBeTruthy()
+  const buttons = [...layout.timingButtons, layout.seek]
+  for (const [index, box] of buttons.entries()) {
+    expect(box).toBeTruthy()
+    expect(box!.width, `桌面打轴按钮 ${index + 1} 宽度`).toBeGreaterThanOrEqual(44)
+    expect(box!.height, `桌面打轴按钮 ${index + 1} 高度`).toBeGreaterThanOrEqual(44)
+    expectBoxInViewport(box!, layout.viewportWidth, layout.viewportHeight, `桌面打轴按钮 ${index + 1}`)
+    expect(rectanglesIntersect(box!, layout.player!)).toBe(false)
+    expect(rectanglesIntersect(box!, layout.controls!)).toBe(false)
+  }
+  expectBoxInViewport(layout.currentTime!, layout.viewportWidth, layout.viewportHeight, '桌面当前播放时间')
+  assertBoxesDoNotOverlap(buttons)
+}
+
 async function assertMobileLayout(page: Page) {
   await expect.poll(
     () => page.getByTestId('lyric-editor-grid').evaluate(element => element.getBoundingClientRect().right),
@@ -334,23 +424,45 @@ async function assertMobileLayout(page: Page) {
     () => page.locator('.p-sheet-panel[aria-label="编辑歌词"]').evaluate(element => element.getBoundingClientRect().right),
     { message: '歌词 sheet 应完成进场并位于移动端视口内' },
   ).toBeLessThanOrEqual(390)
+  await expect(page.getByTestId('lyrics-current-time')).toBeVisible()
+  await expect(page.getByTestId('lyrics-write-current-time')).toBeVisible()
+  await expect(page.getByTestId('lyrics-write-current-time-next')).toBeVisible()
+  await expect(page.locator('.music-lyric-editor-drawer__timing')).toBeVisible()
+
+  await page.locator('.music-lyric-editor-drawer__timing').evaluate(element => {
+    element.scrollIntoView({ block: 'start' })
+  })
 
   const layout = await page.evaluate(() => {
     const row = document.querySelector<HTMLElement>('.lyric-row')
     const original = row?.querySelector<HTMLElement>('[data-testid^="lyric-original-"]')
+    const timeControls = row?.querySelector<HTMLElement>('.lyric-time-controls')
+    const seek = timeControls?.querySelector<HTMLElement>('[data-testid^="lyric-seek-"]')
     const actions = row?.querySelector<HTMLElement>('.lyric-actions')
     const actionButtons = [...(actions?.querySelectorAll<HTMLElement>('.lyric-action') ?? [])]
+    const timing = document.querySelector<HTMLElement>('.music-lyric-editor-drawer__timing')
+    const currentTime = document.querySelector<HTMLElement>('[data-testid="lyrics-current-time"]')
+    const timingButtons = [
+      document.querySelector<HTMLElement>('[data-testid="lyrics-write-current-time"]'),
+      document.querySelector<HTMLElement>('[data-testid="lyrics-write-current-time-next"]'),
+    ]
     const sheet = document.querySelector<HTMLElement>('.p-sheet-panel[aria-label="编辑歌词"]')
     const player = document.querySelector<HTMLElement>('.player')
     const controls = document.querySelector<HTMLElement>('.player-controls-hub')
     const rect = (element: HTMLElement | null | undefined) => element?.getBoundingClientRect()
     return {
       viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
       bodyScrollWidth: document.documentElement.scrollWidth,
       row: rect(row),
       original: rect(original),
+      timeControls: rect(timeControls),
+      seek: rect(seek),
       actions: rect(actions),
       actionButtons: actionButtons.map(rect),
+      timing: rect(timing),
+      currentTime: rect(currentTime),
+      timingButtons: timingButtons.map(rect),
       sheet: rect(sheet),
       player: rect(player),
       controls: rect(controls),
@@ -363,26 +475,64 @@ async function assertMobileLayout(page: Page) {
   const viewportBoxes = [
     ['row', layout.row],
     ['original', layout.original],
+    ['time-controls', layout.timeControls],
+    ['seek', layout.seek],
     ['actions', layout.actions],
+    ['timing', layout.timing],
+    ['current-time', layout.currentTime],
     ['sheet', layout.sheet],
+    ...layout.timingButtons.map((box, index) => [`timing-action-${index + 1}`, box] as const),
     ...layout.actionButtons.map((box, index) => [`action-${index + 1}`, box] as const),
   ] as const
   for (const [name, box] of viewportBoxes) {
     expect(box).toBeTruthy()
-    expect(box!.left, `${name} 左边界`).toBeGreaterThanOrEqual(0)
-    expect(box!.right, `${name} 右边界`).toBeLessThanOrEqual(layout.viewportWidth)
+    expectBoxInViewport(box!, layout.viewportWidth, layout.viewportHeight, name)
   }
   expect(layout.actionButtons).toHaveLength(3)
+  expect(layout.timingButtons).toHaveLength(2)
   expect(layout.actions!.top).toBeGreaterThanOrEqual(layout.original!.bottom)
 
-  for (let index = 0; index < layout.actionButtons.length; index += 1) {
-    for (let other = index + 1; other < layout.actionButtons.length; other += 1) {
-      expect(rectanglesIntersect(layout.actionButtons[index]!, layout.actionButtons[other]!)).toBe(false)
-    }
+  const touchButtons = [...layout.timingButtons, layout.seek, ...layout.actionButtons]
+  for (const [index, box] of touchButtons.entries()) {
+    expect(box).toBeTruthy()
+    expect(box!.width, `移动端按钮 ${index + 1} 宽度`).toBeGreaterThanOrEqual(44)
+    expect(box!.height, `移动端按钮 ${index + 1} 高度`).toBeGreaterThanOrEqual(44)
   }
-  for (const editorBox of [layout.sheet!, layout.row!, layout.original!, layout.actions!, ...layout.actionButtons.map(box => box!)]) {
+  assertBoxesDoNotOverlap(touchButtons)
+  for (const editorBox of [
+    layout.sheet!,
+    layout.timing!,
+    layout.currentTime!,
+    layout.row!,
+    layout.original!,
+    layout.timeControls!,
+    layout.actions!,
+    ...touchButtons.map(box => box!),
+  ]) {
     expect(rectanglesIntersect(editorBox, layout.player!)).toBe(false)
     expect(rectanglesIntersect(editorBox, layout.controls!)).toBe(false)
+  }
+}
+
+function expectBoxInViewport(
+  box: { left: number, right: number, top: number, bottom: number },
+  viewportWidth: number,
+  viewportHeight: number,
+  name: string,
+) {
+  expect(box.left, `${name} 左边界`).toBeGreaterThanOrEqual(0)
+  expect(box.right, `${name} 右边界`).toBeLessThanOrEqual(viewportWidth)
+  expect(box.top, `${name} 上边界`).toBeGreaterThanOrEqual(0)
+  expect(box.bottom, `${name} 下边界`).toBeLessThanOrEqual(viewportHeight)
+}
+
+function assertBoxesDoNotOverlap(
+  boxes: Array<{ left: number, right: number, top: number, bottom: number } | undefined>,
+) {
+  for (let index = 0; index < boxes.length; index += 1) {
+    for (let other = index + 1; other < boxes.length; other += 1) {
+      expect(rectanglesIntersect(boxes[index]!, boxes[other]!)).toBe(false)
+    }
   }
 }
 

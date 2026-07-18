@@ -116,6 +116,7 @@
     <MusicLyricEditorDrawer
       v-if="isAuthenticated"
       :show="isLyricEditorOpen"
+      :song-title="songTitle"
       :content="lyrics?.content ?? ''"
       :translation="lyrics?.translation ?? ''"
       :format="lyrics?.format ?? 'plain'"

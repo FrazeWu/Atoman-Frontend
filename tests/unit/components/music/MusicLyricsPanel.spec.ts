@@ -131,7 +131,7 @@ vi.mock('@/components/music/MusicAnnotationEditor.vue', () => ({
 
 vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
   default: {
-    props: ['show', 'content', 'translation', 'format', 'saving'],
+    props: ['show', 'songTitle', 'content', 'translation', 'format', 'saving'],
     data() {
       return { draftContent: '' }
     },
@@ -144,7 +144,7 @@ vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
       },
     },
     template: `
-      <div v-if="show" class="lyric-editor-drawer-stub">
+      <div v-if="show" class="lyric-editor-drawer-stub" :data-song-title="songTitle">
         <span class="drawer-content">{{ draftContent }}</span>
         <input v-model="draftContent" class="drawer-content-input" />
         <span class="drawer-translation">{{ translation }}</span>
@@ -335,6 +335,15 @@ describe('MusicLyricsPanel.vue', () => {
       format: 'plain',
       edit_summary: '修正歌词',
     })
+  })
+
+  it('将歌曲标题传给歌词编辑抽屉', async () => {
+    const wrapper = await mountPanel({ songTitle: 'Neon Song' })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+
+    expect(wrapper.get('.lyric-editor-drawer-stub').attributes('data-song-title')).toBe('Neon Song')
   })
 
   it('查看并恢复歌词版本', async () => {

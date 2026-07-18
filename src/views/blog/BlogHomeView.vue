@@ -6,6 +6,8 @@
       </template>
     </PPageHeader>
 
+    <ContentContinueSection module="blog" />
+
     <!-- Filters -->
     <div class="blog-home__filters" aria-label="文章筛选">
       <div class="blog-home__filter-group">
@@ -145,6 +147,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'

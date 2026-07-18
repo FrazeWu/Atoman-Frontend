@@ -1034,7 +1034,8 @@ describe('PostEditorView', () => {
     expect(putCall).toBeTruthy()
     const body = JSON.parse(String(putCall?.[1]?.body ?? '{}'))
     expect(body.channel_id).toBe('channel-1')
-    expect(body.collection_ids).toEqual(['collection-1', 'collection-2'])
+    expect(body.collection_id).toBe('collection-2')
+    expect(body).not.toHaveProperty('collection_ids')
     expect(router.currentRoute.value.fullPath).toBe('/studio/blog/content?collection_id=collection-2')
   })
 

@@ -154,7 +154,7 @@ import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
-import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
 import { useUserBlocksStore } from '@/stores/userBlocks'
 import { useAuthStore } from '@/stores/auth'
@@ -281,6 +281,7 @@ const notificationTargetPath = (notification: Notification) => {
     return notification.source_url
   }
   if (isCommentNotification(notification)) return commentNotificationLocation(notification)
+  if (notification.type === 'content_published') return contentPublishedLocation(notification)
   if (notification.type === 'forum_follow') return forumNotificationLocation(notification)
   const topicId = notification.meta.topic_id
   if (notification.source_type === 'forum_reply' && topicId) {

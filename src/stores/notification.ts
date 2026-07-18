@@ -32,6 +32,13 @@ export function forumNotificationLocation(notification: Notification): RouteLoca
   return { path: modulePathUrl('forum', `/topic/${topicId}`) }
 }
 
+export function contentPublishedLocation(notification: Notification): RouteLocationRaw | null {
+  if (notification.type !== 'content_published') return null
+  const path = notification.meta.path
+  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) return null
+  return { path, query: { source: 'notification' } }
+}
+
 export function isCommentNotification(notification: Notification) {
   return commentNotificationTypes.has(notification.type)
 }

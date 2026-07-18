@@ -65,6 +65,17 @@ describe('API endpoint construction contract', () => {
     env.VITE_API_URL = undefined as unknown as string
   })
 
+  it('exposes content lifecycle endpoints under the versioned API', () => {
+    const api = useApi()
+
+    expect(api.content.events).toBe('/api/v1/content/events')
+    expect(api.content.progress).toBe('/api/v1/content/progress')
+    expect(api.content.progressItem('video', 'video-1')).toBe('/api/v1/content/progress/video/video-1')
+    expect(api.content.continue).toBe('/api/v1/content/continue')
+    expect(api.content.notificationPreferences).toBe('/api/v1/content/notification-preferences')
+    expect(api.content.schedule('podcast', 'episode-1')).toBe('/api/v1/content/podcast/episode-1/schedule')
+  })
+
   it('does not expose legacy top-level music CRUD endpoints', () => {
     const api = useApi()
 

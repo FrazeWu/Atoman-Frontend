@@ -417,7 +417,7 @@ async function addPodcastListenLater() {
     return
   }
   try {
-    const res = await fetch(api.podcast.listenLater, {
+    const res = await fetch(api.podcast.bookmarks, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
-import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import type { Notification, NotificationCategory } from '@/types'
 
 const makeNotification = (id: string, category: NotificationCategory, read_at: string | null = null, type = `content.${category}`): Notification => ({
@@ -68,6 +68,12 @@ describe('notification store', () => {
 
   it('accepts forum follow notifications', () => {
     expect(makeNotification('follow-1', 'reply', null, 'forum_follow').type).toBe('forum_follow')
+  })
+
+  it('locates published content notifications and rejects external meta paths', () => {
+    const published = { ...makeNotification('published-1', 'system', null, 'content_published'), meta: { path: '/videos/watch/video-1' } }
+    expect(contentPublishedLocation(published)).toEqual({ path: '/videos/watch/video-1', query: { source: 'notification' } })
+    expect(contentPublishedLocation({ ...published, meta: { path: 'https://evil.example' } })).toBeNull()
   })
 
   it('treats forum topic comments as comment notifications and locates forum follows', () => {

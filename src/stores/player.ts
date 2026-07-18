@@ -4,6 +4,8 @@ import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from '@/types';
 import { useApi } from '@/composables/useApi'
 import { recordMusicSongPlay } from '@/api/musicV1'
 import { readPodcastProgress, writePodcastProgress } from '@/composables/usePodcastProgress'
+import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
+import { useAuthStore } from '@/stores/auth'
 
 const api = useApi();
 
@@ -27,6 +29,8 @@ function resolveUploadedMediaUrl(url: string) {
 }
 
 export const usePlayerStore = defineStore('player', () => {
+  const lifecycle = useContentLifecycle();
+  const authStore = useAuthStore();
   const songs = ref<Song[]>([]);
   const currentSong = ref<Song | null>(null);
   const isPlaying = ref(false);
@@ -77,6 +81,7 @@ export const usePlayerStore = defineStore('player', () => {
   let listenedMs = 0;
   let listeningSongId: string | null = null;
   let playReported = false;
+  let podcastTracker: ReturnType<typeof createContentConsumptionTracker> | null = null;
 
   const clearListeningTimer = () => {
     if (listeningTimer === null) return;
@@ -265,6 +270,28 @@ export const usePlayerStore = defineStore('player', () => {
       : null;
     currentTime.value = savedProgress?.completed ? 0 : savedProgress?.position_sec || 0;
     duration.value = 0;
+    podcastTracker = null;
+    if (song.source_type === 'podcast_episode' && song.source_id) {
+      const episodeID = song.source_id;
+      podcastTracker = createContentConsumptionTracker({
+        onEvent: (event) => {
+          void lifecycle.recordEvent({
+            module: 'podcast', content_id: episodeID, event,
+            position_sec: Math.floor(currentTime.value), duration_sec: Math.floor(duration.value),
+            progress: duration.value > 0 ? currentTime.value / duration.value : 0,
+          }).catch(() => undefined);
+        },
+        onProgress: (progress) => {
+          if (!authStore.token) return;
+          void lifecycle.saveProgress({
+            module: 'podcast', content_id: episodeID,
+            position_sec: Math.floor(currentTime.value), duration_sec: Math.floor(duration.value),
+            progress, completed: progress >= 0.95,
+          }).catch(() => undefined);
+        },
+      });
+      podcastTracker.open();
+    }
     attemptPlay(player);
   };
 
@@ -445,6 +472,7 @@ export const usePlayerStore = defineStore('player', () => {
       completed,
       last_played_at: new Date().toISOString(),
     });
+    podcastTracker?.update(completed ? 1 : (durationSec > 0 ? Math.floor(audio?.currentTime ?? currentTime.value) / durationSec : 0));
   }
 
   const setVolume = (v: number) => {

@@ -8,10 +8,13 @@ import { usePlayerStore } from '@/stores/player'
 import PPress from '@/components/ui/PPress.vue'
 import PodcastShownotes from '@/components/podcast/PodcastShownotes.vue'
 import PodcastCommentSection from '@/components/podcast/PodcastCommentSection.vue'
+import { useContentLifecycle } from '@/composables/useContentLifecycle'
+import { writePodcastProgress } from '@/composables/usePodcastProgress'
 
 const api = useApi()
 const authStore = useAuthStore()
 const player = usePlayerStore()
+const lifecycle = useContentLifecycle()
 const route = useRoute()
 const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
@@ -24,6 +27,18 @@ onMounted(async () => {
     const res = await fetch(`${api.url}/podcast/episodes/${id}`)
     if (res.ok) {
       ep.value = await res.json()
+      if (authStore.token && ep.value) {
+        const serverProgress = await lifecycle.getProgress('podcast', ep.value.id).catch(() => null)
+        if (serverProgress?.position_sec) {
+          writePodcastProgress({
+            episode_id: ep.value.id,
+            position_sec: serverProgress.position_sec,
+            duration_sec: serverProgress.duration_sec,
+            completed: serverProgress.completed,
+            last_played_at: serverProgress.updated_at || new Date().toISOString(),
+          })
+        }
+      }
       const startAt = typeof route.query.t === 'string' ? Number(route.query.t) : NaN
       if (Number.isFinite(startAt) && startAt >= 0) {
         playEpisode()

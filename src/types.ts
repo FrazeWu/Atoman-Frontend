@@ -304,6 +304,11 @@ export interface StudioAnalyticsContentMetric {
   metrics: Record<string, number>
 }
 
+export interface StudioAnalyticsSourceMetric {
+  source: string
+  count: number
+}
+
 export interface StudioAnalytics {
   range: 7 | 28 | 90
   from: string
@@ -311,6 +316,12 @@ export interface StudioAnalytics {
   totals: Record<string, number>
   trend: StudioAnalyticsPoint[]
   top: StudioAnalyticsContentMetric[]
+  sources?: StudioAnalyticsSourceMetric[]
+  retention?: {
+    consumers: number
+    returning_consumers: number
+    rate: number
+  }
 }
 
 export interface StudioInteractionFilters {

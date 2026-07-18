@@ -1,29 +1,56 @@
 <template>
-  <section class="studio-page">
-    <header><h1>Dashboard</h1></header>
-    <p v-if="loading">加载中...</p>
-    <p v-else-if="error" role="alert">{{ error }}</p>
-    <p v-else-if="!studio.dashboard?.sections.length">暂无内容</p>
-    <section v-for="section in studio.dashboard?.sections" v-else :key="section.module" class="studio-summary">
-      <h2>{{ moduleLabel(section.module) }}</h2>
-      <p v-if="section.error" role="alert">{{ section.error }}</p>
-      <p v-else>{{ section.recent.length }} 条最近内容</p>
-    </section>
+  <section class="studio-dashboard">
+    <header class="studio-dashboard__header">
+      <h1>Dashboard</h1>
+      <p v-if="studio.dashboard" data-testid="dashboard-subscriber-count">
+        频道订阅 {{ formatNumber(studio.dashboard.channel_subscriber_count) }}
+      </p>
+    </header>
+
+    <p v-if="loading" class="studio-dashboard__state">加载中...</p>
+    <div v-else-if="error" class="studio-dashboard__state" role="alert">
+      <p>{{ error }}</p>
+      <button type="button" @click="load">重试</button>
+    </div>
+    <p v-else-if="!studio.dashboard" class="studio-dashboard__state">暂无内容</p>
+    <div v-else class="studio-dashboard__sections">
+      <StudioDashboardSection
+        v-for="section in orderedSections"
+        :key="section.module"
+        :section="section"
+      />
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import StudioDashboardSection from '@/components/studio/StudioDashboardSection.vue'
 import { useStudioStore } from '@/stores/studio'
-import type { StudioModule } from '@/types'
+import type { StudioDashboardSection as DashboardSection, StudioModule } from '@/types'
 
 const studio = useStudioStore()
 const loading = ref(true)
 const error = ref('')
-const labels: Record<StudioModule, string> = { blog: '博客', podcast: '播客', video: '视频' }
-const moduleLabel = (module: StudioModule) => labels[module]
+const modules: StudioModule[] = ['blog', 'podcast', 'video']
 
-onMounted(async () => {
+const orderedSections = computed(() => modules.map((module): DashboardSection => (
+  studio.dashboard?.sections.find(section => section.module === module) ?? {
+    module,
+    metrics: {},
+    recent: [],
+    issues: [],
+    error: '加载失败',
+  }
+)))
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat('zh-CN').format(value)
+}
+
+async function load() {
+  loading.value = true
+  error.value = ''
   try {
     await studio.loadState()
     if (studio.currentChannel) await studio.loadDashboard()
@@ -32,13 +59,18 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(load)
 </script>
 
 <style scoped>
-.studio-page { display: grid; gap: 1.5rem; }
-.studio-page h1, .studio-page h2, .studio-page p { margin: 0; }
-.studio-page h1 { font-size: 1.5rem; }
-.studio-page h2 { font-size: 1rem; }
-.studio-summary { display: grid; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--a-color-border-soft); }
+.studio-dashboard { display: grid; gap: 0; }
+.studio-dashboard__header { min-height: 3rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; }
+.studio-dashboard__header h1 { margin: 0; font-size: 1.5rem; }
+.studio-dashboard__header p { margin: 0; color: var(--a-color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.studio-dashboard__sections { display: grid; }
+.studio-dashboard__state { margin: 2rem 0; }
+.studio-dashboard__state button { min-height: 2.75rem; border: 1px solid var(--a-color-fg); background: var(--a-color-bg); color: var(--a-color-fg); padding: 0 1rem; cursor: pointer; }
+.studio-dashboard__state button:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 2px; }
 </style>

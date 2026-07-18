@@ -6,26 +6,13 @@ import { sanitizeDownloadName } from '../../../src/utils/textDownload'
 
 const enabled = process.env.MUSIC_LYRICS_ROW_EDITOR_E2E === '1'
 const albumId = process.env.MUSIC_LYRICS_E2E_ALBUM_ID ?? ''
-const songTitle = process.env.MUSIC_LYRICS_E2E_SONG_TITLE ?? ''
+const sourceSongTitle = process.env.MUSIC_LYRICS_E2E_SONG_TITLE ?? ''
+const sourceSongId = process.env.MUSIC_LYRICS_E2E_SOURCE_SONG_ID ?? ''
 
 const descendingOriginal = '[00:02.00]Two\n[00:01.00]One A\n[00:01.00]One B'
 const descendingTranslation = '[00:02.00]二\n[00:01.00]一甲\n[00:01.00]一乙'
 const sortedOriginal = '[00:01.00]One A\n[00:01.00]One B\n[00:02.00]Two'
 const sortedTranslation = '[00:01.00]一甲\n[00:01.00]一乙\n[00:02.00]二'
-
-type LyricsSnapshot = {
-  content: string
-  translation: string
-  format: 'plain' | 'lrc'
-}
-
-type DatabaseLyricsSnapshot = {
-  id: string
-  version: number
-  updated_by: string
-  edit_summary: string
-  legacy_lyrics: string
-} | null
 
 type LocalAuthFixture = {
   token: string
@@ -34,51 +21,43 @@ type LocalAuthFixture = {
 }
 
 test.describe('Music lyrics row editor real workflow', () => {
+  test.skip(!enabled, 'requires MUSIC_LYRICS_ROW_EDITOR_E2E=1 and a prepared local source song')
+
   test('imports, validates, downloads, saves, and fits desktop and mobile', async ({ page }, testInfo) => {
     test.setTimeout(90_000)
     requirePreparedFixture()
 
     const username = `lyrics-e2e-${Date.now()}-${randomUUID().slice(0, 8)}`
     const password = `Lyrics-E2E-${randomUUID()}!`
+    const songId = randomUUID()
+    const temporarySongTitle = `Lyrics E2E ${randomUUID().slice(0, 8)}`
     let auth: LocalAuthFixture | null = null
-    let songId = ''
-    let apiSnapshot: LyricsSnapshot | null = null
-    let databaseSnapshot: DatabaseLyricsSnapshot = null
+    let sourceHash = ''
 
     try {
       auth = await createLocalAuthFixture(page.request, username, password)
+      sourceHash = createTemporarySongFixture(songId, temporarySongTitle, auth.userId)
       await page.addInitScript(({ token, user }) => {
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
       }, { token: auth.token, user: auth.user })
 
-      const albumResponse = await page.request.get(`/api/v1/music/albums/${encodeURIComponent(albumId)}`)
-      expect(albumResponse.ok()).toBeTruthy()
-      const albumPayload = await albumResponse.json() as {
-        data?: { songs?: Array<{ id: string, title: string }> }
-      }
-      const song = albumPayload.data?.songs?.find(candidate => candidate.title === songTitle)
-      expect(song, `专辑 ${albumId} 中必须存在歌曲 ${songTitle}`).toBeTruthy()
-      songId = song!.id
-
-      const snapshotResponse = await page.request.get(`/api/v1/music/songs/${songId}/lyrics`)
-      expect([200, 404]).toContain(snapshotResponse.status())
-      if (snapshotResponse.status() === 200) {
-        const payload = await snapshotResponse.json() as { data: LyricsSnapshot }
-        apiSnapshot = payload.data
-      }
-      databaseSnapshot = readDatabaseLyricsSnapshot(songId)
-
-      await runWorkflow(page, testInfo, songId, auth.token)
+      await runWorkflow(page, testInfo, songId, temporarySongTitle, auth.token)
     } finally {
       if (auth) {
-        await restoreLocalFixture(page.request, songId, apiSnapshot, databaseSnapshot, auth)
+        cleanupTemporaryFixture(songId, auth.userId, sourceHash)
       }
     }
   })
 })
 
-async function runWorkflow(page: Page, testInfo: import('@playwright/test').TestInfo, songId: string, token: string) {
+async function runWorkflow(
+  page: Page,
+  testInfo: import('@playwright/test').TestInfo,
+  songId: string,
+  songTitle: string,
+  token: string,
+) {
   const consoleErrors: string[] = []
   const failedRequests: string[] = []
   const failingResponses: string[] = []
@@ -207,16 +186,54 @@ async function runWorkflow(page: Page, testInfo: import('@playwright/test').Test
 }
 
 function requirePreparedFixture() {
-  if (!enabled || !albumId || !songTitle) {
-    throw new Error('MUSIC_LYRICS_ROW_EDITOR_E2E=1、MUSIC_LYRICS_E2E_ALBUM_ID 和 MUSIC_LYRICS_E2E_SONG_TITLE 必须显式提供')
+  if (!albumId || (!sourceSongId && !sourceSongTitle)) {
+    throw new Error('启用真实歌词 smoke 后必须提供 album ID，以及 source song ID 或 title')
   }
   if (process.env.MUSIC_LYRICS_E2E_LOCAL_DB_CLEANUP !== '1') {
     throw new Error('真实歌词 smoke 需要 MUSIC_LYRICS_E2E_LOCAL_DB_CLEANUP=1 以启用 finally 本地恢复')
   }
-  const baseURL = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173')
+  if (!process.env.PLAYWRIGHT_BASE_URL) {
+    throw new Error('真实歌词 smoke 必须显式提供 PLAYWRIGHT_BASE_URL')
+  }
+  const baseURL = new URL(process.env.PLAYWRIGHT_BASE_URL)
   if (!['localhost', '127.0.0.1', '0.0.0.0'].includes(baseURL.hostname)) {
     throw new Error(`拒绝对非本地地址执行数据库 fixture：${baseURL.origin}`)
   }
+}
+
+function createTemporarySongFixture(songId: string, temporaryTitle: string, userId: string) {
+  const sourceWhere = sourceSongId
+    ? `source.id = ${sqlLiteral(sourceSongId)} AND source.album_id = ${sqlLiteral(albumId)}`
+    : `source.album_id = ${sqlLiteral(albumId)} AND source.title = ${sqlLiteral(sourceSongTitle)}`
+  const sourceCount = Number(runPsql(`SELECT count(*) FROM "Songs" source WHERE ${sourceWhere} AND source.deleted_at IS NULL;`))
+  expect(sourceCount, 'source song 查询必须唯一').toBe(1)
+
+  const sourceHash = readSourceSongHash(sourceWhere)
+  const insertedId = runPsql(`
+    INSERT INTO "Songs" (
+      id, created_at, updated_at, title, release_date, track_number, lyrics,
+      audio_url, audio_source, cover_url, cover_source, batch_id, status,
+      album_id, uploaded_by, play_count, duration_sec
+    )
+    SELECT
+      ${sqlLiteral(songId)}, now(), now(), ${sqlLiteral(temporaryTitle)}, source.release_date,
+      COALESCE((SELECT max(track_number) FROM "Songs" WHERE album_id = ${sqlLiteral(albumId)}), 0) + 1000,
+      '', source.audio_url, source.audio_source, source.cover_url, source.cover_source,
+      '', 'open', source.album_id, ${sqlLiteral(userId)}, 0, source.duration_sec
+    FROM "Songs" source
+    WHERE ${sourceWhere} AND source.deleted_at IS NULL
+    RETURNING id;
+  `)
+  expect(insertedId).toBe(songId)
+  return sourceHash
+}
+
+function readSourceSongHash(sourceWhere: string) {
+  return runPsql(`
+    SELECT md5(row_to_json(source)::text)
+    FROM "Songs" source
+    WHERE ${sourceWhere} AND source.deleted_at IS NULL;
+  `)
 }
 
 async function createLocalAuthFixture(request: APIRequestContext, username: string, password: string): Promise<LocalAuthFixture> {
@@ -238,87 +255,45 @@ async function createLocalAuthFixture(request: APIRequestContext, username: stri
   }
 }
 
-function readDatabaseLyricsSnapshot(songId: string): DatabaseLyricsSnapshot {
-  const raw = runPsql(`
-    SELECT COALESCE((
-      SELECT json_build_object(
-        'id', lyrics.id,
-        'version', lyrics.version,
-        'updated_by', lyrics.updated_by,
-        'edit_summary', lyrics.edit_summary,
-        'legacy_lyrics', songs.lyrics
-      )::text
-      FROM music_song_lyrics lyrics
-      JOIN "Songs" songs ON songs.id = lyrics.song_id
-      WHERE lyrics.song_id = ${sqlLiteral(songId)}
-    ), 'null');
+function cleanupTemporaryFixture(songId: string, userId: string, sourceHash: string) {
+  runPsql(`
+    BEGIN;
+    DELETE FROM music_lyric_annotation_votes WHERE annotation_id IN (
+      SELECT id FROM music_lyric_annotations WHERE song_id = ${sqlLiteral(songId)}
+    );
+    DELETE FROM music_lyric_annotations WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM music_song_lyric_lines WHERE lyric_id IN (
+      SELECT id FROM music_song_lyrics WHERE song_id = ${sqlLiteral(songId)}
+    );
+    DELETE FROM music_song_lyrics WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM music_song_lyric_versions WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM lyric_annotations WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM music_listening_histories WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM music_playlist_songs WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM music_song_bookmarks WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM song_artists WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM song_corrections WHERE song_id = ${sqlLiteral(songId)};
+    DELETE FROM "Songs" WHERE id = ${sqlLiteral(songId)};
+    DELETE FROM "Users" WHERE uuid = ${sqlLiteral(userId)};
+    COMMIT;
   `)
-  return JSON.parse(raw) as DatabaseLyricsSnapshot
-}
 
-async function restoreLocalFixture(
-  request: APIRequestContext,
-  songId: string,
-  apiSnapshot: LyricsSnapshot | null,
-  databaseSnapshot: DatabaseLyricsSnapshot,
-  auth: LocalAuthFixture,
-) {
-  try {
-    if (songId && apiSnapshot && databaseSnapshot) {
-      const response = await request.put(`/api/v1/music/songs/${songId}/lyrics`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-        data: {
-          ...apiSnapshot,
-          edit_summary: 'e2e fixture restore',
-        },
-      })
-      expect(response.status()).toBe(200)
-      runPsql(`
-        DELETE FROM music_song_lyric_versions
-        WHERE song_id = ${sqlLiteral(songId)} AND created_by = ${sqlLiteral(auth.userId)};
-        UPDATE music_song_lyrics SET
-          version = ${databaseSnapshot.version},
-          updated_by = ${sqlLiteral(databaseSnapshot.updated_by)},
-          edit_summary = ${sqlLiteral(databaseSnapshot.edit_summary)}
-        WHERE song_id = ${sqlLiteral(songId)};
-        UPDATE "Songs" SET lyrics = ${sqlLiteral(databaseSnapshot.legacy_lyrics)} WHERE id = ${sqlLiteral(songId)};
-      `)
-    } else if (songId) {
-      runPsql(`
-        DELETE FROM music_lyric_annotation_votes WHERE annotation_id IN (
-          SELECT annotations.id FROM music_lyric_annotations annotations
-          JOIN music_song_lyric_lines lines ON lines.id = annotations.line_id
-          JOIN music_song_lyrics lyrics ON lyrics.id = lines.lyric_id
-          WHERE lyrics.song_id = ${sqlLiteral(songId)}
-        );
-        DELETE FROM music_lyric_annotations WHERE line_id IN (
-          SELECT lines.id FROM music_song_lyric_lines lines
-          JOIN music_song_lyrics lyrics ON lyrics.id = lines.lyric_id
-          WHERE lyrics.song_id = ${sqlLiteral(songId)}
-        );
-        DELETE FROM music_song_lyric_lines WHERE lyric_id IN (
-          SELECT id FROM music_song_lyrics WHERE song_id = ${sqlLiteral(songId)} AND updated_by = ${sqlLiteral(auth.userId)}
-        );
-        DELETE FROM music_song_lyric_versions WHERE song_id = ${sqlLiteral(songId)} AND created_by = ${sqlLiteral(auth.userId)};
-        DELETE FROM music_song_lyrics WHERE song_id = ${sqlLiteral(songId)} AND updated_by = ${sqlLiteral(auth.userId)};
-        UPDATE "Songs" SET lyrics = '' WHERE id = ${sqlLiteral(songId)};
-      `)
-    }
-  } finally {
-    runPsql(`DELETE FROM "Users" WHERE uuid = ${sqlLiteral(auth.userId)};`)
-  }
+  const counts = runPsql(`
+    SELECT concat_ws('|',
+      (SELECT count(*) FROM "Songs" WHERE id = ${sqlLiteral(songId)}),
+      (SELECT count(*) FROM "Users" WHERE uuid = ${sqlLiteral(userId)}),
+      (SELECT count(*) FROM music_song_lyrics WHERE song_id = ${sqlLiteral(songId)}),
+      (SELECT count(*) FROM music_song_lyric_versions WHERE song_id = ${sqlLiteral(songId)})
+    );
+  `)
+  expect(counts).toBe('0|0|0|0')
 
-  if (songId) {
-    const restoredResponse = await request.get(`/api/v1/music/songs/${songId}/lyrics`)
-    if (apiSnapshot) {
-      expect(restoredResponse.status()).toBe(200)
-      const restored = await restoredResponse.json() as { data: LyricsSnapshot }
-      expect(restored.data).toMatchObject(apiSnapshot)
-    } else {
-      expect(restoredResponse.status()).toBe(404)
-    }
+  if (sourceHash) {
+    const sourceWhere = sourceSongId
+      ? `source.id = ${sqlLiteral(sourceSongId)} AND source.album_id = ${sqlLiteral(albumId)}`
+      : `source.album_id = ${sqlLiteral(albumId)} AND source.title = ${sqlLiteral(sourceSongTitle)}`
+    expect(readSourceSongHash(sourceWhere)).toBe(sourceHash)
   }
-  expect(Number(runPsql(`SELECT count(*) FROM "Users" WHERE uuid = ${sqlLiteral(auth.userId)};`))).toBe(0)
 }
 
 function runPsql(sql: string) {

@@ -161,6 +161,18 @@ describe('auth store', () => {
     expect(auth.lastAuthError).toBe('密码不正确')
   })
 
+  it('directs passwordless OAuth accounts to a linked provider', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      code: 'auth.password_not_set',
+      error: 'Use a provider',
+    }), { status: 401 }))
+
+    const auth = useAuthStore()
+
+    await expect(auth.loginWithPassword('alice@example.com', 'secret')).rejects.toThrow('请使用第三方账号登录')
+    expect(auth.lastAuthError).toBe('请使用第三方账号登录')
+  })
+
   it('clears local session and stores reason when shared cookie user is missing', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       code: 'auth.user_not_found',

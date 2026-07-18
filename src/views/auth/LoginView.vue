@@ -14,6 +14,12 @@
         <span class="step-label" :class="{ 'step-label--inactive': currentStep < 2 }">设置账号</span>
       </div>
 
+      <OAuthProviderButtons
+        v-if="!isRegister || currentStep === 1"
+        class="auth-oauth"
+        :return-to="safeRedirectPath(route.query.redirect)"
+      />
+
       <form @submit.prevent="handleSubmit" class="auth-form">
         <!-- Error Banner -->
         <Transition name="fade-slide">
@@ -204,6 +210,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
+import OAuthProviderButtons from '@/components/auth/OAuthProviderButtons.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
 import { validateRegisterUsername } from '@/views/auth/registerValidation'
 import {
@@ -682,6 +689,10 @@ watch(username, (value) => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+}
+
+.auth-oauth {
+  margin-bottom: 1rem;
 }
 
 .auth-step-container {

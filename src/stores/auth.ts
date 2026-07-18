@@ -119,6 +119,9 @@ async function parseApiResponse(response: Response): Promise<AuthApiPayload> {
 }
 
 function authErrorMessage(payload: AuthApiError, fallback: string) {
+  if (payload.code === 'auth.password_not_set') {
+    return '请使用第三方账号登录'
+  }
   const rawMessage = payload.error || payload.message
   if (rawMessage === 'Turnstile verification is required') {
     return '请先完成人机验证'

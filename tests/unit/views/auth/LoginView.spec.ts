@@ -54,6 +54,20 @@ const mountLogin = async (redirect: string) => {
 }
 
 describe('LoginView redirect', () => {
+  it('shows configured OAuth providers with the safe return path', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ providers: ['google'] }), { status: 200 }))
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push({ path: '/login', query: { redirect: '/forum' } })
+
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="oauth-provider-google"]').attributes('href'))
+      .toBe('/api/v1/auth/oauth/google/start?purpose=login&return_to=%2Fforum')
+  })
+
   it('links to password reset from the login form', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

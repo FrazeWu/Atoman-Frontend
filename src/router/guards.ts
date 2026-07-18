@@ -6,7 +6,18 @@ import { resolveSiteContext } from '@/router/siteContext'
 import { isAdminRole, isModeratorRole, isOwnerRole } from '@/utils/roles'
 
 const disabledTarget = { path: '/__disabled__' }
-const publicSystemPaths = new Set(['/login', '/register', '/about', '/terms', '/privacy', '/__not_found__', disabledTarget.path])
+const publicSystemPaths = new Set([
+  '/login',
+  '/register',
+  '/auth/oauth/callback',
+  '/auth/oauth/complete-profile',
+  '/auth/oauth/confirm-account',
+  '/about',
+  '/terms',
+  '/privacy',
+  '/__not_found__',
+  disabledTarget.path,
+])
 
 export function installRouteGuards(router: Router) {
   router.beforeEach(async (to, from) => {

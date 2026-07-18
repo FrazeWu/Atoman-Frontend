@@ -110,6 +110,11 @@ describe('host-scoped route tables', () => {
   it('keeps portal routes separate from module routes', () => {
     expect(paths(portalRoutes)).toContain('/')
     expect(paths(portalRoutes)).toContain('/login')
+    expect(paths(portalRoutes)).toEqual(expect.arrayContaining([
+      '/auth/oauth/callback',
+      '/auth/oauth/complete-profile',
+      '/auth/oauth/confirm-account',
+    ]))
     expect(paths(portalRoutes)).toContain('/terms')
   })
 

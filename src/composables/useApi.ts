@@ -210,7 +210,6 @@ export function useApi() {
       me: `${apiUrl}/users/me`,
       settings: `${apiUrl}/users/me`,          // profile update (display_name, bio, etc)
       meSettings: `${apiUrl}/users/me/settings`,
-      meDefaultChannels: `${apiUrl}/users/me/default-channels`,
       meDefaultChannel: (module: 'blog' | 'podcast' | 'video') => `${apiUrl}/users/me/default-channels/${module}`,
       profile: (username: string) => `${apiUrl}/users/by-username/${username}`,
       roles: `${apiUrl}/users/roles`,

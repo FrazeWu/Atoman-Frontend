@@ -5,6 +5,7 @@ import { defineComponent, h, nextTick } from 'vue'
 
 import PostEditorView from '@/views/blog/PostEditorView.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useStudioStore } from '@/stores/studio'
 
 const editorControl = {
   lastModelValue: '',
@@ -85,6 +86,16 @@ describe('PostEditorView', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    const studio = useStudioStore()
+    studio.loaded = true
+    studio.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+    studio.channels = [studio.currentChannel]
+    studio.collections.blog = [
+      { id: 'collection-1', channel_id: 'channel-1', content_type: 'blog', name: '默认合集', description: '', cover_url: '', is_default: true, created_at: '', updated_at: '' },
+      { id: 'collection-2', channel_id: 'channel-1', content_type: 'blog', name: '专题合集', description: '', cover_url: '', is_default: false, created_at: '', updated_at: '' },
+      { id: 'collection-3', channel_id: 'channel-1', content_type: 'blog', name: '查询参数合集', description: '', cover_url: '', is_default: false, created_at: '', updated_at: '' },
+    ]
+    vi.spyOn(studio, 'loadCollections').mockResolvedValue()
     editorControl.reset()
     vi.useRealTimers()
   })
@@ -140,18 +151,8 @@ describe('PostEditorView', () => {
 
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/blog/channels/channel-2/collections'),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: 'Bearer token',
-        }),
-      }),
-    )
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      expect.stringContaining('/blog/collections'),
-      expect.anything(),
-    )
+    expect(useStudioStore().loadCollections).toHaveBeenCalledWith('blog')
+    expect(router.currentRoute.value.query.channel).toBe('channel-2')
   })
 
   it('新建文章补默认频道时，应保留已注册的编辑器路由前缀', async () => {
@@ -209,7 +210,7 @@ describe('PostEditorView', () => {
 
     await flushPromises()
 
-    expect(router.currentRoute.value.fullPath).toBe('/posts/post/new?channel=channel-2')
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/new')
   })
 
   it('新建文章应在合法频道下恢复 query.collection', async () => {
@@ -1033,7 +1034,7 @@ describe('PostEditorView', () => {
     const body = JSON.parse(String(putCall?.[1]?.body ?? '{}'))
     expect(body.channel_id).toBe('channel-1')
     expect(body.collection_ids).toEqual(['collection-1', 'collection-2'])
-    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1')
+    expect(router.currentRoute.value.fullPath).toBe('/studio/blog/content?collection_id=collection-2')
   })
 
   it('应当根据 URL 查询参数初始化合集和频道', async () => {
@@ -1094,13 +1095,66 @@ describe('PostEditorView', () => {
     await flushPromises()
     await nextTick()
 
-    // 检查是否请求了正确的频道合集
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/blog/channels/channel-2/collections'),
-      expect.anything()
-    )
+    expect(useStudioStore().loadCollections).toHaveBeenCalledWith('blog')
 
     const editorView = wrapper.findComponent(PostEditorView)
     expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1', 'collection-3'])
+  })
+
+  it('使用 Studio 当前频道和合集预选，草稿保存后返回内容管理', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/studio/blog/new', component: PostEditorView },
+        { path: '/studio/blog/content', component: { template: '<div />' } },
+      ],
+    })
+    await router.push('/studio/blog/new?collection=collection-2')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+    const studio = useStudioStore()
+    studio.loaded = true
+    studio.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+    studio.channels = [studio.currentChannel]
+    studio.collections.blog = [
+      { id: 'collection-1', channel_id: 'channel-1', content_type: 'blog', name: '默认合集', description: '', cover_url: '', is_default: true, created_at: '', updated_at: '' },
+      { id: 'collection-2', channel_id: 'channel-1', content_type: 'blog', name: '专题', description: '', cover_url: '', is_default: false, created_at: '', updated_at: '' },
+    ]
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
+      if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      if (url.endsWith('/blog/posts') && init?.method === 'POST') return makeJsonResponse({ data: { id: 'post-1' } })
+      throw new Error(`unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount({ template: '<router-view />' }, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PButton: { template: '<button @click="$emit(\'click\')"><slot /></button>' },
+          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    const editorView = wrapper.findComponent(PostEditorView)
+    expect(editorView.vm.$.setupState.currentChannelId).toBe('channel-1')
+    expect(editorView.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1', 'collection-2'])
+    editorView.vm.$.setupState.form.title = 'Studio 草稿'
+    editorView.vm.$.setupState.form.content = '正文'
+    await editorView.vm.$.setupState.save('draft')
+    await flushPromises()
+
+    const postCall = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/blog/posts') && init?.method === 'POST')
+    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({ channel_id: 'channel-1', status: 'draft' })
+    expect(router.currentRoute.value.fullPath).toBe('/studio/blog/content?collection_id=collection-2')
   })
 })

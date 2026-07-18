@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useDefaultChannelsStore } from '@/stores/defaultChannels'
+import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -10,14 +10,14 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
-import type { Video, Channel, Collection } from '@/types'
+import type { Video, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
 
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const defaultChannelsStore = useDefaultChannelsStore()
+const studio = useStudioStore()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
@@ -27,7 +27,6 @@ const draftSaved = ref(false)
 const errorMsg = ref('')
 const titleError = ref('')
 const urlError = ref('')
-const channels = ref<Channel[]>([])
 const collections = ref<Collection[]>([])
 const selectedCollectionIds = ref<string[]>([])
 const selectedCollectionFromQuery = computed(() => (
@@ -52,11 +51,6 @@ const form = ref({
   visibility: 'public' as 'public' | 'followers' | 'private',
   tags: '',
 })
-
-const channelOptions = computed(() => [
-  { label: '不关联频道', value: '' },
-  ...channels.value.map(ch => ({ label: ch.name, value: ch.id })),
-])
 
 const storageOptions = [
   { label: '外部链接（YouTube / Bilibili / 其他）', value: 'external' },
@@ -232,15 +226,19 @@ async function onCoverFileChange(e: Event) {
 
 // ── Form logic ────────────────────────────────────────────
 
-function validate(): boolean {
+function validate(status: 'draft' | 'published'): boolean {
   errorMsg.value = ''
   titleError.value = form.value.title.trim() ? '' : '请填写视频标题'
   urlError.value = form.value.video_url.trim() ? '' : (
     form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
   )
   if (titleError.value || urlError.value) return false
-  if (!form.value.channel_id || selectedCollectionIds.value.length === 0) {
-    errorMsg.value = '请先创建或选择合集'
+  if (!form.value.channel_id) {
+    errorMsg.value = '请先创建频道'
+    return false
+  }
+  if (status === 'published' && selectedCollectionIds.value.length === 0) {
+    errorMsg.value = '请先选择合集'
     return false
   }
   return true
@@ -278,57 +276,17 @@ async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video>
   }
 }
 
-async function loadChannels() {
-  if (!authStore.user) return
-  await defaultChannelsStore.load()
-  const res = await fetch(
-    `${api.url}/blog/channels?user_id=${authStore.user.id}`,
-    { headers: { Authorization: `Bearer ${authStore.token}` } }
-  )
-  if (res.ok) {
-    const data = await res.json()
-    channels.value = data.data ?? data
-    const fromQuery = typeof route.query.channel === 'string' ? route.query.channel : ''
-    if (!form.value.channel_id && fromQuery && channels.value.some(ch => ch.id === fromQuery)) {
-      form.value.channel_id = fromQuery
-    }
-    const defaultChannelId = defaultChannelsStore.channelFor('video')?.id || ''
-    if (!form.value.channel_id && defaultChannelId && channels.value.some(ch => ch.id === defaultChannelId)) {
-      form.value.channel_id = defaultChannelId
-    }
-    if (!form.value.channel_id && channels.value.length > 0) {
-      form.value.channel_id = channels.value[0].id
-    }
-
-    if (form.value.channel_id) {
-      await loadCollections(form.value.channel_id)
-    }
-  }
-}
-
 async function loadCollections(channelID: string) {
   collections.value = []
   if (!channelID) return
-
-  const res = await fetch(`${api.url}/blog/channels/${channelID}/collections`, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (!res.ok) return
-
-  const data = await res.json()
-  collections.value = data.data ?? data
+  await studio.loadCollections('video')
+  collections.value = studio.collections.video
   if (!isEdit.value) {
     const queryCollectionId = selectedCollectionFromQuery.value
     selectedCollectionIds.value = queryCollectionId && collections.value.some(collection => collection.id === queryCollectionId)
       ? [queryCollectionId]
       : []
   }
-}
-
-function onChannelChange(value: string) {
-  form.value.channel_id = value
-  selectedCollectionIds.value = []
-  void loadCollections(value)
 }
 
 function toggleCollection(id: string, checked: boolean) {
@@ -348,6 +306,9 @@ async function loadVideo() {
   })
   if (!res.ok) return
   const v: Video = await res.json()
+  if (v.channel_id && studio.currentChannel?.id !== v.channel_id) {
+    await studio.selectChannel(v.channel_id)
+  }
   form.value = {
     channel_id: v.channel_id ?? '',
     title: v.title,
@@ -358,23 +319,39 @@ async function loadVideo() {
     visibility: v.visibility,
     tags: v.tags?.map(t => t.name).join(', ') ?? '',
   }
+  await loadCollections(form.value.channel_id)
   selectedCollectionIds.value = v.collections?.map(collection => collection.id) ?? []
 }
 
 onMounted(async () => {
-  await loadChannels()
-  if (isEdit.value) await loadVideo()
+  await studio.loadState()
+  if (isEdit.value) {
+    await loadVideo()
+    return
+  }
+  form.value.channel_id = studio.currentChannel?.id || ''
+  await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('video')])
+  const settings = studio.settings.video
+  if (settings?.default_visibility) {
+    form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
+  }
+  if (!selectedCollectionIds.value.length && settings?.default_collection_id && collections.value.some(item => item.id === settings.default_collection_id)) {
+    selectedCollectionIds.value = [settings.default_collection_id]
+  }
 })
 
 async function saveDraft() {
-  if (!validate()) return
+  if (!validate('draft')) return
   savingDraft.value = true
   errorMsg.value = ''
   draftSaved.value = false
   try {
-    const v = await apiSave(buildPayload('draft'))
-    if (!isEdit.value) router.replace(`/videos/edit/${v.id}`)
+    await apiSave(buildPayload('draft'))
     draftSaved.value = true
+    await router.push({
+      path: '/studio/video/content',
+      query: selectedCollectionIds.value[0] ? { collection_id: selectedCollectionIds.value[0] } : undefined,
+    })
     setTimeout(() => { draftSaved.value = false }, 3000)
   } catch (e: any) {
     errorMsg.value = e?.error || '保存失败，请重试'
@@ -384,7 +361,7 @@ async function saveDraft() {
 }
 
 function requestPublish() {
-  if (!validate()) return
+  if (!validate('published')) return
   showPublishConfirm.value = true
 }
 
@@ -497,20 +474,12 @@ async function doPublish() {
           </div>
         </section>
 
-        <!-- 频道 -->
+        <!-- 合集 -->
         <section class="ve-section">
-          <h2 class="ve-section-title">关联频道</h2>
-          <PSelect
-            label="频道"
-            :model-value="form.channel_id"
-            :options="channelOptions"
-            @update:model-value="onChannelChange($event as string)"
-          />
-
+          <h2 class="ve-section-title">归档位置</h2>
           <div class="ve-collections">
             <label class="ve-field-label">合集</label>
-            <div v-if="!form.channel_id" class="ve-collections-empty">请先选择频道</div>
-            <div v-else-if="collections.length === 0" class="ve-collections-empty">当前频道暂无合集</div>
+            <div v-if="collections.length === 0" class="ve-collections-empty">当前频道暂无合集</div>
             <div v-else class="ve-collections-list">
               <label v-for="collection in collections" :key="collection.id" class="ve-collection-item">
                 <input

@@ -79,10 +79,13 @@ describe('musicLyricsDraft', () => {
     expect(rows).toEqual(snapshot)
   })
 
-  it('parses two- and three-decimal timestamps', () => {
+  it('parses trimmed timestamps with one to three minute digits and optional fractions', () => {
     expect(parseMusicLyricTime('01:02.34')).toBe(62_340)
     expect(parseMusicLyricTime('01:02.345')).toBe(62_345)
-    expect(parseMusicLyricTime('1:02.34')).toBeNull()
+    expect(parseMusicLyricTime('1:02.34')).toBe(62_340)
+    expect(parseMusicLyricTime('  1:02  ')).toBe(62_000)
+    expect(parseMusicLyricTime('123:02')).toBe(7_382_000)
+    expect(parseMusicLyricTime('1234:02')).toBeNull()
   })
 
   it('formats timestamps with rounded centiseconds', () => {
@@ -93,27 +96,28 @@ describe('musicLyricsDraft', () => {
 
   it('expands multiple timestamps on one LRC line in tag order', () => {
     const result = parseBilingualLrcDraft(
-      '[00:01.20][00:03.456]Echo\n[ar:Artist]\n\n[00:05.00]End',
+      '[1:02][00:03.456]Echo\n[ar:Artist]\n\n[00:05.00]End',
       '',
     )
 
     expect(result.issues).toEqual([])
     expect(result.rows.map(({ timeMs, original }) => ({ timeMs, original }))).toEqual([
-      { timeMs: 1200, original: 'Echo' },
+      { timeMs: 62_000, original: 'Echo' },
       { timeMs: 3456, original: 'Echo' },
       { timeMs: 5000, original: 'End' },
     ])
   })
 
-  it('pairs repeated translation timestamps by occurrence order', () => {
+  it('pairs repeated translation timestamps by occurrence across expanded original tags', () => {
     const result = parseBilingualLrcDraft(
-      '[00:01.00]First\n[00:01.00]Second',
+      '[00:01.00][00:02.00]First\n[00:01.00]Second',
       '[00:01.00]甲\n[00:01.00]乙',
     )
 
     expect(result.issues).toEqual([])
     expect(result.rows.map(({ original, translation }) => ({ original, translation }))).toEqual([
       { original: 'First', translation: '甲' },
+      { original: 'First', translation: '' },
       { original: 'Second', translation: '乙' },
     ])
   })
@@ -150,10 +154,10 @@ describe('musicLyricsDraft', () => {
 
     expect(validateMusicLyricDraft(rows, 'lrc')).toEqual(expect.arrayContaining([
       expect.objectContaining({ severity: 'error', code: 'empty_original', rowIndex: 0 }),
-      expect.objectContaining({ severity: 'error', code: 'missing_lrc_time', rowIndex: 0 }),
+      expect.objectContaining({ severity: 'error', code: 'missing_time', rowIndex: 0 }),
     ]))
     expect(validateMusicLyricDraft(rows, 'plain')).not.toContainEqual(
-      expect.objectContaining({ code: 'missing_lrc_time' }),
+      expect.objectContaining({ code: 'missing_time' }),
     )
   })
 
@@ -168,10 +172,22 @@ describe('musicLyricsDraft', () => {
 
     expect(issues).toContainEqual(expect.objectContaining({
       severity: 'error',
-      code: 'descending_lrc_time',
+      code: 'descending_time',
       rowIndex: 1,
     }))
-    expect(issues.filter((issue) => issue.code === 'duplicate_lrc_time')).toHaveLength(1)
+    expect(issues.filter((issue) => issue.code === 'duplicate_time')).toHaveLength(1)
+  })
+
+  it('does not validate any time rules for plain rows', () => {
+    const rows = [
+      createMusicLyricDraftRow({ timeMs: null, original: 'Untimed' }),
+      createMusicLyricDraftRow({ timeMs: 2000, original: 'Later' }),
+      createMusicLyricDraftRow({ timeMs: 1000, original: 'Earlier' }),
+      createMusicLyricDraftRow({ timeMs: 1000, original: 'Duplicate' }),
+    ]
+
+    const timeIssueCodes = new Set(['missing_time', 'descending_time', 'duplicate_time'])
+    expect(validateMusicLyricDraft(rows, 'plain').filter((issue) => timeIssueCodes.has(issue.code))).toEqual([])
   })
 
   it('sorts by time stably with null last without mutating input', () => {
@@ -208,6 +224,17 @@ describe('musicLyricsDraft', () => {
     expect(serializeMusicLyricDraft(rows, 'lrc')).toEqual({
       content: '[00:01.23]Alpha\n[00:02.50]Beta',
       translation: '[00:01.23]甲',
+    })
+  })
+
+  it('serializes null times with a zero timestamp fallback', () => {
+    const rows = [
+      createMusicLyricDraftRow({ timeMs: null, original: 'Untimed', translation: '未计时' }),
+    ]
+
+    expect(serializeBilingualLrcDraft(rows)).toEqual({
+      content: '[00:00.00]Untimed',
+      translation: '[00:00.00]未计时',
     })
   })
 

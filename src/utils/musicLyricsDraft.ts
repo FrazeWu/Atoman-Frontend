@@ -117,32 +117,29 @@ export function parseBilingualLrcDraft(
 export function serializeBilingualLrcDraft(
   rows: readonly MusicLyricDraftRow[],
 ): MusicLyricDraftSerialized {
-  const timedRows = rows.filter(
-    (row): row is MusicLyricDraftRow & { timeMs: number } => row.timeMs !== null,
-  )
-
   return {
-    content: timedRows
-      .map((row) => `[${formatMusicLyricTime(row.timeMs)}]${row.original}`)
+    content: rows
+      .map((row) => `[${formatMusicLyricTime(row.timeMs ?? 0)}]${row.original}`)
       .join('\n'),
-    translation: timedRows
+    translation: rows
       .filter((row) => row.translation !== '')
-      .map((row) => `[${formatMusicLyricTime(row.timeMs)}]${row.translation}`)
+      .map((row) => `[${formatMusicLyricTime(row.timeMs ?? 0)}]${row.translation}`)
       .join('\n'),
   }
 }
 
 export function parseMusicLyricTime(value: string): number | null {
-  const match = /^(\d{2,}):(\d{2})\.(\d{2,3})$/.exec(value)
+  const match = /^(\d{1,3}):(\d{2})(?:\.(\d{2,3}))?$/.exec(value.trim())
   if (!match) return null
 
   const minutes = Number(match[1])
   const seconds = Number(match[2])
   if (seconds >= 60) return null
 
-  const milliseconds = match[3].length === 2
-    ? Number(match[3]) * 10
-    : Number(match[3])
+  const fraction = match[3]
+  const milliseconds = fraction === undefined
+    ? 0
+    : fraction.length === 2 ? Number(fraction) * 10 : Number(fraction)
 
   return (minutes * 60 + seconds) * 1000 + milliseconds
 }
@@ -175,7 +172,7 @@ export function validateMusicLyricDraft(
     if (format === 'lrc' && row.timeMs === null) {
       issues.push({
         severity: 'error',
-        code: 'missing_lrc_time',
+        code: 'missing_time',
         message: 'LRC 歌词需要时间',
         rowIndex,
       })
@@ -190,7 +187,7 @@ export function validateMusicLyricDraft(
     if (previousTime !== null && currentTime !== null && currentTime < previousTime) {
       issues.push({
         severity: 'error',
-        code: 'descending_lrc_time',
+        code: 'descending_time',
         message: '时间不能早于上一行',
         rowIndex,
       })
@@ -209,7 +206,7 @@ export function validateMusicLyricDraft(
       warnedTimes.add(row.timeMs)
       issues.push({
         severity: 'warning',
-        code: 'duplicate_lrc_time',
+        code: 'duplicate_time',
         message: '存在重复时间',
         rowIndex: firstIndex,
       })
@@ -239,7 +236,7 @@ type ParsedLrcLine = {
 }
 
 const metadataPattern = /^\[(?:ar|al|ti|by|re|ve):.*\]$/i
-const timestampPattern = /\[(\d{2,}:\d{2}\.\d{2,3})\]/g
+const timestampPattern = /\[(\d{1,3}:\d{2}(?:\.\d{2,3})?)\]/g
 
 function parseLrcDraftLines(value: string): {
   lines: ParsedLrcLine[]
@@ -252,7 +249,7 @@ function parseLrcDraftLines(value: string): {
     const sourceLine = index + 1
     if (line.trim() === '' || metadataPattern.test(line.trim())) return
 
-    const tagPrefix = /^((?:\[\d{2,}:\d{2}\.\d{2,3}\])+)(.*)$/.exec(line)
+    const tagPrefix = /^((?:\[\d{1,3}:\d{2}(?:\.\d{2,3})?\])+)(.*)$/.exec(line)
     if (!tagPrefix) {
       issues.push({
         severity: 'error',

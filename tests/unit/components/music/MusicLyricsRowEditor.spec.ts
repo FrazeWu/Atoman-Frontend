@@ -32,6 +32,13 @@ function lastRows(wrapper: ReturnType<typeof mountEditor>): MusicLyricDraftRow[]
   return events!.at(-1)![0]
 }
 
+function cssRule(selector: string, source = componentSource): string {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`).exec(source)
+  expect(match, `缺少 CSS 规则：${selector}`).toBeTruthy()
+  return match![1].replace(/\s+/g, ' ').trim()
+}
+
 describe('MusicLyricsRowEditor', () => {
   it('编辑原文和翻译时发射新数组且不修改 props', async () => {
     const inputRows = rows.map((row) => ({ ...row }))
@@ -52,12 +59,28 @@ describe('MusicLyricsRowEditor', () => {
     expect(translationUpdate[0].translation).toBe('Updated translation')
   })
 
-  it('plain 隐藏时间，lrc 显示格式化时间并解析输入', async () => {
+  it('plain 隐藏时间列，lrc 渲染时间列并切换网格模式', async () => {
     const wrapper = mountEditor({ format: 'plain' })
+    const editor = wrapper.get('[data-testid="lyric-editor-grid"]')
+    const firstRow = wrapper.get('[data-testid="lyric-row-first"]')
+
+    expect(editor.classes()).not.toContain('is-lrc')
+    expect(firstRow.classes()).not.toContain('is-lrc')
+    expect(wrapper.get('.lyric-grid-header').findAll('span').map((item) => item.text()))
+      .toEqual(['序号', '原文', '翻译', '操作'])
     expect(wrapper.find('[data-testid="lyric-time-first"]').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('时间')
 
     await wrapper.setProps({ format: 'lrc' })
+
+    expect(editor.classes()).toContain('is-lrc')
+    expect(firstRow.classes()).toContain('is-lrc')
+    expect(wrapper.get('.lyric-grid-header').findAll('span').map((item) => item.text()))
+      .toEqual(['序号', '时间', '原文', '翻译', '操作'])
+    expect(wrapper.findAll('[data-testid^="lyric-time-"]')).toHaveLength(rows.length)
+  })
+
+  it('lrc 显示格式化时间并解析输入', async () => {
+    const wrapper = mountEditor({ format: 'lrc' })
     const timeInput = wrapper.get('[data-testid="lyric-time-first"]')
     expect((timeInput.element as HTMLInputElement).value).toBe('00:01.00')
 
@@ -118,6 +141,29 @@ describe('MusicLyricsRowEditor', () => {
     expect(rows).toHaveLength(3)
   })
 
+  it('三类操作按钮具备图标、可访问名称和正确边界状态', () => {
+    const wrapper = mountEditor()
+    const contracts = [
+      { action: 'move-up', title: '上移', icon: 'lucide-arrow-up' },
+      { action: 'move-down', title: '下移', icon: 'lucide-arrow-down' },
+      { action: 'delete', title: '删除', icon: 'lucide-trash-2' },
+    ]
+
+    rows.forEach((row, index) => {
+      for (const contract of contracts) {
+        const button = wrapper.get(`[data-testid="lyric-${contract.action}-${row.id}"]`)
+        expect(button.attributes('title')).toBe(contract.title)
+        expect(button.attributes('aria-label')).toBe(`${contract.title}第 ${index + 1} 行`)
+        expect(button.get('svg').classes()).toContain(contract.icon)
+
+        const isBoundary = (contract.action === 'move-up' && index === 0)
+          || (contract.action === 'move-down' && index === rows.length - 1)
+        if (isBoundary) expect(button.attributes()).toHaveProperty('disabled')
+        else expect(button.attributes()).not.toHaveProperty('disabled')
+      }
+    })
+  })
+
   it('disabled 时禁用全部输入和操作按钮', () => {
     const wrapper = mountEditor({ format: 'lrc', disabled: true })
 
@@ -142,18 +188,33 @@ describe('MusicLyricsRowEditor', () => {
     expect(wrapper.text()).not.toContain('不属于任何行')
   })
 
-  it('使用稳定桌面网格和 767px 以下纵向布局', () => {
-    const wrapper = mountEditor({ format: 'lrc' })
+  it('锁定桌面网格、44px 操作按钮和移动端防溢出 CSS', () => {
+    const mobileMedia = /@media\s*\(max-width:\s*767px\)\s*\{/.exec(componentSource)
+    expect(mobileMedia).toBeTruthy()
+    const desktopCss = componentSource.slice(0, mobileMedia!.index)
+    const mobileCss = componentSource.slice(mobileMedia!.index)
 
-    expect(wrapper.get('[data-testid="lyric-editor-grid"]').classes()).toContain('is-lrc')
-    expect(wrapper.get('[data-testid="lyric-row-first"]').classes()).toContain('lyric-row')
-    expect(wrapper.get('[data-testid="lyric-move-up-first"]').attributes('title')).toBe('上移')
-    expect(wrapper.get('[data-testid="lyric-move-up-first"]').attributes('aria-label')).toBe('上移第 1 行')
-    expect(wrapper.get('[data-testid="lyric-delete-first"] svg').exists()).toBe(true)
+    expect(cssRule('.lyric-grid-line', desktopCss)).toContain(
+      'grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 8.75rem;',
+    )
+    expect(cssRule('.lyric-grid-line.is-lrc', desktopCss)).toContain(
+      'grid-template-columns: 3rem 8rem minmax(0, 1fr) minmax(0, 1fr) 8.75rem;',
+    )
 
-    expect(componentSource).toMatch(/grid-template-columns/)
-    expect(componentSource).toMatch(/@media\s*\(max-width:\s*767px\)/)
-    expect(componentSource).toMatch(/overflow-x:\s*hidden/)
-    expect(componentSource).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+    expect(cssRule('.lyric-action', desktopCss)).toMatch(/width:\s*44px;/)
+    expect(cssRule('.lyric-action', desktopCss)).toMatch(/height:\s*44px;/)
+    expect(cssRule('.lyric-actions', desktopCss)).toContain('grid-template-columns: repeat(3, 44px);')
+
+    expect(cssRule('.lyric-grid-line,\n  .lyric-grid-line.is-lrc', mobileCss)).toContain(
+      'grid-template-columns: minmax(0, 1fr);',
+    )
+
+    expect(cssRule('.lyric-editor', desktopCss)).toMatch(/width:\s*100%;/)
+    expect(cssRule('.lyric-editor', desktopCss)).toMatch(/min-width:\s*0;/)
+    expect(cssRule('.lyric-editor', desktopCss)).toMatch(/overflow-x:\s*hidden;/)
+    expect(cssRule('.lyric-field', desktopCss)).toMatch(/min-width:\s*0;/)
+    expect(cssRule('.lyric-input', desktopCss)).toMatch(/width:\s*100%;/)
+    expect(cssRule('.lyric-input', desktopCss)).toMatch(/min-width:\s*0;/)
+    expect(cssRule('.lyric-input', desktopCss)).toMatch(/box-sizing:\s*border-box;/)
   })
 })

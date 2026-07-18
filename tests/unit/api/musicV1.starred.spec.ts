@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   listAlbumBookmarks,
   listArtistBookmarks,
+  listPlaylistBookmarks,
   listMusicPlaylists,
+  createPlaylistBookmark,
+  deletePlaylistBookmark,
   createMusicPlaylist,
   deleteMusicPlaylist,
   getMusicPlaylist,
@@ -52,6 +55,8 @@ describe('music v1 starred and playlist adapters', () => {
     expect(musicV1Endpoints.artistBookmarks()).toBe('/api/v1/music/bookmarks/artists')
     expect(musicV1Endpoints.albumBookmarks()).toBe('/api/v1/music/bookmarks/albums')
     expect(musicV1Endpoints.songBookmarks()).toBe('/api/v1/music/bookmarks/songs')
+		expect(musicV1Endpoints.playlistBookmarks()).toBe('/api/v1/music/bookmarks/playlists')
+		expect(musicV1Endpoints.playlistBookmark('playlist-1')).toBe('/api/v1/music/bookmarks/playlists/playlist-1')
     expect(musicV1Endpoints.playlists()).toBe('/api/v1/music/playlists')
     expect(musicV1Endpoints.playlistSongs('playlist-1')).toBe('/api/v1/music/playlists/playlist-1/songs')
     expect(musicV1Endpoints.artistMerge('artist-target')).toBe('/api/v1/music/artists/artist-target/merge')
@@ -86,10 +91,11 @@ describe('music v1 starred and playlist adapters', () => {
       throw new Error(`unexpected fetch: ${url}`)
     }))
 
-    const [artistBookmarks, albumBookmarks, songBookmarks, playlists, starred] = await Promise.all([
+    const [artistBookmarks, albumBookmarks, songBookmarks, playlistBookmarks, playlists, starred] = await Promise.all([
       listArtistBookmarks(),
       listAlbumBookmarks(),
       listSongBookmarks(),
+      listPlaylistBookmarks(),
       listMusicPlaylists(),
       listMusicStarred(),
     ])
@@ -97,9 +103,38 @@ describe('music v1 starred and playlist adapters', () => {
     expect(artistBookmarks.data).toHaveLength(1)
     expect(albumBookmarks.data).toHaveLength(1)
     expect(songBookmarks.data).toHaveLength(1)
+		expect(playlistBookmarks.data[0]?.playlist?.name).toBe('夜航歌单')
     expect(playlists.data).toHaveLength(1)
     expect(starred.map((item) => item.kind)).toEqual(['artist', 'album', 'song', 'playlist'])
   })
+
+	it('creates and deletes playlist bookmarks through the playlist bookmark endpoint', async () => {
+		vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			if (String(input) !== '/api/v1/music/bookmarks/playlists' && String(input) !== '/api/v1/music/bookmarks/playlists/playlist-1') {
+				throw new Error(`unexpected fetch: ${String(input)}`)
+			}
+			if (init?.method === 'POST') {
+				return new Response(JSON.stringify({ data: { id: 'bookmark-1', playlist_id: 'playlist-1', created_at: '2026-07-01T00:00:00Z' } }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+			}
+			return new Response(JSON.stringify({ data: { deleted: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+		}))
+
+		await createPlaylistBookmark('playlist-1')
+		await deletePlaylistBookmark('playlist-1')
+
+		expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/music/bookmarks/playlists', {
+			method: 'POST',
+			credentials: 'include',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({ playlist_id: 'playlist-1' }),
+		})
+		expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/music/bookmarks/playlists/playlist-1', {
+			method: 'DELETE',
+			credentials: 'include',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: undefined,
+		})
+	})
 
   it('creates playlists through the music namespace', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(

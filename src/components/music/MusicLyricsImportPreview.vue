@@ -100,14 +100,36 @@ const cannotConfirm = computed(() => (
 </template>
 
 <style scoped>
+:deep(.p-modal) {
+  max-height: calc(100dvh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:deep(.p-modal-body) {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:deep(.p-modal-header),
+:deep(.p-modal-footer) {
+  flex: 0 0 auto;
+}
+
 .lyrics-import-preview {
-  display: grid;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 12px;
   min-width: 0;
 }
 
 .file-summary {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
@@ -142,7 +164,9 @@ const cannotConfirm = computed(() => (
 
 .issue-list {
   display: grid;
+  flex: 0 1 auto;
   gap: 4px;
+  min-height: 0;
   max-height: 112px;
   margin: 0;
   padding: 0;
@@ -167,8 +191,9 @@ const cannotConfirm = computed(() => (
 }
 
 .preview-table-wrap {
+  flex: 1 1 180px;
+  min-height: 0;
   min-width: 0;
-  max-height: min(48vh, 440px);
   overflow: auto;
   border: 1px solid var(--a-color-border);
   border-radius: 6px;

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
 import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
@@ -10,6 +12,10 @@ const rows: MusicLyricDraftRow[] = [
 ]
 
 const mounted: VueWrapper[] = []
+const componentSource = readFileSync(
+  resolve(process.cwd(), 'src/components/music/MusicLyricsImportPreview.vue'),
+  'utf8',
+)
 
 function mountPreview(options: {
   rows?: MusicLyricDraftRow[]
@@ -115,5 +121,13 @@ describe('MusicLyricsImportPreview.vue', () => {
     expect(modal.props('abovePlayer')).toBe(true)
     expect(document.body.querySelector('.p-modal-lg')).not.toBeNull()
     expect(document.body.querySelector('.p-modal-backdrop--above-player')).not.toBeNull()
+  })
+
+  it('keeps actions reachable in short viewports and scrolls preview content', () => {
+    expect(componentSource).toMatch(/:deep\(\.p-modal\)\s*\{[^}]*max-height: calc\(100dvh - 2rem\);[^}]*display: flex;[^}]*flex-direction: column;[^}]*overflow: hidden;/s)
+    expect(componentSource).toMatch(/:deep\(\.p-modal-body\)\s*\{[^}]*display: flex;[^}]*min-height: 0;[^}]*overflow: hidden;/s)
+    expect(componentSource).toMatch(/:deep\(\.p-modal-header\),\s*:deep\(\.p-modal-footer\)\s*\{[^}]*flex: 0 0 auto;/s)
+    expect(componentSource).toMatch(/\.lyrics-import-preview\s*\{[^}]*display: flex;[^}]*min-height: 0;[^}]*flex-direction: column;/s)
+    expect(componentSource).toMatch(/\.preview-table-wrap\s*\{[^}]*flex: 1 1 180px;[^}]*min-height: 0;[^}]*overflow: auto;/s)
   })
 })

@@ -13,6 +13,7 @@ export type MusicLyricDraftIssue = {
   message: string
   rowIndex?: number
   sourceLine?: number
+  source?: 'original' | 'translation'
 }
 
 export type MusicLyricDraftParseResult = {
@@ -79,19 +80,24 @@ export function parseBilingualLrcDraft(
   content = '',
   translation = '',
 ): MusicLyricDraftParseResult {
-  const original = parseLrcDraftLines(content)
-  const translated = parseLrcDraftLines(translation)
-  const translationQueues = new Map<number, ParsedLrcLine[]>()
+  const original = parseLrcDraftLines(content, 'original')
+  const translated = parseLrcDraftLines(translation, 'translation')
+  const translationOccurrences = new Map<number, number>()
+  const translationByOccurrence = new Map<string, ParsedLrcLine>()
 
   for (const line of translated.lines) {
-    const queue = translationQueues.get(line.timeMs) ?? []
-    queue.push(line)
-    translationQueues.set(line.timeMs, queue)
+    const occurrence = translationOccurrences.get(line.timeMs) ?? 0
+    translationOccurrences.set(line.timeMs, occurrence + 1)
+    translationByOccurrence.set(`${line.timeMs}:${occurrence}`, line)
   }
 
+  const originalOccurrences = new Map<number, number>()
   const rows = original.lines.map((line) => {
-    const matchingTranslations = translationQueues.get(line.timeMs)
-    const matched = matchingTranslations?.shift()
+    const occurrence = originalOccurrences.get(line.timeMs) ?? 0
+    originalOccurrences.set(line.timeMs, occurrence + 1)
+    const occurrenceKey = `${line.timeMs}:${occurrence}`
+    const matched = translationByOccurrence.get(occurrenceKey)
+    translationByOccurrence.delete(occurrenceKey)
 
     return createMusicLyricDraftRow({
       timeMs: line.timeMs,
@@ -99,18 +105,21 @@ export function parseBilingualLrcDraft(
       translation: matched?.text ?? '',
     })
   })
-  const unmatchedTranslationIssues = [...translationQueues.values()]
-    .flat()
-    .map((line): MusicLyricDraftIssue => ({
+  const unmatchedTranslationIssues = new Map<string, MusicLyricDraftIssue>()
+  for (const line of translationByOccurrence.values()) {
+    const issue: MusicLyricDraftIssue = {
       severity: 'error',
       code: 'unmatched_translation_time',
       message: '翻译时间无法与原文匹配',
       sourceLine: line.sourceLine,
-    }))
+      source: 'translation',
+    }
+    unmatchedTranslationIssues.set(`translation:${line.sourceLine}:${issue.code}`, issue)
+  }
 
   return {
     rows,
-    issues: [...original.issues, ...translated.issues, ...unmatchedTranslationIssues],
+    issues: [...original.issues, ...translated.issues, ...unmatchedTranslationIssues.values()],
   }
 }
 
@@ -145,7 +154,10 @@ export function parseMusicLyricTime(value: string): number | null {
 }
 
 export function formatMusicLyricTime(timeMs: number): string {
-  const roundedCentiseconds = Math.round(timeMs / 10)
+  const maxCentiseconds = 999 * 60 * 100 + 59 * 100 + 99
+  const roundedCentiseconds = Number.isFinite(timeMs)
+    ? Math.min(maxCentiseconds, Math.max(0, Math.round(timeMs / 10)))
+    : 0
   const minutes = Math.floor(roundedCentiseconds / 6000)
   const seconds = Math.floor((roundedCentiseconds % 6000) / 100)
   const centiseconds = roundedCentiseconds % 100
@@ -238,7 +250,10 @@ type ParsedLrcLine = {
 const metadataPattern = /^\[(?:ar|al|ti|by|re|ve):.*\]$/i
 const timestampPattern = /\[(\d{1,3}:\d{2}(?:\.\d{2,3})?)\]/g
 
-function parseLrcDraftLines(value: string): {
+function parseLrcDraftLines(
+  value: string,
+  source: 'original' | 'translation',
+): {
   lines: ParsedLrcLine[]
   issues: MusicLyricDraftIssue[]
 } {
@@ -256,6 +271,7 @@ function parseLrcDraftLines(value: string): {
         code: 'invalid_lrc_line',
         message: '无法识别 LRC 行',
         sourceLine,
+        source,
       })
       return
     }
@@ -269,6 +285,7 @@ function parseLrcDraftLines(value: string): {
           code: 'invalid_lrc_line',
           message: '无法识别 LRC 行',
           sourceLine,
+          source,
         })
         return
       }

@@ -94,6 +94,15 @@ describe('musicLyricsDraft', () => {
     expect(formatMusicLyricTime(59_999)).toBe('01:00.00')
   })
 
+  it('keeps formatted timestamps parseable at numeric boundaries', () => {
+    expect(formatMusicLyricTime(parseMusicLyricTime('999:59.999')!)).toBe('999:59.99')
+    expect(parseMusicLyricTime(formatMusicLyricTime(parseMusicLyricTime('999:59.999')!))).toBe(59_999_990)
+    expect(formatMusicLyricTime(-1000)).toBe('00:00.00')
+    expect(formatMusicLyricTime(Number.NaN)).toBe('00:00.00')
+    expect(formatMusicLyricTime(Number.POSITIVE_INFINITY)).toBe('00:00.00')
+    expect(parseMusicLyricTime('-1:00')).toBeNull()
+  })
+
   it('expands multiple timestamps on one LRC line in tag order', () => {
     const result = parseBilingualLrcDraft(
       '[1:02][00:03.456]Echo\n[ar:Artist]\n\n[00:05.00]End',
@@ -122,6 +131,20 @@ describe('musicLyricsDraft', () => {
     ])
   })
 
+  it('pairs many repeated timestamps in the original occurrence order', () => {
+    const lineCount = 2000
+    const content = Array.from({ length: lineCount }, (_, index) => `[00:01.00]Original ${index}`).join('\n')
+    const translation = Array.from({ length: lineCount }, (_, index) => `[00:01.00]Translation ${index}`).join('\n')
+
+    const result = parseBilingualLrcDraft(content, translation)
+
+    expect(result.issues).toEqual([])
+    expect(result.rows).toHaveLength(lineCount)
+    expect(result.rows.map((row) => row.translation)).toEqual(
+      Array.from({ length: lineCount }, (_, index) => `Translation ${index}`),
+    )
+  })
+
   it('reports invalid LRC lines with their physical source line', () => {
     const result = parseBilingualLrcDraft('[00:01.00]Valid\nnot timed', '')
 
@@ -129,7 +152,17 @@ describe('musicLyricsDraft', () => {
       severity: 'error',
       code: 'invalid_lrc_line',
       sourceLine: 2,
+      source: 'original',
     }))
+  })
+
+  it('distinguishes original and translation parse issues on the same source line', () => {
+    const result = parseBilingualLrcDraft('invalid original', 'invalid translation')
+
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'invalid_lrc_line', sourceLine: 1, source: 'original' }),
+      expect.objectContaining({ code: 'invalid_lrc_line', sourceLine: 1, source: 'translation' }),
+    ]))
   })
 
   it('reports unmatched translation timestamps with their source line', () => {
@@ -143,7 +176,21 @@ describe('musicLyricsDraft', () => {
       severity: 'error',
       code: 'unmatched_translation_time',
       sourceLine: 2,
+      source: 'translation',
     }))
+  })
+
+  it('reports one unmatched issue for multiple translation tags on one physical line', () => {
+    const result = parseBilingualLrcDraft('', '[00:01.00][00:02.00]多余')
+
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        code: 'unmatched_translation_time',
+        sourceLine: 1,
+        source: 'translation',
+      }),
+    ])
   })
 
   it('validates empty originals and missing LRC times', () => {

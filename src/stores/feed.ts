@@ -110,9 +110,7 @@ export interface FeedAutomationRules {
 
 const FEED_FILTER_RULES_STORAGE_KEY = 'atoman.feed.filter-rules'
 const FEED_AUTOMATION_RULES_STORAGE_KEY = 'atoman.feed.automation-rules'
-// The backend has no registered subscription-rules routes yet. Keep these actions
-// local no-ops until a real API is available instead of issuing guaranteed 404s.
-const SUBSCRIPTION_RULES_AVAILABLE = false
+const SUBSCRIPTION_RULES_AVAILABLE = true
 
 const normalizeRuleList = (value: unknown) => {
   if (!Array.isArray(value)) return []
@@ -217,6 +215,26 @@ export const useFeedStore = defineStore('feed', () => {
     }
     filterRules.value = nextRules
     writeFilterRules(nextRules)
+    const authStore = useAuthStore()
+    if (authStore.isAuthenticated) {
+      void fetch(`${api.url}/feed/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify({ hidden_keywords: nextRules.hiddenKeywords }),
+      })
+    }
+  }
+
+  const fetchFilterPreferences = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return false
+    try {
+      const res = await fetch(`${api.url}/feed/preferences`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+      if (!res.ok) return false
+      const data = await res.json()
+      setFilterRules({ hiddenKeywords: normalizeRuleList(data.data?.hidden_keywords), mutedSourceIds: [] })
+      return true
+    } catch { return false }
   }
 
   const setAutomationRules = (rules: Partial<FeedAutomationRules>) => {
@@ -301,8 +319,24 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   const fetchSubscriptionRules = async () => {
-    subscriptionRules.value = []
-    ruleApplySummary.value = null
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      subscriptionRules.value = []
+      ruleApplySummary.value = null
+      return false
+    }
+    try {
+      const res = await fetch(`${api.url}/feed/subscription-rules`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!res.ok) return false
+      const data = await res.json()
+      subscriptionRules.value = data.data || []
+      return true
+    } catch (e) {
+      console.error('Failed to fetch subscription rules', e)
+      return false
+    }
   }
 
   const createSubscriptionRule = async (payload: SubscriptionRulePayload): Promise<boolean> => {
@@ -1534,6 +1568,7 @@ export const useFeedStore = defineStore('feed', () => {
     setFilterRules,
     setAutomationRules,
     fetchSubscriptions,
+    fetchFilterPreferences,
     fetchSubscriptionRules,
     fetchGroups,
     createSubscriptionRule,

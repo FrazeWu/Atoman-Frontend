@@ -442,7 +442,7 @@ const visibleTimeline = computed(() => {
     if (!matchesSourceTypeFilter(item, sourceTypeFilter.value)) return false
     if (!matchesThemeFilter(item, activeTheme.value)) return false
 
-    if (findSubscriptionByTimelineItem(item)?.is_muted) return false
+    if (!querySourceId.value && findSubscriptionByTimelineItem(item)?.is_muted) return false
 
     if (!hiddenKeywords.length) return true
 

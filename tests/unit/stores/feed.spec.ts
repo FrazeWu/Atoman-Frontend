@@ -566,16 +566,19 @@ describe('feed store', () => {
     })])
   })
 
-  it('does not request unavailable subscription rules', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
+  it('loads subscription rules from the server', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: 'rule-1', name: '播客整理' }],
+    }), { status: 200 }))
     const feed = useFeedStore()
     feed.subscriptionRules = [{ id: 'stale-rule' } as never]
     feed.ruleApplySummary = { updated_count: 1 } as never
     await feed.fetchSubscriptionRules()
 
-    expect(feed.subscriptionRules).toEqual([])
-    expect(feed.ruleApplySummary).toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(feed.subscriptionRules).toEqual([{ id: 'rule-1', name: '播客整理' }])
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/subscription-rules', expect.objectContaining({
+      headers: { Authorization: 'Bearer token' },
+    }))
   })
 
   it('does not send a subscription rule without any action', async () => {
@@ -609,8 +612,10 @@ describe('feed store', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('does not create a subscription rule without a registered backend API', async () => {
+  it('creates a subscription rule and refreshes the rule list', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { id: 'rule-1' } }), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'rule-1' }] }), { status: 200 }))
     const feed = useFeedStore()
     const result = await feed.createSubscriptionRule({
       name: '播客整理',
@@ -620,12 +625,20 @@ describe('feed store', () => {
       action_auto_mark_read: true,
     })
 
-    expect(result).toBe(false)
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscription-rules', expect.objectContaining({ method: 'POST' }))
   })
 
-  it('does not update, reorder, delete, or apply subscription rules', async () => {
+  it('updates, reorders, deletes, and applies subscription rules', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { updated_count: 1 } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
     const feed = useFeedStore()
 
     expect(await feed.updateSubscriptionRule('rule-1', {
@@ -635,10 +648,10 @@ describe('feed store', () => {
       match_type: 'keywords',
       conditions_json: { keywords: ['go'] },
       action_muted: true,
-    })).toBe(false)
-    expect(await feed.reorderSubscriptionRules(['rule-2', 'rule-1'])).toBe(false)
-    expect(await feed.deleteSubscriptionRule('rule-1')).toBe(false)
-    expect(await feed.applySubscriptionRules({ all: true })).toBe(false)
-    expect(fetchMock).not.toHaveBeenCalled()
+    })).toBe(true)
+    expect(await feed.reorderSubscriptionRules(['rule-2', 'rule-1'])).toBe(true)
+    expect(await feed.deleteSubscriptionRule('rule-1')).toBe(true)
+    expect(await feed.applySubscriptionRules({ all: true })).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/subscription-rules/apply', expect.objectContaining({ method: 'POST' }))
   })
 })

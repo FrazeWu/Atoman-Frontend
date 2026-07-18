@@ -573,9 +573,9 @@ onMounted(() => {
 
 .setting-feed-panel__filter-frame {
   max-width: 100%;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.4rem 0.5rem;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
 }
 
 .setting-feed-panel__filters {
@@ -586,12 +586,12 @@ onMounted(() => {
 
 .setting-feed-panel__filter {
   flex: 0 0 auto;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.34rem 0.6rem;
-  background: var(--a-color-paper);
-  color: var(--a-color-ink-muted);
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
@@ -599,9 +599,9 @@ onMounted(() => {
 }
 
 .setting-feed-panel__filter.is-active {
-  border-color: var(--a-color-ink);
-  color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
+  border-color: var(--a-color-text);
+  color: var(--a-color-text);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .setting-feed-panel__header h3,
@@ -620,7 +620,7 @@ onMounted(() => {
 
 .setting-feed-panel__recommendations {
   padding-top: 1rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .setting-feed-panel__recommendations-header,
@@ -640,14 +640,14 @@ onMounted(() => {
 .setting-feed-panel__recommendations-add select {
   min-width: 220px;
   padding: 0.55rem 0.65rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
 }
 
 .setting-feed-panel__recommendation-row {
   padding: 0.8rem 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .setting-feed-panel__editor-grid {
@@ -675,7 +675,7 @@ onMounted(() => {
 
 .setting-feed-panel__row {
   padding: 0.9rem 0;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .setting-feed-panel__meta {
@@ -685,7 +685,7 @@ onMounted(() => {
 .setting-feed-panel__meta small,
 .setting-feed-panel__empty,
 .setting-feed-panel__message {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .setting-feed-panel__row-actions {
@@ -703,7 +703,7 @@ onMounted(() => {
 .setting-feed-panel__toggle input {
   width: 18px;
   height: 18px;
-  accent-color: var(--a-color-ink);
+  accent-color: var(--a-color-text);
 }
 
 .setting-feed-panel__message {
@@ -711,7 +711,7 @@ onMounted(() => {
 }
 
 .setting-feed-panel__message--error {
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 720px) {

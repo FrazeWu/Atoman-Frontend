@@ -717,7 +717,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -839,7 +839,7 @@ onUnmounted(() => {
 
 .popup-content {
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
   padding: 0.75rem 1rem;
   min-width: 160px;
@@ -897,7 +897,7 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0;
   background: none;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   padding: 3px 10px;
   transition: background 0.1s, color 0.1s;
@@ -919,7 +919,7 @@ onUnmounted(() => {
 
 .a-modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--a-color-line-soft);
+  padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--a-color-border-soft);
 }
 .a-modal-title { font-size: 1.25rem; font-weight: 500; letter-spacing: 0; }
 .a-modal-close {
@@ -929,7 +929,7 @@ onUnmounted(() => {
 .a-modal-body { padding: 1.5rem; overflow-y: auto; max-height: 65vh; }
 .a-modal-footer {
   display: flex; justify-content: flex-end; gap: 0.75rem;
-  padding: 1rem 1.5rem; border-top: 1px solid var(--a-color-line-soft);
+  padding: 1rem 1.5rem; border-top: 1px solid var(--a-color-border-soft);
 }
 
 /* Mobile: stack layout */

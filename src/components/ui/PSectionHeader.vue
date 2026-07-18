@@ -32,7 +32,7 @@ withDefaults(defineProps<{
 
 .p-section-header__kicker {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-family: inherit;
   font-size: 11px;
   font-weight: 500;
@@ -42,9 +42,9 @@ withDefaults(defineProps<{
 
 .p-section-header__title {
   margin: 0;
-  color: var(--a-color-ink);
-  font-size: 2.75rem;
-  font-weight: 500;
+  color: var(--a-color-text);
+  font-size: 1.5rem;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.1;
 }
@@ -52,13 +52,13 @@ withDefaults(defineProps<{
 .p-section-header__description {
   max-width: 620px;
   margin: 0;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   line-height: 1.7;
 }
 
 @media (max-width: 720px) {
   .p-section-header__title {
-    font-size: 1.75rem;
+    font-size: 1.375rem;
   }
 }
 </style>

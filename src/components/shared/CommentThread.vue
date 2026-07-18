@@ -166,7 +166,7 @@ const CommentNode = defineComponent({
 .comment-thread__input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 0.75rem;
   padding: 0.875rem;
   background: var(--a-color-bg);
@@ -235,7 +235,7 @@ const CommentNode = defineComponent({
   gap: 0.75rem;
   margin-left: 1rem;
   padding-left: 1rem;
-  border-left: 1px solid var(--a-color-line-soft);
+  border-left: 1px solid var(--a-color-border-soft);
 }
 
 .comment-thread__author {

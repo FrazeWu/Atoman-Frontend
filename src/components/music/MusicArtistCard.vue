@@ -150,7 +150,7 @@ const formattedSubscribers = computed(() => {
   background: var(--a-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .music-artist-card:hover .avatar-image {
@@ -173,10 +173,10 @@ const formattedSubscribers = computed(() => {
   justify-content: center;
   font-size: 2.2rem;
   font-weight: 900;
-  color: var(--a-color-ink);
-  background: linear-gradient(135deg, var(--a-color-surface), var(--a-color-line-soft));
+  color: var(--a-color-text);
+  background: linear-gradient(135deg, var(--a-color-surface), var(--a-color-border-soft));
   text-transform: uppercase;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   letter-spacing: 0;
   opacity: 0.85;
 }
@@ -190,8 +190,8 @@ const formattedSubscribers = computed(() => {
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   display: flex;
   align-items: center;
@@ -209,7 +209,7 @@ const formattedSubscribers = computed(() => {
 
 .bookmark-btn:hover {
   background: var(--a-color-surface);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .bookmark-btn.is-bookmarked {
@@ -242,7 +242,7 @@ const formattedSubscribers = computed(() => {
   gap: 6px;
   color: #fff;
   font-size: 0.85rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }

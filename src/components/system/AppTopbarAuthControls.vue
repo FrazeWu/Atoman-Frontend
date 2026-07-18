@@ -365,7 +365,7 @@ const logout = async () => {
 .blog-channel-switcher {
   min-height: 2.75rem;
   padding: 0.35rem 0.65rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   cursor: pointer;
 }
@@ -376,7 +376,7 @@ const logout = async () => {
 }
 
 .blog-channel-switcher:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
 }
 
@@ -386,7 +386,7 @@ const logout = async () => {
 
 .channel-dropdown .dropdown-item.is-active {
   font-weight: 500;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .chevron.is-open {
@@ -457,8 +457,8 @@ const logout = async () => {
 
 .search-pill:hover {
   color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-text);
 }
 
 .search-box {
@@ -467,7 +467,7 @@ const logout = async () => {
   gap: 0;
   margin: 0;
   border: 1px solid var(--a-color-fg);
-  border-bottom: 1px solid var(--a-color-line-soft); /* 输入框下方的横线 */
+  border-bottom: 1px solid var(--a-color-border-soft); /* 输入框下方的横线 */
   background: var(--a-color-bg);
   width: 100%; /* 占满父级 400px */
   height: 36px; /* 固定的 36px 高度 */
@@ -563,7 +563,7 @@ const logout = async () => {
 }
 
 .search-panel__footer {
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   padding: 0.5rem 1rem;
   text-align: center;
 }
@@ -676,19 +676,19 @@ const logout = async () => {
 
 .user-settings-link:hover {
   color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
   text-decoration: none;
 }
 
 .notif-count {
   display: inline-block;
   margin-left: 3px;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   font-size: 0.6rem;
   font-weight: var(--a-font-weight-strong, 700);
   border-radius: 0;
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
   padding: 1px 5px;
   line-height: 1;
   vertical-align: middle;
@@ -714,15 +714,15 @@ const logout = async () => {
 }
 
 .user-btn:hover {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .user-avatar {
   width: 24px;
   height: 24px;
   border-radius: var(--a-radius-none);
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   font-weight: var(--a-font-weight-strong, 700);
   font-size: 0.75rem;
   display: flex;
@@ -766,7 +766,7 @@ const logout = async () => {
   text-decoration: none;
   background: none;
   border: none;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   cursor: pointer;
 }
 
@@ -792,7 +792,7 @@ const logout = async () => {
 
 .dropdown-divider {
   height: 1px;
-  background: var(--a-color-line-soft);
+  background: var(--a-color-border-soft);
   margin: 0.25rem 0;
 }
 

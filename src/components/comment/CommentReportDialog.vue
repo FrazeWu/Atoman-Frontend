@@ -86,9 +86,9 @@ async function submit() {
 
 <style scoped>
 .comment-report { display: grid; gap: 1rem; }
-.comment-report label { display: grid; gap: 0.45rem; color: var(--a-color-ink-soft); font-size: var(--a-text-sm); font-weight: 800; }
-.comment-report select { min-height: 42px; padding: 0 0.65rem; border: 1px solid var(--a-color-line); background: var(--a-color-paper); color: var(--a-color-ink); font: inherit; }
+.comment-report label { display: grid; gap: 0.45rem; color: var(--a-color-muted); font-size: var(--a-text-sm); font-weight: 800; }
+.comment-report select { min-height: 42px; padding: 0 0.65rem; border: 1px solid var(--a-color-border); background: var(--a-color-bg); color: var(--a-color-text); font: inherit; }
 .comment-report__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
-.comment-report__submit { min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-ink); background: var(--a-color-ink); color: var(--a-color-paper); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+.comment-report__submit { min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-text); background: var(--a-color-text); color: var(--a-color-bg); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
 .comment-report__error { margin: 0; color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
 </style>

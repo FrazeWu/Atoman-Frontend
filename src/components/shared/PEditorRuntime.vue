@@ -932,7 +932,7 @@ onBeforeUnmount(() => {
 }
 
 .p-editor:not(.no-border) {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .p-editor-presence {
@@ -940,8 +940,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.4rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
   flex-shrink: 0;
 }
 
@@ -960,7 +960,7 @@ onBeforeUnmount(() => {
   color: #fff;
   font-weight: 500;
   font-size: 0.65rem;
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
   flex-shrink: 0;
 }
 
@@ -978,11 +978,11 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.8rem;
   min-width: 8.5rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   padding: 0.55rem 0.75rem;
   cursor: pointer;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font: inherit;
   font-weight: var(--a-font-weight-strong, 700);
   line-height: 1;
@@ -990,7 +990,7 @@ onBeforeUnmount(() => {
 }
 
 .mode-switch:hover {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .mode-switch-label {
@@ -1001,9 +1001,9 @@ onBeforeUnmount(() => {
 .mode-switch-state {
   min-width: 2.2rem;
   padding: 0.22rem 0.45rem;
-  border: 1px solid var(--a-color-ink);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1025,8 +1025,8 @@ onBeforeUnmount(() => {
 .p-editor-toolbar {
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   flex-shrink: 0;
   position: sticky;
   top: 0;
@@ -1042,7 +1042,7 @@ onBeforeUnmount(() => {
 }
 
 .tb-row + .tb-row {
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .tb-row-label {
@@ -1060,9 +1060,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 0.35rem 0.6rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   font-size: 0.72rem;
   font-weight: var(--a-font-weight-strong, 700);
   font-family: inherit;
@@ -1117,7 +1117,7 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.08);
-  border: 3px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1139,7 +1139,7 @@ onBeforeUnmount(() => {
 }
 
 .sv-source {
-  border-right: 1px solid var(--a-color-line-soft);
+  border-right: 1px solid var(--a-color-border-soft);
   display: flex;
   flex-direction: column;
 }
@@ -1172,8 +1172,8 @@ onBeforeUnmount(() => {
 .p-mention-dropdown {
   position: fixed;
   z-index: 9999;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   min-width: 200px;
   box-shadow: none;
   max-height: 200px;
@@ -1220,7 +1220,7 @@ onBeforeUnmount(() => {
 
   .sv-source {
     border-right: none;
-    border-bottom: 1px solid var(--a-color-line-soft);
+    border-bottom: 1px solid var(--a-color-border-soft);
   }
 
   .cm-container {
@@ -1233,7 +1233,7 @@ onBeforeUnmount(() => {
   padding-top: 2.5rem;
   overflow: hidden;
   background: #1e1e2e;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
   color: #cdd6f4;
 }

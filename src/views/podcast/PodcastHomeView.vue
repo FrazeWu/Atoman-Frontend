@@ -154,7 +154,7 @@ function playEpisode(ep: PodcastEpisode) {
             <img
               v-if="episodeCover(ep)"
               :src="episodeCover(ep)"
-              style="width:5rem;height:5rem;object-fit:cover;border:1px solid var(--a-color-line-soft);filter:grayscale(100%);flex-shrink:0;border-radius:4px;margin-top:0.25rem"
+              style="width:5rem;height:5rem;object-fit:cover;border:1px solid var(--a-color-border-soft);filter:grayscale(100%);flex-shrink:0;border-radius:4px;margin-top:0.25rem"
             />
           </div>
         </template>
@@ -202,11 +202,11 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-play {
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
   border-radius: 6px;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   padding: 0.25rem 0.5rem;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 0.75rem;
   cursor: pointer;
 }

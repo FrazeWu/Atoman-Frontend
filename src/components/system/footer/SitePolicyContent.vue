@@ -120,7 +120,7 @@ const document = computed(() => documents[props.kind])
 .site-policy-intro,
 .site-policy-section p,
 .site-policy-section li {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-md);
   line-height: 1.75;
 }

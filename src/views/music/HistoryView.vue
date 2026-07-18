@@ -166,7 +166,7 @@ onMounted(() => loadPage(1))
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .history-row {
@@ -176,7 +176,7 @@ onMounted(() => loadPage(1))
   align-items: center;
   min-height: 72px;
   padding: 0.65rem 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .history-song {
@@ -202,7 +202,7 @@ onMounted(() => loadPage(1))
   height: 48px;
   flex: 0 0 48px;
   overflow: hidden;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .history-cover img,
@@ -218,8 +218,8 @@ onMounted(() => loadPage(1))
   inset: 0;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--a-color-ink) 56%, transparent);
-  color: var(--a-color-paper);
+  background: color-mix(in srgb, var(--a-color-text) 56%, transparent);
+  color: var(--a-color-bg);
   opacity: 0;
   transition: opacity 0.16s ease;
 }
@@ -283,7 +283,7 @@ onMounted(() => loadPage(1))
   justify-items: center;
   gap: 0.75rem;
   padding: 4rem 1rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
 }
 

@@ -313,7 +313,7 @@ onMounted(async () => {
 .manage-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   margin-bottom: 2rem;
   overflow-x: auto;
 }

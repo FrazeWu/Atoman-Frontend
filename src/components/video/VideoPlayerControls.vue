@@ -244,9 +244,9 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 0.24rem;
   padding: 0.45rem 1rem 0.55rem;
-  color: var(--a-color-paper);
+  color: var(--a-color-bg);
   background: linear-gradient(to top, rgba(0, 0, 0, 0.86), rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0));
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   opacity: 0;
   transform: translateY(0.65rem);
   transition: opacity 160ms ease, transform 160ms ease;
@@ -416,7 +416,7 @@ onUnmounted(() => {
 }
 
 .vpc-progress {
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
 }
 
 .vpc-preview {
@@ -516,7 +516,7 @@ onUnmounted(() => {
 .vpc-volume {
   width: 5.6rem;
   height: 0.18rem;
-  accent-color: var(--a-color-paper);
+  accent-color: var(--a-color-bg);
   writing-mode: vertical-lr;
   direction: rtl;
 }

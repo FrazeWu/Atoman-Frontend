@@ -668,7 +668,7 @@ async function doPublish() {
   justify-content: center;
   gap: 0.35rem;
   padding: 2rem 1rem;
-  border: 2px dashed var(--a-color-border, #e5e7eb);
+  border: 1px solid var(--a-color-border, #e5e7eb);
   border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -804,7 +804,7 @@ async function doPublish() {
   gap: 0.3rem;
   width: 100%;
   aspect-ratio: 16/9;
-  border: 2px dashed var(--a-color-border, #e5e7eb);
+  border: 1px solid var(--a-color-border, #e5e7eb);
   border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;

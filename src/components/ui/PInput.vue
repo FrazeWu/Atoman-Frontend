@@ -1,7 +1,6 @@
 <template>
   <div class="p-field">
     <label v-if="label" class="p-field-label" :for="inputId">
-      <span class="p-field-dot" aria-hidden="true" />
       {{ label }}
     </label>
     <input
@@ -63,37 +62,31 @@ const handleInput = (event: Event) => {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.p-field-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
-  flex-shrink: 0;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .p-input {
   width: 100%;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-line);
-  background: transparent;
-  color: var(--a-color-ink);
-  padding: 0 0 0.6rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
   font-size: 1rem;
   font-family: inherit;
   box-sizing: border-box;
-  transition: border-bottom-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .p-input:focus {
-  outline: none;
-  border-bottom-color: var(--a-color-accent-confirm);
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
+  border-color: var(--a-color-primary);
 }
 
 .p-input--error {
@@ -106,7 +99,7 @@ const handleInput = (event: Event) => {
 }
 
 .p-field-hint {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.75rem;
 }
 </style>

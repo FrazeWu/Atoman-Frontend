@@ -276,7 +276,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   justify-content: space-between;
   gap: 0.75rem;
   padding: 1rem 1.1rem;
-  border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-line-soft));
+  border: 1px solid color-mix(in srgb, var(--feed-source-color) 22%, var(--a-color-border-soft));
   border-radius: 4px;
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--feed-source-color) 34%, white) 0%, transparent 46%),
@@ -318,7 +318,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   border-radius: 0px;
   background: rgba(255, 255, 255, 0.72);
   color: color-mix(in srgb, var(--feed-source-color) 72%, black);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -364,7 +364,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 
 .source-search-input {
   flex: 1;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   padding: 0.8rem 0.95rem;
@@ -373,7 +373,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 
 .source-sort-select {
   min-width: 8rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   padding: 0.8rem 0.95rem;
@@ -397,7 +397,7 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   width: 100%;
   padding: 1rem 0;
   border: 0;
-  border-bottom: 1px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   background: transparent;
   color: inherit;
   text-align: left;
@@ -406,14 +406,14 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
 
 .source-article-row:hover .source-article-title,
 .source-article-row:focus-visible .source-article-title {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
 
 .source-article-date {
   color: var(--a-color-muted-soft);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
 }

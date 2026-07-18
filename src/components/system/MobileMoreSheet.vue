@@ -72,7 +72,7 @@ async function openFooterPanel(panel: FootbarPanel) {
 .mobile-more-sheet__eyebrow {
   margin: 0;
   color: var(--a-color-muted);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -91,7 +91,7 @@ async function openFooterPanel(panel: FootbarPanel) {
   justify-content: center;
   gap: 0.5rem;
   padding: 1rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   text-decoration: none;
@@ -104,7 +104,7 @@ async function openFooterPanel(panel: FootbarPanel) {
 
 .mobile-more-sheet__item-helper {
   color: var(--a-color-muted);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -114,7 +114,7 @@ async function openFooterPanel(panel: FootbarPanel) {
   display: grid;
   gap: var(--a-space-2);
   padding-top: var(--a-space-4);
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .mobile-more-sheet__site-links {

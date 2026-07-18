@@ -54,22 +54,24 @@
       >
         所有话题
       </PSidebarItem>
-      <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
-      <div class="p-sidebar-label">/ CATEGORIES</div>
-      <PSidebarItem
-        v-for="cat in forumStore.categories"
-        :key="cat.id"
-        :icon="Folder"
-        :active="route && $route.query.category_id === String(cat.id)"
-        @click="selectCategory(cat.id)"
-      >
-        <span class="sidebar-cat-dot" :style="{ background: cat.color || 'var(--a-color-fg)' }" />
-        <span style="flex:1">{{ cat.name }}</span>
-        <span class="a-label" style="font-size:0.7rem">{{ cat.topic_count || 0 }}</span>
-      </PSidebarItem>
-      <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
-      <template v-if="!sidebarCollapsed">
-        <div class="p-sidebar-label">/ TAGS</div>
+      <template v-if="forumStore.categories.length > 0">
+        <div v-if="!sidebarCollapsed" class="p-sidebar-divider" />
+        <div class="p-sidebar-label">分类</div>
+        <PSidebarItem
+          v-for="cat in forumStore.categories"
+          :key="cat.id"
+          :icon="Folder"
+          :active="route && $route.query.category_id === String(cat.id)"
+          @click="selectCategory(cat.id)"
+        >
+          <span class="sidebar-cat-dot" :style="{ background: cat.color || 'var(--a-color-fg)' }" />
+          <span style="flex:1">{{ cat.name }}</span>
+          <span class="a-label" style="font-size:0.7rem">{{ cat.topic_count || 0 }}</span>
+        </PSidebarItem>
+      </template>
+      <template v-if="!sidebarCollapsed && popularTags.length > 0">
+        <div class="p-sidebar-divider" />
+        <div class="p-sidebar-label">热门标签</div>
         <div style="padding:0.5rem 2rem;display:flex;flex-wrap:wrap;gap:0.35rem">
           <button
             v-for="tag in popularTags"
@@ -174,12 +176,6 @@
         v-else-if="currentModule === 'music'"
         :collapsed="sidebarCollapsed"
       />
-      <div v-else-if="currentModule === 'forum'" style="padding:1rem 2rem;font-size:0.7rem;color:var(--a-color-muted-soft)">
-        <div style="margin-bottom:0.25rem"><kbd>J</kbd> <kbd>K</kbd> 上下选择</div>
-        <div style="margin-bottom:0.25rem"><kbd>Enter</kbd> 打开话题</div>
-        <div style="margin-bottom:0.25rem"><kbd>N</kbd> 发新话题</div>
-        <div><kbd>/</kbd> 搜索</div>
-      </div>
     </template>
   </PSidebar>
 </template>
@@ -412,7 +408,7 @@ const canPublishPodcast = computed(() => siteAccessStore ? siteAccessStore.isFea
   font-size: 0.7rem;
   font-weight: 500;
   padding: 0.2rem 0.45rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;

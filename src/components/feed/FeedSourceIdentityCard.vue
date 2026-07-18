@@ -139,8 +139,8 @@ const compactCount = (value: number) => {
   gap: 1.1rem;
   align-items: start;
   padding: 1.15rem 1.25rem;
-  border: 1px solid var(--a-color-line-soft);
-  border-left: 3px solid color-mix(in srgb, var(--feed-source-color, var(--a-color-line)) 24%, var(--a-color-line-soft));
+  border: 1px solid var(--a-color-border-soft);
+  border-left: 3px solid color-mix(in srgb, var(--feed-source-color, var(--a-color-border)) 24%, var(--a-color-border-soft));
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
@@ -151,12 +151,12 @@ const compactCount = (value: number) => {
 
 .feed-source-card:hover,
 .feed-source-card:focus-visible {
-  border-left-color: color-mix(in srgb, var(--feed-source-color, var(--a-color-ink)) 68%, var(--a-color-ink));
-  box-shadow: var(--a-shadow-paper-sm);
+  border-left-color: color-mix(in srgb, var(--feed-source-color, var(--a-color-text)) 68%, var(--a-color-text));
+  box-shadow: var(--a-shadow-sm);
 }
 
 .feed-source-card__meta {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -202,7 +202,7 @@ const compactCount = (value: number) => {
 .feed-source-card__eyebrow {
   margin: 0 0 0.3rem;
   color: var(--a-color-muted);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -230,10 +230,10 @@ const compactCount = (value: number) => {
   min-width: 5.5rem;
   min-height: 2rem;
   padding: 0.35rem 0.8rem;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   color: var(--a-color-fg);
-  background: var(--a-color-paper);
-  font-family: var(--a-font-meta);
+  background: var(--a-color-bg);
+  font-family: var(--a-font-sans);
   font-size: 0.74rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -307,15 +307,15 @@ const compactCount = (value: number) => {
 
 .feed-source-card.is-recommend {
   border-radius: 0;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 
 .feed-source-card.is-recommend .feed-source-card__avatar {
   border-radius: 0;
-  box-shadow: inset 0 0 0 1px var(--a-color-line-soft);
+  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
   background: var(--a-color-bg);
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 @media (max-width: 640px) {

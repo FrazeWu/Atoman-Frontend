@@ -542,14 +542,14 @@ watch(() => props.filterRules, (rules) => {
 .manage-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .manage-tab {
   border: 0;
-  border-right: 1px solid var(--a-color-line-soft);
+  border-right: 1px solid var(--a-color-border-soft);
   padding: 0.7rem 0.75rem;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   cursor: pointer;
   font: inherit;
@@ -568,7 +568,7 @@ watch(() => props.filterRules, (rules) => {
 
 .create-group-form {
   padding-bottom: 1.5rem;
-  border-bottom: 1px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .filter-rules-section {
@@ -576,7 +576,7 @@ watch(() => props.filterRules, (rules) => {
   flex-direction: column;
   gap: 1rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .subscription-rules-section {
@@ -584,7 +584,7 @@ watch(() => props.filterRules, (rules) => {
   flex-direction: column;
   gap: 1rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .subscription-rules-header {
@@ -606,8 +606,8 @@ watch(() => props.filterRules, (rules) => {
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .subscription-rule-list {
@@ -621,8 +621,8 @@ watch(() => props.filterRules, (rules) => {
   grid-template-columns: minmax(0, 1fr) 18rem;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .subscription-rule-main {
@@ -691,8 +691,8 @@ watch(() => props.filterRules, (rules) => {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
   padding: 0.45rem 0.7rem;
   cursor: pointer;
@@ -711,7 +711,7 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .group-title {
-  border-bottom: 1px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   padding-bottom: 0.5rem;
   display: flex;
   align-items: center;
@@ -736,8 +736,8 @@ watch(() => props.filterRules, (rules) => {
   gap: 1rem;
   align-items: start;
   padding: 1rem;
-  background: var(--a-color-paper-wash);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
 }
 

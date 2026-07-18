@@ -69,4 +69,23 @@ describe('UI 准则', () => {
       expect(source).not.toMatch(/PShortcutHints|<kbd>/)
     }
   })
+
+  it('代表页面不再使用档案纸装饰', () => {
+    const login = read('src/views/auth/LoginView.vue')
+    const timeline = read('src/views/timeline/TimelineHomeView.vue')
+    const forum = read('src/views/forum/ForumHomeView.vue')
+    const sidebar = read('src/components/system/AppSidebar.vue')
+
+    expect(login).not.toMatch(/repeating-linear-gradient|box-shadow:\s*[268]px\s+[268]px\s+0/)
+    expect(timeline).not.toMatch(/repeating-linear-gradient/)
+    expect(forum).not.toMatch(/<kbd>|sidebar-shortcuts/)
+    expect(sidebar).not.toMatch(/CATEGORIES|TAGS|<kbd>|上下选择|打开话题/)
+  })
+
+  it('论坛侧栏只显示有内容的分类与标签分组', () => {
+    const source = read('src/components/system/AppSidebar.vue')
+
+    expect(source).toContain('v-if="forumStore.categories.length > 0"')
+    expect(source).toContain('v-if="!sidebarCollapsed && popularTags.length > 0"')
+  })
 })

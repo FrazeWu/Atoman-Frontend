@@ -234,7 +234,7 @@ function toTrackPayload(track: MusicTrackDraft, index: number): MusicAlbumTrackE
 }
 
 .music-edit-album__state {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.95rem;
 }
 

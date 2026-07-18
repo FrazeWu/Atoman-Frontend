@@ -215,8 +215,8 @@ function audioLabel(track: MusicTrackDraft) {
 }
 
 .music-tracks__item {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   padding: 0.875rem;
   display: grid;
   gap: 0.75rem;

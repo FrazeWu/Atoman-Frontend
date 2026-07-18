@@ -1,9 +1,6 @@
 <template>
   <div class="p-field">
-    <label v-if="label" class="p-field-label">
-      <span class="p-field-dot" aria-hidden="true" />
-      {{ label }}
-    </label>
+    <label v-if="label" class="p-field-label">{{ label }}</label>
     <div ref="rootRef" class="p-select-root">
       <button
         ref="triggerRef"
@@ -198,19 +195,11 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.p-field-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
-  flex-shrink: 0;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .p-select-root {
@@ -223,25 +212,26 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0 0 0.6rem;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-line);
-  background: transparent;
-  color: var(--a-color-ink);
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-bottom-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .p-select-trigger:focus-visible,
 .p-select-trigger--open {
-  border-bottom-color: var(--a-color-accent-confirm);
+  border-color: var(--a-color-primary);
 }
 
 .p-select-trigger:focus-visible {
-  outline: 2px solid var(--a-color-ink);
-  outline-offset: 2px;
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
 }
 
 .p-select-trigger--error {
@@ -250,7 +240,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 .p-select-value--placeholder,
 .p-select-chevron {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .p-select-panel {
@@ -262,10 +252,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   display: flex;
   flex-direction: column;
   padding: 0.25rem;
-  border-radius: var(--a-radius-none, 4px);
+  border-radius: var(--a-radius-control);
   background: #ffffff;
-  border: 1px solid var(--a-color-line);
-  box-shadow: none;
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: var(--a-shadow-dropdown);
 }
 
 .p-select-option {
@@ -275,26 +265,26 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   padding: 0.55rem 0.75rem;
   border: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-align: left;
   cursor: pointer;
   font: inherit;
-  border-radius: calc(var(--a-radius-none, 4px) - 1px);
+  border-radius: var(--a-radius-base);
   transition: background-color 0.15s ease;
 }
 
 .p-select-option:hover {
-  background-color: var(--a-color-paper-soft);
+  background-color: var(--a-color-surface);
 }
 
 .p-select-option:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .p-select-marker {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-select-empty,
@@ -309,7 +299,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 .p-field-hint,
 .p-select-empty {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 @media (max-width: 767px) {

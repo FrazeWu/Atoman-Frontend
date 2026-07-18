@@ -146,8 +146,8 @@ const formatTime = (iso: string) => {
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 .reply-node:hover {
-  background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
+  background: var(--a-color-surface-muted);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .reply-node-solution {

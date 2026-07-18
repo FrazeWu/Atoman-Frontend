@@ -10,7 +10,7 @@
     <template v-else>
       <PPageHeader :title="collection.name" accent :sub="collection.description || ''" style="margin-bottom:2.5rem">
         <template #action>
-          <div class="paper-actions-row">
+          <div class="ui-actions-row">
             <PClip
               v-if="authStore.isAuthenticated && !isOwner"
               :disabled="collectionSubscribeLoading"
@@ -39,7 +39,7 @@
           <p class="a-label a-muted" style="margin-bottom:.4rem">文章数量</p>
           <p style="font-weight: 500;margin:0">{{ posts.length }}篇</p>
         </div>
-        <div v-if="isOwner" class="paper-actions-row">
+        <div v-if="isOwner" class="ui-actions-row">
           <PClip label="编辑" @click="openEditModal" />
           <PReject label="删除" @click="confirmDelete" />
         </div>
@@ -346,7 +346,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.paper-actions-row,
+.ui-actions-row,
 .modal-actions {
   display: flex;
   flex-wrap: wrap;

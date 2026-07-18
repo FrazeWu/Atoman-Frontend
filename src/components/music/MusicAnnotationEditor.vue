@@ -69,13 +69,13 @@ function handleSave() {
   display: grid;
   gap: 0.9rem;
   padding: 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .music-annotation-editor__quote {
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-weight: 800;
   line-height: 1.5;
 }

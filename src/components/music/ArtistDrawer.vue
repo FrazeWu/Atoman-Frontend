@@ -292,26 +292,26 @@ watch(
 <style scoped>
 .drawer-header-content { display: flex; flex-direction: column; gap: 0.25rem; }
 .kicker {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: bold;
   letter-spacing: 0;
   text-transform: uppercase;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
-.title { font-family: var(--a-font-serif); font-size: 2.5rem; margin: 0; line-height: 1.1; letter-spacing: 0; }
+.title { font-family: var(--a-font-sans); font-size: 2.5rem; margin: 0; line-height: 1.1; letter-spacing: 0; }
 .artist-meta-line {
   margin: 0.35rem 0 0;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
-.artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-ink-soft); line-height: 1.6; }
+.artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-muted); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
-.actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-line-soft); align-self: flex-start; }
+.actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-border-soft); align-self: flex-start; }
 .member-sections {
   display: grid;
   gap: 1.5rem;
@@ -334,17 +334,17 @@ watch(
   width: 100%;
   padding: 0.85rem 0;
   border: none;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   background: transparent;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 .member-row:last-child {
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 .member-row:hover {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 .member-avatar {
   width: 48px;
@@ -356,7 +356,7 @@ watch(
   width: 100%;
   height: 100%;
   border-radius: 4px;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 .member-avatar-img {
   object-fit: cover;
@@ -373,42 +373,42 @@ watch(
   gap: 0.2rem;
 }
 .member-name {
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 1.05rem;
   font-weight: 500;
 }
 .member-period {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
-.paper-action {
+.ui-action {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   border: 0;
-  border-right: 1px solid var(--a-color-line-soft);
+  border-right: 1px solid var(--a-color-border-soft);
   padding: 0.75rem 1.05rem;
   font-weight: 500;
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.75rem;
   letter-spacing: 0;
   text-transform: uppercase;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
-.paper-action:last-child {
+.ui-action:last-child {
   border-right: none;
 }
-.paper-action:hover {
+.ui-action:hover {
   background: var(--a-color-fg);
   color: var(--a-color-bg);
 }
-.paper-action-dot {
+.action-indicator {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 4px;
@@ -419,16 +419,16 @@ watch(
 .album-list-header {
   margin-bottom: 1.5rem;
   padding-bottom: 0.85rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
 }
 .album-list-kicker {
   margin: 0 0 0.35rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
   text-transform: uppercase;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 .album-list-header h3 { font-size: 1.15rem; font-weight: 500; margin: 0; letter-spacing: 0; }
 .album-row {
@@ -439,29 +439,29 @@ watch(
   cursor: pointer;
   padding: 1rem;
   border: none;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   border-left: 3px solid transparent;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 .album-row:first-of-type {
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 .album-row:hover {
-  background: var(--a-color-paper-soft);
-  border-left-color: var(--a-color-ink);
+  background: var(--a-color-surface);
+  border-left-color: var(--a-color-text);
 }
 .album-row-left { width: 80px; flex-shrink: 0; text-align: right; padding-top: 0.35rem; }
-.album-year { font-family: var(--a-font-meta); font-size: 1.25rem; font-weight: 500; color: var(--a-color-ink); }
+.album-year { font-family: var(--a-font-sans); font-size: 1.25rem; font-weight: 500; color: var(--a-color-text); }
 .album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; }
 .album-row-cover {
   width: 80px;
   height: 80px;
-  background: var(--a-color-paper-wash);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.65rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -471,9 +471,9 @@ watch(
 }
 .album-row-img { width: 100%; height: 100%; object-fit: cover; }
 .album-row-info { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
-.album-row-title { font-family: var(--a-font-serif); font-size: 1.35rem; font-weight: 500; letter-spacing: 0; }
-.album-row-meta { font-family: var(--a-font-meta); font-size: 0.75rem; color: var(--a-color-ink-soft); text-transform: uppercase; letter-spacing: 0; }
-.state-line { margin: 0 0 1.5rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 500; }
+.album-row-title { font-family: var(--a-font-sans); font-size: 1.35rem; font-weight: 500; letter-spacing: 0; }
+.album-row-meta { font-family: var(--a-font-sans); font-size: 0.75rem; color: var(--a-color-muted); text-transform: uppercase; letter-spacing: 0; }
+.state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 
 .artist-header-profile {
@@ -488,7 +488,7 @@ watch(
   height: 90px;
   border-radius: 4px;
   object-fit: cover;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   flex-shrink: 0;
 }
 
@@ -496,7 +496,7 @@ watch(
   width: 90px;
   height: 90px;
   border-radius: 4px;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface);
   display: flex;
   align-items: center;

@@ -37,8 +37,8 @@ defineProps<{
 .shortcut-trigger {
   width: 2.5rem;
   height: 2.5rem;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,17 +47,17 @@ defineProps<{
   transition: all 0.2s ease;
 }
 .shortcut-trigger:hover {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
 }
 .shortcut-content {
   position: absolute;
   bottom: 100%;
   right: 0;
   margin-bottom: 1rem;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border);
   padding: 1.25rem;
   width: 14rem;
   box-shadow: none;
@@ -78,7 +78,7 @@ defineProps<{
   font-weight: var(--a-font-weight-strong, 700);
   font-size: 0.85rem;
   margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   padding-bottom: 0.5rem;
   color: var(--a-color-fg);
 }
@@ -94,14 +94,14 @@ defineProps<{
   font-family: inherit;
   font-size: 0.72rem;
   font-weight: 500;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 .shortcut-item kbd {
-  font-family: var(--a-font-meta);
-  background: var(--a-color-paper-wash);
+  font-family: var(--a-font-sans);
+  background: var(--a-color-surface-muted);
   padding: 0.1rem 0.35rem;
   border-radius: var(--a-radius-base);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   min-width: 1.2rem;
   text-align: center;
   color: var(--a-color-fg);

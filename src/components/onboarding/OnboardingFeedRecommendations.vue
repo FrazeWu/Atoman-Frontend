@@ -149,15 +149,15 @@ const toggle = (id: string) => {
 
 .onboarding-recommendations__source:hover,
 .onboarding-recommendations__source.is-selected {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 
 .onboarding-recommendations__source.is-selected::before {
-  background: var(--a-color-ink);
+  background: var(--a-color-text);
 }
 
 .onboarding-recommendations__source:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
 }
 
@@ -202,7 +202,7 @@ const toggle = (id: string) => {
 }
 
 .onboarding-recommendations__skip:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
 }
 

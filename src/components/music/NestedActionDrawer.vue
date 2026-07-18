@@ -505,7 +505,7 @@ async function submitEdit() {
 
     <div class="drawer-body">
       <form v-if="isArtistForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -514,8 +514,8 @@ async function submitEdit() {
             </div>
           </div>
 
-          <div class="paper-form-grid">
-            <div class="paper-input-group">
+          <div class="form-grid">
+            <div class="field-group">
               <PInput
                 id="music-artist-name"
                 v-slot
@@ -526,7 +526,7 @@ async function submitEdit() {
               />
             </div>
 
-            <div class="paper-input-group paper-input-group--wide">
+            <div class="field-group field-group--wide">
               <PTextarea
                 id="music-artist-bio"
                 v-model="artistDraft.bio"
@@ -538,7 +538,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -547,7 +547,7 @@ async function submitEdit() {
             </div>
           </div>
 
-          <div class="paper-input-group">
+          <div class="field-group">
             <PInput
               id="music-artist-image"
               v-model="artistDraft.imageUrl"
@@ -557,7 +557,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -566,8 +566,8 @@ async function submitEdit() {
             </div>
           </div>
 
-          <div class="paper-form-grid">
-            <div class="paper-input-group">
+          <div class="form-grid">
+            <div class="field-group">
               <PInput
                 id="music-artist-nationality"
                 v-model="artistDraft.nationality"
@@ -576,7 +576,7 @@ async function submitEdit() {
               />
             </div>
 
-            <div class="paper-input-group">
+            <div class="field-group">
               <PInput
                 id="music-artist-birth-year"
                 v-model="artistDraft.birthYear"
@@ -587,7 +587,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -597,7 +597,7 @@ async function submitEdit() {
           </div>
 
           <div class="source-row">
-            <div class="paper-input-group">
+            <div class="field-group">
               <PInput
                 v-model="sourceDraft.title"
                 type="text"
@@ -605,7 +605,7 @@ async function submitEdit() {
                 label="来源标题"
               />
             </div>
-            <div class="paper-input-group">
+            <div class="field-group">
               <PInput
                 v-model="sourceDraft.url"
                 type="url"
@@ -616,7 +616,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <div class="paper-input-group">
+        <div class="field-group">
           <PTextarea
             id="music-edit-reason"
             v-slot
@@ -630,11 +630,11 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <button class="paper-submit" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
+        <button class="primary-action" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
       </form>
 
       <form v-else-if="isAlbumForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -643,8 +643,8 @@ async function submitEdit() {
             </div>
           </div>
 
-          <div class="paper-form-grid">
-            <div class="paper-input-group">
+          <div class="form-grid">
+            <div class="field-group">
               <PInput
                 id="music-album-title"
                 v-model="albumDraft.title"
@@ -653,7 +653,7 @@ async function submitEdit() {
                 label="名字"
               />
             </div>
-            <div class="paper-input-group paper-input-group--wide">
+            <div class="field-group field-group--wide">
               <PTextarea
                 id="music-album-description"
                 v-model="albumDraft.description"
@@ -664,7 +664,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -673,8 +673,8 @@ async function submitEdit() {
             </div>
           </div>
 
-          <div class="paper-form-grid">
-            <div class="paper-input-group">
+          <div class="form-grid">
+            <div class="field-group">
               <PInput
                 id="music-album-release-date"
                 v-model="albumDraft.releaseDate"
@@ -693,7 +693,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <section class="paper-section">
+        <section class="form-section">
           <div class="section-heading">
             <span class="section-dot" aria-hidden="true" />
             <div>
@@ -703,7 +703,7 @@ async function submitEdit() {
           </div>
 
           <div class="source-row">
-            <div class="paper-input-group">
+            <div class="field-group">
               <PInput
                 v-model="sourceDraft.title"
                 type="text"
@@ -711,7 +711,7 @@ async function submitEdit() {
                 label="来源标题"
               />
             </div>
-            <div class="paper-input-group">
+            <div class="field-group">
               <PInput
                 v-model="sourceDraft.url"
                 type="url"
@@ -722,7 +722,7 @@ async function submitEdit() {
           </div>
         </section>
 
-        <div class="paper-input-group">
+        <div class="field-group">
           <PTextarea
             id="music-album-reason"
             v-slot
@@ -736,7 +736,7 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <button class="paper-submit" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
+        <button class="primary-action" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
       </form>
 
       <!-- History placeholder -->
@@ -757,7 +757,7 @@ async function submitEdit() {
           <div class="history-summary">{{ revision.edit_summary || '无摘要' }}</div>
           <div class="history-actions">
             <button
-              class="paper-action history-diff"
+              class="ui-action history-diff"
               type="button"
               :data-test="`history-diff-button-${revision.version_number}`"
               :disabled="diffLoading"
@@ -767,7 +767,7 @@ async function submitEdit() {
             </button>
             <button
 				v-if="currentAction === 'history'"
-              class="paper-submit history-revert"
+              class="primary-action history-revert"
               type="button"
               :data-test="`history-revert-button-${revision.version_number}`"
               :disabled="submitting || revision.is_current"
@@ -807,7 +807,7 @@ async function submitEdit() {
             label="添加讨论"
             placeholder="写下你对这张专辑的看法"
           />
-          <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发布</button>
+          <button class="primary-action discussion-submit" type="submit" :disabled="submitting">发布</button>
         </form>
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -824,7 +824,7 @@ async function submitEdit() {
             <div class="history-summary">{{ discussion.content }}</div>
             <div class="history-actions">
               <button
-                class="paper-action history-diff"
+                class="ui-action history-diff"
                 type="button"
                 :data-test="`discussion-reply-toggle-${discussion.id}`"
                 @click="toggleReply(discussion.id)"
@@ -833,7 +833,7 @@ async function submitEdit() {
               </button>
               <button
                 v-if="discussion.can_delete"
-                class="paper-action history-diff"
+                class="ui-action history-diff"
                 type="button"
                 :data-test="`discussion-delete-button-${discussion.id}`"
                 :disabled="submitting"
@@ -855,7 +855,7 @@ async function submitEdit() {
                 :rows="3"
                 label="回复内容"
               />
-              <button class="paper-submit discussion-submit" type="submit" :disabled="submitting">发送回复</button>
+              <button class="primary-action discussion-submit" type="submit" :disabled="submitting">发送回复</button>
             </form>
           </div>
 
@@ -867,7 +867,7 @@ async function submitEdit() {
             <div class="history-summary">{{ reply.content }}</div>
             <div v-if="reply.can_delete" class="history-actions">
               <button
-                class="paper-action history-diff"
+                class="ui-action history-diff"
                 type="button"
                 :data-test="`discussion-delete-button-${reply.id}`"
                 :disabled="submitting"
@@ -884,87 +884,87 @@ async function submitEdit() {
 </template>
 
 <style scoped>
-.drawer-header { margin: -2.5rem -2.5rem 0; padding: 1.8rem 2rem 1rem; border-bottom: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); }
-.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.78rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
-.title { font-family: var(--a-font-serif); font-size: 1.7rem; margin: 0; }
-.subtitle { margin: 0.55rem 0 0; color: var(--a-color-ink-soft); line-height: 1.6; max-width: 28rem; }
+.drawer-header { margin: -2.5rem -2.5rem 0; padding: 1.8rem 2rem 1rem; border-bottom: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); }
+.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-size: 0.78rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
+.title { font-family: var(--a-font-sans); font-size: 1.7rem; margin: 0; }
+.subtitle { margin: 0.55rem 0 0; color: var(--a-color-muted); line-height: 1.6; max-width: 28rem; }
 .drawer-body { margin: 0 -2.5rem; padding: 1.6rem 2rem 2rem; }
 
 .wiki-form { display: flex; flex-direction: column; gap: 1.1rem; }
-.paper-section {
+.form-section {
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
   padding: 1.1rem 1.15rem 1.2rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
 }
 .section-heading { display: flex; align-items: flex-start; gap: 0.75rem; }
 .section-dot,
-.paper-label-dot,
+.field-label-marker,
 .upload-trigger-dot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--a-color-ink) 70%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 70%, transparent);
   flex-shrink: 0;
 }
-.section-kicker { margin: 0 0 0.2rem; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
-.section-heading h4 { margin: 0; font-size: 1.05rem; font-family: var(--a-font-serif); }
-.paper-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.4rem; }
-.paper-input-group { display: flex; flex-direction: column; gap: 0.5rem; }
-.paper-input-group--wide { grid-column: 1 / -1; }
-.paper-label {
+.section-kicker { margin: 0 0 0.2rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-size: 0.74rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
+.section-heading h4 { margin: 0; font-size: 1.05rem; font-family: var(--a-font-sans); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.4rem; }
+.field-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.field-group--wide { grid-column: 1 / -1; }
+.field-label {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
-.paper-input {
+.form-input {
   width: 100%;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 22%, transparent);
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   padding: 0 0 0.72rem;
   font-size: 1rem;
   font-family: inherit;
   transition: border-color 0.18s ease;
 }
-.paper-input:focus {
+.form-input:focus {
   outline: none;
-  border-bottom-color: color-mix(in srgb, var(--a-color-ink) 58%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--a-color-text) 58%, transparent);
 }
-.paper-textarea { resize: vertical; min-height: 6rem; line-height: 1.65; }
+.form-textarea { resize: vertical; min-height: 6rem; line-height: 1.65; }
 .source-row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1rem; }
 .form-error { margin: 0; color: var(--a-color-accent-destructive); font-weight: 500; font-size: 0.9rem; }
 .form-success { margin: 0; color: var(--a-color-accent-confirm); font-weight: 500; font-size: 0.9rem; }
-.paper-submit {
+.primary-action {
   width: 100%;
   border: 0;
   border-radius: 0px;
   padding: 0.95rem 1.5rem;
   font-weight: 500;
   background: var(--a-color-accent-confirm);
-  color: var(--a-color-paper);
+  color: var(--a-color-bg);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   text-transform: uppercase;
   letter-spacing: 0;
   transition: background-color 0.15s ease;
 }
-.paper-submit:hover {
+.primary-action:hover {
   background: var(--a-color-accent-confirm-hover);
 }
-.paper-submit:disabled { opacity: 0.55; cursor: not-allowed; }
-.a-btn-secondary { border: 1.5px solid var(--a-color-ink); padding: 0.75rem 1rem; font-weight: bold; background: var(--a-color-paper); cursor: pointer; font-family: var(--a-font-meta); }
+.primary-action:disabled { opacity: 0.55; cursor: not-allowed; }
+.a-btn-secondary { border: 1.5px solid var(--a-color-text); padding: 0.75rem 1rem; font-weight: bold; background: var(--a-color-bg); cursor: pointer; font-family: var(--a-font-sans); }
 .a-btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.history-item { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--a-color-line-soft); }
+.history-item { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .history-panel { display: grid; gap: 1rem; }
 .history-item__head {
   display: flex;
@@ -974,9 +974,9 @@ async function submitEdit() {
   margin-bottom: 0.35rem;
 }
 .history-meta {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
 }
 .history-summary {
   margin-top: 0.45rem;
@@ -994,23 +994,23 @@ async function submitEdit() {
 }
 .history-diff {
   border-right: 0;
-  border: 1px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 .history-badge {
   margin-left: 0.5rem;
   font-size: 0.72rem;
   color: var(--a-color-accent-confirm);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-weight: 500;
 }
 .history-state {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 .history-diff-panel {
   padding: 1rem 1.1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
 }
 .history-diff-list {
   display: grid;
@@ -1018,7 +1018,7 @@ async function submitEdit() {
 }
 .history-diff-line {
   padding-bottom: 0.6rem;
-  border-bottom: 1px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   line-height: 1.6;
 }
 .history-diff-line:last-child {
@@ -1041,8 +1041,8 @@ async function submitEdit() {
 .discussion-card,
 .discussion-reply {
   padding: 1rem 1.1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
 }
 .discussion-reply {
   margin-left: 1.25rem;
@@ -1052,7 +1052,7 @@ async function submitEdit() {
 }
 
 @media (max-width: 640px) {
-  .paper-form-grid,
+  .form-grid,
   .artist-search-row,
   .source-row { grid-template-columns: 1fr; }
 }

@@ -213,7 +213,7 @@ onMounted(fetchComments)
 .comment-section {
   margin-top: 3rem;
   padding-top: 2rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 .section-title {
   font-size: 1.5rem;
@@ -223,7 +223,7 @@ onMounted(fetchComments)
 }
 .comment-count { color: var(--a-color-muted); font-weight: 500; font-size: 1.125rem; }
 .closed-notice {
-  border: 1px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 2rem;
   text-align: center;
   color: var(--a-color-muted);
@@ -242,7 +242,7 @@ onMounted(fetchComments)
 .text-input,
 .comment-input {
   width: 100%;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -258,22 +258,22 @@ onMounted(fetchComments)
 .comment-input:focus { border-color: var(--a-color-fg); }
 .submit-btn {
   margin-top: 0.5rem;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   padding: 0.5rem 1.5rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
   letter-spacing: 0;
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.submit-btn:hover:not(:disabled) { background: var(--a-color-paper); color: var(--a-color-ink); }
+.submit-btn:hover:not(:disabled) { background: var(--a-color-bg); color: var(--a-color-text); }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .login-prompt {
   margin-bottom: 2rem;
-  border: 1px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 1.5rem;
   text-align: center;
   color: var(--a-color-muted);
@@ -285,7 +285,7 @@ onMounted(fetchComments)
 .loading-item {
   height: 80px;
   background: var(--a-color-disabled-bg);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
@@ -294,7 +294,7 @@ onMounted(fetchComments)
 }
 .comment-list { display: flex; flex-direction: column; gap: 1rem; }
 .comment-item {
-  border-left: 2px solid var(--a-color-line);
+  border-left: 2px solid var(--a-color-border);
   padding: 0.75rem 0 0.75rem 1.5rem;
 }
 .comment-header {
@@ -308,8 +308,8 @@ onMounted(fetchComments)
   width: 28px;
   height: 28px;
   border-radius: 4px;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   display: flex;

@@ -243,7 +243,7 @@ watch(sortMode, () => {
   width: 5.5rem;
   height: 5.5rem;
   object-fit: cover;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
   border-radius: 4px;
@@ -264,14 +264,14 @@ watch(sortMode, () => {
   transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 .sidebar-item:hover {
-  background: var(--a-color-paper-wash);
-  box-shadow: var(--a-shadow-paper-sm);
+  background: var(--a-color-surface-muted);
+  box-shadow: var(--a-shadow-sm);
 }
 .sidebar-item-active {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
   font-weight: 500;
-  box-shadow: var(--a-shadow-paper-sm);
+  box-shadow: var(--a-shadow-sm);
 }
 .delete-btn {
   font-size: 0.75rem;

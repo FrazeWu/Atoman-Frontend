@@ -122,9 +122,9 @@ function selectItem(id: string, mobile: boolean) {
   width: 13.75rem;
   max-height: calc(100dvh - var(--a-topbar-height) - 2rem);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--a-color-line) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--a-color-border) 84%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--a-color-paper-soft) 94%, transparent);
+  background: color-mix(in srgb, var(--a-color-surface) 94%, transparent);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14), 0 3px 10px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -142,7 +142,7 @@ function selectItem(id: string, mobile: boolean) {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0 0.5rem 0 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-line) 72%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-border) 72%, transparent);
 }
 
 .p-directory-header strong {
@@ -160,18 +160,18 @@ function selectItem(id: string, mobile: boolean) {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   cursor: pointer;
 }
 
 .p-directory-toggle:hover,
 .p-directory-toggle:focus-visible {
   background: var(--a-color-disabled-bg);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-directory-toggle:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: 1px;
 }
 
@@ -186,7 +186,7 @@ function selectItem(id: string, mobile: boolean) {
 
 .p-directory-collapsed-label {
   padding-bottom: 0.75rem;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-strong);
   writing-mode: vertical-rl;
@@ -210,7 +210,7 @@ function selectItem(id: string, mobile: boolean) {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-sm);
   line-height: 1.35;
   text-align: left;
@@ -221,17 +221,17 @@ function selectItem(id: string, mobile: boolean) {
 .p-directory-item:hover,
 .p-directory-item:focus-visible {
   background: color-mix(in srgb, var(--a-color-disabled-bg) 68%, transparent);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-directory-item:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
 }
 
 .p-directory-item.is-active {
   background: var(--a-color-disabled-bg);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-weight: var(--a-font-weight-strong);
 }
 
@@ -241,12 +241,12 @@ function selectItem(id: string, mobile: boolean) {
   width: 2px;
   height: 1.125rem;
   border-radius: 2px;
-  background: var(--a-color-ink);
+  background: var(--a-color-text);
   content: '';
 }
 
 .p-directory-item.is-branch:not(.is-active) {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .p-directory-empty {
@@ -284,9 +284,9 @@ function selectItem(id: string, mobile: boolean) {
   width: calc(100% - 1.5rem) !important;
   max-width: calc(100% - 1.5rem) !important;
   overflow: hidden;
-  border: 1px solid var(--a-color-line) !important;
+  border: 1px solid var(--a-color-border) !important;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--a-color-paper-soft) 96%, transparent) !important;
+  background: color-mix(in srgb, var(--a-color-surface) 96%, transparent) !important;
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18), 0 3px 10px rgba(15, 23, 42, 0.1) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

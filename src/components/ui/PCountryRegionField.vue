@@ -404,53 +404,50 @@ function chooseCountry(country: CountryOption) {
 </script>
 
 <template>
-  <div class="paper-field" :class="{ 'paper-field--open': panelOpen }">
-    <label class="paper-field-label">
-      <span class="paper-field-dot" aria-hidden="true" />
-      <span>{{ label }}</span>
-    </label>
+  <div class="country-field" :class="{ 'country-field--open': panelOpen }">
+    <label class="country-field-label">{{ label }}</label>
 
     <button
       :data-test="triggerTestId"
       type="button"
-      class="paper-field-trigger"
-      :class="{ 'paper-field-trigger--selected': !!selectedLabel }"
+      class="country-field-trigger"
+      :class="{ 'country-field-trigger--selected': !!selectedLabel }"
       :disabled="disabled"
       @click="togglePanel"
     >
-      <span :class="{ 'paper-field-placeholder': !selectedLabel }">{{ selectedLabel || placeholder }}</span>
-      <span class="paper-field-trigger-meta">{{ panelOpen ? '收起' : '选择' }}</span>
+      <span :class="{ 'country-field-placeholder': !selectedLabel }">{{ selectedLabel || placeholder }}</span>
+      <span class="country-field-trigger-meta">{{ panelOpen ? '收起' : '选择' }}</span>
     </button>
 
     <div
       v-if="panelOpen"
       data-test="artist-nationality-dialog"
-      class="paper-field-dialog-backdrop"
+      class="country-field-dialog-backdrop"
       @click.self="closePanel"
     >
-      <div class="paper-field-dialog">
-        <div class="paper-field-dialog-header">
+      <div class="country-field-dialog">
+        <div class="country-field-dialog-header">
           <div>
-            <p class="paper-field-dialog-kicker">国籍选择</p>
-            <h3 class="paper-field-dialog-title">先选洲，再选国家或地区</h3>
+            <p class="country-field-dialog-kicker">国籍选择</p>
+            <h3 class="country-field-dialog-title">先选洲，再选国家或地区</h3>
           </div>
 
-          <button type="button" class="paper-field-dialog-close" @click="closePanel">
+          <button type="button" class="country-field-dialog-close" @click="closePanel">
             关闭
           </button>
         </div>
 
-        <div class="paper-field-dialog-grid">
-          <section class="paper-field-dialog-section">
-            <p class="paper-field-section-title">选择洲</p>
-            <div class="paper-field-continent-list">
+        <div class="country-field-dialog-grid">
+          <section class="country-field-dialog-section">
+            <p class="country-field-section-title">选择洲</p>
+            <div class="country-field-continent-list">
               <button
                 v-for="continent in continentOptions"
                 :key="continent.code"
                 :data-test="`artist-nationality-continent-${continent.code === 'AS' ? 'Asia' : continent.label}`"
                 type="button"
-                class="paper-field-continent"
-                :class="{ 'paper-field-continent--active': continent.code === activeContinentCode }"
+                class="country-field-continent"
+                :class="{ 'country-field-continent--active': continent.code === activeContinentCode }"
                 @click="chooseContinent(continent.code)"
               >
                 <span>{{ continent.label }}</span>
@@ -458,23 +455,23 @@ function chooseCountry(country: CountryOption) {
             </div>
           </section>
 
-          <section class="paper-field-dialog-section">
-            <p class="paper-field-section-title">
+          <section class="country-field-dialog-section">
+            <p class="country-field-section-title">
               {{ activeContinentCode ? '选择国家或地区' : '请选择国家' }}
             </p>
-            <div class="paper-field-country-list">
+            <div class="country-field-country-list">
               <button
                 v-for="country in countriesInActiveContinent"
                 :key="country.code"
                 :data-test="`${optionPrefix}${country.name}`"
                 type="button"
-                class="paper-field-country"
-                :class="{ 'paper-field-country--active': country.name === selectedLabel }"
+                class="country-field-country"
+                :class="{ 'country-field-country--active': country.name === selectedLabel }"
                 @click="chooseCountry(country)"
               >
                 <span>{{ country.name }}</span>
               </button>
-              <p v-if="!countriesInActiveContinent.length" class="paper-field-empty">
+              <p v-if="!countriesInActiveContinent.length" class="country-field-empty">
                 请先从左侧选择洲
               </p>
             </div>
@@ -486,72 +483,61 @@ function chooseCountry(country: CountryOption) {
 </template>
 
 <style scoped>
-.paper-field {
+.country-field {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.paper-field-label {
+.country-field-label {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
-.paper-field-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 70%, transparent);
-  opacity: 0.35;
-  transition: opacity 0.18s ease;
-}
-
-.paper-field--open .paper-field-dot {
-  opacity: 1;
-}
-
-.paper-field-trigger {
+.country-field-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0 0 0.7rem;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
-  background: transparent;
-  color: var(--a-color-ink);
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   text-align: left;
   font: inherit;
   cursor: pointer;
   transition: border-color 0.18s ease, color 0.18s ease;
 }
 
-.paper-field-trigger:hover,
-.paper-field-trigger:focus-visible,
-.paper-field--open .paper-field-trigger {
-  outline: none;
-  border-bottom-color: var(--a-color-accent-confirm);
+.country-field-trigger:hover,
+.country-field-trigger:focus-visible,
+.country-field--open .country-field-trigger {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
+  border-color: var(--a-color-primary);
 }
 
-.paper-field-placeholder,
-.paper-field-trigger-meta {
-  color: var(--a-color-ink-soft);
+.country-field-placeholder,
+.country-field-trigger-meta {
+  color: var(--a-color-muted);
 }
 
-.paper-field-trigger-meta {
-  font-family: var(--a-font-meta);
+.country-field-trigger-meta {
+  font-family: inherit;
   font-size: 0.75rem;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 
-.paper-field-dialog-backdrop {
+.country-field-dialog-backdrop {
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -562,7 +548,7 @@ function chooseCountry(country: CountryOption) {
   background: rgba(16, 18, 20, 0.24);
 }
 
-.paper-field-dialog {
+.country-field-dialog {
   width: min(56rem, 100%);
   max-height: min(44rem, calc(100vh - 3rem));
   overflow: hidden;
@@ -570,115 +556,119 @@ function chooseCountry(country: CountryOption) {
   flex-direction: column;
   gap: 1.25rem;
   padding: 1.4rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: #fff;
-  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.16);
+  border-radius: var(--a-radius-modal);
+  box-shadow: var(--a-shadow-modal);
 }
 
-.paper-field-dialog-header {
+.country-field-dialog-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.paper-field-dialog-kicker {
+.country-field-dialog-kicker {
   margin: 0 0 0.25rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.paper-field-dialog-title {
+.country-field-dialog-title {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
-.paper-field-dialog-close {
-  border: 1px solid var(--a-color-line-soft);
+.country-field-dialog-close {
+  border: 1px solid var(--a-color-border-soft);
   background: #fff;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font: inherit;
   padding: 0.45rem 0.8rem;
   cursor: pointer;
+  border-radius: var(--a-radius-control);
 }
 
-.paper-field-dialog-grid {
+.country-field-dialog-grid {
   display: grid;
   grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
   gap: 1rem;
   min-height: 24rem;
 }
 
-.paper-field-dialog-section {
+.country-field-dialog-section {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.paper-field-section-title {
+.country-field-section-title {
   margin: 0 0 0.85rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
 
-.paper-field-continent-list,
-.paper-field-country-list {
+.country-field-continent-list,
+.country-field-country-list {
   min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 10%, transparent);
 }
 
-.paper-field-continent,
-.paper-field-country {
+.country-field-continent,
+.country-field-country {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.82rem 0;
+  padding: 0.82rem;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 10%, transparent);
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-align: left;
   cursor: pointer;
   font: inherit;
+  border-radius: var(--a-radius-base);
 }
 
-.paper-field-continent:hover,
-.paper-field-continent--active,
-.paper-field-country:hover,
-.paper-field-country--active {
-  color: var(--a-color-accent-confirm);
+.country-field-continent:hover,
+.country-field-continent--active,
+.country-field-country:hover,
+.country-field-country--active {
+  color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
 }
 
-.paper-field-empty {
+.country-field-empty {
   margin: 0;
   padding: 1rem 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 @media (max-width: 720px) {
-  .paper-field-dialog-backdrop {
+  .country-field-dialog-backdrop {
     padding: 0.75rem;
   }
 
-  .paper-field-dialog {
+  .country-field-dialog {
     max-height: calc(100vh - 1.5rem);
     padding: 1rem;
   }
 
-  .paper-field-dialog-grid {
+  .country-field-dialog-grid {
     grid-template-columns: 1fr;
     min-height: auto;
   }

@@ -17,7 +17,7 @@ describe('PChoiceField', () => {
 
     expect(wrapper.text()).toContain('类型')
     await wrapper.get('button').trigger('click')
-    await wrapper.get('[data-test="paper-choice-option-ep"]').trigger('click')
+    await wrapper.get('[data-test="p-choice-field-option-ep"]').trigger('click')
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['ep'])
   })
 })

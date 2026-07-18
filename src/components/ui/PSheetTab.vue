@@ -28,7 +28,7 @@ defineEmits(['click'])
   gap: 8px;
   position: relative;
   cursor: pointer;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-none, 4px) 0 0 var(--a-radius-none, 4px);
   border-right: none;
   transition: background-color 0.2s, border-color 0.2s;
@@ -54,8 +54,8 @@ defineEmits(['click'])
 }
 
 .sheet-tab:hover {
-  background-color: var(--a-color-paper-soft);
-  color: var(--a-color-ink);
-  border-color: var(--a-color-line);
+  background-color: var(--a-color-surface);
+  color: var(--a-color-text);
+  border-color: var(--a-color-border);
 }
 </style>

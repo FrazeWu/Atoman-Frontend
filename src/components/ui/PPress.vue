@@ -45,10 +45,10 @@ const onClick = (event: MouseEvent) => {
   align-items: center;
   justify-content: center;
   padding: 0 22px;
-  border: 1px solid var(--a-color-ink);
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  font-family: var(--a-font-meta);
+  border: 1px solid var(--a-color-text);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  font-family: var(--a-font-sans);
   font-size: 12px;
   font-weight: 950;
   letter-spacing: 0.16em;
@@ -57,8 +57,8 @@ const onClick = (event: MouseEvent) => {
 }
 
 .p-press--secondary {
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
 }
 
 .p-press:not(:disabled) {
@@ -70,12 +70,12 @@ const onClick = (event: MouseEvent) => {
 }
 
 .p-press--secondary:not(:disabled):hover {
-  background-color: var(--a-color-paper-soft);
+  background-color: var(--a-color-surface);
   opacity: 1;
 }
 
 .p-press:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
 }
 

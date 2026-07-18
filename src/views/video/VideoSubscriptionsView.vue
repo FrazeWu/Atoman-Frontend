@@ -163,7 +163,7 @@ onMounted(async () => {
   display: grid;
   gap: 0.4rem;
   padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .video-subscription-item__meta {

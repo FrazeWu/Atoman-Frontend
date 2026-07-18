@@ -81,20 +81,10 @@ describe('SiteFooter', () => {
     expect(footerSource).not.toContain('to="/setting"')
   })
 
-  it('uses the topbar short-line motif instead of full-width borders', () => {
+  it('does not render archival divider decorations', () => {
     expect(footerSource).not.toContain('border-top: var(--a-border)')
-    expect(footerSource).toContain('.site-footer::before')
-    expect(footerSource).toContain('width: 20px')
-    expect(footerSource).toContain('background-color: var(--a-color-ink)')
-  })
-
-  it('extends the centered divider with two subtle side lines', () => {
-    expect(footerSource).toContain('.site-footer::after')
-    expect(footerSource).toContain('width: 68px')
-    expect(footerSource).toContain('opacity: 0.45')
-    expect(footerSource).toContain('var(--a-color-ink) 0 12px')
-    expect(footerSource).toContain('transparent 12px 56px')
-    expect(footerSource).toContain('var(--a-color-ink) 56px 68px')
+    expect(footerSource).not.toContain('.site-footer::before')
+    expect(footerSource).not.toContain('.site-footer::after')
   })
 
   it('does not install a scroll-driven floating footer state', () => {

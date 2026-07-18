@@ -294,7 +294,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--a-color-line);
+  border-bottom: 1px solid var(--a-color-border);
 }
 
 .user-management__page-head h1,
@@ -310,7 +310,7 @@ onBeforeUnmount(() => {
 }
 
 .user-management__page-head h1 {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 2rem;
   line-height: 1.2;
 }
@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
 .user-management__page-head p,
 .user-management__section-head p,
 .user-management__profile-preview span {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .user-management__directory-trigger {
@@ -347,12 +347,12 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 1.5rem;
   padding: 2rem 0 2.5rem;
-  border-top: 1px solid var(--a-color-line);
+  border-top: 1px solid var(--a-color-border);
   scroll-margin-top: calc(var(--a-topbar-height) + 1rem);
 }
 
 .user-management__section:first-child {
-  border-top: 2px solid var(--a-color-ink);
+  border-top: 2px solid var(--a-color-text);
 }
 
 .user-management__section-head {
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
 .user-management__section-head > span {
   padding-top: 0.25rem;
   color: var(--a-color-muted-soft);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-strong);
 }
@@ -379,8 +379,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 1rem;
   padding: 1rem 0;
-  border-top: 1px solid var(--a-color-line-soft);
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .user-management__profile-preview > div:last-child {
@@ -396,7 +396,7 @@ onBeforeUnmount(() => {
   place-items: center;
   overflow: hidden;
   border-radius: 8px;
-  background: var(--a-color-ink);
+  background: var(--a-color-text);
   color: var(--a-color-bg);
   font-size: 1.5rem;
   font-weight: var(--a-font-weight-strong);
@@ -426,7 +426,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: flex-end;
   padding-top: 1rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 @media (max-width: 1023px) {

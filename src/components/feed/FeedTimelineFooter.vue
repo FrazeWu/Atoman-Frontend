@@ -164,7 +164,7 @@ const submitJump = () => {
   min-width: 2.2rem;
   min-height: 2.2rem;
   padding: 0.3rem 0.55rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   font-size: 0.72rem;
@@ -176,13 +176,13 @@ const submitJump = () => {
 .feed-page-control:hover:not(:disabled),
 .feed-page-number:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: var(--a-shadow-paper-sm);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .feed-page-number.is-active {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
 }
 
 .feed-page-number:disabled,
@@ -194,7 +194,7 @@ const submitJump = () => {
 }
 
 .feed-page-number:disabled:not(.is-active) {
-  border-style: dashed;
+  border-style: solid;
 }
 
 .feed-jump {
@@ -217,9 +217,9 @@ const submitJump = () => {
   text-align: center;
   padding: 0.2rem 0.1rem 0.3rem;
   font-size: 0.875rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-family: inherit;
   outline: none;
   box-sizing: border-box;

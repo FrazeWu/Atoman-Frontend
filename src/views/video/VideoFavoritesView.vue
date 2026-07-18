@@ -40,8 +40,8 @@ const activeTab = ref<(typeof tabs)[number]>('视频')
 }
 
 .video-favorites-tab {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   font: inherit;
   font-weight: 500;

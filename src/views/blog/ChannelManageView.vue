@@ -33,7 +33,7 @@
             <h3 style="font-size:1.25rem;font-weight:bold;margin-bottom:0.5rem">{{ channel.name }}</h3>
             <p v-if="channel.description" style="color:#666;margin-bottom:1rem">{{ channel.description }}</p>
           </div>
-          <div class="paper-actions-row">
+          <div class="ui-actions-row">
             <PClip label="编辑" @click="showEditModal(channel)" />
             <PReject v-if="!channel.is_default" label="删除" @click="showDeleteModal(channel)" />
           </div>
@@ -267,7 +267,7 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.paper-actions-row,
+.ui-actions-row,
 .modal-actions {
   display: flex;
   flex-wrap: wrap;

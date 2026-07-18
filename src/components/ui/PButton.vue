@@ -118,7 +118,7 @@ const handleClick = (event: MouseEvent) => {
   justify-content: center;
   gap: 0.5rem;
   border: 1px solid transparent;
-  border-radius: var(--a-radius-base);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast);
   cursor: pointer;
@@ -127,7 +127,7 @@ const handleClick = (event: MouseEvent) => {
   letter-spacing: 0;
   line-height: 1;
   text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
 }
 
@@ -140,7 +140,7 @@ const handleClick = (event: MouseEvent) => {
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   flex-shrink: 0;
 }
 
@@ -179,35 +179,35 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button--secondary {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
   border-color: transparent;
 }
 
 .p-button--secondary:hover:not(.p-button--disabled) {
   background: var(--a-color-disabled-border);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-button--ghost {
   border-color: transparent;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-button--ghost:hover:not(.p-button--disabled) {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 
 .p-button--danger {
-  border-color: var(--a-color-danger-line);
-  background: var(--a-color-paper);
+  border-color: var(--a-color-danger-border);
+  background: var(--a-color-bg);
   color: var(--a-color-danger);
 }
 
 .p-button--danger:hover:not(.p-button--disabled) {
   background: var(--a-color-danger-bg);
-  border-color: var(--a-color-danger-line);
+  border-color: var(--a-color-danger-border);
 }
 
 .p-button--block {
@@ -215,7 +215,7 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button:not(.p-button--disabled):active {
-  transform: translateY(1px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
 }
 
 .p-button--disabled {

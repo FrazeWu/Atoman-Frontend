@@ -542,7 +542,7 @@ onMounted(fetchPost)
   margin: 1.5rem 0;
   font-style: italic;
   color: var(--a-color-muted);
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 .prose-blog :deep(ul), .prose-blog :deep(ol) {
   padding-left: 1.5rem;
@@ -701,8 +701,8 @@ onMounted(fetchPost)
   font-family: "Times New Roman", Times, Georgia, "Liberation Serif", serif;
   line-height: 1.62;
   padding: 1.25rem 1.75rem;
-  background: var(--a-color-paper-soft);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
 }
 
@@ -726,7 +726,7 @@ onMounted(fetchPost)
 .prose-blog-academic {
   column-count: 2;
   column-gap: 3rem;
-  column-rule: 1px solid var(--a-color-line-soft);
+  column-rule: 1px solid var(--a-color-border-soft);
   text-align: justify;
   text-justify: inter-word;
   font-family: "Times New Roman", Times, Georgia, "Liberation Serif", serif !important;
@@ -793,7 +793,7 @@ onMounted(fetchPost)
 .prose-blog-academic :deep(blockquote) {
   break-inside: avoid;
   border-left: 3px double var(--a-color-fg) !important;
-  background: var(--a-color-paper-soft) !important;
+  background: var(--a-color-surface) !important;
   padding: 0.75rem 1rem !important;
   margin: 1.25rem 0 !important;
   font-family: inherit !important;
@@ -830,7 +830,7 @@ onMounted(fetchPost)
 
 .prose-blog-academic :deep(td) {
   border: none !important;
-  border-bottom: 1px solid var(--a-color-line-soft) !important;
+  border-bottom: 1px solid var(--a-color-border-soft) !important;
   padding: 0.4rem 0.5rem !important;
 }
 
@@ -841,7 +841,7 @@ onMounted(fetchPost)
 .prose-blog-academic :deep(img) {
   break-inside: avoid;
   max-width: 100%;
-  border: 1px solid var(--a-color-line-soft) !important;
+  border: 1px solid var(--a-color-border-soft) !important;
 }
 
 .prose-blog-academic :deep(hr) {

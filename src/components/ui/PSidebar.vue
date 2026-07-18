@@ -44,7 +44,7 @@ const { sidebarCollapsed } = useSidebar()
 
 :deep(.p-sidebar-item) {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   min-height: 3.75rem;
   padding: 0 1.35rem;
@@ -56,7 +56,7 @@ const { sidebarCollapsed } = useSidebar()
   justify-content: center;
   width: 1.5rem;
   flex-shrink: 0;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   text-align: center;
 }
 
@@ -70,10 +70,6 @@ const { sidebarCollapsed } = useSidebar()
 
 .p-sidebar.is-collapsed :deep(.p-sidebar-item-icon) {
   display: inline-flex;
-}
-
-.p-sidebar.is-collapsed :deep(.p-sidebar-item-num) {
-  display: none;
 }
 
 .p-sidebar.is-collapsed :deep(.p-sidebar-item-label) {

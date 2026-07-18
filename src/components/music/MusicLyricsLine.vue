@@ -146,7 +146,7 @@ function handleMouseUp() {
 
 .music-lyrics-line__text {
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: clamp(1.25rem, 2vw, 2rem);
   font-weight: 900;
   line-height: 1.3;
@@ -155,7 +155,7 @@ function handleMouseUp() {
 
 .music-lyrics-line__translation {
   margin: 0.4rem 0 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.95rem;
   line-height: 1.5;
   white-space: pre-wrap;

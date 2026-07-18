@@ -172,8 +172,8 @@ defineExpose({ open })
 
 <style scoped>
 .bookmark-folder-modal { display: grid; gap: 0.55rem; }
-.bookmark-folder-option { display: grid; grid-template-columns: 20px 1fr 20px; align-items: center; gap: 0.6rem; width: 100%; min-height: 2.75rem; padding: 0.55rem 0.7rem; border: 1px solid var(--a-color-line-soft); background: var(--a-color-bg); color: var(--a-color-fg); text-align: left; cursor: pointer; }
+.bookmark-folder-option { display: grid; grid-template-columns: 20px 1fr 20px; align-items: center; gap: 0.6rem; width: 100%; min-height: 2.75rem; padding: 0.55rem 0.7rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: var(--a-color-fg); text-align: left; cursor: pointer; }
 .bookmark-folder-option.active { border-color: var(--a-color-fg); font-weight: 800; }
 .bookmark-folder-create { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; margin-top: 0.7rem; }
-.bookmark-folder-create input { min-width: 0; border: 1px solid var(--a-color-line); padding: 0.55rem 0.65rem; background: var(--a-color-bg); color: var(--a-color-fg); }
+.bookmark-folder-create input { min-width: 0; border: 1px solid var(--a-color-border); padding: 0.55rem 0.65rem; background: var(--a-color-bg); color: var(--a-color-fg); }
 </style>

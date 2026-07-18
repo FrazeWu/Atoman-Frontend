@@ -331,8 +331,8 @@ onBeforeUnmount(() => {
 }
 
 .setting-access__module-toggle-item {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
 }
 
 .setting-access__module-toggle-item strong,
@@ -341,7 +341,7 @@ onBeforeUnmount(() => {
 }
 
 .setting-access__module-toggle-item small {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-xs);
 }
 
@@ -352,7 +352,7 @@ onBeforeUnmount(() => {
 .setting-access__module-nav input {
   width: 18px;
   height: 18px;
-  accent-color: var(--a-color-ink);
+  accent-color: var(--a-color-text);
 }
 
 .setting-access__module-nav {
@@ -369,13 +369,13 @@ onBeforeUnmount(() => {
 
 .setting-access__module-helper,
 .setting-access__placeholder {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   line-height: 1.6;
 }
 
 .setting-access__section-state {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
@@ -412,12 +412,12 @@ onBeforeUnmount(() => {
 }
 
 .setting-access__message {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-weight: var(--a-font-weight-strong);
 }
 
 .setting-access__message--error {
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 900px) {

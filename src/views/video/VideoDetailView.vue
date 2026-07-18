@@ -500,8 +500,8 @@ function handleSeekToTimestamp(value: number) {
   color: var(--a-color-muted, #6b7280);
 }
 .vd-share {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
   font: inherit;
   font-size: 0.8rem;

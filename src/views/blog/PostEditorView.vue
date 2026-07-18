@@ -1491,13 +1491,7 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   padding: 0.9rem 1.25rem;
   border-bottom: var(--a-border);
-  background: repeating-linear-gradient(
-    -45deg,
-    #fff,
-    #fff 10px,
-    #f3f3f3 10px,
-    #f3f3f3 20px
-  );
+  background: var(--a-color-surface);
 }
 
 .collab-mode-banner__label {
@@ -1676,12 +1670,7 @@ onBeforeUnmount(() => {
 .toc-rail {
   width: calc(var(--toc-depth) * 0.8rem + 1px);
   min-height: 1.2rem;
-  background-image: repeating-linear-gradient(
-    to right,
-    color-mix(in srgb, var(--a-color-border) 52%, transparent) 0 1px,
-    transparent 1px 0.8rem
-  );
-  background-repeat: no-repeat;
+  border-left: 1px solid var(--a-color-border-soft);
   opacity: 0.9;
 }
 

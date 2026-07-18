@@ -272,11 +272,11 @@ async function submitReport(input: ReportCommentInput) {
 
 <style scoped>
 .comment-section { display: grid; gap: 1rem; min-width: 0; }
-.comment-section__header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--a-color-ink); }
+.comment-section__header { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--a-color-text); }
 .comment-section__header h2 { display: inline; margin: 0; font-size: 1.35rem; letter-spacing: 0; }
-.comment-section__header small { margin-left: 0.55rem; color: var(--a-color-ink-muted); }
-.comment-section__kicker { display: block; margin-bottom: 0.25rem; color: var(--a-color-ink-muted); font-family: var(--a-font-meta); font-size: 0.68rem; font-weight: 900; letter-spacing: 0.12em; }
-.comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 84px; border: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); color: var(--a-color-ink-muted); }
+.comment-section__header small { margin-left: 0.55rem; color: var(--a-color-text-secondary); }
+.comment-section__kicker { display: block; margin-bottom: 0.25rem; color: var(--a-color-text-secondary); font-family: var(--a-font-sans); font-size: 0.68rem; font-weight: 900; letter-spacing: 0.12em; }
+.comment-section__login, .comment-section__state { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 84px; border: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); color: var(--a-color-text-secondary); }
 .comment-section__login :deep(.p-button) { margin-left: 0.5rem; }
 .comment-section__threads { display: grid; gap: 0.9rem; }
 .comment-section__error { margin: 0; padding: 0.75rem; border-left: 3px solid var(--a-color-accent-destructive); color: var(--a-color-accent-destructive); }

@@ -7,8 +7,6 @@
     active-class="active"
     :exact-active-class="exact ? 'active' : ''"
   >
-    <span v-if="index" class="p-sidebar-item-num">{{ formattedIndex }}</span>
-    <span class="p-sidebar-item-label"><slot /></span>
     <span
       v-if="icon || iconChar"
       class="p-sidebar-item-icon"
@@ -18,6 +16,7 @@
       <component :is="icon" v-if="icon" class="p-sidebar-item-svg" />
       <template v-else>{{ iconChar }}</template>
     </span>
+    <span class="p-sidebar-item-label"><slot /></span>
   </RouterLink>
   <button
     v-else
@@ -26,8 +25,6 @@
     :class="{ active, 'is-focused': isFocused }"
     @click="$emit('click')"
   >
-    <span v-if="index" class="p-sidebar-item-num">{{ formattedIndex }}</span>
-    <span class="p-sidebar-item-label"><slot /></span>
     <span
       v-if="icon || iconChar"
       class="p-sidebar-item-icon"
@@ -37,13 +34,14 @@
       <component :is="icon" v-if="icon" class="p-sidebar-item-svg" />
       <template v-else>{{ iconChar }}</template>
     </span>
+    <span class="p-sidebar-item-label"><slot /></span>
   </button>
 </template>
 
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
+import type { Component } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   to?: string | object
   index?: number | string
   active?: boolean
@@ -55,35 +53,28 @@ const props = defineProps<{
 
 defineEmits(['click'])
 
-const formattedIndex = computed(() => {
-  if (typeof props.index === 'number') {
-    return String(props.index).padStart(2, '0') + '/'
-  }
-  return props.index
-})
 </script>
 
 <style scoped>
 .p-sidebar-item {
-  border-radius: 0px; /* Straight corner */
+  border-radius: var(--a-radius-control);
   background: transparent;
   box-shadow: none;
   transition: all 0.2s ease;
 }
 .p-sidebar-item:hover,
 .p-sidebar-item.is-focused {
-  background: transparent;
-  box-shadow: none;
-  color: var(--a-color-ink);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
 }
 .p-sidebar-item:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 .p-sidebar-item.active {
-  background: transparent;
-  color: var(--a-color-ink);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
   box-shadow: none;
   font-weight: 700;
 }

@@ -51,7 +51,7 @@ describe('PButton', () => {
     expect(wrapper.findComponent({ name: 'RouterLink' }).exists()).toBe(true)
   })
 
-  it('renders paper button styling hooks', () => {
+  it('renders secondary button styling without a decorative marker', () => {
     const wrapper = mount(PButton, {
       props: {
         label: '保存',

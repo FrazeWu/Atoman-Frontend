@@ -263,7 +263,7 @@ onMounted(async () => {
 .user-blog-settings-panel__field,
 .user-blog-settings-panel__password {
   padding: 1rem 0;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .user-blog-settings-panel__password {
@@ -272,7 +272,7 @@ onMounted(async () => {
 }
 
 .settings-section {
-  border-top: 1.5px solid var(--a-color-line-soft);
+  border-top: 1.5px solid var(--a-color-border-soft);
   padding-top: 1.25rem;
 }
 

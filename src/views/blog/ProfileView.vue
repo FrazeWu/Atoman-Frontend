@@ -296,7 +296,7 @@ onMounted(async () => {
   width: 5.5rem;
   height: 5.5rem;
   object-fit: cover;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
   border-radius: 4px;

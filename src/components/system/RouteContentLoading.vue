@@ -9,7 +9,7 @@
   display: grid;
   min-height: min(40vh, 20rem);
   place-items: center;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: var(--a-text-sm);
   font-weight: 500;
 }

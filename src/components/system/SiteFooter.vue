@@ -74,34 +74,6 @@ function openPanel(panel: FootbarPanel, label: string) {
   background: var(--a-color-bg);
 }
 
-.site-footer::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 20px;
-  height: 1px;
-  transform: translateX(-50%);
-  background-color: var(--a-color-ink);
-}
-
-.site-footer::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 68px;
-  height: 1px;
-  transform: translateX(-50%);
-  background: linear-gradient(
-    to right,
-    var(--a-color-ink) 0 12px,
-    transparent 12px 56px,
-    var(--a-color-ink) 56px 68px
-  );
-  opacity: 0.45;
-}
-
 .site-footer-inner {
   display: flex;
   height: 100%;

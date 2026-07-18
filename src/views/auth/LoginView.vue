@@ -1,7 +1,7 @@
 <template>
   <div class="auth-page">
-    <section :class="['auth-paper', { 'auth-paper--register': isRegister }]">
-      <div class="auth-paper-head">
+    <section :class="['auth-card', { 'auth-card--register': isRegister }]">
+      <div class="auth-card-head">
         <h1 class="auth-title">{{ isRegister ? '注册' : '登录' }}</h1>
       </div>
 
@@ -621,35 +621,25 @@ watch(username, (value) => {
   align-items: center;
   justify-content: center;
   padding: 4rem 1.5rem 6rem;
-  background-color: var(--a-color-paper-soft);
-  background-image: 
-    linear-gradient(var(--a-color-line-soft) 1px, transparent 1px),
-    linear-gradient(90deg, var(--a-color-line-soft) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: center;
+  background-color: var(--a-color-surface);
   min-height: calc(100vh - 56px);
 }
 
-.auth-paper {
+.auth-card {
   width: min(100%, 23rem);
-  background: var(--a-color-paper);
-  border: 2px solid var(--a-color-fg);
-  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.15);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-modal);
+  box-shadow: var(--a-shadow-md);
   padding: 2.5rem 2.25rem;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
-.auth-paper:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.2);
-}
-
-.auth-paper--register {
+.auth-card--register {
   width: min(100%, 25.5rem);
 }
 
-.auth-paper-head {
+.auth-card-head {
   margin-bottom: 1.45rem;
 }
 
@@ -663,11 +653,11 @@ watch(username, (value) => {
 
 .auth-title {
   margin: 0;
-  font-family: var(--a-font-serif);
-  font-size: 3.55rem;
-  font-weight: 900;
-  line-height: 0.95;
-  letter-spacing: -0.05em;
+  font-family: var(--a-font-sans);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .auth-sub {
@@ -690,7 +680,7 @@ watch(username, (value) => {
 
 .auth-inline-tip {
   margin-top: 0.45rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.75rem;
 }
 
@@ -700,7 +690,7 @@ watch(username, (value) => {
   justify-content: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
 }
 
@@ -708,19 +698,19 @@ watch(username, (value) => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--a-color-line);
+  background: var(--a-color-border);
   transition: background-color 0.3s;
 }
 
 .step-dot--active {
   background: var(--a-color-fg);
-  box-shadow: 0 0 0 2px var(--a-color-line-soft);
+  box-shadow: 0 0 0 2px var(--a-color-border-soft);
 }
 
 .step-line {
   width: 24px;
   height: 1px;
-  background: var(--a-color-line-soft);
+  background: var(--a-color-border-soft);
   transition: background-color 0.3s;
 }
 
@@ -748,7 +738,7 @@ watch(username, (value) => {
 }
 
 .auth-form :deep(.p-input) {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.88rem 0.95rem;
   box-shadow: none;
   background: #fff;
@@ -768,8 +758,8 @@ watch(username, (value) => {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -779,14 +769,14 @@ watch(username, (value) => {
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   flex-shrink: 0;
 }
 
 .auth-code-input-group {
   display: flex;
   align-items: stretch;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
@@ -826,10 +816,10 @@ watch(username, (value) => {
   margin-right: 0.5rem;
   height: 2.2rem;
   padding: 0 1rem;
-  border: 1.5px solid var(--a-color-fg);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-family: var(--a-font-meta);
+  border: 1px solid var(--a-color-primary);
+  background: var(--a-color-primary);
+  color: var(--a-color-primary-contrast);
+  font-family: inherit;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -838,26 +828,23 @@ watch(username, (value) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 2px 2px 0px var(--a-color-fg);
-  border-radius: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  box-shadow: none;
+  border-radius: var(--a-radius-control);
 }
 
 .auth-code-btn-inline:hover:not(:disabled) {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  box-shadow: 3px 3px 0px var(--a-color-fg);
-  transform: translate(-1px, -1px);
+  background: var(--a-color-primary-hover);
+  border-color: var(--a-color-primary-hover);
 }
 
 .auth-code-btn-inline:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px var(--a-color-fg);
+  background: var(--a-color-primary-pressed);
 }
 
 .auth-code-btn-inline:disabled {
-  border-color: var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border-color: var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted-soft);
   box-shadow: none;
   transform: none;
@@ -870,9 +857,9 @@ watch(username, (value) => {
 
 .auth-submit:deep(.p-button) {
   min-height: 3.05rem;
-  border: 2px solid var(--a-color-fg);
-  border-radius: 0;
-  background: var(--a-color-fg);
+  border: 1px solid var(--a-color-primary);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-primary);
   color: var(--a-color-bg);
   box-shadow: none;
   letter-spacing: 0.08em;
@@ -880,8 +867,8 @@ watch(username, (value) => {
 }
 
 .auth-submit:deep(.p-button:hover:not(:disabled)) {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-fg);
+  background: var(--a-color-primary-hover);
+  color: var(--a-color-primary-contrast);
   text-decoration: none;
   transform: none;
   box-shadow: none;
@@ -896,24 +883,24 @@ watch(username, (value) => {
 
 .auth-back-btn:deep(.p-button) {
   min-height: 3.05rem;
-  border: 2px solid var(--a-color-fg);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border-radius: 0;
+  border-radius: var(--a-radius-control);
   box-shadow: none;
   letter-spacing: 0.08em;
 }
 
 .auth-back-btn:deep(.p-button:hover:not(:disabled)) {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
   text-decoration: none;
 }
 
 .auth-submit-btn:deep(.p-button) {
   min-height: 3.05rem;
-  border: 2px solid var(--a-color-fg);
-  border-radius: 0;
-  background: var(--a-color-fg);
+  border: 1px solid var(--a-color-primary);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-primary);
   color: var(--a-color-bg);
   box-shadow: none;
   letter-spacing: 0.08em;
@@ -921,8 +908,8 @@ watch(username, (value) => {
 }
 
 .auth-submit-btn:deep(.p-button:hover:not(:disabled)) {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-fg);
+  background: var(--a-color-primary-hover);
+  color: var(--a-color-primary-contrast);
   text-decoration: none;
 }
 
@@ -973,7 +960,7 @@ watch(username, (value) => {
 .auth-footer {
   margin-top: 1.55rem;
   padding-top: 1.2rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   font-size: var(--a-text-sm);
   color: var(--a-color-muted);
 }
@@ -1005,14 +992,14 @@ watch(username, (value) => {
     padding: 2rem 1rem 4rem;
   }
 
-  .auth-paper,
-  .auth-paper--register {
+  .auth-card,
+  .auth-card--register {
     width: 100%;
     padding: 1.75rem 1.5rem;
   }
 
   .auth-title {
-    font-size: 2.65rem;
+    font-size: 1.75rem;
   }
 
   .auth-buttons-row {

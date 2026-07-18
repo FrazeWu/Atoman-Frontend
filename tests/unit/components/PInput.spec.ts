@@ -23,7 +23,7 @@ describe('PInput', () => {
     expect(label.attributes('for')).toBe(inputId)
   })
 
-  it('renders paper field affordances', () => {
+  it('renders a standard labeled input without decorative markers', () => {
     const wrapper = mount(PInput, {
       props: {
         modelValue: 'value',
@@ -31,7 +31,8 @@ describe('PInput', () => {
       },
     })
 
-    expect(wrapper.find('.p-field-dot').exists()).toBe(true)
+    expect(wrapper.find('.p-field-dot').exists()).toBe(false)
+    expect(wrapper.get('label').text()).toBe('标题')
     expect(wrapper.find('input').classes()).toContain('p-input')
   })
 

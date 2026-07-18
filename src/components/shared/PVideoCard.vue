@@ -130,9 +130,9 @@ const avatarLetter = () =>
   display: grid;
   place-items: center;
   opacity: 0;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   border-radius: 4px;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   box-shadow: none;
   color: var(--a-color-fg);
   cursor: pointer;
@@ -219,7 +219,7 @@ const avatarLetter = () =>
 }
 
 .vc-meta {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.725rem;
   color: var(--a-color-muted-soft);
   display: flex;

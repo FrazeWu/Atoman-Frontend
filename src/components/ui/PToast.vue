@@ -90,8 +90,8 @@ onUnmounted(clearTimer)
   border-radius: var(--a-radius-none, 4px);
   padding: 8px 14px;
   background: #ffffff;
-  color: var(--a-color-ink);
-  border: 1px solid var(--a-color-line);
+  color: var(--a-color-text);
+  border: 1px solid var(--a-color-border);
   box-shadow: none;
   transition: top 0.3s ease;
 }
@@ -105,7 +105,7 @@ onUnmounted(clearTimer)
 }
 
 .p-toast--info .p-toast-dot {
-  background-color: var(--a-color-ink-soft);
+  background-color: var(--a-color-muted);
 }
 
 .p-toast--success .p-toast-dot {

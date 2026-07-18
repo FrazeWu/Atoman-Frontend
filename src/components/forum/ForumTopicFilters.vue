@@ -82,7 +82,7 @@ defineEmits<{
   display: grid;
   gap: 1rem;
   margin-bottom: 1.25rem;
-  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   padding-bottom: 1rem;
 }
 
@@ -134,7 +134,7 @@ defineEmits<{
   top: 0.1rem;
   border: 0;
   background: transparent;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   cursor: pointer;
   font-size: 1.1rem;
   line-height: 1;

@@ -95,7 +95,7 @@ defineEmits<{
 
 .setting-feed-items-sheet__row {
   padding: 0.9rem 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .setting-feed-items-sheet__meta {
@@ -104,7 +104,7 @@ defineEmits<{
 
 .setting-feed-items-sheet__meta small,
 .setting-feed-items-sheet__message {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .setting-feed-items-sheet__message {
@@ -112,7 +112,7 @@ defineEmits<{
 }
 
 .setting-feed-items-sheet__message--error {
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 720px) {

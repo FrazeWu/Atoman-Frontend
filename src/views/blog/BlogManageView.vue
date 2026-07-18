@@ -264,13 +264,13 @@ watch(() => currentChannel.value?.id, () => void loadCollections(), { immediate:
 .collection-card {
   position: relative;
   min-height: 13rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   border-radius: var(--a-radius-base);
 }
 
 .collection-card.is-default {
-  border-color: var(--a-color-ink);
+  border-color: var(--a-color-text);
 }
 
 .collection-card-main {
@@ -289,8 +289,8 @@ watch(() => currentChannel.value?.id, () => void loadCollections(), { immediate:
 
 .collection-card-main:hover,
 .collection-card-main:focus-visible {
-  background: var(--a-color-paper-wash);
-  outline: 2px solid var(--a-color-ink);
+  background: var(--a-color-surface-muted);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
 }
 

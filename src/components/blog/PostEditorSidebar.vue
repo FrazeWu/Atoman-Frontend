@@ -228,7 +228,7 @@ const triggerCoverUpload = () => {
   gap: 0.5rem;
   min-height: 2.75rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   font-weight: 500;
 }
 

@@ -106,8 +106,8 @@ function onFileChange(event: Event) {
 }
 
 .music-cover__preview-wrap {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   width: min(16rem, 100%);
 }
 

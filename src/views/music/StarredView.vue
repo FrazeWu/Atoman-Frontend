@@ -272,7 +272,7 @@ watch(
 }
 
 .page-header {
-  border-left: 4px solid var(--a-color-line-soft);
+  border-left: 4px solid var(--a-color-border-soft);
   padding-left: 1.25rem;
 }
 
@@ -339,7 +339,7 @@ watch(
 
 .page-title {
   margin: 0;
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 6rem;
   font-style: italic;
   font-weight: 500;
@@ -356,8 +356,8 @@ watch(
 .playlist-creation,
 .result-card,
 .empty-paper {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 
@@ -367,8 +367,8 @@ watch(
 }
 
 .result-card--interactive:hover {
-  background: var(--a-color-paper-soft);
-  border-color: color-mix(in srgb, var(--a-color-ink) 18%, var(--a-color-line-soft));
+  background: var(--a-color-surface);
+  border-color: color-mix(in srgb, var(--a-color-text) 18%, var(--a-color-border-soft));
   transform: translateY(-1px);
 }
 
@@ -406,25 +406,25 @@ watch(
   margin-top: 1rem;
 }
 
-.paper-input,
-.paper-textarea {
+.form-input,
+.form-textarea {
   width: 100%;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: rgba(255, 255, 255, 0.72);
   padding: 0.9rem 1rem;
   font: inherit;
 }
 
-.paper-action {
+.ui-action {
   width: fit-content;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   padding: 0.75rem 1rem;
   font: inherit;
   cursor: pointer;
 }
 
-.paper-action:disabled {
+.ui-action:disabled {
   cursor: wait;
   opacity: 0.7;
 }
@@ -436,14 +436,14 @@ watch(
 }
 
 .p-tab {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: rgba(255, 255, 255, 0.72);
   padding: 0.7rem 1rem;
   cursor: pointer;
 }
 
 .p-tab--active {
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 
@@ -485,7 +485,7 @@ watch(
   border-radius: 50%;
   overflow: hidden;
   background: var(--a-color-surface);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -542,7 +542,7 @@ watch(
   gap: 0.9rem;
   margin: 1rem 0 0;
   padding: 1rem 0 0;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .playlist-song {

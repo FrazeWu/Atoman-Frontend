@@ -240,7 +240,7 @@ const emitPlayPodcast = () => {
   height: 280px;
   object-fit: cover;
   margin-bottom: 3rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   filter: grayscale(100%);
 }
 
@@ -280,7 +280,7 @@ const emitPlayPodcast = () => {
   align-items: center;
   min-height: 1.9rem;
   padding: 0.2rem 0.65rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
   font-size: 0.74rem;
   font-weight: 500;
@@ -296,14 +296,14 @@ const emitPlayPodcast = () => {
   text-decoration: none;
   letter-spacing: 0;
   padding: 0.25rem 0.5rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   transition: all 0.15s ease;
 }
 
 .read-original-link:hover {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
 }
 
 .article-nav-link {

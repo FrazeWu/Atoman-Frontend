@@ -256,25 +256,25 @@ const shouldShowYear = (index: number) =>
 .header-top-row { display: flex; align-items: flex-start; justify-content: space-between; }
 .btn-upload {
   margin-top: 0.5rem;
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
   padding: 0.5rem 1.25rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
   letter-spacing: 0;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   text-decoration: none;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
-.btn-upload:hover { background: var(--a-color-paper); color: var(--a-color-ink); }
+.btn-upload:hover { background: var(--a-color-bg); color: var(--a-color-text); }
 .home-title {
   font-size: 2.5rem;
   font-weight: var(--a-font-weight-black, 900);
   font-style: italic;
   letter-spacing: 0;
-  border-left: 4px solid var(--a-color-ink);
+  border-left: 4px solid var(--a-color-text);
   padding-left: 1.25rem;
   line-height: 1.1;
   margin: 0 0 0.75rem;
@@ -295,7 +295,7 @@ const shouldShowYear = (index: number) =>
 }
 .search-frame {
   border: var(--a-border);
-  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  background: color-mix(in srgb, var(--a-color-bg) 94%, #f3eee5 6%);
   box-shadow: none;
   padding: 0.75rem 0.9rem 0.85rem;
   display: grid;
@@ -319,7 +319,7 @@ const shouldShowYear = (index: number) =>
   color: var(--a-color-muted-soft);
 }
 .search-frame__context {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 .search-input {
   width: 100%;
@@ -333,7 +333,7 @@ const shouldShowYear = (index: number) =>
   right: 0;
   z-index: 50;
   border: var(--a-border);
-  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  background: color-mix(in srgb, var(--a-color-bg) 94%, #f3eee5 6%);
   box-shadow: none;
   max-height: 18rem;
   overflow-y: auto;
@@ -368,9 +368,9 @@ const shouldShowYear = (index: number) =>
 }
 .search-item:hover,
 .search-item.active {
-  background: color-mix(in srgb, var(--a-color-paper) 58%, var(--a-color-paper-wash) 42%);
-  border-top-color: var(--a-color-line-soft);
-  border-bottom-color: var(--a-color-line-soft);
+  background: color-mix(in srgb, var(--a-color-bg) 58%, var(--a-color-surface-muted) 42%);
+  border-top-color: var(--a-color-border-soft);
+  border-bottom-color: var(--a-color-border-soft);
 }
 .search-item__label {
   font-weight: 500;
@@ -385,19 +385,19 @@ const shouldShowYear = (index: number) =>
 .search-actions {
   display: inline-flex;
   align-items: stretch;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 .search-action {
   border: 0;
-  border-right: 1px solid var(--a-color-line-soft);
+  border-right: 1px solid var(--a-color-border-soft);
   padding: 0.8rem 1rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
   letter-spacing: 0;
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -405,7 +405,7 @@ const shouldShowYear = (index: number) =>
   border-right: none;
 }
 .search-action:hover {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 .search-action--primary {
   font-weight: 500;
@@ -424,7 +424,7 @@ const shouldShowYear = (index: number) =>
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--a-color-line-soft);
+  background: var(--a-color-border-soft);
   z-index: 0;
 }
 .timeline-empty {
@@ -445,9 +445,9 @@ const shouldShowYear = (index: number) =>
   z-index: 20;
 }
 .year-badge {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink-muted);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text-secondary);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.25rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -460,28 +460,28 @@ const shouldShowYear = (index: number) =>
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 2px solid var(--a-color-line);
+  border: 2px solid var(--a-color-border);
   background: var(--a-color-bg);
   z-index: 20;
   transition: transform 0.2s ease, border-color 0.2s ease;
 }
-.timeline-node.playing { transform: translateX(-50%) scale(1.3); border-color: var(--a-color-ink); background: var(--a-color-ink); }
+.timeline-node.playing { transform: translateX(-50%) scale(1.3); border-color: var(--a-color-text); background: var(--a-color-text); }
 .album-card-wrap {
   margin-left: calc(33.333% + 2rem);
   width: calc(66.666% - 2rem);
 }
 .album-card {
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   padding: 1.5rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.album-card:hover { border-color: var(--a-color-line); box-shadow: none; }
+.album-card:hover { border-color: var(--a-color-border); box-shadow: none; }
 .album-card-inner { display: flex; gap: 1.5rem; }
 .album-cover {
   width: 128px;
   height: 128px;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   object-fit: cover;
   flex-shrink: 0;
   filter: grayscale(1);
@@ -494,25 +494,25 @@ const shouldShowYear = (index: number) =>
   line-height: 1.2;
   margin: 0 0 0.25rem;
 }
-.album-artist { font-size: 0.875rem; font-weight: 500; color: var(--a-color-ink-muted); margin: 0 0 0.25rem; }
+.album-artist { font-size: 0.875rem; font-weight: 500; color: var(--a-color-text-secondary); margin: 0 0 0.25rem; }
 .album-date { font-size: 0.75rem; color: var(--a-color-muted); margin: 0 0 0.25rem; }
 .album-tracks { font-size: 0.75rem; color: var(--a-color-muted-soft); margin: 0; }
 .album-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
 .btn-play, .btn-detail {
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 0.5rem 1rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
   letter-spacing: 0;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   cursor: pointer;
   transition: all 0.15s ease;
   text-decoration: none;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   display: inline-block;
 }
-.btn-play:hover, .btn-detail:hover { background: var(--a-color-ink); color: var(--a-color-paper); border-color: var(--a-color-ink); }
+.btn-play:hover, .btn-detail:hover { background: var(--a-color-text); color: var(--a-color-bg); border-color: var(--a-color-text); }
 
 @media (max-width: 720px) {
   .search-surface {

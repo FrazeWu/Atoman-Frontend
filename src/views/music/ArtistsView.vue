@@ -303,8 +303,8 @@ function handleSearchBlur() {
               </template>
             </SearchSurface>
           </div>
-          <button class="paper-action search-side-action" type="button" @click="openMusicCreationFlow()">
-            <span class="paper-action-dot" aria-hidden="true" />
+          <button class="ui-action search-side-action" type="button" @click="openMusicCreationFlow()">
+            <span class="action-indicator" aria-hidden="true" />
             添加艺术家
           </button>
         </div>
@@ -325,12 +325,12 @@ function handleSearchBlur() {
         <p class="state-line">{{ activeTab === 'subscribed' ? '暂无订阅的艺术家' : '没有匹配的艺术家' }}</p>
         <div class="empty-actions">
           <button
-            class="paper-action"
+            class="ui-action"
             type="button"
             data-testid="empty-add-artist"
             @click="openMusicCreationFlow()"
           >
-            <span class="paper-action-dot" aria-hidden="true" />
+            <span class="action-indicator" aria-hidden="true" />
             添加艺术家
           </button>
         </div>
@@ -420,11 +420,11 @@ function handleSearchBlur() {
   z-index: 100;
 }
 
-.paper-action-dot {
+.action-indicator {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   flex-shrink: 0;
 }
 .search-dropdown__hint {
@@ -449,7 +449,7 @@ function handleSearchBlur() {
   transition: background-color 0.15s ease;
 }
 .search-dropdown__item:hover {
-  background: color-mix(in srgb, var(--a-color-paper) 58%, var(--a-color-paper-wash) 42%);
+  background: color-mix(in srgb, var(--a-color-bg) 58%, var(--a-color-surface-muted) 42%);
 }
 .search-dropdown__item-title {
   font-size: 0.98rem;
@@ -461,21 +461,21 @@ function handleSearchBlur() {
   color: var(--a-color-muted-soft);
 }
 
-.state-line { margin: 1.5rem 0; color: var(--a-color-ink-soft); font-family: var(--a-font-meta); font-weight: 500; }
+.state-line { margin: 1.5rem 0; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 .empty-state { margin-top: 1.5rem; }
 .empty-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
 
-.paper-action {
+.ui-action {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
   min-height: 2.75rem;
   padding: 0.65rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 16%, transparent);
-  background: var(--a-color-paper);
+  border: 1px solid color-mix(in srgb, var(--a-color-text) 16%, transparent);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.78rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -484,8 +484,8 @@ function handleSearchBlur() {
   transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.paper-action:hover {
-  border-color: color-mix(in srgb, var(--a-color-ink) 30%, transparent);
+.ui-action:hover {
+  border-color: color-mix(in srgb, var(--a-color-text) 30%, transparent);
   transform: translateY(-1px);
   box-shadow: none;
 }

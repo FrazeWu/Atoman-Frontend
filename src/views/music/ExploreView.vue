@@ -560,7 +560,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .search-group + .search-group {
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   margin-top: 0.35rem;
   padding-top: 0.35rem;
 }
@@ -588,7 +588,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .search-result:hover {
-  background: color-mix(in srgb, var(--a-color-paper) 58%, var(--a-color-paper-wash) 42%);
+  background: color-mix(in srgb, var(--a-color-bg) 58%, var(--a-color-surface-muted) 42%);
 }
 
 .search-result__title {
@@ -668,10 +668,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 .discover-layout__playlist-placeholder {
   min-height: 13rem;
   padding: 1rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--a-color-paper) 86%, var(--a-color-paper-wash) 14%), var(--a-color-paper));
+    linear-gradient(180deg, color-mix(in srgb, var(--a-color-bg) 86%, var(--a-color-surface-muted) 14%), var(--a-color-bg));
   display: flex;
   flex-direction: column;
   justify-content: space-between;

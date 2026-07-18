@@ -53,6 +53,6 @@ defineProps<{
 .p-badge.is-info .p-badge-dot,
 .p-badge.is-internal .p-badge-dot,
 .p-badge.is-external .p-badge-dot {
-  background-color: var(--a-color-ink-soft);
+  background-color: var(--a-color-muted);
 }
 </style>

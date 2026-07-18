@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import PTextarea from '@/components/ui/PTextarea.vue'
 
 describe('PTextarea', () => {
-  it('renders paper textarea affordances', () => {
+  it('renders a standard labeled textarea without decorative markers', () => {
     const wrapper = mount(PTextarea, {
       props: {
         modelValue: 'notes',
@@ -11,7 +11,8 @@ describe('PTextarea', () => {
       },
     })
 
-    expect(wrapper.find('.p-field-dot').exists()).toBe(true)
+    expect(wrapper.find('.p-field-dot').exists()).toBe(false)
+    expect(wrapper.get('label').text()).toBe('摘要')
     expect(wrapper.find('textarea').classes()).toContain('p-textarea')
   })
 

@@ -386,14 +386,14 @@ onMounted(async () => {
 }
 
 .inbox-shell {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .inbox-category-pane {
   min-width: 0;
-  border-right: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border-right: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
 }
 
 .inbox-category-item {
@@ -405,10 +405,10 @@ onMounted(async () => {
   gap: 0.5rem;
   padding: 0 1rem;
   border: 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   border-left: 3px solid transparent;
   background: transparent;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   cursor: pointer;
   font-family: inherit;
   font-size: 0.86rem;
@@ -419,18 +419,18 @@ onMounted(async () => {
 }
 
 .inbox-category-item:hover {
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
 }
 
 .inbox-category-item.active {
-  border-left-color: var(--a-color-ink);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  border-left-color: var(--a-color-text);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
 }
 
 .inbox-category-item:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
 }
 
@@ -440,8 +440,8 @@ onMounted(async () => {
   display: grid;
   place-items: center;
   padding: 0 0.35rem;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   font-size: 0.68rem;
   font-weight: 500;
   line-height: 1;
@@ -455,8 +455,8 @@ onMounted(async () => {
 
 .inbox-list-pane {
   min-width: 0;
-  border-right: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border-right: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .pane-heading {
@@ -466,8 +466,8 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  color: var(--a-color-ink);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-text);
   font-size: 0.8rem;
   font-weight: 500;
 }
@@ -481,7 +481,7 @@ onMounted(async () => {
   width: 100%;
   min-height: 5rem;
   border: none;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   border-left: 3px solid transparent;
   background: transparent;
   padding: 0.9rem 1rem;
@@ -491,17 +491,17 @@ onMounted(async () => {
 }
 
 .sidebar-item:hover {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .sidebar-item.selected {
-  border-left-color: var(--a-color-ink);
-  background: var(--a-color-paper-wash);
+  border-left-color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
 }
 
 .sidebar-item.unread .sidebar-item-title {
   font-weight: 500;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .sidebar-item-title {
@@ -515,7 +515,7 @@ onMounted(async () => {
 
 .sidebar-item-source {
   margin-top: 0.25rem;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: 0.74rem;
   font-weight: 500;
 }
@@ -544,7 +544,7 @@ onMounted(async () => {
   align-content: center;
   justify-items: start;
   gap: 0.4rem;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .inbox-empty-state {
@@ -555,12 +555,12 @@ onMounted(async () => {
 .detail-empty {
   min-height: 100%;
   padding: 2rem;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
 }
 
 .inbox-empty-state strong,
 .detail-empty strong {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 1.05rem;
   font-weight: 500;
 }
@@ -572,13 +572,13 @@ onMounted(async () => {
 
 .inbox-detail {
   min-width: 0;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
 }
 
 .detail-card {
   min-height: 100%;
   padding: 2rem;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
 }
 
 .detail-body {
@@ -608,13 +608,13 @@ onMounted(async () => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
 }
 
 .dm-header {
   min-height: 3.5rem;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -641,22 +641,22 @@ onMounted(async () => {
 .dm-bubble {
   max-width: 70%;
   padding: 0.75rem 1.25rem;
-  background: var(--a-color-paper-wash);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-none);
   font-size: 0.95rem;
   line-height: 1.5;
 }
 
 .dm-message.self .dm-bubble {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
 }
 
 .dm-composer {
   padding: 1.25rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .dm-blocked-state {
@@ -690,7 +690,7 @@ onMounted(async () => {
     display: flex;
     overflow-x: auto;
     border-right: none;
-    border-bottom: 1px solid var(--a-color-line-soft);
+    border-bottom: 1px solid var(--a-color-border-soft);
   }
 
   .inbox-category-item {
@@ -701,12 +701,12 @@ onMounted(async () => {
   }
 
   .inbox-category-item.active {
-    border-bottom-color: var(--a-color-ink);
+    border-bottom-color: var(--a-color-text);
   }
 
   .inbox-list-pane {
     border-right: none;
-    border-bottom: 1px solid var(--a-color-line-soft);
+    border-bottom: 1px solid var(--a-color-border-soft);
   }
 }
 

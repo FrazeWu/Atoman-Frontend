@@ -166,8 +166,8 @@ function formatKindLabel(kind: MusicArtistKind) {
   gap: 0.75rem;
   align-items: center;
   padding: 0.8rem 0.9rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .contributor-chip__meta {
@@ -183,8 +183,8 @@ function formatKindLabel(kind: MusicArtistKind) {
 .contributor-chip__kind,
 .picker-option__kind,
 .picker-state {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -195,20 +195,20 @@ function formatKindLabel(kind: MusicArtistKind) {
 }
 
 .contributor-chip__remove {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.45rem 0.7rem;
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
-  font-family: var(--a-font-meta);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
   font-size: 0.75rem;
   font-weight: 800;
   cursor: pointer;
 }
 
 .picker-option {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   width: 100%;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   color: inherit;
   text-align: left;
   cursor: pointer;

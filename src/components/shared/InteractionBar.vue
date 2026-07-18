@@ -44,7 +44,7 @@ function toggleLike() {
 }
 
 .interaction-bar__button {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   padding: 0.5rem 0.875rem;
   background: var(--a-color-bg);

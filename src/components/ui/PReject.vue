@@ -31,9 +31,9 @@ const onClick = (event: MouseEvent) => {
   align-items: center;
   justify-content: center;
   padding: 9px 13px;
-  border: 1px solid var(--a-color-danger-line);
-  background: var(--a-color-paper);
-  color: var(--a-color-danger-ink);
+  border: 1px solid var(--a-color-danger-border);
+  background: var(--a-color-bg);
+  color: var(--a-color-danger);
   font-family: inherit;
   font-size: 10px;
   font-weight: var(--a-font-weight-strong, 700);
@@ -48,7 +48,7 @@ const onClick = (event: MouseEvent) => {
   right: 9px;
   left: 9px;
   height: 1px;
-  background: var(--a-color-danger-line);
+  background: var(--a-color-danger-border);
   content: '';
   opacity: 0.72;
   transform: translateY(-50%);
@@ -59,7 +59,7 @@ const onClick = (event: MouseEvent) => {
 }
 
 .p-reject:focus-visible {
-  outline: 2px solid var(--a-color-danger-line);
+  outline: 2px solid var(--a-color-danger-border);
   outline-offset: 2px;
 }
 

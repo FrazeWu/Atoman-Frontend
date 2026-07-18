@@ -187,7 +187,7 @@ watch(query, (v) => { if (v) open.value = true })
   width: 100%;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -201,8 +201,8 @@ watch(query, (v) => { if (v) open.value = true })
   left: 0;
   right: 0;
   top: calc(100% + 2px);
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border);
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   z-index: 50;
   max-height: 240px;
@@ -215,16 +215,16 @@ watch(query, (v) => { if (v) open.value = true })
   cursor: pointer;
   transition: background 0.1s;
 }
-.dropdown-item:hover { background: var(--a-color-paper-wash); }
+.dropdown-item:hover { background: var(--a-color-surface-muted); }
 .dropdown-empty { padding: 1rem; color: var(--a-color-muted); font-size: 0.875rem; text-align: center; }
 .dropdown-section { padding: 0.5rem; }
-.dropdown-divider { height: 1px; background: var(--a-color-line-soft); margin: 0.25rem 0; }
+.dropdown-divider { height: 1px; background: var(--a-color-border-soft); margin: 0.25rem 0; }
 .add-artist-link {
   display: inline-block;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   text-decoration: none;
-  border: 1px solid var(--a-color-ink);
+  border: 1px solid var(--a-color-text);
   padding: 0.45rem 0.75rem;
   font-size: 0.75rem;
   font-weight: var(--a-font-weight-strong, 700);
@@ -232,5 +232,5 @@ watch(query, (v) => { if (v) open.value = true })
   letter-spacing: 0.08em;
   transition: all 0.15s ease;
 }
-.add-artist-link:hover { background: var(--a-color-paper); color: var(--a-color-ink); }
+.add-artist-link:hover { background: var(--a-color-bg); color: var(--a-color-text); }
 </style>

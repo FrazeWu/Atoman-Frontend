@@ -270,28 +270,28 @@ defineExpose({ reset })
 </script>
 
 <style scoped>
-.comment-composer { display: grid; gap: 0.75rem; padding: 1rem; border: 1px solid var(--a-color-line-soft); background: var(--a-color-paper); }
-.comment-composer__reply { display: flex; align-items: center; justify-content: space-between; color: var(--a-color-ink-muted); font-size: var(--a-text-sm); }
+.comment-composer { display: grid; gap: 0.75rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); }
+.comment-composer__reply { display: flex; align-items: center; justify-content: space-between; color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
 .comment-composer__reply button, .comment-composer__attachment button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .comment-composer__field { position: relative; }
-.comment-composer textarea { width: 100%; min-height: 7rem; box-sizing: border-box; resize: vertical; border: 0; border-bottom: 1px solid var(--a-color-line); background: transparent; color: var(--a-color-ink); font: inherit; line-height: 1.65; }
-.comment-composer textarea:focus { outline: 2px solid var(--a-color-ink); outline-offset: 3px; }
-.comment-composer__mentions { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); max-height: 13rem; overflow: auto; border: 1px solid var(--a-color-ink); background: var(--a-color-paper); box-shadow: var(--a-shadow-paper-md); }
-.comment-composer__mentions button { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.6rem; width: 100%; min-height: 44px; padding: 0.45rem 0.65rem; border: 0; border-bottom: 1px solid var(--a-color-line-soft); background: transparent; color: var(--a-color-ink); text-align: left; cursor: pointer; }
-.comment-composer__mentions button:hover, .comment-composer__mentions button:focus-visible { background: var(--a-color-paper-wash); }
-.comment-composer__mentions small { color: var(--a-color-ink-muted); }
+.comment-composer textarea { width: 100%; min-height: 7rem; box-sizing: border-box; resize: vertical; border: 0; border-bottom: 1px solid var(--a-color-border); background: transparent; color: var(--a-color-text); font: inherit; line-height: 1.65; }
+.comment-composer textarea:focus { outline: 2px solid var(--a-color-text); outline-offset: 3px; }
+.comment-composer__mentions { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); max-height: 13rem; overflow: auto; border: 1px solid var(--a-color-text); background: var(--a-color-bg); box-shadow: var(--a-shadow-md); }
+.comment-composer__mentions button { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.6rem; width: 100%; min-height: 44px; padding: 0.45rem 0.65rem; border: 0; border-bottom: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); text-align: left; cursor: pointer; }
+.comment-composer__mentions button:hover, .comment-composer__mentions button:focus-visible { background: var(--a-color-surface-muted); }
+.comment-composer__mentions small { color: var(--a-color-text-secondary); }
 .comment-composer__attachments { display: grid; gap: 0.35rem; }
-.comment-composer__attachment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-height: 36px; padding-left: 0.65rem; border: 1px solid var(--a-color-line-soft); font-size: var(--a-text-sm); }
+.comment-composer__attachment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-height: 36px; padding-left: 0.65rem; border: 1px solid var(--a-color-border-soft); font-size: var(--a-text-sm); }
 .comment-composer__attachment span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comment-composer__footer, .comment-composer__tools { display: flex; align-items: center; gap: 0.5rem; }
 .comment-composer__footer { justify-content: flex-end; min-height: 40px; }
 .comment-composer__tools { margin-right: auto; }
-.comment-composer__tool { position: relative; display: grid; place-items: center; width: 40px; height: 40px; box-sizing: border-box; border: 1px solid var(--a-color-line-soft); background: transparent; color: var(--a-color-ink); cursor: pointer; }
-.comment-composer__tool:hover { border-color: var(--a-color-ink); }
+.comment-composer__tool { position: relative; display: grid; place-items: center; width: 40px; height: 40px; box-sizing: border-box; border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); cursor: pointer; }
+.comment-composer__tool:hover { border-color: var(--a-color-text); }
 .comment-composer__tool input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.comment-composer__count { color: var(--a-color-ink-muted); font-family: var(--a-font-meta); font-size: 0.75rem; }
+.comment-composer__count { color: var(--a-color-text-secondary); font-family: var(--a-font-sans); font-size: 0.75rem; }
 .comment-composer__count.is-over, .comment-composer__error { color: var(--a-color-accent-destructive); }
-.comment-composer__submit { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-ink); background: var(--a-color-ink); color: var(--a-color-paper); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+.comment-composer__submit { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-text); background: var(--a-color-text); color: var(--a-color-bg); font: inherit; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
 .comment-composer__submit:disabled { cursor: not-allowed; opacity: 0.5; }
 .comment-composer__error { margin: 0; font-size: var(--a-text-sm); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

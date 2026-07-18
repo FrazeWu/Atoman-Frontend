@@ -2,7 +2,7 @@
   <div class="a-page" style="padding-bottom:12rem">
     <PPageHeader title="视频创作">
       <template #action>
-        <div class="paper-actions-row">
+        <div class="ui-actions-row">
           <PPress label="新建频道" @click="showCreateChannelModal" />
           <PPress label="新建合集" variant="secondary" @click="showCreateCollectionModal" />
           <PPress label="上传视频" @click="router.push('/videos/upload')" />
@@ -450,7 +450,7 @@ onMounted(() => {
   padding: 2rem 1rem;
 }
 
-.paper-actions-row,
+.ui-actions-row,
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -474,34 +474,34 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   transition: background-color 0.1s ease, color 0.1s ease;
   font-weight: bold;
 }
 
 .collection-pill:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: var(--a-color-surface-muted);
 }
 
 .collection-pill.active {
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink);
-  border-color: var(--a-color-line);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  border-color: var(--a-color-border);
 }
 
 .col-count {
   font-size: 0.75rem;
-  background: var(--a-color-paper-wash);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.125rem 0.375rem;
   border-radius: var(--a-radius-none);
 }
 
 .collection-pill.active .col-count {
-  background: var(--a-color-paper);
-  border-color: var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  border-color: var(--a-color-border-soft);
 }
 
 .video-list {
@@ -514,7 +514,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 0;
-  border-bottom: 1px solid var(--a-color-paper-soft);
+  border-bottom: 1px solid var(--a-color-surface);
 }
 
 .video-item:last-child {
@@ -550,7 +550,7 @@ onMounted(() => {
 
 .action-btn {
   background: none;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 0.25rem 0.75rem;
   font-size: 0.875rem;
   font-weight: bold;
@@ -559,7 +559,7 @@ onMounted(() => {
 }
 
 .action-btn:hover {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 
 .action-btn.danger:hover {

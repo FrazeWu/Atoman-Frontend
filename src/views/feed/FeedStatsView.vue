@@ -35,15 +35,15 @@
       </div>
 
       <div v-if="stats" class="stats-overview">
-        <div class="stats-paper-card">
+        <div class="stats-card">
           <div class="a-label a-muted">阅读总量</div>
           <div class="stats-big-value">{{ stats.total_read }}</div>
         </div>
-        <div class="stats-paper-card">
+        <div class="stats-card">
           <div class="a-label a-muted">活跃订阅源</div>
           <div class="stats-big-value">{{ stats.source_breakdown.length }}</div>
         </div>
-        <div class="stats-paper-card">
+        <div class="stats-card">
           <div class="a-label a-muted">最常阅读</div>
           <div class="stats-small-title">{{ topSourceLabel }}</div>
           <div class="stats-small-meta">{{ topSourceReads }}</div>
@@ -311,16 +311,16 @@ onBeforeUnmount(() => {
   margin-bottom: 3rem;
 }
 
-.stats-paper-card {
+.stats-card {
   padding: 1.5rem;
-  background: var(--a-color-paper-soft);
-  border-bottom: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface);
+  border-bottom: 1px solid var(--a-color-border-soft);
   transition: all 0.2s;
 }
 
-.stats-paper-card:hover {
-  background: var(--a-color-paper-wash);
-  border-bottom-color: var(--a-color-ink);
+.stats-card:hover {
+  background: var(--a-color-surface-muted);
+  border-bottom-color: var(--a-color-text);
 }
 
 .stats-big-value {
@@ -356,7 +356,7 @@ onBeforeUnmount(() => {
 .stats-chart-section {
   padding: 1.5rem;
   background: white;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .chart-header {

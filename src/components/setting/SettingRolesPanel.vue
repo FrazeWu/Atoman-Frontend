@@ -170,9 +170,9 @@ onMounted(() => {
   width: min(100%, 420px);
   min-height: 44px;
   padding: 0.75rem 0.9rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   font-family: inherit;
   font-size: 1rem;
   box-sizing: border-box;
@@ -197,7 +197,7 @@ onMounted(() => {
 }
 
 .setting-roles__meta strong {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 1rem;
 }
 
@@ -205,7 +205,7 @@ onMounted(() => {
 .setting-roles__meta small,
 .setting-roles__empty,
 .setting-roles__message {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .setting-roles__message {
@@ -213,7 +213,7 @@ onMounted(() => {
 }
 
 .setting-roles__message--error {
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 640px) {

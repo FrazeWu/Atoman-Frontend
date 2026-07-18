@@ -418,10 +418,10 @@ onUnmounted(() => {
   padding: 0.35rem 0.65rem;
   cursor: pointer;
   min-height: 2rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -429,17 +429,17 @@ onUnmounted(() => {
 
 .star-group-button.active,
 .star-group-button:hover {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
 }
 
 .star-group-select {
   max-width: 9rem;
   padding: 0.25rem 0.45rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: #fff;
 }
 
@@ -458,21 +458,21 @@ onUnmounted(() => {
 .feed-item-external-link {
   display: inline-block;
   padding: 0.25rem 0.5rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   text-decoration: none;
   transition: all 0.15s;
 }
 
 .feed-item-external-link:hover {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
+  box-shadow: var(--a-shadow-sm);
 }
 </style>

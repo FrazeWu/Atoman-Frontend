@@ -125,7 +125,7 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
   background: var(--a-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .bookmark-btn {
@@ -136,8 +136,8 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   display: flex;
   align-items: center;
@@ -155,7 +155,7 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
 
 .bookmark-btn:hover {
   background: var(--a-color-surface);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .bookmark-btn.is-bookmarked {

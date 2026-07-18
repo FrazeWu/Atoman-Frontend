@@ -291,8 +291,8 @@ async function handleSaveLyrics(payload: {
   grid-template-rows: auto 1fr;
   gap: 1rem;
   padding: 1.5rem 2rem 2rem;
-  background: color-mix(in srgb, var(--a-color-paper) 94%, #efe5d5 6%);
-  border-top: 1px solid var(--a-color-line-soft);
+  background: color-mix(in srgb, var(--a-color-bg) 94%, #efe5d5 6%);
+  border-top: 1px solid var(--a-color-border-soft);
   z-index: var(--a-z-player-lyrics);
 }
 
@@ -312,8 +312,8 @@ async function handleSaveLyrics(payload: {
 .music-lyrics-panel__eyebrow,
 .music-lyrics-panel__meta {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -322,8 +322,8 @@ async function handleSaveLyrics(payload: {
 
 .music-lyrics-panel__heading h2 {
   margin: 0;
-  color: var(--a-color-ink);
-  font-family: var(--a-font-serif);
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
   font-size: clamp(1.2rem, 2vw, 1.8rem);
   font-weight: 900;
 }
@@ -338,9 +338,9 @@ async function handleSaveLyrics(payload: {
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -350,12 +350,12 @@ async function handleSaveLyrics(payload: {
 .music-lyrics-panel__feedback,
 .music-lyrics-panel__placeholder {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .music-lyrics-panel__versions {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   padding: 0.75rem;
 }
 
@@ -369,7 +369,7 @@ async function handleSaveLyrics(payload: {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .music-lyrics-panel__version div {
@@ -378,16 +378,16 @@ async function handleSaveLyrics(payload: {
 }
 
 .music-lyrics-panel__version span {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
 }
 
 .music-lyrics-panel__version-action {
   border: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -415,7 +415,7 @@ async function handleSaveLyrics(payload: {
   display: grid;
   align-content: start;
   gap: 1rem;
-  border-left: 1px solid var(--a-color-line-soft);
+  border-left: 1px solid var(--a-color-border-soft);
   padding-left: 1.25rem;
 }
 
@@ -437,7 +437,7 @@ async function handleSaveLyrics(payload: {
   }
 
   .music-lyrics-panel__sidebar {
-    border-top: 1px solid var(--a-color-line-soft);
+    border-top: 1px solid var(--a-color-border-soft);
     border-left: 0;
     padding-top: 1rem;
     padding-left: 0;

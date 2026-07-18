@@ -54,7 +54,7 @@ const cancel = () => {
 <style scoped>
 .p-confirm__message {
   margin: 0;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   line-height: 1.7;
   white-space: pre-wrap;
 }

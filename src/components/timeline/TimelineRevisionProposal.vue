@@ -305,20 +305,20 @@ function displayValue(changed: unknown) { return Array.isArray(changed) ? change
 </script>
 
 <style scoped>
-.timeline-proposals { display: grid; gap: 0.9rem; min-width: 0; padding-top: 1rem; border-top: 2px solid var(--a-color-ink); }
+.timeline-proposals { display: grid; gap: 0.9rem; min-width: 0; padding-top: 1rem; border-top: 2px solid var(--a-color-text); }
 .timeline-proposals__header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .timeline-proposals__header h2 { margin: 0; font-size: 1.1rem; letter-spacing: 0; }
-.timeline-proposals__header span, .timeline-proposals__state { color: var(--a-color-ink-muted); font-size: var(--a-text-sm); }
+.timeline-proposals__header span, .timeline-proposals__state { color: var(--a-color-text-secondary); font-size: var(--a-text-sm); }
 .timeline-proposals__composer, .timeline-proposals__list { display: grid; gap: 0.75rem; }
 .timeline-proposals__change { display: grid; grid-template-columns: minmax(9rem, 0.4fr) minmax(0, 1fr); gap: 0.75rem; }
 .timeline-proposals__coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .timeline-proposals label { display: grid; gap: 0.35rem; font-size: var(--a-text-sm); font-weight: 700; }
 .timeline-proposals__item { display: grid; gap: 0.55rem; }
-.timeline-proposals__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.65rem; border: 1px solid var(--a-color-line); background: var(--a-color-paper-soft); font-size: var(--a-text-sm); }
+.timeline-proposals__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.65rem; border: 1px solid var(--a-color-border); background: var(--a-color-surface); font-size: var(--a-text-sm); }
 .timeline-proposals__status { font-weight: 800; }
 .timeline-proposals__actions { display: flex; gap: 0.5rem; }
-.timeline-proposals__actions button { min-height: 36px; padding: 0 0.8rem; border: 1px solid var(--a-color-ink); background: var(--a-color-paper); cursor: pointer; }
-.timeline-proposals__more { min-height: 40px; border: 1px solid var(--a-color-line); background: var(--a-color-paper); cursor: pointer; }
+.timeline-proposals__actions button { min-height: 36px; padding: 0 0.8rem; border: 1px solid var(--a-color-text); background: var(--a-color-bg); cursor: pointer; }
+.timeline-proposals__more { min-height: 40px; border: 1px solid var(--a-color-border); background: var(--a-color-bg); cursor: pointer; }
 .timeline-proposals__error { margin: 0; color: var(--a-color-accent-destructive); }
 @media (max-width: 560px) { .timeline-proposals__change { grid-template-columns: 1fr; } }
 </style>

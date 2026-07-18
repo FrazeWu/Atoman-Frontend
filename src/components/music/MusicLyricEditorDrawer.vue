@@ -129,7 +129,7 @@ function handleSave() {
 <style scoped>
 .music-lyric-editor-drawer__header h2 {
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 1rem;
   font-weight: 900;
 }
@@ -146,8 +146,8 @@ function handleSave() {
 }
 
 .music-lyric-editor-drawer__field-label {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -156,9 +156,9 @@ function handleSave() {
 .music-lyric-editor-drawer__select {
   width: 100%;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 22%, transparent);
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   padding: 0 0 0.72rem;
   font: inherit;
 }

@@ -601,31 +601,6 @@ const submitCategoryRequest = async () => {
   background: var(--a-color-fg);
 }
 
-/* Shortcuts */
-.sidebar-shortcuts {
-  margin-top: 1.5rem;
-  padding: 0.75rem 1.25rem;
-  border-top: 1px solid var(--a-color-disabled-border);
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  color: var(--a-color-muted-soft);
-  line-height: 2.2;
-}
-
-kbd {
-  display: inline-block;
-  padding: 0.05em 0.3em;
-  border: 1.5px solid var(--a-color-disabled-border);
-  font-size: 0.6rem;
-  font-weight: 500;
-  font-family: monospace;
-  background: var(--a-color-surface);
-  color: var(--a-color-muted);
-  margin-right: 0.2em;
-}
-
 /* ── Main content ────────────────────────────────────────────────────────── */
 .forum-main {
   flex: 1;

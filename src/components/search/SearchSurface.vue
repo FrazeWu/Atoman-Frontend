@@ -132,7 +132,7 @@ function handleInput(event: Event) {
   min-width: min(100%, 24rem);
   position: relative;
   border: var(--a-border);
-  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  background: color-mix(in srgb, var(--a-color-bg) 94%, #f3eee5 6%);
   box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
   padding: 0.6rem 0.8rem 0.65rem;
   display: grid;
@@ -177,9 +177,9 @@ function handleInput(event: Event) {
 .search-btn {
   border: none;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 800;
   padding: 0 0.5rem;
@@ -214,7 +214,7 @@ function handleInput(event: Event) {
 }
 
 .search-frame__status {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .search-input-wrapper {
@@ -231,7 +231,7 @@ function handleInput(event: Event) {
 }
 
 .search-input-wrapper:focus-within .search-icon {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .search-icon {
@@ -247,7 +247,7 @@ function handleInput(event: Event) {
   flex: 1;
   border: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   padding: 0.35rem 0;
   font-size: 1rem;
   font-family: inherit;
@@ -266,7 +266,7 @@ function handleInput(event: Event) {
 .search-dropdown {
   margin-top: 0.25rem;
   padding: 0.75rem 0 0;
-  border-top: 1px solid color-mix(in srgb, var(--a-color-ink) 10%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--a-color-text) 10%, transparent);
   background: transparent;
   max-height: 420px;
   overflow-y: auto;
@@ -287,7 +287,7 @@ function handleInput(event: Event) {
   left: 0;
   right: 0;
   margin-top: 0;
-  background: color-mix(in srgb, var(--a-color-paper) 94%, #f3eee5 6%);
+  background: color-mix(in srgb, var(--a-color-bg) 94%, #f3eee5 6%);
   border: var(--a-border);
   border-top: 0;
   box-shadow: 0 10px 24px rgba(18, 18, 18, 0.05);
@@ -310,7 +310,7 @@ function handleInput(event: Event) {
   white-space: nowrap;
 }
 
-.search-actions :deep(.paper-action) {
+.search-actions :deep(.ui-action) {
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -318,9 +318,9 @@ function handleInput(event: Event) {
   min-height: auto;
 }
 
-.search-actions :deep(.paper-action:hover) {
+.search-actions :deep(.ui-action:hover) {
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   box-shadow: none;
 }
 
@@ -348,7 +348,7 @@ function handleInput(event: Event) {
   .search-actions {
     justify-self: stretch;
     padding-top: 0.75rem;
-    border-top: 1px solid color-mix(in srgb, var(--a-color-ink) 12%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
   }
 }
 

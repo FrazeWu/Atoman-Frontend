@@ -49,7 +49,7 @@ withDefaults(defineProps<{
 }
 
 .p-page-header__kicker {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-family: inherit;
   font-size: 11px;
   font-weight: 500;
@@ -58,9 +58,9 @@ withDefaults(defineProps<{
 }
 
 .p-page-header__title {
-  color: var(--a-color-ink);
-  font-size: 3.5rem;
-  font-weight: 500;
+  color: var(--a-color-text);
+  font-size: 2rem;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.1;
 }
@@ -68,7 +68,7 @@ withDefaults(defineProps<{
 .p-page-header__sub {
   max-width: 680px;
   margin-top: 14px;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   line-height: 1.7;
 }
 
@@ -85,7 +85,7 @@ withDefaults(defineProps<{
   }
 
   .p-page-header__title {
-    font-size: 2.25rem;
+    font-size: 1.75rem;
   }
 
   .p-page-header__sub {

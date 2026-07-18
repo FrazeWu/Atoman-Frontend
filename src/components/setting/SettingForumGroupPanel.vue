@@ -335,12 +335,12 @@ onMounted(loadAll)
 .forum-group-panel__layout {
   display: grid;
   grid-template-columns: minmax(12rem, 0.34fr) minmax(0, 1fr);
-  border-top: 1px solid var(--a-color-line);
+  border-top: 1px solid var(--a-color-border);
 }
 
 .forum-group-panel__groups {
   padding: 1.25rem 1.25rem 1.25rem 0;
-  border-right: 1px solid var(--a-color-line);
+  border-right: 1px solid var(--a-color-border);
 }
 
 .forum-group-panel__workspace {
@@ -368,7 +368,7 @@ onMounted(loadAll)
 .forum-group-panel small,
 .forum-group-panel__empty,
 .forum-group-panel__workspace-head p {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .forum-group-panel__group-list,
@@ -383,21 +383,21 @@ onMounted(loadAll)
   width: 100%;
   padding: 0.9rem 0.75rem;
   border: 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-align: left;
   cursor: pointer;
 }
 
 .forum-group-panel__group.is-active {
-  background: var(--a-color-paper-soft);
-  border-left: 3px solid var(--a-color-ink);
+  background: var(--a-color-surface);
+  border-left: 3px solid var(--a-color-text);
 }
 
 .forum-group-panel__block {
   padding-top: 1rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .forum-group-panel__member-form {
@@ -411,7 +411,7 @@ onMounted(loadAll)
 .forum-group-panel__checks label {
   min-height: 44px;
   padding: 0.55rem 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .forum-group-panel__member span {
@@ -422,7 +422,7 @@ onMounted(loadAll)
 .forum-group-panel__checks input {
   width: 20px;
   height: 20px;
-  accent-color: var(--a-color-ink);
+  accent-color: var(--a-color-text);
 }
 
 .forum-group-panel__actions {
@@ -432,11 +432,11 @@ onMounted(loadAll)
 }
 
 .forum-group-panel__notice {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .forum-group-panel__notice--error {
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 760px) {
@@ -447,7 +447,7 @@ onMounted(loadAll)
   .forum-group-panel__groups {
 	padding-right: 0;
 	border-right: 0;
-	border-bottom: 1px solid var(--a-color-line);
+	border-bottom: 1px solid var(--a-color-border);
   }
 
   .forum-group-panel__workspace {

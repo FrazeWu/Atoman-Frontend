@@ -657,8 +657,8 @@ watch(playlist, syncEditForm, { immediate: true })
 .playlist-cover-wrapper {
   width: 120px;
   height: 120px;
-  background: var(--a-color-paper-wash);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -693,7 +693,7 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .cover-placeholder {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   opacity: 0.6;
 }
 
@@ -706,15 +706,15 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .playlist-eyebrow {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .playlist-title {
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 2rem;
   font-weight: 500;
   line-height: 1.1;
@@ -727,7 +727,7 @@ watch(playlist, syncEditForm, { immediate: true })
 .playlist-description {
   margin: 0.25rem 0 0.5rem;
   font-size: 0.85rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -740,10 +740,10 @@ watch(playlist, syncEditForm, { immediate: true })
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.76rem;
   font-weight: 500;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .playlist-edit-sheet {
@@ -754,8 +754,8 @@ watch(playlist, syncEditForm, { immediate: true })
 .playlist-edit-panel {
   display: grid;
   gap: 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   padding: 1rem;
 }
 
@@ -784,8 +784,8 @@ watch(playlist, syncEditForm, { immediate: true })
 .playlist-cover-preview {
   width: 120px;
   height: 120px;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   overflow: hidden;
   position: relative;
 }
@@ -798,7 +798,7 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .playlist-cover-preview--button:hover {
-  border-color: var(--a-color-ink);
+  border-color: var(--a-color-text);
 }
 
 .playlist-cover-preview--button:disabled {
@@ -869,13 +869,13 @@ watch(playlist, syncEditForm, { immediate: true })
   display: flex;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  font-family: var(--a-font-meta);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
   text-transform: uppercase;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .col-index {
@@ -906,12 +906,12 @@ watch(playlist, syncEditForm, { immediate: true })
   display: flex;
   align-items: center;
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 5%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 5%, transparent);
   transition: background-color 0.15s ease;
 }
 
 .track-row:hover {
-  background-color: var(--a-color-paper-wash);
+  background-color: var(--a-color-surface-muted);
 }
 
 .track-row:last-child {
@@ -924,7 +924,7 @@ watch(playlist, syncEditForm, { immediate: true })
   width: 100%;
   height: 100%;
   cursor: pointer;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -940,7 +940,7 @@ watch(playlist, syncEditForm, { immediate: true })
 
 .track-row:hover:not(.is-disabled) .row-play-icon {
   display: block;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .track-meta {
@@ -960,7 +960,7 @@ watch(playlist, syncEditForm, { immediate: true })
 
 .track-artists-text {
   font-size: 0.75rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   margin-top: 0.1rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -969,28 +969,28 @@ watch(playlist, syncEditForm, { immediate: true })
 
 .album-name {
   font-size: 0.82rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .badge-no-audio {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.62rem;
   font-weight: 500;
   letter-spacing: 0;
   padding: 0.15rem 0.35rem;
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink-soft);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .track-remove-btn {
   border: 0;
   background: transparent;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   cursor: pointer;
@@ -1016,8 +1016,8 @@ watch(playlist, syncEditForm, { immediate: true })
 .track-order-btn {
   border: 0;
   background: transparent;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -1025,7 +1025,7 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .track-order-btn:hover {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .track-order-btn:disabled {
@@ -1042,11 +1042,11 @@ watch(playlist, syncEditForm, { immediate: true })
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 500;
   padding: 1.5rem 0.75rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
 }
 
 .state-line.error {
@@ -1059,9 +1059,9 @@ watch(playlist, syncEditForm, { immediate: true })
   align-items: center;
   gap: 0.5rem;
   padding: 3rem 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   opacity: 0.6;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.82rem;
   font-weight: 500;
 }

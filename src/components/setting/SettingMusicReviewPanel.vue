@@ -191,7 +191,7 @@ onMounted(async () => {
 
 <style scoped>
 .setting-music-review-panel { display: grid; gap: 1.25rem; min-width: 0; }
-.admin-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--a-color-line-soft); margin-bottom: 1.5rem; }
+.admin-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--a-color-border-soft); margin-bottom: 1.5rem; }
 .admin-tab {
   padding: 0.5rem 1.5rem;
   font-size: 0.75rem;
@@ -204,11 +204,11 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.15s;
 }
-.admin-tab:hover { background: var(--a-color-paper-wash); }
-.admin-tab-active { border-color: var(--a-color-line-soft); border-bottom-color: var(--a-color-bg); background: var(--a-color-bg); margin-bottom: -1px; }
+.admin-tab:hover { background: var(--a-color-surface-muted); }
+.admin-tab-active { border-color: var(--a-color-border-soft); border-bottom-color: var(--a-color-bg); background: var(--a-color-bg); margin-bottom: -1px; }
 .entries-filters { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
 .filter-select {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 500;
@@ -222,7 +222,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0.875rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-bottom-width: 0;
   transition: background 0.1s;
 }

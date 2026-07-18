@@ -6,23 +6,23 @@
 
 <script setup lang="ts">
 withDefaults(defineProps<{
-  tone?: 'paper' | 'soft'
+  tone?: 'default' | 'soft'
   layer?: 0 | 1 | 2
 }>(), {
-  tone: 'paper',
+  tone: 'default',
   layer: 0,
 })
 </script>
 
 <style scoped>
 .p-surface {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  border-radius: var(--a-radius-base);
+  border: none;
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
 }
 
 .p-surface--soft {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 
 .p-surface--layer-0,
@@ -31,6 +31,6 @@ withDefaults(defineProps<{
 }
 
 .p-surface--layer-2 {
-  box-shadow: none;
+  box-shadow: var(--a-shadow-md);
 }
 </style>

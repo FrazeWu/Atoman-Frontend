@@ -172,7 +172,7 @@ const albumYear = computed(() => {
   background: var(--a-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .music-album-card:hover .cover-image {
@@ -221,7 +221,7 @@ const albumYear = computed(() => {
   gap: 5px;
   color: #fff;
   font-size: 0.82rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
@@ -241,8 +241,8 @@ const albumYear = computed(() => {
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
   color: var(--a-color-muted);
   display: flex;
   align-items: center;
@@ -260,7 +260,7 @@ const albumYear = computed(() => {
 
 .bookmark-btn:hover {
   background: var(--a-color-surface);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .bookmark-btn.is-bookmarked {

@@ -111,7 +111,7 @@ const renderContent = (html: string) => {
     USE_PROFILES: { html: true },
     ADD_ATTR: ['target', 'rel'],
   })
-  return clean.replace(/<img/g, '<img style="max-width:100%;height:auto;border:1px solid var(--a-color-line-soft);margin:2rem 0"')
+  return clean.replace(/<img/g, '<img style="max-width:100%;height:auto;border:1px solid var(--a-color-border-soft);margin:2rem 0"')
 }
 
 const togglePlay = () => {
@@ -185,7 +185,7 @@ onUnmounted(() => {
 }
 
 .back-link {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -196,17 +196,17 @@ onUnmounted(() => {
 }
 
 .back-link:hover {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-decoration: underline;
 }
 
 .article-title {
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 4rem;
   font-weight: 500;
   line-height: 1.1;
   margin-bottom: 1.5rem;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   letter-spacing: 0;
 }
 
@@ -215,7 +215,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 1.25rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--a-color-muted-soft);
@@ -223,7 +223,7 @@ onUnmounted(() => {
 }
 
 .author-tag {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .article-cover-wrap {
@@ -235,7 +235,7 @@ onUnmounted(() => {
   max-height: 60vh;
   object-fit: cover;
   display: block;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   filter: grayscale(100%);
 }
 
@@ -250,12 +250,12 @@ onUnmounted(() => {
 .podcast-player-panel {
   margin-bottom: 3.5rem;
   padding: 2rem;
-  background: var(--a-color-paper-soft);
-  border-left: 4px solid var(--a-color-ink);
+  background: var(--a-color-surface);
+  border-left: 4px solid var(--a-color-text);
 }
 
 .player-label {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.65rem;
   font-weight: 500;
   margin-bottom: 1.25rem;
@@ -264,10 +264,10 @@ onUnmounted(() => {
 }
 
 .duration-text {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .article-body-wrap {
@@ -289,16 +289,16 @@ onUnmounted(() => {
 
 .footer-divider {
   height: 1px;
-  border-top: 1.5px dashed var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .external-btn {
   display: inline-block;
   padding: 1.25rem 2.5rem;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   text-decoration: none;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0;

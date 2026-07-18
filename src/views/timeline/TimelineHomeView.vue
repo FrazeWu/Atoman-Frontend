@@ -1119,12 +1119,9 @@ onMounted(() => {
   flex-wrap: wrap;
   align-items: flex-end;
   padding: 1.1rem 1.15rem 1.2rem;
-  border: 1px solid var(--a-color-line-soft);
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 32%),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.035) 0, rgba(0, 0, 0, 0.035) 1px, transparent 1px, transparent 18px),
-    var(--a-color-bg);
-  box-shadow: none;
+  border: none;
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
 }
 
 .tl-toolbar-batch {
@@ -1144,13 +1141,13 @@ onMounted(() => {
 
 .tl-mode-switch {
   display: inline-flex;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
 }
 
 .tl-mode-btn {
   border: none;
-  border-right: 1px solid var(--a-color-line-soft);
+  border-right: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   cursor: pointer;
@@ -1195,9 +1192,8 @@ onMounted(() => {
 .tl-map-stage-card,
 .tl-stage-empty {
   padding: 1.35rem;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 28%),
-    var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 
@@ -1236,7 +1232,7 @@ onMounted(() => {
   justify-content: center;
   min-height: 2rem;
   padding: 0.2rem 0.7rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   font-size: 0.7rem;
   font-weight: 500;
@@ -1256,11 +1252,11 @@ onMounted(() => {
 
 .tl-panel-empty {
   padding: 1rem;
-  border: 2px dashed var(--a-color-muted-soft);
+  border-radius: var(--a-radius-control);
   font-size: 0.82rem;
   line-height: 1.6;
   color: var(--a-color-muted);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--a-color-surface);
 }
 
 .tl-panel-actions {
@@ -1272,7 +1268,7 @@ onMounted(() => {
 
 .tl-action-btn,
 .tl-mini-btn {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-fg);
   color: var(--a-color-bg);
   cursor: pointer;
@@ -1317,7 +1313,7 @@ onMounted(() => {
   display: flex;
   gap: 0.9rem;
   padding: 1rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   box-shadow: none;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -1372,7 +1368,7 @@ onMounted(() => {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   font-size: 0.8rem;
   font-weight: 500;
   flex-shrink: 0;
@@ -1489,7 +1485,7 @@ onMounted(() => {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 2px 6px;
 }
 
@@ -1534,7 +1530,7 @@ onMounted(() => {
 .tl-lane-ruler {
   position: relative;
   height: 3.5rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   margin-bottom: 0.25rem;
 }
 
@@ -1613,7 +1609,7 @@ onMounted(() => {
   min-width: 1.25rem;
   height: 1rem;
   border-radius: 4px;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   box-shadow: none;
 }
@@ -1667,11 +1663,10 @@ onMounted(() => {
 .tl-map-canvas {
   position: relative;
   min-height: 36rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   overflow: hidden;
-  background:
-    repeating-linear-gradient(0deg, var(--a-color-bg) 0, var(--a-color-bg) 29px, var(--a-color-disabled-bg) 29px, var(--a-color-disabled-bg) 30px),
-    var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
 }
 
 .tl-event-map {
@@ -1687,7 +1682,7 @@ onMounted(() => {
   z-index: 10;
   padding: 0.75rem 0.9rem;
   background: rgba(255, 255, 255, 0.96);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.55;
@@ -1698,7 +1693,7 @@ onMounted(() => {
   max-width: 18rem;
   padding: 0.75rem 0.85rem;
   background: rgba(255, 255, 255, 0.98);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
   opacity: 0;
   pointer-events: none;
@@ -1757,7 +1752,7 @@ onMounted(() => {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 2px 6px;
   color: var(--a-color-fg);
 }
@@ -1827,7 +1822,7 @@ onMounted(() => {
 .tl-form-error {
   margin: -0.25rem 0 1rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: #fef2f2;
   color: #991b1b;
   font-size: 0.75rem;
@@ -1840,7 +1835,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .a-modal-title {
@@ -1870,7 +1865,7 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 @media (max-width: 1180px) {

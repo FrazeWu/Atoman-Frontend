@@ -63,7 +63,7 @@ defineEmits<{
 }
 
 .topbar-search-section__item {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   text-align: left;
   padding: 0.7rem 0.8rem;
@@ -75,7 +75,7 @@ defineEmits<{
 .topbar-search-section__item.is-active,
 .topbar-search-section__item:hover {
   border-color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .topbar-search-section__title {

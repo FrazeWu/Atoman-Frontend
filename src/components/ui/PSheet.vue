@@ -224,13 +224,13 @@ const sheetStyle = computed(() => {
 
 .p-sheet-layer.is-right {
   right: 0;
-  border-left: 1px solid var(--a-color-line-soft);
+  border-left: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
 
 .p-sheet-layer.is-left {
   left: 0;
-  border-right: 1px solid var(--a-color-line-soft);
+  border-right: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
 
@@ -238,7 +238,7 @@ const sheetStyle = computed(() => {
   left: 0;
   right: 0;
   top: auto;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   box-shadow: none;
 }
 
@@ -284,7 +284,7 @@ const sheetStyle = computed(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 2.5rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   background: white;
   color: black;
 }

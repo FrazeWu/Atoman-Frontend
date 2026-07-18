@@ -25,7 +25,7 @@ const portalUrl = `${window.location.protocol}//atoman.org/`
 .unknown-card {
   max-width: 560px;
   background: var(--a-color-surface, #fff);
-  border: 1px solid var(--a-color-ink, #111);
+  border: 1px solid var(--a-color-text, #111);
   box-shadow: none;
   padding: 2rem;
 }
@@ -44,7 +44,7 @@ const portalUrl = `${window.location.protocol}//atoman.org/`
 .unknown-link {
   display: inline-block;
   margin-top: 1rem;
-  color: var(--a-color-ink, #111);
+  color: var(--a-color-text, #111);
   font-weight: 500;
 }
 </style>

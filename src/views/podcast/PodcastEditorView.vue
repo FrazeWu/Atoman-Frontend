@@ -477,7 +477,7 @@ async function doPublish() {
   <div class="pe-wrap">
     <PPageHeader :title="isEdit ? '编辑单集' : '发布新单集'" accent />
 
-    <PSurface v-if="!canEditMetadata" tone="paper" :layer="1" class="pe-gate">
+    <PSurface v-if="!canEditMetadata" tone="default" :layer="1" class="pe-gate">
       <h2 class="pe-section-title">上传节目音频</h2>
       <label class="pe-drop-zone pe-source-card">
         <input
@@ -497,7 +497,7 @@ async function doPublish() {
       <!-- 左栏 -->
       <div class="pe-main">
         <!-- 音频文件 -->
-        <PSurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="default" :layer="1" class="pe-section">
           <h2 class="pe-section-title">音频文件</h2>
 
           <!-- 已上传 -->
@@ -541,7 +541,7 @@ async function doPublish() {
         </PSurface>
 
         <!-- 基本信息 -->
-        <PSurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="default" :layer="1" class="pe-section">
           <h2 class="pe-section-title">基本信息</h2>
           <div class="a-field--line">
             <PInput
@@ -570,7 +570,7 @@ async function doPublish() {
         </PSurface>
 
         <!-- 归档位置 -->
-        <PSurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="default" :layer="1" class="pe-section">
           <h2 class="pe-section-title">归档位置</h2>
           <div class="a-field--line">
             <PSelect
@@ -610,7 +610,7 @@ async function doPublish() {
         </PSurface>
 
         <!-- 单集编号 -->
-        <PSurface tone="paper" :layer="1" class="pe-section">
+        <PSurface tone="default" :layer="1" class="pe-section">
           <h2 class="pe-section-title">单集编号</h2>
           <div class="pe-row">
             <div class="a-field--line">
@@ -634,7 +634,7 @@ async function doPublish() {
       </div>
 
       <!-- 右栏：发布面板 -->
-      <PSurface tone="paper" :layer="1" class="pe-panel">
+      <PSurface tone="default" :layer="1" class="pe-panel">
         <PodcastCoverPanel
           :effective-cover-u-r-l="effectiveCoverURL"
           :effective-cover-label="effectiveCoverLabel"
@@ -715,7 +715,7 @@ async function doPublish() {
 }
 
 .pe-section-title {
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 1.125rem;
   font-weight: 500;
   color: var(--a-color-fg);
@@ -731,9 +731,9 @@ async function doPublish() {
 }
 
 .pe-default-channel-btn {
-  border: 1px solid var(--a-color-line-soft, #d6d3d1);
-  background: var(--a-color-paper, #fffdf8);
-  color: var(--a-color-ink, #111827);
+  border: 1px solid var(--a-color-border-soft, #d6d3d1);
+  background: var(--a-color-bg, #fffdf8);
+  color: var(--a-color-text, #111827);
   padding: 0.45rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -759,8 +759,8 @@ async function doPublish() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 0.75rem;
-  background: var(--a-color-paper-soft);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   font-size: 0.8rem;
 }
@@ -793,14 +793,14 @@ async function doPublish() {
   justify-content: center;
   gap: 0.35rem;
   padding: 2rem 1rem;
-  border: 1px dashed var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   text-align: center;
 }
 .pe-drop-zone:hover:not(.pe-drop-zone--uploading) {
   border-color: var(--a-color-fg);
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 .pe-drop-zone--uploading { cursor: default; opacity: 0.7; }
 .pe-drop-hint { font-size: 0.875rem; font-weight: 500; color: var(--a-color-fg); }
@@ -812,13 +812,13 @@ async function doPublish() {
   align-items: center;
   justify-content: center;
   min-height: 7rem;
-  background: var(--a-color-paper-soft);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .pe-progress-track {
   height: 4px;
-  background: var(--a-color-line-soft);
+  background: var(--a-color-border-soft);
   overflow: hidden;
 }
 .pe-progress-bar {
@@ -854,7 +854,7 @@ async function doPublish() {
   gap: 0.25rem;
   max-height: 10rem;
   overflow: auto;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.375rem;
 }
 
@@ -882,7 +882,7 @@ async function doPublish() {
   aspect-ratio: 1/1;
   border-radius: 4px;
   overflow: hidden;
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 .pe-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pe-cover-source {
@@ -918,7 +918,7 @@ async function doPublish() {
   gap: 0.3rem;
   width: 100%;
   aspect-ratio: 1/1;
-  border: 1px dashed var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   cursor: pointer;
   transition: border-color 0.15s;
 }

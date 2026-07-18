@@ -229,7 +229,7 @@ onMounted(loadHotContent)
   min-height: calc(100vh - 56px);
   padding: 48px 24px 96px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--a-color-paper-wash) 70%, transparent), transparent 340px),
+    linear-gradient(180deg, color-mix(in srgb, var(--a-color-surface-muted) 70%, transparent), transparent 340px),
     var(--a-color-bg);
 }
 
@@ -254,7 +254,7 @@ onMounted(loadHotContent)
 .portal-hot__header h1 {
   max-width: 760px;
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 40px;
   font-weight: 600;
   letter-spacing: 0;
@@ -263,8 +263,8 @@ onMounted(loadHotContent)
 
 .portal-hot__kicker {
   margin: 0 0 10px;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
@@ -295,8 +295,8 @@ onMounted(loadHotContent)
   grid-template-columns: minmax(0, 1fr);
   min-height: 154px;
   overflow: hidden;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .portal-hot__recommendation-card.has-image {
@@ -304,8 +304,8 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__recommendation-image {
-  background: var(--a-color-paper-wash);
-  border-right: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border-right: 1px solid var(--a-color-border-soft);
 }
 
 .portal-hot__recommendation-image img,
@@ -328,8 +328,8 @@ onMounted(loadHotContent)
 
 .portal-hot__meta {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0;
@@ -340,7 +340,7 @@ onMounted(loadHotContent)
 .portal-hot__empty h2,
 .portal-hot__section-head h2 {
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   letter-spacing: 0;
 }
 
@@ -352,7 +352,7 @@ onMounted(loadHotContent)
 .portal-hot__recommendation-body > p:last-child,
 .portal-hot__empty p,
 .portal-hot__card-body p {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   line-height: 1.7;
 }
 
@@ -365,8 +365,8 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__card-body span {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0;
@@ -383,18 +383,18 @@ onMounted(loadHotContent)
   align-items: center;
   flex-wrap: wrap;
   gap: 10px 18px;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   padding-top: 18px;
 }
 
 .portal-hot__module-strip span {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 12px;
   font-weight: 500;
 }
 
 .portal-hot__module-strip a {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
@@ -414,7 +414,7 @@ onMounted(loadHotContent)
   align-items: end;
   justify-content: space-between;
   gap: 18px;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   padding-bottom: 12px;
 }
 
@@ -424,7 +424,7 @@ onMounted(loadHotContent)
 
 .portal-hot__module-link {
   flex-shrink: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 13px;
   font-weight: 500;
 }
@@ -439,14 +439,14 @@ onMounted(loadHotContent)
   display: grid;
   grid-template-rows: auto 1fr;
   min-height: 210px;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .portal-hot__thumb {
   aspect-ratio: 16 / 9;
-  background: var(--a-color-paper-wash);
-  border-bottom: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-surface-muted);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .portal-hot__card-body {
@@ -457,7 +457,7 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__card-body strong {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 17px;
   line-height: 1.3;
 }
@@ -474,8 +474,8 @@ onMounted(loadHotContent)
   display: grid;
   justify-items: start;
   gap: 14px;
-  border: 1px solid var(--a-color-line);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border);
+  background: var(--a-color-bg);
   padding: 32px;
 }
 
@@ -496,9 +496,9 @@ onMounted(loadHotContent)
 }
 
 .portal-hot__fallback-links a {
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 8px 12px;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 13px;
   font-weight: 500;
 }
@@ -510,7 +510,7 @@ onMounted(loadHotContent)
 .portal-hot__recommendation-card:hover,
 .portal-hot__card:hover,
 .portal-hot__fallback-links a:hover {
-  border-color: var(--a-color-ink);
+  border-color: var(--a-color-text);
 }
 
 @media (max-width: 860px) {

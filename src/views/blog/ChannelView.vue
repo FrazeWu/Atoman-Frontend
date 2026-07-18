@@ -11,7 +11,7 @@
       <!-- Channel header -->
       <PPageHeader :title="channel.name" accent :sub="channel.description">
         <template #action>
-          <div class="paper-actions-row">
+          <div class="ui-actions-row">
             <PClip
               v-if="authStore.isAuthenticated && !isOwner"
               :disabled="channelSubscribeLoading"
@@ -369,7 +369,7 @@ onMounted(async () => {
   margin-bottom: .75rem;
 }
 
-.paper-actions-row,
+.ui-actions-row,
 .modal-actions {
   display: flex;
   flex-wrap: wrap;

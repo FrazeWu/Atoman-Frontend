@@ -254,7 +254,7 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__search {
   width: 100%;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 0.45rem 0.55rem;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
@@ -264,12 +264,12 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__search:focus {
-  border-color: var(--a-color-ink);
+  border-color: var(--a-color-text);
 }
 
 .feed-sidebar-sources__filter {
   justify-self: start;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 0.28rem 0.5rem;
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -281,7 +281,7 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__all {
   width: 100%;
-  border: 1px solid var(--a-color-line);
+  border: 1px solid var(--a-color-border);
   padding: 0.48rem 0.55rem;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
@@ -293,12 +293,12 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__all.is-active {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .feed-sidebar-sources__filter.is-active {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
 }
 
 .feed-sidebar-sources__group {
@@ -343,8 +343,8 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__count {
   min-width: 1.35rem;
   padding: 0.12rem 0.34rem;
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   font-size: 0.58rem;
   text-align: center;
   border-radius: var(--a-radius-none, 4px);
@@ -361,8 +361,8 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__item:hover {
-  background-color: var(--a-color-paper-soft);
-  color: var(--a-color-ink);
+  background-color: var(--a-color-surface);
+  color: var(--a-color-text);
 }
 
 .feed-sidebar-sources__item:hover .feed-sidebar-sources__name {
@@ -371,16 +371,16 @@ function toggleGroup(groupId: string) {
 }
 
 .feed-sidebar-sources__item.is-active {
-  background-color: var(--a-color-paper-wash);
+  background-color: var(--a-color-surface-muted);
   box-shadow: none;
   font-weight: 500;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .feed-sidebar-sources__badge {
   padding: 0.18rem 0.34rem;
-  background: var(--a-color-paper-wash);
-  color: var(--a-color-ink-muted);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text-secondary);
   font-size: 0.58rem;
   letter-spacing: 0;
 }

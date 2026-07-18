@@ -48,7 +48,7 @@ const computedRel = computed(() => props.rel ?? (props.target === '_blank' || pr
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-family: inherit;
   font-size: inherit;
   font-weight: 500;

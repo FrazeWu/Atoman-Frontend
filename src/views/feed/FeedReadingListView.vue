@@ -34,7 +34,7 @@
               <img
                 v-if="entry.feed_item.image_url"
                 :src="entry.feed_item.image_url"
-                style="width:4.5rem;height:4.5rem;object-fit:cover;border:1px solid var(--a-color-line-soft);filter:grayscale(100%);flex-shrink:0;border-radius:4px;margin-top:0.25rem;"
+                style="width:4.5rem;height:4.5rem;object-fit:cover;border:1px solid var(--a-color-border-soft);filter:grayscale(100%);flex-shrink:0;border-radius:4px;margin-top:0.25rem;"
               />
             </div>
           </template>
@@ -424,21 +424,21 @@ onUnmounted(() => {
 .feed-item-external-link {
   display: inline-block;
   padding: 0.25rem 0.5rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0;
   color: var(--a-color-fg);
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   text-decoration: none;
   transition: all 0.15s;
 }
 
 .feed-item-external-link:hover {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
-  border-color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border-color: var(--a-color-text);
+  box-shadow: var(--a-shadow-sm);
 }
 </style>

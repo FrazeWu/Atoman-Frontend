@@ -276,7 +276,7 @@ watch(() => props.resetKey, () => {
 }
 
 .resolve-status {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.85rem 1rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -295,13 +295,13 @@ watch(() => props.resetKey, () => {
 }
 
 .resolve-status--choice {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .resolved-source {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.9rem 1rem;
-  background: var(--a-color-paper-soft, var(--a-color-paper-wash));
+  background: var(--a-color-surface, var(--a-color-surface-muted));
 }
 
 .resolved-source__title {
@@ -325,7 +325,7 @@ watch(() => props.resetKey, () => {
 .candidate-option {
   width: 100%;
   text-align: left;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   padding: 0.9rem 1rem;
   display: flex;
@@ -335,12 +335,12 @@ watch(() => props.resetKey, () => {
 }
 
 .candidate-option:hover {
-  box-shadow: var(--a-shadow-paper-sm);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .candidate-option--active {
-  border-color: var(--a-color-ink);
-  box-shadow: var(--a-shadow-paper-sm);
+  border-color: var(--a-color-text);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .candidate-option__title-row {

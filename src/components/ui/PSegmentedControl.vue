@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   padding: 3px;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
   border: none;
   border-radius: var(--a-radius-none, 4px);
   box-shadow: none;
@@ -165,11 +165,11 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 3px;
   bottom: 3px;
-  background: var(--a-color-paper);
+  background: var(--a-color-bg);
   border-radius: calc(var(--a-radius-none, 4px) - 1px);
   transition: left 0.25s cubic-bezier(0.25, 1, 0.5, 1), width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
   z-index: 1;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .p-segmented-control-item {
@@ -193,15 +193,15 @@ onBeforeUnmount(() => {
 }
 
 .p-segmented-control-item:hover:not(:disabled) {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-segmented-control-item--active {
-  color: var(--a-color-ink) !important;
+  color: var(--a-color-text) !important;
 }
 
 .p-segmented-control-item:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
 }
 

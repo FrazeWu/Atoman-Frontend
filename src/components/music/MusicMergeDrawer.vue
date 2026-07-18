@@ -151,12 +151,12 @@ async function merge() {
 <style scoped>
 .merge-drawer { display: grid; gap: 12px; padding: 20px; }
 .merge-search { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-.merge-search input { min-width: 0; padding: 10px 12px; border: 1px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-ink); }
-.merge-drawer button { padding: 9px 12px; border: 1px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-ink); cursor: pointer; }
+.merge-search input { min-width: 0; padding: 10px 12px; border: 1px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-text); }
+.merge-drawer button { padding: 9px 12px; border: 1px solid var(--a-color-border); background: var(--a-color-surface); color: var(--a-color-text); cursor: pointer; }
 .merge-drawer button:disabled { cursor: default; opacity: 0.5; }
 .merge-target { display: grid; gap: 3px; text-align: left; }
-.merge-target span { color: var(--a-color-ink-soft); font-size: 0.82rem; }
-.merge-target.is-selected { border-color: var(--a-color-ink); }
+.merge-target span { color: var(--a-color-muted); font-size: 0.82rem; }
+.merge-target.is-selected { border-color: var(--a-color-text); }
 .merge-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .merge-error { color: var(--a-color-danger); }
 </style>

@@ -1,62 +1,81 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const root = resolve(__dirname, '../../..')
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8')
+const sourceText = (directory: string): string => readdirSync(resolve(root, directory))
+  .flatMap((name) => {
+    const relativePath = `${directory}/${name}`
+    const absolutePath = resolve(root, relativePath)
+    return statSync(absolutePath).isDirectory()
+      ? [sourceText(relativePath)]
+      : /\.(?:css|vue)$/.test(name) ? [read(relativePath)] : []
+  })
+  .join('\n')
 
-describe('approved design-system contract', () => {
-  it('defines canonical semantic colors and flat geometry', () => {
+describe('modern flat UI design-system contract', () => {
+  it('uses neutral semantic tokens and soft geometry', () => {
     const css = read('src/style.css')
 
-    expect(css).toContain('--a-color-primary: #2563eb;')
-    expect(css).toContain('--a-color-primary-hover: #1d4ed8;')
-    expect(css).toContain('--a-color-primary-pressed: #1e40af;')
-    expect(css).toContain('--a-color-success: #0d9488;')
-    expect(css).toContain('--a-color-warning: #ea580c;')
-    expect(css).toContain('--a-color-danger: #dc2626;')
-    expect(css).toContain('--a-radius-base: 4px;')
-    expect(css).toContain('--a-font-weight-strong: 500;')
-    expect(css).toContain('--a-shadow-modal: none;')
+    expect(css).toContain('--a-color-surface-muted: #f1f5f9;')
+    expect(css).toContain('--a-color-text: #0f172a;')
+    expect(css).toContain('--a-color-text-secondary: #334155;')
+    expect(css).toContain('--a-color-border-soft: #e2e8f0;')
+    expect(css).toContain('--a-font-sans:')
+    expect(css).toContain('--a-font-mono:')
+    expect(css).toContain('--a-radius-control: 8px;')
+    expect(css).toMatch(/--a-shadow-sm:\s*0\s+\d+px\s+\d+px/)
   })
 
-  it('does not retain module colors as global primary aliases', () => {
+  it('does not expose the retired paper and ink token vocabulary', () => {
     const css = read('src/style.css')
 
-    expect(css).not.toContain('--a-color-accent-confirm: var(--a-color-ink)')
-    expect(css).not.toContain('--a-color-accent-destructive: #ea580c')
+    expect(css).not.toMatch(/--a-color-(?:paper|ink|tape)/)
+    expect(css).not.toMatch(/--a-font-(?:serif|meta)/)
+    expect(css).not.toMatch(/--a-shadow-paper/)
   })
 
-  it('uses semantic colors for shared buttons', () => {
-    const source = read('src/components/ui/PButton.vue')
+  it('keeps shared cards quiet until interaction', () => {
+    const source = read('src/components/ui/PCard.vue')
 
-    expect(source).toContain('background: var(--a-color-primary);')
-    expect(source).toContain('background: var(--a-color-primary-hover);')
-    expect(source).toContain('background: var(--a-color-primary-pressed);')
-    expect(source).toContain('outline: 2px solid var(--a-color-primary);')
-    expect(source).toContain('color: var(--a-color-danger);')
-    expect(source).not.toContain('letter-spacing: 0.05em;')
+    expect(source).toContain('background: var(--a-color-bg);')
+    expect(source).toContain('border-radius: var(--a-radius-card);')
+    expect(source).toContain('box-shadow: var(--a-shadow-sm);')
+    expect(source).not.toMatch(/dashed|border-left|text-decoration:\s*underline/)
   })
 
-  it('maps status dots to semantic tokens', () => {
-    const badge = read('src/components/ui/PBadge.vue')
-    const toast = read('src/components/ui/PToast.vue')
-
-    expect(badge).toContain('var(--a-color-success)')
-    expect(badge).toContain('var(--a-color-warning)')
-    expect(badge).toContain('var(--a-color-danger)')
-    expect(toast).toContain('.p-toast--warning .p-toast-dot')
-    expect(toast).toContain('var(--a-color-warning)')
-  })
-
-  it('keeps shared headings at 500 and shortcut help flat', () => {
+  it('uses compact shared headings', () => {
     const pageHeader = read('src/components/ui/PPageHeader.vue')
     const sectionHeader = read('src/components/ui/PSectionHeader.vue')
-    const shortcuts = read('src/components/ui/PShortcutHints.vue')
 
-    expect(pageHeader).not.toMatch(/font-weight:\s*(700|800|900|950)/)
-    expect(sectionHeader).not.toMatch(/font-weight:\s*(700|800|900|950)/)
-    expect(shortcuts).not.toContain('box-shadow: 3px 3px')
-    expect(shortcuts).toContain(':focus-within .shortcut-content')
+    expect(pageHeader).toContain('font-size: 2rem;')
+    expect(sectionHeader).toContain('font-size: 1.5rem;')
+    expect(pageHeader).not.toMatch(/font-size:\s*3(?:\.\d+)?rem/)
+    expect(sectionHeader).not.toMatch(/font-size:\s*2\.75rem/)
+  })
+
+  it('removes retired paper assets and visual metaphors from source styles', () => {
+    const source = sourceText('src')
+
+    expect(existsSync(resolve(root, 'src/assets/paper-ink.css'))).toBe(false)
+    expect(source).not.toMatch(/paper-[\w-]+/)
+    expect(source).not.toMatch(/\bdashed\b/)
+    expect(source).not.toContain('var(--a-font-mono)')
+    expect(source).not.toMatch(/repeating-linear-gradient/)
+    expect(source).not.toMatch(/box-shadow:\s*-?\d+px\s+-?\d+px\s+0(?:px)?/)
+  })
+
+  it('uses neutral shared field naming and standard form styling', () => {
+    const choice = read('src/components/ui/PChoiceField.vue')
+    const country = read('src/components/ui/PCountryRegionField.vue')
+    const select = read('src/components/ui/PSelect.vue')
+    const textarea = read('src/components/ui/PTextarea.vue')
+
+    expect(choice).not.toMatch(/paper-|a-font-mono|choice-dot/)
+    expect(country).not.toMatch(/paper-|a-font-mono|field-dot/)
+    expect(select).not.toMatch(/a-font-mono|p-field-dot/)
+    expect(textarea).not.toMatch(/a-font-mono|p-field-dot|Ruled lines|background-image/)
+    expect(textarea).toContain('border: 1px solid var(--a-color-border-soft);')
   })
 })

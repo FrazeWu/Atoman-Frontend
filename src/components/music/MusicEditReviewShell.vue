@@ -228,7 +228,7 @@ const entityTypeModel = computed({
 
 .music-edit-review-shell__detail strong {
   font-size: 0.76rem;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .music-edit-review-shell__detail dl {
@@ -239,7 +239,7 @@ const entityTypeModel = computed({
 }
 
 .music-edit-review-shell__detail dt {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-weight: 800;
 }
 
@@ -258,7 +258,7 @@ const entityTypeModel = computed({
 }
 
 .music-edit-review-shell__detail a {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   overflow-wrap: anywhere;
 }
 

@@ -52,7 +52,7 @@ describe('PCountryRegionField', () => {
     expect(wrapper.get('[data-test="artist-nationality-trigger"]').text()).toContain('日本')
 
     await wrapper.get('[data-test="artist-nationality-trigger"]').trigger('click')
-    expect(wrapper.get('[data-test="artist-nationality-continent-Asia"]').classes()).toContain('paper-field-continent--active')
-    expect(wrapper.get('[data-test="artist-nationality-option-日本"]').classes()).toContain('paper-field-country--active')
+    expect(wrapper.get('[data-test="artist-nationality-continent-Asia"]').classes()).toContain('country-field-continent--active')
+    expect(wrapper.get('[data-test="artist-nationality-option-日本"]').classes()).toContain('country-field-country--active')
   })
 })

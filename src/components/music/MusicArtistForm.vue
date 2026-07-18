@@ -214,8 +214,8 @@ function handleSubmit() {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -226,7 +226,7 @@ function handleSubmit() {
   width: 0.42rem;
   height: 0.42rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   flex-shrink: 0;
 }
 
@@ -234,7 +234,7 @@ function handleSubmit() {
   position: relative;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 22%, transparent);
   min-height: 2.75rem;
 }
 
@@ -246,7 +246,7 @@ function handleSubmit() {
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   padding: 0 2.75rem 0.72rem 0;
   font-size: 1rem;
   font-family: inherit;
@@ -258,7 +258,7 @@ function handleSubmit() {
 }
 
 .music-artist-form__birth-input::placeholder {
-  color: color-mix(in srgb, var(--a-color-ink) 28%, transparent);
+  color: color-mix(in srgb, var(--a-color-text) 28%, transparent);
 }
 
 .music-artist-form__birth-trigger {
@@ -272,12 +272,12 @@ function handleSubmit() {
   height: 2rem;
   border: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  color: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   cursor: pointer;
 }
 
 .music-artist-form__birth-trigger:hover {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .music-artist-form__birth-native {

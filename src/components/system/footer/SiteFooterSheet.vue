@@ -134,7 +134,7 @@ async function copyEmail() {
 
 .footer-sheet-lead {
   margin: var(--a-space-5) 0 0;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-md);
   line-height: 1.75;
 }
@@ -222,7 +222,7 @@ async function copyEmail() {
 
 .footer-feedback-channel p {
   margin-top: var(--a-space-2);
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-sm);
   line-height: 1.6;
 }

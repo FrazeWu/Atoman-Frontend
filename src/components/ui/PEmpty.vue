@@ -40,8 +40,6 @@ const computedKicker = computed(() => (computedTitle.value || computedDescriptio
   justify-items: start;
   gap: 12px;
   padding: 34px 0;
-  border-top: 1px solid var(--a-color-line-soft);
-  border-bottom: 1px solid var(--a-color-line-soft);
 }
 
 .p-empty__kicker,
@@ -51,7 +49,7 @@ const computedKicker = computed(() => (computedTitle.value || computedDescriptio
 }
 
 .p-empty__kicker {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-family: inherit;
   font-size: 10px;
   font-weight: 500;
@@ -60,13 +58,13 @@ const computedKicker = computed(() => (computedTitle.value || computedDescriptio
 }
 
 .p-empty__title {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 18px;
   font-weight: 500;
 }
 
 .p-empty__description {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.5;
   font-size: 0.85rem;
 }

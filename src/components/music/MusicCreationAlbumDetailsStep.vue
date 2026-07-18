@@ -789,7 +789,7 @@ watch(
         <button
           data-testid="album-details-close-button"
           type="button"
-          class="paper-action"
+          class="ui-action"
           @click="closeMusicCreationFlow"
         >
           关闭
@@ -799,7 +799,7 @@ watch(
         <button
           data-testid="album-details-back-button"
           type="button"
-          class="paper-action"
+          class="ui-action"
           @click="goBack"
         >
           返回上一步
@@ -807,7 +807,7 @@ watch(
         <button
           data-testid="album-details-finish-button"
           type="button"
-          class="paper-submit"
+          class="primary-action"
         >
           完成
         </button>
@@ -825,8 +825,8 @@ watch(
 .progress-card,
 .track-adjustment {
   padding: 1.35rem 1.45rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-soft);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface);
 }
 
 .progress-card {
@@ -849,13 +849,13 @@ watch(
 .track-adjustment__count,
 .track-sequence,
 .track-action {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
 }
 
 .step-kicker,
 .field-label {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -866,7 +866,7 @@ watch(
 .progress-value,
 .track-adjustment__count {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -874,7 +874,7 @@ watch(
 .progress-track {
   height: 0.5rem;
   overflow: hidden;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .progress-steps {
@@ -884,20 +884,20 @@ watch(
 }
 
 .progress-step {
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
 .progress-step--active {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .progress-bar {
   width: 100%;
   height: 100%;
-  background: color-mix(in srgb, var(--a-color-ink) 92%, #6b4f3a 8%);
+  background: color-mix(in srgb, var(--a-color-text) 92%, #6b4f3a 8%);
 }
 
 .field-stack {
@@ -919,17 +919,17 @@ watch(
 .field-input {
   width: 100%;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-ink) 24%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 24%, transparent);
   border-radius: 0;
   padding: 0.25rem 0 0.72rem;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font: inherit;
 }
 
 :deep(.p-input:focus),
 :deep(.p-textarea:focus) {
-  border-bottom-color: var(--a-color-ink);
+  border-bottom-color: var(--a-color-text);
 }
 
 .field-input--textarea {
@@ -939,9 +939,9 @@ watch(
 }
 
 .field-input--file {
-  border: 1px dashed color-mix(in srgb, var(--a-color-ink) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--a-color-text) 16%, transparent);
   padding: 0.85rem 0.95rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   background: var(--a-color-bg);
 }
 
@@ -951,14 +951,14 @@ watch(
 
 .state-line {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.82rem;
   font-weight: 800;
 }
 
 .state-line--strong {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .state-line--error {
@@ -969,13 +969,13 @@ watch(
   display: grid;
   gap: 0.75rem;
   padding: 0.85rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: rgba(15, 23, 42, 0.03);
 }
 
 .imported-cover-callout__copy {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.5;
   font-size: 0.9rem;
 }
@@ -986,8 +986,8 @@ watch(
   gap: 0.85rem;
   align-items: center;
   padding: 0.85rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .cover-preview__image {
@@ -1002,14 +1002,14 @@ watch(
 }
 
 .cover-preview__title {
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.84rem;
   font-weight: 800;
 }
 
 .cover-preview__sub {
   margin-top: 0.25rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.5;
   font-size: 0.9rem;
 }
@@ -1028,7 +1028,7 @@ watch(
 
 .track-adjustment__hint {
   margin: 0.35rem 0 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
 }
 
@@ -1043,13 +1043,13 @@ watch(
   gap: 0.75rem;
   align-items: center;
   padding: 0.85rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .track-sequence {
   min-width: 2rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -1068,8 +1068,8 @@ watch(
   border: 0;
   border-radius: 0px;
   padding: 0.65rem 0.95rem;
-  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, white);
-  color: var(--a-color-ink);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 78%, white);
+  color: var(--a-color-text);
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
@@ -1095,29 +1095,29 @@ watch(
   display: none !important;
 }
 
-.paper-action,
-.paper-submit {
+.ui-action,
+.primary-action {
   border: 0;
   border-radius: 0px;
   padding: 0.85rem 1.2rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-weight: 800;
   cursor: pointer;
 }
 
-.paper-action {
-  background: color-mix(in srgb, var(--a-color-paper-wash) 78%, white);
-  color: var(--a-color-ink);
+.ui-action {
+  background: color-mix(in srgb, var(--a-color-surface-muted) 78%, white);
+  color: var(--a-color-text);
 }
 
-.paper-submit {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+.primary-action {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   transition: background-color 0.15s ease;
 }
 
-.paper-submit:hover {
-  background: color-mix(in srgb, var(--a-color-ink) 86%, black);
+.primary-action:hover {
+  background: color-mix(in srgb, var(--a-color-text) 86%, black);
 }
 
 .track-title-input {
@@ -1125,7 +1125,7 @@ watch(
   border: 0;
   background: transparent;
   padding: 0.5rem 0.75rem;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-family: inherit;
   font-size: 0.95rem;
   width: 100%;
@@ -1134,8 +1134,8 @@ watch(
 }
 .track-title-input:focus {
   outline: none;
-  background: var(--a-color-paper);
-  box-shadow: inset 0 -2px 0 var(--a-color-ink);
+  background: var(--a-color-bg);
+  box-shadow: inset 0 -2px 0 var(--a-color-text);
 }
 
 @media (max-width: 720px) {
@@ -1162,14 +1162,14 @@ watch(
   align-items: center;
   gap: 1.25rem;
   padding: 1.25rem;
-  border: 1px dashed var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .custom-file-picker:hover:not(.is-disabled) {
-  border-color: var(--a-color-ink);
-  background: var(--a-color-paper);
+  border-color: var(--a-color-text);
+  background: var(--a-color-bg);
 }
 .custom-file-picker.is-disabled {
   opacity: 0.6;
@@ -1184,8 +1184,8 @@ watch(
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
 }
 .file-picker-text {
   display: flex;
@@ -1196,7 +1196,7 @@ watch(
 .file-picker-title {
   font-size: 0.88rem;
   font-weight: 800;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   word-break: break-all;
   line-height: 1.4;
 }

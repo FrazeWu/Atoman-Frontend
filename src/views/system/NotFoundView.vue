@@ -30,7 +30,7 @@ import { moduleUrl } from '@/router/siteUrls'
 
 .notfound-card {
   width: min(40rem, 100%);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 2rem;
   background: #fff;
   box-shadow: none;
@@ -67,7 +67,7 @@ import { moduleUrl } from '@/router/siteUrls'
 .btn-main,
 .btn-sub {
   text-decoration: none;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.6rem 1rem;
   font-size: 0.75rem;
   font-weight: 500;

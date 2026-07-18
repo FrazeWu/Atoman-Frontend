@@ -328,7 +328,7 @@ const toggleFeatured = async () => {
 
 .topic-header {
   margin-bottom: 2rem;
-  border-bottom: 1.5px dashed var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   padding-bottom: 1.5rem;
 }
 

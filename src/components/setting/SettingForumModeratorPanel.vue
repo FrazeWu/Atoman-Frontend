@@ -396,13 +396,13 @@ onMounted(() => {
   gap: 1rem;
   align-items: center;
   padding: 0.75rem 0;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .setting-forum-moderator__check input {
   width: 18px;
   height: 18px;
-  accent-color: var(--a-color-ink);
+  accent-color: var(--a-color-text);
 }
 
 .setting-forum-moderator__actions,
@@ -418,7 +418,7 @@ onMounted(() => {
   gap: 1rem;
   align-items: center;
   padding: 0.9rem 0;
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .setting-forum-moderator__meta {
@@ -427,13 +427,13 @@ onMounted(() => {
 }
 
 .setting-forum-moderator__meta strong {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .setting-forum-moderator__meta small,
 .setting-forum-moderator__empty,
 .setting-forum-moderator__message {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .setting-forum-moderator__message {
@@ -441,7 +441,7 @@ onMounted(() => {
 }
 
 .setting-forum-moderator__message--error {
-  color: var(--a-color-danger-ink);
+  color: var(--a-color-danger);
 }
 
 @media (max-width: 640px) {

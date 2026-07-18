@@ -404,11 +404,10 @@ onBeforeUnmount(() => {
 .tl-map-canvas {
   position: relative;
   min-height: 36rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   overflow: hidden;
-  background:
-    repeating-linear-gradient(0deg, var(--a-color-bg) 0, var(--a-color-bg) 29px, var(--a-color-disabled-bg) 29px, var(--a-color-disabled-bg) 30px),
-    var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
 }
 
 .tl-event-map {
@@ -424,7 +423,7 @@ onBeforeUnmount(() => {
   z-index: 10;
   padding: 0.75rem 0.9rem;
   background: rgba(255, 255, 255, 0.96);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.55;
@@ -436,7 +435,7 @@ onBeforeUnmount(() => {
   max-width: 18rem;
   padding: 0.75rem 0.85rem;
   background: rgba(255, 255, 255, 0.98);
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
   opacity: 0;
   pointer-events: none;

@@ -213,7 +213,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
 }
 
 .collection-post-list {
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .collection-post-row {
@@ -221,13 +221,13 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
   gap: 1rem;
   min-height: 5.5rem;
   padding: 1rem 0;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   cursor: pointer;
 }
 
 .collection-post-row:hover,
 .collection-post-row:focus-visible {
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
   outline: none;
 }
 
@@ -257,7 +257,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
   gap: 0.35rem;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   cursor: pointer;

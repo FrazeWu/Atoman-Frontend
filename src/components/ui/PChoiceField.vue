@@ -16,8 +16,8 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
 }>(), {
   placeholder: '请选择',
-  triggerTestId: 'paper-choice-trigger',
-  optionPrefix: 'paper-choice-option-',
+  triggerTestId: 'p-choice-field-trigger',
+  optionPrefix: 'p-choice-field-option-',
   disabled: false,
 })
 
@@ -58,34 +58,31 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
-  <div ref="rootRef" class="paper-choice" :class="{ 'paper-choice--open': open }">
-    <label class="paper-choice-label">
-      <span class="paper-choice-dot" aria-hidden="true" />
-      <span>{{ label }}</span>
-    </label>
+  <div ref="rootRef" class="p-choice-field" :class="{ 'p-choice-field--open': open }">
+    <label class="p-choice-field-label">{{ label }}</label>
 
     <button
       :data-test="triggerTestId"
       type="button"
-      class="paper-choice-trigger"
+      class="p-choice-field-trigger"
       :disabled="disabled"
       @click="toggle"
     >
-      <span :class="{ 'paper-choice-placeholder': !selectedLabel }">{{ selectedLabel || placeholder }}</span>
-      <span class="paper-choice-meta">{{ open ? '收起' : '选择' }}</span>
+      <span :class="{ 'p-choice-field-placeholder': !selectedLabel }">{{ selectedLabel || placeholder }}</span>
+      <span class="p-choice-field-meta">{{ open ? '收起' : '选择' }}</span>
     </button>
 
-    <div v-if="open" class="paper-choice-panel">
+    <div v-if="open" class="p-choice-field-panel">
       <button
         v-for="option in options"
         :key="option.value"
         :data-test="`${optionPrefix}${option.value}`"
         type="button"
-        class="paper-choice-option"
-        :class="{ 'paper-choice-option--active': option.value === modelValue }"
+        class="p-choice-field-option"
+        :class="{ 'p-choice-field-option--active': option.value === modelValue }"
         @click="selectOption(option.value)"
       >
-        <span class="paper-choice-marker">{{ option.value === modelValue ? '•' : '' }}</span>
+        <span class="p-choice-field-marker">{{ option.value === modelValue ? '•' : '' }}</span>
         <span>{{ option.label }}</span>
       </button>
     </div>
@@ -93,66 +90,60 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 </template>
 
 <style scoped>
-.paper-choice {
+.p-choice-field {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.paper-choice-label {
+.p-choice-field-label {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: inherit;
   font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
-.paper-choice-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-ink) 70%, transparent);
-  opacity: 0.4;
-}
-
-.paper-choice-trigger {
+.p-choice-field-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0 0 0.6rem;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-line);
-  background: transparent;
-  color: var(--a-color-ink);
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   text-align: left;
   font: inherit;
   cursor: pointer;
-  transition: border-bottom-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.paper-choice-trigger:focus-visible,
-.paper-choice--open .paper-choice-trigger {
-  outline: none;
-  border-bottom-color: var(--a-color-accent-confirm);
+.p-choice-field-trigger:focus-visible,
+.p-choice-field--open .p-choice-field-trigger {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
+  border-color: var(--a-color-primary);
 }
 
-.paper-choice-placeholder,
-.paper-choice-meta {
-  color: var(--a-color-ink-soft);
+.p-choice-field-placeholder,
+.p-choice-field-meta {
+  color: var(--a-color-muted);
 }
 
-.paper-choice-meta {
-  font-family: var(--a-font-meta);
+.p-choice-field-meta {
+  font-family: inherit;
   font-size: 0.75rem;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 
-.paper-choice-panel {
+.p-choice-field-panel {
   position: absolute;
   left: 0;
   right: 0;
@@ -161,36 +152,36 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   display: flex;
   flex-direction: column;
   padding: 0.25rem;
-  border-radius: var(--a-radius-none, 4px);
+  border-radius: var(--a-radius-control);
   background: #ffffff;
-  border: 1px solid var(--a-color-line);
-  box-shadow: none;
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: var(--a-shadow-dropdown);
 }
 
-.paper-choice-option {
+.p-choice-field-option {
   display: grid;
   grid-template-columns: 1rem 1fr;
   gap: 0.45rem;
   padding: 0.55rem 0.75rem;
   border: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-align: left;
   cursor: pointer;
   font: inherit;
-  border-radius: calc(var(--a-radius-none, 4px) - 1px);
+  border-radius: var(--a-radius-base);
   transition: background-color 0.15s ease;
 }
 
-.paper-choice-option:hover {
-  background-color: var(--a-color-paper-soft);
+.p-choice-field-option:hover {
+  background-color: var(--a-color-surface);
 }
 
-.paper-choice-option--active {
-  color: var(--a-color-ink);
+.p-choice-field-option--active {
+  color: var(--a-color-text);
 }
 
-.paper-choice-marker {
-  color: var(--a-color-ink);
+.p-choice-field-marker {
+  color: var(--a-color-text);
 }
 </style>

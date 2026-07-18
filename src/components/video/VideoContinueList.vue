@@ -42,7 +42,7 @@ const emit = defineEmits<{
 
 .vcl-title {
   margin: 0;
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 1rem;
   font-weight: 900;
 }

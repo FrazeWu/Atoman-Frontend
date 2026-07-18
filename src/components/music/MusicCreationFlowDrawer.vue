@@ -407,7 +407,7 @@ async function completeCreation() {
           <button
             data-testid="music-creation-close-button"
             type="button"
-            class="paper-action"
+            class="ui-action"
             @click="requestClose"
           >
             关闭
@@ -416,7 +416,7 @@ async function completeCreation() {
             v-if="creationFlow.step !== 'artist'"
             data-testid="album-details-back-button"
             type="button"
-            class="paper-action"
+            class="ui-action"
             @click="goBackStep"
           >
             返回上一步
@@ -424,7 +424,7 @@ async function completeCreation() {
           <button
             :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
-            class="paper-submit"
+            class="primary-action"
             :disabled="creationFlow.submitting || !canGoForward"
             @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction()"
           >
@@ -441,8 +441,8 @@ async function completeCreation() {
 .drawer-header {
   margin: -2.5rem -2.5rem 0;
   padding: 1.5rem 2rem 1.1rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
-  background: color-mix(in srgb, var(--a-color-paper-soft) 86%, var(--a-color-paper));
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: color-mix(in srgb, var(--a-color-surface) 86%, var(--a-color-bg));
 }
 .header-meta {
   display: flex;
@@ -453,8 +453,8 @@ async function completeCreation() {
 }
 .eyebrow {
   margin: 0 0 0.45rem;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -462,20 +462,20 @@ async function completeCreation() {
 }
 .step-label {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.82rem;
   font-weight: 800;
 }
 .title {
   margin: 0.2rem 0 0;
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 2.05rem;
   line-height: 1.05;
 }
 .subtitle {
   margin: 0.55rem 0 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.7;
   max-width: 34rem;
 }
@@ -483,33 +483,33 @@ async function completeCreation() {
 .error-message {
   margin: 0;
   color: var(--a-color-accent-destructive);
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.82rem;
   font-weight: 800;
 }
 .footer-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: auto; }
 [data-testid="music-creation-close-button"] { display: none !important; }
-.paper-action,
-.paper-submit {
+.ui-action,
+.primary-action {
   border: 0;
   border-radius: 0px;
   padding: 0.85rem 1.2rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-weight: 800;
   cursor: pointer;
 }
-.paper-action {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+.ui-action {
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
 }
-.paper-submit {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+.primary-action {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   transition: background-color 0.15s ease;
 }
-.paper-submit:hover {
-  background: color-mix(in srgb, var(--a-color-ink) 86%, black);
+.primary-action:hover {
+  background: color-mix(in srgb, var(--a-color-text) 86%, black);
 }
 
 .drawer-body :deep(.album-details-step .footer-actions) {

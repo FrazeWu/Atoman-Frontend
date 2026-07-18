@@ -60,7 +60,7 @@ defineEmits(['click'])
   display: block;
   text-decoration: none;
   color: inherit;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   padding: 0.75rem 1.5rem;
   margin: 0 -1.5rem;
   transition: all 0.15s ease;
@@ -75,17 +75,17 @@ defineEmits(['click'])
   border-bottom: none;
 }
 .p-entry:hover {
-  background-color: var(--a-color-paper-soft);
-  border-left-color: var(--a-color-ink);
+  background-color: var(--a-color-surface);
+  border-left-color: var(--a-color-text);
 }
 .p-entry.is-open {
-  background-color: var(--a-color-paper-soft);
-  border-left-color: var(--a-color-ink);
+  background-color: var(--a-color-surface);
+  border-left-color: var(--a-color-text);
   border-bottom-color: transparent;
 }
 .p-entry.is-focused {
-  background-color: var(--a-color-paper-soft);
-  border-left-color: var(--a-color-ink);
+  background-color: var(--a-color-surface);
+  border-left-color: var(--a-color-text);
 }
 
 /* 2. Read State Weakening (Disabled - items do not turn grey) */
@@ -100,7 +100,7 @@ defineEmits(['click'])
 .feed-entry-title {
   display: inline-block; /* Ensure underline fits content if it was smaller, but h3 is block */
   width: fit-content;
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 1.15rem; /* Slightly smaller for tighter layout */
   font-weight: 500;
   line-height: 1.3;
@@ -111,7 +111,7 @@ defineEmits(['click'])
 
 .feed-entry-title:hover,
 .p-entry.is-open .feed-entry-title {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   text-decoration: underline;
   text-decoration-thickness: 1px;
 }
@@ -121,7 +121,7 @@ defineEmits(['click'])
   transition: all 0.2s;
 }
 :deep(.feed-source-link:hover) {
-  color: var(--a-color-ink) !important;
+  color: var(--a-color-text) !important;
   text-decoration: underline !important;
   text-decoration-thickness: 1px;
 }
@@ -131,7 +131,7 @@ defineEmits(['click'])
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.25rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted-soft);
@@ -155,7 +155,7 @@ defineEmits(['click'])
   align-items: center;
   gap: 0.75rem;
   padding-left: 2rem;
-  background: linear-gradient(to right, transparent, var(--a-color-paper-wash) 40%);
+  background: linear-gradient(to right, transparent, var(--a-color-surface-muted) 40%);
   opacity: 0;
   pointer-events: auto;
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
@@ -168,7 +168,7 @@ defineEmits(['click'])
 }
 
 .p-entry.is-open .feed-entry-actions {
-  background: linear-gradient(to right, transparent, var(--a-color-paper-soft) 40%);
+  background: linear-gradient(to right, transparent, var(--a-color-surface) 40%);
 }
 
 /* Ensure actions stand out */

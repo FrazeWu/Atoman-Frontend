@@ -485,7 +485,7 @@ function goNext() {
           <button
             data-testid="artist-add-stage-name-button"
             type="button"
-            class="paper-action paper-action--inline"
+            class="ui-action ui-action--inline"
             @click="addStageName"
           >
             添加艺名
@@ -548,7 +548,7 @@ function goNext() {
           <button
             data-testid="artist-add-member-button"
             type="button"
-            class="paper-action paper-action--inline"
+            class="ui-action ui-action--inline"
             @click="addMember"
           >
             添加成员
@@ -572,7 +572,7 @@ function goNext() {
               />
               <button
                 type="button"
-                class="paper-action paper-action--inline"
+                class="ui-action ui-action--inline"
                 @click="removeMember(member.id)"
               >
                 删除
@@ -739,7 +739,7 @@ function goNext() {
         <button
           data-testid="artist-next-button"
           type="button"
-          class="paper-submit"
+          class="primary-action"
           :disabled="avatarUploading"
           @click="goNext"
         >
@@ -767,7 +767,7 @@ function goNext() {
   display: none !important;
   gap: 0.7rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .artist-hero__meta {
@@ -782,8 +782,8 @@ function goNext() {
 .card-kicker,
 .field-label {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -792,7 +792,7 @@ function goNext() {
 
 .artist-hero h4 {
   margin: 0;
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 2rem;
   line-height: 1.05;
 }
@@ -800,7 +800,7 @@ function goNext() {
 .hero-copy,
 .card-copy {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.7;
 }
 
@@ -808,16 +808,16 @@ function goNext() {
   display: grid;
   gap: 1rem;
   padding: 1.15rem 1.2rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .artist-card--primary {
-  background: color-mix(in srgb, var(--a-color-paper) 82%, var(--a-color-paper-soft));
+  background: color-mix(in srgb, var(--a-color-bg) 82%, var(--a-color-surface));
 }
 
 .artist-card--soft {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 
 .card-header {
@@ -834,21 +834,21 @@ function goNext() {
 }
 
 .kind-switch__button {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   padding: 0.55rem 0.9rem;
-  background: var(--a-color-paper);
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
 }
 
 .kind-switch__button.is-active {
-  border-color: var(--a-color-ink);
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+  border-color: var(--a-color-text);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
 }
 
 .avatar-upload-section {
@@ -862,7 +862,7 @@ function goNext() {
   cursor: pointer;
   border-radius: 0;
   overflow: hidden;
-  border: 2px dashed var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   padding: 4px;
   transition: border-color 0.2s ease, transform 0.1s ease;
 }
@@ -872,7 +872,7 @@ function goNext() {
   height: 8rem;
   border-radius: 0;
   overflow: hidden;
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .artist-avatar-frame :deep(.p-avatar) {
@@ -889,7 +889,7 @@ function goNext() {
 }
 
 .avatar-uploader:hover {
-  border-color: var(--a-color-ink);
+  border-color: var(--a-color-text);
   transform: scale(1.02);
 }
 
@@ -906,7 +906,7 @@ function goNext() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.72rem;
   font-weight: 800;
   opacity: 0;
@@ -929,8 +929,8 @@ function goNext() {
   position: relative;
   display: flex;
   align-items: center;
-  border: 1px solid color-mix(in srgb, var(--a-color-ink) 22%, transparent);
-  background: var(--a-color-paper);
+  border: 1px solid color-mix(in srgb, var(--a-color-text) 22%, transparent);
+  background: var(--a-color-bg);
   min-height: 3.2rem;
 }
 
@@ -942,7 +942,7 @@ function goNext() {
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   padding: 0.85rem 3rem 0.85rem 0.95rem;
   font: inherit;
   box-sizing: border-box;
@@ -953,7 +953,7 @@ function goNext() {
 }
 
 .birth-date-input::placeholder {
-  color: color-mix(in srgb, var(--a-color-ink) 28%, transparent);
+  color: color-mix(in srgb, var(--a-color-text) 28%, transparent);
 }
 
 .birth-date-trigger {
@@ -968,12 +968,12 @@ function goNext() {
   height: 2rem;
   border: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--a-color-ink) 72%, transparent);
+  color: color-mix(in srgb, var(--a-color-text) 72%, transparent);
   cursor: pointer;
 }
 
 .birth-date-trigger:hover {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .birth-date-native {
@@ -994,8 +994,8 @@ function goNext() {
   display: grid;
   gap: 0.75rem;
   padding: 0.95rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: color-mix(in srgb, var(--a-color-paper-wash) 86%, var(--a-color-paper));
+  border: 1px solid var(--a-color-border-soft);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 86%, var(--a-color-bg));
 }
 
 .stage-name-dates {
@@ -1013,12 +1013,12 @@ function goNext() {
 
 :deep(.p-input:focus),
 :deep(.p-textarea:focus) {
-  border-bottom-color: var(--a-color-ink);
+  border-bottom-color: var(--a-color-text);
 }
 
 .state-line {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -1031,31 +1031,31 @@ function goNext() {
   display: none !important;
 }
 
-.paper-action,
-.paper-submit {
+.ui-action,
+.primary-action {
   border: 0;
   border-radius: 0;
   padding: 0.85rem 1.2rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-weight: 800;
   cursor: pointer;
 }
 
-.paper-action {
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+.ui-action {
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   font-size: 0.78rem;
 }
 
-.paper-submit {
-  background: var(--a-color-ink);
-  color: var(--a-color-paper);
+.primary-action {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
   transition: background-color 0.15s ease;
 }
 
-.paper-submit:hover {
-  background: color-mix(in srgb, var(--a-color-ink) 86%, black);
+.primary-action:hover {
+  background: color-mix(in srgb, var(--a-color-text) 86%, black);
 }
 
 @media (max-width: 720px) {

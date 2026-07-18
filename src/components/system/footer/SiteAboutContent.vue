@@ -53,7 +53,7 @@ withDefaults(defineProps<{
 
 .site-info-lead,
 .site-info-section p {
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   font-size: var(--a-text-md);
   line-height: 1.75;
 }

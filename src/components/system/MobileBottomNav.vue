@@ -82,7 +82,7 @@ const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
   left: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid var(--a-color-line-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   background: color-mix(in srgb, var(--a-color-bg) 94%, white 6%);
   backdrop-filter: blur(18px);
 }
@@ -100,7 +100,7 @@ const onTabClick = (tab: MobilePrimaryTab, event: MouseEvent) => {
 
 .mobile-bottom-nav__tab.is-active {
   color: var(--a-color-fg);
-  background: var(--a-color-paper-wash);
+  background: var(--a-color-surface-muted);
 }
 
 .mobile-bottom-nav__tab-copy {

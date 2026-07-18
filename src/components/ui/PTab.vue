@@ -43,7 +43,7 @@ const onClick = (event: MouseEvent) => {
   border: none;
   border-bottom: 2px solid transparent; /* Only bottom border line */
   background: transparent;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-family: inherit;
   font-size: 11px;
   font-weight: var(--a-font-weight-strong, 700);
@@ -57,13 +57,13 @@ const onClick = (event: MouseEvent) => {
 }
 
 .p-tab:hover {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 .p-tab--active {
-  border-bottom-color: var(--a-color-ink); /* Black bottom highlight */
+  border-bottom-color: var(--a-color-text); /* Black bottom highlight */
   background: transparent;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
 }
 
 /* Remove old active before block */
@@ -72,7 +72,7 @@ const onClick = (event: MouseEvent) => {
 }
 
 .p-tab:focus-visible {
-  outline: 2px solid var(--a-color-ink);
+  outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
 }
 

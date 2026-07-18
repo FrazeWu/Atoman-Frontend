@@ -27,7 +27,7 @@ describe('PSidebarItem', () => {
     expect(iconWrapper.exists()).toBe(true)
     expect(iconWrapper.classes()).toContain('is-component-icon')
     expect(iconWrapper.classes()).not.toContain('is-char-icon')
-    expect(wrapper.text()).toContain('01/')
+    expect(wrapper.find('.p-sidebar-item-num').exists()).toBe(false)
     expect(wrapper.text()).toContain('订阅')
   })
 
@@ -41,29 +41,27 @@ describe('PSidebarItem', () => {
     expect(iconWrapper.text()).toBe('探')
     expect(iconWrapper.classes()).toContain('is-char-icon')
     expect(iconWrapper.classes()).not.toContain('is-component-icon')
-    expect(wrapper.text()).toContain('02/')
+    expect(wrapper.find('.p-sidebar-item-num').exists()).toBe(false)
     expect(wrapper.text()).toContain('探索')
   })
 
-  it('places icon after the label content in DOM order for expanded sidebars', () => {
+  it('places icon before the label content in DOM order for expanded sidebars', () => {
     const wrapper = mount(PSidebarItem, {
       props: { active: true, index: 1, icon: TestIcon },
       slots: { default: '订阅' },
     })
 
     const itemHtml = wrapper.html()
-    const numberIndex = itemHtml.indexOf('01/')
     const labelIndex = itemHtml.indexOf('p-sidebar-item-label')
     const iconIndex = itemHtml.indexOf('p-sidebar-item-icon')
 
-    expect(numberIndex).toBeGreaterThanOrEqual(0)
     expect(labelIndex).toBeGreaterThanOrEqual(0)
     expect(iconIndex).toBeGreaterThanOrEqual(0)
-    expect(numberIndex).toBeLessThan(labelIndex)
-    expect(labelIndex).toBeLessThan(iconIndex)
+    expect(wrapper.find('.p-sidebar-item-num').exists()).toBe(false)
+    expect(iconIndex).toBeLessThan(labelIndex)
   })
 
-  it('places icon after the label content in DOM order for RouterLink items', () => {
+  it('places icon before the label content in DOM order for RouterLink items', () => {
     const wrapper = mount(PSidebarItem, {
       props: { to: '/', index: 1, icon: TestIcon },
       slots: { default: '订阅' },
@@ -75,14 +73,12 @@ describe('PSidebarItem', () => {
     })
 
     const itemHtml = wrapper.html()
-    const numberIndex = itemHtml.indexOf('01/')
     const labelIndex = itemHtml.indexOf('p-sidebar-item-label')
     const iconIndex = itemHtml.indexOf('p-sidebar-item-icon')
 
-    expect(numberIndex).toBeGreaterThanOrEqual(0)
     expect(labelIndex).toBeGreaterThanOrEqual(0)
     expect(iconIndex).toBeGreaterThanOrEqual(0)
-    expect(numberIndex).toBeLessThan(labelIndex)
-    expect(labelIndex).toBeLessThan(iconIndex)
+    expect(wrapper.find('.p-sidebar-item-num').exists()).toBe(false)
+    expect(iconIndex).toBeLessThan(labelIndex)
   })
 })

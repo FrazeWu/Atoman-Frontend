@@ -102,7 +102,7 @@ function removeSource(id: string) {
 
 :deep(.music-sources__remove:hover) {
   background-color: var(--a-color-accent-destructive);
-  color: var(--a-color-paper);
+  color: var(--a-color-bg);
 }
 
 @media (max-width: 720px) {

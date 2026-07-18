@@ -33,7 +33,7 @@ const tab = ref<'moderation' | 'users' | 'groups'>('moderation')
 .setting-community__tabs {
   display: flex;
   gap: 0.25rem;
-  border-bottom: 1px solid var(--a-color-line);
+  border-bottom: 1px solid var(--a-color-border);
 }
 
 .setting-community__tabs button {
@@ -42,13 +42,13 @@ const tab = ref<'moderation' | 'users' | 'groups'>('moderation')
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
   cursor: pointer;
 }
 
 .setting-community__tabs button.active {
   border-bottom-color: var(--a-color-primary);
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-weight: 600;
 }
 </style>

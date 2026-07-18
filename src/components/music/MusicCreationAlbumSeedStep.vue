@@ -461,7 +461,7 @@ async function handleArchiveChange(event: Event) {
   height: 5.5rem;
   object-fit: cover;
   border-radius: 0.9rem;
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-2);
 }
 
@@ -469,7 +469,7 @@ async function handleArchiveChange(event: Event) {
   display: none !important;
   gap: 0.7rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .album-hero__meta {
@@ -484,8 +484,8 @@ async function handleArchiveChange(event: Event) {
 .card-kicker,
 .summary-label {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -494,7 +494,7 @@ async function handleArchiveChange(event: Event) {
 
 .album-hero h4 {
   margin: 0;
-  font-family: var(--a-font-serif);
+  font-family: var(--a-font-sans);
   font-size: 2rem;
   line-height: 1.05;
 }
@@ -502,7 +502,7 @@ async function handleArchiveChange(event: Event) {
 .hero-copy,
 .card-copy {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   line-height: 1.7;
 }
 
@@ -510,16 +510,16 @@ async function handleArchiveChange(event: Event) {
   display: grid;
   gap: 1rem;
   padding: 1.15rem 1.2rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .album-card--primary {
-  background: color-mix(in srgb, var(--a-color-paper) 82%, var(--a-color-paper-soft));
+  background: color-mix(in srgb, var(--a-color-bg) 82%, var(--a-color-surface));
 }
 
 .album-card--soft {
-  background: var(--a-color-paper-soft);
+  background: var(--a-color-surface);
 }
 
 .card-header {
@@ -535,13 +535,13 @@ async function handleArchiveChange(event: Event) {
 .progress-panel { display: grid; gap: 0.7rem; }
 
 :deep(.p-input:focus) {
-  border-bottom-color: var(--a-color-ink);
+  border-bottom-color: var(--a-color-text);
 }
 
 .state-line {
   margin: 0;
-  color: var(--a-color-ink-soft);
-  font-family: var(--a-font-meta);
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -553,12 +553,12 @@ async function handleArchiveChange(event: Event) {
   gap: 0.75rem;
   align-items: center;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .summary-value {
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 0.92rem;
   font-weight: 800;
 }
@@ -567,17 +567,17 @@ async function handleArchiveChange(event: Event) {
   display: grid;
   gap: 0.6rem;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
 }
 
 .track-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   padding-bottom: 0.45rem;
-  border-bottom: 1px dashed color-mix(in srgb, var(--a-color-ink) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
 }
 
 .track-row:last-child {
@@ -599,7 +599,7 @@ async function handleArchiveChange(event: Event) {
 
 .track-seq {
   min-width: 2rem;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.76rem;
   font-weight: 800;
 }
@@ -609,7 +609,7 @@ async function handleArchiveChange(event: Event) {
   border: 0;
   background: transparent;
   padding: 0.5rem 0.75rem;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-family: inherit;
   font-size: 0.95rem;
   width: 100%;
@@ -618,8 +618,8 @@ async function handleArchiveChange(event: Event) {
 }
 .track-title-input:focus {
   outline: none;
-  background: var(--a-color-paper);
-  box-shadow: inset 0 -2px 0 var(--a-color-ink);
+  background: var(--a-color-bg);
+  box-shadow: inset 0 -2px 0 var(--a-color-text);
 }
 
 .track-row-actions {
@@ -630,12 +630,12 @@ async function handleArchiveChange(event: Event) {
 
 .track-action-button,
 .track-add-button {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 0;
-  background: var(--a-color-paper);
-  color: var(--a-color-ink);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
   cursor: pointer;
-  font-family: var(--a-font-meta);
+  font-family: var(--a-font-sans);
   font-size: 0.76rem;
   font-weight: 800;
   padding: 0.45rem 0.7rem;
@@ -651,8 +651,8 @@ async function handleArchiveChange(event: Event) {
   display: grid;
   gap: 0.5rem;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--a-color-line-soft);
-  background: color-mix(in srgb, var(--a-color-paper-wash) 84%, var(--a-color-paper));
+  border: 1px solid var(--a-color-border-soft);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 84%, var(--a-color-bg));
 }
 
 @media (max-width: 720px) {
@@ -667,14 +667,14 @@ async function handleArchiveChange(event: Event) {
   align-items: center;
   gap: 1.25rem;
   padding: 1.25rem;
-  border: 1px dashed var(--a-color-line-soft);
-  background: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .custom-file-picker:hover:not(.is-disabled) {
-  border-color: var(--a-color-ink);
-  background: var(--a-color-paper);
+  border-color: var(--a-color-text);
+  background: var(--a-color-bg);
 }
 .custom-file-picker.is-disabled {
   opacity: 0.6;
@@ -689,8 +689,8 @@ async function handleArchiveChange(event: Event) {
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: var(--a-color-paper);
-  border: 1px solid var(--a-color-line-soft);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
 }
 .file-picker-text {
   display: flex;
@@ -701,7 +701,7 @@ async function handleArchiveChange(event: Event) {
 .file-picker-title {
   font-size: 0.88rem;
   font-weight: 800;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   word-break: break-all;
   line-height: 1.4;
 }

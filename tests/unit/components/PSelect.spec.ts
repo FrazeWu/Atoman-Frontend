@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import PSelect from '@/components/ui/PSelect.vue'
 
 describe('PSelect', () => {
-  it('renders paper select affordances and options', async () => {
+  it('renders a standard labeled select and its options', async () => {
     const wrapper = mount(PSelect, {
       props: {
         modelValue: 'album',
@@ -15,7 +15,8 @@ describe('PSelect', () => {
       },
     })
 
-    expect(wrapper.find('.p-field-dot').exists()).toBe(true)
+    expect(wrapper.find('.p-field-dot').exists()).toBe(false)
+    expect(wrapper.get('label').text()).toBe('专辑类型')
 
     await wrapper.get('button').trigger('click')
     expect(wrapper.find('.p-select-panel').exists()).toBe(true)

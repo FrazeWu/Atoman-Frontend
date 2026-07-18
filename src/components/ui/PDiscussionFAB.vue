@@ -18,8 +18,8 @@ defineEmits(['click'])
   transform: translateY(-50%);
   width: 36px;
   padding: 1.5rem 0;
-  background: var(--a-color-ink);
-  border: 1px solid var(--a-color-ink);
+  background: var(--a-color-text);
+  border: 1px solid var(--a-color-text);
   border-right: none;
   border-radius: var(--a-radius-none, 4px) 0 0 var(--a-radius-none, 4px);
   box-shadow: none;
@@ -32,8 +32,8 @@ defineEmits(['click'])
 }
 .discussion-fab:hover {
   transform: translate(-2px, -50%);
-  background: var(--a-color-ink-muted);
-  border-color: var(--a-color-ink-muted);
+  background: var(--a-color-text-secondary);
+  border-color: var(--a-color-text-secondary);
 }
 .fab-label {
   writing-mode: vertical-rl;
@@ -42,6 +42,6 @@ defineEmits(['click'])
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.15em;
-  color: var(--a-color-paper);
+  color: var(--a-color-bg);
 }
 </style>

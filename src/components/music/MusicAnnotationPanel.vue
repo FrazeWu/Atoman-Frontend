@@ -111,8 +111,8 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   align-content: start;
   gap: 1rem;
   padding: 1rem;
-  border-left: 1px solid var(--a-color-line-soft);
-  background: color-mix(in srgb, var(--a-color-paper) 84%, #f3eadc 16%);
+  border-left: 1px solid var(--a-color-border-soft);
+  background: color-mix(in srgb, var(--a-color-bg) 84%, #f3eadc 16%);
   overflow: auto;
 }
 
@@ -125,7 +125,7 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 
 .music-annotation-panel__header h3 {
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   font-size: 1rem;
   font-weight: 900;
 }
@@ -133,7 +133,7 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 .music-annotation-panel__count,
 .music-annotation-panel__empty,
 .music-annotation-card__score {
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
 }
 
@@ -141,19 +141,19 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   display: grid;
   gap: 0.75rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-line-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .music-annotation-card__quote {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.82rem;
   line-height: 1.5;
 }
 
 .music-annotation-card__body {
   margin: 0;
-  color: var(--a-color-ink);
+  color: var(--a-color-text);
   line-height: 1.65;
 }
 
@@ -166,16 +166,16 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 }
 
 .music-annotation-card__vote {
-  border: 1px solid var(--a-color-line-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: transparent;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   padding: 0.35rem 0.55rem;
   cursor: pointer;
   font: inherit;
 }
 
 .music-annotation-card__vote.is-active {
-  border-color: var(--a-color-ink);
-  color: var(--a-color-ink);
+  border-color: var(--a-color-text);
+  color: var(--a-color-text);
 }
 </style>

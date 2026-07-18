@@ -184,10 +184,10 @@ async function submitEdit(input: CreateCommentInput) {
 </script>
 
 <style scoped>
-.comment-thread { min-width: 0; border: 1px solid var(--a-color-ink); box-shadow: var(--a-shadow-paper-sm); }
+.comment-thread { min-width: 0; border: 1px solid var(--a-color-text); box-shadow: var(--a-shadow-sm); }
 .comment-thread > :deep(.comment-item:first-child) { border: 0; }
-.comment-thread__replies { margin-left: clamp(0.75rem, 4vw, 3rem); border-left: 2px solid var(--a-color-line); }
-.comment-thread__expand { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-height: 42px; border: 0; border-top: 1px solid var(--a-color-line-soft); background: var(--a-color-paper-soft); color: var(--a-color-ink); cursor: pointer; }
+.comment-thread__replies { margin-left: clamp(0.75rem, 4vw, 3rem); border-left: 2px solid var(--a-color-border); }
+.comment-thread__expand { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; min-height: 42px; border: 0; border-top: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); color: var(--a-color-text); cursor: pointer; }
 .comment-thread__composer { margin: 0.75rem; }
 .comment-thread__error { margin: 0 0.75rem 0.75rem; color: var(--a-color-accent-destructive); font-size: var(--a-text-sm); }
 @media (max-width: 560px) { .comment-thread__replies { margin-left: 0.5rem; } }

@@ -32,14 +32,14 @@ const avatarStyle = computed(() => ({
 <style scoped>
 .p-avatar {
   border-radius: var(--a-radius-none, 4px);
-  background: var(--a-color-line-soft);
+  background: var(--a-color-border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  border: 1px solid var(--a-color-line-soft);
-  background-color: var(--a-color-paper-wash);
+  border: 1px solid var(--a-color-border-soft);
+  background-color: var(--a-color-surface-muted);
 }
 
 .avatar-img {
@@ -50,7 +50,7 @@ const avatarStyle = computed(() => ({
 
 .avatar-fallback {
   font-weight: 500;
-  color: var(--a-color-ink-muted);
+  color: var(--a-color-text-secondary);
 }
 
 .is-size-xs { width: 1.25rem; height: 1.25rem; font-size: 0.65rem; }

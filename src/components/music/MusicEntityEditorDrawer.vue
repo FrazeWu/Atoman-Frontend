@@ -597,7 +597,7 @@ async function finishAlbumCreate() {
 
 .entity-editor__state {
   margin: 0;
-  color: var(--a-color-ink-soft);
+  color: var(--a-color-muted);
   font-size: 0.95rem;
 }
 </style>

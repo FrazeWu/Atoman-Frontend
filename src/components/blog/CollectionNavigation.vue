@@ -37,6 +37,6 @@ defineProps<{
 .collection-navigation__heading { display: grid; gap: 0.3rem; margin-bottom: 0.7rem; }
 .collection-navigation__item { padding: 0.5rem 0; color: var(--a-color-muted); text-decoration: none; line-height: 1.35; }
 .collection-navigation__item.active { color: var(--a-color-fg); font-weight: 800; }
-.collection-navigation__steps { display: grid; gap: 0.65rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--a-color-line-soft); }
+.collection-navigation__steps { display: grid; gap: 0.65rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--a-color-border-soft); }
 .collection-navigation__steps a { color: var(--a-color-muted); text-decoration: none; font-size: 0.8rem; }
 </style>

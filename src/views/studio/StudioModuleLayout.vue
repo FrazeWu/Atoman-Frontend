@@ -1,7 +1,7 @@
 <template>
   <section class="studio-module">
-    <header class="studio-module__header">
-      <h1>{{ label }}</h1>
+    <header v-if="matchedRoute" class="studio-module__header">
+      <h1>{{ config.label }}</h1>
       <nav aria-label="模块管理">
         <RouterLink :to="`/studio/${module}/content`">内容</RouterLink>
         <RouterLink :to="`/studio/${module}/analytics`">数据</RouterLink>
@@ -14,13 +14,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { computed, inject } from 'vue'
+import { matchedRouteKey, RouterLink, RouterView, useRoute } from 'vue-router'
+
+import { studioModules } from '@/config/studioModules'
 import type { StudioModule } from '@/types'
 
 const route = useRoute()
+const matchedRoute = inject(matchedRouteKey, undefined)
 const module = computed(() => route.params.module as StudioModule)
-const label = computed(() => ({ blog: '博客', podcast: '播客', video: '视频' })[module.value])
+const config = computed(() => studioModules[module.value])
 </script>
 
 <style scoped>

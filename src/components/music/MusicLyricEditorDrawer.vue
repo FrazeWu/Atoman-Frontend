@@ -60,6 +60,7 @@ const importError = ref('')
 const exportError = ref('')
 const originalInput = ref<HTMLInputElement | null>(null)
 const translationInput = ref<HTMLInputElement | null>(null)
+let importGeneration = 0
 
 const validationIssues = computed(() => validateMusicLyricDraft(rows.value, draftFormat.value))
 const blockingIssues = computed(() => validationIssues.value.filter(issue => issue.severity === 'error'))
@@ -75,7 +76,12 @@ const exportBaseName = computed(() => props.songTitle.trim() || 'lyrics')
 watch(
   () => [props.show, props.content, props.translation, props.format] as const,
   ([show, content, translation, format]) => {
-    if (!show) return
+    importGeneration += 1
+    if (!show) {
+      importPreview.value = null
+      importError.value = ''
+      return
+    }
 
     draftFormat.value = format ?? 'plain'
     rows.value = parseMusicLyricDraft(content ?? '', translation ?? '', draftFormat.value)
@@ -103,6 +109,7 @@ function sortRows() {
 
 function selectImportFile(kind: 'original' | 'translation', event: Event) {
   if (props.saving) return
+  importGeneration += 1
   const file = (event.target as HTMLInputElement).files?.[0] ?? null
   if (kind === 'original') originalImportFile.value = file
   else translationImportFile.value = file
@@ -113,26 +120,33 @@ function selectImportFile(kind: 'original' | 'translation', event: Event) {
 async function previewImport() {
   if (props.saving || !originalImportFile.value) return
 
+  importGeneration += 1
+  const generation = importGeneration
   const originalFile = originalImportFile.value
+  const translationFile = translationImportFile.value
+  const isStale = () => generation !== importGeneration || !props.show
   let original: string
   try {
     original = await originalFile.text()
   } catch {
+    if (isStale()) return
     importPreview.value = null
     importError.value = `读取 LRC 文件失败：${originalFile.name}`
     return
   }
+  if (isStale()) return
 
-  const translationFile = translationImportFile.value
   let translation = ''
   if (translationFile) {
     try {
       translation = await translationFile.text()
     } catch {
+      if (isStale()) return
       importPreview.value = null
       importError.value = `读取 LRC 文件失败：${translationFile.name}`
       return
     }
+    if (isStale()) return
   }
 
   try {
@@ -146,6 +160,7 @@ async function previewImport() {
         : `${fileName} 第 ${issue.sourceLine} 行`
       return { ...issue, message: `${location}：${issue.message}` }
     })
+    if (isStale()) return
     importPreview.value = {
       rows: parsed.rows,
       issues: [
@@ -155,6 +170,7 @@ async function previewImport() {
     }
     importError.value = ''
   } catch {
+    if (isStale()) return
     importPreview.value = null
     importError.value = `解析 LRC 文件失败：${originalFile.name}`
   }
@@ -208,6 +224,7 @@ function handleSave() {
 <template>
   <PSheet
     :show="show"
+    title="编辑歌词"
     width="min(1080px, calc(100vw - var(--a-sidebar-width) - 16px))"
     max-width="calc(100vw - var(--a-sidebar-width) - 16px)"
     close-type="header"

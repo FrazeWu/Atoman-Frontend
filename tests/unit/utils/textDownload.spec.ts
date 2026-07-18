@@ -30,4 +30,26 @@ describe('textDownload', () => {
     expect(revoke).toHaveBeenCalledWith('blob:lyrics')
     expect(click.mock.invocationCallOrder[0]).toBeLessThan(revoke.mock.invocationCallOrder[0]!)
   })
+
+  it('revokes the object URL and rethrows when clicking the anchor fails', () => {
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+      throw new Error('click failed')
+    })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:failed-lyrics')
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    expect(() => downloadTextFile('Song', 'lyrics', '.lrc')).toThrow('click failed')
+    expect(revoke).toHaveBeenCalledWith('blob:failed-lyrics')
+  })
+
+  it('revokes the object URL when configuring the anchor fails', () => {
+    vi.spyOn(HTMLAnchorElement.prototype, 'download', 'set').mockImplementation(() => {
+      throw new Error('download property failed')
+    })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:unconfigured-lyrics')
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    expect(() => downloadTextFile('Song', 'lyrics', '.lrc')).toThrow('download property failed')
+    expect(revoke).toHaveBeenCalledWith('blob:unconfigured-lyrics')
+  })
 })

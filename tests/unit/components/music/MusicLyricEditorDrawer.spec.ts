@@ -35,6 +35,16 @@ function fileWithText(name: string, text: () => Promise<string>) {
   return file
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
 async function chooseFile(wrapper: VueWrapper, label: string, file: File) {
   const input = wrapper.get<HTMLInputElement>(`input[aria-label="${label}"]`)
   Object.defineProperty(input.element, 'files', { configurable: true, value: [file] })
@@ -49,6 +59,11 @@ afterEach(() => {
 })
 
 describe('MusicLyricEditorDrawer.vue', () => {
+  it('gives the sheet an accessible lyric editor title', () => {
+    const wrapper = mountDrawer()
+    expect(wrapper.get('[role="dialog"]').attributes('aria-label')).toBe('编辑歌词')
+  })
+
   it('saves edited rows through the existing payload contract and trims the summary', async () => {
     const wrapper = mountDrawer()
 
@@ -214,6 +229,44 @@ describe('MusicLyricEditorDrawer.vue', () => {
     await buttonByText(wrapper, '预览导入').trigger('click')
 
     await vi.waitFor(() => expect(document.body.textContent).toContain('broken-translation.lrc 第 2 行'))
+  })
+
+  it('keeps the newest import preview when an older file read finishes later', async () => {
+    const wrapper = mountDrawer()
+    const firstRead = deferred<string>()
+    const secondRead = deferred<string>()
+
+    await chooseFile(wrapper, '原文 LRC', fileWithText('first.lrc', () => firstRead.promise))
+    await buttonByText(wrapper, '预览导入').trigger('click')
+    await chooseFile(wrapper, '原文 LRC', fileWithText('second.lrc', () => secondRead.promise))
+    await buttonByText(wrapper, '预览导入').trigger('click')
+
+    secondRead.resolve('[00:02.00]Second')
+    await vi.waitFor(() => {
+      expect(wrapper.findComponent(MusicLyricsImportPreview).props('rows')[0]?.original).toBe('Second')
+      expect(wrapper.findComponent(MusicLyricsImportPreview).props('originalFileName')).toBe('second.lrc')
+    })
+
+    firstRead.resolve('[00:01.00]First')
+    await firstRead.promise
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent(MusicLyricsImportPreview).props('rows')[0]?.original).toBe('Second')
+    expect(wrapper.findComponent(MusicLyricsImportPreview).props('originalFileName')).toBe('second.lrc')
+  })
+
+  it('ignores a pending import failure after the drawer closes', async () => {
+    const wrapper = mountDrawer()
+    const pendingRead = deferred<string>()
+    await chooseFile(wrapper, '原文 LRC', fileWithText('pending.lrc', () => pendingRead.promise))
+    await buttonByText(wrapper, '预览导入').trigger('click')
+
+    await wrapper.setProps({ show: false })
+    pendingRead.reject(new Error('late failure'))
+    await pendingRead.promise.catch(() => undefined)
+    await wrapper.vm.$nextTick()
+
+    expect((wrapper.vm as unknown as { importPreview: unknown }).importPreview).toBeNull()
+    expect((wrapper.vm as unknown as { importError: string }).importError).toBe('')
   })
 
   it('exports original and translated LRC files with the song title', async () => {

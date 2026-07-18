@@ -79,6 +79,10 @@ async function runWorkflow(
   await expect(track.getByText(songTitle, { exact: true })).toBeVisible()
   await track.locator(`[data-testid="track-play-${songId}"]`).click()
   await expect(page.locator('.player')).toBeVisible()
+  const playbackToggle = page.locator('.main-play-btn')
+  await expect(playbackToggle).toHaveText('暂停')
+  await playbackToggle.click()
+  await expect(playbackToggle).toHaveText('播放')
   await page.locator('.feature-link').filter({ hasText: '词' }).click()
   await expect(page.getByTestId('lyrics-edit-trigger')).toBeVisible()
   await page.getByTestId('lyrics-edit-trigger').click()
@@ -136,7 +140,6 @@ async function runWorkflow(
   const timeInputs = editor.locator('[data-testid^="lyric-time-"]')
   const currentTime = page.getByTestId('lyrics-current-time')
 
-  await pausePlayback(page)
   await setRangeValue(progress, 4.2)
   await originalInputs.nth(0).focus()
   await expect(lyricRows.nth(0)).toHaveClass(/is-selected/)
@@ -362,14 +365,6 @@ async function setRangeValue(slider: Locator, value: number) {
     input.dispatchEvent(new Event('input', { bubbles: true }))
   }, value)
   await expect(slider).toHaveValue(String(value))
-}
-
-async function pausePlayback(page: Page) {
-  const toggle = page.locator('.main-play-btn')
-  if ((await toggle.textContent())?.trim() !== '暂停') return
-
-  await toggle.evaluate(element => (element as HTMLButtonElement).click())
-  await expect(toggle).toHaveText('播放')
 }
 
 async function assertDesktopTimingLayout(page: Page) {

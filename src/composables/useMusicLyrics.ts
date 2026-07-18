@@ -49,16 +49,43 @@ export function useMusicLyrics() {
   const lyrics = ref<MusicSongLyrics | null>(null)
   const loading = ref(false)
   const saving = ref(false)
+  const reverting = ref(false)
   const versions = ref<MusicSongLyricsVersion[]>([])
+  const versionsSongId = ref('')
   const versionsLoading = ref(false)
+  const versionsErrorMessage = ref('')
   const errorMessage = ref('')
   let activeLoadRequestId = 0
   let activeSaveRequestId = 0
+  let activeVersionsRequestId = 0
+  let activeRevertRequestId = 0
+  let activeRevertSongId = ''
   const activeSongId = ref('')
 
   const annotationsByLine = computed(() => buildAnnotationsByLine(lyrics.value?.annotations ?? []))
 
+  function invalidateContentLoad() {
+    activeLoadRequestId += 1
+    loading.value = false
+  }
+
+  function canApplyMutationResponse(songId: string, response: MusicSongLyrics) {
+    const currentVersion = lyrics.value?.song_id === songId ? lyrics.value.version : undefined
+    return activeSongId.value === songId
+      && response.song_id === songId
+      && (currentVersion === undefined || response.version >= currentVersion)
+  }
+
   async function load(songId: string) {
+    if (activeRevertSongId && activeRevertSongId !== songId) {
+      activeRevertRequestId += 1
+      activeRevertSongId = ''
+      reverting.value = false
+    }
+    if (activeSongId.value && activeSongId.value !== songId) {
+      activeSaveRequestId += 1
+      saving.value = false
+    }
     const requestId = ++activeLoadRequestId
     activeSongId.value = songId
     loading.value = true
@@ -78,17 +105,21 @@ export function useMusicLyrics() {
   }
 
   async function save(songId: string, input: UpdateMusicSongLyricsInput) {
+    if (saving.value || reverting.value) throw new Error('歌词正在更新')
     const requestId = ++activeSaveRequestId
+    invalidateContentLoad()
     saving.value = true
     errorMessage.value = ''
     try {
       const updatedLyrics = await updateMusicSongLyrics(songId, input)
-      if (activeSongId.value === songId) {
-        lyrics.value = updatedLyrics
+      if (requestId === activeSaveRequestId && activeSongId.value === songId) {
+        invalidateContentLoad()
+        if (canApplyMutationResponse(songId, updatedLyrics)) lyrics.value = updatedLyrics
+        resetVersions()
       }
       return updatedLyrics
     } catch (error) {
-      if (activeSongId.value === songId) {
+      if (requestId === activeSaveRequestId && activeSongId.value === songId) {
         errorMessage.value = '歌词保存失败'
       }
       throw error
@@ -160,34 +191,66 @@ export function useMusicLyrics() {
   }
 
   async function loadVersions(songId: string) {
+    const requestId = ++activeVersionsRequestId
+    versions.value = []
+    versionsSongId.value = ''
     versionsLoading.value = true
-    errorMessage.value = ''
+    versionsErrorMessage.value = ''
     try {
-      versions.value = await listMusicSongLyricsVersions(songId)
-      return versions.value
+      const nextVersions = await listMusicSongLyricsVersions(songId)
+      if (requestId !== activeVersionsRequestId) return []
+      versions.value = nextVersions
+      versionsSongId.value = songId
+      return nextVersions
     } catch (error) {
-      errorMessage.value = '版本加载失败'
+      if (requestId !== activeVersionsRequestId) return []
+      versionsErrorMessage.value = '版本加载失败'
       throw error
     } finally {
-      versionsLoading.value = false
+      if (requestId === activeVersionsRequestId) {
+        versionsLoading.value = false
+      }
     }
   }
 
+  function resetVersions() {
+    activeVersionsRequestId += 1
+    versions.value = []
+    versionsSongId.value = ''
+    versionsLoading.value = false
+    versionsErrorMessage.value = ''
+  }
+
   async function revertVersion(songId: string, version: number, editSummary: string) {
-    saving.value = true
-    errorMessage.value = ''
+    if (saving.value || reverting.value) return false
+    if (versionsSongId.value !== songId || !versions.value.some((item) => item.version === version)) {
+      throw new Error('版本与当前歌曲不匹配')
+    }
+    const requestId = ++activeRevertRequestId
+    activeRevertSongId = songId
+    invalidateContentLoad()
+    reverting.value = true
+    versionsErrorMessage.value = ''
     try {
       const updatedLyrics = await revertMusicSongLyricsVersion(songId, version, editSummary)
+      if (requestId !== activeRevertRequestId) return false
       if (activeSongId.value === songId || activeSongId.value === '') {
-        lyrics.value = updatedLyrics
         activeSongId.value = songId
+        invalidateContentLoad()
+        errorMessage.value = ''
+        if (canApplyMutationResponse(songId, updatedLyrics)) lyrics.value = updatedLyrics
+        resetVersions()
       }
-      return updatedLyrics
+      return true
     } catch (error) {
-      errorMessage.value = '版本恢复失败'
+      if (requestId !== activeRevertRequestId) return false
+      versionsErrorMessage.value = '版本恢复失败'
       throw error
     } finally {
-      saving.value = false
+      if (requestId === activeRevertRequestId) {
+        activeRevertSongId = ''
+        reverting.value = false
+      }
     }
   }
 
@@ -208,8 +271,11 @@ export function useMusicLyrics() {
     lyrics,
     loading,
     saving,
+    reverting,
     versions,
+    versionsSongId,
     versionsLoading,
+    versionsErrorMessage,
     errorMessage,
     annotationsByLine,
     load,
@@ -219,6 +285,7 @@ export function useMusicLyrics() {
     deleteAnnotation,
     voteAnnotation,
     loadVersions,
+    resetVersions,
     revertVersion,
     currentLine,
   }

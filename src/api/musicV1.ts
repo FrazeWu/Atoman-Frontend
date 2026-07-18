@@ -565,11 +565,22 @@ export type MusicSongLyricsVersion = {
   updated_by?: string
 }
 
+export type MusicLyricsAnnotationResolution = {
+  annotation_id: string
+  action: 'needs_rebind' | 'rebind'
+  line_id?: string
+  line_key?: string
+  selected_text?: string
+  start_offset?: number
+  end_offset?: number
+}
+
 export type UpdateMusicSongLyricsInput = {
   content: string
   translation: string
   format: MusicLyricsFormat
   edit_summary: string
+  annotation_resolutions?: MusicLyricsAnnotationResolution[]
 }
 
 export type CreateMusicLyricsAnnotationInput = {

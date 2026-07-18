@@ -17,8 +17,10 @@
           版本
         </PButton>
         <PButton
+          v-if="isAuthenticated"
           type="button"
           variant="secondary"
+          :disabled="saving || reverting"
           data-testid="lyrics-edit-trigger"
           @click="isLyricEditorOpen = true"
         >
@@ -40,7 +42,8 @@
 
     <div v-if="versionsVisible" class="music-lyrics-panel__versions">
       <p v-if="versionsLoading" class="music-lyrics-panel__placeholder">正在加载版本</p>
-      <p v-else-if="!versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
+      <p v-else-if="versionsErrorMessage" class="music-lyrics-panel__placeholder">{{ versionsErrorMessage }}</p>
+      <p v-else-if="versionsSongId !== songId || !versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
       <div v-else class="music-lyrics-panel__version-list">
         <article
           v-for="version in versions"
@@ -52,8 +55,10 @@
             <span>{{ version.edit_summary || '歌词更新' }}</span>
           </div>
           <button
+            v-if="isAuthenticated"
             type="button"
             class="music-lyrics-panel__version-action"
+            :disabled="saving || reverting"
             :data-testid="`lyrics-revert-version-${version.version}`"
             @click="handleRevertVersion(version.version)"
           >
@@ -65,10 +70,13 @@
 
     <div class="music-lyrics-panel__layout">
       <div class="music-lyrics-panel__main">
+        <div v-if="hasTranslation" class="music-lyrics-panel__display-mode">
+          <PSegmentedControl v-model="displayMode" :options="displayModeOptions" />
+        </div>
         <p v-if="loading" class="music-lyrics-panel__placeholder">加载中</p>
         <p v-else-if="!lyrics?.lines.length" class="music-lyrics-panel__placeholder">暂无歌词</p>
 
-        <div v-else class="music-lyrics-panel__lines">
+        <div v-else ref="lyricsLinesElement" class="music-lyrics-panel__lines">
           <MusicLyricsLine
             v-for="line in lyrics.lines"
             :key="line.line_key ?? line.id ?? line.text"
@@ -76,6 +84,7 @@
             :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
             :active="currentLineId === (line.line_key ?? line.id ?? '')"
             :bilingual="showTranslation"
+            :can-select="isAuthenticated"
             @select-text="handleSelectText"
             @open-annotations="handleOpenAnnotations"
           />
@@ -86,12 +95,15 @@
         <MusicAnnotationPanel
           v-if="selectedAnnotations.length"
           :annotations="selectedAnnotations"
+          :can-write="isAuthenticated"
+          :current-user-ids="currentUserIds"
           @vote="handleVoteAnnotation"
           @edit="handleEditAnnotation"
           @delete="handleDeleteAnnotation"
         />
 
         <MusicAnnotationEditor
+          v-if="isAuthenticated"
           :show="annotationEditorVisible"
           :selected-text="annotationSelectedText"
           :initial-body="annotationInitialBody"
@@ -102,19 +114,33 @@
     </div>
 
     <MusicLyricEditorDrawer
+      v-if="isAuthenticated"
       :show="isLyricEditorOpen"
       :content="lyrics?.content ?? ''"
       :translation="lyrics?.translation ?? ''"
       :format="lyrics?.format ?? 'plain'"
-      :saving="saving"
+      :saving="saving || reverting"
       @close="isLyricEditorOpen = false"
       @save="handleSaveLyrics"
+    />
+
+    <PConfirm
+      above-player
+      :show="conflictAnnotationIds.length > 0"
+      title="保存歌词"
+      :message="conflictMessage"
+      confirm-text="继续保存"
+      cancel-text="取消"
+      :loading="saving"
+      @confirm="confirmLyricsConflict"
+      @cancel="cancelLyricsConflict"
     />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { ApiErrorResponseError } from '@/api/client'
 import type {
   MusicLyricsAnnotation,
   MusicSongLyricsLine,
@@ -125,7 +151,10 @@ import MusicAnnotationPanel from '@/components/music/MusicAnnotationPanel.vue'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   songId: string
@@ -138,11 +167,15 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const authStore = useAuthStore()
+
 const {
   lyrics,
   loading,
   saving,
+  reverting,
   errorMessage,
+  versionsErrorMessage,
   annotationsByLine,
   load,
   save,
@@ -151,8 +184,10 @@ const {
   deleteAnnotation,
   voteAnnotation,
   versions,
+  versionsSongId,
   versionsLoading,
   loadVersions,
+  resetVersions,
   revertVersion,
   currentLine,
 } = useMusicLyrics()
@@ -167,9 +202,31 @@ const selectedTextDraft = ref<{
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const isLyricEditorOpen = ref(false)
 const versionsVisible = ref(false)
+const displayMode = ref<'original' | 'bilingual'>('bilingual')
+const lyricsLinesElement = ref<HTMLElement | null>(null)
+const pendingLyricsInput = ref<UpdateMusicSongLyricsInput | null>(null)
+const conflictAnnotationIds = ref<string[]>([])
+const pendingLyricsSongId = ref('')
+let pendingLyricsSaveGeneration = 0
+let activeLyricsSaveGeneration = 0
+let versionsViewGeneration = 0
 
-const currentLineId = computed(() => currentLine(props.currentTimeSeconds)?.line_key ?? currentLine(props.currentTimeSeconds)?.id ?? '')
-const showTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
+const displayModeOptions = [
+  { label: '原文', value: 'original' },
+  { label: '双语', value: 'bilingual' },
+]
+
+const isAuthenticated = computed(() => Boolean(authStore.isAuthenticated))
+const currentUserIds = computed(() => collectIdentityValues(authStore.user as Record<string, unknown> | null))
+const activeTimedLine = computed(() => {
+  const line = currentLine(props.currentTimeSeconds)
+  const startTime = line?.time_ms ?? line?.startTimeMs
+  return typeof startTime === 'number' ? line : null
+})
+const currentLineId = computed(() => activeTimedLine.value?.line_key ?? activeTimedLine.value?.id ?? '')
+const hasTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
+const showTranslation = computed(() => hasTranslation.value && displayMode.value === 'bilingual')
+const conflictMessage = computed(() => `这次修改会影响 ${conflictAnnotationIds.value.length} 条注释，保存后将通知作者重新确认。`)
 const selectedAnnotations = computed(() => {
   if (!lyrics.value || selectedAnnotationIds.value.length === 0) return []
   const selectedSet = new Set(selectedAnnotationIds.value)
@@ -183,15 +240,38 @@ const showSidebar = computed(() => selectedAnnotations.value.length > 0 || annot
 watch(
   () => props.songId,
   (songId) => {
+    activeLyricsSaveGeneration += 1
+    versionsViewGeneration += 1
+    resetVersions()
     selectedAnnotationIds.value = []
     selectedTextDraft.value = null
     editingAnnotation.value = null
     isLyricEditorOpen.value = false
     versionsVisible.value = false
+    displayMode.value = 'bilingual'
+    pendingLyricsInput.value = null
+    pendingLyricsSongId.value = ''
+    pendingLyricsSaveGeneration = 0
+    conflictAnnotationIds.value = []
     void load(songId)
   },
   { immediate: true },
 )
+
+watch(currentLineId, async (lineId, previousLineId) => {
+  if (!lineId || lineId === previousLineId) return
+  await nextTick()
+  lyricsLinesElement.value
+    ?.querySelector<HTMLElement>('.music-lyrics-line.is-active')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+})
+
+function collectIdentityValues(value: Record<string, unknown> | null | undefined) {
+  if (!value) return []
+  return [value.id, value.uuid]
+    .filter((candidate) => candidate !== null && candidate !== undefined && candidate !== '')
+    .map((candidate) => String(candidate))
+}
 
 function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationIds: string[] }) {
   selectedTextDraft.value = null
@@ -205,6 +285,7 @@ function handleSelectText(payload: {
   startOffset: number
   endOffset: number
 }) {
+  if (!isAuthenticated.value) return
   editingAnnotation.value = null
   selectedAnnotationIds.value = []
   selectedTextDraft.value = payload
@@ -216,6 +297,7 @@ function handleCancelAnnotation() {
 }
 
 async function handleSaveAnnotation(body: string) {
+  if (!isAuthenticated.value) return
   if (editingAnnotation.value) {
     await updateAnnotation(props.songId, editingAnnotation.value.id, { body })
     editingAnnotation.value = null
@@ -239,27 +321,53 @@ async function handleSaveAnnotation(body: string) {
 }
 
 function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
+  if (!isAuthenticated.value) return
   selectedTextDraft.value = null
   editingAnnotation.value = annotation
 }
 
 async function handleDeleteAnnotation(annotationId: string) {
+  if (!isAuthenticated.value) return
   await deleteAnnotation(props.songId, annotationId)
   selectedAnnotationIds.value = selectedAnnotationIds.value.filter((id) => id !== annotationId)
 }
 
 async function handleVoteAnnotation(annotationId: string, vote: 'up' | 'down' | null) {
+  if (!isAuthenticated.value) return
   await voteAnnotation(props.songId, annotationId, vote)
 }
 
 async function toggleVersions() {
+  versionsViewGeneration += 1
   versionsVisible.value = !versionsVisible.value
-  if (versionsVisible.value) await loadVersions(props.songId)
+  if (!versionsVisible.value) {
+    resetVersions()
+    return
+  }
+  try {
+    await loadVersions(props.songId)
+  } catch {
+    // The composable exposes the current version error inside this panel.
+  }
 }
 
 async function handleRevertVersion(version: number) {
-  await revertVersion(props.songId, version, `恢复到第 ${version} 版`)
-  versionsVisible.value = false
+  if (!isAuthenticated.value || saving.value || reverting.value || versionsSongId.value !== props.songId) return
+  const songId = props.songId
+  const viewGeneration = versionsViewGeneration
+  try {
+    const succeeded = await revertVersion(songId, version, `恢复到第 ${version} 版`)
+    if (
+      succeeded
+      && props.songId === songId
+      && versionsVisible.value
+      && versionsViewGeneration === viewGeneration
+    ) {
+      versionsVisible.value = false
+    }
+  } catch {
+    // The composable exposes the current version error inside this panel.
+  }
 }
 
 async function handleSaveLyrics(payload: {
@@ -268,6 +376,7 @@ async function handleSaveLyrics(payload: {
   format: 'plain' | 'lrc'
   editSummary: string
 }) {
+  if (!isAuthenticated.value || saving.value || reverting.value) return
   const input: UpdateMusicSongLyricsInput = {
     content: payload.content,
     translation: payload.translation,
@@ -275,8 +384,70 @@ async function handleSaveLyrics(payload: {
     edit_summary: payload.editSummary,
   }
 
-  await save(props.songId, input)
-  isLyricEditorOpen.value = false
+  const songId = props.songId
+  const generation = ++activeLyricsSaveGeneration
+  await attemptLyricsSave(songId, generation, input)
+}
+
+async function attemptLyricsSave(songId: string, generation: number, input: UpdateMusicSongLyricsInput) {
+  try {
+    await save(songId, input)
+    if (generation !== activeLyricsSaveGeneration || props.songId !== songId) return
+    pendingLyricsInput.value = null
+    pendingLyricsSongId.value = ''
+    pendingLyricsSaveGeneration = 0
+    conflictAnnotationIds.value = []
+    isLyricEditorOpen.value = false
+  } catch (error) {
+    if (generation !== activeLyricsSaveGeneration || props.songId !== songId) return
+    const annotationIds = error instanceof ApiErrorResponseError
+      && error.status === 409
+      && error.code === 'music.annotation_anchor_conflict'
+      && Array.isArray(error.details.annotation_ids)
+      ? error.details.annotation_ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : []
+    if (annotationIds.length === 0) return
+
+    errorMessage.value = ''
+    pendingLyricsInput.value = input
+    pendingLyricsSongId.value = songId
+    pendingLyricsSaveGeneration = generation
+    conflictAnnotationIds.value = annotationIds
+  }
+}
+
+async function confirmLyricsConflict() {
+  if (
+    !pendingLyricsInput.value
+    || conflictAnnotationIds.value.length === 0
+    || pendingLyricsSongId.value !== props.songId
+    || pendingLyricsSaveGeneration !== activeLyricsSaveGeneration
+  ) return
+  const songId = pendingLyricsSongId.value
+  const generation = pendingLyricsSaveGeneration
+  const resolutionsByAnnotationId = new Map(
+    (pendingLyricsInput.value.annotation_resolutions ?? []).map((resolution) => [resolution.annotation_id, resolution]),
+  )
+  for (const annotationId of conflictAnnotationIds.value) {
+    resolutionsByAnnotationId.set(annotationId, {
+      annotation_id: annotationId,
+      action: 'needs_rebind',
+    })
+  }
+  const input: UpdateMusicSongLyricsInput = {
+    ...pendingLyricsInput.value,
+    annotation_resolutions: [...resolutionsByAnnotationId.values()],
+  }
+  conflictAnnotationIds.value = []
+  await attemptLyricsSave(songId, generation, input)
+}
+
+function cancelLyricsConflict() {
+  if (pendingLyricsSongId.value !== props.songId || pendingLyricsSaveGeneration !== activeLyricsSaveGeneration) return
+  conflictAnnotationIds.value = []
+  pendingLyricsInput.value = null
+  pendingLyricsSongId.value = ''
+  pendingLyricsSaveGeneration = 0
 }
 </script>
 
@@ -403,6 +574,12 @@ async function handleSaveLyrics(payload: {
   min-height: 0;
   overflow: auto;
   padding-right: 1rem;
+}
+
+.music-lyrics-panel__display-mode {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
 }
 
 .music-lyrics-panel__lines {

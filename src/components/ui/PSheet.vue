@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body" :disabled="isTest">
-    <div class="p-sheet-root">
+    <div class="p-sheet-root" :class="{ 'p-sheet-root--above-player': abovePlayer }">
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade">
         <div v-if="show && showBackdrop && isTopLayer" class="p-sheet-backdrop" :style="{ top: top }" @click="$emit('close')" />
@@ -85,6 +85,7 @@ const props = withDefaults(defineProps<{
   stackSize?: number
   index?: number
   showBackdrop?: boolean
+  abovePlayer?: boolean
 }>(), {
   title: 'VIEW',
   width: 'min(100%, 480px)',
@@ -97,6 +98,7 @@ const props = withDefaults(defineProps<{
   layerIndex: 0,
   stackSize: 1,
   showBackdrop: true,
+  abovePlayer: false,
 })
 
 defineEmits(['close'])
@@ -252,6 +254,14 @@ const sheetStyle = computed(() => {
   -webkit-backdrop-filter: blur(8px);
   z-index: var(--a-z-sheet-backdrop);
   cursor: default;
+}
+
+.p-sheet-root--above-player .p-sheet-layer {
+  z-index: var(--a-z-player-sheet);
+}
+
+.p-sheet-root--above-player .p-sheet-backdrop {
+  z-index: var(--a-z-player-sheet-backdrop);
 }
 
 .fade-enter-active,

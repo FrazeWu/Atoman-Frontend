@@ -1,5 +1,5 @@
 <template>
-  <PModal :show="show" size="sm" :title="title" @close="cancel" @update:show="(value) => { if (!value) cancel() }">
+  <PModal :show="show" size="sm" :title="title" :above-player="abovePlayer" @close="cancel" @update:show="(value) => { if (!value) cancel() }">
     <p class="p-confirm__message">{{ message }}</p>
     <template #footer>
       <PButton variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />
@@ -28,6 +28,7 @@ const props = withDefaults(defineProps<{
   danger?: boolean
   loading?: boolean
   loadingText?: string
+  abovePlayer?: boolean
 }>(), {
   title: '请确认操作',
   message: '该操作不可撤销，是否继续？',
@@ -36,6 +37,7 @@ const props = withDefaults(defineProps<{
   danger: false,
   loading: false,
   loadingText: '处理中...',
+  abovePlayer: false,
 })
 
 const emit = defineEmits<{

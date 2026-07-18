@@ -107,6 +107,17 @@ describe('music lyrics api adapter', () => {
       translation: '你好',
       format: 'plain',
       edit_summary: 'cleanup',
+      annotation_resolutions: [
+        { annotation_id: 'ann-1', action: 'needs_rebind' },
+        {
+          annotation_id: 'ann-2',
+          action: 'rebind',
+          line_key: 'line-2',
+          selected_text: 'Hello',
+          start_offset: 0,
+          end_offset: 5,
+        },
+      ],
     })
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/songs/song-1/lyrics', {
@@ -118,6 +129,17 @@ describe('music lyrics api adapter', () => {
         translation: '你好',
         format: 'plain',
         edit_summary: 'cleanup',
+        annotation_resolutions: [
+          { annotation_id: 'ann-1', action: 'needs_rebind' },
+          {
+            annotation_id: 'ann-2',
+            action: 'rebind',
+            line_key: 'line-2',
+            selected_text: 'Hello',
+            start_offset: 0,
+            end_offset: 5,
+          },
+        ],
       }),
     })
   })

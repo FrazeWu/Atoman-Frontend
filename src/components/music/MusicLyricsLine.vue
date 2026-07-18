@@ -38,10 +38,12 @@ const props = withDefaults(defineProps<{
   annotations?: MusicLyricsAnnotation[]
   active?: boolean
   bilingual?: boolean
+  canSelect?: boolean
 }>(), {
   annotations: () => [],
   active: false,
   bilingual: false,
+  canSelect: true,
 })
 
 const emit = defineEmits<{
@@ -102,6 +104,7 @@ const segments = computed<HighlightSegment[]>(() => {
 })
 
 function handleMouseUp() {
+  if (!props.canSelect) return
   const selection = window.getSelection()
   const root = textElement.value
   if (!selection || !root || selection.rangeCount === 0 || selection.isCollapsed) return

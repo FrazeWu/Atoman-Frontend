@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import AudioPlayer from '@/components/music/AudioPlayer.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -87,5 +89,12 @@ describe('AudioPlayer', () => {
 
     wrapper.unmount()
     vi.useRealTimers()
+  })
+
+  it('reserves separate mobile columns for metadata, playback, and queue controls', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/music/AudioPlayer.vue'), 'utf8')
+
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 44px 44px;/)
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-controls-hub\s*\{[^}]*position: static;[^}]*transform: none;/)
   })
 })

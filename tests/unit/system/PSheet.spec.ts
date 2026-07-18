@@ -219,6 +219,14 @@ describe('PSheet.vue', () => {
     expect(panel.attributes('style')).toContain('height: 400px')
   })
 
+  it('can render above player overlays when explicitly requested', () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, abovePlayer: true },
+    })
+
+    expect(wrapper.get('.p-sheet-root').classes()).toContain('p-sheet-root--above-player')
+  })
+
   it('focuses the close control when a header sheet opens', async () => {
     const wrapper = mount(PSheet, {
       props: { show: true, side: 'bottom', title: '关于' },

@@ -25,8 +25,8 @@ describe('host-scoped route tables', () => {
   it('keeps blog routes relative to the module root', () => {
     const blogPaths = flattenPaths(moduleRoutes.blog)
     expect(blogPaths).toContain('/')
-    expect(blogPaths).toContain('post/new')
     expect(blogPaths).toContain('bookmarks')
+    expect(blogPaths).not.toContain('post/new')
     expect(blogPaths).not.toContain('/posts')
   })
 
@@ -68,12 +68,13 @@ describe('host-scoped route tables', () => {
     expect(appRoutePaths).not.toContain('/feed/inbox')
   })
 
-  it('registers channel management as a top-level route', () => {
+  it('registers Studio as the only creator workspace', () => {
     const routes = buildAppRoutes()
     const appRoutePaths = paths(routes)
 
-    expect(appRoutePaths).toContain('/channels')
-    expect(routes.find((route) => route.path === '/posts/channels')?.redirect).toBe('/channels')
+    expect(appRoutePaths).toContain('/studio')
+    expect(appRoutePaths).not.toContain('/channels')
+    expect(appRoutePaths).not.toContain('/posts/channels')
   })
 
   it('registers video detail pages under the video module root', () => {
@@ -88,8 +89,8 @@ describe('host-scoped route tables', () => {
   it('registers the approved video destinations', () => {
     const root = moduleRoutes.video.find(route => route.path === '/')
     const routePaths = root?.children?.map(route => route.path)
-    expect(routePaths).toEqual(expect.arrayContaining(['', 'subscriptions', 'favorites', 'creator']))
-    expect(root?.children?.find(route => route.path === 'manage')?.redirect).toBe('/videos/creator')
+    expect(routePaths).toEqual(expect.arrayContaining(['', 'subscriptions', 'favorites', 'videos/watch/:id']))
+    expect(routePaths).not.toEqual(expect.arrayContaining(['creator', 'manage', 'upload', 'edit/:id']))
   })
 
   it('defines entity profile routes as aggregation spaces', () => {

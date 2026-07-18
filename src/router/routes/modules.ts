@@ -17,7 +17,11 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
     },
     { path: '/channel/:slug', component: () => import('@/views/blog/ChannelView.vue') },
     { path: '/collection/:id', component: () => import('@/views/blog/CollectionView.vue') },
-    { path: '/post/:id', component: () => import('@/views/blog/PostDetailView.vue') },
+    {
+      path: '/post/:id',
+      component: () => import('@/views/blog/PostDetailView.vue'),
+      beforeEnter: to => to.params.id === 'new' ? '/__not_found__' : true,
+    },
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },

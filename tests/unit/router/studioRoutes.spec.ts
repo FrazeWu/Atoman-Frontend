@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { describe, expect, it } from 'vitest'
 
 import { buildAppRoutes } from '@/router/buildAppRoutes'
@@ -51,5 +52,11 @@ describe('studio routes', () => {
     ]) {
       expect(paths).not.toContain(legacy)
     }
+  })
+
+  it('does not treat the retired blog editor path as a public post id', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
+    await router.push('/posts/post/new')
+    expect(router.currentRoute.value.path).toBe('/__not_found__')
   })
 })

@@ -63,10 +63,10 @@ describe('router auth guards', () => {
     const auth = useAuthStore()
     auth.logout()
 
-    await router.push('/post/new')
+    await router.push('/bookmarks')
 
     expect(router.currentRoute.value.path).toBe('/login')
-    expect(router.currentRoute.value.query.redirect).toBe('/post/new')
+    expect(router.currentRoute.value.query.redirect).toBe('/bookmarks')
   })
 
   it('allows unauthenticated users to open public content reading routes', async () => {

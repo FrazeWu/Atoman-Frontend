@@ -49,6 +49,7 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },
+    { path: '/__not_found__', component: () => import('@/views/system/NotFoundView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },
   ]
 }

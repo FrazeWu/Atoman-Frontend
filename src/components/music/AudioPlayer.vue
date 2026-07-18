@@ -191,6 +191,7 @@
       :artist-text="artistText"
       :current-time-seconds="player.currentTime"
       @close="player.toggleLyrics"
+      @seek="player.seek"
     />
   </Transition>
 

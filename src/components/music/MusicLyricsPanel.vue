@@ -121,8 +121,10 @@
       :translation="lyrics?.translation ?? ''"
       :format="lyrics?.format ?? 'plain'"
       :saving="saving || reverting"
+      :current-time-seconds="currentTimeSeconds"
       @close="isLyricEditorOpen = false"
       @save="handleSaveLyrics"
+      @seek="emit('seek', $event)"
     />
 
     <PConfirm
@@ -166,6 +168,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
+  seek: [timeSeconds: number]
 }>()
 
 const authStore = useAuthStore()

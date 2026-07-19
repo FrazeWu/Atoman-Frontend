@@ -26,7 +26,8 @@ export function installRouteGuards(router: Router) {
     const siteAccessStore = useSiteAccessStore()
     const isSettingRoute = to.path === '/site/setting'
     const isPublicSystemRoute = publicSystemPaths.has(to.path)
-    const hasValidSession = authStore.validateSession() || await authStore.restoreSession()
+    const hasValidSession = authStore.validateSession()
+      || (to.meta.requiresAuth ? await authStore.restoreSession() : false)
 
     if (hasValidSession) {
       onboardingStore.initialize(authStore.user)

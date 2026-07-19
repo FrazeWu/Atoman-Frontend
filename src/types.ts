@@ -994,7 +994,7 @@ export interface DebateReference {
   kind: DebateResourceKind
   resource_id: string
   title: string
-  qualifier: string
+  qualifier?: string
   state: DebateReferenceState
   relation_id?: string
 }

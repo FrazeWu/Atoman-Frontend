@@ -3,14 +3,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
+import type { DebateReference } from '@/types'
 
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status })
+const ordinaryReference: DebateReference = {
+  raw: '@post:post-1',
+  kind: 'post',
+  resource_id: 'post-1',
+  title: '普通文章',
+  state: 'active',
+}
 
 describe('debate store', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
     vi.mocked(fetch).mockReset()
+  })
+
+  it('accepts ordinary references without a qualifier', () => {
+    expect(ordinaryReference.qualifier).toBeUndefined()
   })
 
   it('uses the wiki list query and appends paginated results', async () => {

@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Debate, DebateRevision } from '@/types'
 import DebateWikiEditor from '@/components/debate/DebateWikiEditor.vue'
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve })
+  return { promise, resolve }
+}
+
 const mocks = vi.hoisted(() => ({
   saveWiki: vi.fn(),
   searchCitableDebates: vi.fn(),
@@ -96,6 +102,8 @@ describe('DebateWikiEditor', () => {
     mocks.searchCitableDebates.mockResolvedValue([citable, unresolved, archived])
 
     const wrapper = mountEditor()
+    expect(wrapper.get('[data-test="wiki-content-region"]').attributes('aria-labelledby')).toBe('wiki-content-label')
+    expect(wrapper.get('#wiki-content-label').text()).toBe('正文')
     await wrapper.get('[data-test="insert-reference"]').trigger('click')
     await wrapper.get('[data-test="reference-search"]').setValue('有轨电车')
     await flushPromises()
@@ -120,13 +128,18 @@ describe('DebateWikiEditor', () => {
   })
 
   it('保存冲突时保留草稿并显示三方信息', async () => {
-    mocks.saveWiki.mockResolvedValue({
-      ok: false,
-      conflict: {
-        base_revision_id: 'revision-3',
-        current_revision_id: 'revision-4',
-      },
-    })
+    mocks.saveWiki
+      .mockResolvedValueOnce({
+        ok: false,
+        conflict: {
+          base_revision_id: 'revision-3',
+          current_revision_id: 'revision-4',
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        debate: buildDebate({ current_revision_id: 'revision-5' }),
+      })
     mocks.fetchRevision
       .mockResolvedValueOnce(buildRevision('revision-3', {
         title: '基础标题',
@@ -175,5 +188,156 @@ describe('DebateWikiEditor', () => {
     expect(wrapper.get('[data-test="wiki-content"]').element).toHaveProperty('value', '尚未保存的正文')
     expect(wrapper.emitted('saved')).toBeUndefined()
     expect(wrapper.emitted('close')).toBeUndefined()
+
+    await wrapper.get('[data-test="save-wiki"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.saveWiki).toHaveBeenNthCalledWith(2, 'debate-root', expect.objectContaining({
+      base_revision: 'revision-4',
+    }))
+    expect(wrapper.emitted('close')).toBeTruthy()
+  })
+
+  it('保存期间继续编辑时保留新草稿并从成功版本继续保存', async () => {
+    const pendingSave = deferred<{ ok: true; debate: Debate }>()
+    mocks.saveWiki
+      .mockReturnValueOnce(pendingSave.promise)
+      .mockResolvedValueOnce({
+        ok: true,
+        debate: buildDebate({ current_revision_id: 'revision-5' }),
+      })
+
+    const wrapper = mountEditor()
+    await wrapper.get('[data-test="wiki-edit-summary"]').setValue('第一次保存')
+    await wrapper.get('[data-test="save-wiki"]').trigger('click')
+    await wrapper.get('[data-test="wiki-content"]').setValue('保存期间继续修改')
+
+    pendingSave.resolve({
+      ok: true,
+      debate: buildDebate({ current_revision_id: 'revision-4' }),
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="wiki-content"]').element).toHaveProperty('value', '保存期间继续修改')
+    expect(wrapper.emitted('saved')).toHaveLength(1)
+    expect(wrapper.emitted('close')).toBeUndefined()
+
+    await wrapper.get('[data-test="save-wiki"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.saveWiki).toHaveBeenNthCalledWith(2, 'debate-root', expect.objectContaining({
+      content: '保存期间继续修改',
+      base_revision: 'revision-4',
+    }))
+  })
+
+  it('关闭重开后旧保存成功不会关闭新会话', async () => {
+    const pendingSave = deferred<{ ok: true; debate: Debate }>()
+    mocks.saveWiki.mockReturnValueOnce(pendingSave.promise)
+    const wrapper = mountEditor()
+    await wrapper.get('[data-test="wiki-edit-summary"]').setValue('旧会话保存')
+    await wrapper.get('[data-test="save-wiki"]').trigger('click')
+
+    const nextDebate = buildDebate({
+      id: 'debate-next',
+      title: '新的辩题',
+      content: '新的正文',
+      current_revision_id: 'revision-next',
+    })
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({ show: true, debate: nextDebate, currentRevisionId: 'revision-next' })
+
+    pendingSave.resolve({
+      ok: true,
+      debate: buildDebate({ current_revision_id: 'revision-4' }),
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="wiki-title"]').element).toHaveProperty('value', '新的辩题')
+    expect(wrapper.get('[data-test="wiki-content"]').element).toHaveProperty('value', '新的正文')
+    expect(wrapper.emitted('saved')).toBeUndefined()
+    expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
+  it('辩题切换后旧冲突不会读取新辩题的版本或覆盖草稿', async () => {
+    const pendingSave = deferred<{
+      ok: false
+      conflict: { base_revision_id: string; current_revision_id: string }
+    }>()
+    mocks.saveWiki.mockReturnValueOnce(pendingSave.promise)
+    const wrapper = mountEditor()
+    await wrapper.get('[data-test="wiki-edit-summary"]').setValue('旧会话保存')
+    await wrapper.get('[data-test="save-wiki"]').trigger('click')
+
+    await wrapper.setProps({
+      debate: buildDebate({ id: 'debate-next', title: '新的辩题', current_revision_id: 'revision-next' }),
+      currentRevisionId: 'revision-next',
+    })
+    pendingSave.resolve({
+      ok: false,
+      conflict: { base_revision_id: 'revision-3', current_revision_id: 'revision-4' },
+    })
+    await flushPromises()
+
+    expect(mocks.fetchRevision).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-test="wiki-conflict"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="wiki-title"]').element).toHaveProperty('value', '新的辩题')
+  })
+
+  it('关闭重开后旧引用搜索不会回填新会话', async () => {
+    const pendingSearch = deferred<Debate[]>()
+    mocks.searchCitableDebates.mockReturnValueOnce(pendingSearch.promise)
+    const wrapper = mountEditor()
+    await wrapper.get('[data-test="insert-reference"]').trigger('click')
+    await wrapper.get('[data-test="reference-search"]').setValue('旧搜索')
+
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({
+      show: true,
+      debate: buildDebate({ id: 'debate-next', title: '新的辩题', current_revision_id: 'revision-next' }),
+      currentRevisionId: 'revision-next',
+    })
+    await wrapper.get('[data-test="insert-reference"]').trigger('click')
+
+    pendingSearch.resolve([buildDebate({
+      id: 'debate-old-result',
+      title: '旧搜索结果',
+      current_conclusion_event_id: 'conclusion-old',
+      conclusion_type: 'yes',
+    })])
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="reference-result-debate-old-result"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('搜索中...')
+  })
+
+  it('冲突快照加载失败后可以重试', async () => {
+    mocks.saveWiki.mockResolvedValueOnce({
+      ok: false,
+      conflict: { base_revision_id: 'revision-3', current_revision_id: 'revision-4' },
+    })
+    mocks.fetchRevision
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(buildRevision('revision-3', {
+        title: '基础标题', description: '基础说明', content: '基础正文', tags: ['基础标签'],
+      }))
+      .mockResolvedValueOnce(buildRevision('revision-4', {
+        title: '当前标题', description: '当前说明', content: '当前正文', tags: ['当前标签'],
+      }))
+
+    const wrapper = mountEditor()
+    await wrapper.get('[data-test="wiki-edit-summary"]').setValue('触发冲突')
+    await wrapper.get('[data-test="save-wiki"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="wiki-conflict-snapshot-error"]').text()).toContain('版本内容加载失败')
+    await wrapper.get('[data-test="retry-conflict-snapshots"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.fetchRevision).toHaveBeenNthCalledWith(3, 'debate-root', 'revision-3')
+    expect(mocks.fetchRevision).toHaveBeenNthCalledWith(4, 'debate-root', 'revision-4')
+    expect(wrapper.find('[data-test="wiki-conflict-snapshot-error"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="wiki-conflict-current"]').text()).toContain('当前正文')
   })
 })

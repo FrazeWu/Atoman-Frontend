@@ -26,6 +26,7 @@
               :data-test="`revision-select-base-${revision.id}`"
               size="sm"
               variant="secondary"
+              :aria-label="`选择 v${revision.version_number} 为旧版`"
               :aria-pressed="baseRevisionId === revision.id"
               @click="selectBase(revision.id)"
             >
@@ -35,6 +36,7 @@
               :data-test="`revision-select-target-${revision.id}`"
               size="sm"
               variant="secondary"
+              :aria-label="`选择 v${revision.version_number} 为新版`"
               :aria-pressed="targetRevisionId === revision.id"
               @click="selectTarget(revision.id)"
             >
@@ -184,13 +186,14 @@ function selectTarget(revisionId: string) {
 }
 
 async function loadDiff() {
+  const sequence = ++diffSequence
+  diff.value = null
+  diffLoading.value = false
+  diffError.value = false
   if (!baseRevisionId.value || !targetRevisionId.value || baseRevisionId.value === targetRevisionId.value) {
-    diff.value = null
     return
   }
-  const sequence = ++diffSequence
   diffLoading.value = true
-  diffError.value = false
   const result = await store.fetchRevisionDiff(
     props.debateId,
     targetRevisionId.value,

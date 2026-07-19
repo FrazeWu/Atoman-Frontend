@@ -4,26 +4,32 @@
     title="编辑辩题"
     width="min(100%, 760px)"
     close-type="header"
-    @close="emit('close')"
+    @close="closeEditor"
   >
     <form class="wiki-editor" @submit.prevent="save">
       <PInput
         v-model="title"
         data-test="wiki-title"
         label="标题"
-        :disabled="store.wikiSaving"
+        :disabled="saving"
       />
       <PInput
         v-model="description"
         data-test="wiki-description"
         label="说明"
-        :disabled="store.wikiSaving"
+        :disabled="saving"
       />
 
-      <div class="wiki-editor__content">
-        <span class="wiki-editor__label">正文</span>
+      <div
+        class="wiki-editor__content"
+        data-test="wiki-content-region"
+        role="group"
+        aria-labelledby="wiki-content-label"
+      >
+        <span id="wiki-content-label" class="wiki-editor__label">正文</span>
         <PEditor
           v-model="content"
+          aria-labelledby="wiki-content-label"
           mode="normal"
           placeholder="撰写辩题正文"
           :show-toolbar="true"
@@ -106,14 +112,14 @@
         data-test="wiki-tags"
         label="标签"
         placeholder="用逗号分隔"
-        :disabled="store.wikiSaving"
+        :disabled="saving"
       />
       <PInput
         v-model="editSummary"
         data-test="wiki-edit-summary"
         label="编辑摘要"
         placeholder="概括本次修改"
-        :disabled="store.wikiSaving"
+        :disabled="saving"
       />
 
       <section v-if="conflict" data-test="wiki-conflict" class="wiki-conflict" role="alert">
@@ -147,18 +153,33 @@
             </dl>
           </article>
         </div>
+        <div
+          v-if="conflictSnapshotStatus === 'error'"
+          data-test="wiki-conflict-snapshot-error"
+          class="wiki-conflict__error"
+        >
+          <span>版本内容加载失败</span>
+          <PButton
+            data-test="retry-conflict-snapshots"
+            size="sm"
+            variant="secondary"
+            @click="retryConflictSnapshots"
+          >
+            重试
+          </PButton>
+        </div>
         <p>草稿已保留，请查看最新版本后再保存。</p>
       </section>
       <p v-else-if="saveError" class="wiki-editor__error" role="alert">保存失败，请重试</p>
 
       <div class="wiki-editor__footer">
-        <PButton variant="secondary" :disabled="store.wikiSaving" @click="emit('close')">
+        <PButton variant="secondary" :disabled="saving" @click="closeEditor">
           取消
         </PButton>
         <PButton
           data-test="save-wiki"
           type="button"
-          :loading="store.wikiSaving"
+          :loading="saving"
           :disabled="!canSave()"
           @click="save"
         >
@@ -179,6 +200,17 @@ import PSheet from '@/components/ui/PSheet.vue'
 import { useDebateStore } from '@/stores/debate'
 import type { Debate, DebateRelationStance, DebateRevisionSnapshot } from '@/types'
 
+type WikiDraft = DebateRevisionSnapshot & {
+  edit_summary: string
+}
+
+type WikiConflict = {
+  debateId: string
+  base_revision_id: string
+  current_revision_id: string
+  draft: DebateRevisionSnapshot
+}
+
 const props = defineProps<{
   show: boolean
   debate: Debate
@@ -197,13 +229,16 @@ const description = ref('')
 const content = ref('')
 const tagsText = ref('')
 const editSummary = ref('')
+const baseRevisionId = ref('')
+const saving = ref(false)
 const saveError = ref(false)
-const conflict = ref<{ base_revision_id: string; current_revision_id: string } | null>(null)
+const conflict = ref<WikiConflict | null>(null)
 const conflictSnapshots = ref<{
   base: DebateRevisionSnapshot | null
   current: DebateRevisionSnapshot | null
   draft: DebateRevisionSnapshot
 } | null>(null)
+const conflictSnapshotStatus = ref<'idle' | 'loading' | 'loaded' | 'error'>('idle')
 const referenceOpen = ref(false)
 const referenceQuery = ref('')
 const referenceSearching = ref(false)
@@ -212,6 +247,8 @@ const selectedReference = ref<Debate | null>(null)
 const referenceStance = ref<DebateRelationStance | null>(null)
 let referenceSearchSequence = 0
 let conflictLoadSequence = 0
+let sessionSequence = 0
+let saveSequence = 0
 
 const canSave = () => Boolean(title.value.trim() && editSummary.value.trim())
 
@@ -219,26 +256,46 @@ watch(
   () => [props.show, props.debate.id] as const,
   ([show, debateId], previous) => {
     const [wasOpen, previousDebateId] = previous ?? [false, '']
-    if (show && (!wasOpen || debateId !== previousDebateId)) resetDraft()
+    if (!show) {
+      if (wasOpen) invalidateSession()
+      return
+    }
+    if (!wasOpen || debateId !== previousDebateId) startSession()
   },
   { immediate: true },
 )
 
-function resetDraft() {
+function invalidateSession() {
+  sessionSequence += 1
+  saveSequence += 1
+  referenceSearchSequence += 1
+  conflictLoadSequence += 1
+  saving.value = false
+  referenceSearching.value = false
+}
+
+function startSession() {
+  invalidateSession()
   title.value = props.debate.title
   description.value = props.debate.description
   content.value = props.debate.content
   tagsText.value = props.debate.tags.join(', ')
   editSummary.value = ''
+  baseRevisionId.value = props.currentRevisionId
   saveError.value = false
   conflict.value = null
   conflictSnapshots.value = null
-  conflictLoadSequence += 1
+  conflictSnapshotStatus.value = 'idle'
   referenceOpen.value = false
   referenceQuery.value = ''
   referenceResults.value = []
   selectedReference.value = null
   referenceStance.value = null
+}
+
+function closeEditor() {
+  invalidateSession()
+  emit('close')
 }
 
 function isCitable(candidate: Debate) {
@@ -250,16 +307,24 @@ function isCitable(candidate: Debate) {
 async function searchReferences() {
   const query = referenceQuery.value.trim()
   const sequence = ++referenceSearchSequence
+  const session = sessionSequence
+  const debateId = props.debate.id
   selectedReference.value = null
   referenceStance.value = null
   if (!query) {
     referenceResults.value = []
+    referenceSearching.value = false
     return
   }
 
   referenceSearching.value = true
-  const results = await store.searchCitableDebates(query, props.debate.id)
-  if (sequence === referenceSearchSequence) {
+  const results = await store.searchCitableDebates(query, debateId)
+  if (
+    sequence === referenceSearchSequence
+    && session === sessionSequence
+    && props.show
+    && props.debate.id === debateId
+  ) {
     referenceResults.value = results.filter(isCitable)
     referenceSearching.value = false
   }
@@ -292,54 +357,113 @@ function parseTags() {
     .filter(Boolean)
 }
 
+function captureDraft(): WikiDraft {
+  return {
+    title: title.value.trim(),
+    description: description.value.trim(),
+    content: content.value,
+    tags: parseTags(),
+    edit_summary: editSummary.value.trim(),
+  }
+}
+
+function revisionSnapshot(draft: WikiDraft): DebateRevisionSnapshot {
+  return {
+    title: draft.title,
+    description: draft.description,
+    content: draft.content,
+    tags: [...draft.tags],
+  }
+}
+
+function sameDraft(left: WikiDraft, right: WikiDraft) {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
 function snapshotValue(snapshot: DebateRevisionSnapshot | null, field: keyof DebateRevisionSnapshot) {
-  if (!snapshot) return '加载中...'
+  if (!snapshot) return conflictSnapshotStatus.value === 'loading' ? '加载中...' : '加载失败'
   const value = snapshot[field]
   if (Array.isArray(value)) return value.join('、') || '无'
   return value || '无'
 }
 
+async function loadConflictSnapshots(context: WikiConflict, session: number) {
+  const sequence = ++conflictLoadSequence
+  conflictSnapshotStatus.value = 'loading'
+  const [baseRevision, currentRevision] = await Promise.all([
+    store.fetchRevision(context.debateId, context.base_revision_id),
+    store.fetchRevision(context.debateId, context.current_revision_id),
+  ])
+  if (
+    sequence !== conflictLoadSequence
+    || session !== sessionSequence
+    || !props.show
+    || props.debate.id !== context.debateId
+  ) return
+
+  conflictSnapshots.value = {
+    base: baseRevision?.snapshot ?? null,
+    current: currentRevision?.snapshot ?? null,
+    draft: context.draft,
+  }
+  conflictSnapshotStatus.value = baseRevision && currentRevision ? 'loaded' : 'error'
+}
+
+function retryConflictSnapshots() {
+  if (!conflict.value) return
+  void loadConflictSnapshots(conflict.value, sessionSequence)
+}
+
 async function save() {
-  if (!canSave() || store.wikiSaving) return
+  if (!canSave() || saving.value) return
+  const session = sessionSequence
+  const sequence = ++saveSequence
+  const debateId = props.debate.id
+  const requestBaseRevisionId = baseRevisionId.value
+  const draft = captureDraft()
+  const ownsRequest = () => (
+    sequence === saveSequence
+    && session === sessionSequence
+    && props.show
+    && props.debate.id === debateId
+  )
+
+  saving.value = true
   saveError.value = false
   conflict.value = null
-  const result = await store.saveWiki(props.debate.id, {
-    title: title.value.trim(),
-    description: description.value.trim(),
-    content: content.value,
-    tags: parseTags(),
-    base_revision: props.currentRevisionId,
-    edit_summary: editSummary.value.trim(),
+  conflictSnapshots.value = null
+  conflictSnapshotStatus.value = 'idle'
+  conflictLoadSequence += 1
+  const result = await store.saveWiki(debateId, {
+    ...draft,
+    base_revision: requestBaseRevisionId,
   })
+  if (!ownsRequest()) return
 
   if (result.ok) {
+    if (result.debate.current_revision_id) {
+      baseRevisionId.value = result.debate.current_revision_id
+    }
+    saving.value = false
     emit('saved', result.debate)
-    emit('close')
+    if (sameDraft(draft, captureDraft())) closeEditor()
     return
   }
   if (result.conflict) {
-    conflict.value = result.conflict
-    const sequence = ++conflictLoadSequence
-    const draft: DebateRevisionSnapshot = {
-      title: title.value.trim(),
-      description: description.value.trim(),
-      content: content.value,
-      tags: parseTags(),
+    baseRevisionId.value = result.conflict.current_revision_id
+    const context: WikiConflict = {
+      debateId,
+      base_revision_id: result.conflict.base_revision_id,
+      current_revision_id: result.conflict.current_revision_id,
+      draft: revisionSnapshot(draft),
     }
-    conflictSnapshots.value = { base: null, current: null, draft }
-    const [baseRevision, currentRevision] = await Promise.all([
-      store.fetchRevision(props.debate.id, result.conflict.base_revision_id),
-      store.fetchRevision(props.debate.id, result.conflict.current_revision_id),
-    ])
-    if (sequence === conflictLoadSequence) {
-      conflictSnapshots.value = {
-        base: baseRevision?.snapshot ?? null,
-        current: currentRevision?.snapshot ?? null,
-        draft,
-      }
-    }
+    conflict.value = context
+    conflictSnapshots.value = { base: null, current: null, draft: context.draft }
+    saving.value = false
+    await loadConflictSnapshots(context, session)
     return
   }
+  saving.value = false
   saveError.value = true
 }
 </script>
@@ -494,6 +618,15 @@ async function save() {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.wiki-conflict__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  color: var(--a-color-accent-destructive);
 }
 
 .wiki-editor__error {

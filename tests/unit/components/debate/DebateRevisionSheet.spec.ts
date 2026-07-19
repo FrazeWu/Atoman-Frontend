@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DebateRevision, DebateRevisionDiff } from '@/types'
 import DebateRevisionSheet from '@/components/debate/DebateRevisionSheet.vue'
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve })
+  return { promise, resolve }
+}
+
 const mocks = vi.hoisted(() => ({
   fetchRevisions: vi.fn(),
   fetchRevisionDiff: vi.fn(),
@@ -95,6 +101,8 @@ describe('DebateRevisionSheet', () => {
     expect(wrapper.text()).toContain('编辑者一')
     expect(wrapper.text()).toContain('创建辩题')
     expect(wrapper.text()).toContain('补充数据')
+    expect(wrapper.get('[data-test="revision-select-base-revision-1"]').attributes('aria-label')).toContain('v1')
+    expect(wrapper.get('[data-test="revision-select-target-revision-2"]').attributes('aria-label')).toContain('v2')
 
     await wrapper.get('[data-test="revision-select-base-revision-1"]').trigger('click')
     await wrapper.get('[data-test="revision-select-target-revision-2"]').trigger('click')
@@ -126,5 +134,30 @@ describe('DebateRevisionSheet', () => {
     })
     expect(wrapper.emitted('reverted')?.[0]?.[0]).toEqual({ id: 'debate-1' })
     expect(wrapper.emitted('close')).toBeTruthy()
+  })
+
+  it('选择相同版本时作废尚未完成的差异请求', async () => {
+    const pendingDiff = deferred<DebateRevisionDiff>()
+    mocks.fetchRevisionDiff.mockReturnValueOnce(pendingDiff.promise)
+    const wrapper = mountSheet()
+    await flushPromises()
+
+    await wrapper.get('[data-test="revision-select-base-revision-1"]').trigger('click')
+    await wrapper.get('[data-test="revision-select-target-revision-2"]').trigger('click')
+    expect(wrapper.text()).toContain('比较中...')
+
+    await wrapper.get('[data-test="revision-select-target-revision-1"]').trigger('click')
+    expect(wrapper.text()).not.toContain('比较中...')
+
+    pendingDiff.resolve({
+      revision_id: 'revision-2',
+      against_revision_id: 'revision-1',
+      changes: {
+        title: { before: '旧标题', after: '不应显示', changed: true },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="revision-diff-title"]').exists()).toBe(false)
   })
 })

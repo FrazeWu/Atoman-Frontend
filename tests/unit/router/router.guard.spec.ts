@@ -44,6 +44,10 @@ async function createGuardRouter(site: ModuleRoomKey) {
   return router as Router
 }
 
+function createPendingPromise<T>() {
+  return new Promise<T>(() => {})
+}
+
 describe('router auth guards', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -83,6 +87,44 @@ describe('router auth guards', () => {
     const blogRouter = await createGuardRouter('blog')
     await blogRouter.push('/post/123')
     expect(blogRouter.currentRoute.value.path).toBe('/post/123')
+  })
+
+  it('does not block the public music home route on a pending session restore', async () => {
+    window.history.replaceState(null, '', '/music')
+    const auth = useAuthStore()
+    const restoreSessionSpy = vi.spyOn(auth, 'restoreSession').mockReturnValue(createPendingPromise<boolean>())
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: stubRouteComponents(moduleRoutes.music),
+    })
+    installRouteGuards(router)
+
+    let navigationFinished = false
+    void router.push('/').then(() => {
+      navigationFinished = true
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 20))
+
+    expect(navigationFinished).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(restoreSessionSpy).not.toHaveBeenCalled()
+  })
+
+  it('continues to wait for session restoration on protected music routes', async () => {
+    const router = await createGuardRouter('music')
+    const auth = useAuthStore()
+    const restoreSessionSpy = vi.spyOn(auth, 'restoreSession').mockReturnValue(createPendingPromise<boolean>())
+
+    let navigationFinished = false
+    void router.push('/history').then(() => {
+      navigationFinished = true
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 20))
+
+    expect(navigationFinished).toBe(false)
+    expect(restoreSessionSpy).toHaveBeenCalled()
   })
 
   it('redirects unauthenticated users away from blog subscriptions', async () => {

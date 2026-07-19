@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
-import type { Debate, Argument, DebateVote } from "@/types";
+import type { Debate, Argument, DebateGraph, DebateRelation, DebateRelationStance, DebateVote } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from '@/composables/useApi'
 
@@ -11,6 +11,8 @@ export const useDebateStore = defineStore("debate", () => {
   const debatesTotal = ref(0);
   const currentDebate = ref<Debate | null>(null);
   const argumentList = ref<Argument[]>([]);
+	const relationGraph = ref<DebateGraph | null>(null);
+	const relationLoading = ref(false);
 	const argumentsPage = ref(0);
 	const argumentsHasMore = ref(false);
   const loading = ref(false);
@@ -82,6 +84,59 @@ export const useDebateStore = defineStore("debate", () => {
       loading.value = false;
     }
   };
+
+	const fetchRelationGraph = async (id: string, view: 'tree' | 'graph' = 'tree'): Promise<DebateGraph | null> => {
+		relationLoading.value = true
+		try {
+			const res = await fetch(`${api.url}/debates/${id}/relations?view=${view}`)
+			if (!res.ok) return null
+			const payload = await res.json()
+			relationGraph.value = payload.data as DebateGraph
+			return relationGraph.value
+		} catch (e) {
+			console.error('Failed to fetch debate relations', e)
+			return null
+		} finally {
+			relationLoading.value = false
+		}
+	}
+
+	const createRelation = async (
+		sourceDebateId: string,
+		targetDebateId: string,
+		stance: DebateRelationStance,
+	): Promise<DebateRelation | null> => {
+		try {
+			const res = await fetch(`${api.url}/debate-relations`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', ...authHeaders() },
+				body: JSON.stringify({
+					source_debate_id: sourceDebateId,
+					target_debate_id: targetDebateId,
+					stance,
+				}),
+			})
+			if (!res.ok) return null
+			const payload = await res.json()
+			return payload.data as DebateRelation
+		} catch (e) {
+			console.error('Failed to create debate relation', e)
+			return null
+		}
+	}
+
+	const deleteRelation = async (relationId: string): Promise<boolean> => {
+		try {
+			const res = await fetch(`${api.url}/debate-relations/${relationId}`, {
+				method: 'DELETE',
+				headers: authHeaders(),
+			})
+			return res.ok
+		} catch (e) {
+			console.error('Failed to delete debate relation', e)
+			return false
+		}
+	}
 
   const fetchArguments = async (debateId: string, options: { page?: number; reset?: boolean } = {}) => {
 	const requestedPage = options.page ?? (options.reset === false ? argumentsPage.value + 1 : 1)
@@ -188,7 +243,7 @@ export const useDebateStore = defineStore("debate", () => {
 
   const concludeDebate = async (
     id: string,
-    payload: { conclusion_type: 'yes' | 'no' | 'inconclusive'; conclusion_summary?: string },
+    payload: { conclusion_type: 'yes' | 'no'; conclusion_summary?: string },
   ): Promise<Debate | null> => {
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/conclude`, {
@@ -262,6 +317,23 @@ export const useDebateStore = defineStore("debate", () => {
       return []
     }
   }
+
+	const searchCitableDebates = async (q: string, excludeId = ''): Promise<Debate[]> => {
+		try {
+			const query = encodeURIComponent(q.trim())
+			const res = await fetch(`${api.url}/debate/topics/search?q=${query}&status=concluded&limit=10`)
+			if (!res.ok) return []
+			const payload = await res.json()
+			return ((payload.data || []) as Debate[]).filter((candidate) => (
+				candidate.id !== excludeId
+				&& candidate.status === 'concluded'
+				&& (candidate.conclusion_type === 'yes' || candidate.conclusion_type === 'no')
+			))
+		} catch (e) {
+			console.error('Failed to search citable debates', e)
+			return []
+		}
+	}
 
   const addDebateReference = async (argumentId: string, debateId: string): Promise<boolean> => {
     try {
@@ -473,6 +545,7 @@ export const useDebateStore = defineStore("debate", () => {
     debates.value = [];
     debatesTotal.value = 0;
     currentDebate.value = null;
+		relationGraph.value = null;
     argumentList.value = [];
 	argumentsPage.value = 0;
 	argumentsHasMore.value = false;
@@ -485,6 +558,8 @@ export const useDebateStore = defineStore("debate", () => {
     debates,
     debatesTotal,
     currentDebate,
+		relationGraph,
+		relationLoading,
     argumentList,
 	argumentsPage,
 	argumentsHasMore,
@@ -493,6 +568,9 @@ export const useDebateStore = defineStore("debate", () => {
     userVotes,
     fetchDebates,
     fetchDebate,
+		fetchRelationGraph,
+		createRelation,
+		deleteRelation,
     fetchArguments,
     createDebate,
     updateDebate,
@@ -501,6 +579,7 @@ export const useDebateStore = defineStore("debate", () => {
     reopenDebate,
     voteToConclude,
     searchDebates,
+		searchCitableDebates,
     createArgument,
     updateArgument,
     deleteArgument,

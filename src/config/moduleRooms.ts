@@ -58,7 +58,7 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
     publicPathSegment: 'debate',
     name: '辩论',
     helper: '辩题讨论',
-    homepageSub: '围绕辩题展开立场、论点与正反讨论。',
+    homepageSub: '',
   },
   timeline: {
     key: 'timeline',

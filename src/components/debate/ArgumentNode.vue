@@ -205,7 +205,6 @@ const canVote = computed(() => {
 
 const canEdit = computed(() => {
   if (!authStore.isAuthenticated) return false
-  if (isAdminRole(authStore.user?.role)) return true
   return String(props.argument.user_id) === String(authStore.user?.id)
 })
 

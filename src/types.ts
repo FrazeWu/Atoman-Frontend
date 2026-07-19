@@ -968,6 +968,7 @@ export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 export type DebateStatus = 'open' | 'concluded' | 'archived'
 export type ArgumentType = 'support' | 'oppose' | 'neutral' | 'evidence' | 'question' | 'counter'
+export type DebateRelationStance = 'support' | 'oppose'
 
 export interface Debate {
   id: string
@@ -1026,6 +1027,25 @@ export interface DebateVote {
   vote_type: number // +1 or -1
   created_at: string
   updated_at: string
+}
+
+export interface DebateRelation {
+  id: string
+  source_debate_id: string
+  source_debate?: Debate
+  target_debate_id: string
+  target_debate?: Debate
+  stance: DebateRelationStance
+  user_id: string
+  user?: User
+  created_at: string
+  updated_at: string
+}
+
+export interface DebateGraph {
+  root_id: string
+  nodes: Debate[]
+  relations: DebateRelation[]
 }
 
 export interface VoteHistory {

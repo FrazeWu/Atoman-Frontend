@@ -54,14 +54,14 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 
 const props = defineProps<{
   show: boolean
-  modelValue: { conclusion_type: 'yes' | 'no' | 'inconclusive' | ''; conclusion_summary: string }
+  modelValue: { conclusion_type: 'yes' | 'no' | ''; conclusion_summary: string }
   concluding: boolean
-  conclusionOptions: Array<{ label: string; value: 'yes' | 'no' | 'inconclusive'; style: Record<string, string> }>
+  conclusionOptions: Array<{ label: string; value: 'yes' | 'no'; style: Record<string, string> }>
 }>()
 
 defineEmits<{
   (e: 'close'): void
   (e: 'submit'): void
-  (e: 'update:modelValue', value: { conclusion_type: 'yes' | 'no' | 'inconclusive' | ''; conclusion_summary: string }): void
+  (e: 'update:modelValue', value: { conclusion_type: 'yes' | 'no' | ''; conclusion_summary: string }): void
 }>()
 </script>

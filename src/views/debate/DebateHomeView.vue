@@ -2,7 +2,7 @@
   <div class="a-page-xl" style="padding-bottom:6rem">
     <PPageHeader :title="moduleRooms.debate.name" accent :sub="moduleRooms.debate.homepageSub">
       <template #action>
-        <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">发起辩论</PButton>
+        <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">新建辩题</PButton>
       </template>
     </PPageHeader>
 
@@ -32,7 +32,7 @@
 
     <!-- Empty State -->
     <PEmpty v-else-if="error && debates.length === 0" text="辩题加载失败" />
-    <PEmpty v-else-if="debates.length === 0" text="暂无辩论" />
+    <PEmpty v-else-if="debates.length === 0" text="暂无辩题" />
 
     <!-- Debate List -->
     <div v-else class="debate-list">
@@ -44,11 +44,11 @@
         <!-- Tags / Status badge -->
         <template #meta>
           <span
-            v-if="debate.conclusion_type"
-            class="text-xs font-black px-2 py-1 border-2"
-            :style="conclusionBadgeStyles[debate.conclusion_type]"
+            v-if="debate.conclusion_type === 'yes' || debate.conclusion_type === 'no'"
+            class="debate-conclusion-stamp"
+            :class="`debate-conclusion-stamp--${debate.conclusion_type}`"
           >
-            {{ conclusionLabels[debate.conclusion_type] }}
+            结论 · {{ conclusionLabels[debate.conclusion_type] }}
           </span>
           <span
             class="a-badge"
@@ -83,8 +83,6 @@
         <!-- Stats -->
         <template #actions>
           <div style="display:flex;align-items:center;gap:1rem;font-size:0.72rem;color:var(--a-color-muted);font-weight: 500">
-            <span>论点 {{ debate.argument_count || 0 }}</span>
-            <span>投票 {{ debate.vote_count || 0 }}</span>
             <span>浏览 {{ debate.view_count || 0 }}</span>
           </div>
         </template>
@@ -106,13 +104,13 @@
     <!-- Create Modal -->
     <PModal v-if="showCreateModal" @close="showCreateModal = false">
       <div class="p-6">
-        <h3 class="a-title-sm mb-6">发起辩论</h3>
+        <h3 class="a-title-sm mb-6">新建辩题</h3>
 
         <form @submit.prevent="handleCreate" class="space-y-4">
-          <PInput v-model="createForm.title" label="标题" placeholder="辩论主题" />
-          <PInput v-model="createForm.description" label="描述" placeholder="简短描述" />
-          <PTextarea v-model="createForm.content" label="背景内容" :rows="4" placeholder="详细说明..." />
-          <PInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="例如：科技，社会，哲学" />
+          <PInput v-model="createForm.title" label="标题" placeholder="长期吸烟会不会显著增加肺癌风险？" />
+          <PInput v-model="createForm.description" label="描述" placeholder="补充背景（可选）" />
+          <PTextarea v-model="createForm.content" label="背景内容" :rows="4" />
+          <PInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="医学，公共健康" />
 
           <div class="debate-modal-actions">
             <PButton outline type="button" @click="showCreateModal = false">取消</PButton>
@@ -175,7 +173,7 @@ const createForm = ref({
 const tagsInput = ref('')
 
 const statusLabels: Record<string, string> = {
-  open: '进行中',
+  open: '讨论中',
   concluded: '已结题',
   archived: '已归档',
 }
@@ -183,13 +181,6 @@ const statusLabels: Record<string, string> = {
 const conclusionLabels: Record<string, string> = {
   yes: '是',
   no: '否',
-  inconclusive: '无定论',
-}
-
-const conclusionBadgeStyles: Record<string, any> = {
-  yes: { color: 'var(--a-color-success)', borderColor: 'var(--a-color-success)' },
-  no: { color: 'var(--a-color-danger)', borderColor: 'var(--a-color-danger)' },
-  inconclusive: { color: 'var(--a-color-muted)', borderColor: 'var(--a-color-muted)' },
 }
 
 const loadDebates = async () => {
@@ -278,5 +269,20 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+.debate-conclusion-stamp {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.debate-conclusion-stamp--yes {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.debate-conclusion-stamp--no {
+  border: 1px solid var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  color: #475569;
 }
 </style>

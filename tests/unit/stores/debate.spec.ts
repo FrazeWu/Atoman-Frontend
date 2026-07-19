@@ -228,11 +228,45 @@ describe('debate store', () => {
     })
     save.resolve(response({ data: { id: 'topic-b' } }))
     await saveRequest
-    debate.resolve(response({ data: { id: 'topic-a' } }))
-
-    expect(await debateRequest).toBeNull()
     expect(store.loading).toBe(false)
     expect(store.currentDebate?.id).toBe('topic-b')
+
+    debate.resolve(response({ data: { id: 'topic-a' } }))
+    expect(await debateRequest).toBeNull()
+    expect(store.currentDebate?.id).toBe('topic-b')
+  })
+
+  it('does not clear a newer debate fetch when an older wiki save finishes', async () => {
+    const firstDebate = deferred<Response>()
+    const save = deferred<Response>()
+    const latestDebate = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(firstDebate.promise)
+      .mockReturnValueOnce(save.promise)
+      .mockReturnValueOnce(latestDebate.promise)
+    const store = useDebateStore()
+
+    const firstRequest = store.fetchDebate('topic-a')
+    const saveRequest = store.saveWiki('topic-b', {
+      title: 'B',
+      description: '',
+      content: '',
+      tags: [],
+      edit_summary: 'Save B',
+      base_revision: 'revision-b',
+    })
+    const latestRequest = store.fetchDebate('topic-c')
+    save.resolve(response({ data: { id: 'topic-b' } }))
+    await saveRequest
+    expect(store.loading).toBe(true)
+    expect(store.currentDebate).toBeNull()
+
+    latestDebate.resolve(response({ data: { id: 'topic-c' } }))
+    await latestRequest
+    firstDebate.resolve(response({ data: { id: 'topic-a' } }))
+    expect(await firstRequest).toBeNull()
+    expect(store.loading).toBe(false)
+    expect(store.currentDebate?.id).toBe('topic-c')
   })
 
   it('keeps wiki saving active until the latest save finishes', async () => {

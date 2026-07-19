@@ -97,6 +97,21 @@ export const useDebateStore = defineStore("debate", () => {
     return authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {};
   };
 
+  const beginCurrentDebateMutation = (id: string) => {
+    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
+    const isCurrent = () => ownsRequest(currentDebateRequest, id, requestSequence);
+    return {
+      isCurrent,
+      commit: () => {
+        if (!isCurrent()) return false;
+        beginOwnedRequest(currentDebateRequest, id);
+        currentDebateLoadingSequence += 1;
+        loading.value = false;
+        return true;
+      },
+    };
+  };
+
   const fetchDebates = async (
     params: {
       status?: DebateStatus;
@@ -308,7 +323,7 @@ export const useDebateStore = defineStore("debate", () => {
     id: string,
     payload: SaveWikiPayload,
   ): Promise<SaveWikiResult> => {
-    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
+    const mutation = beginCurrentDebateMutation(id);
     const saveSequence = ++wikiSaveRequestSequence;
     wikiSaving.value = true;
     error.value = null;
@@ -321,7 +336,7 @@ export const useDebateStore = defineStore("debate", () => {
       const responsePayload = await res.json();
       if (res.ok) {
         const debate = responsePayload.data as Debate;
-        if (ownsRequest(currentDebateRequest, id, requestSequence)) currentDebate.value = debate;
+        if (mutation.commit()) currentDebate.value = debate;
         return { ok: true, debate };
       }
 
@@ -342,12 +357,12 @@ export const useDebateStore = defineStore("debate", () => {
         }
       }
 
-      if (ownsRequest(currentDebateRequest, id, requestSequence)) {
+      if (mutation.isCurrent()) {
         error.value = apiError?.message || "Failed to save debate";
       }
       return { ok: false };
     } catch (e) {
-      if (ownsRequest(currentDebateRequest, id, requestSequence)) error.value = "Failed to save debate";
+      if (mutation.isCurrent()) error.value = "Failed to save debate";
       console.error("Failed to save debate", e);
       return { ok: false };
     } finally {
@@ -425,7 +440,7 @@ export const useDebateStore = defineStore("debate", () => {
     revisionID: string,
     payload: WikiConcurrencyPayload,
   ): Promise<Debate | null> => {
-    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
+    const mutation = beginCurrentDebateMutation(id);
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/revisions/${revisionID}/revert`, {
@@ -433,17 +448,17 @@ export const useDebateStore = defineStore("debate", () => {
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
-      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
+      if (!mutation.isCurrent()) return null;
       if (!res.ok) {
         error.value = "Failed to revert revision";
         return null;
       }
       const data = await res.json();
-      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
+      if (!mutation.commit()) return null;
       currentDebate.value = data.data as Debate;
       return currentDebate.value;
     } catch (e) {
-      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
+      if (!mutation.isCurrent()) return null;
       error.value = "Failed to revert revision";
       console.error("Failed to revert revision", e);
       return null;
@@ -455,7 +470,7 @@ export const useDebateStore = defineStore("debate", () => {
     relationID: string,
     payload: WikiConcurrencyPayload,
   ): Promise<Debate | null> => {
-    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
+    const mutation = beginCurrentDebateMutation(id);
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/references/${relationID}/reconfirm`, {
@@ -463,17 +478,17 @@ export const useDebateStore = defineStore("debate", () => {
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
-      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
+      if (!mutation.isCurrent()) return null;
       if (!res.ok) {
         error.value = "Failed to reconfirm reference";
         return null;
       }
       const data = await res.json();
-      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
+      if (!mutation.commit()) return null;
       currentDebate.value = data.data as Debate;
       return currentDebate.value;
     } catch (e) {
-      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
+      if (!mutation.isCurrent()) return null;
       error.value = "Failed to reconfirm reference";
       console.error("Failed to reconfirm reference", e);
       return null;

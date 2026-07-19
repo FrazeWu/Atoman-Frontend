@@ -81,15 +81,17 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await editorPage.getByRole('button', { name: '继续保存', exact: true }).click()
       expect((await saveResponse).status()).toBe(200)
 
-      await diagnostics.reload(editorPage)
-      await openLyrics(editorPage, songId, songTitle)
-      await expect(editorPage.getByTestId(`annotation-rebind-${annotationId}`)).toHaveCount(0)
+      await diagnostics.reloadWithExpectedAborts(editorPage, async () => {
+        await openLyrics(editorPage, songId, songTitle)
+        await expect(editorPage.getByTestId(`annotation-rebind-${annotationId}`)).toHaveCount(0)
+      })
 
       const beforeRebindVersions = await getVersions(authorPage.request, songId, author.token)
-      await diagnostics.reload(authorPage)
-      await openLyrics(authorPage, songId, songTitle)
       const rebindButton = authorPage.getByTestId(`annotation-rebind-${annotationId}`)
-      await expect(rebindButton).toBeVisible()
+      await diagnostics.reloadWithExpectedAborts(authorPage, async () => {
+        await openLyrics(authorPage, songId, songTitle)
+        await expect(rebindButton).toBeVisible()
+      })
       await expect(authorPage.getByText('待重新绑定', { exact: true })).toBeVisible()
       await assertDesktopControls(authorPage, rebindButton, null)
       await authorPage.screenshot({ path: testInfo.outputPath('annotation-rebind-pending-desktop.png'), fullPage: true })
@@ -280,10 +282,11 @@ function attachDiagnostics(pages: Page[]) {
     consoleErrors,
     failedRequests,
     failingResponses,
-    async reload(page: Page) {
+    async reloadWithExpectedAborts(page: Page, waitForReady: () => Promise<void>) {
       pagesNavigating.add(page)
       try {
         await page.reload()
+        await waitForReady()
       } finally {
         pagesNavigating.delete(page)
       }

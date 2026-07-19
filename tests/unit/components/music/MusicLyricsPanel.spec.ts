@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   resetVersions: vi.fn(),
   revertVersion: vi.fn(),
   currentLine: vi.fn(),
+  removePendingMusicLyricsAnnotation: vi.fn(),
 }))
 
 const apiMocks = vi.hoisted(() => ({
@@ -88,6 +89,10 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => authState,
+}))
+
+vi.mock('@/composables/usePendingMusicLyricsAnnotations', () => ({
+  removePendingMusicLyricsAnnotation: mocks.removePendingMusicLyricsAnnotation,
 }))
 
 vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
@@ -279,6 +284,7 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.resetVersions.mockReset()
     mocks.revertVersion.mockReset()
     mocks.currentLine.mockReset()
+    mocks.removePendingMusicLyricsAnnotation.mockReset()
 
     mocks.load.mockResolvedValue(undefined)
     mocks.save.mockResolvedValue(lyricsState.lyrics.value)
@@ -346,6 +352,7 @@ describe('MusicLyricsPanel.vue', () => {
       end_offset: 4,
     })
     expect(mocks.createAnnotation).not.toHaveBeenCalled()
+    expect(mocks.removePendingMusicLyricsAnnotation).toHaveBeenCalledWith('annotation-1')
     expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
   })
 

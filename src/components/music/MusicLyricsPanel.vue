@@ -160,6 +160,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
+import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
@@ -393,6 +394,7 @@ async function handleConfirmRebind() {
     return
   }
   if (props.songId !== songId || rebindOperationGeneration !== operationGeneration) return
+  removePendingMusicLyricsAnnotation(annotation.id)
   clearRebindState()
 }
 

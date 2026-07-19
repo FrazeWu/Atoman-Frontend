@@ -162,6 +162,7 @@ describe('AudioPlayer', () => {
 
     const wrapper = mount(AudioPlayer, {
       global: {
+        plugins: [createTestRouter()],
         stubs: {
           MusicLyricsPanel: true,
           PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
@@ -190,6 +191,7 @@ describe('AudioPlayer', () => {
 
     const wrapper = mount(AudioPlayer, {
       global: {
+        plugins: [createTestRouter()],
         stubs: {
           MusicLyricsPanel: true,
           PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },

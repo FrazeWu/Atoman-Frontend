@@ -15,6 +15,7 @@ function mountEditor(options: {
   format?: 'plain' | 'lrc'
   issues?: MusicLyricDraftIssue[]
   disabled?: boolean
+  selectedRowId?: string
 } = {}) {
   return mount(MusicLyricsRowEditor, {
     props: {
@@ -22,6 +23,7 @@ function mountEditor(options: {
       format: options.format ?? 'plain',
       issues: options.issues,
       disabled: options.disabled,
+      selectedRowId: options.selectedRowId,
     },
   })
 }
@@ -102,6 +104,86 @@ describe('MusicLyricsRowEditor', () => {
     })
   })
 
+  it('任一歌词输入获得焦点时选择对应行', async () => {
+    const wrapper = mountEditor({ format: 'lrc' })
+
+    await wrapper.get('[data-testid="lyric-time-first"]').trigger('focus')
+    await wrapper.get('[data-testid="lyric-original-second"]').trigger('focus')
+    await wrapper.get('[data-testid="lyric-translation-third"]').trigger('focus')
+
+    expect(wrapper.emitted('select-row')).toEqual([
+      ['first'],
+      ['second'],
+      ['third'],
+    ])
+  })
+
+  it('为选中行提供稳定类名和 aria-current', () => {
+    const wrapper = mountEditor({ selectedRowId: 'second' })
+    const firstRow = wrapper.get('[data-testid="lyric-row-first"]')
+    const secondRow = wrapper.get('[data-testid="lyric-row-second"]')
+
+    expect(firstRow.classes()).not.toContain('is-selected')
+    expect(firstRow.attributes()).not.toHaveProperty('aria-current')
+    expect(secondRow.classes()).toContain('is-selected')
+    expect(secondRow.attributes('aria-current')).toBe('true')
+  })
+
+  it('点击有效时间跳转时先选择行再发射秒数且不修改 rows', async () => {
+    const inputRows = rows.map((row) => ({ ...row }))
+    const snapshot = structuredClone(inputRows)
+    const eventOrder: string[] = []
+    const wrapper = mount(MusicLyricsRowEditor, {
+      props: {
+        rows: inputRows,
+        format: 'lrc',
+        onSelectRow: (rowId: string) => eventOrder.push(`select:${rowId}`),
+        onSeek: (seconds: number) => eventOrder.push(`seek:${seconds}`),
+      },
+    })
+
+    await wrapper.get('[data-testid="lyric-seek-second"]').trigger('click')
+
+    expect(eventOrder).toEqual(['select:second', 'seek:2'])
+    expect(wrapper.emitted('select-row')).toEqual([['second']])
+    expect(wrapper.emitted('seek')).toEqual([[2]])
+    expect(wrapper.emitted('update:rows')).toBeUndefined()
+    expect(inputRows).toEqual(snapshot)
+  })
+
+  it('仅在 LRC 模式显示具备 Play 图标和可访问名称的跳转按钮', () => {
+    const plainWrapper = mountEditor({ format: 'plain' })
+    expect(plainWrapper.find('[data-testid="lyric-seek-first"]').exists()).toBe(false)
+
+    const lrcWrapper = mountEditor({ format: 'lrc' })
+    rows.forEach((row, index) => {
+      const button = lrcWrapper.get(`[data-testid="lyric-seek-${row.id}"]`)
+      expect(button.attributes('title')).toBe('跳转')
+      expect(button.attributes('aria-label')).toBe(`跳转到第 ${index + 1} 行时间`)
+      expect(button.get('svg').classes()).toContain('lucide-play')
+    })
+  })
+
+  it('无时间时禁用跳转，disabled 时输入不会产生选择且跳转无事件', async () => {
+    const noTimeRows = [{ ...rows[0], timeMs: null }]
+    const noTimeWrapper = mountEditor({ rows: noTimeRows, format: 'lrc' })
+    const noTimeSeek = noTimeWrapper.get('[data-testid="lyric-seek-first"]')
+
+    expect(noTimeSeek.attributes()).toHaveProperty('disabled')
+    await noTimeSeek.trigger('click')
+    expect(noTimeWrapper.emitted('select-row')).toBeUndefined()
+    expect(noTimeWrapper.emitted('seek')).toBeUndefined()
+
+    const disabledWrapper = mountEditor({ format: 'lrc', disabled: true })
+    await disabledWrapper.get('[data-testid="lyric-time-first"]').trigger('focus')
+    await disabledWrapper.get('[data-testid="lyric-original-first"]').trigger('focus')
+    await disabledWrapper.get('[data-testid="lyric-translation-first"]').trigger('focus')
+    await disabledWrapper.get('[data-testid="lyric-seek-first"]').trigger('click')
+
+    expect(disabledWrapper.emitted('select-row')).toBeUndefined()
+    expect(disabledWrapper.emitted('seek')).toBeUndefined()
+  })
+
   it('保留非空非法时间原文、显示错误并发射 null', async () => {
     const wrapper = mountEditor({ format: 'lrc' })
     const timeInput = wrapper.get('[data-testid="lyric-time-first"]')
@@ -157,7 +239,7 @@ describe('MusicLyricsRowEditor', () => {
     expect(rows).toHaveLength(3)
   })
 
-  it('三类操作按钮具备图标、可访问名称和正确边界状态', () => {
+  it('三类行操作按钮具备图标、可访问名称和正确边界状态', () => {
     const wrapper = mountEditor()
     const contracts = [
       { action: 'move-up', title: '上移', icon: 'lucide-arrow-up' },
@@ -239,26 +321,35 @@ describe('MusicLyricsRowEditor', () => {
     }
   })
 
-  it('锁定桌面网格、44px 操作按钮和移动端防溢出 CSS', () => {
+  it('锁定桌面网格、44px 按钮、8px 间距和移动端防溢出 CSS', () => {
     const mobileMedia = /@media\s*\(max-width:\s*767px\)\s*\{/.exec(componentSource)
     expect(mobileMedia).toBeTruthy()
     const desktopCss = componentSource.slice(0, mobileMedia!.index)
     const mobileCss = componentSource.slice(mobileMedia!.index)
 
     expect(cssRule('.lyric-grid-line', desktopCss)).toContain(
-      'grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 8.75rem;',
+      'grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;',
     )
     expect(cssRule('.lyric-grid-line.is-lrc', desktopCss)).toContain(
-      'grid-template-columns: 3rem 8rem minmax(0, 1fr) minmax(0, 1fr) 8.75rem;',
+      'grid-template-columns: 3rem 11rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;',
     )
 
     expect(cssRule('.lyric-action', desktopCss)).toMatch(/width:\s*44px;/)
     expect(cssRule('.lyric-action', desktopCss)).toMatch(/height:\s*44px;/)
     expect(cssRule('.lyric-actions', desktopCss)).toContain('grid-template-columns: repeat(3, 44px);')
+    expect(cssRule('.lyric-actions', desktopCss)).toContain('gap: 8px;')
+    expect(cssRule('.lyric-time-controls', desktopCss)).toContain(
+      'grid-template-columns: minmax(0, 1fr) 44px;',
+    )
+    expect(cssRule('.lyric-time-controls', desktopCss)).toContain('gap: 8px;')
+
+    expect(cssRule('.lyric-row.is-selected', desktopCss)).toMatch(/box-shadow:\s*inset/)
 
     expect(cssRule('.lyric-grid-line,\n  .lyric-grid-line.is-lrc', mobileCss)).toContain(
       'grid-template-columns: minmax(0, 1fr);',
     )
+    expect(cssRule('.lyric-time-controls', mobileCss)).toMatch(/min-width:\s*0;/)
+    expect(cssRule('.lyric-time-controls', mobileCss)).toMatch(/width:\s*100%;/)
 
     expect(cssRule('.lyric-editor', desktopCss)).toMatch(/width:\s*100%;/)
     expect(cssRule('.lyric-editor', desktopCss)).toMatch(/min-width:\s*0;/)

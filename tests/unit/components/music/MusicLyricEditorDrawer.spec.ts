@@ -2,11 +2,16 @@ import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
 import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
+import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
+import * as musicLyricsDraft from '@/utils/musicLyricsDraft'
 import { downloadTextFile } from '@/utils/textDownload'
+import componentSource from '@/components/music/MusicLyricEditorDrawer.vue?raw'
 
 vi.mock('@/utils/textDownload', () => ({ downloadTextFile: vi.fn() }))
 
 const mounted: VueWrapper[] = []
+
+type DraftRow = { id: string, timeMs: number | null, original: string, translation: string }
 
 function mountDrawer(props: Record<string, unknown> = {}) {
   const wrapper = mount(MusicLyricEditorDrawer, {
@@ -21,6 +26,18 @@ function mountDrawer(props: Record<string, unknown> = {}) {
   })
   mounted.push(wrapper)
   return wrapper
+}
+
+function rowEditor(wrapper: VueWrapper) {
+  return wrapper.getComponent(MusicLyricsRowEditor)
+}
+
+function draftRows(wrapper: VueWrapper): DraftRow[] {
+  return rowEditor(wrapper).props('rows') as DraftRow[]
+}
+
+function selectedRowId(wrapper: VueWrapper): string {
+  return rowEditor(wrapper).props('selectedRowId') as string
 }
 
 function buttonByText(wrapper: VueWrapper, text: string) {
@@ -59,6 +76,170 @@ afterEach(() => {
 })
 
 describe('MusicLyricEditorDrawer.vue', () => {
+  it('defaults the current playback time to zero', () => {
+    const wrapper = mountDrawer()
+    expect(wrapper.props('currentTimeSeconds')).toBe(0)
+  })
+
+  it('selects the first untimed row, falls back to the first timed row, and resets on reopen', async () => {
+    const parseDraft = vi.spyOn(musicLyricsDraft, 'parseMusicLyricDraft').mockReturnValueOnce([
+      { id: 'timed-first', timeMs: 1000, original: 'Timed', translation: '' },
+      { id: 'untimed-second', timeMs: null, original: 'Untimed', translation: '' },
+    ])
+    const untimed = mountDrawer({ content: 'Alpha\nBeta', format: 'plain' })
+    expect(selectedRowId(untimed)).toBe('untimed-second')
+    parseDraft.mockRestore()
+
+    const timed = mountDrawer({ content: '[00:01.00]Alpha\n[00:02.00]Beta', format: 'lrc' })
+    expect(selectedRowId(timed)).toBe(draftRows(timed)[0]!.id)
+
+    const previousIds = draftRows(timed).map(row => row.id)
+    await timed.get(`[data-testid="lyric-original-${previousIds[1]}"]`).trigger('focus')
+    expect(selectedRowId(timed)).toBe(previousIds[1])
+    await timed.setProps({ show: false })
+    await timed.setProps({ content: '[00:03.00]Fresh', show: true })
+
+    expect(draftRows(timed)).toHaveLength(1)
+    expect(selectedRowId(timed)).toBe(draftRows(timed)[0]!.id)
+    expect(selectedRowId(timed)).not.toBe(previousIds[1])
+  })
+
+  it('shows and writes the same centisecond-rounded playback time while keeping selection', async () => {
+    const wrapper = mountDrawer({
+      content: '[00:01.00]Alpha\n[00:02.00]Beta',
+      format: 'lrc',
+      currentTimeSeconds: 3.256,
+    })
+    const secondId = draftRows(wrapper)[1]!.id
+    await wrapper.get(`[data-testid="lyric-original-${secondId}"]`).trigger('focus')
+
+    expect(wrapper.get('[data-testid="lyrics-current-time"]').text()).toBe('00:03.26')
+    expect(wrapper.get('[data-testid="lyrics-write-current-time"]').attributes('aria-label')).toBe('写入当前播放时间')
+    expect(wrapper.get('[data-testid="lyrics-write-current-time-next"]').attributes('aria-label')).toBe('写入当前播放时间并选择下一行')
+    await wrapper.get('[data-testid="lyrics-write-current-time"]').trigger('click')
+
+    expect(draftRows(wrapper)[1]!.timeMs).toBe(3260)
+    expect(selectedRowId(wrapper)).toBe(secondId)
+  })
+
+  it('writes time, selects the next row, and focuses its original input', async () => {
+    const wrapper = mountDrawer({
+      content: '[00:01.00]Alpha\n[00:02.00]Beta\n[00:03.00]Gamma',
+      format: 'lrc',
+      currentTimeSeconds: 4.444,
+    })
+    const ids = draftRows(wrapper).map(row => row.id)
+    const firstInput = wrapper.get(`[data-testid="lyric-original-${ids[0]}"]`)
+    const nextInput = wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`)
+    document.body.appendChild(wrapper.get('.music-lyric-editor-drawer__row-editor').element)
+    await firstInput.trigger('focus')
+    await wrapper.get('[data-testid="lyrics-write-current-time-next"]').trigger('click')
+
+    expect(draftRows(wrapper)[0]!.timeMs).toBe(4440)
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+    expect(document.activeElement).toBe(nextInput.element)
+  })
+
+  it('writes the last row without adding or moving selection', async () => {
+    const wrapper = mountDrawer({
+      content: '[00:01.00]Alpha\n[00:02.00]Beta',
+      format: 'lrc',
+      currentTimeSeconds: 5,
+    })
+    const ids = draftRows(wrapper).map(row => row.id)
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).trigger('focus')
+    await wrapper.get('[data-testid="lyrics-write-current-time-next"]').trigger('click')
+
+    expect(draftRows(wrapper)).toHaveLength(2)
+    expect(draftRows(wrapper)[1]!.timeMs).toBe(5000)
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+  })
+
+  it('selects a newly added row', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]Alpha', format: 'lrc' })
+    await buttonByText(wrapper, '增加行').trigger('click')
+
+    expect(selectedRowId(wrapper)).toBe(draftRows(wrapper).at(-1)!.id)
+  })
+
+  it('selects the next row after deleting a selected middle row', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]A\n[00:02.00]B\n[00:03.00]C', format: 'lrc' })
+    const ids = draftRows(wrapper).map(row => row.id)
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).trigger('focus')
+    await wrapper.get(`[data-testid="lyric-delete-${ids[1]}"]`).trigger('click')
+
+    expect(selectedRowId(wrapper)).toBe(ids[2])
+  })
+
+  it('selects the previous row after deleting the selected last row', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]A\n[00:02.00]B\n[00:03.00]C', format: 'lrc' })
+    const ids = draftRows(wrapper).map(row => row.id)
+    await wrapper.get(`[data-testid="lyric-original-${ids[2]}"]`).trigger('focus')
+    await wrapper.get(`[data-testid="lyric-delete-${ids[2]}"]`).trigger('click')
+
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+  })
+
+  it('keeps selection when another row is deleted', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]A\n[00:02.00]B\n[00:03.00]C', format: 'lrc' })
+    const ids = draftRows(wrapper).map(row => row.id)
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).trigger('focus')
+    await wrapper.get(`[data-testid="lyric-delete-${ids[0]}"]`).trigger('click')
+
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+  })
+
+  it('keeps the same row selected while editing and moving it', async () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]A\n[00:02.00]B\n[00:03.00]C', format: 'lrc' })
+    const ids = draftRows(wrapper).map(row => row.id)
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).trigger('focus')
+
+    await wrapper.get(`[data-testid="lyric-original-${ids[1]}"]`).setValue('B edited')
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+
+    await wrapper.get(`[data-testid="lyric-move-down-${ids[1]}"]`).trigger('click')
+    expect(draftRows(wrapper).map(row => row.id)).toEqual([ids[0], ids[2], ids[1]])
+    expect(selectedRowId(wrapper)).toBe(ids[1])
+  })
+
+  it('keeps selection while sorting and switching formats', async () => {
+    const wrapper = mountDrawer({ content: '[00:02.00]Two\n[00:01.00]One', format: 'lrc' })
+    const selectedId = draftRows(wrapper)[0]!.id
+    await wrapper.get(`[data-testid="lyric-original-${selectedId}"]`).trigger('focus')
+    await buttonByText(wrapper, '按时间排序').trigger('click')
+    expect(selectedRowId(wrapper)).toBe(selectedId)
+
+    await wrapper.get('[data-testid="mode-plain"]').trigger('click')
+    expect(selectedRowId(wrapper)).toBe(selectedId)
+  })
+
+  it('hides timing controls in plain mode and disables them while saving or without rows', () => {
+    const plain = mountDrawer()
+    expect(plain.find('[data-testid="lyrics-current-time"]').exists()).toBe(false)
+
+    const saving = mountDrawer({ content: '[00:01.00]Alpha', format: 'lrc', saving: true })
+    expect(saving.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time"]').element.disabled).toBe(true)
+    expect(saving.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time-next"]').element.disabled).toBe(true)
+
+    const empty = mountDrawer({ content: '', translation: '', format: 'lrc' })
+    expect(empty.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time"]').element.disabled).toBe(true)
+    expect(empty.get<HTMLButtonElement>('[data-testid="lyrics-write-current-time-next"]').element.disabled).toBe(true)
+  })
+
+  it('forwards row seek events unchanged', () => {
+    const wrapper = mountDrawer({ content: '[00:01.00]Alpha', format: 'lrc' })
+    rowEditor(wrapper).vm.$emit('seek', 12.34)
+    expect(wrapper.emitted('seek')).toEqual([[12.34]])
+  })
+
+  it('locks timing controls to accessible touch targets and mobile-safe layout', () => {
+    expect(componentSource).toMatch(/\.music-lyric-editor-drawer__timing-actions\s*\{[^}]*gap:\s*8px;/s)
+    expect(componentSource).toMatch(/\.music-lyric-editor-drawer__timing-actions\s+:deep\(\.p-button\)\s*\{[^}]*min-height:\s*44px;/s)
+    expect(componentSource).toMatch(/\.music-lyric-editor-drawer__current-time\s*\{[^}]*font-variant-numeric:\s*tabular-nums;/s)
+    expect(componentSource).toMatch(/@media \(max-width: 767px\)[\s\S]*\.music-lyric-editor-drawer__timing\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/)
+    expect(componentSource).toMatch(/@media \(max-width: 767px\)[\s\S]*\.music-lyric-editor-drawer__timing-actions\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/)
+  })
+
   it('gives the sheet an accessible lyric editor title', () => {
     const wrapper = mountDrawer()
     expect(wrapper.get('[role="dialog"]').attributes('aria-label')).toBe('编辑歌词')
@@ -173,6 +354,7 @@ describe('MusicLyricEditorDrawer.vue', () => {
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-original-"]').element.value).toBe('New')
     expect(wrapper.find<HTMLInputElement>('[data-testid^="lyric-translation-"]').element.value).toBe('新')
     expect(wrapper.get('[data-testid="mode-lrc"]').attributes('aria-checked')).toBe('true')
+    expect(selectedRowId(wrapper)).toBe(draftRows(wrapper)[0]!.id)
   })
 
   it('blocks import confirmation when imported rows fail lyric validation', async () => {

@@ -131,7 +131,7 @@ vi.mock('@/components/music/MusicAnnotationEditor.vue', () => ({
 
 vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
   default: {
-    props: ['show', 'songTitle', 'content', 'translation', 'format', 'saving'],
+    props: ['show', 'songTitle', 'content', 'translation', 'format', 'saving', 'currentTimeSeconds'],
     data() {
       return { draftContent: '' }
     },
@@ -144,7 +144,12 @@ vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
       },
     },
     template: `
-      <div v-if="show" class="lyric-editor-drawer-stub" :data-song-title="songTitle">
+      <div
+        v-if="show"
+        class="lyric-editor-drawer-stub"
+        :data-song-title="songTitle"
+        :data-current-time-seconds="currentTimeSeconds"
+      >
         <span class="drawer-content">{{ draftContent }}</span>
         <input v-model="draftContent" class="drawer-content-input" />
         <span class="drawer-translation">{{ translation }}</span>
@@ -153,6 +158,7 @@ vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
           保存歌词
         </button>
         <button type="button" class="drawer-close" @click="$emit('close')">关闭抽屉</button>
+        <button type="button" class="drawer-seek" @click="$emit('seek', 19.625)">定位</button>
       </div>
     `,
   },
@@ -344,6 +350,25 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
 
     expect(wrapper.get('.lyric-editor-drawer-stub').attributes('data-song-title')).toBe('Neon Song')
+  })
+
+  it('将当前播放时间原样传给歌词编辑抽屉', async () => {
+    const wrapper = await mountPanel({ currentTimeSeconds: 42.375 })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+
+    expect(wrapper.get('.lyric-editor-drawer-stub').attributes('data-current-time-seconds')).toBe('42.375')
+  })
+
+  it('原样转发歌词编辑抽屉的定位事件', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    await wrapper.get('.drawer-seek').trigger('click')
+
+    expect(wrapper.emitted('seek')).toEqual([[19.625]])
   })
 
   it('查看并恢复歌词版本', async () => {

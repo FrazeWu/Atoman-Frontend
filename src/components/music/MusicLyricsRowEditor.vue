@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, Play, Trash2 } from 'lucide-vue-next'
 import type { MusicLyricsFormat } from '@/api/musicV1'
 import {
   formatMusicLyricTime,
@@ -14,13 +14,17 @@ const props = withDefaults(defineProps<{
   format: MusicLyricsFormat
   issues?: MusicLyricDraftIssue[]
   disabled?: boolean
+  selectedRowId?: string
 }>(), {
   issues: () => [],
   disabled: false,
+  selectedRowId: '',
 })
 
 const emit = defineEmits<{
   'update:rows': [rows: MusicLyricDraftRow[]]
+  'select-row': [rowId: string]
+  seek: [timeSeconds: number]
 }>()
 
 const rawTimes = reactive<Record<string, string>>({})
@@ -88,6 +92,17 @@ function deleteRow(index: number) {
   emit('update:rows', props.rows.filter((_, rowIndex) => rowIndex !== index))
 }
 
+function selectRow(rowId: string) {
+  if (props.disabled) return
+  emit('select-row', rowId)
+}
+
+function seekToRow(row: MusicLyricDraftRow) {
+  if (props.disabled || row.timeMs === null) return
+  emit('select-row', row.id)
+  emit('seek', row.timeMs / 1000)
+}
+
 function issuesForRow(rowIndex: number) {
   return props.issues.filter((issue) => issue.rowIndex === rowIndex)
 }
@@ -142,26 +157,41 @@ function describedByForField(
       v-for="(row, index) in rows"
       :key="row.id"
       class="lyric-row lyric-grid-line"
-      :class="{ 'is-lrc': format === 'lrc' }"
+      :class="{ 'is-lrc': format === 'lrc', 'is-selected': selectedRowId === row.id }"
+      :aria-current="selectedRowId === row.id ? 'true' : undefined"
       :data-testid="`lyric-row-${row.id}`"
     >
       <span class="lyric-index" :aria-label="`第 ${index + 1} 行`">{{ index + 1 }}</span>
 
-      <label v-if="format === 'lrc'" class="lyric-field lyric-time-field">
+      <div v-if="format === 'lrc'" class="lyric-field lyric-time-field">
         <span class="mobile-label">时间</span>
-        <input
-          :value="rawTimes[row.id] ?? ''"
-          :data-testid="`lyric-time-${row.id}`"
-          class="lyric-input lyric-time-input"
-          type="text"
-          inputmode="decimal"
-          placeholder="00:00.00"
-          :aria-label="`时间，第 ${index + 1} 行`"
-          :aria-invalid="isInvalidTime(row.id)"
-          :aria-describedby="describedByForField(row.id, index, 'time')"
-          :disabled="disabled"
-          @input="updateTime(index, $event)"
-        />
+        <div class="lyric-time-controls">
+          <input
+            :value="rawTimes[row.id] ?? ''"
+            :data-testid="`lyric-time-${row.id}`"
+            class="lyric-input lyric-time-input"
+            type="text"
+            inputmode="decimal"
+            placeholder="00:00.00"
+            :aria-label="`时间，第 ${index + 1} 行`"
+            :aria-invalid="isInvalidTime(row.id)"
+            :aria-describedby="describedByForField(row.id, index, 'time')"
+            :disabled="disabled"
+            @focus="selectRow(row.id)"
+            @input="updateTime(index, $event)"
+          />
+          <button
+            :data-testid="`lyric-seek-${row.id}`"
+            class="lyric-action"
+            type="button"
+            title="跳转"
+            :aria-label="`跳转到第 ${index + 1} 行时间`"
+            :disabled="disabled || row.timeMs === null"
+            @click="seekToRow(row)"
+          >
+            <Play :size="18" aria-hidden="true" />
+          </button>
+        </div>
         <span
           v-if="isInvalidTime(row.id)"
           :id="`lyric-time-error-${row.id}`"
@@ -170,7 +200,7 @@ function describedByForField(
         >
           时间格式无效
         </span>
-      </label>
+      </div>
 
       <label class="lyric-field">
         <span class="mobile-label">原文</span>
@@ -183,6 +213,7 @@ function describedByForField(
           :aria-label="`原文，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'original')"
           :disabled="disabled"
+          @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { original: ($event.target as HTMLInputElement).value })"
         />
       </label>
@@ -198,6 +229,7 @@ function describedByForField(
           :aria-label="`翻译，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'translation')"
           :disabled="disabled"
+          @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { translation: ($event.target as HTMLInputElement).value })"
         />
       </label>
@@ -263,13 +295,13 @@ function describedByForField(
 
 .lyric-grid-line {
   display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 8.75rem;
+  grid-template-columns: 3rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;
   gap: 0.75rem;
   align-items: start;
 }
 
 .lyric-grid-line.is-lrc {
-  grid-template-columns: 3rem 8rem minmax(0, 1fr) minmax(0, 1fr) 8.75rem;
+  grid-template-columns: 3rem 11rem minmax(0, 1fr) minmax(0, 1fr) 9.25rem;
 }
 
 .lyric-grid-header {
@@ -282,6 +314,10 @@ function describedByForField(
 .lyric-row {
   padding: 0.75rem;
   border-top: 1px solid var(--a-color-border-soft, #e4e4e7);
+}
+
+.lyric-row.is-selected {
+  box-shadow: inset 3px 0 0 var(--a-color-primary, #2563eb);
 }
 
 .lyric-index {
@@ -327,6 +363,13 @@ function describedByForField(
   font-variant-numeric: tabular-nums;
 }
 
+.lyric-time-controls {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+
 .lyric-time-error,
 .lyric-issue--error {
   color: var(--a-color-danger, #b42318);
@@ -340,7 +383,7 @@ function describedByForField(
 .lyric-actions {
   display: grid;
   grid-template-columns: repeat(3, 44px);
-  gap: 4px;
+  gap: 8px;
 }
 
 .lyric-action {
@@ -401,6 +444,11 @@ function describedByForField(
 
   .lyric-actions {
     grid-template-columns: repeat(3, 44px);
+  }
+
+  .lyric-time-controls {
+    width: 100%;
+    min-width: 0;
   }
 
   .lyric-issues {

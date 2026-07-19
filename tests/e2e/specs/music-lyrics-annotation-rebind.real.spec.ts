@@ -260,11 +260,12 @@ function attachDiagnostics(pages: Page[], songId: string) {
   const failedRequests: string[] = []
   const failingResponses: string[] = []
   const pagesNavigating = new Set<Page>()
+  const lyricSavePath = `/api/v1/music/songs/${songId}/lyrics`
   for (const page of pages) {
     page.on('console', message => {
       const expectedAnchorConflict = message.type() === 'error'
         && message.text().includes('status of 409 (Conflict)')
-        && message.text().includes(`/api/v1/music/songs/${songId}/lyrics`)
+        && message.location().url.endsWith(lyricSavePath)
       if (message.type() === 'error' && !expectedAnchorConflict) consoleErrors.push(message.text())
     })
     page.on('requestfailed', request => {
@@ -278,7 +279,7 @@ function attachDiagnostics(pages: Page[], songId: string) {
     page.on('response', response => {
       const expectedAnchorConflict = response.status() === 409
         && response.request().method() === 'PUT'
-        && response.url().endsWith(`/api/v1/music/songs/${songId}/lyrics`)
+        && response.url().endsWith(lyricSavePath)
       if (response.status() >= 400 && !expectedAnchorConflict) {
         failingResponses.push(`${response.status()} ${response.request().method()} ${response.url()}`)
       }
@@ -292,10 +293,10 @@ function attachDiagnostics(pages: Page[], songId: string) {
       pagesNavigating.add(page)
       try {
         await page.reload()
-        await waitForReady()
       } finally {
         pagesNavigating.delete(page)
       }
+      await waitForReady()
     },
   }
 }

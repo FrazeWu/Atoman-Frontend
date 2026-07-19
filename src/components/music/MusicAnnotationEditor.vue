@@ -29,6 +29,7 @@
       <PButton
         v-if="mode === 'rebind'"
         type="button"
+        size="lg"
         :disabled="!selectedText"
         data-testid="annotation-confirm-rebind"
         aria-label="确认重新绑定"

@@ -20,7 +20,7 @@
               <span class="logo-text">ATOMAN</span>
               <span class="logo-meta">
                 <span v-if="appVersion" class="logo-version">{{ appVersion }}</span>
-                <span class="logo-notice">测试阶段，不保留用户数据</span>
+                <span class="logo-notice">beta</span>
               </span>
             </span>
           </span>

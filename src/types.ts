@@ -994,7 +994,7 @@ export interface DebateReference {
   kind: DebateResourceKind
   resource_id: string
   title: string
-  qualifier?: string
+  qualifier?: DebateRelationStance
   state: DebateReferenceState
   relation_id?: string
 }
@@ -1083,8 +1083,8 @@ export interface DebateRevision {
   editor_id: string
   editor?: User
   edit_summary: string
-  edit_type: string
-  status: string
+  edit_type: 'creation' | 'edit' | 'revert'
+  status: 'approved'
   is_current: boolean
   created_at: string
   snapshot: DebateRevisionSnapshot

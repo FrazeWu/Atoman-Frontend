@@ -3,15 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
-import type { DebateReference } from '@/types'
 
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status })
-const ordinaryReference: DebateReference = {
-  raw: '@post:post-1',
-  kind: 'post',
-  resource_id: 'post-1',
-  title: '普通文章',
-  state: 'active',
+const deferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => { resolve = promiseResolve })
+  return { promise, resolve }
 }
 
 describe('debate store', () => {
@@ -19,10 +16,6 @@ describe('debate store', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     vi.mocked(fetch).mockReset()
-  })
-
-  it('accepts ordinary references without a qualifier', () => {
-    expect(ordinaryReference.qualifier).toBeUndefined()
   })
 
   it('uses the wiki list query and appends paginated results', async () => {
@@ -60,6 +53,215 @@ describe('debate store', () => {
     await staleRequest
 
     expect(store.debates.map(({ id }) => id)).toEqual(['latest'])
+  })
+
+  it('keeps the latest current debate when requests resolve out of order', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const store = useDebateStore()
+
+    const firstRequest = store.fetchDebate('topic-a')
+    const secondRequest = store.fetchDebate('topic-b')
+    second.resolve(response({ data: { id: 'topic-b', title: 'B' } }))
+    await secondRequest
+    first.resolve(response({ data: { id: 'topic-a', title: 'A' } }))
+
+    expect(await firstRequest).toBeNull()
+    expect(store.currentDebate?.id).toBe('topic-b')
+  })
+
+  it('keeps the latest revision owner when requests resolve out of order', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const store = useDebateStore()
+
+    const firstRequest = store.fetchRevisions('topic-a')
+    const secondRequest = store.fetchRevisions('topic-b')
+    expect(store.revisionsLoading).toBe(true)
+    second.resolve(response({ data: [{ id: 'revision-b' }] }))
+    await secondRequest
+    first.resolve(response({ data: [{ id: 'revision-a' }] }))
+
+    expect(await firstRequest).toBeNull()
+    expect(store.revisions.map(({ id }) => id)).toEqual(['revision-b'])
+    expect(store.revisionsLoading).toBe(false)
+  })
+
+  it('keeps the latest vote owner when requests resolve out of order', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const store = useDebateStore()
+
+    const firstRequest = store.fetchVotes('topic-a')
+    const secondRequest = store.fetchVotes('topic-b')
+    expect(store.votesLoading).toBe(true)
+    second.resolve(response({ data: {
+      yes_votes: 2,
+      no_votes: 0,
+      total_votes: 2,
+      current_direction: '',
+      current_user_vote: '',
+    } }))
+    await secondRequest
+    first.resolve(response({ data: {
+      yes_votes: 0,
+      no_votes: 1,
+      total_votes: 1,
+      current_direction: '',
+      current_user_vote: '',
+    } }))
+
+    expect(await firstRequest).toBeNull()
+    expect(store.voteSummary?.total_votes).toBe(2)
+    expect(store.votesLoading).toBe(false)
+  })
+
+  it('keeps the latest relation graph owner when requests resolve out of order', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const store = useDebateStore()
+
+    const firstRequest = store.fetchRelationGraph('topic-a', 'graph')
+    const secondRequest = store.fetchRelationGraph('topic-b', 'graph')
+    second.resolve(response({ data: { root_id: 'topic-b', nodes: [], relations: [], expandable_node_ids: [] } }))
+    await secondRequest
+    first.resolve(response({ data: { root_id: 'topic-a', nodes: [], relations: [], expandable_node_ids: [] } }))
+
+    expect(await firstRequest).toBeNull()
+    expect(store.relationGraph?.root_id).toBe('topic-b')
+    expect(store.relationLoading).toBe(false)
+  })
+
+  it('invalidates every singleton request when the store resets', async () => {
+    const current = deferred<Response>()
+    const revisionList = deferred<Response>()
+    const votes = deferred<Response>()
+    const graph = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(current.promise)
+      .mockReturnValueOnce(revisionList.promise)
+      .mockReturnValueOnce(votes.promise)
+      .mockReturnValueOnce(graph.promise)
+    const store = useDebateStore()
+
+    const requests = [
+      store.fetchDebate('topic-a'),
+      store.fetchRevisions('topic-a'),
+      store.fetchVotes('topic-a'),
+      store.fetchRelationGraph('topic-a', 'graph'),
+    ]
+    store.resetStore()
+    current.resolve(response({ data: { id: 'topic-a' } }))
+    revisionList.resolve(response({ data: [{ id: 'revision-a' }] }))
+    votes.resolve(response({ data: { total_votes: 1 } }))
+    graph.resolve(response({ data: { root_id: 'topic-a', nodes: [], relations: [] } }))
+
+    expect(await Promise.all(requests)).toEqual([null, null, null, null])
+    expect(store.currentDebate).toBeNull()
+    expect(store.revisions).toEqual([])
+    expect(store.voteSummary).toBeNull()
+    expect(store.relationGraph).toBeNull()
+    expect(store.revisionsLoading).toBe(false)
+    expect(store.votesLoading).toBe(false)
+    expect(store.relationLoading).toBe(false)
+  })
+
+  it('tracks wiki saves and revision fetches independently', async () => {
+    const save = deferred<Response>()
+    const revisionList = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(save.promise)
+      .mockReturnValueOnce(revisionList.promise)
+    const store = useDebateStore()
+
+    const saveRequest = store.saveWiki('topic-a', {
+      title: 'A',
+      description: '',
+      content: '',
+      tags: [],
+      edit_summary: 'Save A',
+      base_revision: 'revision-a',
+    })
+    const revisionsRequest = store.fetchRevisions('topic-a')
+    expect(store.wikiSaving).toBe(true)
+    expect(store.revisionsLoading).toBe(true)
+    expect(store.loading).toBe(false)
+
+    save.resolve(response({ data: { id: 'topic-a', current_revision_id: 'revision-b' } }))
+    await saveRequest
+    expect(store.wikiSaving).toBe(false)
+    expect(store.revisionsLoading).toBe(true)
+
+    revisionList.resolve(response({ data: [{ id: 'revision-b' }] }))
+    await revisionsRequest
+    expect(store.revisionsLoading).toBe(false)
+  })
+
+  it('clears debate loading when a wiki save supersedes the fetch', async () => {
+    const debate = deferred<Response>()
+    const save = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(debate.promise)
+      .mockReturnValueOnce(save.promise)
+    const store = useDebateStore()
+
+    const debateRequest = store.fetchDebate('topic-a')
+    const saveRequest = store.saveWiki('topic-b', {
+      title: 'B',
+      description: '',
+      content: '',
+      tags: [],
+      edit_summary: 'Save B',
+      base_revision: 'revision-b',
+    })
+    save.resolve(response({ data: { id: 'topic-b' } }))
+    await saveRequest
+    debate.resolve(response({ data: { id: 'topic-a' } }))
+
+    expect(await debateRequest).toBeNull()
+    expect(store.loading).toBe(false)
+    expect(store.currentDebate?.id).toBe('topic-b')
+  })
+
+  it('keeps wiki saving active until the latest save finishes', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const store = useDebateStore()
+    const payload = {
+      title: 'Title',
+      description: '',
+      content: '',
+      tags: [],
+      edit_summary: 'Save',
+      base_revision: 'revision-a',
+    }
+
+    const firstRequest = store.saveWiki('topic-a', payload)
+    const secondRequest = store.saveWiki('topic-b', payload)
+    first.resolve(response({ data: { id: 'topic-a' } }))
+    await firstRequest
+    expect(store.wikiSaving).toBe(true)
+    expect(store.currentDebate).toBeNull()
+
+    second.resolve(response({ data: { id: 'topic-b' } }))
+    await secondRequest
+    expect(store.wikiSaving).toBe(false)
+    expect(store.currentDebate?.id).toBe('topic-b')
   })
 
   it('saves a wiki revision and updates the current debate', async () => {

@@ -45,6 +45,26 @@ type DebateListMeta = {
   has_more: boolean;
 };
 
+type OwnedRequest = {
+  sequence: number;
+  ownerID: string | null;
+};
+
+const beginOwnedRequest = (request: OwnedRequest, ownerID: string) => {
+  request.sequence += 1;
+  request.ownerID = ownerID;
+  return request.sequence;
+};
+
+const ownsRequest = (request: OwnedRequest, ownerID: string, sequence: number) => (
+  request.sequence === sequence && request.ownerID === ownerID
+);
+
+const invalidateOwnedRequest = (request: OwnedRequest) => {
+  request.sequence += 1;
+  request.ownerID = null;
+};
+
 export const useDebateStore = defineStore("debate", () => {
   const debates = ref<Debate[]>([]);
   const debatesTotal = ref(0);
@@ -58,10 +78,19 @@ export const useDebateStore = defineStore("debate", () => {
 	const argumentsPage = ref(0);
 	const argumentsHasMore = ref(false);
   const loading = ref(false);
+  const wikiSaving = ref(false);
+  const revisionsLoading = ref(false);
+  const votesLoading = ref(false);
   const error = ref<string | null>(null);
   // Track current user's votes on arguments
   const userVotes = ref<Record<string, number>>({});
   let debatesRequestSequence = 0;
+  let currentDebateLoadingSequence = 0;
+  let wikiSaveRequestSequence = 0;
+  const currentDebateRequest: OwnedRequest = { sequence: 0, ownerID: null };
+  const revisionsRequest: OwnedRequest = { sequence: 0, ownerID: null };
+  const votesRequest: OwnedRequest = { sequence: 0, ownerID: null };
+  const relationGraphRequest: OwnedRequest = { sequence: 0, ownerID: null };
 
   const authHeaders = (): Record<string, string> => {
     const authStore = useAuthStore();
@@ -117,12 +146,16 @@ export const useDebateStore = defineStore("debate", () => {
   };
 
   const fetchDebate = async (id: string) => {
+    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
+    const loadingSequence = ++currentDebateLoadingSequence;
     loading.value = true;
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}`);
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       if (res.ok) {
         const data = await res.json();
+        if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
         currentDebate.value = data.data;
         return data.data as Debate;
       } else {
@@ -130,11 +163,12 @@ export const useDebateStore = defineStore("debate", () => {
         return null;
       }
     } catch (e) {
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       error.value = "Failed to fetch debate";
       console.error(e);
       return null;
     } finally {
-      loading.value = false;
+      if (loadingSequence === currentDebateLoadingSequence) loading.value = false;
     }
   };
 
@@ -143,24 +177,28 @@ export const useDebateStore = defineStore("debate", () => {
       view: 'tree' | 'graph' = 'tree',
       depth?: number,
     ): Promise<DebateGraph | null> => {
+			const requestSequence = beginOwnedRequest(relationGraphRequest, id)
 			relationLoading.value = true
 			error.value = null
 			try {
 				const depthQuery = depth === undefined ? '' : `&depth=${depth}`
 				const res = await fetch(`${api.url}/debates/${id}/relations?view=${view}${depthQuery}`)
+				if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
 				if (!res.ok) {
           error.value = 'Failed to fetch debate relations'
           return null
         }
 				const payload = await res.json()
+				if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
 				relationGraph.value = payload.data as DebateGraph
 				return relationGraph.value
 			} catch (e) {
+				if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
 				error.value = 'Failed to fetch debate relations'
 				console.error('Failed to fetch debate relations', e)
 			return null
 		} finally {
-			relationLoading.value = false
+			if (ownsRequest(relationGraphRequest, id, requestSequence)) relationLoading.value = false
 		}
 	}
 
@@ -270,7 +308,9 @@ export const useDebateStore = defineStore("debate", () => {
     id: string,
     payload: SaveWikiPayload,
   ): Promise<SaveWikiResult> => {
-    loading.value = true;
+    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
+    const saveSequence = ++wikiSaveRequestSequence;
+    wikiSaving.value = true;
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}`, {
@@ -281,7 +321,7 @@ export const useDebateStore = defineStore("debate", () => {
       const responsePayload = await res.json();
       if (res.ok) {
         const debate = responsePayload.data as Debate;
-        currentDebate.value = debate;
+        if (ownsRequest(currentDebateRequest, id, requestSequence)) currentDebate.value = debate;
         return { ok: true, debate };
       }
 
@@ -302,35 +342,41 @@ export const useDebateStore = defineStore("debate", () => {
         }
       }
 
-      error.value = apiError?.message || "Failed to save debate";
+      if (ownsRequest(currentDebateRequest, id, requestSequence)) {
+        error.value = apiError?.message || "Failed to save debate";
+      }
       return { ok: false };
     } catch (e) {
-      error.value = "Failed to save debate";
+      if (ownsRequest(currentDebateRequest, id, requestSequence)) error.value = "Failed to save debate";
       console.error("Failed to save debate", e);
       return { ok: false };
     } finally {
-      loading.value = false;
+      if (saveSequence === wikiSaveRequestSequence) wikiSaving.value = false;
     }
   };
 
   const fetchRevisions = async (id: string): Promise<DebateRevision[] | null> => {
-    loading.value = true;
+    const requestSequence = beginOwnedRequest(revisionsRequest, id);
+    revisionsLoading.value = true;
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/revisions`);
+      if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to fetch revisions";
         return null;
       }
       const data = await res.json();
+      if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
       revisions.value = (data.data || []) as DebateRevision[];
       return revisions.value;
     } catch (e) {
+      if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
       error.value = "Failed to fetch revisions";
       console.error("Failed to fetch revisions", e);
       return null;
     } finally {
-      loading.value = false;
+      if (ownsRequest(revisionsRequest, id, requestSequence)) revisionsLoading.value = false;
     }
   };
 
@@ -379,6 +425,7 @@ export const useDebateStore = defineStore("debate", () => {
     revisionID: string,
     payload: WikiConcurrencyPayload,
   ): Promise<Debate | null> => {
+    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/revisions/${revisionID}/revert`, {
@@ -386,14 +433,17 @@ export const useDebateStore = defineStore("debate", () => {
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to revert revision";
         return null;
       }
       const data = await res.json();
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       currentDebate.value = data.data as Debate;
       return currentDebate.value;
     } catch (e) {
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       error.value = "Failed to revert revision";
       console.error("Failed to revert revision", e);
       return null;
@@ -405,6 +455,7 @@ export const useDebateStore = defineStore("debate", () => {
     relationID: string,
     payload: WikiConcurrencyPayload,
   ): Promise<Debate | null> => {
+    const requestSequence = beginOwnedRequest(currentDebateRequest, id);
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/references/${relationID}/reconfirm`, {
@@ -412,14 +463,17 @@ export const useDebateStore = defineStore("debate", () => {
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to reconfirm reference";
         return null;
       }
       const data = await res.json();
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       currentDebate.value = data.data as Debate;
       return currentDebate.value;
     } catch (e) {
+      if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       error.value = "Failed to reconfirm reference";
       console.error("Failed to reconfirm reference", e);
       return null;
@@ -427,24 +481,33 @@ export const useDebateStore = defineStore("debate", () => {
   };
 
   const fetchVotes = async (id: string): Promise<DebateVoteSummary | null> => {
+    const requestSequence = beginOwnedRequest(votesRequest, id);
+    votesLoading.value = true;
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/votes`, { headers: authHeaders() });
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to fetch votes";
         return null;
       }
       const data = await res.json();
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       voteSummary.value = data.data as DebateVoteSummary;
       return voteSummary.value;
     } catch (e) {
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       error.value = "Failed to fetch votes";
       console.error("Failed to fetch votes", e);
       return null;
+    } finally {
+      if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
     }
   };
 
   const setVote = async (id: string, direction: DebateVoteDirection): Promise<DebateVoteSummary | null> => {
+    const requestSequence = beginOwnedRequest(votesRequest, id);
+    votesLoading.value = true;
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/vote`, {
@@ -452,38 +515,50 @@ export const useDebateStore = defineStore("debate", () => {
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ direction }),
       });
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to set vote";
         return null;
       }
       const data = await res.json();
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       voteSummary.value = data.data as DebateVoteSummary;
       return voteSummary.value;
     } catch (e) {
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       error.value = "Failed to set vote";
       console.error("Failed to set vote", e);
       return null;
+    } finally {
+      if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
     }
   };
 
   const removeVote = async (id: string): Promise<DebateVoteSummary | null> => {
+    const requestSequence = beginOwnedRequest(votesRequest, id);
+    votesLoading.value = true;
     error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/vote`, {
         method: "DELETE",
         headers: authHeaders(),
       });
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to remove vote";
         return null;
       }
       const data = await res.json();
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       voteSummary.value = data.data as DebateVoteSummary;
       return voteSummary.value;
     } catch (e) {
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       error.value = "Failed to remove vote";
       console.error("Failed to remove vote", e);
       return null;
+    } finally {
+      if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
     }
   };
 
@@ -861,6 +936,12 @@ export const useDebateStore = defineStore("debate", () => {
 
   const resetStore = () => {
     debatesRequestSequence += 1;
+    currentDebateLoadingSequence += 1;
+    wikiSaveRequestSequence += 1;
+    invalidateOwnedRequest(currentDebateRequest);
+    invalidateOwnedRequest(revisionsRequest);
+    invalidateOwnedRequest(votesRequest);
+    invalidateOwnedRequest(relationGraphRequest);
     debates.value = [];
     debatesTotal.value = 0;
     debatesMeta.value = { page: 1, page_size: 20, total: 0, has_more: false };
@@ -873,6 +954,10 @@ export const useDebateStore = defineStore("debate", () => {
 	argumentsHasMore.value = false;
     userVotes.value = {};
     loading.value = false;
+    wikiSaving.value = false;
+    revisionsLoading.value = false;
+    votesLoading.value = false;
+		relationLoading.value = false;
     error.value = null;
   };
 
@@ -889,6 +974,9 @@ export const useDebateStore = defineStore("debate", () => {
 	argumentsPage,
 	argumentsHasMore,
     loading,
+		wikiSaving,
+		revisionsLoading,
+		votesLoading,
     error,
     userVotes,
     fetchDebates,

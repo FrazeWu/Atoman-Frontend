@@ -31,6 +31,7 @@ export interface AdminFeedOPMLImportResult {
   imported: number
   reused: number
   failed: number
+  failed_sources?: { url: string; reason: string }[]
 }
 
 export interface AdminFeedFulltextSourceRow {

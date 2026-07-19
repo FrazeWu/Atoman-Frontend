@@ -140,4 +140,13 @@ describe('AudioPlayer', () => {
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-inner\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 44px 44px;/)
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.player-controls-hub\s*\{[^}]*position: static;[^}]*transform: none;/)
   })
+
+  it('applies adaptive glassmorphism styles', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/music/AudioPlayer.vue'), 'utf8')
+    expect(source).toMatch(/background:\s*rgba\(255,\s*255,\s*255,\s*0\.82\)/)
+    expect(source).toMatch(/backdrop-filter:\s*blur\(12px\)/)
+    expect(source).toMatch(/-webkit-backdrop-filter:\s*blur\(12px\)/)
+    expect(source).toMatch(/:root\[data-theme='dark'\] \.player\s*\{[^}]*background:\s*rgba\(15,\s*23,\s*42,\s*0\.85\)/)
+    expect(source).toMatch(/@media \(prefers-color-scheme: dark\)/)
+  })
 })

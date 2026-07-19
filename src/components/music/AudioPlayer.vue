@@ -526,10 +526,28 @@ onBeforeUnmount(() => {
   bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height));
   width: 100%;
   z-index: var(--a-z-player, 720);
-  background: var(--a-color-bg);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--a-color-border-soft);
   height: var(--a-player-height);
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+:root[data-theme='dark'] .player {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--a-color-border-dark, #334155);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .player {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--a-color-border-dark, #334155);
+  }
 }
 
 .player.is-auto-hidden {

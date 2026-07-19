@@ -172,7 +172,7 @@ describe('shared responsive shell CSS', () => {
     expect(styleSource).not.toContain('body:has(.site-footer)')
     expect(styleSource).not.toContain('--a-footer-reserved-height: 88px;')
     expect(appSource).not.toContain('padding-bottom: var(--a-footer-reserved-height)')
-    expect(appSource).not.toMatch(/\.app-main\s*\{[^}]*flex:\s*1/)
+    expect(appSource).toMatch(/\.app-main\s*\{[^}]*flex:\s*1 0 auto;/)
   })
 
   it('hides the footer on mobile sidebar routes without reserving footer space', () => {

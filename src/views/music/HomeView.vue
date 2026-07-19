@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
+import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import ExploreView from '@/views/music/ExploreView.vue'
 import PButton from '@/components/ui/PButton.vue'
-import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import type { Notification } from '@/types'
+import { listPendingMusicLyricsAnnotations, type PendingMusicLyricsAnnotation } from '@/api/musicV1'
 
 const route = useRoute()
-const router = useRouter()
-const api = useApi()
-const authStore = useAuthStore()
-const pendingRebindNotifications = ref<Notification[]>([])
+const authStore = getActivePinia() ? useAuthStore() : null
+const pendingRebindNotifications = ref<PendingMusicLyricsAnnotation[]>([])
 const pendingRebindCount = computed(() => pendingRebindNotifications.value.length)
 const {
   isMainShifted,
@@ -38,29 +36,20 @@ const { applyRouteSelection } = useMusicRouteSelection({
 })
 
 async function loadPendingRebindNotifications() {
-  if (!authStore.isAuthenticated || !authStore.token) {
+  if (!authStore?.isAuthenticated || !authStore.token) {
     pendingRebindNotifications.value = []
     return
   }
-  const response = await fetch(`${api.notifications.list}?category=collaboration&page=1&page_size=100`, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (!response.ok) return
-  const payload = await response.json()
-  pendingRebindNotifications.value = (payload.data ?? []).filter((item: Notification) => (
-    item.source_type === 'music_lyrics'
-    && typeof item.meta.album_id === 'string'
-    && typeof item.meta.song_id === 'string'
-    && typeof item.meta.annotation_id === 'string'
-  ))
+  pendingRebindNotifications.value = await listPendingMusicLyricsAnnotations()
 }
 
-function openFirstPendingRebind() {
+async function openFirstPendingRebind() {
   const notification = pendingRebindNotifications.value[0]
   if (!notification) return
-  router.push({
-    path: `/music/album/${notification.meta.album_id}`,
-    query: { song_id: notification.meta.song_id, annotation_id: notification.meta.annotation_id, rebind: '1' },
+  const router = (await import('@/router')).default
+  await router.push({
+    path: `/music/album/${notification.album_id}`,
+    query: { song_id: notification.song_id, annotation_id: notification.annotation_id, rebind: '1' },
   })
 }
 

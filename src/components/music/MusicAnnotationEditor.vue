@@ -4,7 +4,12 @@
       “{{ selectedText }}”
     </p>
 
+    <p v-if="mode === 'rebind'" class="music-annotation-editor__hint">
+      在歌词中选择新的片段
+    </p>
+
     <PTextarea
+      v-if="mode !== 'rebind'"
       v-model="body"
       label="注释"
       placeholder="写下这句歌词的解释"
@@ -15,11 +20,25 @@
       <PButton
         type="button"
         variant="secondary"
+        data-testid="annotation-cancel"
+        aria-label="取消注释操作"
         @click="handleCancel"
       >
         取消
       </PButton>
       <PButton
+        v-if="mode === 'rebind'"
+        type="button"
+        size="lg"
+        :disabled="!selectedText"
+        data-testid="annotation-confirm-rebind"
+        aria-label="确认重新绑定"
+        @click="emit('confirm-rebind')"
+      >
+        确认重新绑定
+      </PButton>
+      <PButton
+        v-else
         type="button"
         :disabled="!body.trim()"
         @click="handleSave"
@@ -39,17 +58,19 @@ const props = defineProps<{
   show: boolean
   selectedText?: string
   initialBody?: string
+  mode?: 'create' | 'edit' | 'rebind'
 }>()
 
 const emit = defineEmits<{
   save: [body: string]
   cancel: []
+  'confirm-rebind': []
 }>()
 
 const body = ref('')
 
-watch(() => [props.show, props.initialBody] as const, ([show, initialBody]) => {
-  body.value = show ? (initialBody ?? '') : ''
+watch(() => [props.show, props.initialBody, props.mode] as const, ([show, initialBody, mode]) => {
+  body.value = show && mode !== 'rebind' ? (initialBody ?? '') : ''
 }, { immediate: true })
 
 function handleCancel() {
@@ -78,6 +99,12 @@ function handleSave() {
   color: var(--a-color-text);
   font-weight: 800;
   line-height: 1.5;
+}
+
+.music-annotation-editor__hint {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.9rem;
 }
 
 .music-annotation-editor__actions {

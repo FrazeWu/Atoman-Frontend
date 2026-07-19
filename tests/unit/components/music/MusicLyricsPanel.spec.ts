@@ -117,13 +117,15 @@ vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
 
 vi.mock('@/components/music/MusicAnnotationEditor.vue', () => ({
   default: {
-    props: ['show', 'selectedText', 'initialBody'],
+    props: ['show', 'selectedText', 'initialBody', 'mode'],
     template: `
       <div v-if="show" class="annotation-editor-stub">
+        <span class="annotation-editor-mode">{{ mode }}</span>
         <span class="annotation-editor-selected">{{ selectedText }}</span>
         <span class="annotation-editor-body">{{ initialBody }}</span>
         <button type="button" class="annotation-save" @click="$emit('save', '新的注释')">保存注释</button>
         <button type="button" class="annotation-cancel" @click="$emit('cancel')">取消注释</button>
+        <button type="button" class="annotation-confirm-rebind" @click="$emit('confirm-rebind')">确认重新绑定</button>
       </div>
     `,
   },
@@ -320,6 +322,114 @@ describe('MusicLyricsPanel.vue', () => {
       end_offset: 4,
       body: '新的注释',
     })
+  })
+
+  it('作者可发起待重新绑定并以新选区提交完整锚点', async () => {
+    lyricsState.lyrics.value.annotations[0] = {
+      ...lyricsState.lyrics.value.annotations[0],
+      status: 'needs_rebind',
+    }
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="annotation-rebind-annotation-1"]').trigger('click')
+    expect(wrapper.get('.annotation-editor-mode').text()).toBe('rebind')
+
+    await wrapper.get('[data-line-id="line-2"] .select-text').trigger('click')
+    expect(wrapper.get('.annotation-editor-selected').text()).toBe('Neon')
+
+    await wrapper.get('.annotation-confirm-rebind').trigger('click')
+    expect(mocks.updateAnnotation).toHaveBeenCalledWith('song-1', 'annotation-1', {
+      line_key: 'line-2',
+      selected_text: 'Neon',
+      start_offset: 0,
+      end_offset: 4,
+    })
+    expect(mocks.createAnnotation).not.toHaveBeenCalled()
+    expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
+  })
+
+  it('取消重绑或切歌时清理重绑状态', async () => {
+    lyricsState.lyrics.value.annotations[0] = {
+      ...lyricsState.lyrics.value.annotations[0],
+      status: 'needs_rebind',
+    }
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="annotation-rebind-annotation-1"]').trigger('click')
+    await wrapper.get('.annotation-cancel').trigger('click')
+    expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="annotation-rebind-annotation-1"]').trigger('click')
+    await wrapper.setProps({ songId: 'song-2' })
+    expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
+  })
+
+  it('切歌后旧重绑请求完成不清理新歌曲的重绑状态', async () => {
+    const firstRequest = deferred<void>()
+    mocks.updateAnnotation.mockReturnValueOnce(firstRequest.promise)
+    lyricsState.lyrics.value.annotations[0] = {
+      ...lyricsState.lyrics.value.annotations[0],
+      status: 'needs_rebind',
+    }
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="annotation-rebind-annotation-1"]').trigger('click')
+    await wrapper.get('[data-line-id="line-1"] .select-text').trigger('click')
+    await wrapper.get('.annotation-confirm-rebind').trigger('click')
+
+    lyricsState.lyrics.value = {
+      ...lyricsState.lyrics.value,
+      song_id: 'song-2',
+      annotations: [{
+        ...lyricsState.lyrics.value.annotations[0],
+        id: 'annotation-2',
+        song_id: 'song-2',
+        status: 'needs_rebind',
+      }],
+    }
+    await wrapper.setProps({ songId: 'song-2' })
+    await wrapper.get('[data-testid="annotation-rebind-annotation-2"]').trigger('click')
+    expect(wrapper.get('.annotation-editor-mode').text()).toBe('rebind')
+
+    firstRequest.resolve()
+    await flushPromises()
+    expect(wrapper.get('.annotation-editor-mode').text()).toBe('rebind')
+
+  })
+
+  it('切歌后旧重绑请求失败不清理新歌曲的重绑状态', async () => {
+    const firstRequest = deferred<void>()
+    mocks.updateAnnotation.mockReturnValueOnce(firstRequest.promise)
+    lyricsState.lyrics.value.annotations[0] = {
+      ...lyricsState.lyrics.value.annotations[0],
+      status: 'needs_rebind',
+    }
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="annotation-rebind-annotation-1"]').trigger('click')
+    await wrapper.get('[data-line-id="line-1"] .select-text').trigger('click')
+    await wrapper.get('.annotation-confirm-rebind').trigger('click')
+
+    lyricsState.lyrics.value = {
+      ...lyricsState.lyrics.value,
+      song_id: 'song-2',
+      annotations: [{
+        ...lyricsState.lyrics.value.annotations[0],
+        id: 'annotation-2',
+        song_id: 'song-2',
+        status: 'needs_rebind',
+      }],
+    }
+    await wrapper.setProps({ songId: 'song-2' })
+    await wrapper.get('[data-testid="annotation-rebind-annotation-2"]').trigger('click')
+
+    firstRequest.reject(new Error('late failure'))
+    await flushPromises()
+    expect(wrapper.get('.annotation-editor-mode').text()).toBe('rebind')
   })
 
   it('打开歌词编辑抽屉并保存歌词', async () => {

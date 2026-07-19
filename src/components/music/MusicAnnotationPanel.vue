@@ -45,6 +45,18 @@
 
       <div v-if="canWrite && canManageAnnotation(annotation)" class="music-annotation-card__actions">
         <PButton
+          v-if="annotation.status === 'needs_rebind'"
+          type="button"
+          size="lg"
+          variant="ghost"
+          class="music-annotation-card__rebind"
+          :data-testid="`annotation-rebind-${annotation.id}`"
+          :aria-label="`重新绑定注释：${annotation.selected_text}`"
+          @click="emit('rebind', annotation)"
+        >
+          重新绑定
+        </PButton>
+        <PButton
           type="button"
           size="sm"
           variant="ghost"
@@ -61,6 +73,10 @@
           删除
         </PButton>
       </div>
+
+      <p v-if="annotation.status === 'needs_rebind'" class="music-annotation-card__status">
+        待重新绑定
+      </p>
     </article>
   </aside>
 </template>
@@ -83,6 +99,7 @@ const emit = defineEmits<{
   vote: [annotationId: string, vote: MusicLyricsAnnotationVote | null]
   edit: [annotation: MusicLyricsAnnotation]
   delete: [annotationId: string]
+  rebind: [annotation: MusicLyricsAnnotation]
 }>()
 
 function collectIdentityValues(value: Record<string, unknown> | null | undefined) {
@@ -132,9 +149,14 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 
 .music-annotation-panel__count,
 .music-annotation-panel__empty,
-.music-annotation-card__score {
+.music-annotation-card__score,
+.music-annotation-card__status {
   color: var(--a-color-muted);
   font-size: 0.82rem;
+}
+
+.music-annotation-card__status {
+  margin: 0;
 }
 
 .music-annotation-card {
@@ -177,5 +199,10 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 .music-annotation-card__vote.is-active {
   border-color: var(--a-color-text);
   color: var(--a-color-text);
+}
+
+.music-annotation-card__rebind {
+  min-width: 44px;
+  min-height: 44px;
 }
 </style>

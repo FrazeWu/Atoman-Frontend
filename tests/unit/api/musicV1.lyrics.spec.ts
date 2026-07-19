@@ -10,7 +10,31 @@ import {
   updateMusicLyricsAnnotation,
   updateMusicSongLyrics,
   voteMusicLyricsAnnotation,
+  type UpdateMusicLyricsAnnotationInput,
 } from '@/api/musicV1'
+
+const bodyOnlyAnnotationUpdate: UpdateMusicLyricsAnnotationInput = { body: 'updated' }
+const rebindAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {
+  line_key: 'line-1',
+  selected_text: 'Hello',
+  start_offset: 0,
+  end_offset: 5,
+}
+// @ts-expect-error 更新注释必须包含正文或完整锚点。
+const emptyAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {}
+// @ts-expect-error 锚点不可只传部分字段。
+const partialAnchorAnnotationUpdate: UpdateMusicLyricsAnnotationInput = { line_key: 'line-1' }
+// @ts-expect-error 正文与半套锚点不可混用。
+const bodyWithPartialAnchorAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {
+  body: '更新',
+  line_key: 'line-1',
+}
+
+void bodyOnlyAnnotationUpdate
+void rebindAnnotationUpdate
+void emptyAnnotationUpdate
+void partialAnchorAnnotationUpdate
+void bodyWithPartialAnchorAnnotationUpdate
 
 describe('music lyrics api client', () => {
   afterEach(() => {
@@ -242,6 +266,32 @@ describe('music lyrics api adapter', () => {
         body: undefined,
       },
     ])
+  })
+
+  it('serializes complete anchors when rebinding an annotation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'ann-1' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    await updateMusicLyricsAnnotation('song-1', 'ann-1', {
+      line_key: 'line-2',
+      selected_text: 'Midnight',
+      start_offset: 0,
+      end_offset: 8,
+    })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/songs/song-1/lyrics/annotations/ann-1', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        line_key: 'line-2',
+        selected_text: 'Midnight',
+        start_offset: 0,
+        end_offset: 8,
+      }),
+    })
   })
 
   it('votes on annotations with POST', async () => {

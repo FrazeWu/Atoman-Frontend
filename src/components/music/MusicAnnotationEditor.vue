@@ -18,6 +18,15 @@
 
     <div class="music-annotation-editor__actions">
       <PButton
+        type="button"
+        variant="secondary"
+        data-testid="annotation-cancel"
+        aria-label="取消注释操作"
+        @click="handleCancel"
+      >
+        取消
+      </PButton>
+      <PButton
         v-if="mode === 'rebind'"
         type="button"
         :disabled="!selectedText"
@@ -29,13 +38,6 @@
       </PButton>
       <PButton
         v-else
-        type="button"
-        variant="secondary"
-        @click="handleCancel"
-      >
-        取消
-      </PButton>
-      <PButton
         type="button"
         :disabled="!body.trim()"
         @click="handleSave"
@@ -66,8 +68,8 @@ const emit = defineEmits<{
 
 const body = ref('')
 
-watch(() => [props.show, props.initialBody] as const, ([show, initialBody]) => {
-  body.value = show ? (initialBody ?? '') : ''
+watch(() => [props.show, props.initialBody, props.mode] as const, ([show, initialBody, mode]) => {
+  body.value = show && mode !== 'rebind' ? (initialBody ?? '') : ''
 }, { immediate: true })
 
 function handleCancel() {

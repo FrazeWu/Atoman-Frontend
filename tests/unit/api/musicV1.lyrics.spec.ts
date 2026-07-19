@@ -10,7 +10,25 @@ import {
   updateMusicLyricsAnnotation,
   updateMusicSongLyrics,
   voteMusicLyricsAnnotation,
+  type UpdateMusicLyricsAnnotationInput,
 } from '@/api/musicV1'
+
+const bodyOnlyAnnotationUpdate: UpdateMusicLyricsAnnotationInput = { body: 'updated' }
+const rebindAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {
+  line_key: 'line-1',
+  selected_text: 'Hello',
+  start_offset: 0,
+  end_offset: 5,
+}
+// @ts-expect-error 更新注释必须包含正文或完整锚点。
+const emptyAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {}
+// @ts-expect-error 锚点不可只传部分字段。
+const partialAnchorAnnotationUpdate: UpdateMusicLyricsAnnotationInput = { line_key: 'line-1' }
+
+void bodyOnlyAnnotationUpdate
+void rebindAnnotationUpdate
+void emptyAnnotationUpdate
+void partialAnchorAnnotationUpdate
 
 describe('music lyrics api client', () => {
   afterEach(() => {

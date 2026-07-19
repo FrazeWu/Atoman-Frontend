@@ -218,6 +218,7 @@ const pendingLyricsSongId = ref('')
 let pendingLyricsSaveGeneration = 0
 let activeLyricsSaveGeneration = 0
 let versionsViewGeneration = 0
+let rebindOperationGeneration = 0
 
 const displayModeOptions = [
   { label: '原文', value: 'original' },
@@ -266,9 +267,8 @@ watch(
     versionsViewGeneration += 1
     resetVersions()
     selectedAnnotationIds.value = []
-    selectedTextDraft.value = null
+    clearRebindState()
     editingAnnotation.value = null
-    rebindingAnnotation.value = null
     isLyricEditorOpen.value = false
     versionsVisible.value = false
     displayMode.value = 'bilingual'
@@ -303,9 +303,8 @@ function canManageAnnotation(annotation: MusicLyricsAnnotation) {
 }
 
 function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationIds: string[] }) {
-  selectedTextDraft.value = null
+  clearRebindState()
   editingAnnotation.value = null
-  rebindingAnnotation.value = null
   selectedAnnotationIds.value = payload.annotationIds
 }
 
@@ -316,15 +315,15 @@ function handleSelectText(payload: {
   endOffset: number
 }) {
   if (!isAuthenticated.value) return
+  if (rebindingAnnotation.value) rebindOperationGeneration += 1
   editingAnnotation.value = null
   selectedAnnotationIds.value = []
   selectedTextDraft.value = payload
 }
 
 function handleCancelAnnotation() {
-  selectedTextDraft.value = null
+  clearRebindState()
   editingAnnotation.value = null
-  rebindingAnnotation.value = null
 }
 
 async function handleSaveAnnotation(body: string) {
@@ -353,7 +352,7 @@ async function handleSaveAnnotation(body: string) {
 
 function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
   if (!canManageAnnotation(annotation) || annotation.status !== 'needs_rebind') return
-  selectedTextDraft.value = null
+  clearRebindState()
   editingAnnotation.value = null
   rebindingAnnotation.value = annotation
 }
@@ -364,21 +363,32 @@ async function handleConfirmRebind() {
   if (!lineKey) return
 
   const annotation = rebindingAnnotation.value
-  await updateAnnotation(props.songId, annotation.id, {
-    line_key: lineKey,
-    selected_text: selectedTextDraft.value.selectedText,
-    start_offset: selectedTextDraft.value.startOffset,
-    end_offset: selectedTextDraft.value.endOffset,
-  })
-  selectedTextDraft.value = null
-  rebindingAnnotation.value = null
+  const songId = props.songId
+  const operationGeneration = ++rebindOperationGeneration
+  try {
+    await updateAnnotation(songId, annotation.id, {
+      line_key: lineKey,
+      selected_text: selectedTextDraft.value.selectedText,
+      start_offset: selectedTextDraft.value.startOffset,
+      end_offset: selectedTextDraft.value.endOffset,
+    })
+  } catch {
+    return
+  }
+  if (props.songId !== songId || rebindOperationGeneration !== operationGeneration) return
+  clearRebindState()
 }
 
 function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
   if (!isAuthenticated.value) return
+  clearRebindState()
+  editingAnnotation.value = annotation
+}
+
+function clearRebindState() {
+  rebindOperationGeneration += 1
   selectedTextDraft.value = null
   rebindingAnnotation.value = null
-  editingAnnotation.value = annotation
 }
 
 async function handleDeleteAnnotation(annotationId: string) {

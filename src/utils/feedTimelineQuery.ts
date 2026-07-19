@@ -5,6 +5,7 @@ export interface FeedTimelineQueryOptions {
   sourceId?: string | number | null
   groupId?: string | null
   unreadOnly?: boolean
+  hideDuplicates?: boolean
   q?: string | null
 }
 
@@ -15,6 +16,7 @@ export const buildFeedTimelineQuery = ({
   sourceId,
   groupId,
   unreadOnly = false,
+  hideDuplicates = false,
   q,
 }: FeedTimelineQueryOptions) => {
   const params = new URLSearchParams()
@@ -40,6 +42,10 @@ export const buildFeedTimelineQuery = ({
 
   if (unreadOnly) {
     params.set('unread_only', 'true')
+  }
+
+  if (hideDuplicates) {
+    params.set('hide_duplicates', 'true')
   }
 
   const search = q?.trim()

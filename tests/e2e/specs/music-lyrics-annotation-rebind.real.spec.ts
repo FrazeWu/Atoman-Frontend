@@ -96,6 +96,24 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await assertDesktopControls(authorPage, rebindButton, null)
       await authorPage.screenshot({ path: testInfo.outputPath('annotation-rebind-pending-desktop.png'), fullPage: true })
 
+      await authorPage.goto('/inbox?tab=collaboration')
+      await expect(authorPage.getByRole('heading', { name: '歌词修改影响了你的注释绑定', exact: true })).toBeVisible()
+      await authorPage.getByRole('button', { name: '前往来源内容', exact: true }).click()
+      await expect(authorPage).toHaveURL(new RegExp(`/music/album/${albumId}\\?`))
+      await expect(authorPage).toHaveURL(new RegExp(`song_id=${songId}`))
+      await expect(authorPage).toHaveURL(new RegExp(`annotation_id=${annotationId}`))
+      await expect(authorPage.getByTestId('annotation-confirm-rebind')).toBeDisabled()
+      await authorPage.getByTestId('annotation-cancel').click()
+
+      await authorPage.goto('/music')
+      const pendingRebindEntry = authorPage.getByTestId('music-pending-rebind')
+      await expect(pendingRebindEntry).toHaveText('待重新绑定 1')
+      await pendingRebindEntry.click()
+      await expect(authorPage).toHaveURL(new RegExp(`/music/album/${albumId}\\?`))
+      await expect(authorPage).toHaveURL(new RegExp(`song_id=${songId}`))
+      await expect(authorPage).toHaveURL(new RegExp(`annotation_id=${annotationId}`))
+      await expect(authorPage.getByTestId('annotation-confirm-rebind')).toBeDisabled()
+
       const cancelledPatches: string[] = []
       const recordCancelledPatch = (request: import('@playwright/test').Request) => {
         if (request.method() === 'PATCH' && request.url().endsWith(`/api/v1/music/songs/${songId}/lyrics/annotations/${annotationId}`)) {
@@ -103,8 +121,6 @@ test.describe('Music lyric annotation rebind real workflow', () => {
         }
       }
       authorPage.on('request', recordCancelledPatch)
-      await rebindButton.click()
-      await expect(authorPage.getByTestId('annotation-confirm-rebind')).toBeDisabled()
       await authorPage.getByTestId('annotation-cancel').click()
       authorPage.off('request', recordCancelledPatch)
       expect(cancelledPatches).toEqual([])
@@ -142,6 +158,9 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await expect(highlight).toBeVisible()
       await highlight.click()
       await expect(authorPage.getByText('需要保留的注释', { exact: true })).toBeVisible()
+
+      await authorPage.goto('/music')
+      await expect(authorPage.getByTestId('music-pending-rebind')).toHaveCount(0)
 
       await authorPage.setViewportSize({ width: 390, height: 844 })
       await expect(authorPage.locator('.music-lyrics-line__highlight').filter({ hasText: 'target phrase' })).toBeVisible()

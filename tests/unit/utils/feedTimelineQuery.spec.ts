@@ -37,4 +37,12 @@ describe('buildFeedTimelineQuery', () => {
 
     expect(query.toString()).toBe('page=3&limit=10&source_type=external_rss&source_id=source-1&unread_only=true&q=citrus+notes')
   })
+
+  it('requests duplicate filtering only when merge is enabled', () => {
+    const merged = buildFeedTimelineQuery({ page: 1, limit: 20, hideDuplicates: true })
+    const original = buildFeedTimelineQuery({ page: 1, limit: 20, hideDuplicates: false })
+
+    expect(merged.get('hide_duplicates')).toBe('true')
+    expect(original.has('hide_duplicates')).toBe(false)
+  })
 })

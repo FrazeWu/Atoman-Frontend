@@ -190,6 +190,8 @@
       :song-title="player.currentSong.title"
       :artist-text="artistText"
       :current-time-seconds="player.currentTime"
+      :focus-annotation-id="typeof route.query.annotation_id === 'string' ? route.query.annotation_id : ''"
+      :start-rebind="route.query.rebind === '1'"
       @close="player.toggleLyrics"
       @seek="player.seek"
     />
@@ -224,6 +226,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
@@ -251,6 +254,7 @@ import {
 } from '@/api/musicV1'
 
 const player = usePlayerStore()
+const route = useRoute() ?? { query: {} }
 const authStore = useAuthStore()
 const api = useApi()
 const playerInnerRef = ref<HTMLElement | null>(null)
@@ -418,7 +422,7 @@ async function addPodcastListenLater() {
     return
   }
   try {
-    const res = await fetch(api.podcast.listenLater, {
+    const res = await fetch(api.podcast.bookmarks, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -672,6 +672,7 @@ export interface FeedItem {
   duplicate_count?: number
   duplicate_of_id?: string
   duplicate_sources?: string[]
+  duplicate_item_ids?: string[]
   is_starred?: boolean
 }
 

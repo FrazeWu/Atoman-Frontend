@@ -517,6 +517,7 @@ export type MusicLyricsFormat = 'plain' | 'lrc'
 export type MusicLyricsAnnotationVote = 'up' | 'down'
 export type MusicLyricsViewerVote = MusicLyricsAnnotationVote | 'none'
 export type MusicLyricsAnnotationStatus = 'active' | 'deleted' | 'needs_rebind'
+export type PendingMusicLyricsAnnotation = { annotation_id: string; song_id: string; album_id: string }
 
 export type MusicSongLyricsLine = {
   line_key?: string
@@ -649,6 +650,7 @@ export const musicV1Endpoints = {
   lyricAnnotations: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations`,
   lyricAnnotation: (songId: string, annotationId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations/${annotationId}`,
   lyricAnnotationVote: (songId: string, annotationId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/annotations/${annotationId}/votes`,
+  pendingLyricAnnotations: () => `${apiV1Base()}/music/lyrics/annotations/pending`,
   songLyricsVersions: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics/versions`,
   songLyricsVersionRevert: (songId: string, version: number) => `${apiV1Base()}/music/songs/${songId}/lyrics/versions/${version}/revert`,
   artistBookmarks: () => `${apiV1Base()}/music/bookmarks/artists`,
@@ -1208,6 +1210,11 @@ export async function listMusicListeningHistory(
 
 export async function getMusicSongLyrics(songId: string): Promise<MusicSongLyrics> {
   return apiGet<MusicSongLyrics>(musicV1Endpoints.songLyrics(songId))
+}
+
+export async function listPendingMusicLyricsAnnotations(): Promise<PendingMusicLyricsAnnotation[]> {
+  const response = await apiGetEnvelope<PendingMusicLyricsAnnotation[]>(musicV1Endpoints.pendingLyricAnnotations())
+  return response.data
 }
 
 export async function updateMusicSongLyrics(songId: string, input: UpdateMusicSongLyricsInput): Promise<MusicSongLyrics> {

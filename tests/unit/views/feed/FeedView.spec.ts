@@ -27,6 +27,51 @@ vi.mock('@/composables/useAsyncNavigate', () => ({
   }),
 }))
 
+const feedViewStubs = {
+  PButton: true,
+  PModal: true,
+  PEmpty: true,
+  PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+  PSelect: true,
+  PField: true,
+  PPress: { props: ['label'], template: '<button type="button">{{ label }}</button>' },
+  PBadge: { template: '<span><slot /></span>' },
+  PClip: {
+    props: ['label'],
+    emits: ['click'],
+    template: '<button type="button" class="p-clip-stub" @click="$emit(\'click\')">{{ label }}</button>',
+  },
+  PShortcutHints: true,
+  SubscriptionAddSheet: true,
+  SubscriptionManageSheet: true,
+  FeedArticleSheet: true,
+  FeedSourceArticlesSheet: true,
+}
+
+const clusteredTimelineResponse = (isRead = false) => ({
+  data: [{
+    type: 'feed_item',
+    feed_item: {
+      id: 'cluster-primary',
+      feed_source_id: 'source-a',
+      feed_source: { id: 'source-a', source_type: 'external_rss', title: 'Source A' },
+      guid: 'cluster-primary',
+      title: '同题报道',
+      link: 'https://example.com/story',
+      summary: '摘要',
+      author: '作者',
+      published_at: '2026-07-19T00:00:00Z',
+      fetched_at: '2026-07-19T00:00:00Z',
+      duplicate_count: 2,
+      duplicate_sources: ['Source A', 'Source B'],
+      duplicate_item_ids: ['cluster-primary', 'cluster-copy'],
+    },
+    published_at: '2026-07-19T00:00:00Z',
+    is_read: isRead,
+  }],
+  meta: { page: 1, page_size: 20, total: 1, has_more: false },
+})
+
 describe('FeedView', () => {
   beforeEach(() => {
     navigateModuleWithShutter.mockReset()
@@ -82,6 +127,209 @@ describe('FeedView', () => {
     feedStore.deleteSubscriptionRule = vi.fn().mockResolvedValue(true) as any
     feedStore.reorderSubscriptionRules = vi.fn().mockResolvedValue(true) as any
     feedStore.applySubscriptionRules = vi.fn().mockResolvedValue(true) as any
+  })
+
+  it('merges duplicate stories by default and persists an explicit off state', async () => {
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    const timelineCall = vi.mocked(globalThis.fetch).mock.calls.find(([input]) => String(input).includes('/feed/timeline?'))
+    expect(String(timelineCall?.[0])).toContain('hide_duplicates=true')
+    const toggle = wrapper.get('[data-test="feed-merge-duplicates"]')
+    expect((toggle.element as HTMLInputElement).checked).toBe(true)
+
+    await toggle.setValue(false)
+    await flushPromises()
+    expect(routerReplace).toHaveBeenLastCalledWith({
+      query: expect.objectContaining({ merge_duplicates: 'false', page: undefined }),
+    })
+  })
+
+  it('keeps a single source timeline unmerged and hides the merge control', async () => {
+    routeQuery.source_id = 'subscription-a'
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [{
+      id: 'subscription-a',
+      user_id: 'viewer',
+      feed_source_id: 'source-a',
+      title: 'Source A',
+      created_at: '2026-01-01T00:00:00Z',
+    }]
+
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    const timelineCall = vi.mocked(globalThis.fetch).mock.calls.find(([input]) => String(input).includes('/feed/timeline?'))
+    expect(String(timelineCall?.[0])).not.toContain('hide_duplicates=true')
+    expect(wrapper.find('[data-test="feed-merge-duplicates"]').exists()).toBe(false)
+  })
+
+  it('restores the explicit unmerged route state', async () => {
+    routeQuery.merge_duplicates = 'false'
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    const timelineCall = vi.mocked(globalThis.fetch).mock.calls.find(([input]) => String(input).includes('/feed/timeline?'))
+    expect(String(timelineCall?.[0])).not.toContain('hide_duplicates=true')
+    expect((wrapper.get('[data-test="feed-merge-duplicates"]').element as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('shows duplicate sources and marks the whole cluster read while saving only the primary', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(clusteredTimelineResponse()), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const feedStore = useFeedStore()
+    const markRead = vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(true)
+    const toggleStar = vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(undefined as any)
+    const toggleReadingList = vi.spyOn(feedStore, 'toggleReadingListItem').mockResolvedValue(undefined as any)
+
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('来自 2 个来源')
+    expect(wrapper.find('[data-test="feed-duplicate-sources"]').exists()).toBe(false)
+    await wrapper.get('[data-test="feed-duplicate-toggle"]').trigger('click')
+    expect(wrapper.get('[data-test="feed-duplicate-sources"]').text()).toContain('Source A')
+    expect(wrapper.get('[data-test="feed-duplicate-sources"]').text()).toContain('Source B')
+
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+    expect(markRead).toHaveBeenCalledWith(['cluster-primary', 'cluster-copy'])
+
+    await wrapper.findAll('.p-clip-stub').find((button) => button.text() === '收藏')!.trigger('click')
+    await wrapper.findAll('.p-clip-stub').find((button) => button.text() === '稍后阅读')!.trigger('click')
+    expect(toggleStar).toHaveBeenCalledWith('cluster-primary')
+    expect(toggleReadingList).toHaveBeenCalledWith('cluster-primary')
+  })
+
+  it('groups duplicate source details in a responsive summary block', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(clusteredTimelineResponse()), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    const summary = wrapper.get('[data-test="feed-duplicate-summary"]')
+    expect(summary.get('[data-test="feed-duplicate-toggle"]').exists()).toBe(true)
+    await summary.get('[data-test="feed-duplicate-toggle"]').trigger('click')
+    expect(summary.get('[data-test="feed-duplicate-sources"]').text()).toContain('Source B')
+  })
+
+  it('rolls a clustered item back to unread when group marking fails', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(clusteredTimelineResponse()), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(false)
+
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+    await wrapper.get('.p-entry').trigger('click')
+    await flushPromises()
+
+    expect(feedStore.markItemsRead).toHaveBeenCalledWith(['cluster-primary', 'cluster-copy'])
+    expect(wrapper.get('.p-entry').classes()).not.toContain('is-read')
+  })
+
+  it('rolls a source article back to unread when marking fails', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(clusteredTimelineResponse()), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(false)
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+    const sourceItem = JSON.parse(JSON.stringify((wrapper.vm as any).timeline[0]))
+    ;(wrapper.vm as any).sourceArticles = [sourceItem]
+
+    ;(wrapper.vm as any).openSourceArticle(sourceItem)
+    await flushPromises()
+
+    expect(sourceItem.is_read).toBe(false)
+  })
+
+  it('marks the whole cluster unread from the timeline read toggle', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(clusteredTimelineResponse(true)), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const feedStore = useFeedStore()
+    const markUnread = vi.spyOn(feedStore, 'markItemsUnread').mockResolvedValue(true)
+
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+    ;(wrapper.vm as any).toggleRead((wrapper.vm as any).timeline[0])
+    await flushPromises()
+
+    expect(markUnread).toHaveBeenCalledWith(['cluster-primary', 'cluster-copy'])
+  })
+
+  it('marks the whole cluster read when podcast playback starts', async () => {
+    const response = clusteredTimelineResponse()
+    Object.assign(response.data[0].feed_item, {
+      enclosure_url: 'https://example.com/episode.mp3',
+      enclosure_type: 'audio/mpeg',
+    })
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(response), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const feedStore = useFeedStore()
+    const markRead = vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(true)
+    const playerStore = usePlayerStore()
+    vi.spyOn(playerStore, 'playQueuedSong').mockImplementation(() => undefined)
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    ;(wrapper.vm as any).playFeedItemFromSheet((wrapper.vm as any).timeline[0].feed_item)
+    await flushPromises()
+
+    expect(markRead).toHaveBeenCalledWith(['cluster-primary', 'cluster-copy'])
+  })
+
+  it('expands auto-read to the cluster but auto-saves only the primary item', async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline?')) {
+        return new Response(JSON.stringify(clusteredTimelineResponse()), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const feedStore = useFeedStore()
+    feedStore.subscriptions = [{
+      id: 'subscription-a',
+      user_id: 'viewer',
+      feed_source_id: 'source-a',
+      feed_source: { id: 'source-a', source_type: 'external_rss', hash: 'source-a', created_at: '2026-01-01T00:00:00Z' },
+      title: 'Source A',
+      auto_mark_read: true,
+      auto_add_reading_list: true,
+      created_at: '2026-01-01T00:00:00Z',
+    }]
+    const markRead = vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(true)
+    const toggleReadingList = vi.spyOn(feedStore, 'toggleReadingListItem').mockResolvedValue(undefined as any)
+
+    mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+
+    expect(markRead).toHaveBeenCalledWith(['cluster-primary', 'cluster-copy'])
+    expect(toggleReadingList).toHaveBeenCalledWith('cluster-primary')
   })
 
   it('subscribes selected onboarding recommendations and completes after one success', async () => {

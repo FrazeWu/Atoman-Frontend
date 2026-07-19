@@ -1,7 +1,9 @@
-import { mount } from '@vue/test-utils'
-import { computed } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import { computed, nextTick, reactive } from 'vue'
+import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HomeView from '@/views/music/HomeView.vue'
+import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 
 const mocks = vi.hoisted(() => ({
   openAlbum: vi.fn(),
@@ -13,7 +15,15 @@ const mocks = vi.hoisted(() => ({
   openMusicEditor: vi.fn(),
   closeMusicEditor: vi.fn(),
   routeQuery: {} as Record<string, string>,
+  listPendingMusicLyricsAnnotations: vi.fn(),
+  routerPush: vi.fn(),
 }))
+
+const authStore = reactive({
+  isAuthenticated: false,
+  token: null as string | null,
+  user: null as null | { uuid: string },
+})
 
 vi.mock('@/views/music/ExploreView.vue', () => ({
   default: {
@@ -49,6 +59,18 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
+vi.mock('@/api/musicV1', () => ({
+  listPendingMusicLyricsAnnotations: mocks.listPendingMusicLyricsAnnotations,
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => authStore,
+}))
+
+vi.mock('@/router', () => ({
+  default: { push: mocks.routerPush },
+}))
+
 describe('Music HomeView.vue (Album Landing)', () => {
   beforeEach(() => {
     mocks.openAlbum.mockReset()
@@ -59,11 +81,16 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.closeMusicCreationFlow.mockReset()
     mocks.openMusicEditor.mockReset()
     mocks.closeMusicEditor.mockReset()
+    mocks.listPendingMusicLyricsAnnotations.mockReset()
+    mocks.routerPush.mockReset()
+    authStore.isAuthenticated = false
+    authStore.token = null
+    authStore.user = null
     mocks.routeQuery = {}
   })
 
   it('renders the album landing content for the music module entry', () => {
-    const wrapper = mount(HomeView)
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('专辑首页')
@@ -77,7 +104,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       artist: 'artist-1',
     }
 
-    mount(HomeView)
+    mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
@@ -89,7 +116,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       editor: 'album-edit',
     }
 
-    mount(HomeView)
+    mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({
       entity: 'album',
@@ -104,7 +131,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       name: 'Seed Artist',
     }
 
-    mount(HomeView)
+    mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({
       entity: 'artist',
@@ -112,5 +139,81 @@ describe('Music HomeView.vue (Album Landing)', () => {
       seed: { name: 'Seed Artist' },
     })
     expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
+  })
+
+  it('shows the authenticated user exact pending rebind count and opens the first task', async () => {
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-1' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
+      { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
+      { annotation_id: 'annotation-2', song_id: 'song-2', album_id: 'album-2' },
+    ])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await nextTick()
+    await nextTick()
+
+    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="music-pending-rebind"]').text()).toContain('2')
+
+    await wrapper.get('[data-testid="music-pending-rebind"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.routerPush).toHaveBeenCalledWith({
+      path: '/music/album/album-1',
+      query: { song_id: 'song-1', annotation_id: 'annotation-1', rebind: '1' },
+    })
+  })
+
+  it('does not show a pending rebind entry when the authenticated user has no tasks', async () => {
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-1' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await nextTick()
+    await nextTick()
+
+    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
+  })
+
+  it('removes the pending rebind entry after the annotation is rebound', async () => {
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-1' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
+      { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
+    ])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(true)
+
+    removePendingMusicLyricsAnnotation('annotation-1')
+    await nextTick()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
+  })
+
+  it('clears the pending rebind entry when the user logs out', async () => {
+    authStore.isAuthenticated = true
+    authStore.token = 'token-a'
+    authStore.user = { uuid: 'user-a' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
+      { annotation_id: 'annotation-a', song_id: 'song-a', album_id: 'album-a' },
+    ])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(true)
+
+    authStore.isAuthenticated = false
+    authStore.token = null
+    authStore.user = null
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
   })
 })

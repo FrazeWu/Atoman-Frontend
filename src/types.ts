@@ -956,9 +956,48 @@ export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====
 
-export type DebateStatus = 'open' | 'concluded' | 'archived'
+export type DebateVoteDirection = 'yes' | 'no'
+export type DebateReferenceState = 'active' | 'stale' | 'unavailable'
+export type DebateResourceKind =
+  | 'post'
+  | 'thread'
+  | 'debate'
+  | 'feed'
+  | 'article'
+  | 'artist'
+  | 'album'
+  | 'song'
+  | 'playlist'
+  | 'podcast'
+  | 'episode'
+  | 'video'
+  | 'person'
+  | 'event'
+  | 'channel'
+  | 'collection'
+  | 'comment'
+
+export type DebateStatus =
+  | 'active'
+  | 'archived'
+  /** @deprecated Task 11 removes the legacy debate status. */
+  | 'open'
+  /** @deprecated Task 11 removes the legacy debate status. */
+  | 'concluded'
+
+/** @deprecated Task 11 removes the legacy argument model. */
 export type ArgumentType = 'support' | 'oppose' | 'neutral' | 'evidence' | 'question' | 'counter'
 export type DebateRelationStance = 'support' | 'oppose'
+
+export interface DebateReference {
+  raw: string
+  kind: DebateResourceKind
+  resource_id: string
+  title: string
+  qualifier: string
+  state: DebateReferenceState
+  relation_id?: string
+}
 
 export interface Debate {
   id: string
@@ -970,17 +1009,27 @@ export interface Debate {
   status: DebateStatus
   tags: string[]
   view_count: number
-  argument_count: number
-  vote_count: number
+  current_revision_id?: string
+  current_conclusion_event_id?: string
+  references?: DebateReference[]
+  /** @deprecated Task 11 removes legacy argument statistics. */
+  argument_count?: number
+  /** @deprecated Task 11 removes legacy vote statistics. */
+  vote_count?: number
   conclusion_type?: 'yes' | 'no' | 'inconclusive' | ''
+  /** @deprecated Task 11 removes the legacy conclusion summary. */
   conclusion_summary?: string
+  /** @deprecated Task 11 removes the legacy conclusion vote count. */
   conclude_vote_count?: number
+  /** @deprecated Task 11 removes the legacy conclusion threshold. */
   conclude_threshold?: number
   created_at: string
   updated_at: string
+  /** @deprecated Task 11 removes the legacy concluded timestamp. */
   concluded_at?: string
 }
 
+/** @deprecated Task 11 removes the legacy argument model. */
 export interface Argument {
   id: string
   debate_id: string
@@ -1008,6 +1057,7 @@ export interface Argument {
   updated_at: string
 }
 
+/** @deprecated Task 11 removes the legacy argument vote model. */
 export interface DebateVote {
   id: string
   argument_id: string
@@ -1019,6 +1069,59 @@ export interface DebateVote {
   updated_at: string
 }
 
+export interface DebateRevisionSnapshot {
+  title: string
+  description: string
+  content: string
+  tags: string[]
+}
+
+export interface DebateRevision {
+  id: string
+  version_number: number
+  previous_revision_id?: string
+  editor_id: string
+  editor?: User
+  edit_summary: string
+  edit_type: string
+  status: string
+  is_current: boolean
+  created_at: string
+  snapshot: DebateRevisionSnapshot
+  references?: DebateReference[]
+}
+
+export interface DebateRevisionFieldDiff {
+  before: unknown
+  after: unknown
+  changed: boolean
+}
+
+export interface DebateRevisionDiff {
+  revision_id: string
+  against_revision_id: string
+  changes: Record<string, DebateRevisionFieldDiff>
+}
+
+export interface DebateVoteSummary {
+  yes_votes: number
+  no_votes: number
+  total_votes: number
+  current_direction: DebateVoteDirection | ''
+  current_user_vote: DebateVoteDirection | ''
+}
+
+export interface DebateConclusionEvent {
+  id: string
+  debate_id: string
+  direction: DebateVoteDirection
+  yes_votes: number
+  no_votes: number
+  total_votes: number
+  created_at: string
+  updated_at: string
+}
+
 export interface DebateRelation {
   id: string
   source_debate_id: string
@@ -1026,7 +1129,12 @@ export interface DebateRelation {
   target_debate_id: string
   target_debate?: Debate
   stance: DebateRelationStance
-  user_id: string
+  target_revision_id: string
+  source_conclusion_event_id: string
+  status: DebateReferenceState
+  /** @deprecated Relations are projected from wiki references and have no owner. */
+  user_id?: string
+  /** @deprecated Relations are projected from wiki references and have no owner. */
   user?: User
   created_at: string
   updated_at: string
@@ -1036,6 +1144,7 @@ export interface DebateGraph {
   root_id: string
   nodes: Debate[]
   relations: DebateRelation[]
+  expandable_node_ids: string[]
 }
 
 export interface VoteHistory {

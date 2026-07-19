@@ -1,15 +1,57 @@
 import { ref } from "vue";
 import { defineStore } from "pinia";
-import type { Debate, Argument, DebateGraph, DebateRelation, DebateRelationStance, DebateVote } from "@/types";
+import type {
+  Argument,
+  Debate,
+  DebateConclusionEvent,
+  DebateGraph,
+  DebateRelation,
+  DebateRelationStance,
+  DebateRevision,
+  DebateRevisionDiff,
+  DebateStatus,
+  DebateVote,
+  DebateVoteDirection,
+  DebateVoteSummary,
+} from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from '@/composables/useApi'
 
 const api = useApi();
 
+type WikiConcurrencyPayload = {
+  base_revision: string;
+  edit_summary: string;
+};
+
+type SaveWikiPayload = WikiConcurrencyPayload & {
+  title: string;
+  description: string;
+  content: string;
+  tags: string[];
+};
+
+type SaveWikiResult =
+  | { ok: true; debate: Debate }
+  | {
+      ok: false;
+      conflict?: { base_revision_id: string; current_revision_id: string };
+    };
+
+type DebateListMeta = {
+  page: number;
+  page_size: number;
+  total: number;
+  has_more: boolean;
+};
+
 export const useDebateStore = defineStore("debate", () => {
   const debates = ref<Debate[]>([]);
   const debatesTotal = ref(0);
+  const debatesMeta = ref<DebateListMeta>({ page: 1, page_size: 20, total: 0, has_more: false });
   const currentDebate = ref<Debate | null>(null);
+  const voteSummary = ref<DebateVoteSummary | null>(null);
+  const revisions = ref<DebateRevision[]>([]);
   const argumentList = ref<Argument[]>([]);
 	const relationGraph = ref<DebateGraph | null>(null);
 	const relationLoading = ref(false);
@@ -21,16 +63,19 @@ export const useDebateStore = defineStore("debate", () => {
   const userVotes = ref<Record<string, number>>({});
   let debatesRequestSequence = 0;
 
-  const authHeaders = () => {
+  const authHeaders = (): Record<string, string> => {
     const authStore = useAuthStore();
-    return { Authorization: `Bearer ${authStore.token}` };
+    return authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {};
   };
 
   const fetchDebates = async (
     params: {
-      status?: "open" | "concluded" | "archived";
+      status?: DebateStatus;
+      search?: string;
       tag?: string;
       page?: number;
+      pageSize?: number;
+      /** @deprecated Use pageSize. */
       limit?: number;
     } = {},
   ) => {
@@ -40,9 +85,11 @@ export const useDebateStore = defineStore("debate", () => {
     try {
       const query = new URLSearchParams();
       if (params.status) query.set("status", params.status);
+      if (params.search) query.set("search", params.search);
       if (params.tag) query.set("tag", params.tag);
       if (params.page) query.set("page", String(params.page));
-      if (params.limit) query.set("limit", String(params.limit));
+      const pageSize = params.pageSize ?? params.limit;
+      if (pageSize) query.set("page_size", String(pageSize));
 
       const res = await fetch(`${api.url}/debate/topics?${query}`);
       if (requestSequence !== debatesRequestSequence) return false;
@@ -51,7 +98,13 @@ export const useDebateStore = defineStore("debate", () => {
       if (requestSequence !== debatesRequestSequence) return false;
       const rows = data.data || [];
       debates.value = (params.page || 1) > 1 ? [...debates.value, ...rows] : rows;
-      debatesTotal.value = data.meta?.total || 0;
+      debatesMeta.value = {
+        page: data.meta?.page ?? params.page ?? 1,
+        page_size: data.meta?.page_size ?? pageSize ?? 20,
+        total: data.meta?.total ?? rows.length,
+        has_more: Boolean(data.meta?.has_more),
+      };
+      debatesTotal.value = debatesMeta.value.total;
       return true;
     } catch (e) {
       if (requestSequence !== debatesRequestSequence) return false;
@@ -85,23 +138,34 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
-	const fetchRelationGraph = async (id: string, view: 'tree' | 'graph' = 'tree'): Promise<DebateGraph | null> => {
-		relationLoading.value = true
-		try {
-			const res = await fetch(`${api.url}/debates/${id}/relations?view=${view}`)
-			if (!res.ok) return null
-			const payload = await res.json()
-			relationGraph.value = payload.data as DebateGraph
-			return relationGraph.value
-		} catch (e) {
-			console.error('Failed to fetch debate relations', e)
+		const fetchRelationGraph = async (
+      id: string,
+      view: 'tree' | 'graph' = 'tree',
+      depth?: number,
+    ): Promise<DebateGraph | null> => {
+			relationLoading.value = true
+			error.value = null
+			try {
+				const depthQuery = depth === undefined ? '' : `&depth=${depth}`
+				const res = await fetch(`${api.url}/debates/${id}/relations?view=${view}${depthQuery}`)
+				if (!res.ok) {
+          error.value = 'Failed to fetch debate relations'
+          return null
+        }
+				const payload = await res.json()
+				relationGraph.value = payload.data as DebateGraph
+				return relationGraph.value
+			} catch (e) {
+				error.value = 'Failed to fetch debate relations'
+				console.error('Failed to fetch debate relations', e)
 			return null
 		} finally {
 			relationLoading.value = false
 		}
 	}
 
-	const createRelation = async (
+		/** @deprecated Relations are projected from wiki references. */
+		const createRelation = async (
 		sourceDebateId: string,
 		targetDebateId: string,
 		stance: DebateRelationStance,
@@ -125,7 +189,8 @@ export const useDebateStore = defineStore("debate", () => {
 		}
 	}
 
-	const deleteRelation = async (relationId: string): Promise<boolean> => {
+		/** @deprecated Relations are projected from wiki references. */
+		const deleteRelation = async (relationId: string): Promise<boolean> => {
 		try {
 			const res = await fetch(`${api.url}/debate-relations/${relationId}`, {
 				method: 'DELETE',
@@ -138,15 +203,15 @@ export const useDebateStore = defineStore("debate", () => {
 		}
 	}
 
+  /** @deprecated Task 11 removes arguments. */
   const fetchArguments = async (debateId: string, options: { page?: number; reset?: boolean } = {}) => {
 	const requestedPage = options.page ?? (options.reset === false ? argumentsPage.value + 1 : 1)
 	const reset = options.reset !== false
     loading.value = true;
     error.value = null;
     try {
-      const authStore = useAuthStore();
       const res = await fetch(`${api.url}/debates/${debateId}/arguments?page=${requestedPage}&page_size=20`, {
-        headers: authStore.isAuthenticated ? authHeaders() : {},
+        headers: authHeaders(),
       });
       if (res.ok) {
         const data = await res.json();
@@ -181,6 +246,7 @@ export const useDebateStore = defineStore("debate", () => {
     content: string;
     tags: string[];
   }): Promise<Debate | null> => {
+    error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics`, {
         method: "POST",
@@ -191,15 +257,254 @@ export const useDebateStore = defineStore("debate", () => {
         const data = await res.json();
         return data.data as Debate;
       } else {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to create debate");
+        throw new Error("Failed to create debate");
       }
     } catch (e) {
+      error.value = "Failed to create debate";
       console.error("Failed to create debate", e);
       return null;
     }
   };
 
+  const saveWiki = async (
+    id: string,
+    payload: SaveWikiPayload,
+  ): Promise<SaveWikiResult> => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(payload),
+      });
+      const responsePayload = await res.json();
+      if (res.ok) {
+        const debate = responsePayload.data as Debate;
+        currentDebate.value = debate;
+        return { ok: true, debate };
+      }
+
+      const apiError = responsePayload.error;
+      if (res.status === 409 && apiError?.code === "debate.edit_conflict") {
+        const details = apiError.details;
+        if (
+          typeof details?.base_revision_id === "string"
+          && typeof details?.current_revision_id === "string"
+        ) {
+          return {
+            ok: false,
+            conflict: {
+              base_revision_id: details.base_revision_id,
+              current_revision_id: details.current_revision_id,
+            },
+          };
+        }
+      }
+
+      error.value = apiError?.message || "Failed to save debate";
+      return { ok: false };
+    } catch (e) {
+      error.value = "Failed to save debate";
+      console.error("Failed to save debate", e);
+      return { ok: false };
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fetchRevisions = async (id: string): Promise<DebateRevision[] | null> => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/revisions`);
+      if (!res.ok) {
+        error.value = "Failed to fetch revisions";
+        return null;
+      }
+      const data = await res.json();
+      revisions.value = (data.data || []) as DebateRevision[];
+      return revisions.value;
+    } catch (e) {
+      error.value = "Failed to fetch revisions";
+      console.error("Failed to fetch revisions", e);
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fetchRevision = async (id: string, revisionID: string): Promise<DebateRevision | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/revisions/${revisionID}`);
+      if (!res.ok) {
+        error.value = "Failed to fetch revision";
+        return null;
+      }
+      const data = await res.json();
+      return data.data as DebateRevision;
+    } catch (e) {
+      error.value = "Failed to fetch revision";
+      console.error("Failed to fetch revision", e);
+      return null;
+    }
+  };
+
+  const fetchRevisionDiff = async (
+    id: string,
+    revisionID: string,
+    against: string,
+  ): Promise<DebateRevisionDiff | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(
+        `${api.url}/debate/topics/${id}/revisions/${revisionID}/diff?against=${encodeURIComponent(against)}`,
+      );
+      if (!res.ok) {
+        error.value = "Failed to fetch revision diff";
+        return null;
+      }
+      const data = await res.json();
+      return data.data as DebateRevisionDiff;
+    } catch (e) {
+      error.value = "Failed to fetch revision diff";
+      console.error("Failed to fetch revision diff", e);
+      return null;
+    }
+  };
+
+  const revertRevision = async (
+    id: string,
+    revisionID: string,
+    payload: WikiConcurrencyPayload,
+  ): Promise<Debate | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/revisions/${revisionID}/revert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        error.value = "Failed to revert revision";
+        return null;
+      }
+      const data = await res.json();
+      currentDebate.value = data.data as Debate;
+      return currentDebate.value;
+    } catch (e) {
+      error.value = "Failed to revert revision";
+      console.error("Failed to revert revision", e);
+      return null;
+    }
+  };
+
+  const reconfirmReference = async (
+    id: string,
+    relationID: string,
+    payload: WikiConcurrencyPayload,
+  ): Promise<Debate | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/references/${relationID}/reconfirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        error.value = "Failed to reconfirm reference";
+        return null;
+      }
+      const data = await res.json();
+      currentDebate.value = data.data as Debate;
+      return currentDebate.value;
+    } catch (e) {
+      error.value = "Failed to reconfirm reference";
+      console.error("Failed to reconfirm reference", e);
+      return null;
+    }
+  };
+
+  const fetchVotes = async (id: string): Promise<DebateVoteSummary | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/votes`, { headers: authHeaders() });
+      if (!res.ok) {
+        error.value = "Failed to fetch votes";
+        return null;
+      }
+      const data = await res.json();
+      voteSummary.value = data.data as DebateVoteSummary;
+      return voteSummary.value;
+    } catch (e) {
+      error.value = "Failed to fetch votes";
+      console.error("Failed to fetch votes", e);
+      return null;
+    }
+  };
+
+  const setVote = async (id: string, direction: DebateVoteDirection): Promise<DebateVoteSummary | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/vote`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ direction }),
+      });
+      if (!res.ok) {
+        error.value = "Failed to set vote";
+        return null;
+      }
+      const data = await res.json();
+      voteSummary.value = data.data as DebateVoteSummary;
+      return voteSummary.value;
+    } catch (e) {
+      error.value = "Failed to set vote";
+      console.error("Failed to set vote", e);
+      return null;
+    }
+  };
+
+  const removeVote = async (id: string): Promise<DebateVoteSummary | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/vote`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        error.value = "Failed to remove vote";
+        return null;
+      }
+      const data = await res.json();
+      voteSummary.value = data.data as DebateVoteSummary;
+      return voteSummary.value;
+    } catch (e) {
+      error.value = "Failed to remove vote";
+      console.error("Failed to remove vote", e);
+      return null;
+    }
+  };
+
+  const fetchConclusions = async (id: string): Promise<DebateConclusionEvent[] | null> => {
+    error.value = null;
+    try {
+      const res = await fetch(`${api.url}/debate/topics/${id}/conclusions`);
+      if (!res.ok) {
+        error.value = "Failed to fetch conclusions";
+        return null;
+      }
+      const data = await res.json();
+      return (data.data || []) as DebateConclusionEvent[];
+    } catch (e) {
+      error.value = "Failed to fetch conclusions";
+      console.error("Failed to fetch conclusions", e);
+      return null;
+    }
+  };
+
+  /** @deprecated Use saveWiki with optimistic concurrency fields. */
   const updateDebate = async (
     id: string,
     payload: {
@@ -228,6 +533,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Task 11 removes the legacy delete action. */
   const deleteDebate = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}`, {
@@ -241,6 +547,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Conclusions are derived from community votes. */
   const concludeDebate = async (
     id: string,
     payload: { conclusion_type: 'yes' | 'no'; conclusion_summary?: string },
@@ -264,6 +571,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   }
 
+  /** @deprecated Conclusions are immutable events. */
   const reopenDebate = async (id: string): Promise<Debate | null> => {
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}/reopen`, {
@@ -283,6 +591,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   }
 
+  /** @deprecated Use setVote. */
   const voteToConclude = async (
     id: string,
   ): Promise<{ conclude_vote_count: number; conclude_threshold: number; auto_concluded: boolean } | null> => {
@@ -306,7 +615,7 @@ export const useDebateStore = defineStore("debate", () => {
 
   const searchDebates = async (q: string, limit = 10): Promise<Debate[]> => {
     try {
-      const res = await fetch(`${api.url}/debate/topics/search?q=${encodeURIComponent(q)}&limit=${limit}`)
+      const res = await fetch(`${api.url}/debate/topics?search=${encodeURIComponent(q.trim())}&page_size=${limit}`)
       if (res.ok) {
         const data = await res.json()
         return data.data || []
@@ -321,12 +630,13 @@ export const useDebateStore = defineStore("debate", () => {
 	const searchCitableDebates = async (q: string, excludeId = ''): Promise<Debate[]> => {
 		try {
 			const query = encodeURIComponent(q.trim())
-			const res = await fetch(`${api.url}/debate/topics/search?q=${query}&status=concluded&limit=10`)
+			const res = await fetch(`${api.url}/debate/topics?search=${query}&status=active&page_size=10`)
 			if (!res.ok) return []
 			const payload = await res.json()
 			return ((payload.data || []) as Debate[]).filter((candidate) => (
 				candidate.id !== excludeId
-				&& candidate.status === 'concluded'
+				&& candidate.status !== 'archived'
+				&& Boolean(candidate.current_conclusion_event_id)
 				&& (candidate.conclusion_type === 'yes' || candidate.conclusion_type === 'no')
 			))
 		} catch (e) {
@@ -335,6 +645,7 @@ export const useDebateStore = defineStore("debate", () => {
 		}
 	}
 
+  /** @deprecated Task 11 removes argument references. */
   const addDebateReference = async (argumentId: string, debateId: string): Promise<boolean> => {
     try {
       const res = await fetch(`${api.url}/debate-arguments/${argumentId}/debate-reference`, {
@@ -349,6 +660,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   }
 
+  /** @deprecated Task 11 removes argument references. */
   const removeDebateReference = async (argumentId: string, debateId: string): Promise<boolean> => {
     try {
       const res = await fetch(
@@ -365,6 +677,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   }
 
+  /** @deprecated Task 11 removes arguments. */
   const createArgument = async (
     debateId: string,
     payload: {
@@ -403,6 +716,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Task 11 removes arguments. */
   const updateArgument = async (
     id: string,
     payload: {
@@ -440,6 +754,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Task 11 removes arguments. */
   const deleteArgument = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`${api.url}/debate-arguments/${id}`, {
@@ -453,6 +768,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Task 11 removes argument votes. */
   const voteArgument = async (
     argumentId: string,
     voteType: number,
@@ -481,7 +797,8 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
-  const removeVote = async (argumentId: string): Promise<boolean> => {
+  /** @deprecated Task 11 removes argument votes. */
+  const removeArgumentVote = async (argumentId: string): Promise<boolean> => {
     try {
       const res = await fetch(
         `${api.url}/debate-arguments/${argumentId}/vote`,
@@ -501,6 +818,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Task 11 removes argument references. */
   const addArgumentReference = async (
     argumentId: string,
     referenceId: string,
@@ -521,6 +839,7 @@ export const useDebateStore = defineStore("debate", () => {
     }
   };
 
+  /** @deprecated Task 11 removes argument references. */
   const removeArgumentReference = async (
     argumentId: string,
     referenceId: string,
@@ -544,7 +863,10 @@ export const useDebateStore = defineStore("debate", () => {
     debatesRequestSequence += 1;
     debates.value = [];
     debatesTotal.value = 0;
+    debatesMeta.value = { page: 1, page_size: 20, total: 0, has_more: false };
     currentDebate.value = null;
+		voteSummary.value = null;
+		revisions.value = [];
 		relationGraph.value = null;
     argumentList.value = [];
 	argumentsPage.value = 0;
@@ -557,7 +879,10 @@ export const useDebateStore = defineStore("debate", () => {
   return {
     debates,
     debatesTotal,
+		debatesMeta,
     currentDebate,
+		voteSummary,
+		revisions,
 		relationGraph,
 		relationLoading,
     argumentList,
@@ -568,6 +893,16 @@ export const useDebateStore = defineStore("debate", () => {
     userVotes,
     fetchDebates,
     fetchDebate,
+		saveWiki,
+		fetchRevisions,
+		fetchRevision,
+		fetchRevisionDiff,
+		revertRevision,
+		reconfirmReference,
+		fetchVotes,
+		setVote,
+		removeVote,
+		fetchConclusions,
 		fetchRelationGraph,
 		createRelation,
 		deleteRelation,
@@ -584,7 +919,7 @@ export const useDebateStore = defineStore("debate", () => {
     updateArgument,
     deleteArgument,
     voteArgument,
-    removeVote,
+		removeArgumentVote,
     addArgumentReference,
     removeArgumentReference,
     addDebateReference,

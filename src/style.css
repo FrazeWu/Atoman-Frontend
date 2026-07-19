@@ -726,6 +726,28 @@ body:has(.app-shell.has-sidebar) {
   background: var(--a-color-bg);
 }
 
+/* Modal Transition */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .p-modal {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-fade-leave-active .p-modal {
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease-in;
+}
+.modal-fade-enter-from .p-modal,
+.modal-fade-leave-to .p-modal {
+  transform: scale(0.95);
+  opacity: 0;
+}
+
 /* ─── Dropdown / Popover ─────────────────────────────── */
 .a-dropdown-root,
 .a-popover-root,
@@ -836,13 +858,34 @@ body:has(.app-shell.has-sidebar) {
 
 /* ─── Skeleton loader ─────────────────────────────────── */
 .a-skeleton {
+  position: relative;
+  overflow: hidden;
   background: var(--a-color-disabled-bg);
   border: var(--a-border);
-  animation: a-pulse 2s infinite;
 }
-@keyframes a-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+.a-skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.25) 30%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: a-shimmer 1.5s infinite cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes a-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* ─── Grid helpers ────────────────────────────────────── */

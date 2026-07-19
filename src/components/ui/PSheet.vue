@@ -373,10 +373,13 @@ const sheetStyle = computed(() => {
 }
 
 .slide-right-enter-active,
+.slide-left-enter-active {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out, box-shadow 0.35s;
+}
+
 .slide-right-leave-active,
-.slide-left-enter-active,
 .slide-left-leave-active {
-  transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.4s, opacity 0.4s;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease-in, box-shadow 0.25s;
 }
 
 .slide-right-enter-from,
@@ -393,9 +396,12 @@ const sheetStyle = computed(() => {
   opacity: 0;
 }
 
-.slide-up-enter-active,
+.slide-up-enter-active {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease-out, box-shadow 0.35s;
+}
+
 .slide-up-leave-active {
-  transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.4s, opacity 0.4s;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s ease-in, box-shadow 0.25s;
 }
 
 .slide-up-enter-from,

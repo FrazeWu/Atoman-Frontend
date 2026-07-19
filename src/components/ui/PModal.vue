@@ -1,33 +1,35 @@
 <template>
   <Teleport to="body">
-    <div
-      v-if="visible"
-      class="p-modal-backdrop"
-      :class="{ 'p-modal-backdrop--above-player': abovePlayer }"
-      @click.self="handleClose"
-    >
+    <Transition name="modal-fade">
       <div
-        ref="dialogRef"
-        class="p-modal"
-        :class="`p-modal-${size}`"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="title || undefined"
-        tabindex="-1"
-        @keydown="handleKeydown"
+        v-if="visible"
+        class="p-modal-backdrop"
+        :class="{ 'p-modal-backdrop--above-player': abovePlayer }"
+        @click.self="handleClose"
       >
-        <div v-if="title || closable" class="p-modal-header">
-          <span class="p-modal-title">{{ title }}</span>
-          <button v-if="closable" class="p-modal-close" type="button" aria-label="关闭" title="关闭" @click="handleClose">✕</button>
-        </div>
-        <div class="p-modal-body">
-          <slot />
-        </div>
-        <div v-if="hasFooter" class="p-modal-footer">
-          <slot name="footer" />
+        <div
+          ref="dialogRef"
+          class="p-modal"
+          :class="`p-modal-${size}`"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="title || undefined"
+          tabindex="-1"
+          @keydown="handleKeydown"
+        >
+          <div v-if="title || closable" class="p-modal-header">
+            <span class="p-modal-title">{{ title }}</span>
+            <button v-if="closable" class="p-modal-close" type="button" aria-label="关闭" title="关闭" @click="handleClose">✕</button>
+          </div>
+          <div class="p-modal-body">
+            <slot />
+          </div>
+          <div v-if="hasFooter" class="p-modal-footer">
+            <slot name="footer" />
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 

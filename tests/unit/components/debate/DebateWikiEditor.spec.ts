@@ -1,12 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Debate } from '@/types'
+import type { Debate, DebateRevision } from '@/types'
 import DebateWikiEditor from '@/components/debate/DebateWikiEditor.vue'
 
 const mocks = vi.hoisted(() => ({
   saveWiki: vi.fn(),
   searchCitableDebates: vi.fn(),
+  fetchRevision: vi.fn(),
 }))
 
 vi.mock('@/stores/debate', () => ({
@@ -14,6 +15,7 @@ vi.mock('@/stores/debate', () => ({
     wikiSaving: false,
     saveWiki: mocks.saveWiki,
     searchCitableDebates: mocks.searchCitableDebates,
+    fetchRevision: mocks.fetchRevision,
   }),
 }))
 
@@ -30,6 +32,21 @@ const buildDebate = (overrides: Partial<Debate> = {}): Debate => ({
   created_at: '2026-07-01T08:00:00Z',
   updated_at: '2026-07-02T08:00:00Z',
   ...overrides,
+})
+
+const buildRevision = (
+  id: string,
+  snapshot: DebateRevision['snapshot'],
+): DebateRevision => ({
+  id,
+  version_number: id === 'revision-3' ? 3 : 4,
+  editor_id: 'editor-1',
+  edit_summary: '编辑辩题',
+  edit_type: 'edit',
+  status: 'approved',
+  is_current: id === 'revision-4',
+  created_at: '2026-07-02T08:00:00Z',
+  snapshot,
 })
 
 const mountEditor = (debate = buildDebate()) => mount(DebateWikiEditor, {
@@ -58,6 +75,7 @@ describe('DebateWikiEditor', () => {
   beforeEach(() => {
     mocks.saveWiki.mockReset()
     mocks.searchCitableDebates.mockReset()
+    mocks.fetchRevision.mockReset()
   })
 
   it('只插入已形成结论且未归档的辩题引用', async () => {
@@ -109,25 +127,51 @@ describe('DebateWikiEditor', () => {
         current_revision_id: 'revision-4',
       },
     })
+    mocks.fetchRevision
+      .mockResolvedValueOnce(buildRevision('revision-3', {
+        title: '基础标题',
+        description: '基础说明',
+        content: '基础正文',
+        tags: ['基础标签'],
+      }))
+      .mockResolvedValueOnce(buildRevision('revision-4', {
+        title: '当前标题',
+        description: '当前说明',
+        content: '当前正文',
+        tags: ['当前标签'],
+      }))
 
     const wrapper = mountEditor()
     await wrapper.get('[data-test="wiki-title"]').setValue('新的辩题标题')
+    await wrapper.get('[data-test="wiki-description"]').setValue('草稿说明')
     await wrapper.get('[data-test="wiki-content"]').setValue('尚未保存的正文')
+    await wrapper.get('[data-test="wiki-tags"]').setValue('草稿标签一, 草稿标签二')
     await wrapper.get('[data-test="wiki-edit-summary"]').setValue('补充交通数据')
     await wrapper.get('[data-test="save-wiki"]').trigger('click')
     await flushPromises()
 
     expect(mocks.saveWiki).toHaveBeenCalledWith('debate-root', {
       title: '新的辩题标题',
-      description: '评估公共交通投资。',
+      description: '草稿说明',
       content: '尚未保存的正文',
-      tags: ['交通', '城市'],
+      tags: ['草稿标签一', '草稿标签二'],
       base_revision: 'revision-3',
       edit_summary: '补充交通数据',
     })
-    expect(wrapper.get('[data-test="wiki-conflict"]').text()).toContain('revision-3')
-    expect(wrapper.get('[data-test="wiki-conflict"]').text()).toContain('revision-4')
-    expect(wrapper.get('[data-test="wiki-conflict"]').text()).toContain('新的辩题标题')
+    expect(mocks.fetchRevision).toHaveBeenNthCalledWith(1, 'debate-root', 'revision-3')
+    expect(mocks.fetchRevision).toHaveBeenNthCalledWith(2, 'debate-root', 'revision-4')
+    expect(wrapper.get('[data-test="wiki-conflict-base"]').text()).toContain('基础标题')
+    expect(wrapper.get('[data-test="wiki-conflict-base"]').text()).toContain('基础说明')
+    expect(wrapper.get('[data-test="wiki-conflict-base"]').text()).toContain('基础正文')
+    expect(wrapper.get('[data-test="wiki-conflict-base"]').text()).toContain('基础标签')
+    expect(wrapper.get('[data-test="wiki-conflict-current"]').text()).toContain('当前标题')
+    expect(wrapper.get('[data-test="wiki-conflict-current"]').text()).toContain('当前说明')
+    expect(wrapper.get('[data-test="wiki-conflict-current"]').text()).toContain('当前正文')
+    expect(wrapper.get('[data-test="wiki-conflict-current"]').text()).toContain('当前标签')
+    expect(wrapper.get('[data-test="wiki-conflict-draft"]').text()).toContain('新的辩题标题')
+    expect(wrapper.get('[data-test="wiki-conflict-draft"]').text()).toContain('草稿说明')
+    expect(wrapper.get('[data-test="wiki-conflict-draft"]').text()).toContain('尚未保存的正文')
+    expect(wrapper.get('[data-test="wiki-conflict-draft"]').text()).toContain('草稿标签一、草稿标签二')
     expect(wrapper.get('[data-test="wiki-content"]').element).toHaveProperty('value', '尚未保存的正文')
     expect(wrapper.emitted('saved')).toBeUndefined()
     expect(wrapper.emitted('close')).toBeUndefined()

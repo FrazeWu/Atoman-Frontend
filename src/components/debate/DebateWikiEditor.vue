@@ -118,20 +118,35 @@
 
       <section v-if="conflict" data-test="wiki-conflict" class="wiki-conflict" role="alert">
         <h3>内容已更新</h3>
-        <dl>
-          <div>
-            <dt>基础版本</dt>
-            <dd>{{ conflict.base_revision_id }}</dd>
-          </div>
-          <div>
-            <dt>当前版本</dt>
-            <dd>{{ conflict.current_revision_id }}</dd>
-          </div>
-          <div>
-            <dt>你的草稿</dt>
-            <dd>{{ title }}</dd>
-          </div>
-        </dl>
+        <div v-if="conflictSnapshots" class="wiki-conflict__versions">
+          <article data-test="wiki-conflict-base">
+            <h4>基础版本 <small>{{ conflict.base_revision_id }}</small></h4>
+            <dl>
+              <div><dt>标题</dt><dd>{{ snapshotValue(conflictSnapshots.base, 'title') }}</dd></div>
+              <div><dt>说明</dt><dd>{{ snapshotValue(conflictSnapshots.base, 'description') }}</dd></div>
+              <div><dt>正文</dt><dd>{{ snapshotValue(conflictSnapshots.base, 'content') }}</dd></div>
+              <div><dt>标签</dt><dd>{{ snapshotValue(conflictSnapshots.base, 'tags') }}</dd></div>
+            </dl>
+          </article>
+          <article data-test="wiki-conflict-current">
+            <h4>当前版本 <small>{{ conflict.current_revision_id }}</small></h4>
+            <dl>
+              <div><dt>标题</dt><dd>{{ snapshotValue(conflictSnapshots.current, 'title') }}</dd></div>
+              <div><dt>说明</dt><dd>{{ snapshotValue(conflictSnapshots.current, 'description') }}</dd></div>
+              <div><dt>正文</dt><dd>{{ snapshotValue(conflictSnapshots.current, 'content') }}</dd></div>
+              <div><dt>标签</dt><dd>{{ snapshotValue(conflictSnapshots.current, 'tags') }}</dd></div>
+            </dl>
+          </article>
+          <article data-test="wiki-conflict-draft">
+            <h4>你的草稿</h4>
+            <dl>
+              <div><dt>标题</dt><dd>{{ snapshotValue(conflictSnapshots.draft, 'title') }}</dd></div>
+              <div><dt>说明</dt><dd>{{ snapshotValue(conflictSnapshots.draft, 'description') }}</dd></div>
+              <div><dt>正文</dt><dd>{{ snapshotValue(conflictSnapshots.draft, 'content') }}</dd></div>
+              <div><dt>标签</dt><dd>{{ snapshotValue(conflictSnapshots.draft, 'tags') }}</dd></div>
+            </dl>
+          </article>
+        </div>
         <p>草稿已保留，请查看最新版本后再保存。</p>
       </section>
       <p v-else-if="saveError" class="wiki-editor__error" role="alert">保存失败，请重试</p>
@@ -162,7 +177,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useDebateStore } from '@/stores/debate'
-import type { Debate, DebateRelationStance } from '@/types'
+import type { Debate, DebateRelationStance, DebateRevisionSnapshot } from '@/types'
 
 const props = defineProps<{
   show: boolean
@@ -184,6 +199,11 @@ const tagsText = ref('')
 const editSummary = ref('')
 const saveError = ref(false)
 const conflict = ref<{ base_revision_id: string; current_revision_id: string } | null>(null)
+const conflictSnapshots = ref<{
+  base: DebateRevisionSnapshot | null
+  current: DebateRevisionSnapshot | null
+  draft: DebateRevisionSnapshot
+} | null>(null)
 const referenceOpen = ref(false)
 const referenceQuery = ref('')
 const referenceSearching = ref(false)
@@ -191,6 +211,7 @@ const referenceResults = ref<Debate[]>([])
 const selectedReference = ref<Debate | null>(null)
 const referenceStance = ref<DebateRelationStance | null>(null)
 let referenceSearchSequence = 0
+let conflictLoadSequence = 0
 
 const canSave = () => Boolean(title.value.trim() && editSummary.value.trim())
 
@@ -211,6 +232,8 @@ function resetDraft() {
   editSummary.value = ''
   saveError.value = false
   conflict.value = null
+  conflictSnapshots.value = null
+  conflictLoadSequence += 1
   referenceOpen.value = false
   referenceQuery.value = ''
   referenceResults.value = []
@@ -269,6 +292,13 @@ function parseTags() {
     .filter(Boolean)
 }
 
+function snapshotValue(snapshot: DebateRevisionSnapshot | null, field: keyof DebateRevisionSnapshot) {
+  if (!snapshot) return '加载中...'
+  const value = snapshot[field]
+  if (Array.isArray(value)) return value.join('、') || '无'
+  return value || '无'
+}
+
 async function save() {
   if (!canSave() || store.wikiSaving) return
   saveError.value = false
@@ -289,6 +319,25 @@ async function save() {
   }
   if (result.conflict) {
     conflict.value = result.conflict
+    const sequence = ++conflictLoadSequence
+    const draft: DebateRevisionSnapshot = {
+      title: title.value.trim(),
+      description: description.value.trim(),
+      content: content.value,
+      tags: parseTags(),
+    }
+    conflictSnapshots.value = { base: null, current: null, draft }
+    const [baseRevision, currentRevision] = await Promise.all([
+      store.fetchRevision(props.debate.id, result.conflict.base_revision_id),
+      store.fetchRevision(props.debate.id, result.conflict.current_revision_id),
+    ])
+    if (sequence === conflictLoadSequence) {
+      conflictSnapshots.value = {
+        base: baseRevision?.snapshot ?? null,
+        current: currentRevision?.snapshot ?? null,
+        draft,
+      }
+    }
     return
   }
   saveError.value = true
@@ -400,6 +449,31 @@ async function save() {
   margin: 0;
 }
 
+.wiki-conflict__versions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.wiki-conflict article {
+  min-width: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.wiki-conflict h4 {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.wiki-conflict h4 small {
+  color: var(--a-color-muted);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
 .wiki-conflict dl {
   display: grid;
   gap: 0.5rem;
@@ -418,6 +492,7 @@ async function save() {
 
 .wiki-conflict dd {
   margin: 0;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -435,6 +510,10 @@ async function save() {
   .reference-picker__actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .wiki-conflict__versions {
+    grid-template-columns: 1fr;
   }
 }
 </style>

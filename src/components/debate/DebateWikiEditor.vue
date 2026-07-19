@@ -440,7 +440,7 @@ async function save() {
   })
   if (!ownsRequest()) return
 
-  if (result.ok) {
+  if ('debate' in result) {
     if (result.debate.current_revision_id) {
       baseRevisionId.value = result.debate.current_revision_id
     }
@@ -449,7 +449,7 @@ async function save() {
     if (sameDraft(draft, captureDraft())) closeEditor()
     return
   }
-  if (result.conflict) {
+  if ('conflict' in result && result.conflict) {
     baseRevisionId.value = result.conflict.current_revision_id
     const context: WikiConflict = {
       debateId,

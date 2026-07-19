@@ -4,7 +4,7 @@
     title="版本"
     width="min(100%, 760px)"
     close-type="header"
-    @close="emit('close')"
+    @close="closeSheet"
   >
     <div class="revision-sheet">
       <p v-if="loading" class="revision-sheet__muted">加载中...</p>
@@ -135,6 +135,8 @@ const revertingId = ref('')
 const revertError = ref(false)
 let loadSequence = 0
 let diffSequence = 0
+let revertSequence = 0
+let sessionSequence = 0
 
 const diffFields = [
   { key: 'title', label: '标题' },
@@ -147,21 +149,55 @@ watch(
   () => [props.show, props.debateId] as const,
   ([show, debateId], previous) => {
     const [wasOpen, previousDebateId] = previous ?? [false, '']
-    if (show && (!wasOpen || debateId !== previousDebateId)) loadRevisions()
+    if (!show) {
+      if (wasOpen) invalidateSession()
+      return
+    }
+    if (!wasOpen || debateId !== previousDebateId) startSession()
   },
   { immediate: true },
 )
 
-async function loadRevisions() {
-  const sequence = ++loadSequence
-  loading.value = true
+function invalidateSession() {
+  sessionSequence += 1
+  loadSequence += 1
+  diffSequence += 1
+  revertSequence += 1
+  revisions.value = []
+  loading.value = false
   loadError.value = false
   baseRevisionId.value = ''
   targetRevisionId.value = ''
   diff.value = null
+  diffLoading.value = false
+  diffError.value = false
   revertSummary.value = ''
-  const result = await store.fetchRevisions(props.debateId)
-  if (sequence !== loadSequence) return
+  reverting.value = false
+  revertingId.value = ''
+  revertError.value = false
+}
+
+function startSession() {
+  invalidateSession()
+  void loadRevisions(sessionSequence, props.debateId)
+}
+
+function closeSheet() {
+  invalidateSession()
+  emit('close')
+}
+
+async function loadRevisions(session: number, debateId: string) {
+  const sequence = ++loadSequence
+  loading.value = true
+  loadError.value = false
+  const result = await store.fetchRevisions(debateId)
+  if (
+    sequence !== loadSequence
+    || session !== sessionSequence
+    || !props.show
+    || props.debateId !== debateId
+  ) return
   revisions.value = result ?? []
   loadError.value = result === null
   loading.value = false
@@ -187,19 +223,28 @@ function selectTarget(revisionId: string) {
 
 async function loadDiff() {
   const sequence = ++diffSequence
+  const session = sessionSequence
+  const debateId = props.debateId
+  const baseId = baseRevisionId.value
+  const targetId = targetRevisionId.value
   diff.value = null
   diffLoading.value = false
   diffError.value = false
-  if (!baseRevisionId.value || !targetRevisionId.value || baseRevisionId.value === targetRevisionId.value) {
+  if (!baseId || !targetId || baseId === targetId) {
     return
   }
   diffLoading.value = true
   const result = await store.fetchRevisionDiff(
-    props.debateId,
-    targetRevisionId.value,
-    baseRevisionId.value,
+    debateId,
+    targetId,
+    baseId,
   )
-  if (sequence !== diffSequence) return
+  if (
+    sequence !== diffSequence
+    || session !== sessionSequence
+    || !props.show
+    || props.debateId !== debateId
+  ) return
   diff.value = result
   diffError.value = result === null
   diffLoading.value = false
@@ -215,13 +260,23 @@ function formatValue(value: unknown) {
 async function revert(revisionId: string) {
   const summary = revertSummary.value.trim()
   if (!summary || reverting.value) return
+  const sequence = ++revertSequence
+  const session = sessionSequence
+  const debateId = props.debateId
+  const currentRevisionId = props.currentRevisionId
   reverting.value = true
   revertingId.value = revisionId
   revertError.value = false
-  const result = await store.revertRevision(props.debateId, revisionId, {
-    base_revision: props.currentRevisionId,
+  const result = await store.revertRevision(debateId, revisionId, {
+    base_revision: currentRevisionId,
     edit_summary: summary,
   })
+  if (
+    sequence !== revertSequence
+    || session !== sessionSequence
+    || !props.show
+    || props.debateId !== debateId
+  ) return
   reverting.value = false
   revertingId.value = ''
   if (!result) {
@@ -229,7 +284,7 @@ async function revert(revisionId: string) {
     return
   }
   emit('reverted', result)
-  emit('close')
+  closeSheet()
 }
 </script>
 

@@ -160,4 +160,54 @@ describe('DebateRevisionSheet', () => {
 
     expect(wrapper.find('[data-test="revision-diff-title"]').exists()).toBe(false)
   })
+
+  it('打开另一辩题后忽略旧回退成功结果', async () => {
+    const pendingRevert = deferred<{ id: string }>()
+    mocks.revertRevision.mockReturnValueOnce(pendingRevert.promise)
+    const wrapper = mountSheet()
+    await flushPromises()
+
+    await wrapper.get('[data-test="revert-summary"]').setValue('回退 A')
+    await wrapper.get('[data-test="revert-revision-revision-1"]').trigger('click')
+    expect(mocks.revertRevision).toHaveBeenCalledWith('debate-1', 'revision-1', {
+      base_revision: 'revision-2',
+      edit_summary: '回退 A',
+    })
+
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({ show: true, debateId: 'debate-2', currentRevisionId: 'revision-b2' })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="revert-summary"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-test="revert-summary"]').element).toHaveProperty('value', '')
+    expect(wrapper.text()).not.toContain('加载中...')
+
+    pendingRevert.resolve({ id: 'debate-1' })
+    await flushPromises()
+
+    expect(wrapper.emitted('reverted')).toBeUndefined()
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(wrapper.text()).not.toContain('回退失败')
+  })
+
+  it('打开另一辩题后忽略旧回退失败结果', async () => {
+    const pendingRevert = deferred<null>()
+    mocks.revertRevision.mockReturnValueOnce(pendingRevert.promise)
+    const wrapper = mountSheet()
+    await flushPromises()
+
+    await wrapper.get('[data-test="revert-summary"]').setValue('回退 A')
+    await wrapper.get('[data-test="revert-revision-revision-1"]').trigger('click')
+    await wrapper.setProps({ show: false })
+    await wrapper.setProps({ show: true, debateId: 'debate-2', currentRevisionId: 'revision-b2' })
+    await flushPromises()
+
+    pendingRevert.resolve(null)
+    await flushPromises()
+
+    expect(wrapper.emitted('reverted')).toBeUndefined()
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(wrapper.text()).not.toContain('回退失败')
+    expect(wrapper.get('[data-test="revert-summary"]').attributes('disabled')).toBeUndefined()
+  })
 })

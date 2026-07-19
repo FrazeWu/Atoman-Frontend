@@ -942,10 +942,12 @@ onBeforeUnmount(() => {
 }
 :root[data-theme='dark'] .volume-control {
   background: rgba(15, 23, 42, 0.88);
+  border-color: var(--a-color-border-dark, #334155);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .volume-control {
     background: rgba(15, 23, 42, 0.88);
+    border-color: var(--a-color-border-dark, #334155);
   }
 }
 .volume-control::after {
@@ -988,7 +990,7 @@ onBeforeUnmount(() => {
   appearance: none;
   width: 10px;
   height: 10px;
-  background: #0d9488;
+  background: var(--a-color-accent-confirm);
   border-radius: 50%;
 }
 

@@ -81,12 +81,12 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await editorPage.getByRole('button', { name: '继续保存', exact: true }).click()
       expect((await saveResponse).status()).toBe(200)
 
-      await editorPage.reload()
+      await diagnostics.reload(editorPage)
       await openLyrics(editorPage, songId, songTitle)
       await expect(editorPage.getByTestId(`annotation-rebind-${annotationId}`)).toHaveCount(0)
 
       const beforeRebindVersions = await getVersions(authorPage.request, songId, author.token)
-      await authorPage.reload()
+      await diagnostics.reload(authorPage)
       await openLyrics(authorPage, songId, songTitle)
       const rebindButton = authorPage.getByTestId(`annotation-rebind-${annotationId}`)
       await expect(rebindButton).toBeVisible()
@@ -254,6 +254,7 @@ function attachDiagnostics(pages: Page[]) {
   const consoleErrors: string[] = []
   const failedRequests: string[] = []
   const failingResponses: string[] = []
+  const pagesNavigating = new Set<Page>()
   for (const page of pages) {
     page.on('console', message => {
       const expectedAnchorConflict = message.type() === 'error'
@@ -261,6 +262,9 @@ function attachDiagnostics(pages: Page[]) {
       if (message.type() === 'error' && !expectedAnchorConflict) consoleErrors.push(message.text())
     })
     page.on('requestfailed', request => {
+      const expectedNavigationAbort = pagesNavigating.has(page)
+        && request.failure()?.errorText === 'net::ERR_ABORTED'
+      if (expectedNavigationAbort) return
       failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`)
     })
     page.on('response', response => {
@@ -272,7 +276,19 @@ function attachDiagnostics(pages: Page[]) {
       }
     })
   }
-  return { consoleErrors, failedRequests, failingResponses }
+  return {
+    consoleErrors,
+    failedRequests,
+    failingResponses,
+    async reload(page: Page) {
+      pagesNavigating.add(page)
+      try {
+        await page.reload()
+      } finally {
+        pagesNavigating.delete(page)
+      }
+    },
+  }
 }
 
 async function getLyrics(request: APIRequestContext, songId: string, token: string) {

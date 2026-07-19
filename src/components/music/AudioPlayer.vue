@@ -750,14 +750,32 @@ onBeforeUnmount(() => {
 .skip-btn:hover, .nav-btn:hover { opacity: 1; }
 
 .main-play-btn {
-  background: var(--a-color-text); color: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  padding: 6px 20px; font-weight: 950;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  border-radius: 4px;
+  padding: 6px 20px;
+  font-weight: 500;
   font-size: 11px;
-  cursor: pointer; letter-spacing: 0.1em;
+  cursor: pointer;
+  letter-spacing: 0.1em;
   transition: transform 0.1s;
 }
-.main-play-btn:active { transform: translateY(2px); }
+.main-play-btn:active { transform: translateY(1px); }
+
+:root[data-theme='dark'] .main-play-btn {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .main-play-btn {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: #ffffff;
+  }
+}
 
 .progress-container {
   width: 100%;

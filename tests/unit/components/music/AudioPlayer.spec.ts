@@ -168,4 +168,28 @@ describe('AudioPlayer', () => {
     // which binds to our glassmorphism CSS rules.
     expect(playerEl.classes()).toContain('player')
   })
+
+  it('renders main play button with correct class for styling', () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1',
+      title: 'Song 1',
+      artist: 'Artist 1',
+      audio_url: '/song-1.mp3',
+    } as any
+
+    const wrapper = mount(AudioPlayer, {
+      global: {
+        stubs: {
+          MusicLyricsPanel: true,
+          PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+          PToast: true,
+        },
+      },
+    })
+    
+    const playBtn = wrapper.find('.main-play-btn')
+    expect(playBtn.exists()).toBe(true)
+    expect(playBtn.classes()).toContain('main-play-btn')
+  })
 })

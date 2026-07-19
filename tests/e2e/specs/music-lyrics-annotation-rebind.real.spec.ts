@@ -41,7 +41,7 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       const authorPage = await authorContext.newPage()
       const editorPage = await editorContext.newPage()
 
-      const diagnostics = attachDiagnostics([authorPage, editorPage])
+      const diagnostics = attachDiagnostics([authorPage, editorPage], songId)
       await openLyrics(editorPage, songId, songTitle)
       await importInitialLyrics(editorPage, songId)
 
@@ -113,6 +113,9 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await selectTextInLine(authorPage, 'A separate target phrase', 'target phrase')
       const confirmRebind = authorPage.getByTestId('annotation-confirm-rebind')
       await expect(confirmRebind).toBeEnabled()
+      await authorPage.setViewportSize({ width: 390, height: 844 })
+      await assertMobileRebindControls(authorPage, rebindButton, confirmRebind)
+      await authorPage.setViewportSize({ width: 1280, height: 720 })
       await assertDesktopControls(authorPage, rebindButton, confirmRebind)
       const patchResponse = authorPage.waitForResponse(response => (
         response.request().method() === 'PATCH'
@@ -252,7 +255,7 @@ async function selectTextInLine(page: Page, lineText: string, selectedText: stri
   await line.dispatchEvent('mouseup')
 }
 
-function attachDiagnostics(pages: Page[]) {
+function attachDiagnostics(pages: Page[], songId: string) {
   const consoleErrors: string[] = []
   const failedRequests: string[] = []
   const failingResponses: string[] = []
@@ -261,18 +264,21 @@ function attachDiagnostics(pages: Page[]) {
     page.on('console', message => {
       const expectedAnchorConflict = message.type() === 'error'
         && message.text().includes('status of 409 (Conflict)')
+        && message.text().includes(`/api/v1/music/songs/${songId}/lyrics`)
       if (message.type() === 'error' && !expectedAnchorConflict) consoleErrors.push(message.text())
     })
     page.on('requestfailed', request => {
       const expectedNavigationAbort = pagesNavigating.has(page)
         && request.failure()?.errorText === 'net::ERR_ABORTED'
+        && request.isNavigationRequest()
+        && request.url() === page.url()
       if (expectedNavigationAbort) return
       failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`)
     })
     page.on('response', response => {
       const expectedAnchorConflict = response.status() === 409
         && response.request().method() === 'PUT'
-        && response.url().endsWith('/lyrics')
+        && response.url().endsWith(`/api/v1/music/songs/${songId}/lyrics`)
       if (response.status() >= 400 && !expectedAnchorConflict) {
         failingResponses.push(`${response.status()} ${response.request().method()} ${response.url()}`)
       }
@@ -344,6 +350,27 @@ async function assertMobileLayout(page: Page) {
   expect(layout.controls).toBeTruthy()
   expect(rectanglesIntersect(layout.highlight!, layout.player!)).toBe(false)
   expect(rectanglesIntersect(layout.highlight!, layout.controls!)).toBe(false)
+}
+
+async function assertMobileRebindControls(page: Page, pending: Locator, confirm: Locator) {
+  await assertDesktopControls(page, pending, confirm)
+  const layout = await page.evaluate(() => {
+    const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect()
+    return {
+      player: rect('.player'),
+      controls: rect('.player-controls-hub'),
+      pending: rect('[data-testid^="annotation-rebind-"]'),
+      confirm: rect('[data-testid="annotation-confirm-rebind"]'),
+    }
+  })
+  expect(layout.player).toBeTruthy()
+  expect(layout.controls).toBeTruthy()
+  expect(layout.pending).toBeTruthy()
+  expect(layout.confirm).toBeTruthy()
+  expect(rectanglesIntersect(layout.pending!, layout.player!)).toBe(false)
+  expect(rectanglesIntersect(layout.pending!, layout.controls!)).toBe(false)
+  expect(rectanglesIntersect(layout.confirm!, layout.player!)).toBe(false)
+  expect(rectanglesIntersect(layout.confirm!, layout.controls!)).toBe(false)
 }
 
 function rectanglesIntersect(

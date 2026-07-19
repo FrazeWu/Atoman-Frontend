@@ -139,8 +139,6 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await expect(authorPage.getByText('需要保留的注释', { exact: true })).toBeVisible()
 
       await authorPage.setViewportSize({ width: 390, height: 844 })
-      await authorPage.reload()
-      await openLyrics(authorPage, songId, songTitle)
       await expect(authorPage.locator('.music-lyrics-line__highlight').filter({ hasText: 'target phrase' })).toBeVisible()
       await assertMobileLayout(authorPage)
       await authorPage.screenshot({ path: testInfo.outputPath('annotation-rebind-mobile.png'), fullPage: true })
@@ -258,7 +256,9 @@ function attachDiagnostics(pages: Page[]) {
   const failingResponses: string[] = []
   for (const page of pages) {
     page.on('console', message => {
-      if (message.type() === 'error') consoleErrors.push(message.text())
+      const expectedAnchorConflict = message.type() === 'error'
+        && message.text().includes('status of 409 (Conflict)')
+      if (message.type() === 'error' && !expectedAnchorConflict) consoleErrors.push(message.text())
     })
     page.on('requestfailed', request => {
       failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`)

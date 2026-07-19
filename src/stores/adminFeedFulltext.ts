@@ -333,6 +333,18 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     return response.json()
   }
 
+  async function retryGlobalOPMLSource(payload: { title?: string; url: string }, token: string | null) {
+    const response = await fetch(api.admin.feed.opmlRetryImport, {
+      method: 'POST',
+      headers: buildHeaders(token, true),
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      throw new Error(await parseError(response, '重试订阅源失败'))
+    }
+    return response.json()
+  }
+
   async function exportGlobalOPML(token: string | null): Promise<Blob> {
     const response = await fetch(api.admin.feed.opmlExport, {
       headers: buildHeaders(token),
@@ -415,6 +427,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     createSource,
     updateSource,
     importGlobalOPML,
+    retryGlobalOPMLSource,
     exportGlobalOPML,
     syncSource,
     updateSourceEnabled,

@@ -877,9 +877,13 @@ onBeforeUnmount(() => {
   font-weight: 500;
   opacity: 0.5;
   padding: 0 4px;
-  transition: opacity 0.2s;
+  border-bottom: 1.5px solid transparent;
+  transition: opacity 0.2s, border-bottom-color 0.2s;
 }
-.feature-link:hover { opacity: 1; }
+.feature-link:hover {
+  opacity: 1;
+  border-bottom-color: var(--a-color-text);
+}
 
 .feature-toggle {
   cursor: pointer;

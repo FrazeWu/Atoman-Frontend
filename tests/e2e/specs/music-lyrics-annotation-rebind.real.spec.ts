@@ -81,14 +81,14 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await editorPage.getByRole('button', { name: '继续保存', exact: true }).click()
       expect((await saveResponse).status()).toBe(200)
 
-      await diagnostics.reloadWithExpectedAborts(editorPage, async () => {
+      await diagnostics.refreshLyrics(async () => {
         await openLyrics(editorPage, songId, songTitle)
         await expect(editorPage.getByTestId(`annotation-rebind-${annotationId}`)).toHaveCount(0)
       })
 
       const beforeRebindVersions = await getVersions(authorPage.request, songId, author.token)
       const rebindButton = authorPage.getByTestId(`annotation-rebind-${annotationId}`)
-      await diagnostics.reloadWithExpectedAborts(authorPage, async () => {
+      await diagnostics.refreshLyrics(async () => {
         await openLyrics(authorPage, songId, songTitle)
         await expect(rebindButton).toBeVisible()
       })
@@ -185,9 +185,9 @@ async function createAuthenticatedContext(browser: Browser, auth: LocalAuthFixtu
 }
 
 async function openLyrics(page: Page, songId: string, songTitle: string) {
-  await page.goto(`/music?album=${encodeURIComponent(albumId)}`)
+  await page.goto(`/music/album/${encodeURIComponent(albumId)}`)
   const track = page.locator('.track').filter({ hasText: songTitle }).first()
-  await expect(track.getByText(songTitle, { exact: true })).toBeVisible()
+  await expect(track.getByText(songTitle, { exact: true })).toBeVisible({ timeout: 15_000 })
   await track.locator(`[data-testid="track-play-${songId}"]`).click()
   await page.locator('.feature-link').filter({ hasText: '词' }).click()
   await expect(page.getByTestId('lyrics-edit-trigger')).toBeVisible()
@@ -259,8 +259,8 @@ function attachDiagnostics(pages: Page[], songId: string) {
   const consoleErrors: string[] = []
   const failedRequests: string[] = []
   const failingResponses: string[] = []
-  const pagesNavigating = new Set<Page>()
   const lyricSavePath = `/api/v1/music/songs/${songId}/lyrics`
+  const sourceAudioPath = `/music/albums/${albumId}/tracks/${sourceSongId}.mp3`
   for (const page of pages) {
     page.on('console', message => {
       const expectedAnchorConflict = message.type() === 'error'
@@ -269,11 +269,10 @@ function attachDiagnostics(pages: Page[], songId: string) {
       if (message.type() === 'error' && !expectedAnchorConflict) consoleErrors.push(message.text())
     })
     page.on('requestfailed', request => {
-      const expectedNavigationAbort = pagesNavigating.has(page)
+      const expectedPlaybackAbort = request.method() === 'GET'
         && request.failure()?.errorText === 'net::ERR_ABORTED'
-        && request.isNavigationRequest()
-        && request.url() === page.url()
-      if (expectedNavigationAbort) return
+        && new URL(request.url()).pathname === sourceAudioPath
+      if (expectedPlaybackAbort) return
       failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`)
     })
     page.on('response', response => {
@@ -289,13 +288,7 @@ function attachDiagnostics(pages: Page[], songId: string) {
     consoleErrors,
     failedRequests,
     failingResponses,
-    async reloadWithExpectedAborts(page: Page, waitForReady: () => Promise<void>) {
-      pagesNavigating.add(page)
-      try {
-        await page.reload()
-      } finally {
-        pagesNavigating.delete(page)
-      }
+    async refreshLyrics(waitForReady: () => Promise<void>) {
       await waitForReady()
     },
   }

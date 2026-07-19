@@ -179,6 +179,7 @@ export function useApi() {
         onboardingRecommendations: `${apiUrl}/admin/feed/onboarding/recommendations`,
         onboardingRecommendation: (recommendationId: number | string) => `${apiUrl}/admin/feed/onboarding/recommendations/${recommendationId}`,
         opmlImport: `${apiUrl}/feed/sources/opml/import`,
+        opmlRetryImport: `${apiUrl}/feed/sources/retry-import`,
         opmlExport: `${apiUrl}/feed/sources/opml/export`,
       },
       feedFulltext: {

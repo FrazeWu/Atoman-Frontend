@@ -49,6 +49,8 @@ export interface FeedOPMLImportResult {
   imported: number
   reused: number
   failed: number
+
+  failed_sources?: Array<{ url: string; reason: string }>
 }
 
 interface FeedTimelineFetchOptions {
@@ -213,8 +215,7 @@ export const useFeedStore = defineStore('feed', () => {
       mutedSourceIds: normalizeRuleList(rules.mutedSourceIds ?? filterRules.value.mutedSourceIds),
       hiddenKeywords: normalizeRuleList(rules.hiddenKeywords ?? filterRules.value.hiddenKeywords),
     }
-    filterRules.value = nextRules
-    writeFilterRules(nextRules)
+    applyFilterRules(nextRules)
     const authStore = useAuthStore()
     if (authStore.isAuthenticated) {
       void fetch(`${api.url}/feed/preferences`, {
@@ -225,6 +226,11 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
+  const applyFilterRules = (rules: FeedFilterRules) => {
+    filterRules.value = rules
+    writeFilterRules(rules)
+  }
+
   const fetchFilterPreferences = async () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return false
@@ -232,7 +238,7 @@ export const useFeedStore = defineStore('feed', () => {
       const res = await fetch(`${api.url}/feed/preferences`, { headers: { Authorization: `Bearer ${authStore.token}` } })
       if (!res.ok) return false
       const data = await res.json()
-      setFilterRules({ hiddenKeywords: normalizeRuleList(data.data?.hidden_keywords), mutedSourceIds: [] })
+      applyFilterRules({ hiddenKeywords: normalizeRuleList(data.data?.hidden_keywords), mutedSourceIds: [] })
       return true
     } catch { return false }
   }
@@ -1024,6 +1030,22 @@ export const useFeedStore = defineStore('feed', () => {
     }
   }
 
+  const batchSubscribeSources = async (sourceIds: string[]): Promise<{ created: number; reusedIds: string[]; missingIds: string[] } | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || !sourceIds.length) return null
+    try {
+      const res = await fetch(`${api.url}/feed/sources/batch-subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+        body: JSON.stringify({ source_ids: sourceIds }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      await fetchSubscriptions()
+      return { created: Number(data.data?.created || 0), reusedIds: data.data?.reused_ids || [], missingIds: data.data?.missing_ids || [] }
+    } catch { return null }
+  }
+
   const importOPML = async (file: File): Promise<FeedOPMLImportResult | null> => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated) return null
@@ -1623,6 +1645,7 @@ export const useFeedStore = defineStore('feed', () => {
     discoverFeedCandidates,
     resolveSubscriptionInput,
     autoAddSubscription,
+    batchSubscribeSources,
     importOPML,
     exportOPML,
     createSubscriptionFromProvider,

@@ -17,6 +17,7 @@ const routeQuery = {
   target: undefined as string | undefined,
   category: undefined as string | undefined,
   theme: undefined as string | undefined,
+  scope: undefined as string | undefined,
 }
 
 const segmentedControlStub = {
@@ -48,11 +49,72 @@ describe('FeedRecommendedView', () => {
     routeQuery.target = undefined
     routeQuery.category = undefined
     routeQuery.theme = undefined
+    routeQuery.scope = undefined
     setActivePinia(createPinia())
   })
 
   it('uses the shared segmented control size for category filters', () => {
     expect(source).not.toContain('.category-segmented-control :deep(.p-segmented-control-item)')
+  })
+
+  it('restores the external scope, searches paginated sources, selects all visible sources and subscribes them', async () => {
+    routeQuery.scope = 'external'
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/explore/sources')) {
+        return new Response(JSON.stringify({
+          data: [
+            { id: 'source-1', title: 'Open Source Weekly', rss_url: 'https://example.com/open.xml', category: 'blog', subscribed: false, recent_items: [] },
+            { id: 'source-2', title: 'Open Data', rss_url: 'https://example.com/data.xml', category: 'blog', subscribed: false, recent_items: [] },
+          ],
+          meta: { page: 1, page_size: 20, total: 21 },
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/recommend/themes')) return new Response(JSON.stringify({ data: [] }), { status: 200 })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+    const authStore = useAuthStore()
+    authStore.token = 'token'
+    authStore.isAuthenticated = true
+    const feedStore = useFeedStore()
+    const batchSubscribeSpy = vi.spyOn(feedStore, 'batchSubscribeSources').mockResolvedValue({ created: 2, reusedIds: [], missingIds: [] })
+
+    const wrapper = mount(FeedRecommendedView, {
+      global: {
+        stubs: {
+          PPageHeader: { template: '<header><slot /><slot name="action" /></header>' },
+          PSegmentedControl: segmentedControlStub,
+          PPress: { props: ['label'], template: '<button class="p-press" @click="$emit(\'click\')">{{ label }}</button>' },
+          PEmpty: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/feed/explore/sources?page=1&limit=20'),
+      { headers: { Authorization: 'Bearer token' } },
+    )
+    expect(routerReplace).toHaveBeenCalledWith(expect.objectContaining({ query: expect.objectContaining({ scope: 'external' }) }))
+
+    await wrapper.get('[data-test="external-source-search"]').setValue('open')
+    await flushPromises()
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('q=open'),
+      { headers: { Authorization: 'Bearer token' } },
+    )
+
+    await wrapper.get('[data-test="external-source-select-all"]').setValue(true)
+    await wrapper.findAll('.p-press').find((button) => button.text() === '订阅选中来源')!.trigger('click')
+    await flushPromises()
+    expect(batchSubscribeSpy).toHaveBeenCalledWith(['source-1', 'source-2'])
+
+    await wrapper.findAll('.feed-page-control').find((button) => button.text().includes('下一页'))!.trigger('click')
+    await flushPromises()
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('page=2'),
+      { headers: { Authorization: 'Bearer token' } },
+    )
   })
 
   it('shows subscribe action for unsubscribed recommended channels and marks them subscribed after click', async () => {

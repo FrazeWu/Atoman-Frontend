@@ -1462,6 +1462,7 @@ watch(showManageSheet, (visible) => {
   if (visible && authStore.isAuthenticated) {
     void Promise.all([
       feedStore.fetchSubscriptions(),
+      feedStore.fetchFilterPreferences(),
       feedStore.fetchGroups(),
       feedStore.fetchSubscriptionRules(),
     ])

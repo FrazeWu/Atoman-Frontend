@@ -10,6 +10,7 @@ const syncSource = vi.fn().mockResolvedValue(null)
 const fetchItems = vi.fn().mockResolvedValue([])
 const retryItem = vi.fn().mockResolvedValue(null)
 const importGlobalOPML = vi.fn().mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
+const retryGlobalOPMLSource = vi.fn().mockResolvedValue({ imported: true, reused: false })
 const exportGlobalOPML = vi.fn().mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
 const fetchOnboardingRecommendations = vi.fn().mockResolvedValue([])
 const createOnboardingRecommendation = vi.fn().mockResolvedValue(null)
@@ -28,6 +29,7 @@ const storeState = reactive({
   fetchItems,
   retryItem,
   importGlobalOPML,
+  retryGlobalOPMLSource,
   exportGlobalOPML,
   fetchOnboardingRecommendations,
   createOnboardingRecommendation,
@@ -109,6 +111,7 @@ describe('SettingFeedSourcePanel', () => {
     fetchItems.mockResolvedValue([])
     retryItem.mockResolvedValue(null)
     importGlobalOPML.mockResolvedValue({ imported: 1, reused: 2, failed: 0 })
+    retryGlobalOPMLSource.mockResolvedValue({ imported: true, reused: false })
     exportGlobalOPML.mockResolvedValue(new Blob(['opml'], { type: 'application/x-opml+xml' }))
     fetchOnboardingRecommendations.mockResolvedValue([])
     createOnboardingRecommendation.mockResolvedValue(null)
@@ -394,6 +397,33 @@ describe('SettingFeedSourcePanel', () => {
     expect(importGlobalOPML).toHaveBeenCalledWith(file, 'admin-token')
     expect(fetchSources).toHaveBeenCalledWith('admin-token', { limit: 100 })
     expect(wrapper.text()).toContain('导入 1，复用 2，失败 0')
+  })
+
+  it('显示 OPML 失败来源的 URL 和原因，并能单独重试', async () => {
+    importGlobalOPML.mockResolvedValue({
+      imported: 0,
+      reused: 0,
+      failed: 1,
+      failed_sources: [{ url: 'https://bad.example.com/feed.xml', reason: '地址不可用' }],
+    })
+    const file = new File(['<opml version="2.0"><body /></opml>'], 'feeds.opml', { type: 'text/xml' })
+    const wrapper = mount(SettingFeedSourcePanel, {
+      props: { fullTextMode: 'per_source' },
+      global: { stubs },
+    })
+    await flushPromises()
+
+    const input = wrapper.get('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('https://bad.example.com/feed.xml')
+    expect(wrapper.text()).toContain('地址不可用')
+    await wrapper.get('[data-test="opml-failure-retry"]').trigger('click')
+    await flushPromises()
+    expect(retryGlobalOPMLSource).toHaveBeenCalledWith({ url: 'https://bad.example.com/feed.xml' }, 'admin-token')
+    expect(wrapper.text()).not.toContain('https://bad.example.com/feed.xml')
   })
 
   it('点击导出 OPML 时下载后端返回的文件', async () => {

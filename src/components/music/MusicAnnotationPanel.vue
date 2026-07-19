@@ -49,6 +49,7 @@
           type="button"
           size="sm"
           variant="ghost"
+          class="music-annotation-card__rebind"
           :data-testid="`annotation-rebind-${annotation.id}`"
           :aria-label="`重新绑定注释：${annotation.selected_text}`"
           @click="emit('rebind', annotation)"
@@ -198,5 +199,10 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 .music-annotation-card__vote.is-active {
   border-color: var(--a-color-text);
   color: var(--a-color-text);
+}
+
+.music-annotation-card__rebind {
+  min-width: 44px;
+  min-height: 44px;
 }
 </style>

@@ -1,5 +1,6 @@
-import { mount } from '@vue/test-utils'
-import { computed } from 'vue'
+import { flushPromises, mount } from '@vue/test-utils'
+import { computed, nextTick } from 'vue'
+import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HomeView from '@/views/music/HomeView.vue'
 
@@ -13,6 +14,9 @@ const mocks = vi.hoisted(() => ({
   openMusicEditor: vi.fn(),
   closeMusicEditor: vi.fn(),
   routeQuery: {} as Record<string, string>,
+  listPendingMusicLyricsAnnotations: vi.fn(),
+  routerPush: vi.fn(),
+  authStore: { isAuthenticated: false, token: null } as { isAuthenticated: boolean; token: string | null },
 }))
 
 vi.mock('@/views/music/ExploreView.vue', () => ({
@@ -49,6 +53,18 @@ vi.mock('vue-router', () => ({
   }),
 }))
 
+vi.mock('@/api/musicV1', () => ({
+  listPendingMusicLyricsAnnotations: mocks.listPendingMusicLyricsAnnotations,
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => mocks.authStore,
+}))
+
+vi.mock('@/router', () => ({
+  default: { push: mocks.routerPush },
+}))
+
 describe('Music HomeView.vue (Album Landing)', () => {
   beforeEach(() => {
     mocks.openAlbum.mockReset()
@@ -59,11 +75,14 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.closeMusicCreationFlow.mockReset()
     mocks.openMusicEditor.mockReset()
     mocks.closeMusicEditor.mockReset()
+    mocks.listPendingMusicLyricsAnnotations.mockReset()
+    mocks.routerPush.mockReset()
+    mocks.authStore = { isAuthenticated: false, token: null }
     mocks.routeQuery = {}
   })
 
   it('renders the album landing content for the music module entry', () => {
-    const wrapper = mount(HomeView)
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('专辑首页')
@@ -77,7 +96,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       artist: 'artist-1',
     }
 
-    mount(HomeView)
+    mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
@@ -89,7 +108,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       editor: 'album-edit',
     }
 
-    mount(HomeView)
+    mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({
       entity: 'album',
@@ -104,7 +123,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       name: 'Seed Artist',
     }
 
-    mount(HomeView)
+    mount(HomeView, { global: { plugins: [createPinia()] } })
 
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({
       entity: 'artist',
@@ -112,5 +131,40 @@ describe('Music HomeView.vue (Album Landing)', () => {
       seed: { name: 'Seed Artist' },
     })
     expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
+  })
+
+  it('shows the authenticated user exact pending rebind count and opens the first task', async () => {
+    mocks.authStore = { isAuthenticated: true, token: 'token' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
+      { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
+      { annotation_id: 'annotation-2', song_id: 'song-2', album_id: 'album-2' },
+    ])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await nextTick()
+    await nextTick()
+
+    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalledOnce()
+    expect(wrapper.get('[data-testid="music-pending-rebind"]').text()).toContain('2')
+
+    await wrapper.get('[data-testid="music-pending-rebind"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.routerPush).toHaveBeenCalledWith({
+      path: '/music/album/album-1',
+      query: { song_id: 'song-1', annotation_id: 'annotation-1', rebind: '1' },
+    })
+  })
+
+  it('does not show a pending rebind entry when the authenticated user has no tasks', async () => {
+    mocks.authStore = { isAuthenticated: true, token: 'token' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await nextTick()
+    await nextTick()
+
+    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalledOnce()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
   })
 })

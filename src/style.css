@@ -1229,3 +1229,25 @@ input[type="radio"]:disabled {
   background-color: var(--a-color-disabled-bg);
   border-color: var(--a-color-disabled-border);
 }
+
+:root.dark {
+  --a-color-bg: #0b0f19;
+  --a-color-fg: #f1f5f9;
+  --a-color-text: #f1f5f9;
+  --a-color-text-secondary: #94a3b8;
+  --a-color-surface: #111827;
+  --a-color-surface-muted: #1f2937;
+  --a-color-border: #374151;
+  --a-color-border-soft: #1f2937;
+  --a-color-muted: #6b7280;
+  --a-color-muted-soft: #4b5563;
+  background-color: #0b0f19;
+}
+
+/* 视图过渡定制样式 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+

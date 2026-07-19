@@ -41,6 +41,15 @@
       </nav>
 
       <div class="nav-right">
+        <button
+          type="button"
+          class="theme-toggle-btn"
+          aria-label="切换主题"
+          @click="toggleTheme"
+        >
+          <Sun v-if="isDark" :size="18" />
+          <Moon v-else :size="18" />
+        </button>
         <AppTopbarAuthControls v-if="showAuthControls" />
         <RouterLink v-else to="/login" class="a-btn a-btn--primary a-btn--sm">登录</RouterLink>
       </div>
@@ -49,9 +58,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, ref, onMounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
-import { Menu } from 'lucide-vue-next'
+import { Menu, Sun, Moon } from 'lucide-vue-next'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { useSheetStore } from '@/stores/sheet'
@@ -91,6 +100,63 @@ const siteContext = computed(() => {
 })
 
 const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.value)
+
+const isDark = ref(false)
+
+onMounted(() => {
+  isDark.value = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark'
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+  }
+})
+
+const toggleTheme = (event: MouseEvent) => {
+  const isSupported = typeof document.startViewTransition === 'function'
+  
+  const changeTheme = () => {
+    isDark.value = !isDark.value
+    if (isDark.value) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }
+
+  if (!isSupported) {
+    changeTheme()
+    return
+  }
+
+  const x = event.clientX
+  const y = event.clientY
+  const endRadius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y)
+  )
+
+  const transition = document.startViewTransition(changeTheme)
+  
+  void transition.ready.then(() => {
+    const clipPath = [
+      `circle(0px at ${x}px ${y}px)`,
+      `circle(${endRadius}px at ${x}px ${y}px)`
+    ]
+    document.documentElement.animate(
+      {
+        clipPath: isDark.value ? [...clipPath].reverse() : clipPath
+      },
+      {
+        duration: 400,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        pseudoElement: isDark.value
+          ? '::view-transition-old(root)'
+          : '::view-transition-new(root)'
+      }
+    )
+  })
+}
 
 </script>
 
@@ -322,5 +388,22 @@ const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.
 
 .topbar-collapse-btn:hover {
   background-color: var(--a-color-surface-muted);
+}
+
+.theme-toggle-btn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  color: var(--a-color-text);
+  transition: background-color 0.2s;
+  margin-right: 0.5rem; /* spacing from auth controls */
+}
+.theme-toggle-btn:hover {
+  background: var(--a-color-surface-muted);
 }
 </style>

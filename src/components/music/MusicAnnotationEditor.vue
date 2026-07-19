@@ -4,7 +4,12 @@
       “{{ selectedText }}”
     </p>
 
+    <p v-if="mode === 'rebind'" class="music-annotation-editor__hint">
+      在歌词中选择新的片段
+    </p>
+
     <PTextarea
+      v-if="mode !== 'rebind'"
       v-model="body"
       label="注释"
       placeholder="写下这句歌词的解释"
@@ -13,6 +18,17 @@
 
     <div class="music-annotation-editor__actions">
       <PButton
+        v-if="mode === 'rebind'"
+        type="button"
+        :disabled="!selectedText"
+        data-testid="annotation-confirm-rebind"
+        aria-label="确认重新绑定"
+        @click="emit('confirm-rebind')"
+      >
+        确认重新绑定
+      </PButton>
+      <PButton
+        v-else
         type="button"
         variant="secondary"
         @click="handleCancel"
@@ -39,11 +55,13 @@ const props = defineProps<{
   show: boolean
   selectedText?: string
   initialBody?: string
+  mode?: 'create' | 'edit' | 'rebind'
 }>()
 
 const emit = defineEmits<{
   save: [body: string]
   cancel: []
+  'confirm-rebind': []
 }>()
 
 const body = ref('')
@@ -78,6 +96,12 @@ function handleSave() {
   color: var(--a-color-text);
   font-weight: 800;
   line-height: 1.5;
+}
+
+.music-annotation-editor__hint {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.9rem;
 }
 
 .music-annotation-editor__actions {

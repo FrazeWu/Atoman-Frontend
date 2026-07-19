@@ -18,11 +18,19 @@ import type { FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory } f
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 type RecommendTarget = 'articles' | 'channels' | 'mixed'
+type SourceScope = 'internal' | 'external'
 
 const ALL_CATEGORY = 'all'
 const ALL_THEME = 'all'
 
 type FeedSourceFilterCategory = typeof ALL_CATEGORY | FeedSourceCategory
+type ExploreSourcePayload = Partial<FeedExploreSource> & {
+  rss_url?: string
+  subscription_count?: number
+  recent_item_count?: number
+  last_published_at?: string
+  recent_items?: Array<{ id: string; title: string; published_at?: string }>
+}
 type RecommendationItem = {
   id: string
   title: string
@@ -80,6 +88,10 @@ const theme = ref(ALL_THEME)
 const themes = ref<FeedRecommendationTheme[]>([])
 const themesLoading = ref(false)
 const loading = ref(false)
+const sourceScope = ref<SourceScope>('internal')
+const externalSources = ref<FeedExploreSource[]>([])
+const selectedExternalSourceIds = ref<string[]>([])
+const externalLoading = ref(false)
 const subscribingChannelIds = ref<string[]>([])
 const errorMessage = ref('')
 const articles = ref<RecommendationItem[]>([])
@@ -88,6 +100,10 @@ const page = ref(1)
 const pageSize = 20
 const totalArticles = ref(0)
 const totalChannels = ref(0)
+const externalSearch = ref('')
+const externalPage = ref(1)
+const externalPageSize = 20
+const externalTotal = ref(0)
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
   { label: '热度', value: 'hot' },
@@ -99,6 +115,11 @@ const targetOptions: Array<{ label: string; value: RecommendTarget }> = [
   { label: '文章', value: 'articles' },
   { label: '频道', value: 'channels' },
   { label: '混合', value: 'mixed' },
+]
+
+const sourceScopeOptions: Array<{ label: string; value: SourceScope }> = [
+  { label: '站内', value: 'internal' },
+  { label: '站外', value: 'external' },
 ]
 
 const categoryOptions: Array<{ label: string; value: FeedSourceFilterCategory }> = [
@@ -135,8 +156,30 @@ function normalizeCategory(raw: unknown): FeedSourceFilterCategory {
     : ALL_CATEGORY
 }
 
+function normalizeSourceScope(raw: unknown): SourceScope {
+  return raw === 'external' ? 'external' : 'internal'
+}
+
 function normalizedCategoryParam(value: FeedSourceFilterCategory) {
   return value === ALL_CATEGORY ? 'all' : value
+}
+
+function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSource {
+  return {
+    id: payload.id || '',
+    title: payload.title || '',
+    rssUrl: payload.rssUrl ?? payload.rss_url,
+    category: payload.category || 'blog',
+    subscriptionCount: payload.subscriptionCount ?? payload.subscription_count ?? 0,
+    recentItemCount: payload.recentItemCount ?? payload.recent_item_count ?? 0,
+    lastPublishedAt: payload.lastPublishedAt ?? payload.last_published_at,
+    subscribed: Boolean(payload.subscribed),
+    recentItems: (payload.recentItems ?? payload.recent_items ?? []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      publishedAt: item.publishedAt ?? item.published_at,
+    })),
+  }
 }
 
 function syncQuery() {
@@ -147,6 +190,9 @@ function syncQuery() {
       target: target.value,
       category: category.value,
       theme: theme.value,
+      scope: sourceScope.value,
+      source_q: externalSearch.value || undefined,
+      source_page: sourceScope.value === 'external' && externalPage.value > 1 ? String(externalPage.value) : undefined,
     },
   })
 }
@@ -220,6 +266,52 @@ async function fetchRecommendations() {
   } finally {
     loading.value = false
   }
+}
+
+async function fetchExternalSources() {
+  externalLoading.value = true
+  try {
+    const params = new URLSearchParams({ page: String(externalPage.value), limit: String(externalPageSize) })
+    if (category.value !== ALL_CATEGORY) params.set('category', category.value)
+    if (externalSearch.value.trim()) params.set('q', externalSearch.value.trim())
+    const res = await fetch(`${api.url}/feed/explore/sources?${params}`, authStore.isAuthenticated
+      ? { headers: { Authorization: `Bearer ${authStore.token}` } }
+      : undefined)
+    const data = await res.json()
+    externalSources.value = res.ok && Array.isArray(data.data)
+      ? data.data.map((item: ExploreSourcePayload) => normalizeExploreSource(item))
+      : []
+    externalTotal.value = Number(data.meta?.total ?? externalSources.value.length)
+  } catch {
+    externalSources.value = []
+    externalTotal.value = 0
+    errorMessage.value = '订阅源加载失败'
+  } finally { externalLoading.value = false }
+}
+
+async function subscribeSelectedExternalSources() {
+  const result = await feedStore.batchSubscribeSources(selectedExternalSourceIds.value)
+  if (!result) { errorMessage.value = '订阅失败，请重试'; return }
+  if (result.missingIds.length) errorMessage.value = `${result.missingIds.length} 个来源已不可用`
+  selectedExternalSourceIds.value = []
+  await fetchExternalSources()
+}
+
+const externalSelectableSourceIds = computed(() => externalSources.value
+  .filter((source) => !source.subscribed)
+  .map((source) => source.id))
+
+const allExternalSourcesSelected = computed({
+  get: () => externalSelectableSourceIds.value.length > 0
+    && externalSelectableSourceIds.value.every((id) => selectedExternalSourceIds.value.includes(id)),
+  set: (selected: boolean) => {
+    selectedExternalSourceIds.value = selected ? [...externalSelectableSourceIds.value] : []
+  },
+})
+
+function changeExternalPage(nextPage: number) {
+  if (nextPage < 1 || nextPage === externalPage.value) return
+  externalPage.value = nextPage
 }
 
 function openTarget(path: string) {
@@ -337,6 +429,24 @@ watch([mode, page, theme], () => {
   fetchRecommendations()
 })
 
+watch(sourceScope, () => {
+  syncQuery()
+  if (sourceScope.value === 'external') void fetchExternalSources()
+})
+
+watch(externalSearch, () => {
+  if (externalPage.value === 1) {
+    void fetchExternalSources()
+  } else {
+    externalPage.value = 1
+  }
+})
+
+watch(externalPage, () => {
+  syncQuery()
+  if (sourceScope.value === 'external') void fetchExternalSources()
+})
+
 watch([target], () => {
   syncQuery()
 })
@@ -346,6 +456,10 @@ watch([mode], () => {
     fetchRecommendations()
   } else {
     page.value = 1
+  }
+  if (sourceScope.value === 'external') {
+    if (externalPage.value === 1) void fetchExternalSources()
+    else externalPage.value = 1
   }
 })
 
@@ -367,9 +481,14 @@ onMounted(() => {
   target.value = normalizeTarget(route.query.target)
   category.value = normalizeCategory(route.query.category)
   theme.value = typeof route.query.theme === 'string' && route.query.theme.trim() ? route.query.theme.trim() : ALL_THEME
+  sourceScope.value = normalizeSourceScope(route.query.scope)
+  externalSearch.value = typeof route.query.source_q === 'string' ? route.query.source_q.trim() : ''
+  const sourcePage = Number(route.query.source_page)
+  externalPage.value = Number.isInteger(sourcePage) && sourcePage > 0 ? sourcePage : 1
   syncQuery()
   fetchThemes()
   fetchRecommendations()
+  if (sourceScope.value === 'external') fetchExternalSources()
   if (authStore.isAuthenticated) {
     feedStore.fetchStarredIds()
     feedStore.fetchReadingListIds()
@@ -389,6 +508,9 @@ onMounted(() => {
     </PPageHeader>
 
     <div class="filters-wrap" data-test="feed-filter-wrap">
+      <div class="filter-group" aria-label="来源范围">
+        <PSegmentedControl v-model="sourceScope" :options="sourceScopeOptions" />
+      </div>
       <div class="filter-group" data-test="feed-filter-group" aria-label="订阅推荐模式">
         <PSegmentedControl
           v-model="mode"
@@ -423,6 +545,34 @@ onMounted(() => {
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
+
+    <div v-else-if="sourceScope === 'external'" class="recommend-grid recommend-grid--single">
+      <section class="recommend-section">
+        <div class="section-head"><p class="section-kicker">站外</p><h2>RSS 订阅源</h2></div>
+        <div class="external-source-controls">
+          <label v-if="authStore.isAuthenticated" class="external-source-select-all">
+            <input v-model="allExternalSourcesSelected" data-test="external-source-select-all" type="checkbox" :disabled="!externalSelectableSourceIds.length" />
+            <span>全选当前页</span>
+          </label>
+          <input v-model="externalSearch" data-test="external-source-search" class="external-source-search" type="search" placeholder="搜索订阅源" />
+          <PPress v-if="authStore.isAuthenticated && selectedExternalSourceIds.length" label="订阅选中来源" :loading="externalLoading" @click="subscribeSelectedExternalSources" />
+        </div>
+        <PEmpty v-if="!externalLoading && !externalSources.length" title="暂无订阅源" />
+        <div v-else class="card-stack">
+          <label v-for="source in externalSources" :key="source.id" class="external-source-row">
+            <input v-if="authStore.isAuthenticated && !source.subscribed" v-model="selectedExternalSourceIds" type="checkbox" :value="source.id" />
+            <FeedSourceIdentityCard :source="source" :color="buildSourceColor(source.title)" :avatar-label="buildSourceAvatarLabel(source.title)" :display-url="source.rssUrl || ''" :show-subscribe="false" />
+          </label>
+        </div>
+        <FeedTimelineFooter
+          :page="externalPage"
+          :page-size="externalPageSize"
+          :total="externalTotal"
+          :loading="externalLoading"
+          @change-page="changeExternalPage"
+        />
+      </section>
+    </div>
 
     <div v-else-if="target === 'articles'" class="recommend-grid recommend-grid--single">
       <section class="recommend-section">
@@ -691,6 +841,46 @@ onMounted(() => {
 .card-stack {
   display: grid;
   gap: 1rem;
+}
+
+.external-source-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.external-source-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.external-source-search {
+  min-width: min(100%, 16rem);
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font: inherit;
+}
+
+.external-source-search:focus {
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
+  border-color: var(--a-color-primary);
+}
+
+.external-source-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
 }
 
 .recommend-card {

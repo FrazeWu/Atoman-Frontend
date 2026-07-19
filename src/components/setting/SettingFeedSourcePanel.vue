@@ -68,6 +68,26 @@
       </PButton>
     </div>
 
+    <ul v-if="opmlFailures.length" class="setting-feed-panel__opml-failures">
+      <li v-for="failure in opmlFailures" :key="failure.url" class="setting-feed-panel__opml-failure">
+        <div>
+          <a :href="failure.url" target="_blank" rel="noreferrer">{{ failure.url }}</a>
+          <p>{{ failure.reason }}</p>
+        </div>
+        <PButton
+          size="sm"
+          variant="secondary"
+          data-test="opml-failure-retry"
+          :disabled="retryingOPMLURLs.has(failure.url)"
+          :loading="retryingOPMLURLs.has(failure.url)"
+          loading-text="重试中..."
+          @click="retryOPMLFailure(failure)"
+        >
+          重试
+        </PButton>
+      </li>
+    </ul>
+
     <div class="setting-feed-panel__editor">
       <div class="setting-feed-panel__editor-grid">
         <PInput
@@ -250,6 +270,8 @@ const itemsSheetError = ref('')
 const selectedSource = ref<AdminFeedFulltextSourceRow | null>(null)
 const selectedSourceItems = ref([])
 const opmlInput = ref<HTMLInputElement | null>(null)
+const opmlFailures = ref<Array<{ url: string; reason: string }>>([])
+const retryingOPMLURLs = ref(new Set<string>())
 const draft = ref({
   title: '',
   rssUrl: '',
@@ -422,6 +444,8 @@ async function importOPML(event: Event) {
   message.value = ''
   try {
     const result = await adminFeedFulltextStore.importGlobalOPML(file, authStore.token)
+    const failures = Array.isArray(result.failed_sources) ? result.failed_sources : []
+    opmlFailures.value = failures
     message.value = `导入 ${result.imported || 0}，复用 ${result.reused || 0}，失败 ${result.failed || 0}`
     await refresh()
   } catch (err) {
@@ -429,6 +453,21 @@ async function importOPML(event: Event) {
   } finally {
     importingOPML.value = false
     input.value = ''
+  }
+}
+
+async function retryOPMLFailure(failure: { url: string; reason: string }) {
+  if (!authStore.token || retryingOPMLURLs.value.has(failure.url)) return
+  retryingOPMLURLs.value = new Set([...retryingOPMLURLs.value, failure.url])
+  error.value = ''
+  try {
+    await adminFeedFulltextStore.retryGlobalOPMLSource({ url: failure.url }, authStore.token)
+    opmlFailures.value = opmlFailures.value.filter((item) => item.url !== failure.url)
+    await refresh()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : '重试订阅源失败'
+  } finally {
+    retryingOPMLURLs.value = new Set([...retryingOPMLURLs.value].filter((url) => url !== failure.url))
   }
 }
 
@@ -673,6 +712,34 @@ onMounted(() => {
   display: none;
 }
 
+.setting-feed-panel__opml-failures {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setting-feed-panel__opml-failure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.setting-feed-panel__opml-failure a {
+  color: var(--a-color-text);
+  overflow-wrap: anywhere;
+}
+
+.setting-feed-panel__opml-failure p {
+  margin: 0.25rem 0 0;
+  color: var(--a-color-danger);
+  font-size: 0.8rem;
+}
+
 .setting-feed-panel__row {
   padding: 0.9rem 0;
   border-top: 1px solid var(--a-color-border-soft);
@@ -725,6 +792,10 @@ onMounted(() => {
   .setting-feed-panel__recommendation-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .setting-feed-panel__opml-failure {
+    align-items: flex-start;
   }
 
   .setting-feed-panel__recommendations-add {

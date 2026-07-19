@@ -6,15 +6,17 @@ import { useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
 
 let routeQuery: Record<string, string> = { tab: 'collaboration' }
+const routerPush = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: routeQuery, fullPath: `/inbox?tab=${routeQuery.tab || ''}` }),
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: routerPush, replace: vi.fn() }),
 }))
 
 describe('InboxPage notifications', () => {
   beforeEach(() => {
     routeQuery = { tab: 'collaboration' }
+    routerPush.mockReset()
     setActivePinia(createPinia())
   })
 
@@ -63,6 +65,25 @@ describe('InboxPage notifications', () => {
     const wrapper = mount(InboxPage, { global: { stubs } })
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('因为歌词修改影响了你的注释')
+  })
+
+  it('将歌词重绑通知跳转到专辑并携带歌曲和注释焦点', async () => {
+    const store = useNotificationStore()
+    store.notifications = [{
+      id: 'n-lyrics', recipient_id: 'u1', type: 'collaboration.required', category: 'collaboration',
+      reason: '歌词需要重新绑定', source_type: 'music_lyrics', source_id: 'annotation-1', actor_count: 1,
+      meta: { album_id: 'album-1', song_id: 'song-1', annotation_id: 'annotation-1' },
+      created_at: '2026-07-07T00:00:00Z', updated_at: '2026-07-07T00:00:00Z',
+    }]
+    const wrapper = mount(InboxPage, { global: { stubs } })
+    await wrapper.vm.$nextTick()
+    await wrapper.get('.sidebar-item').trigger('click')
+    await wrapper.vm.$nextTick()
+    await wrapper.get('.detail-actions button').trigger('click')
+    expect(routerPush).toHaveBeenCalledWith({
+      path: '/music/album/album-1',
+      query: { song_id: 'song-1', annotation_id: 'annotation-1', rebind: '1' },
+    })
   })
 
   it('shows notification source label in list and detail panes', async () => {

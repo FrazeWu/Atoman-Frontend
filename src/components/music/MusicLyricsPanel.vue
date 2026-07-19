@@ -160,6 +160,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
+import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
@@ -167,6 +168,8 @@ const props = defineProps<{
   songTitle: string
   artistText: string
   currentTimeSeconds: number
+  focusAnnotationId?: string
+  startRebind?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -289,6 +292,21 @@ watch(currentLineId, async (lineId, previousLineId) => {
     ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 })
 
+watch(
+  () => [props.focusAnnotationId, props.startRebind, lyrics.value?.song_id, lyrics.value?.annotations] as const,
+  async ([annotationId, startRebind]) => {
+    if (!annotationId || !lyrics.value) return
+    const annotation = lyrics.value.annotations.find((item) => item.id === annotationId)
+    if (!annotation) return
+    selectedAnnotationIds.value = [annotation.id]
+    await nextTick()
+    if (startRebind && annotation.status === 'needs_rebind' && canManageAnnotation(annotation)) {
+      handleRebindAnnotation(annotation)
+    }
+  },
+  { immediate: true, deep: true },
+)
+
 function collectIdentityValues(value: Record<string, unknown> | null | undefined) {
   if (!value) return []
   return [value.id, value.uuid]
@@ -376,6 +394,7 @@ async function handleConfirmRebind() {
     return
   }
   if (props.songId !== songId || rebindOperationGeneration !== operationGeneration) return
+  removePendingMusicLyricsAnnotation(annotation.id)
   clearRebindState()
 }
 

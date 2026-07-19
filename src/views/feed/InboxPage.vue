@@ -159,6 +159,7 @@ import { useDMStore } from '@/stores/dm'
 import { useUserBlocksStore } from '@/stores/userBlocks'
 import { useAuthStore } from '@/stores/auth'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
+import type { RouteLocationRaw } from 'vue-router'
 
 type InboxPageTab = InboxTab | 'forum'
 
@@ -276,12 +277,21 @@ const jumpToNotification = async (notification: Notification) => {
   await router.push(targetPath)
 }
 
-const notificationTargetPath = (notification: Notification) => {
+const notificationTargetPath = (notification: Notification): RouteLocationRaw | string => {
   if (notification.source_url) {
     return notification.source_url
   }
   if (isCommentNotification(notification)) return commentNotificationLocation(notification)
   if (notification.type === 'forum_follow') return forumNotificationLocation(notification)
+  if (notification.source_type === 'music_lyrics') {
+    const { album_id: albumId, song_id: songId, annotation_id: annotationId } = notification.meta
+    if (typeof albumId === 'string' && typeof songId === 'string' && typeof annotationId === 'string') {
+      return {
+        path: `/music/album/${albumId}`,
+        query: { song_id: songId, annotation_id: annotationId, rebind: '1' },
+      }
+    }
+  }
   const topicId = notification.meta.topic_id
   if (notification.source_type === 'forum_reply' && topicId) {
     return `/forum/topic/${topicId}#reply-${notification.source_id}`

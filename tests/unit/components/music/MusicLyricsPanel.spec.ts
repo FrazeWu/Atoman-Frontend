@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   resetVersions: vi.fn(),
   revertVersion: vi.fn(),
   currentLine: vi.fn(),
+  removePendingMusicLyricsAnnotation: vi.fn(),
 }))
 
 const apiMocks = vi.hoisted(() => ({
@@ -88,6 +89,10 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => authState,
+}))
+
+vi.mock('@/composables/usePendingMusicLyricsAnnotations', () => ({
+  removePendingMusicLyricsAnnotation: mocks.removePendingMusicLyricsAnnotation,
 }))
 
 vi.mock('@/components/music/MusicLyricsLine.vue', () => ({
@@ -279,6 +284,7 @@ describe('MusicLyricsPanel.vue', () => {
     mocks.resetVersions.mockReset()
     mocks.revertVersion.mockReset()
     mocks.currentLine.mockReset()
+    mocks.removePendingMusicLyricsAnnotation.mockReset()
 
     mocks.load.mockResolvedValue(undefined)
     mocks.save.mockResolvedValue(lyricsState.lyrics.value)
@@ -346,7 +352,18 @@ describe('MusicLyricsPanel.vue', () => {
       end_offset: 4,
     })
     expect(mocks.createAnnotation).not.toHaveBeenCalled()
+    expect(mocks.removePendingMusicLyricsAnnotation).toHaveBeenCalledWith('annotation-1')
     expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
+  })
+
+  it('收到重绑焦点时自动打开作者自己的待重绑注释', async () => {
+    lyricsState.lyrics.value.annotations[0] = {
+      ...lyricsState.lyrics.value.annotations[0],
+      status: 'needs_rebind',
+    }
+    const wrapper = await mountPanel({ focusAnnotationId: 'annotation-1', startRebind: true })
+    await flushPromises()
+    expect(wrapper.get('.annotation-editor-mode').text()).toBe('rebind')
   })
 
   it('取消重绑或切歌时清理重绑状态', async () => {

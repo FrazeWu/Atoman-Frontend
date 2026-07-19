@@ -74,31 +74,36 @@ onMounted(() => {
 }
 
 .app-main {
+  flex: 1 0 auto;
   background: #fff;
   transition: opacity 0.5s ease, filter 0.5s ease;
 }
 
-/* 出场：内容区原地渐隐 */
+/* 出场：内容区稍微上移并渐隐 */
 .shutter-exit {
   opacity: 0;
-  filter: blur(4px);
+  filter: blur(2px);
+  transform: translateY(-12px);
   pointer-events: none;
+  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
 }
 
-/* 入场关键帧：内容区原地渐出 */
+/* 入场关键帧：内容区平滑上浮渐现 */
 @keyframes shutterIn {
   from {
     opacity: 0;
-    filter: blur(4px);
+    transform: translateY(16px);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
     filter: blur(0);
   }
 }
 
 .shutter-entry {
-  animation: shutterIn 0.7s ease-out forwards;
+  animation: shutterIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .app-main--auth {

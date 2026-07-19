@@ -87,4 +87,27 @@ describe('MusicAlbumRouteView', () => {
     expect(mocks.player.showLyrics).toBe(true)
     wrapper.unmount()
   })
+
+  it('does not play an outdated song when an earlier album request finishes last', async () => {
+    let resolveFirstAlbum: (album: { id: string }) => void
+    const firstAlbum = new Promise<{ id: string }>((resolve) => {
+      resolveFirstAlbum = resolve
+    })
+    mocks.getMusicAlbum.mockReturnValueOnce(firstAlbum).mockResolvedValueOnce({ id: 'album-1' })
+
+    const component = (await import('@/views/music/MusicAlbumRouteView.vue')).default
+    const wrapper = mount(component)
+    await nextTick()
+
+    route.query = { song_id: 'song-2', annotation_id: 'annotation-2' }
+    await nextTick()
+    await flushPromises()
+
+    resolveFirstAlbum!({ id: 'album-1' })
+    await flushPromises()
+
+    expect(mocks.player.playSong).toHaveBeenCalledTimes(1)
+    expect(mocks.player.playSong).toHaveBeenLastCalledWith({ id: 'song-2', title: '第二首' })
+    wrapper.unmount()
+  })
 })

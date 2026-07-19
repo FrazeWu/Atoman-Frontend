@@ -47,7 +47,7 @@ test.describe('Music lyric annotation rebind real workflow', () => {
 
       await openLyrics(authorPage, songId, songTitle)
       await selectTextInLine(authorPage, 'Anchor token is annotated', 'Anchor token')
-      await authorPage.getByLabel('注释').fill('需要保留的注释')
+      await authorPage.locator('.music-annotation-editor textarea').fill('需要保留的注释')
       const createResponse = authorPage.waitForResponse(response => (
         response.request().method() === 'POST'
         && response.url().endsWith(`/api/v1/music/songs/${songId}/lyrics/annotations`)
@@ -82,10 +82,12 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       expect((await saveResponse).status()).toBe(200)
 
       await editorPage.reload()
+      await openLyrics(editorPage, songId, songTitle)
       await expect(editorPage.getByTestId(`annotation-rebind-${annotationId}`)).toHaveCount(0)
 
       const beforeRebindVersions = await getVersions(authorPage.request, songId, author.token)
       await authorPage.reload()
+      await openLyrics(authorPage, songId, songTitle)
       const rebindButton = authorPage.getByTestId(`annotation-rebind-${annotationId}`)
       await expect(rebindButton).toBeVisible()
       await expect(authorPage.getByText('待重新绑定', { exact: true })).toBeVisible()
@@ -138,6 +140,7 @@ test.describe('Music lyric annotation rebind real workflow', () => {
 
       await authorPage.setViewportSize({ width: 390, height: 844 })
       await authorPage.reload()
+      await openLyrics(authorPage, songId, songTitle)
       await expect(authorPage.locator('.music-lyrics-line__highlight').filter({ hasText: 'target phrase' })).toBeVisible()
       await assertMobileLayout(authorPage)
       await authorPage.screenshot({ path: testInfo.outputPath('annotation-rebind-mobile.png'), fullPage: true })

@@ -5,6 +5,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PSkeleton from '@/components/ui/PSkeleton.vue'
 import { useApiUrl } from '@/composables/useApi'
 import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
@@ -105,7 +106,11 @@ function playEpisode(ep: PodcastEpisode) {
       </div>
 
       <div v-if="recommendationLoading" class="ph-recommendation-grid" aria-label="正在加载推荐">
-        <div v-for="i in 2" :key="i" class="a-skeleton ph-recommendation-skeleton" />
+        <div v-for="i in 3" :key="i" class="ph-recommendation-card-skeleton" style="display:flex;flex-direction:column;gap:0.75rem;">
+          <PSkeleton height="180px" variant="rect" />
+          <PSkeleton width="80%" height="20px" variant="text" />
+          <PSkeleton width="50%" height="16px" variant="text" />
+        </div>
       </div>
       <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" />
       <div v-else class="ph-recommendation-grid">
@@ -137,7 +142,13 @@ function playEpisode(ep: PodcastEpisode) {
       </div>
 
       <div v-if="loading" class="ph-episode-list" aria-label="正在加载单集">
-        <div v-for="i in 3" :key="i" class="a-skeleton ph-episode-skeleton" />
+        <div v-for="i in 4" :key="i" style="display:flex;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--a-color-border-soft);">
+          <PSkeleton width="64px" height="64px" variant="rect" />
+          <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem;">
+            <PSkeleton width="40%" height="18px" />
+            <PSkeleton width="90%" height="14px" />
+          </div>
+        </div>
       </div>
       <PEmpty v-else-if="episodes.length === 0" title="暂无单集" />
       <div v-else class="ph-episode-list">

@@ -24,11 +24,17 @@ const rebindAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {
 const emptyAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {}
 // @ts-expect-error 锚点不可只传部分字段。
 const partialAnchorAnnotationUpdate: UpdateMusicLyricsAnnotationInput = { line_key: 'line-1' }
+// @ts-expect-error 正文与半套锚点不可混用。
+const bodyWithPartialAnchorAnnotationUpdate: UpdateMusicLyricsAnnotationInput = {
+  body: '更新',
+  line_key: 'line-1',
+}
 
 void bodyOnlyAnnotationUpdate
 void rebindAnnotationUpdate
 void emptyAnnotationUpdate
 void partialAnchorAnnotationUpdate
+void bodyWithPartialAnchorAnnotationUpdate
 
 describe('music lyrics api client', () => {
   afterEach(() => {

@@ -349,6 +349,16 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)
   })
 
+  it('收到重绑焦点时自动打开作者自己的待重绑注释', async () => {
+    lyricsState.lyrics.value.annotations[0] = {
+      ...lyricsState.lyrics.value.annotations[0],
+      status: 'needs_rebind',
+    }
+    const wrapper = await mountPanel({ focusAnnotationId: 'annotation-1', startRebind: true })
+    await flushPromises()
+    expect(wrapper.get('.annotation-editor-mode').text()).toBe('rebind')
+  })
+
   it('取消重绑或切歌时清理重绑状态', async () => {
     lyricsState.lyrics.value.annotations[0] = {
       ...lyricsState.lyrics.value.annotations[0],

@@ -1,7 +1,9 @@
 <template>
   <div class="route-content-loading" role="status" aria-live="polite" aria-label="正在加载内容">
     <div class="loading-container">
-      <div class="spinner-ring"></div>
+      <div class="progress-line-track">
+        <div class="progress-line-bar"></div>
+      </div>
       <div class="loading-text">
         <span>正在加载</span>
         <span class="dot-flow"></span>
@@ -13,7 +15,7 @@
 <style scoped>
 .route-content-loading {
   display: grid;
-  min-height: min(50vh, 24rem);
+  min-height: min(60vh, 32rem);
   place-items: center;
   background: transparent;
 }
@@ -22,20 +24,32 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
+  width: 180px;
 }
 
-/* 高级流光 Spinner */
-.spinner-ring {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 30%, var(--a-color-muted, #64748b) 100%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
-  animation: spin 0.8s linear infinite;
+/* 进度条背景轨道 */
+.progress-line-track {
+  width: 100%;
+  height: 3px;
+  background: var(--a-color-border-soft, #e2e8f0);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
 }
 
+/* 进度条流动条 */
+.progress-line-bar {
+  height: 100%;
+  width: 35%;
+  background: var(--a-color-primary, #2563eb);
+  position: absolute;
+  left: -35%;
+  border-radius: 2px;
+  animation: indeterminate-center-bar 1.5s infinite ease-in-out;
+}
+
+/* 文字标签 */
 .loading-text {
   font-size: var(--a-text-sm, 0.875rem);
   font-weight: 500;
@@ -53,9 +67,19 @@
   animation: dots 1.6s steps(4, end) infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* 流动动画 */
+@keyframes indeterminate-center-bar {
+  0% {
+    left: -35%;
+    width: 35%;
+  }
+  50% {
+    left: 30%;
+    width: 50%;
+  }
+  100% {
+    left: 100%;
+    width: 35%;
   }
 }
 
@@ -66,3 +90,4 @@
   80%, 100% { content: '...'; }
 }
 </style>
+

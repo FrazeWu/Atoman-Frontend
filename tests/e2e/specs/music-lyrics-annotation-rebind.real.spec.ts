@@ -53,7 +53,7 @@ test.describe('Music lyric annotation rebind real workflow', () => {
         && response.url().endsWith(`/api/v1/music/songs/${songId}/lyrics/annotations`)
       ))
       await authorPage.getByRole('button', { name: '保存', exact: true }).click()
-      expect((await createResponse).status()).toBe(200)
+      expect((await createResponse).status()).toBe(201)
 
       const created = await getLyrics(authorPage.request, songId, author.token)
       const annotation = created.annotations.find(item => item.body === '需要保留的注释')
@@ -277,7 +277,10 @@ async function getLyrics(request: APIRequestContext, songId: string, token: stri
     headers: { Authorization: `Bearer ${token}` },
   })
   expect(response.status()).toBe(200)
-  return await response.json() as { annotations: Array<{ id: string, body: string, status: string, selected_text: string, start_offset: number, end_offset: number }> }
+  const body = await response.json() as {
+    data: { annotations: Array<{ id: string, body: string, status: string, selected_text: string, start_offset: number, end_offset: number }> }
+  }
+  return body.data
 }
 
 async function getVersions(request: APIRequestContext, songId: string, token: string) {

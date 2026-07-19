@@ -93,13 +93,14 @@
 
       <aside v-if="showSidebar" class="music-lyrics-panel__sidebar">
         <MusicAnnotationPanel
-          v-if="selectedAnnotations.length"
-          :annotations="selectedAnnotations"
+          v-if="visibleAnnotations.length"
+          :annotations="visibleAnnotations"
           :can-write="isAuthenticated"
           :current-user-ids="currentUserIds"
           @vote="handleVoteAnnotation"
           @edit="handleEditAnnotation"
           @delete="handleDeleteAnnotation"
+          @rebind="handleRebindAnnotation"
         />
 
         <MusicAnnotationEditor
@@ -107,8 +108,10 @@
           :show="annotationEditorVisible"
           :selected-text="annotationSelectedText"
           :initial-body="annotationInitialBody"
+          :mode="annotationEditorMode"
           @save="handleSaveAnnotation"
           @cancel="handleCancelAnnotation"
+          @confirm-rebind="handleConfirmRebind"
         />
       </aside>
     </div>
@@ -204,6 +207,7 @@ const selectedTextDraft = ref<{
   endOffset: number
 } | null>(null)
 const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
+const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const isLyricEditorOpen = ref(false)
 const versionsVisible = ref(false)
 const displayMode = ref<'original' | 'bilingual'>('bilingual')
@@ -236,10 +240,24 @@ const selectedAnnotations = computed(() => {
   const selectedSet = new Set(selectedAnnotationIds.value)
   return lyrics.value.annotations.filter((annotation) => selectedSet.has(annotation.id))
 })
-const annotationEditorVisible = computed(() => Boolean(selectedTextDraft.value || editingAnnotation.value))
+const rebindableAnnotations = computed(() => (lyrics.value?.annotations ?? []).filter((annotation) => (
+  annotation.status === 'needs_rebind' && canManageAnnotation(annotation)
+)))
+const visibleAnnotations = computed(() => {
+  const seen = new Set<string>()
+  return [...selectedAnnotations.value, ...rebindableAnnotations.value].filter((annotation) => {
+    if (seen.has(annotation.id)) return false
+    seen.add(annotation.id)
+    return true
+  })
+})
+const annotationEditorVisible = computed(() => Boolean(selectedTextDraft.value || editingAnnotation.value || rebindingAnnotation.value))
 const annotationSelectedText = computed(() => editingAnnotation.value?.selected_text ?? selectedTextDraft.value?.selectedText ?? '')
 const annotationInitialBody = computed(() => editingAnnotation.value?.body ?? '')
-const showSidebar = computed(() => selectedAnnotations.value.length > 0 || annotationEditorVisible.value)
+const annotationEditorMode = computed<'create' | 'edit' | 'rebind'>(() => (
+  rebindingAnnotation.value ? 'rebind' : editingAnnotation.value ? 'edit' : 'create'
+))
+const showSidebar = computed(() => visibleAnnotations.value.length > 0 || annotationEditorVisible.value)
 
 watch(
   () => props.songId,
@@ -250,6 +268,7 @@ watch(
     selectedAnnotationIds.value = []
     selectedTextDraft.value = null
     editingAnnotation.value = null
+    rebindingAnnotation.value = null
     isLyricEditorOpen.value = false
     versionsVisible.value = false
     displayMode.value = 'bilingual'
@@ -277,9 +296,16 @@ function collectIdentityValues(value: Record<string, unknown> | null | undefined
     .map((candidate) => String(candidate))
 }
 
+function canManageAnnotation(annotation: MusicLyricsAnnotation) {
+  if (!isAuthenticated.value || currentUserIds.value.length === 0) return false
+  const creatorIds = collectIdentityValues(annotation.creator as Record<string, unknown> | null)
+  return creatorIds.some((creatorId) => currentUserIds.value.includes(creatorId))
+}
+
 function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationIds: string[] }) {
   selectedTextDraft.value = null
   editingAnnotation.value = null
+  rebindingAnnotation.value = null
   selectedAnnotationIds.value = payload.annotationIds
 }
 
@@ -298,6 +324,7 @@ function handleSelectText(payload: {
 function handleCancelAnnotation() {
   selectedTextDraft.value = null
   editingAnnotation.value = null
+  rebindingAnnotation.value = null
 }
 
 async function handleSaveAnnotation(body: string) {
@@ -324,9 +351,33 @@ async function handleSaveAnnotation(body: string) {
   selectedTextDraft.value = null
 }
 
+function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
+  if (!canManageAnnotation(annotation) || annotation.status !== 'needs_rebind') return
+  selectedTextDraft.value = null
+  editingAnnotation.value = null
+  rebindingAnnotation.value = annotation
+}
+
+async function handleConfirmRebind() {
+  if (!isAuthenticated.value || !rebindingAnnotation.value || !selectedTextDraft.value) return
+  const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
+  if (!lineKey) return
+
+  const annotation = rebindingAnnotation.value
+  await updateAnnotation(props.songId, annotation.id, {
+    line_key: lineKey,
+    selected_text: selectedTextDraft.value.selectedText,
+    start_offset: selectedTextDraft.value.startOffset,
+    end_offset: selectedTextDraft.value.endOffset,
+  })
+  selectedTextDraft.value = null
+  rebindingAnnotation.value = null
+}
+
 function handleEditAnnotation(annotation: MusicLyricsAnnotation) {
   if (!isAuthenticated.value) return
   selectedTextDraft.value = null
+  rebindingAnnotation.value = null
   editingAnnotation.value = annotation
 }
 

@@ -244,6 +244,32 @@ describe('music lyrics api adapter', () => {
     ])
   })
 
+  it('serializes complete anchors when rebinding an annotation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ data: { id: 'ann-1' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    await updateMusicLyricsAnnotation('song-1', 'ann-1', {
+      line_key: 'line-2',
+      selected_text: 'Midnight',
+      start_offset: 0,
+      end_offset: 8,
+    })
+
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/songs/song-1/lyrics/annotations/ann-1', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        line_key: 'line-2',
+        selected_text: 'Midnight',
+        start_offset: 0,
+        end_offset: 8,
+      }),
+    })
+  })
+
   it('votes on annotations with POST', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({

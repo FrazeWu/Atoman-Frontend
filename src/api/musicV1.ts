@@ -593,7 +593,11 @@ export type CreateMusicLyricsAnnotationInput = {
 }
 
 export type UpdateMusicLyricsAnnotationInput = {
-  body: string
+  body?: string
+  line_key?: string
+  selected_text?: string
+  start_offset?: number
+  end_offset?: number
 }
 
 export type MusicSongLyrics = {

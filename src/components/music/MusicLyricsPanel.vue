@@ -639,6 +639,21 @@ function cancelLyricsConflict() {
   min-height: 0;
   overflow: auto;
   padding-right: 1rem;
+  /* 增加高质感渐变遮罩 */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 15%,
+    black 85%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 15%,
+    black 85%,
+    transparent 100%
+  );
 }
 
 .music-lyrics-panel__display-mode {

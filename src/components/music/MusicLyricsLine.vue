@@ -137,14 +137,19 @@ function handleMouseUp() {
 
 <style scoped>
 .music-lyrics-line {
-  padding: 0.75rem 0;
-  opacity: 0.48;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  padding: 0.9rem 0;
+  opacity: 0.32; /* 调低未激活歌词的透明度，增大对比度 */
+  filter: blur(0.5px); /* 可选：给不活跃行添加极其微弱的模糊 */
+  transform: scale(0.98);
+  transform-origin: left center;
+  transition: all 0.38s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .music-lyrics-line.is-active {
   opacity: 1;
-  transform: translateX(0.25rem);
+  filter: blur(0);
+  transform: scale(1.03) translateX(0.5rem);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
 }
 
 .music-lyrics-line__text {

@@ -129,8 +129,9 @@ const toggleTheme = (event: MouseEvent) => {
     return
   }
 
-  const x = event.clientX
-  const y = event.clientY
+  const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect()
+  const x = event.clientX || (rect ? rect.left + rect.width / 2 : window.innerWidth / 2)
+  const y = event.clientY || (rect ? rect.top + rect.height / 2 : window.innerHeight / 2)
   const endRadius = Math.hypot(
     Math.max(x, window.innerWidth - x),
     Math.max(y, window.innerHeight - y)

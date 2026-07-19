@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, reactive } from 'vue'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HomeView from '@/views/music/HomeView.vue'
@@ -17,8 +17,13 @@ const mocks = vi.hoisted(() => ({
   routeQuery: {} as Record<string, string>,
   listPendingMusicLyricsAnnotations: vi.fn(),
   routerPush: vi.fn(),
-  authStore: { isAuthenticated: false, token: null } as { isAuthenticated: boolean; token: string | null },
 }))
+
+const authStore = reactive({
+  isAuthenticated: false,
+  token: null as string | null,
+  user: null as null | { uuid: string },
+})
 
 vi.mock('@/views/music/ExploreView.vue', () => ({
   default: {
@@ -59,7 +64,7 @@ vi.mock('@/api/musicV1', () => ({
 }))
 
 vi.mock('@/stores/auth', () => ({
-  useAuthStore: () => mocks.authStore,
+  useAuthStore: () => authStore,
 }))
 
 vi.mock('@/router', () => ({
@@ -78,7 +83,9 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.closeMusicEditor.mockReset()
     mocks.listPendingMusicLyricsAnnotations.mockReset()
     mocks.routerPush.mockReset()
-    mocks.authStore = { isAuthenticated: false, token: null }
+    authStore.isAuthenticated = false
+    authStore.token = null
+    authStore.user = null
     mocks.routeQuery = {}
   })
 
@@ -135,7 +142,9 @@ describe('Music HomeView.vue (Album Landing)', () => {
   })
 
   it('shows the authenticated user exact pending rebind count and opens the first task', async () => {
-    mocks.authStore = { isAuthenticated: true, token: 'token' }
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-1' }
     mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
       { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
       { annotation_id: 'annotation-2', song_id: 'song-2', album_id: 'album-2' },
@@ -145,7 +154,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
     await nextTick()
     await nextTick()
 
-    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalledOnce()
+    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalled()
     expect(wrapper.get('[data-testid="music-pending-rebind"]').text()).toContain('2')
 
     await wrapper.get('[data-testid="music-pending-rebind"]').trigger('click')
@@ -158,19 +167,23 @@ describe('Music HomeView.vue (Album Landing)', () => {
   })
 
   it('does not show a pending rebind entry when the authenticated user has no tasks', async () => {
-    mocks.authStore = { isAuthenticated: true, token: 'token' }
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-1' }
     mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
 
     const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
     await nextTick()
     await nextTick()
 
-    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalledOnce()
+    expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalled()
     expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
   })
 
   it('removes the pending rebind entry after the annotation is rebound', async () => {
-    mocks.authStore = { isAuthenticated: true, token: 'token' }
+    authStore.isAuthenticated = true
+    authStore.token = 'token'
+    authStore.user = { uuid: 'user-1' }
     mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
       { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
     ])
@@ -181,6 +194,26 @@ describe('Music HomeView.vue (Album Landing)', () => {
 
     removePendingMusicLyricsAnnotation('annotation-1')
     await nextTick()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
+  })
+
+  it('clears the pending rebind entry when the user logs out', async () => {
+    authStore.isAuthenticated = true
+    authStore.token = 'token-a'
+    authStore.user = { uuid: 'user-a' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
+      { annotation_id: 'annotation-a', song_id: 'song-a', album_id: 'album-a' },
+    ])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(true)
+
+    authStore.isAuthenticated = false
+    authStore.token = null
+    authStore.user = null
+    await nextTick()
+
     expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
   })
 })

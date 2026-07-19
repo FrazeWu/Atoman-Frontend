@@ -12,6 +12,7 @@ describe('MusicAnnotationEditor', () => {
     expect(wrapper.find('textarea').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('保存')
     expect(wrapper.get('[data-testid="annotation-confirm-rebind"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="annotation-confirm-rebind"]').classes()).toContain('p-button--lg')
 
     await wrapper.setProps({ selectedText: '新的歌词' })
     const confirm = wrapper.get('[data-testid="annotation-confirm-rebind"]')

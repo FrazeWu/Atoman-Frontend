@@ -47,7 +47,7 @@
         <PButton
           v-if="annotation.status === 'needs_rebind'"
           type="button"
-          size="sm"
+          size="lg"
           variant="ghost"
           class="music-annotation-card__rebind"
           :data-testid="`annotation-rebind-${annotation.id}`"

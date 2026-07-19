@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -7,11 +7,11 @@ import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import ExploreView from '@/views/music/ExploreView.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'
-import { listPendingMusicLyricsAnnotations, type PendingMusicLyricsAnnotation } from '@/api/musicV1'
+import { usePendingMusicLyricsAnnotations } from '@/composables/usePendingMusicLyricsAnnotations'
 
 const route = useRoute()
 const authStore = getActivePinia() ? useAuthStore() : null
-const pendingRebindNotifications = ref<PendingMusicLyricsAnnotation[]>([])
+const { pendingMusicLyricsAnnotations: pendingRebindNotifications, loadPendingMusicLyricsAnnotations } = usePendingMusicLyricsAnnotations()
 const pendingRebindCount = computed(() => pendingRebindNotifications.value.length)
 const {
   isMainShifted,
@@ -36,11 +36,7 @@ const { applyRouteSelection } = useMusicRouteSelection({
 })
 
 async function loadPendingRebindNotifications() {
-  if (!authStore?.isAuthenticated || !authStore.token) {
-    pendingRebindNotifications.value = []
-    return
-  }
-  pendingRebindNotifications.value = await listPendingMusicLyricsAnnotations()
+  await loadPendingMusicLyricsAnnotations(Boolean(authStore?.isAuthenticated), authStore?.token ?? null)
 }
 
 async function openFirstPendingRebind() {

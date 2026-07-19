@@ -3,6 +3,7 @@ import { computed, nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HomeView from '@/views/music/HomeView.vue'
+import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 
 const mocks = vi.hoisted(() => ({
   openAlbum: vi.fn(),
@@ -165,6 +166,21 @@ describe('Music HomeView.vue (Album Landing)', () => {
     await nextTick()
 
     expect(mocks.listPendingMusicLyricsAnnotations).toHaveBeenCalledOnce()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
+  })
+
+  it('removes the pending rebind entry after the annotation is rebound', async () => {
+    mocks.authStore = { isAuthenticated: true, token: 'token' }
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([
+      { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
+    ])
+
+    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(true)
+
+    removePendingMusicLyricsAnnotation('annotation-1')
+    await nextTick()
     expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(false)
   })
 })

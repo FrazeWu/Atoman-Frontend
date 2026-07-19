@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -36,6 +37,13 @@ class ResizeObserverStub {
   disconnect() {}
 }
 
+function createTestRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', component: { template: '<div />' } }],
+  })
+}
+
 describe('AudioPlayer', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -58,6 +66,7 @@ describe('AudioPlayer', () => {
 
     const wrapper = mount(AudioPlayer, {
       global: {
+        plugins: [createTestRouter()],
         stubs: {
           MusicLyricsPanel: true,
           PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
@@ -105,6 +114,7 @@ describe('AudioPlayer', () => {
 
     const wrapper = mount(AudioPlayer, {
       global: {
+        plugins: [createTestRouter()],
         stubs: {
           MusicLyricsPanel: {
             props: ['currentTimeSeconds'],

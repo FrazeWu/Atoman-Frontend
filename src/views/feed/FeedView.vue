@@ -148,6 +148,15 @@
             :options="sourceTypeFilterOptions"
           />
         </div>
+        <label v-if="!querySourceId" class="feed-merge-duplicates">
+          <input
+            v-model="mergeDuplicates"
+            data-test="feed-merge-duplicates"
+            type="checkbox"
+            @change="updateMergeDuplicates"
+          />
+          <span>合并同题</span>
+        </label>
         <div v-if="themeFilters.length" class="theme-filters" aria-label="主题筛选">
           <button
             v-for="theme in themeFilters"
@@ -256,6 +265,29 @@
                 时长: {{ item.feed_item.duration }}
               </span>
               <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.feed_item.published_at) }}</span>
+              <span
+                v-if="(item.feed_item.duplicate_count || 0) > 1"
+                class="feed-duplicate-summary"
+                data-test="feed-duplicate-summary"
+              >
+                <button
+                  type="button"
+                  class="feed-duplicate-toggle"
+                  data-test="feed-duplicate-toggle"
+                  :aria-expanded="expandedDuplicateItemIds.has(item.feed_item.id)"
+                  @click.stop="toggleDuplicateSources(item.feed_item.id)"
+                >
+                  <ChevronDown :size="14" :class="{ 'is-expanded': expandedDuplicateItemIds.has(item.feed_item.id) }" aria-hidden="true" />
+                  来自 {{ item.feed_item.duplicate_count }} 个来源
+                </button>
+                <span
+                  v-if="expandedDuplicateItemIds.has(item.feed_item.id)"
+                  class="feed-duplicate-sources"
+                  data-test="feed-duplicate-sources"
+                >
+                  {{ (item.feed_item.duplicate_sources || []).join(' · ') }}
+                </span>
+              </span>
             </template>
 
             <template #actions>
@@ -329,7 +361,7 @@ import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore, type OnboardingFeedRecommendation } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import { Filter } from 'lucide-vue-next'
+import { ChevronDown, Filter } from 'lucide-vue-next'
 import type {
   AutoAddSubscriptionPayload,
   FeedArticleSource,
@@ -383,7 +415,9 @@ const querySourceId = computed(() => typeof route.query.source_id === 'string' ?
 const queryGroupId = computed(() => typeof route.query.group_id === 'string' ? route.query.group_id : null)
 const queryPage = computed(() => normalizePage(route.query.page))
 const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
+const queryMergeDuplicates = computed(() => route.query.merge_duplicates !== 'false')
 const searchInput = ref(querySearch.value)
+const mergeDuplicates = ref(queryMergeDuplicates.value)
 const sourceTypeFilter = ref<'all' | 'internal' | 'blog' | 'podcast'>('all')
 const activeTheme = ref('')
 const activeSearchLabel = computed(() => querySearch.value.trim())
@@ -523,6 +557,7 @@ const addSubscriptionError = ref('')
 const addSubscriptionResetKey = ref(0)
 
 const showArticleSheet = ref(false)
+const expandedDuplicateItemIds = ref(new Set<string>())
 const selectedArticle = ref<TimelineItem | null>(null)
 const selectedArticleIndex = computed(() => {
   if (!selectedArticle.value) return -1
@@ -543,6 +578,11 @@ const headerBottom = computed(() => {
   return `${height}px`
 })
 
+const feedItemActionIDs = (feedItem: FeedItem) => Array.from(new Set([
+  feedItem.id,
+  ...(feedItem.duplicate_item_ids || []),
+].filter(Boolean)))
+
 const openArticleSheet = (item: TimelineItem, index?: number) => {
   if (index !== undefined) focusedIndex.value = index
   if (!item.post && !item.feed_item) return
@@ -551,7 +591,7 @@ const openArticleSheet = (item: TimelineItem, index?: number) => {
   showArticleSheet.value = true
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
     item.is_read = true
-    void markItemsReadAndRefresh([item.feed_item.id])
+    void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
   }
 }
 
@@ -574,7 +614,7 @@ const openSourceArticle = (item: TimelineItem) => {
   showArticleSheet.value = true
   if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
     item.is_read = true
-    void markItemsReadAndRefresh([item.feed_item.id])
+    void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
   }
 }
 
@@ -1145,17 +1185,29 @@ const toggleReadingList = async (feedItemId: string) => {
 
 const toggleRead = (item: TimelineItem) => {
   if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item) return
-  const id = item.feed_item.id
+  const itemIDs = feedItemActionIDs(item.feed_item)
   const nextIsRead = !item.is_read
   void (async () => {
     const success = nextIsRead
-      ? await feedStore.markItemsRead([id])
-      : await feedStore.markItemsUnread([id])
+      ? await feedStore.markItemsRead(itemIDs)
+      : await feedStore.markItemsUnread(itemIDs)
     if (!success) return
     item.is_read = nextIsRead
     if (!nextIsRead) allRead.value = false
     await feedStore.fetchSubscriptions()
   })()
+}
+
+const setFeedItemsReadState = (ids: string[], isRead: boolean) => {
+  const targetIds = new Set(ids)
+  const selectedItems = selectedArticle.value ? [selectedArticle.value] : []
+  for (const items of [timeline.value, sourceArticles.value, selectedItems]) {
+    items.forEach((item) => {
+      if (item.type === 'feed_item' && item.feed_item && targetIds.has(item.feed_item.id)) {
+        item.is_read = isRead
+      }
+    })
+  }
 }
 
 const markItemsReadAndRefresh = async (ids: string[]) => {
@@ -1164,10 +1216,7 @@ const markItemsReadAndRefresh = async (ids: string[]) => {
     await feedStore.fetchSubscriptions()
     return
   }
-  const failedIds = new Set(ids)
-  timeline.value.forEach((item) => {
-    if (item.type === 'feed_item' && item.feed_item && failedIds.has(item.feed_item.id)) item.is_read = false
-  })
+  setFeedItemsReadState(ids, false)
 }
 
 const markItemsUnreadAndRefresh = async (ids: string[]) => {
@@ -1176,10 +1225,7 @@ const markItemsUnreadAndRefresh = async (ids: string[]) => {
     await feedStore.fetchSubscriptions()
     return
   }
-  const failedIds = new Set(ids)
-  timeline.value.forEach((item) => {
-    if (item.type === 'feed_item' && item.feed_item && failedIds.has(item.feed_item.id)) item.is_read = true
-  })
+  setFeedItemsReadState(ids, true)
 }
 
 const itemKey = (item: TimelineItem) => {
@@ -1253,6 +1299,23 @@ const clearSearch = async () => {
   await setSearchInRoute('')
 }
 
+const updateMergeDuplicates = async () => {
+  await router.replace({
+    query: {
+      ...route.query,
+      merge_duplicates: mergeDuplicates.value ? undefined : 'false',
+      page: undefined,
+    },
+  })
+}
+
+const toggleDuplicateSources = (feedItemID: string) => {
+  const next = new Set(expandedDuplicateItemIds.value)
+  if (next.has(feedItemID)) next.delete(feedItemID)
+  else next.add(feedItemID)
+  expandedDuplicateItemIds.value = next
+}
+
 const changePage = async (page: number) => {
   const normalizedPage = normalizePage(page)
   if (normalizedPage === currentPage.value) return
@@ -1278,6 +1341,7 @@ const fetchTimeline = async () => {
       sourceId: querySourceId.value,
       groupId: queryGroupId.value,
       unreadOnly: unreadOnly.value,
+      hideDuplicates: mergeDuplicates.value && !querySourceId.value,
       q: querySearch.value,
     })
 
@@ -1337,20 +1401,22 @@ const applyAutomationRules = async (items: TimelineItem[]) => {
   )
   if (!autoReadSubscriptionSourceIds.size && !autoReadingListSubscriptionSourceIds.size) return
 
-  const pendingReadIds = items
+  const pendingReadItems = items
     .filter((item) => (
       item.type === 'feed_item'
       && item.feed_item
       && !item.is_read
       && autoReadSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
     ))
-    .map((item) => item.feed_item!.id)
+  const pendingReadIds = Array.from(new Set(
+    pendingReadItems.flatMap((item) => feedItemActionIDs(item.feed_item!)),
+  ))
 
   items.forEach((item) => {
     if (
       item.type === 'feed_item'
       && item.feed_item
-      && pendingReadIds.includes(item.feed_item.id)
+      && pendingReadItems.includes(item)
     ) {
       item.is_read = true
     }
@@ -1384,7 +1450,7 @@ const toggleUnreadOnly = () => {
 const onItemClick = (item: TimelineItem) => {
   if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
   item.is_read = true
-  void markItemsReadAndRefresh([item.feed_item.id])
+  void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
 }
 
 const playPodcast = (feedItem: FeedItem, event: Event) => {
@@ -1404,7 +1470,7 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   )
   if (authStore.isAuthenticated && timelineItem && !timelineItem.is_read) {
     timelineItem.is_read = true
-    void markItemsReadAndRefresh([feedItem.id])
+    void markItemsReadAndRefresh(feedItemActionIDs(feedItem))
   }
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
@@ -1493,7 +1559,8 @@ watch(() => route.query.manage_subscriptions, async (value) => {
   }
 }, { immediate: true })
 
-watch([querySourceId, queryGroupId, queryPage, querySearch], async () => {
+watch([querySourceId, queryGroupId, queryPage, querySearch, queryMergeDuplicates], async () => {
+  mergeDuplicates.value = queryMergeDuplicates.value
   currentPage.value = queryPage.value
   await fetchTimeline()
 }, { immediate: true })
@@ -1704,6 +1771,55 @@ onUnmounted(() => {
   border-bottom-color: var(--a-color-accent-confirm);
 }
 
+.feed-merge-duplicates {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.feed-merge-duplicates input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--a-color-text);
+}
+
+.feed-duplicate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.feed-duplicate-summary {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.feed-duplicate-toggle svg {
+  transition: transform 0.15s ease;
+}
+
+.feed-duplicate-toggle svg.is-expanded {
+  transform: rotate(180deg);
+}
+
+.feed-duplicate-sources {
+  max-width: min(100%, 36rem);
+  color: var(--a-color-muted);
+  overflow-wrap: anywhere;
+}
+
 .filter-toggle-btn {
   display: flex;
   align-items: center;
@@ -1789,6 +1905,7 @@ onUnmounted(() => {
 @media (max-width: 720px) {
   .feed-actions {
     align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .feed-search {
@@ -1798,6 +1915,40 @@ onUnmounted(() => {
 
   .feed-search__clear {
     grid-column: 1 / -1;
+  }
+
+  :deep(.feed-entry-meta) {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+
+  .feed-timeline :deep(.p-entry) {
+    margin-right: 0;
+    margin-left: 0;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .feed-duplicate-summary {
+    flex: 1 0 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+
+  .feed-duplicate-toggle {
+    min-height: 2rem;
+  }
+
+  :deep(.feed-entry-actions) {
+    position: static;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+    padding-left: 0;
+    background: transparent;
+    opacity: 1;
+    transform: none;
   }
 }
 

@@ -254,7 +254,7 @@ import {
 } from '@/api/musicV1'
 
 const player = usePlayerStore()
-const route = useRoute() ?? { query: {} }
+const route = useRoute()
 const authStore = useAuthStore()
 const api = useApi()
 const playerInnerRef = ref<HTMLElement | null>(null)

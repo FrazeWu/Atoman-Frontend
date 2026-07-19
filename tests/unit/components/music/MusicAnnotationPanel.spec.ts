@@ -44,6 +44,7 @@ describe('MusicAnnotationPanel', () => {
 
     const rebindButton = wrapper.get('[data-testid="annotation-rebind-annotation-pending"]')
     expect(wrapper.text()).toContain('待重新绑定')
+    expect(rebindButton.classes()).toContain('music-annotation-card__rebind')
     await rebindButton.trigger('click')
     expect(wrapper.emitted('rebind')).toEqual([[pendingAnnotation]])
 

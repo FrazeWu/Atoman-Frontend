@@ -35,8 +35,8 @@
             <div class="player-tooltip">{{ player.currentSong.title }}</div>
           </div>
           <div class="player-tooltip-wrap">
-            <p class="player-artist">{{ artistText }}</p>
-            <div class="player-tooltip player-tooltip--subtle">{{ artistText }}</div>
+            <p class="player-artist">TRACK // {{ artistText }}</p>
+            <div class="player-tooltip player-tooltip--subtle">TRACK // {{ artistText }}</div>
           </div>
         </div>
       </div>
@@ -595,9 +595,10 @@ onBeforeUnmount(() => {
 }
 .cover-wrap {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -657,8 +658,8 @@ onBeforeUnmount(() => {
 }
 .player-title {
   font-family: var(--a-font-sans);
-  font-weight: 950;
-  font-size: 1.05rem;
+  font-weight: 500;
+  font-size: 13px;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -666,10 +667,10 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 .player-artist {
-  font-family: var(--a-font-sans);
+  font-family: var(--a-font-mono);
   font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.08em;
   margin: 0;
   color: var(--a-color-muted);
   font-weight: 800;
@@ -743,11 +744,16 @@ onBeforeUnmount(() => {
   color: var(--a-color-text);
 }
 .skip-btn, .nav-btn {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.5;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, color 0.2s;
 }
-.skip-btn { opacity: 0.4; }
-.skip-btn:hover, .nav-btn:hover { opacity: 1; }
+.skip-btn:hover, .nav-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
 
 .main-play-btn {
   background: #0f172a;
@@ -759,7 +765,7 @@ onBeforeUnmount(() => {
   font-size: 11px;
   cursor: pointer;
   letter-spacing: 0.1em;
-  transition: transform 0.1s;
+  transition: transform 0.1s, background-color 0.15s;
 }
 .main-play-btn:active { transform: translateY(1px); }
 
@@ -867,11 +873,13 @@ onBeforeUnmount(() => {
 }
 .feature-link {
   cursor: pointer;
-  border-bottom: 1.5px solid transparent;
-  font-size: 0.9rem;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.5;
   padding: 0 4px;
+  transition: opacity 0.2s;
 }
-.feature-link:hover { border-bottom-color: var(--a-color-text); }
+.feature-link:hover { opacity: 1; }
 
 .feature-toggle {
   cursor: pointer;
@@ -919,12 +927,22 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--a-color-bg);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--a-color-border-soft);
   padding: 16px 0;
   z-index: 100;
-  box-shadow: var(--a-shadow-dropdown);
-  border-radius: var(--a-radius-control);
+  box-shadow: none;
+  border-radius: 4px;
+}
+:root[data-theme='dark'] .volume-control {
+  background: rgba(15, 23, 42, 0.88);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .volume-control {
+    background: rgba(15, 23, 42, 0.88);
+  }
 }
 .volume-control::after {
   content: '';
@@ -966,7 +984,7 @@ onBeforeUnmount(() => {
   appearance: none;
   width: 10px;
   height: 10px;
-  background: var(--a-color-text);
+  background: #0d9488;
   border-radius: 50%;
 }
 
@@ -978,9 +996,17 @@ onBeforeUnmount(() => {
   color: var(--a-color-muted);
   transition: all 0.2s;
   padding: 4px 8px;
-  border-radius: 0px;
-  background: transparent;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
   border: none;
+}
+:root[data-theme='dark'] .queue-trigger {
+  background: rgba(255, 255, 255, 0.1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .queue-trigger {
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .player-pin-btn {
@@ -1015,9 +1041,9 @@ onBeforeUnmount(() => {
   background: var(--a-color-overlay-soft);
 }
 .queue-count {
-  font-family: var(--a-font-mono, monospace);
-  font-size: 10px;
-  font-weight: 900;
+  font-family: var(--a-font-mono);
+  font-size: 9px;
+  font-weight: 500;
   min-width: 14px;
   text-align: center;
 }

@@ -120,5 +120,9 @@ async function expectCurrentDebateViews(page: Page) {
   await expect(page.getByRole('tab', { name: '正文' })).toBeVisible()
   await expect(page.getByRole('tab', { name: '辩论树' })).toBeVisible()
   await expect(page.getByRole('tab', { name: '关系图' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '讨论' })).toBeVisible()
+  await page.getByRole('button', { name: '讨论' }).click()
+  const discussion = page.getByRole('dialog', { name: '讨论' })
+  await expect(discussion).toBeVisible()
+  await discussion.getByRole('button', { name: '关闭讨论' }).click()
+  await expect(discussion).toHaveCount(0)
 }

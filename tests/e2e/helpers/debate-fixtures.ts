@@ -41,10 +41,26 @@ export function requireLocalDebateFixture() {
   if (!['localhost', '127.0.0.1', '0.0.0.0'].includes(baseURL.hostname)) {
     throw new Error(`拒绝对非本地地址执行数据库 fixture：${baseURL.origin}`)
   }
+
+  if (process.env.DOCKER_HOST) assertLocalDockerEndpoint(process.env.DOCKER_HOST)
+  const context = execFileSync('docker', ['context', 'show'], { encoding: 'utf8' }).trim()
+  const endpoint = execFileSync('docker', [
+    'context', 'inspect',
+    '--format', '{{ (index .Endpoints "docker").Host }}',
+    context,
+  ], { encoding: 'utf8' }).trim()
+  assertLocalDockerEndpoint(endpoint)
+}
+
+export function assertLocalDockerEndpoint(endpoint: string) {
+  if (!endpoint.trim().startsWith('unix://')) {
+    throw new Error(`拒绝对非本机 Docker daemon 执行数据库 fixture：${endpoint || '未配置 endpoint'}`)
+  }
 }
 
 export async function createDebateFixture(request: APIRequestContext): Promise<DebateFixture> {
   requireLocalDebateFixture()
+  runPsql('CREATE EXTENSION IF NOT EXISTS pgcrypto;')
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`
   const password = `Debate-E2E-${randomUUID()}!`
   const sessions: DebateSession[] = []

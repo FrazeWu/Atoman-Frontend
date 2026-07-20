@@ -216,14 +216,19 @@ function cleanupFixtureRows(debateIDs: string[], userIDs: string[]) {
 }
 
 function runPsql(sql: string) {
-  return execFileSync('docker', [
+  return execFileSync('docker', buildLocalPsqlArgs(sql), { encoding: 'utf8' }).trim()
+}
+
+export function buildLocalPsqlArgs(sql: string) {
+  return [
     'exec', process.env.DEBATE_E2E_POSTGRES_CONTAINER ?? 'atoman-dev-postgres-1',
     'psql', '-q',
+    '-h', '/var/run/postgresql',
     '-U', process.env.DEBATE_E2E_POSTGRES_USER ?? 'atoman',
     '-d', process.env.DEBATE_E2E_POSTGRES_DB ?? 'atoman_dev',
     '-v', 'ON_ERROR_STOP=1',
     '-At', '-c', sql,
-  ], { encoding: 'utf8' }).trim()
+  ]
 }
 
 function sqlLiteral(value: string) {

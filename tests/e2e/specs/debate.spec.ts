@@ -1,6 +1,11 @@
-import type { Page } from '@playwright/test'
+import type { Page, Response } from '@playwright/test'
 
 import { expect, test } from '../fixtures/base'
+import {
+  cleanupDebateFixture,
+  createDebateFixture,
+  type DebateSession,
+} from '../helpers/debate-fixtures'
 
 test.describe('Debate', () => {
   test('browse debates home page', async ({ page }) => {
@@ -19,21 +24,25 @@ test.describe('Debate', () => {
     await expect(page.getByRole('option', { name: '已归档', exact: true })).toBeVisible()
 
     await page.getByRole('option', { name: '开放', exact: true }).click()
-    const activeRequest = page.waitForRequest(request => {
-      const url = new URL(request.url())
-      return url.pathname.endsWith('/api/v1/debate/topics') && url.searchParams.get('status') === 'active'
+    const activeResponse = page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return response.request().method() === 'GET'
+        && url.pathname.endsWith('/api/v1/debate/topics')
+        && url.searchParams.get('status') === 'active'
     })
     await page.getByRole('button', { name: '筛选' }).click()
-    await activeRequest
+    await expectDebateStatusResponse(await activeResponse, 'active')
 
     await statusTrigger.click()
     await page.getByRole('option', { name: '已归档', exact: true }).click()
-    const archivedRequest = page.waitForRequest(request => {
-      const url = new URL(request.url())
-      return url.pathname.endsWith('/api/v1/debate/topics') && url.searchParams.get('status') === 'archived'
+    const archivedResponse = page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return response.request().method() === 'GET'
+        && url.pathname.endsWith('/api/v1/debate/topics')
+        && url.searchParams.get('status') === 'archived'
     })
     await page.getByRole('button', { name: '筛选' }).click()
-    await archivedRequest
+    await expectDebateStatusResponse(await archivedResponse, 'archived')
   })
 
   test('shows an empty state or debate entries', async ({ page }) => {
@@ -41,26 +50,35 @@ test.describe('Debate', () => {
     await expect(page.getByText('暂无辩题', { exact: true }).or(page.locator('.p-entry').first())).toBeVisible()
   })
 
-  test('creates a debate and opens its current wiki views', async ({ authenticatedPage }) => {
-    await gotoDebateHome(authenticatedPage)
-    await authenticatedPage.getByRole('button', { name: '新建辩题' }).click()
-    await expect(authenticatedPage.getByRole('heading', { name: '新建辩题' })).toBeVisible()
+  test('creates a debate and opens its current wiki views', async ({ page, request }) => {
+    test.skip(process.env.DEBATE_WIKI_E2E !== '1', 'requires local PostgreSQL and DEBATE_WIKI_E2E=1')
+    test.setTimeout(90_000)
+    const fixture = await createDebateFixture(request)
 
-    const title = `E2E 辩题 ${Date.now()}`
-    await authenticatedPage.getByPlaceholder('长期吸烟会不会显著增加肺癌风险？').fill(title)
-    await authenticatedPage.locator('textarea').fill('这是 E2E 创建的正文。')
-    await authenticatedPage.getByPlaceholder('医学，公共健康').fill('测试,E2E')
+    try {
+      await authenticatePage(page, fixture.sessions[0]!)
+      await gotoDebateHome(page)
+      await page.getByRole('button', { name: '新建辩题' }).click()
+      await expect(page.getByRole('heading', { name: '新建辩题' })).toBeVisible()
 
-    const created = authenticatedPage.waitForResponse(response => (
-      response.request().method() === 'POST'
-      && new URL(response.url()).pathname.endsWith('/api/v1/debate/topics')
-    ))
-    await authenticatedPage.getByRole('button', { name: '创建', exact: true }).click()
-    expect((await created).status()).toBe(201)
+      const title = `E2E 辩题 ${Date.now()}`
+      await page.getByPlaceholder('长期吸烟会不会显著增加肺癌风险？').fill(title)
+      await page.locator('textarea').fill('这是 E2E 创建的正文。')
+      await page.getByPlaceholder('医学，公共健康').fill('测试,E2E')
 
-    await expect(authenticatedPage).toHaveURL(/\/debate\/[0-9a-f-]+$/)
-    await expect(authenticatedPage.getByRole('heading', { name: title })).toBeVisible()
-    await expectCurrentDebateViews(authenticatedPage)
+      const created = page.waitForResponse(response => (
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname.endsWith('/api/v1/debate/topics')
+      ))
+      await page.getByRole('button', { name: '创建', exact: true }).click()
+      expect((await created).status()).toBe(201)
+
+      await expect(page).toHaveURL(/\/debate\/[0-9a-f-]+$/)
+      await expect(page.getByRole('heading', { name: title })).toBeVisible()
+      await expectCurrentDebateViews(page)
+    } finally {
+      cleanupDebateFixture(fixture)
+    }
   })
 
   test('view debate detail page', async ({ authenticatedPage }) => {
@@ -69,25 +87,35 @@ test.describe('Debate', () => {
     await expectCurrentDebateViews(authenticatedPage)
   })
 
-  test('vote yes or no on the debate', async ({ authenticatedPage }) => {
-    const opened = await openFirstDebate(authenticatedPage)
-    test.skip(!opened, 'requires at least one debate')
+  test('vote yes or no on the debate', async ({ page, request }) => {
+    test.skip(process.env.DEBATE_WIKI_E2E !== '1', 'requires local PostgreSQL and DEBATE_WIKI_E2E=1')
+    test.setTimeout(90_000)
+    const fixture = await createDebateFixture(request)
 
-    const yes = authenticatedPage.locator('[data-test="vote-yes"]')
-    const no = authenticatedPage.locator('[data-test="vote-no"]')
-    await expect(yes).toBeVisible()
-    await expect(no).toBeVisible()
+    try {
+      await authenticatePage(page, fixture.sessions[0]!)
+      const detailResponse = page.waitForResponse(response => (
+        response.request().method() === 'GET'
+        && new URL(response.url()).pathname.endsWith(`/api/v1/debate/topics/${fixture.target.id}`)
+      ))
+      await page.goto(`/debate/${fixture.target.id}`)
+      expect((await detailResponse).ok()).toBeTruthy()
 
-    const chooseNo = await yes.getAttribute('aria-pressed') === 'true'
-    const choice = chooseNo ? no : yes
-    const expectedVote = chooseNo ? '否' : '是'
-    const voteResponse = authenticatedPage.waitForResponse(response => (
-      response.request().method() === 'PUT'
-      && /\/api\/v1\/debate\/topics\/[0-9a-f-]+\/vote$/.test(new URL(response.url()).pathname)
-    ))
-    await choice.click()
-    expect((await voteResponse).ok()).toBeTruthy()
-    await expect(authenticatedPage.locator('[data-test="current-user-vote"]')).toHaveText(expectedVote)
+      const yes = page.locator('[data-test="vote-yes"]')
+      const no = page.locator('[data-test="vote-no"]')
+      await expect(yes).toBeVisible()
+      await expect(no).toBeVisible()
+
+      const voteResponse = page.waitForResponse(response => (
+        response.request().method() === 'PUT'
+        && new URL(response.url()).pathname.endsWith(`/api/v1/debate/topics/${fixture.target.id}/vote`)
+      ))
+      await yes.click()
+      expect((await voteResponse).ok()).toBeTruthy()
+      await expect(page.locator('[data-test="current-user-vote"]')).toHaveText('是')
+    } finally {
+      cleanupDebateFixture(fixture)
+    }
   })
 })
 
@@ -98,6 +126,20 @@ async function gotoDebateHome(page: Page) {
   ))
   await page.goto('/debate')
   expect((await debatesResponse).ok()).toBeTruthy()
+}
+
+async function expectDebateStatusResponse(response: Response, status: 'active' | 'archived') {
+  expect(response.ok()).toBeTruthy()
+  const body = await response.json() as { data?: Array<{ status?: string }> }
+  expect(Array.isArray(body.data)).toBeTruthy()
+  expect((body.data ?? []).every(item => item.status === status)).toBeTruthy()
+}
+
+async function authenticatePage(page: Page, session: DebateSession) {
+  await page.addInitScript(({ token, user }) => {
+    localStorage.setItem('token', token)
+    localStorage.setItem('user', JSON.stringify(user))
+  }, session)
 }
 
 async function openFirstDebate(page: Page) {

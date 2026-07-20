@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { createPinia, setActivePinia } from 'pinia'
-import { nextTick } from 'vue'
+import { nextTick, reactive } from 'vue'
 
 const collabMockState = vi.hoisted(() => ({
   initialText: '',
@@ -71,7 +71,10 @@ vi.mock('y-websocket', () => {
 })
 
 import PEditor from '@/components/shared/PEditor.vue'
-import { resourceReferenceExtension } from '@/components/shared/editor/resourceReferenceExtension'
+import {
+  resourceReferenceExtension,
+  type ResourceReferenceLabels,
+} from '@/components/shared/editor/resourceReferenceExtension'
 
 // Task 1 先固定统一编辑器的最小未来契约，后续 Task 2 再让实现对齐这些 props 和语义标识。
 const FUTURE_NORMAL_MODE = 'normal'
@@ -82,6 +85,8 @@ const FUTURE_PREVIEW_PANE = '[data-testid="markdown-preview"]'
 const FUTURE_MODE_TOGGLE = '[data-testid="editor-mode-toggle"]'
 const ALBUM_ID = '01900000-0000-7000-8000-000000000001'
 const ALBUM_REFERENCE = `@album:${ALBUM_ID}`
+const DEBATE_ID = '01900000-0000-7000-8000-000000000002'
+const DEBATE_REFERENCE = `@debate:${DEBATE_ID}:support`
 
 async function flushCollabSync() {
   vi.useFakeTimers()
@@ -442,6 +447,37 @@ describe('PEditor', () => {
 
     const reference = wrapper.get(`[data-resource-reference="${key}"]`)
     expect(reference.text()).toContain('新标题')
+    expect(reference.text()).toContain('待确认')
+    expect(reference.classes()).toContain('resource-reference--stale')
+    expect(reference.attributes('data-resource-reference-state')).toBe('stale')
+    expect(EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)).toBe(originalView)
+  })
+
+  it('labels 深层原地修改时刷新现有引用块', async () => {
+    const key = `debate:${DEBATE_ID}`
+    const labels = reactive<ResourceReferenceLabels>({
+      [key]: {
+        title: '旧辩题',
+        state: 'active',
+        qualifierLabel: '赞成',
+      },
+    })
+    const wrapper = await mountEditor({
+      modelValue: DEBATE_REFERENCE,
+      mode: FUTURE_NORMAL_MODE,
+      enableResourceReferences: true,
+      resourceReferenceLabels: labels,
+    })
+    const originalView = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)
+
+    labels[key].title = '新辩题'
+    labels[key].state = 'stale'
+    labels[key].qualifierLabel = '支撑'
+    await nextTick()
+
+    const reference = wrapper.get(`[data-resource-reference="${key}"]`)
+    expect(reference.text()).toContain('新辩题')
+    expect(reference.text()).toContain('支撑')
     expect(reference.text()).toContain('待确认')
     expect(reference.classes()).toContain('resource-reference--stale')
     expect(reference.attributes('data-resource-reference-state')).toBe('stale')

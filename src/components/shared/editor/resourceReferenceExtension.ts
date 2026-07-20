@@ -47,11 +47,14 @@ const stateLabels: Record<ResourceReferenceState, string> = {
 }
 
 class ResourceReferenceWidget extends WidgetType {
+  readonly label: ResourceReferenceLabel
+
   constructor(
     readonly reference: ResourceReference,
-    readonly label: ResourceReferenceLabel,
+    label: ResourceReferenceLabel,
   ) {
     super()
+    this.label = { ...label }
   }
 
   eq(other: ResourceReferenceWidget) {

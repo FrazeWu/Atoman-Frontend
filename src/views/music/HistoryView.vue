@@ -203,6 +203,8 @@ onMounted(() => loadPage(1))
   flex: 0 0 48px;
   overflow: hidden;
   background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
 }
 
 .history-cover img,
@@ -248,15 +250,16 @@ onMounted(() => loadPage(1))
 }
 
 .history-copy span,
-.history-album,
-.history-count,
-.history-time {
+.history-album {
   color: var(--a-color-muted);
   font-size: 0.8rem;
 }
 
 .history-count,
 .history-time {
+  color: var(--a-color-muted);
+  font-size: 11px;
+  font-family: monospace;
   white-space: nowrap;
 }
 

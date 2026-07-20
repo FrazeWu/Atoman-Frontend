@@ -78,11 +78,21 @@
                 v-for="(line, index) in selectedVersionPreview.lines"
                 :key="`${line.kind}-${line.currentIndex ?? ''}-${line.targetIndex ?? ''}-${index}`"
                 class="music-lyrics-panel__version-diff-line"
-                :class="`is-${line.kind}`"
+                :class="[
+                  `is-${line.kind}`,
+                  { 'is-translation-only': line.kind === 'modified' && line.current?.text === line.target?.text },
+                ]"
               >
                 <span>{{ versionDiffLabel(line.kind) }}</span>
-                <del v-if="line.current && line.kind !== 'unchanged'">{{ line.current.text }}</del>
-                <ins v-if="line.target && line.kind !== 'removed'">{{ line.target.text }}</ins>
+                <template v-if="line.kind === 'modified' && line.current?.text === line.target?.text">
+                  <span class="music-lyrics-panel__version-diff-original">{{ line.current.text }}</span>
+                  <del class="music-lyrics-panel__version-diff-translation">当前译文：{{ line.current.translation || '无译文' }}</del>
+                  <ins class="music-lyrics-panel__version-diff-translation">目标译文：{{ line.target.translation || '无译文' }}</ins>
+                </template>
+                <template v-else>
+                  <del v-if="line.current && line.kind !== 'unchanged'">{{ line.current.text }}</del>
+                  <ins v-if="line.target && line.kind !== 'removed'">{{ line.target.text }}</ins>
+                </template>
               </p>
             </div>
             <button
@@ -786,6 +796,20 @@ function cancelLyricsConflict() {
 
 .music-lyrics-panel__version-diff-line.is-modified ins {
   color: var(--a-color-success);
+}
+
+.music-lyrics-panel__version-diff-line.is-translation-only {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+}
+
+.music-lyrics-panel__version-diff-line.is-translation-only > span:first-child {
+  grid-column: 1;
+}
+
+.music-lyrics-panel__version-diff-original,
+.music-lyrics-panel__version-diff-translation {
+  grid-column: 2;
 }
 
 .music-lyrics-panel__layout {

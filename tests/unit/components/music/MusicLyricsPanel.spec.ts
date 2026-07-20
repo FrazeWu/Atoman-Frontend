@@ -521,6 +521,29 @@ describe('MusicLyricsPanel.vue', () => {
     expect(mocks.revertVersion).toHaveBeenCalledWith('song-1', 2, '恢复到第 2 版')
   })
 
+  it('纯翻译变更的版本预览同时展示当前与目标译文', async () => {
+    lyricsState.versions.value = [{
+      id: 'version-2',
+      song_id: 'song-1',
+      version: 2,
+      content: 'Neon lights\nMidnight radio',
+      translation: '新的霓虹灯\n新的午夜电台',
+      format: 'plain',
+      edit_summary: '更新翻译',
+      created_at: '2026-07-07T01:00:00Z',
+      created_by: 'user-1',
+    }]
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await wrapper.get('[data-testid="lyrics-version-preview-2"]').trigger('click')
+
+    const preview = wrapper.get('[data-testid="lyrics-version-diff-2"]').text()
+    expect(preview).toContain('霓虹灯')
+    expect(preview).toContain('新的霓虹灯')
+  })
+
   it('恢复进行中禁用按钮并阻止重复请求', async () => {
     let resolveRevert!: (value: any) => void
     mocks.revertVersion.mockImplementationOnce(() => {

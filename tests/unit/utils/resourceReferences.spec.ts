@@ -66,4 +66,49 @@ describe('resourceReferences', () => {
       expect.objectContaining({ raw, from: second, to: second + raw.length }),
     ])
   })
+
+  it('只解析 Markdown 正文而跳过代码、链接地址和原始 HTML', () => {
+    const raw = `@album:${ALBUM_ID}`
+    const link = `[显示 ${raw}](https://example/${raw})`
+    const inlineHtml = `<a href="/${raw}">正文 ${raw}</a>`
+    const content = [
+      `普通正文 ${raw}`,
+      `\`${raw}\``,
+      `\`\`\`md\n${raw}\n\`\`\``,
+      `    ${raw}`,
+      link,
+      `<https://example/${raw}>`,
+      inlineHtml,
+      `<div>\n${raw}\n</div>`,
+    ].join('\n\n')
+    const proseStart = content.indexOf(raw)
+    const linkTextStart = content.indexOf(`[显示 ${raw}]`) + '[显示 '.length
+    const htmlTextStart = content.indexOf(`>正文 ${raw}</a>`) + '>正文 '.length
+
+    expect(parseResourceReferences(content)).toEqual([
+      expect.objectContaining({ raw, from: proseStart, to: proseStart + raw.length }),
+      expect.objectContaining({ raw, from: linkTextStart, to: linkTextStart + raw.length }),
+      expect.objectContaining({ raw, from: htmlTextStart, to: htmlTextStart + raw.length }),
+    ])
+  })
+
+  it('要求资源标记两侧具有 Unicode 文本边界', () => {
+    const raw = `@album:${ALBUM_ID}`
+    const invalid = [
+      `foo${raw}`,
+      `@${raw}`,
+      `中${raw}`,
+      `1${raw}`,
+      `_${raw}`,
+      `-${raw}`,
+      `${raw}中文`,
+      `${raw}word`,
+      `${raw}1`,
+      `${raw}_suffix`,
+      `${raw}-suffix`,
+    ].join(' ')
+
+    expect(parseResourceReferences(invalid)).toEqual([])
+    expect(parseResourceReferences(`合法 ${raw}，再次 ${raw}。`)).toHaveLength(2)
+  })
 })

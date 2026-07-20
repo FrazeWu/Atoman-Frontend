@@ -26,6 +26,10 @@ function lineKey(line: MusicSongLyricsLine) {
   return `${line.text}\u0000${line.translation}`
 }
 
+function normalizePlainLineText(value: string) {
+  return value.trim().split(/\s+/).filter(Boolean).join(' ')
+}
+
 function buildLcsLengths(current: MusicSongLyricsLine[], target: MusicSongLyricsLine[]) {
   const lengths = Array.from({ length: current.length + 1 }, () => Array<number>(target.length + 1).fill(0))
   for (let currentIndex = current.length - 1; currentIndex >= 0; currentIndex -= 1) {
@@ -97,8 +101,13 @@ function targetKeepsAnnotation(
   annotation: MusicSongLyrics['annotations'][number],
   currentLine: MusicSongLyricsLine | undefined,
   targetLine: MusicSongLyricsLine | undefined,
+  format: MusicSongLyricsVersion['format'],
 ) {
-  if (!currentLine || !targetLine || targetLine.text !== currentLine.text) return false
+  if (!currentLine || !targetLine) return false
+  const lineTextMatches = format === 'plain'
+    ? normalizePlainLineText(targetLine.text) === normalizePlainLineText(currentLine.text)
+    : targetLine.text === currentLine.text
+  if (!lineTextMatches) return false
   const selectedText = targetLine.text.slice(annotation.start_offset, annotation.end_offset)
   return selectedText === annotation.selected_text
 }
@@ -125,6 +134,7 @@ export function buildMusicLyricsVersionPreview(
         annotation,
         currentIndex === undefined ? undefined : currentLyrics.lines[currentIndex],
         targetByCurrentLineIndex.get(currentIndex ?? -1),
+        targetVersion.format,
       )
     })
     .map((annotation) => annotation.id)

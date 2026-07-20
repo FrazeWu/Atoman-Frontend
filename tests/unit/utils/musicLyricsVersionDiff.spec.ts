@@ -80,6 +80,23 @@ describe('buildMusicLyricsVersionPreview', () => {
     expect(preview.affectedActiveAnnotationIds).toEqual(['annotation-world'])
   })
 
+  it('仅空白差异且原选区仍匹配时不计入影响', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      content: 'Hello world',
+      translation: '',
+      lines: [{ line_key: 'line-hello', line_index: 0, text: 'Hello world', translation: '' }],
+      annotations: [{
+        id: 'annotation-hello', line_key: 'line-hello', selected_text: 'Hello', start_offset: 0, end_offset: 5,
+        body: '', upvotes: 0, downvotes: 0, status: 'active', created_at: '', updated_at: '',
+      }],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, version('Hello  world'))
+
+    expect(preview.affectedActiveAnnotationCount).toBe(0)
+  })
+
   it('内容和翻译都未变化时不产生差异', () => {
     const preview = buildMusicLyricsVersionPreview(currentLyrics, version(currentLyrics.content, currentLyrics.translation))
 

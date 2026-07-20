@@ -400,6 +400,7 @@ watch(playlist, syncEditForm, { immediate: true })
     :layer-index="layerIndex"
     :stack-size="stackSize"
     :index="layerIndex"
+    panel-class="playlist-drawer"
   >
     <template #header>
       <div class="playlist-header-container">
@@ -646,6 +647,26 @@ watch(playlist, syncEditForm, { immediate: true })
 </template>
 
 <style scoped>
+:global(.playlist-drawer) {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-left: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] :global(.playlist-drawer) {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :global(.playlist-drawer) {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+  }
+}
+
 /* Spotify-style Header */
 .playlist-header-container {
   display: flex;
@@ -866,7 +887,8 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .tracks-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1.5fr) minmax(0, 1fr) 7.5rem;
   align-items: center;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
@@ -879,31 +901,29 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .col-index {
-  width: 2.5rem;
-  flex-shrink: 0;
   text-align: center;
 }
 
 .col-title {
-  flex: 1.5;
   min-width: 0;
 }
 
 .col-album {
-  flex: 1;
   min-width: 0;
   padding-left: 1rem;
 }
 
 .col-status {
-  width: 7.5rem;
-  flex-shrink: 0;
   text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 /* Track Row */
 .track-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1.5fr) minmax(0, 1fr) 7.5rem;
   align-items: center;
   padding: 0.6rem 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 5%, transparent);
@@ -932,6 +952,12 @@ watch(playlist, syncEditForm, { immediate: true })
 
 .row-play-icon {
   display: none;
+}
+
+.row-num {
+  font-family: var(--a-font-mono, monospace);
+  font-size: 11px;
+  color: var(--a-color-muted);
 }
 
 .track-row:hover:not(.is-disabled) .row-num {

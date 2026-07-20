@@ -137,7 +137,7 @@ const importStatusLabel = computed(() => {
   const status = albumImportDraft.value?.status
   if (status === 'uploading') return '上传中'
   if (status === 'uploaded' || status === 'extracting') return '解析中'
-  if (status === 'ready') return '已识别'
+  if (status === 'ready' || status === 'needs_attention') return '已识别'
   if (status === 'failed') return '上传失败'
   return '等待上传'
 })

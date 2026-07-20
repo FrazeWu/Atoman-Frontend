@@ -108,7 +108,12 @@ const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDet
 const shouldShowFinishButton = computed(() => {
   const flow = creationFlow.value
   if (!flow) return false
-  return flow.step === 'albumDetails' || (flow.step === 'albumImport' && flow.draft.albumImport.status === 'ready')
+  if (flow.step === 'albumDetails') return true
+  if (flow.step === 'albumImport') {
+    const status = flow.draft.albumImport.status
+    return status === 'ready' || status === 'needs_attention'
+  }
+  return false
 })
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => {
@@ -136,8 +141,12 @@ const canGoForward = computed(() => {
       && !!formatDateFromParts(flow.draft.artist.birthDateParts)
       && !!flow.draft.artist.source.trim()
   }
-  if (flow.step === 'albumImport') return flow.draft.albumImport.status === 'ready'
-  return flow.draft.albumImport.status === 'ready'
+  if (flow.step === 'albumImport') {
+    const status = flow.draft.albumImport.status
+    return status === 'ready' || status === 'needs_attention'
+  }
+  const status = flow.draft.albumImport.status
+  return status === 'ready' || status === 'needs_attention'
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
@@ -262,7 +271,7 @@ function syncReadyImportToDraft() {
   if (!flow) return
 
   const { albumImport, albumDetails } = flow.draft
-  if (albumImport.status !== 'ready') return
+  if (albumImport.status !== 'ready' && albumImport.status !== 'needs_attention') return
   const derivedTracks = albumImport.derivedTracks ?? []
 
   if (albumImport.derivedAlbumTitle.trim()) {
@@ -318,7 +327,7 @@ function handlePrimaryAction() {
   if (creationFlow.value.step === 'artist') {
     if (!canGoForward.value) return
     setMusicCreationStep('albumImport')
-  } else if (creationFlow.value.step === 'albumImport' && creationFlow.value.draft.albumImport.status === 'ready') {
+  } else if (creationFlow.value.step === 'albumImport' && (creationFlow.value.draft.albumImport.status === 'ready' || creationFlow.value.draft.albumImport.status === 'needs_attention')) {
     setMusicCreationStep('albumDetails')
   }
 }
@@ -345,7 +354,7 @@ async function completeCreation() {
       throw new Error('缺少 importId，无法提交专辑导入')
     }
 
-    if (flow.draft.albumImport.status !== 'ready') {
+    if (flow.draft.albumImport.status !== 'ready' && flow.draft.albumImport.status !== 'needs_attention') {
       throw new Error('请等待压缩包处理完成')
     }
 

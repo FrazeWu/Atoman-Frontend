@@ -95,9 +95,10 @@ function buildLineDiff(current: MusicSongLyricsLine[], target: MusicSongLyricsLi
 
 function targetKeepsAnnotation(
   annotation: MusicSongLyrics['annotations'][number],
+  currentLine: MusicSongLyricsLine | undefined,
   targetLine: MusicSongLyricsLine | undefined,
 ) {
-  if (!targetLine) return false
+  if (!currentLine || !targetLine || targetLine.text !== currentLine.text) return false
   const selectedText = targetLine.text.slice(annotation.start_offset, annotation.end_offset)
   return selectedText === annotation.selected_text
 }
@@ -118,10 +119,14 @@ export function buildMusicLyricsVersionPreview(
   )
   const affectedActiveAnnotationIds = currentLyrics.annotations
     .filter((annotation) => annotation.status === 'active')
-    .filter((annotation) => !targetKeepsAnnotation(
-      annotation,
-      targetByCurrentLineIndex.get(currentIndexByLineKey.get(annotation.line_key ?? annotation.line_id ?? '') ?? -1),
-    ))
+    .filter((annotation) => {
+      const currentIndex = currentIndexByLineKey.get(annotation.line_key ?? annotation.line_id ?? '')
+      return !targetKeepsAnnotation(
+        annotation,
+        currentIndex === undefined ? undefined : currentLyrics.lines[currentIndex],
+        targetByCurrentLineIndex.get(currentIndex ?? -1),
+      )
+    })
     .map((annotation) => annotation.id)
 
   return {

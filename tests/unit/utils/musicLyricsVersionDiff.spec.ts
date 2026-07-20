@@ -63,6 +63,23 @@ describe('buildMusicLyricsVersionPreview', () => {
     expect(preview.affectedActiveAnnotationIds).toEqual(['annotation-breaks'])
   })
 
+  it('配对行文本改变时即使原选区和偏移仍能匹配也计为受影响', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      content: 'Hello world',
+      translation: '',
+      lines: [{ line_key: 'line-hello', line_index: 0, text: 'Hello world', translation: '' }],
+      annotations: [{
+        id: 'annotation-world', line_key: 'line-hello', selected_text: 'world', start_offset: 6, end_offset: 11,
+        body: '', upvotes: 0, downvotes: 0, status: 'active', created_at: '', updated_at: '',
+      }],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, version('Hi!   world'))
+
+    expect(preview.affectedActiveAnnotationIds).toEqual(['annotation-world'])
+  })
+
   it('内容和翻译都未变化时不产生差异', () => {
     const preview = buildMusicLyricsVersionPreview(currentLyrics, version(currentLyrics.content, currentLyrics.translation))
 

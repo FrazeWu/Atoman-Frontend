@@ -667,7 +667,7 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 .player-artist {
-  font-family: var(--a-font-mono);
+  font-family: monospace;
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -791,7 +791,7 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 .time-stamp {
-  font-family: var(--a-font-mono, monospace);
+  font-family: monospace;
   font-size: 9px;
   color: var(--a-color-muted);
   min-width: 32px;
@@ -1047,7 +1047,7 @@ onBeforeUnmount(() => {
   background: var(--a-color-overlay-soft);
 }
 .queue-count {
-  font-family: var(--a-font-mono);
+  font-family: monospace;
   font-size: 9px;
   font-weight: 500;
   min-width: 14px;

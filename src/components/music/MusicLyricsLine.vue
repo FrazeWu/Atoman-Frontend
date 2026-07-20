@@ -166,7 +166,7 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line__time {
-  font-family: var(--a-font-mono, monospace);
+  font-family: monospace;
   font-size: 11px;
   color: var(--a-color-muted);
   width: 42px;

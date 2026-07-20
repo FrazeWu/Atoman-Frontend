@@ -647,7 +647,7 @@ watch(
   display: none;
 }
 .track-num {
-  font-family: var(--a-font-mono, monospace);
+  font-family: monospace;
   font-size: 11px;
   color: var(--a-color-muted);
 }
@@ -679,7 +679,7 @@ watch(
 }
 .track-empty { color: var(--a-color-muted); font-family: var(--a-font-sans); font-size: 0.875rem; }
 .track-time {
-  font-family: var(--a-font-mono, monospace);
+  font-family: monospace;
   font-size: 11px;
   color: var(--a-color-muted);
 }

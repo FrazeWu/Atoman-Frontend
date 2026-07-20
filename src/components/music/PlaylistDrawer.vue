@@ -955,7 +955,7 @@ watch(playlist, syncEditForm, { immediate: true })
 }
 
 .row-num {
-  font-family: var(--a-font-mono, monospace);
+  font-family: monospace;
   font-size: 11px;
   color: var(--a-color-muted);
 }

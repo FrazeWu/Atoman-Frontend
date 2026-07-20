@@ -47,6 +47,9 @@ const excludedMarkdownNodes = new Set([
   'Autolink',
   'HTMLTag',
   'HTMLBlock',
+  'LinkTitle',
+  'CommentBlock',
+  'ProcessingInstructionBlock',
 ])
 const startBoundaryCharacter = /[\p{L}\p{N}_@-]/u
 const endBoundaryCharacter = /[\p{L}\p{N}_-]/u

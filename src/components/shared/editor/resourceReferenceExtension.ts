@@ -100,9 +100,13 @@ function createPart(className: string, text: string) {
   return part
 }
 
-function buildDecorations(view: EditorView, labels: ResourceReferenceLabels): DecorationSet {
+function buildDecorations(
+  view: EditorView,
+  labels: ResourceReferenceLabels,
+  references: ResourceReference[],
+): DecorationSet {
   const ranges = view.state.selection.ranges
-  const decorations = parseResourceReferences(view.state.doc.toString()).flatMap((reference) => {
+  const decorations = references.flatMap((reference) => {
     const selectionTouchesReference = view.hasFocus && ranges.some(
       selection => selection.from <= reference.to && selection.to >= reference.from,
     )
@@ -163,10 +167,12 @@ export function resourceReferenceExtension(initialLabels: ResourceReferenceLabel
   const plugin = ViewPlugin.fromClass(class {
     decorations: DecorationSet
     private labels: ResourceReferenceLabels
+    private references: ResourceReference[]
 
     constructor(view: EditorView) {
       this.labels = initialLabels
-      this.decorations = buildDecorations(view, this.labels)
+      this.references = parseResourceReferences(view.state.doc.toString())
+      this.decorations = buildDecorations(view, this.labels, this.references)
     }
 
     update(update: ViewUpdate) {
@@ -180,8 +186,12 @@ export function resourceReferenceExtension(initialLabels: ResourceReferenceLabel
         }
       }
 
+      if (update.docChanged) {
+        this.references = parseResourceReferences(update.state.doc.toString())
+      }
+
       if (labelsChanged || update.docChanged || update.selectionSet || update.focusChanged) {
-        this.decorations = buildDecorations(update.view, this.labels)
+        this.decorations = buildDecorations(update.view, this.labels, this.references)
       }
     }
   }, {

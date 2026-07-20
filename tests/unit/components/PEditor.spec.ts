@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { commonmarkLanguage } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { createPinia, setActivePinia } from 'pinia'
@@ -73,6 +74,7 @@ vi.mock('y-websocket', () => {
 import PEditor from '@/components/shared/PEditor.vue'
 import {
   resourceReferenceExtension,
+  updateResourceReferenceLabels,
   type ResourceReferenceLabels,
 } from '@/components/shared/editor/resourceReferenceExtension'
 
@@ -482,6 +484,47 @@ describe('PEditor', () => {
     expect(reference.classes()).toContain('resource-reference--stale')
     expect(reference.attributes('data-resource-reference-state')).toBe('stale')
     expect(EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)).toBe(originalView)
+  })
+
+  it('仅在文档变化时重新解析资源引用语法', () => {
+    const key = `album:${ALBUM_ID}`
+    const parent = document.createElement('div')
+    document.body.appendChild(parent)
+    const parseSpy = vi.spyOn(commonmarkLanguage.parser, 'parse')
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: `证据：${ALBUM_REFERENCE}`,
+        extensions: [resourceReferenceExtension({
+          [key]: { title: '旧标题' },
+        })],
+      }),
+      parent,
+    })
+
+    try {
+      parseSpy.mockClear()
+      view.focus()
+      view.dispatch({ selection: { anchor: 5 } })
+      view.dispatch({ selection: { anchor: 0 } })
+      view.dispatch({
+        effects: updateResourceReferenceLabels.of({
+          [key]: { title: '新标题', state: 'stale' },
+        }),
+      })
+
+      expect(parseSpy).not.toHaveBeenCalled()
+      expect(parent.querySelector(`[data-resource-reference="${key}"]`)?.textContent).toContain('新标题')
+
+      view.dispatch({ changes: { from: 0, insert: '新增 ' } })
+
+      expect(parseSpy).toHaveBeenCalledTimes(1)
+      expect(view.state.doc.toString()).toBe(`新增 证据：${ALBUM_REFERENCE}`)
+      expect(parent.querySelector(`[data-resource-reference="${key}"]`)).not.toBeNull()
+    } finally {
+      view.destroy()
+      parent.remove()
+      parseSpy.mockRestore()
+    }
   })
 
   it('默认关闭资源引用装饰', async () => {

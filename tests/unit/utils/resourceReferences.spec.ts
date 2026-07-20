@@ -111,4 +111,19 @@ describe('resourceReferences', () => {
     expect(parseResourceReferences(invalid)).toEqual([])
     expect(parseResourceReferences(`合法 ${raw}，再次 ${raw}。`)).toHaveLength(2)
   })
+
+  it('跳过链接标题、HTML 注释和处理指令中的引用', () => {
+    const raw = `@album:${ALBUM_ID}`
+    const link = `[显示 ${raw}](https://example.test "${raw}")`
+    const content = `${link}\n\n<!-- ${raw} -->\n\n<?pi ${raw} ?>`
+    const displayStart = content.indexOf(raw)
+
+    expect(parseResourceReferences(content)).toEqual([
+      expect.objectContaining({
+        raw,
+        from: displayStart,
+        to: displayStart + raw.length,
+      }),
+    ])
+  })
 })

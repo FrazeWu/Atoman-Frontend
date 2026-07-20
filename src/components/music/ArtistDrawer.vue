@@ -135,6 +135,7 @@ watch(
 
 <template>
   <PSheet
+    panel-class="artist-drawer"
     :show="isOpen"
     :title="layer?.title ?? '艺术家详情'"
     @close="closeCurrentArtist"
@@ -290,6 +291,26 @@ watch(
 </template>
 
 <style scoped>
+:global(.artist-drawer) {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(.artist-drawer) {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+  }
+}
+
+:global(:root[data-theme='dark'] .artist-drawer) {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+}
+
 .drawer-header-content { display: flex; flex-direction: column; gap: 0.25rem; }
 .kicker {
   font-family: var(--a-font-sans);
@@ -389,6 +410,7 @@ watch(
   align-items: center;
   gap: 0.55rem;
   border: 0;
+  border-radius: 4px;
   border-right: 1px solid var(--a-color-border-soft);
   padding: 0.75rem 1.05rem;
   font-weight: 500;
@@ -458,6 +480,8 @@ watch(
   height: 80px;
   background: var(--a-color-surface-muted);
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -487,6 +511,7 @@ watch(
   width: 90px;
   height: 90px;
   border-radius: 4px;
+  box-shadow: none;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
   flex-shrink: 0;
@@ -496,6 +521,7 @@ watch(
   width: 90px;
   height: 90px;
   border-radius: 4px;
+  box-shadow: none;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface);
   display: flex;

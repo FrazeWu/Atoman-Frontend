@@ -162,8 +162,15 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 .music-annotation-card {
   display: grid;
   gap: 0.75rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
+  transition: border-color 0.2s ease;
+}
+
+.music-annotation-card:hover {
+  border-color: var(--a-color-muted-soft);
 }
 
 .music-annotation-card__quote {

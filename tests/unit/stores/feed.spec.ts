@@ -623,6 +623,39 @@ describe('feed store', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscriptions/sync-all', expect.objectContaining({ method: 'POST' }))
   })
 
+  it('prevents single-source and all-source refreshes from overlapping', async () => {
+    let resolveSync!: (response: Response) => void
+    const pendingSync = new Promise<Response>((resolve) => {
+      resolveSync = resolve
+    })
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(pendingSync)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feed = useFeedStore()
+    feed.syncingAllSubscriptions = true
+    await expect(feed.syncSubscription('sub-blocked')).resolves.toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    feed.syncingAllSubscriptions = false
+    const pending = feed.syncSubscription('sub-1')
+    expect(feed.syncingSubscriptionIds.has('sub-1')).toBe(true)
+    await expect(feed.syncAllSubscriptions()).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    resolveSync(new Response(JSON.stringify({
+      data: {
+        subscription_id: 'sub-1',
+        feed_source_id: 'source-1',
+        fetched_items: 1,
+        new_items: 0,
+        synced_at: '2026-07-20T02:00:00Z',
+        success: true,
+      },
+    }), { status: 200 }))
+    await pending
+  })
+
   it('loads subscription rules from the server', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: [{ id: 'rule-1', name: '播客整理' }],

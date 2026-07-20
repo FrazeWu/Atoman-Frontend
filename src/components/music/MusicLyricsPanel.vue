@@ -9,6 +9,7 @@
 
       <div class="music-lyrics-panel__actions">
         <PButton
+          class="music-lyrics-panel__action-btn"
           type="button"
           variant="secondary"
           data-testid="lyrics-versions-trigger"
@@ -17,6 +18,7 @@
           版本
         </PButton>
         <PButton
+          class="music-lyrics-panel__action-btn"
           v-if="isAuthenticated"
           type="button"
           variant="secondary"
@@ -557,19 +559,13 @@ function cancelLyricsConflict() {
 @media (prefers-color-scheme: dark) {
   .music-lyrics-panel {
     background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--a-color-border-dark, #334155);
-    box-shadow: none;
   }
 }
 
 :root[data-theme='dark'] .music-lyrics-panel {
   background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--a-color-border-dark, #334155);
-  box-shadow: none;
 }
 
 .music-lyrics-panel__header {
@@ -608,6 +604,10 @@ function cancelLyricsConflict() {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.music-lyrics-panel__action-btn {
+  border-radius: 4px !important;
 }
 
 .music-lyrics-panel__close {

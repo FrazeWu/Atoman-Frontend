@@ -71,9 +71,9 @@ const mountEditor = (debate = buildDebate()) => mount(DebateWikiEditor, {
         template: '<section v-if="show"><slot /></section>',
       },
       PEditor: {
-        props: ['modelValue', 'editorAriaLabel'],
+        props: ['modelValue', 'editorAriaLabel', 'enableResourceReferences', 'resourceReferenceLabels'],
         emits: ['update:modelValue'],
-        template: '<textarea data-test="wiki-content" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+        template: '<textarea data-test="wiki-content" :data-enable-resource-references="String(enableResourceReferences)" :data-resource-reference-labels="JSON.stringify(resourceReferenceLabels)" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
       },
     },
   },
@@ -156,6 +156,32 @@ describe('DebateWikiEditor', () => {
     const wrapper = await mountEditorWithRealCodeMirror()
 
     expect(wrapper.get('.cm-content[role="textbox"]').attributes('aria-label')).toBe('正文')
+  })
+
+  it('向编辑器传入正文引用的行内状态标签', () => {
+    const sourceID = '11111111-1111-4111-8111-111111111111'
+    const wrapper = mountEditor(buildDebate({
+      content: `证据来自 @debate:${sourceID}:support`,
+      references: [{
+        raw: `@debate:${sourceID}:support`,
+        kind: 'debate',
+        resource_id: sourceID,
+        title: '有轨电车能降低中心城区拥堵',
+        qualifier: 'support',
+        state: 'stale',
+        relation_id: 'relation-1',
+      }],
+    }))
+
+    const editor = wrapper.get('[data-test="wiki-content"]')
+    expect(editor.attributes('data-enable-resource-references')).toBe('true')
+    expect(JSON.parse(editor.attributes('data-resource-reference-labels')!)).toEqual({
+      [`debate:${sourceID}`]: {
+        title: '有轨电车能降低中心城区拥堵',
+        qualifierLabel: '支撑',
+        state: 'stale',
+      },
+    })
   })
 
   it('保存冲突时保留草稿并显示三方信息', async () => {

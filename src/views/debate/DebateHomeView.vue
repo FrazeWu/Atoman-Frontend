@@ -51,21 +51,14 @@
             结论 · {{ conclusionLabels[debate.conclusion_type] }}
           </span>
           <span
-            class="a-badge"
-            :class="{
-              'a-badge-fill': debate.status === 'open',
-            }"
-            :style="{
-              backgroundColor: debate.status === 'open' ? 'var(--a-color-success)' : undefined,
-              borderColor: debate.status === 'open' ? 'var(--a-color-success)' : undefined,
-              color: debate.status === 'open' ? 'var(--a-color-bg)' : undefined,
-            }"
+            class="a-badge debate-status"
+            :class="{ 'debate-status--archived': debate.status === 'archived' }"
           >
             {{ statusLabels[debate.status] }}
           </span>
           <span v-for="tag in debate.tags" :key="tag" class="a-badge">#{{ tag }}</span>
           <span class="mx-2">·</span>
-          <span>由 {{ debate.user.username }} 发起</span>
+          <span>由 {{ debate.user?.username || '匿名' }} 发起</span>
           <span class="mx-2">·</span>
           <span>{{ formatDate(debate.created_at) }}</span>
         </template>
@@ -108,9 +101,9 @@
 
         <form @submit.prevent="handleCreate" class="space-y-4">
           <PInput v-model="createForm.title" label="标题" placeholder="长期吸烟会不会显著增加肺癌风险？" />
-          <PInput v-model="createForm.description" label="描述" placeholder="补充背景（可选）" />
-          <PTextarea v-model="createForm.content" label="背景内容" :rows="4" />
+          <PTextarea v-model="createForm.content" label="正文" :rows="6" />
           <PInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="医学，公共健康" />
+          <p v-if="createError" class="a-field-error" role="alert">{{ createError }}</p>
 
           <div class="debate-modal-actions">
             <PButton outline type="button" @click="showCreateModal = false">取消</PButton>
@@ -129,7 +122,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
 import { useAuthStore } from '@/stores/auth'
-import type { Debate } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -149,32 +141,30 @@ const debatesTotal = computed(() => debateStore.debatesTotal)
 const loading = computed(() => debateStore.loading)
 const error = computed(() => debateStore.error)
 
-const filterStatus = ref<'' | 'open' | 'concluded' | 'archived'>('')
+const filterStatus = ref<'' | 'active' | 'archived'>('')
 const filterTag = ref('')
-const appliedStatus = ref<'' | 'open' | 'concluded' | 'archived'>('')
+const appliedStatus = ref<'' | 'active' | 'archived'>('')
 const appliedTag = ref('')
 const currentPage = ref(1)
 const limit = 12
 
 const filterStatusOptions = [
   { label: '全部状态', value: '' },
-  { label: '进行中', value: 'open' },
-  { label: '已结题', value: 'concluded' },
+  { label: '开放', value: 'active' },
   { label: '已归档', value: 'archived' },
 ]
 
 const showCreateModal = ref(false)
 const creating = ref(false)
+const createError = ref('')
 const createForm = ref({
   title: '',
-  description: '',
   content: '',
 })
 const tagsInput = ref('')
 
 const statusLabels: Record<string, string> = {
-  open: '讨论中',
-  concluded: '已结题',
+  active: '开放',
   archived: '已归档',
 }
 
@@ -218,21 +208,26 @@ const handleCreate = async () => {
   }
 
   creating.value = true
+  createError.value = ''
   const tags = tagsInput.value
     .split(',')
     .map(t => t.trim())
     .filter(Boolean)
 
   const debate = await debateStore.createDebate({
-    ...createForm.value,
+    title: createForm.value.title,
+    description: '',
+    content: createForm.value.content,
     tags,
   })
 
-  if (debate) {
+  if (debate?.current_revision_id) {
     showCreateModal.value = false
-    createForm.value = { title: '', description: '', content: '' }
+    createForm.value = { title: '', content: '' }
     tagsInput.value = ''
-    loadDebates()
+    await router.push(`/debate/${debate.id}`)
+  } else {
+    createError.value = debateStore.error || '创建失败，请重试'
   }
   creating.value = false
 }

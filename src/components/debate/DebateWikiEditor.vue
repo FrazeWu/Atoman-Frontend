@@ -33,6 +33,8 @@
           :show-toolbar="true"
           :show-mode-toggle="false"
           :enable-mentions="true"
+          :enable-resource-references="true"
+          :resource-reference-labels="resourceReferenceLabels"
         />
       </div>
 
@@ -189,9 +191,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import PEditor from '@/components/shared/PEditor.vue'
+import type { ResourceReferenceLabels } from '@/components/shared/editor/resourceReferenceExtension'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -249,6 +252,18 @@ let sessionSequence = 0
 let saveSequence = 0
 
 const canSave = () => Boolean(title.value.trim() && editSummary.value.trim())
+const resourceReferenceLabels = computed<ResourceReferenceLabels>(() => Object.fromEntries(
+  (props.debate.references ?? []).map(reference => [
+    `${reference.kind}:${reference.resource_id}`,
+    {
+      title: reference.title,
+      qualifierLabel: reference.qualifier === 'support'
+        ? '支撑'
+        : reference.qualifier === 'oppose' ? '反驳' : undefined,
+      state: reference.state,
+    },
+  ]),
+))
 
 watch(
   () => [props.show, props.debate.id] as const,

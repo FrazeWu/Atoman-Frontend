@@ -1,5 +1,5 @@
 import type { UploadAsset } from '@/api/types'
-import type { MusicAlbumImportStatus } from '@/api/musicV1'
+import type { MusicAlbumImportFile, MusicAlbumImportInputMode, MusicAlbumImportStage, MusicAlbumImportStatus } from '@/api/musicV1'
 
 export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails'
 export type MusicArtistKind = 'person' | 'group'
@@ -56,10 +56,15 @@ export interface MusicCreationArtistDraft {
 
 export interface MusicCreationAlbumImportDraft {
   importId: string | null
+  inputMode: MusicAlbumImportInputMode
   archiveName: string
   status: MusicAlbumImportStatus
+  stage: MusicAlbumImportStage
   uploadProgress: number
   uploadSpeed: number
+  files: MusicAlbumImportFile[]
+  totalBytesLoaded: number
+  totalBytesTotal: number
   coverUrl: string
   coverKey: string
   derivedAlbumTitle: string

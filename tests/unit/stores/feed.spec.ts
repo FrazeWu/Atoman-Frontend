@@ -623,25 +623,44 @@ describe('feed store', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscriptions/sync-all', expect.objectContaining({ method: 'POST' }))
   })
 
-  it('prevents single-source and all-source refreshes from overlapping', async () => {
+  it('prevents a single-source refresh while refresh-all is active', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: {
+          subscription_id: 'sub-blocked',
+          feed_source_id: 'source-1',
+          fetched_items: 1,
+          new_items: 0,
+          synced_at: '2026-07-20T02:00:00Z',
+          success: true,
+        },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feed = useFeedStore()
+    feed.syncingAllSubscriptions = true
+
+    await expect(feed.syncSubscription('sub-blocked')).resolves.toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('prevents refresh-all while a single-source refresh is active', async () => {
     let resolveSync!: (response: Response) => void
     const pendingSync = new Promise<Response>((resolve) => {
       resolveSync = resolve
     })
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockReturnValueOnce(pendingSync)
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { total: 0, succeeded: 0, failed: 0, new_items: 0, results: [] },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
 
     const feed = useFeedStore()
-    feed.syncingAllSubscriptions = true
-    await expect(feed.syncSubscription('sub-blocked')).resolves.toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
-
-    feed.syncingAllSubscriptions = false
     const pending = feed.syncSubscription('sub-1')
     expect(feed.syncingSubscriptionIds.has('sub-1')).toBe(true)
-    await expect(feed.syncAllSubscriptions()).resolves.toBeNull()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const syncAll = feed.syncAllSubscriptions()
 
     resolveSync(new Response(JSON.stringify({
       data: {
@@ -654,6 +673,8 @@ describe('feed store', () => {
       },
     }), { status: 200 }))
     await pending
+    await expect(syncAll).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('loads subscription rules from the server', async () => {

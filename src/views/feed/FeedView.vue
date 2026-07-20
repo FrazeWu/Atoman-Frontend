@@ -1002,12 +1002,17 @@ const checkAllSubscriptionsHealth = async () => {
 const syncSubscription = async (id: string) => {
   manageError.value = ''
   const result = await feedStore.syncSubscription(id)
-  if (!result?.success) {
-    setManageError(result?.error || '刷新失败')
+  if (!result) {
+    setManageError('刷新失败')
     return
   }
-  currentPage.value = 1
-  await fetchTimeline()
+  if (!result.success) {
+    setManageError(result.error || '刷新失败')
+  }
+  if (result.success || result.new_items > 0) {
+    currentPage.value = 1
+    await fetchTimeline()
+  }
 }
 
 const syncAllSubscriptions = async () => {

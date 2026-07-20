@@ -34,7 +34,7 @@
             data-test="sync-all-subscriptions"
             variant="secondary"
             :label="syncingAllSubscriptions ? '刷新中...' : '刷新全部'"
-            :disabled="busy || healthChecking || syncingAllSubscriptions || !externalSubscriptions.length"
+            :disabled="busy || healthChecking || syncingAllSubscriptions || !!syncingSubscriptionIds?.size || !externalSubscriptions.length"
             @click="syncAllSubscriptions"
           />
           <PPress
@@ -449,7 +449,7 @@ const syncSubscription = (id: string) => {
 }
 
 const syncAllSubscriptions = () => {
-  if (props.busy || props.healthChecking || props.syncingAllSubscriptions || !externalSubscriptions.value.length) return
+  if (props.busy || props.healthChecking || props.syncingAllSubscriptions || props.syncingSubscriptionIds?.size || !externalSubscriptions.value.length) return
   emit('sync-all-subscriptions')
 }
 

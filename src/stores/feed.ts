@@ -1255,7 +1255,7 @@ export const useFeedStore = defineStore('feed', () => {
 
   const syncSubscription = async (subscriptionId: string): Promise<SubscriptionSyncResult | null> => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || syncingSubscriptionIds.value.has(subscriptionId)) return null
+    if (!authStore.isAuthenticated || syncingAllSubscriptions.value || syncingSubscriptionIds.value.has(subscriptionId)) return null
     syncingSubscriptionIds.value.add(subscriptionId)
     try {
       const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/sync`, {
@@ -1291,7 +1291,7 @@ export const useFeedStore = defineStore('feed', () => {
 
   const syncAllSubscriptions = async (): Promise<SubscriptionSyncSummary | null> => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || syncingAllSubscriptions.value) return null
+    if (!authStore.isAuthenticated || syncingAllSubscriptions.value || syncingSubscriptionIds.value.size > 0) return null
     syncingAllSubscriptions.value = true
     try {
       const res = await fetch(`${api.url}/feed/subscriptions/sync-all`, {

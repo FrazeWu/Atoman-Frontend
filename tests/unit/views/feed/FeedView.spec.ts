@@ -2423,6 +2423,55 @@ describe('FeedView', () => {
     expect(timelineCallCount()).toBeGreaterThan(before)
   })
 
+  it('reloads the timeline when a failed refresh still inserted items', async () => {
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'syncSubscription').mockResolvedValue({
+      subscription_id: 'sub-1',
+      feed_source_id: 'source-1',
+      fetched_items: 2,
+      new_items: 1,
+      synced_at: '2026-07-20T02:00:00Z',
+      success: false,
+      error: 'failed to save refresh status',
+    })
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+    const timelineCallCount = () => vi.mocked(globalThis.fetch).mock.calls
+      .filter(([input]) => String(input).includes('/feed/timeline?')).length
+    const before = timelineCallCount()
+
+    wrapper.findComponent({ name: 'SubscriptionManageSheet' }).vm.$emit('sync-subscription', 'sub-1')
+    await flushPromises()
+
+    expect(timelineCallCount()).toBeGreaterThan(before)
+    expect(wrapper.findComponent({ name: 'SubscriptionManageSheet' }).props('error')).toBe('failed to save refresh status')
+  })
+
+  it('reloads the timeline and reports partial refresh-all failures', async () => {
+    const feedStore = useFeedStore()
+    vi.spyOn(feedStore, 'syncAllSubscriptions').mockResolvedValue({
+      total: 2,
+      succeeded: 1,
+      failed: 1,
+      new_items: 2,
+      results: [
+        { subscription_id: 'sub-1', feed_source_id: 'source-1', fetched_items: 2, new_items: 2, synced_at: '2026-07-20T02:00:00Z', success: true },
+        { subscription_id: 'sub-2', feed_source_id: 'source-2', fetched_items: 0, new_items: 0, synced_at: '2026-07-20T02:00:00Z', success: false, error: 'source unavailable' },
+      ],
+    })
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+    const timelineCallCount = () => vi.mocked(globalThis.fetch).mock.calls
+      .filter(([input]) => String(input).includes('/feed/timeline?')).length
+    const before = timelineCallCount()
+
+    wrapper.findComponent({ name: 'SubscriptionManageSheet' }).vm.$emit('sync-all-subscriptions')
+    await flushPromises()
+
+    expect(timelineCallCount()).toBeGreaterThan(before)
+    expect(wrapper.findComponent({ name: 'SubscriptionManageSheet' }).props('error')).toBe('1 个来源刷新失败')
+  })
+
   it.each([
     {
       eventName: 'move-rule-down',

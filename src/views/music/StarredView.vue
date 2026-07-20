@@ -357,6 +357,7 @@ watch(
 .result-card,
 .empty-paper {
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
   background: var(--a-color-bg);
   box-shadow: none;
 }
@@ -368,8 +369,8 @@ watch(
 
 .result-card--interactive:hover {
   background: var(--a-color-surface);
-  border-color: color-mix(in srgb, var(--a-color-text) 18%, var(--a-color-border-soft));
-  transform: translateY(-1px);
+  border-color: var(--a-color-muted-soft);
+  transform: translateY(1px);
 }
 
 .result-card--interactive:hover h2 {

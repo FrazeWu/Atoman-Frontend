@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test'
+
 import { expect, test } from '../fixtures/base'
 import {
   cleanupDebateFixture,
@@ -30,10 +32,8 @@ test.describe('Debate wiki relation lifecycle', () => {
       expect((await initialTopic).ok()).toBeTruthy()
       await expect(page.getByRole('heading', { name: fixture.target.title })).toBeVisible()
 
-      const initialTree = page.waitForResponse(response => isTreeResponse(response.url(), fixture.target.id))
-      await page.getByRole('tab', { name: '辩论树' }).click()
-      expect((await initialTree).ok()).toBeTruthy()
-      await expect(treePanel(page).getByText(fixture.source.title, { exact: true })).toBeVisible()
+      const initialTree = await openSettledTree(page, fixture.target.id, fixture.target.title)
+      await expect(initialTree.getByText(fixture.source.title, { exact: true })).toBeVisible()
 
       await flipSourceConclusion(request, fixture)
       await page.getByRole('tab', { name: '正文' }).click()
@@ -45,10 +45,8 @@ test.describe('Debate wiki relation lifecycle', () => {
       expect((await refreshedTopic).ok()).toBeTruthy()
       await expect(page.getByText('来源结论已变化', { exact: true })).toBeVisible()
 
-      const staleTree = page.waitForResponse(response => isTreeResponse(response.url(), fixture.target.id))
-      await page.getByRole('tab', { name: '辩论树' }).click()
-      expect((await staleTree).ok()).toBeTruthy()
-      await expect(treePanel(page).getByText(fixture.source.title, { exact: true })).toHaveCount(0)
+      const staleTree = await openSettledTree(page, fixture.target.id, fixture.target.title)
+      await expect(staleTree.getByText(fixture.source.title, { exact: true })).toHaveCount(0)
 
       await page.getByRole('tab', { name: '正文' }).click()
       const reconfirmed = page.waitForResponse(response => (
@@ -59,10 +57,8 @@ test.describe('Debate wiki relation lifecycle', () => {
       await page.getByRole('button', { name: '重新确认', exact: true }).click()
       expect((await reconfirmed).ok()).toBeTruthy()
 
-      const activeTree = page.waitForResponse(response => isTreeResponse(response.url(), fixture.target.id))
-      await page.getByRole('tab', { name: '辩论树' }).click()
-      expect((await activeTree).ok()).toBeTruthy()
-      await expect(treePanel(page).getByText(fixture.source.title, { exact: true })).toBeVisible()
+      const activeTree = await openSettledTree(page, fixture.target.id, fixture.target.title)
+      await expect(activeTree.getByText(fixture.source.title, { exact: true })).toBeVisible()
     } finally {
       cleanupDebateFixture(fixture)
     }
@@ -75,6 +71,16 @@ function isTreeResponse(url: string, debateID: string) {
     && parsed.searchParams.get('view') === 'tree'
 }
 
-function treePanel(page: import('@playwright/test').Page) {
-  return page.locator('#debate-panel-tree')
+async function openSettledTree(page: Page, debateID: string, rootTitle: string) {
+  const treeResponse = page.waitForResponse(response => (
+    response.request().method() === 'GET' && isTreeResponse(response.url(), debateID)
+  ))
+  await page.getByRole('tab', { name: '辩论树' }).click()
+  expect((await treeResponse).ok()).toBeTruthy()
+
+  const graph = page.locator('#debate-panel-tree .debate-flow')
+  await expect(graph).toHaveAttribute('aria-busy', 'false')
+  const root = graph.locator('.debate-node--root')
+  await expect(root.getByRole('heading', { name: rootTitle, exact: true })).toBeVisible()
+  return graph
 }

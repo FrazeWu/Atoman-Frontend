@@ -1,6 +1,22 @@
 <template>
-  <div v-if="providers.length" class="oauth-providers">
+  <div v-if="providers.length || loadError" class="oauth-providers">
+	<div v-if="loadError" class="oauth-providers__error" data-test="oauth-provider-error" role="status">
+	  <span>其他登录方式暂不可用</span>
+	  <PButton
+		data-test="oauth-provider-retry"
+		type="button"
+		variant="secondary"
+		size="sm"
+		:loading="loading"
+		loading-text="正在重试..."
+		@click="loadProviders"
+	  >
+		<RefreshCw :size="16" aria-hidden="true" />
+		<span>重试</span>
+	  </PButton>
+	</div>
     <div
+	  v-if="providers.length"
       data-test="oauth-provider-list"
       :class="['oauth-providers__grid', `oauth-providers__grid--${providers.length}`]"
       role="group"
@@ -32,12 +48,13 @@
         </PButton>
       </div>
     </div>
-    <div class="oauth-providers__divider" aria-hidden="true"><span>或</span></div>
+	<div v-if="providers.length" class="oauth-providers__divider" aria-hidden="true"><span>或</span></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 
 import OAuthBrandIcon from '@/components/auth/OAuthBrandIcon.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -59,6 +76,8 @@ const props = withDefaults(defineProps<{
 })
 
 const providers = ref<OAuthProvider[]>([])
+const loadError = ref(false)
+const loading = ref(false)
 const lastUsedProvider = ref<OAuthProvider | null>(null)
 const lastUsedProviderKey = 'atoman_oauth_last_provider'
 
@@ -82,14 +101,24 @@ function rememberProvider(provider: OAuthProvider) {
   }
 }
 
-onMounted(async () => {
-  lastUsedProvider.value = readLastUsedProvider()
+async function loadProviders() {
+	loading.value = true
+	loadError.value = false
   try {
     const configuredProviders = await listOAuthProviders()
     providers.value = oauthProviders.filter(provider => configuredProviders.includes(provider))
   } catch {
     providers.value = []
+	loadError.value = true
+	} finally {
+	  loading.value = false
   }
+
+}
+
+onMounted(async () => {
+  lastUsedProvider.value = readLastUsedProvider()
+	await loadProviders()
 })
 </script>
 
@@ -105,6 +134,16 @@ onMounted(async () => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   padding-top: 0.625rem;
+}
+
+.oauth-providers__error {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.8125rem;
 }
 
 .oauth-providers__grid--2 {

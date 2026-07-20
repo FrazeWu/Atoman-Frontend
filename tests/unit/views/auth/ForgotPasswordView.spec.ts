@@ -6,6 +6,7 @@ import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
 const routes = [
   { path: '/forgot-password', component: ForgotPasswordView },
   { path: '/login', component: { template: '<div>登录</div>' } },
+	{ path: '/auth/oauth/confirm-account', component: { template: '<div>确认账号</div>' } },
 ]
 
 describe('ForgotPasswordView', () => {
@@ -62,5 +63,42 @@ describe('ForgotPasswordView', () => {
       }),
     }))
     expect(router.currentRoute.value.fullPath).toBe('/login?reset=success')
+  })
+
+  it('returns to the pending OAuth confirmation after password recovery', async () => {
+	vi.stubEnv('PROD', false)
+	vi.spyOn(globalThis, 'fetch')
+	  .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'sent' }), { status: 200 }))
+	  .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'reset' }), { status: 200 }))
+	const router = createRouter({ history: createMemoryHistory(), routes })
+	await router.push('/forgot-password?oauth=resume')
+	const wrapper = mount(ForgotPasswordView, { global: { plugins: [router] } })
+	await wrapper.get('[data-test="reset-email"]').setValue('alice@example.com')
+	await wrapper.get('[data-test="send-reset-code"]').trigger('click')
+	await flushPromises()
+	await wrapper.get('[data-test="reset-code"]').setValue('123456')
+	await wrapper.get('[data-test="reset-next"]').trigger('click')
+	await wrapper.get('[data-test="reset-password"]').setValue('new-password')
+	await wrapper.get('[data-test="reset-password-confirm"]').setValue('new-password')
+	await wrapper.get('form').trigger('submit')
+	await flushPromises()
+	expect(router.currentRoute.value.path).toBe('/auth/oauth/confirm-account')
+  })
+
+  it('rejects a reset password longer than 72 bytes', async () => {
+	vi.stubEnv('PROD', false)
+	const fetchMock = vi.spyOn(globalThis, 'fetch')
+	const router = createRouter({ history: createMemoryHistory(), routes })
+	await router.push('/forgot-password')
+	const wrapper = mount(ForgotPasswordView, { global: { plugins: [router] } })
+	await wrapper.get('[data-test="reset-email"]').setValue('alice@example.com')
+	await wrapper.get('[data-test="reset-code"]').setValue('123456')
+	await wrapper.get('[data-test="reset-next"]').trigger('click')
+	const password = 'a'.repeat(73)
+	await wrapper.get('[data-test="reset-password"]').setValue(password)
+	await wrapper.get('[data-test="reset-password-confirm"]').setValue(password)
+	await wrapper.get('form').trigger('submit')
+	expect(fetchMock).not.toHaveBeenCalled()
+	expect(wrapper.text()).toContain('密码过长，请缩短后重试')
   })
 })

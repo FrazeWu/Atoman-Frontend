@@ -1,4 +1,5 @@
 import type { ApiErrorEnvelope, ApiSuccess } from './types'
+import { apiFetch } from './transport'
 
 export class ApiErrorResponseError extends Error {
   status: number
@@ -21,21 +22,6 @@ const jsonHeaders = {
 
 const multipartHeaders = {
   Accept: 'application/json',
-}
-
-function shouldAttachBearer(url: string) {
-  return /^https?:\/\//i.test(url) || url.startsWith('/api/')
-}
-
-function withAuthHeaders(url: string, headers: Record<string, string>) {
-  if (!shouldAttachBearer(url)) return headers
-  const storage = typeof globalThis !== 'undefined' ? globalThis.localStorage : undefined
-  const token = storage ? storage.getItem('token') : null
-  if (!token) return headers
-  return {
-    ...headers,
-    Authorization: `Bearer ${token}`,
-  }
 }
 
 async function parseJson(response: Response): Promise<unknown> {
@@ -80,68 +66,68 @@ async function unwrapResponse<T>(response: Response): Promise<T> {
 }
 
 export async function apiGet<T>(url: string): Promise<T> {
-  return unwrapResponse<T>(await fetch(url, {
+  return unwrapResponse<T>(await apiFetch(url, {
     credentials: 'include',
-    headers: withAuthHeaders(url, { Accept: 'application/json' }),
+    headers: { Accept: 'application/json' },
   }))
 }
 
 export async function apiGetEnvelope<T, M = Record<string, unknown>>(url: string): Promise<ApiSuccess<T, M>> {
-  return unwrapResponseEnvelope<T, M>(await fetch(url, {
+  return unwrapResponseEnvelope<T, M>(await apiFetch(url, {
     credentials: 'include',
-    headers: withAuthHeaders(url, { Accept: 'application/json' }),
+    headers: { Accept: 'application/json' },
   }))
 }
 
 export async function apiGetRaw<T>(url: string, init: RequestInit = {}): Promise<T> {
-  return unwrapResponseEnvelope<T>(await fetch(url, {
+  return unwrapResponseEnvelope<T>(await apiFetch(url, {
     ...init,
     credentials: 'include',
-    headers: withAuthHeaders(url, { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) }),
+    headers: { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) },
   })) as Promise<T>
 }
 
 export async function apiPostJson<T>(url: string, body: unknown): Promise<T> {
-  return unwrapResponse<T>(await fetch(url, {
+  return unwrapResponse<T>(await apiFetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: withAuthHeaders(url, jsonHeaders),
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   }))
 }
 
 export async function apiPatchJson<T>(url: string, body: unknown): Promise<T> {
-  return unwrapResponse<T>(await fetch(url, {
+  return unwrapResponse<T>(await apiFetch(url, {
     method: 'PATCH',
     credentials: 'include',
-    headers: withAuthHeaders(url, jsonHeaders),
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   }))
 }
 
 export async function apiPutJson<T>(url: string, body?: unknown): Promise<T> {
-  return unwrapResponse<T>(await fetch(url, {
+  return unwrapResponse<T>(await apiFetch(url, {
     method: 'PUT',
     credentials: 'include',
-    headers: withAuthHeaders(url, jsonHeaders),
+    headers: jsonHeaders,
     body: body === undefined ? undefined : JSON.stringify(body),
   }))
 }
 
 export async function apiDeleteJson<T>(url: string, body?: unknown): Promise<T> {
-  return unwrapResponse<T>(await fetch(url, {
+  return unwrapResponse<T>(await apiFetch(url, {
     method: 'DELETE',
     credentials: 'include',
-    headers: withAuthHeaders(url, jsonHeaders),
+    headers: jsonHeaders,
     body: body === undefined ? undefined : JSON.stringify(body),
   }))
 }
 
 export async function apiPostMultipart<T>(url: string, body: FormData): Promise<T> {
-  return unwrapResponse<T>(await fetch(url, {
+  return unwrapResponse<T>(await apiFetch(url, {
     method: 'POST',
     credentials: 'include',
-    headers: withAuthHeaders(url, multipartHeaders),
+    headers: multipartHeaders,
     body,
   }))
 }

@@ -16,7 +16,6 @@ const sortedTranslation = '[00:01.00]一甲\n[00:01.00]\n[00:02.00]二'
 
 type LocalAuthFixture = {
   token: string
-  user: Record<string, unknown>
   userId: string
 }
 
@@ -37,10 +36,6 @@ test.describe('Music lyrics row editor real workflow', () => {
     try {
       auth = await createLocalAuthFixture(page.request, username, password)
       sourceHash = createTemporarySongFixture(songId, temporarySongTitle, auth.userId)
-      await page.addInitScript(({ token, user }) => {
-        localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(user))
-      }, { token: auth.token, user: auth.user })
 
       await runWorkflow(page, testInfo, songId, temporarySongTitle, auth.token)
     } finally {
@@ -284,12 +279,16 @@ async function createLocalAuthFixture(request: APIRequestContext, username: stri
     RETURNING uuid;
   `)
   try {
-    const response = await request.post('/api/v1/auth/login', {
-      data: { username, password },
-    })
-    expect(response.status()).toBe(200)
-    const body = await response.json() as { token: string, user: Record<string, unknown> }
-    return { token: body.token, user: body.user, userId }
+		const webResponse = await request.post('/api/v1/auth/login', {
+			data: { username, password },
+		})
+		expect(webResponse.status()).toBe(200)
+		const response = await request.post('/api/v1/auth/token', {
+			data: { username, password },
+		})
+		expect(response.status()).toBe(200)
+		const body = await response.json() as { token: string }
+		return { token: body.token, userId }
   } catch (error) {
     runPsql(`DELETE FROM "Users" WHERE uuid = ${sqlLiteral(userId)};`)
     throw error

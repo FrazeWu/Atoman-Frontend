@@ -7,12 +7,15 @@ import {
   completeOAuthProfile,
   confirmOAuthAccount,
   getPendingOAuth,
+	sendPendingOAuthVerification,
   setOAuthPassword,
+	verifyPendingOAuthEmail,
 } from '@/services/oauth'
 import { useAuthStore } from '@/stores/auth'
 import OAuthCompleteProfileView from '@/views/auth/OAuthCompleteProfileView.vue'
 import OAuthConfirmAccountView from '@/views/auth/OAuthConfirmAccountView.vue'
 import OAuthSetPasswordView from '@/views/auth/OAuthSetPasswordView.vue'
+import OAuthVerifyEmailView from '@/views/auth/OAuthVerifyEmailView.vue'
 
 vi.mock('@/services/oauth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/oauth')>()
@@ -21,7 +24,9 @@ vi.mock('@/services/oauth', async (importOriginal) => {
     getPendingOAuth: vi.fn(),
     completeOAuthProfile: vi.fn(),
     confirmOAuthAccount: vi.fn(),
+	sendPendingOAuthVerification: vi.fn(),
     setOAuthPassword: vi.fn(),
+	verifyPendingOAuthEmail: vi.fn(),
     cancelPendingOAuth: vi.fn(),
   }
 })
@@ -34,6 +39,7 @@ function makeRouter(component: object, path: string) {
       { path: '/forum', component: { template: '<div>forum</div>' } },
       { path: '/login', component: { template: '<div>login</div>' } },
       { path: '/forgot-password', component: { template: '<div>forgot password</div>' } },
+	  { path: '/auth/oauth/complete-profile', component: { template: '<div>complete profile</div>' } },
     ],
   })
 }
@@ -67,6 +73,27 @@ describe('OAuth pending views', () => {
     expect(completeOAuthProfile).toHaveBeenCalledWith('alice', 'secret123', 'secret123')
     expect(auth.restoreSession).toHaveBeenCalledWith(true)
     expect(router.currentRoute.value.path).toBe('/forum')
+  })
+
+  it('verifies a Microsoft email before continuing the OAuth flow', async () => {
+	vi.mocked(getPendingOAuth).mockResolvedValue({
+	  provider: 'microsoft', stage: 'verify_email', email: 'p***@example.com', has_password: false,
+	})
+	vi.mocked(sendPendingOAuthVerification).mockResolvedValue()
+	vi.mocked(verifyPendingOAuthEmail).mockResolvedValue({ stage: 'complete_profile' })
+	const pinia = createPinia()
+	setActivePinia(pinia)
+	const router = makeRouter(OAuthVerifyEmailView, '/auth/oauth/verify-email')
+	await router.push('/auth/oauth/verify-email')
+	const wrapper = mount(OAuthVerifyEmailView, { global: { plugins: [pinia, router] } })
+	await flushPromises()
+	await wrapper.get('[data-test="oauth-email-send"]').trigger('click')
+	await wrapper.get('input').setValue('123456')
+	await wrapper.get('form').trigger('submit')
+	await flushPromises()
+	expect(sendPendingOAuthVerification).toHaveBeenCalled()
+	expect(verifyPendingOAuthEmail).toHaveBeenCalledWith('123456')
+	expect(router.currentRoute.value.path).toBe('/auth/oauth/complete-profile')
   })
 
   it('binds an existing account after password confirmation', async () => {
@@ -107,7 +134,7 @@ describe('OAuth pending views', () => {
     expect(wrapper.text()).toContain('请先使用已绑定的登录方式登录，或重置密码')
     const links = wrapper.findAll('a').map(link => link.attributes('href'))
     expect(links).toContain('/login')
-    expect(links).toContain('/forgot-password')
+	expect(links).toContain('/forgot-password?oauth=resume')
   })
 
   it('sets a local password before logging in an OAuth-only account', async () => {

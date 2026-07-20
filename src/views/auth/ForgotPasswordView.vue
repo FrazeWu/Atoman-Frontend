@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
@@ -120,6 +120,7 @@ import {
 
 const api = useApi()
 const router = useRouter()
+const route = useRoute()
 const step = ref(1)
 const email = ref('')
 const code = ref('')
@@ -198,6 +199,10 @@ const resetPassword = async () => {
     fieldErrors.value.password = '密码长度至少为 6 位'
     return
   }
+	if (new TextEncoder().encode(password.value).length > 72) {
+	  fieldErrors.value.password = '密码过长，请缩短后重试'
+	  return
+	}
   if (password.value !== passwordConfirm.value) {
     fieldErrors.value.passwordConfirm = '两次输入的密码不一致'
     return
@@ -217,7 +222,11 @@ const resetPassword = async () => {
       }),
     })
     await responseMessage(response, '重置密码失败')
-    await router.push({ path: '/login', query: { reset: 'success' } })
+	if (route.query.oauth === 'resume') {
+	  await router.push('/auth/oauth/confirm-account')
+	} else {
+	  await router.push({ path: '/login', query: { reset: 'success' } })
+	}
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '重置密码失败'
   } finally {

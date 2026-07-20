@@ -1,10 +1,11 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MobileBottomNav from '@/components/system/MobileBottomNav.vue'
 import { getMobileMoreItems, getMobilePrimaryTabs } from '@/composables/useResponsiveShell'
 import { modulePathUrl, moduleUrl } from '@/composables/useSubdomainNav'
+import { useAuthStore } from '@/stores/auth'
 
 const { navigateModuleWithShutter } = vi.hoisted(() => ({
   navigateModuleWithShutter: vi.fn(),
@@ -150,6 +151,31 @@ describe('useResponsiveShell', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.get('.site-footer-sheet').text()).toContain('关于凹凸庵')
+  })
+
+  it('shows account settings and logout in the mobile more sheet', async () => {
+	const router = createRouter({
+	  history: createMemoryHistory(),
+	  routes: [
+		{ path: '/', component: { template: '<div />' } },
+		{ path: '/login', component: { template: '<div />' } },
+		{ path: '/users/:handle/settings', component: { template: '<div />' } },
+	  ],
+	})
+	await router.push('/')
+	const pinia = createPinia()
+	setActivePinia(pinia)
+	const auth = useAuthStore()
+	auth.user = { username: 'alice', email: 'alice@example.com', role: 'user' }
+	auth.isAuthenticated = true
+	const logout = vi.spyOn(auth, 'logout').mockResolvedValue()
+	const wrapper = mount(MobileBottomNav, { global: { plugins: [pinia, router] } })
+	await wrapper.get('[data-tab-key="more"]').trigger('click')
+	expect(wrapper.get('[data-testid="mobile-account-settings"]').attributes('href')).toBe('/users/alice/settings')
+	await wrapper.get('[data-testid="mobile-account-logout"]').trigger('click')
+	await flushPromises()
+	expect(logout).toHaveBeenCalled()
+	expect(router.currentRoute.value.path).toBe('/login')
   })
 
   it('uses shutter navigation for the create tab target', async () => {

@@ -38,12 +38,9 @@ test.describe('Navigation', () => {
     expect(body).toBeTruthy()
   })
 
-  test('login button visible when not authenticated', async ({ page }) => {
-    await page.goto('/')
-    await page.evaluate(() => {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-    })
+	test('login button visible when not authenticated', async ({ page }) => {
+		await page.goto('/')
+		await page.context().clearCookies()
     await page.reload()
     await expect(page.locator('header').getByRole('link', { name: '登录', exact: true })).toBeVisible()
   })

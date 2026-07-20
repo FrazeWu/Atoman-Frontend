@@ -1,12 +1,6 @@
 import { expect, test } from '@playwright/test'
 
 test('content lifecycle surfaces render across consumption, publishing and analytics', async ({ page }) => {
-  await page.addInitScript(() => {
-    const token = `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify({ uuid: 'user-1', username: 'creator', email: 'creator@example.com', role: 'user' }))
-  })
-
   const channel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
   const collection = {
     id: 'collection-1', channel_id: channel.id, content_type: 'blog', name: '文章合集',
@@ -15,9 +9,18 @@ test('content lifecycle surfaces render across consumption, publishing and analy
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url())
     const path = url.pathname
-    const fulfill = (data: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
+		const fulfill = (data: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
+		if (path === '/api/v1/auth/session') {
+			return route.fulfill({
+				status: 200,
+				json: {
+					csrf_token: 'e2e-csrf-token',
+					user: { uuid: 'user-1', username: 'creator', email: 'creator@example.com', role: 'user' },
+				},
+			})
+		}
 
-    if (path === '/api/v1/content/continue') {
+		if (path === '/api/v1/content/continue') {
       return fulfill([{
         content_id: 'post-1', module: 'blog', title: '继续阅读的文章', path: '/posts/post/post-1', cover_url: '',
         position_sec: 0, duration_sec: 0, progress: 0.42, updated_at: '2026-07-18T00:00:00Z',

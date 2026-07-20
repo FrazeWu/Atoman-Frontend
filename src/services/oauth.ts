@@ -1,4 +1,5 @@
 import { useApiUrl } from '@/composables/useApi'
+import { apiFetch } from '@/api/transport'
 
 export const oauthProviders = ['google', 'github', 'microsoft'] as const
 export type OAuthProvider = typeof oauthProviders[number]
@@ -12,7 +13,7 @@ export const oauthProviderLabels: Record<OAuthProvider, string> = {
 
 export type OAuthPendingInfo = {
   provider: OAuthProvider
-  stage: 'complete_profile' | 'confirm_account' | 'set_password'
+  stage: 'verify_email' | 'complete_profile' | 'confirm_account' | 'set_password'
   email: string
   has_password: boolean
 }
@@ -47,6 +48,8 @@ function oauthErrorMessage(code: unknown, fallback: string) {
     case 'oauth.invalid_flow': return '登录请求已失效，请重新登录'
     case 'oauth.last_login_method': return '请先添加其他登录方式'
     case 'oauth.identity_conflict': return '该登录方式已绑定其他账号'
+	case 'oauth.email_code_invalid': return '验证码无效或已过期'
+	case 'auth.rate_limited': return '尝试次数过多，请稍后重试'
     case 'validation.invalid_request': return '请检查输入内容'
     default: return fallback
   }
@@ -87,8 +90,23 @@ export function safeOAuthReturnPath(value: unknown) {
 }
 
 export async function getPendingOAuth(): Promise<OAuthPendingInfo> {
-  const response = await fetch(`${oauthURL}/pending`, { credentials: 'include' })
+  const response = await apiFetch(`${oauthURL}/pending`, { credentials: 'include' })
   return readJSON<OAuthPendingInfo>(response, '登录请求已失效，请重新登录')
+}
+
+export async function sendPendingOAuthVerification(): Promise<void> {
+	const response = await apiFetch(`${oauthURL}/pending/send-verification`, { method: 'POST', credentials: 'include' })
+	if (!response.ok) await readJSON(response, '无法发送验证码')
+}
+
+export async function verifyPendingOAuthEmail(code: string): Promise<{ stage: OAuthPendingInfo['stage'] }> {
+	const response = await apiFetch(`${oauthURL}/pending/verify-email`, {
+	  method: 'POST',
+	  credentials: 'include',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({ code }),
+	})
+	return readJSON<{ stage: OAuthPendingInfo['stage'] }>(response, '无法确认邮箱')
 }
 
 export async function completeOAuthProfile(

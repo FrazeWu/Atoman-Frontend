@@ -53,7 +53,7 @@ test.describe('Music', () => {
   test('music contribute requires login', async ({ page }) => {
     await page.goto('/artist/new')
     await expect(page).toHaveURL(/\/login/)
-    await expect(page.getByRole('heading', { name: '欢迎回来' })).toBeVisible()
+		await expect(page.getByRole('heading', { name: '登录' })).toBeVisible()
   })
 
   test('authenticated user can access contribute page', async ({ authenticatedPage }) => {

@@ -21,8 +21,8 @@
  */
 
 import { ref } from 'vue'
+import { configureApiXHR } from '@/api/transport'
 import { useApi } from '@/composables/useApi'
-import { useAuthStore } from '@/stores/auth'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
@@ -32,7 +32,6 @@ export function useImageUpload(
   replaceText: (search: string, replacement: string) => void,
 ) {
   const api = useApi()
-  const authStore = useAuthStore()
   const isUploading = ref(false)
   const uploadProgress = ref(0)
   const uploadError = ref<string | null>(null)
@@ -87,12 +86,7 @@ export function useImageUpload(
 
       const xhr = new XMLHttpRequest()
       xhr.open('POST', api.blog.uploadImage)
-
-      // Set auth token
-      const token = authStore.token
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-      }
+	  configureApiXHR(xhr, 'POST')
 
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {

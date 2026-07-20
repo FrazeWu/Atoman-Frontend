@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures/base'
+import { mockAuthenticatedSession } from '../helpers/auth'
 
 const comment = (id: string, content: string) => ({
   id, author_id: 'owner-1', author: { id: 'owner-1', username: 'owner', display_name: 'Owner', avatar_url: '' },
@@ -8,10 +9,7 @@ const comment = (id: string, content: string) => ({
 })
 
 async function becomeTargetOwner(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
-	localStorage.setItem('token', `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`)
-	localStorage.setItem('user', JSON.stringify({ uuid: 'owner-1', username: 'owner', email: 'owner@example.com', role: 'user' }))
-  })
+	await mockAuthenticatedSession(page, { uuid: 'owner-1', username: 'owner', email: 'owner@example.com', role: 'user' })
 }
 
 test.describe('Timeline revision proposals', () => {

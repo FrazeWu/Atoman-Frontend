@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { configureApiXHR } from '@/api/transport'
 import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -97,7 +98,7 @@ function uploadWithProgress(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', url)
-    xhr.setRequestHeader('Authorization', `Bearer ${authStore.token}`)
+	configureApiXHR(xhr, 'POST')
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
     })

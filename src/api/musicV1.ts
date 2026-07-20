@@ -1,4 +1,5 @@
 import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
+import { configureApiXHR } from './transport'
 import type { ApiList, ApiSuccess, PaginationMeta, UploadAsset, UploadPurpose } from './types'
 import { commentApi, type CommentDTO } from './comments'
 import { useApiUrl } from '@/composables/useApi'
@@ -943,12 +944,8 @@ export async function uploadMusicAlbumArchive(
     const xhr = new XMLHttpRequest()
     const startedAt = Date.now()
     xhr.open('POST', musicV1Endpoints.albumImportArchive(importId))
-    xhr.withCredentials = true
+	configureApiXHR(xhr, 'POST')
     xhr.setRequestHeader('Accept', 'application/json')
-    const token = typeof globalThis !== 'undefined' ? globalThis.localStorage?.getItem('token') : null
-    if (token) {
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-    }
 
     xhr.upload.addEventListener('progress', (event) => {
       if (!event.lengthComputable) return

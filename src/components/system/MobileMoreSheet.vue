@@ -18,6 +18,30 @@
         </a>
       </nav>
 
+	  <section v-if="authStore.isAuthenticated && authStore.user" class="mobile-more-sheet__site">
+		<p class="mobile-more-sheet__eyebrow">账号</p>
+		<nav class="mobile-more-sheet__account" aria-label="账号">
+		  <RouterLink
+			:data-testid="'mobile-account-settings'"
+			:to="`/users/${authStore.user.username}/settings`"
+			class="mobile-more-sheet__account-action"
+			@click="emit('close')"
+		  >
+			<UserRound :size="18" aria-hidden="true" />
+			<span>账号设置</span>
+		  </RouterLink>
+		  <button
+			type="button"
+			class="mobile-more-sheet__account-action mobile-more-sheet__account-action--danger"
+			data-testid="mobile-account-logout"
+			@click="logout"
+		  >
+			<LogOut :size="18" aria-hidden="true" />
+			<span>退出登录</span>
+		  </button>
+		</nav>
+	  </section>
+
       <section class="mobile-more-sheet__site">
         <p class="mobile-more-sheet__eyebrow">站点信息</p>
         <nav class="mobile-more-sheet__site-links" aria-label="站点信息">
@@ -39,10 +63,13 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { LogOut, UserRound } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import SiteFooterSheet from '@/components/system/footer/SiteFooterSheet.vue'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { footbarLinks, type FootbarPanel } from '@/config/moduleRooms'
+import { useAuthStore } from '@/stores/auth'
 
 defineProps<{
   show: boolean
@@ -52,6 +79,9 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const router = useRouter()
+const authStore = useAuthStore()
+
 const items = computed(() => getMobileMoreItems())
 const activePanel = ref<FootbarPanel | null>(null)
 
@@ -59,6 +89,12 @@ async function openFooterPanel(panel: FootbarPanel) {
   emit('close')
   await nextTick()
   activePanel.value = panel
+}
+
+async function logout() {
+	await authStore.logout()
+	emit('close')
+	await router.push('/login')
 }
 </script>
 
@@ -121,6 +157,36 @@ async function openFooterPanel(panel: FootbarPanel) {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--a-space-4);
+}
+
+.mobile-more-sheet__account {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--a-space-2);
+}
+
+.mobile-more-sheet__account-action {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--a-space-2);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font: inherit;
+  font-weight: var(--a-font-weight-strong);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mobile-more-sheet__account-action--danger {
+  color: var(--a-color-danger);
+}
+
+.mobile-more-sheet__account-action:hover,
+.mobile-more-sheet__account-action:focus-visible {
+  background: var(--a-color-surface-muted);
 }
 
 .mobile-more-sheet__site-link {

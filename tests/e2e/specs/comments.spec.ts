@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures/base'
 import type { Page, Route } from '@playwright/test'
+import { loginViaAPI, mockAuthenticatedSession } from '../helpers/auth'
 
 type Comment = {
   id: string
@@ -24,12 +25,9 @@ type Comment = {
 const owner = { id: 'owner-1', username: 'owner', display_name: 'Owner', avatar_url: '' }
 
 async function becomeUser(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('token', `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`)
-    localStorage.setItem('user', JSON.stringify({
-      uuid: 'owner-1', username: 'owner', email: 'owner@example.com', role: 'user', onboarding_completed_at: '2026-07-15T09:00:00Z',
-    }))
-  })
+	await mockAuthenticatedSession(page, {
+		uuid: 'owner-1', username: 'owner', email: 'owner@example.com', role: 'user', onboarding_completed_at: '2026-07-15T09:00:00Z',
+	})
 }
 
 function makeComment(id: string, content: string, mentions: Comment['mentions'] = []): Comment {
@@ -185,10 +183,9 @@ test.describe('Comment surfaces and core API', () => {
     await expect(page.locator('.comment-section [data-test="marked-label"]')).toHaveText(/最佳回答/)
   })
 
-  test('real comment API parses time anchors', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/debate')
-    const token = await authenticatedPage.evaluate(() => localStorage.getItem('token'))
-    expect(token).toBeTruthy()
+	test('real comment API parses time anchors', async ({ authenticatedPage }) => {
+		await authenticatedPage.goto('/debate')
+		const { token } = await loginViaAPI(authenticatedPage.request)
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     const videoResponse = await authenticatedPage.request.post('/api/v1/videos', {
       headers,

@@ -1,16 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('Unified Studio', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      const token = `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify({
-        id: 'user-1', uuid: 'user-1', username: 'creator', email: 'creator@example.com', role: 'user',
-      }))
-    })
-
-    let collections = [{
+	test.beforeEach(async ({ page }) => {
+		let collections = [{
       id: 'collection-default', channel_id: 'channel-1', content_type: 'blog', name: '全部文章',
       description: '', cover_url: '', is_default: true, created_at: '2026-07-18T00:00:00Z', updated_at: '2026-07-18T00:00:00Z',
     }]
@@ -21,9 +13,15 @@ test.describe('Unified Studio', () => {
       const url = new URL(request.url())
       const path = url.pathname
       const method = request.method()
-      const fulfill = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+			const fulfill = (body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+			if (path === '/api/v1/auth/session') {
+				return fulfill({
+					csrf_token: 'e2e-csrf-token',
+					user: { id: 'user-1', uuid: 'user-1', username: 'creator', email: 'creator@example.com', role: 'user' },
+				})
+			}
 
-      if (path === '/api/v1/studio/state') {
+			if (path === '/api/v1/studio/state') {
         return fulfill({ data: { current_channel: channel, channels: [channel] } })
       }
       if (path === '/api/v1/studio/dashboard') {

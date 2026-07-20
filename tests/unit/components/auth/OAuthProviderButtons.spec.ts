@@ -120,4 +120,15 @@ describe('OAuthProviderButtons', () => {
 
     expect(wrapper.find('[data-test="oauth-provider-list"]').exists()).toBe(false)
   })
+
+  it('shows a retry action when provider loading fails', async () => {
+	vi.mocked(listOAuthProviders).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(['google'])
+	const wrapper = mount(OAuthProviderButtons)
+	await flushPromises()
+	expect(wrapper.get('[data-test="oauth-provider-error"]').text()).toContain('其他登录方式暂不可用')
+	await wrapper.get('[data-test="oauth-provider-retry"]').trigger('click')
+	await flushPromises()
+	expect(listOAuthProviders).toHaveBeenCalledTimes(2)
+	expect(wrapper.find('[data-test="oauth-provider-google"]').exists()).toBe(true)
+  })
 })

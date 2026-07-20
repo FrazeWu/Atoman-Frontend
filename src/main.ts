@@ -4,6 +4,9 @@ import './style.css'
 import './assets/editor.css'
 import App from './App.vue'
 import router from './router'
+import { installApiTransport } from './api/transport'
+
+installApiTransport()
 
 const app = createApp(App)
 app.use(createPinia())

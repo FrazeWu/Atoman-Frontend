@@ -10,6 +10,7 @@ const publicSystemPaths = new Set([
   '/login',
   '/register',
   '/auth/oauth/callback',
+  '/auth/oauth/verify-email',
   '/auth/oauth/complete-profile',
   '/auth/oauth/confirm-account',
   '/auth/oauth/set-password',

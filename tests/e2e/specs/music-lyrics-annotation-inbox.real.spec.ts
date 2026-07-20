@@ -9,8 +9,9 @@ const sourceSongId = process.env.MUSIC_LYRICS_E2E_SOURCE_SONG_ID ?? ''
 
 type LocalAuthFixture = {
   token: string
-  user: Record<string, unknown>
   userId: string
+  username: string
+  password: string
 }
 
 type InboxFixture = {
@@ -87,10 +88,12 @@ function requirePreparedFixture() {
 
 async function createAuthenticatedContext(browser: Browser, auth: LocalAuthFixture) {
   const context = await browser.newContext()
-  await context.addInitScript(({ token, user }) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
-  }, auth)
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL!
+  const response = await context.request.post(new URL('/api/v1/auth/login', baseURL).toString(), {
+    data: { username: auth.username, password: auth.password },
+    headers: { Origin: new URL(baseURL).origin },
+  })
+  expect(response.status()).toBe(200)
   return context
 }
 
@@ -195,10 +198,10 @@ async function createLocalAuthFixture(request: APIRequestContext, username: stri
     RETURNING uuid;
   `)
   try {
-    const response = await request.post('/api/v1/auth/login', { data: { username, password } })
-    expect(response.status()).toBe(200)
-    const body = await response.json() as { token: string, user: Record<string, unknown> }
-    return { token: body.token, user: body.user, userId }
+		const response = await request.post('/api/v1/auth/token', { data: { username, password } })
+		expect(response.status()).toBe(200)
+		const body = await response.json() as { token: string }
+		return { token: body.token, userId, username, password }
   } catch (error) {
     runPsql(`DELETE FROM "Users" WHERE uuid = ${sqlLiteral(userId)};`)
     throw error

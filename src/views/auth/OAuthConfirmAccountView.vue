@@ -30,7 +30,7 @@
             <PButton to="/login" variant="secondary" size="lg">
               返回登录
             </PButton>
-            <PButton to="/forgot-password" size="lg">
+			<PButton :to="{ path: '/forgot-password', query: { oauth: 'resume' } }" size="lg">
               重置密码
             </PButton>
           </div>

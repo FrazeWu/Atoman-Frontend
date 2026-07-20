@@ -55,6 +55,7 @@
                   <small>@{{ authStore.user?.username }}</small>
                 </div>
               </div>
+              <PasswordSettingsPanel />
               <OAuthIdentitySettingsPanel :return-to="route.fullPath" />
             </template>
 
@@ -95,6 +96,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'
+import PasswordSettingsPanel from '@/components/user/PasswordSettingsPanel.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'

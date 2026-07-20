@@ -650,15 +650,23 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 }
 
 .discover-layout--albums {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .discover-layout--playlists {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .discover-layout--artists {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .discover-layout--albums,
+  .discover-layout--playlists,
+  .discover-layout--artists {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .discover-layout__item {
@@ -724,8 +732,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   .discover-layout--albums,
   .discover-layout--playlists,
   .discover-layout--artists {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
 }
 </style>

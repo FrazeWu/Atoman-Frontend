@@ -14,12 +14,12 @@
       :max-zoom="1.6"
       fit-view-on-init
       class="debate-flow__canvas"
-      aria-label="辩论关系图"
+      :aria-label="canvasLabel"
     >
-      <Background pattern-color="#e2e8f0" :gap="20" :size="1" />
+      <Background pattern-color="var(--a-color-border-soft)" :gap="20" :size="1" />
       <Controls :show-interactive="false" position="bottom-right" />
       <template #node-debate="nodeProps">
-        <DebateGraphNode :data="nodeProps.data" />
+        <DebateGraphNode :data="nodeProps.data" @expand="emit('expand', $event)" />
       </template>
     </VueFlow>
   </div>
@@ -36,17 +36,27 @@ import '@vue-flow/controls/dist/style.css'
 
 import type { DebateGraph } from '@/types'
 import DebateGraphNode from './DebateGraphNode.vue'
-import { buildDebateFlow } from './debateGraph'
+import { buildDebateFlow, type DebateRelationView } from './debateGraph'
 
 const props = withDefaults(defineProps<{
   graph?: DebateGraph | null
   loading?: boolean
+  view: DebateRelationView
+  expandingNodeIds?: readonly string[]
 }>(), {
   graph: null,
   loading: false,
+  expandingNodeIds: () => [],
 })
 
-const flow = computed(() => props.graph ? buildDebateFlow(props.graph) : { nodes: [], edges: [] })
+const emit = defineEmits<{ expand: [nodeId: string] }>()
+const canvasLabel = computed(() => props.view === 'tree' ? '辩论树画布' : '辩论关系图画布')
+const flow = computed(() => props.graph
+  ? buildDebateFlow(props.graph, {
+      view: props.view,
+      expandingNodeIds: props.expandingNodeIds,
+    })
+  : { nodes: [], edges: [] })
 </script>
 
 <style scoped>
@@ -72,8 +82,8 @@ const flow = computed(() => props.graph ? buildDebateFlow(props.graph) : { nodes
 }
 
 .debate-flow :deep(.vue-flow__controls-button) {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-bottom-color: var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-text);

@@ -101,8 +101,11 @@
               </div>
               <DebateRelationGraph
                 data-test="relation-graph"
-                :graph="debateStore.relationGraph"
-                :loading="debateStore.relationLoading"
+                :graph="relationGraphs[relationTab.value]"
+                :loading="relationViewLoading[relationTab.value]"
+                :view="relationTab.value"
+                :expanding-node-ids="expandingNodeIds[relationTab.value]"
+                @expand="handleExpand(relationTab.value, $event)"
               />
             </template>
           </div>
@@ -122,14 +125,14 @@
       <DebateWikiEditor
         :show="showWikiEditor"
         :debate="debate"
-        :current-revision-id="debate.current_revision_id || ''"
+        :current-revision-id="debate.current_revision_id"
         @close="showWikiEditor = false"
         @saved="handleWikiMutation"
       />
       <DebateRevisionSheet
         :show="showRevisions"
         :debate-id="debate.id"
-        :current-revision-id="debate.current_revision_id || ''"
+        :current-revision-id="debate.current_revision_id"
         @close="showRevisions = false"
         @reverted="handleWikiMutation"
       />
@@ -158,6 +161,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
 import type {
   Debate,
+  DebateGraph,
   DebateReference,
   DebateResourceKind,
   DebateVoteDirection,
@@ -204,6 +208,9 @@ const { renderMarkdown } = useMarkdownRenderer()
 
 const activeTab = ref<DebateTab>('content')
 const lastLoadedRelationView = ref<RelationView | null>(null)
+const relationGraphs = ref<Record<RelationView, DebateGraph | null>>({ tree: null, graph: null })
+const relationViewLoading = ref<Record<RelationView, boolean>>({ tree: false, graph: false })
+const expandingNodeIds = ref<Record<RelationView, string[]>>({ tree: [], graph: [] })
 const showWikiEditor = ref(false)
 const showRevisions = ref(false)
 const showDiscussion = ref(false)
@@ -213,6 +220,9 @@ const routeDebateSettled = ref(false)
 const voteOwnerID = ref('')
 const voteLoadState = ref<'loading' | 'ready' | 'error'>('loading')
 let reconfirmSession = 0
+let relationSession = 0
+const relationBaseRequestSequence: Record<RelationView, number> = { tree: 0, graph: 0 }
+const relationViewEpoch: Record<RelationView, number> = { tree: 0, graph: 0 }
 
 const routeDebateID = computed(() => String(route.params.id || ''))
 const debate = computed(() => {
@@ -261,6 +271,8 @@ watch(() => String(route.params.id || ''), (id) => {
   voteOwnerID.value = ''
   voteLoadState.value = 'loading'
   reconfirmSession += 1
+  relationSession += 1
+  resetRelationViews()
   reconfirmingRelationId.value = ''
   reconfirmError.value = ''
   activeTab.value = 'content'
@@ -291,6 +303,8 @@ async function loadRouteVotes(id: string) {
 }
 
 async function selectTab(tab: DebateTab) {
+  const previousTab = activeTab.value
+  if (previousTab !== 'content' && previousTab !== tab) invalidateRelationView(previousTab)
   activeTab.value = tab
   if (tab === 'content') return
   lastLoadedRelationView.value = tab
@@ -317,14 +331,124 @@ function relationDepth(view: RelationView) {
   return view === 'tree' ? 3 : 2
 }
 
-async function loadRelationView(view: RelationView) {
+async function loadRelationView(view: RelationView, background = false) {
   const debateID = debate.value?.id
   if (!debateID) return
-  await debateStore.fetchRelationGraph(debateID, view, relationDepth(view))
+  const session = relationSession
+  const requestSequence = ++relationBaseRequestSequence[view]
+  const epoch = ++relationViewEpoch[view]
+  relationGraphs.value[view] = null
+  relationViewLoading.value[view] = true
+  expandingNodeIds.value[view] = []
+
+  const loaded = await debateStore.fetchRelationGraph(debateID, view, relationDepth(view))
+  const ownsView = (
+    session === relationSession
+    && requestSequence === relationBaseRequestSequence[view]
+    && epoch === relationViewEpoch[view]
+    && routeDebateID.value === debateID
+    && debate.value?.id === debateID
+    && (background ? lastLoadedRelationView.value === view : activeTab.value === view)
+  )
+  if (!ownsView) return
+
+  if (loaded?.root_id === debateID) {
+    relationGraphs.value[view] = loaded
+    debateStore.relationGraph = loaded
+  }
+  relationViewLoading.value[view] = false
 }
 
 async function refreshLoadedRelationView() {
-  if (lastLoadedRelationView.value) await loadRelationView(lastLoadedRelationView.value)
+  if (lastLoadedRelationView.value) await loadRelationView(lastLoadedRelationView.value, true)
+}
+
+function invalidateRelationView(view: RelationView) {
+  relationBaseRequestSequence[view] += 1
+  relationViewEpoch[view] += 1
+  relationViewLoading.value[view] = false
+  expandingNodeIds.value[view] = []
+}
+
+function resetRelationViews() {
+  for (const view of relationTabs.map(tab => tab.value)) {
+    invalidateRelationView(view)
+    relationGraphs.value[view] = null
+  }
+}
+
+function mergeRelationGraph(
+  base: DebateGraph,
+  fragment: DebateGraph,
+  expandedNodeID: string,
+): DebateGraph {
+  const nodes = new Map(base.nodes.map(node => [node.id, node]))
+  for (const node of fragment.nodes) nodes.set(node.id, node)
+
+  const relations = new Map(base.relations.map(relation => [relation.id, relation]))
+  for (const relation of fragment.relations) relations.set(relation.id, relation)
+
+  const expandable = new Set([
+    ...base.expandable_node_ids,
+    ...fragment.expandable_node_ids,
+  ])
+  expandable.delete(expandedNodeID)
+
+  return {
+    root_id: base.root_id,
+    nodes: [...nodes.values()],
+    relations: [...relations.values()],
+    expandable_node_ids: [...expandable],
+  }
+}
+
+function removeExpandingNode(view: RelationView, nodeID: string) {
+  expandingNodeIds.value[view] = expandingNodeIds.value[view].filter(id => id !== nodeID)
+}
+
+function restoreCurrentRootGraph() {
+  const view = activeTab.value === 'content' ? lastLoadedRelationView.value : activeTab.value
+  if (!view) return
+  const current = relationGraphs.value[view]
+  if (current?.root_id === routeDebateID.value) debateStore.relationGraph = current
+}
+
+async function handleExpand(view: RelationView, nodeID: string) {
+  const base = relationGraphs.value[view]
+  const debateID = debate.value?.id
+  if (
+    !base
+    || !debateID
+    || activeTab.value !== view
+    || !base.expandable_node_ids.includes(nodeID)
+    || expandingNodeIds.value[view].includes(nodeID)
+  ) return
+
+  const session = relationSession
+  const epoch = relationViewEpoch[view]
+  expandingNodeIds.value[view] = [...expandingNodeIds.value[view], nodeID]
+  try {
+    const fragment = await debateStore.fetchRelationGraph(nodeID, view, 1)
+    const ownsView = (
+      session === relationSession
+      && epoch === relationViewEpoch[view]
+      && routeDebateID.value === debateID
+      && debate.value?.id === debateID
+      && activeTab.value === view
+    )
+    if (!ownsView || !fragment) return
+
+    const current = relationGraphs.value[view]
+    if (!current || current.root_id !== debateID) return
+    const merged = mergeRelationGraph(current, fragment, nodeID)
+    relationGraphs.value[view] = merged
+    debateStore.relationGraph = merged
+  } finally {
+    if (session === relationSession && epoch === relationViewEpoch[view]) {
+      removeExpandingNode(view, nodeID)
+    }
+    restoreCurrentRootGraph()
+  }
 }
 
 async function handleVote(direction: DebateVoteDirection) {

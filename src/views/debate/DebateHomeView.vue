@@ -267,7 +267,7 @@ onMounted(() => {
 }
 .debate-conclusion-stamp {
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control);
   font-size: 10px;
   font-weight: 600;
 }

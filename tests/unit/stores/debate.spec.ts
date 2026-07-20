@@ -144,6 +144,32 @@ describe('debate store', () => {
     expect(store.relationLoading).toBe(false)
   })
 
+  it('returns concurrent depth-one fragments without replacing the owned root graph', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({
+        data: { root_id: 'root', nodes: [], relations: [], expandable_node_ids: ['child-a', 'child-b'] },
+      }))
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+    const store = useDebateStore()
+
+    await store.fetchRelationGraph('root', 'tree', 3)
+    const firstRequest = store.fetchRelationGraph('child-a', 'tree', 1)
+    const secondRequest = store.fetchRelationGraph('child-b', 'tree', 1)
+    second.resolve(response({
+      data: { root_id: 'child-b', nodes: [], relations: [], expandable_node_ids: [] },
+    }))
+    first.resolve(response({
+      data: { root_id: 'child-a', nodes: [], relations: [], expandable_node_ids: [] },
+    }))
+
+    expect((await firstRequest)?.root_id).toBe('child-a')
+    expect((await secondRequest)?.root_id).toBe('child-b')
+    expect(store.relationGraph?.root_id).toBe('root')
+  })
+
   it('invalidates every singleton request when the store resets', async () => {
     const current = deferred<Response>()
     const revisionList = deferred<Response>()
@@ -465,6 +491,35 @@ describe('debate store', () => {
     expect(store.relationGraph?.expandable_node_ids).toEqual(['next'])
   })
 
+  it('does not expose removed argument and manual relation capabilities', () => {
+    const store = useDebateStore()
+    const removedCapabilities = [
+      ['argument', 'List'],
+      ['arguments', 'Page'],
+      ['arguments', 'HasMore'],
+      ['user', 'Votes'],
+      ['fetch', 'Arguments'],
+      ['create', 'Relation'],
+      ['delete', 'Relation'],
+      ['conclude', 'Debate'],
+      ['reopen', 'Debate'],
+      ['voteTo', 'Conclude'],
+      ['create', 'Argument'],
+      ['update', 'Argument'],
+      ['delete', 'Argument'],
+      ['vote', 'Argument'],
+      ['removeArgument', 'Vote'],
+      ['addArgument', 'Reference'],
+      ['removeArgument', 'Reference'],
+      ['addDebate', 'Reference'],
+      ['removeDebate', 'Reference'],
+    ].map(parts => parts.join(''))
+
+    for (const capability of removedCapabilities) {
+      expect(store).not.toHaveProperty(capability)
+    }
+  })
+
   it('keeps the two-argument relation graph call compatible', async () => {
     vi.mocked(fetch).mockResolvedValue(response({ data: { root_id: 'root', nodes: [], relations: [] } }))
     const store = useDebateStore()
@@ -472,24 +527,6 @@ describe('debate store', () => {
     await store.fetchRelationGraph('root', 'tree')
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/debates/root/relations?view=tree')
-  })
-
-  it('keeps direct relation creation as a deprecated compatibility method', async () => {
-    const auth = useAuthStore()
-    auth.token = 'relation-token'
-    vi.mocked(fetch).mockResolvedValue(response({
-      data: { id: 'relation-1', source_debate_id: 'source', target_debate_id: 'target', stance: 'support' },
-    }, 201))
-    const store = useDebateStore()
-
-    const created = await store.createRelation('source', 'target', 'support')
-
-    expect(created?.id).toBe('relation-1')
-    expect(fetch).toHaveBeenCalledWith('/api/v1/debate-relations', expect.objectContaining({
-      method: 'POST',
-      headers: expect.objectContaining({ Authorization: 'Bearer relation-token' }),
-      body: JSON.stringify({ source_debate_id: 'source', target_debate_id: 'target', stance: 'support' }),
-    }))
   })
 
   it('searches the real list endpoint and keeps only citable active debates', async () => {

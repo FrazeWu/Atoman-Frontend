@@ -66,8 +66,6 @@ const blogFeedFiles = [
   'src/views/feed/InboxPage.vue',
 ]
 const remainingModuleFiles = [
-  'src/components/debate/ArgumentNode.vue',
-  'src/components/debate/DebateHeaderActions.vue',
   'src/components/forum/ForumReplyNode.vue',
   'src/components/podcast/PodcastCommentSection.vue',
   'src/views/debate/DebateHomeView.vue',

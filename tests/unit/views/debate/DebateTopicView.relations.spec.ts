@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import DebateTopicView from '@/views/debate/DebateTopicView.vue'
 import { useAuthStore } from '@/stores/auth'
-import type { Debate, DebateGraph, DebateVoteSummary } from '@/types'
+import type { Debate, DebateGraph, DebateRelation, DebateVoteSummary } from '@/types'
 
 const routerPush = vi.hoisted(() => vi.fn())
 let store: ReturnType<typeof buildStore>
@@ -74,6 +74,67 @@ const graph: DebateGraph = {
   expandable_node_ids: [],
 }
 
+const supportOne: Debate = {
+  ...root,
+  id: 'support-1',
+  title: '烟草烟雾会不会含有已知致癌物？',
+  content: '',
+  current_revision_id: 'revision-support-1',
+  current_conclusion_event_id: 'conclusion-support-1',
+  references: [],
+}
+
+const supportTwo: Debate = {
+  ...root,
+  id: 'support-2',
+  title: '过滤嘴会不会去除全部致癌物？',
+  content: '',
+  current_revision_id: 'revision-support-2',
+  current_conclusion_event_id: 'conclusion-support-2',
+  references: [],
+}
+
+const supportLeaf: Debate = {
+  ...root,
+  id: 'support-leaf',
+  title: '焦油中会不会检测到多环芳烃？',
+  content: '',
+  current_revision_id: 'revision-support-leaf',
+  current_conclusion_event_id: 'conclusion-support-leaf',
+  references: [],
+}
+
+function relation(id: string, source: string, target: string): DebateRelation {
+  return {
+    id,
+    source_debate_id: source,
+    target_debate_id: target,
+    stance: 'support',
+    target_revision_id: `revision-${target}`,
+    source_conclusion_event_id: `conclusion-${source}`,
+    status: 'active',
+    created_at: '2026-07-18T00:00:00Z',
+    updated_at: '2026-07-18T00:00:00Z',
+  }
+}
+
+const expandableTree: DebateGraph = {
+  root_id: 'root',
+  nodes: [root, supportOne],
+  relations: [relation('relation-root-support-1', 'support-1', 'root')],
+  expandable_node_ids: ['support-1'],
+}
+
+const supportFragment: DebateGraph = {
+  root_id: 'support-1',
+  nodes: [supportOne, root, supportLeaf],
+  relations: [
+    relation('relation-root-support-1', 'support-1', 'root'),
+    relation('relation-support-1-leaf', 'support-leaf', 'support-1'),
+  ],
+  expandable_node_ids: ['support-1', 'support-leaf'],
+}
+
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   const promise = new Promise<T>(nextResolve => { resolve = nextResolve })
@@ -109,7 +170,12 @@ function mountView() {
           template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
         },
         DebateVotePanel: true,
-        DebateRelationGraph: true,
+        DebateRelationGraph: {
+          name: 'DebateRelationGraph',
+          props: ['graph', 'loading', 'view', 'expandingNodeIds'],
+          emits: ['expand'],
+          template: '<div />',
+        },
         DebateWikiEditor: true,
         DebateRevisionSheet: true,
         DebateDiscussionSheet: true,
@@ -161,6 +227,180 @@ describe('DebateTopicView relation experience', () => {
     await wrapper.findAll('[role="tab"]')[2]!.trigger('click')
     await flushPromises()
     expect(store.fetchRelationGraph).toHaveBeenLastCalledWith('root', 'graph', 2)
+  })
+
+  it('按 depth 1 展开节点并按 ID 合并，同时保留初始根和重置基础图', async () => {
+    const expansion = deferred<DebateGraph>()
+    store.fetchRelationGraph.mockImplementation(async (id: string) => {
+      if (id === 'root') return expandableTree
+      return expansion.promise
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+    let relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    expect(relationView.props('graph')).toEqual(expandableTree)
+    expect(relationView.props('view')).toBe('tree')
+
+    relationView.vm.$emit('expand', 'support-1')
+    await nextTick()
+
+    expect(store.fetchRelationGraph).toHaveBeenLastCalledWith('support-1', 'tree', 1)
+    expect(relationView.props('expandingNodeIds')).toEqual(['support-1'])
+
+    expansion.resolve(supportFragment)
+    await flushPromises()
+
+    relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    const merged = relationView.props('graph') as DebateGraph
+    expect(merged.root_id).toBe('root')
+    expect(merged.nodes.map(node => node.id)).toEqual(['root', 'support-1', 'support-leaf'])
+    expect(merged.relations.map(item => item.id)).toEqual([
+      'relation-root-support-1',
+      'relation-support-1-leaf',
+    ])
+    expect(merged.expandable_node_ids).toEqual(['support-leaf'])
+    expect(relationView.props('expandingNodeIds')).toEqual([])
+    expect(store.relationGraph?.root_id).toBe('root')
+
+    await wrapper.findAll('[role="tab"]')[0]!.trigger('click')
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+
+    const reloaded = wrapper.findComponent({ name: 'DebateRelationGraph' }).props('graph') as DebateGraph
+    expect(reloaded.nodes.map(node => node.id)).toEqual(['root', 'support-1'])
+    expect(reloaded.expandable_node_ids).toEqual(['support-1'])
+  })
+
+  it('并发展开按节点维护状态，逆序返回也会合并到同一个根图', async () => {
+    const first = deferred<DebateGraph>()
+    const second = deferred<DebateGraph>()
+    const base: DebateGraph = {
+      root_id: 'root',
+      nodes: [root, supportOne, supportTwo],
+      relations: [
+        relation('relation-root-support-1', 'support-1', 'root'),
+        relation('relation-root-support-2', 'support-2', 'root'),
+      ],
+      expandable_node_ids: ['support-1', 'support-2'],
+    }
+    const secondLeaf: Debate = {
+      ...supportLeaf,
+      id: 'support-leaf-2',
+      current_revision_id: 'revision-support-leaf-2',
+    }
+    store.fetchRelationGraph.mockImplementation(async (id: string) => {
+      if (id === 'root') return base
+      if (id === 'support-1') return first.promise
+      return second.promise
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+    let relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+
+    relationView.vm.$emit('expand', 'support-1')
+    relationView.vm.$emit('expand', 'support-2')
+    await nextTick()
+    expect(relationView.props('expandingNodeIds')).toEqual(['support-1', 'support-2'])
+
+    second.resolve({
+      root_id: 'support-2',
+      nodes: [supportTwo, secondLeaf],
+      relations: [relation('relation-support-2-leaf', 'support-leaf-2', 'support-2')],
+      expandable_node_ids: [],
+    })
+    await flushPromises()
+    first.resolve(supportFragment)
+    await flushPromises()
+
+    relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    const merged = relationView.props('graph') as DebateGraph
+    expect(merged.root_id).toBe('root')
+    expect(merged.nodes.map(node => node.id)).toEqual([
+      'root',
+      'support-1',
+      'support-2',
+      'support-leaf-2',
+      'support-leaf',
+    ])
+    expect(relationView.props('expandingNodeIds')).toEqual([])
+  })
+
+  it('切换关系标签后丢弃仍在返回的旧视图展开结果', async () => {
+    const staleExpansion = deferred<DebateGraph>()
+    const graphView: DebateGraph = {
+      root_id: 'root',
+      nodes: [root, supportTwo],
+      relations: [relation('relation-root-support-2', 'support-2', 'root')],
+      expandable_node_ids: [],
+    }
+    store.fetchRelationGraph.mockImplementation(async (id: string, view: string) => {
+      if (id === 'support-1') return staleExpansion.promise
+      return view === 'tree' ? expandableTree : graphView
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+    wrapper.findComponent({ name: 'DebateRelationGraph' }).vm.$emit('expand', 'support-1')
+
+    await wrapper.findAll('[role="tab"]')[2]!.trigger('click')
+    await flushPromises()
+    staleExpansion.resolve(supportFragment)
+    await flushPromises()
+
+    const current = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    expect(current.props('view')).toBe('graph')
+    expect((current.props('graph') as DebateGraph).nodes.map(node => node.id)).toEqual(['root', 'support-2'])
+    expect((current.props('graph') as DebateGraph).root_id).toBe('root')
+  })
+
+  it('切换路由后丢弃旧辩题的展开结果', async () => {
+    const staleExpansion = deferred<DebateGraph>()
+    const nextDebate: Debate = {
+      ...root,
+      id: 'topic-b',
+      title: '规律运动会不会降低心血管疾病风险？',
+      current_revision_id: 'revision-topic-b',
+      references: [],
+    }
+    const nextGraph: DebateGraph = {
+      root_id: 'topic-b',
+      nodes: [nextDebate],
+      relations: [],
+      expandable_node_ids: [],
+    }
+    store.fetchDebate.mockImplementation(async (id: string) => {
+      const result = id === 'root' ? root : nextDebate
+      store.currentDebate = result
+      return result
+    })
+    store.fetchVotes.mockImplementation(async () => votes)
+    store.fetchRelationGraph.mockImplementation(async (id: string) => {
+      if (id === 'root') return expandableTree
+      if (id === 'support-1') return staleExpansion.promise
+      return nextGraph
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+    wrapper.findComponent({ name: 'DebateRelationGraph' }).vm.$emit('expand', 'support-1')
+
+    currentRoute.params.id = 'topic-b'
+    await flushPromises()
+    staleExpansion.resolve(supportFragment)
+    await flushPromises()
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+
+    const current = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    expect((current.props('graph') as DebateGraph).root_id).toBe('topic-b')
+    expect((current.props('graph') as DebateGraph).nodes.map(node => node.id)).toEqual(['topic-b'])
   })
 
   it('区分变化和不可用引用，且只允许重新确认变化引用', async () => {

@@ -1,5 +1,11 @@
 <template>
-  <article class="debate-node" :class="{ 'debate-node--root': data.root }">
+  <article
+    class="debate-node"
+    :class="{
+      'debate-node--root': data.root,
+      'debate-node--expandable': data.expandable,
+    }"
+  >
     <Handle id="top-target" type="target" :position="Position.Top" class="debate-node__handle" />
     <Handle id="top-source" type="source" :position="Position.Top" class="debate-node__handle" />
     <Handle id="bottom-target" type="target" :position="Position.Bottom" class="debate-node__handle" />
@@ -22,45 +28,65 @@
         <span v-if="data.debate.tags?.[0]">{{ data.debate.tags[0] }}</span>
       </footer>
     </RouterLink>
+
+    <button
+      v-if="data.expandable"
+      type="button"
+      class="debate-node__expand"
+      aria-label="继续展开"
+      :aria-busy="data.expanding"
+      :disabled="data.expanding"
+      @click.stop.prevent="emit('expand', data.debate.id)"
+    >
+      <LoaderCircle v-if="data.expanding" :size="15" class="debate-node__spinner" aria-hidden="true" />
+      <ChevronDown v-else :size="15" aria-hidden="true" />
+      {{ data.expanding ? '展开中' : '继续展开' }}
+    </button>
   </article>
 </template>
 
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
+import { ChevronDown, LoaderCircle } from 'lucide-vue-next'
 
 import type { DebateFlowNodeData } from './debateGraph'
 
 defineProps<{ data: DebateFlowNodeData }>()
+const emit = defineEmits<{ expand: [nodeId: string] }>()
 </script>
 
 <style scoped>
 .debate-node {
+  position: relative;
+  box-sizing: border-box;
   width: 240px;
-  min-height: 132px;
+  height: 132px;
+  overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color 180ms ease;
 }
 
 .debate-node:hover {
   border-color: var(--a-color-border);
-  box-shadow: 0 4px 12px rgb(15 23 42 / 8%);
 }
 
 .debate-node--root {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 12%, transparent);
 }
 
 .debate-node__link {
   display: grid;
-  min-height: 130px;
+  box-sizing: border-box;
+  height: 130px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   padding: 14px;
   color: inherit;
   text-decoration: none;
 }
+
+.debate-node--expandable .debate-node__link { padding-bottom: 45px; }
 
 .debate-node__link:focus-visible {
   outline: 2px solid var(--a-color-primary);
@@ -101,20 +127,24 @@ defineProps<{ data: DebateFlowNodeData }>()
 }
 
 .debate-node__stamp--yes {
-  background: #eff6ff;
-  color: #2563eb;
+  background: color-mix(in srgb, var(--a-color-success) 10%, var(--a-color-bg));
+  color: var(--a-color-success);
 }
 
 .debate-node__stamp--no {
-  border: 1px solid var(--a-color-border);
-  background: var(--a-color-surface-muted);
-  color: #475569;
+  border: 1px solid color-mix(in srgb, var(--a-color-danger) 30%, var(--a-color-border-soft));
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
+  color: var(--a-color-danger);
 }
 
 .debate-node h3 {
   align-self: center;
   margin: 10px 0;
+  display: -webkit-box;
   overflow-wrap: anywhere;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.45;
@@ -134,7 +164,47 @@ defineProps<{ data: DebateFlowNodeData }>()
   opacity: 0;
 }
 
+.debate-node__expand {
+  position: absolute;
+  z-index: 1;
+  bottom: 0;
+  left: 0;
+  display: inline-flex;
+  width: 100%;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.debate-node__expand:hover:not(:disabled) {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+}
+
+.debate-node__expand:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -3px;
+}
+
+.debate-node__expand:disabled {
+  color: var(--a-color-muted);
+  cursor: wait;
+}
+
+.debate-node__spinner { animation: debate-node-spin 900ms linear infinite; }
+
+@keyframes debate-node-spin { to { transform: rotate(360deg); } }
+
 @media (prefers-reduced-motion: reduce) {
   .debate-node { transition: none; }
+  .debate-node__spinner { animation: none; }
 }
 </style>

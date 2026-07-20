@@ -12,7 +12,7 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }))
 const debateRow = {
   id: 'debate-1', user_id: 'user-1', user: { username: 'fafa' },
   title: '长期吸烟会不会显著增加肺癌风险？', description: '', content: '',
-  status: 'active', tags: [], view_count: 2, argument_count: 9, vote_count: 0,
+  status: 'active', tags: [], view_count: 2, current_revision_id: 'revision-debate-1', references: [],
   conclusion_type: 'yes', created_at: '2026-07-18T00:00:00Z', updated_at: '2026-07-18T00:00:00Z',
 }
 
@@ -109,7 +109,7 @@ describe('DebateHomeView node wording', () => {
   })
 
   it('创建响应缺少当前版本时不进入详情', async () => {
-    createResponse = { ...debateRow, id: 'debate-created' }
+    createResponse = { ...debateRow, id: 'debate-created', current_revision_id: undefined }
     const wrapper = mountView()
     await flushPromises()
     await openCreateForm(wrapper)

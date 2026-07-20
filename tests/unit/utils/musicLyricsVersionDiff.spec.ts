@@ -151,6 +151,69 @@ describe('buildMusicLyricsVersionPreview', () => {
     expect(preview.lines.map((line) => line.kind)).toEqual(['unchanged', 'unchanged'])
   })
 
+  it('纯翻译变化只展示差异，不影响 active 注释', () => {
+    const preview = buildMusicLyricsVersionPreview(currentLyrics, version(
+      currentLyrics.content,
+      '改过的第一句\n改过的第二句\n改过的第三句\n改过的第四句',
+    ))
+
+    expect(preview.lines.some((line) => line.kind === 'modified')).toBe(true)
+    expect(preview.affectedActiveAnnotationCount).toBe(0)
+  })
+
+  it('跨格式版本不配对并使所有 active 注释受影响', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      format: 'lrc',
+      content: '[00:01.00]Hello',
+      translation: '',
+      lines: [{ line_key: 'line-lrc', line_index: 0, time_ms: 1_000, text: 'Hello', translation: '' }],
+      annotations: [{
+        id: 'annotation-cross-format', line_key: 'line-lrc', selected_text: 'Hello', start_offset: 0, end_offset: 5,
+        body: '', upvotes: 0, downvotes: 0, status: 'active', created_at: '', updated_at: '',
+      }],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, version('Hello'))
+
+    expect(preview.lines.map((line) => line.kind)).toEqual(['removed', 'added'])
+    expect(preview.affectedActiveAnnotationIds).toEqual(['annotation-cross-format'])
+  })
+
+  it('LRC 预览接受单数字分钟', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      format: 'lrc',
+      content: '[01:02]Hello',
+      translation: '',
+      lines: [{ line_key: 'line-lrc', line_index: 0, time_ms: 62_000, text: 'Hello', translation: '' }],
+      annotations: [],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, { ...version('[1:02]Hello'), format: 'lrc' })
+
+    expect(preview.lines.map((line) => line.kind)).toEqual(['unchanged'])
+  })
+
+  it('LRC 预览保留非时间顺序的物理行顺序', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      format: 'lrc',
+      content: '[00:02]Later\n[00:01]Earlier',
+      translation: '',
+      lines: [
+        { line_key: 'line-later', line_index: 0, time_ms: 2_000, text: 'Later', translation: '' },
+        { line_key: 'line-earlier', line_index: 1, time_ms: 1_000, text: 'Earlier', translation: '' },
+      ],
+      annotations: [],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, { ...version('[00:02]Later\n[00:01]Earlier'), format: 'lrc' })
+
+    expect(preview.lines.map((line) => line.target?.text)).toEqual(['Later', 'Earlier'])
+    expect(preview.lines.map((line) => line.kind)).toEqual(['unchanged', 'unchanged'])
+  })
+
   it('内容和翻译都未变化时不产生差异', () => {
     const preview = buildMusicLyricsVersionPreview(currentLyrics, version(currentLyrics.content, currentLyrics.translation))
 

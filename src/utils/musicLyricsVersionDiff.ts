@@ -1,5 +1,5 @@
-import type { MusicSongLyrics, MusicSongLyricsLine, MusicSongLyricsVersion } from '@/api/musicV1'
-import { mergeLyricsWithTranslation, parseLrcLyrics, parsePlainLyrics } from '@/utils/musicLyrics'
+import type { MusicLyricsFormat, MusicSongLyrics, MusicSongLyricsLine, MusicSongLyricsVersion } from '@/api/musicV1'
+import { mergeLyricsWithTranslation, parseLrcLyrics } from '@/utils/musicLyrics'
 
 export type MusicLyricsVersionDiffKind = 'unchanged' | 'added' | 'removed' | 'modified'
 
@@ -17,24 +17,48 @@ export type MusicLyricsVersionPreview = {
   affectedActiveAnnotationIds: string[]
 }
 
-function parseVersionLines(version: Pick<MusicSongLyricsVersion, 'content' | 'translation' | 'format'>) {
-  const parse = version.format === 'lrc' ? parseLrcLyrics : parsePlainLyrics
-  return mergeLyricsWithTranslation(parse(version.content), parse(version.translation))
+function parsePlainVersionLines(content: string): MusicSongLyricsLine[] {
+  if (content === '') return []
+  const lines = content.replace(/\r\n|\r/g, '\n').split('\n')
+  if (lines.at(-1) === '') lines.pop()
+  return lines.map((line, index) => ({
+    id: `plain-${index}`,
+    lineNumber: index,
+    text: line.trim(),
+    translation: '',
+    startTimeMs: null,
+    endTimeMs: null,
+  }))
 }
 
-function lineKey(line: MusicSongLyricsLine) {
-  return `${line.text}\u0000${line.translation}`
+function parseVersionLines(version: Pick<MusicSongLyricsVersion, 'content' | 'translation' | 'format'>) {
+  if (version.format === 'lrc') {
+    return mergeLyricsWithTranslation(parseLrcLyrics(version.content), parseLrcLyrics(version.translation))
+  }
+
+  const contentLines = parsePlainVersionLines(version.content)
+  const translationLines = parsePlainVersionLines(version.translation)
+  return contentLines.map((line, index) => ({ ...line, translation: translationLines[index]?.text ?? '' }))
+}
+
+function lineTimeMs(line: MusicSongLyricsLine) {
+  return line.time_ms ?? line.startTimeMs ?? null
+}
+
+function lineKey(line: MusicSongLyricsLine, format: MusicLyricsFormat) {
+  const timestamp = format === 'lrc' ? `${lineTimeMs(line) ?? ''}\u0000` : ''
+  return `${timestamp}${normalizePlainLineText(line.text)}\u0000${line.translation}`
 }
 
 function normalizePlainLineText(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).join(' ')
 }
 
-function buildLcsLengths(current: MusicSongLyricsLine[], target: MusicSongLyricsLine[]) {
+function buildLcsLengths(current: MusicSongLyricsLine[], target: MusicSongLyricsLine[], format: MusicLyricsFormat) {
   const lengths = Array.from({ length: current.length + 1 }, () => Array<number>(target.length + 1).fill(0))
   for (let currentIndex = current.length - 1; currentIndex >= 0; currentIndex -= 1) {
     for (let targetIndex = target.length - 1; targetIndex >= 0; targetIndex -= 1) {
-      lengths[currentIndex][targetIndex] = lineKey(current[currentIndex]) === lineKey(target[targetIndex])
+      lengths[currentIndex][targetIndex] = lineKey(current[currentIndex], format) === lineKey(target[targetIndex], format)
         ? lengths[currentIndex + 1][targetIndex + 1] + 1
         : Math.max(lengths[currentIndex + 1][targetIndex], lengths[currentIndex][targetIndex + 1])
     }
@@ -65,8 +89,8 @@ function appendChangedSegment(
   }
 }
 
-function buildLineDiff(current: MusicSongLyricsLine[], target: MusicSongLyricsLine[]) {
-  const lengths = buildLcsLengths(current, target)
+function buildLineDiff(current: MusicSongLyricsLine[], target: MusicSongLyricsLine[], format: MusicLyricsFormat) {
+  const lengths = buildLcsLengths(current, target, format)
   const result: MusicLyricsVersionDiffLine[] = []
   let currentIndex = 0
   let targetIndex = 0
@@ -80,7 +104,7 @@ function buildLineDiff(current: MusicSongLyricsLine[], target: MusicSongLyricsLi
   }
 
   while (currentIndex < current.length || targetIndex < target.length) {
-    if (currentIndex < current.length && targetIndex < target.length && lineKey(current[currentIndex]) === lineKey(target[targetIndex])) {
+    if (currentIndex < current.length && targetIndex < target.length && lineKey(current[currentIndex], format) === lineKey(target[targetIndex], format)) {
       flushChanged()
       result.push({ kind: 'unchanged', current: current[currentIndex], currentIndex, target: target[targetIndex], targetIndex })
       currentIndex += 1
@@ -104,10 +128,9 @@ function targetKeepsAnnotation(
   format: MusicSongLyricsVersion['format'],
 ) {
   if (!currentLine || !targetLine) return false
-  const lineTextMatches = format === 'plain'
-    ? normalizePlainLineText(targetLine.text) === normalizePlainLineText(currentLine.text)
-    : targetLine.text === currentLine.text
-  if (!lineTextMatches) return false
+  const lineTextMatches = normalizePlainLineText(targetLine.text) === normalizePlainLineText(currentLine.text)
+  const lineTimeMatches = format !== 'lrc' || lineTimeMs(targetLine) === lineTimeMs(currentLine)
+  if (!lineTextMatches || !lineTimeMatches) return false
   const selectedText = targetLine.text.slice(annotation.start_offset, annotation.end_offset)
   return selectedText === annotation.selected_text
 }
@@ -117,7 +140,7 @@ export function buildMusicLyricsVersionPreview(
   targetVersion: MusicSongLyricsVersion,
 ): MusicLyricsVersionPreview {
   const targetLines = parseVersionLines(targetVersion)
-  const lines = buildLineDiff(currentLyrics.lines, targetLines)
+  const lines = buildLineDiff(currentLyrics.lines, targetLines, targetVersion.format)
   const targetByCurrentLineIndex = new Map(
     lines
       .filter((line) => line.currentIndex !== undefined)

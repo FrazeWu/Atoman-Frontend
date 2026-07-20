@@ -97,6 +97,60 @@ describe('buildMusicLyricsVersionPreview', () => {
     expect(preview.affectedActiveAnnotationCount).toBe(0)
   })
 
+  it('LRC 时间戳变化时显示修改并计入 active 注释影响', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      format: 'lrc',
+      content: '[00:01.00]Hello',
+      translation: '',
+      lines: [{ line_key: 'line-lrc', line_index: 0, time_ms: 1_000, text: 'Hello', translation: '' }],
+      annotations: [{
+        id: 'annotation-lrc', line_key: 'line-lrc', selected_text: 'Hello', start_offset: 0, end_offset: 5,
+        body: '', upvotes: 0, downvotes: 0, status: 'active', created_at: '', updated_at: '',
+      }],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, { ...version('[00:02.00]Hello'), format: 'lrc' })
+
+    expect(preview.lines.map((line) => line.kind)).toEqual(['modified'])
+    expect(preview.affectedActiveAnnotationIds).toEqual(['annotation-lrc'])
+  })
+
+  it('plain 预览保留中间空行并兼容 CRLF', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      content: 'A\n\nB',
+      translation: '',
+      lines: [
+        { line_key: 'line-a', line_index: 0, text: 'A', translation: '' },
+        { line_key: 'line-empty', line_index: 1, text: '', translation: '' },
+        { line_key: 'line-b', line_index: 2, text: 'B', translation: '' },
+      ],
+      annotations: [],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, version('A\r\n\r\nB\r\n'))
+
+    expect(preview.lines.map((line) => line.kind)).toEqual(['unchanged', 'unchanged', 'unchanged'])
+  })
+
+  it('plain 预览兼容裸 CR 换行', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      content: 'A\nB',
+      translation: '',
+      lines: [
+        { line_key: 'line-a', line_index: 0, text: 'A', translation: '' },
+        { line_key: 'line-b', line_index: 1, text: 'B', translation: '' },
+      ],
+      annotations: [],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, version('A\rB\r'))
+
+    expect(preview.lines.map((line) => line.kind)).toEqual(['unchanged', 'unchanged'])
+  })
+
   it('内容和翻译都未变化时不产生差异', () => {
     const preview = buildMusicLyricsVersionPreview(currentLyrics, version(currentLyrics.content, currentLyrics.translation))
 

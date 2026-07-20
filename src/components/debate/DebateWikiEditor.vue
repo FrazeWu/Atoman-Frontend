@@ -23,13 +23,11 @@
       <div
         class="wiki-editor__content"
         data-test="wiki-content-region"
-        role="group"
-        aria-labelledby="wiki-content-label"
       >
         <span id="wiki-content-label" class="wiki-editor__label">正文</span>
         <PEditor
           v-model="content"
-          aria-labelledby="wiki-content-label"
+          editor-aria-label="正文"
           mode="normal"
           placeholder="撰写辩题正文"
           :show-toolbar="true"

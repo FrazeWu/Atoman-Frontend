@@ -1,4 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Debate, DebateRevision } from '@/types'
@@ -69,7 +71,7 @@ const mountEditor = (debate = buildDebate()) => mount(DebateWikiEditor, {
         template: '<section v-if="show"><slot /></section>',
       },
       PEditor: {
-        props: ['modelValue'],
+        props: ['modelValue', 'editorAriaLabel'],
         emits: ['update:modelValue'],
         template: '<textarea data-test="wiki-content" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
       },
@@ -77,8 +79,31 @@ const mountEditor = (debate = buildDebate()) => mount(DebateWikiEditor, {
   },
 })
 
+const mountEditorWithRealCodeMirror = async () => {
+  const wrapper = mount(DebateWikiEditor, {
+    props: {
+      show: true,
+      debate: buildDebate(),
+      currentRevisionId: 'revision-3',
+    },
+    global: {
+      stubs: {
+        PSheet: {
+          props: ['show'],
+          emits: ['close'],
+          template: '<section v-if="show"><slot /></section>',
+        },
+      },
+    },
+  })
+  await vi.dynamicImportSettled()
+  await nextTick()
+  return wrapper
+}
+
 describe('DebateWikiEditor', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     mocks.saveWiki.mockReset()
     mocks.searchCitableDebates.mockReset()
     mocks.fetchRevision.mockReset()
@@ -102,7 +127,7 @@ describe('DebateWikiEditor', () => {
     mocks.searchCitableDebates.mockResolvedValue([citable, unresolved, archived])
 
     const wrapper = mountEditor()
-    expect(wrapper.get('[data-test="wiki-content-region"]').attributes('aria-labelledby')).toBe('wiki-content-label')
+    expect(wrapper.get('[data-test="wiki-content-region"]').attributes('aria-labelledby')).toBeUndefined()
     expect(wrapper.get('#wiki-content-label').text()).toBe('正文')
     await wrapper.get('[data-test="insert-reference"]').trigger('click')
     await wrapper.get('[data-test="reference-search"]').setValue('有轨电车')
@@ -125,6 +150,12 @@ describe('DebateWikiEditor', () => {
     expect(wrapper.emitted('update:content')?.at(-1)).toEqual([
       '现有正文\n\n@debate:debate-citable:oppose',
     ])
+  })
+
+  it('把正文可访问名称传给真实 CodeMirror textbox', async () => {
+    const wrapper = await mountEditorWithRealCodeMirror()
+
+    expect(wrapper.get('.cm-content[role="textbox"]').attributes('aria-label')).toBe('正文')
   })
 
   it('保存冲突时保留草稿并显示三方信息', async () => {

@@ -1,4 +1,6 @@
 import { mount } from '@vue/test-utils'
+import { EditorState } from '@codemirror/state'
+import { EditorView } from '@codemirror/view'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 
@@ -69,6 +71,7 @@ vi.mock('y-websocket', () => {
 })
 
 import PEditor from '@/components/shared/PEditor.vue'
+import { resourceReferenceExtension } from '@/components/shared/editor/resourceReferenceExtension'
 
 // Task 1 先固定统一编辑器的最小未来契约，后续 Task 2 再让实现对齐这些 props 和语义标识。
 const FUTURE_NORMAL_MODE = 'normal'
@@ -77,6 +80,8 @@ const FUTURE_EDITOR_ROOT = '[data-testid="markdown-editor"]'
 const FUTURE_SOURCE_SURFACE = '[data-testid="markdown-source"]'
 const FUTURE_PREVIEW_PANE = '[data-testid="markdown-preview"]'
 const FUTURE_MODE_TOGGLE = '[data-testid="editor-mode-toggle"]'
+const ALBUM_ID = '01900000-0000-7000-8000-000000000001'
+const ALBUM_REFERENCE = `@album:${ALBUM_ID}`
 
 async function flushCollabSync() {
   vi.useFakeTimers()
@@ -364,5 +369,105 @@ describe('PEditor', () => {
     })
     expect(wrapper.find(FUTURE_EDITOR_ROOT).exists()).toBe(true)
     expect(wrapper.find('.cm-content').exists()).toBe(true)
+  })
+
+  it('开启后把已解析资源显示为行内引用块且保留原始源码', async () => {
+    const wrapper = await mountEditor({
+      modelValue: ALBUM_REFERENCE,
+      mode: FUTURE_NORMAL_MODE,
+      enableResourceReferences: true,
+      resourceReferenceLabels: {
+        [`album:${ALBUM_ID}`]: { title: 'Kind of Blue' },
+      },
+    })
+
+    const reference = wrapper.get(`[data-resource-reference="album:${ALBUM_ID}"]`)
+    const view = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)
+    expect(reference.text()).toContain('Kind of Blue')
+    expect(reference.text()).toContain('专辑')
+    expect(reference.attributes('data-resource-reference-state')).toBe('active')
+    expect(view?.state.doc.toString()).toBe(ALBUM_REFERENCE)
+
+    wrapper.vm.replaceDocument(`${ALBUM_REFERENCE}\n补充说明`)
+    await nextTick()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([`${ALBUM_REFERENCE}\n补充说明`])
+    expect(view?.state.doc.toString()).toBe(`${ALBUM_REFERENCE}\n补充说明`)
+  })
+
+  it('光标进入引用范围时恢复原始标记', async () => {
+    const prefix = '证据：'
+    const parent = document.createElement('div')
+    document.body.appendChild(parent)
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: `${prefix}${ALBUM_REFERENCE}`,
+        extensions: [resourceReferenceExtension({
+          [`album:${ALBUM_ID}`]: { title: 'Kind of Blue' },
+        })],
+      }),
+      parent,
+    })
+    expect(parent.querySelector(`[data-resource-reference="album:${ALBUM_ID}"]`)).not.toBeNull()
+
+    view.focus()
+    view.dispatch({ selection: { anchor: prefix.length + 2 } })
+    await nextTick()
+
+    expect(parent.querySelector(`[data-resource-reference="album:${ALBUM_ID}"]`)).toBeNull()
+    expect(view.contentDOM.textContent).toContain(ALBUM_REFERENCE)
+    expect(view.state.doc.toString()).toBe(`${prefix}${ALBUM_REFERENCE}`)
+    view.destroy()
+    parent.remove()
+  })
+
+  it('labels 更新时原地刷新引用标题和状态', async () => {
+    const key = `album:${ALBUM_ID}`
+    const wrapper = await mountEditor({
+      modelValue: ALBUM_REFERENCE,
+      mode: FUTURE_NORMAL_MODE,
+      enableResourceReferences: true,
+      resourceReferenceLabels: {
+        [key]: { title: '旧标题' },
+      },
+    })
+    const originalView = EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)
+
+    await wrapper.setProps({
+      resourceReferenceLabels: {
+        [key]: { title: '新标题', state: 'stale' },
+      },
+    })
+    await nextTick()
+
+    const reference = wrapper.get(`[data-resource-reference="${key}"]`)
+    expect(reference.text()).toContain('新标题')
+    expect(reference.text()).toContain('待确认')
+    expect(reference.classes()).toContain('resource-reference--stale')
+    expect(reference.attributes('data-resource-reference-state')).toBe('stale')
+    expect(EditorView.findFromDOM(wrapper.get('.cm-content').element as HTMLElement)).toBe(originalView)
+  })
+
+  it('默认关闭资源引用装饰', async () => {
+    const wrapper = await mountEditor({
+      modelValue: ALBUM_REFERENCE,
+      mode: FUTURE_NORMAL_MODE,
+      resourceReferenceLabels: {
+        [`album:${ALBUM_ID}`]: { title: 'Kind of Blue' },
+      },
+    })
+
+    expect(wrapper.find(`[data-resource-reference="album:${ALBUM_ID}"]`).exists()).toBe(false)
+    expect(wrapper.get('.cm-content').text()).toContain(ALBUM_REFERENCE)
+  })
+
+  it('把可访问名称绑定到真实 CodeMirror textbox', async () => {
+    const wrapper = await mountEditor({
+      modelValue: '',
+      mode: FUTURE_NORMAL_MODE,
+      editorAriaLabel: '辩题正文',
+    })
+
+    expect(wrapper.get('.cm-content[role="textbox"]').attributes('aria-label')).toBe('辩题正文')
   })
 })

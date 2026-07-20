@@ -142,6 +142,11 @@ import { yCollab } from 'y-codemirror.next'
 import { useApi, useWebSocketUrl } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
+import {
+  resourceReferenceExtension,
+  updateResourceReferenceLabels,
+  type ResourceReferenceLabels,
+} from './editor/resourceReferenceExtension'
 
 interface Peer { clientId: number; name: string; color: string }
 interface MentionUser { uuid: string; username: string; display_name: string; avatar_url: string }
@@ -162,6 +167,9 @@ interface Props {
   collabRoomId?: string
   protectFirstLine?: boolean
   renderingLevel?: 'full' | 'comment'
+  enableResourceReferences?: boolean
+  resourceReferenceLabels?: ResourceReferenceLabels
+  editorAriaLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -179,6 +187,9 @@ const props = withDefaults(defineProps<Props>(), {
   collabRoomId: undefined,
   protectFirstLine: false,
   renderingLevel: 'full',
+  enableResourceReferences: false,
+  resourceReferenceLabels: () => ({}),
+  editorAriaLabel: undefined,
 })
 
 const emit = defineEmits<{
@@ -204,6 +215,8 @@ const cmContainerRef = ref<HTMLElement | null>(null)
 const previewPaneRef = ref<HTMLElement | null>(null)
 const showLineNumbers = ref(false)
 const lineNumberCompartment = new Compartment()
+const resourceReferenceCompartment = new Compartment()
+const contentAttributesCompartment = new Compartment()
 let cmView: EditorView | null = null
 
 const CURSOR_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
@@ -297,6 +310,16 @@ function teardownEditor() {
 
 function lineNumberExtensions() {
   return showLineNumbers.value ? [lineNumbers(), highlightActiveLineGutter()] : []
+}
+
+function resourceReferenceExtensions() {
+  return props.enableResourceReferences
+    ? resourceReferenceExtension(props.resourceReferenceLabels)
+    : []
+}
+
+function editorContentAttributes() {
+  return props.editorAriaLabel ? { 'aria-label': props.editorAriaLabel } : {}
 }
 
 function emitCollabReadyIfNeeded() {
@@ -416,6 +439,8 @@ function initCodeMirror() {
     keymap.of(bindings),
     markdown({ codeLanguages: languages }),
     lineNumberCompartment.of(lineNumberExtensions()),
+    resourceReferenceCompartment.of(resourceReferenceExtensions()),
+    contentAttributesCompartment.of(EditorView.contentAttributes.of(editorContentAttributes())),
     EditorView.lineWrapping,
     scrollPastEnd(),
     cmPlaceholder(props.placeholder),
@@ -582,6 +607,29 @@ watch(() => props.modelValue, (val) => {
 
 watch(effectiveMode, () => {
   syncEditorByMode()
+})
+
+watch(() => props.enableResourceReferences, () => {
+  if (!cmView) return
+  cmView.dispatch({
+    effects: resourceReferenceCompartment.reconfigure(resourceReferenceExtensions()),
+  })
+})
+
+watch(() => props.resourceReferenceLabels, (labels) => {
+  if (!cmView || !props.enableResourceReferences) return
+  cmView.dispatch({
+    effects: updateResourceReferenceLabels.of(labels),
+  })
+}, { deep: true })
+
+watch(() => props.editorAriaLabel, () => {
+  if (!cmView) return
+  cmView.dispatch({
+    effects: contentAttributesCompartment.reconfigure(
+      EditorView.contentAttributes.of(editorContentAttributes()),
+    ),
+  })
 })
 
 function getCmSelection(): { from: number; to: number; selectedText: string } {

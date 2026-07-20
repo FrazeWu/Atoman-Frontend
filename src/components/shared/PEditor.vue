@@ -12,6 +12,7 @@
 
 <script setup lang="ts">
 import { defineAsyncComponent, ref } from 'vue'
+import type { ResourceReferenceLabels } from './editor/resourceReferenceExtension'
 
 interface Props {
   modelValue?: string
@@ -29,6 +30,9 @@ interface Props {
   collabRoomId?: string
   protectFirstLine?: boolean
   renderingLevel?: 'full' | 'comment'
+  enableResourceReferences?: boolean
+  resourceReferenceLabels?: ResourceReferenceLabels
+  editorAriaLabel?: string
 }
 
 type PEditorExposed = {

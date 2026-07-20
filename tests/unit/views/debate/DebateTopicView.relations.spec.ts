@@ -172,8 +172,8 @@ function mountView() {
         DebateVotePanel: true,
         DebateRelationGraph: {
           name: 'DebateRelationGraph',
-          props: ['graph', 'loading', 'view', 'expandingNodeIds'],
-          emits: ['expand'],
+          props: ['graph', 'loading', 'error', 'view', 'expandingNodeIds'],
+          emits: ['expand', 'retry'],
           template: '<div />',
         },
         DebateWikiEditor: true,
@@ -227,6 +227,55 @@ describe('DebateTopicView relation experience', () => {
     await wrapper.findAll('[role="tab"]')[2]!.trigger('click')
     await flushPromises()
     expect(store.fetchRelationGraph).toHaveBeenLastCalledWith('root', 'graph', 2)
+  })
+
+  it('基础关系加载失败后显示错误，并可重试恢复当前视图', async () => {
+    let attempts = 0
+    store.fetchRelationGraph.mockImplementation(async () => {
+      attempts += 1
+      return attempts === 1 ? null : expandableTree
+    })
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+    let relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+
+    expect(relationView.props('loading')).toBe(false)
+    expect(relationView.props('error')).toBe(true)
+    expect(relationView.props('graph')).toBeNull()
+
+    relationView.vm.$emit('retry')
+    await flushPromises()
+    relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+
+    expect(store.fetchRelationGraph).toHaveBeenLastCalledWith('root', 'tree', 3)
+    expect(attempts).toBe(2)
+    expect(relationView.props('error')).toBe(false)
+    expect(relationView.props('graph')).toEqual(expandableTree)
+  })
+
+  it('切换关系标签后丢弃旧视图迟到的加载错误', async () => {
+    const staleTree = deferred<DebateGraph | null>()
+    store.fetchRelationGraph.mockImplementation(async (_id: string, view: string) => (
+      view === 'tree' ? staleTree.promise : graph
+    ))
+    const wrapper = mountView()
+    await flushPromises()
+
+    const treeRequest = wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await nextTick()
+    await wrapper.findAll('[role="tab"]')[2]!.trigger('click')
+    await flushPromises()
+    staleTree.resolve(null)
+    await treeRequest
+    await flushPromises()
+
+    const relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    expect(relationView.props('view')).toBe('graph')
+    expect(relationView.props('error')).toBe(false)
+    expect((relationView.props('graph') as DebateGraph).root_id).toBe('root')
   })
 
   it('按 depth 1 展开节点并按 ID 合并，同时保留初始根和重置基础图', async () => {
@@ -311,10 +360,13 @@ describe('DebateTopicView relation experience', () => {
       root_id: 'support-2',
       nodes: [supportTwo, secondLeaf],
       relations: [relation('relation-support-2-leaf', 'support-leaf-2', 'support-2')],
-      expandable_node_ids: [],
+      expandable_node_ids: ['support-1'],
     })
     await flushPromises()
-    first.resolve(supportFragment)
+    first.resolve({
+      ...supportFragment,
+      expandable_node_ids: ['support-2', 'support-leaf'],
+    })
     await flushPromises()
 
     relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
@@ -327,7 +379,33 @@ describe('DebateTopicView relation experience', () => {
       'support-leaf-2',
       'support-leaf',
     ])
+    expect(merged.expandable_node_ids).toEqual(['support-leaf'])
     expect(relationView.props('expandingNodeIds')).toEqual([])
+  })
+
+  it('展开失败的节点不会被记为已展开，并且可以重试', async () => {
+    let expansionAttempts = 0
+    store.fetchRelationGraph.mockImplementation(async (id: string) => {
+      if (id === 'root') return expandableTree
+      expansionAttempts += 1
+      return expansionAttempts === 1 ? null : supportFragment
+    })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('[role="tab"]')[1]!.trigger('click')
+    await flushPromises()
+    let relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+
+    relationView.vm.$emit('expand', 'support-1')
+    await flushPromises()
+
+    expect((relationView.props('graph') as DebateGraph).expandable_node_ids).toEqual(['support-1'])
+    relationView.vm.$emit('expand', 'support-1')
+    await flushPromises()
+
+    relationView = wrapper.findComponent({ name: 'DebateRelationGraph' })
+    expect(expansionAttempts).toBe(2)
+    expect((relationView.props('graph') as DebateGraph).expandable_node_ids).toEqual(['support-leaf'])
   })
 
   it('切换关系标签后丢弃仍在返回的旧视图展开结果', async () => {

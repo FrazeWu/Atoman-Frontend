@@ -90,7 +90,7 @@ const emit = defineEmits<{ expand: [nodeId: string] }>()
 
 .debate-node__link:focus-visible {
   outline: 2px solid var(--a-color-primary);
-  outline-offset: 3px;
+  outline-offset: -3px;
   border-radius: var(--a-radius-card);
 }
 

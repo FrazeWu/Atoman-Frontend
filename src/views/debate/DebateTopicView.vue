@@ -103,9 +103,11 @@
                 data-test="relation-graph"
                 :graph="relationGraphs[relationTab.value]"
                 :loading="relationViewLoading[relationTab.value]"
+                :error="relationViewError[relationTab.value]"
                 :view="relationTab.value"
                 :expanding-node-ids="expandingNodeIds[relationTab.value]"
                 @expand="handleExpand(relationTab.value, $event)"
+                @retry="retryRelationView(relationTab.value)"
               />
             </template>
           </div>
@@ -210,7 +212,9 @@ const activeTab = ref<DebateTab>('content')
 const lastLoadedRelationView = ref<RelationView | null>(null)
 const relationGraphs = ref<Record<RelationView, DebateGraph | null>>({ tree: null, graph: null })
 const relationViewLoading = ref<Record<RelationView, boolean>>({ tree: false, graph: false })
+const relationViewError = ref<Record<RelationView, boolean>>({ tree: false, graph: false })
 const expandingNodeIds = ref<Record<RelationView, string[]>>({ tree: [], graph: [] })
+const expandedNodeIds = ref<Record<RelationView, Set<string>>>({ tree: new Set(), graph: new Set() })
 const showWikiEditor = ref(false)
 const showRevisions = ref(false)
 const showDiscussion = ref(false)
@@ -339,7 +343,9 @@ async function loadRelationView(view: RelationView, background = false) {
   const epoch = ++relationViewEpoch[view]
   relationGraphs.value[view] = null
   relationViewLoading.value[view] = true
+  relationViewError.value[view] = false
   expandingNodeIds.value[view] = []
+  expandedNodeIds.value[view] = new Set()
 
   const loaded = await debateStore.fetchRelationGraph(debateID, view, relationDepth(view))
   const ownsView = (
@@ -355,8 +361,15 @@ async function loadRelationView(view: RelationView, background = false) {
   if (loaded?.root_id === debateID) {
     relationGraphs.value[view] = loaded
     debateStore.relationGraph = loaded
+    relationViewError.value[view] = false
+  } else {
+    relationViewError.value[view] = true
   }
   relationViewLoading.value[view] = false
+}
+
+async function retryRelationView(view: RelationView) {
+  if (activeTab.value === view) await loadRelationView(view)
 }
 
 async function refreshLoadedRelationView() {
@@ -367,7 +380,9 @@ function invalidateRelationView(view: RelationView) {
   relationBaseRequestSequence[view] += 1
   relationViewEpoch[view] += 1
   relationViewLoading.value[view] = false
+  relationViewError.value[view] = false
   expandingNodeIds.value[view] = []
+  expandedNodeIds.value[view] = new Set()
 }
 
 function resetRelationViews() {
@@ -380,7 +395,7 @@ function resetRelationViews() {
 function mergeRelationGraph(
   base: DebateGraph,
   fragment: DebateGraph,
-  expandedNodeID: string,
+  expanded: ReadonlySet<string>,
 ): DebateGraph {
   const nodes = new Map(base.nodes.map(node => [node.id, node]))
   for (const node of fragment.nodes) nodes.set(node.id, node)
@@ -392,7 +407,7 @@ function mergeRelationGraph(
     ...base.expandable_node_ids,
     ...fragment.expandable_node_ids,
   ])
-  expandable.delete(expandedNodeID)
+  for (const nodeID of expanded) expandable.delete(nodeID)
 
   return {
     root_id: base.root_id,
@@ -440,7 +455,8 @@ async function handleExpand(view: RelationView, nodeID: string) {
 
     const current = relationGraphs.value[view]
     if (!current || current.root_id !== debateID) return
-    const merged = mergeRelationGraph(current, fragment, nodeID)
+    expandedNodeIds.value[view].add(nodeID)
+    const merged = mergeRelationGraph(current, fragment, expandedNodeIds.value[view])
     relationGraphs.value[view] = merged
     debateStore.relationGraph = merged
   } finally {

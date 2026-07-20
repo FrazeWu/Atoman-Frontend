@@ -60,4 +60,20 @@ describe('DebateRelationGraph', () => {
     await wrapper.get('[data-test="node-expand"]').trigger('click')
     expect(wrapper.emitted('expand')).toEqual([['root']])
   })
+
+  it('shows a retryable error state instead of the empty state', async () => {
+    const wrapper = mount(DebateRelationGraph, {
+      props: {
+        graph: null,
+        view: 'graph',
+        error: true,
+      },
+    })
+
+    expect(wrapper.text()).toContain('关系加载失败')
+    expect(wrapper.text()).not.toContain('暂无引用')
+
+    await wrapper.get('button[aria-label="重试加载关系"]').trigger('click')
+    expect(wrapper.emitted('retry')).toHaveLength(1)
+  })
 })

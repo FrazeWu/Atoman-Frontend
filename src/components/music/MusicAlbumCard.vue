@@ -160,24 +160,31 @@ const albumYear = computed(() => {
   display: block;
   text-decoration: none;
   color: inherit;
-  border: none;
   background: transparent;
   cursor: pointer;
   width: 100%;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.music-album-card:hover {
+  transform: translateY(1px);
+  border-color: var(--a-color-muted-soft);
 }
 
 .cover-frame {
   position: relative;
   aspect-ratio: 1 / 1;
   background: var(--a-color-surface);
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
-.music-album-card:hover .cover-image {
-  transform: scale(1.03);
-}
+
 
 .cover-image {
   width: 100%;
@@ -282,7 +289,7 @@ const albumYear = computed(() => {
 
 .music-title {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--a-color-fg);
   margin: 0 0 0.25rem 0;

@@ -117,15 +117,25 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
   gap: 0.75rem;
   color: inherit;
   cursor: pointer;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.music-playlist-card:hover {
+  transform: translateY(1px);
+  border-color: var(--a-color-muted-soft);
 }
 
 .cover-frame {
   position: relative;
   aspect-ratio: 1 / 1;
   background: var(--a-color-surface);
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 .bookmark-btn {
@@ -207,9 +217,7 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
   transition: transform 0.2s ease;
 }
 
-.music-playlist-card:hover .cover-image {
-  transform: scale(1.03);
-}
+
 
 .cover-placeholder {
   position: absolute;
@@ -229,7 +237,7 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
 .playlist-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 

@@ -138,24 +138,31 @@ const formattedSubscribers = computed(() => {
   display: block;
   text-decoration: none;
   color: inherit;
-  border: none;
   background: transparent;
   cursor: pointer;
   width: 100%;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.music-artist-card:hover {
+  transform: translateY(1px);
+  border-color: var(--a-color-muted-soft);
 }
 
 .avatar-frame {
   position: relative;
   aspect-ratio: 1 / 1;
   background: var(--a-color-surface);
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
-.music-artist-card:hover .avatar-image {
-  transform: scale(1.03);
-}
+
 
 .avatar-image {
   width: 100%;
@@ -263,7 +270,7 @@ const formattedSubscribers = computed(() => {
 
 .artist-title {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.35;
   color: var(--a-color-fg);
   margin: 0;

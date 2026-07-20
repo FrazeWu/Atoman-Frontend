@@ -31,7 +31,7 @@ const { renderMarkdown } = useMarkdownRenderer()
 const post = ref<Post | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
-const renderedContent = computed(() => renderMarkdown(post.value?.content || ''))
+const renderedContent = computed(() => renderMarkdown(post.value?.content || '', { references: post.value?.references }))
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 
 async function loadPost() {

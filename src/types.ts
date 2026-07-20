@@ -1,3 +1,5 @@
+import type { ResolvedReference } from '@/api/references'
+
 export type MusicEntryStatus = 'open' | 'confirmed' | 'disputed'
 
 export interface ArtistAlias {
@@ -394,6 +396,7 @@ export interface Post {
   channel_followers_count?: number
   likes_count?: number
   comments_count?: number
+  references?: ResolvedReference[]
   created_at: string
   updated_at: string
 }
@@ -453,6 +456,7 @@ export interface InteractionComment {
   user?: InteractionUserRef | null
   replies?: InteractionComment[]
   timestamp_sec?: number | null
+  references?: ResolvedReference[]
 }
 
 export interface Like {
@@ -800,6 +804,7 @@ export interface ForumTopic {
   last_reply_at?: string
   is_liked: boolean
   is_bookmarked: boolean
+  references?: ResolvedReference[]
   created_at: string
   updated_at: string
 }
@@ -890,6 +895,8 @@ export interface Notification {
     resource_id?: string
     comment_id?: string
     root_id?: string
+    module?: string
+    path?: string
     like_count?: number
     [key: string]: any
   }
@@ -990,6 +997,7 @@ export interface Debate {
   created_at: string
   updated_at: string
   concluded_at?: string
+  references?: ResolvedReference[]
 }
 
 export interface Argument {
@@ -1015,6 +1023,7 @@ export interface Argument {
   mentions?: Array<{ user_id: string; start: number; end: number }>
   attachment_ids?: string[]
   attachments?: Array<{ id: string; url: string; content_type: string; position: number }>
+  content_references?: ResolvedReference[]
   created_at: string
   updated_at: string
 }

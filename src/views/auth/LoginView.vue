@@ -772,11 +772,6 @@ watch(username, (value) => {
   color: var(--a-color-muted-soft);
 }
 
-.auth-form :deep(.p-input:focus) {
-  border-color: var(--a-color-fg);
-  box-shadow: inset 0 0 0 1px var(--a-color-fg);
-}
-
 .email-field-label {
   display: inline-flex;
   align-items: center;

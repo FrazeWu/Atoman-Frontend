@@ -77,7 +77,10 @@
 
         <!-- Description -->
         <template #summary>
-          {{ debate.description }}
+          <span
+            @click.stop
+            v-html="renderMarkdownInline(debate.description, { references: debate.references, referenceField: 'description' })"
+          />
         </template>
 
         <!-- Stats -->
@@ -108,9 +111,10 @@
 
         <form @submit.prevent="handleCreate" class="space-y-4">
           <PInput v-model="createForm.title" label="标题" placeholder="长期吸烟会不会显著增加肺癌风险？" />
-          <PInput v-model="createForm.description" label="描述" placeholder="补充背景（可选）" />
-          <PTextarea v-model="createForm.content" label="背景内容" :rows="4" />
+          <PReferenceField v-model="createForm.description" label="描述" placeholder="补充背景（可选）" />
+          <PReferenceField v-model="createForm.content" variant="textarea" label="背景内容" :rows="4" />
           <PInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="医学，公共健康" />
+          <p v-if="createError" class="a-field-error" role="alert">{{ createError }}</p>
 
           <div class="debate-modal-actions">
             <PButton outline type="button" @click="showCreateModal = false">取消</PButton>
@@ -128,21 +132,23 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
+import PReferenceField from '@/components/shared/PReferenceField.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { Debate } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { moduleRooms } from '@/config/moduleRooms'
 import PEntry from '@/components/ui/PEntry.vue'
+import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 
 const router = useRouter()
 const debateStore = useDebateStore()
 const authStore = useAuthStore()
+const { renderMarkdownInline } = useMarkdownRenderer()
 
 const debates = computed(() => debateStore.debates)
 const debatesTotal = computed(() => debateStore.debatesTotal)
@@ -165,6 +171,7 @@ const filterStatusOptions = [
 
 const showCreateModal = ref(false)
 const creating = ref(false)
+const createError = ref('')
 const createForm = ref({
   title: '',
   description: '',
@@ -218,6 +225,7 @@ const handleCreate = async () => {
   }
 
   creating.value = true
+  createError.value = ''
   const tags = tagsInput.value
     .split(',')
     .map(t => t.trim())
@@ -233,6 +241,8 @@ const handleCreate = async () => {
     createForm.value = { title: '', description: '', content: '' }
     tagsInput.value = ''
     loadDebates()
+  } else {
+    createError.value = debateStore.error || '创建失败，请重试'
   }
   creating.value = false
 }

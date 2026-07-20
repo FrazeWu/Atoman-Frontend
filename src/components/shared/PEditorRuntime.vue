@@ -19,7 +19,20 @@
       </div>
     </div>
 
-    <div v-if="canShowModeSwitches" class="editor-mode-switches">
+    <div v-if="canShowModeSwitches || enableMentions" class="editor-mode-switches">
+      <button
+        v-if="enableMentions"
+        type="button"
+        class="editor-reference-trigger"
+        title="添加引用"
+        aria-label="添加引用"
+        :aria-expanded="mention.visible"
+        data-testid="editor-reference-trigger"
+        @click="insertReference"
+      >
+        <AtSign :size="18" aria-hidden="true" />
+      </button>
+
       <button
         v-if="canShowModeToggle"
         type="button"
@@ -106,29 +119,21 @@
       />
     </div>
 
-    <div
-      v-if="mention.visible && mention.results.length > 0"
-      class="p-mention-dropdown"
-      :style="{ top: mention.y + 'px', left: mention.x + 'px' }"
-    >
-      <button
-        v-for="(user, i) in mention.results"
-        :key="user.username"
-        type="button"
-        class="mention-item"
-        :class="{ 'is-active': i === mention.index }"
-        @mousedown.prevent="applyMention(user)"
-      >
-        <span class="mention-name">{{ user.display_name || user.username }}</span>
-        <span class="mention-username">@{{ user.username }}</span>
-      </button>
-    </div>
+    <PReferenceMenu
+      v-if="mention.visible && (mention.loading || mention.results.length > 0)"
+      :suggestions="mention.results"
+      :active-index="mention.index"
+      :loading="mention.loading"
+      :position="{ top: mention.y, left: mention.x }"
+      @hover="mention.index = $event"
+      @select="applyReference"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Quote } from 'lucide-vue-next'
+import { AtSign, Quote } from 'lucide-vue-next'
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
 import { Compartment, EditorState, RangeSetBuilder } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
@@ -142,10 +147,17 @@ import { yCollab } from 'y-codemirror.next'
 import { useApi, useWebSocketUrl } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
+import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
+import {
+  fitReferenceMenuPosition,
+  insertReferenceTrigger,
+  parseReferenceTrigger,
+  referenceTokenForSuggestion,
+  searchReferenceSuggestions,
+  type ReferenceSuggestion,
+} from '@/composables/useReferenceAutocomplete'
 
 interface Peer { clientId: number; name: string; color: string }
-interface MentionUser { uuid: string; username: string; display_name: string; avatar_url: string }
-
 interface Props {
   modelValue?: string
   mode: 'normal' | 'split'
@@ -760,35 +772,53 @@ function handleDropFiles(files?: FileList | null) {
 
 const mention = ref({
   visible: false,
-  query: '',
+  loading: false,
   index: 0,
   x: 0,
   y: 0,
-  results: [] as MentionUser[],
+  results: [] as ReferenceSuggestion[],
   startPos: -1,
 })
 
 let mentionDebounce: ReturnType<typeof setTimeout> | null = null
+let mentionRequest = 0
 
 function detectMentionFromText(textBefore: string, pos: number) {
-  const match = textBefore.match(/@([\w一-龥-]*)$/)
-  if (!match) {
+  const trigger = parseReferenceTrigger(textBefore)
+  if (!trigger) {
     closeMention()
     return
   }
-
-  const query = match[1]
-  mention.value.startPos = pos - match[0].length
-  mention.value.query = query
+  mention.value.startPos = pos - (textBefore.length - trigger.start)
+  mention.value.visible = true
+  mention.value.loading = true
+  mention.value.results = []
 
   const coords = cmView?.coordsAtPos(mention.value.startPos)
   if (coords) {
-    mention.value.x = coords.left
-    mention.value.y = coords.bottom + 4
+    const position = fitReferenceMenuPosition(coords, {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    })
+    mention.value.x = position.left
+    mention.value.y = position.top
   }
 
   if (mentionDebounce) clearTimeout(mentionDebounce)
-  mentionDebounce = setTimeout(() => fetchMentionUsers(query), 120)
+  const request = ++mentionRequest
+  mentionDebounce = setTimeout(async () => {
+    try {
+      const results = await searchReferenceSuggestions(trigger, 10)
+      if (request !== mentionRequest) return
+      mention.value.results = results
+      mention.value.visible = results.length > 0
+      mention.value.index = 0
+    } catch {
+      if (request === mentionRequest) closeMention()
+    } finally {
+      if (request === mentionRequest) mention.value.loading = false
+    }
+  }, 120)
 }
 
 function detectMentionFromValue(value: string) {
@@ -797,45 +827,49 @@ function detectMentionFromValue(value: string) {
   const doc = cmView.state.doc
   const line = doc.lineAt(pos)
   const textBefore = line.text.slice(0, pos - line.from)
-  detectMentionFromText(textBefore || value, pos)
+  detectMentionFromText(textBefore, pos)
 }
 
-async function fetchMentionUsers(q: string) {
-  try {
-    const headers: Record<string, string> = {}
-    if (authStore.token) headers.Authorization = `Bearer ${authStore.token}`
-    const res = await fetch(`${api.users.search}?scope=mention&q=${encodeURIComponent(q)}&limit=5`, { headers })
-    if (!res.ok) return
-    const data = await res.json()
-    mention.value.results = data.data || []
-    mention.value.visible = mention.value.results.length > 0
-    mention.value.index = 0
-  } catch {
-    // ignore
-  }
+function insertReference() {
+  if (!cmView) return
+  const { from, to } = cmView.state.selection.main
+  const result = insertReferenceTrigger(cmView.state.doc.toString(), from, to)
+  cmView.dispatch({
+    changes: { from, to, insert: result.insert },
+    selection: { anchor: result.cursor },
+  })
+  cmView.focus()
 }
 
-function applyMention(user: MentionUser) {
+function applyReference(suggestion: ReferenceSuggestion) {
   if (!cmView) return
   const pos = cmView.state.selection.main.head
-  const insertText = `@${user.username}`
+  const insertText = referenceTokenForSuggestion(suggestion)
   cmView.dispatch({
     changes: { from: mention.value.startPos, to: pos, insert: insertText },
     selection: { anchor: mention.value.startPos + insertText.length },
   })
   cmView.focus()
-  closeMention()
+  if (suggestion.kind === 'target') closeMention()
 }
 
 function closeMention() {
   mention.value.visible = false
+  mention.value.loading = false
   mention.value.results = []
   mention.value.startPos = -1
+  mentionRequest++
 }
 
 function onContainerKeydown(e: KeyboardEvent) {
   if (!mention.value.visible) return
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    closeMention()
+    return
+  }
   const items = mention.value.results
+  if (items.length === 0) return
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     mention.value.index = (mention.value.index + 1) % items.length
@@ -844,9 +878,7 @@ function onContainerKeydown(e: KeyboardEvent) {
     mention.value.index = (mention.value.index - 1 + items.length) % items.length
   } else if (e.key === 'Enter' || e.key === 'Tab') {
     e.preventDefault()
-    applyMention(items[mention.value.index])
-  } else if (e.key === 'Escape') {
-    closeMention()
+    applyReference(items[mention.value.index])
   }
 }
 
@@ -970,6 +1002,27 @@ onBeforeUnmount(() => {
   gap: 0.75rem;
   padding: 0.75rem 1rem 0;
   flex-wrap: wrap;
+}
+
+.editor-reference-trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+
+.editor-reference-trigger:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.editor-reference-trigger:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
 }
 
 .mode-switch {
@@ -1167,50 +1220,6 @@ onBeforeUnmount(() => {
   background: #fff;
   overflow: auto;
   min-height: 16rem;
-}
-
-.p-mention-dropdown {
-  position: fixed;
-  z-index: 9999;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  min-width: 200px;
-  box-shadow: none;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.mention-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.6rem 0.9rem;
-  border: none;
-  background: #fff;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.mention-item:hover,
-.mention-item.is-active {
-  background: #000;
-  color: #fff;
-}
-
-.mention-name {
-  font-size: 0.82rem;
-  font-weight: 500;
-}
-
-.mention-username {
-  font-size: 0.72rem;
-  color: #9ca3af;
-}
-
-.mention-item.is-active .mention-username {
-  color: #d1d5db;
 }
 
 @media (max-width: 700px) {

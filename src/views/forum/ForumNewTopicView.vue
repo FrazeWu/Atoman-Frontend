@@ -235,6 +235,8 @@ const submit = async () => {
     if (topic) {
       await clearDraft()
       router.push(`/forum/topic/${topic.id}`)
+    } else {
+      errors.value.editor = forumStore.error || '发布失败，请重试'
     }
   } finally {
     submitting.value = false

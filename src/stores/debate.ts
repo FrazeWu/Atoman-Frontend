@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import type { Debate, Argument, DebateGraph, DebateRelation, DebateRelationStance, DebateVote } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from '@/composables/useApi'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 const api = useApi();
 
@@ -181,6 +182,7 @@ export const useDebateStore = defineStore("debate", () => {
     content: string;
     tags: string[];
   }): Promise<Debate | null> => {
+    error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics`, {
         method: "POST",
@@ -191,13 +193,14 @@ export const useDebateStore = defineStore("debate", () => {
         const data = await res.json();
         return data.data as Debate;
       } else {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to create debate");
+        const responseError = await res.json().catch(() => ({}));
+        error.value = referencePublishErrorMessage(responseError, "创建失败，请重试");
       }
     } catch (e) {
+      error.value = referencePublishErrorMessage(e, "创建失败，请重试");
       console.error("Failed to create debate", e);
-      return null;
     }
+    return null;
   };
 
   const updateDebate = async (
@@ -209,6 +212,7 @@ export const useDebateStore = defineStore("debate", () => {
       tags: string[];
     },
   ): Promise<Debate | null> => {
+    error.value = null;
     try {
       const res = await fetch(`${api.url}/debate/topics/${id}`, {
         method: "PUT",
@@ -219,13 +223,14 @@ export const useDebateStore = defineStore("debate", () => {
         const data = await res.json();
         return data.data as Debate;
       } else {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to update debate");
+        const responseError = await res.json().catch(() => ({}));
+        error.value = referencePublishErrorMessage(responseError, "保存失败，请重试");
       }
     } catch (e) {
+      error.value = referencePublishErrorMessage(e, "保存失败，请重试");
       console.error("Failed to update debate", e);
-      return null;
     }
+    return null;
   };
 
   const deleteDebate = async (id: string): Promise<boolean> => {

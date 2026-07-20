@@ -1,6 +1,8 @@
 import { shallowRef } from 'vue'
 import { marked, type Token } from 'marked'
 import DOMPurify from 'dompurify'
+import type { ResolvedReference } from '@/api/references'
+import { applyResolvedReferences } from '@/composables/useReferenceRendering'
 
 type EmbedData = {
   id: string
@@ -14,6 +16,8 @@ type RenderMarkdownOptions = {
   postEmbeds?: Record<string, EmbedData>
   musicEmbeds?: Record<string, EmbedData>
   videoEmbeds?: Record<string, EmbedData>
+  references?: ResolvedReference[]
+  referenceField?: string
 }
 
 type MarkdownRuntimeState = 'idle' | 'loading' | 'ready'
@@ -185,8 +189,9 @@ function labelText(kind: 'post' | 'music' | 'video') {
 }
 
 function preprocessDirectives(content: string, options?: RenderMarkdownOptions): string {
-  let next = replaceDirective(
-    content,
+  let next = applyResolvedReferences(content, options?.references, options?.referenceField)
+  next = replaceDirective(
+    next,
     'post',
     /:::post\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.postEmbeds,
@@ -229,5 +234,20 @@ export function useMarkdownRenderer() {
     }
   }
 
-  return { renderMarkdown }
+  function renderMarkdownInline(content: string, options?: RenderMarkdownOptions): string {
+    if (!content) return ''
+
+    try {
+      const referenced = applyResolvedReferences(
+        content,
+        options?.references,
+        options?.referenceField,
+      )
+      return DOMPurify.sanitize(marked.parseInline(referenced) as string)
+    } catch {
+      return escapeHtml(content)
+    }
+  }
+
+  return { renderMarkdown, renderMarkdownInline }
 }

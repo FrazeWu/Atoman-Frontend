@@ -17,7 +17,11 @@
             <template v-if="debate.tags?.[0]"> · {{ debate.tags[0] }}</template>
           </div>
           <h1>{{ debate.title }}</h1>
-          <p v-if="debate.description" class="debate-header__description">{{ debate.description }}</p>
+          <div
+            v-if="debate.description"
+            class="debate-header__description"
+            v-html="renderMarkdownInline(debate.description, { references: debate.references, referenceField: 'description' })"
+          />
           <div class="debate-header__meta">
             <span>{{ debate.user?.display_name || debate.user?.username || '匿名' }}</span>
             <span>{{ formatDate(debate.created_at) }}</span>
@@ -64,7 +68,7 @@
       </section>
 
       <section v-if="debate.content" class="debate-background">
-        <div class="prose max-w-none" v-html="renderMarkdown(debate.content)" />
+        <div class="prose max-w-none" v-html="renderMarkdown(debate.content, { references: debate.references, referenceField: 'content' })" />
       </section>
 
       <section class="debate-relations" aria-label="辩论关系">
@@ -139,9 +143,10 @@
     <PModal v-if="showEditModal" title="编辑辩题" @close="showEditModal = false">
       <form class="debate-form" @submit.prevent="handleUpdate">
         <PInput v-model="editForm.title" label="标题" required />
-        <PInput v-model="editForm.description" label="描述" />
-        <PTextarea v-model="editForm.content" label="内容" :rows="5" />
+        <PReferenceField v-model="editForm.description" label="描述" />
+        <PReferenceField v-model="editForm.content" variant="textarea" label="内容" :rows="5" />
         <PInput v-model="tagsInput" label="标签" />
+        <p v-if="editError" class="a-field-error" role="alert">{{ editError }}</p>
         <div class="debate-form__actions">
           <PButton type="button" variant="secondary" @click="showEditModal = false">取消</PButton>
           <PButton type="submit">保存</PButton>
@@ -168,11 +173,11 @@ import { ChevronLeft, CircleCheck, Link2, Pencil, RotateCcw, Search } from 'luci
 import CommentSection from '@/components/comment/CommentSection.vue'
 import DebateConcludeModal from '@/components/debate/DebateConcludeModal.vue'
 import DebateRelationGraph from '@/components/debate/DebateRelationGraph.vue'
+import PReferenceField from '@/components/shared/PReferenceField.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import PTextarea from '@/components/ui/PTextarea.vue'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
@@ -183,7 +188,7 @@ const route = useRoute()
 const router = useRouter()
 const debateStore = useDebateStore()
 const authStore = useAuthStore()
-const { renderMarkdown } = useMarkdownRenderer()
+const { renderMarkdown, renderMarkdownInline } = useMarkdownRenderer()
 
 const debate = computed(() => debateStore.currentDebate)
 const loading = computed(() => debateStore.loading)
@@ -227,6 +232,7 @@ const relationError = ref('')
 
 const showEditModal = ref(false)
 const editForm = ref({ title: '', description: '', content: '' })
+const editError = ref('')
 const tagsInput = ref('')
 
 const showConcludeModal = ref(false)
@@ -305,16 +311,21 @@ function openEditModal() {
     content: debate.value.content,
   }
   tagsInput.value = (debate.value.tags ?? []).join(', ')
+  editError.value = ''
   showEditModal.value = true
 }
 
 async function handleUpdate() {
   if (!debate.value) return
+  editError.value = ''
   const updated = await debateStore.updateDebate(debate.value.id, {
     ...editForm.value,
     tags: tagsInput.value.split(',').map((tag) => tag.trim()).filter(Boolean),
   })
-  if (!updated) return
+  if (!updated) {
+    editError.value = debateStore.error || '保存失败，请重试'
+    return
+  }
   debateStore.currentDebate = updated
   showEditModal.value = false
 }

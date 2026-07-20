@@ -158,6 +158,7 @@ import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import { applyResolvedReferences } from '@/composables/useReferenceRendering'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useInteractions } from '@/composables/useInteractions'
 import { isModeratorRole } from '@/utils/roles'
@@ -263,7 +264,8 @@ const stripLeadingDuplicateHeading = (content: string, title: string) => {
 const renderedContent = computed(() => {
   const content = post.value?.content ?? ''
   const title = post.value?.title ?? ''
-  return renderMarkdown(stripLeadingDuplicateHeading(content, title), {
+  const referencedContent = applyResolvedReferences(content, post.value?.references)
+  return renderMarkdown(stripLeadingDuplicateHeading(referencedContent, title), {
     postEmbeds: postEmbeds.value,
     musicEmbeds: musicEmbeds.value,
     videoEmbeds: videoEmbeds.value,

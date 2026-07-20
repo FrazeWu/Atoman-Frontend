@@ -1,7 +1,7 @@
 <template>
   <div class="p-field">
     <label v-if="label" class="p-field-label">{{ label }}</label>
-    <div class="p-textarea-wrapper">
+    <div class="p-textarea-wrapper" :class="{ 'p-textarea-wrapper--with-suffix': $slots.suffix }">
       <textarea
         class="p-textarea"
         :class="error ? 'p-textarea--error' : ''"
@@ -11,6 +11,9 @@
         :disabled="disabled"
         @input="handleInput"
       />
+      <div v-if="$slots.suffix" class="p-textarea-suffix">
+        <slot name="suffix" />
+      </div>
     </div>
     <div v-if="error" class="p-field-error">{{ error }}</div>
     <div v-else-if="hint" class="p-field-hint">{{ hint }}</div>
@@ -82,6 +85,17 @@ const handleInput = (event: Event) => {
   resize: vertical;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.p-textarea-wrapper--with-suffix .p-textarea {
+  padding-right: 3.6rem;
+}
+
+.p-textarea-suffix {
+  position: absolute;
+  inset: 0 0 auto auto;
+  display: grid;
+  place-items: center;
 }
 
 .p-textarea:focus {

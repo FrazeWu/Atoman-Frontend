@@ -199,6 +199,7 @@ import { useAutoSave } from '@/composables/useAutoSave'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 import type { BlogDraft, Collection } from '@/types'
@@ -1199,7 +1200,10 @@ const save = async (status: SaveTarget, redirect = true): Promise<string | null>
       return savedPostId.value
     } else {
       const err = await res.json()
-      error.value = err.error || '保存失败，请重试'
+      error.value = referencePublishErrorMessage(
+        err,
+        typeof err.error === 'string' ? err.error : '保存失败，请重试',
+      )
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : '网络错误，请重试'

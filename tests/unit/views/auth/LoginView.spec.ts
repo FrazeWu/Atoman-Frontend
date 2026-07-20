@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import LoginView from '@/views/auth/LoginView.vue'
 import {
@@ -13,6 +15,11 @@ import {
 } from '@/views/auth/turnstileConfig'
 import { validateRegisterUsername } from '@/views/auth/registerValidation'
 import { useAuthStore } from '@/stores/auth'
+
+const loginViewSource = readFileSync(
+  resolve(__dirname, '../../../../src/views/auth/LoginView.vue'),
+  'utf8',
+)
 
 const routes = [
   { path: '/', component: { template: '<div />' } },
@@ -54,6 +61,10 @@ const mountLogin = async (redirect: string) => {
 }
 
 describe('LoginView redirect', () => {
+  it('inherits the shared input focus ring without a local focus override', () => {
+    expect(loginViewSource).not.toContain('.auth-form :deep(.p-input:focus)')
+  })
+
   it('shows configured OAuth providers with the safe return path', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ providers: ['google'] }), { status: 200 }))
     const pinia = createPinia()

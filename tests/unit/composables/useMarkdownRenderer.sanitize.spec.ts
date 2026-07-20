@@ -1,4 +1,5 @@
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import type { ResolvedReference } from '@/api/references'
 
 describe('useMarkdownRenderer sanitize', () => {
   it('filters dangerous inline event handlers from rendered html', () => {
@@ -9,6 +10,18 @@ describe('useMarkdownRenderer sanitize', () => {
     expect(html).not.toContain('onerror=')
     expect(html).not.toContain('<script')
     expect(html).toContain('<img')
+  })
+
+  it('renders resolved reference tokens as internal links', () => {
+    const { renderMarkdown, renderMarkdownInline } = useMarkdownRenderer()
+    const references: ResolvedReference[] = [{
+      kind: 'resource', target_type: 'thread', target_id: 'topic-1', field: 'content',
+      start: 0, end: 13, label: '讨论主题', module: 'forum', path: '/topic/topic-1', available: true,
+    }]
+    const html = renderMarkdown('@thread:topic', { references })
+    expect(html).toContain('href="/forum/topic/topic-1"')
+    expect(html).toContain('@讨论主题')
+    expect(renderMarkdownInline('@thread:topic', { references })).toBe('<a href="/forum/topic/topic-1">@讨论主题</a>')
   })
 
   it('renders scoped post and music embed fallback links', () => {

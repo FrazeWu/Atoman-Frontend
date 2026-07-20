@@ -83,7 +83,7 @@
 
     <!-- Content -->
     <div class="mb-3">
-      <p class="font-medium">{{ argument.content }}</p>
+      <div class="font-medium" v-html="renderMarkdown(argument.content, { references: argument.content_references })" />
     </div>
 
     <!-- Evidence source card -->
@@ -160,6 +160,7 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
+import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 
 const props = defineProps<{
   argument: Argument
@@ -177,6 +178,7 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
+const { renderMarkdown } = useMarkdownRenderer()
 
 const apiBase = useApi().url
 const localIsFolded = ref(props.argument.is_folded ?? false)

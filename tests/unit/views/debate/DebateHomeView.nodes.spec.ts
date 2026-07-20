@@ -15,9 +15,13 @@ describe('DebateHomeView node wording', () => {
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
       data: [{
         id: 'debate-1', user_id: 'user-1', user: { username: 'fafa' },
-        title: '长期吸烟会不会显著增加肺癌风险？', description: '', content: '',
+        title: '长期吸烟会不会显著增加肺癌风险？', description: '@thread:topic', content: '',
         status: 'concluded', tags: [], view_count: 2, argument_count: 9, vote_count: 0,
         conclusion_type: 'yes', created_at: '2026-07-18T00:00:00Z', updated_at: '2026-07-18T00:00:00Z',
+        references: [{
+          kind: 'resource', target_type: 'thread', target_id: 'topic-1', field: 'description',
+          start: 0, end: 13, label: '讨论主题', module: 'forum', path: '/topic/topic-1', available: true,
+        }],
       }],
       meta: { total: 1 },
     }), { status: 200 }))
@@ -42,6 +46,7 @@ describe('DebateHomeView node wording', () => {
 
     expect(wrapper.text()).toContain('新建辩题')
     expect(wrapper.text()).toContain('结论 · 是')
+    expect(wrapper.find('a[href="/forum/topic/topic-1"]').text()).toBe('@讨论主题')
     expect(wrapper.text()).not.toContain('论点 9')
     expect(wrapper.text()).not.toContain('发起辩论')
   })

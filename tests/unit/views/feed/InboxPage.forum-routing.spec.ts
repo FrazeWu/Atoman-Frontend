@@ -121,6 +121,21 @@ describe('InboxPage forum 通知跳转', () => {
     expect(pushSpy).toHaveBeenLastCalledWith('/forum/topic/topic-3#reply-reply-3')
   })
 
+  it('内容提及按 module 与 path 跳转', async () => {
+    const { wrapper, pushSpy } = await mountInbox(makeNotification({
+      id: 'notice-reference',
+      type: 'content_mention',
+      category: 'mention',
+      source_type: 'content_reference_post',
+      source_id: 'post-1',
+      meta: { module: 'blog', path: '/post/post-1' },
+    }))
+
+    await wrapper.findAll('button').find((button) => button.text().includes('前往来源内容'))!.trigger('click')
+
+    expect(pushSpy).toHaveBeenLastCalledWith('/posts/post/post-1')
+  })
+
   it('没有可用来源时不显示跳转按钮', async () => {
     const { wrapper, pushSpy } = await mountInbox(makeNotification({
       id: 'notice-4',

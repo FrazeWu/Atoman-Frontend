@@ -7,6 +7,7 @@ import {
   apiPutJson,
 } from './client'
 import { useApi } from '@/composables/useApi'
+import type { ResolvedReference } from './references'
 
 export type CommentTargetKind =
   | 'blog_post'
@@ -47,6 +48,7 @@ export interface CommentDTO {
   marked: boolean
   liked: boolean
   mentions: CommentMention[]
+  references: ResolvedReference[]
   attachments: CommentAttachment[]
   time_anchors: CommentTimeAnchor[]
   replies: CommentDTO[]

@@ -28,7 +28,7 @@
     </div>
 
     <template v-else>
-      <div class="comment-item__content" data-test="comment-content" v-html="comment.rendered_html" />
+      <div class="comment-item__content" data-test="comment-content" v-html="renderedContent" />
       <div v-if="comment.attachments.length" class="comment-item__images">
         <a
           v-for="attachment in comment.attachments"
@@ -84,6 +84,8 @@ import { BadgeCheck, Flag, Heart, Pencil, Pin, PinOff, Play, Reply, Trash2 } fro
 
 import type { CommentDTO } from '@/api/comments'
 import PAvatar from '@/components/ui/PAvatar.vue'
+import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
+import { applyResolvedReferences } from '@/composables/useReferenceRendering'
 
 defineOptions({ name: 'CommentItem' })
 
@@ -128,6 +130,10 @@ const isOwner = computed(() => Boolean(props.currentUserId && props.currentUserI
 const showMarked = computed(() => props.depth === 0 && (props.markedCommentId
   ? props.markedCommentId === props.comment.id
   : props.comment.marked))
+const renderedContent = computed(() => {
+  const rendered = renderCommentMarkdown(applyResolvedReferences(props.comment.content, props.comment.references))
+  return rendered.ok ? rendered.html : props.comment.rendered_html
+})
 
 function formatDate(value: string) {
   const date = new Date(value)

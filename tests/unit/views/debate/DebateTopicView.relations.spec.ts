@@ -11,8 +11,12 @@ vi.mock('vue-router', () => ({
 
 const root = {
   id: 'root', user_id: 'user-1', title: '长期吸烟会不会显著增加肺癌风险？',
-  description: '', content: '', status: 'open', tags: ['医学'], view_count: 0,
+  description: '@thread:topic', content: '', status: 'open', tags: ['医学'], view_count: 0,
   argument_count: 0, vote_count: 0, created_at: '2026-07-18T00:00:00Z', updated_at: '2026-07-18T00:00:00Z',
+  references: [{
+    kind: 'resource', target_type: 'thread', target_id: 'topic-1', field: 'description',
+    start: 0, end: 13, label: '讨论主题', module: 'forum', path: '/topic/topic-1', available: true,
+  }],
 }
 
 describe('DebateTopicView relation experience', () => {
@@ -48,6 +52,8 @@ describe('DebateTopicView relation experience', () => {
     expect(wrapper.text()).toContain('辩论树')
     expect(wrapper.text()).toContain('关系图谱')
     expect(wrapper.text()).toContain('引用')
+    expect(wrapper.find('a[href="/forum/topic/topic-1"]').text()).toBe('@讨论主题')
+    expect(wrapper.find('.debate-header__description > p').exists()).toBe(false)
     expect(wrapper.find('[data-test="debate-discussion"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('论点列表')
     expect(wrapper.text()).not.toContain('添加论点')

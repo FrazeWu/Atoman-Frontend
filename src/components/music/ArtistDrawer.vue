@@ -293,14 +293,14 @@ watch(
 <style scoped>
 :global(.artist-drawer) {
   background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  :global(.artist-drawer) {
+  :global(:root:not([data-theme="light"]) .artist-drawer) {
     background: rgba(15, 23, 42, 0.88) !important;
     border-left: 1px solid var(--a-color-border-dark, #334155) !important;
   }

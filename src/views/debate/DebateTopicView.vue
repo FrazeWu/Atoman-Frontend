@@ -57,14 +57,16 @@
               :class="{ 'is-active': activeTab === tab.value }"
               :aria-selected="activeTab === tab.value"
               :aria-controls="`debate-panel-${tab.value}`"
+              :tabindex="activeTab === tab.value ? 0 : -1"
               @click="selectTab(tab.value)"
+              @keydown="handleTabKeydown($event, tab.value)"
             >
               {{ tab.label }}
             </button>
           </div>
 
           <div
-            v-if="activeTab === 'content'"
+            v-show="activeTab === 'content'"
             id="debate-panel-content"
             role="tabpanel"
             aria-labelledby="debate-tab-content"
@@ -78,31 +80,39 @@
               v-html="renderedContent"
             />
             <p v-else class="debate-workspace__empty">暂无正文</p>
+            <p v-if="reconfirmError" data-test="reconfirm-error" class="debate-content__error" role="alert">
+              {{ reconfirmError }}
+            </p>
           </div>
 
           <div
-            v-else
-            :id="`debate-panel-${activeTab}`"
+            v-for="relationTab in relationTabs"
+            v-show="activeTab === relationTab.value"
+            :id="`debate-panel-${relationTab.value}`"
+            :key="relationTab.value"
             role="tabpanel"
-            :aria-labelledby="`debate-tab-${activeTab}`"
+            :aria-labelledby="`debate-tab-${relationTab.value}`"
             class="debate-graph"
           >
-            <div class="debate-graph__legend" aria-label="关系图例">
-              <span><i class="debate-graph__line debate-graph__line--support" />支撑</span>
-              <span><i class="debate-graph__line debate-graph__line--oppose" />反驳</span>
-            </div>
-            <DebateRelationGraph
-              data-test="relation-graph"
-              :graph="debateStore.relationGraph"
-              :loading="debateStore.relationLoading"
-            />
+            <template v-if="activeTab === relationTab.value">
+              <div class="debate-graph__legend" aria-label="关系图例">
+                <span><i class="debate-graph__line debate-graph__line--support" />支撑</span>
+                <span><i class="debate-graph__line debate-graph__line--oppose" />反驳</span>
+              </div>
+              <DebateRelationGraph
+                data-test="relation-graph"
+                :graph="debateStore.relationGraph"
+                :loading="debateStore.relationLoading"
+              />
+            </template>
           </div>
         </section>
 
         <aside class="debate-sidebar" aria-label="投票">
           <DebateVotePanel
             :summary="ownedVoteSummary"
-            :loading="debateStore.votesLoading"
+            :loading="voteLoading"
+            :unavailable="voteLoadState === 'error'"
             @vote="handleVote"
             @remove="handleRemoveVote"
           />
@@ -133,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, History, MessageSquare, Pencil } from 'lucide-vue-next'
 
@@ -157,10 +167,13 @@ import { parseResourceReferences } from '@/utils/resourceReferences'
 type DebateTab = 'content' | 'tree' | 'graph'
 type RelationView = Exclude<DebateTab, 'content'>
 
-const tabs = [
-  { value: 'content' as const, label: '正文' },
+const relationTabs = [
   { value: 'tree' as const, label: '辩论树' },
   { value: 'graph' as const, label: '关系图' },
+]
+const tabs = [
+  { value: 'content' as const, label: '正文' },
+  ...relationTabs,
 ]
 
 const kindLabels: Record<DebateResourceKind, string> = {
@@ -195,19 +208,33 @@ const showWikiEditor = ref(false)
 const showRevisions = ref(false)
 const showDiscussion = ref(false)
 const reconfirmingRelationId = ref('')
-const routeDataReady = ref(false)
+const reconfirmError = ref('')
+const routeDebateSettled = ref(false)
 const voteOwnerID = ref('')
+const voteLoadState = ref<'loading' | 'ready' | 'error'>('loading')
+let reconfirmSession = 0
 
 const routeDebateID = computed(() => String(route.params.id || ''))
 const debate = computed(() => {
-  if (!routeDataReady.value || debateStore.currentDebate?.id !== routeDebateID.value) return null
+  if (!routeDebateSettled.value || debateStore.currentDebate?.id !== routeDebateID.value) return null
   return debateStore.currentDebate
 })
 const ownedVoteSummary = computed(() => (
-  voteOwnerID.value === routeDebateID.value ? debateStore.voteSummary : null
+  voteLoadState.value === 'ready' && voteOwnerID.value === routeDebateID.value
+    ? debateStore.voteSummary
+    : null
 ))
-const loading = computed(() => !routeDataReady.value || debateStore.loading)
+const loading = computed(() => !routeDebateSettled.value || debateStore.loading)
+const voteLoading = computed(() => (
+  voteLoadState.value === 'loading'
+  || (voteOwnerID.value === routeDebateID.value && debateStore.votesLoading)
+))
 const canEdit = computed(() => authStore.isAuthenticated)
+const staleRelationIDs = computed(() => new Set(
+  (debate.value?.references ?? [])
+    .filter(reference => reference.state === 'stale' && reference.relation_id)
+    .map(reference => reference.relation_id!),
+))
 const currentDirection = computed<DebateVoteDirection | ''>(() => (
   ownedVoteSummary.value?.current_direction
   || (debate.value?.conclusion_type === 'yes' || debate.value?.conclusion_type === 'no'
@@ -228,29 +255,62 @@ const renderedContent = computed(() => renderDebateContent(
   debate.value?.references ?? [],
 ))
 
-watch(() => String(route.params.id || ''), async (id) => {
+watch(() => String(route.params.id || ''), (id) => {
   if (!id) return
-  routeDataReady.value = false
+  routeDebateSettled.value = false
   voteOwnerID.value = ''
+  voteLoadState.value = 'loading'
+  reconfirmSession += 1
+  reconfirmingRelationId.value = ''
+  reconfirmError.value = ''
   activeTab.value = 'content'
   lastLoadedRelationView.value = null
   showWikiEditor.value = false
   showRevisions.value = false
   showDiscussion.value = false
-  const [, loadedVotes] = await Promise.all([
-    debateStore.fetchDebate(id),
-    debateStore.fetchVotes(id),
-  ])
-  if (routeDebateID.value !== id) return
-  if (loadedVotes) voteOwnerID.value = id
-  routeDataReady.value = true
+  void loadRouteDebate(id)
+  void loadRouteVotes(id)
 }, { immediate: true })
+
+async function loadRouteDebate(id: string) {
+  await debateStore.fetchDebate(id)
+  if (routeDebateID.value !== id) return
+  routeDebateSettled.value = true
+}
+
+async function loadRouteVotes(id: string) {
+  const loadedVotes = await debateStore.fetchVotes(id)
+  if (routeDebateID.value !== id) return
+  if (loadedVotes) {
+    voteOwnerID.value = id
+    voteLoadState.value = 'ready'
+    return
+  }
+  voteOwnerID.value = ''
+  voteLoadState.value = 'error'
+}
 
 async function selectTab(tab: DebateTab) {
   activeTab.value = tab
   if (tab === 'content') return
   lastLoadedRelationView.value = tab
   await loadRelationView(tab)
+}
+
+async function handleTabKeydown(event: KeyboardEvent, currentTab: DebateTab) {
+  const currentIndex = tabs.findIndex(tab => tab.value === currentTab)
+  let targetIndex: number | null = null
+  if (event.key === 'ArrowRight') targetIndex = (currentIndex + 1) % tabs.length
+  if (event.key === 'ArrowLeft') targetIndex = (currentIndex - 1 + tabs.length) % tabs.length
+  if (event.key === 'Home') targetIndex = 0
+  if (event.key === 'End') targetIndex = tabs.length - 1
+  if (targetIndex === null) return
+
+  event.preventDefault()
+  const tablist = (event.currentTarget as HTMLElement).closest('[role="tablist"]')
+  void selectTab(tabs[targetIndex]!.value)
+  await nextTick()
+  tablist?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[targetIndex]?.focus()
 }
 
 function relationDepth(view: RelationView) {
@@ -270,15 +330,33 @@ async function refreshLoadedRelationView() {
 async function handleVote(direction: DebateVoteDirection) {
   const debateID = debate.value?.id
   if (!debateID) return
+  voteLoadState.value = 'loading'
   const summary = await debateStore.setVote(debateID, direction)
-  if (summary) await debateStore.fetchDebate(debateID)
+  if (routeDebateID.value !== debateID) return
+  if (!summary) {
+    voteOwnerID.value = ''
+    voteLoadState.value = 'error'
+    return
+  }
+  voteOwnerID.value = debateID
+  voteLoadState.value = 'ready'
+  await debateStore.fetchDebate(debateID)
 }
 
 async function handleRemoveVote() {
   const debateID = debate.value?.id
   if (!debateID) return
+  voteLoadState.value = 'loading'
   const summary = await debateStore.removeVote(debateID)
-  if (summary) await debateStore.fetchDebate(debateID)
+  if (routeDebateID.value !== debateID) return
+  if (!summary) {
+    voteOwnerID.value = ''
+    voteLoadState.value = 'error'
+    return
+  }
+  voteOwnerID.value = debateID
+  voteLoadState.value = 'ready'
+  await debateStore.fetchDebate(debateID)
 }
 
 async function handleWikiMutation(updated: Debate) {
@@ -293,29 +371,44 @@ async function handleWikiMutation(updated: Debate) {
 
 function renderDebateContent(content: string, references: DebateReference[]) {
   const parsed = parseResourceReferences(content)
-  if (!parsed.length || !references.length) return renderMarkdown(content)
-
-  let sentinelPrefix = 'ATOMANRESOURCEREFERENCE'
-  while (content.includes(sentinelPrefix)) sentinelPrefix += 'X'
   const replacements: Array<{ marker: string; reference: DebateReference }> = []
-  const available = [...references]
   let source = content
 
-  for (let index = parsed.length - 1; index >= 0; index -= 1) {
-    const syntax = parsed[index]!
-    const matchIndex = available.findIndex(reference => reference.raw === syntax.raw)
-    if (matchIndex === -1) continue
-    const reference = available.splice(matchIndex, 1)[0]!
-    const marker = `${sentinelPrefix}${index}END`
-    source = `${source.slice(0, syntax.from)}${marker}${source.slice(syntax.to)}`
-    replacements.push({ marker, reference })
+  if (parsed.length && references.length) {
+    let sentinelPrefix = 'ATOMANRESOURCEREFERENCE'
+    while (content.includes(sentinelPrefix)) sentinelPrefix += 'X'
+    const available = [...references]
+    for (let index = parsed.length - 1; index >= 0; index -= 1) {
+      const syntax = parsed[index]!
+      const matchIndex = available.findIndex(reference => reference.raw === syntax.raw)
+      if (matchIndex === -1) continue
+      const reference = available.splice(matchIndex, 1)[0]!
+      const marker = `${sentinelPrefix}${index}END`
+      source = `${source.slice(0, syntax.from)}${marker}${source.slice(syntax.to)}`
+      replacements.push({ marker, reference })
+    }
   }
 
-  let html = renderMarkdown(source)
+  let html = stripAuthorReferenceActions(renderMarkdown(source))
   for (const replacement of replacements) {
     html = html.split(replacement.marker).join(renderReferenceChip(replacement.reference))
   }
   return html
+}
+
+function stripAuthorReferenceActions(html: string) {
+  const container = document.createElement('div')
+  container.innerHTML = html
+  const controlledAttributes = [
+    'data-reconfirm-reference',
+    'data-generated-debate-reference',
+    'data-debate-reference-action',
+  ]
+  const selector = controlledAttributes.map(attribute => `[${attribute}]`).join(',')
+  for (const element of container.querySelectorAll(selector)) {
+    for (const attribute of controlledAttributes) element.removeAttribute(attribute)
+  }
+  return container.innerHTML
 }
 
 function appendText(root: HTMLElement, className: string, text: string) {
@@ -328,6 +421,7 @@ function appendText(root: HTMLElement, className: string, text: string) {
 function renderReferenceChip(reference: DebateReference) {
   const root = document.createElement('span')
   root.className = `debate-reference debate-reference--${reference.state}`
+  root.dataset.generatedDebateReference = 'true'
   root.dataset.referenceState = reference.state
   root.dataset.resourceReference = `${reference.kind}:${reference.resource_id}`
 
@@ -346,6 +440,7 @@ function renderReferenceChip(reference: DebateReference) {
     button.type = 'button'
     button.className = 'debate-reference__action'
     button.dataset.reconfirmReference = reference.relation_id
+    button.dataset.debateReferenceAction = 'reconfirm'
     button.textContent = reconfirmingRelationId.value === reference.relation_id ? '确认中...' : '重新确认'
     button.disabled = reconfirmingRelationId.value === reference.relation_id
     root.append(button)
@@ -356,7 +451,15 @@ function renderReferenceChip(reference: DebateReference) {
 async function handleContentClick(event: MouseEvent) {
   const target = event.target as HTMLElement | null
   const button = target?.closest<HTMLButtonElement>('button[data-reconfirm-reference]')
-  if (!button) return
+  const chip = button?.closest<HTMLElement>('[data-generated-debate-reference="true"]')
+  const relationID = button?.dataset.reconfirmReference
+  if (
+    !button
+    || !chip
+    || button.dataset.debateReferenceAction !== 'reconfirm'
+    || !relationID
+    || !staleRelationIDs.value.has(relationID)
+  ) return
   if (!authStore.isAuthenticated) {
     await router.push('/login')
     return
@@ -364,22 +467,35 @@ async function handleContentClick(event: MouseEvent) {
 
   const debateID = debate.value?.id
   const revisionID = debate.value?.current_revision_id
-  const relationID = button.dataset.reconfirmReference
   if (!debateID || !revisionID || !relationID || reconfirmingRelationId.value) return
 
+  const session = reconfirmSession
   reconfirmingRelationId.value = relationID
-  const updated = await debateStore.reconfirmReference(debateID, relationID, {
-    base_revision: revisionID,
-    edit_summary: '重新确认引用',
-  })
-  if (updated) {
-    await Promise.all([
-      debateStore.fetchDebate(debateID),
-      debateStore.fetchRevisions(debateID),
-      refreshLoadedRelationView(),
-    ])
+  reconfirmError.value = ''
+  try {
+    const updated = await debateStore.reconfirmReference(debateID, relationID, {
+      base_revision: revisionID,
+      edit_summary: '重新确认引用',
+    })
+    if (session !== reconfirmSession || routeDebateID.value !== debateID) return
+    if (updated) {
+      await Promise.all([
+        debateStore.fetchDebate(debateID),
+        debateStore.fetchRevisions(debateID),
+        refreshLoadedRelationView(),
+      ])
+      return
+    }
+
+    await debateStore.fetchDebate(debateID)
+    if (session === reconfirmSession && routeDebateID.value === debateID) {
+      reconfirmError.value = '重新确认失败，请重试'
+    }
+  } finally {
+    if (session === reconfirmSession && reconfirmingRelationId.value === relationID) {
+      reconfirmingRelationId.value = ''
+    }
   }
-  reconfirmingRelationId.value = ''
 }
 
 function formatDate(value: string) {
@@ -453,6 +569,7 @@ function formatDate(value: string) {
 .debate-tabs__button.is-active { border-bottom-color: var(--a-color-primary); color: var(--a-color-text); font-weight: 600; }
 .debate-content { min-height: 360px; padding: 28px 0; }
 .debate-content__prose { overflow-wrap: anywhere; }
+.debate-content__error { margin: 16px 0 0; color: var(--a-color-danger); font-size: 13px; }
 .debate-workspace__empty { margin: 0; padding: 64px 0; color: var(--a-color-muted); text-align: center; }
 .debate-graph { min-width: 0; padding-top: 16px; }
 .debate-graph__legend { display: flex; min-height: 40px; align-items: center; justify-content: flex-end; gap: 16px; color: var(--a-color-muted); font-size: 12px; }

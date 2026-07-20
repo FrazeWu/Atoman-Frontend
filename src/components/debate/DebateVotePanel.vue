@@ -1,36 +1,40 @@
 <template>
-  <section class="vote-panel" aria-labelledby="debate-vote-title" :aria-busy="loading">
-    <div class="vote-panel__summary">
-      <div>
-        <span id="debate-vote-title" class="vote-panel__label">{{ copy.conclusion }}</span>
-        <strong data-test="current-conclusion">{{ directionText(summary?.current_direction) }}</strong>
-      </div>
-      <div>
-        <span class="vote-panel__label">{{ copy.participants }}</span>
-        <strong>{{ totals.total_votes }}</strong>
-      </div>
-      <div>
-        <span class="vote-panel__label">{{ copy.yourVote }}</span>
-        <strong data-test="current-user-vote">{{ directionText(summary?.current_user_vote) }}</strong>
-      </div>
-    </div>
+  <section class="vote-panel" aria-label="投票" :aria-busy="loading">
+    <div v-if="loading" class="vote-panel__state" aria-live="polite">投票加载中</div>
+    <div v-else-if="unavailable || !summary" class="vote-panel__state" role="status">投票暂不可用</div>
 
-    <div class="vote-panel__choices" role="group" :aria-label="copy.vote">
-      <button
-        v-for="choice in choices"
-        :key="choice.value"
-        type="button"
-        class="vote-panel__choice"
-        :class="{ 'is-selected': summary?.current_user_vote === choice.value }"
-        :data-test="`vote-${choice.value}`"
-        :aria-pressed="summary?.current_user_vote === choice.value"
-        :disabled="loading"
-        @click="choose(choice.value)"
-      >
-        <span>{{ choice.label }}</span>
-        <strong>{{ choice.value === 'yes' ? totals.yes_votes : totals.no_votes }}</strong>
-      </button>
-    </div>
+    <template v-else>
+      <div class="vote-panel__summary">
+        <div>
+          <span class="vote-panel__label">{{ copy.conclusion }}</span>
+          <strong data-test="current-conclusion">{{ directionText(summary?.current_direction) }}</strong>
+        </div>
+        <div>
+          <span class="vote-panel__label">{{ copy.participants }}</span>
+          <strong>{{ totals.total_votes }}</strong>
+        </div>
+        <div>
+          <span class="vote-panel__label">{{ copy.yourVote }}</span>
+          <strong data-test="current-user-vote">{{ directionText(summary?.current_user_vote) }}</strong>
+        </div>
+      </div>
+
+      <div class="vote-panel__choices" role="group" :aria-label="copy.vote">
+        <button
+          v-for="choice in choices"
+          :key="choice.value"
+          type="button"
+          class="vote-panel__choice"
+          :class="{ 'is-selected': summary.current_user_vote === choice.value }"
+          :data-test="`vote-${choice.value}`"
+          :aria-pressed="summary.current_user_vote === choice.value"
+          @click="choose(choice.value)"
+        >
+          <span>{{ choice.label }}</span>
+          <strong>{{ choice.value === 'yes' ? totals.yes_votes : totals.no_votes }}</strong>
+        </button>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -44,9 +48,11 @@ import type { DebateVoteDirection, DebateVoteSummary } from '@/types'
 const props = withDefaults(defineProps<{
   summary?: DebateVoteSummary | null
   loading?: boolean
+  unavailable?: boolean
 }>(), {
   summary: null,
   loading: false,
+  unavailable: false,
 })
 
 const emit = defineEmits<{
@@ -109,6 +115,14 @@ function choose(direction: DebateVoteDirection) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.vote-panel__state {
+  display: grid;
+  min-height: 126px;
+  place-items: center;
+  color: var(--a-color-muted);
+  font-size: 13px;
 }
 
 .vote-panel__summary > div {

@@ -150,6 +150,13 @@ describe('DebateWikiEditor', () => {
     expect(wrapper.emitted('update:content')?.at(-1)).toEqual([
       '现有正文\n\n@debate:debate-citable:oppose',
     ])
+    expect(JSON.parse(wrapper.get('[data-test="wiki-content"]').attributes('data-resource-reference-labels')!)).toEqual({
+      'debate:debate-citable': {
+        title: '有轨电车能降低中心城区拥堵',
+        qualifierLabel: '反驳',
+        state: 'active',
+      },
+    })
   })
 
   it('把正文可访问名称传给真实 CodeMirror textbox', async () => {

@@ -246,13 +246,14 @@ const referenceSearching = ref(false)
 const referenceResults = ref<Debate[]>([])
 const selectedReference = ref<Debate | null>(null)
 const referenceStance = ref<DebateRelationStance | null>(null)
+const draftReferenceLabels = ref<ResourceReferenceLabels>({})
 let referenceSearchSequence = 0
 let conflictLoadSequence = 0
 let sessionSequence = 0
 let saveSequence = 0
 
 const canSave = () => Boolean(title.value.trim() && editSummary.value.trim())
-const resourceReferenceLabels = computed<ResourceReferenceLabels>(() => Object.fromEntries(
+const serverReferenceLabels = computed<ResourceReferenceLabels>(() => Object.fromEntries(
   (props.debate.references ?? []).map(reference => [
     `${reference.kind}:${reference.resource_id}`,
     {
@@ -264,6 +265,10 @@ const resourceReferenceLabels = computed<ResourceReferenceLabels>(() => Object.f
     },
   ]),
 ))
+const resourceReferenceLabels = computed<ResourceReferenceLabels>(() => ({
+  ...draftReferenceLabels.value,
+  ...serverReferenceLabels.value,
+}))
 
 watch(
   () => [props.show, props.debate.id] as const,
@@ -285,6 +290,7 @@ function invalidateSession() {
   conflictLoadSequence += 1
   saving.value = false
   referenceSearching.value = false
+  draftReferenceLabels.value = {}
 }
 
 function startSession() {
@@ -350,6 +356,14 @@ function selectReference(candidate: Debate) {
 
 function insertReference() {
   if (!selectedReference.value || !referenceStance.value) return
+  draftReferenceLabels.value = {
+    ...draftReferenceLabels.value,
+    [`debate:${selectedReference.value.id}`]: {
+      title: selectedReference.value.title,
+      qualifierLabel: referenceStance.value === 'support' ? '支撑' : '反驳',
+      state: 'active',
+    },
+  }
   const marker = `@debate:${selectedReference.value.id}:${referenceStance.value}`
   const separator = content.value.length === 0
     ? ''

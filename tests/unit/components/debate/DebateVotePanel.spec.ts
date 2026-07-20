@@ -67,4 +67,20 @@ describe('DebateVotePanel', () => {
     expect(wrapper.emitted('remove')).toHaveLength(1)
     expect(wrapper.emitted('vote')).toBeUndefined()
   })
+
+  it('加载投票时不显示旧摘要或零票占位', () => {
+    const wrapper = mount(DebateVotePanel, { props: { summary, loading: true } })
+
+    expect(wrapper.text()).toContain('投票加载中')
+    expect(wrapper.text()).not.toContain('32')
+    expect(wrapper.find('[data-test="vote-yes"]').exists()).toBe(false)
+  })
+
+  it('投票不可用时显示明确状态而不是零票结论', () => {
+    const wrapper = mount(DebateVotePanel, { props: { summary: null, unavailable: true } })
+
+    expect(wrapper.text()).toContain('投票暂不可用')
+    expect(wrapper.text()).not.toContain('暂无')
+    expect(wrapper.text()).not.toContain('0')
+  })
 })

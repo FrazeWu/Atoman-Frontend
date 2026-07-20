@@ -125,6 +125,7 @@ describe('DebateTopicView relation experience', () => {
     authStore.isAuthenticated = true
     authStore.user = { uuid: 'user-1', username: 'fafa' } as never
     routerPush.mockReset()
+    document.body.innerHTML = ''
     currentRoute = reactive({ params: { id: 'root' } })
     store = buildStore()
   })
@@ -175,6 +176,28 @@ describe('DebateTopicView relation experience', () => {
     expect(content.text()).toContain('不可用')
     expect(content.findAll('[data-reconfirm-reference]')).toHaveLength(1)
     expect(content.find('[data-reference-state="unavailable"] [data-reconfirm-reference]').exists()).toBe(false)
+  })
+
+  it('忽略作者 HTML 伪造的重新确认按钮，只接受受控引用按钮', async () => {
+    const forgedDebate: Debate = {
+      ...root,
+      content: [
+        '<button type="button" data-test="forged-reconfirm" data-reconfirm-reference="relation-stale">伪造确认</button>',
+        root.content,
+      ].join('\n\n'),
+    }
+    store.currentDebate = forgedDebate
+    store.fetchDebate.mockResolvedValue(forgedDebate)
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-test="forged-reconfirm"]').trigger('click')
+    await flushPromises()
+    expect(store.reconfirmReference).not.toHaveBeenCalled()
+
+    await wrapper.get('[data-reconfirm-reference="relation-stale"]').trigger('click')
+    await flushPromises()
+    expect(store.reconfirmReference).toHaveBeenCalledTimes(1)
   })
 
   it('重新确认引用后刷新正文和此前加载的关系视图', async () => {
@@ -243,12 +266,12 @@ describe('DebateTopicView relation experience', () => {
     expect(wrapper.findComponent({ name: 'DebateRevisionSheet' }).exists()).toBe(false)
 
     nextDebateRequest.resolve(nextDebate)
-    await nextTick()
-    await Promise.resolve()
+    await flushPromises()
 
-    expect(wrapper.text()).toContain('加载中...')
-    expect(wrapper.text()).not.toContain(nextDebate.title)
-    expect(wrapper.findComponent({ name: 'DebateVotePanel' }).exists()).toBe(false)
+    expect(wrapper.text()).toContain(nextDebate.title)
+    expect(wrapper.text()).toContain(nextDebate.content)
+    expect(wrapper.findComponent({ name: 'DebateVotePanel' }).props('loading')).toBe(true)
+    expect(wrapper.findComponent({ name: 'DebateVotePanel' }).props('summary')).toBeNull()
 
     nextVotesRequest.resolve(nextVotes)
     await flushPromises()
@@ -257,5 +280,111 @@ describe('DebateTopicView relation experience', () => {
     expect(wrapper.text()).toContain(nextDebate.content)
     expect(wrapper.text()).not.toContain(root.title)
     expect(wrapper.findComponent({ name: 'DebateVotePanel' }).props('summary')).toEqual(nextVotes)
+  })
+
+  it('切换路由会隔离悬挂的重新确认，并在当前请求失败后刷新版本再重试', async () => {
+    const oldRequest = deferred<Debate | null>()
+    const nextReferenceID = '33333333-3333-4333-8333-333333333333'
+    const nextDebate: Debate = {
+      ...root,
+      id: 'topic-b',
+      title: '规律运动会不会降低心血管疾病风险？',
+      content: `新证据 @debate:${nextReferenceID}:support`,
+      current_revision_id: 'revision-b1',
+      references: [{
+        raw: `@debate:${nextReferenceID}:support`,
+        kind: 'debate',
+        resource_id: nextReferenceID,
+        title: '规律运动降低心血管风险',
+        qualifier: 'support',
+        state: 'stale',
+        relation_id: 'relation-b',
+      }],
+    }
+    const refreshedDebate = { ...nextDebate, current_revision_id: 'revision-b2' }
+    let nextFetchCount = 0
+    let nextReconfirmCount = 0
+    store.fetchDebate.mockImplementation(async (id: string) => {
+      if (id === 'root') return root
+      nextFetchCount += 1
+      const result = nextFetchCount === 1 ? nextDebate : refreshedDebate
+      store.currentDebate = result
+      return result
+    })
+    store.fetchVotes.mockImplementation(async (id: string) => {
+      const result = id === 'root' ? votes : { ...votes, current_user_vote: '' as const }
+      store.voteSummary = result
+      return result
+    })
+    store.reconfirmReference.mockImplementation(async (_id: string, relationID: string) => {
+      if (relationID === 'relation-stale') return oldRequest.promise
+      nextReconfirmCount += 1
+      return nextReconfirmCount === 1 ? null : refreshedDebate
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-reconfirm-reference="relation-stale"]').trigger('click')
+
+    currentRoute.params.id = 'topic-b'
+    await flushPromises()
+    expect(wrapper.text()).toContain(nextDebate.title)
+
+    await wrapper.get('[data-reconfirm-reference="relation-b"]').trigger('click')
+    await flushPromises()
+
+    expect(store.reconfirmReference).toHaveBeenCalledWith('topic-b', 'relation-b', {
+      base_revision: 'revision-b1',
+      edit_summary: '重新确认引用',
+    })
+    expect(wrapper.get('[data-test="reconfirm-error"]').text()).toContain('重新确认失败，请重试')
+    expect(store.fetchDebate).toHaveBeenCalledWith('topic-b')
+
+    await wrapper.get('[data-reconfirm-reference="relation-b"]').trigger('click')
+    await flushPromises()
+    expect(store.reconfirmReference).toHaveBeenLastCalledWith('topic-b', 'relation-b', {
+      base_revision: 'revision-b2',
+      edit_summary: '重新确认引用',
+    })
+
+    oldRequest.resolve(root)
+    await flushPromises()
+    expect(store.fetchDebate.mock.calls.filter(([id]) => id === 'root')).toHaveLength(1)
+    expect(wrapper.find('[data-test="reconfirm-error"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain(nextDebate.title)
+  })
+
+  it('支持 tabs roving tabindex、稳定面板和方向键导航', async () => {
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus')
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.find('#debate-panel-content').exists()).toBe(true)
+    expect(wrapper.find('#debate-panel-tree').exists()).toBe(true)
+    expect(wrapper.find('#debate-panel-graph').exists()).toBe(true)
+    expect(wrapper.findAll('[role="tab"]').map(tab => tab.attributes('tabindex'))).toEqual(['0', '-1', '-1'])
+
+    await wrapper.findAll('[role="tab"]')[0]!.trigger('keydown', { key: 'ArrowRight' })
+    await flushPromises()
+    let tabButtons = wrapper.findAll('[role="tab"]')
+    expect(tabButtons[1]!.attributes('aria-selected')).toBe('true')
+    expect(focusSpy).toHaveBeenLastCalledWith()
+    expect(focusSpy.mock.instances.at(-1)).toBe(tabButtons[1]!.element)
+
+    await tabButtons[1]!.trigger('keydown', { key: 'End' })
+    await flushPromises()
+    tabButtons = wrapper.findAll('[role="tab"]')
+    expect(tabButtons[2]!.attributes('aria-selected')).toBe('true')
+
+    await tabButtons[2]!.trigger('keydown', { key: 'Home' })
+    await flushPromises()
+    tabButtons = wrapper.findAll('[role="tab"]')
+    expect(tabButtons[0]!.attributes('aria-selected')).toBe('true')
+
+    await tabButtons[0]!.trigger('keydown', { key: 'ArrowLeft' })
+    await flushPromises()
+    expect(wrapper.findAll('[role="tab"]')[2]!.attributes('aria-selected')).toBe('true')
+    focusSpy.mockRestore()
+    wrapper.unmount()
   })
 })

@@ -411,7 +411,8 @@ watch(
 .form-textarea {
   width: 100%;
   border: 1px solid var(--a-color-border-soft);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--a-color-surface);
+  color: var(--a-color-text);
   padding: 0.9rem 1rem;
   font: inherit;
 }
@@ -438,13 +439,15 @@ watch(
 
 .p-tab {
   border: 1px solid var(--a-color-border-soft);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text-secondary);
   padding: 0.7rem 1rem;
   cursor: pointer;
 }
 
 .p-tab--active {
   background: var(--a-color-bg);
+  color: var(--a-color-text);
   box-shadow: none;
 }
 

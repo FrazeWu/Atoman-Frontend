@@ -163,13 +163,9 @@ const albumYear = computed(() => {
   background: transparent;
   cursor: pointer;
   width: 100%;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  box-shadow: none;
-  transition: border-color 0.2s, transform 0.2s;
 }
 
-.music-album-card:hover {
+.music-album-card:hover .cover-frame {
   transform: translateY(1px);
   border-color: var(--a-color-muted-soft);
 }
@@ -182,6 +178,7 @@ const albumYear = computed(() => {
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
+  transition: border-color 0.2s, transform 0.2s;
 }
 
 

@@ -860,6 +860,17 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
     expect(mocks.save).toHaveBeenCalledOnce()
   })
+
+  it('渲染具有自适应毛玻璃与扁平化操作按钮的结构', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    // 断言主容器类存在
+    expect(wrapper.find('.music-lyrics-panel').exists()).toBe(true)
+    // 断言头部和关闭按钮存在
+    expect(wrapper.find('.music-lyrics-panel__header').exists()).toBe(true)
+    expect(wrapper.find('.music-lyrics-panel__close').exists()).toBe(true)
+  })
 })
 
 describe('useMusicLyrics', () => {

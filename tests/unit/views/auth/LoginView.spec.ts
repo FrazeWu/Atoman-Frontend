@@ -86,7 +86,22 @@ describe('LoginView redirect', () => {
     await router.push('/login')
     const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } })
 
-    expect(wrapper.get('[data-test="forgot-password-link"]').attributes('href')).toBe('/forgot-password')
+    const footer = wrapper.get('.auth-footer')
+    const forgotPasswordLink = footer.get('[data-test="forgot-password-link"]')
+
+    expect(footer.text()).toContain('没有账号？')
+    expect(footer.text()).not.toContain('还没有账号？')
+    expect(forgotPasswordLink.attributes('href')).toBe('/forgot-password')
+    expect(forgotPasswordLink.classes()).toContain('auth-footer__forgot')
+  })
+
+  it('aligns the smaller password reset link to the right side of the footer', () => {
+    const footerStyles = loginViewSource.match(/\.auth-footer\s*\{([^}]*)\}/)?.[1]
+    const forgotPasswordStyles = loginViewSource.match(/\.auth-footer__forgot\s*\{([^}]*)\}/)?.[1]
+
+    expect(footerStyles).toContain('display: flex;')
+    expect(footerStyles).toContain('justify-content: space-between;')
+    expect(forgotPasswordStyles).toContain('font-size: var(--a-text-xs);')
   })
 
   it('keeps safe same-site relative redirects after login', async () => {

@@ -3,13 +3,24 @@ import { useAsyncNavigate } from '@/composables/useAsyncNavigate'
 
 const clearStack = vi.fn()
 const triggerExit = vi.fn()
+const triggerEntry = vi.fn()
+const resetTransition = vi.fn()
+const routerPush = vi.fn()
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: routerPush }),
+}))
 
 vi.mock('@/stores/sheet', () => ({
   useSheetStore: () => ({ clearStack }),
 }))
 
 vi.mock('@/stores/transition', () => ({
-  useTransitionStore: () => ({ triggerExit }),
+  useTransitionStore: () => ({
+    triggerExit,
+    triggerEntry,
+    reset: resetTransition,
+  }),
 }))
 
 function mockFailingStorage() {
@@ -39,6 +50,12 @@ describe('useAsyncNavigate', () => {
       },
     })
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    routerPush.mockReset()
+    routerPush.mockResolvedValue(undefined)
+    clearStack.mockReset()
+    triggerExit.mockReset()
+    triggerEntry.mockReset()
+    resetTransition.mockReset()
     document.body.style.cursor = 'default'
   })
 
@@ -65,7 +82,7 @@ describe('useAsyncNavigate', () => {
     expect(document.body.style.cursor).toBe('default')
   })
 
-  it('does not start module transition when basic relay storage write fails', async () => {
+  it('falls back to router navigation when basic relay storage write fails', async () => {
     mockFailingStorage()
     const { navigateModuleWithShutter } = useAsyncNavigate()
 
@@ -73,7 +90,38 @@ describe('useAsyncNavigate', () => {
 
     expect(clearStack).not.toHaveBeenCalled()
     expect(triggerExit).not.toHaveBeenCalled()
+    expect(routerPush).toHaveBeenCalledWith('/music')
     expect(assign).not.toHaveBeenCalled()
     expect(document.body.style.cursor).toBe('default')
+  })
+
+  it('starts router navigation without a fixed transition delay', async () => {
+    const { navigateModuleWithShutter } = useAsyncNavigate()
+
+    const navigation = navigateModuleWithShutter('/music')
+    await Promise.resolve()
+
+    expect(routerPush).toHaveBeenCalledWith('/music')
+    await navigation
+  })
+
+  it('only completes the latest overlapping module navigation', async () => {
+    let resolveFirst: (() => void) | undefined
+    let resolveSecond: (() => void) | undefined
+    routerPush
+      .mockImplementationOnce(() => new Promise<void>(resolve => { resolveFirst = resolve }))
+      .mockImplementationOnce(() => new Promise<void>(resolve => { resolveSecond = resolve }))
+    const { navigateModuleWithShutter } = useAsyncNavigate()
+
+    const first = navigateModuleWithShutter('/music')
+    const second = navigateModuleWithShutter('/forum')
+    resolveSecond?.()
+    await second
+    resolveFirst?.()
+    await first
+
+    expect(routerPush.mock.calls).toEqual([['/music'], ['/forum']])
+    expect(triggerEntry).toHaveBeenCalledTimes(1)
+    expect(resetTransition).toHaveBeenCalledTimes(1)
   })
 })

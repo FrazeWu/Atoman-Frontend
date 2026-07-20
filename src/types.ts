@@ -629,6 +629,24 @@ export interface Subscription {
   created_at: string
 }
 
+export interface SubscriptionSyncResult {
+  subscription_id: string
+  feed_source_id: string
+  fetched_items: number
+  new_items: number
+  synced_at: string
+  success: boolean
+  error?: string
+}
+
+export interface SubscriptionSyncSummary {
+  total: number
+  succeeded: number
+  failed: number
+  new_items: number
+  results: SubscriptionSyncResult[]
+}
+
 export type FeedSubscriptionRuleMatchType = 'source_category' | 'source_ids' | 'keywords'
 
 export interface FeedSubscriptionRule {

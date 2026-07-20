@@ -31,6 +31,13 @@
             @click="exportOPML"
           />
           <PPress
+            data-test="sync-all-subscriptions"
+            variant="secondary"
+            :label="syncingAllSubscriptions ? '刷新中...' : '刷新全部'"
+            :disabled="busy || healthChecking || syncingAllSubscriptions || !externalSubscriptions.length"
+            @click="syncAllSubscriptions"
+          />
+          <PPress
             variant="secondary"
             :label="healthChecking ? '检查中...' : '全部检查'"
             :disabled="busy || healthChecking || !subscriptions.length"
@@ -109,6 +116,16 @@
                   <p class="source-url a-muted">
                     {{ subscriptionSourceLabel(sub) }}
                   </p>
+                  <p v-if="sub.feed_source?.last_fetched_at" class="sync-meta a-muted">
+                    最近更新 {{ formatCheckedAt(sub.feed_source.last_fetched_at) }}
+                  </p>
+                  <p
+                    v-if="subscriptionSyncResults?.[sub.id]"
+                    class="sync-result"
+                    :class="{ 'is-error': !subscriptionSyncResults[sub.id]?.success }"
+                  >
+                    {{ syncResultLabel(subscriptionSyncResults[sub.id]!) }}
+                  </p>
                   <div class="health-line" :class="`health-${subscriptionHealthStatus(sub)}`">
                     <span class="health-dot" aria-hidden="true"></span>
                     <span>{{ subscriptionHealthLabel(sub) }}</span>
@@ -159,6 +176,14 @@
                     :options="groupOptions"
                     :disabled="busy"
                     @update:model-value="moveSubscription(sub.id, String($event))"
+                  />
+                  <PPress
+                    v-if="sub.feed_source?.source_type === 'external_rss'"
+                    data-test="sync-subscription"
+                    variant="secondary"
+                    :label="syncingSubscriptionIds?.has(sub.id) ? '刷新中...' : '刷新'"
+                    :disabled="busy || healthChecking || syncingAllSubscriptions || syncingSubscriptionIds?.has(sub.id)"
+                    @click="syncSubscription(sub.id)"
                   />
                   <PPress
                     variant="secondary"
@@ -235,6 +260,7 @@ import type {
   FeedSubscriptionRule,
   Subscription,
   SubscriptionGroup,
+  SubscriptionSyncResult,
 } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
 import PField from '@/components/ui/PField.vue'
@@ -254,6 +280,9 @@ const props = defineProps<{
   automationRules: FeedAutomationRules
   busy?: boolean
   healthChecking?: boolean
+  syncingSubscriptionIds?: Set<string>
+  syncingAllSubscriptions?: boolean
+  subscriptionSyncResults?: Record<string, SubscriptionSyncResult>
   error?: string
 }>()
 
@@ -268,6 +297,8 @@ const emit = defineEmits<{
   (e: 'delete-group', id: string): void
   (e: 'check-subscription-health', id: string): void
   (e: 'check-all-subscriptions-health'): void
+  (e: 'sync-subscription', id: string): void
+  (e: 'sync-all-subscriptions'): void
   (e: 'import-opml', file: File): void
   (e: 'export-opml'): void
   (e: 'create-rule'): void
@@ -318,6 +349,10 @@ const displayGroups = computed(() => [
     subscriptions: props.subscriptions.filter(sub => !sub.subscription_group_id),
   },
 ])
+
+const externalSubscriptions = computed(() => props.subscriptions.filter(
+  (subscription) => subscription.feed_source?.source_type === 'external_rss',
+))
 
 const subscriptionTitle = (sub: Subscription) =>
   sub.title || sub.feed_source?.title || '未命名订阅'
@@ -408,6 +443,16 @@ const checkAllSubscriptionsHealth = () => {
   emit('check-all-subscriptions-health')
 }
 
+const syncSubscription = (id: string) => {
+  if (props.busy || props.healthChecking || props.syncingAllSubscriptions || props.syncingSubscriptionIds?.has(id)) return
+  emit('sync-subscription', id)
+}
+
+const syncAllSubscriptions = () => {
+  if (props.busy || props.healthChecking || props.syncingAllSubscriptions || !externalSubscriptions.value.length) return
+  emit('sync-all-subscriptions')
+}
+
 const openOPMLPicker = () => {
   if (props.busy || props.healthChecking) return
   opmlInputRef.value?.click()
@@ -454,6 +499,11 @@ const formatCheckedAt = (value: string) => {
   if (Number.isNaN(date.getTime())) return value
   const pad = (unit: number) => String(unit).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+const syncResultLabel = (result: SubscriptionSyncResult) => {
+  if (!result.success) return `刷新失败：${result.error || '请重试'}`
+  return result.new_items > 0 ? `新增 ${result.new_items} 篇` : '已是最新'
 }
 
 watch(() => props.show, (visible) => {
@@ -537,6 +587,20 @@ watch(() => props.filterRules, (rules) => {
   color: var(--a-color-danger);
   font-size: 0.82rem;
   font-weight: 500;
+}
+
+.sync-meta,
+.sync-result {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.sync-result {
+  color: var(--a-color-success);
+}
+
+.sync-result.is-error {
+  color: var(--a-color-danger);
 }
 
 .manage-tabs {

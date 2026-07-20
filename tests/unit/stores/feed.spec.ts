@@ -566,6 +566,63 @@ describe('feed store', () => {
     })])
   })
 
+  it('syncs one subscription and stores its latest result', async () => {
+    let resolveSync!: (response: Response) => void
+    const pendingSync = new Promise<Response>((resolve) => {
+      resolveSync = resolve
+    })
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(pendingSync)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const pending = feed.syncSubscription('sub-1')
+    expect(feed.syncingSubscriptionIds.has('sub-1')).toBe(true)
+
+    resolveSync(new Response(JSON.stringify({
+      data: {
+        subscription_id: 'sub-1',
+        feed_source_id: 'source-1',
+        fetched_items: 8,
+        new_items: 3,
+        synced_at: '2026-07-20T02:00:00Z',
+        success: true,
+      },
+    }), { status: 200 }))
+
+    await expect(pending).resolves.toEqual(expect.objectContaining({ new_items: 3, success: true }))
+    expect(feed.syncingSubscriptionIds.has('sub-1')).toBe(false)
+    expect(feed.subscriptionSyncResults['sub-1']).toEqual(expect.objectContaining({ new_items: 3 }))
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscriptions/sub-1/sync', expect.objectContaining({ method: 'POST' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/feed/subscriptions', expect.anything())
+  })
+
+  it('syncs all subscriptions and keeps partial failure results', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: {
+          total: 2,
+          succeeded: 1,
+          failed: 1,
+          new_items: 2,
+          results: [
+            { subscription_id: 'sub-1', feed_source_id: 'source-1', fetched_items: 4, new_items: 2, synced_at: '2026-07-20T02:00:00Z', success: true },
+            { subscription_id: 'sub-2', feed_source_id: 'source-2', fetched_items: 0, new_items: 0, synced_at: '2026-07-20T02:00:00Z', success: false, error: 'source unavailable' },
+          ],
+        },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const pending = feed.syncAllSubscriptions()
+    expect(feed.syncingAllSubscriptions).toBe(true)
+
+    await expect(pending).resolves.toEqual(expect.objectContaining({ total: 2, succeeded: 1, failed: 1, new_items: 2 }))
+    expect(feed.syncingAllSubscriptions).toBe(false)
+    expect(feed.subscriptionSyncResults['sub-2']).toEqual(expect.objectContaining({ success: false, error: 'source unavailable' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/feed/subscriptions/sync-all', expect.objectContaining({ method: 'POST' }))
+  })
+
   it('loads subscription rules from the server', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: [{ id: 'rule-1', name: '播客整理' }],

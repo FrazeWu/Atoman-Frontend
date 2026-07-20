@@ -11,6 +11,8 @@ import type {
   ResolvedSubscriptionInput,
   Subscription,
   SubscriptionGroup,
+  SubscriptionSyncResult,
+  SubscriptionSyncSummary,
 } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -186,6 +188,9 @@ export const useFeedStore = defineStore('feed', () => {
   const automationRules = ref<FeedAutomationRules>(readAutomationRules())
   const activeSource = ref<{ type: string; id: string } | null>(null)
   const error = ref<string | null>(null)
+  const syncingSubscriptionIds = ref<Set<string>>(new Set())
+  const syncingAllSubscriptions = ref(false)
+  const subscriptionSyncResults = ref<Record<string, SubscriptionSyncResult>>({})
 
 
   let pollInterval: ReturnType<typeof setInterval> | null = null
@@ -208,6 +213,9 @@ export const useFeedStore = defineStore('feed', () => {
     readingListItemIds.value = new Set()
     activeSource.value = null
     error.value = null
+    syncingSubscriptionIds.value = new Set()
+    syncingAllSubscriptions.value = false
+    subscriptionSyncResults.value = {}
   }
 
   const setFilterRules = (rules: Partial<FeedFilterRules>) => {
@@ -1245,6 +1253,68 @@ export const useFeedStore = defineStore('feed', () => {
     return false
   }
 
+  const syncSubscription = async (subscriptionId: string): Promise<SubscriptionSyncResult | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || syncingSubscriptionIds.value.has(subscriptionId)) return null
+    syncingSubscriptionIds.value.add(subscriptionId)
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/${subscriptionId}/sync`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const failed: SubscriptionSyncResult = {
+          subscription_id: subscriptionId,
+          feed_source_id: '',
+          fetched_items: 0,
+          new_items: 0,
+          synced_at: new Date().toISOString(),
+          success: false,
+          error: apiErrorMessage(payload, '刷新失败，请重试'),
+        }
+        subscriptionSyncResults.value = { ...subscriptionSyncResults.value, [subscriptionId]: failed }
+        await fetchSubscriptions()
+        return failed
+      }
+      const result = (payload.data ?? payload) as SubscriptionSyncResult
+      subscriptionSyncResults.value = { ...subscriptionSyncResults.value, [subscriptionId]: result }
+      await fetchSubscriptions()
+      return result
+    } catch (e) {
+      console.error('Failed to sync subscription', e)
+      return null
+    } finally {
+      syncingSubscriptionIds.value.delete(subscriptionId)
+    }
+  }
+
+  const syncAllSubscriptions = async (): Promise<SubscriptionSyncSummary | null> => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || syncingAllSubscriptions.value) return null
+    syncingAllSubscriptions.value = true
+    try {
+      const res = await fetch(`${api.url}/feed/subscriptions/sync-all`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) return null
+      const summary = (payload.data ?? payload) as SubscriptionSyncSummary
+      subscriptionSyncResults.value = {
+        ...subscriptionSyncResults.value,
+        ...Object.fromEntries(summary.results.map((result) => [result.subscription_id, result])),
+      }
+      await fetchSubscriptions()
+      return summary
+    } catch (e) {
+      console.error('Failed to sync all subscriptions', e)
+      return null
+    } finally {
+      syncingAllSubscriptions.value = false
+    }
+  }
+
 
   // --- Star Actions ---
 
@@ -1619,6 +1689,11 @@ export const useFeedStore = defineStore('feed', () => {
     healthChecking,
     checkSubscriptionHealth,
     checkAllSubscriptionsHealth,
+    syncingSubscriptionIds,
+    syncingAllSubscriptions,
+    subscriptionSyncResults,
+    syncSubscription,
+    syncAllSubscriptions,
     // Star
     starredItemIds,
     bookmarkedPostIds,

@@ -2343,6 +2343,18 @@ describe('FeedView', () => {
       errorText: '检查失败',
       args: [],
     },
+    {
+      eventName: 'sync-subscription',
+      methodName: 'syncSubscription',
+      errorText: '刷新失败',
+      args: ['sub-1'],
+    },
+    {
+      eventName: 'sync-all-subscriptions',
+      methodName: 'syncAllSubscriptions',
+      errorText: '刷新失败',
+      args: [],
+    },
   ])('shows manage errors when $eventName fails', async ({ eventName, methodName, errorText, args }) => {
     const feedStore = useFeedStore()
     vi.spyOn(feedStore, methodName as any).mockResolvedValue(false)
@@ -2386,6 +2398,29 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-test="manage-sheet"]').text()).toContain(errorText)
+  })
+
+  it('reloads the timeline after a subscription refresh succeeds', async () => {
+    const feedStore = useFeedStore()
+    const syncSubscription = vi.spyOn(feedStore, 'syncSubscription').mockResolvedValue({
+      subscription_id: 'sub-1',
+      feed_source_id: 'source-1',
+      fetched_items: 4,
+      new_items: 2,
+      synced_at: '2026-07-20T02:00:00Z',
+      success: true,
+    })
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+    await flushPromises()
+    const timelineCallCount = () => vi.mocked(globalThis.fetch).mock.calls
+      .filter(([input]) => String(input).includes('/feed/timeline?')).length
+    const before = timelineCallCount()
+
+    wrapper.findComponent({ name: 'SubscriptionManageSheet' }).vm.$emit('sync-subscription', 'sub-1')
+    await flushPromises()
+
+    expect(syncSubscription).toHaveBeenCalledWith('sub-1')
+    expect(timelineCallCount()).toBeGreaterThan(before)
   })
 
   it.each([

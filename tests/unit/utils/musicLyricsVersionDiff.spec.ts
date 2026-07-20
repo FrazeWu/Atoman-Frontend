@@ -214,6 +214,52 @@ describe('buildMusicLyricsVersionPreview', () => {
     expect(preview.lines.map((line) => line.kind)).toEqual(['unchanged', 'unchanged'])
   })
 
+  it('plain 重复归一化文本按 occurrence 配对，不误报增删或注释影响', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      format: 'plain',
+      content: 'Hello world\nHello  world',
+      translation: '',
+      lines: [
+        { line_key: 'line-hello-0', line_index: 0, text: 'Hello world', translation: '' },
+        { line_key: 'line-hello-1', line_index: 1, text: 'Hello  world', translation: '' },
+      ],
+      annotations: [{
+        id: 'annotation-plain-repeat', line_key: 'line-hello-1', selected_text: 'Hello', start_offset: 0, end_offset: 5,
+        body: '', upvotes: 0, downvotes: 0, status: 'active', created_at: '', updated_at: '',
+      }],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, version('Hello  world\nHello world'))
+
+    expect(preview.lines.map((line) => line.kind)).not.toContain('added')
+    expect(preview.lines.map((line) => line.kind)).not.toContain('removed')
+    expect(preview.affectedActiveAnnotationCount).toBe(0)
+  })
+
+  it('同时间戳的 LRC 重复归一化文本按 occurrence 配对，不误报增删或注释影响', () => {
+    const lyrics: MusicSongLyrics = {
+      ...currentLyrics,
+      format: 'lrc',
+      content: '[00:01]Hello world\n[00:01]Hello  world',
+      translation: '',
+      lines: [
+        { line_key: 'line-lrc-0', line_index: 0, time_ms: 1_000, text: 'Hello world', translation: '' },
+        { line_key: 'line-lrc-1', line_index: 1, time_ms: 1_000, text: 'Hello  world', translation: '' },
+      ],
+      annotations: [{
+        id: 'annotation-lrc-repeat', line_key: 'line-lrc-1', selected_text: 'Hello', start_offset: 0, end_offset: 5,
+        body: '', upvotes: 0, downvotes: 0, status: 'active', created_at: '', updated_at: '',
+      }],
+    }
+
+    const preview = buildMusicLyricsVersionPreview(lyrics, { ...version('[00:01]Hello  world\n[00:01]Hello world'), format: 'lrc' })
+
+    expect(preview.lines.map((line) => line.kind)).not.toContain('added')
+    expect(preview.lines.map((line) => line.kind)).not.toContain('removed')
+    expect(preview.affectedActiveAnnotationCount).toBe(0)
+  })
+
   it('内容和翻译都未变化时不产生差异', () => {
     const preview = buildMusicLyricsVersionPreview(currentLyrics, version(currentLyrics.content, currentLyrics.translation))
 

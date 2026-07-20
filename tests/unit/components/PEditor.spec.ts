@@ -549,4 +549,40 @@ describe('PEditor', () => {
 
     expect(wrapper.get('.cm-content[role="textbox"]').attributes('aria-label')).toBe('辩题正文')
   })
+
+  it('opens root suggestions from the reference tool', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise<Response>(() => {}))
+    const wrapper = await mountEditor({
+      modelValue: '',
+      mode: FUTURE_NORMAL_MODE,
+      enableMentions: true,
+    })
+    const button = wrapper.get('[data-testid="editor-reference-trigger"]')
+    expect(button.attributes('aria-label')).toBe('添加引用')
+
+    await button.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.cm-content').text()).toContain('@')
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(true)
+  })
+
+  it('ignores selection keys while reference suggestions are still loading', async () => {
+    vi.mocked(fetch).mockImplementation(() => new Promise<Response>(() => {}))
+    const wrapper = await mountEditor({
+      modelValue: '',
+      mode: FUTURE_NORMAL_MODE,
+      enableMentions: true,
+    })
+
+    const view = EditorView.findFromDOM(wrapper.find('.cm-editor').element as HTMLElement)
+    view?.dispatch({
+      changes: { from: 0, insert: '@' },
+      selection: { anchor: 1 },
+    })
+    await nextTick()
+
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(true)
+    await expect(wrapper.find(FUTURE_EDITOR_ROOT).trigger('keydown', { key: 'Enter' })).resolves.toBeUndefined()
+  })
 })

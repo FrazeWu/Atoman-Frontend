@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import CommentThread from '@/components/shared/CommentThread.vue'
 
 const items = [{
@@ -80,5 +80,21 @@ describe('CommentThread', () => {
     const wrapper = mount(CommentThread, { props: { items } })
 
     expect(wrapper.text()).toContain('@alice')
+  })
+
+  it('keeps the draft and shows an actionable reference error after a rejected submit', async () => {
+    const wrapper = mount(CommentThread, {
+      props: {
+        items,
+        canComment: true,
+        submitAction: vi.fn().mockRejectedValue({ code: 'reference.invalid_target' }),
+      },
+    })
+
+    await wrapper.find('textarea').setValue('@post:missing')
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('@post:missing')
+    expect(wrapper.text()).toContain('请从候选中选择有效引用')
   })
 })

@@ -716,7 +716,7 @@ function formatDate(value: string) {
 .debate-graph__legend span { display: inline-flex; align-items: center; gap: 6px; }
 .debate-graph__line { width: 24px; border-top: 2px solid; }
 .debate-graph__line--support { border-color: var(--a-color-success); }
-.debate-graph__line--oppose { border-color: var(--a-color-danger); border-top-style: dashed; }
+.debate-graph__line--oppose { border-color: var(--a-color-danger); border-top-style: solid; }
 .debate-sidebar { min-width: 0; }
 
 .debate-content :deep(.debate-reference) {
@@ -738,7 +738,10 @@ function formatDate(value: string) {
 .debate-content :deep(.debate-reference__qualifier),
 .debate-content :deep(.debate-reference__state) { color: var(--a-color-muted); font-size: 0.78em; white-space: nowrap; }
 .debate-content :deep(.debate-reference__title) { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
-.debate-content :deep(.debate-reference--stale) { border-style: dashed; }
+.debate-content :deep(.debate-reference--stale) {
+  border-style: solid;
+  box-shadow: inset 0 -2px 0 var(--a-color-warning);
+}
 .debate-content :deep(.debate-reference--stale .debate-reference__state) { color: var(--a-color-warning); }
 .debate-content :deep(.debate-reference--unavailable .debate-reference__title) { text-decoration: line-through; }
 .debate-content :deep(.debate-reference--unavailable .debate-reference__state) { color: var(--a-color-danger); }

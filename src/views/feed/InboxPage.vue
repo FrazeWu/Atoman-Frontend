@@ -154,10 +154,11 @@ import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
-import { commentNotificationLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
+import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
 import { useUserBlocksStore } from '@/stores/userBlocks'
 import { useAuthStore } from '@/stores/auth'
+import { referenceHref } from '@/composables/useReferenceRendering'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
 import type { RouteLocationRaw } from 'vue-router'
 
@@ -281,7 +282,11 @@ const notificationTargetPath = (notification: Notification): RouteLocationRaw | 
   if (notification.source_url) {
     return notification.source_url
   }
+  if (notification.type === 'content_mention' && notification.meta.module && notification.meta.path) {
+    return referenceHref({ module: notification.meta.module, path: notification.meta.path })
+  }
   if (isCommentNotification(notification)) return commentNotificationLocation(notification)
+  if (notification.type === 'content_published') return contentPublishedLocation(notification)
   if (notification.type === 'forum_follow') return forumNotificationLocation(notification)
   if (notification.source_type === 'music_lyrics') {
     const { album_id: albumId, song_id: songId, annotation_id: annotationId } = notification.meta
@@ -354,6 +359,8 @@ const formatNotificationTitle = (notification: Notification) => {
       return `${actor} 回复了你`
     case 'comment_mention':
       return `${actor} 提到了你`
+    case 'content_mention':
+      return `${actor} 提到了你`
     case 'comment_marked':
       return `${actor} 标记了你的评论`
     case 'comment_like':
@@ -371,6 +378,7 @@ const formatNotificationBody = (notification: Notification) => {
   }
   if (notification.type === 'comment_reply') return '查看回复'
   if (notification.type === 'comment_mention') return '查看提及'
+  if (notification.type === 'content_mention') return '查看提及'
   if (notification.type === 'comment_marked') return '查看标记'
   if (notification.type === 'comment_like') return '查看点赞'
   return notification.reason || notification.meta.body || notification.meta.reply_excerpt || notification.meta.topic_title || '查看详情'

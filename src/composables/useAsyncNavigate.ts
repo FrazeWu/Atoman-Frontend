@@ -6,6 +6,7 @@ export function useAsyncNavigate() {
   const transition = useTransitionStore()
   const sheet = useSheetStore()
   const router = useRouter()
+  let moduleNavigationRequest = 0
 
   /**
    * 跨模块跳转函数
@@ -67,30 +68,30 @@ export function useAsyncNavigate() {
    * @param targetUrl 目标页面的完整 URL
    */
   async function navigateModuleWithShutter(targetUrl: string) {
+    const request = ++moduleNavigationRequest
     try {
-      // 1. 先设置基础转场标记，写入失败时不能启动半截转场
       localStorage.setItem('atoman_transition_relay_basic', 'true')
     } catch (err) {
       console.error('Transition relay failed:', err)
+      await router.push(targetUrl)
       return
     }
 
-    // 1. 快速收回 Sheet
     sheet.clearStack(false)
-    
-    // 2. 触发背景文字隐去
     transition.triggerExit()
 
-    // 4. 等待动画完成并跳转 (匹配 CSS 0.5s 动画)
-    await new Promise(r => setTimeout(r, 500))
-    
-    if (router) {
-      transition.reset()
+    try {
       await router.push(targetUrl)
+      if (request !== moduleNavigationRequest) return
+      transition.reset()
       transition.triggerEntry()
       localStorage.removeItem('atoman_transition_relay_basic')
-    } else {
-      window.location.assign(targetUrl)
+    } catch (err) {
+      if (request === moduleNavigationRequest) {
+        transition.reset()
+        localStorage.removeItem('atoman_transition_relay_basic')
+      }
+      console.error('Module navigation failed:', err)
     }
   }
 

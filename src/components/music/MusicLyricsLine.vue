@@ -1,25 +1,30 @@
 <template>
   <div class="music-lyrics-line" :class="{ 'is-active': active }">
-    <p
-      ref="textElement"
-      class="music-lyrics-line__text"
-      @mouseup="handleMouseUp"
-    >
-      <template v-for="segment in segments" :key="segment.key">
-        <span v-if="!segment.annotationIds.length">{{ segment.text }}</span>
-        <button
-          v-else
-          type="button"
-          class="music-lyrics-line__highlight"
-          @click="emit('open-annotations', { line, annotationIds: segment.annotationIds })"
-        >
-          {{ segment.text }}
-        </button>
-      </template>
-    </p>
-    <p v-if="bilingual && line.translation" class="music-lyrics-line__translation">
-      {{ line.translation }}
-    </p>
+    <div v-if="line.time_ms != null" class="music-lyrics-line__time">
+      {{ formatTime(line.time_ms) }}
+    </div>
+    <div class="music-lyrics-line__content">
+      <p
+        ref="textElement"
+        class="music-lyrics-line__text"
+        @mouseup="handleMouseUp"
+      >
+        <template v-for="segment in segments" :key="segment.key">
+          <span v-if="!segment.annotationIds.length">{{ segment.text }}</span>
+          <button
+            v-else
+            type="button"
+            class="music-lyrics-line__highlight"
+            @click="emit('open-annotations', { line, annotationIds: segment.annotationIds })"
+          >
+            {{ segment.text }}
+          </button>
+        </template>
+      </p>
+      <p v-if="bilingual && line.translation" class="music-lyrics-line__translation">
+        {{ line.translation }}
+      </p>
+    </div>
   </div>
 </template>
 
@@ -133,30 +138,53 @@ function handleMouseUp() {
     endOffset,
   })
 }
+
+function formatTime(timeMs: number | null | undefined): string {
+  if (timeMs == null) return ''
+  const totalSeconds = Math.floor(timeMs / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
 </script>
 
 <style scoped>
 .music-lyrics-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  text-align: left;
+  opacity: 0.3;
+  transition: opacity 0.25s ease, font-weight 0.2s;
   padding: 0.9rem 0;
-  opacity: 0.32; /* 调低未激活歌词的透明度，增大对比度 */
-  filter: blur(0.5px); /* 可选：给不活跃行添加极其微弱的模糊 */
-  transform: scale(0.98);
-  transform-origin: left center;
-  transition: all 0.38s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .music-lyrics-line.is-active {
   opacity: 1;
-  filter: blur(0);
-  transform: scale(1.03) translateX(0.5rem);
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+  font-weight: 500;
+  color: var(--a-color-text);
+}
+
+.music-lyrics-line__time {
+  font-family: var(--a-font-mono, monospace);
+  font-size: 11px;
+  color: var(--a-color-muted);
+  width: 42px;
+  flex-shrink: 0;
+  text-align: left;
+  margin-top: 0.6rem;
+}
+
+.music-lyrics-line__content {
+  min-width: 0;
+  flex: 1;
 }
 
 .music-lyrics-line__text {
   margin: 0;
-  color: var(--a-color-text);
+  color: inherit;
   font-size: clamp(1.25rem, 2vw, 2rem);
-  font-weight: 900;
+  font-weight: inherit;
   line-height: 1.3;
   white-space: pre-wrap;
 }

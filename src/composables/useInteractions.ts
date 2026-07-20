@@ -2,6 +2,7 @@ import { ref, unref, type Ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { InteractionComment, InteractionModule, InteractionTargetType } from '@/types'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 type CommentOptions = {
   timestamp_sec?: number
@@ -28,7 +29,7 @@ function countComments(items: InteractionComment[]): number {
 async function readJson(response: Response): Promise<ApiEnvelope> {
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error('请求失败')
+    throw new Error(referencePublishErrorMessage(payload, '请求失败'))
   }
   return payload as ApiEnvelope
 }

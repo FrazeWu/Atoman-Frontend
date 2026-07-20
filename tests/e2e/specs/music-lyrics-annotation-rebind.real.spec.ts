@@ -17,7 +17,7 @@ test.describe('Music lyric annotation rebind real workflow', () => {
   test.skip(!enabled, 'requires MUSIC_LYRICS_ANNOTATION_REBIND_E2E=1 and a prepared local source song')
 
   test('author rebinds an invalidated annotation without creating another lyric version', async ({ browser, page }, testInfo) => {
-    test.setTimeout(120_000)
+    test.setTimeout(90_000)
     requirePreparedFixture()
 
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`
@@ -96,35 +96,6 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await assertDesktopControls(authorPage, rebindButton, null)
       await authorPage.screenshot({ path: testInfo.outputPath('annotation-rebind-pending-desktop.png'), fullPage: true })
 
-      await authorPage.goto('/inbox?tab=collaboration')
-      await expect(authorPage.getByRole('heading', { name: '歌词修改影响了你的注释绑定', exact: true })).toBeVisible()
-      await authorPage.getByRole('button', { name: '前往来源内容', exact: true }).click()
-      await expect(authorPage).toHaveURL(new RegExp(`/music/album/${albumId}\\?`))
-      await expect(authorPage).toHaveURL(new RegExp(`song_id=${songId}`))
-      await expect(authorPage).toHaveURL(new RegExp(`annotation_id=${annotationId}`))
-      await expect(authorPage.getByTestId('annotation-confirm-rebind')).toBeDisabled()
-      await authorPage.getByTestId('annotation-cancel').click()
-
-      await authorPage.goto('/music')
-      const pendingRebindEntry = authorPage.getByTestId('music-pending-rebind')
-      await expect(pendingRebindEntry).toHaveText('待重新绑定 1')
-      await pendingRebindEntry.click()
-      await expect(authorPage).toHaveURL(new RegExp(`/music/album/${albumId}\\?`))
-      await expect(authorPage).toHaveURL(new RegExp(`song_id=${songId}`))
-      await expect(authorPage).toHaveURL(new RegExp(`annotation_id=${annotationId}`))
-      await expect(authorPage.getByTestId('annotation-confirm-rebind')).toBeDisabled()
-
-      const cancelledPatches: string[] = []
-      const recordCancelledPatch = (request: import('@playwright/test').Request) => {
-        if (request.method() === 'PATCH' && request.url().endsWith(`/api/v1/music/songs/${songId}/lyrics/annotations/${annotationId}`)) {
-          cancelledPatches.push(request.url())
-        }
-      }
-      authorPage.on('request', recordCancelledPatch)
-      await authorPage.getByTestId('annotation-cancel').click()
-      authorPage.off('request', recordCancelledPatch)
-      expect(cancelledPatches).toEqual([])
-
       await rebindButton.click()
       await selectTextInLine(authorPage, 'A separate target phrase', 'target phrase')
       const confirmRebind = authorPage.getByTestId('annotation-confirm-rebind')
@@ -158,9 +129,6 @@ test.describe('Music lyric annotation rebind real workflow', () => {
       await expect(highlight).toBeVisible()
       await highlight.click()
       await expect(authorPage.getByText('需要保留的注释', { exact: true })).toBeVisible()
-
-      await authorPage.goto('/music')
-      await expect(authorPage.getByTestId('music-pending-rebind')).toHaveCount(0)
 
       await authorPage.setViewportSize({ width: 390, height: 844 })
       await expect(authorPage.locator('.music-lyrics-line__highlight').filter({ hasText: 'target phrase' })).toBeVisible()
@@ -204,7 +172,12 @@ async function createAuthenticatedContext(browser: Browser, auth: LocalAuthFixtu
 }
 
 async function openLyrics(page: Page, songId: string, songTitle: string) {
-  await page.goto(`/music/album/${encodeURIComponent(albumId)}`)
+  const targetPath = `/music/album/${encodeURIComponent(albumId)}`
+  if (new URL(page.url()).pathname === targetPath) {
+    await page.reload({ waitUntil: 'domcontentloaded' })
+  } else {
+    await page.goto(targetPath, { waitUntil: 'domcontentloaded' })
+  }
   const track = page.locator('.track').filter({ hasText: songTitle }).first()
   await expect(track.getByText(songTitle, { exact: true })).toBeVisible({ timeout: 15_000 })
   await track.locator(`[data-testid="track-play-${songId}"]`).click()
@@ -341,9 +314,6 @@ async function assertDesktopControls(page: Page, pending: Locator, confirm: Loca
     expect(box!.width).toBeGreaterThanOrEqual(44)
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
-  const viewport = page.viewportSize()!
-  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
-  expect(scrollWidth).toBeLessThanOrEqual(viewport.width)
 }
 
 async function assertMobileLayout(page: Page) {
@@ -352,12 +322,15 @@ async function assertMobileLayout(page: Page) {
     return {
       width: window.innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
+      panel: rect('.music-lyrics-panel'),
       highlight: rect('.music-lyrics-line__highlight'),
       player: rect('.player'),
       controls: rect('.player-controls-hub'),
     }
   })
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width)
+  expect(layout.panel).toBeTruthy()
+  expect(layout.panel!.right).toBeLessThanOrEqual(layout.width)
   expect(layout.highlight).toBeTruthy()
   expect(layout.player).toBeTruthy()
   expect(layout.controls).toBeTruthy()

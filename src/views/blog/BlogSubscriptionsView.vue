@@ -33,6 +33,11 @@
       </aside>
 
       <section class="subscription-posts">
+        <ContentNotificationMode
+          v-if="selectedNotificationSource"
+          :source-type="selectedNotificationSource.sourceType"
+          :source-id="selectedNotificationSource.sourceId"
+        />
         <div v-if="loading && !posts.length" class="a-grid-2">
           <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
         </div>
@@ -128,6 +133,7 @@ import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { moduleRooms } from '@/config/moduleRooms'
 import type { Post, Subscription, TimelineItem } from '@/types'
+import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
 
 // Included components from BlogHomeView as requested, even if not used directly in template
 // to maintain consistency and fulfill requirement
@@ -143,6 +149,11 @@ const starredIds = computed(() => feedStore.bookmarkedPostIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
 const subscriptions = computed(() => feedStore.subscriptions)
 const selectedSubscriptionId = ref<string | null>(null)
+const selectedNotificationSource = computed(() => {
+  const source = subscriptions.value.find(item => item.id === selectedSubscriptionId.value)?.feed_source
+  if (!source?.source_id || (source.source_type !== 'internal_user' && source.source_type !== 'internal_channel')) return null
+  return { sourceType: source.source_type, sourceId: source.source_id }
+})
 
 const toggleStar = (id: string) => {
   void feedStore.togglePostBookmark(id)

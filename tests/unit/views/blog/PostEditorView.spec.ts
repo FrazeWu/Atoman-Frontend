@@ -1034,7 +1034,8 @@ describe('PostEditorView', () => {
     expect(putCall).toBeTruthy()
     const body = JSON.parse(String(putCall?.[1]?.body ?? '{}'))
     expect(body.channel_id).toBe('channel-1')
-    expect(body.collection_ids).toEqual(['collection-1', 'collection-2'])
+    expect(body.collection_id).toBe('collection-2')
+    expect(body).not.toHaveProperty('collection_ids')
     expect(router.currentRoute.value.fullPath).toBe('/studio/blog/content?collection_id=collection-2')
   })
 
@@ -1184,5 +1185,39 @@ describe('PostEditorView', () => {
     expect(editor.vm.$.setupState.form.visibility).toBe('private')
     expect(editor.vm.$.setupState.selectedCollectionIds).toEqual(['collection-1', 'collection-2'])
     expect(editor.vm.$.setupState.preferredPublishStatus).toBe('draft')
+  })
+
+  it('发布文章遇到无效引用时显示候选选择提示', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/studio/blog/new', component: PostEditorView }],
+    })
+    await router.push('/studio/blog/new')
+    await router.isReady()
+
+    const auth = useAuthStore()
+    auth.token = 'token'
+    auth.user = { uuid: 'user-1', username: 'demo', role: 'user' } as never
+    auth.isAuthenticated = true
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/blog/posts') && init?.method === 'POST') {
+        return new Response(JSON.stringify({
+          error: { code: 'reference.invalid_syntax', message: 'Reference syntax is invalid' },
+        }), { status: 400 })
+      }
+      if (url.includes('/blog/drafts?context_key=')) return makeJsonResponse({ data: null })
+      return makeJsonResponse({ data: null })
+    }))
+
+    const wrapper = mount({ template: '<router-view />' }, { global: { plugins: [router] } })
+    await flushPromises()
+    const editor = wrapper.findComponent(PostEditorView)
+    editor.vm.$.setupState.form.title = '文章'
+    editor.vm.$.setupState.form.content = '@post:not-a-uuid'
+
+    await editor.vm.$.setupState.save('published')
+
+    expect(editor.vm.$.setupState.error).toBe('请从候选中选择有效引用')
   })
 })

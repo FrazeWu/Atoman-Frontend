@@ -12,23 +12,21 @@
         rows="4"
         :placeholder="placeholder"
         :aria-invalid="Boolean(validationError)"
-        @keyup="updateMentionSearch"
-        @click="updateMentionSearch"
+        aria-autocomplete="list"
+        :aria-expanded="referenceVisible"
+        @input="updateReferenceSearch"
+        @keyup="updateReferenceSearch"
+        @click="updateReferenceSearch"
+        @keydown="handleReferenceKeydown"
       />
-      <div v-if="mentionUsers.length" class="comment-composer__mentions" role="listbox" aria-label="提及用户">
-        <button
-          v-for="user in mentionUsers"
-          :key="user.uuid"
-          type="button"
-          role="option"
-          data-test="mention-option"
-          @click="selectMention(user)"
-        >
-          <PAvatar :src="user.avatar_url" :name="user.display_name || user.username" size="xs" />
-          <span>{{ user.display_name || user.username }}</span>
-          <small>@{{ user.username }}</small>
-        </button>
-      </div>
+      <PReferenceMenu
+        v-if="referenceVisible && (referenceLoading || referenceSuggestions.length > 0)"
+        :suggestions="referenceSuggestions"
+        :active-index="referenceIndex"
+        :loading="referenceLoading"
+        @hover="referenceIndex = $event"
+        @select="selectReference"
+      />
     </div>
 
     <div v-if="attachments.length" class="comment-composer__attachments" aria-label="已选图片">
@@ -46,6 +44,17 @@
 
     <div class="comment-composer__footer">
       <div class="comment-composer__tools">
+        <button
+          type="button"
+          class="comment-composer__tool"
+          title="添加引用"
+          aria-label="添加引用"
+          :aria-expanded="referenceVisible"
+          data-test="reference-trigger"
+          @click="insertReference"
+        >
+          <AtSign :size="17" aria-hidden="true" />
+        </button>
         <label class="comment-composer__tool" title="添加图片">
           <ImagePlus :size="17" aria-hidden="true" />
           <span class="sr-only">添加图片</span>
@@ -79,18 +88,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import { Clock3, Image as ImageIcon, ImagePlus, Send, X } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { AtSign, Clock3, Image as ImageIcon, ImagePlus, Send, X } from 'lucide-vue-next'
 
-import PAvatar from '@/components/ui/PAvatar.vue'
+import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
 import { commentApi, type CommentMentionInput, type CreateCommentInput } from '@/api/comments'
 import { commentCodePointLength, validateCommentMarkdown } from '@/composables/useCommentMarkdown'
 import {
   normalizeCommentContent,
-  searchMentionUsers,
   toMentionRange,
-  type MentionSearchUser,
 } from '@/composables/useCommentMentions'
+import {
+  insertReferenceTrigger,
+  parseReferenceTrigger,
+  referenceTokenForSuggestion,
+  searchReferenceSuggestions,
+  type ReferenceSuggestion,
+  type ReferenceTrigger,
+} from '@/composables/useReferenceAutocomplete'
 import { formatTimeAnchor } from '@/composables/useMediaTimeAnchors'
 
 defineOptions({ name: 'CommentComposer' })
@@ -139,12 +154,16 @@ function selectedFromInput(value: string, inputs: CommentMentionInput[]) {
 const content = ref(props.initialContent)
 const attachments = ref<LocalAttachment[]>(props.initialAttachmentIds.map((id) => ({ id, name: '已上传图片' })))
 const selectedMentions = ref<SelectedMention[]>(selectedFromInput(props.initialContent, props.initialMentions))
-const mentionUsers = ref<MentionSearchUser[]>([])
-const mentionRange = ref<{ start: number; end: number } | null>(null)
+const referenceSuggestions = ref<ReferenceSuggestion[]>([])
+const referenceVisible = ref(false)
+const referenceLoading = ref(false)
+const referenceIndex = ref(0)
+let referenceTrigger: ReferenceTrigger | null = null
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const uploading = ref(false)
 const imageError = ref('')
-let mentionRequest = 0
+let referenceRequest = 0
+let referenceDebounce: ReturnType<typeof setTimeout> | null = null
 
 const codePointLength = computed(() => commentCodePointLength(content.value))
 const markdownValidation = computed(() => validateCommentMarkdown(content.value))
@@ -156,43 +175,98 @@ const validationError = computed(() => {
 const canSubmit = computed(() => !props.submitting && !uploading.value && !validationError.value
   && (normalizeCommentContent(content.value).length > 0 || attachments.value.length > 0))
 
-async function updateMentionSearch() {
-  const request = ++mentionRequest
+function closeReferences() {
+  referenceVisible.value = false
+  referenceLoading.value = false
+  referenceSuggestions.value = []
+  referenceIndex.value = 0
+  referenceTrigger = null
+  referenceRequest++
+  if (referenceDebounce) clearTimeout(referenceDebounce)
+  referenceDebounce = null
+}
+
+function updateReferenceSearch() {
   const textarea = textareaRef.value
   if (!textarea) return
   const cursor = textarea.selectionStart
-  const prefix = content.value.slice(0, cursor)
-  const match = prefix.match(/(?:^|\s)@([\p{L}\p{N}_.-]*)$/u)
-  if (!match) {
-    mentionUsers.value = []
-    mentionRange.value = null
+  const trigger = parseReferenceTrigger(content.value.slice(0, cursor))
+  if (!trigger) {
+    closeReferences()
     return
   }
-  const start = cursor - match[1].length - 1
-  mentionRange.value = { start, end: cursor }
-  try {
-    const users = await searchMentionUsers(match[1])
-    if (request === mentionRequest) mentionUsers.value = users
-  } catch {
-    if (request === mentionRequest) mentionUsers.value = []
-  }
+  referenceTrigger = trigger
+  referenceVisible.value = true
+  referenceLoading.value = true
+  referenceSuggestions.value = []
+  referenceIndex.value = 0
+  const request = ++referenceRequest
+  if (referenceDebounce) clearTimeout(referenceDebounce)
+  referenceDebounce = setTimeout(async () => {
+    try {
+      const suggestions = await searchReferenceSuggestions(trigger, 10)
+      if (request !== referenceRequest) return
+      referenceSuggestions.value = suggestions
+      referenceVisible.value = suggestions.length > 0
+    } catch {
+      if (request === referenceRequest) closeReferences()
+    } finally {
+      if (request === referenceRequest) referenceLoading.value = false
+    }
+  }, 120)
 }
 
-async function selectMention(user: MentionSearchUser) {
-  const range = mentionRange.value
-  if (!range) return
-  const token = `@${user.username}`
-  content.value = `${content.value.slice(0, range.start)}${token}${content.value.slice(range.end)}`
-  if (!selectedMentions.value.some(({ userId, username }) => userId === user.uuid && username === user.username)) {
-    selectedMentions.value.push({ userId: user.uuid, username: user.username })
-  }
-  mentionUsers.value = []
-  mentionRange.value = null
-  mentionRequest++
+async function insertReference() {
+  const textarea = textareaRef.value
+  if (!textarea) return
+  const result = insertReferenceTrigger(
+    content.value,
+    textarea.selectionStart,
+    textarea.selectionEnd,
+  )
+  content.value = result.value
   await nextTick()
-  const cursor = range.start + token.length
-  textareaRef.value?.setSelectionRange(cursor, cursor)
-  textareaRef.value?.focus()
+  textarea.setSelectionRange(result.cursor, result.cursor)
+  textarea.focus()
+  updateReferenceSearch()
+}
+
+async function selectReference(suggestion: ReferenceSuggestion) {
+  const trigger = referenceTrigger
+  const textarea = textareaRef.value
+  if (!trigger || !textarea) return
+  const cursor = textarea.selectionStart
+  const token = referenceTokenForSuggestion(suggestion)
+  content.value = `${content.value.slice(0, trigger.start)}${token}${content.value.slice(cursor)}`
+  if (suggestion.kind === 'target' && suggestion.targetType === 'user' && suggestion.id) {
+    const username = token.slice(1)
+    if (!selectedMentions.value.some(mention => mention.userId === suggestion.id && mention.username === username)) {
+      selectedMentions.value.push({ userId: suggestion.id, username })
+    }
+  }
+  await nextTick()
+  const nextCursor = trigger.start + token.length
+  textarea.setSelectionRange(nextCursor, nextCursor)
+  textarea.focus()
+  if (suggestion.kind === 'type') updateReferenceSearch()
+  else closeReferences()
+}
+
+function handleReferenceKeydown(event: KeyboardEvent) {
+  if (!referenceVisible.value || referenceSuggestions.value.length === 0) return
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    referenceIndex.value = (referenceIndex.value + 1) % referenceSuggestions.value.length
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    referenceIndex.value = (referenceIndex.value - 1 + referenceSuggestions.value.length) % referenceSuggestions.value.length
+  } else if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault()
+    void selectReference(referenceSuggestions.value[referenceIndex.value])
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    closeReferences()
+  }
 }
 
 function buildMentions(normalized: string): CommentMentionInput[] {
@@ -260,13 +334,15 @@ function reset() {
   content.value = props.initialContent
   attachments.value = props.initialAttachmentIds.map((id) => ({ id, name: '已上传图片' }))
   selectedMentions.value = selectedFromInput(props.initialContent, props.initialMentions)
-  mentionUsers.value = []
-  mentionRange.value = null
+  closeReferences()
   imageError.value = ''
-  mentionRequest++
 }
 
 defineExpose({ reset })
+
+onBeforeUnmount(() => {
+  if (referenceDebounce) clearTimeout(referenceDebounce)
+})
 </script>
 
 <style scoped>
@@ -276,18 +352,16 @@ defineExpose({ reset })
 .comment-composer__field { position: relative; }
 .comment-composer textarea { width: 100%; min-height: 7rem; box-sizing: border-box; resize: vertical; border: 0; border-bottom: 1px solid var(--a-color-border); background: transparent; color: var(--a-color-text); font: inherit; line-height: 1.65; }
 .comment-composer textarea:focus { outline: 2px solid var(--a-color-text); outline-offset: 3px; }
-.comment-composer__mentions { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); max-height: 13rem; overflow: auto; border: 1px solid var(--a-color-text); background: var(--a-color-bg); box-shadow: var(--a-shadow-md); }
-.comment-composer__mentions button { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.6rem; width: 100%; min-height: 44px; padding: 0.45rem 0.65rem; border: 0; border-bottom: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); text-align: left; cursor: pointer; }
-.comment-composer__mentions button:hover, .comment-composer__mentions button:focus-visible { background: var(--a-color-surface-muted); }
-.comment-composer__mentions small { color: var(--a-color-text-secondary); }
+.comment-composer__field :deep(.p-reference-menu) { width: 100%; }
 .comment-composer__attachments { display: grid; gap: 0.35rem; }
 .comment-composer__attachment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-height: 36px; padding-left: 0.65rem; border: 1px solid var(--a-color-border-soft); font-size: var(--a-text-sm); }
 .comment-composer__attachment span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comment-composer__footer, .comment-composer__tools { display: flex; align-items: center; gap: 0.5rem; }
 .comment-composer__footer { justify-content: flex-end; min-height: 40px; }
 .comment-composer__tools { margin-right: auto; }
-.comment-composer__tool { position: relative; display: grid; place-items: center; width: 40px; height: 40px; box-sizing: border-box; border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); cursor: pointer; }
+.comment-composer__tool { position: relative; display: grid; place-items: center; width: 44px; height: 44px; box-sizing: border-box; border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); cursor: pointer; }
 .comment-composer__tool:hover { border-color: var(--a-color-text); }
+.comment-composer__tool:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .comment-composer__tool input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .comment-composer__count { color: var(--a-color-text-secondary); font-family: var(--a-font-sans); font-size: 0.75rem; }
 .comment-composer__count.is-over, .comment-composer__error { color: var(--a-color-accent-destructive); }

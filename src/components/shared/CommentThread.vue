@@ -1,10 +1,11 @@
 <template>
   <section class="comment-thread">
     <form v-if="canComment" class="comment-thread__form" @submit.prevent="submitComment()">
-      <textarea
+      <PReferenceField
         v-model="draft"
         class="comment-thread__input"
-        rows="3"
+        variant="textarea"
+        :rows="3"
         :placeholder="replyingTo ? `回复 ${replyingToName}` : '写下评论'"
         :disabled="submitting"
       />
@@ -16,6 +17,7 @@
           {{ submitting ? '发送中' : '发送' }}
         </button>
       </div>
+      <p v-if="submissionError" class="comment-thread__error" role="alert">{{ submissionError }}</p>
     </form>
 
     <div v-if="loading" class="comment-thread__state">加载中</div>
@@ -51,6 +53,10 @@
 <script setup lang="ts">
 import { computed, defineComponent, h, ref } from 'vue'
 import type { InteractionComment } from '@/types'
+import PReferenceField from '@/components/shared/PReferenceField.vue'
+import { renderCommentMarkdown } from '@/composables/useCommentMarkdown'
+import { applyResolvedReferences } from '@/composables/useReferenceRendering'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 type SubmitPayload = { content: string; parentCommentId?: string }
 type CanDelete = boolean | ((comment: InteractionComment) => boolean)
@@ -70,6 +76,7 @@ const emit = defineEmits<{
 }>()
 
 const draft = ref('')
+const submissionError = ref('')
 const replyingTo = ref<InteractionComment | null>(null)
 const replyingToName = computed(() => displayName(replyingTo.value))
 
@@ -82,6 +89,11 @@ function contentWithReplyTo(comment: InteractionComment) {
   if (!username) return comment.content
   const mention = `@${username}`
   return comment.content.includes(mention) ? comment.content : `${mention} ${comment.content}`
+}
+
+function renderedCommentContent(comment: InteractionComment) {
+  const rendered = renderCommentMarkdown(applyResolvedReferences(contentWithReplyTo(comment), comment.references))
+  return rendered.ok ? rendered.html : ''
 }
 
 function canDeleteComment(comment: InteractionComment) {
@@ -106,9 +118,15 @@ async function submitComment() {
     ...(replyingTo.value ? { parentCommentId: replyingTo.value.id } : {}),
   }
   if (props.submitAction) {
-    await props.submitAction(payload)
-    draft.value = ''
-    replyingTo.value = null
+    submissionError.value = ''
+    try {
+      await props.submitAction(payload)
+      draft.value = ''
+      replyingTo.value = null
+    } catch (error) {
+      const fallback = error instanceof Error ? error.message : '发送失败，请重试'
+      submissionError.value = referencePublishErrorMessage(error, fallback)
+    }
     return
   }
   emit('submit', payload)
@@ -130,7 +148,7 @@ const CommentNode = defineComponent({
         h('span', { class: 'comment-thread__author' }, displayName(props.comment)),
         h('time', { class: 'comment-thread__time', datetime: props.comment.created_at }, new Date(props.comment.created_at).toLocaleDateString('zh-CN')),
       ]),
-      h('p', { class: 'comment-thread__content' }, contentWithReplyTo(props.comment)),
+      h('div', { class: 'comment-thread__content', innerHTML: renderedCommentContent(props.comment) }),
       h('div', { class: 'comment-thread__node-actions' }, [
         props.canComment
           ? h('button', {
@@ -161,6 +179,12 @@ const CommentNode = defineComponent({
 .comment-thread__form {
   display: grid;
   gap: 0.75rem;
+}
+
+.comment-thread__error {
+  margin: 0;
+  color: var(--a-color-accent-destructive);
+  font-size: var(--a-text-sm);
 }
 
 .comment-thread__input {
@@ -245,6 +269,6 @@ const CommentNode = defineComponent({
 .comment-thread__content {
   margin: 0;
   line-height: 1.7;
-  white-space: pre-wrap;
 }
+.comment-thread__content :deep(p) { margin: 0; }
 </style>

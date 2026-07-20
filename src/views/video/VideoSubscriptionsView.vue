@@ -4,6 +4,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
 
 type SubscriptionVideo = {
   id: string
@@ -73,13 +74,13 @@ onMounted(async () => {
       <aside class="video-subscriptions-sources" aria-label="订阅来源">
         <section v-if="channelBookmarks.length">
           <h2>频道</h2>
-          <RouterLink
+          <div
             v-for="item in channelBookmarks"
             :key="item.id"
-            :to="`/channel/${item.channel?.id}`"
           >
-            {{ item.channel?.name }}
-          </RouterLink>
+            <RouterLink :to="`/channel/${item.channel?.id}`">{{ item.channel?.name }}</RouterLink>
+            <ContentNotificationMode v-if="item.channel?.id" source-type="internal_channel" :source-id="item.channel.id" />
+          </div>
         </section>
 
         <section v-if="collectionBookmarks.length">

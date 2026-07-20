@@ -101,7 +101,7 @@
 
         <form @submit.prevent="handleCreate" class="space-y-4">
           <PInput v-model="createForm.title" label="标题" placeholder="长期吸烟会不会显著增加肺癌风险？" />
-          <PTextarea v-model="createForm.content" label="正文" :rows="6" />
+          <PReferenceField v-model="createForm.content" variant="textarea" label="正文" :rows="6" />
           <PInput v-model="tagsInput" label="标签（逗号分隔）" placeholder="医学，公共健康" />
           <p v-if="createError" class="a-field-error" role="alert">{{ createError }}</p>
 
@@ -121,12 +121,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
+import PReferenceField from '@/components/shared/PReferenceField.vue'
 import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { moduleRooms } from '@/config/moduleRooms'

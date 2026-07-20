@@ -210,6 +210,10 @@ async function mountPanel(props?: Record<string, unknown>) {
   })
 }
 
+async function openVersionPreview(wrapper: Awaited<ReturnType<typeof mountPanel>>, version = 2) {
+  await wrapper.get(`[data-testid="lyrics-version-preview-${version}"]`).trigger('click')
+}
+
 describe('MusicLyricsPanel.vue', () => {
   beforeEach(() => {
     authState.isAuthenticated = true
@@ -498,7 +502,7 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.emitted('seek')).toEqual([[19.625]])
   })
 
-  it('查看并恢复歌词版本', async () => {
+  it('预览歌词版本差异后确认恢复', async () => {
     const wrapper = await mountPanel()
     await flushPromises()
 
@@ -507,11 +511,37 @@ describe('MusicLyricsPanel.vue', () => {
 
     expect(mocks.loadVersions).toHaveBeenCalledWith('song-1')
     expect(wrapper.text()).toContain('修正错字')
+    expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(false)
 
+    await wrapper.get('[data-testid="lyrics-version-preview-2"]').trigger('click')
+    expect(wrapper.get('[data-testid="lyrics-version-diff-2"]').text()).toContain('1 条注释')
     await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
     await flushPromises()
 
     expect(mocks.revertVersion).toHaveBeenCalledWith('song-1', 2, '恢复到第 2 版')
+  })
+
+  it('纯翻译变更的版本预览同时展示当前与目标译文', async () => {
+    lyricsState.versions.value = [{
+      id: 'version-2',
+      song_id: 'song-1',
+      version: 2,
+      content: 'Neon lights\nMidnight radio',
+      translation: '新的霓虹灯\n新的午夜电台',
+      format: 'plain',
+      edit_summary: '更新翻译',
+      created_at: '2026-07-07T01:00:00Z',
+      created_by: 'user-1',
+    }]
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await wrapper.get('[data-testid="lyrics-version-preview-2"]').trigger('click')
+
+    const preview = wrapper.get('[data-testid="lyrics-version-diff-2"]').text()
+    expect(preview).toContain('当前译文：霓虹灯')
+    expect(preview).toContain('目标译文：新的霓虹灯')
   })
 
   it('恢复进行中禁用按钮并阻止重复请求', async () => {
@@ -525,6 +555,7 @@ describe('MusicLyricsPanel.vue', () => {
     const wrapper = await mountPanel()
     await flushPromises()
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await openVersionPreview(wrapper)
     const revertButton = wrapper.get('[data-testid="lyrics-revert-version-2"]')
 
     await revertButton.trigger('click')
@@ -556,6 +587,7 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await openVersionPreview(wrapper)
     await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
@@ -576,6 +608,7 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await openVersionPreview(wrapper)
     await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
 
     await wrapper.setProps({ songId: 'song-2' })
@@ -621,6 +654,7 @@ describe('MusicLyricsPanel.vue', () => {
 
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
     await flushPromises()
+    await openVersionPreview(wrapper)
     expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(true)
 
     await wrapper.setProps({ songId: 'song-2' })
@@ -859,6 +893,17 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.find('.lyrics-conflict-confirm').exists()).toBe(false)
     expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(true)
     expect(mocks.save).toHaveBeenCalledOnce()
+  })
+
+  it('渲染具有自适应毛玻璃与扁平化操作按钮的结构', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    // 断言主容器类存在
+    expect(wrapper.find('.music-lyrics-panel').exists()).toBe(true)
+    // 断言头部和关闭按钮存在
+    expect(wrapper.find('.music-lyrics-panel__header').exists()).toBe(true)
+    expect(wrapper.find('.music-lyrics-panel__close').exists()).toBe(true)
   })
 })
 

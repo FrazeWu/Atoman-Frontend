@@ -81,6 +81,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useComments } from '@/composables/useComments'
 import { useAuthStore } from '@/stores/auth'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 import CommentComposer from './CommentComposer.vue'
 import CommentReportDialog from './CommentReportDialog.vue'
 import CommentThread from './CommentThread.vue'
@@ -204,8 +205,8 @@ async function createRoot(input: CreateCommentInput) {
     await comments.create(input)
     rootComposer.value?.reset()
     emitCount()
-  } catch {
-    mutationError.value = '发布失败，请重试'
+  } catch (error) {
+    mutationError.value = referencePublishErrorMessage(error, '发布失败，请重试')
   } finally {
     creating.value = false
   }

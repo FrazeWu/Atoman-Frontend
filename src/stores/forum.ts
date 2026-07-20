@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import type { ForumCategory, ForumTopic, ForumDraft, ForumFollow, ForumFollowTargetType } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 const api = useApi()
 
@@ -109,6 +110,7 @@ export const useForumStore = defineStore('forum', () => {
     content: string
     tags?: string[]
   }): Promise<ForumTopic | null> => {
+    error.value = null
     try {
       const res = await fetch(`${api.url}/forum/topics`, {
         method: 'POST',
@@ -119,7 +121,10 @@ export const useForumStore = defineStore('forum', () => {
         const data = await res.json()
         return data.data as ForumTopic
       }
+      const responseError = await res.json().catch(() => ({}))
+      error.value = referencePublishErrorMessage(responseError, '发布失败，请重试')
     } catch (e) {
+      error.value = referencePublishErrorMessage(e, '发布失败，请重试')
       console.error('Failed to create topic', e)
     }
     return null

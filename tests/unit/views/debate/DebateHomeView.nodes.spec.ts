@@ -34,7 +34,7 @@ function mountView() {
           emits: ['update:modelValue'],
           template: '<label>{{ label }}<input :data-label="label" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /></label>',
         },
-        PTextarea: {
+        PReferenceField: {
           props: ['modelValue', 'label'],
           emits: ['update:modelValue'],
           template: '<label>{{ label }}<textarea :data-label="label" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" /></label>',

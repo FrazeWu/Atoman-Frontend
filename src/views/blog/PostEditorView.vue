@@ -3,6 +3,14 @@
     <div class="editor-shell">
       <div v-if="error" class="editor-error a-error">{{ error }}</div>
 
+      <ContentScheduleControl
+        v-if="contentReady"
+        v-model="scheduledAt"
+        :busy="scheduling"
+        :disabled="Boolean(saving) || uploading || coverUploading"
+        @schedule="schedulePublish"
+      />
+
       <div class="editor-layout">
         <PostEditorSidebar
           :mobile-open="mobilePanel === 'outline'"
@@ -191,16 +199,20 @@ import { useAutoSave } from '@/composables/useAutoSave'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 import type { BlogDraft, Collection } from '@/types'
 import { normalizeBlogCollectionSelection } from '@/utils/blogCollectionSelection'
+import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
+import { useContentLifecycle } from '@/composables/useContentLifecycle'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
 const studio = useStudioStore()
+const lifecycle = useContentLifecycle()
 
 // ── 布局 ─────────────────────────────────────────────────
 type OutlineItem = {
@@ -249,6 +261,8 @@ const syncScroll = ref(true)
 const saving = ref<'draft' | 'published' | null>(null)
 const preferredPublishStatus = ref<SaveTarget>('published')
 const savedPostId = ref<string | null>(null)
+const scheduling = ref(false)
+const scheduledAt = ref('')
 
 // ── 状态 ─────────────────────────────────────────────────
 const isEdit = computed(() => !!route.params.id)
@@ -395,6 +409,11 @@ const selectedNonDefaultCollectionId = computed(() => (
   channelCollections.value.find(collection => (
     !collection.is_default && selectedCollectionIds.value.includes(collection.id)
   ))?.id || ''
+))
+const primaryCollectionId = computed(() => (
+  selectedNonDefaultCollectionId.value
+  || channelCollections.value.find(collection => collection.is_default && selectedCollectionIds.value.includes(collection.id))?.id
+  || ''
 ))
 
 const derivedChannelId = computed(() => {
@@ -1122,17 +1141,19 @@ const loadPost = async () => {
 }
 
 // ── 保存 ─────────────────────────────────────────────────
-const save = async (status: SaveTarget) => {
-  if (saving.value) return
+const save = async (status: SaveTarget, redirect = true): Promise<string | null> => {
+  if (saving.value) return null
   if (savedPostId.value) {
-    allowRouteLeaveOnce.value = true
-    await router.push(`/post/${savedPostId.value}`)
-    return
+    if (redirect) {
+      allowRouteLeaveOnce.value = true
+      await router.push(`/post/${savedPostId.value}`)
+    }
+    return savedPostId.value
   }
-  if (!form.value.title.trim()) { error.value = '请输入文章标题'; return }
-  if (!form.value.content.trim()) { error.value = '请输入文章内容'; return }
-  if (!currentChannelId.value) { error.value = '请先创建频道'; return }
-  if (status === 'published' && selectedCollectionIds.value.length === 0) { error.value = '请先选择合集'; return }
+  if (!form.value.title.trim()) { error.value = '请输入文章标题'; return null }
+  if (!form.value.content.trim()) { error.value = '请输入文章内容'; return null }
+  if (!currentChannelId.value) { error.value = '请先创建频道'; return null }
+  if (status === 'published' && selectedCollectionIds.value.length === 0) { error.value = '请先选择合集'; return null }
   error.value = ''
   saving.value = status
   const payload = { ...form.value, status }
@@ -1146,7 +1167,7 @@ const save = async (status: SaveTarget) => {
         body: JSON.stringify({
           ...payload,
           channel_id: currentChannelId.value,
-          collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
+          collection_id: primaryCollectionId.value || undefined,
         }),
       })
     } else {
@@ -1156,7 +1177,7 @@ const save = async (status: SaveTarget) => {
         body: JSON.stringify({
           ...payload,
           channel_id: currentChannelId.value,
-          collection_ids: uniqueCollectionIds(selectedCollectionIds.value),
+          collection_id: primaryCollectionId.value || undefined,
         }),
       })
     }
@@ -1167,6 +1188,7 @@ const save = async (status: SaveTarget) => {
       await clearAllDrafts()
       if (isEdit.value) await syncPostCollections(String(savedPost.id))
       allowRouteLeaveOnce.value = true
+      if (!redirect) return savedPostId.value
       if (status === 'draft') {
         await router.push({
           path: '/studio/blog/content',
@@ -1175,14 +1197,44 @@ const save = async (status: SaveTarget) => {
       } else {
         await router.push(`/post/${savedPost.id}`)
       }
+      return savedPostId.value
     } else {
       const err = await res.json()
-      error.value = err.error || '保存失败，请重试'
+      error.value = referencePublishErrorMessage(
+        err,
+        typeof err.error === 'string' ? err.error : '保存失败，请重试',
+      )
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : '网络错误，请重试'
   } finally {
     saving.value = null
+  }
+  return null
+}
+
+const schedulePublish = async () => {
+  if (!selectedCollectionIds.value.length) {
+    error.value = '请先选择合集'
+    return
+  }
+  const publishAt = new Date(scheduledAt.value)
+  if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
+    error.value = '请选择未来的发布时间'
+    return
+  }
+  scheduling.value = true
+  error.value = ''
+  try {
+    const postID = await save('draft', false)
+    if (!postID) return
+    await lifecycle.schedule('blog', postID, publishAt.toISOString())
+    allowRouteLeaveOnce.value = true
+    await router.push('/studio/blog/content')
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '设置失败，请重试'
+  } finally {
+    scheduling.value = false
   }
 }
 

@@ -667,7 +667,7 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 .player-artist {
-  font-family: var(--a-font-mono);
+  font-family: var(--a-font-mono, monospace);
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -811,8 +811,8 @@ onBeforeUnmount(() => {
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    var(--a-color-text) 0%,
-    var(--a-color-text) var(--progress-pct, 0%),
+    var(--a-color-muted) 0%,
+    var(--a-color-muted) var(--progress-pct, 0%),
     var(--a-color-border-soft) var(--progress-pct, 0%),
     var(--a-color-border-soft) 100%
   );
@@ -824,8 +824,8 @@ onBeforeUnmount(() => {
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    var(--a-color-text) 0%,
-    var(--a-color-text) var(--progress-pct, 0%),
+    var(--a-color-muted) 0%,
+    var(--a-color-muted) var(--progress-pct, 0%),
     var(--a-color-border-soft) var(--progress-pct, 0%),
     var(--a-color-border-soft) 100%
   );
@@ -839,7 +839,7 @@ onBeforeUnmount(() => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--a-color-text);
+  background: var(--a-color-muted);
   margin-top: -4px;
   opacity: 0;
   transition: opacity 0.1s ease, margin-top 0.1s ease;
@@ -854,7 +854,7 @@ onBeforeUnmount(() => {
   height: 10px;
   border: 0;
   border-radius: 50%;
-  background: var(--a-color-text);
+  background: var(--a-color-muted);
   opacity: 0;
   transition: opacity 0.1s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -990,7 +990,7 @@ onBeforeUnmount(() => {
   appearance: none;
   width: 10px;
   height: 10px;
-  background: var(--a-color-accent-confirm);
+  background: var(--a-color-muted);
   border-radius: 50%;
 }
 
@@ -1047,7 +1047,7 @@ onBeforeUnmount(() => {
   background: var(--a-color-overlay-soft);
 }
 .queue-count {
-  font-family: var(--a-font-mono);
+  font-family: var(--a-font-mono, monospace);
   font-size: 9px;
   font-weight: 500;
   min-width: 14px;

@@ -95,6 +95,7 @@ import { MessagesSquare } from 'lucide-vue-next'
 import type { CommentDTO, CreateCommentInput } from '@/api/comments'
 import CommentComposer from './CommentComposer.vue'
 import CommentItem from './CommentItem.vue'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 defineOptions({ name: 'CommentThread' })
 
@@ -160,8 +161,10 @@ async function submitReply(input: CreateCommentInput) {
   try {
     await props.onReply?.(submitted, input)
     if (replyingTo.value?.id === submitted.id) replyingTo.value = null
-  } catch {
-    if (replyingTo.value?.id === submitted.id) mutationError.value = '回复失败，请重试'
+  } catch (error) {
+    if (replyingTo.value?.id === submitted.id) {
+      mutationError.value = referencePublishErrorMessage(error, '回复失败，请重试')
+    }
   } finally {
     mutationPending.value = false
   }
@@ -175,8 +178,10 @@ async function submitEdit(input: CreateCommentInput) {
   try {
     await props.onEdit?.(submitted, input)
     if (editing.value?.id === submitted.id) editing.value = null
-  } catch {
-    if (editing.value?.id === submitted.id) mutationError.value = '保存失败，请重试'
+  } catch (error) {
+    if (editing.value?.id === submitted.id) {
+      mutationError.value = referencePublishErrorMessage(error, '保存失败，请重试')
+    }
   } finally {
     mutationPending.value = false
   }

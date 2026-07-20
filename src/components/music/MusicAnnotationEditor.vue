@@ -14,6 +14,7 @@
       label="注释"
       placeholder="写下这句歌词的解释"
       :rows="5"
+      class="music-annotation-editor__input"
     />
 
     <div class="music-annotation-editor__actions">
@@ -22,6 +23,7 @@
         variant="secondary"
         data-testid="annotation-cancel"
         aria-label="取消注释操作"
+        class="music-annotation-editor__action-btn"
         @click="handleCancel"
       >
         取消
@@ -33,6 +35,7 @@
         :disabled="!selectedText"
         data-testid="annotation-confirm-rebind"
         aria-label="确认重新绑定"
+        class="music-annotation-editor__action-btn"
         @click="emit('confirm-rebind')"
       >
         确认重新绑定
@@ -41,6 +44,7 @@
         v-else
         type="button"
         :disabled="!body.trim()"
+        class="music-annotation-editor__action-btn"
         @click="handleSave"
       >
         保存
@@ -91,6 +95,8 @@ function handleSave() {
   gap: 0.9rem;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
   background: var(--a-color-bg);
 }
 
@@ -111,5 +117,18 @@ function handleSave() {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+:deep(.music-annotation-editor__input),
+:deep(.music-annotation-editor__input textarea),
+:deep(.music-annotation-editor__input input) {
+  border-radius: 4px !important;
+  border: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+
+:deep(.music-annotation-editor__action-btn) {
+  border-radius: 4px !important;
+  box-shadow: none !important;
 }
 </style>

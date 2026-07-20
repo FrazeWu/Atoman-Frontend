@@ -14,6 +14,7 @@ import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'
 import { useAuthStore } from '@/stores/auth'
 import { isModeratorRole } from '@/utils/roles'
+import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 
 type VideoDetailResponse = Video & {
   liked?: boolean
@@ -31,6 +32,7 @@ const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const lifecycle = useContentLifecycle()
 const videoId = computed(() => String(route.params.id || ''))
 const interactions = useInteractions('videos', 'video', videoId)
 
@@ -42,6 +44,7 @@ const theaterMode = ref(getStoredTheaterMode())
 const showNextPrompt = ref(false)
 let lastProgressSave = 0
 let loadSeq = 0
+let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
 
 function getFirstStringQueryValue(value: unknown): string | undefined {
   const firstValue = Array.isArray(value) ? value[0] : value
@@ -132,6 +135,7 @@ async function load(id: string) {
   showNextPrompt.value = false
   currentPlaybackTime.value = 0
   lastProgressSave = 0
+  consumptionTracker = null
   try {
     const [vRes, rRes] = await Promise.all([
       fetch(`${api.url}/videos/${id}`),
@@ -142,6 +146,21 @@ async function load(id: string) {
     const detail = await vRes.json() as VideoDetailResponse
     if (seq !== loadSeq) return
     video.value = detail
+    consumptionTracker = createContentConsumptionTracker({
+      onEvent: (event) => {
+        void lifecycle.recordEvent({ module: 'video', content_id: detail.id, event, source: getFirstStringQueryValue(route.query.source) || 'direct' }).catch(() => undefined)
+      },
+      onProgress: (progress) => {
+        if (!authStore.token) return
+        const duration = Math.floor(videoElement.value?.duration || detail.duration_sec || 0)
+        void lifecycle.saveProgress({
+          module: 'video', content_id: detail.id, position_sec: Math.floor(videoElement.value?.currentTime || 0),
+          duration_sec: duration, progress, completed: progress >= 0.95, source: getFirstStringQueryValue(route.query.source) || 'direct',
+        }).catch(() => undefined)
+      },
+      progressIntervalMs: 5_000,
+    })
+    consumptionTracker.open()
     syncInteractionState(detail)
     if (rRes.ok) {
       const data = await rRes.json()
@@ -172,6 +191,7 @@ function syncCurrentPlaybackTime() {
   if (Date.now() - lastProgressSave < 5000) return
   lastProgressSave = Date.now()
   saveVideoProgress(video.value.id, current, Math.floor(duration))
+  consumptionTracker?.update(duration > 0 ? current / duration : 0)
 }
 
 function seekLocalVideo(value: number) {
@@ -181,12 +201,19 @@ function seekLocalVideo(value: number) {
   return true
 }
 
-function restoreInitialPlaybackPosition() {
+async function restoreInitialPlaybackPosition() {
   if (!video.value || video.value.storage_type !== 'local') return
   const deepLinkTime = parseVideoTimeParam(getFirstStringQueryValue(route.query.t), video.value.duration_sec)
   if (deepLinkTime !== null) {
     seekLocalVideo(deepLinkTime)
     return
+  }
+  if (authStore.token) {
+    const serverProgress = await lifecycle.getProgress('video', video.value.id).catch(() => null)
+    if (serverProgress?.position_sec) {
+      seekLocalVideo(serverProgress.position_sec)
+      return
+    }
   }
   const saved = getVideoProgress(video.value.id)
   if (saved) seekLocalVideo(saved.time_sec)
@@ -201,6 +228,7 @@ function handlePauseOrUnload() {
 function handleVideoEnded() {
   if (!video.value) return
   clearVideoProgress(video.value.id)
+  consumptionTracker?.update(1)
   showNextPrompt.value = recommended.value.length > 0
 }
 

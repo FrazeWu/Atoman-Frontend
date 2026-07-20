@@ -45,6 +45,9 @@
       :automation-rules="feedStore.automationRules"
       :busy="manageBusy"
       :health-checking="feedStore.healthChecking"
+      :syncing-subscription-ids="feedStore.syncingSubscriptionIds"
+      :syncing-all-subscriptions="feedStore.syncingAllSubscriptions"
+      :subscription-sync-results="feedStore.subscriptionSyncResults"
       :error="manageError"
       @close="showManageSheet = false"
       @create-group="createSubscriptionGroup"
@@ -56,6 +59,8 @@
       @delete-group="deleteGroup"
       @check-subscription-health="checkSubscriptionHealth"
       @check-all-subscriptions-health="checkAllSubscriptionsHealth"
+      @sync-subscription="syncSubscription"
+      @sync-all-subscriptions="syncAllSubscriptions"
       @import-opml="importOPML"
       @export-opml="exportOPML"
       @save-rule="saveSubscriptionRule"
@@ -992,6 +997,36 @@ const checkAllSubscriptionsHealth = async () => {
     const success = await feedStore.checkAllSubscriptionsHealth()
     if (!success) setManageError('检查失败')
   })
+}
+
+const syncSubscription = async (id: string) => {
+  manageError.value = ''
+  const result = await feedStore.syncSubscription(id)
+  if (!result) {
+    setManageError('刷新失败')
+    return
+  }
+  if (!result.success) {
+    setManageError(result.error || '刷新失败')
+  }
+  if (result.success || result.new_items > 0) {
+    currentPage.value = 1
+    await fetchTimeline()
+  }
+}
+
+const syncAllSubscriptions = async () => {
+  manageError.value = ''
+  const result = await feedStore.syncAllSubscriptions()
+  if (!result) {
+    setManageError('刷新失败')
+    return
+  }
+  if (result.failed > 0) {
+    setManageError(`${result.failed} 个来源刷新失败`)
+  }
+  currentPage.value = 1
+  await fetchTimeline()
 }
 
 const importOPML = async (file: File) => {

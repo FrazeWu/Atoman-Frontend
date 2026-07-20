@@ -12,6 +12,7 @@ import type {
 } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from '@/composables/useApi'
+import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 const api = useApi();
 
@@ -240,13 +241,14 @@ export const useDebateStore = defineStore("debate", () => {
         const data = await res.json();
         return data.data as Debate;
       } else {
-        throw new Error("Failed to create debate");
+        const responseError = await res.json().catch(() => ({}));
+        error.value = referencePublishErrorMessage(responseError, "创建失败，请重试");
       }
     } catch (e) {
-      error.value = "Failed to create debate";
+      error.value = referencePublishErrorMessage(e, "创建失败，请重试");
       console.error("Failed to create debate", e);
-      return null;
     }
+    return null;
   };
 
   const saveWiki = async (
@@ -288,11 +290,11 @@ export const useDebateStore = defineStore("debate", () => {
       }
 
       if (mutation.isCurrent()) {
-        error.value = apiError?.message || "Failed to save debate";
+        error.value = referencePublishErrorMessage(responsePayload, apiError?.message || "保存失败，请重试");
       }
       return { ok: false };
     } catch (e) {
-      if (mutation.isCurrent()) error.value = "Failed to save debate";
+      if (mutation.isCurrent()) error.value = referencePublishErrorMessage(e, "保存失败，请重试");
       console.error("Failed to save debate", e);
       return { ok: false };
     } finally {
@@ -555,6 +557,7 @@ export const useDebateStore = defineStore("debate", () => {
 			return []
 		}
 	}
+
   const resetStore = () => {
     debatesRequestSequence += 1;
     currentDebateLoadingSequence += 1;

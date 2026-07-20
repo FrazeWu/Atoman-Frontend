@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
 
 const api = useApi()
 const authStore = useAuthStore()
@@ -16,6 +17,7 @@ const episodes = ref<PodcastEpisode[]>([])
 const progressRows = ref<PodcastEpisodeProgress[]>([])
 const loading = ref(true)
 const message = ref('')
+const shows = ref<Array<{ id: string; channel?: { id: string; name: string; slug?: string } }>>([])
 
 const progressByEpisode = computed(() => new Map(progressRows.value.map(row => [row.episode_id, row])))
 
@@ -58,8 +60,8 @@ onMounted(async () => {
   try {
     const subscriptionsRes = await fetch(api.podcast.showBookmarks, { headers: headers() })
     const subscriptionsData = await subscriptionsRes.json()
-    const shows = Array.isArray(subscriptionsData?.data) ? subscriptionsData.data : []
-    const episodeResponses = await Promise.all(shows
+    shows.value = Array.isArray(subscriptionsData?.data) ? subscriptionsData.data : []
+    const episodeResponses = await Promise.all(shows.value
       .map((show: { channel?: { slug?: string } }) => show.channel?.slug)
       .filter((slug): slug is string => Boolean(slug))
       .map((slug) => fetch(api.podcast.showEpisodes(slug))))
@@ -84,6 +86,12 @@ onMounted(async () => {
   <div class="a-page-md">
     <PPageHeader title="订阅" accent />
     <p v-if="message" class="psub-message">{{ message }}</p>
+    <div v-if="shows.length" class="psub-sources">
+      <div v-for="show in shows" :key="show.id">
+        <span>{{ show.channel?.name || '播客' }}</span>
+        <ContentNotificationMode v-if="show.channel?.id" source-type="internal_channel" :source-id="show.channel.id" />
+      </div>
+    </div>
 
     <div v-if="loading" class="psub-state">加载中...</div>
     <PEmpty v-else-if="episodes.length === 0" title="暂无更新" description="订阅节目后会显示新单集。" />
@@ -111,6 +119,8 @@ onMounted(async () => {
 <style scoped>
 .psub-state,
 .psub-message { color: #6b7280; font-size: 0.875rem; }
+.psub-sources { display: grid; gap: 0.75rem; margin-bottom: 1.25rem; padding-block: 0.75rem; border-block: 1px solid var(--a-color-border-soft); }
+.psub-sources > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .psub-list { display: grid; gap: 0.75rem; }
 .psub-row { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e5e7eb; padding: 0.875rem 0; }
 .psub-main { min-width: 0; }

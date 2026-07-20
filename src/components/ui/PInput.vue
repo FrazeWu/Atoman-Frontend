@@ -3,15 +3,20 @@
     <label v-if="label" class="p-field-label" :for="inputId">
       {{ label }}
     </label>
-    <input
-      :id="inputId"
-      class="p-input"
-      :class="error ? 'p-input--error' : ''"
-      v-bind="$attrs"
-      :value="modelValue"
-      :disabled="disabled"
-      @input="handleInput"
-    />
+    <div class="p-input-wrapper" :class="{ 'p-input-wrapper--with-suffix': $slots.suffix }">
+      <input
+        :id="inputId"
+        class="p-input"
+        :class="error ? 'p-input--error' : ''"
+        v-bind="$attrs"
+        :value="modelValue"
+        :disabled="disabled"
+        @input="handleInput"
+      />
+      <div v-if="$slots.suffix" class="p-input-suffix">
+        <slot name="suffix" />
+      </div>
+    </div>
     <div v-if="error" class="p-field-error">{{ error }}</div>
     <div v-else-if="hint" class="p-field-hint">{{ hint }}</div>
   </div>
@@ -69,6 +74,11 @@ const handleInput = (event: Event) => {
   letter-spacing: 0;
 }
 
+.p-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .p-input {
   width: 100%;
   border: 1px solid var(--a-color-border-soft);
@@ -81,6 +91,17 @@ const handleInput = (event: Event) => {
   font-family: inherit;
   box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.p-input-wrapper--with-suffix .p-input {
+  padding-right: 3.6rem;
+}
+
+.p-input-suffix {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: grid;
+  place-items: center;
 }
 
 .p-input:focus {

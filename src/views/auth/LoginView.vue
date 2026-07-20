@@ -64,10 +64,6 @@
             :error="fieldErrors.password"
           />
 
-          <div class="auth-password-actions">
-            <RouterLink to="/forgot-password" class="toggle-link" data-test="forgot-password-link">忘记密码</RouterLink>
-          </div>
-
           <PButton
             type="submit"
             variant="primary"
@@ -195,9 +191,18 @@
         <span v-if="isRegister">
           已有账号？ <RouterLink to="/login" class="toggle-link">去登录</RouterLink>
         </span>
-        <span v-else>
-          还没有账号？ <RouterLink to="/register" class="toggle-link">去注册</RouterLink>
-        </span>
+        <template v-else>
+          <span>
+            没有账号？ <RouterLink to="/register" class="toggle-link">去注册</RouterLink>
+          </span>
+          <RouterLink
+            to="/forgot-password"
+            class="toggle-link auth-footer__forgot"
+            data-test="forgot-password-link"
+          >
+            忘记密码
+          </RouterLink>
+        </template>
       </div>
     </section>
   </div>
@@ -772,11 +777,6 @@ watch(username, (value) => {
   color: var(--a-color-muted-soft);
 }
 
-.auth-form :deep(.p-input:focus) {
-  border-color: var(--a-color-fg);
-  box-shadow: inset 0 0 0 1px var(--a-color-fg);
-}
-
 .email-field-label {
   display: inline-flex;
   align-items: center;
@@ -958,11 +958,6 @@ watch(username, (value) => {
   font-size: 0.875rem;
 }
 
-.auth-password-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .error-text {
   flex: 1;
   line-height: 1.4;
@@ -994,11 +989,20 @@ watch(username, (value) => {
 }
 
 .auth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-top: 1.55rem;
   padding-top: 1.2rem;
   border-top: 1px solid var(--a-color-border-soft);
   font-size: var(--a-text-sm);
   color: var(--a-color-muted);
+}
+
+.auth-footer__forgot {
+  flex: 0 0 auto;
+  font-size: var(--a-text-xs);
 }
 
 .toggle-link {

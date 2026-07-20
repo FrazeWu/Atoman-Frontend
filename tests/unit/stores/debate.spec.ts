@@ -546,4 +546,18 @@ describe('debate store', () => {
     expect(fetch).toHaveBeenCalledWith('/api/v1/debate/topics?search=%E8%82%BA%E7%99%8C&status=active&page_size=10')
     expect(results.map(({ id }) => id)).toEqual(['yes'])
   })
+
+  it('reports an actionable reference error when debate creation fails', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      error: { code: 'reference.invalid_target', message: 'Reference is unavailable' },
+    }, 400))
+    const store = useDebateStore()
+
+    const created = await store.createDebate({
+      title: '辩题', description: '', content: '@post:missing', tags: [],
+    })
+
+    expect(created).toBeNull()
+    expect(store.error).toBe('请从候选中选择有效引用')
+  })
 })

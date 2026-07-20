@@ -92,7 +92,7 @@
           <!-- Topic content (Markdown rendered) -->
           <div
             class="markdown-body topic-content-card"
-            v-html="renderMarkdown(forumStore.currentTopic.content)"
+            v-html="renderMarkdown(forumStore.currentTopic.content, { references: forumStore.currentTopic.references })"
           />
 
           <div class="reply-form-root">

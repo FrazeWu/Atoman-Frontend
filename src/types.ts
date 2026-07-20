@@ -1,3 +1,5 @@
+import type { ResolvedReference } from '@/api/references'
+
 export type MusicEntryStatus = 'open' | 'confirmed' | 'disputed'
 
 export interface ArtistAlias {
@@ -304,6 +306,11 @@ export interface StudioAnalyticsContentMetric {
   metrics: Record<string, number>
 }
 
+export interface StudioAnalyticsSourceMetric {
+  source: string
+  count: number
+}
+
 export interface StudioAnalytics {
   range: 7 | 28 | 90
   from: string
@@ -311,6 +318,12 @@ export interface StudioAnalytics {
   totals: Record<string, number>
   trend: StudioAnalyticsPoint[]
   top: StudioAnalyticsContentMetric[]
+  sources?: StudioAnalyticsSourceMetric[]
+  retention?: {
+    consumers: number
+    returning_consumers: number
+    rate: number
+  }
 }
 
 export interface StudioInteractionFilters {
@@ -383,6 +396,7 @@ export interface Post {
   channel_followers_count?: number
   likes_count?: number
   comments_count?: number
+  references?: ResolvedReference[]
   created_at: string
   updated_at: string
 }
@@ -442,6 +456,7 @@ export interface InteractionComment {
   user?: InteractionUserRef | null
   replies?: InteractionComment[]
   timestamp_sec?: number | null
+  references?: ResolvedReference[]
 }
 
 export interface Like {
@@ -612,6 +627,24 @@ export interface Subscription {
   last_checked?: string
   unread_count?: number
   created_at: string
+}
+
+export interface SubscriptionSyncResult {
+  subscription_id: string
+  feed_source_id: string
+  fetched_items: number
+  new_items: number
+  synced_at: string
+  success: boolean
+  error?: string
+}
+
+export interface SubscriptionSyncSummary {
+  total: number
+  succeeded: number
+  failed: number
+  new_items: number
+  results: SubscriptionSyncResult[]
 }
 
 export type FeedSubscriptionRuleMatchType = 'source_category' | 'source_ids' | 'keywords'
@@ -789,6 +822,7 @@ export interface ForumTopic {
   last_reply_at?: string
   is_liked: boolean
   is_bookmarked: boolean
+  references?: ResolvedReference[]
   created_at: string
   updated_at: string
 }
@@ -879,6 +913,8 @@ export interface Notification {
     resource_id?: string
     comment_id?: string
     root_id?: string
+    module?: string
+    path?: string
     like_count?: number
     [key: string]: any
   }

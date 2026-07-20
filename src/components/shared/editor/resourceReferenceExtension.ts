@@ -149,7 +149,8 @@ const referenceTheme = EditorView.baseTheme({
     whiteSpace: 'nowrap',
   },
   '.resource-reference--stale': {
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
+    boxShadow: 'inset 0 -2px 0 var(--a-color-warning)',
   },
   '.resource-reference--stale .resource-reference__state': {
     color: 'var(--a-color-warning)',

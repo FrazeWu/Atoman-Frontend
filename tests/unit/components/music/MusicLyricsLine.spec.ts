@@ -47,4 +47,26 @@ describe('MusicLyricsLine', () => {
 
     expect(wrapper.emitted('select-text')).toBeUndefined()
   })
+
+  it('applies .is-active class when active prop is true', () => {
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line: { line_key: 'line-1', text: 'Active line', translation: '' },
+        active: true,
+      },
+    })
+    expect(wrapper.classes()).toContain('is-active')
+  })
+
+  it('renders correctly formatted time in .music-lyrics-line__time when time_ms is provided', () => {
+    const wrapper = mount(MusicLyricsLine, {
+      props: {
+        line: { line_key: 'line-1', text: 'Time line', translation: '', time_ms: 125000 },
+      },
+    })
+    const timeEl = wrapper.find('.music-lyrics-line__time')
+    expect(timeEl.exists()).toBe(true)
+    // 125000 ms = 125 seconds = 02:05
+    expect(timeEl.text()).toBe('02:05')
+  })
 })

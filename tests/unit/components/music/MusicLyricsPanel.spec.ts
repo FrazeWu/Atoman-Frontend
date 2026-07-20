@@ -540,8 +540,8 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('[data-testid="lyrics-version-preview-2"]').trigger('click')
 
     const preview = wrapper.get('[data-testid="lyrics-version-diff-2"]').text()
-    expect(preview).toContain('霓虹灯')
-    expect(preview).toContain('新的霓虹灯')
+    expect(preview).toContain('当前译文：霓虹灯')
+    expect(preview).toContain('目标译文：新的霓虹灯')
   })
 
   it('恢复进行中禁用按钮并阻止重复请求', async () => {

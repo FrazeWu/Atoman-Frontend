@@ -210,6 +210,10 @@ async function mountPanel(props?: Record<string, unknown>) {
   })
 }
 
+async function openVersionPreview(wrapper: Awaited<ReturnType<typeof mountPanel>>, version = 2) {
+  await wrapper.get(`[data-testid="lyrics-version-preview-${version}"]`).trigger('click')
+}
+
 describe('MusicLyricsPanel.vue', () => {
   beforeEach(() => {
     authState.isAuthenticated = true
@@ -498,7 +502,7 @@ describe('MusicLyricsPanel.vue', () => {
     expect(wrapper.emitted('seek')).toEqual([[19.625]])
   })
 
-  it('查看并恢复歌词版本', async () => {
+  it('预览歌词版本差异后确认恢复', async () => {
     const wrapper = await mountPanel()
     await flushPromises()
 
@@ -507,7 +511,10 @@ describe('MusicLyricsPanel.vue', () => {
 
     expect(mocks.loadVersions).toHaveBeenCalledWith('song-1')
     expect(wrapper.text()).toContain('修正错字')
+    expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(false)
 
+    await wrapper.get('[data-testid="lyrics-version-preview-2"]').trigger('click')
+    expect(wrapper.get('[data-testid="lyrics-version-diff-2"]').text()).toContain('1 条注释')
     await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
     await flushPromises()
 
@@ -525,6 +532,7 @@ describe('MusicLyricsPanel.vue', () => {
     const wrapper = await mountPanel()
     await flushPromises()
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await openVersionPreview(wrapper)
     const revertButton = wrapper.get('[data-testid="lyrics-revert-version-2"]')
 
     await revertButton.trigger('click')
@@ -556,6 +564,7 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await openVersionPreview(wrapper)
     await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
@@ -576,6 +585,7 @@ describe('MusicLyricsPanel.vue', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
+    await openVersionPreview(wrapper)
     await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
 
     await wrapper.setProps({ songId: 'song-2' })
@@ -621,6 +631,7 @@ describe('MusicLyricsPanel.vue', () => {
 
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
     await flushPromises()
+    await openVersionPreview(wrapper)
     expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(true)
 
     await wrapper.setProps({ songId: 'song-2' })

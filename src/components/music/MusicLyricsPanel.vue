@@ -57,15 +57,45 @@
             <span>{{ version.edit_summary || '歌词更新' }}</span>
           </div>
           <button
-            v-if="isAuthenticated"
             type="button"
             class="music-lyrics-panel__version-action"
-            :disabled="saving || reverting"
-            :data-testid="`lyrics-revert-version-${version.version}`"
-            @click="handleRevertVersion(version.version)"
+            :data-testid="`lyrics-version-preview-${version.version}`"
+            @click="selectVersionPreview(version.version)"
           >
-            恢复
+            预览
           </button>
+
+          <div
+            v-if="selectedVersionPreview?.version === version.version"
+            class="music-lyrics-panel__version-preview"
+            :data-testid="`lyrics-version-diff-${version.version}`"
+          >
+            <p class="music-lyrics-panel__version-impact">
+              {{ selectedVersionPreview.affectedActiveAnnotationCount }} 条注释需重新绑定
+            </p>
+            <div class="music-lyrics-panel__version-diff-lines">
+              <p
+                v-for="(line, index) in selectedVersionPreview.lines"
+                :key="`${line.kind}-${line.currentIndex ?? ''}-${line.targetIndex ?? ''}-${index}`"
+                class="music-lyrics-panel__version-diff-line"
+                :class="`is-${line.kind}`"
+              >
+                <span>{{ versionDiffLabel(line.kind) }}</span>
+                <del v-if="line.current && line.kind !== 'unchanged'">{{ line.current.text }}</del>
+                <ins v-if="line.target && line.kind !== 'removed'">{{ line.target.text }}</ins>
+              </p>
+            </div>
+            <button
+              v-if="isAuthenticated"
+              type="button"
+              class="music-lyrics-panel__version-action"
+              :disabled="saving || reverting"
+              :data-testid="`lyrics-revert-version-${version.version}`"
+              @click="handleRevertVersion(version.version)"
+            >
+              确认恢复
+            </button>
+          </div>
         </article>
       </div>
     </div>
@@ -164,6 +194,7 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
+import { buildMusicLyricsVersionPreview, type MusicLyricsVersionDiffKind } from '@/utils/musicLyricsVersionDiff'
 
 const props = defineProps<{
   songId: string
@@ -215,6 +246,7 @@ const editingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const rebindingAnnotation = ref<MusicLyricsAnnotation | null>(null)
 const isLyricEditorOpen = ref(false)
 const versionsVisible = ref(false)
+const selectedVersionNumber = ref<number | null>(null)
 const displayMode = ref<'original' | 'bilingual'>('bilingual')
 const lyricsLinesElement = ref<HTMLElement | null>(null)
 const pendingLyricsInput = ref<UpdateMusicSongLyricsInput | null>(null)
@@ -264,6 +296,11 @@ const annotationEditorMode = computed<'create' | 'edit' | 'rebind'>(() => (
   rebindingAnnotation.value ? 'rebind' : editingAnnotation.value ? 'edit' : 'create'
 ))
 const showSidebar = computed(() => visibleAnnotations.value.length > 0 || annotationEditorVisible.value)
+const selectedVersionPreview = computed(() => {
+  if (!lyrics.value || selectedVersionNumber.value === null || versionsSongId.value !== props.songId) return null
+  const version = versions.value.find((item) => item.version === selectedVersionNumber.value)
+  return version ? { version: version.version, ...buildMusicLyricsVersionPreview(lyrics.value, version) } : null
+})
 
 watch(
   () => props.songId,
@@ -276,6 +313,7 @@ watch(
     editingAnnotation.value = null
     isLyricEditorOpen.value = false
     versionsVisible.value = false
+    selectedVersionNumber.value = null
     displayMode.value = 'bilingual'
     pendingLyricsInput.value = null
     pendingLyricsSongId.value = ''
@@ -377,6 +415,15 @@ function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
   rebindingAnnotation.value = annotation
 }
 
+function versionDiffLabel(kind: MusicLyricsVersionDiffKind) {
+  return {
+    unchanged: '未变更',
+    added: '新增',
+    removed: '删除',
+    modified: '修改',
+  }[kind]
+}
+
 async function handleConfirmRebind() {
   if (!isAuthenticated.value || !rebindingAnnotation.value || !selectedTextDraft.value) return
   const lineKey = selectedTextDraft.value.line.line_key ?? selectedTextDraft.value.line.id
@@ -427,6 +474,7 @@ async function toggleVersions() {
   versionsViewGeneration += 1
   versionsVisible.value = !versionsVisible.value
   if (!versionsVisible.value) {
+    selectedVersionNumber.value = null
     resetVersions()
     return
   }
@@ -437,8 +485,18 @@ async function toggleVersions() {
   }
 }
 
+function selectVersionPreview(version: number) {
+  selectedVersionNumber.value = selectedVersionNumber.value === version ? null : version
+}
+
 async function handleRevertVersion(version: number) {
-  if (!isAuthenticated.value || saving.value || reverting.value || versionsSongId.value !== props.songId) return
+  if (
+    !isAuthenticated.value
+    || saving.value
+    || reverting.value
+    || versionsSongId.value !== props.songId
+    || selectedVersionNumber.value !== version
+  ) return
   const songId = props.songId
   const viewGeneration = versionsViewGeneration
   try {
@@ -450,6 +508,7 @@ async function handleRevertVersion(version: number) {
       && versionsViewGeneration === viewGeneration
     ) {
       versionsVisible.value = false
+      selectedVersionNumber.value = null
     }
   } catch {
     // The composable exposes the current version error inside this panel.
@@ -643,9 +702,9 @@ function cancelLyricsConflict() {
 }
 
 .music-lyrics-panel__version {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   color: var(--a-color-text);
 }
@@ -670,6 +729,63 @@ function cancelLyricsConflict() {
   font-weight: 800;
   border-radius: 4px;
   box-shadow: none;
+}
+
+.music-lyrics-panel__version-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.6rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 0.75rem;
+}
+
+.music-lyrics-panel__version-impact {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.music-lyrics-panel__version-diff-lines {
+  display: grid;
+  gap: 0.25rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.music-lyrics-panel__version-diff-line {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--a-color-text);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.music-lyrics-panel__version-diff-line > span {
+  flex: 0 0 3rem;
+  color: var(--a-color-muted);
+  font-weight: 700;
+}
+
+.music-lyrics-panel__version-diff-line del,
+.music-lyrics-panel__version-diff-line ins {
+  text-decoration: none;
+}
+
+.music-lyrics-panel__version-diff-line.is-added ins {
+  color: var(--a-color-success);
+}
+
+.music-lyrics-panel__version-diff-line.is-removed del {
+  color: var(--a-color-danger);
+}
+
+.music-lyrics-panel__version-diff-line.is-modified del {
+  color: var(--a-color-danger);
+}
+
+.music-lyrics-panel__version-diff-line.is-modified ins {
+  color: var(--a-color-success);
 }
 
 .music-lyrics-panel__layout {

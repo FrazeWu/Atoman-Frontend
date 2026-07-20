@@ -44,6 +44,11 @@ export type MusicAlbumImportStatus =
   | 'ready'
   | 'failed'
   | 'committed'
+  | 'queued'
+  | 'analyzing'
+  | 'transcoding'
+  | 'needs_attention'
+  | 'canceled'
 
 export type MusicAlbumImportTrack = {
   title: string
@@ -111,6 +116,10 @@ export type MusicAlbumImport = {
   derivedTracks: MusicAlbumImportTrack[]
   lastSyncedAt: string
   errorMessage: string
+  inputMode: MusicAlbumImportInputMode
+  stage: MusicAlbumImportStage
+  progress: MusicAlbumImportProgress
+  files: MusicAlbumImportFile[]
 }
 
 export type MusicAlbumImportMultipartPart = {
@@ -120,6 +129,7 @@ export type MusicAlbumImportMultipartPart = {
 
 export type CreateMusicAlbumImportInput = {
   artistId?: string | null
+  inputMode?: MusicAlbumImportInputMode
 }
 
 export type StartMusicAlbumImportMultipartInput = {
@@ -134,6 +144,57 @@ export type MusicAlbumImportMultipart = {
 }
 
 export type MusicAlbumImportMultipartPartUpload = {
+  partNumber: number
+  uploadUrl: string
+}
+
+export type MusicAlbumImportFileUploadStatus = 'pending' | 'uploading' | 'completing' | 'uploaded' | 'failed'
+export type MusicAlbumImportFileProcessingStatus = 'pending' | 'failed'
+export type MusicAlbumImportStage =
+  | 'upload'
+  | 'queued'
+  | 'extracting'
+  | 'analyzing'
+  | 'transcoding'
+  | 'ready'
+  | 'committing'
+  | 'completed'
+  | 'failed'
+  | 'canceled'
+export type MusicAlbumImportInputMode = 'auto' | 'archive' | 'files' | 'folder'
+
+export type MusicAlbumImportFile = {
+  fileId: string
+  relativePath: string
+  fileName: string
+  role: string
+  detectedFormat: string
+  size: number
+  uploadStatus: MusicAlbumImportFileUploadStatus
+  processingStatus: MusicAlbumImportFileProcessingStatus
+  discNumber: number
+  trackNumber: number
+  title: string
+  errorMessage: string
+}
+
+export type MusicAlbumImportProgress = {
+  current: number
+  total: number
+}
+
+export type RegisterMusicAlbumImportFileInput = {
+  relativePath: string
+  fileName: string
+  fileSize: number
+  contentType: string
+}
+
+export type RegisterMusicAlbumImportFilesInput = {
+  files: RegisterMusicAlbumImportFileInput[]
+}
+
+export type MusicAlbumImportFilePartUpload = {
   partNumber: number
   uploadUrl: string
 }
@@ -681,6 +742,19 @@ export const musicV1Endpoints = {
   albumImportMultipartPart: (importId: string, partNumber: number) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/parts/${partNumber}`,
   albumImportMultipartPartComplete: (importId: string, partNumber: number) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/parts/${partNumber}/complete`,
   albumImportMultipartComplete: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/multipart/complete`,
+  albumImportFiles: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/files`,
+  albumImportFilePart: (importId: string, fileId: string, partNumber: number) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/parts/${partNumber}`,
+  albumImportFilePartComplete: (importId: string, fileId: string, partNumber: number) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/parts/${partNumber}/complete`,
+  albumImportFileComplete: (importId: string, fileId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/complete`,
+  albumImportFileRetry: (importId: string, fileId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/retry`,
+  albumImportSessionComplete: (importId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/complete`,
+  albumImportSessionCancel: (importId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}`,
   albumImportCommit: (importId: string) => `${apiV1Base()}/music/imports/albums/${importId}/commit`,
   discover: (mode?: MusicBrowseMode) => `${apiV1Base()}/music/discover${mode ? `?mode=${mode}` : ''}`,
   recommendAlbums: (mode: MusicRecommendationMode) => `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
@@ -814,14 +888,30 @@ export async function commitMusicAlbumImport(
 
 const maxAlbumArchiveBytes = 2 * 1024 * 1024 * 1024
 
+const SUPPORTED_ARCHIVE_EXTENSIONS = [
+  '.zip', '.rar', '.7z', '.tar',
+  '.tar.gz', '.tgz', '.tar.bz2', '.tar.xz',
+]
+
 export function validateMusicAlbumArchiveFile(file: File): void {
-  if (!file.name.toLowerCase().endsWith('.zip')) {
-    throw new Error('请上传 .zip 压缩包')
+  const lower = file.name.toLowerCase()
+  const supported = SUPPORTED_ARCHIVE_EXTENSIONS.some((ext) => lower.endsWith(ext))
+  if (!supported) {
+    throw new Error('请上传压缩包文件（支持 ZIP、RAR、7Z、TAR 等格式）')
   }
   if (file.size > maxAlbumArchiveBytes) {
     throw new Error('文件需在 2GB 以内，请转换或压缩后上传')
   }
 }
+
+export const SUPPORTED_ARCHIVE_ACCEPT = '.zip,.rar,.7z,.tar,.tar.gz,.tgz,.tar.bz2,.tar.xz'
+
+export const SUPPORTED_AUDIO_EXTENSIONS = [
+  '.mp3', '.flac', '.wav', '.m4a', '.aac', '.ogg',
+  '.opus', '.aiff', '.aif', '.wma', '.ape', '.alac',
+]
+
+export const SUPPORTED_AUDIO_ACCEPT = SUPPORTED_AUDIO_EXTENSIONS.join(',')
 
 export async function startMusicAlbumImportMultipart(
   importId: string,
@@ -929,6 +1019,60 @@ export async function uploadMusicAlbumArchiveMultipart(
 
   await Promise.all(workers)
   return completeMusicAlbumImportMultipart(importId)
+}
+
+export async function registerMusicAlbumImportFiles(
+  importId: string,
+  input: RegisterMusicAlbumImportFilesInput,
+): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFiles(importId), input)
+}
+
+export async function createMusicAlbumImportFilePartUpload(
+  importId: string,
+  fileId: string,
+  partNumber: number,
+  partSize: number,
+): Promise<MusicAlbumImportFilePartUpload> {
+  return apiPostJson<MusicAlbumImportFilePartUpload>(
+    musicV1Endpoints.albumImportFilePart(importId, fileId, partNumber),
+    { partSize },
+  )
+}
+
+export async function completeMusicAlbumImportFilePart(
+  importId: string,
+  fileId: string,
+  partNumber: number,
+  etag: string,
+  size: number,
+): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(
+    musicV1Endpoints.albumImportFilePartComplete(importId, fileId, partNumber),
+    { etag, size },
+  )
+}
+
+export async function completeMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileComplete(importId, fileId), {})
+}
+
+export async function retryMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileRetry(importId, fileId), {})
+}
+
+export async function completeMusicAlbumImportSession(importId: string): Promise<MusicAlbumImport> {
+  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportSessionComplete(importId), {})
+}
+
+export async function cancelMusicAlbumImportSession(importId: string): Promise<void> {
+  await apiDeleteJson<any>(musicV1Endpoints.albumImportSessionCancel(importId))
 }
 
 export async function uploadMusicAlbumArchive(

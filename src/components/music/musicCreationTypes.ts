@@ -1,4 +1,5 @@
 import type { UploadAsset } from '@/api/types'
+import type { MusicAlbumImportStatus } from '@/api/musicV1'
 
 export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails'
 export type MusicArtistKind = 'person' | 'group'
@@ -56,7 +57,7 @@ export interface MusicCreationArtistDraft {
 export interface MusicCreationAlbumImportDraft {
   importId: string | null
   archiveName: string
-  status: 'pending_upload' | 'uploading' | 'uploaded' | 'extracting' | 'ready' | 'failed' | 'committed'
+  status: MusicAlbumImportStatus
   uploadProgress: number
   uploadSpeed: number
   coverUrl: string

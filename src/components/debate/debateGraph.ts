@@ -41,8 +41,10 @@ export function buildDebateFlow(
 
   const relationNeighbors = new Map(graph.nodes.map(node => [node.id, [] as string[]]))
   for (const relation of candidateRelations) {
-    relationNeighbors.get(relation.source_debate_id)?.push(relation.target_debate_id)
     relationNeighbors.get(relation.target_debate_id)?.push(relation.source_debate_id)
+    if (options.view === 'graph') {
+      relationNeighbors.get(relation.source_debate_id)?.push(relation.target_debate_id)
+    }
   }
 
   const visibleNodeIds = options.view === 'graph'

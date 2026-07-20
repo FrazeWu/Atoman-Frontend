@@ -82,6 +82,30 @@ describe('debate graph layout', () => {
     })
   })
 
+  it('follows only incoming support relations in tree view', () => {
+    const directionalGraph: DebateGraph = {
+      root_id: 'root',
+      nodes: [
+        debate('root', '长期吸烟会不会显著增加肺癌风险？'),
+        debate('child', '烟草烟雾会不会含有已知致癌物？'),
+        debate('external', '肺癌风险会不会影响戒烟决策？'),
+      ],
+      relations: [
+        relation('incoming', 'child', 'root', 'support'),
+        relation('outgoing', 'root', 'external', 'support'),
+      ],
+      expandable_node_ids: [],
+    }
+
+    const tree = buildDebateFlow(directionalGraph, { view: 'tree' })
+    const relationGraph = buildDebateFlow(directionalGraph, { view: 'graph' })
+
+    expect(tree.nodes.map(node => node.id)).toEqual(['root', 'child'])
+    expect(tree.edges.map(edge => edge.id)).toEqual(['incoming'])
+    expect(relationGraph.nodes.map(node => node.id)).toEqual(['root', 'child', 'external'])
+    expect(relationGraph.edges.map(edge => edge.id)).toEqual(['incoming', 'outgoing'])
+  })
+
   it('keeps both relation stances in graph view and exposes stable node state', () => {
     const flow = buildDebateFlow(graph, {
       view: 'graph',

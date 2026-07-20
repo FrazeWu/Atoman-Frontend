@@ -272,12 +272,12 @@ onMounted(() => {
   font-weight: 600;
 }
 .debate-conclusion-stamp--yes {
-  background: #eff6ff;
-  color: #2563eb;
+  background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
+  color: var(--a-color-primary);
 }
 .debate-conclusion-stamp--no {
   border: 1px solid var(--a-color-border);
   background: var(--a-color-surface-muted);
-  color: #475569;
+  color: var(--a-color-text-secondary);
 }
 </style>

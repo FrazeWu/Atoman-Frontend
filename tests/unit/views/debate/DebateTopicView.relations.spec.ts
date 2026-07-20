@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, shallowMount } from '@vue/test-utils'
-import { reactive } from 'vue'
+import { nextTick, reactive } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import DebateTopicView from '@/views/debate/DebateTopicView.vue'
@@ -9,9 +9,10 @@ import type { Debate, DebateGraph, DebateVoteSummary } from '@/types'
 
 const routerPush = vi.hoisted(() => vi.fn())
 let store: ReturnType<typeof buildStore>
+let currentRoute: { params: { id: string } }
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { id: 'root' } }),
+  useRoute: () => currentRoute,
   useRouter: () => ({ push: routerPush }),
   RouterLink: { template: '<a><slot /></a>' },
 }))
@@ -73,6 +74,12 @@ const graph: DebateGraph = {
   expandable_node_ids: [],
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>(nextResolve => { resolve = nextResolve })
+  return { promise, resolve }
+}
+
 function buildStore() {
   return reactive({
     currentDebate: root as Debate | null,
@@ -118,6 +125,7 @@ describe('DebateTopicView relation experience', () => {
     authStore.isAuthenticated = true
     authStore.user = { uuid: 'user-1', username: 'fafa' } as never
     routerPush.mockReset()
+    currentRoute = reactive({ params: { id: 'root' } })
     store = buildStore()
   })
 
@@ -185,5 +193,69 @@ describe('DebateTopicView relation experience', () => {
     })
     expect(store.fetchDebate).toHaveBeenCalledTimes(2)
     expect(store.fetchRelationGraph).toHaveBeenLastCalledWith('root', 'tree', 3)
+  })
+
+  it('切换路由后立即隔离旧辩题和投票，直到新辩题完整加载', async () => {
+    const nextDebateRequest = deferred<Debate>()
+    const nextVotesRequest = deferred<DebateVoteSummary>()
+    const nextDebate: Debate = {
+      ...root,
+      id: 'topic-b',
+      user_id: 'user-2',
+      title: '规律运动会不会降低心血管疾病风险？',
+      content: '新辩题正文',
+      current_revision_id: 'revision-b',
+      references: [],
+    }
+    const nextVotes: DebateVoteSummary = {
+      yes_votes: 8,
+      no_votes: 4,
+      total_votes: 12,
+      current_direction: '',
+      current_user_vote: 'no',
+    }
+    store.fetchDebate.mockImplementation(async (id: string) => {
+      if (id === 'root') return root
+      const result = await nextDebateRequest.promise
+      store.currentDebate = result
+      return result
+    })
+    store.fetchVotes.mockImplementation(async (id: string) => {
+      if (id === 'root') return votes
+      const result = await nextVotesRequest.promise
+      store.voteSummary = result
+      return result
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain(root.title)
+    await wrapper.get('[data-test="topic-action-revisions"]').trigger('click')
+
+    currentRoute.params.id = 'topic-b'
+    await nextTick()
+
+    expect(wrapper.text()).toContain('加载中...')
+    expect(wrapper.text()).not.toContain(root.title)
+    expect(wrapper.text()).not.toContain(root.content)
+    expect(wrapper.find('[data-test^="topic-action-"]').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'DebateVotePanel' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'DebateRevisionSheet' }).exists()).toBe(false)
+
+    nextDebateRequest.resolve(nextDebate)
+    await nextTick()
+    await Promise.resolve()
+
+    expect(wrapper.text()).toContain('加载中...')
+    expect(wrapper.text()).not.toContain(nextDebate.title)
+    expect(wrapper.findComponent({ name: 'DebateVotePanel' }).exists()).toBe(false)
+
+    nextVotesRequest.resolve(nextVotes)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(nextDebate.title)
+    expect(wrapper.text()).toContain(nextDebate.content)
+    expect(wrapper.text()).not.toContain(root.title)
+    expect(wrapper.findComponent({ name: 'DebateVotePanel' }).props('summary')).toEqual(nextVotes)
   })
 })

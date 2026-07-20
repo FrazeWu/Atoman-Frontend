@@ -101,7 +101,7 @@
 
         <aside class="debate-sidebar" aria-label="投票">
           <DebateVotePanel
-            :summary="debateStore.voteSummary"
+            :summary="ownedVoteSummary"
             :loading="debateStore.votesLoading"
             @vote="handleVote"
             @remove="handleRemoveVote"
@@ -195,12 +195,21 @@ const showWikiEditor = ref(false)
 const showRevisions = ref(false)
 const showDiscussion = ref(false)
 const reconfirmingRelationId = ref('')
+const routeDataReady = ref(false)
+const voteOwnerID = ref('')
 
-const debate = computed(() => debateStore.currentDebate)
-const loading = computed(() => debateStore.loading)
+const routeDebateID = computed(() => String(route.params.id || ''))
+const debate = computed(() => {
+  if (!routeDataReady.value || debateStore.currentDebate?.id !== routeDebateID.value) return null
+  return debateStore.currentDebate
+})
+const ownedVoteSummary = computed(() => (
+  voteOwnerID.value === routeDebateID.value ? debateStore.voteSummary : null
+))
+const loading = computed(() => !routeDataReady.value || debateStore.loading)
 const canEdit = computed(() => authStore.isAuthenticated)
 const currentDirection = computed<DebateVoteDirection | ''>(() => (
-  debateStore.voteSummary?.current_direction
+  ownedVoteSummary.value?.current_direction
   || (debate.value?.conclusion_type === 'yes' || debate.value?.conclusion_type === 'no'
     ? debate.value.conclusion_type
     : '')
@@ -221,15 +230,20 @@ const renderedContent = computed(() => renderDebateContent(
 
 watch(() => String(route.params.id || ''), async (id) => {
   if (!id) return
+  routeDataReady.value = false
+  voteOwnerID.value = ''
   activeTab.value = 'content'
   lastLoadedRelationView.value = null
   showWikiEditor.value = false
   showRevisions.value = false
   showDiscussion.value = false
-  await Promise.all([
+  const [, loadedVotes] = await Promise.all([
     debateStore.fetchDebate(id),
     debateStore.fetchVotes(id),
   ])
+  if (routeDebateID.value !== id) return
+  if (loadedVotes) voteOwnerID.value = id
+  routeDataReady.value = true
 }, { immediate: true })
 
 async function selectTab(tab: DebateTab) {

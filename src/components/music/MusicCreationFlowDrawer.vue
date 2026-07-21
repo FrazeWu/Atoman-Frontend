@@ -378,6 +378,7 @@ async function completeCreation() {
     :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
+    panel-class="creation-flow-drawer"
     @close="requestClose"
   >
     <div v-if="creationFlow" class="creation-flow">
@@ -442,7 +443,7 @@ async function completeCreation() {
   margin: -2.5rem -2.5rem 0;
   padding: 1.5rem 2rem 1.1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: color-mix(in srgb, var(--a-color-surface) 86%, var(--a-color-bg));
+  background: transparent;
 }
 .header-meta {
   display: flex;
@@ -492,7 +493,7 @@ async function completeCreation() {
 .ui-action,
 .primary-action {
   border: 0;
-  border-radius: 0px;
+  border-radius: 4px;
   padding: 0.85rem 1.2rem;
   font-family: var(--a-font-sans);
   font-weight: 800;
@@ -514,5 +515,23 @@ async function completeCreation() {
 
 .drawer-body :deep(.album-details-step .footer-actions) {
   display: none;
+}
+
+:global(.creation-flow-drawer) {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-left: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"]) .creation-flow-drawer) {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-left: 1px solid var(--a-color-border-dark, #334155) !important;
+  }
+}
+:root[data-theme='dark'] :global(.creation-flow-drawer) {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-left: 1px solid var(--a-color-border-dark, #334155) !important;
 }
 </style>

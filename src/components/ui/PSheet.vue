@@ -251,9 +251,7 @@ const sheetStyle = computed(() => {
   left: 0;
   right: 0;
   bottom: var(--a-content-bottom-offset);
-  background: rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: transparent;
   z-index: var(--a-z-sheet-backdrop);
   cursor: default;
 }

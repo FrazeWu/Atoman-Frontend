@@ -289,7 +289,7 @@ watch(
 
       <div class="action-bar">
         <PButton
-          variant="secondary"
+          variant="primary"
           :disabled="!playableSongs.length"
           @click="playAlbum"
         >

@@ -100,8 +100,6 @@ watch(
 }
 
 .main-level-1.is-shifted {
-  transform: translateX(-10%) scale(0.98);
-  opacity: 0.4;
   pointer-events: none;
 }
 </style>

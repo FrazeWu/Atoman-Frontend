@@ -115,7 +115,7 @@ onMounted(fetchAlbums)
 <style scoped>
 .music-base-view { position: relative; }
 .main-level-1 { display: flex; flex-direction: column; gap: 1.5rem; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; }
-.main-level-1.is-shifted { transform: translateX(-10%) scale(0.98); opacity: 0.4; pointer-events: none; }
+.main-level-1.is-shifted { pointer-events: none; }
 .toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .toolbar-left { min-width: 0; flex: 1 1 auto; }
 .toolbar-right { display: flex; align-items: center; flex: 0 0 auto; }

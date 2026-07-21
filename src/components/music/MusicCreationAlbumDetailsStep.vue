@@ -9,6 +9,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 import MusicCreationContributorPicker from '@/components/music/MusicCreationContributorPicker.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -717,12 +718,6 @@ watch(
 .field-stack {
   display: grid;
   gap: 1rem;
-}
-
-.date-parts-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .field-group {

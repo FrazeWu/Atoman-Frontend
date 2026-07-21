@@ -218,7 +218,9 @@ const sheetStyle = computed(() => {
 .p-sheet-layer {
   position: fixed;
   bottom: var(--a-content-bottom-offset);
-  background: white;
+  background: color-mix(in srgb, var(--a-color-bg) 85%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   display: flex;
   flex-direction: column;
   z-index: var(--a-z-sheet);
@@ -295,8 +297,6 @@ const sheetStyle = computed(() => {
   align-items: center;
   padding: 1.25rem 2.5rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: white;
-  color: black;
 }
 
 .sheet-header-label {
@@ -308,7 +308,7 @@ const sheetStyle = computed(() => {
 .header-close-btn {
   background: none;
   border: none;
-  color: black;
+  color: inherit;
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.1em;

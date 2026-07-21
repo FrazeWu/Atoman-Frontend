@@ -400,7 +400,6 @@ watch(
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: var(--a-color-surface);
 }
 .kicker {
   font-family: var(--a-font-sans);

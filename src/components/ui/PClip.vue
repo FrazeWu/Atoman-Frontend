@@ -40,7 +40,7 @@ const onClick = (event: MouseEvent) => {
   min-height: 34px;
   padding: 8px 12px;
   border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-none, 4px);
+  border-radius: 4px;
   background: var(--a-color-bg);
   color: var(--a-color-text);
   font-family: inherit;

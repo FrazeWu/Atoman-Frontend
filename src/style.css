@@ -35,10 +35,10 @@
   --a-border-color: var(--a-color-border);
   --a-border: var(--a-border-width) var(--a-border-style) var(--a-border-color);
 
-  --a-radius-base: 6px;
-  --a-radius-control: 8px;
-  --a-radius-card: 8px;
-  --a-radius-modal: 12px;
+  --a-radius-base: 4px;
+  --a-radius-control: 4px;
+  --a-radius-card: 4px;
+  --a-radius-modal: 4px;
   --a-radius-none: 0px;
 
   --a-shadow-button: none;

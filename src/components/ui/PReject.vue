@@ -32,6 +32,7 @@ const onClick = (event: MouseEvent) => {
   justify-content: center;
   padding: 9px 13px;
   border: 1px solid var(--a-color-danger-border);
+  border-radius: 4px;
   background: var(--a-color-bg);
   color: var(--a-color-danger);
   font-family: inherit;

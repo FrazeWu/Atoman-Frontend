@@ -46,6 +46,7 @@ const onClick = (event: MouseEvent) => {
   justify-content: center;
   padding: 0 22px;
   border: 1px solid var(--a-color-text);
+  border-radius: 4px;
   background: var(--a-color-text);
   color: var(--a-color-bg);
   font-family: var(--a-font-sans);

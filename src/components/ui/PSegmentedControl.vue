@@ -151,7 +151,7 @@ onBeforeUnmount(() => {
   padding: 3px;
   background: var(--a-color-surface-muted);
   border: none;
-  border-radius: var(--a-radius-none, 4px);
+  border-radius: 4px;
   box-shadow: none;
   user-select: none;
 }
@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
   top: 3px;
   bottom: 3px;
   background: var(--a-color-bg);
-  border-radius: calc(var(--a-radius-none, 4px) - 1px);
+  border-radius: 3px;
   transition: left 0.25s cubic-bezier(0.25, 1, 0.5, 1), width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
   z-index: 1;
   border: 1px solid var(--a-color-border-soft);

@@ -751,6 +751,8 @@ export const musicV1Endpoints = {
     `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/complete`,
   albumImportFileRetry: (importId: string, fileId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/retry`,
+  albumImportFileDelete: (importId: string, fileId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}`,
   albumImportSessionComplete: (importId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/complete`,
   albumImportSessionCancel: (importId: string) =>
@@ -1065,6 +1067,13 @@ export async function retryMusicAlbumImportFile(
   fileId: string,
 ): Promise<MusicAlbumImport> {
   return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileRetry(importId, fileId), {})
+}
+
+export async function deleteMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+): Promise<MusicAlbumImport> {
+  return apiDeleteJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileDelete(importId, fileId))
 }
 
 export async function completeMusicAlbumImportSession(importId: string): Promise<MusicAlbumImport> {

@@ -13,6 +13,8 @@ import {
   completeMusicAlbumImportFile,
   completeMusicAlbumImportSession,
   getMusicAlbumImport,
+  retryMusicAlbumImportFile,
+  deleteMusicAlbumImportFile,
   SUPPORTED_ARCHIVE_ACCEPT,
   SUPPORTED_AUDIO_ACCEPT,
 } from '@/api/musicV1'
@@ -349,6 +351,29 @@ function startPolling(importId: string) {
 onUnmounted(() => {
   if (pollTimer) clearTimeout(pollTimer)
 })
+
+async function handleRetryFile(fileId: string) {
+  const draft = albumImportDraft.value
+  if (!draft?.importId) return
+  try {
+    const snapshot = await retryMusicAlbumImportFile(draft.importId, fileId)
+    draft.files = snapshot.files ?? draft.files
+    startPolling(draft.importId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '重试失败'
+  }
+}
+
+async function handleDeleteFile(fileId: string) {
+  const draft = albumImportDraft.value
+  if (!draft?.importId) return
+  try {
+    const snapshot = await deleteMusicAlbumImportFile(draft.importId, fileId)
+    draft.files = snapshot.files ?? draft.files.filter((f) => f.fileId !== fileId)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '移除失败'
+  }
+}
 </script>
 
 <template>
@@ -437,7 +462,7 @@ onUnmounted(() => {
               ref="filesInputRef"
               data-testid="album-import-files-input"
               type="file"
-              :accept="SUPPORTED_AUDIO_ACCEPT + ',.cue,.jpg,.jpeg,.png,.webp'"
+              :accept="SUPPORTED_AUDIO_ACCEPT + ',.cue,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
               multiple
               :disabled="uploading"
               style="display: none"
@@ -539,7 +564,25 @@ onUnmounted(() => {
             <span class="import-file-format">{{ f.detectedFormat }}</span>
             <span class="import-file-progress">
               <template v-if="f.uploadStatus === 'uploaded' || f.uploadStatus === 'completing'">✓</template>
-              <template v-else-if="f.uploadStatus === 'failed'">{{ f.errorMessage || '失败' }}</template>
+              <template v-else-if="f.uploadStatus === 'failed'">
+                <span class="import-file-error">{{ f.errorMessage || '上传失败' }}</span>
+                <button
+                  type="button"
+                  class="import-file-action"
+                  :disabled="uploading"
+                  @click="handleRetryFile(f.fileId)"
+                >
+                  重试
+                </button>
+                <button
+                  type="button"
+                  class="import-file-action import-file-action--danger"
+                  :disabled="uploading"
+                  @click="handleDeleteFile(f.fileId)"
+                >
+                  移除
+                </button>
+              </template>
               <template v-else-if="fileProgress.get(f.fileId) !== undefined">
                 {{ fileProgress.get(f.fileId) }}%
               </template>
@@ -1117,13 +1160,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.import-file-progress {
-  min-width: 36px;
-  text-align: right;
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--color-text-secondary, #888);
-}
+
 
 .stage-banner {
   margin-top: 12px;
@@ -1142,5 +1179,52 @@ onUnmounted(() => {
 
 .stage-hint {
   color: var(--color-text-secondary, #888);
+}
+
+.import-file-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.import-file-error {
+  color: var(--color-error, #c00);
+  font-size: 11px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-file-action {
+  padding: 1px 6px;
+  font-size: 11px;
+  border: 1px solid var(--color-border, rgba(0,0,0,0.15));
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text, #333);
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.import-file-action:hover:not(:disabled) {
+  background: var(--color-surface-secondary, rgba(0,0,0,0.06));
+}
+
+.import-file-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.import-file-action--danger {
+  color: var(--color-error, #c00);
+  border-color: var(--color-error, #c00);
+}
+
+.import-file-action--danger:hover:not(:disabled) {
+  background: rgba(204,0,0,0.06);
 }
 </style>

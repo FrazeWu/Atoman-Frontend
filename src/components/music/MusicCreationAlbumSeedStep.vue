@@ -25,7 +25,6 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 
 const { state, setMusicCreationStep } = useMusicDrawers()
-const archiveInputRef = ref<HTMLInputElement | null>(null)
 const coverInputRef = ref<HTMLInputElement | null>(null)
 
 const creationFlow = computed(() => state.value.creationFlow)
@@ -38,8 +37,6 @@ const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const resolvedCoverUrl = computed(() => albumImportDraft.value?.coverUrl || albumImportDraft.value?.derivedCover || '')
 
-// Upload mode
-const selectedMode = ref<MusicAlbumImportInputMode>('archive')
 const filesInputRef = ref<HTMLInputElement | null>(null)
 const folderInputRef = ref<HTMLInputElement | null>(null)
 
@@ -47,12 +44,6 @@ const folderInputRef = ref<HTMLInputElement | null>(null)
 const fileProgress = ref<Map<string, number>>(new Map())
 
 let pollTimer: ReturnType<typeof setTimeout> | null = null
-
-const uploadModes: Array<{ key: MusicAlbumImportInputMode; label: string }> = [
-  { key: 'archive', label: '压缩包' },
-  { key: 'files', label: '多选文件' },
-  { key: 'folder', label: '文件夹' },
-]
 
 const stageLabelMap: Record<string, string> = {
   queued: '等待处理',
@@ -223,6 +214,30 @@ async function handleArchiveChange(event: Event) {
   }
 }
 
+// Auto-detect upload mode based on what the user selected:
+// - Single archive file (压缩包) → archive mode
+// - Any other selection → files mode
+async function handleAutoFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const fileList = input.files
+  if (!fileList || fileList.length === 0) return
+
+  const files = Array.from(fileList)
+  const isArchive =
+    files.length === 1 &&
+    SUPPORTED_ARCHIVE_ACCEPT.split(',').some((ext) =>
+      files[0].name.toLowerCase().endsWith(ext.trim()),
+    )
+
+  if (isArchive) {
+    await handleArchiveChange(event)
+  } else {
+    await handleFilesUpload(fileList)
+  }
+
+  input.value = ''
+}
+
 const FILE_PART_SIZE = 10 * 1024 * 1024 // 10MB
 
 async function uploadSingleFileMultipart(
@@ -273,14 +288,19 @@ async function handleFilesUpload(fileList: FileList) {
 
   const draft = albumImportDraft.value
   draft.status = 'uploading'
-  draft.inputMode = selectedMode.value
+  // Auto-detect: if any file has a webkitRelativePath with a '/', it came from a folder picker
+  const hasRelativePaths = files.some(
+    (f) => !!(f as File & { webkitRelativePath?: string }).webkitRelativePath,
+  )
+  const autoMode: MusicAlbumImportInputMode = hasRelativePaths ? 'folder' : 'files'
+  draft.inputMode = autoMode
   draft.totalBytesLoaded = 0
   draft.totalBytesTotal = files.reduce((sum, f) => sum + f.size, 0)
 
   try {
     const session = await createMusicAlbumImport({
       artistId: creationFlow.value.draft.artist.id,
-      inputMode: selectedMode.value,
+      inputMode: autoMode,
     })
     draft.importId = session.importId
     setMusicCreationStep('albumDetails')
@@ -393,159 +413,79 @@ async function handleDeleteFile(fileId: string) {
           </div>
         </div>
 
-        <!-- Mode tabs -->
-        <div class="upload-mode-tabs" role="tablist" aria-label="上传方式">
-          <button
-            v-for="mode in uploadModes"
-            :key="mode.key"
-            role="tab"
-            class="upload-mode-tab"
-            :class="{ 'is-active': selectedMode === mode.key }"
-            :disabled="uploading"
-            :aria-selected="selectedMode === mode.key"
-            @click="selectedMode = mode.key"
-          >
-            {{ mode.label }}
-          </button>
-        </div>
-
         <div class="field-group">
-          <!-- Archive mode -->
-          <template v-if="selectedMode === 'archive'">
-            <input
-              ref="archiveInputRef"
-              data-testid="album-import-archive-input"
-              type="file"
-              :accept="SUPPORTED_ARCHIVE_ACCEPT"
-              :disabled="uploading"
-              style="display: none"
-              @change="handleArchiveChange"
-            />
-            <div class="p-field">
-              <label class="p-field-label">
-                <span class="p-field-dot" aria-hidden="true" />
-                专辑压缩包
-              </label>
-              <div
-                class="custom-file-picker"
-                :class="{ 'is-disabled': uploading }"
-                @click="archiveInputRef?.click()"
-              >
-                <div class="file-picker-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                </div>
-                <div class="file-picker-text">
-                  <span class="file-picker-title">
-                    {{ albumImportDraft?.archiveName || '点击上传专辑压缩包' }}
-                  </span>
-                  <span class="file-picker-subtitle">支持 ZIP、RAR、7Z、TAR 格式</span>
-                </div>
-                <PButton
-                  type="button"
-                  variant="secondary"
-                  :disabled="uploading"
-                  @click.stop="archiveInputRef?.click()"
-                >
-                  {{ albumImportDraft?.archiveName ? '重新选择' : '浏览文件' }}
-                </PButton>
-              </div>
-            </div>
-          </template>
+          <!-- Hidden: unified file picker (archive + audio + covers, multiple) -->
+          <input
+            ref="filesInputRef"
+            data-testid="album-import-files-input"
+            type="file"
+            :accept="SUPPORTED_ARCHIVE_ACCEPT + ',' + SUPPORTED_AUDIO_ACCEPT + ',.cue,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
+            multiple
+            :disabled="uploading"
+            style="display: none"
+            @change="handleAutoFileChange"
+          />
+          <!-- Hidden: folder picker -->
+          <input
+            ref="folderInputRef"
+            data-testid="album-import-folder-input"
+            type="file"
+            webkitdirectory
+            :disabled="uploading"
+            style="display: none"
+            @change="(e) => { handleFilesUpload((e.target as HTMLInputElement).files!) }"
+          />
 
-          <!-- Multi-select files mode -->
-          <template v-else-if="selectedMode === 'files'">
-            <input
-              ref="filesInputRef"
-              data-testid="album-import-files-input"
-              type="file"
-              :accept="SUPPORTED_AUDIO_ACCEPT + ',.cue,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.tiff,.tif,.bmp'"
-              multiple
-              :disabled="uploading"
-              style="display: none"
-              @change="(e) => handleFilesUpload((e.target as HTMLInputElement).files!)"
-            />
-            <div class="p-field">
-              <label class="p-field-label">
-                <span class="p-field-dot" aria-hidden="true" />
-                音频文件
-              </label>
-              <div
-                class="custom-file-picker"
-                :class="{ 'is-disabled': uploading }"
-                @click="filesInputRef?.click()"
-              >
-                <div class="file-picker-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10 9 9 9 8 9" />
-                  </svg>
-                </div>
-                <div class="file-picker-text">
-                  <span class="file-picker-title">
-                    {{ albumImportDraft && albumImportDraft.files.length > 0 ? `已选择 ${albumImportDraft.files.length} 个文件` : '点击选择音频文件' }}
-                  </span>
-                  <span class="file-picker-subtitle">支持 MP3、FLAC、WAV、M4A、APE 等格式，可多选</span>
-                </div>
-                <PButton
-                  type="button"
-                  variant="secondary"
-                  :disabled="uploading"
-                  @click.stop="filesInputRef?.click()"
-                >
-                  选择文件
-                </PButton>
+          <div class="p-field">
+            <label class="p-field-label">
+              <span class="p-field-dot" aria-hidden="true" />
+              上传专辑
+            </label>
+            <div
+              class="custom-file-picker"
+              :class="{ 'is-disabled': uploading }"
+              @click="filesInputRef?.click()"
+            >
+              <div class="file-picker-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
               </div>
+              <div class="file-picker-text">
+                <span class="file-picker-title">
+                  <template v-if="albumImportDraft.archiveName">{{ albumImportDraft.archiveName }}</template>
+                  <template v-else-if="albumImportDraft.files.length > 0">已选择 {{ albumImportDraft.files.length }} 个文件</template>
+                  <template v-else>点击选择文件</template>
+                </span>
+                <span class="file-picker-subtitle">压缩包（ZIP/RAR/7Z）、音频文件或封面图片</span>
+              </div>
+              <PButton
+                type="button"
+                variant="secondary"
+                :disabled="uploading"
+                @click.stop="filesInputRef?.click()"
+              >
+                {{ albumImportDraft.archiveName || albumImportDraft.files.length > 0 ? '重新选择' : '选择文件' }}
+              </PButton>
             </div>
-          </template>
+          </div>
 
-          <!-- Folder mode -->
-          <template v-else-if="selectedMode === 'folder'">
-            <input
-              ref="folderInputRef"
-              data-testid="album-import-folder-input"
-              type="file"
-              webkitdirectory
+          <!-- Folder picker trigger -->
+          <div class="folder-picker-row">
+            <button
+              type="button"
+              class="folder-picker-btn"
               :disabled="uploading"
-              style="display: none"
-              @change="(e) => handleFilesUpload((e.target as HTMLInputElement).files!)"
-            />
-            <div class="p-field">
-              <label class="p-field-label">
-                <span class="p-field-dot" aria-hidden="true" />
-                专辑文件夹
-              </label>
-              <div
-                class="custom-file-picker"
-                :class="{ 'is-disabled': uploading }"
-                @click="folderInputRef?.click()"
-              >
-                <div class="file-picker-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
-                </div>
-                <div class="file-picker-text">
-                  <span class="file-picker-title">点击选择专辑文件夹</span>
-                  <span class="file-picker-subtitle">选择包含音频和封面的整个文件夹</span>
-                </div>
-                <PButton
-                  type="button"
-                  variant="secondary"
-                  :disabled="uploading"
-                  @click.stop="folderInputRef?.click()"
-                >
-                  选择文件夹
-                </PButton>
-              </div>
-            </div>
-          </template>
+              @click="folderInputRef?.click()"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              选择文件夹
+            </button>
+          </div>
         </div>
 
         <!-- File list (multi-file / folder mode) -->
@@ -594,7 +534,7 @@ async function handleDeleteFile(fileId: string) {
         <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
 
         <!-- Archive mode progress -->
-        <div v-else-if="selectedMode === 'archive'" class="progress-panel">
+        <div v-else-if="albumImportDraft.archiveName" class="progress-panel">
           <p v-if="albumImportDraft.uploadProgress > 0" class="state-line">
             上传进度 {{ albumImportDraft.uploadProgress }}%
           </p>
@@ -606,10 +546,6 @@ async function handleDeleteFile(fileId: string) {
           >
             {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
           </p>
-          <div v-if="albumImportDraft.archiveName" class="import-summary">
-            <span class="summary-label">当前文件</span>
-            <span class="summary-value">{{ albumImportDraft.archiveName }}</span>
-          </div>
         </div>
 
         <!-- Multi-file mode progress -->
@@ -1087,36 +1023,33 @@ async function handleDeleteFile(fileId: string) {
   line-height: 1.3;
 }
 
-.upload-mode-tabs {
+.folder-picker-row {
+  margin-top: 8px;
   display: flex;
-  gap: 2px;
-  margin-bottom: 12px;
-  background: var(--color-surface-secondary, rgba(0,0,0,0.06));
-  border-radius: 8px;
-  padding: 2px;
+  justify-content: flex-end;
 }
 
-.upload-mode-tab {
-  flex: 1;
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
+.folder-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--color-border, rgba(0,0,0,0.15));
   border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #666);
   cursor: pointer;
-  font-size: 13px;
-  color: var(--color-text-secondary, #888);
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.12s, color 0.12s;
 }
 
-.upload-mode-tab.is-active {
-  background: var(--color-surface, #fff);
-  color: var(--color-text, #111);
-  font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.folder-picker-btn:hover:not(:disabled) {
+  background: var(--color-surface-secondary, rgba(0,0,0,0.05));
+  color: var(--color-text, #333);
 }
 
-.upload-mode-tab:disabled {
-  opacity: 0.5;
+.folder-picker-btn:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 

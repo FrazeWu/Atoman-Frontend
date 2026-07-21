@@ -216,6 +216,7 @@ function audioLabel(track: MusicTrackDraft) {
 
 .music-tracks__item {
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
   background: var(--a-color-bg);
   padding: 0.875rem;
   display: grid;
@@ -268,6 +269,16 @@ function audioLabel(track: MusicTrackDraft) {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+:deep(.p-clip),
+:deep(.p-reject) {
+  border-radius: 4px !important;
+}
+
+:deep(.p-clip:not(:disabled):hover),
+:deep(.p-reject:not(:disabled):hover) {
+  transform: translateY(1px);
 }
 
 @media (max-width: 720px) {

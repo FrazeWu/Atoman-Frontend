@@ -98,11 +98,14 @@ function removeSource(id: string) {
 
 :deep(.music-sources__remove) {
   color: var(--a-color-accent-destructive);
+  border-radius: 4px !important;
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease !important;
 }
 
 :deep(.music-sources__remove:hover) {
   background-color: var(--a-color-accent-destructive);
   color: var(--a-color-bg);
+  transform: translateY(1px);
 }
 
 @media (max-width: 720px) {

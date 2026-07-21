@@ -473,6 +473,7 @@ function handleSearchBlur() {
   min-height: 2.75rem;
   padding: 0.65rem 1rem;
   border: 1px solid color-mix(in srgb, var(--a-color-text) 16%, transparent);
+  border-radius: 4px;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   font-family: var(--a-font-sans);
@@ -486,7 +487,7 @@ function handleSearchBlur() {
 
 .ui-action:hover {
   border-color: color-mix(in srgb, var(--a-color-text) 30%, transparent);
-  transform: translateY(-1px);
+  transform: translateY(1px);
   box-shadow: none;
 }
 
@@ -498,7 +499,13 @@ function handleSearchBlur() {
   margin-top: 1.5rem;
   display: grid;
   gap: 1.25rem;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .artist-results-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -516,6 +523,11 @@ function handleSearchBlur() {
 
   .search-shell.is-open :deep(.search-frame) {
     width: 100%;
+  }
+
+  .artist-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0.75rem;
   }
 }
 </style>

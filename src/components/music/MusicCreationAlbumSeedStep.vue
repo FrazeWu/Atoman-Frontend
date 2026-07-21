@@ -365,6 +365,7 @@ async function onCoverChange(event: Event) {
   gap: 1rem;
   padding: 1.15rem 1.2rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
   background: var(--a-color-bg);
 }
 

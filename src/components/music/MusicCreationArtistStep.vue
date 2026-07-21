@@ -691,6 +691,7 @@ function goNext() {
   gap: 1rem;
   padding: 1.15rem 1.2rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
   background: var(--a-color-bg);
 }
 
@@ -717,7 +718,7 @@ function goNext() {
 
 .kind-switch__button {
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 0;
+  border-radius: 4px;
   padding: 0.55rem 0.9rem;
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -725,6 +726,12 @@ function goNext() {
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.kind-switch__button:hover {
+  transform: translateY(1px);
+  border-color: var(--a-color-text);
 }
 
 .kind-switch__button.is-active {
@@ -742,7 +749,7 @@ function goNext() {
 .avatar-uploader {
   position: relative;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   padding: 4px;
@@ -752,7 +759,7 @@ function goNext() {
 .artist-avatar-frame {
   width: 8rem;
   height: 8rem;
-  border-radius: 0;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--a-color-surface-muted);
 }
@@ -760,7 +767,7 @@ function goNext() {
 .artist-avatar-frame :deep(.p-avatar) {
   width: 100%;
   height: 100%;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .artist-avatar-image {
@@ -772,17 +779,17 @@ function goNext() {
 
 .avatar-uploader:hover {
   border-color: var(--a-color-text);
-  transform: scale(1.02);
+  transform: translateY(1px);
 }
 
 .avatar-uploader:active {
-  transform: scale(0.98);
+  transform: translateY(2px);
 }
 
 .avatar-uploader-hover {
   position: absolute;
   inset: 4px;
-  border-radius: 0;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
   color: white;
   display: flex;

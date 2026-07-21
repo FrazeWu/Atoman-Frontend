@@ -4,60 +4,24 @@ import {
   uploadMusicAsset,
   createMusicAlbumImport,
   type MusicAlbumImport,
-  uploadMusicAlbumArchiveMultipart,
-  validateMusicAlbumArchiveFile,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 
 const { state, setMusicCreationStep } = useMusicDrawers()
-const archiveInputRef = ref<HTMLInputElement | null>(null)
 const coverInputRef = ref<HTMLInputElement | null>(null)
 
 const creationFlow = computed(() => state.value.creationFlow)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
-const uploading = ref(false)
-const errorMessage = ref('')
 const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const resolvedCoverUrl = computed(() => albumImportDraft.value?.coverUrl || albumImportDraft.value?.derivedCover || '')
-
-function formatUploadSpeed(bytesPerSecond: number) {
-  if (bytesPerSecond <= 0) return '0 KB/s'
-  return `${Math.round(bytesPerSecond / 1024)} KB/s`
-}
-
-function applyImportSnapshot(snapshot: MusicAlbumImport) {
-  if (!creationFlow.value) return
-  const derivedTracks = snapshot.derivedTracks ?? []
-
-  creationFlow.value.draft.albumImport.importId = snapshot.importId
-  creationFlow.value.draft.albumImport.status = snapshot.status
-  creationFlow.value.draft.albumImport.archiveName = snapshot.archiveName
-  creationFlow.value.draft.albumImport.uploadProgress = snapshot.uploadProgress
-  creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed
-  creationFlow.value.draft.albumImport.coverUrl = snapshot.coverUrl
-  creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
-  creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
-  creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
-  creationFlow.value.draft.albumImport.derivedTracks = derivedTracks
-  creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
-  creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
-  creationFlow.value.draft.albumDetails.title = snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
-  creationFlow.value.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover || creationFlow.value.draft.albumDetails.coverUrl
-  creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
-    id: `import-track-${index + 1}`,
-    sequence: index + 1,
-    title: track.title,
-    audioKey: track.audioKey,
-    origin: track.origin,
-  }))
-}
 
 function renumberTracks() {
   if (!creationFlow.value) return
@@ -117,51 +81,7 @@ async function onCoverChange(event: Event) {
   }
 }
 
-async function handleArchiveChange(event: Event) {
-  if (!creationFlow.value || !albumImportDraft.value) return
 
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  uploading.value = true
-  errorMessage.value = ''
-
-  try {
-    validateMusicAlbumArchiveFile(file)
-
-    const session = await createMusicAlbumImport({ artistId: creationFlow.value.draft.artist.id })
-    albumImportDraft.value.importId = session.importId
-    albumImportDraft.value.status = 'uploading'
-    albumImportDraft.value.archiveName = file.name
-    albumImportDraft.value.uploadProgress = 0
-    albumImportDraft.value.uploadSpeed = 0
-
-    const snapshot = await uploadMusicAlbumArchiveMultipart(session.importId, file, {
-      onProgress(progress) {
-        if (!albumImportDraft.value) return
-        albumImportDraft.value.status = 'uploading'
-        albumImportDraft.value.uploadProgress = progress.total > 0
-          ? Math.round((progress.loaded / progress.total) * 100)
-          : 0
-        albumImportDraft.value.uploadSpeed = progress.bytesPerSecond
-        setMusicCreationStep('albumDetails')
-      },
-    })
-
-    albumImportDraft.value.status = 'extracting'
-    applyImportSnapshot(snapshot)
-  } catch (error) {
-    if (albumImportDraft.value) {
-      albumImportDraft.value.status = 'failed'
-      albumImportDraft.value.errorMessage = error instanceof Error ? error.message : '压缩包上传失败'
-    }
-    errorMessage.value = error instanceof Error ? error.message : '压缩包上传失败'
-  } finally {
-    uploading.value = false
-    input.value = ''
-  }
-}
 </script>
 
 <template>
@@ -178,75 +98,9 @@ async function handleArchiveChange(event: Event) {
         <div class="card-header">
           <div>
             <p class="card-kicker">上传文件</p>
-            <p class="card-copy">只支持 zip 压缩包，建议包含专辑封面和音频文件。</p>
           </div>
         </div>
-
-        <div class="field-group">
-          <input
-            ref="archiveInputRef"
-            data-testid="album-import-archive-input"
-            type="file"
-            accept=".zip,application/zip"
-            :disabled="uploading"
-            style="display: none"
-            @change="handleArchiveChange"
-          />
-          <div class="p-field">
-            <label class="p-field-label">
-              <span class="p-field-dot" aria-hidden="true" />
-              专辑压缩包
-            </label>
-            <div 
-              class="custom-file-picker" 
-              :class="{ 'is-disabled': uploading }"
-              @click="archiveInputRef?.click()"
-            >
-              <div class="file-picker-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
-              <div class="file-picker-text">
-                <span class="file-picker-title">
-                  {{ albumImportDraft?.archiveName || '点击或拖拽上传专辑压缩包' }}
-                </span>
-                <span class="file-picker-subtitle">只支持 .zip 格式，文件需在 2GB 以内</span>
-              </div>
-              <PButton 
-                type="button" 
-                variant="secondary" 
-                :disabled="uploading"
-                @click.stop="archiveInputRef?.click()"
-              >
-                {{ albumImportDraft?.archiveName ? '重新选择' : '浏览文件' }}
-              </PButton>
-            </div>
-          </div>
-        </div>
-
-        <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
-        <div v-else class="progress-panel">
-          <p v-if="albumImportDraft.uploadProgress > 0" class="state-line">
-            上传进度 {{ albumImportDraft.uploadProgress }}%
-          </p>
-          <p v-else class="state-line">上传后会自动填入封面和曲目信息。</p>
-
-          <p
-            v-if="albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0"
-            class="state-line"
-            data-testid="album-import-speed"
-          >
-            {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
-          </p>
-
-          <div v-if="albumImportDraft.archiveName" class="import-summary">
-            <span class="summary-label">当前文件</span>
-            <span class="summary-value">{{ albumImportDraft.archiveName }}</span>
-          </div>
-        </div>
+        <MusicCreationAlbumUploadZone />
       </section>
 
       <section class="album-card album-card--soft">
@@ -710,5 +564,143 @@ async function handleArchiveChange(event: Event) {
   color: var(--a-color-muted-soft);
   margin-top: 0.15rem;
   line-height: 1.3;
+}
+
+.folder-picker-row {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.folder-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--color-border, rgba(0,0,0,0.15));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary, #666);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.folder-picker-btn:hover:not(:disabled) {
+  background: var(--color-surface-secondary, rgba(0,0,0,0.05));
+  color: var(--color-text, #333);
+}
+
+.folder-picker-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.import-file-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.import-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 2px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border-subtle, rgba(0,0,0,0.06));
+}
+
+.import-file-item--failed .import-file-name {
+  color: var(--color-error, #c00);
+}
+
+.import-file-item--uploaded .import-file-name {
+  opacity: 0.6;
+}
+
+.import-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.import-file-format {
+  font-family: monospace;
+  color: var(--color-text-secondary, #888);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+
+
+.stage-banner {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: var(--color-surface-secondary, rgba(0,0,0,0.04));
+  border-radius: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.stage-label {
+  font-weight: 500;
+}
+
+.stage-hint {
+  color: var(--color-text-secondary, #888);
+}
+
+.import-file-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.import-file-error {
+  color: var(--color-error, #c00);
+  font-size: 11px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-file-action {
+  padding: 1px 6px;
+  font-size: 11px;
+  border: 1px solid var(--color-border, rgba(0,0,0,0.15));
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text, #333);
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.import-file-action:hover:not(:disabled) {
+  background: var(--color-surface-secondary, rgba(0,0,0,0.06));
+}
+
+.import-file-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.import-file-action--danger {
+  color: var(--color-error, #c00);
+  border-color: var(--color-error, #c00);
+}
+
+.import-file-action--danger:hover:not(:disabled) {
+  background: rgba(204,0,0,0.06);
 }
 </style>

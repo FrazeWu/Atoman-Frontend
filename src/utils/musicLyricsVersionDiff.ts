@@ -149,7 +149,7 @@ function buildLineDiff(
   target: MusicSongLyricsLine[],
   currentFormat: MusicLyricsFormat,
   targetFormat: MusicLyricsFormat,
-) {
+): MusicLyricsVersionDiffLine[] {
   if (currentFormat !== targetFormat) {
     return [
       ...current.map((line, currentIndex) => ({ kind: 'removed' as const, current: line, currentIndex })),

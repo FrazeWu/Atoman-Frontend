@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { CalendarDays } from 'lucide-vue-next'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
-import { formatBirthDateInput, getBirthDateCursorIndex, getBirthDateDigits } from '@/components/music/birthDateMask'
 import { uploadMusicAsset } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
@@ -22,10 +22,8 @@ const groupErrorMessage = ref('')
 const membersErrorMessage = ref('')
 const personalErrorMessage = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const birthDatePickerRef = ref<HTMLInputElement | null>(null)
 const pendingAvatarFile = ref<File | null>(null)
 const avatarPreviewUrl = ref('')
-const birthDateDigits = ref('')
 
 function createEmptyDateParts() {
   return {
@@ -79,8 +77,6 @@ watch(
       draft.birthDateParts = parseDateToParts(draft.birthDate)
     }
 
-    const formattedBirthDate = formatDateParts(draft.birthDateParts) || draft.birthDate.trim()
-    birthDateDigits.value = getBirthDateDigits(formattedBirthDate)
   },
   { immediate: true },
 )
@@ -99,19 +95,6 @@ const avatarDisplayUrl = computed(() => {
   return artistDraft.value?.avatarUrl || ''
 })
 
-const birthDateModel = computed({
-  get: () => {
-    return formatBirthDateInput(birthDateDigits.value)
-  },
-  set: (value: string) => {
-    if (!artistDraft.value) return
-    birthDateDigits.value = value.replace(/\D/g, '').slice(0, 8)
-    artistDraft.value.birthDateParts = parseDateToParts(formatBirthDateInput(birthDateDigits.value))
-  },
-})
-
-const birthDateNativeValue = computed(() => artistDraft.value?.birthDate.trim() || '')
-
 function replaceAvatarPreviewUrl(file: File) {
   if (avatarPreviewUrl.value) {
     URL.revokeObjectURL(avatarPreviewUrl.value)
@@ -121,29 +104,6 @@ function replaceAvatarPreviewUrl(file: File) {
 
 function triggerFileInput() {
   fileInputRef.value?.click()
-}
-
-function openBirthDatePicker() {
-  birthDatePickerRef.value?.showPicker?.()
-  birthDatePickerRef.value?.focus()
-}
-
-function onBirthDatePickerChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  birthDateModel.value = input.value.replaceAll('-', '/')
-}
-
-function handleBirthDateInput(event: Event) {
-  const input = event.target as HTMLInputElement
-  const selectionStart = input.selectionStart ?? input.value.length
-  const digitCountBeforeCursor = getBirthDateDigits(input.value.slice(0, selectionStart)).length
-
-  birthDateModel.value = input.value
-
-  void nextTick(() => {
-    const cursorIndex = getBirthDateCursorIndex(digitCountBeforeCursor)
-    input.setSelectionRange(cursorIndex, cursorIndex)
-  })
 }
 
 async function onAvatarChange(event: Event) {
@@ -338,8 +298,9 @@ function goNext() {
         </div>
 
         <div class="avatar-upload-section">
-          <div v-if="!isGroup" class="field-group">
-            <span class="field-label">{{ requiredLabel('头像') }}</span>
+          <div class="field-group avatar-label-group">
+            <span class="field-label">{{ !isGroup ? requiredLabel('头像') : '头像' }}</span>
+            <span class="field-hint">建议尺寸大于 600×600。</span>
           </div>
           <div
             data-testid="artist-avatar-preview"
@@ -580,65 +541,9 @@ function goNext() {
             </div>
 
             <div class="field-grid field-grid--duo">
-              <div class="field-group">
-                <span class="field-label">{{ requiredLabel('加入时间') }}</span>
-                <div class="date-parts-grid">
-                  <PInput
-                    v-model="member.joinDateParts.year"
-                    :data-testid="`artist-member-join-year-input-${index}`"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="年"
-                    label="年份"
-                  />
-                  <PInput
-                    v-model="member.joinDateParts.month"
-                    :data-testid="`artist-member-join-month-input-${index}`"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="月"
-                    label="月份"
-                  />
-                  <PInput
-                    v-model="member.joinDateParts.day"
-                    :data-testid="`artist-member-join-day-input-${index}`"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="日"
-                    label="日期"
-                  />
-                </div>
-              </div>
+              <PMaskedDateInput v-model="member.joinDateParts" :label="requiredLabel('加入时间')" :testId="`artist-member-join-input-${index}`" />
 
-              <div class="field-group">
-                <span class="field-label">退出时间</span>
-                <div class="date-parts-grid">
-                  <PInput
-                    v-model="member.leaveDateParts.year"
-                    :data-testid="`artist-member-leave-year-input-${index}`"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="年"
-                    label="年份"
-                  />
-                  <PInput
-                    v-model="member.leaveDateParts.month"
-                    :data-testid="`artist-member-leave-month-input-${index}`"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="月"
-                    label="月份"
-                  />
-                  <PInput
-                    v-model="member.leaveDateParts.day"
-                    :data-testid="`artist-member-leave-day-input-${index}`"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="日"
-                    label="日期"
-                  />
-                </div>
-              </div>
+              <PMaskedDateInput v-model="member.leaveDateParts" label="退出时间" :testId="`artist-member-leave-input-${index}`" />
             </div>
           </div>
 
@@ -671,39 +576,7 @@ function goNext() {
                 option-prefix="artist-country-option-"
               />
             </div>
-            <div class="field-group">
-              <label class="field-label" for="artist-birth-input">{{ requiredLabel('生日') }}</label>
-              <div class="birth-date-field">
-              <input
-                id="artist-birth-input"
-                :value="birthDateModel"
-                data-testid="artist-birth-input"
-                type="text"
-                inputmode="numeric"
-                class="birth-date-input"
-                placeholder="yyyy/mm/dd"
-                @input="handleBirthDateInput"
-              >
-                <button
-                  type="button"
-                  class="birth-date-trigger"
-                  data-testid="artist-birth-picker-button"
-                  aria-label="选择生日"
-                  @click="openBirthDatePicker"
-                >
-                  <CalendarDays :size="18" />
-                </button>
-                <input
-                  ref="birthDatePickerRef"
-                  :value="birthDateNativeValue"
-                  type="date"
-                  class="birth-date-native"
-                  tabindex="-1"
-                  aria-hidden="true"
-                  @change="onBirthDatePickerChange"
-                >
-              </div>
-            </div>
+            <PMaskedDateInput v-model="artistDraft.birthDateParts" :label="requiredLabel('生日')" testId="artist-birth-input" />
           </div>
 
           <div class="field-group">
@@ -751,6 +624,15 @@ function goNext() {
 </template>
 
 <style scoped>
+.avatar-label-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.field-hint {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
 .artist-step {
   display: flex;
   flex: 1;
@@ -925,71 +807,11 @@ function goNext() {
   gap: 1rem;
 }
 
-.birth-date-field {
-  position: relative;
-  display: flex;
-  align-items: center;
-  border: 1px solid color-mix(in srgb, var(--a-color-text) 22%, transparent);
-  background: var(--a-color-bg);
-  min-height: 3.2rem;
-}
-
-.birth-date-field:focus-within {
-  border-color: var(--a-color-accent-confirm);
-}
-
-.birth-date-input {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-text);
-  padding: 0.85rem 3rem 0.85rem 0.95rem;
-  font: inherit;
-  box-sizing: border-box;
-}
-
-.birth-date-input:focus {
-  outline: none;
-}
-
-.birth-date-input::placeholder {
-  color: color-mix(in srgb, var(--a-color-text) 28%, transparent);
-}
-
-.birth-date-trigger {
-  position: absolute;
-  right: 0.55rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--a-color-text) 72%, transparent);
-  cursor: pointer;
-}
-
-.birth-date-trigger:hover {
-  color: var(--a-color-text);
-}
-
-.birth-date-native {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
 .field-stack { display: grid; gap: 1rem; }
 .field-grid { display: grid; gap: 1rem; }
 .field-grid--duo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .field-group { display: grid; gap: 0.45rem; }
 .field-group--narrow { max-width: 16rem; }
-.date-parts-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-
 .stage-name-card {
   display: grid;
   gap: 0.75rem;
@@ -1061,11 +883,7 @@ function goNext() {
 @media (max-width: 720px) {
   .field-grid--duo,
   .stage-name-dates,
-  .date-parts-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .avatar-upload-section {
+    .avatar-upload-section {
     flex-direction: column;
   }
 }

@@ -195,6 +195,18 @@
         />
       </div>
 
+      <div v-if="hasNewTimelineContent" class="feed-new-content-region" aria-live="polite">
+        <button
+          type="button"
+          class="feed-new-content"
+          data-test="feed-new-content"
+          @click="refreshNewTimelineContent"
+        >
+          <RefreshCw :size="16" aria-hidden="true" />
+          <span>有新内容，点击刷新</span>
+        </button>
+      </div>
+
       <div v-if="loadingTimeline" class="feed-loading">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
       </div>
@@ -366,7 +378,7 @@ import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore, type OnboardingFeedRecommendation } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
-import { ChevronDown, Filter } from 'lucide-vue-next'
+import { ChevronDown, Filter, RefreshCw } from 'lucide-vue-next'
 import type {
   AutoAddSubscriptionPayload,
   FeedArticleSource,
@@ -439,6 +451,12 @@ const currentSourceUnreadCount = computed(() =>
   Math.max(0, currentSourceSubscription.value?.unread_count || 0),
 )
 const sourceViewMode = computed(() => Boolean(querySourceId.value))
+const canCheckTimelineUpdates = computed(() => {
+  if (!authStore.isAuthenticated || querySearch.value.trim()) return false
+  if (sourceTypeFilter.value !== 'all') return false
+  const sourceType = currentSourceSubscription.value?.feed_source?.source_type
+  return !sourceType || sourceType === 'external_rss'
+})
 const bulkReadLabel = computed(() => {
   if (sourceViewMode.value) return allRead.value ? '当前来源未读' : '当前来源已读'
   return allRead.value ? '全部未读' : '全部已读'
@@ -552,6 +570,9 @@ const pageLimit = 20
 const unreadOnly = ref(false)
 const loadingTimeline = ref(false)
 const markingAllRead = ref(false)
+const timelineUpdatesCursor = ref('')
+const hasNewTimelineContent = ref(false)
+const checkingTimelineUpdates = ref(false)
 const addingSubscription = ref(false)
 const allRead = ref(false)
 const showAddModal = ref(false)
@@ -574,6 +595,8 @@ const sourceArticles = ref<TimelineItem[]>([])
 const sourceArticlesLoading = ref(false)
 const sourceSubscribeBusy = ref(false)
 let timelineRequestSequence = 0
+let timelineUpdatesTimer: ReturnType<typeof setInterval> | null = null
+const timelineUpdatesPollInterval = 60_000
 
 const headerRef = ref<HTMLElement | null>(null)
 const pageRootRef = ref<HTMLElement | null>(null)
@@ -1358,6 +1381,83 @@ const changePage = async (page: number) => {
   await scrollToTop()
 }
 
+const buildTimelineUpdatesQuery = () => {
+  const params = new URLSearchParams()
+  if (timelineUpdatesCursor.value) params.set('since', timelineUpdatesCursor.value)
+  if (querySourceId.value) params.set('source_id', querySourceId.value)
+  if (queryGroupId.value) params.set('group_id', queryGroupId.value)
+  return params
+}
+
+const checkTimelineUpdates = async () => {
+  if (
+    checkingTimelineUpdates.value
+    || !canCheckTimelineUpdates.value
+    || typeof document === 'undefined'
+    || document.visibilityState === 'hidden'
+  ) return
+
+  checkingTimelineUpdates.value = true
+  try {
+    const response = await fetch(`${API_URL}/feed/timeline/updates?${buildTimelineUpdatesQuery()}`, {
+      headers: authHeaders(),
+    })
+    if (!response.ok) return
+    const payload = await response.json()
+    const update = payload.data ?? payload
+    if (typeof update.checked_at !== 'string') return
+    if (!timelineUpdatesCursor.value) {
+      timelineUpdatesCursor.value = update.checked_at
+      return
+    }
+    if (update.has_updates) {
+      hasNewTimelineContent.value = true
+      return
+    }
+    timelineUpdatesCursor.value = update.checked_at
+  } catch {
+    // Update checks are intentionally silent; the next interval retries.
+  } finally {
+    checkingTimelineUpdates.value = false
+  }
+}
+
+const stopTimelineUpdatesPolling = () => {
+  if (!timelineUpdatesTimer) return
+  clearInterval(timelineUpdatesTimer)
+  timelineUpdatesTimer = null
+}
+
+const startTimelineUpdatesPolling = () => {
+  stopTimelineUpdatesPolling()
+  if (
+    !canCheckTimelineUpdates.value
+    || typeof document === 'undefined'
+    || document.visibilityState === 'hidden'
+  ) return
+  timelineUpdatesTimer = setInterval(() => {
+    void checkTimelineUpdates()
+  }, timelineUpdatesPollInterval)
+}
+
+const handleTimelineVisibilityChange = () => {
+  if (typeof document === 'undefined' || document.visibilityState === 'hidden') {
+    stopTimelineUpdatesPolling()
+    return
+  }
+  void checkTimelineUpdates()
+  startTimelineUpdatesPolling()
+}
+
+const refreshNewTimelineContent = async () => {
+  if (loadingTimeline.value) return
+  hasNewTimelineContent.value = false
+  currentPage.value = 1
+  await setPageInRoute(1, true)
+  await fetchTimeline()
+  await scrollToTop()
+}
+
 const fetchTimeline = async () => {
   const requestSequence = ++timelineRequestSequence
   loadingTimeline.value = true
@@ -1398,6 +1498,10 @@ const fetchTimeline = async () => {
       timeline.value = items
       feedStore.timeline = items
       totalItems.value = total
+      if (typeof data.meta?.checked_at === 'string') {
+        timelineUpdatesCursor.value = data.meta.checked_at
+        hasNewTimelineContent.value = false
+      }
       await applyAutomationRules(items)
       if (requestSequence !== timelineRequestSequence) return
       if (sourceViewMode.value) {
@@ -1606,6 +1710,14 @@ watch(hasExternalRSSSubscription, (hasExternalRSS) => {
   }
 })
 
+watch(canCheckTimelineUpdates, (canCheck) => {
+  if (!canCheck) {
+    hasNewTimelineContent.value = false
+    timelineUpdatesCursor.value = ''
+  }
+  startTimelineUpdatesPolling()
+})
+
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     showArticleSheet.value = false
@@ -1626,10 +1738,14 @@ onMounted(async () => {
   }
   onboardingReady.value = true
   window.addEventListener('keydown', handleKeyDownGlobal)
+  document.addEventListener('visibilitychange', handleTimelineVisibilityChange)
+  startTimelineUpdatesPolling()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDownGlobal)
+  document.removeEventListener('visibilitychange', handleTimelineVisibilityChange)
+  stopTimelineUpdatesPolling()
 })
 </script>
 
@@ -1885,6 +2001,45 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.feed-new-content-region {
+  margin-bottom: 0.75rem;
+}
+
+.feed-new-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-none, 4px);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.feed-new-content:hover {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+}
+
+.feed-new-content:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-new-content {
+    transition: none;
+  }
 }
 
 .feed-skeleton {

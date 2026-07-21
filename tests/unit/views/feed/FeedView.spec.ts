@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -172,6 +173,117 @@ describe('FeedView', () => {
     const timelineCall = vi.mocked(globalThis.fetch).mock.calls.find(([input]) => String(input).includes('/feed/timeline?'))
     expect(String(timelineCall?.[0])).not.toContain('hide_duplicates=true')
     expect((wrapper.get('[data-test="feed-merge-duplicates"]').element as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('shows a new-content prompt and refreshes the first page with the current group filter', async () => {
+    vi.useFakeTimers()
+    const originalScrollIntoView = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = vi.fn()
+    routeQuery.page = '2'
+    routeQuery.group_id = 'group-1'
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/feed/timeline/updates')) {
+        return new Response(JSON.stringify({
+          data: { has_updates: true, checked_at: '2026-07-21T10:01:00Z' },
+        }), { status: 200 })
+      }
+      if (url.includes('/feed/timeline?')) {
+        return new Response(JSON.stringify({
+          ...clusteredTimelineResponse(),
+          meta: { page: 2, page_size: 20, total: 40, has_more: true, checked_at: '2026-07-21T10:00:00Z' },
+        }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
+    })
+
+    try {
+      const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+      await flushPromises()
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+
+      const prompt = wrapper.get('[data-test="feed-new-content"]')
+      expect(prompt.text()).toContain('有新内容')
+      await prompt.trigger('click')
+      await flushPromises()
+
+      const timelineCalls = vi.mocked(globalThis.fetch).mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/feed/timeline?') && url.includes('group_id=group-1'))
+      expect(timelineCalls.at(-1)).toContain('page=1')
+      expect(timelineCalls.at(-1)).toContain('group_id=group-1')
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not poll for new content while showing search results', async () => {
+    vi.useFakeTimers()
+    routeQuery.q = 'RSS'
+    const fetchMock = vi.mocked(globalThis.fetch)
+
+    try {
+      mount(FeedView, { global: { stubs: feedViewStubs } })
+      await flushPromises()
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/feed/timeline/updates'))).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not poll for new content while showing only podcasts', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.mocked(globalThis.fetch)
+
+    try {
+      const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } })
+      await flushPromises()
+      const view = wrapper.vm as any
+      view.sourceTypeFilter = 'podcast'
+      await nextTick()
+      await vi.advanceTimersByTimeAsync(60_000)
+      await flushPromises()
+
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/feed/timeline/updates'))).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('checks for new content when the timeline returns to the foreground', async () => {
+    vi.useFakeTimers()
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, 'visibilityState')
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    const fetchMock = vi.mocked(globalThis.fetch)
+    fetchMock.mockImplementation(async (input) => {
+      if (String(input).includes('/feed/timeline/updates')) {
+        return new Response(JSON.stringify({ data: { has_updates: false, checked_at: '2026-07-21T10:01:00Z' } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({
+        ...clusteredTimelineResponse(),
+        meta: { page: 1, page_size: 20, total: 1, has_more: false, checked_at: '2026-07-21T10:00:00Z' },
+      }), { status: 200 })
+    })
+
+    try {
+      mount(FeedView, { global: { stubs: feedViewStubs } })
+      await flushPromises()
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/feed/timeline/updates'))).toBe(false)
+
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+      document.dispatchEvent(new Event('visibilitychange'))
+      await flushPromises()
+
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/feed/timeline/updates'))).toBe(true)
+    } finally {
+      if (visibilityDescriptor) Object.defineProperty(document, 'visibilityState', visibilityDescriptor)
+      vi.useRealTimers()
+    }
   })
 
   it('shows duplicate sources and marks the whole cluster read while saving only the primary', async () => {

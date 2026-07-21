@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 
 import { expect, test } from '../fixtures/base'
 import {
@@ -19,6 +19,7 @@ test.describe('Debate wiki relation lifecycle', () => {
 
     try {
       await saveWikiReference(request, fixture)
+      await page.setViewportSize({ width: 390, height: 844 })
       await page.addInitScript(({ token, user }) => {
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
@@ -59,11 +60,32 @@ test.describe('Debate wiki relation lifecycle', () => {
 
       const activeTree = await openSettledTree(page, fixture.target.id, fixture.target.title)
       await expect(activeTree.getByText(fixture.source.title, { exact: true })).toBeVisible()
+      await expectGraphControlsClearOfNodes(activeTree)
     } finally {
       cleanupDebateFixture(fixture)
     }
   })
 })
+
+async function expectGraphControlsClearOfNodes(graph: Locator) {
+  const overlapRects = await graph.evaluate((element) => {
+    const controls = element.querySelector<HTMLElement>('.vue-flow__controls')
+    if (!controls) return []
+    const controlsRect = controls.getBoundingClientRect()
+    return [...element.querySelectorAll<HTMLElement>('.vue-flow__node')].flatMap((node) => {
+      const nodeRect = node.getBoundingClientRect()
+      const overlaps = controlsRect.left < nodeRect.right
+        && controlsRect.right > nodeRect.left
+        && controlsRect.top < nodeRect.bottom
+        && controlsRect.bottom > nodeRect.top
+      return overlaps ? [{
+        controls: { left: controlsRect.left, right: controlsRect.right, top: controlsRect.top, bottom: controlsRect.bottom },
+        node: { left: nodeRect.left, right: nodeRect.right, top: nodeRect.top, bottom: nodeRect.bottom },
+      }] : []
+    })
+  })
+  expect(overlapRects).toEqual([])
+}
 
 function isTreeResponse(url: string, debateID: string) {
   const parsed = new URL(url)

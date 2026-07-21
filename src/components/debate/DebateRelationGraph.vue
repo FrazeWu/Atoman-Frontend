@@ -125,5 +125,11 @@ const flow = computed(() => props.graph
 
 @media (max-width: 640px) {
   .debate-flow { height: 640px; min-height: 560px; }
+  .debate-flow :deep(.vue-flow__controls) { display: flex; flex-direction: row; }
+  .debate-flow :deep(.vue-flow__controls-button) {
+    border-right: 1px solid var(--a-color-border-soft);
+    border-bottom: 0;
+  }
+  .debate-flow :deep(.vue-flow__controls-button:last-child) { border-right: 0; }
 }
 </style>

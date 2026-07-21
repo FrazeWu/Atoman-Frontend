@@ -289,9 +289,8 @@ watch(
 
       <div class="action-bar">
         <PButton
-          variant="primary"
+          variant="secondary"
           :disabled="!playableSongs.length"
-          dot
           @click="playAlbum"
         >
           播放全专
@@ -299,7 +298,6 @@ watch(
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
-          dot
           data-testid="album-bookmark-toggle"
           @click="toggleAlbumBookmark"
         >
@@ -308,14 +306,12 @@ watch(
         <div class="spacer"></div>
         <PButton
           variant="secondary"
-          dot
           @click="album?.id && openMusicEditor({ entity: 'album', mode: 'edit', id: album.id })"
         >
           编辑
         </PButton>
         <PButton
           variant="secondary"
-          dot
           @click="openNestedAction('revise', { albumId })"
         >
           修改

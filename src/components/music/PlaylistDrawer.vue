@@ -433,9 +433,8 @@ watch(playlist, syncEditForm, { immediate: true })
       <!-- Action Bar -->
       <div class="playlist-actions-bar">
         <PButton
-          variant="primary"
+          variant="secondary"
           :disabled="!playableSongs.length"
-          dot
           @click="playPlaylist"
         >
           播放全部

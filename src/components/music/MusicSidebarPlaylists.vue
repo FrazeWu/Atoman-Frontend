@@ -300,6 +300,7 @@ onMounted(() => {
   color: var(--a-color-fg);
   font-size: 0.8rem;
   padding: 0.35rem 0.5rem;
+  border-radius: 4px;
   outline: none;
   font-family: inherit;
   transition: border-color 0.2s ease;
@@ -337,17 +338,18 @@ onMounted(() => {
   gap: 0.65rem;
   width: 100%;
   border: 0;
+  border-left: 3px solid transparent;
   padding: 0.45rem 0.5rem;
   background: transparent;
   color: var(--a-color-fg);
   text-align: left;
   cursor: pointer;
-  border-radius: 0px;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .music-sidebar-playlists__item:hover {
-  background-color: transparent;
+  background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
 
@@ -356,9 +358,9 @@ onMounted(() => {
 }
 
 .music-sidebar-playlists__item.is-active {
-  background-color: transparent;
+  background-color: var(--a-color-surface);
   font-weight: 800;
-  border-left: none;
+  border-left-color: var(--a-color-text);
   padding-left: 0.5rem;
 }
 
@@ -408,6 +410,7 @@ onMounted(() => {
   width: 2.5rem;
   height: 2.5rem;
   border: 0;
+  border-radius: 4px;
   background: transparent;
   display: flex;
   align-items: center;
@@ -418,12 +421,12 @@ onMounted(() => {
 }
 
 .collapsed-icon-btn:hover {
-  background-color: transparent;
+  background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
 
 .collapsed-icon-btn.is-active {
-  background-color: transparent;
+  background-color: var(--a-color-surface);
   color: var(--a-color-text);
   border-left: none;
 }

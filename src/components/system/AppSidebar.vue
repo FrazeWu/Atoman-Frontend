@@ -95,27 +95,11 @@
         :active="route && !$route.query.status"
         exact
       >
-        全部辩论
-      </PSidebarItem>
-      <PSidebarItem
-        to="/debate?status=open"
-        :index="2"
-        :icon="Play"
-        :active="route && $route.query.status === 'open'"
-      >
-        进行中
-      </PSidebarItem>
-      <PSidebarItem
-        to="/debate?status=concluded"
-        :index="3"
-        :icon="CheckCircle"
-        :active="route && $route.query.status === 'concluded'"
-      >
-        已结题
+        全部辩题
       </PSidebarItem>
       <PSidebarItem
         to="/debate?status=archived"
-        :index="4"
+        :index="2"
         :icon="Archive"
         :active="route && $route.query.status === 'archived'"
       >
@@ -180,7 +164,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Star, Disc3, Users,
-  MessageSquare, Folder, Play, CheckCircle, Archive, Clock, Mic
+  MessageSquare, Folder, Archive, Clock, Mic
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'

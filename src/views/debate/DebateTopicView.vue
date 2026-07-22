@@ -11,354 +11,635 @@
 
       <header class="debate-header">
         <div class="debate-header__content">
-          <div class="debate-header__status">
-            <span class="debate-header__status-dot" :class="`debate-header__status-dot--${debate.status}`" />
-            {{ statusLabels[debate.status] }}
-            <template v-if="debate.tags?.[0]"> · {{ debate.tags[0] }}</template>
+          <div class="debate-header__eyebrow">
+            <span v-if="debate.status === 'archived'" class="debate-header__archive">已归档</span>
+            <span>{{ conclusionText }}</span>
           </div>
           <h1>{{ debate.title }}</h1>
-          <div
-            v-if="debate.description"
-            class="debate-header__description"
-            v-html="renderMarkdownInline(debate.description, { references: debate.references, referenceField: 'description' })"
-          />
+          <p v-if="debate.description" class="debate-header__description">{{ debate.description }}</p>
           <div class="debate-header__meta">
-            <span>{{ debate.user?.display_name || debate.user?.username || '匿名' }}</span>
-            <span>{{ formatDate(debate.created_at) }}</span>
-            <span>{{ relationCount }} 引用</span>
+            <span>{{ versionText }}</span>
+            <span>更新于 {{ formatDate(debate.updated_at) }}</span>
           </div>
         </div>
 
-        <div class="debate-header__actions">
-          <PButton v-if="canEdit" variant="secondary" @click="openEditModal">
+        <div class="debate-header__actions" aria-label="辩题操作">
+          <PButton
+            v-if="canEdit"
+            data-test="topic-action-edit"
+            variant="secondary"
+            @click="showWikiEditor = true"
+          >
             <Pencil :size="15" aria-hidden="true" />
             编辑
           </PButton>
-          <PButton v-if="canConclude" variant="secondary" @click="showConcludeModal = true">
-            <CircleCheck :size="15" aria-hidden="true" />
-            结题
+          <PButton data-test="topic-action-revisions" variant="secondary" @click="showRevisions = true">
+            <History :size="15" aria-hidden="true" />
+            版本
           </PButton>
-          <PButton
-            v-else-if="showVoteToConclude"
-            variant="secondary"
-            :loading="concludeVoting"
-            @click="handleVoteToConclude"
-          >
-            申请结题
-          </PButton>
-          <PButton v-if="canReopen" variant="secondary" :loading="reopening" @click="handleReopen">
-            <RotateCcw :size="15" aria-hidden="true" />
-            重开
-          </PButton>
-          <PButton @click="openRelationModal">
-            <Link2 :size="15" aria-hidden="true" />
-            引用
+          <PButton data-test="topic-action-discussion" variant="secondary" @click="showDiscussion = true">
+            <MessageSquare :size="15" aria-hidden="true" />
+            讨论
           </PButton>
         </div>
       </header>
 
-      <section
-        v-if="debate.status === 'concluded' && (debate.conclusion_type === 'yes' || debate.conclusion_type === 'no')"
-        class="debate-conclusion"
-      >
-        <span class="debate-conclusion__stamp" :class="`debate-conclusion__stamp--${debate.conclusion_type}`">
-          结论 · {{ debate.conclusion_type === 'yes' ? '是' : '否' }}
-        </span>
-        <p v-if="debate.conclusion_summary">{{ debate.conclusion_summary }}</p>
-      </section>
-
-      <section v-if="debate.content" class="debate-background">
-        <div class="prose max-w-none" v-html="renderMarkdown(debate.content, { references: debate.references, referenceField: 'content' })" />
-      </section>
-
-      <section class="debate-relations" aria-label="辩论关系">
-        <div class="debate-relations__toolbar">
-          <PSegmentedControl v-model="viewMode" :options="viewOptions" />
-          <div class="debate-relations__legend" aria-label="关系图例">
-            <span><i class="debate-relations__line debate-relations__line--support" />支撑</span>
-            <span><i class="debate-relations__line debate-relations__line--oppose" />反驳</span>
+      <div class="debate-layout">
+        <section class="debate-workspace" aria-label="辩题内容">
+          <div class="debate-tabs" role="tablist" aria-label="辩题视图">
+            <button
+              v-for="tab in tabs"
+              :id="`debate-tab-${tab.value}`"
+              :key="tab.value"
+              type="button"
+              role="tab"
+              class="debate-tabs__button"
+              :class="{ 'is-active': activeTab === tab.value }"
+              :aria-selected="activeTab === tab.value"
+              :aria-controls="`debate-panel-${tab.value}`"
+              :tabindex="activeTab === tab.value ? 0 : -1"
+              @click="selectTab(tab.value)"
+              @keydown="handleTabKeydown($event, tab.value)"
+            >
+              {{ tab.label }}
+            </button>
           </div>
-        </div>
-        <DebateRelationGraph
-          data-test="relation-graph"
-          :graph="debateStore.relationGraph"
-          :loading="debateStore.relationLoading"
-        />
-      </section>
 
-      <section class="debate-discussion">
-        <CommentSection
-          data-test="debate-discussion"
-          :target="{ kind: 'debate', resourceId: debate.id }"
-          noun="讨论"
-          :can-delete="canEdit"
-        />
-      </section>
-    </template>
-
-    <PModal v-if="showRelationModal" title="引用辩题" size="lg" @close="closeRelationModal">
-      <form class="relation-form" @submit.prevent="handleCreateRelation">
-        <div class="relation-form__search">
-          <PInput
-            v-model="relationQuery"
-            label="搜索已结题辩题"
-            placeholder="输入标题"
-            @keydown.enter.prevent="searchReferences"
-          />
-          <PButton type="button" variant="secondary" :loading="relationSearching" @click="searchReferences">
-            <Search :size="16" aria-hidden="true" />
-            搜索
-          </PButton>
-        </div>
-
-        <div v-if="relationResults.length" class="relation-form__results" role="radiogroup" aria-label="可引用辩题">
-          <button
-            v-for="candidate in relationResults"
-            :key="candidate.id"
-            type="button"
-            class="relation-form__result"
-            :class="{ 'relation-form__result--selected': selectedSourceId === candidate.id }"
-            :aria-pressed="selectedSourceId === candidate.id"
-            @click="selectedSourceId = candidate.id"
+          <div
+            v-show="activeTab === 'content'"
+            id="debate-panel-content"
+            role="tabpanel"
+            aria-labelledby="debate-tab-content"
+            class="debate-content"
           >
-            <span>{{ candidate.title }}</span>
-            <small>结论 · {{ candidate.conclusion_type === 'yes' ? '是' : '否' }}</small>
-          </button>
-        </div>
-        <p v-else-if="relationSearched && !relationSearching" class="relation-form__empty">没有可引用的辩题</p>
+            <div
+              v-if="debate.content"
+              data-test="debate-content"
+              class="prose max-w-none debate-content__prose"
+              @click="handleContentClick"
+              v-html="renderedContent"
+            />
+            <p v-else class="debate-workspace__empty">暂无正文</p>
+            <p v-if="reconfirmError" data-test="reconfirm-error" class="debate-content__error" role="alert">
+              {{ reconfirmError }}
+            </p>
+          </div>
 
-        <div class="relation-form__stance">
-          <span>关系</span>
-          <PSegmentedControl v-model="relationStance" :options="stanceOptions" />
-        </div>
-        <p v-if="relationError" class="relation-form__error" role="alert">{{ relationError }}</p>
+          <div
+            v-for="relationTab in relationTabs"
+            v-show="activeTab === relationTab.value"
+            :id="`debate-panel-${relationTab.value}`"
+            :key="relationTab.value"
+            role="tabpanel"
+            :aria-labelledby="`debate-tab-${relationTab.value}`"
+            class="debate-graph"
+          >
+            <template v-if="activeTab === relationTab.value">
+              <div class="debate-graph__legend" aria-label="关系图例">
+                <span><i class="debate-graph__line debate-graph__line--support" />支撑</span>
+                <span><i class="debate-graph__line debate-graph__line--oppose" />反驳</span>
+              </div>
+              <DebateRelationGraph
+                data-test="relation-graph"
+                :graph="relationGraphs[relationTab.value]"
+                :loading="relationViewLoading[relationTab.value]"
+                :error="relationViewError[relationTab.value]"
+                :view="relationTab.value"
+                :expanding-node-ids="expandingNodeIds[relationTab.value]"
+                @expand="handleExpand(relationTab.value, $event)"
+                @retry="retryRelationView(relationTab.value)"
+              />
+            </template>
+          </div>
+        </section>
 
-        <div class="relation-form__actions">
-          <PButton type="button" variant="secondary" @click="closeRelationModal">取消</PButton>
-          <PButton type="submit" :loading="relationSaving" :disabled="!selectedSourceId">确认引用</PButton>
-        </div>
-      </form>
-    </PModal>
+        <aside class="debate-sidebar" aria-label="投票">
+          <DebateVotePanel
+            :summary="ownedVoteSummary"
+            :loading="voteLoading"
+            :unavailable="voteLoadState === 'error'"
+            @vote="handleVote"
+            @remove="handleRemoveVote"
+          />
+        </aside>
+      </div>
 
-    <PModal v-if="showEditModal" title="编辑辩题" @close="showEditModal = false">
-      <form class="debate-form" @submit.prevent="handleUpdate">
-        <PInput v-model="editForm.title" label="标题" required />
-        <PReferenceField v-model="editForm.description" label="描述" />
-        <PReferenceField v-model="editForm.content" variant="textarea" label="内容" :rows="5" />
-        <PInput v-model="tagsInput" label="标签" />
-        <p v-if="editError" class="a-field-error" role="alert">{{ editError }}</p>
-        <div class="debate-form__actions">
-          <PButton type="button" variant="secondary" @click="showEditModal = false">取消</PButton>
-          <PButton type="submit">保存</PButton>
-        </div>
-      </form>
-    </PModal>
-
-    <DebateConcludeModal
-      :show="showConcludeModal"
-      v-model="concludeForm"
-      :concluding="concluding"
-      :conclusion-options="conclusionOptions"
-      @close="showConcludeModal = false"
-      @submit="handleConcludeSubmit"
-    />
+      <DebateWikiEditor
+        :show="showWikiEditor"
+        :debate="debate"
+        :current-revision-id="debate.current_revision_id"
+        @close="showWikiEditor = false"
+        @saved="handleWikiMutation"
+      />
+      <DebateRevisionSheet
+        :show="showRevisions"
+        :debate-id="debate.id"
+        :current-revision-id="debate.current_revision_id"
+        @close="showRevisions = false"
+        @reverted="handleWikiMutation"
+      />
+      <DebateDiscussionSheet
+        :show="showDiscussion"
+        :debate-id="debate.id"
+        @close="showDiscussion = false"
+      />
+    </template>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, CircleCheck, Link2, Pencil, RotateCcw, Search } from 'lucide-vue-next'
+import { ChevronLeft, History, MessageSquare, Pencil } from 'lucide-vue-next'
 
-import CommentSection from '@/components/comment/CommentSection.vue'
-import DebateConcludeModal from '@/components/debate/DebateConcludeModal.vue'
+import DebateDiscussionSheet from '@/components/debate/DebateDiscussionSheet.vue'
 import DebateRelationGraph from '@/components/debate/DebateRelationGraph.vue'
-import PReferenceField from '@/components/shared/PReferenceField.vue'
+import DebateRevisionSheet from '@/components/debate/DebateRevisionSheet.vue'
+import DebateVotePanel from '@/components/debate/DebateVotePanel.vue'
+import DebateWikiEditor from '@/components/debate/DebateWikiEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PInput from '@/components/ui/PInput.vue'
-import PModal from '@/components/ui/PModal.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
-import type { Debate, DebateRelationStance } from '@/types'
-import { isAdminRole } from '@/utils/roles'
+import type {
+  Debate,
+  ContentReference,
+  DebateGraph,
+  DebateReference,
+  DebateResourceKind,
+  DebateVoteDirection,
+} from '@/types'
+import { normalizeDebateReferences } from '@/utils/debateReferences'
+import { parseResourceReferences } from '@/utils/resourceReferences'
+
+type DebateTab = 'content' | 'tree' | 'graph'
+type RelationView = Exclude<DebateTab, 'content'>
+
+const relationTabs = [
+  { value: 'tree' as const, label: '辩论树' },
+  { value: 'graph' as const, label: '关系图' },
+]
+const tabs = [
+  { value: 'content' as const, label: '正文' },
+  ...relationTabs,
+]
+
+const kindLabels: Record<DebateResourceKind, string> = {
+  post: '文章',
+  thread: '主题',
+  debate: '辩题',
+  feed: '订阅源',
+  article: '文章',
+  artist: '艺术家',
+  album: '专辑',
+  song: '歌曲',
+  playlist: '歌单',
+  podcast: '播客',
+  episode: '单集',
+  video: '视频',
+  person: '人物',
+  event: '事件',
+  channel: '频道',
+  collection: '合集',
+  comment: '评论',
+}
 
 const route = useRoute()
 const router = useRouter()
 const debateStore = useDebateStore()
 const authStore = useAuthStore()
-const { renderMarkdown, renderMarkdownInline } = useMarkdownRenderer()
+const { renderMarkdown } = useMarkdownRenderer()
 
-const debate = computed(() => debateStore.currentDebate)
-const loading = computed(() => debateStore.loading)
-const relationCount = computed(() => debateStore.relationGraph?.relations.length ?? 0)
-const authUserID = computed(() => authStore.user?.uuid ?? authStore.user?.id)
-const viewMode = ref<'tree' | 'graph'>('tree')
-const viewOptions = [
-  { label: '辩论树', value: 'tree' as const },
-  { label: '关系图谱', value: 'graph' as const },
-]
-const stanceOptions = [
-  { label: '支撑', value: 'support' as const },
-  { label: '反驳', value: 'oppose' as const },
-]
+const activeTab = ref<DebateTab>('content')
+const lastLoadedRelationView = ref<RelationView | null>(null)
+const relationGraphs = ref<Record<RelationView, DebateGraph | null>>({ tree: null, graph: null })
+const relationViewLoading = ref<Record<RelationView, boolean>>({ tree: false, graph: false })
+const relationViewError = ref<Record<RelationView, boolean>>({ tree: false, graph: false })
+const expandingNodeIds = ref<Record<RelationView, string[]>>({ tree: [], graph: [] })
+const expandedNodeIds = ref<Record<RelationView, Set<string>>>({ tree: new Set(), graph: new Set() })
+const showWikiEditor = ref(false)
+const showRevisions = ref(false)
+const showDiscussion = ref(false)
+const reconfirmingRelationId = ref('')
+const reconfirmError = ref('')
+const routeDebateSettled = ref(false)
+const voteOwnerID = ref('')
+const voteLoadState = ref<'loading' | 'ready' | 'error'>('loading')
+let reconfirmSession = 0
+let relationSession = 0
+const relationBaseRequestSequence: Record<RelationView, number> = { tree: 0, graph: 0 }
+const relationViewEpoch: Record<RelationView, number> = { tree: 0, graph: 0 }
 
-const statusLabels: Record<string, string> = {
-  open: '讨论中',
-  concluded: '已结题',
-  archived: '已归档',
-}
-
-const canEdit = computed(() => {
-  if (!authStore.isAuthenticated) return false
-  return isAdminRole(authStore.user?.role) || String(debate.value?.user_id) === String(authUserID.value)
+const routeDebateID = computed(() => String(route.params.id || ''))
+const debate = computed(() => {
+  if (!routeDebateSettled.value || debateStore.currentDebate?.id !== routeDebateID.value) return null
+  return debateStore.currentDebate
 })
-const canConclude = computed(() => canEdit.value && debate.value?.status === 'open')
-const canReopen = computed(() => debate.value?.status !== 'open' && isAdminRole(authStore.user?.role))
-const showVoteToConclude = computed(() => (
-  debate.value?.status === 'open' && authStore.isAuthenticated && !canConclude.value
+const ownedVoteSummary = computed(() => (
+  voteLoadState.value === 'ready' && voteOwnerID.value === routeDebateID.value
+    ? debateStore.voteSummary
+    : null
+))
+const loading = computed(() => !routeDebateSettled.value || debateStore.loading)
+const voteLoading = computed(() => (
+  voteLoadState.value === 'loading'
+  || (voteOwnerID.value === routeDebateID.value && debateStore.votesLoading)
+))
+const canEdit = computed(() => authStore.isAuthenticated)
+const staleRelationIDs = computed(() => new Set(
+  normalizeDebateReferences(debate.value?.references ?? [])
+    .filter(reference => reference.relation?.state === 'stale')
+    .map(reference => reference.relation!.id),
+))
+const currentDirection = computed<DebateVoteDirection | ''>(() => (
+  ownedVoteSummary.value?.current_direction
+  || (debate.value?.conclusion_type === 'yes' || debate.value?.conclusion_type === 'no'
+    ? debate.value.conclusion_type
+    : '')
+))
+const conclusionText = computed(() => {
+  if (currentDirection.value === 'yes') return '当前结论 · 是'
+  if (currentDirection.value === 'no') return '当前结论 · 否'
+  return '尚无结论'
+})
+const versionText = computed(() => {
+  const revisionID = debate.value?.current_revision_id
+  return revisionID ? `版本 ${revisionID.slice(0, 8)}` : '当前版本'
+})
+const renderedContent = computed(() => renderDebateContent(
+  debate.value?.content ?? '',
+  debate.value?.references ?? [],
 ))
 
-const showRelationModal = ref(false)
-const relationQuery = ref('')
-const relationResults = ref<Debate[]>([])
-const relationSearching = ref(false)
-const relationSearched = ref(false)
-const selectedSourceId = ref('')
-const relationStance = ref<DebateRelationStance>('support')
-const relationSaving = ref(false)
-const relationError = ref('')
-
-const showEditModal = ref(false)
-const editForm = ref({ title: '', description: '', content: '' })
-const editError = ref('')
-const tagsInput = ref('')
-
-const showConcludeModal = ref(false)
-const concluding = ref(false)
-const concludeForm = ref<{ conclusion_type: 'yes' | 'no' | ''; conclusion_summary: string }>({
-  conclusion_type: '',
-  conclusion_summary: '',
-})
-const conclusionOptions = [
-  { value: 'yes' as const, label: '是', style: { color: 'var(--a-color-primary)', borderColor: 'var(--a-color-primary)' } },
-  { value: 'no' as const, label: '否', style: { color: 'var(--a-color-text-secondary)', borderColor: 'var(--a-color-border)' } },
-]
-const concludeVoting = ref(false)
-const reopening = ref(false)
-
-watch(() => String(route.params.id || ''), async (id) => {
+watch(() => String(route.params.id || ''), (id) => {
   if (!id) return
-  viewMode.value = 'tree'
-  await Promise.all([
-    debateStore.fetchDebate(id),
-    debateStore.fetchRelationGraph(id, 'tree'),
-  ])
+  routeDebateSettled.value = false
+  voteOwnerID.value = ''
+  voteLoadState.value = 'loading'
+  reconfirmSession += 1
+  relationSession += 1
+  resetRelationViews()
+  reconfirmingRelationId.value = ''
+  reconfirmError.value = ''
+  activeTab.value = 'content'
+  lastLoadedRelationView.value = null
+  showWikiEditor.value = false
+  showRevisions.value = false
+  showDiscussion.value = false
+  void loadRouteDebate(id)
+  void loadRouteVotes(id)
 }, { immediate: true })
 
-watch(viewMode, async (mode) => {
-  const id = String(route.params.id || '')
-  if (id) await debateStore.fetchRelationGraph(id, mode)
-})
+async function loadRouteDebate(id: string) {
+  await debateStore.fetchDebate(id)
+  if (routeDebateID.value !== id) return
+  routeDebateSettled.value = true
+}
 
-function openRelationModal() {
+async function loadRouteVotes(id: string) {
+  const loadedVotes = await debateStore.fetchVotes(id)
+  if (routeDebateID.value !== id) return
+  if (loadedVotes) {
+    voteOwnerID.value = id
+    voteLoadState.value = 'ready'
+    return
+  }
+  voteOwnerID.value = ''
+  voteLoadState.value = 'error'
+}
+
+async function selectTab(tab: DebateTab) {
+  const previousTab = activeTab.value
+  if (previousTab !== 'content' && previousTab !== tab) invalidateRelationView(previousTab)
+  activeTab.value = tab
+  if (tab === 'content') return
+  lastLoadedRelationView.value = tab
+  await loadRelationView(tab)
+}
+
+async function handleTabKeydown(event: KeyboardEvent, currentTab: DebateTab) {
+  const currentIndex = tabs.findIndex(tab => tab.value === currentTab)
+  let targetIndex: number | null = null
+  if (event.key === 'ArrowRight') targetIndex = (currentIndex + 1) % tabs.length
+  if (event.key === 'ArrowLeft') targetIndex = (currentIndex - 1 + tabs.length) % tabs.length
+  if (event.key === 'Home') targetIndex = 0
+  if (event.key === 'End') targetIndex = tabs.length - 1
+  if (targetIndex === null) return
+
+  event.preventDefault()
+  const tablist = (event.currentTarget as HTMLElement).closest('[role="tablist"]')
+  void selectTab(tabs[targetIndex]!.value)
+  await nextTick()
+  tablist?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[targetIndex]?.focus()
+}
+
+function relationDepth(view: RelationView) {
+  return view === 'tree' ? 3 : 2
+}
+
+async function loadRelationView(view: RelationView, background = false) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  const session = relationSession
+  const requestSequence = ++relationBaseRequestSequence[view]
+  const epoch = ++relationViewEpoch[view]
+  relationGraphs.value[view] = null
+  relationViewLoading.value[view] = true
+  relationViewError.value[view] = false
+  expandingNodeIds.value[view] = []
+  expandedNodeIds.value[view] = new Set()
+
+  const loaded = await debateStore.fetchRelationGraph(debateID, view, relationDepth(view))
+  const ownsView = (
+    session === relationSession
+    && requestSequence === relationBaseRequestSequence[view]
+    && epoch === relationViewEpoch[view]
+    && routeDebateID.value === debateID
+    && debate.value?.id === debateID
+    && (background ? lastLoadedRelationView.value === view : activeTab.value === view)
+  )
+  if (!ownsView) return
+
+  if (loaded?.root_id === debateID) {
+    relationGraphs.value[view] = loaded
+    debateStore.relationGraph = loaded
+    relationViewError.value[view] = false
+  } else {
+    relationViewError.value[view] = true
+  }
+  relationViewLoading.value[view] = false
+}
+
+async function retryRelationView(view: RelationView) {
+  if (activeTab.value === view) await loadRelationView(view)
+}
+
+async function refreshLoadedRelationView() {
+  if (lastLoadedRelationView.value) await loadRelationView(lastLoadedRelationView.value, true)
+}
+
+function invalidateRelationView(view: RelationView) {
+  relationBaseRequestSequence[view] += 1
+  relationViewEpoch[view] += 1
+  relationViewLoading.value[view] = false
+  relationViewError.value[view] = false
+  expandingNodeIds.value[view] = []
+  expandedNodeIds.value[view] = new Set()
+}
+
+function resetRelationViews() {
+  for (const view of relationTabs.map(tab => tab.value)) {
+    invalidateRelationView(view)
+    relationGraphs.value[view] = null
+  }
+}
+
+function mergeRelationGraph(
+  base: DebateGraph,
+  fragment: DebateGraph,
+  expanded: ReadonlySet<string>,
+): DebateGraph {
+  const nodes = new Map(base.nodes.map(node => [node.id, node]))
+  for (const node of fragment.nodes) nodes.set(node.id, node)
+
+  const relations = new Map(base.relations.map(relation => [relation.id, relation]))
+  for (const relation of fragment.relations) relations.set(relation.id, relation)
+
+  const expandable = new Set([
+    ...base.expandable_node_ids,
+    ...fragment.expandable_node_ids,
+  ])
+  for (const nodeID of expanded) expandable.delete(nodeID)
+
+  return {
+    root_id: base.root_id,
+    nodes: [...nodes.values()],
+    relations: [...relations.values()],
+    expandable_node_ids: [...expandable],
+  }
+}
+
+function removeExpandingNode(view: RelationView, nodeID: string) {
+  expandingNodeIds.value[view] = expandingNodeIds.value[view].filter(id => id !== nodeID)
+}
+
+function restoreCurrentRootGraph() {
+  const view = activeTab.value === 'content' ? lastLoadedRelationView.value : activeTab.value
+  if (!view) return
+  const current = relationGraphs.value[view]
+  if (current?.root_id === routeDebateID.value) debateStore.relationGraph = current
+}
+
+async function handleExpand(view: RelationView, nodeID: string) {
+  const base = relationGraphs.value[view]
+  const debateID = debate.value?.id
+  if (
+    !base
+    || !debateID
+    || activeTab.value !== view
+    || !base.expandable_node_ids.includes(nodeID)
+    || expandingNodeIds.value[view].includes(nodeID)
+  ) return
+
+  const session = relationSession
+  const epoch = relationViewEpoch[view]
+  expandingNodeIds.value[view] = [...expandingNodeIds.value[view], nodeID]
+  try {
+    const fragment = await debateStore.fetchRelationGraph(nodeID, view, 1)
+    const ownsView = (
+      session === relationSession
+      && epoch === relationViewEpoch[view]
+      && routeDebateID.value === debateID
+      && debate.value?.id === debateID
+      && activeTab.value === view
+    )
+    if (!ownsView || !fragment) return
+
+    const current = relationGraphs.value[view]
+    if (!current || current.root_id !== debateID) return
+    expandedNodeIds.value[view].add(nodeID)
+    const merged = mergeRelationGraph(current, fragment, expandedNodeIds.value[view])
+    relationGraphs.value[view] = merged
+    debateStore.relationGraph = merged
+  } finally {
+    if (session === relationSession && epoch === relationViewEpoch[view]) {
+      removeExpandingNode(view, nodeID)
+    }
+    restoreCurrentRootGraph()
+  }
+}
+
+async function handleVote(direction: DebateVoteDirection) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  voteLoadState.value = 'loading'
+  const summary = await debateStore.setVote(debateID, direction)
+  if (routeDebateID.value !== debateID) return
+  if (!summary) {
+    voteOwnerID.value = ''
+    voteLoadState.value = 'error'
+    return
+  }
+  voteOwnerID.value = debateID
+  voteLoadState.value = 'ready'
+  await debateStore.fetchDebate(debateID)
+}
+
+async function handleRemoveVote() {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  voteLoadState.value = 'loading'
+  const summary = await debateStore.removeVote(debateID)
+  if (routeDebateID.value !== debateID) return
+  if (!summary) {
+    voteOwnerID.value = ''
+    voteLoadState.value = 'error'
+    return
+  }
+  voteOwnerID.value = debateID
+  voteLoadState.value = 'ready'
+  await debateStore.fetchDebate(debateID)
+}
+
+async function handleWikiMutation(updated: Debate) {
+  const debateID = updated.id
+  showWikiEditor.value = false
+  await Promise.all([
+    debateStore.fetchDebate(debateID),
+    debateStore.fetchRevisions(debateID),
+    refreshLoadedRelationView(),
+  ])
+}
+
+function renderDebateContent(content: string, references: DebateReference[]) {
+  const parsed = parseResourceReferences(content)
+  const replacements: Array<{ marker: string; reference: ContentReference }> = []
+  let source = content
+
+  if (parsed.length && references.length) {
+    let sentinelPrefix = 'ATOMANRESOURCEREFERENCE'
+    while (content.includes(sentinelPrefix)) sentinelPrefix += 'X'
+    const available = normalizeDebateReferences(references).filter(reference => reference.field === 'content')
+    for (let index = parsed.length - 1; index >= 0; index -= 1) {
+      const syntax = parsed[index]!
+      const matchIndex = available.findIndex(reference => reference.raw === syntax.raw)
+      if (matchIndex === -1) continue
+      const reference = available.splice(matchIndex, 1)[0]!
+      const marker = `${sentinelPrefix}${index}END`
+      source = `${source.slice(0, syntax.from)}${marker}${source.slice(syntax.to)}`
+      replacements.push({ marker, reference })
+    }
+  }
+
+  let html = stripAuthorReferenceActions(renderMarkdown(source))
+  for (const replacement of replacements) {
+    html = html.split(replacement.marker).join(renderReferenceChip(replacement.reference))
+  }
+  return html
+}
+
+function stripAuthorReferenceActions(html: string) {
+  const container = document.createElement('div')
+  container.innerHTML = html
+  const controlledAttributes = [
+    'data-reconfirm-reference',
+    'data-generated-debate-reference',
+    'data-debate-reference-action',
+  ]
+  const selector = controlledAttributes.map(attribute => `[${attribute}]`).join(',')
+  for (const element of container.querySelectorAll(selector)) {
+    for (const attribute of controlledAttributes) element.removeAttribute(attribute)
+  }
+  return container.innerHTML
+}
+
+function appendText(root: HTMLElement, className: string, text: string) {
+  const part = document.createElement('span')
+  part.className = className
+  part.textContent = text
+  root.append(part)
+}
+
+function renderReferenceChip(reference: ContentReference) {
+  const relation = reference.relation
+  const state = relation?.state ?? (reference.target.available ? 'active' : 'unavailable')
+  const root = document.createElement('span')
+  root.className = `debate-reference debate-reference--${state}`
+  root.dataset.generatedDebateReference = 'true'
+  root.dataset.referenceState = state
+  root.dataset.resourceReference = `${reference.target.type}:${reference.target.id}`
+
+  appendText(root, 'debate-reference__kind', kindLabels[reference.target.type])
+  appendText(root, 'debate-reference__title', reference.target.label)
+  if (relation?.stance === 'support') appendText(root, 'debate-reference__qualifier', '支撑')
+  if (relation?.stance === 'oppose') appendText(root, 'debate-reference__qualifier', '反驳')
+
+  const stateText = state === 'stale'
+    ? '来源结论已变化'
+    : state === 'unavailable' ? '不可用' : '有效'
+  appendText(root, 'debate-reference__state', stateText)
+
+  if (state === 'stale' && relation) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'debate-reference__action'
+    button.dataset.reconfirmReference = relation.id
+    button.dataset.debateReferenceAction = 'reconfirm'
+    button.textContent = reconfirmingRelationId.value === relation.id ? '确认中...' : '重新确认'
+    button.disabled = reconfirmingRelationId.value === relation.id
+    root.append(button)
+  }
+  return root.outerHTML
+}
+
+async function handleContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const button = target?.closest<HTMLButtonElement>('button[data-reconfirm-reference]')
+  const chip = button?.closest<HTMLElement>('[data-generated-debate-reference="true"]')
+  const relationID = button?.dataset.reconfirmReference
+  if (
+    !button
+    || !chip
+    || button.dataset.debateReferenceAction !== 'reconfirm'
+    || !relationID
+    || !staleRelationIDs.value.has(relationID)
+  ) return
   if (!authStore.isAuthenticated) {
-    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+    await router.push('/login')
     return
   }
-  showRelationModal.value = true
-  searchReferences()
-}
 
-function closeRelationModal() {
-  showRelationModal.value = false
-  relationQuery.value = ''
-  relationResults.value = []
-  relationSearched.value = false
-  selectedSourceId.value = ''
-  relationStance.value = 'support'
-  relationError.value = ''
-}
+  const debateID = debate.value?.id
+  const revisionID = debate.value?.current_revision_id
+  if (!debateID || !revisionID || !relationID || reconfirmingRelationId.value) return
 
-async function searchReferences() {
-  if (!debate.value) return
-  relationSearching.value = true
-  relationSearched.value = true
-  relationResults.value = await debateStore.searchCitableDebates(relationQuery.value, debate.value.id)
-  relationSearching.value = false
-}
+  const session = reconfirmSession
+  reconfirmingRelationId.value = relationID
+  reconfirmError.value = ''
+  try {
+    const updated = await debateStore.reconfirmReference(debateID, relationID, {
+      base_revision: revisionID,
+      edit_summary: '重新确认引用',
+    })
+    if (session !== reconfirmSession || routeDebateID.value !== debateID) return
+    if (updated) {
+      await Promise.all([
+        debateStore.fetchDebate(debateID),
+        debateStore.fetchRevisions(debateID),
+        refreshLoadedRelationView(),
+      ])
+      return
+    }
 
-async function handleCreateRelation() {
-  if (!debate.value || !selectedSourceId.value) return
-  relationSaving.value = true
-  relationError.value = ''
-  const created = await debateStore.createRelation(selectedSourceId.value, debate.value.id, relationStance.value)
-  relationSaving.value = false
-  if (!created) {
-    relationError.value = '引用失败'
-    return
+    await debateStore.fetchDebate(debateID)
+    if (session === reconfirmSession && routeDebateID.value === debateID) {
+      reconfirmError.value = '重新确认失败，请重试'
+    }
+  } finally {
+    if (session === reconfirmSession && reconfirmingRelationId.value === relationID) {
+      reconfirmingRelationId.value = ''
+    }
   }
-  closeRelationModal()
-  await debateStore.fetchRelationGraph(debate.value.id, viewMode.value)
-}
-
-function openEditModal() {
-  if (!debate.value) return
-  editForm.value = {
-    title: debate.value.title,
-    description: debate.value.description,
-    content: debate.value.content,
-  }
-  tagsInput.value = (debate.value.tags ?? []).join(', ')
-  editError.value = ''
-  showEditModal.value = true
-}
-
-async function handleUpdate() {
-  if (!debate.value) return
-  editError.value = ''
-  const updated = await debateStore.updateDebate(debate.value.id, {
-    ...editForm.value,
-    tags: tagsInput.value.split(',').map((tag) => tag.trim()).filter(Boolean),
-  })
-  if (!updated) {
-    editError.value = debateStore.error || '保存失败，请重试'
-    return
-  }
-  debateStore.currentDebate = updated
-  showEditModal.value = false
-}
-
-async function handleConcludeSubmit() {
-  if (!debate.value || !concludeForm.value.conclusion_type) return
-  concluding.value = true
-  const updated = await debateStore.concludeDebate(debate.value.id, {
-    conclusion_type: concludeForm.value.conclusion_type,
-    conclusion_summary: concludeForm.value.conclusion_summary || undefined,
-  })
-  concluding.value = false
-  if (!updated) return
-  debateStore.currentDebate = updated
-  concludeForm.value = { conclusion_type: '', conclusion_summary: '' }
-  showConcludeModal.value = false
-  await debateStore.fetchRelationGraph(updated.id, viewMode.value)
-}
-
-async function handleVoteToConclude() {
-  if (!debate.value) return
-  concludeVoting.value = true
-  await debateStore.voteToConclude(debate.value.id)
-  concludeVoting.value = false
-  await debateStore.fetchDebate(debate.value.id)
-}
-
-async function handleReopen() {
-  if (!debate.value || !window.confirm('确定重开这个辩题吗？')) return
-  reopening.value = true
-  const updated = await debateStore.reopenDebate(debate.value.id)
-  reopening.value = false
-  if (updated) debateStore.currentDebate = updated
 }
 
 function formatDate(value: string) {
@@ -378,10 +659,27 @@ function formatDate(value: string) {
   color: var(--a-color-text);
 }
 
-.debate-page__state { display: grid; min-height: 50vh; place-items: center; color: var(--a-color-muted); }
-.debate-page__back { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; margin-bottom: 12px; color: var(--a-color-muted); font-size: 13px; text-decoration: none; }
+.debate-page__state {
+  display: grid;
+  min-height: 50vh;
+  place-items: center;
+  color: var(--a-color-muted);
+}
+
+.debate-page__back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  color: var(--a-color-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
 .debate-page__back:hover { color: var(--a-color-text); }
-.debate-page__back:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.debate-page__back:focus-visible,
+.debate-tabs__button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 
 .debate-header {
   display: flex;
@@ -393,65 +691,86 @@ function formatDate(value: string) {
 }
 
 .debate-header__content { min-width: 0; }
-.debate-header__status { display: flex; align-items: center; margin-bottom: 10px; color: var(--a-color-muted); font-size: 12px; }
-.debate-header__status-dot { width: 7px; height: 7px; margin-right: 7px; border-radius: 999px; background: var(--a-color-muted-soft); }
-.debate-header__status-dot--open { background: var(--a-color-success); }
-.debate-header__status-dot--concluded { background: var(--a-color-primary); }
-.debate-header h1 { max-width: 880px; margin: 0; overflow-wrap: anywhere; font-size: 38px; font-weight: 650; line-height: 1.2; letter-spacing: 0; }
+.debate-header__eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--a-color-muted); font-size: 12px; }
+.debate-header__archive { padding: 3px 7px; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); color: var(--a-color-text-secondary); }
+.debate-header h1 { max-width: 880px; margin: 0; overflow-wrap: anywhere; font-size: 32px; font-weight: 650; line-height: 1.25; letter-spacing: 0; }
 .debate-header__description { max-width: 760px; margin: 12px 0 0; color: var(--a-color-text-secondary); line-height: 1.6; }
 .debate-header__meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; color: var(--a-color-muted); font-size: 12px; }
 .debate-header__actions { display: flex; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
-.debate-conclusion { display: flex; align-items: flex-start; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--a-color-border-soft); }
-.debate-conclusion__stamp { flex-shrink: 0; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 600; }
-.debate-conclusion__stamp--yes { background: #eff6ff; color: #2563eb; }
-.debate-conclusion__stamp--no { border: 1px solid var(--a-color-border); background: var(--a-color-surface-muted); color: #475569; }
-.debate-conclusion p { margin: 1px 0 0; color: var(--a-color-text-secondary); line-height: 1.6; }
-
-.debate-background { padding: 24px 0; border-bottom: 1px solid var(--a-color-border-soft); }
-.debate-relations { padding-top: 0; }
-.debate-relations__toolbar { display: flex; min-height: 78px; align-items: center; justify-content: space-between; gap: 16px; }
-.debate-relations__legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--a-color-muted); font-size: 12px; }
-.debate-relations__legend span { display: flex; align-items: center; gap: 6px; }
-.debate-relations__line { width: 24px; border-top: 2px solid; }
-.debate-relations__line--support { border-color: var(--a-color-success); }
-.debate-relations__line--oppose { border-color: var(--a-color-danger); border-top-style: dashed; }
-.debate-discussion { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--a-color-border-soft); }
-.debate-discussion :deep(.comment-section__kicker) { display: none; }
-
-.relation-form,
-.debate-form { display: grid; gap: 20px; }
-.relation-form__search { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
-.relation-form__results { display: grid; max-height: 320px; overflow-y: auto; border-block: 1px solid var(--a-color-border-soft); }
-.relation-form__result { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px; border: 0; border-bottom: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: var(--a-color-text); text-align: left; cursor: pointer; }
-.relation-form__result:last-child { border-bottom: 0; }
-.relation-form__result:hover { background: var(--a-color-surface); }
-.relation-form__result--selected { box-shadow: inset 3px 0 0 var(--a-color-primary); background: #eff6ff; }
-.relation-form__result span { overflow-wrap: anywhere; line-height: 1.45; }
-.relation-form__result small { flex-shrink: 0; color: var(--a-color-muted); }
-.relation-form__stance { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.relation-form__stance > span { color: var(--a-color-muted); font-size: 13px; font-weight: 600; }
-.relation-form__empty { margin: 0; padding: 24px; color: var(--a-color-muted); text-align: center; }
-.relation-form__error { margin: 0; color: var(--a-color-danger); font-size: 13px; }
-.relation-form__actions,
-.debate-form__actions { display: flex; justify-content: flex-end; gap: 8px; }
-
-@media (max-width: 760px) {
-  .debate-page { padding: 24px 14px 64px; }
-  .debate-header { display: block; }
-  .debate-header h1 { font-size: 28px; }
-  .debate-header__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 20px; }
-  .debate-header__actions :deep(.p-button) { width: 100%; min-height: 44px; }
-  .debate-relations__toolbar { align-items: stretch; flex-direction: column; justify-content: center; padding: 20px 0; }
-  .debate-relations__toolbar :deep(.p-segmented-control) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .debate-conclusion { flex-direction: column; gap: 10px; }
-  .relation-form__search { grid-template-columns: 1fr; }
-  .relation-form__search :deep(.p-button) { min-height: 44px; }
-  .relation-form__result { align-items: flex-start; flex-direction: column; gap: 6px; }
-  .relation-form__stance { align-items: stretch; flex-direction: column; }
+.debate-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 32px;
+  padding-top: 24px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .relation-form__result { scroll-behavior: auto; }
+.debate-workspace { min-width: 0; }
+.debate-tabs { display: flex; min-width: 0; border-bottom: 1px solid var(--a-color-border-soft); }
+.debate-tabs__button { min-width: 88px; min-height: 44px; padding: 0 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--a-color-muted); cursor: pointer; font: inherit; font-size: 13px; }
+.debate-tabs__button:hover { color: var(--a-color-text); }
+.debate-tabs__button.is-active { border-bottom-color: var(--a-color-primary); color: var(--a-color-text); font-weight: 600; }
+.debate-content { min-height: 360px; padding: 28px 0; }
+.debate-content__prose { overflow-wrap: anywhere; }
+.debate-content__error { margin: 16px 0 0; color: var(--a-color-danger); font-size: 13px; }
+.debate-workspace__empty { margin: 0; padding: 64px 0; color: var(--a-color-muted); text-align: center; }
+.debate-graph { min-width: 0; padding-top: 16px; }
+.debate-graph__legend { display: flex; min-height: 40px; align-items: center; justify-content: flex-end; gap: 16px; color: var(--a-color-muted); font-size: 12px; }
+.debate-graph__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.debate-graph__line { width: 24px; border-top: 2px solid; }
+.debate-graph__line--support { border-color: var(--a-color-success); }
+.debate-graph__line--oppose { border-color: var(--a-color-danger); border-top-style: solid; }
+.debate-sidebar { min-width: 0; }
+
+.debate-content :deep(.debate-reference) {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: baseline;
+  gap: 6px;
+  margin-inline: 2px;
+  padding: 2px 6px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+.debate-content :deep(.debate-reference__kind),
+.debate-content :deep(.debate-reference__qualifier),
+.debate-content :deep(.debate-reference__state) { color: var(--a-color-muted); font-size: 0.78em; white-space: nowrap; }
+.debate-content :deep(.debate-reference__title) { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.debate-content :deep(.debate-reference--stale) {
+  border-style: solid;
+  box-shadow: inset 0 -2px 0 var(--a-color-warning);
+}
+.debate-content :deep(.debate-reference--stale .debate-reference__state) { color: var(--a-color-warning); }
+.debate-content :deep(.debate-reference--unavailable .debate-reference__title) { text-decoration: line-through; }
+.debate-content :deep(.debate-reference--unavailable .debate-reference__state) { color: var(--a-color-danger); }
+.debate-content :deep(.debate-reference__action) { min-height: 28px; padding: 0 6px; border: 0; border-radius: 4px; background: var(--a-color-bg); color: var(--a-color-text); cursor: pointer; font: inherit; font-size: 0.78em; font-weight: 600; }
+.debate-content :deep(.debate-reference__action:hover:not(:disabled)) { color: var(--a-color-primary); }
+.debate-content :deep(.debate-reference__action:focus-visible) { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
+.debate-content :deep(.debate-reference__action:disabled) { cursor: wait; opacity: 0.6; }
+
+@media (max-width: 960px) {
+  .debate-layout { grid-template-columns: minmax(0, 1fr); }
+  .debate-sidebar { grid-row: 1; }
+}
+
+@media (max-width: 700px) {
+  .debate-page { padding: 24px 16px 64px; }
+  .debate-header { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .debate-header h1 { font-size: 26px; }
+  .debate-header__actions { width: 100%; justify-content: flex-start; }
+  .debate-layout { gap: 24px; padding-top: 20px; }
+  .debate-tabs { overflow-x: auto; }
+  .debate-tabs__button { flex: 1 0 auto; }
+}
+
+@media (max-width: 390px) {
+  .debate-header__actions :deep(.p-button) { flex: 1 1 auto; min-width: 0; }
+  .debate-content :deep(.debate-reference) { align-items: flex-start; flex-wrap: wrap; }
 }
 </style>

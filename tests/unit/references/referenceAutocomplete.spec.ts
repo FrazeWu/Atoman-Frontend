@@ -6,8 +6,17 @@ import {
   parseReferenceTrigger,
   referencePublishErrorMessage,
   referenceTokenForSuggestion,
+  searchDebateReferenceSuggestions,
   type ReferenceSuggestion,
 } from '@/composables/useReferenceAutocomplete'
+
+vi.mock('@/api/references', () => ({
+  referenceApi: {
+    search: vi.fn(),
+  },
+}))
+
+import { referenceApi } from '@/api/references'
 
 describe('reference autocomplete', () => {
   it('detects user and resource searches at the cursor', () => {
@@ -34,6 +43,24 @@ describe('reference autocomplete', () => {
     expect(referenceTokenForSuggestion(user)).toBe('@alice')
     expect(referenceTokenForSuggestion(post)).toBe('@post:2')
     expect(referenceTokenForSuggestion(typeChoice)).toBe('@post:')
+  })
+
+  it('为辩论作用域只提供带立场的辩题 token', async () => {
+    vi.mocked(referenceApi.search).mockResolvedValueOnce([{
+      type: 'debate', id: 'topic-1', label: '公共交通', module: 'debate', path: '/debate/topic-1', available: true,
+    }])
+
+    const results = await searchDebateReferenceSuggestions({ mode: 'root', query: '公共', start: 0 })
+
+    expect(results).toEqual([
+      expect.objectContaining({ targetType: 'debate', qualifier: 'support' }),
+      expect.objectContaining({ targetType: 'debate', qualifier: 'oppose' }),
+    ])
+    expect(results.map(referenceTokenForSuggestion)).toEqual([
+      '@debate:topic-1:support',
+      '@debate:topic-1:oppose',
+    ])
+    expect(referenceApi.search).toHaveBeenCalledWith('debate', '公共', 10)
   })
 
   it('keeps a fixed menu inside the viewport and opens upward near the bottom', () => {

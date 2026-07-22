@@ -324,12 +324,14 @@ async function assertMobileLayout(page: Page) {
     const rect = (selector: string) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect()
     return {
       width: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
       panel: rect('.music-lyrics-panel'),
       highlight: rect('.music-lyrics-line__highlight'),
       player: rect('.player'),
       controls: rect('.player-controls-hub'),
     }
   })
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width)
   expect(layout.panel).toBeTruthy()
   expect(layout.panel!.right).toBeLessThanOrEqual(layout.width)
   expect(layout.highlight).toBeTruthy()

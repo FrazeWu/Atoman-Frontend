@@ -20,16 +20,17 @@ const mountLayout = () => mount(DebateLayout, {
 })
 
 describe('DebateLayout', () => {
-  it('keeps status filter links inside the debate module', () => {
+  it('only exposes supported debate status links', () => {
     const wrapper = mountLayout()
 
-    const links = wrapper.findAll('.debate-sidebar-item').map(item => item.attributes('data-to'))
+    const items = wrapper.findAll('.debate-sidebar-item')
 
-    expect(links).toEqual([
+    expect(items.map(item => item.attributes('data-to'))).toEqual([
       '/debate',
-      '/debate?status=open',
-      '/debate?status=concluded',
       '/debate?status=archived',
     ])
+    expect(items.map(item => item.text().trim())).toEqual(['全部辩题', '已归档'])
+    expect(wrapper.text()).not.toContain(['进行', '中'].join(''))
+    expect(wrapper.text()).not.toContain(['已', '结题'].join(''))
   })
 })

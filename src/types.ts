@@ -137,6 +137,7 @@ export interface User {
   uuid?: string
   username: string
   email: string
+  has_password?: boolean
   role?: 'user' | 'moderator' | 'admin' | 'owner'
   display_name?: string
   avatar_url?: string

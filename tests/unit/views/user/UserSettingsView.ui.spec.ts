@@ -33,6 +33,7 @@ describe('UserSettingsView UI', () => {
           SubscriptionRulesPanel: defineComponent({ template: '<div class="settings-block">订阅规则</div>' }),
           UserBlogSettingsPanel: defineComponent({ template: '<div class="settings-block">博客资料</div>' }),
           OAuthIdentitySettingsPanel: defineComponent({ template: '<div class="oauth-identities">登录方式</div>' }),
+          AccountSecurityPanel: defineComponent({ template: '<div class="settings-block">账户安全</div>' }),
         },
       },
     })

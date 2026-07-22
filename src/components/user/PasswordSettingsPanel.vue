@@ -1,11 +1,12 @@
 <template>
   <form class="password-settings" @submit.prevent="submit">
     <div class="password-settings__copy">
-      <strong>修改密码</strong>
-      <small>修改后，其他设备需要重新登录。</small>
+      <strong>{{ hasPassword ? '修改密码' : '设置密码' }}</strong>
+      <small>{{ hasPassword ? '修改后，其他设备需要重新登录。' : '设置后可使用用户名和密码登录。' }}</small>
     </div>
     <div class="password-settings__form">
       <PInput
+		v-if="hasPassword"
         v-model="currentPassword"
         type="password"
         label="当前密码"
@@ -30,22 +31,24 @@
         :error="fieldErrors.confirm"
       />
       <p v-if="error" class="a-error" role="alert">{{ error }}</p>
-      <p v-if="success" class="a-success" role="status">密码已修改</p>
+      <p v-if="success" class="a-success" role="status">{{ hasPassword ? '密码已修改' : '密码已设置' }}</p>
       <PButton type="submit" size="lg" :loading="submitting" loading-text="正在修改...">
-        修改密码
+        {{ hasPassword ? '修改密码' : '设置密码' }}
       </PButton>
     </div>
   </form>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
 import { apiFetch } from '@/api/transport'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import { useApiUrl } from '@/composables/useApi'
 
+const props = withDefaults(defineProps<{ hasPassword?: boolean }>(), { hasPassword: true })
+const hasPassword = computed(() => props.hasPassword)
 const currentPassword = ref('')
 const newPassword = ref('')
 const passwordConfirm = ref('')
@@ -55,7 +58,7 @@ const success = ref(false)
 const fieldErrors = reactive({ current: '', password: '', confirm: '' })
 
 async function submit() {
-  fieldErrors.current = currentPassword.value ? '' : '请输入当前密码'
+  fieldErrors.current = hasPassword.value && !currentPassword.value ? '请输入当前密码' : ''
   const passwordBytes = new TextEncoder().encode(newPassword.value).length
   fieldErrors.password = passwordBytes < 6
     ? '密码长度至少为 6 位'
@@ -68,13 +71,13 @@ async function submit() {
   success.value = false
   try {
     const response = await apiFetch(`${useApiUrl()}/users/me/password`, {
-      method: 'PUT',
+      method: hasPassword.value ? 'PUT' : 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        current_password: currentPassword.value,
-        new_password: newPassword.value,
-        password_confirm: passwordConfirm.value,
+        ...(hasPassword.value
+          ? { current_password: currentPassword.value, new_password: newPassword.value, password_confirm: passwordConfirm.value }
+          : { password: newPassword.value, password_confirm: passwordConfirm.value }),
       }),
     })
     if (!response.ok) {

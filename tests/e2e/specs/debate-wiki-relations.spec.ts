@@ -20,10 +20,11 @@ test.describe('Debate wiki relation lifecycle', () => {
     try {
       await saveWikiReference(request, fixture)
       await page.setViewportSize({ width: 390, height: 844 })
-      await page.addInitScript(({ token, user }) => {
-        localStorage.setItem('token', token)
-        localStorage.setItem('user', JSON.stringify(user))
-      }, fixture.sessions[0])
+      await page.goto('/login')
+      await page.getByPlaceholder('输入用户名或邮箱').fill(String(fixture.sessions[0]!.user.username))
+      await page.getByPlaceholder('输入密码').fill(fixture.sessions[0]!.password)
+      await page.getByRole('button', { name: '登录' }).click()
+      await page.waitForURL(/^(?!.*\/login)/)
 
       const initialTopic = page.waitForResponse(response => (
         response.request().method() === 'GET'

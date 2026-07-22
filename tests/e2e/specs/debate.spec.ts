@@ -136,10 +136,11 @@ async function expectDebateStatusResponse(response: Response, status: 'active' |
 }
 
 async function authenticatePage(page: Page, session: DebateSession) {
-  await page.addInitScript(({ token, user }) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
-  }, session)
+  await page.goto('/login')
+  await page.getByPlaceholder('输入用户名或邮箱').fill(String(session.user.username))
+  await page.getByPlaceholder('输入密码').fill(session.password)
+  await page.getByRole('button', { name: '登录' }).click()
+  await page.waitForURL(/^(?!.*\/login)/)
 }
 
 async function openFirstDebate(page: Page) {

@@ -604,7 +604,7 @@ async function handleContentClick(event: MouseEvent) {
     || !relationID
     || !staleRelationIDs.value.has(relationID)
   ) return
-  if (!authStore.isAuthenticated) {
+  if (!authStore.isAuthenticated && !await authStore.restoreSession()) {
     await router.push('/login')
     return
   }

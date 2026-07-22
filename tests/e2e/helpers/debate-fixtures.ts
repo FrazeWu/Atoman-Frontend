@@ -5,6 +5,7 @@ import { expect, type APIRequestContext } from '@playwright/test'
 
 export type DebateSession = {
   token: string
+  password: string
   user: Record<string, unknown>
   userId: string
 }
@@ -77,8 +78,10 @@ export async function createDebateFixture(request: APIRequestContext): Promise<D
       `)
       userIDs.push(userId)
 
-      const loggedIn = await api<LoginResponse>(request, 'POST', '/api/v1/auth/login', null, { username, password })
-      sessions.push({ ...loggedIn, userId })
+      const loggedIn = await api<LoginResponse>(request, 'POST', '/api/v1/auth/token', null, { username, password }, {
+        'X-Forwarded-For': `127.0.0.${index + 10}`,
+      })
+      sessions.push({ ...loggedIn, password, userId })
     }
 
     const source = await createDebate(
@@ -179,10 +182,11 @@ async function api<T>(
   path: string,
   token: string | null,
   data?: unknown,
+  headers?: Record<string, string>,
 ): Promise<T> {
   const response = await request.fetch(path, {
     method,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers },
     ...(data === undefined ? {} : { data }),
   })
   if (!response.ok()) {

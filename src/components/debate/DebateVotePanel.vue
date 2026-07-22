@@ -87,9 +87,9 @@ function directionText(direction?: DebateVoteDirection | '') {
   return copy.undecided
 }
 
-function choose(direction: DebateVoteDirection) {
-  if (!authStore.isAuthenticated) {
-    void router.push('/login')
+async function choose(direction: DebateVoteDirection) {
+  if (!authStore.isAuthenticated && !await authStore.restoreSession()) {
+    await router.push('/login')
     return
   }
   if (props.summary?.current_user_vote === direction) {

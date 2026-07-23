@@ -33,6 +33,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: { value: { playlistId: 'playlist-1' } },
     closePlaylist: mocks.closePlaylist,
     refreshPlaylists: mocks.refreshPlaylists,
+    isLayerShifted: () => false,
+    isTopLayer: () => true,
   }),
 }))
 
@@ -339,5 +341,43 @@ describe('PlaylistDrawer', () => {
 
     expect(wrapper.vm.$.setupState.playlist.songs.map((song: { title: string }) => song.title)).toEqual(['Second', 'First', 'Third'])
     expect(wrapper.text()).toContain('歌单顺序保存失败')
+  })
+
+  it('loads a public playlist without waiting for session restoration', async () => {
+    mocks.restoreSession.mockReturnValue(new Promise(() => {}))
+
+    mount(PlaylistDrawer)
+
+    expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
+  })
+
+  it('keeps the latest playlist visible when an earlier request finishes later', async () => {
+    let resolveFirst!: (playlist: Record<string, unknown>) => void
+    const firstRequest = new Promise<Record<string, unknown>>((resolve) => { resolveFirst = resolve })
+    mocks.getMusicPlaylist
+      .mockReturnValueOnce(firstRequest)
+      .mockResolvedValueOnce({
+        id: 'playlist-b', user_id: 'user-1', name: '歌单 B', description: '',
+        cover_url: '', is_public: true, is_favorite: false, song_count: 0, songs: [],
+      })
+
+    const wrapper = mount(PlaylistDrawer, {
+      props: {
+        layer: { key: 'playlist-a', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-a' } },
+      },
+    })
+    await wrapper.setProps({
+      layer: { key: 'playlist-b', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-b' } },
+    })
+    await flushPromises()
+
+    resolveFirst({
+      id: 'playlist-a', user_id: 'user-1', name: '歌单 A', description: '',
+      cover_url: '', is_public: true, is_favorite: false, song_count: 0, songs: [],
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('歌单 B')
+    expect(wrapper.text()).not.toContain('歌单 A')
   })
 })

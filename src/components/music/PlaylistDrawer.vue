@@ -57,17 +57,20 @@ const removingSongIds = ref<Set<string>>(new Set())
 const reordering = ref(false)
 const pendingSongOrders = new Map<string, MusicSongListItem[]>()
 const confirmedSongOrders = new Map<string, MusicSongListItem[]>()
+let playlistLoadGeneration = 0
 
-async function loadBookmarkState(playlistId: string) {
+async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolean) {
   if (!authStore.isAuthenticated) {
-    isBookmarked.value = false
+    if (isCurrentLoad()) isBookmarked.value = false
     return
   }
 
   try {
     const response = await listPlaylistBookmarks()
+    if (!isCurrentLoad()) return
     isBookmarked.value = response.data.some((bookmark) => String(bookmark.playlist_id) === playlistId)
   } catch (error) {
+    if (!isCurrentLoad()) return
     if (error instanceof ApiErrorResponseError && error.status === 401) {
       isBookmarked.value = false
       return
@@ -77,25 +80,33 @@ async function loadBookmarkState(playlistId: string) {
 }
 
 async function loadPlaylist(playlistId: string | null) {
+  const loadGeneration = ++playlistLoadGeneration
+  const isCurrentLoad = () => loadGeneration === playlistLoadGeneration
+
   if (!playlistId) {
-    playlist.value = null
-    editing.value = false
+    if (isCurrentLoad()) {
+      playlist.value = null
+      editing.value = false
+    }
     return
   }
 
   loading.value = true
   errorMessage.value = ''
   try {
-    await authStore.restoreSession()
+    void authStore.restoreSession()
     const detail = await getMusicPlaylist(playlistId)
+    if (!isCurrentLoad()) return
+
     playlist.value = detail
     confirmedSongOrders.set(detail.id, [...detail.songs])
-    await loadBookmarkState(String(detail.id))
+    await loadBookmarkState(String(detail.id), isCurrentLoad)
   } catch (error) {
+    if (!isCurrentLoad()) return
     console.error('Failed to fetch playlist details:', error)
     errorMessage.value = '歌单信息加载失败'
   } finally {
-    loading.value = false
+    if (isCurrentLoad()) loading.value = false
   }
 }
 

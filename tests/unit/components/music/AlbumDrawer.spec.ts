@@ -45,6 +45,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: { value: { albumId: '1' } },
     closeAlbum: vi.fn(),
     isAlbumShifted: { value: false },
+    isLayerShifted: () => false,
+    isTopLayer: () => true,
     openNestedAction,
     openMusicEditor,
     openAlbum,
@@ -340,5 +342,41 @@ describe('AlbumDrawer.vue', () => {
 
     expect(createAlbumBookmark).toHaveBeenCalledWith('1')
     expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toContain('已订阅')
+  })
+
+  it('keeps the latest album visible when an earlier request finishes later', async () => {
+    let resolveFirst!: (album: Record<string, unknown>) => void
+    const firstRequest = new Promise<Record<string, unknown>>((resolve) => { resolveFirst = resolve })
+    getMusicAlbum
+      .mockReturnValueOnce(firstRequest)
+      .mockResolvedValueOnce({ id: 'album-b', title: 'Album B', entry_status: 'open', songs: [] })
+
+    const wrapper = mount(AlbumDrawer, {
+      props: {
+        layer: { key: 'album-a', kind: 'album', title: '专辑详情', payload: { albumId: 'album-a' } },
+      },
+    })
+    await wrapper.setProps({
+      layer: { key: 'album-b', kind: 'album', title: '专辑详情', payload: { albumId: 'album-b' } },
+    })
+    await flushPromises()
+
+    resolveFirst({ id: 'album-a', title: 'Album A', entry_status: 'open', songs: [] })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Album B')
+    expect(wrapper.text()).not.toContain('Album A')
+  })
+
+  it('shows feedback when album bookmark update fails', async () => {
+    createAlbumBookmark.mockRejectedValueOnce(new Error('network'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="album-bookmark-toggle"]').trigger('click')
+    await flushPromises()
+
+    expect(document.body.textContent).toContain('订阅失败')
   })
 })

@@ -579,17 +579,17 @@ async function onCoverChange(event: Event) {
   gap: 5px;
   padding: 4px 10px;
   font-size: 12px;
-  border: 1px solid var(--color-border, rgba(0,0,0,0.15));
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 6px;
   background: transparent;
-  color: var(--color-text-secondary, #666);
+  color: var(--a-color-muted);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
 
 .folder-picker-btn:hover:not(:disabled) {
-  background: var(--color-surface-secondary, rgba(0,0,0,0.05));
-  color: var(--color-text, #333);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
 }
 
 .folder-picker-btn:disabled {
@@ -611,11 +611,11 @@ async function onCoverChange(event: Event) {
   gap: 8px;
   padding: 5px 2px;
   font-size: 12px;
-  border-bottom: 1px solid var(--color-border-subtle, rgba(0,0,0,0.06));
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .import-file-item--failed .import-file-name {
-  color: var(--color-error, #c00);
+  color: var(--a-color-accent-destructive);
 }
 
 .import-file-item--uploaded .import-file-name {
@@ -632,7 +632,7 @@ async function onCoverChange(event: Event) {
 
 .import-file-format {
   font-family: monospace;
-  color: var(--color-text-secondary, #888);
+  color: var(--a-color-muted);
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -642,7 +642,7 @@ async function onCoverChange(event: Event) {
 .stage-banner {
   margin-top: 12px;
   padding: 8px 12px;
-  background: var(--color-surface-secondary, rgba(0,0,0,0.04));
+  background: var(--a-color-surface-muted);
   border-radius: 6px;
   display: flex;
   gap: 8px;
@@ -655,7 +655,7 @@ async function onCoverChange(event: Event) {
 }
 
 .stage-hint {
-  color: var(--color-text-secondary, #888);
+  color: var(--a-color-muted);
 }
 
 .import-file-progress {
@@ -667,7 +667,7 @@ async function onCoverChange(event: Event) {
 }
 
 .import-file-error {
-  color: var(--color-error, #c00);
+  color: var(--a-color-accent-destructive);
   font-size: 11px;
   max-width: 100px;
   overflow: hidden;
@@ -678,17 +678,17 @@ async function onCoverChange(event: Event) {
 .import-file-action {
   padding: 1px 6px;
   font-size: 11px;
-  border: 1px solid var(--color-border, rgba(0,0,0,0.15));
+  border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  color: var(--color-text, #333);
+  color: var(--a-color-text);
   white-space: nowrap;
   transition: background 0.12s;
 }
 
 .import-file-action:hover:not(:disabled) {
-  background: var(--color-surface-secondary, rgba(0,0,0,0.06));
+  background: var(--a-color-surface-muted);
 }
 
 .import-file-action:disabled {
@@ -697,11 +697,11 @@ async function onCoverChange(event: Event) {
 }
 
 .import-file-action--danger {
-  color: var(--color-error, #c00);
-  border-color: var(--color-error, #c00);
+  color: var(--a-color-accent-destructive);
+  border-color: var(--a-color-accent-destructive);
 }
 
 .import-file-action--danger:hover:not(:disabled) {
-  background: rgba(204,0,0,0.06);
+  background: color-mix(in srgb, var(--a-color-accent-destructive) 8%, var(--a-color-bg));
 }
 </style>

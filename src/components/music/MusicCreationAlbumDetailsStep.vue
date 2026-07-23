@@ -712,7 +712,7 @@ watch(
 .progress-bar {
   width: 100%;
   height: 100%;
-  background: color-mix(in srgb, var(--a-color-text) 92%, #6b4f3a 8%);
+  background: var(--a-color-text);
 }
 
 .field-stack {
@@ -779,7 +779,7 @@ watch(
   gap: 0.75rem;
   padding: 0.85rem;
   border: 1px solid var(--a-color-border-soft);
-  background: rgba(15, 23, 42, 0.03);
+  background: var(--a-color-surface-muted);
 }
 
 .imported-cover-callout__copy {

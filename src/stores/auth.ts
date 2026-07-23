@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { useDMStore } from '@/stores/dm'
+import { useNotificationStore } from '@/stores/notification'
 import { ref } from 'vue'
 
 import { apiFetch, clearCSRFToken, setCSRFToken } from '@/api/transport'
@@ -89,7 +91,13 @@ export const useAuthStore = defineStore('auth', () => {
   const lastAuthError = ref<string | null>(null)
   let restoreSessionInFlight: Promise<boolean> | null = null
 
+  const clearDependentState = () => {
+    useDMStore().resetStore()
+    useNotificationStore().resetStore()
+  }
+
   const applySession = (session: { csrfToken: string; user: User }) => {
+    if (user.value?.uuid && user.value.uuid !== session.user.uuid) clearDependentState()
     user.value = session.user
     token.value = 'cookie-session'
     isAuthenticated.value = true
@@ -98,6 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const clearSessionState = () => {
+    clearDependentState()
     token.value = null
     user.value = null
     isAuthenticated.value = false

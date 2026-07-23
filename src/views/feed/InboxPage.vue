@@ -82,7 +82,7 @@
           <template v-else>
             <div v-if="dmStore.activeConversation || dmStore.activeTarget" class="detail-card detail-card-dm" :class="{ 'detail-card-dm--mobile': mobileConversationOpen }">
               <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
-                <DMComposer :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
+                <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
               </DMConversationPane>
             </div>
             <div v-else class="detail-empty">
@@ -136,6 +136,7 @@ const tabs: Array<{ key: InboxPageTab; label: string }> = [
 ]
 
 const selectedNotificationId = ref<string | null>(null)
+const dmContent = ref('')
 const dmImage = ref<DMImage | null>(null)
 const dmSending = ref(false)
 const dmError = ref('')
@@ -237,6 +238,7 @@ const submitDM = async (payload: { content: string; imageId?: string }) => {
   dmError.value = ''
   try {
     const message = await dmStore.sendActiveMessage(payload.content, payload.imageId)
+    dmContent.value = ''
     dmImage.value = null
     if (dmStore.activeConversationId) await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: dmStore.activeMailboxKey, conversation: message.conversation_id } })
   } catch (error) {

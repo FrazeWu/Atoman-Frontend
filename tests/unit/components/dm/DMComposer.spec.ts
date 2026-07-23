@@ -8,6 +8,7 @@ describe('DMComposer', () => {
     const wrapper = mount(DMComposer, { props: { disabled: false, replyAsLabel: '低空飞行' } })
     expect(wrapper.get('[data-testid="dm-reply-as"]').text()).toBe('将以低空飞行回复')
     await wrapper.get('textarea').setValue('你好')
+    await wrapper.setProps({ modelValue: '你好' })
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('send')?.[0]).toEqual([{ content: '你好', imageId: undefined }])
 
@@ -21,5 +22,15 @@ describe('DMComposer', () => {
     expect(wrapper.get('img').attributes('src')).toBe('https://example.com/image.jpg')
     await wrapper.get('form').trigger('submit')
     expect(wrapper.emitted('send')?.[0]).toEqual([{ content: '', imageId: 'image-1' }])
+  })
+
+  it('发送事件后保留正文，直到父级确认成功并更新受控值', async () => {
+    const wrapper = mount(DMComposer, { props: { modelValue: '' } })
+    await wrapper.get('textarea').setValue('失败后保留')
+    await wrapper.setProps({ modelValue: '失败后保留' })
+    await wrapper.get('form').trigger('submit')
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('失败后保留')
+    await wrapper.setProps({ modelValue: '' })
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('')
   })
 })

@@ -16,9 +16,8 @@ describe('content lifecycle client', () => {
 
     expect(saved.progress).toBe(0.4)
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/content/events', expect.objectContaining({ method: 'POST' }))
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/content/progress', expect.objectContaining({
-      method: 'PUT', headers: expect.objectContaining({ Authorization: 'Bearer token-1' }),
-    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/content/progress', expect.objectContaining({ method: 'PUT' }))
+    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get('Authorization')).toBe('Bearer token-1')
   })
 
   it('uses the cookie-aware transport without a bearer placeholder for cookie sessions', async () => {

@@ -216,25 +216,35 @@ async function loadAlbum(albumId: string | null) {
 }
 
 async function toggleAlbumBookmark() {
-  const albumId = album.value?.id
-  if (!albumId || bookmarkLoading.value) return
+  const targetAlbum = album.value
+  if (!targetAlbum || bookmarkLoading.value) return
+
+  const albumId = String(targetAlbum.id)
+  const loadGeneration = albumLoadGeneration
+  const wasBookmarked = isBookmarked.value
+  const isCurrentTarget = () => (
+    loadGeneration === albumLoadGeneration && String(album.value?.id) === albumId
+  )
 
   bookmarkLoading.value = true
   try {
-    if (isBookmarked.value) {
+    if (wasBookmarked) {
       await deleteAlbumBookmark(albumId)
+      if (!isCurrentTarget()) return
       isBookmarked.value = false
       return
     }
 
     await createAlbumBookmark(albumId)
+    if (!isCurrentTarget()) return
     isBookmarked.value = true
   } catch (error) {
+    if (!isCurrentTarget()) return
     console.error('Failed to toggle album bookmark:', error)
-    toastMessage.value = isBookmarked.value ? '取消订阅失败' : '订阅失败'
+    toastMessage.value = wasBookmarked ? '取消订阅失败' : '订阅失败'
     toastVisible.value = true
   } finally {
-    bookmarkLoading.value = false
+    if (isCurrentTarget()) bookmarkLoading.value = false
   }
 }
 

@@ -428,15 +428,16 @@ async function addPodcastListenLater() {
 }
 
 function postPodcastEpisode(episodeId: string) {
-  const init: RequestInit = {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ episode_id: episodeId }),
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
   }
-  if (authStore.token === 'cookie-session') return apiFetch(api.podcast.bookmarks, init)
-  return fetch(api.podcast.bookmarks, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${authStore.token}` },
+  if (authStore.token && authStore.token !== 'cookie-session') {
+    headers.Authorization = `Bearer ${authStore.token}`
+  }
+  return apiFetch(api.podcast.bookmarks, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ episode_id: episodeId }),
   })
 }
 

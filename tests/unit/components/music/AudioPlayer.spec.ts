@@ -84,6 +84,26 @@ describe('AudioPlayer', () => {
     wrapper.unmount()
   })
 
+  it('keeps an API bearer token when bookmarking through the installed transport', async () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1', title: 'Episode 1', artist: 'Host', audio_url: '/episode.mp3',
+      source_id: 'episode-1', source_type: 'podcast_episode',
+    } as any
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.token = 'api-token'
+
+    const wrapper = mount(AudioPlayer, {
+      global: { plugins: [createTestRouter()], stubs: { MusicLyricsPanel: true, PDropdown: true, PToast: true } },
+    })
+    await wrapper.get('[title="收藏单集"]').trigger('click')
+
+    expect(transportApi.apiFetch).toHaveBeenCalledWith('/api/v1/podcast/bookmarks', expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer api-token' }),
+    }))
+    wrapper.unmount()
+  })
+
   it('unpinns, auto-hides, reveals on hover, and pins again', async () => {
     vi.useFakeTimers()
     const player = usePlayerStore()

@@ -368,6 +368,32 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('Album A')
   })
 
+  it('does not apply a delayed album bookmark result after switching albums', async () => {
+    let resolveBookmark!: () => void
+    createAlbumBookmark.mockReturnValueOnce(new Promise<void>((resolve) => { resolveBookmark = resolve }))
+    getMusicAlbum
+      .mockResolvedValueOnce({ id: 'album-a', title: 'Album A', entry_status: 'open', songs: [] })
+      .mockResolvedValueOnce({ id: 'album-b', title: 'Album B', entry_status: 'open', songs: [] })
+
+    const wrapper = mount(AlbumDrawer, {
+      props: {
+        layer: { key: 'album-a', kind: 'album', title: '专辑详情', payload: { albumId: 'album-a' } },
+      },
+    })
+    await flushPromises()
+    void wrapper.get('[data-testid="album-bookmark-toggle"]').trigger('click')
+
+    await wrapper.setProps({
+      layer: { key: 'album-b', kind: 'album', title: '专辑详情', payload: { albumId: 'album-b' } },
+    })
+    await flushPromises()
+    resolveBookmark()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Album B')
+    expect(wrapper.get('[data-testid="album-bookmark-toggle"]').text()).toBe('订阅')
+  })
+
   it('shows feedback when album bookmark update fails', async () => {
     createAlbumBookmark.mockRejectedValueOnce(new Error('network'))
     vi.spyOn(console, 'error').mockImplementation(() => {})

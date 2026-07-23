@@ -366,40 +366,52 @@ function playTrack(track: MusicSongListItem) {
 }
 
 async function toggleBookmark() {
-  if (!playlist.value || bookmarkLoading.value) return
+  const targetPlaylist = playlist.value
+  if (!targetPlaylist || bookmarkLoading.value) return
+
+  const playlistId = String(targetPlaylist.id)
+  const loadGeneration = playlistLoadGeneration
+  const wasBookmarked = isBookmarked.value
+  const isCurrentTarget = () => (
+    loadGeneration === playlistLoadGeneration && String(playlist.value?.id) === playlistId
+  )
+
   await authStore.restoreSession()
+  if (!isCurrentTarget()) return
   if (!authStore.isAuthenticated) {
     errorMessage.value = '请先登录'
     return
   }
 
-  const playlistId = String(playlist.value.id)
   bookmarkLoading.value = true
   errorMessage.value = ''
   try {
-    if (isBookmarked.value) {
+    if (wasBookmarked) {
       await deletePlaylistBookmark(playlistId)
+      if (!isCurrentTarget()) return
       isBookmarked.value = false
       playlist.value = {
-        ...playlist.value,
-        bookmark_count: Math.max(0, (playlist.value.bookmark_count ?? 0) - 1),
+        ...targetPlaylist,
+        bookmark_count: Math.max(0, (targetPlaylist.bookmark_count ?? 0) - 1),
       }
       refreshPlaylists()
       return
     }
 
     await createPlaylistBookmark(playlistId)
+    if (!isCurrentTarget()) return
     isBookmarked.value = true
     playlist.value = {
-      ...playlist.value,
-      bookmark_count: (playlist.value.bookmark_count ?? 0) + 1,
+      ...targetPlaylist,
+      bookmark_count: (targetPlaylist.bookmark_count ?? 0) + 1,
     }
     refreshPlaylists()
   } catch (error) {
+    if (!isCurrentTarget()) return
     console.error('Failed to toggle playlist bookmark:', error)
     errorMessage.value = '操作失败'
   } finally {
-    bookmarkLoading.value = false
+    if (isCurrentTarget()) bookmarkLoading.value = false
   }
 }
 

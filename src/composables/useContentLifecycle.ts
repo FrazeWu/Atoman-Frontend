@@ -113,9 +113,7 @@ async function request<T>(url: string, token: string | null | undefined, init: R
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token && token !== 'cookie-session') headers.Authorization = `Bearer ${token}`
   const requestInit = { ...init, headers: { ...headers, ...(init.headers || {}) } }
-  const response = token === 'cookie-session'
-    ? await apiFetch(url, requestInit)
-    : await fetch(url, requestInit)
+  const response = await apiFetch(url, requestInit)
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(body?.error?.message || body?.error || '请求失败')
   return (body?.data ?? body) as T

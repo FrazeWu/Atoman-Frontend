@@ -402,4 +402,36 @@ describe('PlaylistDrawer', () => {
     expect(wrapper.text()).toContain('歌单 B')
     expect(wrapper.text()).not.toContain('歌单 A')
   })
+
+  it('does not apply a delayed playlist bookmark result after switching playlists', async () => {
+    let resolveBookmark!: () => void
+    mocks.createPlaylistBookmark.mockReturnValueOnce(new Promise<void>((resolve) => { resolveBookmark = resolve }))
+    mocks.getMusicPlaylist
+      .mockResolvedValueOnce({
+        id: 'playlist-a', user_id: 'user-2', name: '歌单 A', description: '',
+        cover_url: '', is_public: true, song_count: 0, bookmark_count: 0, songs: [],
+      })
+      .mockResolvedValueOnce({
+        id: 'playlist-b', user_id: 'user-2', name: '歌单 B', description: '',
+        cover_url: '', is_public: true, song_count: 0, bookmark_count: 0, songs: [],
+      })
+
+    const wrapper = mount(PlaylistDrawer, {
+      props: {
+        layer: { key: 'playlist-a', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-a' } },
+      },
+    })
+    await flushPromises()
+    void wrapper.get('[data-testid="playlist-bookmark-button"]').trigger('click')
+
+    await wrapper.setProps({
+      layer: { key: 'playlist-b', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-b' } },
+    })
+    await flushPromises()
+    resolveBookmark()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('歌单 B')
+    expect(wrapper.get('[data-testid="playlist-bookmark-button"]').text()).toContain('收藏歌单')
+  })
 })

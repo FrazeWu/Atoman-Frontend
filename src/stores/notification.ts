@@ -139,11 +139,13 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const markRead = async (id: string) => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     const res = await fetch(api.notifications.markRead(id), {
       method: 'PUT',
       headers: authHeaders(),
     })
-    if (!res.ok) return
+    if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
     const target = notifications.value.find((item) => item.id === id)
     if (target && !target.read_at) {
       target.read_at = new Date().toISOString()
@@ -153,6 +155,8 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const markAllRead = async (selection: NotificationSelection = currentTypes.value.length ? currentTypes.value : currentCategory.value as NotificationCategory) => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     if (isTypeSelection(selection)) {
       await Promise.all(selection.map((type) => fetch(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
         method: 'PUT', headers: authHeaders(),
@@ -164,6 +168,7 @@ export const useNotificationStore = defineStore('notification', () => {
       })
       if (!res.ok) return
     }
+    if (generation !== requestGeneration || token !== authStore.token) return
     const readAt = new Date().toISOString()
     const matches = (item: Notification) => isTypeSelection(selection) ? selection.includes(item.type) : item.category === selection
     notifications.value = notifications.value.map((item) =>

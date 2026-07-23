@@ -60,6 +60,21 @@ describe('notification store', () => {
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
   })
 
+  it('does not apply a stale mark-all response after reset', async () => {
+    let resolve!: (response: Response) => void
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise<Response>((done) => { resolve = done }))
+    const store = useNotificationStore()
+    store.unreadCounts.reply = 1
+    store.notifications = [makeNotification('reply-1', 'reply')]
+    const pending = store.markAllRead('reply')
+    store.resetStore()
+    store.unreadCounts.reply = 4
+    resolve(new Response(null, { status: 200 }))
+    await pending
+    expect(store.unreadCounts.reply).toBe(4)
+    expect(store.notifications).toEqual([])
+  })
+
   it('replaces unread counts from the categorized API contract', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       data: { total: 4, items: { like: 2, reply: 1, dm: 1 } },

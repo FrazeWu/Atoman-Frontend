@@ -51,7 +51,7 @@ vi.mock('@/api/musicV1', () => ({
 }))
 
 vi.mock('@/stores/auth', () => ({
-  useAuthStore: () => ({ ...mocks.auth, restoreSession: mocks.restoreSession }),
+  useAuthStore: () => Object.assign(mocks.auth, { restoreSession: mocks.restoreSession }),
 }))
 
 vi.mock('@/stores/player', () => ({
@@ -349,6 +349,28 @@ describe('PlaylistDrawer', () => {
     mount(PlaylistDrawer)
 
     expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
+  })
+
+  it('loads bookmark state after session restoration without delaying a public playlist', async () => {
+    let restoreSession!: () => void
+    mocks.auth.isAuthenticated = false
+    mocks.restoreSession.mockImplementation(() => new Promise<void>((resolve) => {
+      restoreSession = () => {
+        mocks.auth.isAuthenticated = true
+        resolve()
+      }
+    }))
+
+    mount(PlaylistDrawer)
+    await flushPromises()
+
+    expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
+    expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled()
+
+    restoreSession()
+    await flushPromises()
+
+    expect(mocks.listPlaylistBookmarks).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the latest playlist visible when an earlier request finishes later', async () => {

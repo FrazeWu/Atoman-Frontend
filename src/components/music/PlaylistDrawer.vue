@@ -94,13 +94,20 @@ async function loadPlaylist(playlistId: string | null) {
   loading.value = true
   errorMessage.value = ''
   try {
-    void authStore.restoreSession()
+    const sessionRestore = authStore.restoreSession()
     const detail = await getMusicPlaylist(playlistId)
     if (!isCurrentLoad()) return
 
     playlist.value = detail
     confirmedSongOrders.set(detail.id, [...detail.songs])
-    await loadBookmarkState(String(detail.id), isCurrentLoad)
+    if (authStore.isAuthenticated) {
+      await loadBookmarkState(String(detail.id), isCurrentLoad)
+    } else {
+      void sessionRestore.then(() => {
+        if (!isCurrentLoad()) return
+        return loadBookmarkState(String(detail.id), isCurrentLoad)
+      }).catch(() => {})
+    }
   } catch (error) {
     if (!isCurrentLoad()) return
     console.error('Failed to fetch playlist details:', error)

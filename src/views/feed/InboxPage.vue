@@ -93,7 +93,7 @@
         </section>
       </div>
     </div>
-    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" @close="closeReportModal" @report="reportMessage" />
+    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" @close="closeReportModal" @clear-error="reportError = ''" @report="reportMessage" />
   </div>
 </template>
 
@@ -107,7 +107,7 @@ import { useDMStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 import { referenceHref } from '@/composables/useReferenceRendering'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
-import { mailboxKey, type DMImage } from '@/api/dm'
+import { dmErrorMessage, mailboxKey, type DMImage } from '@/api/dm'
 import DMMailboxSelector from '@/components/dm/DMMailboxSelector.vue'
 import DMConversationList from '@/components/dm/DMConversationList.vue'
 import DMConversationPane from '@/components/dm/DMConversationPane.vue'
@@ -240,7 +240,7 @@ const submitDM = async (payload: { content: string; imageId?: string }) => {
     dmImage.value = null
     if (dmStore.activeConversationId) await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: dmStore.activeMailboxKey, conversation: message.conversation_id } })
   } catch (error) {
-    dmError.value = error instanceof Error ? error.message : '发送失败'
+    dmError.value = dmErrorMessage(error)
   } finally {
     dmSending.value = false
   }
@@ -250,7 +250,7 @@ const uploadDMImage = async (file: File) => {
   try {
     dmImage.value = await dmStore.uploadImage(file)
   } catch (error) {
-    dmError.value = error instanceof Error ? error.message : '上传失败'
+    dmError.value = dmErrorMessage(error)
   } finally {}
 }
 
@@ -258,7 +258,7 @@ const reportMessage = async ({ messageId, reason, detail }: { messageId: string;
   if (reportSubmitting.value) return
   reportSubmitting.value = true
   reportError.value = ''
-  try { await dmStore.reportMessage(messageId, { reason, detail }); closeReportModal() } catch (error) { reportError.value = error instanceof Error ? error.message : '举报失败' } finally { reportSubmitting.value = false }
+  try { await dmStore.reportMessage(messageId, { reason, detail }); closeReportModal() } catch (error) { reportError.value = dmErrorMessage(error) } finally { reportSubmitting.value = false }
 }
 
 const closeReportModal = () => { reportMessageId.value = ''; reportError.value = '' }

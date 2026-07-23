@@ -72,6 +72,15 @@ export async function apiGet<T>(url: string): Promise<T> {
   }))
 }
 
+export async function apiGetOptional<T>(url: string): Promise<T | null> {
+  const response = await apiFetch(url, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
+  if (response.status === 204) return null
+  return unwrapResponse<T>(response)
+}
+
 export async function apiGetEnvelope<T, M = Record<string, unknown>>(url: string): Promise<ApiSuccess<T, M>> {
   return unwrapResponseEnvelope<T, M>(await apiFetch(url, {
     credentials: 'include',

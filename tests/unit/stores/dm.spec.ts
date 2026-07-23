@@ -1,108 +1,130 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/api/dm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/dm')>()
+  return {
+    ...actual,
+    listMessages: vi.fn(),
+    markConversationRead: vi.fn(),
+  }
+})
+
 import { useDMStore } from '@/stores/dm'
-import { useAuthStore } from '@/stores/auth'
+import { listMessages, markConversationRead } from '@/api/dm'
+import type { DMConversation, DMMailbox, DMMessage } from '@/api/dm'
 
-const makeToken = () => {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }))
-  return `${header}.${payload}.signature`
-}
+const userMailbox: DMMailbox = { type: 'user', id: 'me', display_name: '我的私信', unread_count: 2 }
+const channelMailbox: DMMailbox = { type: 'channel', id: 'channel-1', display_name: '频道', unread_count: 0 }
 
-const makeMessage = (id: string, conversationId: string, senderUsername: string) => ({
+const makeConversation = (id: string, mailbox = userMailbox): DMConversation => ({
+  id,
+  mailbox,
+  other_party: { type: 'user', id: 'alice', username: 'alice', display_name: 'Alice' },
+  last_message_at: '2026-07-23T00:00:00Z',
+  last_message_preview: 'hello',
+  unread_count: 0,
+  blocked: false,
+  reply_as: { type: mailbox.type, id: mailbox.id, display_name: mailbox.display_name },
+})
+
+const makeMessage = (id: string, conversationId: string, createdAt: string, clientMessageId = id): DMMessage => ({
   id,
   conversation_id: conversationId,
-  sender_id: `${senderUsername}-id`,
-  sender: { username: senderUsername, email: `${senderUsername}@example.com` },
-  content: `${senderUsername} message`,
-  image_url: '',
-  created_at: '2026-06-30T00:00:00Z',
-  updated_at: '2026-06-30T00:00:00Z',
+  client_message_id: clientMessageId,
+  sender: { type: 'user', id: 'alice', username: 'alice', display_name: 'Alice' },
+  content: id,
+  created_at: createdAt,
 })
 
 describe('dm store', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    localStorage.clear()
-    localStorage.setItem('token', makeToken())
-    localStorage.setItem('user', JSON.stringify({ username: 'me', email: 'me@example.com' }))
     setActivePinia(createPinia())
   })
 
-  it('ignores stale openConversation responses and only marks the active conversation read', async () => {
-    let resolveAlice!: (response: Response) => void
-    let resolveBob!: (response: Response) => void
-    const aliceResponse = new Promise<Response>((resolve) => {
-      resolveAlice = resolve
-    })
-    const bobResponse = new Promise<Response>((resolve) => {
-      resolveBob = resolve
-    })
-
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-      const url = String(input)
-      if (url.endsWith('/dm/conversations/alice?page=1')) return aliceResponse
-      if (url.endsWith('/dm/conversations/bob?page=1')) return bobResponse
-      if (url.endsWith('/dm/conversations/alice/read') || url.endsWith('/dm/conversations/bob/read')) {
-        return new Response(null, { status: 204 })
-      }
-      throw new Error(`unexpected fetch: ${url} ${init?.method ?? 'GET'}`)
-    })
-
+  it('normalizes mailboxes and conversations by stable ids', () => {
     const store = useDMStore()
-    const aliceOpen = store.openConversation('alice')
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    store.reconcile({
+      mailboxes: [userMailbox, channelMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-2'), makeConversation('conversation-1')] },
+      activeConversationId: '',
+      activeMessages: [],
+    })
 
-    const bobOpen = store.openConversation('bob')
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
-
-    resolveBob(new Response(JSON.stringify({
-      data: [makeMessage('bob-message', 'bob-conversation', 'bob')],
-      total: 1,
-    }), { status: 200 }))
-    await bobOpen
-
-    resolveAlice(new Response(JSON.stringify({
-      data: [makeMessage('alice-message', 'alice-conversation', 'alice')],
-      total: 1,
-    }), { status: 200 }))
-    await aliceOpen
-
-    expect(store.activeConversation).toBe('bob')
-    expect(store.messages.map((message) => message.id)).toEqual(['bob-message'])
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/dm/conversations/bob/read', expect.objectContaining({
-      method: 'PUT',
-    }))
-    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/dm/conversations/alice/read', expect.anything())
+    expect(store.mailboxOrder).toEqual(['user:me', 'channel:channel-1'])
+    expect(store.conversationIdsByMailbox['user:me']).toEqual(['conversation-2', 'conversation-1'])
   })
 
-  it('exposes blocked state for active conversation', () => {
+  it('prepends older messages in chronological order', () => {
     const store = useDMStore()
-    store.conversations = [{ conversation_id: 'c1', other_username: 'alice', other_user_id: 'u1', preview: '', unread_count: 0, is_blocked: true }]
-    store.activeConversation = 'alice'
-    expect(store.activeConversationBlocked).toBe(true)
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1',
+      activeMessages: [makeMessage('newer', 'conversation-1', '2026-07-23T00:00:00Z')],
+    })
+    store.mergeMessages('conversation-1', [makeMessage('older', 'conversation-1', '2026-07-22T00:00:00Z')])
+
+    expect(store.messagesByConversation['conversation-1'].map((item) => item.id)).toEqual(['older', 'newer'])
   })
 
-  it('does not count own realtime echo as unread', () => {
-    const auth = useAuthStore()
-    auth.user = { uuid: 'me-id', username: 'me', email: 'me@example.com' } as never
+  it('deduplicates events by message id and client message id', () => {
     const store = useDMStore()
-    store.unreadCount = 2
-    store.conversations = [{ conversation_id: 'c1', other_username: 'alice', other_user_id: 'alice-id', preview: '', unread_count: 0 }]
-    store.activeConversation = 'alice'
-
-    store.receiveDM({
-      conversation_id: 'c1',
-      message_id: 'm1',
-      sender_id: 'me-id',
-      sender_username: 'me',
-      content: 'hello',
-      image_url: '',
-      created_at: '2026-07-09T00:00:00Z',
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1',
+      activeMessages: [makeMessage('local-message', 'conversation-1', '2026-07-23T00:00:00Z', 'client-1')],
     })
+    store.receiveEvent({ event: 'dm.message.created', data: {
+      message: makeMessage('server-message', 'conversation-1', '2026-07-23T00:00:00Z', 'client-1'),
+      conversation: makeConversation('conversation-1'), mailbox: userMailbox, dm_unread: 2, total_unread: 2,
+    } })
 
-    expect(store.unreadCount).toBe(2)
-    expect(store.conversations[0].unread_count).toBe(0)
+    expect(store.activeMessages.map((item) => item.id)).toEqual(['server-message'])
+  })
+
+  it('keeps every mailbox in order when an event updates one conversation', () => {
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox, channelMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: '',
+      activeMessages: [],
+    })
+    store.receiveEvent({ event: 'dm.message.created', data: {
+      message: makeMessage('message-1', 'conversation-1', '2026-07-23T00:00:00Z'),
+      conversation: makeConversation('conversation-1'), mailbox: userMailbox, dm_unread: 2, total_unread: 2,
+    } })
+
+    expect(store.mailboxOrder).toEqual(['user:me', 'channel:channel-1'])
+  })
+
+  it('ignores a stale conversation response after switching conversations', async () => {
+    let resolveFirst!: (value: { items: DMMessage[] }) => void
+    let resolveSecond!: (value: { items: DMMessage[] }) => void
+    vi.mocked(listMessages)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve }))
+    vi.mocked(markConversationRead).mockResolvedValue({ conversation_unread: 0, mailbox_unread: 0, dm_unread: 0, total_unread: 0 })
+
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1'), makeConversation('conversation-2')] },
+      activeConversationId: '',
+      activeMessages: [],
+    })
+    const first = store.openConversation('conversation-1')
+    const second = store.openConversation('conversation-2')
+    resolveSecond({ items: [makeMessage('second', 'conversation-2', '2026-07-23T00:00:00Z')] })
+    await second
+    resolveFirst({ items: [makeMessage('first', 'conversation-1', '2026-07-23T00:00:00Z')] })
+    await first
+
+    expect(store.activeConversationId).toBe('conversation-2')
+    expect(store.activeMessages.map((item) => item.id)).toEqual(['second'])
+    expect(store.messagesByConversation['conversation-1']).toBeUndefined()
   })
 })

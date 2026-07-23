@@ -82,7 +82,7 @@
           <template v-else>
             <div v-if="dmStore.activeConversation || dmStore.activeTarget" class="detail-card detail-card-dm" :class="{ 'detail-card-dm--mobile': mobileConversationOpen }">
               <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
-                <DMComposer :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" />
+                <DMComposer :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
               </DMConversationPane>
             </div>
             <div v-else class="detail-empty">
@@ -93,7 +93,7 @@
         </section>
       </div>
     </div>
-    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" @close="reportMessageId = ''" @report="reportMessage" />
+    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" @close="closeReportModal" @report="reportMessage" />
   </div>
 </template>
 
@@ -142,6 +142,8 @@ const dmError = ref('')
 const dmOpenError = ref('')
 const notificationActionMessage = ref('')
 const reportMessageId = ref('')
+const reportSubmitting = ref(false)
+const reportError = ref('')
 const viewportMatchesMobile = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches
 const isMobile = ref(viewportMatchesMobile())
 const updateViewport = () => { isMobile.value = viewportMatchesMobile() }
@@ -253,8 +255,13 @@ const uploadDMImage = async (file: File) => {
 }
 
 const reportMessage = async ({ messageId, reason, detail }: { messageId: string; reason: string; detail: string }) => {
-  try { await dmStore.reportMessage(messageId, { reason, detail }); reportMessageId.value = '' } catch (error) { dmError.value = error instanceof Error ? error.message : '举报失败' }
+  if (reportSubmitting.value) return
+  reportSubmitting.value = true
+  reportError.value = ''
+  try { await dmStore.reportMessage(messageId, { reason, detail }); closeReportModal() } catch (error) { reportError.value = error instanceof Error ? error.message : '举报失败' } finally { reportSubmitting.value = false }
 }
+
+const closeReportModal = () => { reportMessageId.value = ''; reportError.value = '' }
 
 const jumpToNotification = async (notification: Notification) => {
   await notificationStore.markRead(notification.id)

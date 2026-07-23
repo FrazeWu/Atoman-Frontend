@@ -14,4 +14,12 @@ describe('DMComposer', () => {
     await wrapper.setProps({ disabled: true })
     expect(wrapper.get('[data-testid="dm-composer"]').attributes('aria-disabled')).toBe('true')
   })
+
+  it('响应外部图片变化并以图片 id 发送纯图片消息', async () => {
+    const wrapper = mount(DMComposer, { props: { image: null } })
+    await wrapper.setProps({ image: { id: 'image-1', url: 'https://example.com/image.jpg' } })
+    expect(wrapper.get('img').attributes('src')).toBe('https://example.com/image.jpg')
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.emitted('send')?.[0]).toEqual([{ content: '', imageId: 'image-1' }])
+  })
 })

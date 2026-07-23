@@ -51,7 +51,9 @@ function prepareInit(input: RequestInfo | URL, init: RequestInit = {}): RequestI
   if (!isAtomanAPI(input)) return init
   const headers = new Headers(typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined)
   new Headers(init.headers).forEach((value, key) => headers.set(key, value))
-  headers.delete('Authorization')
+  if (headers.get('Authorization') === 'Bearer cookie-session') {
+    headers.delete('Authorization')
+  }
   if (csrfToken && isMutation(requestMethod(input, init))) {
     headers.set('X-CSRF-Token', csrfToken)
   }

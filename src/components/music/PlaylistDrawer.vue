@@ -57,17 +57,20 @@ const removingSongIds = ref<Set<string>>(new Set())
 const reordering = ref(false)
 const pendingSongOrders = new Map<string, MusicSongListItem[]>()
 const confirmedSongOrders = new Map<string, MusicSongListItem[]>()
+let playlistLoadGeneration = 0
 
-async function loadBookmarkState(playlistId: string) {
+async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolean) {
   if (!authStore.isAuthenticated) {
-    isBookmarked.value = false
+    if (isCurrentLoad()) isBookmarked.value = false
     return
   }
 
   try {
     const response = await listPlaylistBookmarks()
+    if (!isCurrentLoad()) return
     isBookmarked.value = response.data.some((bookmark) => String(bookmark.playlist_id) === playlistId)
   } catch (error) {
+    if (!isCurrentLoad()) return
     if (error instanceof ApiErrorResponseError && error.status === 401) {
       isBookmarked.value = false
       return
@@ -77,25 +80,41 @@ async function loadBookmarkState(playlistId: string) {
 }
 
 async function loadPlaylist(playlistId: string | null) {
+  const loadGeneration = ++playlistLoadGeneration
+  const isCurrentLoad = () => loadGeneration === playlistLoadGeneration
+  bookmarkLoading.value = false
+
   if (!playlistId) {
-    playlist.value = null
-    editing.value = false
+    if (isCurrentLoad()) {
+      playlist.value = null
+      editing.value = false
+    }
     return
   }
 
   loading.value = true
   errorMessage.value = ''
   try {
-    await authStore.restoreSession()
+    const sessionRestore = authStore.restoreSession()
     const detail = await getMusicPlaylist(playlistId)
+    if (!isCurrentLoad()) return
+
     playlist.value = detail
     confirmedSongOrders.set(detail.id, [...detail.songs])
-    await loadBookmarkState(String(detail.id))
+    if (authStore.isAuthenticated) {
+      await loadBookmarkState(String(detail.id), isCurrentLoad)
+    } else {
+      void sessionRestore.then(() => {
+        if (!isCurrentLoad()) return
+        return loadBookmarkState(String(detail.id), isCurrentLoad)
+      }).catch(() => {})
+    }
   } catch (error) {
+    if (!isCurrentLoad()) return
     console.error('Failed to fetch playlist details:', error)
     errorMessage.value = '歌单信息加载失败'
   } finally {
-    loading.value = false
+    if (isCurrentLoad()) loading.value = false
   }
 }
 
@@ -348,40 +367,52 @@ function playTrack(track: MusicSongListItem) {
 }
 
 async function toggleBookmark() {
-  if (!playlist.value || bookmarkLoading.value) return
+  const targetPlaylist = playlist.value
+  if (!targetPlaylist || bookmarkLoading.value) return
+
+  const playlistId = String(targetPlaylist.id)
+  const loadGeneration = playlistLoadGeneration
+  const wasBookmarked = isBookmarked.value
+  const isCurrentTarget = () => (
+    loadGeneration === playlistLoadGeneration && String(playlist.value?.id) === playlistId
+  )
+
   await authStore.restoreSession()
+  if (!isCurrentTarget()) return
   if (!authStore.isAuthenticated) {
     errorMessage.value = '请先登录'
     return
   }
 
-  const playlistId = String(playlist.value.id)
   bookmarkLoading.value = true
   errorMessage.value = ''
   try {
-    if (isBookmarked.value) {
+    if (wasBookmarked) {
       await deletePlaylistBookmark(playlistId)
+      if (!isCurrentTarget()) return
       isBookmarked.value = false
       playlist.value = {
-        ...playlist.value,
-        bookmark_count: Math.max(0, (playlist.value.bookmark_count ?? 0) - 1),
+        ...targetPlaylist,
+        bookmark_count: Math.max(0, (targetPlaylist.bookmark_count ?? 0) - 1),
       }
       refreshPlaylists()
       return
     }
 
     await createPlaylistBookmark(playlistId)
+    if (!isCurrentTarget()) return
     isBookmarked.value = true
     playlist.value = {
-      ...playlist.value,
-      bookmark_count: (playlist.value.bookmark_count ?? 0) + 1,
+      ...targetPlaylist,
+      bookmark_count: (targetPlaylist.bookmark_count ?? 0) + 1,
     }
     refreshPlaylists()
   } catch (error) {
+    if (!isCurrentTarget()) return
     console.error('Failed to toggle playlist bookmark:', error)
     errorMessage.value = '操作失败'
   } finally {
-    bookmarkLoading.value = false
+    if (isCurrentTarget()) bookmarkLoading.value = false
   }
 }
 

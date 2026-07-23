@@ -42,6 +42,7 @@ const redirectMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
+let albumLoadGeneration = 0
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
@@ -162,9 +163,15 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 }
 
 async function loadAlbum(albumId: string | null) {
+  const loadGeneration = ++albumLoadGeneration
+  const isCurrentLoad = () => loadGeneration === albumLoadGeneration
+  bookmarkLoading.value = false
+
   if (!albumId) {
-    album.value = null
-    isBookmarked.value = false
+    if (isCurrentLoad()) {
+      album.value = null
+      isBookmarked.value = false
+    }
     return
   }
 
@@ -172,6 +179,8 @@ async function loadAlbum(albumId: string | null) {
   errorMessage.value = ''
   try {
     const resolved = await resolveMusicRedirect(albumId, getMusicAlbum)
+    if (!isCurrentLoad()) return
+
     const albumResponse = resolved.entity
     if (resolved.redirected) {
       redirectMessage.value = '已转到合并后的条目'
@@ -182,8 +191,10 @@ async function loadAlbum(albumId: string | null) {
     album.value = albumResponse
     try {
       const bookmarksResponse = await listAlbumBookmarks()
+      if (!isCurrentLoad()) return
       isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
     } catch (error) {
+      if (!isCurrentLoad()) return
       if (error instanceof ApiErrorResponseError && error.status === 401) {
         isBookmarked.value = false
       } else {
@@ -197,31 +208,44 @@ async function loadAlbum(albumId: string | null) {
       loadFavorites(),
     ])
   } catch (error) {
+    if (!isCurrentLoad()) return
     console.error('Failed to fetch album:', error)
     errorMessage.value = '专辑信息加载失败'
   } finally {
-    loading.value = false
+    if (isCurrentLoad()) loading.value = false
   }
 }
 
 async function toggleAlbumBookmark() {
-  const albumId = album.value?.id
-  if (!albumId || bookmarkLoading.value) return
+  const targetAlbum = album.value
+  if (!targetAlbum || bookmarkLoading.value) return
+
+  const albumId = String(targetAlbum.id)
+  const loadGeneration = albumLoadGeneration
+  const wasBookmarked = isBookmarked.value
+  const isCurrentTarget = () => (
+    loadGeneration === albumLoadGeneration && String(album.value?.id) === albumId
+  )
 
   bookmarkLoading.value = true
   try {
-    if (isBookmarked.value) {
+    if (wasBookmarked) {
       await deleteAlbumBookmark(albumId)
+      if (!isCurrentTarget()) return
       isBookmarked.value = false
       return
     }
 
     await createAlbumBookmark(albumId)
+    if (!isCurrentTarget()) return
     isBookmarked.value = true
   } catch (error) {
+    if (!isCurrentTarget()) return
     console.error('Failed to toggle album bookmark:', error)
+    toastMessage.value = wasBookmarked ? '取消订阅失败' : '订阅失败'
+    toastVisible.value = true
   } finally {
-    bookmarkLoading.value = false
+    if (isCurrentTarget()) bookmarkLoading.value = false
   }
 }
 
@@ -389,7 +413,7 @@ watch(
       </div>
     </div>
     <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId })" :count="discussionCount" />
-    <PToast v-model="toastVisible" :message="toastMessage" type="success" />
+    <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
   </PSheet>
 </template>
 

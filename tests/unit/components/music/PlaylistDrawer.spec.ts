@@ -33,6 +33,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: { value: { playlistId: 'playlist-1' } },
     closePlaylist: mocks.closePlaylist,
     refreshPlaylists: mocks.refreshPlaylists,
+    isLayerShifted: () => false,
+    isTopLayer: () => true,
   }),
 }))
 
@@ -49,7 +51,7 @@ vi.mock('@/api/musicV1', () => ({
 }))
 
 vi.mock('@/stores/auth', () => ({
-  useAuthStore: () => ({ ...mocks.auth, restoreSession: mocks.restoreSession }),
+  useAuthStore: () => Object.assign(mocks.auth, { restoreSession: mocks.restoreSession }),
 }))
 
 vi.mock('@/stores/player', () => ({
@@ -339,5 +341,98 @@ describe('PlaylistDrawer', () => {
 
     expect(wrapper.vm.$.setupState.playlist.songs.map((song: { title: string }) => song.title)).toEqual(['Second', 'First', 'Third'])
     expect(wrapper.text()).toContain('歌单顺序保存失败')
+  })
+
+  it('loads a public playlist without waiting for session restoration', async () => {
+    mocks.restoreSession.mockReturnValue(new Promise(() => {}))
+
+    mount(PlaylistDrawer)
+
+    expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
+  })
+
+  it('loads bookmark state after session restoration without delaying a public playlist', async () => {
+    let restoreSession!: () => void
+    mocks.auth.isAuthenticated = false
+    mocks.restoreSession.mockImplementation(() => new Promise<void>((resolve) => {
+      restoreSession = () => {
+        mocks.auth.isAuthenticated = true
+        resolve()
+      }
+    }))
+
+    mount(PlaylistDrawer)
+    await flushPromises()
+
+    expect(mocks.getMusicPlaylist).toHaveBeenCalledWith('playlist-1')
+    expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled()
+
+    restoreSession()
+    await flushPromises()
+
+    expect(mocks.listPlaylistBookmarks).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the latest playlist visible when an earlier request finishes later', async () => {
+    let resolveFirst!: (playlist: Record<string, unknown>) => void
+    const firstRequest = new Promise<Record<string, unknown>>((resolve) => { resolveFirst = resolve })
+    mocks.getMusicPlaylist
+      .mockReturnValueOnce(firstRequest)
+      .mockResolvedValueOnce({
+        id: 'playlist-b', user_id: 'user-1', name: '歌单 B', description: '',
+        cover_url: '', is_public: true, is_favorite: false, song_count: 0, songs: [],
+      })
+
+    const wrapper = mount(PlaylistDrawer, {
+      props: {
+        layer: { key: 'playlist-a', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-a' } },
+      },
+    })
+    await wrapper.setProps({
+      layer: { key: 'playlist-b', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-b' } },
+    })
+    await flushPromises()
+
+    resolveFirst({
+      id: 'playlist-a', user_id: 'user-1', name: '歌单 A', description: '',
+      cover_url: '', is_public: true, is_favorite: false, song_count: 0, songs: [],
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('歌单 B')
+    expect(wrapper.text()).not.toContain('歌单 A')
+  })
+
+  it('does not apply a delayed playlist bookmark result after switching playlists', async () => {
+    let resolveBookmark!: () => void
+    mocks.createPlaylistBookmark.mockReturnValueOnce(new Promise<void>((resolve) => { resolveBookmark = resolve }))
+    mocks.getMusicPlaylist
+      .mockResolvedValueOnce({
+        id: 'playlist-a', user_id: 'user-2', name: '歌单 A', description: '',
+        cover_url: '', is_public: true, song_count: 0, bookmark_count: 0, songs: [],
+      })
+      .mockResolvedValueOnce({
+        id: 'playlist-b', user_id: 'user-2', name: '歌单 B', description: '',
+        cover_url: '', is_public: true, song_count: 0, bookmark_count: 0, songs: [],
+      })
+
+    const wrapper = mount(PlaylistDrawer, {
+      props: {
+        layer: { key: 'playlist-a', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-a' } },
+      },
+    })
+    await flushPromises()
+    void wrapper.get('[data-testid="playlist-bookmark-button"]').trigger('click')
+
+    await wrapper.setProps({
+      layer: { key: 'playlist-b', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-b' } },
+    })
+    await flushPromises()
+    expect(wrapper.get('[data-testid="playlist-bookmark-button"]').attributes('disabled')).toBeUndefined()
+    resolveBookmark()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('歌单 B')
+    expect(wrapper.get('[data-testid="playlist-bookmark-button"]').text()).toContain('收藏歌单')
   })
 })

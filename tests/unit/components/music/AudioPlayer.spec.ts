@@ -13,14 +13,22 @@ const musicApi = vi.hoisted(() => ({
   recordMusicSongPlay: vi.fn(),
 }))
 
+const transportApi = vi.hoisted(() => ({
+  apiFetch: vi.fn(),
+}))
+
 vi.mock('@/composables/useApi', () => ({
   useApiUrl: () => '',
-  useApi: () => ({ url: '', podcast: {} }),
+  useApi: () => ({ url: '', podcast: { bookmarks: '/api/v1/podcast/bookmarks' } }),
 }))
 
 vi.mock('@/api/musicV1', () => ({
   listMusicPlaylists: musicApi.listMusicPlaylists,
   recordMusicSongPlay: musicApi.recordMusicSongPlay,
+}))
+
+vi.mock('@/api/transport', () => ({
+  apiFetch: transportApi.apiFetch,
 }))
 
 vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
@@ -52,6 +60,48 @@ describe('AudioPlayer', () => {
     vi.stubGlobal('ResizeObserver', ResizeObserverStub)
     musicApi.listMusicPlaylists.mockResolvedValue({ data: [] })
     musicApi.recordMusicSongPlay.mockResolvedValue(undefined)
+    transportApi.apiFetch.mockResolvedValue(new Response(null, { status: 201 }))
+  })
+
+  it('uses cookie-aware transport when bookmarking a podcast in a cookie session', async () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1', title: 'Episode 1', artist: 'Host', audio_url: '/episode.mp3',
+      source_id: 'episode-1', source_type: 'podcast_episode',
+    } as any
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.token = 'cookie-session'
+
+    const wrapper = mount(AudioPlayer, {
+      global: { plugins: [createTestRouter()], stubs: { MusicLyricsPanel: true, PDropdown: true, PToast: true } },
+    })
+    await wrapper.get('[title="收藏单集"]').trigger('click')
+
+    expect(transportApi.apiFetch).toHaveBeenCalledWith('/api/v1/podcast/bookmarks', expect.objectContaining({
+      method: 'POST',
+      headers: expect.not.objectContaining({ Authorization: expect.any(String) }),
+    }))
+    wrapper.unmount()
+  })
+
+  it('keeps an API bearer token when bookmarking through the installed transport', async () => {
+    const player = usePlayerStore()
+    player.currentSong = {
+      id: 'song-1', title: 'Episode 1', artist: 'Host', audio_url: '/episode.mp3',
+      source_id: 'episode-1', source_type: 'podcast_episode',
+    } as any
+    const auth = (await import('@/stores/auth')).useAuthStore()
+    auth.token = 'api-token'
+
+    const wrapper = mount(AudioPlayer, {
+      global: { plugins: [createTestRouter()], stubs: { MusicLyricsPanel: true, PDropdown: true, PToast: true } },
+    })
+    await wrapper.get('[title="收藏单集"]').trigger('click')
+
+    expect(transportApi.apiFetch).toHaveBeenCalledWith('/api/v1/podcast/bookmarks', expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer api-token' }),
+    }))
+    wrapper.unmount()
   })
 
   it('unpinns, auto-hides, reveals on hover, and pins again', async () => {

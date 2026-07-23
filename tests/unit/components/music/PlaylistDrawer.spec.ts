@@ -428,6 +428,7 @@ describe('PlaylistDrawer', () => {
       layer: { key: 'playlist-b', kind: 'playlist', title: '歌单详情', payload: { playlistId: 'playlist-b' } },
     })
     await flushPromises()
+    expect(wrapper.get('[data-testid="playlist-bookmark-button"]').attributes('disabled')).toBeUndefined()
     resolveBookmark()
     await flushPromises()
 

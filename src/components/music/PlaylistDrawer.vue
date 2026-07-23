@@ -82,6 +82,7 @@ async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolea
 async function loadPlaylist(playlistId: string | null) {
   const loadGeneration = ++playlistLoadGeneration
   const isCurrentLoad = () => loadGeneration === playlistLoadGeneration
+  bookmarkLoading.value = false
 
   if (!playlistId) {
     if (isCurrentLoad()) {

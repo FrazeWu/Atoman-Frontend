@@ -387,6 +387,7 @@ describe('AlbumDrawer.vue', () => {
       layer: { key: 'album-b', kind: 'album', title: '专辑详情', payload: { albumId: 'album-b' } },
     })
     await flushPromises()
+    expect(wrapper.get('[data-testid="album-bookmark-toggle"]').attributes('disabled')).toBeUndefined()
     resolveBookmark()
     await flushPromises()
 

@@ -165,6 +165,7 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 async function loadAlbum(albumId: string | null) {
   const loadGeneration = ++albumLoadGeneration
   const isCurrentLoad = () => loadGeneration === albumLoadGeneration
+  bookmarkLoading.value = false
 
   if (!albumId) {
     if (isCurrentLoad()) {

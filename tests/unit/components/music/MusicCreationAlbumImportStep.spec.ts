@@ -1,9 +1,47 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
 import * as musicApi from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+
+function snapshot(overrides: Partial<musicApi.MusicAlbumImport> = {}): musicApi.MusicAlbumImport {
+  return {
+    importId: 'import-1',
+    status: 'pending_upload',
+    archiveName: '',
+    uploadProgress: 0,
+    uploadSpeed: 0,
+    coverUrl: '',
+    coverKey: '',
+    derivedAlbumTitle: '',
+    derivedCover: '',
+    derivedTracks: [],
+    lastSyncedAt: '',
+    errorMessage: '',
+    inputMode: 'files',
+    stage: 'upload',
+    progress: { current: 0, total: 0 },
+    files: [],
+    errors: [],
+    ...overrides,
+  }
+}
+
+function fileInput(wrapper: ReturnType<typeof mount>) {
+  return wrapper.get('[data-testid="album-import-files-input"]')
+}
+
+function setFiles(input: HTMLInputElement, files: File[]) {
+  Object.defineProperty(input, 'files', { configurable: true, value: files })
+}
+
+function mockUploadTransport() {
+  vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload').mockResolvedValue({ partNumber: 1, uploadUrl: 'https://upload.test/part-1' })
+  vi.spyOn(musicApi, 'completeMusicAlbumImportFilePart').mockResolvedValue(snapshot())
+  vi.spyOn(musicApi, 'completeMusicAlbumImportFile').mockResolvedValue(snapshot())
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 200, headers: { ETag: 'etag-1' } })))
+}
 
 describe('MusicCreationAlbumImportStep.vue', () => {
   beforeEach(() => {
@@ -14,422 +52,119 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     drawers.setMusicCreationStep('albumImport')
   })
 
-  it('shows upload progress and speed after a zip upload starts', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockImplementation(async (_importId, _file, options) => {
-      options?.onProgress?.({ loaded: 512_000, total: 1_024_000, bytesPerSecond: 256_000 })
-      await new Promise<never>(() => {})
-    })
-
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    const file = new File(['zip'], 'late-registration.zip', { type: 'application/zip' })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-
-    expect(wrapper.text()).toContain('上传进度 50%')
-    expect(wrapper.text()).toContain('250 KB/s')
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
-  it('有封面地址时显示图片预览而不是裸链接文本', async () => {
-    const drawers = useMusicDrawers()
-    if (!drawers.state.value.creationFlow) {
-      throw new Error('creation flow not initialized')
-    }
-
-    drawers.state.value.creationFlow.draft.albumImport.coverUrl = 'http://localhost:9100/atoman-dev/music/covers/uploads/users/u1/2026/07/cover.jpg'
-
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-
-    const image = wrapper.get('[data-testid="album-import-cover-preview"]')
-    expect(image.attributes('src')).toBe('http://localhost:9100/atoman-dev/music/covers/uploads/users/u1/2026/07/cover.jpg')
-    expect(wrapper.text()).not.toContain('http://localhost:9100/atoman-dev/music/covers/uploads/users/u1/2026/07/cover.jpg')
-  })
-
-  it('选择 zip 后保持在专辑导入步骤内继续填写', async () => {
-    let resolveUpload: (() => void) | null = null
-
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'import-2',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockImplementation(async () => {
-      await new Promise<void>((resolve) => {
-        resolveUpload = resolve
-      })
-      return {
-        importId: 'import-2',
-        status: 'ready',
-        archiveName: 'graduation.zip',
-        uploadProgress: 100,
-        uploadSpeed: 0,
-        derivedAlbumTitle: 'Graduation',
-        derivedCover: '',
-        derivedTracks: [],
-        coverUrl: '',
-        coverKey: '',
-        lastSyncedAt: '',
-        errorMessage: '',
-      }
-    })
+  it('通过统一文件入口以 archive 自动模式注册、逐文件上传并完成会话', async () => {
+    const archive = new File(['zip'], 'graduation.zip', { type: 'application/zip' })
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({
+      inputMode: 'archive',
+      files: [{ fileId: 'file-1', relativePath: 'graduation.zip', fileName: 'graduation.zip', role: 'archive', detectedFormat: 'zip', size: archive.size, uploadStatus: 'pending', processingStatus: 'pending', discNumber: 0, trackNumber: 0, title: '', errorMessage: '' }],
+    }))
+    mockUploadTransport()
+    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', inputMode: 'archive' }))
 
     const wrapper = mount(MusicCreationAlbumSeedStep)
-    const drawers = useMusicDrawers()
-    const file = new File(['zip'], 'graduation.zip', { type: 'application/zip' })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-
-    const pending = wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
+    await fileInput(wrapper).trigger('change')
     await flushPromises()
 
-    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
-
-    resolveUpload?.()
-    await pending
+    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({ artistId: 'artist-seeded', inputMode: 'archive' })
+    expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith('import-1', { files: [{ relativePath: 'graduation.zip', fileName: 'graduation.zip', fileSize: archive.size, contentType: 'application/zip' }] })
+    expect(musicApi.createMusicAlbumImportFilePartUpload).toHaveBeenCalledWith('import-1', 'file-1', 1, archive.size)
+    expect(musicApi.completeMusicAlbumImportFilePart).toHaveBeenCalledWith('import-1', 'file-1', 1, 'etag-1', archive.size)
+    expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
+    expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith('import-1')
+    expect(useMusicDrawers().state.value.creationFlow?.step).toBe('albumDetails')
   })
 
-  it('handles null derivedTracks from album import snapshots without crashing', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'import-null-tracks',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
-      importId: 'import-null-tracks',
-      status: 'ready',
-      archiveName: 'null-tracks.zip',
-      uploadProgress: 100,
-      uploadSpeed: 0,
-      derivedAlbumTitle: 'Null Tracks Album',
-      derivedCover: '',
-      derivedTracks: null,
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    } as unknown as musicApi.MusicAlbumImport)
+  it('多文件选择自动使用 files 模式并保留所有注册文件', async () => {
+    const audio = new File(['audio'], '01-song.mp3', { type: 'audio/mpeg' })
+    const cover = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [] }))
+    mockUploadTransport()
+    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued' }))
 
     const wrapper = mount(MusicCreationAlbumSeedStep)
-    const drawers = useMusicDrawers()
-    const file = new File(['zip'], 'null-tracks.zip', { type: 'application/zip' })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [audio, cover])
+    await fileInput(wrapper).trigger('change')
 
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({ artistId: 'artist-seeded', inputMode: 'files' })
+    expect(musicApi.registerMusicAlbumImportFiles).toHaveBeenCalledWith('import-1', { files: [
+      { relativePath: '01-song.mp3', fileName: '01-song.mp3', fileSize: audio.size, contentType: 'audio/mpeg' },
+      { relativePath: 'cover.jpg', fileName: 'cover.jpg', fileSize: cover.size, contentType: 'image/jpeg' },
+    ] })
+  })
+
+  it('接受会话快照中的空数组而不崩溃', async () => {
+    const file = new File(['audio'], 'song.mp3', { type: 'audio/mpeg' })
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: null, errors: null, derivedTracks: null } as unknown as Partial<musicApi.MusicAlbumImport>))
+    mockUploadTransport()
+    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', files: null, errors: null, derivedTracks: null } as unknown as Partial<musicApi.MusicAlbumImport>))
+
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [file])
+    await fileInput(wrapper).trigger('change')
     await flushPromises()
 
-    expect(drawers.state.value.creationFlow?.draft.tracks).toEqual([])
-    expect(drawers.state.value.creationFlow?.draft.albumImport.derivedTracks).toEqual([])
+    const draft = useMusicDrawers().state.value.creationFlow?.draft.albumImport
+    expect(draft?.files).toEqual([])
+    expect(draft?.derivedTracks).toEqual([])
   })
 
-  it('Seed 触发上传时切到详情页，并在详情页中禁用压缩包入口', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'import-uploading',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockImplementation(async (_importId, _file, options) => {
-      options?.onProgress?.({ loaded: 256_000, total: 1_024_000, bytesPerSecond: 128_000 })
-      await new Promise<never>(() => {})
-    })
+  it('轮询提取、分析和就绪三个阶段，并应用最终快照', async () => {
+    vi.useFakeTimers()
+    const archive = new File(['zip'], 'stages.zip', { type: 'application/zip' })
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [] }))
+    mockUploadTransport()
+    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', stage: 'queued' }))
+    vi.spyOn(musicApi, 'getMusicAlbumImport')
+      .mockResolvedValueOnce(snapshot({ status: 'extracting', stage: 'extracting' }))
+      .mockResolvedValueOnce(snapshot({ status: 'analyzing', stage: 'analyzing' }))
+      .mockResolvedValueOnce(snapshot({ status: 'ready', stage: 'ready', derivedAlbumTitle: 'Stages' }))
 
-    const seedWrapper = mount(MusicCreationAlbumSeedStep)
-    const drawers = useMusicDrawers()
-    const file = new File(['zip'], 'uploading.zip', { type: 'application/zip' })
-    const seedInput = seedWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(seedInput, 'files', { configurable: true, value: [file] })
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
+    await fileInput(wrapper).trigger('change')
+    await vi.advanceTimersByTimeAsync(8000)
 
-    void seedWrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
-
-    const detailsWrapper = mount(MusicCreationAlbumDetailsStep)
-    const detailsInput = detailsWrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const detailsButton = detailsWrapper.get('[data-testid="album-import-status"] button').element as HTMLButtonElement
-    vi.mocked(musicApi.createMusicAlbumImport).mockClear()
-
-    expect(detailsInput.disabled).toBe(true)
-    expect(detailsButton.disabled).toBe(true)
-    expect(detailsWrapper.get('[data-testid="album-import-status"]').text()).toContain('上传中')
-    await detailsWrapper.get('[data-testid="album-import-status"] button').trigger('click')
-    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
-      'import-uploading',
-      file,
-      expect.objectContaining({ onProgress: expect.any(Function) }),
-    )
+    expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(3)
+    expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport.status).toBe('ready')
+    expect(useMusicDrawers().state.value.creationFlow?.draft.albumDetails.title).toBe('Stages')
   })
 
-  it('详情页 extracting 状态禁用压缩包入口', () => {
-    const drawers = useMusicDrawers()
-    drawers.setMusicCreationStep('albumDetails')
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-extracting'
-    drawers.state.value.creationFlow.draft.albumImport.status = 'extracting'
-    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'extracting.zip'
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const button = wrapper.get('[data-testid="album-import-status"] button').element as HTMLButtonElement
-
-    expect(input.disabled).toBe(true)
-    expect(button.disabled).toBe(true)
-    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('解析中')
-  })
-
-  it('详情页 ready 后重新选择压缩包时创建新 import session 并走 multipart', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'import-replacement',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
-      importId: 'import-replacement',
-      status: 'ready',
-      archiveName: 'replacement.zip',
-      uploadProgress: 100,
-      uploadSpeed: 0,
-      derivedAlbumTitle: 'Replacement',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
+  it('失败文件可重试并可用替换文件重新上传', async () => {
+    const original = new File(['audio'], 'broken.mp3', { type: 'audio/mpeg' })
+    const replacement = new File(['audio'], 'fixed.mp3', { type: 'audio/mpeg' })
+    const fileRecord = { fileId: 'file-1', relativePath: 'broken.mp3', fileName: 'broken.mp3', role: 'audio', detectedFormat: 'mp3', size: original.size, uploadStatus: 'failed' as const, processingStatus: 'failed' as const, discNumber: 1, trackNumber: 1, title: '', errorMessage: '网络错误' }
+    vi.spyOn(musicApi, 'retryMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [fileRecord] }))
+    vi.spyOn(musicApi, 'replaceMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [{ ...fileRecord, fileName: 'fixed.mp3', relativePath: 'fixed.mp3' }] }))
+    mockUploadTransport()
 
     const drawers = useMusicDrawers()
     drawers.setMusicCreationStep('albumDetails')
     if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-existing'
-    drawers.state.value.creationFlow.draft.albumImport.status = 'ready'
-    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'existing.zip'
-
+    Object.assign(drawers.state.value.creationFlow.draft.albumImport, { importId: 'import-1', status: 'failed', files: [fileRecord] })
     const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const file = new File(['zip'], 'replacement.zip', { type: 'application/zip' })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+    const replacementInput = wrapper.findAll('input[type="file"]')[1]
 
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    await wrapper.get('.import-file-action').trigger('click')
     await flushPromises()
+    expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
 
-    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({ artistId: 'artist-seeded' })
-    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
-      'import-replacement',
-      file,
-      expect.objectContaining({ onProgress: expect.any(Function) }),
-    )
-    expect(drawers.state.value.creationFlow.draft.albumDetails.title).toBe('Replacement')
-  })
-
-  it('详情页 pending_upload 后重新选择压缩包时复用旧 importId 并走 multipart', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'unexpected-import',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
-      importId: 'import-pending',
-      status: 'ready',
-      archiveName: 'pending.zip',
-      uploadProgress: 100,
-      uploadSpeed: 0,
-      derivedAlbumTitle: 'Pending Album',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.setMusicCreationStep('albumDetails')
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-pending'
-    drawers.state.value.creationFlow.draft.albumImport.status = 'pending_upload'
-    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'pending.zip'
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const file = new File(['zip'], 'pending.zip', { type: 'application/zip' })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    await wrapper.findAll('.import-file-action')[1].trigger('click')
+    setFiles(replacementInput.element as HTMLInputElement, [replacement])
+    await replacementInput.trigger('change')
     await flushPromises()
-
-    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
-      'import-pending',
-      file,
-      expect.objectContaining({ onProgress: expect.any(Function) }),
-    )
-    expect(drawers.state.value.creationFlow.draft.albumDetails.title).toBe('Pending Album')
-  })
-
-  it('详情页 failed 后重新选择压缩包时复用旧 importId 并走 multipart', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'unexpected-import',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
+    expect(musicApi.replaceMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1', {
+      relativePath: 'fixed.mp3', fileName: 'fixed.mp3', fileSize: replacement.size, contentType: 'audio/mpeg',
     })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchive').mockResolvedValue()
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
-      importId: 'import-failed',
-      status: 'ready',
-      archiveName: 'retry.zip',
-      uploadProgress: 100,
-      uploadSpeed: 0,
-      derivedAlbumTitle: 'Retry Album',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.setMusicCreationStep('albumDetails')
-    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
-    drawers.state.value.creationFlow.draft.albumImport.importId = 'import-failed'
-    drawers.state.value.creationFlow.draft.albumImport.status = 'failed'
-    drawers.state.value.creationFlow.draft.albumImport.archiveName = 'failed.zip'
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const file = new File(['zip'], 'retry.zip', { type: 'application/zip' })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchive).not.toHaveBeenCalled()
-    expect(musicApi.uploadMusicAlbumArchiveMultipart).toHaveBeenCalledWith(
-      'import-failed',
-      file,
-      expect.objectContaining({ onProgress: expect.any(Function) }),
-    )
-    expect(drawers.state.value.creationFlow.draft.albumDetails.title).toBe('Retry Album')
-  })
-
-  it('超过 2GB 的 zip 在本地拦截且不创建导入会话', async () => {
-    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue({
-      importId: 'import-too-large',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.spyOn(musicApi, 'uploadMusicAlbumArchiveMultipart').mockResolvedValue({
-      importId: 'import-too-large',
-      status: 'ready',
-      archiveName: 'too-large.zip',
-      uploadProgress: 100,
-      uploadSpeed: 0,
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      coverUrl: '',
-      coverKey: '',
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-
-    const wrapper = mount(MusicCreationAlbumSeedStep)
-    const file = new File(['zip'], 'too-large.zip', { type: 'application/zip' })
-    Object.defineProperty(file, 'size', { configurable: true, value: (2 * 1024 * 1024 * 1024) + 1 })
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('文件需在 2GB 以内，请转换或压缩后上传')
-    expect(musicApi.createMusicAlbumImport).not.toHaveBeenCalled()
+    expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
   })
 })

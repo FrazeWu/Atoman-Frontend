@@ -24,12 +24,21 @@ const makeNotification = (id: string, category: NotificationCategory, read_at: s
 
 describe('notification store', () => {
   beforeEach(() => {
-    localStorage.clear()
     vi.restoreAllMocks()
     setActivePinia(createPinia())
 
     const auth = useAuthStore()
     auth.token = 'token'
+  })
+
+  it('updates the unified dm unread count without changing other categories', () => {
+    const store = useNotificationStore()
+    store.unreadCounts.like = 2
+
+    store.setDMUnread(5)
+
+    expect(store.unreadCounts.dm).toBe(5)
+    expect(store.unreadCount).toBe(7)
   })
 
   it('keeps unread from other notification types when marking one type read', async () => {

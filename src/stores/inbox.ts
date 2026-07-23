@@ -83,6 +83,7 @@ export const useInboxStore = defineStore('inbox', () => {
         const { useDMStore } = await import('@/stores/dm')
         const dmStore = useDMStore()
         dmStore.receiveEvent(dmEvent)
+        notificationStore.setDMUnread(dmEvent.data.dm_unread)
         if (dmEvent.event === 'dm.message.created' && dmStore.activeConversationId === dmEvent.data.conversation.id) {
           await dmStore.markRead()
         }

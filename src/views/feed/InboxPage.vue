@@ -55,8 +55,8 @@
               v-for="conversation in dmStore.conversations"
               :key="conversation.conversation_id"
               class="sidebar-item"
-              :class="{ unread: conversation.unread_count > 0, selected: dmStore.activeConversation === conversation.other_username }"
-              @click="openConversation(conversation.other_username)"
+              :class="{ unread: conversation.unread_count > 0, selected: dmStore.activeConversationId === conversation.conversation_id }"
+              @click="openConversation(conversation.conversation_id)"
             >
               <div class="sidebar-item-title">
                 <span>{{ conversation.other_username }}</span>
@@ -98,7 +98,7 @@
           <template v-else>
             <div v-if="dmStore.activeConversation" class="detail-card detail-card-dm">
               <div class="dm-header">
-                <h2 class="a-subtitle">与 {{ dmStore.activeConversation }} 的对话</h2>
+                <h2 class="a-subtitle">与 {{ dmStore.activeConversation.other_party.display_name }} 的对话</h2>
                 <PButton v-if="dmStore.activeConversationBlocked" variant="secondary" @click="unblockActiveConversation">取消拉黑</PButton>
                 <PButton v-else variant="secondary" @click="blockActiveConversation">拉黑</PButton>
               </div>
@@ -156,7 +156,6 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
 import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
-import { useUserBlocksStore } from '@/stores/userBlocks'
 import { useAuthStore } from '@/stores/auth'
 import { referenceHref } from '@/composables/useReferenceRendering'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
@@ -170,7 +169,6 @@ const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const notificationStore = useNotificationStore()
 const dmStore = useDMStore()
-const userBlocksStore = useUserBlocksStore()
 
 const tabs: Array<{ key: InboxPageTab; label: string }> = [
   { key: 'like', label: '点赞' },
@@ -212,10 +210,18 @@ const loadTab = async () => {
   if (activeTab.value === 'dm') {
     dmOpenError.value = ''
     await dmStore.fetchConversations()
+    const targetType = route.query.target_type === 'user' || route.query.target_type === 'channel' ? route.query.target_type : ''
+    const targetID = typeof route.query.target_id === 'string' ? route.query.target_id : ''
     const user = typeof route.query.user === 'string' ? route.query.user : ''
-    if (user) {
+    if (targetType && targetID) {
       try {
-        await openConversation(user)
+        await dmStore.openTarget({ type: targetType, id: targetID })
+      } catch (error) {
+        dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
+      }
+    } else if (user) {
+      try {
+        await dmStore.openConversation(user)
       } catch (error) {
         dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
       }
@@ -237,10 +243,10 @@ const markCurrentNotificationsRead = async () => {
   await notificationStore.markAllRead(activeTab.value === 'forum' ? forumNotificationTypes : activeTab.value as NotificationCategory)
 }
 
-const openConversation = async (username: string) => {
+const openConversation = async (conversationID: string) => {
   dmOpenError.value = ''
-  await router.replace({ path: '/inbox', query: { tab: 'dm', user: username } })
-  await dmStore.openConversation(username)
+  await router.replace({ path: '/inbox', query: { tab: 'dm', conversation: conversationID } })
+  await dmStore.openConversation(conversationID)
 }
 
 const submitDM = async () => {
@@ -323,22 +329,12 @@ const muteNotificationSource = async (notification: Notification) => {
     : '内容静音暂不可用'
 }
 
-const activeConversationItem = computed(() => (
-  dmStore.conversations.find((item) => item.other_username === dmStore.activeConversation) || null
-))
-
 const blockActiveConversation = async () => {
-  const userID = activeConversationItem.value?.other_user_id
-  if (!userID) return
-  await userBlocksStore.blockUser(userID)
-  if (activeConversationItem.value) activeConversationItem.value.is_blocked = true
+  await dmStore.blockActiveConversation()
 }
 
 const unblockActiveConversation = async () => {
-  const userID = activeConversationItem.value?.other_user_id
-  if (!userID) return
-  await userBlocksStore.unblockUser(userID)
-  if (activeConversationItem.value) activeConversationItem.value.is_blocked = false
+  await dmStore.unblockActiveConversation()
 }
 
 const formatNotificationTitle = (notification: Notification) => {

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/stores/auth'
 import { useDMStore } from '@/stores/dm'
 import { useInboxStore } from '@/stores/inbox'
+import { useNotificationStore } from '@/stores/notification'
 
 class FakeWebSocket {
   static urls: string[] = []
@@ -51,6 +52,7 @@ describe('inbox store', () => {
     const inbox = useInboxStore()
     await inbox.connect()
     const dm = useDMStore()
+    const notifications = useNotificationStore()
     const receiveEvent = vi.spyOn(dm, 'receiveEvent')
 
     await FakeWebSocket.instances[0].onmessage?.({ data: '{invalid' } as MessageEvent)
@@ -66,9 +68,11 @@ describe('inbox store', () => {
     const inbox = useInboxStore()
     await inbox.connect()
     const dm = useDMStore()
+    const notifications = useNotificationStore()
     const receiveEvent = vi.spyOn(dm, 'receiveEvent')
     const markRead = vi.spyOn(dm, 'markRead').mockResolvedValue()
     dm.activeConversationId = 'conversation-1'
+    notifications.unreadCounts.dm = 9
     const mailbox = { party: { type: 'user', id: 'me', name: '', avatar_url: '' }, unread: 1 }
 
     for (const payload of [
@@ -83,5 +87,6 @@ describe('inbox store', () => {
     expect((receiveEvent.mock.calls[0][0] as { data: { mailbox: { display_name: string } } }).data.mailbox.display_name).toBe('me')
     expect(markRead).toHaveBeenCalledTimes(1)
     expect(markRead).toHaveBeenCalledWith()
+    expect(notifications.unreadCounts.dm).toBe(0)
   })
 })

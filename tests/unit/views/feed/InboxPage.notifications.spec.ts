@@ -115,9 +115,21 @@ describe('InboxPage notifications', () => {
   it('disables dm composer for blocked conversation', () => {
     routeQuery = { tab: 'dm' }
     const dm = useDMStore()
-    dm.conversations = [{ conversation_id: 'c1', other_username: 'alice', other_user_id: 'u1', preview: '', unread_count: 0, is_blocked: true }]
-    dm.activeConversation = 'alice'
+    vi.spyOn(dm, 'fetchConversations').mockResolvedValue()
+    dm.reconcile({
+      mailboxes: [{ type: 'user', id: 'me', display_name: 'Me', unread_count: 0 }],
+      conversationsByMailbox: {
+        'user:me': [{
+          id: 'c1', mailbox: { type: 'user', id: 'me', display_name: 'Me', unread_count: 0 },
+          other_party: { type: 'user', id: 'u1', display_name: 'alice' }, last_message_at: null,
+          last_message_preview: '', unread_count: 0, blocked: true,
+          reply_as: { type: 'user', id: 'me', display_name: 'Me' },
+        }],
+      },
+      activeConversationId: 'c1', activeMessages: [],
+    })
     const wrapper = mount(InboxPage, { global: { stubs } })
     expect(wrapper.text()).toContain('已拉黑此用户')
+    expect(wrapper.find('.sidebar-item').classes()).toContain('selected')
   })
 })

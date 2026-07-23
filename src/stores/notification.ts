@@ -172,6 +172,10 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  const setDMUnread = (count: number) => {
+    unreadCounts.value.dm = Math.max(0, count)
+  }
+
   const savePreference = async (category: NotificationCategory, eventType: string, enabled: boolean) => {
     void category
     void eventType
@@ -216,6 +220,7 @@ export const useNotificationStore = defineStore('notification', () => {
     markRead,
     markAllRead,
     receiveNotification,
+    setDMUnread,
     savePreference,
     savePreferences,
     createMute,

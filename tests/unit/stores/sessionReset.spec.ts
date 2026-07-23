@@ -1,9 +1,10 @@
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/stores/auth'
 import { useDMStore } from '@/stores/dm'
 import { useNotificationStore } from '@/stores/notification'
+import { clearSessionStores } from '@/stores/sessionReset'
 
 describe('session reset scopes', () => {
   beforeEach(() => {
@@ -16,25 +17,33 @@ describe('session reset scopes', () => {
     const firstPinia = createPinia()
     const secondPinia = createPinia()
 
-    setActivePinia(firstPinia)
-    const firstAuth = useAuthStore()
-    const firstDM = useDMStore()
-    const firstNotifications = useNotificationStore()
+    const firstAuth = useAuthStore(firstPinia)
+    const firstDM = useDMStore(firstPinia)
+    const firstNotifications = useNotificationStore(firstPinia)
     firstDM.activeConversationId = 'first-conversation'
     firstNotifications.setDMUnread(4)
 
-    setActivePinia(secondPinia)
-    const secondDM = useDMStore()
-    const secondNotifications = useNotificationStore()
+    const secondDM = useDMStore(secondPinia)
+    const secondNotifications = useNotificationStore(secondPinia)
     secondDM.activeConversationId = 'second-conversation'
     secondNotifications.setDMUnread(7)
 
-    setActivePinia(firstPinia)
     await firstAuth.logout()
 
     expect(firstDM.activeConversationId).toBe('')
     expect(firstNotifications.unreadCounts.dm).toBe(0)
     expect(secondDM.activeConversationId).toBe('second-conversation')
     expect(secondNotifications.unreadCounts.dm).toBe(7)
+  })
+
+  it('unregisters a disposed store callback from its Pinia scope', () => {
+    const pinia = createPinia()
+    const dm = useDMStore(pinia)
+    dm.activeConversationId = 'disposed-conversation'
+
+    dm.$dispose()
+    clearSessionStores(pinia)
+
+    expect(dm.activeConversationId).toBe('disposed-conversation')
   })
 })

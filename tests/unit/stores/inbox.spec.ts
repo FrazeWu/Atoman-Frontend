@@ -150,12 +150,14 @@ describe('inbox store', () => {
 
     await inbox.connect()
     const staleSocket = FakeWebSocket.instances[0]
+    const staleOnMessage = staleSocket.onmessage
+    const staleOnClose = staleSocket.onclose
     await auth.logout()
     auth.token = 'new-session'
     auth.isAuthenticated = true
 
-    await staleSocket.onmessage?.({ data: JSON.stringify({ event: 'notification', data: { id: 'old' } }) } as MessageEvent)
-    staleSocket.onclose?.()
+    await staleOnMessage?.({ data: JSON.stringify({ event: 'notification', data: { id: 'old' } }) } as MessageEvent)
+    staleOnClose?.()
     await vi.advanceTimersByTimeAsync(30000)
 
     expect(receiveEvent).not.toHaveBeenCalled()

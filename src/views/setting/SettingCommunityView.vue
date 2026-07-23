@@ -6,11 +6,13 @@
       <button :class="{ active: tab === 'moderation' }" @click="tab = 'moderation'">审核</button>
       <button data-test="community-tab-users" :class="{ active: tab === 'users' }" @click="tab = 'users'">用户</button>
       <button data-test="community-tab-groups" :class="{ active: tab === 'groups' }" @click="tab = 'groups'">用户组</button>
+      <button :class="{ active: tab === 'dm' }" @click="tab = 'dm'">私信举报</button>
     </nav>
 
     <SettingForumModerationPanel v-if="tab === 'moderation'" />
     <SettingForumUserModerationPanel v-else-if="tab === 'users'" />
-    <SettingForumGroupPanel v-else />
+    <SettingForumGroupPanel v-else-if="tab === 'groups'" />
+    <DMAdminReportsPanel v-else />
   </section>
 </template>
 
@@ -20,8 +22,9 @@ import SettingForumModerationPanel from '@/components/setting/SettingForumModera
 import SettingForumGroupPanel from '@/components/setting/SettingForumGroupPanel.vue'
 import SettingForumUserModerationPanel from '@/components/setting/SettingForumUserModerationPanel.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import DMAdminReportsPanel from '@/components/dm/DMAdminReportsPanel.vue'
 
-const tab = ref<'moderation' | 'users' | 'groups'>('moderation')
+const tab = ref<'moderation' | 'users' | 'groups' | 'dm'>('moderation')
 </script>
 
 <style scoped>

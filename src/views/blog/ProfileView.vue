@@ -32,7 +32,7 @@
                 class="a-toggle-btn"
                 :class="{ 'a-toggle-btn-active': following }"
               >{{ following ? '已关注' : '关注' }}</button>
-              <button v-if="authStore.isAuthenticated && !isSelf" @click="openDM" class="a-toggle-btn">发私信</button>
+              <PButton v-if="authStore.isAuthenticated && !isSelf" data-testid="message-user" :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'user', target_id: profile.uuid } }" size="sm" variant="secondary">私信</PButton>
               <PButton v-if="isSelf" :to="`/users/${profile.username}/settings`" size="sm" variant="secondary">编辑资料</PButton>
             </div>
           </div>

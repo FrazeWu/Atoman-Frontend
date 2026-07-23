@@ -35,6 +35,7 @@
         </span>
         <input v-model="form.autoplay_enabled" data-testid="autoplay-setting" type="checkbox">
       </label>
+      <DMSettingsPanel v-if="studio.currentChannel" :subject="{ type: 'channel', id: studio.currentChannel.id }" />
       <div class="studio-settings__actions">
         <span v-if="saved" role="status">已保存</span>
         <PButton data-testid="save-settings" type="button" :loading="saving" @click="save">保存</PButton>
@@ -48,6 +49,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'
+import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 import { useStudioStore } from '@/stores/studio'
 import type { StudioModule, StudioPublishStatus, StudioSettingsInput, StudioVisibility } from '@/types'
 

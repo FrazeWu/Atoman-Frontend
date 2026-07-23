@@ -76,6 +76,8 @@
 
             <UserBlogSettingsPanel v-else-if="item.key === 'blog'" :include-account-extras="false" />
 
+            <DMSettingsPanel v-else-if="item.key === 'privacy'" :subject="{ type: 'user', id: authStore.user?.uuid || '' }" />
+
             <div v-else class="settings-block">
               <div class="settings-block__copy">
                 <strong>{{ item.label }}</strong>
@@ -104,6 +106,7 @@ import PSurface from '@/components/ui/PSurface.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import DMSettingsPanel from '@/components/dm/DMSettingsPanel.vue'
 
 type UserSettingSectionKey = 'general' | 'feed' | 'blog' | 'notification' | 'privacy' | 'music' | 'forum'
 

@@ -190,6 +190,7 @@ function cleanupFixture(fixture: Fixture) {
 
 function cleanupFixtureRows(createdUsers: LocalUser[], channelID: string, imageObjectKeys: string[]) {
   const users = createdUsers.map(user => sql(user.id)).join(', ') || 'NULL'
+  const channel = channelID ? sql(channelID) : 'NULL::uuid'
   const objectErrors = imageObjectKeys.flatMap(key => {
     try { deletePrivateImageObject(key); return [] } catch (error) { return [error] }
   })
@@ -200,7 +201,7 @@ function cleanupFixtureRows(createdUsers: LocalUser[], channelID: string, imageO
     DELETE FROM user_blocks WHERE blocker_id IN (${users}) OR blocked_id IN (${users});
     DELETE FROM dm_messages WHERE conversation_id IN (SELECT id FROM dm_conversations WHERE participant_a IN (${users}) OR participant_b IN (${users}));
     DELETE FROM dm_images WHERE uploaded_by_user_id IN (${users});
-    DELETE FROM dm_channel_settings WHERE channel_id = ${sql(channelID)};
+    DELETE FROM dm_channel_settings WHERE channel_id = ${channel};
     DELETE FROM dm_conversations WHERE participant_a IN (${users}) OR participant_b IN (${users});
     DELETE FROM auth_sessions WHERE user_id IN (${users});
     DELETE FROM user_settings WHERE user_id IN (${users});

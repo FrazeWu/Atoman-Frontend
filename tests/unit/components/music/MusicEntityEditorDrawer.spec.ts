@@ -13,7 +13,7 @@ const drawerState = ref({
     seed?: Record<string, unknown>
   },
   creationFlow: null as null | {
-    step: 'artist' | 'albumImport' | 'albumDetails'
+    step: 'artist' | 'albumImport' | 'albumDetails' | 'preview'
     draft: {
       artist: {
         id: string | null
@@ -88,6 +88,10 @@ vi.mock('@/components/music/MusicCreationAlbumDetailsStep.vue', () => ({
   default: { template: '<div data-testid="music-creation-album-details-step-stub" />' },
 }))
 
+vi.mock('@/components/music/MusicCreationAlbumPreviewStep.vue', () => ({
+  default: { template: '<div data-testid="music-creation-album-preview-step-stub" />' },
+}))
+
 vi.mock('@/components/ui/PSheet.vue', () => ({
   default: {
     props: ['show'],
@@ -119,7 +123,7 @@ vi.mock('@/api/musicV1', () => ({
   buildUpdateAlbumEdit: vi.fn(),
 }))
 
-function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' = 'artist') {
+function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' | 'preview' = 'artist') {
   return {
     step,
     draft: {

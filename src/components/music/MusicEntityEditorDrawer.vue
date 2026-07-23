@@ -21,6 +21,7 @@ import { AlbumEditorShell, MusicArtistForm } from '@/components/music'
 import MusicCreationArtistStep from '@/components/music/MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
+import MusicCreationAlbumPreviewStep from '@/components/music/MusicCreationAlbumPreviewStep.vue'
 import type {
   MusicAlbumMetaDraft,
   MusicCoverDraft,
@@ -412,6 +413,7 @@ const canGoNext = computed(() => {
   if (!flow) return false
   if (flow.step === 'artist') return !!flow.draft.artist.legalName.trim()
   if (flow.step === 'albumImport') return flow.draft.albumImport.status === 'ready'
+  if (flow.step === 'albumDetails') return flow.draft.albumImport.status === 'ready'
   return flow.draft.albumImport.status === 'ready' && !!flow.draft.albumDetails.title.trim()
 })
 
@@ -424,12 +426,20 @@ function goAlbumCreateNext() {
   }
   if (flow.step === 'albumImport') {
     setMusicCreationStep('albumDetails')
+    return
+  }
+  if (flow.step === 'albumDetails') {
+    setMusicCreationStep('preview')
   }
 }
 
 function goAlbumCreateBack() {
   const flow = creationFlow.value
   if (!flow) return
+  if (flow.step === 'preview') {
+    setMusicCreationStep('albumDetails')
+    return
+  }
   if (flow.step === 'albumDetails') {
     setMusicCreationStep('albumImport')
     return
@@ -497,7 +507,8 @@ async function finishAlbumCreate() {
         <p v-if="creationFlow.errorMessage" class="entity-editor__error">{{ creationFlow.errorMessage }}</p>
         <MusicCreationArtistStep v-if="albumCreateStep === 'artist'" />
         <MusicCreationAlbumSeedStep v-else-if="albumCreateStep === 'albumImport'" />
-        <MusicCreationAlbumDetailsStep v-else />
+        <MusicCreationAlbumDetailsStep v-else-if="albumCreateStep === 'albumDetails'" />
+        <MusicCreationAlbumPreviewStep v-else />
 
         <div class="entity-editor__actions">
           <PButton variant="secondary" @click="closeCurrentEditor">关闭</PButton>
@@ -509,7 +520,7 @@ async function finishAlbumCreate() {
             返回上一步
           </PButton>
           <PButton
-            v-if="albumCreateStep !== 'albumDetails'"
+            v-if="albumCreateStep !== 'preview'"
             :disabled="!canGoNext"
             @click="goAlbumCreateNext"
           >

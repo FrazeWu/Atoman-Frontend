@@ -121,6 +121,13 @@ export type MusicAlbumImport = {
   stage: MusicAlbumImportStage
   progress: MusicAlbumImportProgress
   files: MusicAlbumImportFile[]
+  errors: MusicAlbumImportError[]
+}
+
+export type MusicAlbumImportError = {
+  fileId: string
+  message: string
+  code: string
 }
 
 export type MusicAlbumImportMultipartPart = {
@@ -198,6 +205,23 @@ export type RegisterMusicAlbumImportFilesInput = {
 export type MusicAlbumImportFilePartUpload = {
   partNumber: number
   uploadUrl: string
+}
+
+function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : []
+}
+
+export function normalizeMusicAlbumImport(snapshot: MusicAlbumImport): MusicAlbumImport {
+  return {
+    ...snapshot,
+    derivedTracks: arrayOrEmpty(snapshot.derivedTracks),
+    files: arrayOrEmpty(snapshot.files),
+    errors: arrayOrEmpty(snapshot.errors),
+  }
+}
+
+function normalizeMusicAlbumImportMultipart(multipart: MusicAlbumImportMultipart): MusicAlbumImportMultipart {
+  return { ...multipart, completedParts: arrayOrEmpty(multipart.completedParts) }
 }
 
 export type MusicAlbumArchiveUploadProgress = {
@@ -752,6 +776,8 @@ export const musicV1Endpoints = {
     `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/complete`,
   albumImportFileRetry: (importId: string, fileId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/retry`,
+  albumImportFileReplace: (importId: string, fileId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}/replace`,
   albumImportFileDelete: (importId: string, fileId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/files/${fileId}`,
   albumImportSessionComplete: (importId: string) =>
@@ -875,18 +901,18 @@ export async function uploadMusicAudioBatch(files: File[]): Promise<UploadAsset[
 }
 
 export async function createMusicAlbumImport(input: CreateMusicAlbumImportInput = {}): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImports(), input)
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImports(), input))
 }
 
 export async function getMusicAlbumImport(importId: string): Promise<MusicAlbumImport> {
-  return apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId))
+  return normalizeMusicAlbumImport(await apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId)))
 }
 
 export async function commitMusicAlbumImport(
   importId: string,
   input: MusicAlbumImportCommitInput,
 ): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportCommit(importId), input)
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportCommit(importId), input))
 }
 
 const maxAlbumArchiveBytes = 2 * 1024 * 1024 * 1024
@@ -920,7 +946,7 @@ export async function startMusicAlbumImportMultipart(
   importId: string,
   input: StartMusicAlbumImportMultipartInput,
 ): Promise<MusicAlbumImportMultipart> {
-  return apiPostJson<MusicAlbumImportMultipart>(musicV1Endpoints.albumImportMultipart(importId), input)
+  return normalizeMusicAlbumImportMultipart(await apiPostJson<MusicAlbumImportMultipart>(musicV1Endpoints.albumImportMultipart(importId), input))
 }
 
 export async function createMusicAlbumImportMultipartPartUpload(
@@ -939,7 +965,7 @@ export async function completeMusicAlbumImportMultipartPart(
 }
 
 export async function completeMusicAlbumImportMultipart(importId: string): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportMultipartComplete(importId), {})
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportMultipartComplete(importId), {}))
 }
 
 async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
@@ -1028,7 +1054,7 @@ export async function registerMusicAlbumImportFiles(
   importId: string,
   input: RegisterMusicAlbumImportFilesInput,
 ): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFiles(importId), input)
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFiles(importId), input))
 }
 
 export async function createMusicAlbumImportFilePartUpload(
@@ -1050,35 +1076,46 @@ export async function completeMusicAlbumImportFilePart(
   etag: string,
   size: number,
 ): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(
     musicV1Endpoints.albumImportFilePartComplete(importId, fileId, partNumber),
     { etag, size },
-  )
+  ))
 }
 
 export async function completeMusicAlbumImportFile(
   importId: string,
   fileId: string,
 ): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileComplete(importId, fileId), {})
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileComplete(importId, fileId), {}))
 }
 
 export async function retryMusicAlbumImportFile(
   importId: string,
   fileId: string,
 ): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileRetry(importId, fileId), {})
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileRetry(importId, fileId), {}))
+}
+
+export async function replaceMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+  input: RegisterMusicAlbumImportFileInput,
+): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(
+    musicV1Endpoints.albumImportFileReplace(importId, fileId),
+    input,
+  ))
 }
 
 export async function deleteMusicAlbumImportFile(
   importId: string,
   fileId: string,
 ): Promise<MusicAlbumImport> {
-  return apiDeleteJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileDelete(importId, fileId))
+  return normalizeMusicAlbumImport(await apiDeleteJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileDelete(importId, fileId)))
 }
 
 export async function completeMusicAlbumImportSession(importId: string): Promise<MusicAlbumImport> {
-  return apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportSessionComplete(importId), {})
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportSessionComplete(importId), {}))
 }
 
 export async function cancelMusicAlbumImportSession(importId: string): Promise<void> {

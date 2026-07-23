@@ -6,6 +6,7 @@ import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
+import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
@@ -20,7 +21,7 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : f
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentCreationFlow = () => closeMusicCreationFlow(props.layer?.key)
 
-type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails'
+type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails' | 'preview'
 
 function hasDatePartsValue(parts?: { year: string; month: string; day: string }) {
   if (!parts) return false
@@ -96,7 +97,13 @@ const stepCopy: Record<CreationStepKey, { index: number; title: string; subtitle
     index: 3,
     title: '完善专辑',
     subtitle: '',
-    cta: '完成',
+    cta: '继续',
+  },
+  preview: {
+    index: 4,
+    title: '预览专辑',
+    subtitle: '',
+    cta: '提交',
   },
 }
 
@@ -104,16 +111,10 @@ const activeStep = computed(() => {
   const step = creationFlow.value?.step ?? 'artist'
   return stepCopy[step]
 })
-const isAlbumDetailsStep = computed(() => creationFlow.value?.step === 'albumDetails')
 const shouldShowFinishButton = computed(() => {
   const flow = creationFlow.value
   if (!flow) return false
-  if (flow.step === 'albumDetails') return true
-  if (flow.step === 'albumImport') {
-    const status = flow.draft.albumImport.status
-    return status === 'ready' || status === 'needs_attention'
-  }
-  return false
+  return flow.step === 'preview'
 })
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => {
@@ -142,6 +143,10 @@ const canGoForward = computed(() => {
       && !!flow.draft.artist.source.trim()
   }
   if (flow.step === 'albumImport') {
+    const status = flow.draft.albumImport.status
+    return status === 'ready' || status === 'needs_attention'
+  }
+  if (flow.step === 'albumDetails') {
     const status = flow.draft.albumImport.status
     return status === 'ready' || status === 'needs_attention'
   }
@@ -329,12 +334,16 @@ function handlePrimaryAction() {
     setMusicCreationStep('albumImport')
   } else if (creationFlow.value.step === 'albumImport' && (creationFlow.value.draft.albumImport.status === 'ready' || creationFlow.value.draft.albumImport.status === 'needs_attention')) {
     setMusicCreationStep('albumDetails')
+  } else if (creationFlow.value.step === 'albumDetails' && (creationFlow.value.draft.albumImport.status === 'ready' || creationFlow.value.draft.albumImport.status === 'needs_attention')) {
+    setMusicCreationStep('preview')
   }
 }
 
 function goBackStep() {
   if (!creationFlow.value) return
-  if (creationFlow.value.step === 'albumDetails') {
+  if (creationFlow.value.step === 'preview') {
+    setMusicCreationStep('albumDetails')
+  } else if (creationFlow.value.step === 'albumDetails') {
     setMusicCreationStep('albumImport')
   } else if (creationFlow.value.step === 'albumImport') {
     setMusicCreationStep('artist')
@@ -412,6 +421,8 @@ async function completeCreation() {
         <MusicCreationAlbumSeedStep v-else-if="creationFlow.step === 'albumImport'" />
 
         <MusicCreationAlbumDetailsStep v-else-if="creationFlow.step === 'albumDetails'" />
+
+        <MusicCreationAlbumPreviewStep v-else-if="creationFlow.step === 'preview'" />
 
         <div v-if="showFooterActions" class="footer-actions" data-testid="creation-flow-footer">
           <button

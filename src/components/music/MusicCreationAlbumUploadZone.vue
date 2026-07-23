@@ -16,11 +16,32 @@ const {
   handleAutoFileChange,
   handleFilesUpload,
   handleRetryFile,
+  handleReplaceFile,
   handleDeleteFile,
+  cancelUpload,
 } = useAlbumImportUpload()
 
 const filesInputRef = ref<HTMLInputElement | null>(null)
 const folderInputRef = ref<HTMLInputElement | null>(null)
+const replacementInputRef = ref<HTMLInputElement | null>(null)
+const replacementFileId = ref('')
+
+function handleDrop(event: DragEvent) {
+  event.preventDefault()
+  if (!event.dataTransfer?.files.length || uploading.value) return
+  void handleFilesUpload(event.dataTransfer.files)
+}
+
+function chooseReplacement(fileId: string) {
+  replacementFileId.value = fileId
+  replacementInputRef.value?.click()
+}
+
+function handleReplacement(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (file && replacementFileId.value) void handleReplaceFile(replacementFileId.value, file)
+  ;(event.target as HTMLInputElement).value = ''
+}
 
 const multiFileTotalProgress = computed(() => {
   if (!albumImportDraft.value) return 0
@@ -62,6 +83,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
         style="display: none"
         @change="handleAutoFileChange"
       />
+      <input ref="replacementInputRef" type="file" style="display: none" @change="handleReplacement" />
       <!-- Hidden: folder picker -->
       <input
         ref="folderInputRef"
@@ -82,6 +104,8 @@ function formatUploadSpeed(bytesPerSecond: number) {
           class="custom-file-picker"
           :class="{ 'is-disabled': uploading }"
           @click="filesInputRef?.click()"
+          @dragover.prevent
+          @drop="handleDrop"
         >
           <div class="file-picker-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -153,6 +177,14 @@ function formatUploadSpeed(bytesPerSecond: number) {
             </button>
             <button
               type="button"
+              class="import-file-action"
+              :disabled="uploading"
+              @click="chooseReplacement(f.fileId)"
+            >
+              替换
+            </button>
+            <button
+              type="button"
               class="import-file-action import-file-action--danger"
               :disabled="uploading"
               @click="handleDeleteFile(f.fileId)"
@@ -169,6 +201,14 @@ function formatUploadSpeed(bytesPerSecond: number) {
 
     <!-- Error -->
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+    <button
+      v-if="uploading"
+      type="button"
+      class="import-file-action"
+      @click="cancelUpload"
+    >
+      取消上传
+    </button>
 
     <!-- Archive mode progress -->
     <div v-else-if="albumImportDraft.archiveName" class="progress-panel">

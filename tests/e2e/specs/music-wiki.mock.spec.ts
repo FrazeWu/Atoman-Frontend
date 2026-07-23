@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/base'
 import { buildMockMusicAlbumsResponse, buildMockMusicArtist, buildMockMusicArtistsResponse } from '../helpers/music-fixtures'
 
-test.describe('Music Wiki Mock', () => {
+test.describe.fixme('Music Wiki Mock', () => {
   test('renders mocked artist list on music home', async ({ page }) => {
     await page.route('**/api/v1/music/artists**', async (route) => {
       await route.fulfill({

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { getTargetConversation, sendToTarget } from '@/api/dm'
+import { blockConversation, getTargetConversation, listConversations, listDMReports, listMailboxes, sendToTarget } from '@/api/dm'
 import { setCSRFToken } from '@/api/transport'
 
 describe('dm api', () => {
@@ -39,5 +39,43 @@ describe('dm api', () => {
     expect(body).not.toHaveProperty('sender_type')
     expect(body).not.toHaveProperty('sender_id')
     expect(body).not.toHaveProperty('actor_user_id')
+  })
+
+  it('normalizes the backend mailbox and participant DTOs', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [{
+        party: { type: 'user', id: 'me', name: 'Me', avatar_url: '' }, unread: 2,
+      }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { items: [{
+        id: 'conversation-1',
+        participant_a: { type: 'user', id: 'me', name: 'Me', avatar_url: '' },
+        participant_b: { type: 'channel', id: 'channel-1', name: 'Channel', avatar_url: 'cover.png' },
+        last_message_at: '2026-07-23T00:00:00Z', last_message_preview: 'hello', unread: 1, blocked: false,
+      }], next_cursor: 'next' } }), { status: 200 })))
+
+    const [mailbox] = await listMailboxes()
+    const page = await listConversations(mailbox)
+
+    expect(mailbox).toEqual({ type: 'user', id: 'me', display_name: 'Me', unread_count: 2 })
+    expect(page.items[0]).toMatchObject({
+      mailbox,
+      other_party: { type: 'channel', id: 'channel-1', display_name: 'Channel', avatar_url: 'cover.png' },
+      reply_as: { type: 'user', id: 'me', display_name: 'Me' },
+      unread_count: 1,
+    })
+  })
+
+  it('uses PUT for block and returns paged admin reports', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: {
+        id: 'conversation-1', participant_a: { type: 'user', id: 'me', name: 'Me', avatar_url: '' },
+        participant_b: { type: 'user', id: 'alice', name: 'Alice', avatar_url: '' }, last_message_preview: '', unread: 0, blocked: true,
+      } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { items: [{ id: 'report-1', status: 'pending' }], next_cursor: 'next' } }), { status: 200 })))
+
+    await blockConversation('conversation-1', { type: 'user', id: 'me', display_name: 'Me', unread_count: 0 })
+    await expect(listDMReports()).resolves.toEqual({ items: [{ id: 'report-1', status: 'pending' }], next_cursor: 'next' })
+
+    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({ method: 'PUT' })
   })
 })

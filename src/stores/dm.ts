@@ -40,6 +40,27 @@ export const useDMStore = defineStore('dm', () => {
   const canLoadOlderMessages = computed(() => Boolean(activeConversationId.value && messageCursorByConversation.value[activeConversationId.value]))
   const activeConversationBlocked = computed(() => activeConversation.value?.blocked ?? false)
   const replyAsLabel = computed(() => activeConversation.value?.reply_as.display_name ?? '')
+  const conversations = computed(() => Object.values(conversationsById.value).map((conversation) => ({
+    conversation_id: conversation.id,
+    other_username: conversation.other_party.display_name,
+    other_user_id: conversation.other_party.type === 'user' ? conversation.other_party.id : '',
+    last_message_at: conversation.last_message_at,
+    preview: conversation.last_message_preview,
+    unread_count: conversation.unread_count,
+    is_blocked: conversation.blocked,
+  })))
+  const messages = computed(() => activeMessages.value.map((message) => ({
+    id: message.id,
+    conversation_id: message.conversation_id,
+    sender_id: message.sender.id,
+    sender: { username: message.sender.display_name, email: '' },
+    content: message.content,
+    image_url: message.image_url,
+    read_at: message.read_at,
+    created_at: message.created_at,
+    updated_at: message.created_at,
+  })))
+  const loading = computed(() => loadingConversations.value || loadingMessages.value)
 
   const mergeMailboxes = (mailboxes: DMMailbox[], replaceOrder = true) => {
     const next = { ...mailboxesByKey.value }
@@ -120,7 +141,17 @@ export const useDMStore = defineStore('dm', () => {
     }
   }
 
-  const openConversation = async (conversationID: string) => {
+  const conversationIDFor = (value: string | DMConversation) => {
+    if (typeof value !== 'string') return value.id
+    if (conversationsById.value[value]) return value
+    return Object.values(conversationsById.value).find((conversation) => (
+      conversation.other_party.id === value || conversation.other_party.display_name === value
+    ))?.id ?? ''
+  }
+
+  const openConversation = async (value: string | DMConversation) => {
+    const conversationID = conversationIDFor(value)
+    if (!conversationID) return
     const generation = ++requestGeneration.value
     activeConversationId.value = conversationID
     activeTarget.value = null
@@ -139,13 +170,12 @@ export const useDMStore = defineStore('dm', () => {
   const openTarget = async (target: DMTarget) => {
     activeTarget.value = target
     const conversation = await getTargetConversation(target)
-    if (activeTarget.value !== target) return
+    if (activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return
     if (conversation) {
       applyConversation(conversation)
       await openConversation(conversation.id)
     } else {
       activeConversationId.value = ''
-      messagesByConversation.value = {}
     }
   }
 
@@ -164,11 +194,17 @@ export const useDMStore = defineStore('dm', () => {
     }
   }
 
-  const sendMessage = async (content: string, imageID?: string) => {
+  const sendMessage = async (contentOrConversation: string | DMConversation, contentOrImageID?: string, legacyImageID?: string) => {
     if (activeConversationBlocked.value) throw new Error('当前会话无法发送消息')
-    const input = { client_message_id: crypto.randomUUID(), content, image_id: imageID ?? null }
-    const message = activeConversationId.value
-      ? await sendInConversation(activeConversationId.value, input)
+    const legacyCall = legacyImageID !== undefined || typeof contentOrConversation !== 'string' || Boolean(conversationIDFor(contentOrConversation))
+    const conversationID = legacyCall ? conversationIDFor(contentOrConversation) : activeConversationId.value
+    const input = {
+      client_message_id: crypto.randomUUID(),
+      content: legacyCall ? contentOrImageID ?? '' : contentOrConversation,
+      image_id: legacyCall ? legacyImageID || null : contentOrImageID ?? null,
+    }
+    const message = conversationID
+      ? await sendInConversation(conversationID, input)
       : activeTarget.value ? await sendToTarget(activeTarget.value, input) : null
     if (!message) throw new Error('请先选择会话')
     mergeMessages(message.conversation_id, [message])
@@ -187,12 +223,12 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const blockActiveConversation = async () => {
-    if (!activeConversationId.value) return
-    applyConversation(await blockConversation(activeConversationId.value))
+    if (!activeConversation.value) return
+    applyConversation(await blockConversation(activeConversation.value.id, activeConversation.value.mailbox))
   }
   const unblockActiveConversation = async () => {
-    if (!activeConversationId.value) return
-    applyConversation(await unblockConversation(activeConversationId.value))
+    if (!activeConversation.value) return
+    applyConversation(await unblockConversation(activeConversation.value.id, activeConversation.value.mailbox))
   }
   const uploadImage = uploadDMImage
   const reportMessage = reportDMMessage
@@ -226,6 +262,11 @@ export const useDMStore = defineStore('dm', () => {
     if (activeConversationId.value) await openConversation(activeConversationId.value)
   }
 
+  const fetchConversations = bootstrapDM
+  const receiveDM = (payload: unknown) => {
+    if (payload && typeof payload === 'object' && 'event' in payload) receiveEvent(payload as DMRealtimeEvent)
+  }
+
   const resetStore = () => {
     requestGeneration.value += 1
     mailboxesByKey.value = {}; mailboxOrder.value = []; conversationsById.value = {}; conversationIdsByMailbox.value = {}
@@ -241,5 +282,6 @@ export const useDMStore = defineStore('dm', () => {
     selectMailbox, loadMoreConversations, openTarget, openConversation, loadOlderMessages, sendMessage, markRead,
     blockActiveConversation, unblockActiveConversation, uploadImage, reportMessage, reconcileFromServer, receiveEvent,
     reconcile, resetStore,
+    conversations, messages, loading, fetchConversations, receiveDM,
   }
 })

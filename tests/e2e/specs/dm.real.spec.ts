@@ -122,19 +122,29 @@ function requireLocalEnvironment() {
 
 async function createFixture(browser: Browser, request: APIRequestContext, suffix: string): Promise<Fixture> {
   const password = `DM-E2E-${randomUUID()}!`
-  const sender = await createUser(browser, request, `dm-sender-${suffix}`, password, 'user')
-  const recipient = await createUser(browser, request, `dm-recipient-${suffix}`, password, 'user')
-  const owner = await createUser(browser, request, `dm-owner-${suffix}`, password, 'user')
-  const admin = await createUser(browser, request, `dm-admin-${suffix}`, password, 'admin')
-  const channelID = randomUUID()
-  runPsql(`INSERT INTO channels (id, created_at, updated_at, user_id, name, slug, description) VALUES (${sql(channelID)}, now(), now(), ${sql(owner.id)}, '频道 E2E ${suffix}', ${sql(`dm-channel-${suffix}`)}, '');`)
-  return { sender, recipient, owner, admin, channelID, imageObjectKeys: [] }
+  const users: LocalUser[] = []
+  let channelID = ''
+  try {
+    users.push(await createUser(browser, request, `dm-sender-${suffix}`, password, 'user'))
+    users.push(await createUser(browser, request, `dm-recipient-${suffix}`, password, 'user'))
+    users.push(await createUser(browser, request, `dm-owner-${suffix}`, password, 'user'))
+    users.push(await createUser(browser, request, `dm-admin-${suffix}`, password, 'admin'))
+    channelID = randomUUID()
+    runPsql(`INSERT INTO channels (id, created_at, updated_at, user_id, name, slug, description) VALUES (${sql(channelID)}, now(), now(), ${sql(users[2]!.id)}, '频道 E2E ${suffix}', ${sql(`dm-channel-${suffix}`)}, '');`)
+    return { sender: users[0]!, recipient: users[1]!, owner: users[2]!, admin: users[3]!, channelID, imageObjectKeys: [] }
+  } catch (error) {
+    await Promise.all(users.map(user => user.context.close()))
+    cleanupFixtureRows(users, channelID, [])
+    throw error
+  }
 }
 
 async function createUser(browser: Browser, request: APIRequestContext, username: string, password: string, role: 'user' | 'admin'): Promise<LocalUser> {
   const email = `${username}@example.test`
   const verificationCode = '123456'
-  const digest = createHmac('sha256', process.env.AUTH_CODE_SECRET || 'atoman-development-verification-secret').update(`${email}\0registration\0${verificationCode}`).digest('hex')
+  const authCodeSecret = process.env.DM_E2E_AUTH_CODE_SECRET
+  if (!authCodeSecret) throw new Error('真实 DM 测试需要 DM_E2E_AUTH_CODE_SECRET，与后端 AUTH_CODE_SECRET 保持一致')
+  const digest = createHmac('sha256', authCodeSecret).update(`${email}\0registration\0${verificationCode}`).digest('hex')
   runPsql(`INSERT INTO email_verification_codes (uuid, email, purpose, code, failed_attempts, expires_at, used, created_at) VALUES (gen_random_uuid(), ${sql(email)}, 'registration', ${sql(digest)}, 0, now() + interval '10 minutes', false, now());`)
   const context = await browser.newContext({ baseURL: process.env.PLAYWRIGHT_BASE_URL })
   const response = await context.request.post('/api/v1/auth/register', { data: { username, email, password, password_confirm: password, verification_code: verificationCode }, headers: { Origin: new URL(process.env.PLAYWRIGHT_BASE_URL!).origin } })
@@ -175,8 +185,14 @@ function seedOlderMessages(conversationID: string, senderID: string, recipientID
 }
 
 function cleanupFixture(fixture: Fixture) {
-  const users = [fixture.sender.id, fixture.recipient.id, fixture.owner.id, fixture.admin.id].map(sql).join(', ')
-  fixture.imageObjectKeys.forEach(deletePrivateImageObject)
+  cleanupFixtureRows([fixture.sender, fixture.recipient, fixture.owner, fixture.admin], fixture.channelID, fixture.imageObjectKeys)
+}
+
+function cleanupFixtureRows(createdUsers: LocalUser[], channelID: string, imageObjectKeys: string[]) {
+  const users = createdUsers.map(user => sql(user.id)).join(', ') || 'NULL'
+  const objectErrors = imageObjectKeys.flatMap(key => {
+    try { deletePrivateImageObject(key); return [] } catch (error) { return [error] }
+  })
   runPsql(`
     BEGIN;
     DELETE FROM notifications WHERE recipient_id IN (${users}) OR actor_id IN (${users});
@@ -184,7 +200,7 @@ function cleanupFixture(fixture: Fixture) {
     DELETE FROM user_blocks WHERE blocker_id IN (${users}) OR blocked_id IN (${users});
     DELETE FROM dm_messages WHERE conversation_id IN (SELECT id FROM dm_conversations WHERE participant_a IN (${users}) OR participant_b IN (${users}));
     DELETE FROM dm_images WHERE uploaded_by_user_id IN (${users});
-    DELETE FROM dm_channel_settings WHERE channel_id = ${sql(fixture.channelID)};
+    DELETE FROM dm_channel_settings WHERE channel_id = ${sql(channelID)};
     DELETE FROM dm_conversations WHERE participant_a IN (${users}) OR participant_b IN (${users});
     DELETE FROM auth_sessions WHERE user_id IN (${users});
     DELETE FROM user_settings WHERE user_id IN (${users});
@@ -195,13 +211,14 @@ function cleanupFixture(fixture: Fixture) {
     DELETE FROM subscriptions WHERE user_id IN (${users});
     DELETE FROM subscription_groups WHERE user_id IN (${users});
     DELETE FROM feed_sources WHERE source_id IN (${users});
-    DELETE FROM playlists WHERE user_id IN (${users});
+    DELETE FROM music_playlists WHERE user_id IN (${users});
     DELETE FROM email_verification_codes WHERE email LIKE 'dm-%@example.test';
     DELETE FROM "Users" WHERE uuid IN (${users});
     COMMIT;
   `)
   expect(countRows(`SELECT count(*) FROM "Users" WHERE uuid IN (${users})`)).toBe(0)
   expect(countRows(`SELECT count(*) FROM dm_conversations WHERE participant_a IN (${users}) OR participant_b IN (${users})`)).toBe(0)
+  if (objectErrors.length) throw new AggregateError(objectErrors, '私有图片对象清理失败')
 }
 
 function countRows(query: string) { return Number(runPsql(query)) }
@@ -213,5 +230,5 @@ function deletePrivateImageObject(key: string) {
   const minio = process.env.DM_E2E_MINIO_CONTAINER ?? 'atoman-dev-minio-1'
   const network = execFileSync('docker', ['inspect', '-f', '{{range $name, $config := .NetworkSettings.Networks}}{{$name}}{{end}}', minio], { encoding: 'utf8' }).trim()
   const bucket = process.env.DM_E2E_DM_S3_BUCKET ?? 'atoman-dm-dev'
-  execFileSync('docker', ['run', '--rm', '--network', network, 'minio/mc:latest', 'sh', '-c', `mc alias set local http://${minio}:9000 minioadmin minioadmin >/dev/null && mc rm --force local/${bucket}/${key}`], { stdio: 'pipe' })
+  execFileSync('docker', ['run', '--rm', '--network', network, '--entrypoint', '/bin/sh', 'minio/mc:latest', '-c', `mc alias set local http://${minio}:9000 minioadmin minioadmin >/dev/null && mc rm --force local/${bucket}/${key}`], { stdio: 'pipe' })
 }

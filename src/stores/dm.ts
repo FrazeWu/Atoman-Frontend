@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { useNotificationStore } from '@/stores/notification'
 
 import {
   blockConversation, getTargetConversation, listConversations, listMailboxes, listMessages, mailboxKey,
@@ -33,6 +34,7 @@ export const useDMStore = defineStore('dm', () => {
   const loadingMessages = ref(false)
   const requestGeneration = ref(0)
   const dmUnread = ref(0)
+  const notificationStore = useNotificationStore()
 
   const activeMailbox = computed(() => mailboxesByKey.value[activeMailboxKey.value] ?? null)
   const activeConversation = computed(() => conversationsById.value[activeConversationId.value] ?? null)
@@ -208,6 +210,12 @@ export const useDMStore = defineStore('dm', () => {
       : activeTarget.value ? await sendToTarget(activeTarget.value, input) : null
     if (!message) throw new Error('请先选择会话')
     mergeMessages(message.conversation_id, [message])
+    if (!conversationID && activeTarget.value) {
+      const conversation = await getTargetConversation(activeTarget.value)
+      if (conversation) applyConversation(conversation)
+      activeConversationId.value = message.conversation_id
+      activeTarget.value = null
+    }
     return message
   }
 
@@ -216,6 +224,7 @@ export const useDMStore = defineStore('dm', () => {
     if (!conversationID) return
     const result = await markConversationRead(conversationID)
     dmUnread.value = result.dm_unread
+    notificationStore.setDMUnread(result.dm_unread)
     const conversation = conversationsById.value[conversationID]
     if (!conversation) return
     const mailbox = { ...conversation.mailbox, unread_count: result.mailbox_unread }

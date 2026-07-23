@@ -132,4 +132,14 @@ describe('InboxPage notifications', () => {
     expect(wrapper.text()).toContain('已拉黑此用户')
     expect(wrapper.find('.sidebar-item').classes()).toContain('selected')
   })
+
+  it('restores a conversation from the v2 conversation query', async () => {
+    routeQuery = { tab: 'dm', conversation: 'conversation-1' }
+    const dm = useDMStore()
+    vi.spyOn(dm, 'fetchConversations').mockResolvedValue()
+    const open = vi.spyOn(dm, 'openConversation').mockResolvedValue()
+
+    mount(InboxPage, { global: { stubs } })
+    await vi.waitFor(() => expect(open).toHaveBeenCalledWith('conversation-1'))
+  })
 })

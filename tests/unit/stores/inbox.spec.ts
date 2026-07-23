@@ -89,4 +89,29 @@ describe('inbox store', () => {
     expect(markRead).toHaveBeenCalledWith()
     expect(notifications.unreadCounts.dm).toBe(0)
   })
+
+  it('reconnects with exponential backoff and refreshes state after opening', async () => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+    const dm = useDMStore()
+    const notifications = useNotificationStore()
+    const reconcile = vi.spyOn(dm, 'reconcileFromServer').mockResolvedValue()
+    const refresh = vi.spyOn(notifications, 'fetchUnreadCounts').mockResolvedValue()
+    const inbox = useInboxStore()
+
+    await inbox.connect()
+    for (const delay of [1000, 2000, 4000, 8000, 16000, 30000]) {
+      FakeWebSocket.instances.at(-1)?.onclose?.()
+      await vi.advanceTimersByTimeAsync(delay)
+    }
+    await FakeWebSocket.instances.at(-1)?.onopen?.()
+    await vi.runAllTicks()
+
+    expect(FakeWebSocket.instances).toHaveLength(7)
+    expect(reconcile).toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
 })

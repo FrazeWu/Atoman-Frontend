@@ -8,11 +8,13 @@ vi.mock('@/api/dm', async (importOriginal) => {
     getTargetConversation: vi.fn(),
     listMessages: vi.fn(),
     markConversationRead: vi.fn(),
+    sendToTarget: vi.fn(),
   }
 })
 
 import { useDMStore } from '@/stores/dm'
-import { getTargetConversation, listMessages, markConversationRead } from '@/api/dm'
+import { getTargetConversation, listMessages, markConversationRead, sendToTarget } from '@/api/dm'
+import { useNotificationStore } from '@/stores/notification'
 import type { DMConversation, DMMailbox, DMMessage } from '@/api/dm'
 
 const userMailbox: DMMailbox = { type: 'user', id: 'me', display_name: '我的私信', unread_count: 2 }
@@ -143,5 +145,31 @@ describe('dm store', () => {
 
     expect(store.activeConversationId).toBe('')
     expect(store.messagesByConversation['conversation-1'].map((message) => message.id)).toEqual(['cached'])
+  })
+
+  it('creates a target conversation on its first sent message', async () => {
+    vi.mocked(getTargetConversation).mockResolvedValue(null)
+    vi.mocked(sendToTarget).mockResolvedValue(makeMessage('message-1', 'conversation-new', '2026-07-23T00:00:00Z'))
+    const store = useDMStore()
+
+    await store.openTarget({ type: 'user', id: 'new-user' })
+    await store.sendMessage('hello')
+
+    expect(sendToTarget).toHaveBeenCalledWith({ type: 'user', id: 'new-user' }, expect.objectContaining({ content: 'hello' }))
+    expect(store.activeConversationId).toBe('conversation-new')
+    expect(store.activeMessages.map((message) => message.id)).toEqual(['message-1'])
+  })
+
+  it('syncs mark-read results to the unified notification count', async () => {
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox], conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1', activeMessages: [],
+    })
+    vi.mocked(markConversationRead).mockResolvedValue({ conversation_unread: 0, mailbox_unread: 0, dm_unread: 3, total_unread: 8 })
+
+    await store.markRead()
+
+    expect(useNotificationStore().unreadCounts.dm).toBe(3)
   })
 })

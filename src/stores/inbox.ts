@@ -15,6 +15,9 @@ export const useInboxStore = defineStore('inbox', () => {
   const initialized = ref(false)
   let socket: WebSocket | null = null
   let pollingTimer: number | null = null
+  let reconnectTimer: number | null = null
+  let reconnectAttempt = 0
+  let disconnecting = false
 
   const totalUnread = computed(() => notificationStore.unreadCount)
 
@@ -31,11 +34,28 @@ export const useInboxStore = defineStore('inbox', () => {
     polling.value = true
     pollingTimer = window.setInterval(async () => {
       await notificationStore.fetchUnreadCounts()
+      const { useDMStore } = await import('@/stores/dm')
+      await useDMStore().reconcileFromServer()
     }, 60000)
   }
 
+  const scheduleReconnect = () => {
+    if (disconnecting || reconnectTimer || !authStore.isAuthenticated) return
+    const delay = [1000, 2000, 4000, 8000, 16000, 30000][Math.min(reconnectAttempt, 5)]
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null
+      reconnectAttempt += 1
+      void connect()
+    }, delay)
+  }
+
   const disconnect = () => {
+    disconnecting = true
     stopPolling()
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
     connected.value = false
     if (socket) {
       socket.close()
@@ -45,6 +65,7 @@ export const useInboxStore = defineStore('inbox', () => {
 
   const connect = async () => {
     if (!authStore.token || socket) return
+    disconnecting = false
     const apiBase = api.url.replace(/\/api\/v1$/, '')
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = apiBase.startsWith('http')
@@ -52,14 +73,18 @@ export const useInboxStore = defineStore('inbox', () => {
       : `${protocol}//${window.location.host}`
     socket = new WebSocket(`${host}/ws/user`)
 
-    socket.onopen = () => {
+    socket.onopen = async () => {
       connected.value = true
+      reconnectAttempt = 0
       stopPolling()
+      const { useDMStore } = await import('@/stores/dm')
+      await Promise.all([useDMStore().reconcileFromServer(), notificationStore.fetchUnreadCounts()])
     }
     socket.onclose = () => {
       connected.value = false
       socket = null
       startPolling()
+      scheduleReconnect()
     }
     socket.onerror = () => {
       connected.value = false

@@ -96,11 +96,11 @@
           </template>
 
           <template v-else>
-            <div v-if="dmStore.activeConversation" class="detail-card detail-card-dm">
+            <div v-if="dmStore.activeConversation || dmStore.activeTarget" class="detail-card detail-card-dm">
               <div class="dm-header">
-                <h2 class="a-subtitle">与 {{ dmStore.activeConversation.other_party.display_name }} 的对话</h2>
-                <PButton v-if="dmStore.activeConversationBlocked" variant="secondary" @click="unblockActiveConversation">取消拉黑</PButton>
-                <PButton v-else variant="secondary" @click="blockActiveConversation">拉黑</PButton>
+                <h2 class="a-subtitle">与 {{ dmStore.activeConversation?.other_party.display_name || dmStore.activeTarget?.id }} 的对话</h2>
+                <PButton v-if="dmStore.activeConversation && dmStore.activeConversationBlocked" variant="secondary" @click="unblockActiveConversation">取消拉黑</PButton>
+                <PButton v-else-if="dmStore.activeConversation" variant="secondary" @click="blockActiveConversation">拉黑</PButton>
               </div>
 
               <div class="dm-messages">
@@ -127,8 +127,8 @@
                   :disabled="dmStore.activeConversationBlocked"
                   :error="dmError || undefined"
                 />
-                <div v-if="dmImageUrl" class="dm-upload-preview">
-                  <img :src="dmImageUrl" alt="preview" class="dm-image" />
+                <div v-if="dmImage" class="dm-upload-preview">
+                  <img :src="dmImage.url" alt="preview" class="dm-image" />
                 </div>
                 <div class="dm-actions">
                   <input ref="fileInput" type="file" accept="image/*" class="dm-file-input" @change="uploadDMImage" />
@@ -159,6 +159,7 @@ import { useDMStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 import { referenceHref } from '@/composables/useReferenceRendering'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
+import type { DMImage } from '@/api/dm'
 import type { RouteLocationRaw } from 'vue-router'
 
 type InboxPageTab = InboxTab | 'forum'
@@ -183,7 +184,7 @@ const tabs: Array<{ key: InboxPageTab; label: string }> = [
 
 const selectedNotificationId = ref<string | null>(null)
 const dmContent = ref('')
-const dmImageUrl = ref('')
+const dmImage = ref<DMImage | null>(null)
 const dmSending = ref(false)
 const dmError = ref('')
 const dmOpenError = ref('')
@@ -212,6 +213,7 @@ const loadTab = async () => {
     await dmStore.fetchConversations()
     const targetType = route.query.target_type === 'user' || route.query.target_type === 'channel' ? route.query.target_type : ''
     const targetID = typeof route.query.target_id === 'string' ? route.query.target_id : ''
+    const conversationID = typeof route.query.conversation === 'string' ? route.query.conversation : ''
     const user = typeof route.query.user === 'string' ? route.query.user : ''
     if (targetType && targetID) {
       try {
@@ -222,6 +224,12 @@ const loadTab = async () => {
     } else if (user) {
       try {
         await dmStore.openConversation(user)
+      } catch (error) {
+        dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
+      }
+    } else if (conversationID) {
+      try {
+        await dmStore.openConversation(conversationID)
       } catch (error) {
         dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
       }
@@ -250,13 +258,13 @@ const openConversation = async (conversationID: string) => {
 }
 
 const submitDM = async () => {
-  if (!dmStore.activeConversation || (!dmContent.value.trim() && !dmImageUrl.value)) return
+  if ((!dmStore.activeConversation && !dmStore.activeTarget) || (!dmContent.value.trim() && !dmImage.value)) return
   dmSending.value = true
   dmError.value = ''
   try {
-    await dmStore.sendMessage(dmStore.activeConversation, dmContent.value.trim(), dmImageUrl.value)
+    await dmStore.sendMessage(dmContent.value.trim(), dmImage.value?.id)
     dmContent.value = ''
-    dmImageUrl.value = ''
+    dmImage.value = null
   } catch (error) {
     dmError.value = error instanceof Error ? error.message : '发送失败'
   } finally {
@@ -269,7 +277,7 @@ const uploadDMImage = async (event: Event) => {
   const file = target.files?.[0]
   if (!file) return
   try {
-    dmImageUrl.value = await dmStore.uploadImage(file)
+    dmImage.value = await dmStore.uploadImage(file)
   } catch (error) {
     dmError.value = error instanceof Error ? error.message : '上传失败'
   } finally {

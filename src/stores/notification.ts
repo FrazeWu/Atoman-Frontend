@@ -81,6 +81,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const currentCategory = ref<InboxTab>('mention')
   const currentType = currentCategory
   const currentTypes = ref<Notification['type'][]>([])
+  let requestGeneration = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -89,17 +90,21 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const fetchUnreadCounts = async () => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     const res = await fetch(api.notifications.unreadCounts, { headers: authHeaders() })
-    if (!res.ok) return
+    if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
     const data = await res.json()
     const payload = data.data || data
-    unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
+    if (generation === requestGeneration && token === authStore.token) unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
   }
 
   const fetchUnreadCount = fetchUnreadCounts
 
   const fetchNotifications = async (selection: NotificationSelection = currentCategory.value as NotificationCategory, nextPage = 1) => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     loading.value = true
     try {
       page.value = nextPage
@@ -111,6 +116,7 @@ export const useNotificationStore = defineStore('notification', () => {
           if (!res.ok) throw new Error('获取通知失败')
           return res.json()
         }))
+        if (generation !== requestGeneration || token !== authStore.token) return
         notifications.value = responses.flatMap((data) => data.data || [])
           .sort((left, right) => right.created_at.localeCompare(left.created_at))
         total.value = responses.reduce((sum, data) => sum + (data.meta?.total ?? data.total ?? 0), 0)
@@ -121,6 +127,7 @@ export const useNotificationStore = defineStore('notification', () => {
         const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('获取通知失败')
         const data = await res.json()
+        if (generation !== requestGeneration || token !== authStore.token) return
         notifications.value = data.data || []
         total.value = data.meta?.total ?? data.total ?? 0
       }
@@ -196,6 +203,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   const resetStore = () => {
+    requestGeneration += 1
     unreadCounts.value = emptyUnreadCounts()
     notifications.value = []
     loading.value = false

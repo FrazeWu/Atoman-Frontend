@@ -107,7 +107,9 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const bootstrapDM = async () => {
+    const generation = requestGeneration.value
     const mailboxes = await listMailboxes()
+    if (generation !== requestGeneration.value) return
     mergeMailboxes(mailboxes)
     if (activeMailboxKey.value) await selectMailbox(activeMailboxKey.value)
   }
@@ -117,9 +119,10 @@ export const useDMStore = defineStore('dm', () => {
     if (!mailbox) return
     activeMailboxKey.value = key
     loadingConversations.value = true
+    const generation = requestGeneration.value
     try {
       const page = await listConversations(mailbox)
-      if (activeMailboxKey.value !== key) return
+      if (generation !== requestGeneration.value || activeMailboxKey.value !== key) return
       mergeConversations(key, page.items)
       conversationCursorByMailbox.value = { ...conversationCursorByMailbox.value, [key]: page.next_cursor ?? null }
     } finally {
@@ -133,9 +136,10 @@ export const useDMStore = defineStore('dm', () => {
     const cursor = conversationCursorByMailbox.value[key]
     if (!mailbox || !cursor || loadingConversations.value) return
     loadingConversations.value = true
+    const generation = requestGeneration.value
     try {
       const page = await listConversations(mailbox, cursor)
-      if (activeMailboxKey.value !== key) return
+      if (generation !== requestGeneration.value || activeMailboxKey.value !== key) return
       mergeConversations(key, page.items, true)
       conversationCursorByMailbox.value = { ...conversationCursorByMailbox.value, [key]: page.next_cursor ?? null }
     } finally {

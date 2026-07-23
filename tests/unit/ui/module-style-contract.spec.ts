@@ -66,8 +66,6 @@ const blogFeedFiles = [
   'src/views/feed/InboxPage.vue',
 ]
 const remainingModuleFiles = [
-  'src/components/debate/ArgumentNode.vue',
-  'src/components/debate/DebateHeaderActions.vue',
   'src/components/forum/ForumReplyNode.vue',
   'src/components/podcast/PodcastCommentSection.vue',
   'src/views/debate/DebateHomeView.vue',
@@ -92,6 +90,15 @@ const remainingModuleFiles = [
 ]
 
 describe('module style contract', () => {
+  it('keeps the debate graph link focus ring inside its clipped node', () => {
+    const source = read('src/components/debate/DebateGraphNode.vue')
+    const nodeRule = source.match(/\.debate-node\s*\{([^}]*)\}/)?.[1] ?? ''
+    const focusRule = source.match(/\.debate-node__link:focus-visible\s*\{([^}]*)\}/)?.[1] ?? ''
+
+    expect(nodeRule).toMatch(/overflow:\s*hidden/)
+    expect(focusRule).toMatch(/outline-offset:\s*-\d+px/)
+  })
+
   it('keeps video surfaces flat, 4px, and headings at 500', () => {
     for (const path of videoFiles) {
       const source = read(path)

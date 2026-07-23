@@ -25,7 +25,7 @@ export type ReferenceTrigger =
   | { mode: 'resource'; targetType: ReferenceResourceType; query: string; start: number }
 
 export type ReferenceSuggestion =
-  | ({ kind: 'target'; key: string; targetType: 'user' | ReferenceResourceType } & Omit<ReferenceTarget, 'type'>)
+  | ({ kind: 'target'; key: string; targetType: 'user' | ReferenceResourceType; qualifier?: 'support' | 'oppose' } & Omit<ReferenceTarget, 'type'>)
   | { kind: 'type'; key: string; targetType: ReferenceResourceType; label: string }
 
 const supportedTypeSet = new Set(referenceResourceTypes.map(({ type }) => type))
@@ -121,8 +121,27 @@ export async function searchReferenceSuggestions(trigger: ReferenceTrigger, limi
   return [...users, ...types].slice(0, limit)
 }
 
+export async function searchDebateReferenceSuggestions(
+  trigger: ReferenceTrigger,
+  limit = 10,
+): Promise<ReferenceSuggestion[]> {
+  if (trigger.mode === 'resource' && trigger.targetType !== 'debate') return []
+  const targets = await referenceApi.search('debate', trigger.query, limit)
+  return targets
+    .filter(target => target.available)
+    .flatMap((target) => {
+      const suggestion = targetSuggestion(target)
+      return (['support', 'oppose'] as const).map(qualifier => ({
+        ...suggestion,
+        key: `${suggestion.key}:${qualifier}`,
+        qualifier,
+      }))
+    })
+}
+
 export function referenceTokenForSuggestion(suggestion: ReferenceSuggestion) {
   if (suggestion.kind === 'type') return `@${suggestion.targetType}:`
   if (suggestion.targetType === 'user') return suggestion.subtitle?.startsWith('@') ? suggestion.subtitle : `@${suggestion.label}`
-  return `@${suggestion.targetType}:${suggestion.id}`
+  const qualifier = suggestion.qualifier ? `:${suggestion.qualifier}` : ''
+  return `@${suggestion.targetType}:${suggestion.id}${qualifier}`
 }

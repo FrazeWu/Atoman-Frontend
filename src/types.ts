@@ -993,9 +993,69 @@ export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====
 
-export type DebateStatus = 'open' | 'concluded' | 'archived'
-export type ArgumentType = 'support' | 'oppose' | 'neutral' | 'evidence' | 'question' | 'counter'
+export type DebateVoteDirection = 'yes' | 'no'
+export type DebateReferenceState = 'active' | 'stale' | 'unavailable'
+export type DebateResourceKind =
+  | 'post'
+  | 'thread'
+  | 'debate'
+  | 'feed'
+  | 'article'
+  | 'artist'
+  | 'album'
+  | 'song'
+  | 'playlist'
+  | 'podcast'
+  | 'episode'
+  | 'video'
+  | 'person'
+  | 'event'
+  | 'channel'
+  | 'collection'
+  | 'comment'
+
+export type DebateStatus = 'active' | 'archived'
 export type DebateRelationStance = 'support' | 'oppose'
+
+export interface ContentReferenceTarget {
+  type: DebateResourceKind
+  id: string
+  label: string
+  subtitle?: string
+  module?: string
+  path?: string
+  available: boolean
+}
+
+export interface DebateReferenceRelation {
+  id: string
+  stance: DebateRelationStance
+  state: DebateReferenceState
+  conclusion_event_id?: string
+  conclusion_direction?: DebateVoteDirection
+}
+
+export interface ContentReference {
+  id: string
+  field: string
+  start: number
+  end: number
+  raw: string
+  target: ContentReferenceTarget
+  relation?: DebateReferenceRelation
+}
+
+export interface LegacyDebateReference {
+  raw: string
+  kind: DebateResourceKind
+  resource_id: string
+  title: string
+  qualifier?: DebateRelationStance
+  state: DebateReferenceState
+  relation_id?: string
+}
+
+export type DebateReference = ContentReference | LegacyDebateReference
 
 export interface Debate {
   id: string
@@ -1007,53 +1067,63 @@ export interface Debate {
   status: DebateStatus
   tags: string[]
   view_count: number
-  argument_count: number
-  vote_count: number
-  conclusion_type?: 'yes' | 'no' | 'inconclusive' | ''
-  conclusion_summary?: string
-  conclude_vote_count?: number
-  conclude_threshold?: number
+  current_revision_id: string
+  current_conclusion_event_id?: string
+  references: DebateReference[]
+  conclusion_type?: DebateVoteDirection | ''
   created_at: string
   updated_at: string
-  concluded_at?: string
-  references?: ResolvedReference[]
 }
 
-export interface Argument {
+export interface DebateRevisionSnapshot {
+  title: string
+  description: string
+  content: string
+  tags: string[]
+}
+
+export interface DebateRevision {
+  id: string
+  version_number: number
+  previous_revision_id?: string
+  editor_id: string
+  editor?: User
+  edit_summary: string
+  edit_type: 'creation' | 'edit' | 'revert'
+  status: 'approved'
+  is_current: boolean
+  created_at: string
+  snapshot: DebateRevisionSnapshot
+  references?: DebateReference[]
+}
+
+export interface DebateRevisionFieldDiff {
+  before: unknown
+  after: unknown
+  changed: boolean
+}
+
+export interface DebateRevisionDiff {
+  revision_id: string
+  against_revision_id: string
+  changes: Record<string, DebateRevisionFieldDiff>
+}
+
+export interface DebateVoteSummary {
+  yes_votes: number
+  no_votes: number
+  total_votes: number
+  current_direction: DebateVoteDirection | ''
+  current_user_vote: DebateVoteDirection | ''
+}
+
+export interface DebateConclusionEvent {
   id: string
   debate_id: string
-  debate?: Debate
-  parent_id?: string // quoted argument id
-  parent?: Argument
-  user_id: string
-  user?: User
-  content: string
-  argument_type: ArgumentType
-  vote_count: number
-  references?: Argument[]
-  referenced_debates?: Debate[]
-  is_concluded: boolean
-  conclusion?: string
-  source_url?: string
-  source_title?: string
-  source_excerpt?: string
-  is_folded?: boolean
-  fold_note?: string
-  mentions?: Array<{ user_id: string; start: number; end: number }>
-  attachment_ids?: string[]
-  attachments?: Array<{ id: string; url: string; content_type: string; position: number }>
-  content_references?: ResolvedReference[]
-  created_at: string
-  updated_at: string
-}
-
-export interface DebateVote {
-  id: string
-  argument_id: string
-  argument?: Argument
-  user_id: string
-  user?: User
-  vote_type: number // +1 or -1
+  direction: DebateVoteDirection
+  yes_votes: number
+  no_votes: number
+  total_votes: number
   created_at: string
   updated_at: string
 }
@@ -1061,12 +1131,11 @@ export interface DebateVote {
 export interface DebateRelation {
   id: string
   source_debate_id: string
-  source_debate?: Debate
   target_debate_id: string
-  target_debate?: Debate
   stance: DebateRelationStance
-  user_id: string
-  user?: User
+  target_revision_id: string
+  source_conclusion_event_id: string
+  status: DebateReferenceState
   created_at: string
   updated_at: string
 }
@@ -1075,15 +1144,7 @@ export interface DebateGraph {
   root_id: string
   nodes: Debate[]
   relations: DebateRelation[]
-}
-
-export interface VoteHistory {
-  id: string
-  argument_id: string
-  user_id: string
-  old_vote_type: number
-  new_vote_type: number
-  created_at: string
+  expandable_node_ids: string[]
 }
 
 export interface TimelineEvent {

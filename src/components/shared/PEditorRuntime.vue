@@ -154,8 +154,14 @@ import {
   parseReferenceTrigger,
   referenceTokenForSuggestion,
   searchReferenceSuggestions,
+  searchDebateReferenceSuggestions,
   type ReferenceSuggestion,
 } from '@/composables/useReferenceAutocomplete'
+import {
+  resourceReferenceExtension,
+  updateResourceReferenceLabels,
+  type ResourceReferenceLabels,
+} from './editor/resourceReferenceExtension'
 
 interface Peer { clientId: number; name: string; color: string }
 interface Props {
@@ -169,11 +175,15 @@ interface Props {
   showToolbar?: boolean
   enableImageUpload?: boolean
   enableMentions?: boolean
+  referenceAutocompleteScope?: 'global' | 'debate'
   enableEmbeds?: boolean
   enableCollab?: boolean
   collabRoomId?: string
   protectFirstLine?: boolean
   renderingLevel?: 'full' | 'comment'
+  enableResourceReferences?: boolean
+  resourceReferenceLabels?: ResourceReferenceLabels
+  editorAriaLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -186,11 +196,15 @@ const props = withDefaults(defineProps<Props>(), {
   showToolbar: true,
   enableImageUpload: true,
   enableMentions: false,
+  referenceAutocompleteScope: 'global',
   enableEmbeds: false,
   enableCollab: false,
   collabRoomId: undefined,
   protectFirstLine: false,
   renderingLevel: 'full',
+  enableResourceReferences: false,
+  resourceReferenceLabels: () => ({}),
+  editorAriaLabel: undefined,
 })
 
 const emit = defineEmits<{
@@ -216,6 +230,8 @@ const cmContainerRef = ref<HTMLElement | null>(null)
 const previewPaneRef = ref<HTMLElement | null>(null)
 const showLineNumbers = ref(false)
 const lineNumberCompartment = new Compartment()
+const resourceReferenceCompartment = new Compartment()
+const contentAttributesCompartment = new Compartment()
 let cmView: EditorView | null = null
 
 const CURSOR_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
@@ -309,6 +325,16 @@ function teardownEditor() {
 
 function lineNumberExtensions() {
   return showLineNumbers.value ? [lineNumbers(), highlightActiveLineGutter()] : []
+}
+
+function resourceReferenceExtensions() {
+  return props.enableResourceReferences
+    ? resourceReferenceExtension(props.resourceReferenceLabels)
+    : []
+}
+
+function editorContentAttributes() {
+  return props.editorAriaLabel ? { 'aria-label': props.editorAriaLabel } : {}
 }
 
 function emitCollabReadyIfNeeded() {
@@ -428,6 +454,8 @@ function initCodeMirror() {
     keymap.of(bindings),
     markdown({ codeLanguages: languages }),
     lineNumberCompartment.of(lineNumberExtensions()),
+    resourceReferenceCompartment.of(resourceReferenceExtensions()),
+    contentAttributesCompartment.of(EditorView.contentAttributes.of(editorContentAttributes())),
     EditorView.lineWrapping,
     scrollPastEnd(),
     cmPlaceholder(props.placeholder),
@@ -594,6 +622,29 @@ watch(() => props.modelValue, (val) => {
 
 watch(effectiveMode, () => {
   syncEditorByMode()
+})
+
+watch(() => props.enableResourceReferences, () => {
+  if (!cmView) return
+  cmView.dispatch({
+    effects: resourceReferenceCompartment.reconfigure(resourceReferenceExtensions()),
+  })
+})
+
+watch(() => props.resourceReferenceLabels, (labels) => {
+  if (!cmView || !props.enableResourceReferences) return
+  cmView.dispatch({
+    effects: updateResourceReferenceLabels.of(labels),
+  })
+}, { deep: true })
+
+watch(() => props.editorAriaLabel, () => {
+  if (!cmView) return
+  cmView.dispatch({
+    effects: contentAttributesCompartment.reconfigure(
+      EditorView.contentAttributes.of(editorContentAttributes()),
+    ),
+  })
 })
 
 function getCmSelection(): { from: number; to: number; selectedText: string } {
@@ -808,7 +859,9 @@ function detectMentionFromText(textBefore: string, pos: number) {
   const request = ++mentionRequest
   mentionDebounce = setTimeout(async () => {
     try {
-      const results = await searchReferenceSuggestions(trigger, 10)
+      const results = props.referenceAutocompleteScope === 'debate'
+        ? await searchDebateReferenceSuggestions(trigger, 10)
+        : await searchReferenceSuggestions(trigger, 10)
       if (request !== mentionRequest) return
       mention.value.results = results
       mention.value.visible = results.length > 0

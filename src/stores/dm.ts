@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, ref } from 'vue'
-import { defineStore } from 'pinia'
+import { defineStore, getActivePinia } from 'pinia'
 import { useNotificationStore } from '@/stores/notification'
 import { registerSessionReset } from '@/stores/sessionReset'
 
@@ -21,6 +21,8 @@ const sortMessages = (messages: DMMessage[]) => [...messages].sort((left, right)
 ))
 
 export const useDMStore = defineStore('dm', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('私信状态必须在 Pinia 实例中创建')
   const mailboxesByKey = ref<Record<string, DMMailbox>>({})
   const mailboxOrder = ref<string[]>([])
   const conversationsById = ref<Record<string, DMConversation>>({})
@@ -220,6 +222,7 @@ export const useDMStore = defineStore('dm', () => {
     mergeMessages(message.conversation_id, [message])
     if (!conversationID && activeTarget.value) {
       const conversation = await getTargetConversation(activeTarget.value)
+      if (generation !== requestGeneration.value || !target || activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return message
       if (conversation) applyConversation(conversation)
       activeConversationId.value = message.conversation_id
       activeTarget.value = null
@@ -310,7 +313,7 @@ export const useDMStore = defineStore('dm', () => {
     messagesByConversation.value = {}; conversationCursorByMailbox.value = {}; messageCursorByConversation.value = {}
     activeMailboxKey.value = ''; activeConversationId.value = ''; activeTarget.value = null; loadingConversations.value = false; loadingMessages.value = false; dmUnread.value = 0
   }
-  onScopeDispose(registerSessionReset(resetStore))
+  onScopeDispose(registerSessionReset(pinia, resetStore))
 
   return {
     mailboxesByKey, mailboxOrder, conversationsById, conversationIdsByMailbox, messagesByConversation,

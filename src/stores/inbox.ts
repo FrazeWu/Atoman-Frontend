@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, ref } from 'vue'
-import { defineStore } from 'pinia'
+import { defineStore, getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useApi } from '@/composables/useApi'
@@ -7,6 +7,8 @@ import { normalizeDMRealtimeEvent } from '@/api/dm'
 import { registerSessionReset } from '@/stores/sessionReset'
 
 export const useInboxStore = defineStore('inbox', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('收件箱状态必须在 Pinia 实例中创建')
   const authStore = useAuthStore()
   const notificationStore = useNotificationStore()
   const api = useApi()
@@ -19,6 +21,7 @@ export const useInboxStore = defineStore('inbox', () => {
   let reconnectTimer: number | null = null
   let reconnectAttempt = 0
   let disconnecting = false
+  let lifecycleGeneration = 0
 
   const totalUnread = computed(() => notificationStore.unreadCount)
 
@@ -40,17 +43,19 @@ export const useInboxStore = defineStore('inbox', () => {
     }, 60000)
   }
 
-  const scheduleReconnect = () => {
-    if (disconnecting || reconnectTimer || !authStore.isAuthenticated) return
+  const scheduleReconnect = (generation: number) => {
+    if (generation !== lifecycleGeneration || disconnecting || reconnectTimer || !authStore.isAuthenticated) return
     const delay = [1000, 2000, 4000, 8000, 16000, 30000][Math.min(reconnectAttempt, 5)]
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null
+      if (generation !== lifecycleGeneration || disconnecting || !authStore.isAuthenticated) return
       reconnectAttempt += 1
       void connect()
     }, delay)
   }
 
   const disconnect = () => {
+    lifecycleGeneration += 1
     disconnecting = true
     stopPolling()
     if (reconnectTimer) {
@@ -59,46 +64,65 @@ export const useInboxStore = defineStore('inbox', () => {
     }
     connected.value = false
     if (socket) {
-      socket.close()
+      const activeSocket = socket
       socket = null
+      activeSocket.onopen = null
+      activeSocket.onclose = null
+      activeSocket.onerror = null
+      activeSocket.onmessage = null
+      activeSocket.close()
     }
   }
-  onScopeDispose(registerSessionReset(disconnect))
+  const resetStore = () => {
+    disconnect()
+    initialized.value = false
+    reconnectAttempt = 0
+  }
+  onScopeDispose(registerSessionReset(pinia, resetStore))
 
   const connect = async () => {
     if (!authStore.token || socket) return
     disconnecting = false
+    const generation = lifecycleGeneration
     const apiBase = api.url.replace(/\/api\/v1$/, '')
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = apiBase.startsWith('http')
       ? apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
       : `${protocol}//${window.location.host}`
-    socket = new WebSocket(`${host}/ws/user`)
+    const activeSocket = new WebSocket(`${host}/ws/user`)
+    socket = activeSocket
 
-    socket.onopen = () => {
+    activeSocket.onopen = () => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       connected.value = true
       reconnectAttempt = 0
       stopPolling()
       void (async () => {
         const { useDMStore } = await import('@/stores/dm')
+        if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         await Promise.all([useDMStore().reconcileFromServer(), notificationStore.fetchUnreadCounts()])
-      })().catch(() => startPolling())
+      })().catch(() => {
+        if (generation === lifecycleGeneration && socket === activeSocket && !disconnecting) startPolling()
+      })
     }
-    socket.onclose = () => {
+    activeSocket.onclose = () => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       connected.value = false
       socket = null
       startPolling()
-      scheduleReconnect()
+      scheduleReconnect(generation)
     }
-    socket.onerror = () => {
+    activeSocket.onerror = () => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       connected.value = false
-      const failedSocket = socket
+      const failedSocket = activeSocket
       socket = null
       failedSocket?.close()
       startPolling()
-      scheduleReconnect()
+      scheduleReconnect(generation)
     }
-    socket.onmessage = async (event) => {
+    activeSocket.onmessage = async (event) => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       if (typeof event.data !== 'string') return
       let payload: unknown
       try {
@@ -107,6 +131,7 @@ export const useInboxStore = defineStore('inbox', () => {
         return
       }
       if (!payload || typeof payload !== 'object') return
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       const message = payload as { event?: unknown; data?: unknown }
       if (message.event === 'notification') {
         notificationStore.receiveNotification(message.data as never)
@@ -114,6 +139,7 @@ export const useInboxStore = defineStore('inbox', () => {
       const dmEvent = normalizeDMRealtimeEvent(message)
       if (dmEvent) {
         const { useDMStore } = await import('@/stores/dm')
+        if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         const dmStore = useDMStore()
         dmStore.receiveEvent(dmEvent)
         notificationStore.setDMUnread(dmEvent.data.dm_unread)

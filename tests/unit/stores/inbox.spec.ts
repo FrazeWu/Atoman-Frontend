@@ -135,4 +135,35 @@ describe('inbox store', () => {
     expect(inbox.polling).toBe(true)
     vi.useRealTimers()
   })
+
+  it('makes a reset socket unable to write state or reconnect', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+    const inbox = useInboxStore()
+    const dm = useDMStore()
+    const notifications = useNotificationStore()
+    const receiveEvent = vi.spyOn(dm, 'receiveEvent')
+    const receiveNotification = vi.spyOn(notifications, 'receiveNotification')
+
+    await inbox.connect()
+    const staleSocket = FakeWebSocket.instances[0]
+    await auth.logout()
+    auth.token = 'new-session'
+    auth.isAuthenticated = true
+
+    await staleSocket.onmessage?.({ data: JSON.stringify({ event: 'notification', data: { id: 'old' } }) } as MessageEvent)
+    staleSocket.onclose?.()
+    await vi.advanceTimersByTimeAsync(30000)
+
+    expect(receiveEvent).not.toHaveBeenCalled()
+    expect(receiveNotification).not.toHaveBeenCalled()
+    expect(FakeWebSocket.instances).toHaveLength(1)
+
+    await inbox.connect()
+    expect(FakeWebSocket.instances).toHaveLength(2)
+    vi.useRealTimers()
+  })
 })

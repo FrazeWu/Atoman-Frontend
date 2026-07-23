@@ -1,6 +1,6 @@
 import { computed, onScopeDispose, ref } from 'vue'
 import { registerSessionReset } from '@/stores/sessionReset'
-import { defineStore } from 'pinia'
+import { defineStore, getActivePinia } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { InboxTab, Notification, NotificationCategory, NotificationPreference } from '@/types'
@@ -70,6 +70,8 @@ export function commentNotificationLocation(notification: Notification): RouteLo
 }
 
 export const useNotificationStore = defineStore('notification', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('通知状态必须在 Pinia 实例中创建')
   const api = useApi()
   const authStore = useAuthStore()
 
@@ -218,7 +220,7 @@ export const useNotificationStore = defineStore('notification', () => {
     currentCategory.value = 'mention'
     currentTypes.value = []
   }
-  onScopeDispose(registerSessionReset(resetStore))
+  onScopeDispose(registerSessionReset(pinia, resetStore))
 
   return {
     unreadCount,

@@ -161,6 +161,28 @@ describe('dm store', () => {
     expect(store.activeMessages.map((message) => message.id)).toEqual(['message-1'])
   })
 
+  it('does not restore a stale target after the first message lookup finishes', async () => {
+    let resolveConversation!: (value: DMConversation | null) => void
+    vi.mocked(getTargetConversation)
+      .mockResolvedValueOnce(null)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveConversation = resolve }))
+      .mockResolvedValueOnce(null)
+    vi.mocked(sendToTarget).mockResolvedValue(makeMessage('message-1', 'conversation-new', '2026-07-23T00:00:00Z'))
+    const store = useDMStore()
+    const firstTarget = { type: 'user' as const, id: 'first-user' }
+    const secondTarget = { type: 'user' as const, id: 'second-user' }
+
+    await store.openTarget(firstTarget)
+    const send = store.sendActiveMessage('hello')
+    await Promise.resolve()
+    await store.openTarget(secondTarget)
+    resolveConversation(makeConversation('conversation-new'))
+    await send
+
+    expect(store.activeConversationId).toBe('')
+    expect(store.activeTarget).toEqual(secondTarget)
+  })
+
   it('never treats active message content as a legacy conversation reference', async () => {
     const store = useDMStore()
     store.reconcile({

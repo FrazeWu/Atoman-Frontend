@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, getActivePinia } from 'pinia'
 import { clearSessionStores } from '@/stores/sessionReset'
 import { ref } from 'vue'
 
@@ -83,6 +83,8 @@ function networkAuthError() {
 }
 
 export const useAuthStore = defineStore('auth', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('认证状态必须在 Pinia 实例中创建')
   clearLegacyStoredAuth()
   const token = ref<string | null>(null)
   const user = ref<User | null>(null)
@@ -91,7 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
   let restoreSessionInFlight: Promise<boolean> | null = null
 
   const clearDependentState = () => {
-    clearSessionStores()
+    clearSessionStores(pinia)
   }
 
   const applySession = (session: { csrfToken: string; user: User }) => {

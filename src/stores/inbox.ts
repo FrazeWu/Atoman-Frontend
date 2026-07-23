@@ -151,13 +151,16 @@ export const useInboxStore = defineStore('inbox', () => {
   }
 
   const bootstrap = async () => {
+    const generation = lifecycleGeneration
     if (!authStore.isAuthenticated) {
       disconnect()
       initialized.value = false
       return
     }
     await notificationStore.fetchUnreadCounts()
+    if (generation !== lifecycleGeneration || !authStore.isAuthenticated) return
     await connect()
+    if (generation !== lifecycleGeneration || !authStore.isAuthenticated) return
     initialized.value = true
   }
 

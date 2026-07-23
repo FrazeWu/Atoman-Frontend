@@ -168,4 +168,26 @@ describe('inbox store', () => {
     expect(FakeWebSocket.instances).toHaveLength(2)
     vi.useRealTimers()
   })
+
+  it('keeps inbox uninitialized when reset interrupts bootstrap', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    let resolveRefresh!: () => void
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+    const notifications = useNotificationStore()
+    const refresh = vi.spyOn(notifications, 'fetchUnreadCounts').mockImplementation(() => new Promise((resolve) => {
+      resolveRefresh = resolve
+    }))
+    const inbox = useInboxStore()
+
+    const bootstrap = inbox.bootstrap()
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+    await auth.logout()
+    resolveRefresh()
+    await bootstrap
+
+    expect(inbox.initialized).toBe(false)
+    expect(FakeWebSocket.instances).toHaveLength(0)
+  })
 })

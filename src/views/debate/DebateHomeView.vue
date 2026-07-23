@@ -2,6 +2,7 @@
   <div class="a-page-xl" style="padding-bottom:6rem">
     <PPageHeader :title="moduleRooms.debate.name" accent :sub="moduleRooms.debate.homepageSub">
       <template #action>
+        <PButton to="/debate/rules" outline>规则</PButton>
         <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">新建辩题</PButton>
       </template>
     </PPageHeader>
@@ -242,7 +243,7 @@ const formatDate = (dateString: string) => {
 }
 
 onMounted(async () => {
-  await authStore.restoreSession()
+  if (!authStore.isAuthenticated) await authStore.restoreSession()
   loadDebates()
 })
 </script>

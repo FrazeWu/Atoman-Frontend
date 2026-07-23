@@ -20,7 +20,7 @@ const mountLayout = () => mount(DebateLayout, {
 })
 
 describe('DebateLayout', () => {
-  it('only exposes supported debate status links', () => {
+  it('exposes debate status links and the public rules page', () => {
     const wrapper = mountLayout()
 
     const items = wrapper.findAll('.debate-sidebar-item')
@@ -28,8 +28,9 @@ describe('DebateLayout', () => {
     expect(items.map(item => item.attributes('data-to'))).toEqual([
       '/debate',
       '/debate?status=archived',
+      '/debate/rules',
     ])
-    expect(items.map(item => item.text().trim())).toEqual(['全部辩题', '已归档'])
+    expect(items.map(item => item.text().trim())).toEqual(['全部辩题', '已归档', '规则'])
     expect(wrapper.text()).not.toContain(['进行', '中'].join(''))
     expect(wrapper.text()).not.toContain(['已', '结题'].join(''))
   })

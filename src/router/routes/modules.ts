@@ -113,6 +113,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/debate/DebateHomeView.vue') },
+        { path: 'rules', component: () => import('@/views/debate/DebateRulesView.vue') },
         { path: ':id', component: () => import('@/views/debate/DebateTopicView.vue') },
       ],
     },

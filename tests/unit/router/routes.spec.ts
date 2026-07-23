@@ -61,6 +61,17 @@ describe('host-scoped route tables', () => {
     expect(forumPaths).not.toContain('/forum')
   })
 
+  it('registers public debate rules before the dynamic debate route', () => {
+    const debateRoot = moduleRoutes.debate.find((route) => route.path === '/')
+    const children = debateRoot?.children || []
+    const ruleIndex = children.findIndex((route) => route.path === 'rules')
+    const topicIndex = children.findIndex((route) => route.path === ':id')
+
+    expect(ruleIndex).toBeGreaterThanOrEqual(0)
+    expect(ruleIndex).toBeLessThan(topicIndex)
+    expect(children[ruleIndex]?.meta?.requiresAuth).toBeUndefined()
+  })
+
   it('registers inbox as a top-level route only', () => {
     const appRoutePaths = paths(buildAppRoutes())
 

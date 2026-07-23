@@ -105,6 +105,14 @@
       >
         已归档
       </PSidebarItem>
+      <PSidebarItem
+        to="/debate/rules"
+        :index="3"
+        :icon="BookOpen"
+        :active="route && route.path === '/debate/rules'"
+      >
+        规则
+      </PSidebarItem>
     </template>
 
     <!-- 6. TIMELINE MODULE SIDEBAR -->
@@ -164,7 +172,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Star, Disc3, Users,
-  MessageSquare, Folder, Archive, Clock, Mic
+  MessageSquare, Folder, Archive, BookOpen, Clock, Mic
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'

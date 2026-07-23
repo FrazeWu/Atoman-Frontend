@@ -146,6 +146,15 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     vi.spyOn(musicApi, 'retryMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [fileRecord] }))
     vi.spyOn(musicApi, 'replaceMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [{ ...fileRecord, fileName: 'fixed.mp3', relativePath: 'fixed.mp3' }] }))
     mockUploadTransport()
+    vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue(snapshot({
+      status: 'uploaded',
+      files: [{ ...fileRecord, uploadStatus: 'uploaded', processingStatus: 'pending' }],
+    }))
+    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({
+      status: 'queued',
+      stage: 'queued',
+      files: [{ ...fileRecord, uploadStatus: 'uploaded', processingStatus: 'pending' }],
+    }))
 
     const drawers = useMusicDrawers()
     drawers.setMusicCreationStep('albumDetails')
@@ -157,7 +166,11 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     await wrapper.get('.import-file-action').trigger('click')
     await flushPromises()
     expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
+    expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith('import-1')
+    expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('queued')
 
+    Object.assign(drawers.state.value.creationFlow.draft.albumImport, { status: 'failed', files: [fileRecord] })
+    await flushPromises()
     await wrapper.findAll('.import-file-action')[1].trigger('click')
     setFiles(replacementInput.element as HTMLInputElement, [replacement])
     await replacementInput.trigger('change')
@@ -166,5 +179,6 @@ describe('MusicCreationAlbumImportStep.vue', () => {
       relativePath: 'fixed.mp3', fileName: 'fixed.mp3', fileSize: replacement.size, contentType: 'audio/mpeg',
     })
     expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
+    expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(2)
   })
 })

@@ -91,7 +91,7 @@ export function useAlbumImportUpload() {
     }
   }
 
-  async function uploadSingleFileMultipart(importId: string, file: File, fileId: string): Promise<void> {
+  async function uploadSingleFileMultipart(importId: string, file: File, fileId: string): Promise<MusicAlbumImport> {
     const totalParts = Math.ceil(file.size / FILE_PART_SIZE)
     for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
       const start = (partNumber - 1) * FILE_PART_SIZE
@@ -119,8 +119,19 @@ export function useAlbumImportUpload() {
         albumImportDraft.value.totalBytesLoaded += partSize
       }
     }
-    await completeMusicAlbumImportFile(importId, fileId)
+    const snapshot = await completeMusicAlbumImportFile(importId, fileId)
     fileProgress.value = new Map(fileProgress.value).set(fileId, 100)
+    return snapshot
+  }
+
+  async function completeSessionWhenFilesUploaded(importId: string, snapshot: MusicAlbumImport) {
+    applyImportSnapshot(snapshot)
+    const files = snapshot.files ?? []
+    if (files.length === 0 || !files.every((file) => file.uploadStatus === 'uploaded')) return
+
+    const session = await completeMusicAlbumImportSession(importId)
+    applyImportSnapshot(session)
+    startPolling(importId)
   }
 
   async function handleFilesUpload(fileList: FileList) {
@@ -215,8 +226,10 @@ export function useAlbumImportUpload() {
       const snapshot = await retryMusicAlbumImportFile(draft.importId, fileId)
       applyImportSnapshot(snapshot)
       const file = selectedFiles.get(fileId)
-      if (file) await uploadSingleFileMultipart(draft.importId, file, fileId)
-      startPolling(draft.importId)
+      if (file) {
+        const completed = await uploadSingleFileMultipart(draft.importId, file, fileId)
+        await completeSessionWhenFilesUploaded(draft.importId, completed)
+      }
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '重试失败'
     }
@@ -234,8 +247,8 @@ export function useAlbumImportUpload() {
       })
       applyImportSnapshot(snapshot)
       selectedFiles.set(fileId, file)
-      await uploadSingleFileMultipart(draft.importId, file, fileId)
-      startPolling(draft.importId)
+      const completed = await uploadSingleFileMultipart(draft.importId, file, fileId)
+      await completeSessionWhenFilesUploaded(draft.importId, completed)
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '替换失败'
     }

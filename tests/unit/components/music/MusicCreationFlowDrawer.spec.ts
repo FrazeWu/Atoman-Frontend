@@ -57,10 +57,15 @@ const createFlowState = (overrides: Partial<MusicCreationFlowState> = {}): Music
     },
     albumImport: {
       importId: 'import-1',
+      inputMode: 'archive',
       archiveName: 'seed.zip',
       status: 'pending_upload',
+      stage: 'upload',
       uploadProgress: 0,
       uploadSpeed: 0,
+      files: [],
+      totalBytesLoaded: 0,
+      totalBytesTotal: 0,
       coverUrl: '',
       coverKey: '',
       derivedAlbumTitle: '',
@@ -213,10 +218,10 @@ describe('MusicCreationFlowDrawer', () => {
     wrapper.unmount()
   })
 
-  it('最终按钮点击后只提交一次 commitMusicAlbumImport', async () => {
+  it('预览步骤点击提交后只调用一次 commitMusicAlbumImport', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumImport',
+      step: 'preview',
       draft: {
         ...createFlowState().draft,
         albumImport: {
@@ -263,12 +268,43 @@ describe('MusicCreationFlowDrawer', () => {
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
   })
 
+  it('详情完成后进入独立预览步骤，预览展示导入结果并提交', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'albumDetails',
+      draft: {
+        ...createFlowState().draft,
+        albumImport: {
+          ...createFlowState().draft.albumImport,
+          importId: 'import-1',
+          status: 'ready',
+          coverUrl: 'https://img.test/cover.jpg',
+          derivedTracks: [{ title: 'Preview Track', audioKey: 'audio-1', origin: 'import' }],
+          files: [{ fileId: 'file-failed', relativePath: 'broken.mp3', fileName: 'broken.mp3', role: 'audio', detectedFormat: 'mp3', size: 1, uploadStatus: 'failed', processingStatus: 'failed', discNumber: 1, trackNumber: 1, title: '', errorMessage: '上传失败' }],
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
+    await flushPromises()
+
+    expect(drawerMocks.state.value.creationFlow?.step).toBe('preview')
+    expect(wrapper.get('[data-testid="album-import-preview-step"]').text()).toContain('Preview Track')
+    expect(wrapper.get('img[alt="专辑封面预览"]').attributes('src')).toBe('https://img.test/cover.jpg')
+    expect(wrapper.text()).toContain('broken.mp3')
+
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
+  })
+
   it.each(['uploading', 'extracting'] as const)(
     '%s 状态点击完成不会提交专辑导入',
     async (status) => {
       commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
       drawerMocks.state.value.creationFlow = createFlowState({
-        step: 'albumDetails',
+        step: 'preview',
         draft: {
           ...createFlowState().draft,
           albumImport: {
@@ -295,7 +331,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('从已有艺术家进入时提交 artist_id 复用现有艺术家', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumImport',
+      step: 'preview',
       draft: {
         ...createFlowState().draft,
         artist: {
@@ -377,7 +413,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('填写发行日期时会同时提交 release_date 和推导后的 release_year', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumImport',
+      step: 'preview',
       draft: {
         ...createFlowState().draft,
         albumImport: {
@@ -437,7 +473,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('提交时按当前曲目顺序重新生成连续 trackNumber', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumImport',
+      step: 'preview',
       draft: {
         ...createFlowState().draft,
         albumImport: {
@@ -482,7 +518,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('提交流里会带上多个创作者，并保留锁定的新艺人', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumImport',
+      step: 'preview',
       draft: {
         ...createFlowState().draft,
         artist: {
@@ -626,7 +662,7 @@ describe('MusicCreationFlowDrawer', () => {
   it('提交失败时保留抽屉并显示错误', async () => {
     commitMusicAlbumImportMock.mockRejectedValue(new Error('commit failed'))
     drawerMocks.state.value.creationFlow = createFlowState({
-      step: 'albumImport',
+      step: 'preview',
       draft: {
         ...createFlowState().draft,
         albumImport: {

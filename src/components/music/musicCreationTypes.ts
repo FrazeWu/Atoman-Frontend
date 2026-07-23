@@ -1,7 +1,7 @@
 import type { UploadAsset } from '@/api/types'
 import type { MusicAlbumImportFile, MusicAlbumImportInputMode, MusicAlbumImportStage, MusicAlbumImportStatus } from '@/api/musicV1'
 
-export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails'
+export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails' | 'preview'
 export type MusicArtistKind = 'person' | 'group'
 
 export interface MusicCreationDatePartsDraft {

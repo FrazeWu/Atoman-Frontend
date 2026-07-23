@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useApi } from '@/composables/useApi'
+import { normalizeDMRealtimeEvent } from '@/api/dm'
 
 export const useInboxStore = defineStore('inbox', () => {
   const authStore = useAuthStore()
@@ -65,16 +66,25 @@ export const useInboxStore = defineStore('inbox', () => {
       startPolling()
     }
     socket.onmessage = async (event) => {
-      const payload = JSON.parse(event.data)
-      if (payload.event === 'notification') {
-        notificationStore.receiveNotification(payload.data)
+      if (typeof event.data !== 'string') return
+      let payload: unknown
+      try {
+        payload = JSON.parse(event.data)
+      } catch {
+        return
       }
-      if (payload.event === 'dm') {
+      if (!payload || typeof payload !== 'object') return
+      const message = payload as { event?: unknown; data?: unknown }
+      if (message.event === 'notification') {
+        notificationStore.receiveNotification(message.data as never)
+      }
+      const dmEvent = normalizeDMRealtimeEvent(message)
+      if (dmEvent) {
         const { useDMStore } = await import('@/stores/dm')
         const dmStore = useDMStore()
-        dmStore.receiveDM(payload.data)
-        if (dmStore.activeConversation === payload.data.sender_username) {
-          await dmStore.markRead(payload.data.sender_username)
+        dmStore.receiveEvent(dmEvent)
+        if (dmEvent.event === 'dm.message.created' && dmStore.activeConversationId === dmEvent.data.conversation.id) {
+          await dmStore.markRead()
         }
       }
     }

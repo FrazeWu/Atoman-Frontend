@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 import {
   blockConversation, getTargetConversation, listConversations, listMailboxes, listMessages, mailboxKey,
-  markConversationRead, reportDMMessage, sendInConversation, sendToTarget, unblockConversation, uploadDMImage,
+  markConversationRead, normalizeDMRealtimeEvent, reportDMMessage, sendInConversation, sendToTarget, unblockConversation, uploadDMImage,
   type DMConversation, type DMMailbox, type DMMessage, type DMRealtimeEvent, type DMTarget,
 } from '@/api/dm'
 
@@ -233,7 +233,9 @@ export const useDMStore = defineStore('dm', () => {
   const uploadImage = uploadDMImage
   const reportMessage = reportDMMessage
 
-  const receiveEvent = (event: DMRealtimeEvent) => {
+  const receiveEvent = (value: unknown) => {
+    const event = normalizeDMRealtimeEvent(value)
+    if (!event) return
     if (event.event === 'dm.message.created') {
       mergeMessages(event.data.message.conversation_id, [event.data.message])
       applyConversation(event.data.conversation)
@@ -264,7 +266,7 @@ export const useDMStore = defineStore('dm', () => {
 
   const fetchConversations = bootstrapDM
   const receiveDM = (payload: unknown) => {
-    if (payload && typeof payload === 'object' && 'event' in payload) receiveEvent(payload as DMRealtimeEvent)
+    receiveEvent(payload)
   }
 
   const resetStore = () => {

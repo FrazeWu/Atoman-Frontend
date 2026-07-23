@@ -6,7 +6,9 @@ const { state } = useMusicDrawers()
 const albumImport = computed(() => state.value.creationFlow?.draft.albumImport ?? null)
 const tracks = computed(() => state.value.creationFlow?.draft.tracks ?? [])
 const coverUrl = computed(() => albumImport.value?.coverUrl || albumImport.value?.derivedCover || '')
-const failedFiles = computed(() => (albumImport.value?.files ?? []).filter((file) => file.uploadStatus === 'failed'))
+const failedFiles = computed(() => (albumImport.value?.files ?? []).filter((file) => (
+  file.uploadStatus === 'failed' || file.processingStatus === 'failed'
+)))
 </script>
 
 <template>

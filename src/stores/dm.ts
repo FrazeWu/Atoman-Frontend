@@ -1,6 +1,7 @@
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useNotificationStore } from '@/stores/notification'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 import {
   blockConversation, getTargetConversation, listConversations, listMailboxes, listMessages, mailboxKey,
@@ -126,7 +127,7 @@ export const useDMStore = defineStore('dm', () => {
       mergeConversations(key, page.items)
       conversationCursorByMailbox.value = { ...conversationCursorByMailbox.value, [key]: page.next_cursor ?? null }
     } finally {
-      if (activeMailboxKey.value === key) loadingConversations.value = false
+      if (generation === requestGeneration.value && activeMailboxKey.value === key) loadingConversations.value = false
     }
   }
 
@@ -143,7 +144,7 @@ export const useDMStore = defineStore('dm', () => {
       mergeConversations(key, page.items, true)
       conversationCursorByMailbox.value = { ...conversationCursorByMailbox.value, [key]: page.next_cursor ?? null }
     } finally {
-      if (activeMailboxKey.value === key) loadingConversations.value = false
+      if (generation === requestGeneration.value && activeMailboxKey.value === key) loadingConversations.value = false
     }
   }
 
@@ -174,9 +175,10 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const openTarget = async (target: DMTarget) => {
+    const generation = ++requestGeneration.value
     activeTarget.value = target
     const conversation = await getTargetConversation(target)
-    if (activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return
+    if (generation !== requestGeneration.value || activeTarget.value?.type !== target.type || activeTarget.value.id !== target.id) return
     if (conversation) {
       applyConversation(conversation)
       await openConversation(conversation.id)
@@ -235,7 +237,9 @@ export const useDMStore = defineStore('dm', () => {
   const markRead = async () => {
     const conversationID = activeConversationId.value
     if (!conversationID) return
+    const generation = requestGeneration.value
     const result = await markConversationRead(conversationID)
+    if (generation !== requestGeneration.value || activeConversationId.value !== conversationID) return
     dmUnread.value = result.dm_unread
     notificationStore.setDMUnread(result.dm_unread)
     const conversation = conversationsById.value[conversationID]
@@ -297,6 +301,7 @@ export const useDMStore = defineStore('dm', () => {
     messagesByConversation.value = {}; conversationCursorByMailbox.value = {}; messageCursorByConversation.value = {}
     activeMailboxKey.value = ''; activeConversationId.value = ''; activeTarget.value = null; loadingConversations.value = false; loadingMessages.value = false; dmUnread.value = 0
   }
+  onScopeDispose(registerSessionReset(resetStore))
 
   return {
     mailboxesByKey, mailboxOrder, conversationsById, conversationIdsByMailbox, messagesByConversation,

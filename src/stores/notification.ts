@@ -1,4 +1,5 @@
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref } from 'vue'
+import { registerSessionReset } from '@/stores/sessionReset'
 import { defineStore } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
@@ -132,7 +133,7 @@ export const useNotificationStore = defineStore('notification', () => {
         total.value = data.meta?.total ?? data.total ?? 0
       }
     } finally {
-      loading.value = false
+      if (generation === requestGeneration && token === authStore.token) loading.value = false
     }
   }
 
@@ -212,6 +213,7 @@ export const useNotificationStore = defineStore('notification', () => {
     currentCategory.value = 'mention'
     currentTypes.value = []
   }
+  onScopeDispose(registerSessionReset(resetStore))
 
   return {
     unreadCount,

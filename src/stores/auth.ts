@@ -1,4 +1,5 @@
-import { defineStore, getActivePinia } from 'pinia'
+import { defineStore } from 'pinia'
+import { clearSessionStores } from '@/stores/sessionReset'
 import { ref } from 'vue'
 
 import { apiFetch, clearCSRFToken, setCSRFToken } from '@/api/transport'
@@ -90,9 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
   let restoreSessionInFlight: Promise<boolean> | null = null
 
   const clearDependentState = () => {
-    const stores = (getActivePinia() as unknown as { _s?: Map<string, { resetStore?: () => void }> } | undefined)?._s
-    stores?.get('dm')?.resetStore?.()
-    stores?.get('notification')?.resetStore?.()
+    clearSessionStores()
   }
 
   const applySession = (session: { csrfToken: string; user: User }) => {

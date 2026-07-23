@@ -1,9 +1,10 @@
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useApi } from '@/composables/useApi'
 import { normalizeDMRealtimeEvent } from '@/api/dm'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 export const useInboxStore = defineStore('inbox', () => {
   const authStore = useAuthStore()
@@ -62,6 +63,7 @@ export const useInboxStore = defineStore('inbox', () => {
       socket = null
     }
   }
+  onScopeDispose(registerSessionReset(disconnect))
 
   const connect = async () => {
     if (!authStore.token || socket) return

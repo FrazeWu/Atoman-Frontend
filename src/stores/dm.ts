@@ -203,6 +203,8 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const sendActiveMessage = async (content: string, imageID?: string) => {
+    const generation = requestGeneration.value
+    const target = activeTarget.value ? { ...activeTarget.value } : null
     if (activeConversationBlocked.value) throw new Error('当前会话无法发送消息')
     const conversationID = activeConversationId.value
     const input = {
@@ -214,6 +216,7 @@ export const useDMStore = defineStore('dm', () => {
       ? await sendInConversation(conversationID, input)
       : activeTarget.value ? await sendToTarget(activeTarget.value, input) : null
     if (!message) throw new Error('请先选择会话')
+    if (generation !== requestGeneration.value || (target && (activeTarget.value?.type !== target.type || activeTarget.value?.id !== target.id))) return message
     mergeMessages(message.conversation_id, [message])
     if (!conversationID && activeTarget.value) {
       const conversation = await getTargetConversation(activeTarget.value)
@@ -225,11 +228,13 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const sendLegacyMessage = async (conversation: string | DMConversation, content: string, imageID?: string) => {
+    const generation = requestGeneration.value
     const conversationID = conversationIDFor(conversation)
     if (!conversationID) throw new Error('请先选择会话')
     const message = await sendInConversation(conversationID, {
       client_message_id: crypto.randomUUID(), content, image_id: imageID ?? null,
     })
+    if (generation !== requestGeneration.value) return message
     mergeMessages(message.conversation_id, [message])
     return message
   }
@@ -250,11 +255,15 @@ export const useDMStore = defineStore('dm', () => {
 
   const blockActiveConversation = async () => {
     if (!activeConversation.value) return
-    applyConversation(await blockConversation(activeConversation.value.id, activeConversation.value.mailbox))
+    const generation = requestGeneration.value; const conversation = activeConversation.value
+    const result = await blockConversation(conversation.id, conversation.mailbox)
+    if (generation === requestGeneration.value && activeConversationId.value === conversation.id) applyConversation(result)
   }
   const unblockActiveConversation = async () => {
     if (!activeConversation.value) return
-    applyConversation(await unblockConversation(activeConversation.value.id, activeConversation.value.mailbox))
+    const generation = requestGeneration.value; const conversation = activeConversation.value
+    const result = await unblockConversation(conversation.id, conversation.mailbox)
+    if (generation === requestGeneration.value && activeConversationId.value === conversation.id) applyConversation(result)
   }
   const uploadImage = uploadDMImage
   const reportMessage = reportDMMessage

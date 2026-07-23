@@ -8,12 +8,13 @@ vi.mock('@/api/dm', async (importOriginal) => {
     getTargetConversation: vi.fn(),
     listMessages: vi.fn(),
     markConversationRead: vi.fn(),
+    sendInConversation: vi.fn(),
     sendToTarget: vi.fn(),
   }
 })
 
 import { useDMStore } from '@/stores/dm'
-import { getTargetConversation, listMessages, markConversationRead, sendToTarget } from '@/api/dm'
+import { getTargetConversation, listMessages, markConversationRead, sendInConversation, sendToTarget } from '@/api/dm'
 import { useNotificationStore } from '@/stores/notification'
 import type { DMConversation, DMMailbox, DMMessage } from '@/api/dm'
 
@@ -153,11 +154,24 @@ describe('dm store', () => {
     const store = useDMStore()
 
     await store.openTarget({ type: 'user', id: 'new-user' })
-    await store.sendMessage('hello')
+    await store.sendActiveMessage('hello')
 
     expect(sendToTarget).toHaveBeenCalledWith({ type: 'user', id: 'new-user' }, expect.objectContaining({ content: 'hello' }))
     expect(store.activeConversationId).toBe('conversation-new')
     expect(store.activeMessages.map((message) => message.id)).toEqual(['message-1'])
+  })
+
+  it('never treats active message content as a legacy conversation reference', async () => {
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox], conversationsByMailbox: { 'user:me': [makeConversation('hello'), makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1', activeMessages: [],
+    })
+    vi.mocked(sendInConversation).mockResolvedValue(makeMessage('message-1', 'conversation-1', '2026-07-23T00:00:00Z'))
+
+    await store.sendActiveMessage('hello')
+
+    expect(sendInConversation).toHaveBeenCalledWith('conversation-1', expect.objectContaining({ content: 'hello' }))
   })
 
   it('syncs mark-read results to the unified notification count', async () => {

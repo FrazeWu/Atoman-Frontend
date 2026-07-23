@@ -196,14 +196,13 @@ export const useDMStore = defineStore('dm', () => {
     }
   }
 
-  const sendMessage = async (contentOrConversation: string | DMConversation, contentOrImageID?: string, legacyImageID?: string) => {
+  const sendActiveMessage = async (content: string, imageID?: string) => {
     if (activeConversationBlocked.value) throw new Error('当前会话无法发送消息')
-    const legacyCall = legacyImageID !== undefined || typeof contentOrConversation !== 'string' || Boolean(conversationIDFor(contentOrConversation))
-    const conversationID = legacyCall ? conversationIDFor(contentOrConversation) : activeConversationId.value
+    const conversationID = activeConversationId.value
     const input = {
       client_message_id: crypto.randomUUID(),
-      content: legacyCall ? contentOrImageID ?? '' : contentOrConversation,
-      image_id: legacyCall ? legacyImageID || null : contentOrImageID ?? null,
+      content,
+      image_id: imageID ?? null,
     }
     const message = conversationID
       ? await sendInConversation(conversationID, input)
@@ -216,6 +215,16 @@ export const useDMStore = defineStore('dm', () => {
       activeConversationId.value = message.conversation_id
       activeTarget.value = null
     }
+    return message
+  }
+
+  const sendLegacyMessage = async (conversation: string | DMConversation, content: string, imageID?: string) => {
+    const conversationID = conversationIDFor(conversation)
+    if (!conversationID) throw new Error('请先选择会话')
+    const message = await sendInConversation(conversationID, {
+      client_message_id: crypto.randomUUID(), content, image_id: imageID ?? null,
+    })
+    mergeMessages(message.conversation_id, [message])
     return message
   }
 
@@ -290,7 +299,7 @@ export const useDMStore = defineStore('dm', () => {
     conversationCursorByMailbox, messageCursorByConversation, activeMailboxKey, activeConversationId, activeTarget,
     loadingConversations, loadingMessages, requestGeneration, dmUnread, activeMailbox, activeConversation,
     activeMessages, canLoadOlderMessages, activeConversationBlocked, replyAsLabel, mergeMessages, bootstrapDM,
-    selectMailbox, loadMoreConversations, openTarget, openConversation, loadOlderMessages, sendMessage, markRead,
+    selectMailbox, loadMoreConversations, openTarget, openConversation, loadOlderMessages, sendActiveMessage, sendLegacyMessage, markRead,
     blockActiveConversation, unblockActiveConversation, uploadImage, reportMessage, reconcileFromServer, receiveEvent,
     reconcile, resetStore,
     conversations, messages, loading, fetchConversations, receiveDM,

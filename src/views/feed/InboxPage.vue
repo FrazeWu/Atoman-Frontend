@@ -262,7 +262,7 @@ const submitDM = async () => {
   dmSending.value = true
   dmError.value = ''
   try {
-    await dmStore.sendMessage(dmContent.value.trim(), dmImage.value?.id)
+    await dmStore.sendActiveMessage(dmContent.value.trim(), dmImage.value?.id)
     dmContent.value = ''
     dmImage.value = null
   } catch (error) {

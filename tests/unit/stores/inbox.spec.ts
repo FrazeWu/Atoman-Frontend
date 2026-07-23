@@ -114,4 +114,25 @@ describe('inbox store', () => {
     expect(refresh).toHaveBeenCalled()
     vi.useRealTimers()
   })
+
+  it('reconnects after socket errors and falls back to polling when reconciliation fails', async () => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+    const dm = useDMStore()
+    vi.spyOn(dm, 'reconcileFromServer').mockRejectedValue(new Error('offline'))
+    const inbox = useInboxStore()
+
+    await inbox.connect()
+    FakeWebSocket.instances[0].onerror?.()
+    await vi.advanceTimersByTimeAsync(1000)
+    await FakeWebSocket.instances[1].onopen?.()
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(FakeWebSocket.instances).toHaveLength(2)
+    expect(inbox.polling).toBe(true)
+    vi.useRealTimers()
+  })
 })

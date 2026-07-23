@@ -73,12 +73,14 @@ export const useInboxStore = defineStore('inbox', () => {
       : `${protocol}//${window.location.host}`
     socket = new WebSocket(`${host}/ws/user`)
 
-    socket.onopen = async () => {
+    socket.onopen = () => {
       connected.value = true
       reconnectAttempt = 0
       stopPolling()
-      const { useDMStore } = await import('@/stores/dm')
-      await Promise.all([useDMStore().reconcileFromServer(), notificationStore.fetchUnreadCounts()])
+      void (async () => {
+        const { useDMStore } = await import('@/stores/dm')
+        await Promise.all([useDMStore().reconcileFromServer(), notificationStore.fetchUnreadCounts()])
+      })().catch(() => startPolling())
     }
     socket.onclose = () => {
       connected.value = false
@@ -88,7 +90,11 @@ export const useInboxStore = defineStore('inbox', () => {
     }
     socket.onerror = () => {
       connected.value = false
+      const failedSocket = socket
+      socket = null
+      failedSocket?.close()
       startPolling()
+      scheduleReconnect()
     }
     socket.onmessage = async (event) => {
       if (typeof event.data !== 'string') return

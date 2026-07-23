@@ -228,6 +228,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
+import { apiFetch } from '@/api/transport'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -395,14 +396,7 @@ async function addPodcastBookmark() {
     return
   }
   try {
-    const res = await fetch(api.podcast.bookmarks, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify({ episode_id: episodeId }),
-    })
+    const res = await postPodcastEpisode(episodeId)
     if (!res.ok) throw new Error('bookmark failed')
     toastMessage.value = '已收藏'
     toastVisible.value = true
@@ -422,14 +416,7 @@ async function addPodcastListenLater() {
     return
   }
   try {
-    const res = await fetch(api.podcast.bookmarks, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify({ episode_id: episodeId }),
-    })
+    const res = await postPodcastEpisode(episodeId)
     if (!res.ok) throw new Error('listen later failed')
     toastMessage.value = '已加入稍后听'
     toastVisible.value = true
@@ -438,6 +425,19 @@ async function addPodcastListenLater() {
     toastMessage.value = '操作失败'
     toastVisible.value = true
   }
+}
+
+function postPodcastEpisode(episodeId: string) {
+  const init: RequestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ episode_id: episodeId }),
+  }
+  if (authStore.token === 'cookie-session') return apiFetch(api.podcast.bookmarks, init)
+  return fetch(api.podcast.bookmarks, {
+    ...init,
+    headers: { ...init.headers, Authorization: `Bearer ${authStore.token}` },
+  })
 }
 
 async function addTrackToPlaylist(playlistId: string, songId: string) {

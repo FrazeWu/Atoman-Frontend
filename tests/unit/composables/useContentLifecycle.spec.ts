@@ -21,6 +21,20 @@ describe('content lifecycle client', () => {
     }))
   })
 
+  it('uses the cookie-aware transport without a bearer placeholder for cookie sessions', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { recorded: true } }), { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const client = createContentLifecycleClient({ baseUrl: '/api/v1/content', token: () => 'cookie-session' })
+
+    await client.recordEvent({ module: 'podcast', content_id: 'episode-1', event: 'open' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/content/events', expect.objectContaining({
+      method: 'POST',
+      credentials: 'include',
+      headers: expect.not.objectContaining({ Authorization: expect.any(String) }),
+    }))
+  })
+
   it('loads module continue items and schedules publication', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify({
       data: String(input).includes('/continue') ? [{ content_id: 'post-1', module: 'blog', title: '继续读' }] : { status: 'scheduled' },

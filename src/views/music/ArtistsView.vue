@@ -303,7 +303,7 @@ function handleSearchBlur() {
               </template>
             </SearchSurface>
           </div>
-          <button class="ui-action search-side-action" type="button" @click="openMusicCreationFlow()">
+          <button class="ui-action search-side-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
             <span class="action-indicator" aria-hidden="true" />
             添加艺术家
           </button>
@@ -328,7 +328,7 @@ function handleSearchBlur() {
             class="ui-action"
             type="button"
             data-testid="empty-add-artist"
-            @click="openMusicCreationFlow()"
+            @click="openMusicCreationFlow({ startStep: 'artist' })"
           >
             <span class="action-indicator" aria-hidden="true" />
             添加艺术家

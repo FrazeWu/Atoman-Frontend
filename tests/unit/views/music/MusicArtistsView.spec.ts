@@ -214,7 +214,7 @@ describe('Music ArtistsView.vue', () => {
     await wrapper.find('[data-testid="empty-add-artist"]').trigger('click')
 
     expect(mocks.openMusicCreationFlow).toHaveBeenCalledTimes(1)
-    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith()
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({ startStep: 'artist' })
   })
 
   it('keeps artist recommendations visible when bookmarks require login', async () => {

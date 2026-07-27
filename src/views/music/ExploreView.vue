@@ -34,7 +34,7 @@ const props = withDefaults(defineProps<{
 })
 
 const router = useRouter()
-const { openAlbum, openArtist } = useMusicDrawers()
+const { openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const loading = ref(false)
 const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
@@ -403,6 +403,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             </template>
           </SearchSurface>
         </div>
+        <button
+          v-if="contentMode === 'albums'"
+          type="button"
+          class="ui-action search-side-action"
+          data-testid="add-album"
+          @click="openMusicCreationFlow()"
+        >
+          <span class="action-indicator" aria-hidden="true" />
+          添加专辑
+        </button>
       </div>
     </div>
 
@@ -534,6 +544,27 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   flex: 0 1 28rem;
   height: 36px;
 }
+
+.ui-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--a-color-text) 16%, transparent);
+  border-radius: 4px;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.search-side-action { white-space: nowrap; }
+.action-indicator { width: 0.45rem; height: 0.45rem; border-radius: 4px; background: color-mix(in srgb, var(--a-color-text) 72%, transparent); flex-shrink: 0; }
 
 .search-shell.is-open {
   z-index: 15;
@@ -719,6 +750,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     flex-direction: column;
     align-items: stretch;
   }
+
+  .toolbar-left { flex-wrap: wrap; }
 
   .search-shell,
   .search-shell.is-open {

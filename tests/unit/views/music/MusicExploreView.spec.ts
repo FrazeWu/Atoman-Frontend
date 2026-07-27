@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openPlaylist: vi.fn(),
+  openMusicCreationFlow: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -55,6 +56,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     openAlbum: mocks.openAlbum,
     openArtist: mocks.openArtist,
     openPlaylist: mocks.openPlaylist,
+    openMusicCreationFlow: mocks.openMusicCreationFlow,
   }),
 }))
 
@@ -78,6 +80,7 @@ describe('Music ExploreView.vue', () => {
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
+    mocks.openMusicCreationFlow.mockReset()
 
     mocks.listMusicDiscoverFeed.mockResolvedValue({
       data: [
@@ -225,6 +228,20 @@ describe('Music ExploreView.vue', () => {
     expect(wrapper.findAll('[data-testid="discover-playlist-card"]')).toHaveLength(0)
     expect(wrapper.text()).toContain('2049')
     expect(wrapper.text()).not.toContain('Late Night Mix')
+  })
+
+  it('opens the album creation flow from the album landing page', async () => {
+    const wrapper = mount(ExploreView, {
+      props: {
+        pageTitle: '专辑',
+        contentMode: 'albums',
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="add-album"]').trigger('click')
+
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith()
   })
 
   it('shows album and artist groups in search dropdown', async () => {

@@ -26,7 +26,7 @@ const searchQuery = ref('')
 const bookmarkedIds = ref<string[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
-const { isMainShifted, openAlbum, openMusicCreationFlow } = useMusicDrawers()
+const { isMainShifted, openAlbum } = useMusicDrawers()
 
 async function fetchAlbums() {
   loading.value = true
@@ -80,15 +80,6 @@ onMounted(fetchAlbums)
               placeholder="搜索专辑..."
             />
           </div>
-          <button
-            type="button"
-            class="ui-action search-side-action"
-            data-testid="add-album"
-            @click="openMusicCreationFlow()"
-          >
-            <span class="action-indicator" aria-hidden="true" />
-            添加专辑
-          </button>
         </div>
         <div class="toolbar-right">
           <PSegmentedControl v-model="mode" :options="MUSIC_BROWSE_MODE_OPTIONS" aria-label="专辑排序" />
@@ -126,16 +117,14 @@ onMounted(fetchAlbums)
 .main-level-1 { display: flex; flex-direction: column; gap: 1.5rem; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s; }
 .main-level-1.is-shifted { pointer-events: none; }
 .toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.toolbar-left { display: flex; align-items: center; gap: 1rem; min-width: 0; flex: 1 1 auto; }
+.toolbar-left { min-width: 0; flex: 1 1 auto; }
 .toolbar-right { display: flex; align-items: center; flex: 0 0 auto; }
 .search-shell { width: min(28rem, 100%); min-height: 36px; }
-.action-indicator { width: 0.45rem; height: 0.45rem; border-radius: 4px; background: color-mix(in srgb, var(--a-color-text) 72%, transparent); flex-shrink: 0; }
 .music-card-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem; }
 .music-card-skeleton { aspect-ratio: 1; }
 @media (max-width: 1100px) { .music-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
   .toolbar-row { flex-direction: column; align-items: stretch; }
-  .toolbar-left { flex-wrap: wrap; }
   .toolbar-right { align-items: stretch; }
   .search-shell { width: 100%; }
   .music-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 0.75rem; }

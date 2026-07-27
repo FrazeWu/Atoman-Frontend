@@ -145,21 +145,21 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button--sm {
-  min-height: 32px;
-  padding: 0 14px;
-  font-size: 10px;
+  min-height: 28px;
+  padding: 0 12px;
+  font-size: 11px;
 }
 
 .p-button--md {
-  min-height: 40px;
-  padding: 0 20px;
-  font-size: 12px;
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
 }
 
 .p-button--lg {
-  min-height: 48px;
-  padding: 0 26px;
-  font-size: 13px;
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 15px;
 }
 
 .p-button--primary {
@@ -224,13 +224,13 @@ const handleClick = (event: MouseEvent) => {
 }
 
 @media (max-width: 767px) {
-  .p-button--sm,
-  .p-button--md {
-    min-height: 44px;
+  .p-button--sm {
+    min-height: 36px;
+    font-size: 12px;
   }
 
-  .p-button--sm {
-    font-size: 12px;
+  .p-button--md {
+    min-height: 40px;
   }
 }
 </style>

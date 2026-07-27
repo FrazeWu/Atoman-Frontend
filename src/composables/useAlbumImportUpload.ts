@@ -23,6 +23,7 @@ const uploading = ref(false)
 const errorMessage = ref('')
 const fileProgress = ref<Map<string, number>>(new Map())
 let pollTimer: ReturnType<typeof setTimeout> | null = null
+let uploadStartedAt = 0
 
 const FILE_PART_SIZE = 10 * 1024 * 1024 // 10MB
 const selectedFiles = new Map<string, File>()
@@ -91,7 +92,7 @@ export function useAlbumImportUpload() {
     }
   }
 
-  async function uploadSingleFileMultipart(importId: string, file: File, fileId: string): Promise<MusicAlbumImport> {
+  async function uploadSingleFileMultipart(importId: string, file: File, fileId: string): Promise<void> {
     const totalParts = Math.ceil(file.size / FILE_PART_SIZE)
     for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
       const start = (partNumber - 1) * FILE_PART_SIZE
@@ -117,11 +118,12 @@ export function useAlbumImportUpload() {
       
       if (albumImportDraft.value) {
         albumImportDraft.value.totalBytesLoaded += partSize
+        const elapsedSeconds = Math.max((Date.now() - uploadStartedAt) / 1000, 0.001)
+        albumImportDraft.value.uploadSpeed = albumImportDraft.value.totalBytesLoaded / elapsedSeconds
       }
     }
-    const snapshot = await completeMusicAlbumImportFile(importId, fileId)
+    await completeMusicAlbumImportFile(importId, fileId)
     fileProgress.value = new Map(fileProgress.value).set(fileId, 100)
-    return snapshot
   }
 
   async function completeSessionWhenFilesUploaded(importId: string, snapshot: MusicAlbumImport) {
@@ -155,6 +157,8 @@ export function useAlbumImportUpload() {
     draft.inputMode = autoMode
     draft.totalBytesLoaded = 0
     draft.totalBytesTotal = files.reduce((sum, f) => sum + f.size, 0)
+    draft.uploadSpeed = 0
+    uploadStartedAt = Date.now()
 
     try {
       const session = await createMusicAlbumImport({
@@ -227,8 +231,8 @@ export function useAlbumImportUpload() {
       applyImportSnapshot(snapshot)
       const file = selectedFiles.get(fileId)
       if (file) {
-        const completed = await uploadSingleFileMultipart(draft.importId, file, fileId)
-        await completeSessionWhenFilesUploaded(draft.importId, completed)
+        await uploadSingleFileMultipart(draft.importId, file, fileId)
+        await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
       }
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '重试失败'
@@ -247,8 +251,8 @@ export function useAlbumImportUpload() {
       })
       applyImportSnapshot(snapshot)
       selectedFiles.set(fileId, file)
-      const completed = await uploadSingleFileMultipart(draft.importId, file, fileId)
-      await completeSessionWhenFilesUploaded(draft.importId, completed)
+      await uploadSingleFileMultipart(draft.importId, file, fileId)
+      await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '替换失败'
     }
@@ -266,8 +270,8 @@ export function useAlbumImportUpload() {
     const draft = albumImportDraft.value
     if (!draft?.importId) return
     try {
-      const snapshot = await deleteMusicAlbumImportFile(draft.importId, fileId)
-      draft.files = snapshot.files ?? draft.files.filter((f) => f.fileId !== fileId)
+      await deleteMusicAlbumImportFile(draft.importId, fileId)
+      draft.files = draft.files.filter((f) => f.fileId !== fileId)
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '移除失败'
     }

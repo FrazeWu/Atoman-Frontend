@@ -146,7 +146,12 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     vi.spyOn(musicApi, 'retryMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [fileRecord] }))
     vi.spyOn(musicApi, 'replaceMusicAlbumImportFile').mockResolvedValue(snapshot({ status: 'uploading', files: [{ ...fileRecord, fileName: 'fixed.mp3', relativePath: 'fixed.mp3' }] }))
     mockUploadTransport()
-    vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue(snapshot({
+    vi.mocked(musicApi.completeMusicAlbumImportFile).mockResolvedValue({
+      ...fileRecord,
+      uploadStatus: 'uploaded',
+      processingStatus: 'pending',
+    })
+    vi.spyOn(musicApi, 'getMusicAlbumImport').mockResolvedValue(snapshot({
       status: 'uploaded',
       files: [{ ...fileRecord, uploadStatus: 'uploaded', processingStatus: 'pending' }],
     }))

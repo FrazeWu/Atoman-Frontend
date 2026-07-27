@@ -476,33 +476,11 @@ watch(
       </div>
 
       <div class="field-group" data-testid="album-details-field" data-field="date">
-        <span class="field-label">{{ requiredLabel('日期') }}</span>
-        <div class="date-parts-grid">
-          <PInput
-            v-model="albumDetailsDraft.releaseDateParts.year"
-            data-testid="album-details-date-year-input"
-            type="text"
-            inputmode="numeric"
-            placeholder="年"
-            label="年份"
-          />
-          <PInput
-            v-model="albumDetailsDraft.releaseDateParts.month"
-            data-testid="album-details-date-month-input"
-            type="text"
-            inputmode="numeric"
-            placeholder="月"
-            label="月份"
-          />
-          <PInput
-            v-model="albumDetailsDraft.releaseDateParts.day"
-            data-testid="album-details-date-day-input"
-            type="text"
-            inputmode="numeric"
-            placeholder="日"
-            label="日期"
-          />
-        </div>
+        <PMaskedDateInput
+          v-model="albumDetailsDraft.releaseDateParts"
+          :label="requiredLabel('日期')"
+          testId="album-details-date-input"
+        />
       </div>
 
       <div class="field-group" data-testid="album-details-field" data-field="type">

@@ -191,6 +191,10 @@ describe('MusicCreationFlowDrawer', () => {
     drawerMocks.state.value.creationFlow = createFlowState({
       draft: {
         ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Imported Album',
+        },
         albumImport: {
           ...createFlowState().draft.albumImport,
           status: 'ready',
@@ -224,6 +228,10 @@ describe('MusicCreationFlowDrawer', () => {
       step: 'preview',
       draft: {
         ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Imported Album',
+        },
         albumImport: {
           ...createFlowState().draft.albumImport,
           importId: 'import-1',
@@ -260,12 +268,13 @@ describe('MusicCreationFlowDrawer', () => {
         },
       ],
       album: {
-        title: '',
+        title: 'Imported Album',
         release_year: 0,
         tracks: [],
       },
     })
-    expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
+    expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
+    expect(drawerMocks.state.value.creationFlow).not.toBeNull()
   })
 
   it('详情完成后进入独立预览步骤，预览展示导入结果并提交', async () => {
@@ -274,6 +283,10 @@ describe('MusicCreationFlowDrawer', () => {
       step: 'albumDetails',
       draft: {
         ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Preview Album',
+        },
         albumImport: {
           ...createFlowState().draft.albumImport,
           importId: 'import-1',
@@ -300,13 +313,17 @@ describe('MusicCreationFlowDrawer', () => {
   })
 
   it.each(['uploading', 'extracting'] as const)(
-    '%s 状态点击完成不会提交专辑导入',
+    '%s 状态允许在预览页提交专辑导入，并保持抽屉打开',
     async (status) => {
       commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
       drawerMocks.state.value.creationFlow = createFlowState({
         step: 'preview',
         draft: {
           ...createFlowState().draft,
+          albumDetails: {
+            ...createFlowState().draft.albumDetails,
+            title: 'Background Upload Album',
+          },
           albumImport: {
             ...createFlowState().draft.albumImport,
             importId: 'import-1',
@@ -318,12 +335,12 @@ describe('MusicCreationFlowDrawer', () => {
       const wrapper = mount(MusicCreationFlowDrawer)
       const finishButton = wrapper.get('[data-testid="music-creation-finish-button"]')
 
-      expect(finishButton.attributes('disabled')).toBeDefined()
+      expect(finishButton.attributes('disabled')).toBeUndefined()
 
       await finishButton.trigger('click')
       await flushPromises()
 
-      expect(commitMusicAlbumImportMock).not.toHaveBeenCalled()
+      expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
       expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
     },
   )
@@ -334,6 +351,10 @@ describe('MusicCreationFlowDrawer', () => {
       step: 'preview',
       draft: {
         ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'You Will Never Know Why',
+        },
         artist: {
           ...createFlowState().draft.artist,
           id: 'artist-existing',
@@ -416,6 +437,10 @@ describe('MusicCreationFlowDrawer', () => {
       step: 'preview',
       draft: {
         ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Failure Album',
+        },
         albumImport: {
           ...createFlowState().draft.albumImport,
           importId: 'import-1',
@@ -540,6 +565,7 @@ describe('MusicCreationFlowDrawer', () => {
         },
         albumDetails: {
           ...createFlowState().draft.albumDetails,
+          title: 'You Will Never Know Why',
           contributors: [
             {
               id: 'contributor-new-artist',
@@ -665,6 +691,10 @@ describe('MusicCreationFlowDrawer', () => {
       step: 'preview',
       draft: {
         ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Failure Album',
+        },
         albumImport: {
           ...createFlowState().draft.albumImport,
           importId: 'import-1',

@@ -1075,18 +1075,18 @@ export async function completeMusicAlbumImportFilePart(
   partNumber: number,
   etag: string,
   size: number,
-): Promise<MusicAlbumImport> {
-  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(
+): Promise<MusicAlbumImportFile> {
+  return apiPostJson<MusicAlbumImportFile>(
     musicV1Endpoints.albumImportFilePartComplete(importId, fileId, partNumber),
     { etag, size },
-  ))
+  )
 }
 
 export async function completeMusicAlbumImportFile(
   importId: string,
   fileId: string,
-): Promise<MusicAlbumImport> {
-  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileComplete(importId, fileId), {}))
+): Promise<MusicAlbumImportFile> {
+  return apiPostJson<MusicAlbumImportFile>(musicV1Endpoints.albumImportFileComplete(importId, fileId), {})
 }
 
 export async function retryMusicAlbumImportFile(
@@ -1110,8 +1110,8 @@ export async function replaceMusicAlbumImportFile(
 export async function deleteMusicAlbumImportFile(
   importId: string,
   fileId: string,
-): Promise<MusicAlbumImport> {
-  return normalizeMusicAlbumImport(await apiDeleteJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileDelete(importId, fileId)))
+): Promise<void> {
+  await apiDeleteJson<void>(musicV1Endpoints.albumImportFileDelete(importId, fileId))
 }
 
 export async function completeMusicAlbumImportSession(importId: string): Promise<MusicAlbumImport> {

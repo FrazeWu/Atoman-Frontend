@@ -242,7 +242,7 @@ export function useMusicDrawers() {
 
   const openMusicCreationFlow = (seed: MusicCreationFlowSeed = {}) => {
     state.value.creationFlow = {
-      step: seed.startStep ?? 'artist',
+      step: seed.startStep ?? 'albumImport',
       draft: createEmptyDraft(seed),
       tracksCustomized: false,
       titleCustomized: false,

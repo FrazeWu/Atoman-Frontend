@@ -9,10 +9,24 @@ const coverUrl = computed(() => albumImport.value?.coverUrl || albumImport.value
 const failedFiles = computed(() => (albumImport.value?.files ?? []).filter((file) => (
   file.uploadStatus === 'failed' || file.processingStatus === 'failed'
 )))
+const uploadProgress = computed(() => {
+  const total = albumImport.value?.totalBytesTotal ?? 0
+  const loaded = albumImport.value?.totalBytesLoaded ?? 0
+  return total > 0 ? Math.round((loaded / total) * 100) : 0
+})
+const uploadSpeed = computed(() => Math.round((albumImport.value?.uploadSpeed ?? 0) / 1024))
+const stageLabel = computed(() => ({
+  upload: '上传中', queued: '等待处理', extracting: '解压中', analyzing: '分析中', transcoding: '转码中', ready: '已就绪', completed: '已完成',
+}[albumImport.value?.stage ?? 'upload'] ?? '处理中'))
 </script>
 
 <template>
   <section v-if="albumImport" class="album-preview-step" data-testid="album-import-preview-step">
+    <section class="album-preview-step__status" data-testid="album-import-preview-status">
+      <strong>{{ stageLabel }}</strong>
+      <span v-if="albumImport.totalBytesTotal > 0">上传进度 {{ uploadProgress }}%</span>
+      <span v-if="albumImport.totalBytesTotal > 0">{{ uploadSpeed }} KB/s</span>
+    </section>
     <div v-if="coverUrl" class="album-preview-step__cover">
       <img :src="coverUrl" alt="专辑封面预览" />
     </div>
@@ -38,6 +52,7 @@ const failedFiles = computed(() => (albumImport.value?.files ?? []).filter((file
 
 <style scoped>
 .album-preview-step { display: grid; gap: 1.25rem; }
+.album-preview-step__status { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; font-size: 0.88rem; }
 .album-preview-step__cover img { display: block; width: min(100%, 16rem); aspect-ratio: 1; object-fit: cover; }
 .album-preview-step__section { display: grid; gap: 0.5rem; }
 .album-preview-step__section h4, .album-preview-step__section p { margin: 0; }

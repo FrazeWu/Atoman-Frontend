@@ -3,19 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
-  createMusicAlbumImport,
   listMusicArtists,
-  uploadMusicAlbumArchiveMultipart,
   uploadMusicAsset,
-  validateMusicAlbumArchiveFile,
 } from '@/api/musicV1'
 
 vi.mock('@/api/musicV1', () => ({
   uploadMusicAsset: vi.fn(),
-  createMusicAlbumImport: vi.fn(),
   listMusicArtists: vi.fn(),
-  uploadMusicAlbumArchiveMultipart: vi.fn(),
-  validateMusicAlbumArchiveFile: vi.fn(),
+  SUPPORTED_ARCHIVE_ACCEPT: '.zip,.rar,.7z',
+  SUPPORTED_AUDIO_ACCEPT: '.mp3,.flac,.wav',
 }))
 
 vi.mock('@/components/music/MusicSquareImageCropSheet.vue', () => ({
@@ -36,10 +32,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     const drawers = useMusicDrawers()
     drawers.closeAll()
     vi.mocked(uploadMusicAsset).mockReset()
-    vi.mocked(createMusicAlbumImport).mockReset()
     vi.mocked(listMusicArtists).mockReset()
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockReset()
-    vi.mocked(validateMusicAlbumArchiveFile).mockReset()
   })
 
   it('renders album details fields in the confirmed order and shows seeded draft values', () => {
@@ -84,9 +77,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
       '3 详细信息',
     ])
     expect(wrapper.get('[data-testid="album-details-title-input"]').element).toHaveValue('Late Registration')
-    expect(wrapper.get('[data-testid="album-details-date-year-input"]').element).toHaveValue('2005')
-    expect(wrapper.get('[data-testid="album-details-date-month-input"]').element).toHaveValue('08')
-    expect(wrapper.get('[data-testid="album-details-date-day-input"]').element).toHaveValue('30')
+    expect(wrapper.get('[data-testid="album-details-date-input"]').element).toHaveValue('2005/08/30')
     expect(wrapper.get('[data-testid="album-details-type-input"]').element).toHaveValue('album')
     expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveValue('second studio album')
     expect(wrapper.get('[data-testid="album-details-source-input"]').element).toHaveValue('https://en.wikipedia.org/wiki/Late_Registration')
@@ -100,7 +91,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     const wrapper = mount(MusicCreationAlbumDetailsStep)
 
-    expect(wrapper.text()).toContain('专辑压缩包*')
+    expect(wrapper.text()).toContain('上传专辑')
     expect(wrapper.text()).toContain('封面*')
     expect(wrapper.text()).toContain('名字*')
     expect(wrapper.text()).toContain('日期*')
@@ -198,13 +189,11 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     const wrapper = mount(MusicCreationAlbumDetailsStep)
 
-    await wrapper.get('[data-testid="album-details-date-year-input"]').setValue('2005')
-    await wrapper.get('[data-testid="album-details-date-month-input"]').setValue('8')
-    await wrapper.get('[data-testid="album-details-date-day-input"]').setValue('30')
+    await wrapper.get('[data-testid="album-details-date-input"]').setValue('2005/08/30')
 
     expect(flow.draft.albumDetails.releaseDateParts).toEqual({
       year: '2005',
-      month: '8',
+      month: '08',
       day: '30',
     })
     expect(flow.draft.albumDetails.releaseDate).toBe('2005-08-30')
@@ -229,7 +218,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     const wrapper = mount(MusicCreationAlbumDetailsStep)
 
-    expect(wrapper.get('[data-testid="album-details-date-year-input"]').element).toHaveValue('2007')
+    expect(wrapper.get('[data-testid="album-details-date-input"]').attributes('placeholder')).toBe('yyyy/mm/dd')
     expect(flow.draft.albumDetails.releaseDateParts).toEqual({
       year: '2007',
       month: '',
@@ -347,311 +336,6 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(flow.draft.tracks.map((track) => track.sequence)).toEqual([1, 2, 3])
   })
 
-  it('does not overwrite customized tracks when a new ready import snapshot arrives', async () => {
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Imported Album',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [
-        { title: 'Imported A', audioKey: 'audio-a', origin: 'import' },
-        { title: 'Imported B', audioKey: 'audio-b', origin: 'import' },
-      ],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    flow.tracksCustomized = true
-    flow.draft.tracks = [
-      { id: 'manual-1', sequence: 1, title: 'Manual Intro' },
-      { id: 'manual-2', sequence: 2, title: 'Manual Outro' },
-    ]
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(flow.draft.albumDetails.title).toBe('Imported Album')
-    expect(flow.draft.tracks).toEqual([
-      { id: 'manual-1', sequence: 1, title: 'Manual Intro' },
-      { id: 'manual-2', sequence: 2, title: 'Manual Outro' },
-    ])
-  })
-
-  it('does not overwrite manually edited track titles when a new ready import snapshot arrives', async () => {
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Imported Album',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [
-        { title: 'Imported A', audioKey: 'audio-a', origin: 'import' },
-        { title: 'Imported B', audioKey: 'audio-b', origin: 'import' },
-      ],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    flow.draft.tracks = [
-      { id: 'track-1', sequence: 1, title: 'Original A' },
-      { id: 'track-2', sequence: 2, title: 'Original B' },
-    ]
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    await wrapper.findAll('[data-testid="album-track-title-input"]')[0].setValue('Manual Intro')
-
-    expect(flow.tracksCustomized).toBe(true)
-
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(flow.draft.tracks).toEqual([
-      { id: 'track-1', sequence: 1, title: 'Manual Intro' },
-      { id: 'track-2', sequence: 2, title: 'Original B' },
-    ])
-  })
-
-  it('does not apply imported cover as final cover before crop confirmation', async () => {
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Imported Album',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(flow.draft.albumDetails.coverUrl).toBe('')
-    expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(true)
-  })
-
-  it('does not let imported cover overwrite a manually confirmed final cover', async () => {
-    vi.mocked(uploadMusicAsset).mockResolvedValue({
-      key: 'music/manual-cover.png',
-      url: 'https://img.example/manual-cover.png',
-    })
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Imported Album',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const manualInput = wrapper.get('[data-testid="album-details-cover-input"]').element as HTMLInputElement
-    const manualFile = new File(['manual'], 'manual.png', { type: 'image/png' })
-    Object.defineProperty(manualInput, 'files', {
-      configurable: true,
-      value: [manualFile],
-    })
-
-    await wrapper.get('[data-testid="album-details-cover-input"]').trigger('change')
-    await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger('click')
-    await flushPromises()
-
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(flow.draft.albumDetails.coverUrl).toBe('https://img.example/manual-cover.png')
-    expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(true)
-  })
-
-  it('does not overwrite a manually edited title when a new ready import snapshot arrives', async () => {
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Imported Album',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    flow.draft.albumDetails.title = 'Manual Title'
-    flow.titleCustomized = true
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(flow.draft.albumDetails.title).toBe('Manual Title')
-  })
-
   it('renders a minimal non-dead-end footer with back, finish, and close affordances', async () => {
     const drawers = useMusicDrawers()
     drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
@@ -694,7 +378,6 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     const wrapper = mount(MusicCreationAlbumDetailsStep)
 
-    expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('上传中')
     expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('graduation.zip')
     expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('上传进度 37%')
     expect(wrapper.get('[data-testid="album-import-status"]').text()).toContain('128 KB/s')
@@ -738,204 +421,24 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
   })
 
-  it('requires square crop confirmation before applying imported cover preview', async () => {
-    vi.mocked(uploadMusicAsset).mockResolvedValue({
-      key: 'music/imported-cover-cropped.png',
-      url: 'https://img.example/imported-cover-cropped.png',
-    })
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Graduation',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
+  it('识别封面在确认裁剪前保持待选状态，并可在取消后重新打开', async () => {
     const drawers = useMusicDrawers()
     drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
     drawers.setMusicCreationStep('albumDetails')
-
     const flow = drawers.state.value.creationFlow
     if (!flow) throw new Error('creation flow missing')
 
     const wrapper = mount(MusicCreationAlbumDetailsStep)
-
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
+    flow.draft.albumImport.derivedCover = 'https://img.example/imported-cover.jpg'
     await flushPromises()
 
-    expect(flow.draft.albumImport.derivedCover).toBe('https://img.example/imported-cover.jpg')
     expect(flow.draft.albumDetails.coverUrl).toBe('')
     expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(true)
 
-    await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(vi.mocked(uploadMusicAsset)).toHaveBeenCalledTimes(1)
-  })
-
-  it('reopens imported cover crop after cancel for the same recognized cover url', async () => {
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Graduation',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-
-    const input = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const file = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [file],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(true)
-
     await wrapper.get('[data-testid="music-square-crop-cancel"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
-    expect(vi.mocked(uploadMusicAsset)).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="album-details-imported-cover-action"]').text()).toContain('继续裁剪识别封面')
-
     await wrapper.get('[data-testid="album-details-imported-cover-action"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(true)
-  })
-
-  it('keeps imported cover as a pending option after a manual cover has been confirmed', async () => {
-    vi.mocked(uploadMusicAsset)
-      .mockResolvedValueOnce({
-        key: 'music/manual-cover.png',
-        url: 'https://img.example/manual-cover.png',
-      })
-    vi.mocked(createMusicAlbumImport).mockResolvedValue({
-      importId: 'import-1',
-      status: 'pending_upload',
-      archiveName: '',
-      uploadProgress: 0,
-      uploadSpeed: 0,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: '',
-      derivedCover: '',
-      derivedTracks: [],
-      lastSyncedAt: '',
-      errorMessage: '',
-    })
-    vi.mocked(uploadMusicAlbumArchiveMultipart).mockResolvedValue({
-      importId: 'import-1',
-      status: 'ready',
-      archiveName: 'album.zip',
-      uploadProgress: 100,
-      uploadSpeed: 1024,
-      coverUrl: '',
-      coverKey: '',
-      derivedAlbumTitle: 'Graduation',
-      derivedCover: 'https://img.example/imported-cover.jpg',
-      derivedTracks: [],
-      lastSyncedAt: '2026-07-06T00:00:00Z',
-      errorMessage: '',
-    })
-
-    const drawers = useMusicDrawers()
-    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
-    drawers.setMusicCreationStep('albumDetails')
-
-    const flow = drawers.state.value.creationFlow
-    if (!flow) throw new Error('creation flow missing')
-
-    const wrapper = mount(MusicCreationAlbumDetailsStep)
-
-    const archiveInput = wrapper.get('[data-testid="album-import-archive-input"]').element as HTMLInputElement
-    const archiveFile = new File(['zip'], 'album.zip', { type: 'application/zip' })
-    Object.defineProperty(archiveInput, 'files', {
-      configurable: true,
-      value: [archiveFile],
-    })
-
-    await wrapper.get('[data-testid="album-import-archive-input"]').trigger('change')
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(true)
-
-    await wrapper.get('[data-testid="music-square-crop-cancel"]').trigger('click')
-    await flushPromises()
-
-    const manualInput = wrapper.get('[data-testid="album-details-cover-input"]').element as HTMLInputElement
-    const manualFile = new File(['manual'], 'manual.png', { type: 'image/png' })
-    Object.defineProperty(manualInput, 'files', {
-      configurable: true,
-      value: [manualFile],
-    })
-
-    await wrapper.get('[data-testid="album-details-cover-input"]').trigger('change')
-    await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(flow.draft.albumDetails.coverUrl).toBe('https://img.example/manual-cover.png')
-    expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(true)
   })
 })

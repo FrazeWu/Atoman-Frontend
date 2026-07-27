@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getMusicAlbumImport, registerMusicAlbumImportFiles } from '@/api/musicV1'
+import {
+  completeMusicAlbumImportFilePart,
+  deleteMusicAlbumImportFile,
+  getMusicAlbumImport,
+  registerMusicAlbumImportFiles,
+} from '@/api/musicV1'
 
 describe('album import v2 API', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -27,5 +32,22 @@ describe('album import v2 API', () => {
 
     expect(snapshot.files).toEqual([])
     expect(snapshot.derivedTracks).toEqual([])
+  })
+
+  it('returns the completed file instead of treating it as an import snapshot', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { fileId: 'file-1', fileName: 'track.flac', uploadStatus: 'uploading' },
+    }), { status: 200 })))
+
+    const file = await completeMusicAlbumImportFilePart('import-1', 'file-1', 1, 'etag-1', 1024)
+
+    expect(file.fileId).toBe('file-1')
+    expect(file.uploadStatus).toBe('uploading')
+  })
+
+  it('accepts an empty successful response when deleting an import file', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+
+    await expect(deleteMusicAlbumImportFile('import-1', 'file-1')).resolves.toBeUndefined()
   })
 })

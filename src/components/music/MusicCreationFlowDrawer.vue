@@ -119,7 +119,7 @@ const shouldShowFinishButton = computed(() => {
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.submitting) return '提交中…'
-  return shouldShowFinishButton.value ? '完成' : activeStep.value.cta
+  return activeStep.value.cta
 })
 const canGoForward = computed(() => {
   const flow = creationFlow.value
@@ -143,15 +143,16 @@ const canGoForward = computed(() => {
       && !!flow.draft.artist.source.trim()
   }
   if (flow.step === 'albumImport') {
-    const status = flow.draft.albumImport.status
-    return status === 'ready' || status === 'needs_attention'
+    return !!flow.draft.albumImport.importId
   }
   if (flow.step === 'albumDetails') {
-    const status = flow.draft.albumImport.status
-    return status === 'ready' || status === 'needs_attention'
+    return !!flow.draft.albumImport.importId
+      && !!flow.draft.albumDetails.title.trim()
+      && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
   }
-  const status = flow.draft.albumImport.status
-  return status === 'ready' || status === 'needs_attention'
+  return !!flow.draft.albumImport.importId
+    && !!flow.draft.albumDetails.title.trim()
+    && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
@@ -332,9 +333,9 @@ function handlePrimaryAction() {
   if (creationFlow.value.step === 'artist') {
     if (!canGoForward.value) return
     setMusicCreationStep('albumImport')
-  } else if (creationFlow.value.step === 'albumImport' && (creationFlow.value.draft.albumImport.status === 'ready' || creationFlow.value.draft.albumImport.status === 'needs_attention')) {
+  } else if (creationFlow.value.step === 'albumImport' && canGoForward.value) {
     setMusicCreationStep('albumDetails')
-  } else if (creationFlow.value.step === 'albumDetails' && (creationFlow.value.draft.albumImport.status === 'ready' || creationFlow.value.draft.albumImport.status === 'needs_attention')) {
+  } else if (creationFlow.value.step === 'albumDetails' && canGoForward.value) {
     setMusicCreationStep('preview')
   }
 }
@@ -345,8 +346,6 @@ function goBackStep() {
     setMusicCreationStep('albumDetails')
   } else if (creationFlow.value.step === 'albumDetails') {
     setMusicCreationStep('albumImport')
-  } else if (creationFlow.value.step === 'albumImport') {
-    setMusicCreationStep('artist')
   }
 }
 
@@ -363,19 +362,12 @@ async function completeCreation() {
       throw new Error('缺少 importId，无法提交专辑导入')
     }
 
-    if (flow.draft.albumImport.status !== 'ready' && flow.draft.albumImport.status !== 'needs_attention') {
-      throw new Error('请等待压缩包处理完成')
-    }
-
     if (!commitMusicAlbumImport) {
       throw new Error('commitMusicAlbumImport is unavailable')
     }
 
     await commitMusicAlbumImport(importId, buildCommitInput(flow))
-    if (flow.draft.artist.id) {
-      refreshArtist()
-    }
-    closeCurrentCreationFlow()
+    if (flow.draft.artist.id) refreshArtist()
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

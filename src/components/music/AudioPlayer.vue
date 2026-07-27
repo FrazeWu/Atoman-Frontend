@@ -535,20 +535,11 @@ onBeforeUnmount(() => {
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-:root[data-theme='dark'] .player {
+:root.dark .player {
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--a-color-border-dark, #334155);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .player {
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid var(--a-color-border-dark, #334155);
-  }
 }
 
 .player.is-auto-hidden {
@@ -770,18 +761,10 @@ onBeforeUnmount(() => {
 }
 .main-play-btn:active { transform: translateY(1px); }
 
-:root[data-theme='dark'] .main-play-btn {
+:root.dark .main-play-btn {
   background: #ffffff;
   color: #0f172a;
   border-color: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .main-play-btn {
-    background: #ffffff;
-    color: #0f172a;
-    border-color: #ffffff;
-  }
 }
 
 .progress-container {
@@ -941,15 +924,9 @@ onBeforeUnmount(() => {
   box-shadow: none;
   border-radius: 4px;
 }
-:root[data-theme='dark'] .volume-control {
+:root.dark .volume-control {
   background: rgba(15, 23, 42, 0.88);
   border-color: var(--a-color-border-dark, #334155);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .volume-control {
-    background: rgba(15, 23, 42, 0.88);
-    border-color: var(--a-color-border-dark, #334155);
-  }
 }
 .volume-control::after {
   content: '';
@@ -1007,13 +984,8 @@ onBeforeUnmount(() => {
   background: rgba(0, 0, 0, 0.05);
   border: none;
 }
-:root[data-theme='dark'] .queue-trigger {
+:root.dark .queue-trigger {
   background: rgba(255, 255, 255, 0.1);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .queue-trigger {
-    background: rgba(255, 255, 255, 0.1);
-  }
 }
 
 .player-pin-btn {

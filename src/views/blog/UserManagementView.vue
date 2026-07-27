@@ -78,19 +78,6 @@
         </section>
 
         <section id="user-contact" class="user-management__section">
-          <header class="user-management__section-head">
-            <span>03</span>
-            <div>
-              <h2>联系权限</h2>
-              <p>选择谁可以向你发送私信。</p>
-            </div>
-          </header>
-
-          <label class="a-field user-management__permission-field">
-            <span class="a-field-label">私信权限</span>
-            <PSelect v-model="form.dm_permission" :options="dmPermissionOptions" />
-          </label>
-
           <p v-if="error" class="a-error" role="alert">{{ error }}</p>
           <p v-if="success" class="a-success" role="status">保存成功</p>
 
@@ -118,11 +105,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ListTree } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
-import PSelect from '@/components/ui/PSelect.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'
-import type { DMPermission } from '@/types'
 
 const authStore = useAuthStore()
 const api = useApi()
@@ -136,19 +121,12 @@ const directoryItems = [
   { id: 'contact', label: '联系权限' },
 ]
 
-const dmPermissionOptions = [
-  { label: '任意人可私信', value: 'anyone' },
-  { label: '仅我关注的人', value: 'following_only' },
-  { label: '陌生人仅可发一条', value: 'one_before_reply' },
-]
-
 const form = ref({
   display_name: '',
   bio: '',
   website: '',
   location: '',
   avatar_url: '',
-  dm_permission: 'anyone' as DMPermission,
 })
 
 const saving = ref(false)
@@ -200,15 +178,6 @@ const loadProfile = async () => {
         website: u.website || '',
         location: u.location || '',
         avatar_url: u.avatar_url || '',
-        dm_permission: 'anyone',
-      }
-
-      const settingsRes = await fetch(api.users.meSettings, {
-        headers: { Authorization: `Bearer ${authStore.token}` }
-      })
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json()
-        form.value.dm_permission = settingsData.data?.dm_permission || 'anyone'
       }
     }
   } catch (e) {
@@ -222,28 +191,13 @@ const save = async () => {
 
   saving.value = true
   try {
-    const settingsRes = await fetch(api.users.meSettings, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`
-      },
-      body: JSON.stringify({ dm_permission: form.value.dm_permission })
-    })
-    if (!settingsRes.ok) {
-      const settingsError = await settingsRes.json().catch(() => ({}))
-      throw new Error(typeof settingsError.error === 'string' ? settingsError.error : '私信设置保存失败')
-    }
-
-    const { dm_permission: _dmPermission, ...profilePayload } = form.value
-
     const res = await fetch(api.users.settings, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`
       },
-      body: JSON.stringify(profilePayload)
+      body: JSON.stringify(form.value)
     })
 
     if (res.ok) {

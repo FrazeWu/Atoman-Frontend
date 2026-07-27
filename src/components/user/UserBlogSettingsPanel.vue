@@ -38,10 +38,6 @@
         <label class="a-field-label">头像 URL</label>
         <input v-model="form.avatar_url" placeholder="https://example.com/avatar.jpg" class="a-input" />
       </div>
-      <div class="a-field user-blog-settings-panel__field">
-        <label class="a-field-label">私信权限</label>
-        <PSelect v-model="form.dm_permission" :options="dmPermissionOptions" />
-      </div>
 
       <section v-if="includeAccountExtras" class="settings-section">
         <h2 class="a-subtitle">通知设置</h2>
@@ -84,12 +80,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
-import PSelect from '@/components/ui/PSelect.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useUserBlocksStore } from '@/stores/userBlocks'
-import type { DMPermission } from '@/types'
 
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -102,19 +96,12 @@ withDefaults(defineProps<{
   includeAccountExtras: true,
 })
 
-const dmPermissionOptions = [
-  { label: '任意人可私信', value: 'anyone' },
-  { label: '仅我关注的人', value: 'following_only' },
-  { label: '陌生人仅可发一条', value: 'one_before_reply' },
-]
-
 const form = ref({
   display_name: '',
   bio: '',
   website: '',
   location: '',
   avatar_url: '',
-  dm_permission: 'one_before_reply' as DMPermission,
 })
 const notificationPrefs = ref({
   like: true,
@@ -141,15 +128,6 @@ const loadProfile = async () => {
         website: u.website || '',
         location: u.location || '',
         avatar_url: u.avatar_url || '',
-        dm_permission: 'one_before_reply',
-      }
-
-      const settingsRes = await fetch(api.users.meSettings, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json()
-        form.value.dm_permission = settingsData.data?.dm_permission || 'one_before_reply'
       }
     }
   } catch (e) {
@@ -170,44 +148,28 @@ const save = async () => {
       { category: 'collaboration', event_type: 'collaboration.changed', enabled: notificationPrefs.value.collaboration },
     ])
 
-    const payload: Record<string, string> = { ...form.value }
-
-    await fetch(api.users.meSettings, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify({ dm_permission: form.value.dm_permission }),
-    })
-
     const res = await fetch(api.users.settings, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${authStore.token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(form.value),
     })
-
-    if (res.ok) {
-      const d = await res.json()
-      const updated = d.data || d
-      if (authStore.user) {
-		authStore.updateUser({
-		  display_name: updated.display_name,
-		  avatar_url: updated.avatar_url,
-		  bio: updated.bio,
-		})
-      }
-      success.value = true
-      setTimeout(() => { success.value = false }, 3000)
-    } else {
-      const err = await res.json()
-      error.value = err.error || '保存失败'
+    if (!res.ok) throw new Error('资料保存失败')
+    const d = await res.json()
+    const updated = d.data || d
+    if (authStore.user) {
+      authStore.updateUser({
+        display_name: updated.display_name,
+        avatar_url: updated.avatar_url,
+        bio: updated.bio,
+      })
     }
+    success.value = true
+    setTimeout(() => { success.value = false }, 3000)
   } catch (e) {
-    error.value = '网络错误，请重试'
+    error.value = e instanceof Error ? e.message : '网络错误，请重试'
   } finally {
     saving.value = false
   }

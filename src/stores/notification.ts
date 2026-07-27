@@ -1,5 +1,6 @@
-import { computed, ref } from 'vue'
-import { defineStore } from 'pinia'
+import { computed, onScopeDispose, ref } from 'vue'
+import { registerSessionReset } from '@/stores/sessionReset'
+import { defineStore, getActivePinia } from 'pinia'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { InboxTab, Notification, NotificationCategory, NotificationPreference } from '@/types'
@@ -69,6 +70,8 @@ export function commentNotificationLocation(notification: Notification): RouteLo
 }
 
 export const useNotificationStore = defineStore('notification', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('通知状态必须在 Pinia 实例中创建')
   const api = useApi()
   const authStore = useAuthStore()
 
@@ -81,6 +84,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const currentCategory = ref<InboxTab>('mention')
   const currentType = currentCategory
   const currentTypes = ref<Notification['type'][]>([])
+  let requestGeneration = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -89,17 +93,21 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const fetchUnreadCounts = async () => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     const res = await fetch(api.notifications.unreadCounts, { headers: authHeaders() })
-    if (!res.ok) return
+    if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
     const data = await res.json()
     const payload = data.data || data
-    unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
+    if (generation === requestGeneration && token === authStore.token) unreadCounts.value = { ...emptyUnreadCounts(), ...(payload.items || {}) }
   }
 
   const fetchUnreadCount = fetchUnreadCounts
 
   const fetchNotifications = async (selection: NotificationSelection = currentCategory.value as NotificationCategory, nextPage = 1) => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     loading.value = true
     try {
       page.value = nextPage
@@ -111,6 +119,7 @@ export const useNotificationStore = defineStore('notification', () => {
           if (!res.ok) throw new Error('获取通知失败')
           return res.json()
         }))
+        if (generation !== requestGeneration || token !== authStore.token) return
         notifications.value = responses.flatMap((data) => data.data || [])
           .sort((left, right) => right.created_at.localeCompare(left.created_at))
         total.value = responses.reduce((sum, data) => sum + (data.meta?.total ?? data.total ?? 0), 0)
@@ -121,21 +130,24 @@ export const useNotificationStore = defineStore('notification', () => {
         const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('获取通知失败')
         const data = await res.json()
+        if (generation !== requestGeneration || token !== authStore.token) return
         notifications.value = data.data || []
         total.value = data.meta?.total ?? data.total ?? 0
       }
     } finally {
-      loading.value = false
+      if (generation === requestGeneration && token === authStore.token) loading.value = false
     }
   }
 
   const markRead = async (id: string) => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     const res = await fetch(api.notifications.markRead(id), {
       method: 'PUT',
       headers: authHeaders(),
     })
-    if (!res.ok) return
+    if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
     const target = notifications.value.find((item) => item.id === id)
     if (target && !target.read_at) {
       target.read_at = new Date().toISOString()
@@ -145,6 +157,8 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const markAllRead = async (selection: NotificationSelection = currentTypes.value.length ? currentTypes.value : currentCategory.value as NotificationCategory) => {
     if (!authStore.token) return
+    const generation = requestGeneration
+    const token = authStore.token
     if (isTypeSelection(selection)) {
       await Promise.all(selection.map((type) => fetch(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
         method: 'PUT', headers: authHeaders(),
@@ -156,6 +170,7 @@ export const useNotificationStore = defineStore('notification', () => {
       })
       if (!res.ok) return
     }
+    if (generation !== requestGeneration || token !== authStore.token) return
     const readAt = new Date().toISOString()
     const matches = (item: Notification) => isTypeSelection(selection) ? selection.includes(item.type) : item.category === selection
     notifications.value = notifications.value.map((item) =>
@@ -170,6 +185,10 @@ export const useNotificationStore = defineStore('notification', () => {
       notifications.value = [notification, ...notifications.value]
       total.value += 1
     }
+  }
+
+  const setDMUnread = (count: number) => {
+    unreadCounts.value.dm = Math.max(0, count)
   }
 
   const savePreference = async (category: NotificationCategory, eventType: string, enabled: boolean) => {
@@ -192,6 +211,7 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   const resetStore = () => {
+    requestGeneration += 1
     unreadCounts.value = emptyUnreadCounts()
     notifications.value = []
     loading.value = false
@@ -200,6 +220,7 @@ export const useNotificationStore = defineStore('notification', () => {
     currentCategory.value = 'mention'
     currentTypes.value = []
   }
+  onScopeDispose(registerSessionReset(pinia, resetStore))
 
   return {
     unreadCount,
@@ -216,6 +237,7 @@ export const useNotificationStore = defineStore('notification', () => {
     markRead,
     markAllRead,
     receiveNotification,
+    setDMUnread,
     savePreference,
     savePreferences,
     createMute,

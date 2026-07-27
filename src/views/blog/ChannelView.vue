@@ -19,6 +19,7 @@
             >
               {{ channelSubscribeLoading ? '处理中...' : (channelSubscribed ? '已订阅' : '订阅') }}
             </PClip>
+            <PButton v-if="authStore.isAuthenticated && !isOwner" data-testid="message-channel" :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'channel', target_id: channel.id } }" size="sm" variant="secondary">私信</PButton>
             <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
           </div>
         </template>
@@ -137,6 +138,7 @@ import PSurface from '@/components/ui/PSurface.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PButton from '@/components/ui/PButton.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PTab from '@/components/ui/PTab.vue'
 import PPress from '@/components/ui/PPress.vue'

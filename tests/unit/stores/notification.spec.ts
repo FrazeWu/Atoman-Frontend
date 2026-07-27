@@ -24,12 +24,21 @@ const makeNotification = (id: string, category: NotificationCategory, read_at: s
 
 describe('notification store', () => {
   beforeEach(() => {
-    localStorage.clear()
     vi.restoreAllMocks()
     setActivePinia(createPinia())
 
     const auth = useAuthStore()
     auth.token = 'token'
+  })
+
+  it('updates the unified dm unread count without changing other categories', () => {
+    const store = useNotificationStore()
+    store.unreadCounts.like = 2
+
+    store.setDMUnread(5)
+
+    expect(store.unreadCounts.dm).toBe(5)
+    expect(store.unreadCount).toBe(7)
   })
 
   it('keeps unread from other notification types when marking one type read', async () => {
@@ -49,6 +58,21 @@ describe('notification store', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/read-all?type=reply', expect.objectContaining({ method: 'PUT' }))
     expect(store.unreadCount).toBe(3)
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
+  })
+
+  it('does not apply a stale mark-all response after reset', async () => {
+    let resolve!: (response: Response) => void
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise<Response>((done) => { resolve = done }))
+    const store = useNotificationStore()
+    store.unreadCounts.reply = 1
+    store.notifications = [makeNotification('reply-1', 'reply')]
+    const pending = store.markAllRead('reply')
+    store.resetStore()
+    store.unreadCounts.reply = 4
+    resolve(new Response(null, { status: 200 }))
+    await pending
+    expect(store.unreadCounts.reply).toBe(4)
+    expect(store.notifications).toEqual([])
   })
 
   it('replaces unread counts from the categorized API contract', async () => {

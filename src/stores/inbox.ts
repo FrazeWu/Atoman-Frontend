@@ -1,10 +1,14 @@
-import { computed, ref } from 'vue'
-import { defineStore } from 'pinia'
+import { computed, onScopeDispose, ref } from 'vue'
+import { defineStore, getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useApi } from '@/composables/useApi'
+import { normalizeDMRealtimeEvent } from '@/api/dm'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 export const useInboxStore = defineStore('inbox', () => {
+  const pinia = getActivePinia()
+  if (!pinia) throw new Error('收件箱状态必须在 Pinia 实例中创建')
   const authStore = useAuthStore()
   const notificationStore = useNotificationStore()
   const api = useApi()
@@ -14,6 +18,10 @@ export const useInboxStore = defineStore('inbox', () => {
   const initialized = ref(false)
   let socket: WebSocket | null = null
   let pollingTimer: number | null = null
+  let reconnectTimer: number | null = null
+  let reconnectAttempt = 0
+  let disconnecting = false
+  let lifecycleGeneration = 0
 
   const totalUnread = computed(() => notificationStore.unreadCount)
 
@@ -30,64 +38,129 @@ export const useInboxStore = defineStore('inbox', () => {
     polling.value = true
     pollingTimer = window.setInterval(async () => {
       await notificationStore.fetchUnreadCounts()
+      const { useDMStore } = await import('@/stores/dm')
+      await useDMStore().reconcileFromServer()
     }, 60000)
   }
 
+  const scheduleReconnect = (generation: number) => {
+    if (generation !== lifecycleGeneration || disconnecting || reconnectTimer || !authStore.isAuthenticated) return
+    const delay = [1000, 2000, 4000, 8000, 16000, 30000][Math.min(reconnectAttempt, 5)]
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null
+      if (generation !== lifecycleGeneration || disconnecting || !authStore.isAuthenticated) return
+      reconnectAttempt += 1
+      void connect()
+    }, delay)
+  }
+
   const disconnect = () => {
+    lifecycleGeneration += 1
+    disconnecting = true
     stopPolling()
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
     connected.value = false
     if (socket) {
-      socket.close()
+      const activeSocket = socket
       socket = null
+      activeSocket.onopen = null
+      activeSocket.onclose = null
+      activeSocket.onerror = null
+      activeSocket.onmessage = null
+      activeSocket.close()
     }
   }
+  const resetStore = () => {
+    disconnect()
+    initialized.value = false
+    reconnectAttempt = 0
+  }
+  onScopeDispose(registerSessionReset(pinia, resetStore))
 
   const connect = async () => {
     if (!authStore.token || socket) return
+    disconnecting = false
+    const generation = lifecycleGeneration
     const apiBase = api.url.replace(/\/api\/v1$/, '')
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = apiBase.startsWith('http')
       ? apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
       : `${protocol}//${window.location.host}`
-    socket = new WebSocket(`${host}/ws/user`)
+    const activeSocket = new WebSocket(`${host}/ws/user`)
+    socket = activeSocket
 
-    socket.onopen = () => {
+    activeSocket.onopen = () => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       connected.value = true
+      reconnectAttempt = 0
       stopPolling()
+      void (async () => {
+        const { useDMStore } = await import('@/stores/dm')
+        if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
+        await Promise.all([useDMStore().reconcileFromServer(), notificationStore.fetchUnreadCounts()])
+      })().catch(() => {
+        if (generation === lifecycleGeneration && socket === activeSocket && !disconnecting) startPolling()
+      })
     }
-    socket.onclose = () => {
+    activeSocket.onclose = () => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       connected.value = false
       socket = null
       startPolling()
+      scheduleReconnect(generation)
     }
-    socket.onerror = () => {
+    activeSocket.onerror = () => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
       connected.value = false
+      const failedSocket = activeSocket
+      socket = null
+      failedSocket?.close()
       startPolling()
+      scheduleReconnect(generation)
     }
-    socket.onmessage = async (event) => {
-      const payload = JSON.parse(event.data)
-      if (payload.event === 'notification') {
-        notificationStore.receiveNotification(payload.data)
+    activeSocket.onmessage = async (event) => {
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
+      if (typeof event.data !== 'string') return
+      let payload: unknown
+      try {
+        payload = JSON.parse(event.data)
+      } catch {
+        return
       }
-      if (payload.event === 'dm') {
+      if (!payload || typeof payload !== 'object') return
+      if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
+      const message = payload as { event?: unknown; data?: unknown }
+      if (message.event === 'notification') {
+        notificationStore.receiveNotification(message.data as never)
+      }
+      const dmEvent = normalizeDMRealtimeEvent(message)
+      if (dmEvent) {
         const { useDMStore } = await import('@/stores/dm')
+        if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         const dmStore = useDMStore()
-        dmStore.receiveDM(payload.data)
-        if (dmStore.activeConversation === payload.data.sender_username) {
-          await dmStore.markRead(payload.data.sender_username)
+        dmStore.receiveEvent(dmEvent)
+        notificationStore.setDMUnread(dmEvent.data.dm_unread)
+        if (dmEvent.event === 'dm.message.created' && dmStore.activeConversationId === dmEvent.data.conversation.id) {
+          await dmStore.markRead()
         }
       }
     }
   }
 
   const bootstrap = async () => {
+    const generation = lifecycleGeneration
     if (!authStore.isAuthenticated) {
       disconnect()
       initialized.value = false
       return
     }
     await notificationStore.fetchUnreadCounts()
+    if (generation !== lifecycleGeneration || !authStore.isAuthenticated) return
     await connect()
+    if (generation !== lifecycleGeneration || !authStore.isAuthenticated) return
     initialized.value = true
   }
 

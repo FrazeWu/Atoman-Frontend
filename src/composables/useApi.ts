@@ -263,14 +263,6 @@ export function useApi() {
       upload: `${apiUrl}/uploads`,
     },
 
-    dm: {
-      conversations: `${apiUrl}/dm/conversations`,
-      conversation: (username: string) => `${apiUrl}/dm/conversations/${username}`,
-      markRead: (username: string) => `${apiUrl}/dm/conversations/${username}/read`,
-      unreadCount: `${apiUrl}/dm/unread-count`,
-      upload: `${apiUrl}/dm/upload`,
-    },
-
     videos: {
       list: `${apiUrl}/videos`,
       create: `${apiUrl}/videos`,

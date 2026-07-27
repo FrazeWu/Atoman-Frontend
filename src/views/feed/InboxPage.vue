@@ -50,25 +50,9 @@
             </div>
           </div>
 
-          <div v-else class="sidebar-list">
-            <button
-              v-for="conversation in dmStore.conversations"
-              :key="conversation.conversation_id"
-              class="sidebar-item"
-              :class="{ unread: conversation.unread_count > 0, selected: dmStore.activeConversation === conversation.other_username }"
-              @click="openConversation(conversation.other_username)"
-            >
-              <div class="sidebar-item-title">
-                <span>{{ conversation.other_username }}</span>
-                <PBadge v-if="conversation.unread_count > 0" type="internal" fill>{{ conversation.unread_count }}</PBadge>
-              </div>
-              <div class="sidebar-item-body a-muted">{{ conversation.preview }}</div>
-              <div class="sidebar-item-time">{{ formatTime(conversation.last_message_at) }}</div>
-            </button>
-            <div v-if="!dmStore.loading && dmStore.conversations.length === 0" class="inbox-empty-state">
-              <strong>暂无私信</strong>
-              <span>还没有新的会话。</span>
-            </div>
+          <div v-else class="dm-list-workspace" :class="{ 'dm-list-workspace--hidden': mobileConversationOpen }">
+            <DMMailboxSelector :mailboxes="dmMailboxes" :active-mailbox-key="dmStore.activeMailboxKey" @select-mailbox="selectMailbox" />
+            <DMConversationList :conversations="dmConversations" :active-conversation-id="dmStore.activeConversationId" :loading="dmStore.loadingConversations" :has-more="hasMoreConversations" @open-conversation="openConversation" @load-more="dmStore.loadMoreConversations" />
           </div>
         </div>
 
@@ -96,46 +80,10 @@
           </template>
 
           <template v-else>
-            <div v-if="dmStore.activeConversation" class="detail-card detail-card-dm">
-              <div class="dm-header">
-                <h2 class="a-subtitle">与 {{ dmStore.activeConversation }} 的对话</h2>
-                <PButton v-if="dmStore.activeConversationBlocked" variant="secondary" @click="unblockActiveConversation">取消拉黑</PButton>
-                <PButton v-else variant="secondary" @click="blockActiveConversation">拉黑</PButton>
-              </div>
-
-              <div class="dm-messages">
-                <div
-                  v-for="message in dmStore.messages"
-                  :key="message.id"
-                  class="dm-message"
-                  :class="{ self: message.sender_id === authStore.user?.uuid }"
-                >
-                  <div class="dm-bubble">
-                    <p v-if="message.content">{{ message.content }}</p>
-                    <img v-if="message.image_url" :src="message.image_url" alt="dm image" class="dm-image" />
-                  </div>
-                </div>
-              </div>
-
-              <form class="dm-composer" @submit.prevent="submitDM">
-                <p v-if="dmStore.activeConversationBlocked" class="dm-blocked-state">已拉黑此用户</p>
-                <PTextarea
-                  v-model="dmContent"
-                  label="消息内容"
-                  :rows="3"
-                  :placeholder="dmStore.activeConversationBlocked ? '已拉黑此用户' : '输入私信'"
-                  :disabled="dmStore.activeConversationBlocked"
-                  :error="dmError || undefined"
-                />
-                <div v-if="dmImageUrl" class="dm-upload-preview">
-                  <img :src="dmImageUrl" alt="preview" class="dm-image" />
-                </div>
-                <div class="dm-actions">
-                  <input ref="fileInput" type="file" accept="image/*" class="dm-file-input" @change="uploadDMImage" />
-                  <PButton variant="secondary" type="button" :disabled="dmStore.activeConversationBlocked" @click="fileInput?.click()">上传图片</PButton>
-                  <PButton type="submit" :disabled="dmStore.activeConversationBlocked" :loading="dmSending" loadingText="发送中...">发送</PButton>
-                </div>
-              </form>
+            <div v-if="dmStore.activeConversation || dmStore.activeTarget" class="detail-card detail-card-dm" :class="{ 'detail-card-dm--mobile': mobileConversationOpen }">
+              <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.id" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
+                <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
+              </DMConversationPane>
             </div>
             <div v-else class="detail-empty">
               <strong>{{ dmOpenError ? '无法打开会话' : '选择一个会话' }}</strong>
@@ -145,21 +93,26 @@
         </section>
       </div>
     </div>
+    <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" @close="closeReportModal" @clear-error="reportError = ''" @report="reportMessage" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
-import PTextarea from '@/components/ui/PTextarea.vue'
 import { useInboxStore } from '@/stores/inbox'
 import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
-import { useUserBlocksStore } from '@/stores/userBlocks'
 import { useAuthStore } from '@/stores/auth'
 import { referenceHref } from '@/composables/useReferenceRendering'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
+import { dmErrorMessage, mailboxKey, type DMImage } from '@/api/dm'
+import DMMailboxSelector from '@/components/dm/DMMailboxSelector.vue'
+import DMConversationList from '@/components/dm/DMConversationList.vue'
+import DMConversationPane from '@/components/dm/DMConversationPane.vue'
+import DMComposer from '@/components/dm/DMComposer.vue'
+import DMReportModal from '@/components/dm/DMReportModal.vue'
 import type { RouteLocationRaw } from 'vue-router'
 
 type InboxPageTab = InboxTab | 'forum'
@@ -170,7 +123,6 @@ const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const notificationStore = useNotificationStore()
 const dmStore = useDMStore()
-const userBlocksStore = useUserBlocksStore()
 
 const tabs: Array<{ key: InboxPageTab; label: string }> = [
   { key: 'like', label: '点赞' },
@@ -185,12 +137,21 @@ const tabs: Array<{ key: InboxPageTab; label: string }> = [
 
 const selectedNotificationId = ref<string | null>(null)
 const dmContent = ref('')
-const dmImageUrl = ref('')
+const dmImage = ref<DMImage | null>(null)
 const dmSending = ref(false)
 const dmError = ref('')
 const dmOpenError = ref('')
 const notificationActionMessage = ref('')
-const fileInput = ref<HTMLInputElement | null>(null)
+const reportMessageId = ref('')
+const reportSubmitting = ref(false)
+const reportError = ref('')
+const viewportMatchesMobile = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches
+const isMobile = ref(viewportMatchesMobile())
+const updateViewport = () => { isMobile.value = viewportMatchesMobile() }
+const mobileConversationOpen = computed(() => isMobile.value && Boolean(dmStore.activeConversation || dmStore.activeTarget))
+const dmMailboxes = computed(() => dmStore.mailboxOrder.map(key => dmStore.mailboxesByKey[key]).filter(Boolean))
+const dmConversations = computed(() => dmStore.conversationIdsByMailbox[dmStore.activeMailboxKey]?.map(id => dmStore.conversationsById[id]).filter(Boolean) || [])
+const hasMoreConversations = computed(() => Boolean(dmStore.conversationCursorByMailbox[dmStore.activeMailboxKey]))
 
 const activeTab = computed<InboxPageTab>(() => {
   const tab = route.query.tab
@@ -211,11 +172,28 @@ const switchTab = async (tab: InboxPageTab) => {
 const loadTab = async () => {
   if (activeTab.value === 'dm') {
     dmOpenError.value = ''
-    await dmStore.fetchConversations()
+    try { await dmStore.bootstrapDM() } catch { /* 会话直链仍可继续打开 */ }
+    const mailbox = typeof route.query.mailbox === 'string' ? route.query.mailbox : ''
+    if (mailbox && dmStore.mailboxesByKey[mailbox]) await dmStore.selectMailbox(mailbox)
+    const targetType = route.query.target_type === 'user' || route.query.target_type === 'channel' ? route.query.target_type : ''
+    const targetID = typeof route.query.target_id === 'string' ? route.query.target_id : ''
+    const conversationID = typeof route.query.conversation === 'string' ? route.query.conversation : ''
     const user = typeof route.query.user === 'string' ? route.query.user : ''
-    if (user) {
+    if (targetType && targetID) {
       try {
-        await openConversation(user)
+        await dmStore.openTarget({ type: targetType, id: targetID })
+      } catch (error) {
+        dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
+      }
+    } else if (user) {
+      try {
+        await dmStore.openConversation(user)
+      } catch (error) {
+        dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
+      }
+    } else if (conversationID) {
+      try {
+        await dmStore.openConversation(conversationID)
       } catch (error) {
         dmOpenError.value = error instanceof Error ? error.message : '打开私信失败'
       }
@@ -237,39 +215,55 @@ const markCurrentNotificationsRead = async () => {
   await notificationStore.markAllRead(activeTab.value === 'forum' ? forumNotificationTypes : activeTab.value as NotificationCategory)
 }
 
-const openConversation = async (username: string) => {
+const openConversation = async (conversationID: string) => {
   dmOpenError.value = ''
-  await router.replace({ path: '/inbox', query: { tab: 'dm', user: username } })
-  await dmStore.openConversation(username)
+  await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: dmStore.activeMailboxKey, conversation: conversationID } })
+  await dmStore.openConversation(conversationID)
 }
 
-const submitDM = async () => {
-  if (!dmStore.activeConversation || (!dmContent.value.trim() && !dmImageUrl.value)) return
+const selectMailbox = async (key: string) => {
+  await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: key } })
+  await dmStore.selectMailbox(key)
+}
+
+const closeMobileConversation = async () => {
+  await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: dmStore.activeMailboxKey } })
+  dmStore.activeConversationId = ''
+  dmStore.activeTarget = null
+}
+
+const submitDM = async (payload: { content: string; imageId?: string }) => {
+  if ((!dmStore.activeConversation && !dmStore.activeTarget) || (!payload.content && !payload.imageId)) return
   dmSending.value = true
   dmError.value = ''
   try {
-    await dmStore.sendMessage(dmStore.activeConversation, dmContent.value.trim(), dmImageUrl.value)
+    const message = await dmStore.sendActiveMessage(payload.content, payload.imageId)
     dmContent.value = ''
-    dmImageUrl.value = ''
+    dmImage.value = null
+    if (dmStore.activeConversationId) await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: dmStore.activeMailboxKey, conversation: message.conversation_id } })
   } catch (error) {
-    dmError.value = error instanceof Error ? error.message : '发送失败'
+    dmError.value = dmErrorMessage(error)
   } finally {
     dmSending.value = false
   }
 }
 
-const uploadDMImage = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
+const uploadDMImage = async (file: File) => {
   try {
-    dmImageUrl.value = await dmStore.uploadImage(file)
+    dmImage.value = await dmStore.uploadImage(file)
   } catch (error) {
-    dmError.value = error instanceof Error ? error.message : '上传失败'
-  } finally {
-    target.value = ''
-  }
+    dmError.value = dmErrorMessage(error)
+  } finally {}
 }
+
+const reportMessage = async ({ messageId, reason, detail }: { messageId: string; reason: string; detail: string }) => {
+  if (reportSubmitting.value) return
+  reportSubmitting.value = true
+  reportError.value = ''
+  try { await dmStore.reportMessage(messageId, { reason, detail }); closeReportModal() } catch (error) { reportError.value = dmErrorMessage(error) } finally { reportSubmitting.value = false }
+}
+
+const closeReportModal = () => { reportMessageId.value = ''; reportError.value = '' }
 
 const jumpToNotification = async (notification: Notification) => {
   await notificationStore.markRead(notification.id)
@@ -323,22 +317,12 @@ const muteNotificationSource = async (notification: Notification) => {
     : '内容静音暂不可用'
 }
 
-const activeConversationItem = computed(() => (
-  dmStore.conversations.find((item) => item.other_username === dmStore.activeConversation) || null
-))
-
 const blockActiveConversation = async () => {
-  const userID = activeConversationItem.value?.other_user_id
-  if (!userID) return
-  await userBlocksStore.blockUser(userID)
-  if (activeConversationItem.value) activeConversationItem.value.is_blocked = true
+  await dmStore.blockActiveConversation()
 }
 
 const unblockActiveConversation = async () => {
-  const userID = activeConversationItem.value?.other_user_id
-  if (!userID) return
-  await userBlocksStore.unblockUser(userID)
-  if (activeConversationItem.value) activeConversationItem.value.is_blocked = false
+  await dmStore.unblockActiveConversation()
 }
 
 const formatNotificationTitle = (notification: Notification) => {
@@ -394,9 +378,12 @@ watch(() => route.fullPath, () => {
 })
 
 onMounted(async () => {
+  window.addEventListener('resize', updateViewport)
   await inboxStore.bootstrap()
   await loadTab()
 })
+
+onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 </script>
 
 <style scoped>
@@ -752,5 +739,9 @@ onMounted(async () => {
     flex-direction: column;
   }
 }
+
+.dm-list-workspace { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); }
+.detail-card-dm { height:calc(100vh - 15rem); min-height:32rem; padding:0; }
+@media (max-width: 767px) { .dm-list-workspace--hidden { display:none; }.inbox-detail:has(.detail-card-dm--mobile) { display:block; position:fixed; inset:0; z-index:30; background:var(--a-color-bg); }.detail-card-dm--mobile { display:block; height:100dvh; min-height:0; border:0; }.detail-card-dm--mobile :deep(.dm-conversation-pane) { height:100%; } }
 
 </style>

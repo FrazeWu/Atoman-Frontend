@@ -924,16 +924,6 @@ export interface Notification {
   updated_at: string
 }
 
-export interface DMConversation {
-  conversation_id: string
-  other_username: string
-  other_user_id: string
-  last_message_at?: string | null
-  preview: string
-  unread_count: number
-  is_blocked?: boolean
-}
-
 export interface NotificationUnreadCounts {
   total: number
   items: Record<InboxTab, number>
@@ -961,34 +951,13 @@ export interface BlockedUser {
   created_at: string
 }
 
-export interface DMMessage {
-  id: string
-  conversation_id: string
-  sender_id: string
-  sender?: User
-  content: string
-  image_url?: string
-  read_at?: string | null
-  created_at: string
-  updated_at: string
-}
-
 export interface UserSettings {
   user_id: string
   private_profile: boolean
   dm_permission?: 'anyone' | 'following_only' | 'one_before_reply'
 }
 
-export interface DMRealtimePayload {
-  conversation_id: string
-  message_id: string
-  sender_id: string
-  sender_username: string
-  content: string
-  image_url: string
-  created_at: string
-}
-
+// Existing settings screens still use this form value until the settings migration.
 export type DMPermission = 'anyone' | 'following_only' | 'one_before_reply'
 
 // ===== Debate Types =====

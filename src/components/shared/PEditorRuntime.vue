@@ -568,12 +568,11 @@ function initCodeMirror() {
     })
     provider.awareness.setLocalStateField('user', { name: myName.value, color: myColor })
 
-    if (ytext.length === 0 && props.modelValue) {
-      ytext.insert(0, props.modelValue)
-    }
-
     provider.on('sync', (isSynced: boolean) => {
-      if (!isSynced) return
+      if (!isSynced || hasEmittedCollabReady) return
+      if (ytext?.length === 0 && props.modelValue) {
+        ytext.insert(0, props.modelValue)
+      }
       emitCollabReadyIfNeeded()
     })
 

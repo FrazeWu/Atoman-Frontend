@@ -8,6 +8,7 @@ import { nextTick, reactive } from 'vue'
 const collabMockState = vi.hoisted(() => ({
   initialText: '',
   asyncText: '',
+  asyncMergedText: '',
 }))
 
 vi.mock('y-websocket', () => {
@@ -53,6 +54,9 @@ vi.mock('y-websocket', () => {
             text.delete(0, text.length)
           }
           text.insert(0, collabMockState.asyncText)
+        }
+        if (collabMockState.asyncMergedText) {
+          text.insert(text.length, collabMockState.asyncMergedText)
         }
 
         this.syncListeners.forEach((listener) => listener(true))
@@ -109,6 +113,7 @@ describe('PEditor', () => {
     setActivePinia(createPinia())
     collabMockState.initialText = ''
     collabMockState.asyncText = ''
+    collabMockState.asyncMergedText = ''
   })
 
   it('renders CodeMirror editor in normal mode without preview pane', async () => {
@@ -275,6 +280,22 @@ describe('PEditor', () => {
 
     expect(wrapper.find('.cm-content').text()).toContain('shared copy')
     expect(wrapper.find('.cm-content').text()).not.toContain('local draft')
+  })
+
+  it('does not duplicate modelValue when the same shared content arrives during sync', async () => {
+    collabMockState.asyncMergedText = 'same copy'
+
+    const wrapper = await mountEditor({
+      modelValue: 'same copy',
+      mode: FUTURE_SPLIT_MODE,
+      enableCollab: true,
+      collabRoomId: 'room-1',
+    })
+    await flushCollabSync()
+
+    expect(wrapper.emitted('collab-ready')).toEqual([['same copy']])
+    expect(wrapper.find('.cm-content').text()).toContain('same copy')
+    expect(wrapper.find('.cm-content').text()).not.toContain('same copysame copy')
   })
 
   it('emits collab-ready only after async shared content becomes readable', async () => {

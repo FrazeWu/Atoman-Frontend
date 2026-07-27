@@ -248,7 +248,7 @@ const sheetStyle = computed(() => {
 
 .p-sheet-backdrop {
   position: fixed;
-  left: 0;
+  left: var(--a-sidebar-width);
   right: 0;
   bottom: var(--a-content-bottom-offset);
   background: transparent;
@@ -349,6 +349,10 @@ const sheetStyle = computed(() => {
 }
 
 @media (max-width: 767px) {
+  .p-sheet-backdrop {
+    left: 0;
+  }
+
   .p-sheet-layer {
     width: 100% !important;
     max-width: 100% !important;

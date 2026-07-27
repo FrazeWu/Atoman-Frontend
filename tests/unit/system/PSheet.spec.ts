@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { mount, config } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
@@ -7,6 +9,13 @@ import PSheet from '@/components/ui/PSheet.vue'
 config.global.plugins = [createTestingPinia({ stubActions: false })]
 
 describe('PSheet.vue', () => {
+  it('keeps the desktop sidebar outside of the sheet backdrop', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/ui/PSheet.vue'), 'utf8')
+
+    expect(source).toMatch(/\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*var\(--a-sidebar-width\)/)
+    expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*0/)
+  })
+
   it('renders body content and bookmark tab, but no default title bar', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, title: 'TEST TITLE' },

@@ -620,13 +620,7 @@ async function finishAlbumCreate() {
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme="light"]) .entity-editor-drawer) {
-    background: rgba(15, 23, 42, 0.88) !important;
-    border-left: 1px solid var(--a-color-border-dark, #334155) !important;
-  }
-}
-:root[data-theme='dark'] :global(.entity-editor-drawer) {
+:root.dark :global(.entity-editor-drawer) {
   background: rgba(15, 23, 42, 0.88) !important;
   border-left: 1px solid var(--a-color-border-dark, #334155) !important;
 }

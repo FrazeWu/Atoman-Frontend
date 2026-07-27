@@ -299,14 +299,7 @@ watch(
   box-shadow: none !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme="light"]) .artist-drawer) {
-    background: rgba(15, 23, 42, 0.88) !important;
-    border-left: 1px solid var(--a-color-border-dark, #334155) !important;
-  }
-}
-
-:global(:root[data-theme='dark'] .artist-drawer) {
+:global(:root.dark .artist-drawer) {
   background: rgba(15, 23, 42, 0.88) !important;
   border-left: 1px solid var(--a-color-border-dark, #334155) !important;
 }

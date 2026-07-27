@@ -624,15 +624,7 @@ function cancelLyricsConflict() {
   box-shadow: none;
   z-index: var(--a-z-player-lyrics);
 }
-
-@media (prefers-color-scheme: dark) {
-  .music-lyrics-panel {
-    background: rgba(15, 23, 42, 0.88);
-    border-top: 1px solid var(--a-color-border-dark, #334155);
-  }
-}
-
-:root[data-theme='dark'] .music-lyrics-panel {
+:root.dark .music-lyrics-panel {
   background: rgba(15, 23, 42, 0.88);
   border-top: 1px solid var(--a-color-border-dark, #334155);
 }

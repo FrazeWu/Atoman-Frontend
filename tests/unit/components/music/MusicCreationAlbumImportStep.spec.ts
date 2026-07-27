@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import JSZip from 'jszip'
 import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
 import * as musicApi from '@/api/musicV1'
@@ -79,6 +80,30 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
     expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith('import-1')
     expect(useMusicDrawers().state.value.creationFlow?.step).toBe('albumDetails')
+  })
+
+  it('在 ZIP 上传期间预填专辑名和曲目', async () => {
+    const zip = new JSZip()
+    zip.file('01 - Dawn.flac', 'audio')
+    zip.file('02 - Dusk.mp3', 'audio')
+    const archive = new File([await zip.generateAsync({ type: 'uint8array' })], 'Day Cycle.zip', { type: 'application/zip' })
+
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [] }))
+    mockUploadTransport()
+    vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued' }))
+
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
+    await fileInput(wrapper).trigger('change')
+    await flushPromises()
+
+    await vi.waitFor(() => {
+      const draft = useMusicDrawers().state.value.creationFlow?.draft
+      expect(draft?.albumDetails.title).toBe('Day Cycle')
+      expect(draft?.tracks.map((track) => track.title)).toEqual(['Dawn', 'Dusk'])
+    })
+    expect(musicApi.createMusicAlbumImport).toHaveBeenCalledTimes(1)
   })
 
   it('多文件选择自动使用 files 模式并保留所有注册文件', async () => {

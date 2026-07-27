@@ -147,6 +147,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
           选择文件夹
         </button>
       </div>
+      <p class="upload-hint">推荐上传 ZIP，识别更快更稳定。</p>
     </div>
 
     <!-- File list (multi-file / folder mode) -->
@@ -244,6 +245,7 @@ function formatUploadSpeed(bytesPerSecond: number) {
   gap: 1rem;
 }
 .field-group { display: grid; gap: 0.45rem; }
+.upload-hint { margin: 0; color: var(--a-color-muted); font-size: 0.78rem; }
 .progress-panel { display: grid; gap: 0.7rem; }
 .state-line {
   margin: 0;

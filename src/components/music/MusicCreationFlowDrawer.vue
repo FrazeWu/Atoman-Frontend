@@ -368,6 +368,7 @@ async function completeCreation() {
 
     await commitMusicAlbumImport(importId, buildCommitInput(flow))
     if (flow.draft.artist.id) refreshArtist()
+    closeCurrentCreationFlow()
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

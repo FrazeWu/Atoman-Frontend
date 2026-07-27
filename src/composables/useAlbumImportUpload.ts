@@ -17,6 +17,7 @@ import {
   type MusicAlbumImportInputMode,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { readAlbumImportPreview } from '@/utils/musicImportPreview'
 
 // Global state for album import upload so it survives step transitions
 const uploading = ref(false)
@@ -159,6 +160,30 @@ export function useAlbumImportUpload() {
     draft.totalBytesTotal = files.reduce((sum, f) => sum + f.size, 0)
     draft.uploadSpeed = 0
     uploadStartedAt = Date.now()
+
+    if (files.length === 1) {
+      void readAlbumImportPreview(files[0]).then((preview) => {
+        draft.derivedAlbumTitle = preview.title
+        draft.derivedTracks = preview.tracks.map((title, index) => ({
+          title,
+          audioKey: '',
+          origin: 'local_preview',
+        }))
+        if (!creationFlow.value.titleCustomized) {
+          creationFlow.value.draft.albumDetails.title = preview.title
+        }
+        if (!creationFlow.value.tracksCustomized && preview.tracks.length > 0) {
+          creationFlow.value.draft.tracks = preview.tracks.map((title, index) => ({
+            id: `preview-track-${index + 1}`,
+            sequence: index + 1,
+            title,
+            origin: 'local_preview',
+          }))
+        }
+      }).catch(() => {
+        // 后台提取会在上传完成后提供完整信息。
+      })
+    }
 
     try {
       const session = await createMusicAlbumImport({

@@ -273,8 +273,8 @@ describe('MusicCreationFlowDrawer', () => {
         tracks: [],
       },
     })
-    expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
-    expect(drawerMocks.state.value.creationFlow).not.toBeNull()
+    expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
+    expect(drawerMocks.state.value.creationFlow).toBeNull()
   })
 
   it('详情完成后进入独立预览步骤，预览展示导入结果并提交', async () => {
@@ -313,7 +313,7 @@ describe('MusicCreationFlowDrawer', () => {
   })
 
   it.each(['uploading', 'extracting'] as const)(
-    '%s 状态允许在预览页提交专辑导入，并保持抽屉打开',
+    '%s 状态允许在预览页提交专辑导入，并在提交后关闭抽屉',
     async (status) => {
       commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
       drawerMocks.state.value.creationFlow = createFlowState({
@@ -341,7 +341,7 @@ describe('MusicCreationFlowDrawer', () => {
       await flushPromises()
 
       expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
-      expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
+      expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
     },
   )
 

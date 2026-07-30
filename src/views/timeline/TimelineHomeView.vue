@@ -472,106 +472,6 @@ const {
 
 const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 
-const isCompared = (id: string) => compareSet.value.has(id)
-
-const isBatchSelected = (id: string) => batchSelectedIds.value.includes(id)
-
-const toggleBatchSelection = (id: string) => {
-  batchSelectedIds.value = isBatchSelected(id)
-    ? batchSelectedIds.value.filter((value) => value !== id)
-    : [...batchSelectedIds.value, id]
-}
-
-const clearBatchSelection = () => {
-  batchSelectedIds.value = []
-}
-
-const setActiveCompare = (id: string) => {
-  if (!compareSet.value.has(id)) return
-  activeCompareId.value = id
-}
-
-const upsertHydratedEvent = (event: TimelineEvent) => {
-  hydratedCompareEvents.value = [...hydratedCompareEvents.value.filter((item) => item.id !== event.id), event]
-}
-
-const removeHydratedEvent = (id: string) => {
-  hydratedCompareEvents.value = hydratedCompareEvents.value.filter((item) => item.id !== id)
-}
-
-const addCompareEvent = (event: TimelineEvent) => {
-  upsertHydratedEvent(event)
-  compareIds.value = uniqueIds([...compareIds.value, event.id])
-  activeCompareId.value = event.id
-}
-
-const removeCompareId = (id: string) => {
-  compareIds.value = compareIds.value.filter((value) => value !== id)
-  if (activeCompareId.value === id) {
-    activeCompareId.value = compareIds.value[compareIds.value.length - 1] ?? null
-  }
-}
-
-const toggleCompareEvent = (event: TimelineEvent) => {
-  if (isCompared(event.id)) {
-    removeCompareId(event.id)
-    return
-  }
-
-  addCompareEvent(event)
-}
-
-const addBatchToCompare = () => {
-  const additions = sortedEvents.value
-    .filter((event) => batchSelectedIds.value.includes(event.id))
-    .map((event) => event.id)
-
-  if (!additions.length) return
-
-  compareIds.value = uniqueIds([...compareIds.value, ...additions])
-  activeCompareId.value = additions[additions.length - 1]
-}
-
-const clearComparePool = () => {
-  compareIds.value = []
-  activeCompareId.value = null
-}
-
-const fetchEventById = async (id: string) => {
-  try {
-    const response = await apiRequest(`${api.url}/timeline/events/${id}`)
-    if (!response.ok) return null
-    const data = await response.json()
-    return data.data as TimelineEvent
-  } catch (error) {
-    reportError(error)
-    return null
-  }
-}
-
-const hydrateComparePool = async (ids: string[]) => {
-  const missingIds = uniqueIds(ids.filter((id) => !knownEvents.value.has(id)))
-  if (!missingIds.length) return
-
-  hydratingCompare.value = true
-  try {
-    const fetchedEvents = await Promise.all(missingIds.map((id) => fetchEventById(id)))
-    const resolvedEvents = fetchedEvents.filter((event): event is TimelineEvent => Boolean(event))
-    const resolvedIds = new Set(resolvedEvents.map((event) => event.id))
-
-    for (const event of resolvedEvents) {
-      upsertHydratedEvent(event)
-    }
-
-    const invalidIds = missingIds.filter((id) => !resolvedIds.has(id))
-    if (invalidIds.length) {
-      compareIds.value = compareIds.value.filter((id) => !invalidIds.includes(id))
-    }
-  } finally {
-    hydratingCompare.value = false
-  }
-}
-
 const canEdit = (event: TimelineEvent) =>
   authStore.isAuthenticated &&
   (event.user_id === authStore.user?.uuid || isAdminRole(authStore.user?.role))
@@ -623,9 +523,7 @@ const getCoordinateValidationError = () => {
 }
 
 const openDetail = (event: TimelineEvent) => {
-  if (isCompared(event.id)) {
-    activeCompareId.value = event.id
-  }
+  setActiveCompare(event.id)
   detailEvent.value = event
 }
 
@@ -647,9 +545,7 @@ const openCreate = () => {
 }
 
 const openEdit = (event: TimelineEvent) => {
-  if (isCompared(event.id)) {
-    activeCompareId.value = event.id
-  }
+  setActiveCompare(event.id)
 
   editingEvent.value = event
   form.value = {
@@ -824,79 +720,6 @@ const resetFilter = () => {
   filterCategory.value = ''
   store.fetchEvents({ limit: 200 })
 }
-
-watch(
-  [() => route.query.mode, () => route.query.compare],
-  () => {
-    if (routeSyncing.value) return
-
-    const nextMode = parseModeQuery(route.query.mode)
-    const nextCompareIds = uniqueIds(parseCompareQuery(route.query.compare))
-
-    if (viewMode.value !== nextMode) {
-      viewMode.value = nextMode
-    }
-
-    if (!sameIds(compareIds.value, nextCompareIds)) {
-      compareIds.value = nextCompareIds
-    }
-  },
-  { immediate: true }
-)
-
-watch(
-  [viewMode, () => compareIds.value.join(',')],
-  async () => {
-    const currentMode = parseModeQuery(route.query.mode)
-    const currentCompare = uniqueIds(parseCompareQuery(route.query.compare))
-    const targetCompare = compareIds.value
-
-    if (currentMode === viewMode.value && sameIds(currentCompare, targetCompare)) {
-      return
-    }
-
-    routeSyncing.value = true
-    try {
-      await router.replace({
-        query: {
-          ...route.query,
-          mode: viewMode.value === 'lanes' ? undefined : viewMode.value,
-          compare: compareIds.value.length ? compareIds.value.join(',') : undefined,
-        },
-      })
-    } finally {
-      routeSyncing.value = false
-    }
-  }
-)
-
-watch(
-  () => compareIds.value.join(','),
-  () => {
-    const ids = compareIds.value
-
-    if (!ids.length) {
-      activeCompareId.value = null
-      return
-    }
-
-    if (!activeCompareId.value || !ids.includes(activeCompareId.value)) {
-      activeCompareId.value = ids[ids.length - 1]
-    }
-
-    hydrateComparePool(ids)
-  },
-  { immediate: true }
-)
-
-watch(
-  sortedEvents,
-  (nextEvents) => {
-    const availableIds = new Set(nextEvents.map((event) => event.id))
-    batchSelectedIds.value = batchSelectedIds.value.filter((id) => availableIds.has(id))
-  },
-  { immediate: true }
-)
 
 onMounted(async () => {
   void store.fetchEvents({ limit: 200 })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
@@ -207,7 +208,7 @@ async function loadArtist(artistId: string) {
       death_year: artist.death_year,
     }
   } catch (error) {
-    console.error('Failed to load artist:', error)
+    reportError(error, 'Failed to load artist:')
     artistErrorMessage.value = '加载艺术家失败'
   } finally {
     artistSubmitting.value = false
@@ -240,7 +241,7 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
     refreshArtist()
     closeCurrentEditor()
   } catch (error) {
-    console.error('Failed to submit artist:', error)
+    reportError(error, 'Failed to submit artist:')
     artistErrorMessage.value = '保存艺术家失败'
   } finally {
     artistSubmitting.value = false
@@ -254,7 +255,7 @@ async function loadAlbum(albumId: string) {
     const result = await getMusicAlbum(albumId)
     hydrateAlbumDraft(result)
   } catch (error) {
-    console.error('Failed to load album:', error)
+    reportError(error, 'Failed to load album:')
     albumErrorMessage.value = '加载专辑失败'
   } finally {
     albumLoading.value = false
@@ -346,7 +347,7 @@ async function handleAlbumEditSubmit() {
     closeCurrentEditor()
     await router.replace(`/music/album/${current.id}`)
   } catch (error) {
-    console.error('Failed to save album edit:', error)
+    reportError(error, 'Failed to save album edit:')
     albumErrorMessage.value = '保存失败，请检查填写内容后重试'
   } finally {
     albumSubmitting.value = false
@@ -614,14 +615,12 @@ async function finishAlbumCreate() {
 }
 
 :global(.entity-editor-drawer) {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 :root.dark :global(.entity-editor-drawer) {
-  background: rgba(15, 23, 42, 0.88) !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-dark, #334155) !important;
 }
 </style>

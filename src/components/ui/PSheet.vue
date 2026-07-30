@@ -31,25 +31,25 @@
             @click="$emit('close')"
           />
 
-          <div v-if="hasHeader" class="sheet-header">
-            <slot name="header">
-              <span class="a-font-meta sheet-header-label">{{ title?.toUpperCase() }}</span>
-            </slot>
-            <button
-              v-if="showHeaderClose"
-              ref="closeButtonRef"
-              class="header-close-btn"
-              type="button"
-              :aria-label="`关闭${title}`"
-              :title="`关闭${title}`"
-              @click="$emit('close')"
-            >
-              <X :size="18" aria-hidden="true" />
-            </button>
-          </div>
+          <button
+            v-if="showHeaderClose"
+            ref="closeButtonRef"
+            class="sheet-close-btn-floating"
+            type="button"
+            :aria-label="`关闭${title}`"
+            :title="`关闭${title}`"
+            @click="$emit('close')"
+          >
+            <X :size="20" aria-hidden="true" />
+          </button>
 
           <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
             <div :class="{ 'sheet-content-inner': readingMode }">
+              <div v-if="slots.header || title" class="sheet-content-header-inline">
+                <slot name="header">
+                  <span class="sheet-title-inline">{{ title }}</span>
+                </slot>
+              </div>
               <slot />
             </div>
           </div>
@@ -289,36 +289,38 @@ const sheetStyle = computed(() => {
   transform: translateX(100%) scaleX(-1);
 }
 
-.sheet-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem 2.5rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-
-.sheet-header-label {
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: var(--a-color-muted);
-}
-
-.header-close-btn {
+.sheet-close-btn-floating {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
   background: none;
   border: none;
-  color: inherit;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
+  color: var(--a-color-muted);
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  padding: 0.5rem;
   line-height: 1;
-  opacity: 0.4;
-  transition: opacity 0.2s;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, opacity 0.2s;
+  opacity: 0.6;
 }
 
-.header-close-btn:hover {
+.sheet-close-btn-floating:hover {
   opacity: 1;
+  color: var(--a-color-fg);
+}
+
+.sheet-content-header-inline {
+  margin-bottom: 2rem;
+  padding-right: 3rem; /* Leave room for floating close button */
+}
+
+.sheet-title-inline {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--a-color-fg);
 }
 
 .sheet-content {

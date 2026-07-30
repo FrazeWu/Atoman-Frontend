@@ -189,6 +189,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
@@ -675,7 +677,7 @@ const handleCoverUpload = async (event: Event) => {
     const formData = new FormData()
     formData.append('image', file)
 
-    const res = await fetch(api.blog.uploadImage, {
+    const res = await apiRequest(api.blog.uploadImage, {
       method: 'POST',
       headers: authHeaders.value,
       body: formData,
@@ -786,7 +788,7 @@ const fetchServerDraft = async () => {
   if (!authStore.token) return null
 
   try {
-    const res = await fetch(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
+    const res = await apiRequest(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
       headers: authHeaders.value,
     })
     if (!res.ok) return null
@@ -794,7 +796,7 @@ const fetchServerDraft = async () => {
     const data = await res.json()
     return (data.data || null) as BlogDraft | null
   } catch (e) {
-    console.error('Failed to fetch blog draft:', e)
+    reportError(e, 'Failed to fetch blog draft:')
     return null
   }
 }
@@ -807,12 +809,12 @@ const deleteServerDraft = async () => {
   if (!authStore.token) return
 
   try {
-    await fetch(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
+    await apiRequest(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
       method: 'DELETE',
       headers: authHeaders.value,
     })
   } catch (e) {
-    console.error('Failed to delete blog draft:', e)
+    reportError(e, 'Failed to delete blog draft:')
   }
 }
 
@@ -827,7 +829,7 @@ const syncServerDraft = async () => {
 
   serverDraftState.value = 'syncing'
   try {
-    const res = await fetch(api.blog.draft, {
+    const res = await apiRequest(api.blog.draft, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders.value },
       body: JSON.stringify(payload),
@@ -839,7 +841,7 @@ const syncServerDraft = async () => {
     serverDraftSavedAt.value = draft ? parseTimestamp(draft.updated_at) : Date.now()
     serverDraftState.value = 'synced'
   } catch (e) {
-    console.error('Failed to sync blog draft:', e)
+    reportError(e, 'Failed to sync blog draft:')
     serverDraftState.value = 'error'
   }
 }
@@ -1065,7 +1067,7 @@ const loadChannelCollections = async () => {
       selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, ordinaryCollection?.id)
     }
   } catch (e) {
-    console.error(e)
+    reportError(e)
     error.value = '加载合集失败'
   }
 }
@@ -1087,7 +1089,7 @@ const syncPostCollections = async (postId: string) => {
   const existing = uniqueCollectionIds(existingCollectionIds.value)
   const { toAdd, toRemove } = diffCollectionIds(target, existing)
   for (const id of toAdd) {
-    const res = await fetch(api.blog.postCollections(postId), {
+    const res = await apiRequest(api.blog.postCollections(postId), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders.value },
       body: JSON.stringify({ collection_id: id }),
@@ -1095,7 +1097,7 @@ const syncPostCollections = async (postId: string) => {
     if (!res.ok) throw new Error('添加文章合集失败')
   }
   for (const id of toRemove) {
-    const res = await fetch(api.blog.postCollection(postId, id), {
+    const res = await apiRequest(api.blog.postCollection(postId, id), {
       method: 'DELETE', headers: authHeaders.value,
     })
     if (!res.ok) throw new Error('移除文章合集失败')
@@ -1109,7 +1111,7 @@ const loadPost = async () => {
   try {
     const postId = String(route.params.id || '')
     if (!postId) return
-    const res = await fetch(api.blog.post(postId), {
+    const res = await apiRequest(api.blog.post(postId), {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (res.ok) {
@@ -1133,7 +1135,7 @@ const loadPost = async () => {
       selectedCollectionIds.value = [...existingCollectionIds.value]
     }
   } catch (e) {
-    console.error(e)
+    reportError(e)
   } finally {
     contentReady.value = true
     await nextTick()
@@ -1161,7 +1163,7 @@ const save = async (status: SaveTarget, redirect = true): Promise<string | null>
     let res: Response
     if (isEdit.value) {
       const postId = String(route.params.id || '')
-      res = await fetch(api.blog.post(postId), {
+      res = await apiRequest(api.blog.post(postId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({
@@ -1171,7 +1173,7 @@ const save = async (status: SaveTarget, redirect = true): Promise<string | null>
         }),
       })
     } else {
-      res = await fetch(api.blog.posts, {
+      res = await apiRequest(api.blog.posts, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
         body: JSON.stringify({
@@ -1334,7 +1336,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .editor-page {
   height: calc(100vh - 64px);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
   overflow: hidden;
 }
 

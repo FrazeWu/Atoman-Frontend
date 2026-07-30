@@ -17,11 +17,9 @@
           tabindex="-1"
           @keydown="handleKeydown"
         >
-          <div v-if="title || closable" class="p-modal-header">
-            <span class="p-modal-title">{{ title }}</span>
-            <button v-if="closable" class="p-modal-close" type="button" aria-label="关闭" title="关闭" @click="handleClose">✕</button>
-          </div>
+          <button v-if="closable" class="p-modal-close-floating" type="button" aria-label="关闭" title="关闭" @click="handleClose">✕</button>
           <div class="p-modal-body">
+            <div v-if="title" class="p-modal-title-inline">{{ title }}</div>
             <slot />
           </div>
           <div v-if="hasFooter" class="p-modal-footer">
@@ -32,6 +30,41 @@
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.p-modal {
+  position: relative;
+}
+.p-modal-close-floating {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  border: none;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, opacity 0.15s ease;
+  opacity: 0.6;
+  z-index: 10;
+}
+.p-modal-close-floating:hover {
+  opacity: 1;
+  color: var(--a-color-fg);
+}
+.p-modal-title-inline {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--a-color-fg);
+  margin-bottom: 1.25rem;
+  padding-right: 2.5rem; /* Avoid overlap with floating close button */
+}
+</style>
 
 <script setup lang="ts">
 import { computed, ref, useSlots } from 'vue'

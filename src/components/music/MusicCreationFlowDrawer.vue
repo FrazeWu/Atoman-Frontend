@@ -531,7 +531,7 @@ async function completeCreation() {
 }
 
 :global(.creation-flow-drawer) {
-  background: var(--a-color-surface) !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }

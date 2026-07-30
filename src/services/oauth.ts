@@ -1,5 +1,5 @@
 import { useApiUrl } from '@/composables/useApi'
-import { apiFetch } from '@/api/transport'
+import { apiRequest } from '@/api/client'
 
 export const oauthProviders = ['google', 'github', 'microsoft'] as const
 export type OAuthProvider = typeof oauthProviders[number]
@@ -67,7 +67,7 @@ async function readJSON<T>(response: Response, fallback: string): Promise<T> {
 }
 
 export async function listOAuthProviders(): Promise<OAuthProvider[]> {
-  const response = await fetch(`${oauthURL}/providers`, { credentials: 'include' })
+  const response = await apiRequest(`${oauthURL}/providers`, { credentials: 'include' })
   const payload = await readJSON<{ providers?: unknown[] }>(response, '无法加载登录方式')
   return Array.isArray(payload.providers) ? payload.providers.filter(isOAuthProvider) : []
 }
@@ -90,17 +90,17 @@ export function safeOAuthReturnPath(value: unknown) {
 }
 
 export async function getPendingOAuth(): Promise<OAuthPendingInfo> {
-  const response = await apiFetch(`${oauthURL}/pending`, { credentials: 'include' })
+  const response = await apiRequest(`${oauthURL}/pending`, { credentials: 'include' })
   return readJSON<OAuthPendingInfo>(response, '登录请求已失效，请重新登录')
 }
 
 export async function sendPendingOAuthVerification(): Promise<void> {
-	const response = await apiFetch(`${oauthURL}/pending/send-verification`, { method: 'POST', credentials: 'include' })
+	const response = await apiRequest(`${oauthURL}/pending/send-verification`, { method: 'POST', credentials: 'include' })
 	if (!response.ok) await readJSON(response, '无法发送验证码')
 }
 
 export async function verifyPendingOAuthEmail(code: string): Promise<{ stage: OAuthPendingInfo['stage'] }> {
-	const response = await apiFetch(`${oauthURL}/pending/verify-email`, {
+	const response = await apiRequest(`${oauthURL}/pending/verify-email`, {
 	  method: 'POST',
 	  credentials: 'include',
 	  headers: { 'Content-Type': 'application/json' },
@@ -114,7 +114,7 @@ export async function completeOAuthProfile(
   password: string,
   passwordConfirm: string,
 ): Promise<{ returnTo: string }> {
-  const response = await fetch(`${oauthURL}/pending/complete-profile`, {
+  const response = await apiRequest(`${oauthURL}/pending/complete-profile`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -125,7 +125,7 @@ export async function completeOAuthProfile(
 }
 
 export async function setOAuthPassword(password: string, passwordConfirm: string): Promise<{ returnTo: string }> {
-  const response = await fetch(`${oauthURL}/pending/set-password`, {
+  const response = await apiRequest(`${oauthURL}/pending/set-password`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -136,7 +136,7 @@ export async function setOAuthPassword(password: string, passwordConfirm: string
 }
 
 export async function confirmOAuthAccount(password: string): Promise<{ returnTo: string }> {
-  const response = await fetch(`${oauthURL}/pending/confirm-account`, {
+  const response = await apiRequest(`${oauthURL}/pending/confirm-account`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -147,17 +147,17 @@ export async function confirmOAuthAccount(password: string): Promise<{ returnTo:
 }
 
 export async function cancelPendingOAuth() {
-  await fetch(`${oauthURL}/pending`, { method: 'DELETE', credentials: 'include' })
+  await apiRequest(`${oauthURL}/pending`, { method: 'DELETE', credentials: 'include' })
 }
 
 export async function listOAuthIdentities(): Promise<OAuthIdentity[]> {
-  const response = await fetch(`${oauthURL}/identities`, { credentials: 'include' })
+  const response = await apiRequest(`${oauthURL}/identities`, { credentials: 'include' })
   const payload = await readJSON<{ identities?: OAuthIdentity[] }>(response, '无法加载登录方式')
   return Array.isArray(payload.identities) ? payload.identities.filter(item => isOAuthProvider(item.provider)) : []
 }
 
 export async function unlinkOAuthIdentity(provider: OAuthProvider) {
-  const response = await fetch(`${oauthURL}/${provider}`, { method: 'DELETE', credentials: 'include' })
+  const response = await apiRequest(`${oauthURL}/${provider}`, { method: 'DELETE', credentials: 'include' })
   if (response.status === 204) return
   await readJSON(response, '无法取消绑定')
 }

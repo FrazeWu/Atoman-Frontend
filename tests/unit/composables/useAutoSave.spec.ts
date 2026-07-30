@@ -10,6 +10,7 @@ describe('useAutoSave', () => {
 
   it('enters error state when local draft persistence fails', async () => {
     vi.useFakeTimers()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const failingStorage = {
       getItem: () => null,
       setItem: () => {
@@ -29,5 +30,6 @@ describe('useAutoSave', () => {
 
     expect(autoSave.autoSaveState.value).toBe('error')
     expect(autoSave.lastSavedAt.value).toBeNull()
+    expect(warn).not.toHaveBeenCalled()
   })
 })

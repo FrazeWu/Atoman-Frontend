@@ -168,10 +168,10 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
-  Rss, Compass, Bookmark, Star, Disc3, Users,
+  Rss, Compass, Bookmark, Star, Disc3, Users, History,
   MessageSquare, Folder, Archive, BookOpen, Clock, Mic
 } from 'lucide-vue-next'
 
@@ -202,8 +202,8 @@ const uiStore = pinia ? useUIStore() : null
 const forumStore = pinia ? useForumStore() : null
 
 // Safe route retrieval
-let route: any = null
-let router: any = null
+let route: RouteLocationNormalizedLoaded | null = null
+let router: Router | null = null
 try {
   route = useRoute()
   router = useRouter()
@@ -330,6 +330,7 @@ const musicNavItems = [
   { to: moduleUrl('music'), label: '专辑', icon: Disc3, exact: true },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
   { to: modulePathUrl('music', '/starred'), label: '收藏', icon: Star },
+  { to: modulePathUrl('music', '/history'), label: '播放历史', icon: History },
 ]
 
 // 5. Forum Logic

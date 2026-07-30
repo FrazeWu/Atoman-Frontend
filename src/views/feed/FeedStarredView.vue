@@ -116,6 +116,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -198,16 +200,16 @@ const openArticleSheet = (item: StarredFeedItem, index?: number) => {
   const wasRead = item.is_read === true
   item.is_read = true
   // Convert StarredFeedItem to TimelineItem for FeedArticleSheet
+  const feedItem: FeedItem = {
+    ...item,
+    feed_source_id: item.feed_source_id || '',
+    guid: item.guid || '',
+    fetched_at: item.fetched_at || '',
+    content_html: item.full_text_html,
+  }
   selectedArticle.value = {
     type: 'feed_item',
-    feed_item: {
-      ...item,
-      id: item.id,
-      feed_source_id: item.feed_source_id || '',
-      guid: item.guid || '',
-      fetched_at: item.fetched_at || '',
-      content_html: item.full_text_html
-    } as any,
+    feed_item: feedItem,
     published_at: item.published_at,
     is_read: true
   }
@@ -293,7 +295,7 @@ const fetchStarred = async () => {
     const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
     if (groupId) params.set('group_id', groupId)
 
-    const res = await fetch(`${api.url}/feed/stars?${params.toString()}`, {
+    const res = await apiRequest(`${api.url}/feed/stars?${params.toString()}`, {
       headers: authHeaders(),
     })
     if (res.ok) {
@@ -315,7 +317,7 @@ const fetchStarred = async () => {
       totalItems.value = total
     }
   } catch (e) {
-    console.error('Failed to fetch starred items', e)
+    reportError(e, 'Failed to fetch starred items')
   } finally {
     if (requestId === starredRequestSeq) {
       loading.value = false

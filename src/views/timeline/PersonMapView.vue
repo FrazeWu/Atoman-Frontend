@@ -226,6 +226,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
@@ -241,6 +242,7 @@ import LineString from 'ol/geom/LineString'
 import { fromLonLat, toLonLat } from 'ol/proj'
 import { Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style'
 import Overlay from 'ol/Overlay'
+import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
@@ -371,7 +373,7 @@ const initMap = () => {
     }),
   })
 
-  olMap.on('click', (evt: any) => {
+  olMap.on('click', (evt: MapBrowserEvent<PointerEvent>) => {
     // If in picking mode, capture coordinates
     if (pickingCoords.value) {
       const lonLat = toLonLat(evt.coordinate)
@@ -409,7 +411,7 @@ const initMap = () => {
     renderMap()
   })
 
-  olMap.on('pointermove', (evt: any) => {
+  olMap.on('pointermove', (evt: MapBrowserEvent<PointerEvent>) => {
     if (pickingCoords.value) {
       olMap!.getTargetElement().style.cursor = 'crosshair'
       return
@@ -426,7 +428,7 @@ const focusLocation = (loc: PersonLocation) => {
   popupData.value = {
     name: loc.place_name,
     date: formatDate(loc.date) + (loc.end_date ? ' — ' + formatDate(loc.end_date) : ''),
-    source: (loc as any).source || '',
+    source: loc.source || '',
     note: loc.note,
   }
   if (olMap && popupOverlay) {
@@ -485,7 +487,7 @@ const openEditLocation = (loc: PersonLocation) => {
     date: loc.date ? loc.date.slice(0, 16) : '',
     end_date: loc.end_date ? loc.end_date.slice(0, 16) : '',
     place_name: loc.place_name,
-    source: (loc as any).source || '',
+    source: loc.source || '',
     latitude: loc.latitude,
     longitude: loc.longitude,
     note: loc.note || '',
@@ -511,7 +513,7 @@ const submitLocation = async () => {
     }
     closeLocationForm()
   } catch (e) {
-    console.error(e)
+    reportError(e)
   } finally {
     locSubmitting.value = false
   }
@@ -557,7 +559,7 @@ const submitEditPerson = async () => {
     await store.updatePerson(currentPerson.value.id, { ...personForm.value, tags })
     showPersonForm.value = false
   } catch (e) {
-    console.error(e)
+    reportError(e)
   } finally {
     personSubmitting.value = false
   }

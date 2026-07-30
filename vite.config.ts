@@ -35,6 +35,20 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    preview: {
+      port: 4173,
+      host: '0.0.0.0',
+      proxy: {
+        '/api': {
+          target: apiProxyTarget,
+          changeOrigin: true,
+        },
+        '/uploads': {
+          target: apiProxyTarget,
+          changeOrigin: true,
+        },
+      },
+    },
     build: {
       chunkSizeWarningLimit: 1700,
       rollupOptions: {

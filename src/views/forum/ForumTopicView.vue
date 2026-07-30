@@ -72,7 +72,7 @@
           <!-- Report button (non-owner, authenticated) -->
           <PButton
             v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
-            @click="openReportModal('topic', forumStore.currentTopic!.id)"
+            @click="openReportModal(forumStore.currentTopic!.id)"
             outline
             size="sm"
           >举报</PButton>
@@ -95,21 +95,14 @@
             v-html="renderMarkdown(forumStore.currentTopic.content, { references: forumStore.currentTopic.references })"
           />
 
-          <div class="reply-form-root">
-            <div v-if="commentNotice" class="reply-login-notice">
-              <p class="reply-login-text">{{ commentNotice }}</p>
-              <PButton v-if="!authStore.isAuthenticated && !forumStore.currentTopic.closed" to="/login">登录</PButton>
-            </div>
-            <CommentThread
-              :items="interactions.comments.value"
-              :loading="interactions.loadingComments.value"
-              :submitting="interactions.submittingComment.value"
-              :can-comment="canComment"
-              :can-delete="canDeleteComment"
-              :submit-action="submitComment"
-              @delete="interactions.deleteComment"
-            />
-          </div>
+          <CommentSection
+            :target="{ kind: 'forum_topic', resourceId: topicId }"
+            noun="回复"
+            mark-label="最佳回答"
+            :readonly="forumStore.currentTopic.closed"
+            :can-delete="canDeleteAnyComment"
+            @count-change="interactions.commentCount.value = $event"
+          />
       </div>
     </template>
 
@@ -133,7 +126,7 @@
     <div style="display:flex;flex-direction:column;gap:1rem">
       <div class="a-field">
         <label class="a-field-label">举报类型</label>
-        <p class="a-muted" style="margin:0;font-size:.85rem;font-weight: 500">{{ reportModal.targetType === 'topic' ? '帖子' : '回复' }}</p>
+        <p class="a-muted" style="margin:0;font-size:.85rem;font-weight: 500">帖子</p>
       </div>
       <div class="a-field">
         <label class="a-field-label">举报原因 *</label>
@@ -154,21 +147,21 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
-import { isAdminRole, isModeratorRole } from '@/utils/roles'
+import { isAdminRole } from '@/utils/roles'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
-import CommentThread from '@/components/shared/CommentThread.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'
-import type { InteractionComment } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -178,29 +171,13 @@ const { renderMarkdown } = useMarkdownRenderer()
 const topicId = computed(() => String(route.params.id || ''))
 const interactions = useInteractions('forum', 'forum_topic', topicId)
 const showBackTop = ref(false)
-const canComment = computed(() => Boolean(forumStore.currentTopic && !forumStore.currentTopic.closed && authStore.isAuthenticated))
-const commentNotice = computed(() => {
-  if (forumStore.currentTopic?.closed) return '该话题已关闭'
-  if (!authStore.isAuthenticated) return '登录后即可参与讨论'
-  return ''
-})
-const canDeleteComment = (comment: InteractionComment) => {
-  if (!authStore.user) return false
-  const authIDs = new Set([
-    authStore.user.uuid,
-    authStore.user.id === undefined ? undefined : String(authStore.user.id),
-  ].filter((id): id is string => Boolean(id)))
-  const commentIDs = [
-    comment.user_id ?? undefined,
-    comment.user?.uuid,
-    comment.user?.id === undefined ? undefined : String(comment.user.id),
-  ].filter((id): id is string => Boolean(id))
-  return (
-    commentIDs.some((id) => authIDs.has(id)) ||
+let loadTopicGeneration = 0
+const canDeleteAnyComment = computed(() => Boolean(
+  authStore.user && (
     authStore.user.uuid === forumStore.currentTopic?.user_id ||
-    isModeratorRole(authStore.user.role)
-  )
-}
+    isAdminRole(authStore.user.role)
+  ),
+))
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -216,10 +193,6 @@ const formatTime = (iso: string) => {
   return d.toLocaleDateString('zh-CN')
 }
 
-const submitComment = async (payload: { content: string; parentCommentId?: string }) => {
-  await interactions.createComment(payload.content, payload.parentCommentId)
-}
-
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
 const onScroll = () => {
@@ -227,13 +200,13 @@ const onScroll = () => {
 }
 
 const loadTopic = async () => {
-  await forumStore.fetchTopic(topicId.value)
-  if (forumStore.currentTopic) {
-    interactions.liked.value = forumStore.currentTopic.is_liked
-    interactions.likeCount.value = forumStore.currentTopic.like_count
-    interactions.commentCount.value = forumStore.currentTopic.reply_count
-    await interactions.fetchComments()
-  }
+  const id = topicId.value
+  const generation = ++loadTopicGeneration
+  const topic = await forumStore.fetchTopic(id)
+  if (generation !== loadTopicGeneration || topicId.value !== id || topic?.id !== id) return
+  interactions.liked.value = topic.is_liked
+  interactions.likeCount.value = topic.like_count
+  interactions.commentCount.value = topic.reply_count
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -253,8 +226,8 @@ onBeforeUnmount(() => {
 
 // Report & Featured
 const api = useApi()
-const reportModal = ref<{ show: boolean; targetType: 'topic' | 'reply'; targetId: string }>(
-  { show: false, targetType: 'topic', targetId: '' },
+const reportModal = ref<{ show: boolean; targetId: string }>(
+  { show: false, targetId: '' },
 )
 const reportForm = ref({ reason: '', note: '' })
 const reportFeedback = ref('')
@@ -265,22 +238,22 @@ const reportReasonOptions = [
   { label: '其他', value: 'other' },
 ]
 
-const openReportModal = (targetType: 'topic' | 'reply', targetId: string) => {
-  reportModal.value = { show: true, targetType, targetId }
+const openReportModal = (targetId: string) => {
+  reportModal.value = { show: true, targetId }
   reportForm.value = { reason: '', note: '' }
   reportFeedback.value = ''
 }
 
 const submitReport = async () => {
   if (!reportForm.value.reason.trim()) { alert('请选择举报原因'); return }
-  const res = await fetch(`${api.url}/forum/report`, {
+  const res = await apiRequest(`${api.url}/forum/report`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${authStore.token}`,
     },
     body: JSON.stringify({
-      target_type: reportModal.value.targetType,
+      target_type: 'topic',
       target_id: reportModal.value.targetId,
       reason: reportForm.value.reason,
       note: reportForm.value.note,
@@ -300,7 +273,7 @@ const submitReport = async () => {
 const toggleFeatured = async () => {
   const topic = forumStore.currentTopic!
   const method = topic.featured ? 'DELETE' : 'POST'
-  const res = await fetch(`${api.url}/forum/topics/${topic.id}/feature`, {
+  const res = await apiRequest(`${api.url}/forum/topics/${topic.id}/feature`, {
     method,
     headers: { Authorization: `Bearer ${authStore.token}` },
   })

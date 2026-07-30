@@ -89,6 +89,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import Chart from 'chart.js/auto'
 import { RouterLink } from 'vue-router'
@@ -164,7 +165,7 @@ const fetchStats = async () => {
   errorMessage.value = ''
   try {
     const params = new URLSearchParams({ period: period.value })
-    const res = await fetch(`${api.url}/feed/stats?${params}`, { headers: authHeaders() })
+    const res = await apiRequest(`${api.url}/feed/stats?${params}`, { headers: authHeaders() })
     if (requestId !== latestRequestId) return
     if (!res.ok) throw new Error(`Failed to load feed stats (${res.status})`)
     const data = await res.json()

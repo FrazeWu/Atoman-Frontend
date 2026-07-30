@@ -1,18 +1,15 @@
 {
-  "cookies": [],
-  "origins": [
+  "cookies": [
     {
-      "origin": "http://localhost:5173",
-      "localStorage": [
-        {
-          "name": "token",
-          "value": "mocked-jwt-token"
-        },
-        {
-          "name": "user",
-          "value": "{\"uuid\":\"019f3f6c-38ae-7d8e-84db-44841287b73d\",\"username\":\"admin\",\"email\":\"admin@atoman.com\",\"role\":\"admin\",\"onboarding_completed_at\":\"2026-07-08T02:15:36.514Z\"}"
-        }
-      ]
+      "name": "atoman_session",
+      "value": "DoL0CtcFgAwYi1INJ6yoKwjUdpihorJxov4NkxLrxbk",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1787992292.819,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
     }
-  ]
+  ],
+  "origins": []
 }

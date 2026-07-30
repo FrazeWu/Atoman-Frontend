@@ -1,3 +1,4 @@
+import { reportError } from '@/utils/logger'
 import { useSheetStore } from '@/stores/sheet'
 
 export function useTransitionRelay() {
@@ -24,7 +25,7 @@ export function useTransitionRelay() {
         }, 200)
       }
     } catch (e) {
-      console.error('Failed to parse relay data', e)
+      reportError(e, 'Failed to parse relay data')
     } finally {
       localStorage.removeItem('atoman_transition_relay')
     }

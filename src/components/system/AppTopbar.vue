@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, onMounted } from 'vue'
+import { computed, defineAsyncComponent, ref, onMounted, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { Menu, Sun, Moon } from 'lucide-vue-next'
 import { useSidebar } from '@/composables/useSidebar'
@@ -107,6 +107,15 @@ onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark'
   if (isDark.value) {
     document.documentElement.classList.add('dark')
+  }
+  if (!isAuthRoute.value) {
+    void authStore.restoreSession()
+  }
+})
+
+watch(isAuthRoute, (isAuthRoute, wasAuthRoute) => {
+  if (wasAuthRoute && !isAuthRoute) {
+    void authStore.restoreSession()
   }
 })
 

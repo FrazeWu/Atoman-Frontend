@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import type { PodcastEpisode, PodcastEpisodeProgress } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -47,7 +48,7 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 async function listenLater(ep: PodcastEpisode) {
-  const res = await fetch(api.podcast.bookmarks, {
+  const res = await apiRequest(api.podcast.bookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers() },
     body: JSON.stringify({ episode_id: ep.id }),
@@ -58,13 +59,13 @@ async function listenLater(ep: PodcastEpisode) {
 onMounted(async () => {
   loading.value = true
   try {
-    const subscriptionsRes = await fetch(api.podcast.showBookmarks, { headers: headers() })
+    const subscriptionsRes = await apiRequest(api.podcast.showBookmarks, { headers: headers() })
     const subscriptionsData = await subscriptionsRes.json()
     shows.value = Array.isArray(subscriptionsData?.data) ? subscriptionsData.data : []
     const episodeResponses = await Promise.all(shows.value
       .map((show: { channel?: { slug?: string } }) => show.channel?.slug)
       .filter((slug): slug is string => Boolean(slug))
-      .map((slug) => fetch(api.podcast.showEpisodes(slug))))
+      .map((slug) => apiRequest(api.podcast.showEpisodes(slug))))
     const episodeData = await Promise.all(episodeResponses.map((response) => response.json()))
     episodes.value = episodeData.flatMap((data) => Array.isArray(data?.episodes) ? data.episodes : [])
     progressRows.value = listPodcastProgress().map((record) => ({

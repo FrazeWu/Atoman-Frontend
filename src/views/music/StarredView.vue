@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
@@ -78,7 +79,7 @@ async function handleToggleArtistBookmark(artistId: string) {
       (item) => !(item.kind === 'artist' && String(item.artist?.id) === artistId)
     )
   } catch (e) {
-    console.error('Failed to delete bookmark:', e)
+    reportError(e, 'Failed to delete bookmark:')
   }
 }
 
@@ -89,7 +90,7 @@ async function handleToggleAlbumBookmark(albumId: string) {
       (item) => !(item.kind === 'album' && String(item.album?.id) === albumId)
     )
   } catch (e) {
-    console.error('Failed to delete album bookmark:', e)
+    reportError(e, 'Failed to delete album bookmark:')
   }
 }
 
@@ -144,7 +145,7 @@ async function loadStarred() {
       .map(bookmark => bookmark.playlist)
       .filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
   } catch (error) {
-    console.error('Failed to load music starred items:', error)
+    reportError(error, 'Failed to load music starred items:')
     errorMessage.value = '收藏加载失败'
   } finally {
     loading.value = false

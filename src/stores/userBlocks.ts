@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
@@ -19,7 +20,7 @@ export const useUserBlocksStore = defineStore('userBlocks', () => {
     if (!authStore.token) return
     loading.value = true
     try {
-      const res = await fetch(api.users.blocked, { headers: authHeaders() })
+      const res = await apiRequest(api.users.blocked, { headers: authHeaders() })
       if (!res.ok) throw new Error('获取拉黑列表失败')
       const data = await res.json()
       blockedUsers.value = data.data || []
@@ -29,13 +30,13 @@ export const useUserBlocksStore = defineStore('userBlocks', () => {
   }
 
   const blockUser = async (userUuid: string) => {
-    const res = await fetch(api.users.block(userUuid), { method: 'POST', headers: authHeaders() })
+    const res = await apiRequest(api.users.block(userUuid), { method: 'POST', headers: authHeaders() })
     if (!res.ok) throw new Error('拉黑失败')
     await fetchBlockedUsers()
   }
 
   const unblockUser = async (userUuid: string) => {
-    const res = await fetch(api.users.block(userUuid), { method: 'DELETE', headers: authHeaders() })
+    const res = await apiRequest(api.users.block(userUuid), { method: 'DELETE', headers: authHeaders() })
     if (!res.ok) throw new Error('取消拉黑失败')
     blockedUsers.value = blockedUsers.value.filter((item) => item.blocked_id !== userUuid)
   }

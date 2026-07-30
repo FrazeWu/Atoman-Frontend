@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter, type RouteRecordRaw, type Router } f
 import { vi } from 'vitest'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 import { installRouteGuards } from '@/router/guards'
+import { buildAppRoutes } from '@/router/buildAppRoutes'
 import { moduleRoutes } from '@/router/routes/modules'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
@@ -41,6 +42,17 @@ async function createGuardRouter(site: ModuleRoomKey) {
   })
   installRouteGuards(router)
   await router.replace('/')
+  return router as Router
+}
+
+async function createMusicAppGuardRouter() {
+  window.history.replaceState(null, '', '/music')
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: stubRouteComponents(buildAppRoutes()),
+  })
+  installRouteGuards(router)
+  await router.replace('/music')
   return router as Router
 }
 
@@ -125,6 +137,81 @@ describe('router auth guards', () => {
 
     expect(navigationFinished).toBe(false)
     expect(restoreSessionSpy).toHaveBeenCalled()
+  })
+
+  it.each([
+    ['artist creation', '/music?editor=artist-create&name=Seed%20Artist'],
+    ['album editing', '/music?editor=album-edit&album=album-42'],
+  ])('redirects unauthenticated users from direct music %s queries', async (_editor, target) => {
+    const router = await createMusicAppGuardRouter()
+    const auth = useAuthStore()
+    await auth.logout()
+
+    await router.push(target)
+
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.query.redirect).toBe(target)
+  })
+
+  it('keeps the artist name while redirecting the legacy creation route through login', async () => {
+    const router = await createMusicAppGuardRouter()
+    const auth = useAuthStore()
+    await auth.logout()
+
+    await router.push('/music/artist/new?name=Seed%20Artist')
+
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.query.redirect).toBe('/music?editor=artist-create&name=Seed+Artist')
+  })
+
+  it('keeps the album id while redirecting the legacy edit route through login', async () => {
+    const router = await createMusicAppGuardRouter()
+    const auth = useAuthStore()
+    await auth.logout()
+
+    await router.push('/music/album/album-42/edit')
+
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.query.redirect).toBe('/music?editor=album-edit&album=album-42')
+  })
+
+  it('allows a direct artist creation query after restoring a cookie session', async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
+      if (url.includes('/auth/session')) {
+        return new Response(JSON.stringify({
+          csrf_token: 'csrf-restored',
+          user: { username: 'cookie-user', email: 'cookie@example.com', role: 'user' },
+        }), { status: 200 })
+      }
+      if (url.endsWith('/site/access')) {
+        return new Response(JSON.stringify({ modules: {} }), { status: 200 })
+      }
+      return new Response('', { status: 401 })
+    })
+    const router = await createMusicAppGuardRouter()
+    const auth = useAuthStore()
+    const restoreSessionSpy = vi.spyOn(auth, 'restoreSession')
+
+    await router.push('/music?editor=artist-create&name=Cookie%20Artist')
+
+    expect(restoreSessionSpy).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.fullPath).toBe('/music?editor=artist-create&name=Cookie%20Artist')
+    expect(auth.isAuthenticated).toBe(true)
+  })
+
+  it('allows an authenticated user to access a direct album edit query without restoring', async () => {
+    const router = await createMusicAppGuardRouter()
+    const auth = useAuthStore()
+    auth.token = makeToken(3600)
+    auth.user = { username: 'member', role: 'user' } as never
+    auth.isAuthenticated = true
+    const restoreSessionSpy = vi.spyOn(auth, 'restoreSession')
+
+    await router.push('/music?editor=album-edit&album=album-42')
+
+    expect(restoreSessionSpy).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.fullPath).toBe('/music?editor=album-edit&album=album-42')
   })
 
   it('redirects unauthenticated users away from blog subscriptions', async () => {

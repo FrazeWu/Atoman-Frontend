@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
@@ -147,7 +148,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   async function fetchHealth(token: string | null) {
     loadingHealth.value = true
     try {
-      const response = await fetch(api.admin.feedFulltext.health, {
+      const response = await apiRequest(api.admin.feedFulltext.health, {
         headers: buildHeaders(token),
       })
       if (!response.ok) {
@@ -163,7 +164,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   async function fetchSettings(token: string | null) {
     loadingSettings.value = true
     try {
-      const response = await fetch(api.admin.feedFulltext.settings, {
+      const response = await apiRequest(api.admin.feedFulltext.settings, {
         headers: buildHeaders(token),
       })
       if (!response.ok) {
@@ -187,7 +188,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
       if (typeof options.enabled === 'boolean') query.set('enabled', String(options.enabled))
       if (options.status) query.set('status', options.status)
       if (options.q) query.set('q', options.q)
-      const response = await fetch(`${api.admin.feedFulltext.sources}?${query.toString()}`, {
+      const response = await apiRequest(`${api.admin.feedFulltext.sources}?${query.toString()}`, {
         headers: buildHeaders(token),
       })
       if (!response.ok) {
@@ -215,7 +216,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
       if (options.sourceId) query.set('source_id', options.sourceId)
       if (options.q) query.set('q', options.q)
 
-      const response = await fetch(`${api.admin.feedFulltext.items}?${query.toString()}`, {
+      const response = await apiRequest(`${api.admin.feedFulltext.items}?${query.toString()}`, {
         headers: buildHeaders(token),
       })
       if (!response.ok) {
@@ -231,7 +232,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function fetchOnboardingRecommendations(token: string | null) {
-    const response = await fetch(api.admin.feed.onboardingRecommendations, {
+    const response = await apiRequest(api.admin.feed.onboardingRecommendations, {
       headers: buildHeaders(token),
     })
     if (!response.ok) throw new Error(await parseError(response, '加载新手推荐失败'))
@@ -241,7 +242,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function createOnboardingRecommendation(payload: { feed_source_id: string; enabled: boolean; sort_order: number }, token: string | null) {
-    const response = await fetch(api.admin.feed.onboardingRecommendations, {
+    const response = await apiRequest(api.admin.feed.onboardingRecommendations, {
       method: 'POST',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
@@ -251,7 +252,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function updateOnboardingRecommendation(id: string, payload: { enabled?: boolean; sort_order?: number }, token: string | null) {
-    const response = await fetch(api.admin.feed.onboardingRecommendation(id), {
+    const response = await apiRequest(api.admin.feed.onboardingRecommendation(id), {
       method: 'PATCH',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
@@ -261,7 +262,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function deleteOnboardingRecommendation(id: string, token: string | null) {
-    const response = await fetch(api.admin.feed.onboardingRecommendation(id), {
+    const response = await apiRequest(api.admin.feed.onboardingRecommendation(id), {
       method: 'DELETE',
       headers: buildHeaders(token),
     })
@@ -269,7 +270,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function updateSourceEnabled(sourceId: string, enabled: boolean, token: string | null) {
-    const response = await fetch(api.admin.feedFulltext.sourceSettings(sourceId), {
+    const response = await apiRequest(api.admin.feedFulltext.sourceSettings(sourceId), {
       method: 'PUT',
       headers: buildHeaders(token, true),
       body: JSON.stringify({ full_text_enabled: enabled }),
@@ -289,7 +290,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function createSource(payload: AdminFeedSourcePayload, token: string | null) {
-    const response = await fetch(api.admin.feedFulltext.sources, {
+    const response = await apiRequest(api.admin.feedFulltext.sources, {
       method: 'POST',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
@@ -303,7 +304,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function updateSource(sourceId: string, payload: AdminFeedSourcePayload, token: string | null) {
-    const response = await fetch(api.admin.feedFulltext.source(sourceId), {
+    const response = await apiRequest(api.admin.feedFulltext.source(sourceId), {
       method: 'PUT',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
@@ -320,7 +321,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch(api.admin.feed.opmlImport, {
+    const response = await apiRequest(api.admin.feed.opmlImport, {
       method: 'POST',
       headers: buildHeaders(token),
       body: formData,
@@ -334,7 +335,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function retryGlobalOPMLSource(payload: { title?: string; url: string }, token: string | null) {
-    const response = await fetch(api.admin.feed.opmlRetryImport, {
+    const response = await apiRequest(api.admin.feed.opmlRetryImport, {
       method: 'POST',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
@@ -346,7 +347,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function exportGlobalOPML(token: string | null): Promise<Blob> {
-    const response = await fetch(api.admin.feed.opmlExport, {
+    const response = await apiRequest(api.admin.feed.opmlExport, {
       headers: buildHeaders(token),
     })
 
@@ -358,7 +359,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function syncSource(sourceId: string, token: string | null) {
-    const response = await fetch(api.admin.feedFulltext.syncSource(sourceId), {
+    const response = await apiRequest(api.admin.feedFulltext.syncSource(sourceId), {
       method: 'POST',
       headers: buildHeaders(token),
     })
@@ -371,7 +372,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function retryItem(itemId: string, token: string | null) {
-    const response = await fetch(api.admin.feedFulltext.retryItem(itemId), {
+    const response = await apiRequest(api.admin.feedFulltext.retryItem(itemId), {
       method: 'POST',
       headers: buildHeaders(token),
     })
@@ -390,7 +391,7 @@ export const useAdminFeedFulltextStore = defineStore('adminFeedFulltext', () => 
   }
 
   async function updateSettings(nextSettings: AdminFeedFulltextSettings, token: string | null) {
-    const response = await fetch(api.admin.feedFulltext.settings, {
+    const response = await apiRequest(api.admin.feedFulltext.settings, {
       method: 'PUT',
       headers: buildHeaders(token, true),
       body: JSON.stringify(nextSettings),

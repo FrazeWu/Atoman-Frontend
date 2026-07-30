@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useApi } from '@/composables/useApi'
@@ -52,7 +53,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     if (!authStore.isAuthenticated || !authStore.user || completing.value) return false
     completing.value = true
     try {
-      const response = await fetch(api.auth.onboardingComplete, {
+      const response = await apiRequest(api.auth.onboardingComplete, {
         method: 'POST',
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         credentials: 'include',
@@ -100,7 +101,7 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     loadingRecommendations.value = true
     recommendationError.value = ''
     try {
-      const response = await fetch(api.auth.onboardingRecommendations, {
+      const response = await apiRequest(api.auth.onboardingRecommendations, {
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         credentials: 'include',
       })

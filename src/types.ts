@@ -725,7 +725,7 @@ export interface StarredFeedItem {
   enclosure_type?: string
   duration?: string
   full_text_html?: string
-  full_text_status?: string
+  full_text_status?: FeedItem['full_text_status']
   source_title: string
   source_site_url?: string
   source_image_url?: string
@@ -750,6 +750,9 @@ export interface FeedArticleSource {
   rssUrl?: string
   subscriptionId?: string
   subscribed: boolean
+  healthStatus?: 'healthy' | 'warning' | 'error'
+  lastCheckedAt?: string
+  itemCount?: number
 }
 
 // ===== Bookmark Types =====
@@ -917,7 +920,7 @@ export interface Notification {
     module?: string
     path?: string
     like_count?: number
-    [key: string]: any
+    [key: string]: unknown
   }
   read_at?: string | null
   created_at: string

@@ -1,0 +1,72 @@
+<h2>重新设计：专辑编辑页的曲目编辑区域</h2>
+<p class="subtitle">当前版本的曲目编辑面板包含了大量的独立大输入框、四行文本域和多个按钮，在多曲目下显得极为冗长和拥挤。我们提议采用更加紧凑、高品质的极简设计。</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>方案 A：极简行内表格（推荐 - 类似播放列表）</h3>
+      <p>所有曲目以单行行内形式展示（类似于表格），仅显示最核心的曲目名称输入框，将歌词输入框默认收纳为折叠面板，点击“歌词”图标才展开。音频上传也合并为小图标按钮，整洁清爽，大大缩减了页面高度，即使有 15 首曲目也无需频繁滚动。</p>
+    </div>
+  </div>
+  
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>方案 B：侧边/弹窗分步编辑</h3>
+      <p>主编辑页面中仅显示一个极度紧凑的曲目列表（如：01. 曲目 A | 02. 曲目 B），每个曲目右侧提供一个“编辑”按钮。点击后，在侧边弹出嵌套的 PSheet 抽屉或 PModal 弹窗单独编辑该曲目的详细信息（歌词、音频、曲序等）。主页面保持极致简洁。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>方案 A 视觉预览（极简行内行）</h3>
+  <div class="mockup">
+    <div class="mockup-header">曲目编辑 (方案 A)</div>
+    <div class="mockup-body" style="background: var(--a-color-bg); padding: 1.5rem; color: var(--a-color-fg);">
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 0.5rem;">
+        <span style="font-weight: 600; font-size: 0.875rem;">曲目列表</span>
+        <button class="mock-button" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">+ 添加曲目</button>
+      </div>
+      
+      <!-- Track Row 1 -->
+      <div style="border-bottom: 1px solid var(--a-color-border-soft); padding: 0.75rem 0; display: flex; align-items: center; gap: 0.75rem;">
+        <span style="color: var(--a-color-muted); font-size: 0.875rem; font-family: monospace;">01</span>
+        <div style="flex: 1; display: flex; gap: 0.75rem; align-items: center;">
+          <input class="mock-input" value="The College Dropout" style="flex: 1; border: none; border-bottom: 1px dashed var(--a-color-border); padding: 0.25rem; font-size: 0.875rem; background: transparent;" />
+          <span style="font-size: 0.75rem; background: var(--a-color-surface-muted); padding: 0.15rem 0.4rem; border-radius: 4px; color: var(--a-color-muted);">已上传音频 (3.2MB)</span>
+        </div>
+        <!-- Action Icons -->
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button style="background: none; border: none; color: var(--a-color-primary); cursor: pointer; font-size: 0.75rem;">歌词 📝</button>
+          <button style="background: none; border: none; color: var(--a-color-muted); cursor: pointer;">↑</button>
+          <button style="background: none; border: none; color: var(--a-color-muted); cursor: pointer;">↓</button>
+          <button style="background: none; border: none; color: var(--a-color-danger); cursor: pointer; font-size: 1rem;">×</button>
+        </div>
+      </div>
+
+      <!-- Track Row 1 Expanded Lyrics (Mocked) -->
+      <div style="background: var(--a-color-surface); padding: 0.75rem; border-radius: 4px; margin-top: -0.25rem; border: 1px solid var(--a-color-border-soft); font-size: 0.825rem; display: flex; flex-direction: column; gap: 0.5rem;">
+        <span style="font-weight: 500; font-size: 0.75rem; color: var(--a-color-muted);">编辑歌词:</span>
+        <textarea class="mock-input" style="width: 100%; height: 60px; font-size: 0.825rem; resize: vertical;" placeholder="在此输入歌词..."></textarea>
+      </div>
+
+      <!-- Track Row 2 -->
+      <div style="border-bottom: 1px solid var(--a-color-border-soft); padding: 0.75rem 0; display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+        <span style="color: var(--a-color-muted); font-size: 0.875rem; font-family: monospace;">02</span>
+        <div style="flex: 1; display: flex; gap: 0.75rem; align-items: center;">
+          <input class="mock-input" value="We Don't Care" style="flex: 1; border: none; border-bottom: 1px dashed var(--a-color-border); padding: 0.25rem; font-size: 0.875rem; background: transparent;" />
+          <span style="font-size: 0.75rem; color: var(--a-color-warning);">未上传音频</span>
+        </div>
+        <!-- Action Icons -->
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button style="background: none; border: none; color: var(--a-color-muted); cursor: pointer; font-size: 0.75rem;">歌词 📝</button>
+          <button style="background: none; border: none; color: var(--a-color-muted); cursor: pointer;">↑</button>
+          <button style="background: none; border: none; color: var(--a-color-muted); cursor: pointer;">↓</button>
+          <button style="background: none; border: none; color: var(--a-color-danger); cursor: pointer; font-size: 1rem;">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

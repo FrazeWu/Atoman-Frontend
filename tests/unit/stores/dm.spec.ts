@@ -41,6 +41,16 @@ const makeMessage = (id: string, conversationId: string, createdAt: string, clie
   created_at: createdAt,
 })
 
+const deferred = <T>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
 describe('dm store', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -130,6 +140,94 @@ describe('dm store', () => {
     expect(store.activeConversationId).toBe('conversation-2')
     expect(store.activeMessages.map((item) => item.id)).toEqual(['second'])
     expect(store.messagesByConversation['conversation-1']).toBeUndefined()
+  })
+
+  it('ignores an older-page success after reopening the same conversation', async () => {
+    const stalePage = deferred<{ items: DMMessage[]; next_cursor?: string }>()
+    vi.mocked(listMessages)
+      .mockResolvedValueOnce({ items: [makeMessage('initial', 'conversation-1', '2026-07-23T00:00:00Z')], next_cursor: 'stale-cursor' })
+      .mockImplementationOnce(() => stalePage.promise)
+      .mockResolvedValueOnce({ items: [makeMessage('reopened', 'conversation-1', '2026-07-24T00:00:00Z')], next_cursor: 'fresh-cursor' })
+    vi.mocked(markConversationRead).mockResolvedValue({ conversation_unread: 0, mailbox_unread: 0, dm_unread: 0, total_unread: 0 })
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: '',
+      activeMessages: [],
+    })
+
+    await store.openConversation('conversation-1')
+    const staleRequest = store.loadOlderMessages()
+    await store.openConversation('conversation-1')
+    stalePage.resolve({ items: [makeMessage('stale', 'conversation-1', '2026-07-22T00:00:00Z')], next_cursor: 'wrong-cursor' })
+    await staleRequest
+
+    expect(store.activeMessages.map((message) => message.id)).toEqual(['initial', 'reopened'])
+    expect(store.messageCursorByConversation['conversation-1']).toBe('fresh-cursor')
+  })
+
+  it('keeps reopened conversation state when an older-page request fails', async () => {
+    const stalePage = deferred<{ items: DMMessage[]; next_cursor?: string }>()
+    const currentPage = deferred<{ items: DMMessage[]; next_cursor?: string }>()
+    vi.mocked(listMessages)
+      .mockResolvedValueOnce({ items: [makeMessage('initial', 'conversation-1', '2026-07-23T00:00:00Z')], next_cursor: 'stale-cursor' })
+      .mockImplementationOnce(() => stalePage.promise)
+      .mockResolvedValueOnce({ items: [makeMessage('reopened', 'conversation-1', '2026-07-24T00:00:00Z')], next_cursor: 'fresh-cursor' })
+      .mockImplementationOnce(() => currentPage.promise)
+    vi.mocked(markConversationRead).mockResolvedValue({ conversation_unread: 0, mailbox_unread: 0, dm_unread: 0, total_unread: 0 })
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: '',
+      activeMessages: [],
+    })
+
+    await store.openConversation('conversation-1')
+    const staleRequest = store.loadOlderMessages()
+    await store.openConversation('conversation-1')
+    const currentRequest = store.loadOlderMessages()
+    stalePage.reject(new Error('stale failure'))
+    await expect(staleRequest).rejects.toThrow('stale failure')
+
+    expect(store.activeMessages.map((message) => message.id)).toEqual(['initial', 'reopened'])
+    expect(store.messageCursorByConversation['conversation-1']).toBe('fresh-cursor')
+    expect(store.loadingMessages).toBe(true)
+
+    currentPage.resolve({ items: [] })
+    await currentRequest
+  })
+
+  it('does not let an older request end loading for the reopened conversation', async () => {
+    const stalePage = deferred<{ items: DMMessage[]; next_cursor?: string }>()
+    const currentPage = deferred<{ items: DMMessage[]; next_cursor?: string }>()
+    vi.mocked(listMessages)
+      .mockResolvedValueOnce({ items: [], next_cursor: 'stale-cursor' })
+      .mockImplementationOnce(() => stalePage.promise)
+      .mockResolvedValueOnce({ items: [], next_cursor: 'fresh-cursor' })
+      .mockImplementationOnce(() => currentPage.promise)
+    vi.mocked(markConversationRead).mockResolvedValue({ conversation_unread: 0, mailbox_unread: 0, dm_unread: 0, total_unread: 0 })
+    const store = useDMStore()
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: '',
+      activeMessages: [],
+    })
+
+    await store.openConversation('conversation-1')
+    const staleRequest = store.loadOlderMessages()
+    await store.openConversation('conversation-1')
+    const currentRequest = store.loadOlderMessages()
+    stalePage.resolve({ items: [] })
+    await staleRequest
+
+    expect(store.loadingMessages).toBe(true)
+
+    currentPage.resolve({ items: [] })
+    await currentRequest
+    expect(store.loadingMessages).toBe(false)
   })
 
   it('keeps cached messages when a target has no conversation', async () => {

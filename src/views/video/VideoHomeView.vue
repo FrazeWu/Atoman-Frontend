@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, ref, onMounted, watch } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -26,13 +27,18 @@ const recommendationOptions = [
   { label: '精选', value: 'featured' },
   { label: '探索', value: 'discover' },
 ]
+type RecommendedVideoPayload = {
+  id: string
+  title: string
+  image_url?: string
+}
 let fetchVideosSeq = 0
 
 async function fetchVideos() {
   const seq = ++fetchVideosSeq
   loading.value = true
   try {
-    const res = await fetch(`${API_URL}/videos?sort=${sort.value}`)
+    const res = await apiRequest(`${API_URL}/videos?sort=${sort.value}`)
     if (res.ok) {
       const data = await res.json()
       if (seq === fetchVideosSeq) videos.value = data
@@ -45,14 +51,14 @@ async function fetchVideos() {
 async function fetchRecommendedVideos() {
   recommendationLoading.value = true
   try {
-    const res = await fetch(`${API_URL}/videos/recommend/items?mode=${recommendationMode.value}&page=1&page_size=8`)
+    const res = await apiRequest(`${API_URL}/videos/recommend/items?mode=${recommendationMode.value}&page=1&page_size=8`)
     if (!res.ok) {
       recommendedVideos.value = []
       return
     }
-    const data = await res.json()
+    const data = await res.json() as { data?: RecommendedVideoPayload[] }
     recommendedVideos.value = Array.isArray(data.data)
-      ? data.data.map((item: any) => ({
+      ? data.data.map((item) => ({
           id: item.id,
           title: item.title,
           thumbnail_url: item.image_url,

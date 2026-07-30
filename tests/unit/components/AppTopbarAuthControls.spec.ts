@@ -4,16 +4,19 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import AppTopbarAuthControls from '@/components/system/AppTopbarAuthControls.vue'
 import { useAuthStore } from '@/stores/auth'
-import { afterEach } from 'vitest'
+import { afterEach, type MockInstance } from 'vitest'
 
 const mountedWrappers: Array<ReturnType<typeof mount>> = []
+let consoleWarnSpy: MockInstance
+let consoleErrorSpy: MockInstance
+let pinia: ReturnType<typeof createPinia>
 
 const mountTopbar = async (path = '/posts') => {
   await router.push(path)
   await router.isReady()
   const wrapper = mount(AppTopbarAuthControls, {
     global: {
-      plugins: [router],
+      plugins: [pinia, router],
     },
   })
   mountedWrappers.push(wrapper)
@@ -38,7 +41,10 @@ const router = createRouter({
 
 describe('AppTopbarAuthControls', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    pinia = createPinia()
+    setActivePinia(pinia)
     const authStore = useAuthStore()
     authStore.user = { id: 1, uuid: 'user-1', username: 'alice', email: 'alice@example.com', role: 'user' }
     authStore.isAuthenticated = true
@@ -52,7 +58,14 @@ describe('AppTopbarAuthControls', () => {
   })
 
   afterEach(() => {
-    mountedWrappers.splice(0).forEach(wrapper => wrapper.unmount())
+    try {
+      mountedWrappers.splice(0).forEach(wrapper => wrapper.unmount())
+      expect(consoleWarnSpy).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).not.toHaveBeenCalled()
+    } finally {
+      consoleWarnSpy.mockRestore()
+      consoleErrorSpy.mockRestore()
+    }
   })
 
   it('renders authenticated inbox and user controls', async () => {

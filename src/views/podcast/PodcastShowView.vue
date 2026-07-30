@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { apiRequest } from '@/api/client'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode, Channel } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -15,20 +16,32 @@ const channel = ref<Channel | null>(null)
 const episodes = ref<PodcastEpisode[]>([])
 const loading = ref(true)
 const actionMessage = ref('')
+let latestRequest = 0
 
-onMounted(async () => {
-  const slug = route.params.channelSlug as string
+watch(() => route.params.channelSlug as string | undefined, (slug) => {
+  if (slug) void loadShow(slug)
+}, { immediate: true })
+
+async function loadShow(slug: string) {
+  const request = ++latestRequest
+  channel.value = null
+  episodes.value = []
+  actionMessage.value = ''
+  loading.value = true
+
   try {
-    const res = await fetch(`${api.url}/podcast/shows/${slug}/episodes`)
-    if (res.ok) {
-      const data = await res.json()
-      channel.value = data.channel
-      episodes.value = data.episodes
-    }
+    const res = await apiRequest(`${api.url}/podcast/shows/${slug}/episodes`)
+    if (!res.ok) return
+    const data = await res.json()
+    if (request !== latestRequest) return
+    channel.value = data.channel
+    episodes.value = data.episodes
+  } catch {
+    if (request !== latestRequest) return
   } finally {
-    loading.value = false
+    if (request === latestRequest) loading.value = false
   }
-})
+}
 
 function episodeCover(ep: PodcastEpisode) {
   return ep.episode_cover_url || ep.post?.cover_url || ep.post?.collections?.[0]?.cover_url || ep.collections?.[0]?.cover_url || channel.value?.cover_url || ''
@@ -45,7 +58,7 @@ async function subscribeShow() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await fetch(api.podcast.showBookmarks, {
+  const res = await apiRequest(api.podcast.showBookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
     body: JSON.stringify({ channel_id: channel.value.id }),

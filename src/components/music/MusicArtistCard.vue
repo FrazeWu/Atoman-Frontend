@@ -222,6 +222,12 @@ const formattedSubscribers = computed(() => {
   background: #fefcf0;
 }
 
+:root.dark .bookmark-btn.is-bookmarked {
+  color: #fcd34d;
+  border-color: rgba(252, 211, 77, 0.2);
+  background: rgba(252, 211, 77, 0.1);
+}
+
 .stats-overlay {
   position: absolute;
   inset: 0;

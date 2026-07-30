@@ -1,3 +1,5 @@
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { TimelineEvent, TimelinePerson, PersonLocation } from '@/types'
@@ -53,7 +55,7 @@ export const useTimelineStore = defineStore('timeline', () => {
         if (params.yearStart) query.set('year_start', String(params.yearStart))
         if (params.yearEnd) query.set('year_end', String(params.yearEnd))
 
-        const res = await fetch(`${api.url}/timeline/events?${query}`)
+        const res = await apiRequest(`${api.url}/timeline/events?${query}`)
         if (requestSequence !== eventsRequestSequence) return
         if (!res.ok) throw new Error('Failed to fetch events')
 
@@ -94,7 +96,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     } catch (e) {
       if (requestSequence !== eventsRequestSequence) return
       error.value = 'Failed to fetch events'
-      console.error(e)
+      reportError(e)
     } finally {
       if (requestSequence === eventsRequestSequence) {
         loading.value = false
@@ -111,14 +113,14 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`${api.url}/timeline/events/${id}`)
+      const res = await apiRequest(`${api.url}/timeline/events/${id}`)
       if (res.ok) {
         const data = await res.json()
         currentEvent.value = data.data
       }
     } catch (e) {
       error.value = 'Failed to fetch event'
-      console.error(e)
+      reportError(e)
     } finally {
       loading.value = false
     }
@@ -139,7 +141,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public?: boolean
   }) => {
     try {
-      const res = await fetch(`${api.url}/timeline/events`, {
+      const res = await apiRequest(`${api.url}/timeline/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -171,7 +173,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public: boolean
   }>) => {
     try {
-      const res = await fetch(`${api.url}/timeline/events/${id}`, {
+      const res = await apiRequest(`${api.url}/timeline/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -192,7 +194,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deleteEvent = async (id: string) => {
     try {
-      const res = await fetch(`${api.url}/timeline/events/${id}`, {
+      const res = await apiRequest(`${api.url}/timeline/events/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -224,7 +226,7 @@ export const useTimelineStore = defineStore('timeline', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('limit', String(params.limit))
 
-      const res = await fetch(`${api.url}/timeline/persons?${query}`)
+      const res = await apiRequest(`${api.url}/timeline/persons?${query}`)
       if (requestSequence !== personsRequestSequence) return
       if (!res.ok) throw new Error('Failed to fetch persons')
 
@@ -244,7 +246,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     } catch (e) {
       if (requestSequence !== personsRequestSequence) return false
       personsError.value = 'Failed to fetch persons'
-      console.error(e)
+      reportError(e)
       return false
     } finally {
       if (requestSequence === personsRequestSequence) {
@@ -257,14 +259,14 @@ export const useTimelineStore = defineStore('timeline', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`${api.url}/timeline/persons/${id}`)
+      const res = await apiRequest(`${api.url}/timeline/persons/${id}`)
       if (res.ok) {
         const data = await res.json()
         currentPerson.value = data.data
       }
     } catch (e) {
       error.value = 'Failed to fetch person'
-      console.error(e)
+      reportError(e)
     } finally {
       loading.value = false
     }
@@ -279,7 +281,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public?: boolean
   }) => {
     try {
-      const res = await fetch(`${api.url}/timeline/persons`, {
+      const res = await apiRequest(`${api.url}/timeline/persons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -305,7 +307,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     is_public: boolean
   }>) => {
     try {
-      const res = await fetch(`${api.url}/timeline/persons/${id}`, {
+      const res = await apiRequest(`${api.url}/timeline/persons/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -326,7 +328,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deletePerson = async (id: string) => {
     try {
-      const res = await fetch(`${api.url}/timeline/persons/${id}`, {
+      const res = await apiRequest(`${api.url}/timeline/persons/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -347,14 +349,14 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const fetchPersonLocations = async (personId: string) => {
     try {
-      const res = await fetch(`${api.url}/timeline/persons/${personId}/locations`)
+      const res = await apiRequest(`${api.url}/timeline/persons/${personId}/locations`)
       if (res.ok) {
         const data = await res.json()
         return data.data as PersonLocation[]
       }
       return []
     } catch (e) {
-      console.error(e)
+      reportError(e)
       return []
     }
   }
@@ -368,7 +370,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     note?: string
   }) => {
     try {
-      const res = await fetch(`${api.url}/timeline/persons/${personId}/locations`, {
+      const res = await apiRequest(`${api.url}/timeline/persons/${personId}/locations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -400,7 +402,7 @@ export const useTimelineStore = defineStore('timeline', () => {
     note?: string
   }) => {
     try {
-      const res = await fetch(`${api.url}/timeline/locations/${locationId}`, {
+      const res = await apiRequest(`${api.url}/timeline/locations/${locationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(input),
@@ -427,7 +429,7 @@ export const useTimelineStore = defineStore('timeline', () => {
 
   const deleteLocation = async (locationId: string) => {
     try {
-      const res = await fetch(`${api.url}/timeline/locations/${locationId}`, {
+      const res = await apiRequest(`${api.url}/timeline/locations/${locationId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })

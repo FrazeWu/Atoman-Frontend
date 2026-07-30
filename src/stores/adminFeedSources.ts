@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
@@ -33,7 +34,7 @@ export const useAdminFeedSourcesStore = defineStore('adminFeedSources', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch(api.admin.feed.sources, {
+      const response = await apiRequest(api.admin.feed.sources, {
         headers: buildHeaders(token),
       })
       if (!response.ok) {
@@ -57,7 +58,7 @@ export const useAdminFeedSourcesStore = defineStore('adminFeedSources', () => {
     }
 
     error.value = null
-    const response = await fetch(api.admin.feed.source(sourceId), {
+    const response = await apiRequest(api.admin.feed.source(sourceId), {
       method: 'PATCH',
       headers: buildHeaders(token, true),
       body: JSON.stringify(payload),
@@ -78,7 +79,7 @@ export const useAdminFeedSourcesStore = defineStore('adminFeedSources', () => {
     }
 
     error.value = null
-    const response = await fetch(api.admin.feed.source(sourceId), {
+    const response = await apiRequest(api.admin.feed.source(sourceId), {
       method: 'DELETE',
       headers: buildHeaders(token),
     })

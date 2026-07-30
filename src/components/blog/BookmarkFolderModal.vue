@@ -31,6 +31,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { ref } from 'vue'
 import { Check, Folder } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
@@ -61,12 +62,12 @@ const error = ref('')
 const headers = () => ({ Authorization: `Bearer ${authStore.token}` })
 
 const loadFolders = async () => {
-  const res = await fetch(api.blog.bookmarkFolders, { headers: headers() })
+  const res = await apiRequest(api.blog.bookmarkFolders, { headers: headers() })
   if (!res.ok) throw new Error('加载收藏夹失败')
   const payload = await res.json()
   folders.value = payload.data || []
   if (folders.value.length === 0) {
-    const createRes = await fetch(api.blog.bookmarkFolders, {
+    const createRes = await apiRequest(api.blog.bookmarkFolders, {
       method: 'POST',
       headers: { ...headers(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: '默认收藏夹' }),
@@ -89,7 +90,7 @@ const open = async (targetPostId: string) => {
   bookmarkId.value = ''
   selectedFolderId.value = ''
   try {
-    const bookmarksRequest = fetch(api.blog.bookmarks, { headers: headers() })
+    const bookmarksRequest = apiRequest(api.blog.bookmarks, { headers: headers() })
     await loadFolders()
     const bookmarksRes = await bookmarksRequest
     if (!bookmarksRes.ok) throw new Error('加载收藏状态失败')
@@ -123,7 +124,7 @@ const saveToFolder = async (folderId: string) => {
     return
   }
   error.value = ''
-  const res = await fetch(api.blog.bookmarks, {
+  const res = await apiRequest(api.blog.bookmarks, {
     method: 'POST',
     headers: { ...headers(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ post_id: postId.value, bookmark_folder_id: folderId }),
@@ -142,7 +143,7 @@ const saveToFolder = async (folderId: string) => {
 const createFolder = async () => {
   const name = newFolderName.value.trim()
   if (!name) return
-  const res = await fetch(api.blog.bookmarkFolders, {
+  const res = await apiRequest(api.blog.bookmarkFolders, {
     method: 'POST',
     headers: { ...headers(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -158,7 +159,7 @@ const createFolder = async () => {
 
 const removeBookmark = async () => {
   if (!bookmarkId.value) return
-  const res = await fetch(api.blog.bookmark(bookmarkId.value), { method: 'DELETE', headers: headers() })
+  const res = await apiRequest(api.blog.bookmark(bookmarkId.value), { method: 'DELETE', headers: headers() })
   if (!res.ok) {
     error.value = '取消收藏失败'
     return

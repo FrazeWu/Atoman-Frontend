@@ -24,6 +24,10 @@ const multipartHeaders = {
   Accept: 'application/json',
 }
 
+export function apiRequest(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return init === undefined ? apiFetch(input) : apiFetch(input, init)
+}
+
 async function parseJson(response: Response): Promise<unknown> {
   const text = await response.text()
   if (!text) return {}
@@ -85,6 +89,14 @@ export async function apiGetEnvelope<T, M = Record<string, unknown>>(url: string
   return unwrapResponseEnvelope<T, M>(await apiFetch(url, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
+  }))
+}
+
+export async function apiRequestEnvelope<T, M = Record<string, unknown>>(url: string, init: RequestInit = {}): Promise<ApiSuccess<T, M>> {
+  return unwrapResponseEnvelope<T, M>(await apiFetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: { Accept: 'application/json', ...(init.headers as Record<string, string> | undefined) },
   }))
 }
 

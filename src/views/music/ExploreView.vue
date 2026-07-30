@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -55,27 +56,27 @@ const starredPlaylistIds = ref<string[]>([])
 async function fetchAlbumBookmarks() {
   try {
     const response = await listAlbumBookmarks()
-    starredAlbumIds.value = response.data.map((b: any) => String(b.album_id))
+    starredAlbumIds.value = response.data.map((bookmark) => String(bookmark.album_id))
   } catch (e) {
-    console.error('Failed to fetch album bookmarks:', e)
+    reportError(e, 'Failed to fetch album bookmarks:')
   }
 }
 
 async function fetchArtistBookmarks() {
   try {
     const response = await listArtistBookmarks()
-    starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
+    starredArtistIds.value = response.data.map((bookmark) => String(bookmark.artist_id))
   } catch (e) {
-    console.error('Failed to fetch artist bookmarks:', e)
+    reportError(e, 'Failed to fetch artist bookmarks:')
   }
 }
 
 async function fetchPlaylistBookmarks() {
   try {
     const response = await listPlaylistBookmarks()
-    starredPlaylistIds.value = response.data.map((b: any) => String(b.playlist_id))
+    starredPlaylistIds.value = response.data.map((bookmark) => String(bookmark.playlist_id))
   } catch (e) {
-    console.error('Failed to fetch playlist bookmarks:', e)
+    reportError(e, 'Failed to fetch playlist bookmarks:')
   }
 }
 
@@ -99,7 +100,7 @@ async function handleToggleAlbumBookmark(albumId: string) {
       return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
     })
   } catch (e) {
-    console.error('Failed to toggle album bookmark:', e)
+    reportError(e, 'Failed to toggle album bookmark:')
   }
 }
 
@@ -123,7 +124,7 @@ async function handleToggleArtistBookmark(artistId: string) {
       return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
     })
   } catch (e) {
-    console.error('Failed to toggle artist bookmark:', e)
+    reportError(e, 'Failed to toggle artist bookmark:')
   }
 }
 
@@ -147,7 +148,7 @@ async function handleTogglePlaylistBookmark(playlistId: string) {
       return { ...item, bookmark_count: (item.bookmark_count ?? 0) + 1 }
     })
   } catch (e) {
-    console.error('Failed to toggle playlist bookmark:', e)
+    reportError(e, 'Failed to toggle playlist bookmark:')
   }
 }
 
@@ -163,7 +164,7 @@ async function fetchDiscoverFeed() {
     ])
     applyDiscoverFeed(feedResponse.data ?? [])
   } catch (error) {
-    console.error('Failed to fetch music discover feed:', error)
+    reportError(error, 'Failed to fetch music discover feed:')
     errorMessage.value = '发现内容加载失败'
     discoverAlbums.value = []
     discoverArtists.value = []
@@ -227,7 +228,7 @@ async function fetchAlbumIndex() {
     ])
     albumItems.value = response.data
   } catch (error) {
-    console.error('Failed to fetch music albums:', error)
+    reportError(error, 'Failed to fetch music albums:')
     errorMessage.value = '专辑列表加载失败'
     albumItems.value = []
   } finally {
@@ -257,7 +258,7 @@ async function fetchSearchResults() {
     searchArtists.value = artistResponse.data
   } catch (error) {
     if (requestId !== activeSearchRequestId) return
-    console.error('Failed to search music explore entities:', error)
+    reportError(error, 'Failed to search music explore entities:')
     searchAlbums.value = []
     searchArtists.value = []
   } finally {

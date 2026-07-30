@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures/base'
 import type { Page, Route } from '@playwright/test'
-import { loginViaAPI, mockAuthenticatedSession } from '../helpers/auth'
+import { mockAuthenticatedSession } from '../helpers/auth'
 
 type Comment = {
   id: string
@@ -23,6 +23,7 @@ type Comment = {
 }
 
 const owner = { id: 'owner-1', username: 'owner', display_name: 'Owner', avatar_url: '' }
+const mentionedUserID = '11111111-1111-4111-8111-111111111111'
 
 async function becomeUser(page: Page) {
 	await mockAuthenticatedSession(page, {
@@ -104,17 +105,30 @@ test.describe('Comment surfaces and core API', () => {
   test('publishes a blog comment with a selected mention', async ({ page }) => {
     await becomeUser(page)
     const submitted = await mockComments(page, 'blog_post', 'post-1')
+    const observedQueries: string[] = []
+    const mentionDTO = {
+      type: 'user', id: mentionedUserID, label: '测试者', subtitle: '@测试者',
+      module: 'blog', path: '/users/测试者', available: true,
+    }
     await page.route('**/api/v1/blog/posts/post-1', (route) => route.fulfill({
       json: {
         data: {
           id: 'post-1', user_id: owner.id, user: owner, title: '统一评论文章', content: '正文', summary: '',
-          status: 'published', visibility: 'public', likes_count: 0, created_at: '2026-07-15T10:00:00Z',
+          status: 'published', visibility: 'public', allow_comments: true, likes_count: 0, created_at: '2026-07-15T10:00:00Z',
         },
       },
     }))
-    await page.route('**/api/v1/users/search?*', (route) => route.fulfill({
-      json: { data: [{ uuid: 'user-2', username: '测试者', display_name: '测试者', avatar_url: '', role: 'user' }] },
-    }))
+    await page.route('**/api/v1/references/search?*', (route) => {
+      const searchParams = new URL(route.request().url()).searchParams
+      expect(searchParams.get('type')).toBe('user')
+      expect(searchParams.get('limit')).toBe('5')
+      const query = searchParams.get('q')
+      expect(['测试', '测试者']).toContain(query)
+      if (query) observedQueries.push(query)
+      return route.fulfill({
+        json: { data: [mentionDTO] },
+      })
+    })
 
     await page.goto('/posts/post/post-1')
     const composer = page.locator('.comment-section textarea').first()
@@ -126,7 +140,8 @@ test.describe('Comment surfaces and core API', () => {
     await page.locator('.comment-section [data-test="comment-submit"]').click()
 
     await expect(page.getByText('@测试者 你好', { exact: true })).toBeVisible()
-    expect(submitted()?.mentions).toEqual([{ user_id: 'user-2', start: 0, end: 4 }])
+    expect(observedQueries).toContain('测试')
+    expect(submitted()?.mentions).toEqual([{ user_id: mentionedUserID, start: 0, end: 4 }])
   })
 
   test('detects a video time anchor and seeks to its second', async ({ page }) => {
@@ -185,11 +200,29 @@ test.describe('Comment surfaces and core API', () => {
 
 	test('real comment API parses time anchors', async ({ authenticatedPage }) => {
 		await authenticatedPage.goto('/debate')
-		const { token } = await loginViaAPI(authenticatedPage.request)
-    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    const sessionResponse = await authenticatedPage.request.get('/api/v1/auth/session')
+    expect(sessionResponse.status()).toBe(200)
+    const session = await sessionResponse.json() as { csrf_token: string }
+    const headers = {
+      'X-CSRF-Token': session.csrf_token,
+      'Content-Type': 'application/json',
+      Origin: new URL(authenticatedPage.url()).origin,
+    }
+    const studioResponse = await authenticatedPage.request.get('/api/v1/studio/state', { headers })
+    expect(studioResponse.status()).toBe(200)
+    const studioState = await studioResponse.json() as { data: { current_channel: { id: string } } }
+    const collectionsResponse = await authenticatedPage.request.get(
+      `/api/v1/studio/video/collections?channel_id=${studioState.data.current_channel.id}`,
+      { headers },
+    )
+    expect(collectionsResponse.status()).toBe(200)
+    const collections = await collectionsResponse.json() as { data: Array<{ id: string }> }
+    expect(collections.data.length).toBeGreaterThan(0)
     const videoResponse = await authenticatedPage.request.post('/api/v1/videos', {
       headers,
       data: {
+        channel_id: studioState.data.current_channel.id,
+        collection_ids: [collections.data[0].id],
         title: `Comment E2E ${Date.now()}`,
         description: 'time anchor',
         storage_type: 'external',

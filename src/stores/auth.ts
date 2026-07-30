@@ -2,7 +2,8 @@ import { defineStore, getActivePinia } from 'pinia'
 import { clearSessionStores } from '@/stores/sessionReset'
 import { ref } from 'vue'
 
-import { apiFetch, clearCSRFToken, setCSRFToken } from '@/api/transport'
+import { apiRequest } from '@/api/client'
+import { clearCSRFToken, setCSRFToken } from '@/api/transport'
 import { useApiUrl } from '@/composables/useApi'
 import type { User } from '@/types'
 
@@ -91,6 +92,18 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false)
   const lastAuthError = ref<string | null>(null)
   let restoreSessionInFlight: Promise<boolean> | null = null
+  let sessionGeneration = 0
+  let credentialGeneration = 0
+  let sessionActionGeneration = 0
+
+  const invalidatePendingRestore = () => {
+    sessionGeneration += 1
+    restoreSessionInFlight = null
+  }
+
+  const invalidatePendingCredentials = () => {
+    credentialGeneration += 1
+  }
 
   const clearDependentState = () => {
     clearSessionStores(pinia)
@@ -115,15 +128,20 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const submitCredentials = async (path: 'login' | 'register', body: Record<string, unknown>) => {
+    sessionActionGeneration += 1
+    invalidatePendingRestore()
+    const submissionGeneration = ++credentialGeneration
     lastAuthError.value = null
     try {
-      const response = await apiFetch(`${API_URL}/auth/${path}`, {
+      const response = await apiRequest(`${API_URL}/auth/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body),
       })
+      if (submissionGeneration !== credentialGeneration) return false
       const data = await parseApiResponse(response)
+      if (submissionGeneration !== credentialGeneration) return false
       const authError = toAuthApiError(data)
       if (!response.ok) {
         const message = authErrorMessage(authError, `${path === 'login' ? '登录' : '注册'}失败 (${response.status})`)
@@ -133,12 +151,14 @@ export const useAuthStore = defineStore('auth', () => {
       const session = extractSessionPayload(data)
       if (!session) {
         const message = '服务返回异常，请稍后重试'
-        clearSessionState()
         lastAuthError.value = message
         throw new Error(message)
       }
       applySession(session)
+      invalidatePendingRestore()
+      return true
     } catch (error) {
+      if (submissionGeneration !== credentialGeneration) return false
       if (error instanceof TypeError) {
         const mapped = networkAuthError()
         lastAuthError.value = mapped.message
@@ -165,24 +185,34 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const logout = async () => {
-    await apiFetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
+    const logoutGeneration = ++sessionActionGeneration
+    invalidatePendingRestore()
+    invalidatePendingCredentials()
+    await apiRequest(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
+    if (logoutGeneration !== sessionActionGeneration) return
+    invalidatePendingRestore()
+    invalidatePendingCredentials()
     clearSessionState()
     lastAuthError.value = null
-    restoreSessionInFlight = null
   }
 
   const restoreSession = async (force = false) => {
     if (!force && isAuthenticated.value && user.value) return true
     if (restoreSessionInFlight) return restoreSessionInFlight
-    restoreSessionInFlight = (async () => {
+    sessionActionGeneration += 1
+    const restoreGeneration = sessionGeneration
+    let currentRestore: Promise<boolean>
+    currentRestore = (async () => {
       try {
-        const response = await apiFetch(`${API_URL}/auth/session`, { credentials: 'include' })
+        const response = await apiRequest(`${API_URL}/auth/session`, { credentials: 'include' })
+        if (restoreGeneration !== sessionGeneration) return false
         if (response.status === 204) {
           clearSessionState()
           lastAuthError.value = null
           return false
         }
         const data = await parseApiResponse(response)
+        if (restoreGeneration !== sessionGeneration) return false
         const authError = toAuthApiError(data)
         if (!response.ok) {
           if (isAuthInvalidationCode(authError.code)) {
@@ -193,20 +223,24 @@ export const useAuthStore = defineStore('auth', () => {
         }
         const session = extractSessionPayload(data)
         if (!session) {
-          clearSessionState()
+          if (!isAuthenticated.value || !user.value) clearSessionState()
           lastAuthError.value = '服务返回异常，请稍后重试'
           return false
         }
         applySession(session)
         return true
       } catch {
+        if (restoreGeneration !== sessionGeneration) return false
         lastAuthError.value = '无法连接服务器，请检查网络后重试'
         return false
       } finally {
-        restoreSessionInFlight = null
+        if (restoreGeneration === sessionGeneration && restoreSessionInFlight === currentRestore) {
+          restoreSessionInFlight = null
+        }
       }
     })()
-    return restoreSessionInFlight
+    restoreSessionInFlight = currentRestore
+    return currentRestore
   }
 
   const validateSession = () => {

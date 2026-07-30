@@ -1,5 +1,6 @@
 <!-- web/src/components/music/PlaylistDrawer.vue -->
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -75,7 +76,7 @@ async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolea
       isBookmarked.value = false
       return
     }
-    console.error('Failed to fetch playlist bookmark state:', error)
+    reportError(error, 'Failed to fetch playlist bookmark state:')
   }
 }
 
@@ -111,7 +112,7 @@ async function loadPlaylist(playlistId: string | null) {
     }
   } catch (error) {
     if (!isCurrentLoad()) return
-    console.error('Failed to fetch playlist details:', error)
+    reportError(error, 'Failed to fetch playlist details:')
     errorMessage.value = '歌单信息加载失败'
   } finally {
     if (isCurrentLoad()) loading.value = false
@@ -149,7 +150,7 @@ async function handleCoverChange(event: Event) {
     const asset = await uploadMusicAsset(file, 'music.cover')
     editCoverUrl.value = asset.url
   } catch (error) {
-    console.error('Failed to upload playlist cover:', error)
+    reportError(error, 'Failed to upload playlist cover:')
     errorMessage.value = '歌单封面上传失败'
   } finally {
     coverUploading.value = false
@@ -188,7 +189,7 @@ async function savePlaylist() {
     syncEditForm(playlist.value)
     editing.value = false
   } catch (error) {
-    console.error('Failed to update playlist:', error)
+    reportError(error, 'Failed to update playlist:')
     errorMessage.value = error instanceof ApiErrorResponseError
       ? error.message
       : error instanceof Error
@@ -217,7 +218,7 @@ async function deletePlaylist() {
     editing.value = false
     closePlaylist()
   } catch (error) {
-    console.error('Failed to delete playlist:', error)
+    reportError(error, 'Failed to delete playlist:')
     errorMessage.value = error instanceof ApiErrorResponseError
       ? error.message
       : error instanceof Error
@@ -242,7 +243,7 @@ async function removePlaylistSong(songId: string) {
     }
     refreshPlaylists()
   } catch (error) {
-    console.error('Failed to remove playlist song:', error)
+    reportError(error, 'Failed to remove playlist song:')
     errorMessage.value = '歌曲移除失败'
   } finally {
     const next = new Set(removingSongIds.value)
@@ -273,7 +274,7 @@ async function persistSongOrder(nextSongs: MusicSongListItem[]) {
         if (playlist.value?.id === queuedPlaylistId) errorMessage.value = ''
         refreshPlaylists()
       } catch (error) {
-        console.error('Failed to reorder playlist songs:', error)
+        reportError(error, 'Failed to reorder playlist songs:')
         if (playlist.value?.id === queuedPlaylistId) {
           const confirmedOrder = confirmedSongOrders.get(queuedPlaylistId)
           if (!pendingSongOrders.has(queuedPlaylistId) && confirmedOrder) {
@@ -409,7 +410,7 @@ async function toggleBookmark() {
     refreshPlaylists()
   } catch (error) {
     if (!isCurrentTarget()) return
-    console.error('Failed to toggle playlist bookmark:', error)
+    reportError(error, 'Failed to toggle playlist bookmark:')
     errorMessage.value = '操作失败'
   } finally {
     if (isCurrentTarget()) bookmarkLoading.value = false

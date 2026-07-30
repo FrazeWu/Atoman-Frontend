@@ -29,7 +29,6 @@ const shellFiles = [
   'src/components/system/MobileBottomNav.vue',
   'src/components/system/MobileMoreSheet.vue',
   'src/components/system/TopbarSearchSection.vue',
-  'src/components/shared/CommentThread.vue',
   'src/components/shared/InteractionBar.vue',
   'src/components/shared/PEditorRuntime.vue',
   'src/components/setting/SettingFeedSourcePanel.vue',
@@ -66,7 +65,6 @@ const blogFeedFiles = [
   'src/views/feed/InboxPage.vue',
 ]
 const remainingModuleFiles = [
-  'src/components/forum/ForumReplyNode.vue',
   'src/components/podcast/PodcastCommentSection.vue',
   'src/views/debate/DebateHomeView.vue',
   'src/views/forum/ForumHomeView.vue',
@@ -86,7 +84,6 @@ const remainingModuleFiles = [
   'src/views/portal/PortalView.vue',
   'src/views/system/AboutView.vue',
   'src/views/system/NotFoundView.vue',
-  'src/views/system/UnknownSiteView.vue',
 ]
 
 describe('module style contract', () => {

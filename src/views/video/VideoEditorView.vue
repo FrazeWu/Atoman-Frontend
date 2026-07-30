@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { apiRequest } from '@/api/client'
 import { configureApiXHR } from '@/api/transport'
 import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -18,6 +19,7 @@ import type { Video, Collection } from '@/types'
 import { useApi } from '@/composables/useApi'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
+import { errorMessage } from '@/utils/logger'
 
 const api = useApi()
 const route = useRoute()
@@ -173,7 +175,7 @@ async function uploadCoverBlob(blob: Blob) {
   try {
     const fd = new FormData()
     fd.append('cover', new File([blob], `auto-cover-${Date.now()}.jpg`, { type: 'image/jpeg' }))
-    const res = await fetch(`${api.url}/videos/upload-cover`, {
+    const res = await apiRequest(`${api.url}/videos/upload-cover`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: fd,
@@ -181,8 +183,8 @@ async function uploadCoverBlob(blob: Blob) {
     if (!res.ok) throw await res.json()
     const result = await res.json()
     form.value.thumbnail_url = result.url
-  } catch (err: any) {
-    errorMsg.value = err?.error || '封面上传失败'
+  } catch (err) {
+    errorMsg.value = errorMessage(err, '封面上传失败')
   } finally {
     coverUploading.value = false
   }
@@ -219,9 +221,9 @@ async function onVideoFileChange(e: Event) {
       generatedCoverReady.value = false
       errorMsg.value = '自动封面生成失败，可手动上传封面'
     }
-  } catch (err: any) {
+  } catch (err) {
     videoUploadProgress.value = -1
-    urlError.value = err?.error || '视频上传失败'
+    urlError.value = errorMessage(err, '视频上传失败')
   } finally {
     videoUploading.value = false
   }
@@ -234,7 +236,7 @@ async function onCoverFileChange(e: Event) {
   try {
     const fd = new FormData()
     fd.append('cover', file)
-    const res = await fetch(`${api.url}/videos/upload-cover`, {
+    const res = await apiRequest(`${api.url}/videos/upload-cover`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: fd,
@@ -242,8 +244,8 @@ async function onCoverFileChange(e: Event) {
     if (!res.ok) throw await res.json()
     const result = await res.json()
     form.value.thumbnail_url = result.url
-  } catch (err: any) {
-    errorMsg.value = err?.error || '封面上传失败'
+  } catch (err) {
+    errorMsg.value = errorMessage(err, '封面上传失败')
   } finally {
     coverUploading.value = false
   }
@@ -314,13 +316,13 @@ function buildPayload(status: 'draft' | 'published') {
 async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video> {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }
   if (isEdit.value) {
-    const res = await fetch(`${api.url}/videos/${route.params.id}`, {
+    const res = await apiRequest(`${api.url}/videos/${route.params.id}`, {
       method: 'PUT', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
     return res.json()
   } else {
-    const res = await fetch(`${api.url}/videos`, {
+    const res = await apiRequest(`${api.url}/videos`, {
       method: 'POST', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
@@ -353,7 +355,7 @@ function toggleCollection(id: string, checked: boolean) {
 
 async function loadVideo() {
   const id = route.params.id as string
-  const res = await fetch(`${api.url}/videos/${id}`, {
+  const res = await apiRequest(`${api.url}/videos/${id}`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) return
@@ -408,8 +410,8 @@ async function saveDraft() {
       query: selectedCollectionIds.value[0] ? { collection_id: selectedCollectionIds.value[0] } : undefined,
     })
     setTimeout(() => { draftSaved.value = false }, 3000)
-  } catch (e: any) {
-    errorMsg.value = e?.error || '保存失败，请重试'
+  } catch (e) {
+    errorMsg.value = errorMessage(e, '保存失败，请重试')
   } finally {
     savingDraft.value = false
   }
@@ -427,8 +429,8 @@ async function doPublish() {
   try {
     const v = await apiSave(buildPayload('published'))
     router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
-  } catch (e: any) {
-    errorMsg.value = e?.error || '发布失败，请重试'
+  } catch (e) {
+    errorMsg.value = errorMessage(e, '发布失败，请重试')
   } finally {
     publishing.value = false
   }
@@ -447,8 +449,8 @@ async function schedulePublish() {
     const video = await apiSave(buildPayload('draft'))
     await lifecycle.schedule('video', video.id, publishAt.toISOString())
     await router.push({ path: '/studio/video/content', query: { status: 'scheduled' } })
-  } catch (e: any) {
-    errorMsg.value = e?.error?.message || e?.error || e?.message || '设置失败，请重试'
+  } catch (e) {
+    errorMsg.value = errorMessage(e, '设置失败，请重试')
   } finally {
     scheduling.value = false
   }

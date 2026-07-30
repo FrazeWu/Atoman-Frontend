@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -31,7 +32,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${api.url}${path}`, {
+  const res = await apiRequest(`${api.url}${path}`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) throw new Error('load failed')

@@ -3,8 +3,7 @@ import { test, expect } from '../fixtures/base'
 test.describe('Feed', () => {
   test('browse feed page without login shows guest view', async ({ page }) => {
     await page.goto('/feed')
-    // use an exact link role to avoid ambiguous matches for the word '订阅'
-    await expect(page.getByRole('link', { name: '订阅', exact: true })).toBeVisible()
+    await expect(page.getByRole('banner').getByRole('link', { name: '订阅', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: '登录', exact: true }).first()).toBeVisible()
   })
 

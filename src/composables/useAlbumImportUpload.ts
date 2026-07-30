@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { ref, computed } from 'vue'
 import {
   createMusicAlbumImport,
@@ -103,7 +104,7 @@ export function useAlbumImportUpload() {
 
       const upload = await createMusicAlbumImportFilePartUpload(importId, fileId, partNumber, partSize)
 
-      const response = await fetch(upload.uploadUrl, {
+      const response = await apiRequest(upload.uploadUrl, {
         method: 'PUT',
         body: chunk,
       })

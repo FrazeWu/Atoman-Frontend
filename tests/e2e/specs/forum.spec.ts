@@ -7,11 +7,9 @@ test.describe('Forum', () => {
     await expect(page.getByRole('button', { name: /全部分类/ })).toBeVisible()
   })
 
-  test('forum shows category sidebar', async ({ page }) => {
+  test('forum shows category filter', async ({ page }) => {
     await page.goto('/forum')
-    await page.waitForTimeout(2000)
-    const sidebar = page.locator('.forum-sidebar')
-    await expect(sidebar).toBeVisible()
+    await expect(page.getByRole('button', { name: '全部分类' })).toBeVisible()
   })
 
   test('forum shows sort tabs', async ({ page }) => {

@@ -10,7 +10,7 @@
         :model-value="comments.sort.value"
         :options="sortOptions"
         :disabled="comments.loading.value"
-        @update:model-value="comments.setSort"
+        @update:model-value="setSort"
       />
     </header>
 
@@ -63,7 +63,7 @@
       />
     </div>
 
-    <PButton v-if="comments.hasMore.value" block outline :loading="comments.loading.value" @click="comments.loadMore">
+    <PButton v-if="comments.hasMore.value" block outline :loading="comments.loading.value" @click="loadMore">
       加载更多
     </PButton>
 
@@ -133,18 +133,29 @@ const sortOptions = [
 
 let focusRequest = 0
 let focusQueue = Promise.resolve()
+let targetGeneration = 0
 
 watch(() => [
   `${props.target.kind}:${props.target.resourceId}`,
   props.focusCommentId,
   props.focusRootId,
 ] as const, ([targetKey], previous) => {
+  if (previous && previous[0] !== targetKey) {
+    targetGeneration += 1
+    creating.value = false
+    rootComposer.value?.reset()
+    mutationError.value = ''
+  }
   const request = ++focusRequest
   const shouldLoad = !previous || previous[0] !== targetKey || comments.page.value === 0
   focusQueue = focusQueue.catch(() => undefined).then(async () => {
     if (request !== focusRequest) return
     try {
-      if (shouldLoad) await comments.load()
+      if (shouldLoad) {
+        await comments.load()
+        if (request !== focusRequest) return
+        emitCount()
+      }
       if (request !== focusRequest) return
       await focusRequestedComment(request)
     } catch {
@@ -199,21 +210,29 @@ async function focusRequestedComment(request: number) {
 }
 
 async function createRoot(input: CreateCommentInput) {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
   creating.value = true
   mutationError.value = ''
   try {
     await comments.create(input)
+    if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
     rootComposer.value?.reset()
     emitCount()
   } catch (error) {
-    mutationError.value = referencePublishErrorMessage(error, '发布失败，请重试')
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) {
+      mutationError.value = referencePublishErrorMessage(error, '发布失败，请重试')
+    }
   } finally {
-    creating.value = false
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) creating.value = false
   }
 }
 
 async function createReply(comment: CommentDTO, input: CreateCommentInput) {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
   await comments.create({ ...input, reply_to_id: comment.id })
+  if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
   emitCount()
 }
 
@@ -222,16 +241,43 @@ async function editComment(comment: CommentDTO, input: CreateCommentInput) {
 }
 
 async function removeComment(commentId: string) {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
   try {
     await comments.remove(commentId)
+    if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
     emitCount()
   } catch {
-    mutationError.value = '删除失败，请重试'
+    if (isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) mutationError.value = '删除失败，请重试'
   }
+}
+
+function targetKey(target: CommentTargetRef) {
+  return `${target.kind}:${target.resourceId}`
+}
+
+function isCurrentTarget(requestedKey: string, requestedGeneration: number) {
+  return requestedGeneration === targetGeneration && requestedKey === targetKey(props.target)
 }
 
 function emitCount() {
   if (comments.target.value) emit('count-change', comments.target.value.comment_count)
+}
+
+async function setSort(next: typeof comments.sort.value) {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
+  await comments.setSort(next)
+  if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
+  emitCount()
+}
+
+async function loadMore() {
+  const requestedTargetKey = targetKey(props.target)
+  const requestedTargetGeneration = targetGeneration
+  await comments.loadMore()
+  if (!isCurrentTarget(requestedTargetKey, requestedTargetGeneration)) return
+  emitCount()
 }
 
 async function markComment(commentId: string) {

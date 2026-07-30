@@ -111,7 +111,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { FeedItem, TimelineItem } from '@/types'
+import type { FeedItem, Post, TimelineItem } from '@/types'
 import DOMPurify from 'dompurify'
 import PSheet from '@/components/ui/PSheet.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -220,7 +220,7 @@ const renderFeedHTML = (html: string) =>
     ADD_ATTR: ['target', 'rel'],
   })
 
-const handleReadMore = (post: any) => {
+const handleReadMore = (post: Post) => {
   void navigateWithShutter(
     async () => Promise.resolve(post),
     modulePathUrl('blog', `/post/${post.id}`),

@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import DebateVotePanel from '@/components/debate/DebateVotePanel.vue'
@@ -38,9 +38,10 @@ describe('DebateVotePanel', () => {
   })
 
   it('未登录投票时进入登录页', async () => {
-    const wrapper = mount(DebateVotePanel, { props: { summary } })
+    const wrapper = mount(DebateVotePanel, { props: { summary }, global: { plugins: [createPinia()] } })
 
     await wrapper.get('[data-test="vote-no"]').trigger('click')
+    await flushPromises()
 
     expect(routerPush).toHaveBeenCalledWith('/login')
     expect(wrapper.emitted('vote')).toBeUndefined()

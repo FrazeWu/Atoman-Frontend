@@ -161,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
@@ -236,7 +237,7 @@ async function loadHotContent() {
   loading.value = true
   error.value = ''
   try {
-    const response = await fetch(`${api.url}/portal/hot?limit=6`, {
+    const response = await apiRequest(`${api.url}/portal/hot?limit=6`, {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
@@ -321,7 +322,6 @@ onMounted(loadHotContent)
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--a-color-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .portal-hot__badge-dot {
@@ -329,13 +329,12 @@ onMounted(loadHotContent)
   height: 6px;
   border-radius: 50%;
   background: var(--a-color-primary);
-  box-shadow: 0 0 8px var(--a-color-primary);
 }
 
 .portal-hot__hero-title {
   margin: 0;
   font-size: 44px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--a-color-text);
@@ -394,7 +393,7 @@ onMounted(loadHotContent)
   color: var(--a-color-primary);
   font-family: var(--a-font-sans);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -414,7 +413,7 @@ onMounted(loadHotContent)
 .portal-hot__section-header h2 {
   margin: 0;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-text);
 }
 
@@ -446,15 +445,13 @@ onMounted(loadHotContent)
   border-radius: var(--a-radius-card, 6px);
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s ease, border-color 0.25s ease;
   overflow: hidden;
 }
 
 .portal-hot__recommendation-card:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--a-color-primary) 40%, var(--a-color-border));
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.07);
 }
 
 .portal-hot__recommendation-card.has-image {
@@ -594,7 +591,7 @@ onMounted(loadHotContent)
 .portal-hot__section-head h2 {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--a-color-text);
 }
 
@@ -627,13 +624,12 @@ onMounted(loadHotContent)
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .portal-hot__card:hover {
   transform: translateY(-2px);
   border-color: var(--a-color-border);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
 }
 
 .portal-hot__thumb {
@@ -732,7 +728,7 @@ onMounted(loadHotContent)
   gap: 16px;
   padding: 64px 24px;
   border-radius: var(--a-radius-card, 6px);
-  border: 1px dashed var(--a-color-border);
+  border: 1px solid var(--a-color-border);
   background: var(--a-color-surface);
 }
 
@@ -830,4 +826,3 @@ onMounted(loadHotContent)
   }
 }
 </style>
-

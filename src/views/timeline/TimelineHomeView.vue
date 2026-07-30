@@ -398,7 +398,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useTimelineStore } from '@/stores/timeline'
@@ -417,13 +419,11 @@ import TimelineEventFormSection from '@/components/timeline/TimelineEventFormSec
 import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProposal.vue'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useApi } from '@/composables/useApi'
+import { useTimelineComparison } from '@/composables/timeline/useTimelineComparison'
 
 const TimelineMapPane = defineAsyncComponent(() => import('@/views/timeline/TimelineMapPane.vue'))
 
-type TimelineViewMode = 'lanes' | 'map'
-
 const api = useApi()
-const DAY_MS = 24 * 60 * 60 * 1000
 
 const store = useTimelineStore()
 const authStore = useAuthStore()
@@ -432,223 +432,43 @@ const router = useRouter()
 
 const { events, loading, error } = storeToRefs(store)
 
-const viewMode = ref<TimelineViewMode>('lanes')
-
 const yearStart = ref<number | null>(null)
 const yearEnd = ref<number | null>(null)
 const filterCategory = ref('')
-
-const compareIds = ref<string[]>([])
-const activeCompareId = ref<string | null>(null)
-const batchSelectedIds = ref<string[]>([])
-const hydratedCompareEvents = ref<TimelineEvent[]>([])
-const hydratingCompare = ref(false)
-const routeSyncing = ref(false)
 
 const sortedEvents = computed(() =>
   [...events.value].sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
 )
 
-const knownEvents = computed(() => {
-  const map = new Map<string, TimelineEvent>()
-  for (const event of hydratedCompareEvents.value) {
-    map.set(event.id, event)
-  }
-  for (const event of sortedEvents.value) {
-    map.set(event.id, event)
-  }
-  return map
-})
-
-const compareEvents = computed(() =>
-  compareIds.value
-    .map((id) => knownEvents.value.get(id))
-    .filter((event): event is TimelineEvent => Boolean(event))
-)
-
-const activeCompareEvent = computed(() =>
-  compareEvents.value.find((event) => event.id === activeCompareId.value) ?? compareEvents.value[0] ?? null
-)
-
-const compareSet = computed(() => new Set(compareIds.value))
-
-const normalizeSingleQueryValue = (value: unknown): string | null => {
-  if (typeof value === 'string') return value
-  if (Array.isArray(value) && typeof value[0] === 'string') return value[0]
-  return null
-}
-
-const uniqueIds = (ids: string[]) => Array.from(new Set(ids.filter(Boolean)))
-
-const sameIds = (left: string[], right: string[]) =>
-  left.length === right.length && left.every((value, index) => value === right[index])
-
-const parseCompareQuery = (value: unknown): string[] => {
-  if (typeof value === 'string') {
-    return value.split(',').map((item) => item.trim()).filter(Boolean)
-  }
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => parseCompareQuery(item))
-  }
-  return []
-}
-
-const parseModeQuery = (value: unknown): TimelineViewMode =>
-  normalizeSingleQueryValue(value) === 'map' ? 'map' : 'lanes'
-
-const getEventStartMs = (event: TimelineEvent) => new Date(event.event_date).getTime()
-
-const getEventEndMs = (event: TimelineEvent) => {
-  if (!event.end_date) return getEventStartMs(event)
-  const endMs = new Date(event.end_date).getTime()
-  return Number.isFinite(endMs) ? endMs : getEventStartMs(event)
-}
-
-const isInstantEvent = (event: TimelineEvent) => getEventEndMs(event) <= getEventStartMs(event)
-
-const canMapEvent = (event: TimelineEvent) =>
-  typeof event.latitude === 'number' &&
-  Number.isFinite(event.latitude) &&
-  typeof event.longitude === 'number' &&
-  Number.isFinite(event.longitude)
-
-const mapRenderableEvents = computed(() => {
-  const map = new Map<string, TimelineEvent>()
-  for (const event of sortedEvents.value) {
-    if (canMapEvent(event)) map.set(event.id, event)
-  }
-  for (const event of compareEvents.value) {
-    if (canMapEvent(event)) map.set(event.id, event)
-  }
-  return Array.from(map.values()).sort((a, b) => getEventStartMs(a) - getEventStartMs(b))
-})
-
-const compareBounds = computed(() => {
-  if (!compareEvents.value.length) return null
-
-  let min = Number.POSITIVE_INFINITY
-  let max = Number.NEGATIVE_INFINITY
-
-  for (const event of compareEvents.value) {
-    min = Math.min(min, getEventStartMs(event))
-    max = Math.max(max, getEventEndMs(event))
-  }
-
-  const safeMax = max === min ? max + DAY_MS : max
-
-  return {
-    min,
-    max: safeMax,
-    span: safeMax - min,
-  }
-})
-
-const formatDatetime = (value: string) => {
-  if (!value) return ''
-
-  // BCE dates: strings starting with '-' (e.g. "-0500-01-01")
-  if (value.startsWith('-')) {
-    const parts = value.slice(1).split('-')
-    const year = parts[0]
-    const suffix = parts.length > 1 ? `-${parts.slice(1).join('-')}` : ''
-    const dateStr = `公元前 ${parseInt(year, 10)} 年${suffix ? suffix.slice(0, 6).replace('-', ' ').replace('-', ' 月') + ' 日' : ''}`
-    return dateStr
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value.slice(0, 16)
-
-  const hours = date.getHours()
-  const minutes = date.getMinutes()
-  const dateLabel = value.slice(0, 10)
-
-  if (hours === 0 && minutes === 0) return dateLabel
-
-  return `${dateLabel} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
-const formatTickLabel = (timestamp: number) => {
-  const bounds = compareBounds.value
-  if (!bounds) return ''
-
-  const totalDays = bounds.span / DAY_MS
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  // BCE dates have negative year from JS Date (year ≤ 0)
-  if (year <= 0) return `BCE ${Math.abs(year)}`
-
-  if (totalDays > 365 * 2) return `${year}`
-  if (totalDays > 60) return `${year}-${month}`
-  return `${year}-${month}-${day}`
-}
-
-const formatEventRange = (event: TimelineEvent) =>
-  isInstantEvent(event)
-    ? formatDatetime(event.event_date)
-    : `${formatDatetime(event.event_date)} — ${formatDatetime(event.end_date || event.event_date)}`
-
-const getDurationLabel = (event: TimelineEvent) => {
-  if (isInstantEvent(event)) return '单点事件'
-
-  const diffMs = Math.max(getEventEndMs(event) - getEventStartMs(event), 0)
-  const totalMinutes = diffMs / (60 * 1000)
-  const totalHours = diffMs / (60 * 60 * 1000)
-  const totalDays = diffMs / DAY_MS
-
-  if (totalMinutes < 60) return `${Math.max(Math.round(totalMinutes), 1)} 分钟`
-  if (totalHours < 24) return `${Math.max(Math.round(totalHours), 1)} 小时`
-  if (totalDays < 60) return `${Math.max(Math.round(totalDays), 1)} 天`
-
-  const totalMonths = totalDays / 30
-  if (totalMonths < 24) {
-    return `${totalMonths < 6 ? totalMonths.toFixed(1) : Math.round(totalMonths)} 个月`
-  }
-
-  const totalYears = totalDays / 365
-  return `${totalYears < 10 ? totalYears.toFixed(1) : Math.round(totalYears)} 年`
-}
-
-const laneTicks = computed(() => {
-  const bounds = compareBounds.value
-  if (!bounds) return []
-
-  const tickCount = Math.min(Math.max(compareEvents.value.length + 1, 4), 6)
-
-  return Array.from({ length: tickCount }, (_, index) => {
-    const ratio = tickCount === 1 ? 0 : index / (tickCount - 1)
-    const timestamp = bounds.min + bounds.span * ratio
-
-    return {
-      pct: ratio * 100,
-      label: formatTickLabel(timestamp),
-    }
-  })
-})
-
-const clampPercent = (value: number) => Math.max(0, Math.min(100, value))
-
-const getLaneStyle = (event: TimelineEvent) => {
-  const bounds = compareBounds.value
-  if (!bounds) return {}
-
-  const startRatio = (getEventStartMs(event) - bounds.min) / bounds.span
-  const left = clampPercent(startRatio * 100)
-
-  if (isInstantEvent(event)) {
-    return { left: `${left}%` }
-  }
-
-  const endRatio = (getEventEndMs(event) - bounds.min) / bounds.span
-  const width = Math.max((endRatio - startRatio) * 100, 1.75)
-
-  return {
-    left: `${left}%`,
-    width: `${width}%`,
-  }
-}
+const {
+  viewMode,
+  compareIds,
+  activeCompareId,
+  batchSelectedIds,
+  hydratingCompare,
+  compareEvents,
+  activeCompareEvent,
+  mapRenderableEvents,
+  laneTicks,
+  formatDatetime,
+  formatEventRange,
+  getDurationLabel,
+  getLaneStyle,
+  isInstantEvent,
+  canMapEvent,
+  isCompared,
+  isBatchSelected,
+  toggleBatchSelection,
+  clearBatchSelection,
+  setActiveCompare,
+  upsertHydratedEvent,
+  removeHydratedEvent,
+  removeCompareId,
+  toggleCompareEvent,
+  addBatchToCompare,
+  clearComparePool,
+  fetchEventById,
+} = useTimelineComparison({ sortedEvents })
 
 const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 
@@ -719,12 +539,12 @@ const clearComparePool = () => {
 
 const fetchEventById = async (id: string) => {
   try {
-    const response = await fetch(`${api.url}/timeline/events/${id}`)
+    const response = await apiRequest(`${api.url}/timeline/events/${id}`)
     if (!response.ok) return null
     const data = await response.json()
     return data.data as TimelineEvent
   } catch (error) {
-    console.error(error)
+    reportError(error)
     return null
   }
 }
@@ -880,7 +700,7 @@ const openHistory = async (event: TimelineEvent) => {
   historyRevisions.value = []
   loadingHistory.value = true
   try {
-    const res = await fetch(`${api.url}/timeline/events/${targetEventId}/history`, {
+    const res = await apiRequest(`${api.url}/timeline/events/${targetEventId}/history`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (!isCurrentRequest()) return
@@ -938,7 +758,7 @@ const submitForm = async () => {
 
     closeForm()
   } catch (error) {
-    console.error(error)
+    reportError(error)
     formError.value = error instanceof Error ? error.message : '保存失败，请稍后重试。'
   } finally {
     submitting.value = false
@@ -983,7 +803,7 @@ const submitPerson = async () => {
     personTagsInput.value = ''
     router.push(`/timeline/person/${created.id}`)
   } catch (error) {
-    console.error(error)
+    reportError(error)
   } finally {
     personSubmitting.value = false
   }

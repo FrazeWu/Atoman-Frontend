@@ -75,20 +75,16 @@ describe('api v1 client', () => {
     })
   })
 
-  it('attaches Authorization for same-origin relative API requests when a token exists', async () => {
+  it('uses cookie credentials for same-origin relative API requests', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({ data: { id: 'playlist_uuid', name: 'Playlist' } }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
-    })
-
     await apiGet<{ id: string; name: string }>('/api/v1/music/playlists/playlist_uuid')
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/playlists/playlist_uuid', {
       credentials: 'include',
-      headers: { Accept: 'application/json', Authorization: 'Bearer test-token' },
+      headers: { Accept: 'application/json' },
     })
   })
 
@@ -190,10 +186,7 @@ describe('api v1 client', () => {
     expect(error.details).toEqual({ field: 'sources' })
   })
 
-  it('retries playlist updates with bearer auth on same-origin absolute URL after a not-found response', async () => {
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => key === 'token' ? 'test-token' : null),
-    })
+  it('retries playlist updates with cookie credentials on same-origin absolute URL after a not-found response', async () => {
     vi.stubGlobal('window', {
       location: { origin: 'http://localhost:5176' },
     })
@@ -214,13 +207,13 @@ describe('api v1 client', () => {
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
       method: 'PATCH',
       credentials: 'include',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     })
     expect(vi.mocked(fetch).mock.calls[1][0]).toBe('http://localhost:5176/api/v1/music/playlists/playlist-1')
     expect(vi.mocked(fetch).mock.calls[1][1]).toMatchObject({
       method: 'PATCH',
       credentials: 'include',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer test-token' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     })
   })
 
@@ -337,7 +330,7 @@ describe('music v1 adapter', () => {
 
     expect(FakeXMLHttpRequest.lastInstance?.withCredentials).toBe(true)
     expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Accept).toBe('application/json')
-    expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Authorization).toBe('Bearer test-token')
+    expect(FakeXMLHttpRequest.lastInstance?.requestHeaders.Authorization).toBeUndefined()
   })
 
   it('serializes list filters using the api v1 query vocabulary and preserves server pagination meta', async () => {

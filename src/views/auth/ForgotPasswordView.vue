@@ -106,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
@@ -165,7 +166,7 @@ const sendCode = async () => {
 
   sendingCode.value = true
   try {
-    const response = await fetch(api.auth.passwordResetSendCode, {
+    const response = await apiRequest(api.auth.passwordResetSendCode, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: normalizedEmail(), turnstile_token: turnstileToken.value }),
@@ -210,7 +211,7 @@ const resetPassword = async () => {
 
   submitting.value = true
   try {
-    const response = await fetch(api.auth.passwordReset, {
+    const response = await apiRequest(api.auth.passwordReset, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

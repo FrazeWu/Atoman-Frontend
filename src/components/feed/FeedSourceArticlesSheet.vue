@@ -148,7 +148,7 @@ const searchQuery = ref('')
 const sortMode = ref<'newest' | 'oldest' | 'title'>('newest')
 
 const sourceHealthLabel = computed(() => {
-  const status = (props.source as any)?.healthStatus
+  const status = props.source?.healthStatus
   if (status === 'healthy') return '状态正常'
   if (status === 'warning') return '状态警告'
   if (status === 'error') return '状态异常'
@@ -156,13 +156,13 @@ const sourceHealthLabel = computed(() => {
 })
 
 const sourceCheckedAtLabel = computed(() => {
-  const value = (props.source as any)?.lastCheckedAt
+  const value = props.source?.lastCheckedAt
   if (!value) return ''
   return formatDateTime(value)
 })
 
 const sourceItemCountLabel = computed(() => {
-  const count = (props.source as any)?.itemCount
+  const count = props.source?.itemCount
   if (typeof count !== 'number') return ''
   return `共 ${count} 篇`
 })

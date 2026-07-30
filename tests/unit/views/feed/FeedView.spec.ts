@@ -1,7 +1,7 @@
-import { flushPromises, mount } from '@vue/test-utils'
+import { config, enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedView from '@/views/feed/FeedView.vue'
 import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFeedRecommendations.vue'
@@ -49,6 +49,8 @@ const feedViewStubs = {
   FeedSourceArticlesSheet: true,
 }
 
+enableAutoUnmount(afterEach)
+
 const clusteredTimelineResponse = (isRead = false) => ({
   data: [{
     type: 'feed_item',
@@ -79,7 +81,9 @@ describe('FeedView', () => {
     routerPush.mockReset()
     routerReplace.mockReset()
     Object.keys(routeQuery).forEach((key) => delete routeQuery[key])
-    setActivePinia(createPinia())
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    config.global.plugins = [pinia]
     window.history.replaceState(null, '', '/?site=feed')
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({
       data: [
@@ -114,6 +118,9 @@ describe('FeedView', () => {
     feedStore.fetchSubscriptions = vi.fn().mockResolvedValue(undefined) as any
     feedStore.fetchGroups = vi.fn().mockResolvedValue(undefined) as any
     feedStore.fetchSubscriptionRules = vi.fn().mockResolvedValue(undefined) as any
+    feedStore.fetchStarredIds = vi.fn().mockResolvedValue(undefined) as any
+    feedStore.fetchReadingListIds = vi.fn().mockResolvedValue(undefined) as any
+    feedStore.fetchUnreadFeedItemCount = vi.fn().mockResolvedValue(1) as any
     feedStore.createSubscriptionRule = vi.fn().mockImplementation(async (payload) => {
       feedStore.subscriptionRules = [
         {
@@ -2983,7 +2990,8 @@ describe('FeedView', () => {
 
   it('shows a feed search empty state for the active query', async () => {
     routeQuery.q = 'missing topic'
-    vi.mocked(globalThis.fetch).mockResolvedValue(new Response(JSON.stringify({
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.mocked(globalThis.fetch).mockImplementation(async () => new Response(JSON.stringify({
       data: [],
       meta: { page: 1, page_size: 20, total: 0, has_more: false },
     }), { status: 200 }))
@@ -3014,6 +3022,8 @@ describe('FeedView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-test="empty-state"]').text()).toContain('没有找到“missing topic”')
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleError.mockRestore()
   })
 
   it('fetches rules when opening the manage sheet', async () => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { apiRequest } from '@/api/client'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -20,18 +21,31 @@ const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
 const actionMessage = ref('')
+let latestRequest = 0
 
-onMounted(async () => {
-  const id = route.params.id as string
+watch(() => route.params.id as string | undefined, (id) => {
+  if (id) void loadEpisode(id)
+}, { immediate: true })
+
+async function loadEpisode(id: string) {
+  const request = ++latestRequest
+  ep.value = null
+  error.value = ''
+  actionMessage.value = ''
+  loading.value = true
+
   try {
-    const res = await fetch(`${api.url}/podcast/episodes/${id}`)
+    const res = await apiRequest(`${api.url}/podcast/episodes/${id}`)
     if (res.ok) {
-      ep.value = await res.json()
-      if (authStore.token && ep.value) {
-        const serverProgress = await lifecycle.getProgress('podcast', ep.value.id).catch(() => null)
+      const episode = await res.json() as PodcastEpisode
+      if (request !== latestRequest) return
+      ep.value = episode
+      if (authStore.token) {
+        const serverProgress = await lifecycle.getProgress('podcast', episode.id).catch(() => null)
+        if (request !== latestRequest) return
         if (serverProgress?.position_sec) {
           writePodcastProgress({
-            episode_id: ep.value.id,
+            episode_id: episode.id,
             position_sec: serverProgress.position_sec,
             duration_sec: serverProgress.duration_sec,
             completed: serverProgress.completed,
@@ -44,15 +58,16 @@ onMounted(async () => {
         playEpisode()
         player.seek(startAt)
       }
-    } else {
+    } else if (request === latestRequest) {
       error.value = '单集不存在'
     }
   } catch {
+    if (request !== latestRequest) return
     error.value = '加载失败，请重试'
   } finally {
-    loading.value = false
+    if (request === latestRequest) loading.value = false
   }
-})
+}
 
 function fmtDuration(sec: number) {
   if (!sec) return ''
@@ -79,7 +94,7 @@ async function subscribeShow() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await fetch(api.podcast.showBookmarks, {
+  const res = await apiRequest(api.podcast.showBookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
     body: JSON.stringify({ channel_id: ep.value.channel_id }),
@@ -93,10 +108,10 @@ async function favoriteEpisode() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await fetch(api.podcast.bookmarks, {
+  const res = await apiRequest(api.podcast.bookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ episode_id: ep.value.id }),
+    body: JSON.stringify({ episode_id: ep.value.id, kind: 'favorite' }),
   })
   actionMessage.value = res.ok ? '已收藏' : '收藏失败'
 }
@@ -107,10 +122,10 @@ async function listenLater() {
     actionMessage.value = '请先登录'
     return
   }
-  const res = await fetch(api.podcast.bookmarks, {
+  const res = await apiRequest(api.podcast.bookmarks, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-    body: JSON.stringify({ episode_id: ep.value.id }),
+    body: JSON.stringify({ episode_id: ep.value.id, kind: 'listen_later' }),
   })
   actionMessage.value = res.ok ? '已加入稍后听' : '操作失败'
 }

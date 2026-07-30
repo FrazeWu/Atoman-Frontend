@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { listMusicArtists } from '@/api/musicV1'
@@ -39,7 +40,7 @@ async function fetchArtists(q = '') {
       name: artist.name,
     }))
   } catch (e) {
-    console.error('Failed to fetch artists:', e)
+    reportError(e, 'Failed to fetch artists:')
   } finally {
     searchLoading.value = false
   }

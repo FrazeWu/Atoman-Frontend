@@ -49,6 +49,7 @@ import Point from 'ol/geom/Point'
 import { fromLonLat } from 'ol/proj'
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style'
 import Overlay from 'ol/Overlay'
+import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import type { TimelineEvent } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
 
@@ -298,7 +299,7 @@ const initEventMap = () => {
     }),
   })
 
-  eventMap.on('click', (evt: any) => {
+  eventMap.on('click', (evt: MapBrowserEvent<PointerEvent>) => {
     const feature = eventMap?.forEachFeatureAtPixel(evt.pixel, (item) => item)
     if (!feature) {
       hideMapPopup()
@@ -321,7 +322,7 @@ const initEventMap = () => {
     renderEventMap()
   })
 
-  eventMap.on('pointermove', (evt: any) => {
+  eventMap.on('pointermove', (evt: MapBrowserEvent<PointerEvent>) => {
     const hit = eventMap?.hasFeatureAtPixel(evt.pixel)
     if (eventMap) {
       eventMap.getTargetElement().style.cursor = hit ? 'pointer' : ''

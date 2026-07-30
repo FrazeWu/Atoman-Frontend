@@ -1,6 +1,6 @@
 <template>
   <section class="dm-conversation-pane" data-testid="dm-conversation-pane">
-    <header><button v-if="mobile" type="button" aria-label="返回会话列表" @click="emit('back')">返回</button><h2>{{ conversation?.other_party.display_name || targetLabel }}</h2><button v-if="conversation" type="button" @click="emit(conversation.blocked ? 'unblock' : 'block')">{{ conversation.blocked ? '取消拉黑' : '拉黑' }}</button></header>
+    <header><button v-if="mobile" type="button" aria-label="返回会话列表" @click="emit('back')">返回</button><h2>{{ conversation?.other_party.display_name || targetLabel }}</h2><button v-if="conversation" type="button" @click="toggleBlock">{{ conversation.blocked ? '取消拉黑' : '拉黑' }}</button></header>
     <div ref="scroller" class="dm-conversation-pane__messages" @scroll="onScroll"><button v-if="hasMore" data-testid="dm-load-older" type="button" :disabled="loading" @click="requestOlder">加载更早消息</button><p v-if="!messages.length" class="dm-conversation-pane__empty">开始一段对话</p><article v-for="message in messages" :key="message.id" class="dm-message" :class="{ self: message.sender.id === conversation?.reply_as.id }"><div><p v-if="message.content">{{ message.content }}</p><img v-if="message.image_url" :src="message.image_url" alt="私信图片"></div><button v-if="message.sender.id !== conversation?.reply_as.id" type="button" @click="emit('report', message.id)">举报</button></article></div>
     <slot />
   </section>
@@ -12,6 +12,7 @@ import type { DMConversation, DMMessage } from '@/api/dm'
 const props = withDefaults(defineProps<{ conversation?: DMConversation | null; messages: DMMessage[]; hasMore: boolean; loading: boolean; mobile?: boolean; targetLabel?: string }>(), { conversation: null, mobile: false, targetLabel: '' })
 const emit = defineEmits<{ 'load-older': []; back: []; block: []; unblock: []; report: [messageId: string] }>()
 const scroller = ref<HTMLElement | null>(null); let previousHeight: number | null = null
+const toggleBlock = () => { if (props.conversation?.blocked) emit('unblock'); else emit('block') }
 const requestOlder = () => { if (!scroller.value || previousHeight !== null) return; previousHeight = scroller.value.scrollHeight; emit('load-older') }
 const onScroll = () => { if (scroller.value && scroller.value.scrollTop < 32 && props.hasMore) requestOlder() }
 watch(() => props.messages.length, async () => { if (!scroller.value) return; if (previousHeight !== null) { const height = previousHeight; previousHeight = null; await nextTick(); scroller.value.scrollTop += scroller.value.scrollHeight - height } else { await nextTick(); scroller.value.scrollTop = scroller.value.scrollHeight } })

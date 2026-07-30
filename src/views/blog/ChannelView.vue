@@ -121,7 +121,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -168,6 +170,7 @@ const channelSubscribed = ref(false)
 const channelSubscribeLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+let loadGeneration = 0
 
 const siteContext = computed(() => resolveSiteContext(window.location.hostname, window.location.search, window.location.pathname))
 const routeParam = computed(() => {
@@ -208,49 +211,69 @@ const summarize = (content: string) =>
 const postCountByCollection = (cid: string) =>
   channelPosts.value.filter(p => (p.collections || []).some(c => c.id === cid)).length
 
-const fetchChannel = async () => {
-  const url = isSlug.value
-    ? api.blog.channelBySlug(routeParam.value)
-    : api.blog.channel(routeParam.value)
-  const res = await fetch(url)
-  if (!res.ok) { channel.value = null; return }
-  const data = await res.json()
-  channel.value = (data.data || null) as Channel | null
-
-  if (authStore.isAuthenticated && channel.value) {
-    channelSubscribeLoading.value = true
-    channelSubscribed.value = await feedStore.isSubscribedToChannel(channel.value.id)
-    channelSubscribeLoading.value = false
-  }
-}
-
-const fetchCollections = async () => {
-  if (!channel.value) return
-  const url = isSlug.value
-    ? api.blog.channelCollectionsBySlug(routeParam.value)
-    : api.blog.channelCollections(channel.value.id)
-  const res = await fetch(url)
-  if (res.ok) collections.value = (await res.json()).data || []
-}
-
-const fetchPosts = async () => {
-  if (!channel.value) return
-  const headers: Record<string, string> = {}
-  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-  const loadedPosts: Post[] = []
-  for (let page = 1; ; page += 1) {
-    const params = new URLSearchParams({
-      channel_id: channel.value.id,
-      page: String(page),
-      page_size: '100',
-    })
-    const res = await fetch(`${api.blog.posts}?${params}`, { headers })
-    if (!res.ok) throw new Error('Failed to load channel posts')
+const fetchChannel = async (param: string, slug: boolean, generation: number) => {
+  try {
+    const url = slug
+      ? api.blog.channelBySlug(param)
+      : api.blog.channel(param)
+    const res = await apiRequest(url)
+    if (generation !== loadGeneration || !res.ok) return null
     const data = await res.json()
-    loadedPosts.push(...(data.data || []))
-    if (!data.meta?.has_more) break
+    if (generation !== loadGeneration) return null
+    const loadedChannel = (data.data || null) as Channel | null
+    channel.value = loadedChannel
+
+    if (authStore.isAuthenticated && loadedChannel) {
+      channelSubscribeLoading.value = true
+      const subscribed = await feedStore.isSubscribedToChannel(loadedChannel.id)
+      if (generation !== loadGeneration) return null
+      channelSubscribed.value = subscribed
+      channelSubscribeLoading.value = false
+    }
+    return loadedChannel
+  } catch {
+    if (generation === loadGeneration) channelSubscribeLoading.value = false
+    return null
   }
-  channelPosts.value = loadedPosts
+}
+
+const fetchCollections = async (loadedChannel: Channel, param: string, slug: boolean, generation: number) => {
+  try {
+    const url = slug
+      ? api.blog.channelCollectionsBySlug(param)
+      : api.blog.channelCollections(loadedChannel.id)
+    const res = await apiRequest(url)
+    if (!res.ok || generation !== loadGeneration) return
+    const data = await res.json()
+    if (generation === loadGeneration) collections.value = data.data || []
+  } catch {
+    return
+  }
+}
+
+const fetchPosts = async (loadedChannel: Channel, generation: number) => {
+  try {
+    const headers: Record<string, string> = {}
+    if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+    const loadedPosts: Post[] = []
+    for (let page = 1; ; page += 1) {
+      const params = new URLSearchParams({
+        channel_id: loadedChannel.id,
+        page: String(page),
+        page_size: '100',
+      })
+      const res = await apiRequest(`${api.blog.posts}?${params}`, { headers })
+      if (generation !== loadGeneration) return
+      if (!res.ok) return
+      const data = await res.json()
+      if (generation !== loadGeneration) return
+      loadedPosts.push(...(data.data || []))
+      if (!data.meta?.has_more) break
+    }
+    if (generation === loadGeneration) channelPosts.value = loadedPosts
+  } catch {
+    return
+  }
 }
 
 const openCollectionModal = (collection?: Collection) => {
@@ -265,13 +288,13 @@ const saveCollection = async () => {
   try {
     let res: Response
     if (editingCollection.value) {
-      res = await fetch(api.blog.collection(editingCollection.value.id), {
+      res = await apiRequest(api.blog.collection(editingCollection.value.id), {
         method: 'PUT',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
       })
     } else {
-      res = await fetch(api.blog.channelCollections(channel.value.id), {
+      res = await apiRequest(api.blog.channelCollections(channel.value.id), {
         method: 'POST',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
@@ -279,19 +302,28 @@ const saveCollection = async () => {
     }
     if (!res.ok) return
     collectionModalOpen.value = false
-    await fetchCollections()
-  } catch (e) { console.error(e) } finally { collectionSaving.value = false }
+    await fetchCollections(channel.value, routeParam.value, isSlug.value, loadGeneration)
+  } catch (e) { reportError(e) } finally { collectionSaving.value = false }
 }
 
 const toggleChannelSubscribe = async () => {
   if (!channel.value) return
+  const channelId = channel.value.id
+  const subscribed = channelSubscribed.value
+  const generation = loadGeneration
   channelSubscribeLoading.value = true
   try {
-    const success = channelSubscribed.value
-      ? await feedStore.unsubscribeFromChannel(channel.value.id)
-      : await feedStore.subscribeToChannel(channel.value.id)
-    if (success) channelSubscribed.value = !channelSubscribed.value
-  } finally { channelSubscribeLoading.value = false }
+    const success = subscribed
+      ? await feedStore.unsubscribeFromChannel(channelId)
+      : await feedStore.subscribeToChannel(channelId)
+    if (success && generation === loadGeneration && channel.value?.id === channelId) {
+      channelSubscribed.value = !subscribed
+    }
+  } finally {
+    if (generation === loadGeneration && channel.value?.id === channelId) {
+      channelSubscribeLoading.value = false
+    }
+  }
 }
 
 const copyRssLink = async () => {
@@ -301,17 +333,37 @@ const copyRssLink = async () => {
   toastVisible.value = true
 }
 
-onMounted(async () => {
+const loadChannel = async () => {
+  const generation = ++loadGeneration
+  const param = routeParam.value
+  const slug = isSlug.value
+  loading.value = true
+  channel.value = null
+  collections.value = []
+  channelPosts.value = []
+  activeCollectionId.value = null
+  channelSubscribed.value = false
+  channelSubscribeLoading.value = false
   try {
-    await fetchChannel()
-    if (!channel.value) return
-    void Promise.all([fetchCollections(), fetchPosts()])
+    if (!param) return
+    const loadedChannel = await fetchChannel(param, slug, generation)
+    if (!loadedChannel || generation !== loadGeneration) return
+    void Promise.all([
+      fetchCollections(loadedChannel, param, slug, generation),
+      fetchPosts(loadedChannel, generation),
+    ]).catch(() => {})
     if (authStore.isAuthenticated) {
       void feedStore.fetchBookmarkedPostIds()
       void feedStore.fetchReadingListIds()
     }
-  } finally { loading.value = false }
-})
+  } catch {
+    return
+  } finally {
+    if (generation === loadGeneration) loading.value = false
+  }
+}
+
+watch(routeParam, () => { void loadChannel() }, { immediate: true })
 </script>
 
 <style scoped>

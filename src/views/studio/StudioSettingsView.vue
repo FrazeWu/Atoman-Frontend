@@ -100,8 +100,7 @@ async function save() {
       default_publish_status: form.default_publish_status,
       autoplay_enabled: module.value === 'blog' ? false : form.autoplay_enabled,
     }
-    await studio.saveSettings(module.value, input)
-    saved.value = true
+    saved.value = await studio.saveSettings(module.value, input)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '保存失败'
   } finally {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -104,7 +105,7 @@ async function resolveSource() {
     }
 
     if (props.sourceUrl?.trim()) {
-      const response = await fetch(props.sourceUrl)
+      const response = await apiRequest(props.sourceUrl)
       if (!response.ok) throw new Error('图片加载失败')
       const blob = await response.blob()
       resolvedObjectUrl.value = URL.createObjectURL(blob)

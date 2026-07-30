@@ -7,16 +7,16 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { apiFetch } from '@/api/transport'
+import { apiRequest } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import { useApiUrl } from '@/composables/useApi'
 const props = defineProps<{ email: string }>()
 const email = ref(props.email), nextEmail = ref(''), code = ref(''), currentPassword = ref(''), message = ref('')
 const sessions = ref<Array<{ id: string; device_name: string; current: boolean }>>([]), activities = ref<Array<{ id: string; action: string; created_at: string }>>([]), base = useApiUrl()
-async function load() { const [s, a] = await Promise.all([apiFetch(`${base}/users/me/sessions`), apiFetch(`${base}/users/me/security-activities`)]); sessions.value = (await s.json()).sessions || []; activities.value = (await a.json()).activities || [] }
-async function sendCode() { const r = await apiFetch(`${base}/users/me/email/send-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: nextEmail.value }) }); message.value = r.ok ? '验证码已发送' : '验证码发送失败' }
-async function changeEmail() { const r = await apiFetch(`${base}/users/me/email`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: nextEmail.value, code: code.value, current_password: currentPassword.value }) }); message.value = r.ok ? '邮箱已修改' : '邮箱修改失败'; if (r.ok) { email.value = nextEmail.value; await load() } }
-async function revoke(id: string) { await apiFetch(`${base}/users/me/sessions/${id}`, { method: 'DELETE' }); await load() }
+async function load() { const [s, a] = await Promise.all([apiRequest(`${base}/users/me/sessions`), apiRequest(`${base}/users/me/security-activities`)]); sessions.value = (await s.json()).sessions || []; activities.value = (await a.json()).activities || [] }
+async function sendCode() { const r = await apiRequest(`${base}/users/me/email/send-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: nextEmail.value }) }); message.value = r.ok ? '验证码已发送' : '验证码发送失败' }
+async function changeEmail() { const r = await apiRequest(`${base}/users/me/email`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: nextEmail.value, code: code.value, current_password: currentPassword.value }) }); message.value = r.ok ? '邮箱已修改' : '邮箱修改失败'; if (r.ok) { email.value = nextEmail.value; await load() } }
+async function revoke(id: string) { await apiRequest(`${base}/users/me/sessions/${id}`, { method: 'DELETE' }); await load() }
 onMounted(load)
 </script>

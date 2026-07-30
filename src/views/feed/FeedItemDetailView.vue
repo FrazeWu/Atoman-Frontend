@@ -78,6 +78,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
@@ -132,7 +134,7 @@ const onEnded = () => {
 
 const reportReadEvent = (eventType: 'detail_open' | 'original_click') => {
   if (!item.value?.feed_source_id) return
-  void fetch(`${api.url}/feed/events/read`, {
+  void apiRequest(`${api.url}/feed/events/read`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -143,7 +145,7 @@ const reportReadEvent = (eventType: 'detail_open' | 'original_click') => {
       source_id: item.value.feed_source_id,
       event_type: eventType,
     }),
-  })
+  }).catch(() => {})
 }
 
 const trackOriginalClick = () => {
@@ -153,7 +155,7 @@ const trackOriginalClick = () => {
 const fetchItem = async () => {
   loading.value = true
   try {
-    const res = await fetch(`${api.url}/feed/items/${route.params.id}`, {
+    const res = await apiRequest(`${api.url}/feed/items/${route.params.id}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
 
@@ -163,7 +165,7 @@ const fetchItem = async () => {
       reportReadEvent('detail_open')
     }
   } catch (e) {
-    console.error('Failed to fetch feed item:', e)
+    reportError(e, 'Failed to fetch feed item:')
   } finally {
     loading.value = false
   }

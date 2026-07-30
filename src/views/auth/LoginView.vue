@@ -209,6 +209,8 @@
 </template>
 
 <script setup lang="ts">
+import { errorMessage } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -356,7 +358,7 @@ const checkEmailAvailability = async () => {
   const seq = ++emailCheckSeq.value
   emailAvailability.value = { status: 'checking', reason: '' }
   try {
-    const response = await fetch(api.auth.checkEmail, {
+    const response = await apiRequest(api.auth.checkEmail, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: normalizedEmail }),
@@ -400,7 +402,7 @@ const checkUsernameAvailability = async () => {
   const seq = ++usernameCheckSeq.value
   usernameAvailability.value = { status: 'checking', reason: '' }
   try {
-    const response = await fetch(api.auth.checkUsername, {
+    const response = await apiRequest(api.auth.checkUsername, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: normalizedUsername }),
@@ -438,7 +440,7 @@ const sendVerificationCode = async () => {
   if (!requireTurnstileToken()) return
   sendingCode.value = true
   try {
-    const response = await fetch(api.auth.sendVerification, {
+    const response = await apiRequest(api.auth.sendVerification, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, turnstile_token: turnstileToken.value }),
@@ -448,8 +450,8 @@ const sendVerificationCode = async () => {
     codeSent.value = true
     startCountdown()
     turnstileToken.value = ''
-  } catch (error: any) {
-    errorMsg.value = error.message || '发送验证码失败'
+  } catch (error) {
+    errorMsg.value = errorMessage(error, '发送验证码失败')
     resetTurnstile()
   } finally {
     sendingCode.value = false
@@ -493,6 +495,7 @@ const handleSubmit = async () => {
   fieldErrors.value = {}
   loading.value = true
   try {
+    let succeeded: boolean
     if (isRegister.value) {
       if (!verificationCode.value) {
         fieldErrors.value.code = '请输入验证码'
@@ -525,7 +528,7 @@ const handleSubmit = async () => {
         loading.value = false
         return
       }
-      await authStore.register(
+      succeeded = await authStore.register(
         username.value,
         email.value,
         password.value,
@@ -543,11 +546,12 @@ const handleSubmit = async () => {
         loading.value = false
         return
       }
-      await authStore.loginWithPassword(email.value, password.value)
+      succeeded = await authStore.loginWithPassword(email.value, password.value)
     }
+    if (!succeeded) return
     router.push(safeRedirectPath(route.query.redirect))
-  } catch (error: any) {
-    errorMsg.value = error.message
+  } catch (error) {
+    errorMsg.value = errorMessage(error, '登录失败，请重试')
     resetTurnstile()
   } finally {
     loading.value = false

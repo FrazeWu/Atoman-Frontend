@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -326,7 +327,7 @@ const fetchItems = async () => {
   loading.value = true
   errorMessage.value = ''
   try {
-    const res = await fetch(`${api.url}/feed/reading-list?page=${targetPage}&limit=${pageLimit}`, {
+    const res = await apiRequest(`${api.url}/feed/reading-list?page=${targetPage}&limit=${pageLimit}`, {
       headers: authHeaders(),
     })
     if (requestId !== readingListRequestId) return
@@ -363,7 +364,7 @@ const fetchItems = async () => {
 }
 
 const remove = async (targetType: ReadingListEntry['target_type'], targetId: string) => {
-  const res = await fetch(`${api.url}/feed/reading-list/${targetType}/${targetId}`, {
+  const res = await apiRequest(`${api.url}/feed/reading-list/${targetType}/${targetId}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })

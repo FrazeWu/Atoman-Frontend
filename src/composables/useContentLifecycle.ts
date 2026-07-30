@@ -1,5 +1,5 @@
 import { useApi } from '@/composables/useApi'
-import { apiFetch } from '@/api/transport'
+import { apiRequest } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { StudioModule } from '@/types'
 
@@ -112,8 +112,8 @@ function eventID() {
 async function request<T>(url: string, token: string | null | undefined, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token && token !== 'cookie-session') headers.Authorization = `Bearer ${token}`
-  const requestInit = { ...init, headers: { ...headers, ...(init.headers || {}) } }
-  const response = await apiFetch(url, requestInit)
+  const requestInit = { credentials: 'include' as const, ...init, headers: { ...headers, ...(init.headers || {}) } }
+  const response = await apiRequest(url, requestInit)
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(body?.error?.message || body?.error || '请求失败')
   return (body?.data ?? body) as T

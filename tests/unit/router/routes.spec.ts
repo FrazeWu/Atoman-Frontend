@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { buildAppRoutes } from '@/router/buildAppRoutes'
-import { moduleRoutes } from '@/router/routes/modules'
+import { commonModuleRoutes, moduleRoutes } from '@/router/routes/modules'
 import { channelRoutes, userRoutes } from '@/router/routes/entities'
 import { portalRoutes } from '@/router/routes/portal'
 import { settingRoutes } from '@/router/routes/settings'
@@ -22,6 +22,10 @@ function lazyImportPath(component: unknown) {
 }
 
 describe('host-scoped route tables', () => {
+  it('builds shared authentication and fallback routes for each module', () => {
+    expect(paths(commonModuleRoutes())).toEqual(['/login', '/register', '/forgot-password', '/:pathMatch(.*)*'])
+    expect(commonModuleRoutes()[0]).not.toBe(commonModuleRoutes()[0])
+  })
   it('keeps blog routes relative to the module root', () => {
     const blogPaths = flattenPaths(moduleRoutes.blog)
     expect(blogPaths).toContain('/')

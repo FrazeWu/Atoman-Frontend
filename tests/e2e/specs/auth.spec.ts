@@ -17,10 +17,8 @@ test.describe('Authentication', () => {
   })
 
   test('logout returns to login page', async ({ authenticatedPage }) => {
-    await authenticatedPage.goto('/feed')
-    const userBtn = authenticatedPage.locator('.user-btn')
-    await expect(userBtn).toBeVisible({ timeout: 10000 })
-    await userBtn.click()
+    await loginViaUI(authenticatedPage, ADMIN_USERNAME, ADMIN_PASSWORD)
+    await authenticatedPage.getByRole('button', { name: new RegExp(ADMIN_USERNAME, 'i') }).click()
     await authenticatedPage.getByRole('button', { name: '退出登录' }).click()
     await expect(authenticatedPage).toHaveURL(/\/login/)
   })
@@ -36,9 +34,9 @@ test.describe('Authentication', () => {
     await expect(page.getByRole('heading', { name: '发布话题' })).toHaveCount(0)
   })
 
-  test('unauthenticated user redirected to login when accessing music contribute', async ({ page }) => {
-    await page.goto('/music/contribute')
-    await expect(page.locator('form.form-stack')).toHaveCount(0)
+  test('unauthenticated user redirected to login when creating an artist', async ({ page }) => {
+    await page.goto('/music/artist/new')
+    await expect(page).toHaveURL(/\/login\?redirect=\/music\?editor=artist-create$/)
   })
 
   test('authenticated user can still access login page', async ({ authenticatedPage }) => {

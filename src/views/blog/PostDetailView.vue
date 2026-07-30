@@ -150,6 +150,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
@@ -161,7 +163,7 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { applyResolvedReferences } from '@/composables/useReferenceRendering'
 import { usePageMeta } from '@/composables/usePageMeta'
 import { useInteractions } from '@/composables/useInteractions'
-import { isModeratorRole } from '@/utils/roles'
+import { isAdminRole } from '@/utils/roles'
 import type { Post } from '@/types'
 import { useSheetStore } from '@/stores/sheet'
 import { useFeedStore } from '@/stores/feed'
@@ -207,6 +209,8 @@ const showUnbookmarkConfirm = ref(false)
 const postEmbeds = ref<Record<string, EmbedData>>({})
 const musicEmbeds = ref<Record<string, EmbedData>>({})
 const videoEmbeds = ref<Record<string, EmbedData>>({})
+let loadSeq = 0
+let bookmarkOperationSeq = 0
 let consumptionTracker: ReturnType<typeof createContentConsumptionTracker> | null = null
 
 const readingSource = () => typeof route.query.source === 'string' ? route.query.source : 'direct'
@@ -217,14 +221,14 @@ const trackReadingProgress = () => {
   consumptionTracker.update(progress)
 }
 
-const startReadingTracking = (contentID: string) => {
+const startReadingTracking = (contentID: string, source: string) => {
   consumptionTracker = createContentConsumptionTracker({
-    onEvent: event => void lifecycle.recordEvent({ module: 'blog', content_id: contentID, event, source: readingSource() }).catch(() => undefined),
+    onEvent: event => void lifecycle.recordEvent({ module: 'blog', content_id: contentID, event, source }).catch(() => undefined),
     onProgress: progress => {
       if (!authStore.token) return
       void lifecycle.saveProgress({
         module: 'blog', content_id: contentID, position_sec: 0, duration_sec: 0,
-        progress, completed: progress >= 0.95, source: readingSource(),
+        progress, completed: progress >= 0.95, source,
       }).catch(() => undefined)
     },
   })
@@ -235,7 +239,7 @@ const startReadingTracking = (contentID: string) => {
 const isOwner = computed(() => authStore.user?.uuid === post.value?.user_id)
 const isInReadingList = computed(() => Boolean(post.value?.id && feedStore.readingListItemIds.has(post.value.id)))
 const commentNotice = computed(() => post.value?.allow_comments ? '' : '评论已关闭')
-const canDeleteAllComments = computed(() => Boolean(isOwner.value || isModeratorRole(authStore.user?.role)))
+const canDeleteAllComments = computed(() => Boolean(isOwner.value || isAdminRole(authStore.user?.role)))
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -273,23 +277,38 @@ const renderedContent = computed(() => {
 })
 
 const fetchPost = async () => {
+  const requestedID = postId.value
+  const seq = ++loadSeq
+  const isCurrentLoad = () => seq === loadSeq && requestedID === postId.value
   loading.value = true
   errorStatus.value = null
+  post.value = null
+  isAcademic.value = false
+  bookmarked.value = false
+  showUnbookmarkConfirm.value = false
+  postEmbeds.value = {}
+  musicEmbeds.value = {}
+  videoEmbeds.value = {}
+  interactions.liked.value = false
+  interactions.likeCount.value = 0
+  interactions.commentCount.value = 0
+  consumptionTracker = null
+  restorePageMeta()
   try {
-    const id = postId.value
-    if (!id) {
+    if (!requestedID) {
       errorStatus.value = 404
-      restorePageMeta()
       return
     }
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-    const res = await fetch(api.blog.post(id), { headers })
+    const res = await apiRequest(api.blog.post(requestedID), { headers })
+    if (!isCurrentLoad()) return
     if (res.ok) {
       const d = await res.json()
+      if (!isCurrentLoad()) return
       const detail = (d.data || d) as PostDetailResponse
       post.value = detail
-      startReadingTracking(detail.id)
+      startReadingTracking(detail.id, readingSource())
       interactions.liked.value = detail.liked ?? detail.is_liked ?? false
       interactions.likeCount.value = detail.likes_count ?? detail.like_count ?? 0
       interactions.commentCount.value = detail.comments_count ?? detail.comment_count ?? 0
@@ -306,8 +325,8 @@ const fetchPost = async () => {
         updatedAt: detail.updated_at,
       })
 
-      if (post.value?.channel_id) {
-        void fetch(`${api.url}/feed/events/read`, {
+      if (detail.channel_id) {
+        void apiRequest(`${api.url}/feed/events/read`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -315,24 +334,33 @@ const fetchPost = async () => {
           },
           body: JSON.stringify({
             source_type: 'internal_channel',
-            source_id: post.value.channel_id,
+            source_id: detail.channel_id,
             event_type: 'detail_open',
           }),
-        })
+        }).catch(() => {})
       }
 
-      if (post.value) {
-        await fetchEmbeds(post.value.content)
-      }
+      const embeds = await fetchEmbeds(detail.content)
+      if (!isCurrentLoad()) return
+      postEmbeds.value = embeds.posts
+      musicEmbeds.value = embeds.music
+      videoEmbeds.value = embeds.videos
 
       // Initialize bookmark state
-      if (authStore.isAuthenticated && post.value) {
-        fetchBookmarkState(post.value.id)
+      if (authStore.isAuthenticated) {
+        const requestBookmarkOperationSeq = bookmarkOperationSeq
+        void fetchBookmarkState(detail.id).then((state) => {
+          if (
+            isCurrentLoad()
+            && requestBookmarkOperationSeq === bookmarkOperationSeq
+            && state !== null
+          ) bookmarked.value = state
+        })
         void feedStore.fetchReadingListIds()
       }
 
-      if (props.id && post.value) {
-        sheetStore.updateSheetTitle(props.id, 'post', post.value.title)
+      if (props.id === requestedID) {
+        sheetStore.updateSheetTitle(requestedID, 'post', detail.title)
       }
 
     } else {
@@ -340,11 +368,12 @@ const fetchPost = async () => {
       restorePageMeta()
     }
   } catch (e) {
-    console.error(e)
+    if (!isCurrentLoad()) return
+    reportError(e)
     errorStatus.value = 500
     restorePageMeta()
   } finally {
-    loading.value = false
+    if (isCurrentLoad()) loading.value = false
   }
 }
 
@@ -352,23 +381,34 @@ watch(postId, () => {
   fetchPost()
 })
 
-const fetchBookmarkState = async (postId: string) => {
+const fetchBookmarkState = async (postId: string): Promise<boolean | null> => {
   try {
-    const res = await fetch(api.blog.bookmarks, {
+    const res = await apiRequest(api.blog.bookmarks, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     if (res.ok) {
       const d = await res.json()
       const items = d.data || []
-      bookmarked.value = items.some((b: { post_id: string }) => b.post_id === postId)
+      return items.some((b: { post_id: string }) => b.post_id === postId)
     }
-  } catch (e) { console.error(e) }
+    return null
+  } catch (e) { reportError(e) }
+  return null
 }
 
 const toggleBookmark = async () => {
   if (!post.value) return
-  const nextState = await feedStore.togglePostBookmark(post.value.id)
-  if (nextState !== null) bookmarked.value = nextState
+  const requestedID = post.value.id
+  const requestLoadSeq = loadSeq
+  const requestOperationSeq = ++bookmarkOperationSeq
+  const nextState = await feedStore.togglePostBookmark(requestedID)
+  if (
+    requestLoadSeq === loadSeq
+    && requestOperationSeq === bookmarkOperationSeq
+    && postId.value === requestedID
+    && post.value?.id === requestedID
+    && nextState !== null
+  ) bookmarked.value = nextState
 }
 
 const toggleReadingList = async () => {
@@ -411,15 +451,12 @@ const authHeaders = () => {
 
 const fetchPostEmbeds = async (content: string) => {
   const ids = extractEmbedIds(content, 'post')
-  if (!ids.length) {
-    postEmbeds.value = {}
-    return
-  }
+  if (!ids.length) return {}
 
   const entries = await Promise.all(
     ids.map(async (id) => {
       try {
-        const res = await fetch(api.blog.post(id), { headers: authHeaders() })
+        const res = await apiRequest(api.blog.post(id), { headers: authHeaders() })
         if (!res.ok) return null
         const payload = await res.json()
         const embedPost = (payload.data || payload) as Post
@@ -439,20 +476,17 @@ const fetchPostEmbeds = async (content: string) => {
     }),
   )
 
-  postEmbeds.value = Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
+  return Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
 }
 
 const fetchMusicEmbeds = async (content: string) => {
   const ids = extractEmbedIds(content, 'music')
-  if (!ids.length) {
-    musicEmbeds.value = {}
-    return
-  }
+  if (!ids.length) return {}
 
   const entries = await Promise.all(
     ids.map(async (id) => {
       try {
-        const res = await fetch(api.v1.music.album(id), { headers: authHeaders() })
+        const res = await apiRequest(api.v1.music.album(id), { headers: authHeaders() })
         if (!res.ok) return null
         const payload = await res.json()
         const album = (payload.data || payload) as import('@/types').Album
@@ -472,17 +506,14 @@ const fetchMusicEmbeds = async (content: string) => {
     }),
   )
 
-  musicEmbeds.value = Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
+  return Object.fromEntries(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null))
 }
 
 const fetchVideoEmbeds = async (content: string) => {
   const ids = extractEmbedIds(content, 'video')
-  if (!ids.length) {
-    videoEmbeds.value = {}
-    return
-  }
+  if (!ids.length) return {}
 
-  videoEmbeds.value = Object.fromEntries(
+  return Object.fromEntries(
     ids.map((id) => [
       id,
       {
@@ -496,7 +527,12 @@ const fetchVideoEmbeds = async (content: string) => {
 }
 
 const fetchEmbeds = async (content: string) => {
-  await Promise.all([fetchPostEmbeds(content), fetchMusicEmbeds(content), fetchVideoEmbeds(content)])
+  const [posts, music, videos] = await Promise.all([
+    fetchPostEmbeds(content),
+    fetchMusicEmbeds(content),
+    fetchVideoEmbeds(content),
+  ])
+  return { posts, music, videos }
 }
 
 onMounted(() => {

@@ -1,3 +1,5 @@
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { ForumCategory, ForumTopic, ForumDraft, ForumFollow, ForumFollowTargetType } from '@/types'
@@ -20,6 +22,7 @@ export const useForumStore = defineStore('forum', () => {
   const follows = ref<ForumFollow[]>([])
   const followsOwnerID = ref<string | null>(null)
   let followsGeneration = 0
+  let topicGeneration = 0
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -33,7 +36,7 @@ export const useForumStore = defineStore('forum', () => {
   const fetchCategories = async () => {
     try {
       const authStore = useAuthStore()
-      const res = await fetch(`${api.url}/forum/categories`, {
+      const res = await apiRequest(`${api.url}/forum/categories`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -41,7 +44,7 @@ export const useForumStore = defineStore('forum', () => {
         categories.value = data.data || []
       }
     } catch (e) {
-      console.error('Failed to fetch forum categories', e)
+      reportError(e, 'Failed to fetch forum categories')
     } finally {
       categoriesLoaded.value = true
     }
@@ -68,7 +71,7 @@ export const useForumStore = defineStore('forum', () => {
       if (params.page) query.set('page', String(params.page))
       if (params.limit) query.set('page_size', String(params.limit))
       const authStore = useAuthStore()
-      const res = await fetch(`${api.url}/forum/topics?${query}`, {
+      const res = await apiRequest(`${api.url}/forum/topics?${query}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -84,24 +87,29 @@ export const useForumStore = defineStore('forum', () => {
   }
 
   const fetchTopic = async (id: string) => {
+    const generation = ++topicGeneration
     loading.value = true
     error.value = null
+    currentTopic.value = null
     try {
       const authStore = useAuthStore()
-      const res = await fetch(`${api.url}/forum/topics/${id}`, {
+      const res = await apiRequest(`${api.url}/forum/topics/${id}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
         const data = await res.json()
-        currentTopic.value = data.data
-      } else {
+        if (generation !== topicGeneration) return null
+        currentTopic.value = data.data as ForumTopic
+        return currentTopic.value
+      } else if (generation === topicGeneration) {
         error.value = 'Topic not found'
       }
     } catch (e) {
-      error.value = 'Failed to fetch topic'
+      if (generation === topicGeneration) error.value = 'Failed to fetch topic'
     } finally {
-      loading.value = false
+      if (generation === topicGeneration) loading.value = false
     }
+    return null
   }
 
   const createTopic = async (payload: {
@@ -112,7 +120,7 @@ export const useForumStore = defineStore('forum', () => {
   }): Promise<ForumTopic | null> => {
     error.value = null
     try {
-      const res = await fetch(`${api.url}/forum/topics`, {
+      const res = await apiRequest(`${api.url}/forum/topics`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ ...payload, tags: payload.tags ?? [] }),
@@ -125,7 +133,7 @@ export const useForumStore = defineStore('forum', () => {
       error.value = referencePublishErrorMessage(responseError, '发布失败，请重试')
     } catch (e) {
       error.value = referencePublishErrorMessage(e, '发布失败，请重试')
-      console.error('Failed to create topic', e)
+      reportError(e, 'Failed to create topic')
     }
     return null
   }
@@ -136,21 +144,21 @@ export const useForumStore = defineStore('forum', () => {
     tags?: string[]
   }): Promise<boolean> => {
     try {
-      const res = await fetch(`${api.url}/forum/topics/${id}`, {
+      const res = await apiRequest(`${api.url}/forum/topics/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       })
       return res.ok
     } catch (e) {
-      console.error('Failed to update topic', e)
+      reportError(e, 'Failed to update topic')
       return false
     }
   }
 
   const deleteTopic = async (id: string) => {
     try {
-      const res = await fetch(`${api.url}/forum/topics/${id}`, {
+      const res = await apiRequest(`${api.url}/forum/topics/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
@@ -158,13 +166,13 @@ export const useForumStore = defineStore('forum', () => {
         topics.value = topics.value.filter((t) => t.id !== id)
       }
     } catch (e) {
-      console.error('Failed to delete topic', e)
+      reportError(e, 'Failed to delete topic')
     }
   }
 
   const toggleTopicLike = async (id: string) => {
     try {
-      const res = await fetch(`${api.url}/forum/topics/${id}/like`, {
+      const res = await apiRequest(`${api.url}/forum/topics/${id}/like`, {
         method: 'POST',
         headers: authHeaders(),
       })
@@ -181,13 +189,13 @@ export const useForumStore = defineStore('forum', () => {
         if (currentTopic.value?.id === id) update(currentTopic.value)
       }
     } catch (e) {
-      console.error('Failed to toggle like', e)
+      reportError(e, 'Failed to toggle like')
     }
   }
 
   const toggleTopicBookmark = async (id: string) => {
     try {
-      const res = await fetch(`${api.url}/forum/topics/${id}/bookmark`, {
+      const res = await apiRequest(`${api.url}/forum/topics/${id}/bookmark`, {
         method: 'POST',
         headers: authHeaders(),
       })
@@ -201,7 +209,7 @@ export const useForumStore = defineStore('forum', () => {
         if (currentTopic.value?.id === id) update(currentTopic.value)
       }
     } catch (e) {
-      console.error('Failed to toggle bookmark', e)
+      reportError(e, 'Failed to toggle bookmark')
     }
   }
 
@@ -227,7 +235,7 @@ export const useForumStore = defineStore('forum', () => {
     if (!ownerID) return
     const generation = ++followsGeneration
     try {
-      const res = await fetch(`${api.url}/forum/follows`, { headers: authHeaders() })
+      const res = await apiRequest(`${api.url}/forum/follows`, { headers: authHeaders() })
       if (res.ok) {
         const data = await res.json()
         if (ensureFollowOwner() !== ownerID || followsGeneration !== generation) return
@@ -235,7 +243,7 @@ export const useForumStore = defineStore('forum', () => {
       }
     } catch (e) {
       ensureFollowOwner()
-      console.error('Failed to fetch follows', e)
+      reportError(e, 'Failed to fetch follows')
     }
   }
 
@@ -252,7 +260,7 @@ export const useForumStore = defineStore('forum', () => {
   const follow = async (targetType: ForumFollowTargetType, targetKey: string) => {
     const ownerID = ensureFollowOwner()
     if (!ownerID) return
-    const res = await fetch(followTargetUrl(targetType, targetKey), {
+    const res = await apiRequest(followTargetUrl(targetType, targetKey), {
       method: 'PUT',
       headers: authHeaders(),
     })
@@ -269,7 +277,7 @@ export const useForumStore = defineStore('forum', () => {
   const unfollow = async (targetType: ForumFollowTargetType, targetKey: string) => {
     const ownerID = ensureFollowOwner()
     if (!ownerID) return
-    const res = await fetch(followTargetUrl(targetType, targetKey), {
+    const res = await apiRequest(followTargetUrl(targetType, targetKey), {
       method: 'DELETE',
       headers: authHeaders(),
     })
@@ -296,7 +304,7 @@ export const useForumStore = defineStore('forum', () => {
     try {
       const authStore = useAuthStore()
       const query = new URLSearchParams({ q, page: String(page), page_size: String(limit) })
-      const res = await fetch(`${api.url}/forum/search?${query}`, {
+      const res = await apiRequest(`${api.url}/forum/search?${query}`, {
         headers: authStore.isAuthenticated ? authHeaders() : {},
       })
       if (res.ok) {
@@ -338,7 +346,7 @@ export const useForumStore = defineStore('forum', () => {
   // Backend draft API (cross-device persistence)
   const fetchDraft = async (contextKey: string): Promise<ForumDraft | null> => {
     try {
-      const res = await fetch(`${api.url}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
+      const res = await apiRequest(`${api.url}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
         headers: authHeaders(),
       })
       if (res.ok) {
@@ -346,33 +354,33 @@ export const useForumStore = defineStore('forum', () => {
         return data.data as ForumDraft
       }
     } catch (e) {
-      console.error('Failed to fetch draft', e)
+      reportError(e, 'Failed to fetch draft')
     }
     return null
   }
 
   const putDraft = async (draft: ForumDraft): Promise<boolean> => {
     try {
-      const res = await fetch(`${api.url}/forum/drafts`, {
+      const res = await apiRequest(`${api.url}/forum/drafts`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(draft),
       })
       return res.ok
     } catch (e) {
-      console.error('Failed to save draft', e)
+      reportError(e, 'Failed to save draft')
       return false
     }
   }
 
   const deleteDraft = async (contextKey: string): Promise<void> => {
     try {
-      await fetch(`${api.url}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
+      await apiRequest(`${api.url}/forum/drafts?context_key=${encodeURIComponent(contextKey)}`, {
         method: 'DELETE',
         headers: authHeaders(),
       })
     } catch (e) {
-      console.error('Failed to delete draft', e)
+      reportError(e, 'Failed to delete draft')
     }
     clearDraftLocal(contextKey)
   }

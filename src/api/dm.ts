@@ -57,12 +57,10 @@ const party = (value: DMRawParty): DMParty => ({ type: value.type, id: value.id,
 const mailbox = (value: DMRawMailbox): DMMailbox => ({ type: value.party.type, id: value.party.id, display_name: value.party.name || value.party.id, unread_count: value.unread })
 const sameParty = (left: Pick<DMTarget, 'type' | 'id'>, right: DMRawParty) => left.type === right.type && left.id === right.id
 const normalizeConversation = (value: DMRawConversation, targetMailbox?: DMMailbox): DMConversation => {
-  const current = targetMailbox ?? (sameParty(value.participant_a, value.participant_b) ? value.participant_a : value.participant_a)
+  const current = targetMailbox ?? party(value.participant_a)
   const other = sameParty(current, value.participant_a) ? value.participant_b : value.participant_a
-  const normalizedMailbox: DMMailbox = targetMailbox ?? { type: current.type, id: current.id, display_name: current.name || current.id, unread_count: 0 }
-  const replyAs: DMParty = targetMailbox
-    ? { type: targetMailbox.type, id: targetMailbox.id, display_name: targetMailbox.display_name }
-    : party(current)
+  const normalizedMailbox: DMMailbox = targetMailbox ?? { type: current.type, id: current.id, display_name: current.display_name, unread_count: 0 }
+  const replyAs: DMParty = targetMailbox ? { type: targetMailbox.type, id: targetMailbox.id, display_name: targetMailbox.display_name } : current
   return { id: value.id, mailbox: normalizedMailbox, other_party: party(other), last_message_at: value.last_message_at ?? null, last_message_preview: value.last_message_preview, unread_count: value.unread, blocked: value.blocked, reply_as: replyAs }
 }
 const normalizeMessage = (value: DMRawMessage): DMMessage => ({

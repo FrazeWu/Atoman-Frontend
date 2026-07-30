@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 
-import { apiFetch } from '@/api/transport'
+import { apiRequest } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import { useApiUrl } from '@/composables/useApi'
@@ -70,7 +70,7 @@ async function submit() {
   error.value = ''
   success.value = false
   try {
-    const response = await apiFetch(`${useApiUrl()}/users/me/password`, {
+    const response = await apiRequest(`${useApiUrl()}/users/me/password`, {
       method: hasPassword.value ? 'PUT' : 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

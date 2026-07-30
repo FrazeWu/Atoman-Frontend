@@ -293,8 +293,10 @@ const sheetStyle = computed(() => {
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  background: none;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   color: var(--a-color-muted);
   cursor: pointer;
   padding: 0.5rem;

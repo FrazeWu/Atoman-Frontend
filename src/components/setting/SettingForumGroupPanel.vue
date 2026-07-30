@@ -99,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import PButton from '@/components/ui/PButton.vue'
@@ -159,9 +160,9 @@ async function loadAll() {
   error.value = ''
   try {
 	const [groupResponse, categoryResponse, permissionResponse] = await Promise.all([
-	  fetch(api.v1.forum.groups, { headers: headers() }),
-	  fetch(api.v1.forum.categories, { headers: headers() }),
-	  fetch(api.v1.forum.categoryPermissions, { headers: headers() }),
+	  apiRequest(api.v1.forum.groups, { headers: headers() }),
+	  apiRequest(api.v1.forum.categories, { headers: headers() }),
+	  apiRequest(api.v1.forum.categoryPermissions, { headers: headers() }),
 	])
 	groups.value = await responseData<ForumGroup[]>(groupResponse, '加载用户组失败') || []
 	categories.value = await responseData<ForumCategory[]>(categoryResponse, '加载分类失败') || []
@@ -206,7 +207,7 @@ async function saveGroup() {
   savingGroup.value = true
   error.value = ''
   try {
-	const response = await fetch(url, { method, headers: headers(true), body: JSON.stringify(payload) })
+	const response = await apiRequest(url, { method, headers: headers(true), body: JSON.stringify(payload) })
 	const saved = await responseData<ForumGroup>(response, '保存用户组失败')
 	const index = groups.value.findIndex(group => group.id === saved.id)
 	if (index >= 0) groups.value[index] = saved
@@ -226,7 +227,7 @@ async function deleteGroup() {
 	const targetGroupId = selectedGroup.value.id
   deletingGroup.value = true
   try {
-	await responseData(await fetch(api.v1.forum.group(targetGroupId), { method: 'DELETE', headers: headers() }), '删除用户组失败')
+	await responseData(await apiRequest(api.v1.forum.group(targetGroupId), { method: 'DELETE', headers: headers() }), '删除用户组失败')
 	groups.value = groups.value.filter(group => group.id !== targetGroupId)
 	if (selectedGroupId.value === targetGroupId) selectedGroupId.value = groups.value[0]?.id || ''
 	deleteModalOpen.value = false
@@ -242,7 +243,7 @@ async function searchUsers() {
   searching.value = true
   try {
 	const params = new URLSearchParams({ q: userQuery.value.trim(), limit: '20' })
-	users.value = await responseData(await fetch(`${api.users.search}?${params}`, { headers: headers() }), '搜索用户失败') || []
+	users.value = await responseData(await apiRequest(`${api.users.search}?${params}`, { headers: headers() }), '搜索用户失败') || []
   } catch (cause) {
 	error.value = cause instanceof Error ? cause.message : '搜索用户失败'
   } finally {
@@ -257,7 +258,7 @@ async function addMember() {
 	const targetUser = users.value.find(item => item.uuid === targetUserId)
   savingMember.value = true
   try {
-	await responseData(await fetch(api.v1.forum.groupMember(targetGroupId, targetUserId), { method: 'PUT', headers: headers() }), '添加成员失败')
+	await responseData(await apiRequest(api.v1.forum.groupMember(targetGroupId, targetUserId), { method: 'PUT', headers: headers() }), '添加成员失败')
 	const targetGroup = groups.value.find(group => group.id === targetGroupId)
 	if (targetGroup && !targetGroup.members?.some(member => member.user_id === targetUserId)) {
 	  targetGroup.members = [...(targetGroup.members || []), { id: '', group_id: targetGroupId, user_id: targetUserId, user: targetUser as User }]
@@ -275,7 +276,7 @@ async function removeMember(userId: string) {
   if (!selectedGroup.value) return
 	const targetGroupId = selectedGroup.value.id
   try {
-	await responseData(await fetch(api.v1.forum.groupMember(targetGroupId, userId), { method: 'DELETE', headers: headers() }), '移除成员失败')
+	await responseData(await apiRequest(api.v1.forum.groupMember(targetGroupId, userId), { method: 'DELETE', headers: headers() }), '移除成员失败')
 	const targetGroup = groups.value.find(group => group.id === targetGroupId)
 	if (targetGroup) targetGroup.members = targetGroup.members?.filter(member => member.user_id !== userId)
 	message.value = '成员已移除'
@@ -296,7 +297,7 @@ async function savePermission() {
 	const body = { category_id: targetCategoryId, group_id: targetGroupId, ...permissionDraft }
   savingPermission.value = true
   try {
-	const saved = await responseData<ForumCategoryPermission>(await fetch(api.v1.forum.categoryPermissions, { method: 'PUT', headers: headers(true), body: JSON.stringify(body) }), '保存权限失败')
+	const saved = await responseData<ForumCategoryPermission>(await apiRequest(api.v1.forum.categoryPermissions, { method: 'PUT', headers: headers(true), body: JSON.stringify(body) }), '保存权限失败')
 	const index = permissions.value.findIndex(permission => permission.id === saved.id || (permission.group_id === targetGroupId && permission.category_id === targetCategoryId))
 	if (index >= 0) permissions.value[index] = { ...saved, ...body }
 	else permissions.value.push({ ...saved, ...body })
@@ -312,7 +313,7 @@ async function deletePermission() {
   if (!activePermission.value) return
 	const targetPermissionId = activePermission.value.id
   try {
-	await responseData(await fetch(api.v1.forum.categoryPermission(targetPermissionId), { method: 'DELETE', headers: headers() }), '清除权限失败')
+	await responseData(await apiRequest(api.v1.forum.categoryPermission(targetPermissionId), { method: 'DELETE', headers: headers() }), '清除权限失败')
 	permissions.value = permissions.value.filter(permission => permission.id !== targetPermissionId)
 	message.value = '分类权限已清除'
   } catch (cause) {

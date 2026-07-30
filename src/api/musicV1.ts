@@ -1,3 +1,4 @@
+import { apiFetch } from '@/api/transport'
 import { ApiErrorResponseError, apiDeleteJson, apiGet, apiGetEnvelope, apiPatchJson, apiPostJson, apiPostMultipart, apiPutJson } from './client'
 import { configureApiXHR } from './transport'
 import type { ApiList, ApiSuccess, PaginationMeta, UploadAsset, UploadPurpose } from './types'
@@ -391,6 +392,12 @@ export type MusicPlaylistSummary = {
 export type MusicPlaylistDetail = MusicPlaylistSummary & {
   songs: MusicSongListItem[]
 }
+
+type MusicPlaylistSongEnvelope = {
+  song?: MusicSongListItem
+}
+
+type MusicPlaylistMutationResult = Record<string, unknown>
 
 export type MusicStarredKind = 'artist' | 'album' | 'song' | 'playlist'
 
@@ -981,7 +988,7 @@ async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
 }
 
 async function uploadAlbumArchivePart(uploadUrl: string, body: Blob): Promise<string> {
-  const response = await fetch(uploadUrl, { method: 'PUT', body })
+  const response = await apiFetch(uploadUrl, { method: 'PUT', body })
   if (!response.ok) throw new Error(`上传分片失败 (${response.status})`)
   const etag = response.headers.get('ETag') || response.headers.get('etag')
   if (!etag) throw new Error('上传分片失败')
@@ -1119,7 +1126,7 @@ export async function completeMusicAlbumImportSession(importId: string): Promise
 }
 
 export async function cancelMusicAlbumImportSession(importId: string): Promise<void> {
-  await apiDeleteJson<any>(musicV1Endpoints.albumImportSessionCancel(importId))
+  await apiDeleteJson<void>(musicV1Endpoints.albumImportSessionCancel(importId))
 }
 
 export async function uploadMusicAlbumArchive(
@@ -1358,7 +1365,7 @@ export async function deleteMusicPlaylist(playlistId: string): Promise<{ deleted
 export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylistDetail> {
   const [playlist, songsResponse] = await Promise.all([
     apiGet<MusicPlaylistSummary>(musicV1Endpoints.playlist(playlistId)),
-    apiGetEnvelope<any[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
+    apiGetEnvelope<MusicPlaylistSongEnvelope[], PaginationMeta>(musicV1Endpoints.playlistSongs(playlistId)),
   ])
   return {
     ...playlist,
@@ -1372,12 +1379,12 @@ export async function getMusicPlaylist(playlistId: string): Promise<MusicPlaylis
   }
 }
 
-export async function addMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
-  return apiPostJson<any>(musicV1Endpoints.playlistSongs(playlistId), { song_id: songId })
+export async function addMusicPlaylistSong(playlistId: string, songId: string): Promise<MusicPlaylistMutationResult> {
+  return apiPostJson<MusicPlaylistMutationResult>(musicV1Endpoints.playlistSongs(playlistId), { song_id: songId })
 }
 
-export async function removeMusicPlaylistSong(playlistId: string, songId: string): Promise<any> {
-  return apiDeleteJson<any>(musicV1Endpoints.playlistSong(playlistId, songId))
+export async function removeMusicPlaylistSong(playlistId: string, songId: string): Promise<MusicPlaylistMutationResult> {
+  return apiDeleteJson<MusicPlaylistMutationResult>(musicV1Endpoints.playlistSong(playlistId, songId))
 }
 
 export async function reorderMusicPlaylistSongs(playlistId: string, songIds: string[]): Promise<{ reordered: boolean }> {

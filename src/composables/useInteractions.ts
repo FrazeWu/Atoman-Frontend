@@ -1,15 +1,11 @@
-import { ref, unref, type Ref } from 'vue'
+import { isRef, ref, unref, watch, type Ref } from 'vue'
+import { apiRequestEnvelope } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { InteractionComment, InteractionModule, InteractionTargetType } from '@/types'
-import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 
 type CommentOptions = {
   timestamp_sec?: number
-}
-
-type ApiEnvelope = {
-  data?: unknown
 }
 
 type InteractionTargetId = string | Ref<string>
@@ -26,14 +22,6 @@ function countComments(items: InteractionComment[]): number {
   return items.reduce((total, item) => total + 1 + (item.replies ? countComments(item.replies) : 0), 0)
 }
 
-async function readJson(response: Response): Promise<ApiEnvelope> {
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(referencePublishErrorMessage(payload, '请求失败'))
-  }
-  return payload as ApiEnvelope
-}
-
 export function useInteractions(moduleName: InteractionModule, targetType: InteractionTargetType, targetId: InteractionTargetId) {
   const api = useApi()
   const authStore = useAuthStore()
@@ -45,6 +33,13 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   const loadingComments = ref(false)
   const submittingComment = ref(false)
   let fetchCommentsSeq = 0
+  let interactionSeq = 0
+
+  if (isRef(targetId)) {
+    watch(targetId, () => {
+      interactionSeq += 1
+    }, { flush: 'sync' })
+  }
 
   const currentTargetId = () => unref(targetId)
   const endpoints = () => ({
@@ -96,14 +91,15 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   }
 
   const like = async () => {
+    const requestTargetId = currentTargetId()
+    const requestSeq = ++interactionSeq
     const selectedEndpoints = endpoints()
     if (moduleName === 'forum') {
-      const response = await fetch(selectedEndpoints.topicLike, {
+      const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.topicLike, {
         method: 'POST',
         headers: headers(),
-        credentials: 'include',
       })
-      const payload = await readJson(response)
+      if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId()) return
       const nextLiked = payload.data && typeof payload.data === 'object'
         ? (payload.data as { liked?: unknown }).liked
         : undefined
@@ -114,25 +110,25 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       return
     }
     if (!selectedEndpoints.likes) return
-    const response = await fetch(selectedEndpoints.likes, {
+    const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.likes, {
       method: 'POST',
       headers: headers(),
-      credentials: 'include',
-      body: JSON.stringify({ target_type: targetType, target_id: currentTargetId() }),
+      body: JSON.stringify({ target_type: targetType, target_id: requestTargetId }),
     })
-    const payload = await readJson(response)
+    if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId()) return
     applyTargetState(payload.data)
   }
 
   const unlike = async () => {
+    const requestTargetId = currentTargetId()
+    const requestSeq = ++interactionSeq
     const selectedEndpoints = endpoints()
     if (moduleName === 'forum') {
-      const response = await fetch(selectedEndpoints.topicLike, {
+      const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.topicLike, {
         method: 'POST',
         headers: headers(),
-        credentials: 'include',
       })
-      const payload = await readJson(response)
+      if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId()) return
       const nextLiked = payload.data && typeof payload.data === 'object'
         ? (payload.data as { liked?: unknown }).liked
         : undefined
@@ -143,13 +139,12 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       return
     }
     if (!selectedEndpoints.likes) return
-    const response = await fetch(selectedEndpoints.likes, {
+    const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.likes, {
       method: 'DELETE',
       headers: headers(),
-      credentials: 'include',
-      body: JSON.stringify({ target_type: targetType, target_id: currentTargetId() }),
+      body: JSON.stringify({ target_type: targetType, target_id: requestTargetId }),
     })
-    const payload = await readJson(response)
+    if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId()) return
     applyTargetState(payload.data)
   }
 
@@ -158,11 +153,9 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     const requestTargetId = currentTargetId()
     loadingComments.value = true
     try {
-      const response = await fetch(endpoints().comments, {
+      const payload = await apiRequestEnvelope<unknown>(endpoints().comments, {
         headers: headers(),
-        credentials: 'include',
       })
-      const payload = await readJson(response)
       if (requestSeq !== fetchCommentsSeq || requestTargetId !== currentTargetId()) return
 
       comments.value = readItems(payload.data)
@@ -183,13 +176,11 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
         ...(parentCommentId ? { [moduleName === 'forum' ? 'reply_to_id' : 'parent_comment_id']: parentCommentId } : {}),
         ...(options?.timestamp_sec !== undefined ? { timestamp_sec: options.timestamp_sec } : {}),
       }
-      const response = await fetch(endpoints().comments, {
+      await apiRequestEnvelope<unknown>(endpoints().comments, {
         method: 'POST',
         headers: headers(),
-        credentials: 'include',
         body: JSON.stringify(body),
       })
-      await readJson(response)
       await fetchComments()
     } finally {
       submittingComment.value = false
@@ -197,12 +188,10 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   }
 
   const deleteComment = async (commentId: string) => {
-    const response = await fetch(endpoints().comment(commentId), {
+    await apiRequestEnvelope<unknown>(endpoints().comment(commentId), {
       method: 'DELETE',
       headers: headers(),
-      credentials: 'include',
     })
-    await readJson(response)
     await fetchComments()
   }
 

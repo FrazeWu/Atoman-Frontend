@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
+import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -23,7 +25,18 @@ const loading = ref(true)
 const statusFilter = ref('open')
 const entityTypeFilter = ref('')
 
-const entries = ref<any[]>([])
+type MusicReviewEntry = {
+  id: string
+  name: string
+  type: 'album' | 'artist'
+  album_type?: string
+  entry_status: string
+  open_discussion_count?: number
+  last_editor?: string
+  updated_at?: string
+}
+
+const entries = ref<MusicReviewEntry[]>([])
 const entriesTotal = ref(0)
 const entriesLoading = ref(false)
 const entriesTypeFilter = ref('all')
@@ -93,14 +106,14 @@ const fetchEntries = async () => {
       status: entriesStatusFilter.value,
       page_size: '30',
     })
-    const res = await fetch(`${api.music.adminMusicReview}?${params}`, {
+    const res = await apiRequest(`${api.music.adminMusicReview}?${params}`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    const data = await res.json()
+    const data = await res.json() as { data?: MusicReviewEntry[]; total?: number }
     entries.value = data.data || []
     entriesTotal.value = data.total || 0
   } catch (e) {
-    console.error('Failed to fetch entries:', e)
+    reportError(e, '加载音乐审核列表失败')
   } finally {
     entriesLoading.value = false
   }

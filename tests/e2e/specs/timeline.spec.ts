@@ -20,7 +20,13 @@ test.describe('Timeline revision proposals', () => {
       event_date: '2020-01-01T00:00:00Z', location: 'Paris', source: 'archive', category: '', tags: [], is_public: true,
     }
     let proposals: Record<string, unknown>[] = []
-    await page.route('**/api/v1/timeline/events?*', (route) => route.fulfill({ json: { data: [event], total: 1 } }))
+    await page.route('**/api/v1/timeline/events?*', (route) => {
+      const requestURL = new URL(route.request().url())
+      const page = Number(requestURL.searchParams.get('page'))
+      const limit = Number(requestURL.searchParams.get('limit'))
+      expect({ page, limit }).toEqual({ page: 1, limit: 200 })
+      return route.fulfill({ json: { data: [event], total: 1, page, limit } })
+    })
     await page.route('**/api/v1/timeline/events/event-1', (route) => route.fulfill({ json: { data: event } }))
     await page.route('**/api/v1/timeline/events/event-1/revision-proposals?*', (route) => route.fulfill({ json: { data: { items: proposals, page: 1, per_page: 20, total: proposals.length, has_more: false } } }))
     await page.route('**/api/v1/timeline/events/event-1/revision-proposals', async (route) => {

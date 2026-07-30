@@ -83,6 +83,8 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
+import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -131,13 +133,13 @@ const canDelete = (comment: Comment) => {
 const fetchComments = async () => {
   loading.value = true
   try {
-    const res = await fetch(api.blog.postComments(props.postId))
+    const res = await apiRequest(api.blog.postComments(props.postId))
     if (res.ok) {
       const d = await res.json()
       comments.value = d.data || []
     }
   } catch (e) {
-    console.error(e)
+    reportError(e, '加载评论失败')
   } finally {
     loading.value = false
   }
@@ -157,7 +159,7 @@ const submitComment = async () => {
       body.guest_name = guestName.value.trim()
     }
 
-    const res = await fetch(api.blog.postComments(props.postId), {
+    const res = await apiRequest(api.blog.postComments(props.postId), {
       method: 'POST',
       headers,
       body: JSON.stringify(body)
@@ -170,7 +172,7 @@ const submitComment = async () => {
       await fetchComments()
     }
   } catch (e) {
-    console.error(e)
+    reportError(e, '发表评论失败')
   } finally {
     submitting.value = false
   }
@@ -178,13 +180,13 @@ const submitComment = async () => {
 
 const deleteComment = async (id: string) => {
   try {
-    const res = await fetch(`${api.blog.comments}/${id}`, {
+    const res = await apiRequest(`${api.blog.comments}/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     if (res.ok) await fetchComments()
   } catch (e) {
-    console.error(e)
+    reportError(e, '删除评论失败')
   }
 }
 

@@ -82,6 +82,191 @@ describe('feed store', () => {
     expect(feed.error).toBeNull()
   })
 
+  it('clears all feed user state through auth logout', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const feed = useFeedStore()
+    feed.subscriptions = [{ id: 'sub-1', user_id: 'user-1', feed_source_id: 'source-1' } as never]
+    feed.subscriptionRules = [{ id: 'rule-1' } as never]
+    feed.ruleApplySummary = { applied: 1 } as never
+    feed.groups = [{ id: 'group-1', user_id: 'user-1', name: 'Old group' } as never]
+    feed.starGroups = [{ id: 'star-group-1', user_id: 'user-1', name: 'Old stars' } as never]
+    feed.timeline = [{ type: 'feed_item', feed_item: { id: 'feed-item-1', title: 'Old item' } }]
+    feed.starredItemIds = new Set(['feed-item-1'])
+    feed.bookmarkedPostIds = new Set(['post-1'])
+    feed.readingListItemIds = new Set(['feed-item-2'])
+    feed.activeSource = { type: 'external_rss', id: 'source-1' }
+    feed.error = 'Old error'
+    feed.syncingSubscriptionIds = new Set(['sub-1'])
+    feed.syncingAllSubscriptions = true
+    feed.subscriptionSyncResults = { 'sub-1': { success: true } as never }
+
+    await useAuthStore().logout()
+
+    expect(feed.subscriptions).toEqual([])
+    expect(feed.subscriptionRules).toEqual([])
+    expect(feed.ruleApplySummary).toBeNull()
+    expect(feed.groups).toEqual([])
+    expect(feed.starGroups).toEqual([])
+    expect(feed.timeline).toEqual([])
+    expect(feed.starredItemIds.size).toBe(0)
+    expect(feed.bookmarkedPostIds.size).toBe(0)
+    expect(feed.readingListItemIds.size).toBe(0)
+    expect(feed.activeSource).toBeNull()
+    expect(feed.error).toBeNull()
+    expect(feed.syncingSubscriptionIds.size).toBe(0)
+    expect(feed.syncingAllSubscriptions).toBe(false)
+    expect(feed.subscriptionSyncResults).toEqual({})
+  })
+
+  it('does not let subscription or group responses started before logout repopulate feed state', async () => {
+    let resolveSubscriptions!: (response: Response) => void
+    let resolveGroups!: (response: Response) => void
+    const subscriptionsResponse = new Promise<Response>((resolve) => { resolveSubscriptions = resolve })
+    const groupsResponse = new Promise<Response>((resolve) => { resolveGroups = resolve })
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === '/api/v1/feed/subscriptions') return subscriptionsResponse
+      if (String(input) === '/api/v1/feed/groups') return groupsResponse
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    const feed = useFeedStore()
+    const subscriptions = feed.fetchSubscriptions()
+    const groups = feed.fetchGroups()
+
+    await useAuthStore().logout()
+    resolveSubscriptions(new Response(JSON.stringify({ data: [{ id: 'stale-subscription' }] }), { status: 200 }))
+    resolveGroups(new Response(JSON.stringify({ data: [{ id: 'stale-group' }] }), { status: 200 }))
+    await Promise.all([subscriptions, groups])
+
+    expect(feed.subscriptions).toEqual([])
+    expect(feed.groups).toEqual([])
+  })
+
+  it('does not let a timeline response started before logout repopulate feed state', async () => {
+    let resolveTimeline!: (response: Response) => void
+    const timelineResponse = new Promise<Response>((resolve) => { resolveTimeline = resolve })
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === '/api/v1/feed/timeline') return timelineResponse
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    const feed = useFeedStore()
+    const request = feed.fetchTimeline()
+
+    await useAuthStore().logout()
+    resolveTimeline(new Response(JSON.stringify({
+      data: [{ type: 'feed_item', feed_item: { id: 'stale-item', title: 'Stale item' } }],
+    }), { status: 200 }))
+    await request
+
+    expect(feed.timeline).toEqual([])
+  })
+
+  it('does not let an in-flight star toggle restore membership after logout', async () => {
+    let resolveToggle!: (response: Response) => void
+    const toggleResponse = new Promise<Response>((resolve) => { resolveToggle = resolve })
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === '/api/v1/feed/timeline/star') return toggleResponse
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    const feed = useFeedStore()
+    const toggle = feed.toggleStar('stale-item')
+    expect(feed.starredItemIds.has('stale-item')).toBe(true)
+
+    await useAuthStore().logout()
+    resolveToggle(new Response(JSON.stringify({ data: { starred: true } }), { status: 200 }))
+    await toggle
+
+    expect(feed.starredItemIds.size).toBe(0)
+  })
+
+  it('discards delayed user-scoped responses after logout', async () => {
+    const deferred = new Map<string, { promise: Promise<Response>; resolve: (response: Response) => void }>()
+    for (const path of [
+      '/api/v1/feed/star-groups',
+      '/api/v1/feed/subscription-rules',
+      '/api/v1/blog/bookmarks',
+      '/api/v1/feed/subscriptions/sub-1/sync',
+    ]) {
+      let resolve!: (response: Response) => void
+      deferred.set(path, { promise: new Promise<Response>((done) => { resolve = done }), resolve })
+    }
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      deferred.get(String(input))?.promise || Promise.resolve(new Response(null, { status: 204 })),
+    )
+    const feed = useFeedStore()
+    const requests = [
+      feed.fetchStarGroups(),
+      feed.fetchSubscriptionRules(),
+      feed.fetchBookmarkedPostIds(),
+      feed.syncSubscription('sub-1'),
+    ]
+
+    await useAuthStore().logout()
+    deferred.get('/api/v1/feed/star-groups')?.resolve(new Response(JSON.stringify({ data: [{ id: 'stale-stars' }] }), { status: 200 }))
+    deferred.get('/api/v1/feed/subscription-rules')?.resolve(new Response(JSON.stringify({ data: [{ id: 'stale-rule' }] }), { status: 200 }))
+    deferred.get('/api/v1/blog/bookmarks')?.resolve(new Response(JSON.stringify({ data: [{ post_id: 'stale-post' }] }), { status: 200 }))
+    deferred.get('/api/v1/feed/subscriptions/sub-1/sync')?.resolve(new Response(JSON.stringify({
+      data: { subscription_id: 'sub-1', success: true },
+    }), { status: 200 }))
+    await Promise.all(requests)
+
+    expect(feed.starGroups).toEqual([])
+    expect(feed.subscriptionRules).toEqual([])
+    expect(feed.bookmarkedPostIds.size).toBe(0)
+    expect(feed.subscriptionSyncResults).toEqual({})
+  })
+
+  it('rejects an OPML export completed after logout', async () => {
+    let resolveExport!: (response: Response) => void
+    const exportResponse = new Promise<Response>((resolve) => { resolveExport = resolve })
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === '/api/v1/feed/opml/export') return exportResponse
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    const feed = useFeedStore()
+    const request = feed.exportOPML()
+
+    await useAuthStore().logout()
+    resolveExport(new Response('<opml />', { status: 200 }))
+
+    await expect(request).rejects.toThrow('登录状态已变更')
+  })
+
+  it('discards delayed filter preferences and clears local user rules after logout', async () => {
+    let resolvePreferences!: (response: Response) => void
+    const preferencesResponse = new Promise<Response>((resolve) => { resolvePreferences = resolve })
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === '/api/v1/feed/preferences') return preferencesResponse
+      return Promise.resolve(new Response(null, { status: 204 }))
+    })
+    const feed = useFeedStore()
+    feed.setFilterRules({ mutedSourceIds: ['source-1'] })
+    feed.setAutomationRules({ autoMarkReadSourceIds: ['source-1'] })
+    const request = feed.fetchFilterPreferences()
+
+    await useAuthStore().logout()
+    resolvePreferences(new Response(JSON.stringify({ data: { hidden_keywords: ['private-keyword'] } }), { status: 200 }))
+    await request
+
+    expect(feed.filterRules).toEqual({ mutedSourceIds: [], hiddenKeywords: [] })
+    expect(feed.automationRules).toEqual({ autoMarkReadSourceIds: [], autoAddReadingListSourceIds: [] })
+    expect(localStorage.getItem('atoman.feed.filter-rules')).toBeNull()
+    expect(localStorage.getItem('atoman.feed.automation-rules')).toBeNull()
+  })
+
+  it('does not restore disposed feed state after logout', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const feed = useFeedStore()
+    feed.subscriptions = [{ id: 'sub-1', user_id: 'user-1', feed_source_id: 'source-1' } as never]
+    feed.groups = [{ id: 'group-1', user_id: 'user-1', name: 'Old group' } as never]
+
+    feed.$dispose()
+    await useAuthStore().logout()
+
+    const recreatedFeed = useFeedStore()
+    expect(recreatedFeed.subscriptions).toEqual([])
+    expect(recreatedFeed.groups).toEqual([])
+  })
+
   it('resolves subscription input through the unified resolve endpoint', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       status: 'existing_source',
@@ -539,6 +724,25 @@ describe('feed store', () => {
 
     resolveToggle(new Response(JSON.stringify({ data: { saved: true } }), { status: 200 }))
     expect(await result).toBe(true)
+    expect(feed.readingListItemIds.has('feed-item-1')).toBe(true)
+  })
+
+  it('does not let an older reading-list fetch overwrite a completed toggle', async () => {
+    let resolveFetch!: (response: Response) => void
+    const pendingFetch = new Promise<Response>((resolve) => {
+      resolveFetch = resolve
+    })
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(pendingFetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { saved: true } }), { status: 200 }))
+
+    const feed = useFeedStore()
+    const fetchResult = feed.fetchReadingListIds()
+    await Promise.resolve()
+    expect(await feed.toggleReadingListItem('feed-item-1')).toBe(true)
+
+    resolveFetch(new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    await fetchResult
     expect(feed.readingListItemIds.has('feed-item-1')).toBe(true)
   })
 

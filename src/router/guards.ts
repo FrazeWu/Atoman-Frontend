@@ -28,8 +28,11 @@ export function installRouteGuards(router: Router) {
     const siteAccessStore = useSiteAccessStore()
     const isSettingRoute = to.path === '/site/setting'
     const isPublicSystemRoute = publicSystemPaths.has(to.path)
+    const requiresMusicEditorAuth = to.path === '/music'
+      && (to.query.editor === 'artist-create' || to.query.editor === 'album-edit')
+    const requiresAuth = Boolean(to.meta.requiresAuth) || requiresMusicEditorAuth
     const hasValidSession = authStore.validateSession()
-      || (to.meta.requiresAuth ? await authStore.restoreSession() : false)
+      || (requiresAuth ? await authStore.restoreSession() : false)
 
     if (hasValidSession) {
       onboardingStore.initialize(authStore.user)
@@ -46,7 +49,7 @@ export function installRouteGuards(router: Router) {
       }
     }
 
-    if (to.meta.requiresAuth && !hasValidSession) {
+    if (requiresAuth && !hasValidSession) {
       return { path: '/login', query: { redirect: to.fullPath } }
     }
 

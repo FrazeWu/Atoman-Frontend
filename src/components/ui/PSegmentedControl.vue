@@ -37,12 +37,12 @@
 </template>
 
 <script setup lang="ts" generic="T extends string | number">
-import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, watch, nextTick, onBeforeUnmount, type ComponentPublicInstance } from 'vue'
 
 interface Option<V> {
   label: string
   value: V
-  [key: string]: any
+  [key: string]: unknown
 }
 
 const props = withDefaults(defineProps<{
@@ -61,7 +61,7 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLElement | null>(null)
 const itemRefs = new Map<T, HTMLButtonElement>()
 
-const setRef = (value: T, el: any) => {
+const setRef = (value: T, el: Element | ComponentPublicInstance | null) => {
   if (el) {
     itemRefs.set(value, el as HTMLButtonElement)
   } else {
@@ -110,7 +110,7 @@ watch(() => props.options, () => {
   nextTick(updateIndicator)
 }, { deep: true })
 
-let resizeObserver: any = null
+let resizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
   nextTick(() => {

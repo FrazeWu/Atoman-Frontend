@@ -111,6 +111,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -165,8 +167,8 @@ const fetchAll = async () => {
   loadingPosts.value = true
   try {
     const [fRes, bRes] = await Promise.all([
-      fetch(api.blog.bookmarkFolders, { headers: authHeader.value }),
-      fetch(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
+      apiRequest(api.blog.bookmarkFolders, { headers: authHeader.value }),
+      apiRequest(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
     ])
     if (requestSequence !== fetchAllSequence || !fRes.ok || !bRes.ok) return false
     const [foldersData, bookmarksData] = await Promise.all([fRes.json(), bRes.json()])
@@ -175,7 +177,7 @@ const fetchAll = async () => {
     bookmarks.value = bookmarksData.data || []
     return true
   } catch (e) {
-    console.error(e)
+    reportError(e)
   } finally {
     if (requestSequence === fetchAllSequence) loadingPosts.value = false
   }
@@ -185,7 +187,7 @@ const fetchAll = async () => {
 const createFolder = async () => {
   if (!newFolderName.value.trim()) return
   try {
-    const res = await fetch(api.blog.bookmarkFolders, {
+    const res = await apiRequest(api.blog.bookmarkFolders, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader.value },
       body: JSON.stringify({ name: newFolderName.value })
@@ -196,19 +198,19 @@ const createFolder = async () => {
       await fetchAll()
     }
   } catch (e) {
-    console.error(e)
+    reportError(e)
   }
 }
 
 const deleteFolder = async (id: string) => {
   try {
-    const res = await fetch(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
+    const res = await apiRequest(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
     if (!res.ok) return false
     if (activeFolder.value === id) activeFolder.value = null
     await fetchAll()
     return true
   } catch (e) {
-    console.error(e)
+    reportError(e)
     return false
   }
 }

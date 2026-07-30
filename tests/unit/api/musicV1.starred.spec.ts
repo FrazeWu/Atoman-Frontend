@@ -288,9 +288,7 @@ describe('music v1 starred and playlist adapters', () => {
     expect(result.songs).toHaveLength(1)
   })
 
-  it('attaches bearer auth to music bookmark and playlist requests when token exists', async () => {
-    localStorageMock.setItem('token', 'music-token')
-
+  it('uses cookie credentials for music bookmark and playlist requests', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url === '/api/v1/music/bookmarks/artists') {
@@ -318,7 +316,6 @@ describe('music v1 starred and playlist adapters', () => {
       credentials: 'include',
       headers: {
         Accept: 'application/json',
-        Authorization: 'Bearer music-token',
       },
     })
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/music/playlists', {
@@ -327,7 +324,6 @@ describe('music v1 starred and playlist adapters', () => {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        Authorization: 'Bearer music-token',
       },
       body: JSON.stringify({ name: 'Auth Playlist' }),
     })

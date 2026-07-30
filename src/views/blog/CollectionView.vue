@@ -103,6 +103,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -193,7 +195,7 @@ const summarize = (content: string) => {
 const fetchCollection = async () => {
   loading.value = true
   try {
-    const res = await fetch(api.blog.collection(collectionId.value))
+    const res = await apiRequest(api.blog.collection(collectionId.value))
     if (res.ok) {
       const data = await res.json()
       collection.value = data.data
@@ -213,7 +215,7 @@ const fetchCollection = async () => {
       }
     }
   } catch (e) {
-    console.error('Failed to fetch collection:', e)
+    reportError(e, 'Failed to fetch collection:')
   } finally {
     loading.value = false
   }
@@ -226,13 +228,13 @@ watch(collectionId, () => {
 const fetchChannel = async () => {
   if (!channelId.value) return
   try {
-    const res = await fetch(api.blog.channel(channelId.value))
+    const res = await apiRequest(api.blog.channel(channelId.value))
     if (res.ok) {
       const data = await res.json()
       channel.value = data.data
     }
   } catch (e) {
-    console.error('Failed to fetch channel:', e)
+    reportError(e, 'Failed to fetch channel:')
   }
 }
 
@@ -241,7 +243,7 @@ const fetchPosts = async () => {
   try {
     const loadedPosts: Post[] = []
     for (let page = 1; ; page += 1) {
-      const res = await fetch(`${api.blog.posts}?collection_id=${encodeURIComponent(collectionId.value)}&page_size=100&page=${page}`)
+      const res = await apiRequest(`${api.blog.posts}?collection_id=${encodeURIComponent(collectionId.value)}&page_size=100&page=${page}`)
       if (!res.ok) throw new Error(`Failed to fetch collection posts (${res.status})`)
       const data = await res.json()
       loadedPosts.push(...((data.data || []) as Post[]))
@@ -249,7 +251,7 @@ const fetchPosts = async () => {
     }
     posts.value = loadedPosts
   } catch (e) {
-    console.error('Failed to fetch posts:', e)
+    reportError(e, 'Failed to fetch posts:')
   }
 }
 
@@ -266,7 +268,7 @@ const saveCollection = async () => {
 
   saving.value = true
   try {
-    const res = await fetch(api.blog.collection(collection.value.id), {
+    const res = await apiRequest(api.blog.collection(collection.value.id), {
       method: 'PUT',
       headers: { ...authHeader.value, 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
@@ -275,7 +277,7 @@ const saveCollection = async () => {
     editModalOpen.value = false
     await fetchCollection()
   } catch (e) {
-    console.error('Failed to save collection:', e)
+    reportError(e, 'Failed to save collection:')
   } finally {
     saving.value = false
   }
@@ -289,7 +291,7 @@ const deleteCollection = async () => {
   if (!collection.value) return
 
   try {
-    const res = await fetch(api.blog.collection(collection.value.id), {
+    const res = await apiRequest(api.blog.collection(collection.value.id), {
       method: 'DELETE',
       headers: authHeader.value
     })
@@ -297,7 +299,7 @@ const deleteCollection = async () => {
     deleteModalOpen.value = false
     router.push(`/posts/channel/${channelId.value}`)
   } catch (e) {
-    console.error('Failed to delete collection:', e)
+    reportError(e, 'Failed to delete collection:')
   }
 }
 
@@ -316,7 +318,7 @@ const toggleCollectionSubscribe = async () => {
       collectionSubscribed.value = !collectionSubscribed.value
     }
   } catch (e) {
-    console.error('Failed to toggle collection subscription:', e)
+    reportError(e, 'Failed to toggle collection subscription:')
   } finally {
     collectionSubscribeLoading.value = false
   }

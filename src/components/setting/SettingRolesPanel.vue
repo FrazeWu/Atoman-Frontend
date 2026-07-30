@@ -57,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PCard from '@/components/ui/PCard.vue'
@@ -99,7 +100,7 @@ async function loadUsers() {
     if (query.value) params.set('q', query.value)
     params.set('limit', '50')
 
-    const response = await fetch(`${api.users.roles}?${params.toString()}`, {
+    const response = await apiRequest(`${api.users.roles}?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${authStore.token}`,
       },
@@ -124,7 +125,7 @@ async function updateRole(userUUID: string, role: 'user' | 'admin') {
   message.value = ''
 
   try {
-    const response = await fetch(api.users.role(userUUID), {
+    const response = await apiRequest(api.users.role(userUUID), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

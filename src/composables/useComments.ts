@@ -40,6 +40,7 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
   const replyStates = reactive<Record<string, ReplyPaginationState>>({})
   const pendingLikes = reactive(new Set<string>())
   let generation = 0
+  let displayedTargetKey: string | null = null
 
   const findComment = (id: string) => {
     for (const root of roots.value) {
@@ -69,6 +70,14 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
     const requestedKey = targetKey(requestedTarget)
     const requestedPage = pageToLoad ?? (reset ? 1 : Math.max(1, page.value))
     const requestGeneration = reset ? ++generation : generation
+    if (reset && displayedTargetKey !== requestedKey) {
+      roots.value = []
+      target.value = null
+      page.value = 0
+      hasMore.value = true
+      Object.keys(replyStates).forEach((key) => delete replyStates[key])
+      displayedTargetKey = null
+    }
     loading.value = true
     error.value = null
     try {
@@ -76,11 +85,12 @@ export function useComments(targetSource: MaybeRefOrGetter<CommentTargetRef>, cl
         sort: sort.value, page: requestedPage, page_size: pageSize.value,
       })
       if (requestGeneration !== generation || requestedKey !== targetKey(toValue(targetSource))) return
+      if (reset) Object.keys(replyStates).forEach((key) => delete replyStates[key])
       roots.value = reset ? mergeById([], result.items) : mergeById(roots.value, result.items)
       target.value = result.target
       page.value = result.page
       hasMore.value = result.page * result.per_page < result.total_roots
-      if (reset) Object.keys(replyStates).forEach((key) => delete replyStates[key])
+      displayedTargetKey = requestedKey
     } catch (caught) {
       if (requestGeneration === generation && requestedKey === targetKey(toValue(targetSource))) error.value = caught
       throw caught

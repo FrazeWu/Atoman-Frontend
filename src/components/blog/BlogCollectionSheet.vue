@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, ref, watch } from 'vue'
 
 import PSheet from '@/components/ui/PSheet.vue'
@@ -53,9 +54,9 @@ async function loadCollection() {
   try {
     const headers = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     const [collectionRes, publishedRes, draftsRes] = await Promise.all([
-      fetch(api.blog.collection(collectionId.value), { headers }),
-      fetch(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),
-      fetch(api.blog.drafts, { headers }),
+      apiRequest(api.blog.collection(collectionId.value), { headers }),
+      apiRequest(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),
+      apiRequest(api.blog.drafts, { headers }),
     ])
     if (!collectionRes.ok || !publishedRes.ok || !draftsRes.ok) throw new Error('load failed')
 

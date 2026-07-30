@@ -123,6 +123,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
@@ -262,7 +263,7 @@ const loadTopics = async (resetPage = true) => {
     })
     if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
     if (activeTag.value) query.set('tag', activeTag.value)
-    const res = await fetch(`${API_URL}/forum/topics?${query}`, {
+    const res = await apiRequest(`${API_URL}/forum/topics?${query}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!res.ok) return
@@ -367,7 +368,7 @@ const loadMore = async () => {
     })
     if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
     if (activeTag.value) query.set('tag', activeTag.value)
-    const res = await fetch(`${API_URL}/forum/topics?${query}`, {
+    const res = await apiRequest(`${API_URL}/forum/topics?${query}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!res.ok) return
@@ -452,7 +453,7 @@ const submitCategoryRequest = async () => {
     alert('请填写分区名称和申请理由')
     return
   }
-  const res = await fetch(`${API_URL}/forum/category-requests`, {
+  const res = await apiRequest(`${API_URL}/forum/category-requests`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

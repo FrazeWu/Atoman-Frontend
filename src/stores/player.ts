@@ -1,3 +1,5 @@
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from '@/types';
@@ -104,7 +106,7 @@ export const usePlayerStore = defineStore('player', () => {
     listeningStartedAt = null;
     listeningTimer = null;
     void recordMusicSongPlay(songId).catch((error) => {
-      console.error('Failed to record music play:', error);
+      reportError(error, 'Failed to record music play:');
     });
   };
 
@@ -218,7 +220,7 @@ export const usePlayerStore = defineStore('player', () => {
       currentAlbum.value = Array.isArray(state.currentAlbum) ? state.currentAlbum : null;
       isPlaying.value = false;
     } catch (error) {
-      console.error('Failed to restore playback state:', error);
+      reportError(error, 'Failed to restore playback state:');
     }
   };
 
@@ -235,7 +237,7 @@ export const usePlayerStore = defineStore('player', () => {
     songLibraryLoading.value = true;
     songsRequest = (async () => {
       try {
-        const response = await fetch(`${api.url}/songs`);
+        const response = await apiRequest(`${api.url}/songs`);
         if (!response.ok) {
           songLibraryLoaded.value = false;
           return;
@@ -247,7 +249,7 @@ export const usePlayerStore = defineStore('player', () => {
         syncCurrentSongFromLibrary(library);
       } catch (error) {
         songLibraryLoaded.value = false;
-        console.error('Failed to fetch songs:', error);
+        reportError(error, 'Failed to fetch songs:');
       } finally {
         songLibraryBootstrapped.value = true;
         songLibraryLoading.value = false;

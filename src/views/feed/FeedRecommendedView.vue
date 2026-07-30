@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -200,7 +202,7 @@ function syncQuery() {
 async function fetchThemes() {
   themesLoading.value = true
   try {
-    const response = await fetch(`${api.url}/feed/recommend/themes?category=${normalizedCategoryParam(category.value)}`)
+    const response = await apiRequest(`${api.url}/feed/recommend/themes?category=${normalizedCategoryParam(category.value)}`)
     if (!response.ok) {
       throw new Error(`theme fetch failed: ${response.status}`)
     }
@@ -211,7 +213,7 @@ async function fetchThemes() {
       syncQuery()
     }
   } catch (error) {
-    console.error('Failed to fetch recommendation themes:', error)
+    reportError(error, 'Failed to fetch recommendation themes:')
     themes.value = []
   } finally {
     themesLoading.value = false
@@ -230,8 +232,8 @@ async function fetchRecommendations() {
       theme: theme.value,
     })
     const [articleRes, channelRes] = await Promise.all([
-      fetch(`${api.url}/feed/recommend/articles?${params.toString()}`),
-      fetch(`${api.url}/feed/recommend/channels?${params.toString()}`),
+      apiRequest(`${api.url}/feed/recommend/articles?${params.toString()}`),
+      apiRequest(`${api.url}/feed/recommend/channels?${params.toString()}`),
     ])
 
     if (!articleRes.ok || !channelRes.ok) {
@@ -257,7 +259,7 @@ async function fetchRecommendations() {
     totalArticles.value = articlePayload.meta?.total ?? articlePayload.total ?? articles.value.length
     totalChannels.value = channelPayload.meta?.total ?? channelPayload.total ?? channels.value.length
   } catch (error) {
-    console.error('Failed to fetch feed recommendations:', error)
+    reportError(error, 'Failed to fetch feed recommendations:')
     errorMessage.value = '推荐内容加载失败'
     articles.value = []
     channels.value = []
@@ -274,7 +276,7 @@ async function fetchExternalSources() {
     const params = new URLSearchParams({ page: String(externalPage.value), limit: String(externalPageSize) })
     if (category.value !== ALL_CATEGORY) params.set('category', category.value)
     if (externalSearch.value.trim()) params.set('q', externalSearch.value.trim())
-    const res = await fetch(`${api.url}/feed/explore/sources?${params}`, authStore.isAuthenticated
+    const res = await apiRequest(`${api.url}/feed/explore/sources?${params}`, authStore.isAuthenticated
       ? { headers: { Authorization: `Bearer ${authStore.token}` } }
       : undefined)
     const data = await res.json()

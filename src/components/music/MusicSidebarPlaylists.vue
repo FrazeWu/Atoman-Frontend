@@ -102,6 +102,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useRoute, useRouter } from 'vue-router'
@@ -140,7 +141,7 @@ async function fetchPlaylists() {
       playlists.value = []
       return
     }
-    console.error('Failed to fetch sidebar playlists:', error)
+    reportError(error, 'Failed to fetch sidebar playlists:')
   }
 }
 
@@ -155,7 +156,7 @@ async function fetchBookmarkedPlaylists() {
       bookmarkedPlaylists.value = []
       return
     }
-    console.error('Failed to fetch bookmarked playlists:', error)
+    reportError(error, 'Failed to fetch bookmarked playlists:')
   }
 }
 
@@ -207,7 +208,7 @@ async function createPlaylistWithName(name: string) {
     await fetchPlaylists()
     await router.push(`/music/playlist/${created.id}`)
   } catch (error) {
-    console.error('Failed to create playlist:', error)
+    reportError(error, 'Failed to create playlist:')
   }
 }
 

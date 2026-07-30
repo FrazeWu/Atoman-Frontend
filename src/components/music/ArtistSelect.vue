@@ -45,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import PInput from '@/components/ui/PInput.vue'
 import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
@@ -131,7 +132,7 @@ const fetchArtists = async () => {
       result.data
         .map(toArtistOption),
     )
-  } catch (e) { console.error(e) }
+  } catch (e) { reportError(e) }
 }
 
 const clickOutside = (e: MouseEvent) => {

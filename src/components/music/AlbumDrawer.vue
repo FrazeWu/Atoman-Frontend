@@ -1,5 +1,6 @@
 <!-- web/src/components/music/AlbumDrawer.vue -->
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
@@ -121,7 +122,7 @@ async function loadPlaylists() {
       playlistsLoaded.value = true
       return
     }
-    console.error('Failed to load playlists in AlbumDrawer:', err)
+    reportError(err, 'Failed to load playlists in AlbumDrawer:')
   }
 }
 
@@ -133,7 +134,7 @@ async function loadFavorites() {
       favoriteSongIds.value = new Set()
       return
     }
-    console.error('Failed to load favorites in AlbumDrawer:', err)
+    reportError(err, 'Failed to load favorites in AlbumDrawer:')
   }
 }
 
@@ -144,7 +145,7 @@ async function toggleTrackFavorite(songId: string) {
     toastVisible.value = true
     await loadPlaylists()
   } catch (err) {
-    console.error('Failed to toggle favorite:', err)
+    reportError(err, 'Failed to toggle favorite:')
     toastMessage.value = '操作失败'
     toastVisible.value = true
   }
@@ -156,7 +157,7 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
   } catch (err) {
-    console.error('Failed to add song to playlist:', err)
+    reportError(err, 'Failed to add song to playlist:')
     toastMessage.value = '添加失败'
     toastVisible.value = true
   }
@@ -209,7 +210,7 @@ async function loadAlbum(albumId: string | null) {
     ])
   } catch (error) {
     if (!isCurrentLoad()) return
-    console.error('Failed to fetch album:', error)
+    reportError(error, 'Failed to fetch album:')
     errorMessage.value = '专辑信息加载失败'
   } finally {
     if (isCurrentLoad()) loading.value = false
@@ -241,7 +242,7 @@ async function toggleAlbumBookmark() {
     isBookmarked.value = true
   } catch (error) {
     if (!isCurrentTarget()) return
-    console.error('Failed to toggle album bookmark:', error)
+    reportError(error, 'Failed to toggle album bookmark:')
     toastMessage.value = wasBookmarked ? '取消订阅失败' : '订阅失败'
     toastVisible.value = true
   } finally {

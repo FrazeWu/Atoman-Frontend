@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { apiRequest } from '@/api/client'
 import { configureApiXHR } from '@/api/transport'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -17,6 +18,7 @@ import { useApi } from '@/composables/useApi'
 import { useStudioStore } from '@/stores/studio'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
+import { errorMessage } from '@/utils/logger'
 
 const api = useApi()
 const route = useRoute()
@@ -133,9 +135,9 @@ async function uploadAudioFile(file: File, sourceName: string) {
       form.value.title = titleFromFilename(sourceName)
       titleError.value = ''
     }
-  } catch (err: any) {
+  } catch (err) {
     audioUploadProgress.value = -1
-    audioError.value = err?.error || '音频上传失败'
+    audioError.value = errorMessage(err, '音频上传失败')
   } finally {
     audioUploading.value = false
     uploadStage.value = ''
@@ -244,9 +246,9 @@ async function onVideoFileChange(e: Event) {
     const audioFile = await extractAudioFromVideo(file)
     audioProcessing.value = false
     await uploadAudioFile(audioFile, file.name)
-  } catch (err: any) {
+  } catch (err) {
     audioUploadProgress.value = -1
-    audioError.value = err?.message || '视频音频提取失败'
+    audioError.value = errorMessage(err, '视频音频提取失败')
   } finally {
     audioProcessing.value = false
     uploadStage.value = ''
@@ -271,7 +273,7 @@ async function onCoverFileChange(e: Event) {
   try {
     const fd = new FormData()
     fd.append('cover', file)
-    const res = await fetch(`${api.url}/podcast/upload-cover`, {
+    const res = await apiRequest(`${api.url}/podcast/upload-cover`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: fd,
@@ -279,8 +281,8 @@ async function onCoverFileChange(e: Event) {
     if (!res.ok) throw await res.json()
     const result = await res.json()
     form.value.episode_cover_url = result.url
-  } catch (err: any) {
-    errorMsg.value = err?.error || '封面上传失败'
+  } catch (err) {
+    errorMsg.value = errorMessage(err, '封面上传失败')
   } finally {
     coverUploading.value = false
   }
@@ -349,13 +351,13 @@ function buildPayload(status: 'draft' | 'published') {
 async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<PodcastEpisode> {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }
   if (isEdit.value) {
-    const res = await fetch(`${api.url}/podcast/episodes/${route.params.id}`, {
+    const res = await apiRequest(`${api.url}/podcast/episodes/${route.params.id}`, {
       method: 'PUT', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
     return res.json()
   } else {
-    const res = await fetch(`${api.url}/podcast/episodes`, {
+    const res = await apiRequest(`${api.url}/podcast/episodes`, {
       method: 'POST', headers, body: JSON.stringify(payload),
     })
     if (!res.ok) throw await res.json()
@@ -388,7 +390,7 @@ async function loadCollections(channelID: string) {
 
 async function loadEpisode() {
   const id = route.params.id as string
-  const res = await fetch(`${api.url}/podcast/episodes/${id}`, {
+  const res = await apiRequest(`${api.url}/podcast/episodes/${id}`, {
     headers: { Authorization: `Bearer ${authStore.token}` },
   })
   if (!res.ok) return
@@ -449,8 +451,8 @@ async function saveDraft() {
       query: selectedCollectionId.value ? { collection_id: selectedCollectionId.value } : undefined,
     })
     setTimeout(() => { draftSaved.value = false }, 3000)
-  } catch (e: any) {
-    errorMsg.value = e?.error || '保存失败，请重试'
+  } catch (e) {
+    errorMsg.value = errorMessage(e, '保存失败，请重试')
   } finally {
     savingDraft.value = false
   }
@@ -468,8 +470,8 @@ async function doPublish() {
   try {
     const ep = await apiSave(buildPayload('published'))
     router.push(`/podcasts/episode/${isEdit.value ? route.params.id : ep.id}`)
-  } catch (e: any) {
-    errorMsg.value = e?.error || '发布失败，请重试'
+  } catch (e) {
+    errorMsg.value = errorMessage(e, '发布失败，请重试')
   } finally {
     publishing.value = false
   }
@@ -488,8 +490,8 @@ async function schedulePublish() {
     const episode = await apiSave(buildPayload('draft'))
     await lifecycle.schedule('podcast', episode.id, publishAt.toISOString())
     await router.push({ path: '/studio/podcast/content', query: { status: 'scheduled' } })
-  } catch (e: any) {
-    errorMsg.value = e?.error?.message || e?.error || e?.message || '设置失败，请重试'
+  } catch (e) {
+    errorMsg.value = errorMessage(e, '设置失败，请重试')
   } finally {
     scheduling.value = false
   }

@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, type VueWrapper } from '@vue/test-utils'
 import { commonmarkLanguage } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
@@ -19,6 +19,8 @@ vi.mock('y-websocket', () => {
     private localState: Record<string, unknown> = {}
 
     on() {}
+
+    off() {}
 
     getStates() {
       return this.states
@@ -93,6 +95,17 @@ const ALBUM_ID = '01900000-0000-7000-8000-000000000001'
 const ALBUM_REFERENCE = `@album:${ALBUM_ID}`
 const DEBATE_ID = '01900000-0000-7000-8000-000000000002'
 const DEBATE_REFERENCE = `@debate:${DEBATE_ID}:support`
+const mountedWrappers: VueWrapper[] = []
+let pinia: ReturnType<typeof createPinia>
+let consoleWarn: ReturnType<typeof vi.spyOn>
+let consoleError: ReturnType<typeof vi.spyOn>
+
+if (!Range.prototype.getClientRects) {
+  Object.defineProperty(Range.prototype, 'getClientRects', {
+    configurable: true,
+    value: () => [] as unknown as DOMRectList,
+  })
+}
 
 async function flushCollabSync() {
   vi.useFakeTimers()
@@ -102,7 +115,11 @@ async function flushCollabSync() {
 }
 
 async function mountEditor(props: Record<string, unknown>) {
-  const wrapper = mount(PEditor, { props })
+  const wrapper = mount(PEditor, {
+    props,
+    global: { plugins: [pinia] },
+  })
+  mountedWrappers.push(wrapper)
   await vi.dynamicImportSettled()
   await nextTick()
   return wrapper
@@ -110,10 +127,21 @@ async function mountEditor(props: Record<string, unknown>) {
 
 describe('PEditor', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    pinia = createPinia()
+    setActivePinia(pinia)
     collabMockState.initialText = ''
     collabMockState.asyncText = ''
     collabMockState.asyncMergedText = ''
+    consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    mountedWrappers.splice(0).forEach(wrapper => wrapper.unmount())
+    expect(consoleWarn).not.toHaveBeenCalled()
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleWarn.mockRestore()
+    consoleError.mockRestore()
   })
 
   it('renders CodeMirror editor in normal mode without preview pane', async () => {

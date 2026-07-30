@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { InteractionComment, Video } from '@/types'
+import type { CommentTargetRef } from '@/api/comments'
+import type { Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
-import { extractTimestampFromComment, serializeTimestampComment } from '@/composables/useVideoTimestamp'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
-import CommentThread from '@/components/shared/CommentThread.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
 import { useApi } from '@/composables/useApi'
@@ -34,9 +35,13 @@ const router = useRouter()
 const authStore = useAuthStore()
 const lifecycle = useContentLifecycle()
 const videoId = computed(() => String(route.params.id || ''))
+const commentTarget = computed<CommentTargetRef>(() => ({ kind: 'video', resourceId: videoId.value }))
 const interactions = useInteractions('videos', 'video', videoId)
 
 const video = ref<Video | null>(null)
+const canDeleteAllComments = computed(() => Boolean(
+  authStore.user?.uuid === video.value?.user_id || isModeratorRole(authStore.user?.role),
+))
 const recommended = ref<Video[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -90,36 +95,6 @@ function fmtDate(s: string): string {
   return new Date(s).toLocaleDateString('zh-CN')
 }
 
-const canComment = computed(() => authStore.isAuthenticated)
-const commentNotice = computed(() => authStore.isAuthenticated ? '' : '登录后即可评论')
-
-const canDeleteComment = (comment: InteractionComment) => {
-  if (!authStore.user) return false
-  const authIDs = new Set([
-    authStore.user.uuid,
-    authStore.user.id === undefined ? undefined : String(authStore.user.id),
-  ].filter((id): id is string => Boolean(id)))
-  const commentIDs = [
-    comment.user_id ?? undefined,
-    comment.user?.uuid,
-    comment.user?.id === undefined ? undefined : String(comment.user.id),
-  ].filter((id): id is string => Boolean(id))
-  return (
-    commentIDs.some((id) => authIDs.has(id)) ||
-    authStore.user.uuid === video.value?.user_id ||
-    isModeratorRole(authStore.user.role)
-  )
-}
-
-async function submitComment(payload: { content: string; parentCommentId?: string }) {
-  const timestamp = serializeTimestampComment(extractTimestampFromComment(payload.content))
-  await interactions.createComment(
-    payload.content,
-    payload.parentCommentId,
-    timestamp.timestamp_sec === null ? undefined : timestamp,
-  )
-}
-
 function syncInteractionState(detail: VideoDetailResponse) {
   interactions.liked.value = detail.liked ?? detail.is_liked ?? detail.viewer_liked ?? false
   interactions.likeCount.value = detail.like_count ?? detail.likes_count ?? detail.LikeCount ?? 0
@@ -138,8 +113,8 @@ async function load(id: string) {
   consumptionTracker = null
   try {
     const [vRes, rRes] = await Promise.all([
-      fetch(`${api.url}/videos/${id}`),
-      fetch(`${api.url}/videos/${id}/recommended`),
+      apiRequest(`${api.url}/videos/${id}`),
+      apiRequest(`${api.url}/videos/${id}/recommended`),
     ])
     if (seq !== loadSeq) return
     if (!vRes.ok) { error.value = '视频不存在'; return }
@@ -166,9 +141,8 @@ async function load(id: string) {
       const data = await rRes.json()
       if (seq === loadSeq) recommended.value = data
     }
-    if (seq === loadSeq) await interactions.fetchComments()
     // Fire-and-forget view count increment
-    if (seq === loadSeq) fetch(`${api.url}/videos/${id}/view`, { method: 'POST' })
+    if (seq === loadSeq) apiRequest(`${api.url}/videos/${id}/view`, { method: 'POST' })
   } catch {
     if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {
@@ -278,6 +252,11 @@ function handleSeekToTimestamp(value: number) {
     if (timestampHint.value) timestampHint.value = ''
   }, 3000)
 }
+
+function currentCommentTime() {
+  if (video.value?.storage_type !== 'local') return null
+  return Math.floor(videoElement.value?.currentTime ?? currentPlaybackTime.value)
+}
 </script>
 
 <template>
@@ -377,15 +356,13 @@ function handleSeekToTimestamp(value: number) {
             @like="interactions.like"
             @unlike="interactions.unlike"
           />
-          <p v-if="commentNotice" class="vd-comment-notice">{{ commentNotice }}</p>
-          <CommentThread
-            :items="interactions.comments.value"
-            :loading="interactions.loadingComments.value"
-            :submitting="interactions.submittingComment.value"
-            :can-comment="canComment"
-            :can-delete="canDeleteComment"
-            :submit-action="submitComment"
-            @delete="interactions.deleteComment"
+          <CommentSection
+            :target="commentTarget"
+            noun="评论"
+            :current-time="currentCommentTime"
+            :can-delete="canDeleteAllComments"
+            @seek="handleSeekToTimestamp"
+            @count-change="interactions.commentCount.value = $event"
           />
         </div>
 
@@ -572,12 +549,6 @@ function handleSeekToTimestamp(value: number) {
   display: grid;
   gap: 1rem;
   margin: 1rem 0;
-}
-
-.vd-comment-notice {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--a-color-muted, #6b7280);
 }
 
 /* Sidebar */

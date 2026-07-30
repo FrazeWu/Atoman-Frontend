@@ -1,6 +1,6 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { computed, ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
 
 const drawerState = ref({
@@ -51,6 +51,7 @@ const mocks = vi.hoisted(() => ({
   closeMusicCreationFlow: vi.fn(),
   setMusicCreationStep: vi.fn(),
   routerReplace: vi.fn(),
+  getMusicArtist: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -114,7 +115,7 @@ vi.mock('@/components/ui/PButton.vue', () => ({
 
 vi.mock('@/api/musicV1', () => ({
   createMusicArtist: vi.fn(),
-  getMusicArtist: vi.fn(),
+  getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: vi.fn(),
   updateMusicArtist: vi.fn(),
   submitMusicEdit: vi.fn(),
@@ -158,7 +159,17 @@ function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' | 'prev
 }
 
 describe('MusicEntityEditorDrawer.vue', () => {
+  let consoleError: ReturnType<typeof vi.spyOn>
+  const mountedWrappers: VueWrapper[] = []
+
+  function mountDrawer() {
+    const wrapper = mount(MusicEntityEditorDrawer)
+    mountedWrappers.push(wrapper)
+    return wrapper
+  }
+
   beforeEach(() => {
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     drawerState.value = {
       artistId: null,
       albumId: null,
@@ -172,12 +183,19 @@ describe('MusicEntityEditorDrawer.vue', () => {
     mocks.closeMusicCreationFlow.mockReset()
     mocks.setMusicCreationStep.mockReset()
     mocks.routerReplace.mockReset()
+    mocks.getMusicArtist.mockReset()
+    mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Test Artist' })
+  })
+
+  afterEach(() => {
+    mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount())
+    consoleError.mockRestore()
   })
 
   it('uses the artist form in artist create mode', () => {
     drawerState.value.musicEditor = { entity: 'artist', mode: 'create' }
 
-    const wrapper = mount(MusicEntityEditorDrawer)
+    const wrapper = mountDrawer()
 
     expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
@@ -185,13 +203,17 @@ describe('MusicEntityEditorDrawer.vue', () => {
     expect(wrapper.text()).toContain('新建艺术家')
   })
 
-  it('keeps artist edit mode on the legacy artist form path', () => {
+  it('keeps artist edit mode on the legacy artist form path', async () => {
     drawerState.value.musicEditor = { entity: 'artist', mode: 'edit', id: 'artist-1' }
 
-    const wrapper = mount(MusicEntityEditorDrawer)
+    const wrapper = mountDrawer()
 
     expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('编辑艺术家')
+
+    await flushPromises()
+    expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')
+    expect(consoleError).not.toHaveBeenCalled()
   })
 })

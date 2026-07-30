@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { computed, ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import { listMusicAlbums, listMusicArtists } from '@/api/musicV1'
@@ -68,11 +69,11 @@ export function useGlobalSearch() {
 
     try {
       const [forumRes, blogRes, albumRes, artistRes] = await Promise.all([
-        fetch(`${api.url}/forum/search?${new URLSearchParams({ q: query.value, limit })}`, {
+        apiRequest(`${api.url}/forum/search?${new URLSearchParams({ q: query.value, limit })}`, {
           credentials: 'include',
           headers: { Accept: 'application/json' },
         }).then((res) => res.json()).catch(() => ({ data: [] })),
-        fetch(`${api.blog.posts}?${new URLSearchParams({ q: query.value, page_size: limit })}`, {
+        apiRequest(`${api.blog.posts}?${new URLSearchParams({ q: query.value, page_size: limit })}`, {
           credentials: 'include',
           headers: { Accept: 'application/json' },
         }).then((res) => res.json()).catch(() => []),

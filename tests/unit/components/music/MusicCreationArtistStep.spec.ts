@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationArtistStep from '@/components/music/MusicCreationArtistStep.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { uploadMusicAsset } from '@/api/musicV1'
@@ -40,8 +40,38 @@ vi.mock('@/components/music/MusicSquareImageCropSheet.vue', () => ({
   },
 }))
 
+const countryRegionFieldStub = {
+  props: ['modelValue', 'label', 'placeholder', 'triggerTestId', 'searchTestId', 'optionPrefix'],
+  emits: ['update:modelValue'],
+  template: `
+    <label>{{ label }}</label>
+    <input
+      data-testid="artist-nationality-input"
+      :value="modelValue"
+      @input="$emit('update:modelValue', $event.target.value)"
+    />
+  `,
+}
+
 describe('MusicCreationArtistStep.vue', () => {
+  let consoleWarn: ReturnType<typeof vi.spyOn>
+  let wrappers: Array<{ unmount: () => void }> = []
+
+  function mountArtistStep() {
+    const wrapper = mount(MusicCreationArtistStep, {
+      global: {
+        stubs: {
+          PCountryRegionField: countryRegionFieldStub,
+        },
+      },
+    })
+    wrappers.push(wrapper)
+    return wrapper
+  }
+
   beforeEach(() => {
+    consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    wrappers = []
     const drawers = useMusicDrawers()
     drawers.closeAll()
     drawers.openMusicCreationFlow()
@@ -53,29 +83,22 @@ describe('MusicCreationArtistStep.vue', () => {
     })
   })
 
+  afterEach(() => {
+    wrappers.forEach((wrapper) => wrapper.unmount())
+    try {
+      expect(consoleWarn).not.toHaveBeenCalled()
+    } finally {
+      consoleWarn.mockRestore()
+    }
+  })
+
   it('blocks moving forward when an additional stage name has no duration', async () => {
     const drawers = useMusicDrawers()
     vi.mocked(uploadMusicAsset).mockResolvedValue({
       key: 'music/avatar-cropped.png',
       url: 'https://img.example/avatar-cropped.png',
     })
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: `
-              <input
-                data-testid="artist-nationality-input"
-                :value="modelValue"
-                @input="$emit('update:modelValue', $event.target.value)"
-              />
-            `,
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-legal-name-input"]').setValue('Kanye Omari West')
     await wrapper.get('[data-testid="artist-stage-name-input-0"]').setValue('Kanye West')
@@ -101,17 +124,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
   it('shows a single birthday input and auto-formats digits with segmented placeholders', async () => {
     const drawers = useMusicDrawers()
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     expect(wrapper.find('[data-testid="artist-birth-input"]').exists()).toBe(true)
     await wrapper.get('[data-testid="artist-birth-input"]').setValue('20010608')
@@ -127,17 +140,7 @@ describe('MusicCreationArtistStep.vue', () => {
   })
 
   it('fills the remaining birthday segments with placeholders while typing', async () => {
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-birth-input"]').setValue('1987')
     await flushPromises()
@@ -146,17 +149,7 @@ describe('MusicCreationArtistStep.vue', () => {
   })
 
   it('places nationality and birthday on the same row', () => {
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     const row = wrapper.find('.field-grid--duo')
     expect(row.exists()).toBe(true)
@@ -165,17 +158,7 @@ describe('MusicCreationArtistStep.vue', () => {
   })
 
   it('shows required markers for mandatory personal artist fields', () => {
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue', 'label'],
-            emits: ['update:modelValue'],
-            template: '<label>{{ label }}</label><input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     expect(wrapper.text()).toContain('头像*')
     expect(wrapper.text()).toContain('本名*')
@@ -192,23 +175,7 @@ describe('MusicCreationArtistStep.vue', () => {
       url: 'https://img.example/avatar-cropped.png',
     })
 
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: `
-              <input
-                data-testid="artist-nationality-input"
-                :value="modelValue"
-                @input="$emit('update:modelValue', $event.target.value)"
-              />
-            `,
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-legal-name-input"]').setValue('Kanye Omari West')
     await wrapper.get('[data-testid="artist-stage-name-input-0"]').setValue('Kanye West')
@@ -240,17 +207,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
   it('switches to group mode, hides person-only fields, and requires at least two members', async () => {
     const drawers = useMusicDrawers()
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-group-name-input"]').setValue('Daft Punk')
@@ -267,19 +224,9 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
   })
 
-  it('stores group member join and leave date parts with the existing segmented date pattern', async () => {
+  it('stores group member join and leave date parts from masked date inputs', async () => {
     const drawers = useMusicDrawers()
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-group-name-input"]').setValue('The xx')
@@ -287,21 +234,17 @@ describe('MusicCreationArtistStep.vue', () => {
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-member-name-input-0"]').setValue('Romy')
-    await wrapper.get('[data-testid="artist-member-join-year-input-0"]').setValue('2005')
-    await wrapper.get('[data-testid="artist-member-join-month-input-0"]').setValue('6')
-    await wrapper.get('[data-testid="artist-member-join-day-input-0"]').setValue('1')
+    await wrapper.get('[data-testid="artist-member-join-input-0"]').setValue('2005/06/01')
     await wrapper.get('[data-testid="artist-member-name-input-1"]').setValue('Oliver')
-    await wrapper.get('[data-testid="artist-member-leave-year-input-1"]').setValue('2014')
-    await wrapper.get('[data-testid="artist-member-leave-month-input-1"]').setValue('8')
-    await wrapper.get('[data-testid="artist-member-leave-day-input-1"]').setValue('31')
+    await wrapper.get('[data-testid="artist-member-leave-input-1"]').setValue('2014/08/31')
 
     expect(drawers.state.value.creationFlow?.draft.artist.members).toEqual([
       expect.objectContaining({
         name: 'Romy',
         joinDateParts: {
           year: '2005',
-          month: '6',
-          day: '1',
+          month: '06',
+          day: '01',
         },
         leaveDateParts: {
           year: '',
@@ -318,7 +261,7 @@ describe('MusicCreationArtistStep.vue', () => {
         },
         leaveDateParts: {
           year: '2014',
-          month: '8',
+          month: '08',
           day: '31',
         },
       }),
@@ -327,17 +270,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
   it('requires group mandatory fields before moving forward', async () => {
     const drawers = useMusicDrawers()
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-group-name-input"]').setValue('The xx')
@@ -351,8 +284,8 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(wrapper.get('[data-testid="artist-members-error"]').text()).toContain('请为每位成员填写加入时间')
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
 
-    await wrapper.get('[data-testid="artist-member-join-year-input-0"]').setValue('2005')
-    await wrapper.get('[data-testid="artist-member-join-year-input-1"]').setValue('2005')
+    await wrapper.get('[data-testid="artist-member-join-input-0"]').setValue('2005/01/01')
+    await wrapper.get('[data-testid="artist-member-join-input-1"]').setValue('2005/01/01')
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
 
     expect(drawers.state.value.creationFlow?.step).toBe('artist')
@@ -370,17 +303,7 @@ describe('MusicCreationArtistStep.vue', () => {
     }))
 
     const drawers = useMusicDrawers()
-    const wrapper = mount(MusicCreationArtistStep, {
-      global: {
-        stubs: {
-          PCountryRegionField: {
-            props: ['modelValue'],
-            emits: ['update:modelValue'],
-            template: '<input data-testid="artist-nationality-input" :value="modelValue" />',
-          },
-        },
-      },
-    })
+    const wrapper = mountArtistStep()
 
     const input = wrapper.get('[data-testid="artist-avatar-input"]').element as HTMLInputElement
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' })

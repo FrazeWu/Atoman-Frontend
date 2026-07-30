@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
@@ -251,7 +252,7 @@ const doDelete = async () => {
     paginationInvalidated.value = true
     await reloadFirstPage(searchAtDelete)
   } catch (error) {
-    console.error(error)
+    reportError(error)
   } finally {
     deleting.value = false
   }
@@ -282,7 +283,7 @@ const submitForm = async () => {
     }
     closeForm()
   } catch (e) {
-    console.error(e)
+    reportError(e)
   } finally {
     submitting.value = false
   }

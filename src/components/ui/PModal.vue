@@ -39,8 +39,10 @@
   position: absolute;
   top: 1rem;
   right: 1.25rem;
-  border: none;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
   color: var(--a-color-muted);
   cursor: pointer;
   font-size: 1.15rem;

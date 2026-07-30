@@ -228,7 +228,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
-import { apiFetch } from '@/api/transport'
+import { apiRequest } from '@/api/client'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -252,7 +252,9 @@ import PToast from '@/components/ui/PToast.vue'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
   listMusicPlaylists,
+  type MusicPlaylistSummary,
 } from '@/api/musicV1'
+import { reportError } from '@/utils/logger'
 
 const player = usePlayerStore()
 const route = useRoute()
@@ -340,7 +342,7 @@ const updateMetaCollapse = () => {
   isMetaCollapsed.value = playerInner.getBoundingClientRect().width <= 760
 }
 
-const playlists = ref<any[]>([])
+const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
@@ -362,7 +364,7 @@ async function loadPlaylists() {
       playlistsLoaded.value = true
       return
     }
-    console.error('Failed to load playlists in AudioPlayer:', err)
+    reportError(err, '加载播放列表失败')
   }
 }
 
@@ -370,7 +372,7 @@ async function loadFavorites() {
   try {
     await loadFavoriteSongs()
   } catch (err) {
-    console.error('Failed to load favorites in AudioPlayer:', err)
+    reportError(err, '加载收藏歌曲失败')
   }
 }
 
@@ -381,7 +383,7 @@ async function toggleTrackFavorite(songId: string) {
     toastVisible.value = true
     await loadPlaylists()
   } catch (err) {
-    console.error('Failed to toggle favorite:', err)
+    reportError(err, '切换歌曲收藏失败')
     toastMessage.value = '操作失败'
     toastVisible.value = true
   }
@@ -401,7 +403,7 @@ async function addPodcastBookmark() {
     toastMessage.value = '已收藏'
     toastVisible.value = true
   } catch (err) {
-    console.error('Failed to bookmark podcast episode:', err)
+    reportError(err, '收藏播客节目失败')
     toastMessage.value = '操作失败'
     toastVisible.value = true
   }
@@ -421,7 +423,7 @@ async function addPodcastListenLater() {
     toastMessage.value = '已加入稍后听'
     toastVisible.value = true
   } catch (err) {
-    console.error('Failed to add podcast listen later:', err)
+    reportError(err, '添加稍后收听失败')
     toastMessage.value = '操作失败'
     toastVisible.value = true
   }
@@ -434,7 +436,7 @@ function postPodcastEpisode(episodeId: string) {
   if (authStore.token && authStore.token !== 'cookie-session') {
     headers.Authorization = `Bearer ${authStore.token}`
   }
-  return apiFetch(api.podcast.bookmarks, {
+  return apiRequest(api.podcast.bookmarks, {
     method: 'POST',
     headers,
     body: JSON.stringify({ episode_id: episodeId }),
@@ -447,7 +449,7 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
     toastMessage.value = '已成功添加到歌单'
     toastVisible.value = true
   } catch (err) {
-    console.error('Failed to add song to playlist:', err)
+    reportError(err, '添加歌曲到播放列表失败')
     toastMessage.value = '添加失败'
     toastVisible.value = true
   }
@@ -748,9 +750,9 @@ onBeforeUnmount(() => {
 }
 
 .main-play-btn {
-  background: #0f172a;
-  color: #ffffff;
-  border: 1px solid #0f172a;
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  border: 1px solid var(--a-color-text);
   border-radius: 4px;
   padding: 6px 20px;
   font-weight: 500;
@@ -760,12 +762,6 @@ onBeforeUnmount(() => {
   transition: transform 0.1s, background-color 0.15s;
 }
 .main-play-btn:active { transform: translateY(1px); }
-
-:root.dark .main-play-btn {
-  background: #ffffff;
-  color: #0f172a;
-  border-color: #ffffff;
-}
 
 .progress-container {
   width: 100%;
@@ -915,9 +911,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   padding: 16px 0;
   z-index: 100;
@@ -925,7 +919,7 @@ onBeforeUnmount(() => {
   border-radius: 4px;
 }
 :root.dark .volume-control {
-  background: rgba(15, 23, 42, 0.88);
+  background: var(--a-color-bg);
   border-color: var(--a-color-border-dark, #334155);
 }
 .volume-control::after {

@@ -25,6 +25,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { onMounted, reactive, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
@@ -52,14 +53,14 @@ async function loadReports() {
   const generation = ++loadGeneration
   loading.value = true; error.value = ''
   try {
-    const result = await payload<Report[]>(await fetch(`${api.v1.forum.reports}?status=${status.value}&page=1&page_size=50`, { headers: headers() }), '加载举报失败')
+    const result = await payload<Report[]>(await apiRequest(`${api.v1.forum.reports}?status=${status.value}&page=1&page_size=50`, { headers: headers() }), '加载举报失败')
     if (generation === loadGeneration) { reports.value = result.data || []; total.value = result.meta?.total || 0 }
   } catch (cause) { if (generation === loadGeneration) error.value = cause instanceof Error ? cause.message : '加载举报失败' } finally { if (generation === loadGeneration) loading.value = false }
 }
 async function resolve(id: string) {
   resolvingId.value = id; error.value = ''
   try {
-    const result = await payload<Report>(await fetch(api.v1.forum.resolveReport(id), { method: 'POST', headers: headers(true), body: JSON.stringify({ review_note: notes[id] || '' }) }), '处理举报失败')
+    const result = await payload<Report>(await apiRequest(api.v1.forum.resolveReport(id), { method: 'POST', headers: headers(true), body: JSON.stringify({ review_note: notes[id] || '' }) }), '处理举报失败')
     reports.value = reports.value.filter(item => item.id !== result.data.id); total.value = Math.max(0, total.value - 1)
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '处理举报失败' } finally { resolvingId.value = '' }
 }

@@ -193,14 +193,15 @@ export const useDMStore = defineStore('dm', () => {
     const conversationID = activeConversationId.value
     const cursor = messageCursorByConversation.value[conversationID]
     if (!conversationID || !cursor || loadingMessages.value) return
+    const generation = requestGeneration.value
     loadingMessages.value = true
     try {
       const page = await listMessages(conversationID, cursor)
-      if (activeConversationId.value !== conversationID) return
+      if (generation !== requestGeneration.value || activeConversationId.value !== conversationID) return
       mergeMessages(conversationID, page.items)
       messageCursorByConversation.value = { ...messageCursorByConversation.value, [conversationID]: page.next_cursor ?? null }
     } finally {
-      if (activeConversationId.value === conversationID) loadingMessages.value = false
+      if (generation === requestGeneration.value && activeConversationId.value === conversationID) loadingMessages.value = false
     }
   }
 

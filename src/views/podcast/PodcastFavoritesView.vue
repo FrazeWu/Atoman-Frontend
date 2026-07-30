@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import type { Channel, PodcastEpisode } from '@/types'
 import { useApi } from '@/composables/useApi'
@@ -20,6 +21,7 @@ const episodeBookmarks = ref<EpisodeBookmark[]>([])
 const showBookmarks = ref<ShowBookmark[]>([])
 const listenLaterRows = ref<EpisodeBookmark[]>([])
 const loading = ref(false)
+let latestLoadRequest = 0
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'episodes', label: '单集' },
@@ -42,23 +44,38 @@ function playEpisode(ep: PodcastEpisode, queue: PodcastEpisode[]) {
 }
 
 async function loadActiveTab() {
+  const tab = activeTab.value
+  const request = ++latestLoadRequest
   loading.value = true
   try {
-    if (activeTab.value === 'episodes') {
-      const res = await fetch(api.podcast.bookmarks, { headers: headers() })
+    if (tab === 'episodes') {
+      const res = await apiRequest(`${api.podcast.bookmarks}?kind=favorite`, { headers: headers() })
+      if (!res.ok) throw new Error('Failed to load episode bookmarks')
       const data = await res.json()
-      episodeBookmarks.value = Array.isArray(data?.data) ? data.data : []
-    } else if (activeTab.value === 'shows') {
-      const res = await fetch(api.podcast.showBookmarks, { headers: headers() })
+      if (request === latestLoadRequest && activeTab.value === tab) {
+        episodeBookmarks.value = Array.isArray(data?.data) ? data.data : []
+      }
+    } else if (tab === 'shows') {
+      const res = await apiRequest(api.podcast.showBookmarks, { headers: headers() })
+      if (!res.ok) throw new Error('Failed to load show bookmarks')
       const data = await res.json()
-      showBookmarks.value = Array.isArray(data?.data) ? data.data : []
-    } else if (activeTab.value === 'listenLater') {
-      const res = await fetch(api.podcast.bookmarks, { headers: headers() })
+      if (request === latestLoadRequest && activeTab.value === tab) {
+        showBookmarks.value = Array.isArray(data?.data) ? data.data : []
+      }
+    } else if (tab === 'listenLater') {
+      const res = await apiRequest(`${api.podcast.bookmarks}?kind=listen_later`, { headers: headers() })
+      if (!res.ok) throw new Error('Failed to load listen later bookmarks')
       const data = await res.json()
-      listenLaterRows.value = Array.isArray(data?.data) ? data.data : []
+      if (request === latestLoadRequest && activeTab.value === tab) {
+        listenLaterRows.value = Array.isArray(data?.data) ? data.data : []
+      }
     }
+  } catch {
+    // 加载失败时保留当前内容，避免异步监听器产生未处理拒绝。
   } finally {
-    loading.value = false
+    if (request === latestLoadRequest && activeTab.value === tab) {
+      loading.value = false
+    }
   }
 }
 

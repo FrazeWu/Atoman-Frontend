@@ -5,7 +5,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import MusicLayout from '@/views/music/MusicLayout.vue'
 
 describe('MusicLayout.vue', () => {
-  it('renders only the simplified sidebar items', () => {
+  it('renders the music navigation items', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [] })
     const wrapper = mount(MusicLayout, {
       global: {
@@ -25,7 +25,7 @@ describe('MusicLayout.vue', () => {
       },
     })
     const items = wrapper.findAll('.sidebar-item')
-    expect(items.length).toBe(4)
+    expect(items.length).toBe(5)
     expect(items[0].text()).toContain('发现')
     expect(items[0].attributes('data-to')).toBe('/music/discover')
     expect(items[1].text()).toContain('专辑')
@@ -34,6 +34,8 @@ describe('MusicLayout.vue', () => {
     expect(items[2].attributes('data-to')).toBe('/music/artists')
     expect(items[3].text()).toContain('收藏')
     expect(items[3].attributes('data-to')).toBe('/music/starred')
+    expect(items[4].text()).toContain('播放历史')
+    expect(items[4].attributes('data-to')).toBe('/music/history')
   })
 
   it('marks the music main content area for module-specific scroll behavior', () => {

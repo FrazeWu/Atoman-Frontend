@@ -1,4 +1,4 @@
-import { ref, onBeforeUnmount } from 'vue'
+import { getCurrentInstance, onBeforeUnmount, ref } from 'vue'
 
 type AutoSaveState = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -93,9 +93,11 @@ export function useAutoSave<T>(options: AutoSaveOptions<T>) {
     autoSaveState.value = 'idle'
   }
 
-  onBeforeUnmount(() => {
-    if (timer) clearTimeout(timer)
-  })
+  if (getCurrentInstance()) {
+    onBeforeUnmount(() => {
+      if (timer) clearTimeout(timer)
+    })
+  }
 
   return {
     autoSaveState,

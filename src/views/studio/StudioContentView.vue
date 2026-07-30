@@ -141,6 +141,7 @@ const error = ref('')
 const collectionSheetOpen = ref(false)
 const searchQuery = ref('')
 const ready = ref(false)
+let latestPageRequest = 0
 const mutationBusy = ref(false)
 const pendingDelete = ref<StudioContentItem | null>(null)
 const actionMessage = ref('')
@@ -251,6 +252,7 @@ async function reprocessVideo(item: StudioContentItem) {
 
 async function loadPage(loadCollections = false) {
   if (!studio.currentChannel) return
+  const request = ++latestPageRequest
   loading.value = true
   error.value = ''
   try {
@@ -258,36 +260,39 @@ async function loadPage(loadCollections = false) {
     if (loadCollections) requests.push(studio.loadCollections(module.value))
     await Promise.all(requests)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '加载失败'
+    if (request === latestPageRequest) {
+      error.value = cause instanceof Error ? cause.message : '加载失败'
+    }
   } finally {
-    loading.value = false
+    if (request === latestPageRequest) loading.value = false
   }
 }
 
 onMounted(async () => {
   searchQuery.value = filters.value.q
+  let initialModule = module.value
+  let initialPath = route.fullPath
   try {
     await studio.loadState()
+    initialModule = module.value
+    initialPath = route.fullPath
     await loadPage(true)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败'
     loading.value = false
   } finally {
     ready.value = true
+    if (route.fullPath !== initialPath) void loadPage(module.value !== initialModule)
   }
 })
 
 watch(
-  () => route.fullPath,
-  () => {
+  () => [module.value, route.fullPath],
+  ([currentModule], [previousModule]) => {
     searchQuery.value = filters.value.q
-    if (ready.value) void loadPage()
+    if (ready.value) void loadPage(currentModule !== previousModule)
   },
 )
-
-watch(module, () => {
-  if (ready.value) void loadPage(true)
-})
 </script>
 
 <style scoped>

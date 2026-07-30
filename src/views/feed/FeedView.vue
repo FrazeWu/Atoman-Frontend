@@ -375,20 +375,18 @@ import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFee
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
-import { useOnboardingStore, type OnboardingFeedRecommendation } from '@/stores/onboarding'
+import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
 import { useKeyboardList } from '@/composables/useKeyboardList'
+import { useFeedSubscriptionManager } from '@/composables/feed/useFeedSubscriptionManager'
+import { useFeedTimelineController } from '@/composables/feed/useFeedTimelineController'
+import { useFeedArticleBrowser } from '@/composables/feed/useFeedArticleBrowser'
 import { ChevronDown, Filter, RefreshCw } from 'lucide-vue-next'
 import type {
-  AutoAddSubscriptionPayload,
-  FeedArticleSource,
   FeedItem,
-  FeedSubscriptionRuleMatchType,
   TimelineItem,
 } from '@/types'
-import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
-import { looksLikeUrl, subscriptionDisplayTitle } from '@/utils/feedTitles'
-import { useApiUrl } from '@/composables/useApi'
+import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()
 const router = useRouter()
@@ -398,22 +396,15 @@ const feedStore = useFeedStore()
 const onboardingStore = useOnboardingStore()
 const uiStore = useUIStore()
 
-const API_URL = useApiUrl()
 const feedCopy = {
   name: '订阅',
   homepageSub: '聚合你感兴趣的 RSS 订阅源与内容更新。',
 }
-const authHeaders = () => ({ Authorization: `Bearer ${authStore.token}` })
-
 const subscriptions = computed(() => feedStore.subscriptions)
 const hasExternalRSSSubscription = computed(() => subscriptions.value.some((subscription) => (
   subscription.feed_source?.source_type === 'external_rss'
 )))
 const onboardingReady = ref(false)
-const onboardingBusy = ref(false)
-const onboardingActionError = ref('')
-const onboardingFailedIds = ref<string[]>([])
-const onboardingMessage = ref('')
 const showOnboardingRecommendations = computed(() => (
   onboardingReady.value
   && authStore.isAuthenticated
@@ -423,44 +414,56 @@ const showOnboardingRecommendations = computed(() => (
 const groups = computed(() => feedStore.groups)
 const starredIds = computed(() => feedStore.starredItemIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
-const normalizePage = (value: unknown) => {
-  const parsed = Number.parseInt(String(value || '1'), 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
-}
-
-const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
-const queryGroupId = computed(() => typeof route.query.group_id === 'string' ? route.query.group_id : null)
-const queryPage = computed(() => normalizePage(route.query.page))
-const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
-const queryMergeDuplicates = computed(() => route.query.merge_duplicates !== 'false')
-const searchInput = ref(querySearch.value)
-const mergeDuplicates = ref(queryMergeDuplicates.value)
 const sourceTypeFilter = ref<'all' | 'internal' | 'blog' | 'podcast'>('all')
 const activeTheme = ref('')
-const activeSearchLabel = computed(() => querySearch.value.trim())
+
+const {
+  querySourceId,
+  queryGroupId,
+  querySearch,
+  searchInput,
+  mergeDuplicates,
+  activeSearchLabel,
+  currentSourceSubscription,
+  sourceViewMode,
+  timeline,
+  totalItems,
+  currentPage,
+  pageLimit,
+  unreadOnly,
+  loadingTimeline,
+  markingAllRead,
+  hasNewTimelineContent,
+  allRead,
+  bulkReadLabel,
+  emptyTimelineText,
+  clearSourceFilter,
+  submitSearch,
+  clearSearch,
+  updateMergeDuplicates,
+  changePage,
+  refreshNewTimelineContent,
+  fetchTimeline,
+  toggleUnreadOnly,
+  toggleAllRead,
+  handleTimelineVisibilityChange,
+  startTimelineUpdatesPolling,
+  stopTimelineUpdatesPolling,
+} = useFeedTimelineController({
+  subscriptions,
+  sourceTypeFilter,
+  applyAutomationRules: (items) => applyAutomationRules(items),
+  scrollToTop: () => scrollToTop(),
+})
+
 const defaultGroupId = computed(() => groups.value.find((group) => group.name === '默认分组')?.id || '')
 const nonDefaultGroups = computed(() => groups.value.filter((group) => group.name !== '默认分组'))
-const currentSourceSubscription = computed(() => {
-  if (!querySourceId.value) return null
-  return subscriptions.value.find((sub) => sub.id === querySourceId.value) || null
-})
 const currentSourceTitle = computed(() =>
   currentSourceSubscription.value ? subscriptionDisplayTitle(currentSourceSubscription.value) : '',
 )
 const currentSourceUnreadCount = computed(() =>
   Math.max(0, currentSourceSubscription.value?.unread_count || 0),
 )
-const sourceViewMode = computed(() => Boolean(querySourceId.value))
-const canCheckTimelineUpdates = computed(() => {
-  if (!authStore.isAuthenticated || querySearch.value.trim()) return false
-  if (sourceTypeFilter.value !== 'all') return false
-  const sourceType = currentSourceSubscription.value?.feed_source?.source_type
-  return !sourceType || sourceType === 'external_rss'
-})
-const bulkReadLabel = computed(() => {
-  if (sourceViewMode.value) return allRead.value ? '当前来源未读' : '当前来源已读'
-  return allRead.value ? '全部未读' : '全部已读'
-})
 
 function findSubscriptionByTimelineItem(item: TimelineItem) {
   if (item.type === 'feed_item' && item.feed_item) {
@@ -485,13 +488,6 @@ function findSubscriptionByTimelineItem(item: TimelineItem) {
   return undefined
 }
 
-const emptyTimelineText = computed(() => {
-  if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
-  if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
-  return subscriptions.value.length ? '订阅源暂无更新' : '订阅后开始探索'
-})
-
-const timeline = ref<TimelineItem[]>([])
 const visibleTimeline = computed(() => {
   const hiddenKeywords = feedStore.filterRules.hiddenKeywords.map((keyword) => keyword.toLocaleLowerCase())
 
@@ -564,40 +560,48 @@ watch(visibleTimeline, () => {
   }
 })
 
-const totalItems = ref(0)
-const currentPage = ref(1)
-const pageLimit = 20
-const unreadOnly = ref(false)
-const loadingTimeline = ref(false)
-const markingAllRead = ref(false)
-const timelineUpdatesCursor = ref('')
-const hasNewTimelineContent = ref(false)
-const checkingTimelineUpdates = ref(false)
-const addingSubscription = ref(false)
-const allRead = ref(false)
-const showAddModal = ref(false)
-const showManageSheet = ref(false)
-const manageBusy = ref(false)
-const manageError = ref('')
-const addSubscriptionError = ref('')
-const addSubscriptionResetKey = ref(0)
+const {
+  addingSubscription,
+  showAddModal,
+  showManageSheet,
+  manageBusy,
+  manageError,
+  addSubscriptionError,
+  addSubscriptionResetKey,
+  onboardingBusy,
+  onboardingActionError,
+  onboardingFailedIds,
+  onboardingMessage,
+  closeAddModal,
+  toggleAddModal,
+  openManageSheet,
+  autoAddSubscription,
+  subscribeOnboardingRecommendations,
+  skipOnboarding,
+  createSubscriptionGroup,
+  renameSubscription,
+  moveSubscription,
+  updateSubscriptionFlags,
+  deleteSubscription,
+  renameGroup,
+  deleteGroup,
+  checkSubscriptionHealth,
+  checkAllSubscriptionsHealth,
+  syncSubscription,
+  syncAllSubscriptions,
+  importOPML,
+  exportOPML,
+  saveSubscriptionRule,
+  moveSubscriptionRuleUp,
+  moveSubscriptionRuleDown,
+  applySubscriptionRule,
+  applyAllSubscriptionRules,
+  deleteSubscriptionRule,
+  updateFilterRules,
+  updateAutomationRules,
+} = useFeedSubscriptionManager({ currentPage, refreshTimeline: () => fetchTimeline() })
 
-const showArticleSheet = ref(false)
 const expandedDuplicateItemIds = ref(new Set<string>())
-const selectedArticle = ref<TimelineItem | null>(null)
-const selectedArticleIndex = computed(() => {
-  if (!selectedArticle.value) return -1
-  return visibleTimeline.value.findIndex((item) => itemKey(item) === itemKey(selectedArticle.value!))
-})
-const showSourceSheet = ref(false)
-const selectedSource = ref<FeedArticleSource | null>(null)
-const sourceArticles = ref<TimelineItem[]>([])
-const sourceArticlesLoading = ref(false)
-const sourceSubscribeBusy = ref(false)
-let timelineRequestSequence = 0
-let timelineUpdatesTimer: ReturnType<typeof setInterval> | null = null
-const timelineUpdatesPollInterval = 60_000
-
 const headerRef = ref<HTMLElement | null>(null)
 const pageRootRef = ref<HTMLElement | null>(null)
 const headerBottom = computed(() => {
@@ -611,579 +615,33 @@ const feedItemActionIDs = (feedItem: FeedItem) => Array.from(new Set([
   ...(feedItem.duplicate_item_ids || []),
 ].filter(Boolean)))
 
-const openArticleSheet = (item: TimelineItem, index?: number) => {
-  if (index !== undefined) focusedIndex.value = index
-  if (!item.post && !item.feed_item) return
-
-  selectedArticle.value = item
-  showArticleSheet.value = true
-  if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
-    item.is_read = true
-    void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
-  }
-}
-
-const openPreviousArticle = () => {
-  if (selectedArticleIndex.value <= 0) return
-  const nextItem = visibleTimeline.value[selectedArticleIndex.value - 1]
-  if (!nextItem) return
-  openArticleSheet(nextItem, selectedArticleIndex.value - 1)
-}
-
-const openNextArticle = () => {
-  if (selectedArticleIndex.value < 0 || selectedArticleIndex.value >= visibleTimeline.value.length - 1) return
-  const nextItem = visibleTimeline.value[selectedArticleIndex.value + 1]
-  if (!nextItem) return
-  openArticleSheet(nextItem, selectedArticleIndex.value + 1)
-}
-
-const openSourceArticle = (item: TimelineItem) => {
-  selectedArticle.value = item
-  showArticleSheet.value = true
-  if (authStore.isAuthenticated && item.type === 'feed_item' && item.feed_item && !item.is_read) {
-    item.is_read = true
-    void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
-  }
-}
-
-const findSubscriptionForSource = (source: FeedArticleSource) => {
-  if (source.type === 'internal_channel') {
-    return subscriptions.value.find((sub) => (
-      sub.feed_source?.source_type === 'internal_channel'
-      && sub.feed_source.source_id === source.id
-    ))
-  }
-  if (source.type === 'external_rss') {
-    return subscriptions.value.find((sub) => (
-      sub.feed_source_id === source.id
-      || sub.feed_source?.id === source.id
-      || (!!source.rssUrl && sub.feed_source?.rss_url === source.rssUrl)
-    ))
-  }
-  return undefined
-}
-
-const withSubscriptionState = (source: FeedArticleSource): FeedArticleSource => {
-  const subscription = findSubscriptionForSource(source)
-  return {
-    ...source,
-    subscriptionId: subscription?.id || source.subscriptionId,
-    subscribed: Boolean(subscription || source.subscribed),
-  }
-}
-
-const sourceDisplayTitle = (source: FeedArticleSource, subscriptionTitle?: string) => {
-  const customTitle = subscriptionTitle?.trim()
-  if (customTitle && !looksLikeUrl(customTitle)) return customTitle
-
-  const normalizedTitle = source.title?.trim()
-  if (normalizedTitle) return normalizedTitle
-
-  if (customTitle) return customTitle
-
-  if (source.type === 'external_rss') {
-    const rssUrl = source.rssUrl?.trim()
-    if (rssUrl) return rssUrl
-  }
-
-  return source.type === 'external_rss' ? 'RSS' : '未命名频道'
-}
-
-const postSource = (item: TimelineItem): FeedArticleSource | null => {
-  if (item.type !== 'post' || !item.post) return null
-  const channelId = item.post.channel_id || item.post.channel?.id
-  if (!channelId) return null
-  const subscription = findSubscriptionForSource({
-    type: 'internal_channel',
-    id: channelId,
-    title: item.post.channel?.name || '',
-    subscribed: false,
-  })
-  return withSubscriptionState({
-    type: 'internal_channel',
-    id: channelId,
-    title: sourceDisplayTitle(
-      {
-        type: 'internal_channel',
-        id: channelId,
-        title: item.post.channel?.name || '',
-        subscribed: false,
-      },
-      subscription?.title,
-    ),
-    subscribed: false,
-  })
-}
-
-const feedItemSource = (item: FeedItem): FeedArticleSource | null => {
-  const sourceId = item.feed_source?.id || item.feed_source_id
-  if (!sourceId) return null
-  const subscription = findSubscriptionForSource({
-    type: 'external_rss',
-    id: sourceId,
-    title: item.feed_source?.title || '',
-    rssUrl: item.feed_source?.rss_url,
-    subscribed: false,
-  })
-  return withSubscriptionState({
-    type: 'external_rss',
-    id: sourceId,
-    title: sourceDisplayTitle(
-      {
-        type: 'external_rss',
-        id: sourceId,
-        title: item.feed_source?.title || '',
-        rssUrl: item.feed_source?.rss_url,
-        subscribed: false,
-      },
-      subscription?.title,
-    ),
-    rssUrl: item.feed_source?.rss_url,
-    subscribed: false,
-  })
-}
-
-const sourceTriggerLabel = (source: FeedArticleSource) => `查看 ${source.title} 的所有文章`
-
-const openPostSourceSheet = async (item: TimelineItem) => {
-  const source = postSource(item)
-  if (!source) return
-  await openSourceSheet(source)
-}
-
-const openFeedItemSourceSheet = async (item: FeedItem) => {
-  const source = feedItemSource(item)
-  if (!source) return
-  await openSourceSheet(source)
-}
-
-const fetchSourceArticles = async (source: FeedArticleSource) => {
-  if (!source.subscriptionId) {
-    sourceArticles.value = []
-    return
-  }
-
-  sourceArticlesLoading.value = true
-  try {
-    const params = buildFeedTimelineQuery({
-      limit: 100,
-      sourceId: source.subscriptionId,
-    })
-    const headers = authStore.isAuthenticated ? authHeaders() : {}
-    const response = await fetch(`${API_URL}/feed/timeline?${params}`, { headers })
-    if (response.ok) {
-      const data = await response.json()
-      sourceArticles.value = data.data || []
-    }
-  } catch (error) {
-    console.error(error)
-    sourceArticles.value = []
-  } finally {
-    sourceArticlesLoading.value = false
-  }
-}
-
-const openSourceSheet = async (source: FeedArticleSource) => {
-  selectedSource.value = withSubscriptionState(source)
-  sourceArticles.value = []
-  showSourceSheet.value = true
-  showArticleSheet.value = false
-  await fetchSourceArticles(selectedSource.value)
-}
-
-const subscribeSelectedSource = async () => {
-  if (!selectedSource.value || selectedSource.value.subscribed || !authStore.isAuthenticated) return
-
-  sourceSubscribeBusy.value = true
-  try {
-    let success = false
-    if (selectedSource.value.type === 'internal_channel') {
-      success = await feedStore.subscribeToChannel(selectedSource.value.id)
-    } else if (selectedSource.value.type === 'external_rss' && selectedSource.value.rssUrl) {
-      success = await feedStore.subscribeToRSS(selectedSource.value.rssUrl, selectedSource.value.title)
-    }
-    if (!success) return
-
-    await feedStore.fetchSubscriptions()
-    selectedSource.value = withSubscriptionState(selectedSource.value)
-    await fetchSourceArticles(selectedSource.value)
-  } finally {
-    sourceSubscribeBusy.value = false
-  }
-}
-
-const closeAddModal = () => {
-  showAddModal.value = false
-  addSubscriptionError.value = ''
-}
-
-const toggleAddModal = () => {
-  if (showAddModal.value) {
-    closeAddModal()
-    return
-  }
-
-  showManageSheet.value = false
-  addSubscriptionError.value = ''
-  showAddModal.value = true
-}
-
-const openManageSheet = () => {
-  showAddModal.value = false
-  addSubscriptionError.value = ''
-  manageError.value = ''
-  showManageSheet.value = true
-}
-
-type SubscriptionRuleSavePayload = {
-  id: string | null
-  payload: {
-    name: string
-    enabled: boolean
-    match_type: FeedSubscriptionRuleMatchType
-    conditions_json: Record<string, unknown>
-    action_group_id?: string | null
-    action_muted?: boolean | null
-    action_auto_mark_read?: boolean | null
-    action_auto_add_reading_list?: boolean | null
-  }
-}
-
-const autoAddSubscription = async (payload: AutoAddSubscriptionPayload) => {
-  addSubscriptionError.value = ''
-  addingSubscription.value = true
-  try {
-    const success = await feedStore.autoAddSubscription(payload)
-    if (success) {
-      addSubscriptionResetKey.value += 1
-      showAddModal.value = false
-      await fetchTimeline()
-      await onboardingStore.handleSubscriptionSuccess()
-    } else {
-      addSubscriptionError.value = feedStore.error || '添加失败，请检查地址是否正确'
-    }
-  } catch (error) {
-    addSubscriptionError.value = error instanceof Error ? error.message : '添加失败'
-  } finally {
-    addingSubscription.value = false
-  }
-}
-
-const subscribeOnboardingRecommendations = async (recommendations: OnboardingFeedRecommendation[]) => {
-  if (!recommendations.length || onboardingBusy.value) return
-  onboardingBusy.value = true
-  onboardingActionError.value = ''
-  onboardingFailedIds.value = []
-  onboardingMessage.value = ''
-  try {
-    const results = await Promise.all(recommendations.map((recommendation) => (
-      feedStore.subscribeToRSS(recommendation.rss_url, recommendation.title)
-    )))
-    const successCount = results.filter(Boolean).length
-    const failedCount = results.length - successCount
-    if (!successCount) {
-      onboardingFailedIds.value = recommendations.map((recommendation) => recommendation.id)
-      onboardingActionError.value = '订阅未成功，请重试。'
-      return
-    }
-
-    await onboardingStore.complete()
-    await Promise.all([feedStore.fetchSubscriptions(), fetchTimeline()])
-    onboardingMessage.value = failedCount
-      ? `已订阅 ${successCount} 个来源，${failedCount} 个未成功`
-      : `已订阅 ${successCount} 个来源`
-  } finally {
-    onboardingBusy.value = false
-  }
-}
-
-const skipOnboarding = async () => {
-  onboardingBusy.value = true
-  onboardingActionError.value = ''
-  try {
-    await onboardingStore.skip()
-  } finally {
-    onboardingBusy.value = false
-  }
-}
-
-const withManageBusy = async <T>(task: () => Promise<T>): Promise<T> => {
-  manageBusy.value = true
-  try {
-    return await task()
-  } finally {
-    manageBusy.value = false
-  }
-}
-
-const setManageError = (fallback: string) => {
-  manageError.value = feedStore.error || fallback
-}
-
-const createSubscriptionGroup = async (name: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.createGroup(name)
-    if (!success) {
-      setManageError('创建失败')
-      return
-    }
-    await Promise.all([feedStore.fetchGroups(), feedStore.fetchSubscriptions()])
-    await fetchTimeline()
-  })
-}
-
-const renameSubscription = async (id: string, title: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.updateSubscription(id, { title })
-    if (!success) {
-      setManageError('保存失败')
-      return
-    }
-    await fetchTimeline()
-  })
-}
-
-const moveSubscription = async (id: string, groupId: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.setSubscriptionGroup(id, groupId || null)
-    if (!success) {
-      setManageError('移动失败')
-      return
-    }
-    await fetchTimeline()
-  })
-}
-
-const updateSubscriptionFlags = async (
-  id: string,
-  payload: { is_muted?: boolean; auto_mark_read?: boolean; auto_add_reading_list?: boolean },
-) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.updateSubscription(id, payload)
-    if (!success) {
-      setManageError('保存失败')
-      return
-    }
-    await fetchTimeline()
-  })
-}
-
-const deleteSubscription = async (id: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.unsubscribe(id)
-    if (!success) {
-      setManageError('删除失败')
-      return
-    }
-    currentPage.value = 1
-    await fetchTimeline()
-  })
-}
-
-const renameGroup = async (id: string, name: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.updateGroup(id, name)
-    if (!success) setManageError('保存失败')
-  })
-}
-
-const deleteGroup = async (id: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.deleteGroup(id)
-    if (!success) {
-      setManageError('删除失败')
-      return
-    }
-    currentPage.value = 1
-    await fetchTimeline()
-  })
-}
-
-const checkSubscriptionHealth = async (id: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.checkSubscriptionHealth(id)
-    if (!success) setManageError('检查失败')
-  })
-}
-
-const checkAllSubscriptionsHealth = async () => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.checkAllSubscriptionsHealth()
-    if (!success) setManageError('检查失败')
-  })
-}
-
-const syncSubscription = async (id: string) => {
-  manageError.value = ''
-  const result = await feedStore.syncSubscription(id)
-  if (!result) {
-    setManageError('刷新失败')
-    return
-  }
-  if (!result.success) {
-    setManageError(result.error || '刷新失败')
-  }
-  if (result.success || result.new_items > 0) {
-    currentPage.value = 1
-    await fetchTimeline()
-  }
-}
-
-const syncAllSubscriptions = async () => {
-  manageError.value = ''
-  const result = await feedStore.syncAllSubscriptions()
-  if (!result) {
-    setManageError('刷新失败')
-    return
-  }
-  if (result.failed > 0) {
-    setManageError(`${result.failed} 个来源刷新失败`)
-  }
-  currentPage.value = 1
-  await fetchTimeline()
-}
-
-const importOPML = async (file: File) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const result = await feedStore.importOPML(file)
-    if (result) {
-      currentPage.value = 1
-      await fetchTimeline()
-    } else {
-      manageError.value = feedStore.error || '导入失败'
-    }
-  })
-}
-
-const exportOPML = async () => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    try {
-      const blob = await feedStore.exportOPML()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'atoman-subscriptions.opml'
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      manageError.value = error instanceof Error ? error.message : '导出失败'
-    }
-  })
-}
-
-const findSavedRuleId = (saved: SubscriptionRuleSavePayload) => {
-  if (saved.id) return saved.id
-  const matchedRules = feedStore.subscriptionRules.filter((rule) =>
-    rule.name === saved.payload.name
-    && rule.match_type === saved.payload.match_type
-    && JSON.stringify(rule.conditions_json) === JSON.stringify(saved.payload.conditions_json),
-  )
-  return matchedRules[matchedRules.length - 1]?.id || null
-}
-
-const confirmApplySavedRule = async (ruleId: string | null) => {
-  if (!ruleId) return
-  if (!window.confirm('规则已保存，是否立即应用到已有订阅？')) return
-  await feedStore.applySubscriptionRules({ rule_id: ruleId })
-}
-
-const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = saved.id
-      ? await feedStore.updateSubscriptionRule(saved.id, saved.payload)
-      : await feedStore.createSubscriptionRule(saved.payload)
-    if (!success) {
-      manageError.value = feedStore.error || '保存失败'
-      return
-    }
-
-    await confirmApplySavedRule(findSavedRuleId(saved))
-    await fetchTimeline()
-  })
-}
-
-const reorderSubscriptionRules = async (nextRuleIds: string[]) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.reorderSubscriptionRules(nextRuleIds)
-    if (!success) setManageError('排序失败')
-  })
-}
-
-const moveSubscriptionRuleUp = async (id: string) => {
-  const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id)
-  if (index <= 0) return
-  const next = [...feedStore.subscriptionRules]
-  const [target] = next.splice(index, 1)
-  next.splice(index - 1, 0, target)
-  await reorderSubscriptionRules(next.map((rule) => rule.id))
-}
-
-const moveSubscriptionRuleDown = async (id: string) => {
-  const index = feedStore.subscriptionRules.findIndex((rule) => rule.id === id)
-  if (index < 0 || index >= feedStore.subscriptionRules.length - 1) return
-  const next = [...feedStore.subscriptionRules]
-  const [target] = next.splice(index, 1)
-  next.splice(index + 1, 0, target)
-  await reorderSubscriptionRules(next.map((rule) => rule.id))
-}
-
-const applySubscriptionRule = async (id: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.applySubscriptionRules({ rule_id: id })
-    if (!success) {
-      setManageError('应用失败')
-      return
-    }
-    await fetchTimeline()
-  })
-}
-
-const applyAllSubscriptionRules = async () => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.applySubscriptionRules({ all: true })
-    if (!success) {
-      setManageError('应用失败')
-      return
-    }
-    await fetchTimeline()
-  })
-}
-
-const deleteSubscriptionRule = async (id: string) => {
-  await withManageBusy(async () => {
-    manageError.value = ''
-    const success = await feedStore.deleteSubscriptionRule(id)
-    if (!success) setManageError('删除失败')
-  })
-}
-
-const updateFilterRules = (rules: { mutedSourceIds: string[]; hiddenKeywords: string[] }) => {
-  feedStore.setFilterRules(rules)
-}
-
-const updateAutomationRules = (rules: {
-  autoMarkReadSourceIds: string[]
-  autoAddReadingListSourceIds: string[]
-}) => {
-  feedStore.setAutomationRules(rules)
-}
+const {
+  showArticleSheet,
+  selectedArticle,
+  selectedArticleIndex,
+  showSourceSheet,
+  selectedSource,
+  sourceArticles,
+  sourceArticlesLoading,
+  sourceSubscribeBusy,
+  openArticleSheet,
+  openPreviousArticle,
+  openNextArticle,
+  openSourceArticle,
+  postSource,
+  feedItemSource,
+  sourceTriggerLabel,
+  openPostSourceSheet,
+  openFeedItemSourceSheet,
+  subscribeSelectedSource,
+} = useFeedArticleBrowser({
+  visibleTimeline,
+  subscriptions,
+  focusedIndex,
+  itemKey: (item) => itemKey(item),
+  markItemsReadAndRefresh: (ids) => markItemsReadAndRefresh(ids),
+  feedItemActionIDs,
+})
 
 const getExternalBadge = (item: FeedItem) => {
   if (item.enclosure_url) {
@@ -1311,216 +769,11 @@ const scrollToTop = async () => {
   pageRootRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const setPageInRoute = async (page: number, replace = false) => {
-  const normalizedPage = normalizePage(page)
-  const query = {
-    ...route.query,
-    page: normalizedPage > 1 ? String(normalizedPage) : undefined,
-  }
-
-  if (replace) {
-    await router.replace({ query })
-    return
-  }
-
-  await router.push({ query })
-}
-
-const setSearchInRoute = async (value: string) => {
-  const search = value.trim()
-  await router.replace({
-    query: {
-      ...route.query,
-      q: search || undefined,
-      page: undefined,
-    },
-  })
-}
-
-const clearSourceFilter = async () => {
-  await router.push({
-    query: {
-      ...route.query,
-      source_id: undefined,
-      group_id: undefined,
-      page: undefined,
-    },
-  })
-}
-
-const submitSearch = async () => {
-  await setSearchInRoute(searchInput.value)
-}
-
-const clearSearch = async () => {
-  searchInput.value = ''
-  await setSearchInRoute('')
-}
-
-const updateMergeDuplicates = async () => {
-  await router.replace({
-    query: {
-      ...route.query,
-      merge_duplicates: mergeDuplicates.value ? undefined : 'false',
-      page: undefined,
-    },
-  })
-}
-
 const toggleDuplicateSources = (feedItemID: string) => {
   const next = new Set(expandedDuplicateItemIds.value)
   if (next.has(feedItemID)) next.delete(feedItemID)
   else next.add(feedItemID)
   expandedDuplicateItemIds.value = next
-}
-
-const changePage = async (page: number) => {
-  const normalizedPage = normalizePage(page)
-  if (normalizedPage === currentPage.value) return
-  await setPageInRoute(normalizedPage)
-  await scrollToTop()
-}
-
-const buildTimelineUpdatesQuery = () => {
-  const params = new URLSearchParams()
-  if (timelineUpdatesCursor.value) params.set('since', timelineUpdatesCursor.value)
-  if (querySourceId.value) params.set('source_id', querySourceId.value)
-  if (queryGroupId.value) params.set('group_id', queryGroupId.value)
-  return params
-}
-
-const checkTimelineUpdates = async () => {
-  if (
-    checkingTimelineUpdates.value
-    || !canCheckTimelineUpdates.value
-    || typeof document === 'undefined'
-    || document.visibilityState === 'hidden'
-  ) return
-
-  checkingTimelineUpdates.value = true
-  try {
-    const response = await fetch(`${API_URL}/feed/timeline/updates?${buildTimelineUpdatesQuery()}`, {
-      headers: authHeaders(),
-    })
-    if (!response.ok) return
-    const payload = await response.json()
-    const update = payload.data ?? payload
-    if (typeof update.checked_at !== 'string') return
-    if (!timelineUpdatesCursor.value) {
-      timelineUpdatesCursor.value = update.checked_at
-      return
-    }
-    if (update.has_updates) {
-      hasNewTimelineContent.value = true
-      return
-    }
-    timelineUpdatesCursor.value = update.checked_at
-  } catch {
-    // Update checks are intentionally silent; the next interval retries.
-  } finally {
-    checkingTimelineUpdates.value = false
-  }
-}
-
-const stopTimelineUpdatesPolling = () => {
-  if (!timelineUpdatesTimer) return
-  clearInterval(timelineUpdatesTimer)
-  timelineUpdatesTimer = null
-}
-
-const startTimelineUpdatesPolling = () => {
-  stopTimelineUpdatesPolling()
-  if (
-    !canCheckTimelineUpdates.value
-    || typeof document === 'undefined'
-    || document.visibilityState === 'hidden'
-  ) return
-  timelineUpdatesTimer = setInterval(() => {
-    void checkTimelineUpdates()
-  }, timelineUpdatesPollInterval)
-}
-
-const handleTimelineVisibilityChange = () => {
-  if (typeof document === 'undefined' || document.visibilityState === 'hidden') {
-    stopTimelineUpdatesPolling()
-    return
-  }
-  void checkTimelineUpdates()
-  startTimelineUpdatesPolling()
-}
-
-const refreshNewTimelineContent = async () => {
-  if (loadingTimeline.value) return
-  hasNewTimelineContent.value = false
-  currentPage.value = 1
-  await setPageInRoute(1, true)
-  await fetchTimeline()
-  await scrollToTop()
-}
-
-const fetchTimeline = async () => {
-  const requestSequence = ++timelineRequestSequence
-  loadingTimeline.value = true
-
-  try {
-    if (!authStore.isAuthenticated) {
-      timeline.value = []
-      feedStore.timeline = []
-      totalItems.value = 0
-      return
-    }
-
-    const params = buildFeedTimelineQuery({
-      page: currentPage.value,
-      limit: pageLimit,
-      sourceId: querySourceId.value,
-      groupId: queryGroupId.value,
-      unreadOnly: unreadOnly.value,
-      hideDuplicates: mergeDuplicates.value && !querySourceId.value,
-      q: querySearch.value,
-    })
-
-    const headers = authStore.isAuthenticated ? authHeaders() : {}
-    const response = await fetch(`${API_URL}/feed/timeline?${params}`, { headers })
-    if (requestSequence !== timelineRequestSequence) return
-    if (response.ok) {
-      const data = await response.json()
-      if (requestSequence !== timelineRequestSequence) return
-      const items: TimelineItem[] = data.data || []
-      const total = data.total ?? data.meta?.total ?? 0
-      const totalPages = Math.max(1, Math.ceil(total / pageLimit))
-
-      if (total > 0 && currentPage.value > totalPages) {
-        await setPageInRoute(totalPages, true)
-        return
-      }
-
-      timeline.value = items
-      feedStore.timeline = items
-      totalItems.value = total
-      if (typeof data.meta?.checked_at === 'string') {
-        timelineUpdatesCursor.value = data.meta.checked_at
-        hasNewTimelineContent.value = false
-      }
-      await applyAutomationRules(items)
-      if (requestSequence !== timelineRequestSequence) return
-      if (sourceViewMode.value) {
-        const sourceUnreadCount = currentSourceSubscription.value?.unread_count
-        allRead.value = typeof sourceUnreadCount === 'number'
-          ? sourceUnreadCount === 0
-          : !items.some((item) => item.type === 'feed_item' && !item.is_read)
-      } else {
-        const unreadCount = await feedStore.fetchUnreadFeedItemCount()
-        if (requestSequence === timelineRequestSequence && unreadCount !== null) {
-          allRead.value = unreadCount === 0
-        }
-      }
-    }
-  } catch (error) {
-    console.error(error)
-  } finally {
-    if (requestSequence === timelineRequestSequence) loadingTimeline.value = false
-  }
 }
 
 const applyAutomationRules = async (items: TimelineItem[]) => {
@@ -1579,13 +832,6 @@ const applyAutomationRules = async (items: TimelineItem[]) => {
   }
 }
 
-const toggleUnreadOnly = () => {
-  if (!authStore.isAuthenticated) return
-  unreadOnly.value = !unreadOnly.value
-  currentPage.value = 1
-  void fetchTimeline()
-}
-
 const onItemClick = (item: TimelineItem) => {
   if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
   item.is_read = true
@@ -1616,64 +862,6 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   playerStore.playQueuedSong(tempSong)
 }
 
-const toggleAllRead = async () => {
-  if (markingAllRead.value) return
-  markingAllRead.value = true
-  try {
-    if (sourceViewMode.value) {
-      if (allRead.value) {
-        const success = await feedStore.markSubscriptionUnread(querySourceId.value!)
-        if (!success) return
-        timeline.value.forEach((item) => {
-          if (item.type === 'feed_item') item.is_read = false
-        })
-        await Promise.all([fetchTimeline(), feedStore.fetchSubscriptions()])
-        allRead.value = false
-      } else {
-        const success = await feedStore.markSubscriptionRead(querySourceId.value!)
-        if (!success) return
-        timeline.value.forEach((item) => {
-          if (item.type === 'feed_item') item.is_read = true
-        })
-        await Promise.all([fetchTimeline(), feedStore.fetchSubscriptions()])
-        allRead.value = true
-      }
-      return
-    }
-
-    if (allRead.value) {
-      const success = await feedStore.markAllFeedUnread()
-      if (!success) return
-      timeline.value.forEach((item) => {
-        if (item.type === 'feed_item') item.is_read = false
-      })
-      await feedStore.fetchSubscriptions()
-      allRead.value = false
-    } else {
-      const success = await feedStore.markAllFeedRead()
-      if (!success) return
-      timeline.value.forEach((item) => {
-        if (item.type === 'feed_item') item.is_read = true
-      })
-      await feedStore.fetchSubscriptions()
-      allRead.value = true
-    }
-  } finally {
-    markingAllRead.value = false
-  }
-}
-
-watch(showManageSheet, (visible) => {
-  if (visible && authStore.isAuthenticated) {
-    void Promise.all([
-      feedStore.fetchSubscriptions(),
-      feedStore.fetchFilterPreferences(),
-      feedStore.fetchGroups(),
-      feedStore.fetchSubscriptionRules(),
-    ])
-  }
-})
-
 watch(subscriptions, async (nextSubscriptions, previousSubscriptions) => {
   if (!authStore.isAuthenticated || !timeline.value.length) return
 
@@ -1683,10 +871,6 @@ watch(subscriptions, async (nextSubscriptions, previousSubscriptions) => {
 
   await applyAutomationRules(timeline.value)
 }, { deep: true })
-
-watch(querySearch, (next) => {
-  searchInput.value = next
-})
 
 watch(() => route.query.manage_subscriptions, async (value) => {
   if (value !== '1') return
@@ -1698,24 +882,10 @@ watch(() => route.query.manage_subscriptions, async (value) => {
   }
 }, { immediate: true })
 
-watch([querySourceId, queryGroupId, queryPage, querySearch, queryMergeDuplicates], async () => {
-  mergeDuplicates.value = queryMergeDuplicates.value
-  currentPage.value = queryPage.value
-  await fetchTimeline()
-}, { immediate: true })
-
 watch(hasExternalRSSSubscription, (hasExternalRSS) => {
   if (hasExternalRSS && onboardingStore.isVisible) {
     void onboardingStore.complete()
   }
-})
-
-watch(canCheckTimelineUpdates, (canCheck) => {
-  if (!canCheck) {
-    hasNewTimelineContent.value = false
-    timelineUpdatesCursor.value = ''
-  }
-  startTimelineUpdatesPolling()
 })
 
 const handleKeyDownGlobal = (e: KeyboardEvent) => {

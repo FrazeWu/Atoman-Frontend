@@ -1,3 +1,4 @@
+import { reportError } from '@/utils/logger'
 import { shallowRef } from 'vue'
 import { marked, type Token } from 'marked'
 import DOMPurify from 'dompurify'
@@ -95,7 +96,7 @@ async function ensureMarkdownRuntime(): Promise<void> {
     .catch((error) => {
       markdownRuntimePromise = null
       markdownRuntimeState.value = 'idle'
-      console.error('Failed to lazy-load markdown runtime', error)
+      reportError(error, 'Failed to lazy-load markdown runtime')
     })
 
   return markdownRuntimePromise
@@ -109,7 +110,7 @@ export function renderToken(token: Token): string {
   try {
     return marked.parser([token] as Token[]) as string
   } catch {
-    return `<pre>${escapeHtml((token as any).raw || '')}</pre>`
+    return `<pre>${escapeHtml(token.raw || '')}</pre>`
   }
 }
 
@@ -123,9 +124,9 @@ export function renderInline(markdown: string): string {
 
 export function lexInline(text: string): Token[] {
   try {
-    return (marked.Lexer as any).lexInline(text) as Token[]
+    return marked.Lexer.lexInline(text)
   } catch {
-    return [{ type: 'text', raw: text, text } as any]
+    return [{ type: 'text', raw: text, text }]
   }
 }
 

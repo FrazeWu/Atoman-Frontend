@@ -43,11 +43,11 @@ const InteractionBarStub = defineComponent({
   },
 })
 
-const CommentThreadStub = defineComponent({
-  name: 'CommentThread',
-  props: ['items', 'canComment', 'canDelete', 'loading', 'submitting', 'submitAction'],
-  emits: ['delete'],
-  template: '<section data-test="comment-thread" />',
+const CommentSectionStub = defineComponent({
+  name: 'CommentSection',
+  props: ['target', 'noun', 'markLabel', 'readonly', 'canDelete'],
+  emits: ['count-change'],
+  template: '<section data-test="comment-section" />',
 })
 
 const PButtonStub = defineComponent({
@@ -99,7 +99,9 @@ async function mountTopicView() {
   forumStore.loading = false
   forumStore.currentTopic = makeTopic()
   const fetchTopicSpy = vi.spyOn(forumStore, 'fetchTopic').mockImplementation(async (id: string) => {
-    forumStore.currentTopic = makeTopic(id)
+    const topic = makeTopic(id)
+    forumStore.currentTopic = topic
+    return topic
   })
 
   const router = createRouter({
@@ -123,13 +125,21 @@ async function mountTopicView() {
         PSelect: { template: '<select />' },
         PTextarea: { template: '<textarea />' },
         InteractionBar: InteractionBarStub,
-        CommentThread: CommentThreadStub,
+        CommentSection: CommentSectionStub,
         ForumReplyNode: { template: '<div data-test="legacy-reply-node" />' },
       },
     },
   })
   await flushPromises()
   return { wrapper, router, fetchTopicSpy }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
 }
 
 describe('ForumTopicView shared interactions', () => {
@@ -146,7 +156,7 @@ describe('ForumTopicView shared interactions', () => {
     mocks.interactions.deleteComment.mockResolvedValue(undefined)
   })
 
-  it('使用共享评论线程，不再走旧 replies 渲染和拉取路径', async () => {
+  it('使用统一评论区，并保留话题互动数据', async () => {
     const { wrapper } = await mountTopicView()
 
     expect(mocks.useInteractions).toHaveBeenCalledWith('forum', 'forum_topic', expect.any(Object))
@@ -154,44 +164,91 @@ describe('ForumTopicView shared interactions', () => {
     expect(mocks.interactions.liked.value).toBe(true)
     expect(mocks.interactions.likeCount.value).toBe(9)
     expect(mocks.interactions.commentCount.value).toBe(4)
-    expect(mocks.interactions.fetchComments).toHaveBeenCalledTimes(1)
-    expect(wrapper.find('[data-test="comment-thread"]').exists()).toBe(true)
+    expect(mocks.interactions.fetchComments).not.toHaveBeenCalled()
+    const section = wrapper.findComponent(CommentSectionStub)
+    expect(section.exists()).toBe(true)
+    expect(section.props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-1' })
+    expect(section.props('noun')).toBe('回复')
+    expect(section.props('markLabel')).toBe('最佳回答')
+    expect(section.props('readonly')).toBe(false)
     expect(wrapper.find('[data-test="legacy-reply-node"]').exists()).toBe(false)
   })
 
-  it('路由 topic id 变化时重新拉取话题和共享评论', async () => {
-    const { router, fetchTopicSpy } = await mountTopicView()
-    const commentTarget = mocks.useInteractions.mock.calls[0][2]
-    mocks.interactions.fetchComments.mockClear()
+  it('路由 topic id 变化时更新统一评论目标，并重新拉取话题', async () => {
+    const { wrapper, router, fetchTopicSpy } = await mountTopicView()
 
     await router.push('/forum/topic/topic-2')
     await flushPromises()
 
     expect(fetchTopicSpy).toHaveBeenLastCalledWith('topic-2')
-    expect(commentTarget.value).toBe('topic-2')
-    expect(mocks.interactions.fetchComments).toHaveBeenCalledTimes(1)
+    expect(mocks.useInteractions.mock.calls[0][2].value).toBe('topic-2')
+    expect(wrapper.findComponent(CommentSectionStub).props('target')).toEqual({ kind: 'forum_topic', resourceId: 'topic-2' })
+    expect(mocks.interactions.fetchComments).not.toHaveBeenCalled()
   })
 
-  it('只允许评论作者、话题作者或管理员删除评论', async () => {
-    const { wrapper } = await mountTopicView()
-    const canDelete = wrapper.findComponent(CommentThreadStub).props('canDelete') as (comment: {
-      user_id?: string | null
-      user?: { id?: string | number; uuid?: string }
-    }) => boolean
+  it('旧话题请求迟到时不覆盖当前话题的互动数据', async () => {
+    const { router } = await mountTopicView()
+    const forumStore = useForumStore()
+    const first = deferred<void>()
+    const second = deferred<void>()
+    const fetchTopicSpy = vi.spyOn(forumStore, 'fetchTopic')
+    fetchTopicSpy.mockImplementationOnce(async () => {
+      await first.promise
+      const topic = { ...makeTopic('topic-a'), is_liked: true, like_count: 11, reply_count: 12 }
+      forumStore.currentTopic = topic
+      return topic
+    })
+    fetchTopicSpy.mockImplementationOnce(async () => {
+      await second.promise
+      const topic = { ...makeTopic('topic-b'), is_liked: false, like_count: 21, reply_count: 22 }
+      forumStore.currentTopic = topic
+      return topic
+    })
 
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(false)
-    expect(canDelete({ user: { id: 'user-2' } })).toBe(true)
-    expect(canDelete({ user_id: 'user-2' })).toBe(true)
-    expect(canDelete({ user: { uuid: 'user-2' } })).toBe(true)
+    await router.push('/forum/topic/topic-a')
+    await router.push('/forum/topic/topic-b')
+    second.resolve()
+    await flushPromises()
+    expect(mocks.interactions.liked.value).toBe(false)
+    expect(mocks.interactions.likeCount.value).toBe(21)
+    expect(mocks.interactions.commentCount.value).toBe(22)
+
+    first.resolve()
+    await flushPromises()
+    expect(mocks.interactions.liked.value).toBe(false)
+    expect(mocks.interactions.likeCount.value).toBe(21)
+    expect(mocks.interactions.commentCount.value).toBe(22)
+  })
+
+  it('将关闭状态、全局删除权限和评论数同步交给统一评论区', async () => {
+    const { wrapper } = await mountTopicView()
+    const section = wrapper.findComponent(CommentSectionStub)
+    expect(section.props('canDelete')).toBe(false)
 
     const authStore = useAuthStore()
     authStore.user = { uuid: 'user-1', username: 'author', email: 'author@example.com' }
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+    await flushPromises()
+    expect(section.props('canDelete')).toBe(true)
 
     authStore.user = { uuid: 'mod-1', username: 'mod', email: 'mod@example.com', role: 'moderator' }
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+    await flushPromises()
+    expect(section.props('canDelete')).toBe(false)
 
     authStore.user = { uuid: 'admin-1', username: 'admin', email: 'admin@example.com', role: 'admin' }
-    expect(canDelete({ user: { id: 'other-user' } })).toBe(true)
+    await flushPromises()
+    expect(section.props('canDelete')).toBe(true)
+
+    authStore.user = { uuid: 'owner-1', username: 'owner', email: 'owner@example.com', role: 'owner' }
+    await flushPromises()
+    expect(section.props('canDelete')).toBe(true)
+
+    section.vm.$emit('count-change', 6)
+    await flushPromises()
+    expect(mocks.interactions.commentCount.value).toBe(6)
+
+    const forumStore = useForumStore()
+    forumStore.currentTopic = { ...makeTopic(), closed: true }
+    await flushPromises()
+    expect(section.props('readonly')).toBe(true)
   })
 })

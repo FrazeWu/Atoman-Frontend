@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { computed, onScopeDispose, ref } from 'vue'
 import { registerSessionReset } from '@/stores/sessionReset'
 import { defineStore, getActivePinia } from 'pinia'
@@ -85,6 +86,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const currentType = currentCategory
   const currentTypes = ref<Notification['type'][]>([])
   let requestGeneration = 0
+  let listRequestSeq = 0
 
   const authHeaders = () => ({
     Authorization: `Bearer ${authStore.token}`,
@@ -95,7 +97,7 @@ export const useNotificationStore = defineStore('notification', () => {
     if (!authStore.token) return
     const generation = requestGeneration
     const token = authStore.token
-    const res = await fetch(api.notifications.unreadCounts, { headers: authHeaders() })
+    const res = await apiRequest(api.notifications.unreadCounts, { headers: authHeaders() })
     if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
     const data = await res.json()
     const payload = data.data || data
@@ -105,9 +107,13 @@ export const useNotificationStore = defineStore('notification', () => {
   const fetchUnreadCount = fetchUnreadCounts
 
   const fetchNotifications = async (selection: NotificationSelection = currentCategory.value as NotificationCategory, nextPage = 1) => {
+    const listRequest = ++listRequestSeq
     if (!authStore.token) return
     const generation = requestGeneration
     const token = authStore.token
+    const isCurrentListRequest = () => (
+      listRequest === listRequestSeq && generation === requestGeneration && token === authStore.token
+    )
     loading.value = true
     try {
       page.value = nextPage
@@ -115,11 +121,11 @@ export const useNotificationStore = defineStore('notification', () => {
         currentTypes.value = [...selection]
         const responses = await Promise.all(selection.map(async (type) => {
           const params = new URLSearchParams({ page: String(nextPage), type })
-          const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
+          const res = await apiRequest(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
           if (!res.ok) throw new Error('获取通知失败')
           return res.json()
         }))
-        if (generation !== requestGeneration || token !== authStore.token) return
+        if (!isCurrentListRequest()) return
         notifications.value = responses.flatMap((data) => data.data || [])
           .sort((left, right) => right.created_at.localeCompare(left.created_at))
         total.value = responses.reduce((sum, data) => sum + (data.meta?.total ?? data.total ?? 0), 0)
@@ -127,15 +133,15 @@ export const useNotificationStore = defineStore('notification', () => {
         currentTypes.value = []
         currentCategory.value = selection
         const params = new URLSearchParams({ page: String(nextPage), category: selection })
-        const res = await fetch(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
+        const res = await apiRequest(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('获取通知失败')
         const data = await res.json()
-        if (generation !== requestGeneration || token !== authStore.token) return
+        if (!isCurrentListRequest()) return
         notifications.value = data.data || []
         total.value = data.meta?.total ?? data.total ?? 0
       }
     } finally {
-      if (generation === requestGeneration && token === authStore.token) loading.value = false
+      if (isCurrentListRequest()) loading.value = false
     }
   }
 
@@ -143,7 +149,7 @@ export const useNotificationStore = defineStore('notification', () => {
     if (!authStore.token) return
     const generation = requestGeneration
     const token = authStore.token
-    const res = await fetch(api.notifications.markRead(id), {
+    const res = await apiRequest(api.notifications.markRead(id), {
       method: 'PUT',
       headers: authHeaders(),
     })
@@ -160,11 +166,11 @@ export const useNotificationStore = defineStore('notification', () => {
     const generation = requestGeneration
     const token = authStore.token
     if (isTypeSelection(selection)) {
-      await Promise.all(selection.map((type) => fetch(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
+      await Promise.all(selection.map((type) => apiRequest(`${api.notifications.markAllRead}?type=${encodeURIComponent(type)}`, {
         method: 'PUT', headers: authHeaders(),
       })))
     } else {
-      const res = await fetch(`${api.notifications.markAllRead}?type=${encodeURIComponent(selection)}`, {
+      const res = await apiRequest(`${api.notifications.markAllRead}?category=${encodeURIComponent(selection)}`, {
         method: 'PUT',
         headers: authHeaders(),
       })

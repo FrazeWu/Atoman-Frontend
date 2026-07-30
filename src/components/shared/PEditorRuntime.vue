@@ -132,6 +132,8 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
+import { reportError } from '@/utils/logger'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AtSign, Quote } from 'lucide-vue-next'
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
@@ -761,7 +763,7 @@ async function uploadImage(file: File) {
   try {
     const formData = new FormData()
     formData.append('image', file)
-    const res = await fetch(api.blog.uploadImage, {
+    const res = await apiRequest(api.blog.uploadImage, {
       method: 'POST',
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
       body: formData,
@@ -779,7 +781,7 @@ async function uploadImage(file: File) {
       })
     }
   } catch (err) {
-    console.error('Image upload failed', err)
+    reportError(err, '图片上传失败')
     const doc = cmView.state.doc.toString()
     const idx = doc.indexOf(placeholder)
     if (idx !== -1) {

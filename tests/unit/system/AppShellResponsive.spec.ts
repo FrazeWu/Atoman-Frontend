@@ -28,22 +28,26 @@ const getBlock = (selector: string) => {
 
 const getMediaBlock = (query: string) => {
   const marker = `@media ${query}`
-  const start = styleSource.indexOf(marker)
-  if (start === -1) return ''
+  const blocks: string[] = []
+  let searchFrom = 0
+  while (searchFrom < styleSource.length) {
+    const start = styleSource.indexOf(marker, searchFrom)
+    if (start === -1) break
+    const openBrace = styleSource.indexOf('{', start)
+    if (openBrace === -1) break
 
-  const openBrace = styleSource.indexOf('{', start)
-  if (openBrace === -1) return ''
-
-  let depth = 1
-  let index = openBrace + 1
-  while (index < styleSource.length && depth > 0) {
-    const char = styleSource[index]
-    if (char === '{') depth += 1
-    if (char === '}') depth -= 1
-    index += 1
+    let depth = 1
+    let index = openBrace + 1
+    while (index < styleSource.length && depth > 0) {
+      const char = styleSource[index]
+      if (char === '{') depth += 1
+      if (char === '}') depth -= 1
+      index += 1
+    }
+    if (depth === 0) blocks.push(styleSource.slice(openBrace + 1, index - 1))
+    searchFrom = index
   }
-
-  return depth === 0 ? styleSource.slice(openBrace + 1, index - 1) : ''
+  return blocks.join('\n')
 }
 
 const makeRouter = () => createRouter({

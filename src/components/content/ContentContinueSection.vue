@@ -13,7 +13,7 @@ const labels: Record<StudioModule, string> = { blog: '继续阅读', podcast: '�
 const icons = { blog: BookOpen, podcast: Headphones, video: Play }
 
 onMounted(async () => {
-  if (!auth.token) return
+  if (!auth.token && !await auth.restoreSession()) return
   items.value = await lifecycle.listContinue(props.module, 6).catch(() => [])
 })
 </script>

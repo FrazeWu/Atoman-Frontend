@@ -1,23 +1,7 @@
-import { type Page, type APIRequestContext, expect } from '@playwright/test'
+import { type Page } from '@playwright/test'
 
 const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = 'admin123'
-
-export async function loginViaAPI(request: APIRequestContext): Promise<{ token: string; user: any }> {
-	const response = await request.post('/api/v1/auth/token', {
-    data: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD },
-  })
-
-  expect(response.ok()).toBeTruthy()
-  const body = await response.json()
-  return {
-    token: body.token,
-    user: {
-      ...body.user,
-      onboarding_completed_at: body.user?.onboarding_completed_at || new Date().toISOString(),
-    },
-  }
-}
 
 export async function mockAuthenticatedSession(page: Page, user: Record<string, unknown> = {
 	uuid: 'user-1',

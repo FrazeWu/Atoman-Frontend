@@ -138,6 +138,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -195,7 +197,7 @@ const isSelf = computed(() => authStore.user?.username === username.value)
 
 const resolveEntityContext = async () => {
   if (siteContext.value.type !== 'entity') return
-  const res = await fetch(api.site.resolve(siteContext.value.handle))
+  const res = await apiRequest(api.site.resolve(siteContext.value.handle))
   if (!res.ok) {
     resolvedUsername.value = siteContext.value.handle
     return
@@ -219,7 +221,7 @@ const fetchProfile = async () => {
     return
   }
   try {
-    const res = await fetch(api.users.profile(username.value))
+    const res = await apiRequest(api.users.profile(username.value))
     if (res.ok) profile.value = (await res.json()).data || null
   } finally { loading.value = false }
 }
@@ -227,16 +229,16 @@ const fetchProfile = async () => {
 const fetchChannels = async () => {
   if (!profile.value) return
   try {
-    const res = await fetch(`${api.blog.channels}?user_id=${profile.value.uuid}`)
+    const res = await apiRequest(`${api.blog.channels}?user_id=${profile.value.uuid}`)
     if (res.ok) channels.value = (await res.json()).data || []
-  } catch (e) { console.error(e) }
+  } catch (e) { reportError(e) }
 }
 
 const fetchPosts = async () => {
   if (!profile.value) return
   loadingPosts.value = true
   try {
-    const res = await fetch(`${api.blog.posts}?user_id=${profile.value.uuid}&status=published&limit=8`)
+    const res = await apiRequest(`${api.blog.posts}?user_id=${profile.value.uuid}&status=published&limit=8`)
     if (res.ok) posts.value = (await res.json()).data || []
   } finally { loadingPosts.value = false }
 }
@@ -244,21 +246,21 @@ const fetchPosts = async () => {
 const fetchFollowingState = async () => {
   if (!profile.value || !authStore.isAuthenticated || isSelf.value) return
   try {
-    const res = await fetch(api.users.following(authStore.user?.uuid || ''), {
+    const res = await apiRequest(api.users.following(authStore.user?.uuid || ''), {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (res.ok) {
       const list = (await res.json()).data || []
       following.value = list.some((u: { uuid?: string }) => u.uuid === profile.value?.uuid)
     }
-  } catch (e) { console.error(e) }
+  } catch (e) { reportError(e) }
 }
 
 const toggleFollow = async () => {
   if (!profile.value) return
   const method = following.value ? 'DELETE' : 'POST'
   try {
-    const res = await fetch(api.users.follow(profile.value.uuid), {
+    const res = await apiRequest(api.users.follow(profile.value.uuid), {
       method,
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
@@ -267,7 +269,7 @@ const toggleFollow = async () => {
       toastMessage.value = following.value ? '已关注该用户' : '已取消关注'
       toastVisible.value = true
     }
-  } catch (e) { console.error(e) }
+  } catch (e) { reportError(e) }
 }
 
 const openDM = () => {

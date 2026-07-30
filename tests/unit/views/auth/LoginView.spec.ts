@@ -26,6 +26,7 @@ const routes = [
   { path: '/feed', component: { template: '<div />' } },
   { path: '/login', component: LoginView },
   { path: '/register', component: LoginView },
+  { path: '/forgot-password', component: { template: '<div />' } },
 ]
 
 afterEach(() => {
@@ -44,7 +45,7 @@ const mountLogin = async (redirect: string) => {
   await router.push({ path: '/login', query: { redirect } })
 
   const authStore = useAuthStore()
-  vi.spyOn(authStore, 'loginWithPassword').mockResolvedValue()
+  vi.spyOn(authStore, 'loginWithPassword').mockResolvedValue(true)
 
   const wrapper = mount(LoginView, {
     global: {
@@ -108,6 +109,24 @@ describe('LoginView redirect', () => {
     const router = await mountLogin('/feed?tab=inbox')
 
     expect(router.currentRoute.value.fullPath).toBe('/feed?tab=inbox')
+  })
+
+  it('does not navigate or show success when login is superseded', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push({ path: '/login', query: { redirect: '/feed' } })
+    const authStore = useAuthStore()
+    vi.spyOn(authStore, 'loginWithPassword').mockResolvedValue(false)
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } })
+
+    await wrapper.findAll('input')[0].setValue('alice@example.com')
+    await wrapper.findAll('input')[1].setValue('secret')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/login?redirect=/feed')
+    expect(wrapper.find('.auth-success').exists()).toBe(false)
   })
 
   it.each([
@@ -175,7 +194,7 @@ describe('LoginView redirect', () => {
     setActivePinia(pinia)
     const router = createRouter({ history: createMemoryHistory(), routes })
     const authStore = useAuthStore()
-    const register = vi.spyOn(authStore, 'register').mockResolvedValue()
+    const register = vi.spyOn(authStore, 'register').mockResolvedValue(true)
     const reset = vi.fn()
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
@@ -235,5 +254,42 @@ describe('LoginView redirect', () => {
       'secret123',
       '123456',
     )
+    expect(router.currentRoute.value.fullPath).toBe('/')
+  })
+
+  it('does not navigate or show success when registration is superseded', async () => {
+    vi.useFakeTimers()
+    vi.stubEnv('PROD', false)
+
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push({ path: '/register', query: { redirect: '/feed' } })
+    const authStore = useAuthStore()
+    vi.spyOn(authStore, 'register').mockResolvedValue(false)
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/auth/check-email') || url.endsWith('/auth/check-username')) {
+        return new Response(JSON.stringify({ available: true }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ message: 'sent' }), { status: 200 })
+    })
+    const wrapper = mount(LoginView, { global: { plugins: [pinia, router] } })
+
+    await wrapper.findAll('input')[0].setValue('alice@example.com')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    await wrapper.get('.auth-code-btn-inline').trigger('click')
+    await flushPromises()
+    await wrapper.findAll('input')[1].setValue('123456')
+    await wrapper.get('.auth-submit').trigger('click')
+    await wrapper.findAll('input')[0].setValue('alice')
+    await wrapper.findAll('input')[1].setValue('secret123')
+    await wrapper.findAll('input')[2].setValue('secret123')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/register?redirect=/feed')
+    expect(wrapper.find('.auth-success').exists()).toBe(false)
   })
 })

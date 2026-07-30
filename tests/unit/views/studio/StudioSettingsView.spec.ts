@@ -51,4 +51,24 @@ describe('StudioSettingsView', () => {
       autoplay_enabled: true,
     })
   })
+
+  it('does not show saved feedback when saving is discarded', async () => {
+    const { wrapper, store } = await setup('blog')
+    vi.mocked(store.saveSettings).mockResolvedValue(false)
+
+    await wrapper.find('[data-testid="save-settings"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+  })
+
+  it('shows saved feedback when settings are written', async () => {
+    const { wrapper, store } = await setup('blog')
+    vi.mocked(store.saveSettings).mockResolvedValue(true)
+
+    await wrapper.find('[data-testid="save-settings"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[role="status"]').text()).toBe('已保存')
+  })
 })

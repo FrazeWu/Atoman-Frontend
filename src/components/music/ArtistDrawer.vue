@@ -1,5 +1,6 @@
 <!-- web/src/components/music/ArtistDrawer.vue -->
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, ref, watch } from 'vue'
 import { UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
@@ -94,7 +95,7 @@ async function loadArtist(artistId: string | null) {
       }
     }
   } catch (error) {
-    console.error('Failed to fetch artist:', error)
+    reportError(error, 'Failed to fetch artist:')
     errorMessage.value = '艺术家信息加载失败'
     lastLoadKey.value = null
   } finally {
@@ -115,7 +116,7 @@ async function toggleArtistBookmark() {
       isBookmarked.value = true
     }
   } catch (error) {
-    console.error('Failed to toggle artist bookmark:', error)
+    reportError(error, 'Failed to toggle artist bookmark:')
   } finally {
     bookmarkLoading.value = false
   }

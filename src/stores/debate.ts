@@ -1,3 +1,5 @@
+import { apiRequest } from '@/api/client'
+import { reportError } from '@/utils/logger'
 import { ref } from "vue";
 import { defineStore } from "pinia";
 import type {
@@ -127,7 +129,7 @@ export const useDebateStore = defineStore("debate", () => {
       const pageSize = params.pageSize ?? params.limit;
       if (pageSize) query.set("page_size", String(pageSize));
 
-      const res = await fetch(`${api.url}/debate/topics?${query}`);
+      const res = await apiRequest(`${api.url}/debate/topics?${query}`);
       if (requestSequence !== debatesRequestSequence) return false;
       if (!res.ok) throw new Error(`Failed to fetch debates (${res.status})`);
       const data = await res.json();
@@ -145,7 +147,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (requestSequence !== debatesRequestSequence) return false;
       error.value = "Failed to fetch debates";
-      console.error(e);
+      reportError(e);
       return false;
     } finally {
       if (requestSequence === debatesRequestSequence) loading.value = false;
@@ -158,7 +160,7 @@ export const useDebateStore = defineStore("debate", () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}`);
+      const res = await apiRequest(`${api.url}/debate/topics/${id}`);
       if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       if (res.ok) {
         const data = await res.json();
@@ -172,7 +174,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
       error.value = "Failed to fetch debate";
-      console.error(e);
+      reportError(e);
       return null;
     } finally {
       if (loadingSequence === currentDebateLoadingSequence) loading.value = false;
@@ -190,12 +192,12 @@ export const useDebateStore = defineStore("debate", () => {
       // The topic page owns and merges expansion fragments into its current root graph.
       if (depth === 1) {
         try {
-          const res = await fetch(url)
+          const res = await apiRequest(url)
           if (!res.ok) return null
           const payload = await res.json()
           return payload.data as DebateGraph
         } catch (e) {
-          console.error('Failed to fetch debate relation fragment', e)
+          reportError(e, 'Failed to fetch debate relation fragment')
           return null
         }
       }
@@ -204,7 +206,7 @@ export const useDebateStore = defineStore("debate", () => {
       relationLoading.value = true
       error.value = null
       try {
-        const res = await fetch(url)
+        const res = await apiRequest(url)
         if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
         if (!res.ok) {
           error.value = 'Failed to fetch debate relations'
@@ -217,7 +219,7 @@ export const useDebateStore = defineStore("debate", () => {
       } catch (e) {
         if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
         error.value = 'Failed to fetch debate relations'
-        console.error('Failed to fetch debate relations', e)
+        reportError(e, 'Failed to fetch debate relations')
         return null
       } finally {
         if (ownsRequest(relationGraphRequest, id, requestSequence)) relationLoading.value = false
@@ -232,7 +234,7 @@ export const useDebateStore = defineStore("debate", () => {
   }): Promise<Debate | null> => {
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics`, {
+      const res = await apiRequest(`${api.url}/debate/topics`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
@@ -246,7 +248,7 @@ export const useDebateStore = defineStore("debate", () => {
       }
     } catch (e) {
       error.value = referencePublishErrorMessage(e, "创建失败，请重试");
-      console.error("Failed to create debate", e);
+      reportError(e, "Failed to create debate");
     }
     return null;
   };
@@ -260,7 +262,7 @@ export const useDebateStore = defineStore("debate", () => {
     wikiSaving.value = true;
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}`, {
+      const res = await apiRequest(`${api.url}/debate/topics/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
@@ -295,7 +297,7 @@ export const useDebateStore = defineStore("debate", () => {
       return { ok: false };
     } catch (e) {
       if (mutation.isCurrent()) error.value = referencePublishErrorMessage(e, "保存失败，请重试");
-      console.error("Failed to save debate", e);
+      reportError(e, "Failed to save debate");
       return { ok: false };
     } finally {
       if (saveSequence === wikiSaveRequestSequence) wikiSaving.value = false;
@@ -307,7 +309,7 @@ export const useDebateStore = defineStore("debate", () => {
     revisionsLoading.value = true;
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/revisions`);
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/revisions`);
       if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to fetch revisions";
@@ -320,7 +322,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
       error.value = "Failed to fetch revisions";
-      console.error("Failed to fetch revisions", e);
+      reportError(e, "Failed to fetch revisions");
       return null;
     } finally {
       if (ownsRequest(revisionsRequest, id, requestSequence)) revisionsLoading.value = false;
@@ -330,7 +332,7 @@ export const useDebateStore = defineStore("debate", () => {
   const fetchRevision = async (id: string, revisionID: string): Promise<DebateRevision | null> => {
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/revisions/${revisionID}`);
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/revisions/${revisionID}`);
       if (!res.ok) {
         error.value = "Failed to fetch revision";
         return null;
@@ -339,7 +341,7 @@ export const useDebateStore = defineStore("debate", () => {
       return data.data as DebateRevision;
     } catch (e) {
       error.value = "Failed to fetch revision";
-      console.error("Failed to fetch revision", e);
+      reportError(e, "Failed to fetch revision");
       return null;
     }
   };
@@ -351,7 +353,7 @@ export const useDebateStore = defineStore("debate", () => {
   ): Promise<DebateRevisionDiff | null> => {
     error.value = null;
     try {
-      const res = await fetch(
+      const res = await apiRequest(
         `${api.url}/debate/topics/${id}/revisions/${revisionID}/diff?against=${encodeURIComponent(against)}`,
       );
       if (!res.ok) {
@@ -362,7 +364,7 @@ export const useDebateStore = defineStore("debate", () => {
       return data.data as DebateRevisionDiff;
     } catch (e) {
       error.value = "Failed to fetch revision diff";
-      console.error("Failed to fetch revision diff", e);
+      reportError(e, "Failed to fetch revision diff");
       return null;
     }
   };
@@ -375,7 +377,7 @@ export const useDebateStore = defineStore("debate", () => {
     const mutation = beginCurrentDebateMutation(id);
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/revisions/${revisionID}/revert`, {
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/revisions/${revisionID}/revert`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
@@ -392,7 +394,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!mutation.isCurrent()) return null;
       error.value = "Failed to revert revision";
-      console.error("Failed to revert revision", e);
+      reportError(e, "Failed to revert revision");
       return null;
     }
   };
@@ -405,7 +407,7 @@ export const useDebateStore = defineStore("debate", () => {
     const mutation = beginCurrentDebateMutation(id);
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/references/${relationID}/reconfirm`, {
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/references/${relationID}/reconfirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
@@ -422,7 +424,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!mutation.isCurrent()) return null;
       error.value = "Failed to reconfirm reference";
-      console.error("Failed to reconfirm reference", e);
+      reportError(e, "Failed to reconfirm reference");
       return null;
     }
   };
@@ -432,7 +434,7 @@ export const useDebateStore = defineStore("debate", () => {
     votesLoading.value = true;
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/votes`, { headers: authHeaders() });
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/votes`, { headers: authHeaders() });
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
         error.value = "Failed to fetch votes";
@@ -445,7 +447,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       error.value = "Failed to fetch votes";
-      console.error("Failed to fetch votes", e);
+      reportError(e, "Failed to fetch votes");
       return null;
     } finally {
       if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
@@ -457,7 +459,7 @@ export const useDebateStore = defineStore("debate", () => {
     votesLoading.value = true;
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/vote`, {
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/vote`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ direction }),
@@ -474,7 +476,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       error.value = "Failed to set vote";
-      console.error("Failed to set vote", e);
+      reportError(e, "Failed to set vote");
       return null;
     } finally {
       if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
@@ -486,7 +488,7 @@ export const useDebateStore = defineStore("debate", () => {
     votesLoading.value = true;
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/vote`, {
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/vote`, {
         method: "DELETE",
         headers: authHeaders(),
       });
@@ -502,7 +504,7 @@ export const useDebateStore = defineStore("debate", () => {
     } catch (e) {
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       error.value = "Failed to remove vote";
-      console.error("Failed to remove vote", e);
+      reportError(e, "Failed to remove vote");
       return null;
     } finally {
       if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
@@ -512,7 +514,7 @@ export const useDebateStore = defineStore("debate", () => {
   const fetchConclusions = async (id: string): Promise<DebateConclusionEvent[] | null> => {
     error.value = null;
     try {
-      const res = await fetch(`${api.url}/debate/topics/${id}/conclusions`);
+      const res = await apiRequest(`${api.url}/debate/topics/${id}/conclusions`);
       if (!res.ok) {
         error.value = "Failed to fetch conclusions";
         return null;
@@ -521,21 +523,21 @@ export const useDebateStore = defineStore("debate", () => {
       return (data.data || []) as DebateConclusionEvent[];
     } catch (e) {
       error.value = "Failed to fetch conclusions";
-      console.error("Failed to fetch conclusions", e);
+      reportError(e, "Failed to fetch conclusions");
       return null;
     }
   };
 
   const searchDebates = async (q: string, limit = 10): Promise<Debate[]> => {
     try {
-      const res = await fetch(`${api.url}/debate/topics?search=${encodeURIComponent(q.trim())}&page_size=${limit}`)
+      const res = await apiRequest(`${api.url}/debate/topics?search=${encodeURIComponent(q.trim())}&page_size=${limit}`)
       if (res.ok) {
         const data = await res.json()
         return data.data || []
       }
       return []
     } catch (e) {
-      console.error('Failed to search debates', e)
+      reportError(e, 'Failed to search debates')
       return []
     }
   }
@@ -543,7 +545,7 @@ export const useDebateStore = defineStore("debate", () => {
 	const searchCitableDebates = async (q: string, excludeId = ''): Promise<Debate[]> => {
 		try {
 			const query = encodeURIComponent(q.trim())
-			const res = await fetch(`${api.url}/debate/topics?search=${query}&status=active&page_size=10`)
+			const res = await apiRequest(`${api.url}/debate/topics?search=${query}&status=active&page_size=10`)
 			if (!res.ok) return []
 			const payload = await res.json()
 			return ((payload.data || []) as Debate[]).filter((candidate) => (
@@ -553,7 +555,7 @@ export const useDebateStore = defineStore("debate", () => {
 				&& (candidate.conclusion_type === 'yes' || candidate.conclusion_type === 'no')
 			))
 		} catch (e) {
-			console.error('Failed to search citable debates', e)
+			reportError(e, 'Failed to search citable debates')
 			return []
 		}
 	}

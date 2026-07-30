@@ -55,7 +55,7 @@ describe('notification store', () => {
 
     await store.markAllRead('reply')
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/read-all?type=reply', expect.objectContaining({ method: 'PUT' }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications/read-all?category=reply', expect.objectContaining({ method: 'PUT' }))
     expect(store.unreadCount).toBe(3)
     expect(store.notifications.every((item) => item.read_at)).toBe(true)
   })
@@ -125,6 +125,76 @@ describe('notification store', () => {
 
     expect(store.notifications.map(({ id }) => id)).toEqual(['live-forum'])
     expect(store.unreadCount).toBe(1)
+  })
+
+  it('uses category when fetching a notification category', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ data: [], meta: { total: 0 } }), { status: 200 }))
+    const store = useNotificationStore()
+
+    await store.fetchNotifications('system')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/notifications?page=1&category=system', expect.anything())
+  })
+
+  it('keeps the newest category request state when an earlier response arrives first', async () => {
+    let resolveFirst!: (response: Response) => void
+    let resolveSecond!: (response: Response) => void
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveFirst = resolve }))
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveSecond = resolve }))
+    const store = useNotificationStore()
+
+    const first = store.fetchNotifications('like', 2)
+    const second = store.fetchNotifications('system', 1)
+
+    resolveFirst(new Response(JSON.stringify({ data: [makeNotification('like-1', 'like')], meta: { total: 1 } }), { status: 200 }))
+    await first
+
+    expect(store.notifications).toEqual([])
+    expect(store.total).toBe(0)
+    expect(store.loading).toBe(true)
+    expect(store.currentCategory).toBe('system')
+    expect(store.currentType).toBe('system')
+    expect(store.page).toBe(1)
+
+    resolveSecond(new Response(JSON.stringify({ data: [makeNotification('system-1', 'system')], meta: { total: 3 } }), { status: 200 }))
+    await second
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['system-1'])
+    expect(store.total).toBe(3)
+    expect(store.loading).toBe(false)
+  })
+
+  it('keeps the newest category request state when it completes before an earlier response', async () => {
+    let resolveFirst!: (response: Response) => void
+    let resolveSecond!: (response: Response) => void
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveFirst = resolve }))
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveSecond = resolve }))
+    const store = useNotificationStore()
+
+    const first = store.fetchNotifications('like', 2)
+    const second = store.fetchNotifications('system', 1)
+
+    resolveSecond(new Response(JSON.stringify({ data: [makeNotification('system-1', 'system')], meta: { total: 3 } }), { status: 200 }))
+    await second
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['system-1'])
+    expect(store.total).toBe(3)
+    expect(store.currentCategory).toBe('system')
+    expect(store.currentType).toBe('system')
+    expect(store.page).toBe(1)
+    expect(store.loading).toBe(false)
+
+    resolveFirst(new Response(JSON.stringify({ data: [makeNotification('like-1', 'like')], meta: { total: 1 } }), { status: 200 }))
+    await first
+
+    expect(store.notifications.map(({ id }) => id)).toEqual(['system-1'])
+    expect(store.total).toBe(3)
+    expect(store.currentCategory).toBe('system')
+    expect(store.currentType).toBe('system')
+    expect(store.page).toBe(1)
+    expect(store.loading).toBe(false)
   })
 
   it('marks both forum notification types read', async () => {

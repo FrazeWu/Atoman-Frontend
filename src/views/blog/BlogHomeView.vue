@@ -137,6 +137,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PEntry from '@/components/ui/PEntry.vue'
@@ -163,9 +165,21 @@ const router = useRouter()
 
 const PAGE_SIZE = 20
 
-type BlogHomeListItem = Post & {
+type BlogHomeListItem = Pick<Post, 'id' | 'title'> & Partial<Pick<Post,
+  'summary' | 'cover_url' | 'likes_count' | 'comments_count' | 'user' | 'channel' | 'created_at'
+>> & {
   source: 'post' | 'feed'
   targetPath: string
+}
+
+type RecommendationPayload = {
+  id: string
+  title: string
+  summary?: string
+  image_url?: string
+  target_path?: string
+  score_label?: string
+  post?: Post
 }
 
 const postStarredIds = computed(() => feedStore.bookmarkedPostIds)
@@ -279,11 +293,11 @@ const fetchRecommendedPosts = async () => {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const res = await fetch(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=1&page_size=20`, { headers })
+    const res = await apiRequest(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=1&page_size=20`, { headers })
     if (!res.ok) return
-    const data = await res.json()
+    const data = await res.json() as { data?: RecommendationPayload[] }
     recommendedPosts.value = Array.isArray(data.data)
-      ? data.data.map((item: any) => ({
+      ? data.data.map((item) => ({
           id: item.id,
           title: item.title,
           summary: item.summary,
@@ -293,7 +307,7 @@ const fetchRecommendedPosts = async () => {
         }))
       : []
   } catch (error) {
-    console.error(error)
+    reportError(error)
     recommendedPosts.value = []
   } finally {
     recommendationLoading.value = false
@@ -317,13 +331,13 @@ const fetchPosts = async (append = false) => {
       ? `${api.url}/feed/recommend/articles?mode=hot&page=${targetPage}&page_size=${PAGE_SIZE}`
       : `${api.blog.posts}?${query.toString()}`
 
-    const res = await fetch(endpoint, { headers })
+    const res = await apiRequest(endpoint, { headers })
     if (requestSequence !== postsRequestSequence) return false
     if (res.ok) {
-      const d = await res.json()
+      const d = await res.json() as { data?: RecommendationPayload[]; meta?: { has_more?: boolean } }
       if (requestSequence !== postsRequestSequence) return false
       const rawData = d.data || []
-      const extractedPosts: BlogHomeListItem[] = rawData.map((item: any) => {
+      const extractedPosts = rawData.map((item): BlogHomeListItem | null => {
         if (isPopular) {
           const targetPath = item.target_path || `/feed/item/${item.id}`
           const targetPostId = postIdFromTargetPath(targetPath)
@@ -348,7 +362,7 @@ const fetchPosts = async (append = false) => {
           }
         }
         return null
-      }).filter(Boolean)
+      }).filter((item): item is BlogHomeListItem => item !== null)
 
       if (append) {
         posts.value = [...posts.value, ...extractedPosts]
@@ -362,7 +376,7 @@ const fetchPosts = async (append = false) => {
       return true
     }
   } catch (e) {
-    console.error(e)
+    reportError(e)
   } finally {
     if (requestSequence === postsRequestSequence) loading.value = false
   }

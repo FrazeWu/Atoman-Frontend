@@ -1,0 +1,48 @@
+<h2>博客短话侧栏</h2>
+<p class="subtitle">选择短话在文章首页中的位置和阅读节奏。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>右侧独立时间线（推荐）</h3>
+      <p>桌面端固定在文章列表右侧，连续浏览短话；移动端收为文章列表中的一个入口。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>文章流顶部</h3>
+      <p>短话只展示最新一条，空间最克制，但弱化了类似微博的连续感。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>独立导航页</h3>
+      <p>内容边界最清楚，但用户需要离开文章首页才能看到短话。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>方案 A 预览</h3>
+  <div class="mockup">
+    <div class="mockup-header">文章</div>
+    <div class="mockup-body" style="padding:24px;background:#f8f8f6;color:#171717;">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:32px;align-items:start;max-width:930px;margin:auto;">
+        <section>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid #d8d8d3;padding-bottom:12px;margin-bottom:14px;font-size:14px;"><strong>全部文章</strong><span style="color:#777">最新</span></div>
+          <article style="padding:16px 0;border-bottom:1px solid #deded9;"><div style="font-size:12px;color:#777;margin-bottom:8px;">陈知言 · 2 小时前</div><strong style="font-size:18px;">关于阅读速度的误解</strong><p style="font-size:13px;line-height:1.55;color:#555;margin:8px 0 0;">慢下来，不等于放弃判断。</p></article>
+          <article style="padding:16px 0;border-bottom:1px solid #deded9;"><div style="font-size:12px;color:#777;margin-bottom:8px;">叶澜 · 昨天</div><strong style="font-size:18px;">电影里的空镜头</strong><p style="font-size:13px;line-height:1.55;color:#555;margin:8px 0 0;">留下来的往往不是情节。</p></article>
+        </section>
+        <aside style="border-left:1px solid #d8d8d3;padding-left:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><strong style="font-size:15px;">短话</strong><button style="border:0;background:#171717;color:#fff;padding:6px 10px;border-radius:4px;font-size:12px;">写短话</button></div>
+          <article style="padding:13px 0;border-top:1px solid #deded9;"><div style="font-size:12px;color:#777;margin-bottom:6px;">林默 · 18 分钟前</div><p style="font-size:13px;line-height:1.55;margin:0;">今天读到一句话：真正的选择，常常发生在没有掌声的时候。</p><div style="font-size:12px;color:#777;margin-top:8px;">12 评论 · 8 喜欢</div></article>
+          <article style="padding:13px 0;border-top:1px solid #deded9;"><div style="font-size:12px;color:#777;margin-bottom:6px;">阿北 · 1 小时前</div><p style="font-size:13px;line-height:1.55;margin:0;">雨后的公交车窗，是城市最诚实的滤镜。</p><div style="font-size:12px;color:#777;margin-top:8px;">3 评论 · 21 喜欢</div></article>
+          <button style="width:100%;margin-top:12px;background:transparent;border:1px solid #bbb;padding:8px;border-radius:4px;font-size:12px;">查看全部</button>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>

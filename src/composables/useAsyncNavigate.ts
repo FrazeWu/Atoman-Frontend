@@ -1,3 +1,4 @@
+import { reportError } from '@/utils/logger'
 import { useTransitionStore } from '@/stores/transition'
 import { useSheetStore } from '@/stores/sheet'
 import { useRouter } from 'vue-router'
@@ -55,8 +56,7 @@ export function useAsyncNavigate() {
       }
 
     } catch (err) {
-      console.error('Transition fetch failed:', err)
-      // TODO: 可选：触发一个轻提示告警
+      reportError(err, 'Transition fetch failed:')
     } finally {
       document.body.style.cursor = 'default'
     }
@@ -72,7 +72,7 @@ export function useAsyncNavigate() {
     try {
       localStorage.setItem('atoman_transition_relay_basic', 'true')
     } catch (err) {
-      console.error('Transition relay failed:', err)
+      reportError(err, 'Transition relay failed:')
       await router.push(targetUrl)
       return
     }
@@ -91,7 +91,7 @@ export function useAsyncNavigate() {
         transition.reset()
         localStorage.removeItem('atoman_transition_relay_basic')
       }
-      console.error('Module navigation failed:', err)
+      reportError(err, 'Module navigation failed:')
     }
   }
 

@@ -101,6 +101,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ListTree } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
@@ -166,7 +168,7 @@ function syncActiveSection() {
 
 const loadProfile = async () => {
   try {
-    const res = await fetch(api.users.me, {
+    const res = await apiRequest(api.users.me, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     if (res.ok) {
@@ -181,7 +183,7 @@ const loadProfile = async () => {
       }
     }
   } catch (e) {
-    console.error(e)
+    reportError(e)
   }
 }
 
@@ -191,7 +193,7 @@ const save = async () => {
 
   saving.value = true
   try {
-    const res = await fetch(api.users.settings, {
+    const res = await apiRequest(api.users.settings, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

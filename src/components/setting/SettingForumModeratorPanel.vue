@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 
 import PButton from '@/components/ui/PButton.vue'
@@ -220,8 +221,8 @@ async function refresh() {
   error.value = ''
   try {
     const [categoryRes, assignmentRes] = await Promise.all([
-      fetch(api.v1.forum.categories),
-      fetch(api.v1.forum.moderators, {
+      apiRequest(api.v1.forum.categories),
+      apiRequest(api.v1.forum.moderators, {
         headers: authHeaders(),
       }),
     ])
@@ -254,7 +255,7 @@ async function searchUsers() {
       q: query.value.trim(),
       limit: '20',
     })
-    const response = await fetch(`${api.users.search}?${params.toString()}`, {
+    const response = await apiRequest(`${api.users.search}?${params.toString()}`, {
       headers: authHeaders(),
     })
     const data = await response.json().catch(() => ({}))
@@ -288,7 +289,7 @@ async function saveAssignment() {
       : api.v1.forum.moderators
     const method = editingId.value ? 'PUT' : 'POST'
 
-    const response = await fetch(url, {
+    const response = await apiRequest(url, {
       method,
       headers: authHeaders(true),
       body: JSON.stringify(payload),
@@ -336,7 +337,7 @@ async function removeAssignment(id: string) {
   error.value = ''
   message.value = ''
   try {
-    const response = await fetch(api.v1.forum.moderator(id), {
+    const response = await apiRequest(api.v1.forum.moderator(id), {
       method: 'DELETE',
       headers: authHeaders(),
     })

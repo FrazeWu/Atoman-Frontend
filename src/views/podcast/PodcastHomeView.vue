@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { apiRequest } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { Headphones, Play } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
@@ -20,6 +21,17 @@ type RecommendedEpisode = {
   imageUrl: string
 }
 
+type RecommendedEpisodePayload = {
+  id: string
+  title: string
+  summary?: string
+  target_path?: string
+  score_label?: string
+  image_url?: string
+  episode_cover_url?: string
+  channel_cover_url?: string
+}
+
 const player = usePlayerStore()
 
 const API_URL = useApiUrl()
@@ -37,7 +49,7 @@ const recommendationOptions = [
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await fetch(`${API_URL}/podcast/episodes`)
+    const res = await apiRequest(`${API_URL}/podcast/episodes`)
     if (res.ok) episodes.value = await res.json()
   } finally {
     loading.value = false
@@ -48,14 +60,14 @@ onMounted(async () => {
 async function fetchRecommendedEpisodes() {
   recommendationLoading.value = true
   try {
-    const res = await fetch(`${API_URL}/podcast/recommend/episodes?mode=${recommendationMode.value}&page=1&page_size=8`)
+    const res = await apiRequest(`${API_URL}/podcast/recommend/episodes?mode=${recommendationMode.value}&page=1&page_size=8`)
     if (!res.ok) {
       recommendedEpisodes.value = []
       return
     }
-    const data = await res.json()
+    const data = await res.json() as { data?: RecommendedEpisodePayload[] }
     recommendedEpisodes.value = Array.isArray(data.data)
-      ? data.data.map((item: any) => ({
+      ? data.data.map((item) => ({
           id: item.id,
           title: item.title,
           summary: item.summary,

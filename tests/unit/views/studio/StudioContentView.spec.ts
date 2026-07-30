@@ -14,6 +14,16 @@ const routes = [{
   children: [{ path: 'content', component: StudioContentView }],
 }]
 
+function deferred() {
+  let resolve!: () => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<void>((done, fail) => {
+    resolve = done
+    reject = fail
+  })
+  return { promise, resolve, reject }
+}
+
 describe('StudioContentView', () => {
   it('renders module navigation and requests route-backed content filters', async () => {
     const router = createRouter({ history: createMemoryHistory(), routes })
@@ -69,6 +79,164 @@ describe('StudioContentView', () => {
 
     await wrapper.find('[data-testid="manage-collections"]').trigger('click')
     expect(wrapper.find('[data-testid="studio-collection-sheet"]').exists()).toBe(true)
+  })
+
+  it('loads contents and collections once when switching modules', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/studio/blog/content')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    const store = useStudioStore(pinia)
+    useSiteAccessStore(pinia).isFeatureEnabled = vi.fn().mockReturnValue(true)
+    store.loaded = true
+    store.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+
+    mount(StudioModuleLayout, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    vi.mocked(store.loadContents).mockClear()
+    vi.mocked(store.loadCollections).mockClear()
+
+    await router.push('/studio/podcast/content')
+    await flushPromises()
+
+    expect(store.loadContents).toHaveBeenCalledTimes(1)
+    expect(store.loadContents).toHaveBeenCalledWith('podcast', {
+      q: '', status: '', visibility: '', collection_id: '', page: 1,
+    })
+    expect(store.loadCollections).toHaveBeenCalledTimes(1)
+    expect(store.loadCollections).toHaveBeenCalledWith('podcast')
+  })
+
+  it('loads the latest module after the initial page load finishes', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/studio/blog/content')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    const store = useStudioStore(pinia)
+    useSiteAccessStore(pinia).isFeatureEnabled = vi.fn().mockReturnValue(true)
+    store.loaded = true
+    store.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+    const initialContents = deferred()
+    const initialCollections = deferred()
+    ;(store as any).loadContents = vi.fn((currentModule: string) => currentModule === 'blog' ? initialContents.promise : Promise.resolve())
+    ;(store as any).loadCollections = vi.fn((currentModule: string) => currentModule === 'blog' ? initialCollections.promise : Promise.resolve())
+
+    mount(StudioModuleLayout, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await router.push('/studio/podcast/content')
+    await flushPromises()
+    initialContents.resolve()
+    initialCollections.resolve()
+    await flushPromises()
+
+    expect(store.loadContents).toHaveBeenCalledTimes(2)
+    expect(store.loadContents).toHaveBeenLastCalledWith('podcast', {
+      q: '', status: '', visibility: '', collection_id: '', page: 1,
+    })
+    expect(store.loadCollections).toHaveBeenCalledTimes(2)
+    expect(store.loadCollections).toHaveBeenLastCalledWith('podcast')
+  })
+
+  it('keeps loading while a newer route request is still pending after an older request finishes', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/studio/blog/content')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    const store = useStudioStore(pinia)
+    useSiteAccessStore(pinia).isFeatureEnabled = vi.fn().mockReturnValue(true)
+    store.loaded = true
+    store.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+    const older = deferred()
+    const newer = deferred()
+    let requestCount = 0
+    ;(store as any).loadContents = vi.fn(() => {
+      requestCount += 1
+      if (requestCount === 2) return older.promise
+      if (requestCount === 3) return newer.promise
+      return Promise.resolve()
+    })
+
+    const wrapper = mount(StudioModuleLayout, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await router.push('/studio/blog/content?q=older')
+    await flushPromises()
+    await router.push('/studio/blog/content?q=newer')
+    await flushPromises()
+    older.resolve()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('加载中...')
+
+    newer.resolve()
+    await flushPromises()
+  })
+
+  it('ignores an older request failure when the latest request succeeds', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/studio/blog/content')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    const store = useStudioStore(pinia)
+    useSiteAccessStore(pinia).isFeatureEnabled = vi.fn().mockReturnValue(true)
+    store.loaded = true
+    store.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+    const older = deferred()
+    const newer = deferred()
+    let requestCount = 0
+    ;(store as any).loadContents = vi.fn(() => {
+      requestCount += 1
+      if (requestCount === 2) return older.promise
+      if (requestCount === 3) return newer.promise
+      return Promise.resolve()
+    })
+
+    const wrapper = mount(StudioModuleLayout, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await router.push('/studio/blog/content?q=older')
+    await flushPromises()
+    await router.push('/studio/blog/content?q=newer')
+    await flushPromises()
+    older.reject(new Error('旧请求失败'))
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('加载中...')
+    expect(wrapper.text()).not.toContain('旧请求失败')
+
+    newer.resolve()
+    await flushPromises()
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+  })
+
+  it('shows the error from the latest route request', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/studio/blog/content')
+    await router.isReady()
+    const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true })
+    const store = useStudioStore(pinia)
+    useSiteAccessStore(pinia).isFeatureEnabled = vi.fn().mockReturnValue(true)
+    store.loaded = true
+    store.currentChannel = { id: 'channel-1', name: '主频道', slug: 'main', description: '', cover_url: '' }
+    const older = deferred()
+    const newer = deferred()
+    let requestCount = 0
+    ;(store as any).loadContents = vi.fn(() => {
+      requestCount += 1
+      if (requestCount === 2) return older.promise
+      if (requestCount === 3) return newer.promise
+      return Promise.resolve()
+    })
+
+    const wrapper = mount(StudioModuleLayout, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await router.push('/studio/blog/content?q=older')
+    await flushPromises()
+    await router.push('/studio/blog/content?q=newer')
+    await flushPromises()
+    older.resolve()
+    newer.reject(new Error('新请求失败'))
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('新请求失败')
   })
 
   it('runs status and confirmed delete actions through the studio store', async () => {

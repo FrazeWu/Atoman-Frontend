@@ -24,7 +24,7 @@ describe('modern flat UI design-system contract', () => {
     expect(css).toContain('--a-color-border-soft: #e2e8f0;')
     expect(css).toContain('--a-font-sans:')
     expect(css).toContain('--a-font-mono:')
-    expect(css).toContain('--a-radius-control: 8px;')
+    expect(css).toContain('--a-radius-control: 4px;')
     expect(css).toMatch(/--a-shadow-sm:\s*0\s+\d+px\s+\d+px/)
   })
 

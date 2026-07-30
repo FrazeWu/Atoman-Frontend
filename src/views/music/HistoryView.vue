@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref } from 'vue'
 import { Clock3, Play } from 'lucide-vue-next'
 import {
@@ -57,7 +58,7 @@ async function loadPage(page: number) {
     currentPage.value = response.meta.page
     hasMore.value = response.meta.has_more
   } catch (error) {
-    console.error('Failed to load music listening history:', error)
+    reportError(error, 'Failed to load music listening history:')
     errorMessage.value = '播放历史加载失败'
   } finally {
     loading.value = false

@@ -1,3 +1,4 @@
+import { apiRequest } from '@/api/client'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
@@ -23,7 +24,7 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
     pendingLoad = (async () => {
       loading.value = true
       const api = useApi()
-      const response = await fetch(api.site.access)
+      const response = await apiRequest(api.site.access)
       if (!response.ok) {
         throw new Error(`站点访问配置加载失败 (${response.status})`)
       }
@@ -40,7 +41,7 @@ export const useSiteAccessStore = defineStore('siteAccess', () => {
 
   async function save(nextAccess: SiteAccessInput, token: string | null) {
     const api = useApi()
-    const response = await fetch(api.settings.siteAccess, {
+    const response = await apiRequest(api.settings.siteAccess, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

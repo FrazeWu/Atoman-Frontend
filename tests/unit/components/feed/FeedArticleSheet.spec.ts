@@ -1,16 +1,49 @@
-import { mount } from '@vue/test-utils'
+import { mount, type MountingOptions, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 
+const mountedWrappers = new Set<VueWrapper>()
+let consoleWarn: ReturnType<typeof vi.spyOn>
+let consoleError: ReturnType<typeof vi.spyOn>
+
+const mountSheet = (options: MountingOptions<any>) => {
+  const pinia = createPinia()
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', component: { template: '<div />' } }],
+  })
+  setActivePinia(pinia)
+
+  const wrapper = mount(FeedArticleSheet, {
+    ...options,
+    global: {
+      ...options.global,
+      plugins: [pinia, router],
+    },
+  })
+  mountedWrappers.add(wrapper)
+  return wrapper
+}
+
 describe('FeedArticleSheet', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
+    consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    mountedWrappers.forEach((wrapper) => wrapper.unmount())
+    mountedWrappers.clear()
+    expect(consoleWarn).not.toHaveBeenCalled()
+    expect(consoleError).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
   })
 
   it('sanitizes external feed HTML before rendering it', () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -44,7 +77,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('marks external feed content as width constrained prose', () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -75,7 +108,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('renders a play button for podcast feed items and emits play-podcast when clicked', async () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -116,7 +149,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('does not render a play button for non-audio feed items', () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -148,7 +181,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('shows the playing label when the current podcast is already playing', () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -182,7 +215,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('shows richer external article reading metadata for readability', () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -226,7 +259,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('renders previous and next navigation controls when neighboring items exist', async () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -263,7 +296,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('explains whether the reader is showing full text or only a summary', () => {
-    const fullTextWrapper = mount(FeedArticleSheet, {
+    const fullTextWrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -293,7 +326,7 @@ describe('FeedArticleSheet', () => {
       },
     })
 
-    const summaryWrapper = mount(FeedArticleSheet, {
+    const summaryWrapper = mountSheet({
       props: {
         show: true,
         article: {
@@ -328,7 +361,7 @@ describe('FeedArticleSheet', () => {
   })
 
   it('falls back to content_html before summary when full-text status is available but html is missing', () => {
-    const wrapper = mount(FeedArticleSheet, {
+    const wrapper = mountSheet({
       props: {
         show: true,
         article: {

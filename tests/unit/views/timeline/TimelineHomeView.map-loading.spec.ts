@@ -12,4 +12,16 @@ describe('TimelineHomeView map loading', () => {
     expect(timelineHomeSource).toContain("defineAsyncComponent(() => import('@/views/timeline/TimelineMapPane.vue'))")
     expect(timelineHomeSource).toContain('v-if="viewMode === \'map\'"')
   })
+
+  it('delegates comparison state, hydration, and route sync to a composable', () => {
+    expect(timelineHomeSource).toContain('useTimelineComparison({')
+    for (const declaration of [
+      "const compareIds = ref<string[]>([])",
+      'const hydrateComparePool = async',
+      'const addBatchToCompare =',
+      'const parseCompareQuery =',
+    ]) {
+      expect(timelineHomeSource).not.toContain(declaration)
+    }
+  })
 })

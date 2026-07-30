@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
@@ -71,13 +72,13 @@ const { applyRouteSelection } = useMusicRouteSelection({
 async function fetchBookmarks() {
   try {
     const response = await listArtistBookmarks()
-    starredArtistIds.value = response.data.map((b: any) => String(b.artist_id))
+    starredArtistIds.value = response.data.map((bookmark) => String(bookmark.artist_id))
   } catch (e) {
     if (e instanceof ApiErrorResponseError && e.status === 401) {
       starredArtistIds.value = []
       return
     }
-    console.error('Failed to fetch bookmarks:', e)
+    reportError(e, 'Failed to fetch bookmarks:')
   }
 }
 
@@ -115,7 +116,7 @@ async function handleToggleBookmark(artistId: string) {
       ))
     }
   } catch (e) {
-    console.error('Failed to toggle bookmark:', e)
+    reportError(e, 'Failed to toggle bookmark:')
   }
 }
 
@@ -157,7 +158,7 @@ async function fetchArtists() {
     artists.value = detailResults.filter(Boolean) as MusicArtistListItem[]
   } catch (e) {
     if (requestId !== activeRequestId) return
-    console.error('Failed to fetch music artists:', e)
+    reportError(e, 'Failed to fetch music artists:')
     errorMessage.value = '艺术家列表加载失败'
     artists.value = []
   } finally {
@@ -196,7 +197,7 @@ async function fetchSearchResults() {
     searchResults.value = response.data
   } catch (e) {
     if (requestId !== activeSearchRequestId) return
-    console.error('Failed to search music artists:', e)
+    reportError(e, 'Failed to search music artists:')
     searchResults.value = []
   } finally {
     if (requestId === activeSearchRequestId) {

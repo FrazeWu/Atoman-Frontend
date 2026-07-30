@@ -78,6 +78,8 @@
 </template>
 
 <script setup lang="ts">
+import { reportError } from '@/utils/logger'
+import { apiRequest } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useApi } from '@/composables/useApi'
@@ -116,7 +118,7 @@ const success = ref(false)
 
 const loadProfile = async () => {
   try {
-    const res = await fetch(api.users.me, {
+    const res = await apiRequest(api.users.me, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (res.ok) {
@@ -131,7 +133,7 @@ const loadProfile = async () => {
       }
     }
   } catch (e) {
-    console.error(e)
+    reportError(e)
   }
 }
 
@@ -148,7 +150,7 @@ const save = async () => {
       { category: 'collaboration', event_type: 'collaboration.changed', enabled: notificationPrefs.value.collaboration },
     ])
 
-    const res = await fetch(api.users.settings, {
+    const res = await apiRequest(api.users.settings, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

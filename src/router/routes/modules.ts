@@ -20,6 +20,10 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/blog/BlogHomeView.vue') },
+        { path: 'notes' },
+        { path: 'notes/new', meta: { requiresAuth: true } },
+        { path: 'notes/:id' },
+        { path: 'notes/:id/edit', meta: { requiresAuth: true } },
         { path: 'subscriptions', component: () => import('@/views/blog/BlogSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'bookmarks', component: () => import('@/views/blog/BookmarkView.vue'), meta: { requiresAuth: true } },
       ],

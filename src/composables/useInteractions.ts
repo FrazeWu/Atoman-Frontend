@@ -42,11 +42,14 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
   }
 
   const currentTargetId = () => unref(targetId)
+  const isShortNote = () => moduleName === 'blog' && targetType === 'short_note'
   const endpoints = () => ({
     blog: {
       likes: api.interactions.blogLikes,
-      comments: api.interactions.blogPostComments(currentTargetId()),
-      comment: api.interactions.blogComment,
+      comments: isShortNote()
+        ? api.interactions.shortNoteComments(currentTargetId())
+        : api.interactions.blogPostComments(currentTargetId()),
+      comment: isShortNote() ? api.comments.comment : api.interactions.blogComment,
     },
     forum: {
       topicLike: api.interactions.forumTopicLike(currentTargetId()),
@@ -94,6 +97,16 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     const requestTargetId = currentTargetId()
     const requestSeq = ++interactionSeq
     const selectedEndpoints = endpoints()
+    if (isShortNote()) {
+      await apiRequestEnvelope<unknown>(api.blog.shortNoteLike(requestTargetId), {
+        method: 'POST',
+        headers: headers(),
+      })
+      if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId()) return
+      liked.value = true
+      likeCount.value += 1
+      return
+    }
     if (moduleName === 'forum') {
       const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.topicLike, {
         method: 'POST',
@@ -123,6 +136,16 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
     const requestTargetId = currentTargetId()
     const requestSeq = ++interactionSeq
     const selectedEndpoints = endpoints()
+    if (isShortNote()) {
+      await apiRequestEnvelope<unknown>(api.blog.shortNoteLike(requestTargetId), {
+        method: 'DELETE',
+        headers: headers(),
+      })
+      if (requestSeq !== interactionSeq || requestTargetId !== currentTargetId()) return
+      liked.value = false
+      likeCount.value = Math.max(0, likeCount.value - 1)
+      return
+    }
     if (moduleName === 'forum') {
       const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.topicLike, {
         method: 'POST',

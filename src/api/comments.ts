@@ -11,6 +11,7 @@ import type { ResolvedReference } from './references'
 
 export type CommentTargetKind =
   | 'blog_post'
+  | 'short_note'
   | 'video'
   | 'podcast_episode'
   | 'feed_article'

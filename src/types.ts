@@ -402,6 +402,26 @@ export interface Post {
   updated_at: string
 }
 
+export interface ShortNoteMedia {
+  id: string
+  url: string
+  position: number
+}
+
+export interface ShortNote {
+  id: string
+  user_id: string
+  user?: User
+  content: string
+  media: ShortNoteMedia[]
+  likes_count: number
+  comments_count: number
+  liked: boolean
+  edited: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface BlogDraft {
   id: string
   user_id: string
@@ -436,7 +456,7 @@ export interface Comment {
 }
 
 export type InteractionModule = 'blog' | 'forum' | 'videos'
-export type InteractionTargetType = 'post' | 'forum_topic' | 'video'
+export type InteractionTargetType = 'post' | 'short_note' | 'forum_topic' | 'video'
 
 export interface InteractionUserRef {
   id?: string | number

@@ -994,7 +994,7 @@ describe('music building-block barrel', () => {
 
 describe('music merge API contract', () => {
   it('declares merge endpoints as returning review edits', () => {
-    const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1.ts'), 'utf8')
+    const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1/catalog.ts'), 'utf8')
 
     expect(source).toMatch(/mergeMusicArtists\([^\n]+\): Promise<MusicEditSummary>/)
     expect(source).toMatch(/mergeMusicAlbums\([^\n]+\): Promise<MusicEditSummary>/)

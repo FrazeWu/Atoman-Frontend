@@ -1,0 +1,687 @@
+import type { ApiList, UploadAsset } from '../types'
+
+export type MusicEntryStatus = 'open' | 'disputed' | 'confirmed' | 'protected' | 'closed'
+export type MusicEntityType = 'artist' | 'album' | 'song'
+export type MusicEditStatus =
+  | 'open'
+  | 'applied'
+  | 'rejected'
+  | 'cancelled'
+  | 'failed_dependency'
+  | 'failed_prerequisite'
+  | 'reverted'
+  | 'internal_error'
+export type MusicEditType =
+  | 'create_artist'
+  | 'update_artist'
+  | 'merge_artist'
+  | 'delete_artist'
+  | 'create_album'
+  | 'update_album'
+  | 'merge_album'
+  | 'delete_album'
+  | 'create_song'
+  | 'update_song'
+  | 'move_song'
+  | 'delete_song'
+  | 'update_lyrics'
+  | 'change_entry_status'
+
+export type MusicSource = {
+  type: 'url' | string
+  url?: string
+  title?: string
+}
+
+export type MusicAlbumImportStatus =
+  | 'pending_upload'
+  | 'uploading'
+  | 'uploaded'
+  | 'extracting'
+  | 'ready'
+  | 'failed'
+  | 'committed'
+  | 'queued'
+  | 'analyzing'
+  | 'transcoding'
+  | 'needs_attention'
+  | 'canceled'
+
+export type MusicAlbumImportTrack = {
+  title: string
+  audioKey: string
+  origin: string
+}
+
+export type MusicAlbumImportCommitStageName = {
+  name: string
+  isPrimary: boolean
+  startDateText: string
+  endDateText: string
+}
+
+export type MusicAlbumImportCommitTrack = {
+  title: string
+  trackNumber: number
+}
+
+export type MusicAlbumImportCommitMember = {
+  artist_id: string
+  join_date: string
+  leave_date: string
+}
+
+export type MusicAlbumImportCommitArtist = {
+  artist_id: string
+  name: string
+  legal_name: string
+  stage_names: MusicAlbumImportCommitStageName[]
+  birth_place: string
+  artist_form: 'person' | 'group'
+  active_start_date: string
+  active_end_date: string
+  members: MusicAlbumImportCommitMember[]
+}
+
+export type MusicAlbumImportCommitInput = {
+  artist_id?: string
+  artist: {
+    name: string
+    legal_name: string
+    stage_names: MusicAlbumImportCommitStageName[]
+    birth_place: string
+  }
+  artists?: MusicAlbumImportCommitArtist[]
+  album: {
+    title: string
+    release_date?: string
+    release_year: number
+    tracks: MusicAlbumImportCommitTrack[]
+  }
+}
+
+export type MusicAlbumImport = {
+  importId: string
+  status: MusicAlbumImportStatus
+  archiveName: string
+  uploadProgress: number
+  uploadSpeed: number
+  coverUrl: string
+  coverKey: string
+  derivedAlbumTitle: string
+  derivedCover: string
+  derivedTracks: MusicAlbumImportTrack[]
+  lastSyncedAt: string
+  errorMessage: string
+  inputMode: MusicAlbumImportInputMode
+  stage: MusicAlbumImportStage
+  progress: MusicAlbumImportProgress
+  files: MusicAlbumImportFile[]
+  errors: MusicAlbumImportError[]
+}
+
+export type MusicAlbumImportError = {
+  fileId: string
+  message: string
+  code: string
+}
+
+export type MusicAlbumImportMultipartPart = {
+  partNumber: number
+  etag: string
+}
+
+export type CreateMusicAlbumImportInput = {
+  artistId?: string | null
+  inputMode?: MusicAlbumImportInputMode
+}
+
+export type StartMusicAlbumImportMultipartInput = {
+  fileName: string
+  fileSize: number
+  contentType?: string
+}
+
+export type MusicAlbumImportMultipart = {
+  partSize: number
+  completedParts: MusicAlbumImportMultipartPart[]
+}
+
+export type MusicAlbumImportMultipartPartUpload = {
+  partNumber: number
+  uploadUrl: string
+}
+
+export type MusicAlbumImportFileUploadStatus = 'pending' | 'uploading' | 'completing' | 'uploaded' | 'failed'
+export type MusicAlbumImportFileProcessingStatus = 'pending' | 'failed'
+export type MusicAlbumImportStage =
+  | 'upload'
+  | 'queued'
+  | 'extracting'
+  | 'analyzing'
+  | 'transcoding'
+  | 'ready'
+  | 'committing'
+  | 'completed'
+  | 'failed'
+  | 'canceled'
+export type MusicAlbumImportInputMode = 'auto' | 'archive' | 'files' | 'folder'
+
+export type MusicAlbumImportFile = {
+  fileId: string
+  relativePath: string
+  fileName: string
+  role: string
+  detectedFormat: string
+  size: number
+  uploadStatus: MusicAlbumImportFileUploadStatus
+  processingStatus: MusicAlbumImportFileProcessingStatus
+  discNumber: number
+  trackNumber: number
+  title: string
+  errorMessage: string
+}
+
+export type MusicAlbumImportProgress = {
+  current: number
+  total: number
+}
+
+export type RegisterMusicAlbumImportFileInput = {
+  relativePath: string
+  fileName: string
+  fileSize: number
+  contentType: string
+}
+
+export type RegisterMusicAlbumImportFilesInput = {
+  files: RegisterMusicAlbumImportFileInput[]
+}
+
+export type MusicAlbumImportFilePartUpload = {
+  partNumber: number
+  uploadUrl: string
+}
+
+function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : []
+}
+
+export function normalizeMusicAlbumImport(snapshot: MusicAlbumImport): MusicAlbumImport {
+  return {
+    ...snapshot,
+    derivedTracks: arrayOrEmpty(snapshot.derivedTracks),
+    files: arrayOrEmpty(snapshot.files),
+    errors: arrayOrEmpty(snapshot.errors),
+  }
+}
+
+
+export type MusicAlbumArchiveUploadProgress = {
+  loaded: number
+  total: number
+  bytesPerSecond: number
+}
+
+export type UploadMusicAlbumArchiveOptions = {
+  onProgress?: (progress: MusicAlbumArchiveUploadProgress) => void
+}
+
+export type MusicEditRequest = {
+  type: MusicEditType
+  entity_type: MusicEntityType
+  entity_id?: string
+  payload?: Record<string, unknown>
+  changes?: Record<string, unknown>
+  reason: string
+  sources?: MusicSource[]
+}
+
+export type MusicEditSummary = {
+  id: string
+  type: MusicEditType
+  status: MusicEditStatus
+  entity_type: MusicEntityType
+  entity_id?: string
+  submitted_by: string
+  reason: string
+  payload: Record<string, unknown>
+  changes: Record<string, unknown>
+  sources: MusicSource[]
+  auto_applied: boolean
+  votable: boolean
+  votes?: { yes: number; no: number }
+  created_at: string
+}
+
+export type MusicRevisionSummary = {
+  id: string
+  content_type: 'album' | 'song' | 'artist'
+  content_id: string
+  version_number: number
+  previous_revision_id?: string | null
+  content_snapshot: unknown
+  editor_id: string
+  editor?: {
+    username?: string
+    display_name?: string
+  }
+  edit_summary: string
+  edit_type: string
+  status: string
+  is_current: boolean
+  created_at: string
+}
+
+export type MusicDiscussionAuthor = {
+  id: string
+  username?: string
+  display_name?: string
+}
+
+export type MusicDiscussion = {
+  id: string
+  album_id: string
+  parent_id?: string | null
+  content: string
+  created_at: string
+  updated_at?: string
+  author_id: string
+  author?: MusicDiscussionAuthor
+  replies?: MusicDiscussion[]
+  can_delete?: boolean
+}
+
+export type MusicArtistListItem = {
+  id: string
+  name: string
+  legal_name?: string
+  bio?: string
+  image_url?: string
+  nationality?: string
+  birth_date?: string
+  birth_year?: number
+  death_year?: number
+  artist_form?: 'person' | 'group'
+  members?: string
+  member_groups?: {
+    current: Array<{
+      artist_id: string
+      name: string
+      image_url?: string
+      join_date?: string
+      leave_date?: string
+    }>
+    former: Array<{
+      artist_id: string
+      name: string
+      image_url?: string
+      join_date?: string
+      leave_date?: string
+    }>
+  }
+  aliases?: Array<{ id?: string; alias: string; is_main_name?: boolean }>
+  play_count?: number
+  bookmark_count?: number
+  entry_status: MusicEntryStatus
+  redirect_to?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export type MusicAlbumListItem = {
+  id: string
+  title: string
+  artists?: Array<{ id: string; name: string }>
+  year?: number
+  release_date?: string
+  cover_url?: string
+  description?: string
+  album_type?: string
+  hot_score?: number
+  play_count?: number
+  bookmark_count?: number
+  songs?: Array<{ id: string; title: string; track_number?: number; audio_url?: string; cover_url?: string; lyrics?: string; status?: string; play_count?: number }>
+  entry_status: MusicEntryStatus
+  redirect_to?: string | null
+}
+
+export type MusicSongListItem = {
+  id: string
+  title: string
+  track_number?: number
+  audio_url?: string
+  cover_url?: string
+  lyrics?: string
+  status?: string
+  entry_status: MusicEntryStatus
+  artists?: Array<{ id: string; name: string }>
+  album?: { id: string; title: string; cover_url?: string }
+  position?: number
+}
+
+export type MusicListeningHistory = {
+  id: string
+  play_count: number
+  last_played_at: string
+  song: MusicSongListItem
+}
+
+export type MusicPlaylistSummary = {
+  id: string
+  name: string
+  description?: string
+  cover_url?: string
+  song_count: number
+  user_id?: string
+  owner_username?: string
+  is_public?: boolean
+  is_favorite: boolean
+  play_count?: number
+  bookmark_count?: number
+}
+
+export type MusicPlaylistDetail = MusicPlaylistSummary & {
+  songs: MusicSongListItem[]
+}
+
+
+export type MusicStarredKind = 'artist' | 'album' | 'song' | 'playlist'
+
+export type MusicArtistBookmark = {
+  id: string
+  artist_id: string
+  created_at: string
+}
+
+export type MusicAlbumBookmark = {
+  id: string
+  album_id: string
+  created_at: string
+}
+
+export type MusicSongBookmark = {
+  id: string
+  song_id: string
+  created_at: string
+  song?: MusicSongListItem
+}
+
+export type MusicPlaylistBookmark = {
+  id: string
+  playlist_id: string
+  created_at: string
+  playlist?: MusicPlaylistSummary
+}
+
+export type MusicStarredItem = {
+  id: string
+  kind: MusicStarredKind
+  starred_at: string
+  artist?: MusicArtistListItem
+  album?: MusicAlbumListItem
+  song?: MusicSongListItem
+  playlist?: MusicPlaylistSummary
+}
+
+export type CreateMusicPlaylistInput = {
+  name: string
+  description?: string
+  cover_url?: string
+  is_public?: boolean
+}
+
+export type UpdateMusicPlaylistInput = {
+  name?: string
+  description?: string
+  cover_url?: string
+  is_public?: boolean
+}
+
+export type MusicAlbumTrackEditInput = {
+  id?: string
+  title: string
+  track_number: number
+  lyrics?: string
+  audio_url?: string
+  removed?: boolean
+}
+
+export type MusicArtistInput = {
+  name: string
+  bio?: string
+  image_url?: string
+  nationality?: string
+  birth_date?: string
+  birth_year?: number
+  death_year?: number
+}
+
+export type MusicAlbumInput = {
+  title: string
+  artist_ids?: string[]
+  release_date?: string
+  cover_url?: string
+  cover_key?: string
+  description?: string
+  album_type?: string
+  tracks?: MusicAlbumTrackEditInput[]
+}
+
+export type MusicArtistUpdateInput = Partial<MusicArtistInput>
+export type MusicAlbumUpdateInput = Partial<MusicAlbumInput>
+
+export type MusicListResponse<T> = ApiList<T>
+
+export type MusicBrowseMode = 'hot' | 'featured' | 'latest'
+export type MusicRecommendationMode = MusicBrowseMode | 'discover'
+
+export type MusicRecommendationItem = {
+  id: string
+  title: string
+  summary?: string
+  image_url?: string
+  target_path: string
+  score_label?: string
+  play_count?: number
+  bookmark_count?: number
+}
+
+export type MusicDiscoverItemType = 'album' | 'artist' | 'playlist'
+
+export type MusicDiscoverAlbumItem = MusicRecommendationItem & {
+  type: 'album'
+  cover_url?: string
+  cover_s3_key?: string
+  release_date?: string
+  year?: number | string
+  artists?: Array<{ id: string; name: string }>
+}
+
+export type MusicDiscoverArtistItem = MusicArtistListItem & {
+  type: 'artist'
+  title?: string
+  summary?: string
+  target_path: string
+}
+
+export type MusicDiscoverPlaylistItem = {
+  type: 'playlist'
+  id: string
+  title: string
+  description?: string
+  summary?: string
+  cover_url?: string
+  image_url?: string
+  song_count: number
+  owner_username?: string
+  play_count?: number
+  bookmark_count?: number
+  target_path: string
+}
+
+export type MusicDiscoverItem =
+  | MusicDiscoverAlbumItem
+  | MusicDiscoverArtistItem
+  | MusicDiscoverPlaylistItem
+
+export type MusicListFilters = {
+  q?: string
+  artist_id?: string
+  album_id?: string
+  year?: string | number
+  status?: MusicEntryStatus
+  page?: number
+  page_size?: number
+  sort?: string
+}
+
+export type MusicEditFilters = {
+  status?: MusicEditStatus
+  entity_type?: MusicEntityType
+  type?: MusicEditType
+  submitted_by?: string
+  page?: number
+  page_size?: number
+  sort?: string
+}
+
+export type MusicUploadTarget = {
+  entityType: 'artist' | 'album' | 'playlist'
+  entityId: string
+  stagingId: string
+}
+
+export type AlbumEditDraft = {
+  title?: string
+  artist_ids?: string[]
+  release_date?: string
+  cover?: UploadAsset | null
+  description?: string
+  album_type?: string
+  tracks?: MusicAlbumTrackEditInput[]
+  reason: string
+  sources: MusicSource[]
+}
+
+export type ArtistEditDraft = {
+  name?: string
+  bio?: string
+  image_url?: string
+  nationality?: string
+  birth_date?: string
+  birth_year?: number
+  death_year?: number
+  reason: string
+  sources: MusicSource[]
+}
+
+export type MusicLyricsFormat = 'plain' | 'lrc'
+export type MusicLyricsAnnotationVote = 'up' | 'down'
+export type MusicLyricsViewerVote = MusicLyricsAnnotationVote | 'none'
+export type MusicLyricsAnnotationStatus = 'active' | 'deleted' | 'needs_rebind'
+export type PendingMusicLyricsAnnotation = { annotation_id: string; song_id: string; album_id: string }
+
+export type MusicSongLyricsLine = {
+  line_key?: string
+  line_index?: number
+  time_ms?: number | null
+  id?: string
+  text: string
+  translation: string
+  startTimeMs?: number | null
+  endTimeMs?: number | null
+  lineNumber?: number
+}
+
+export type MusicLyricsAnnotation = {
+  id: string
+  song_id?: string
+  line_key?: string
+  line_id?: string
+  body: string
+  selected_text: string
+  start_offset: number
+  end_offset: number
+  creator?: {
+    id: string
+    username: string
+  }
+  upvotes: number
+  downvotes: number
+  net_score?: number
+  viewer_vote?: MusicLyricsViewerVote
+  current_user_vote?: MusicLyricsAnnotationVote | null
+  status: MusicLyricsAnnotationStatus
+  created_at: string
+  updated_at: string
+}
+
+export type MusicSongLyricsVersion = {
+  id: string
+  song_id: string
+  version: number
+  content: string
+  translation: string
+  format: MusicLyricsFormat
+  edit_summary: string
+  created_at: string
+  created_by: string
+  updated_by?: string
+}
+
+export type MusicLyricsAnnotationResolution = {
+  annotation_id: string
+  action: 'needs_rebind' | 'rebind'
+  line_id?: string
+  line_key?: string
+  selected_text?: string
+  start_offset?: number
+  end_offset?: number
+}
+
+export type UpdateMusicSongLyricsInput = {
+  content: string
+  translation: string
+  format: MusicLyricsFormat
+  edit_summary: string
+  annotation_resolutions?: MusicLyricsAnnotationResolution[]
+}
+
+export type CreateMusicLyricsAnnotationInput = {
+  line_key: string
+  selected_text: string
+  start_offset: number
+  end_offset: number
+  body: string
+}
+
+export type UpdateMusicLyricsAnnotationInput =
+  | {
+    body: string
+    line_key?: never
+    selected_text?: never
+    start_offset?: never
+    end_offset?: never
+  }
+  | {
+    body?: string
+    line_key: string
+    selected_text: string
+    start_offset: number
+    end_offset: number
+  }
+
+export type MusicSongLyrics = {
+  id: string
+  song_id: string
+  format: MusicLyricsFormat
+  content: string
+  translation: string
+  edit_summary: string
+  updated_at: string
+  updated_by?: string
+  lines: MusicSongLyricsLine[]
+  annotations: MusicLyricsAnnotation[]
+  version: number
+}

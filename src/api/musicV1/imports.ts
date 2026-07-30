@@ -1,0 +1,470 @@
+import { apiFetch } from '@/api/transport'
+import { apiDeleteJson, apiGet, apiPostJson, apiPostMultipart } from '../client'
+import { configureApiXHR } from '../transport'
+import type { UploadAsset, UploadPurpose } from '../types'
+import { musicV1Endpoints } from './core'
+import {
+  normalizeMusicAlbumImport,
+  type AlbumEditDraft,
+  type ArtistEditDraft,
+  type CreateMusicAlbumImportInput,
+  type MusicAlbumImport,
+  type MusicAlbumImportCommitInput,
+  type MusicAlbumImportFile,
+  type MusicAlbumImportFilePartUpload,
+  type MusicAlbumImportMultipart,
+  type MusicAlbumImportMultipartPart,
+  type MusicAlbumImportMultipartPartUpload,
+  type MusicAlbumTrackEditInput,
+  type MusicEditRequest,
+  type MusicSource,
+  type MusicUploadTarget,
+  type RegisterMusicAlbumImportFileInput,
+  type RegisterMusicAlbumImportFilesInput,
+  type StartMusicAlbumImportMultipartInput,
+  type UploadMusicAlbumArchiveOptions,
+} from './types'
+
+function normalizeMusicAlbumImportMultipart(multipart: MusicAlbumImportMultipart): MusicAlbumImportMultipart {
+  return {
+    ...multipart,
+    completedParts: Array.isArray(multipart.completedParts) ? multipart.completedParts : [],
+  }
+}
+
+function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
+  return {
+    ...(draft.title !== undefined ? { title: draft.title } : {}),
+    ...(draft.artist_ids !== undefined ? { artist_ids: draft.artist_ids } : {}),
+    ...(draft.release_date !== undefined ? { release_date: draft.release_date } : {}),
+    ...(draft.cover ? { cover_url: draft.cover.url, cover_key: draft.cover.key } : {}),
+    ...(draft.description !== undefined ? { description: draft.description } : {}),
+    ...(draft.album_type !== undefined ? { album_type: draft.album_type } : {}),
+    ...(('tracks' in draft && Array.isArray((draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] }).tracks))
+      ? { tracks: (draft as AlbumEditDraft & { tracks?: MusicAlbumTrackEditInput[] }).tracks }
+      : {}),
+  }
+}
+
+function artistPayloadFromDraft(draft: ArtistEditDraft): Record<string, unknown> {
+  return {
+    ...(draft.name !== undefined ? { name: draft.name } : {}),
+    ...(draft.bio !== undefined ? { bio: draft.bio } : {}),
+    ...(draft.image_url !== undefined ? { image_url: draft.image_url } : {}),
+    ...(draft.nationality !== undefined ? { nationality: draft.nationality } : {}),
+    ...(draft.birth_date !== undefined ? { birth_date: draft.birth_date } : {}),
+    ...(draft.birth_year !== undefined ? { birth_year: draft.birth_year } : {}),
+    ...(draft.death_year !== undefined ? { death_year: draft.death_year } : {}),
+  }
+}
+
+export function buildCreateArtistEdit(draft: ArtistEditDraft): MusicEditRequest {
+  return {
+    type: 'create_artist',
+    entity_type: 'artist',
+    payload: artistPayloadFromDraft(draft),
+    changes: {},
+    reason: draft.reason,
+    sources: draft.sources,
+  }
+}
+
+export function buildUpdateArtistEdit(artistId: string, draft: ArtistEditDraft): MusicEditRequest {
+  return {
+    type: 'update_artist',
+    entity_type: 'artist',
+    entity_id: artistId,
+    payload: {},
+    changes: artistPayloadFromDraft(draft),
+    reason: draft.reason,
+    sources: draft.sources,
+  }
+}
+
+export function buildCreateAlbumEdit(draft: AlbumEditDraft): MusicEditRequest {
+  return {
+    type: 'create_album',
+    entity_type: 'album',
+    payload: albumPayloadFromDraft(draft),
+    changes: {},
+    reason: draft.reason,
+    sources: draft.sources,
+  }
+}
+
+export function buildUpdateAlbumEdit(albumId: string, draft: AlbumEditDraft): MusicEditRequest {
+  return {
+    type: 'update_album',
+    entity_type: 'album',
+    entity_id: albumId,
+    payload: {},
+    changes: albumPayloadFromDraft(draft),
+    reason: draft.reason,
+    sources: draft.sources,
+  }
+}
+
+export function buildDeleteAlbumEdit(albumId: string, reason: string): MusicEditRequest {
+  return {
+    type: 'delete_album',
+    entity_type: 'album',
+    entity_id: albumId,
+    payload: {},
+    changes: { target_status: 'closed' },
+    reason,
+    sources: [],
+  }
+}
+
+export async function uploadMusicAsset(
+  file: File,
+  purpose: Extract<UploadPurpose, 'music.cover' | 'music.audio'>,
+  target?: MusicUploadTarget,
+): Promise<UploadAsset> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('purpose', purpose)
+  if (target) {
+    form.append('entity_type', target.entityType)
+    form.append('entity_id', target.entityId)
+    form.append('staging_id', target.stagingId)
+  }
+  return apiPostMultipart<UploadAsset>(musicV1Endpoints.uploads(), form)
+}
+
+export async function uploadMusicAudioBatch(files: File[]): Promise<UploadAsset[]> {
+  return Promise.all(files.map((file) => uploadMusicAsset(file, 'music.audio')))
+}
+
+export async function createMusicAlbumImport(input: CreateMusicAlbumImportInput = {}): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImports(), input))
+}
+
+export async function getMusicAlbumImport(importId: string): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId)))
+}
+
+export async function commitMusicAlbumImport(
+  importId: string,
+  input: MusicAlbumImportCommitInput,
+): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportCommit(importId), input))
+}
+
+const maxAlbumArchiveBytes = 2 * 1024 * 1024 * 1024
+
+const SUPPORTED_ARCHIVE_EXTENSIONS = [
+  '.zip', '.rar', '.7z', '.tar',
+  '.tar.gz', '.tgz', '.tar.bz2', '.tar.xz',
+]
+
+export function validateMusicAlbumArchiveFile(file: File): void {
+  const lower = file.name.toLowerCase()
+  const supported = SUPPORTED_ARCHIVE_EXTENSIONS.some((ext) => lower.endsWith(ext))
+  if (!supported) {
+    throw new Error('请上传压缩包文件（支持 ZIP、RAR、7Z、TAR 等格式）')
+  }
+  if (file.size > maxAlbumArchiveBytes) {
+    throw new Error('文件需在 2GB 以内，请转换或压缩后上传')
+  }
+}
+
+export const SUPPORTED_ARCHIVE_ACCEPT = '.zip,.rar,.7z,.tar,.tar.gz,.tgz,.tar.bz2,.tar.xz'
+
+export const SUPPORTED_AUDIO_EXTENSIONS = [
+  '.mp3', '.flac', '.wav', '.m4a', '.aac', '.ogg',
+  '.opus', '.aiff', '.aif', '.wma', '.ape', '.alac',
+]
+
+export const SUPPORTED_AUDIO_ACCEPT = SUPPORTED_AUDIO_EXTENSIONS.join(',')
+
+export async function startMusicAlbumImportMultipart(
+  importId: string,
+  input: StartMusicAlbumImportMultipartInput,
+): Promise<MusicAlbumImportMultipart> {
+  return normalizeMusicAlbumImportMultipart(await apiPostJson<MusicAlbumImportMultipart>(musicV1Endpoints.albumImportMultipart(importId), input))
+}
+
+export async function createMusicAlbumImportMultipartPartUpload(
+  importId: string,
+  partNumber: number,
+): Promise<MusicAlbumImportMultipartPartUpload> {
+  return apiPostJson<MusicAlbumImportMultipartPartUpload>(musicV1Endpoints.albumImportMultipartPart(importId, partNumber), {})
+}
+
+export async function completeMusicAlbumImportMultipartPart(
+  importId: string,
+  partNumber: number,
+  etag: string,
+): Promise<MusicAlbumImportMultipartPart> {
+  return apiPostJson<MusicAlbumImportMultipartPart>(musicV1Endpoints.albumImportMultipartPartComplete(importId, partNumber), { etag })
+}
+
+export async function completeMusicAlbumImportMultipart(importId: string): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportMultipartComplete(importId), {}))
+}
+
+async function retry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError
+}
+
+async function uploadAlbumArchivePart(uploadUrl: string, body: Blob): Promise<string> {
+  const response = await apiFetch(uploadUrl, { method: 'PUT', body })
+  if (!response.ok) throw new Error(`上传分片失败 (${response.status})`)
+  const etag = response.headers.get('ETag') || response.headers.get('etag')
+  if (!etag) throw new Error('上传分片失败')
+  return etag
+}
+
+export async function uploadMusicAlbumArchiveMultipart(
+  importId: string,
+  file: File,
+  options: UploadMusicAlbumArchiveOptions = {},
+): Promise<MusicAlbumImport> {
+  validateMusicAlbumArchiveFile(file)
+
+  const startedAt = Date.now()
+  const multipart = await startMusicAlbumImportMultipart(importId, {
+    fileName: file.name,
+    fileSize: file.size,
+    contentType: file.type || 'application/zip',
+  })
+  const completedParts = new Set(multipart.completedParts.map((part) => part.partNumber))
+  const totalParts = Math.ceil(file.size / multipart.partSize)
+  let loaded = multipart.completedParts.reduce((sum, part) => {
+    const start = (part.partNumber - 1) * multipart.partSize
+    return sum + Math.max(Math.min(file.size - start, multipart.partSize), 0)
+  }, 0)
+
+  const missingPartNumbers = Array.from({ length: totalParts }, (_, index) => index + 1)
+    .filter((partNumber) => !completedParts.has(partNumber))
+
+  function reportProgress(): void {
+    const completedBytes = Math.min(loaded, file.size)
+    const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.001)
+    options.onProgress?.({
+      loaded: completedBytes,
+      total: file.size,
+      bytesPerSecond: completedBytes / elapsedSeconds,
+    })
+  }
+
+  if (missingPartNumbers.length === 0) {
+    reportProgress()
+  }
+
+  async function uploadPart(partNumber: number): Promise<void> {
+    const start = (partNumber - 1) * multipart.partSize
+    const end = Math.min(start + multipart.partSize, file.size)
+    const partBody = file.slice(start, end)
+    const upload = await createMusicAlbumImportMultipartPartUpload(importId, partNumber)
+    const etag = await uploadAlbumArchivePart(upload.uploadUrl, partBody)
+    await completeMusicAlbumImportMultipartPart(importId, partNumber, etag)
+
+    loaded += partBody.size
+    reportProgress()
+  }
+
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(3, missingPartNumbers.length) }, async () => {
+    while (cursor < missingPartNumbers.length) {
+      const partNumber = missingPartNumbers[cursor]
+      cursor += 1
+      await retry(() => uploadPart(partNumber), 2)
+    }
+  })
+
+  await Promise.all(workers)
+  return completeMusicAlbumImportMultipart(importId)
+}
+
+export async function registerMusicAlbumImportFiles(
+  importId: string,
+  input: RegisterMusicAlbumImportFilesInput,
+): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFiles(importId), input))
+}
+
+export async function createMusicAlbumImportFilePartUpload(
+  importId: string,
+  fileId: string,
+  partNumber: number,
+  partSize: number,
+): Promise<MusicAlbumImportFilePartUpload> {
+  return apiPostJson<MusicAlbumImportFilePartUpload>(
+    musicV1Endpoints.albumImportFilePart(importId, fileId, partNumber),
+    { partSize },
+  )
+}
+
+export async function completeMusicAlbumImportFilePart(
+  importId: string,
+  fileId: string,
+  partNumber: number,
+  etag: string,
+  size: number,
+): Promise<MusicAlbumImportFile> {
+  return apiPostJson<MusicAlbumImportFile>(
+    musicV1Endpoints.albumImportFilePartComplete(importId, fileId, partNumber),
+    { etag, size },
+  )
+}
+
+export async function completeMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+): Promise<MusicAlbumImportFile> {
+  return apiPostJson<MusicAlbumImportFile>(musicV1Endpoints.albumImportFileComplete(importId, fileId), {})
+}
+
+export async function retryMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportFileRetry(importId, fileId), {}))
+}
+
+export async function replaceMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+  input: RegisterMusicAlbumImportFileInput,
+): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(
+    musicV1Endpoints.albumImportFileReplace(importId, fileId),
+    input,
+  ))
+}
+
+export async function deleteMusicAlbumImportFile(
+  importId: string,
+  fileId: string,
+): Promise<void> {
+  await apiDeleteJson<void>(musicV1Endpoints.albumImportFileDelete(importId, fileId))
+}
+
+export async function completeMusicAlbumImportSession(importId: string): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportSessionComplete(importId), {}))
+}
+
+export async function cancelMusicAlbumImportSession(importId: string): Promise<void> {
+  await apiDeleteJson<void>(musicV1Endpoints.albumImportSessionCancel(importId))
+}
+
+export async function uploadMusicAlbumArchive(
+  importId: string,
+  file: File,
+  options: UploadMusicAlbumArchiveOptions = {},
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const form = new FormData()
+    form.append('archive', file)
+
+    const xhr = new XMLHttpRequest()
+    const startedAt = Date.now()
+    xhr.open('POST', musicV1Endpoints.albumImportArchive(importId))
+	configureApiXHR(xhr, 'POST')
+    xhr.setRequestHeader('Accept', 'application/json')
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) return
+      const elapsedSeconds = Math.max((Date.now() - startedAt) / 1000, 0.001)
+      options.onProgress?.({
+        loaded: event.loaded,
+        total: event.total,
+        bytesPerSecond: event.loaded / elapsedSeconds,
+      })
+    })
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+        return
+      }
+      try {
+        const payload = xhr.responseText ? JSON.parse(xhr.responseText) as { error?: { message?: string } } : null
+        const message = payload?.error?.message?.trim()
+        reject(new Error(message || `上传压缩包失败 (${xhr.status})`))
+      } catch {
+        reject(new Error(`上传压缩包失败 (${xhr.status})`))
+      }
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('上传压缩包失败'))
+    })
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('上传已取消'))
+    })
+
+    xhr.send(form)
+  })
+}
+
+function buildSources(source?: string): MusicSource[] {
+  const value = source?.trim()
+  return value ? [{ type: 'url', url: value }] : []
+}
+
+function buildSharedCreationReason() {
+  return 'Create artist and debut album from music creation flow'
+}
+
+export function buildArtistEditFromCreationFlow(artist: {
+  avatarUrl?: string
+  name?: string
+  country?: string
+  birthday?: string
+  bio?: string
+  source?: string
+}): MusicEditRequest {
+  return buildCreateArtistEdit({
+    name: artist.name?.trim() || undefined,
+    bio: artist.bio?.trim() || undefined,
+    image_url: artist.avatarUrl?.trim() || undefined,
+    nationality: artist.country?.trim() || undefined,
+    birth_date: artist.birthday?.trim() || undefined,
+    reason: buildSharedCreationReason(),
+    sources: buildSources(artist.source),
+  })
+}
+
+export function buildAlbumEditFromCreationFlow(
+  album: {
+    coverUrl?: string
+    coverAsset?: UploadAsset | null
+    title?: string
+    releaseDate?: string
+    type?: string
+    bio?: string
+    source?: string
+  },
+  artistId: string,
+): MusicEditRequest {
+  const coverUrl = album.coverUrl?.trim()
+  return buildCreateAlbumEdit({
+    title: album.title?.trim() || undefined,
+    artist_ids: [artistId],
+    release_date: album.releaseDate?.trim() || undefined,
+    cover: album.coverAsset || (coverUrl
+      ? {
+          url: coverUrl,
+          key: '',
+          content_type: '',
+          size: 0,
+        }
+      : null),
+    description: album.bio?.trim() || undefined,
+    album_type: album.type?.trim() || undefined,
+    reason: buildSharedCreationReason(),
+    sources: buildSources(album.source),
+  })
+}

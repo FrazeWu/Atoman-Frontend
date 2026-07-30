@@ -15,12 +15,14 @@ describe('podcast and video creator UI contract', () => {
     'src/views/podcast/PodcastEditorView.vue',
   ])('uses the shared three-step flow in %s', (path) => {
     const source = read(path)
+    const stepSource = read('src/composables/useMediaCreationSteps.ts')
 
     expect(source).toContain("import PCreationSteps from '@/components/ui/PCreationSteps.vue'")
+    expect(source).toContain("import { useMediaCreationSteps } from '@/composables/useMediaCreationSteps'")
     expect(source).toContain('<PCreationSteps')
-    expect(source).toContain("label: '媒体'")
-    expect(source).toContain("label: '信息'")
-    expect(source).toContain("label: '发布'")
+    expect(stepSource).toContain("label: '媒体'")
+    expect(stepSource).toContain("label: '信息'")
+    expect(stepSource).toContain("label: '发布'")
   })
 
   it.each([

@@ -17,10 +17,15 @@ describe('timeline route prefixes', () => {
   it('opens person map pages under the timeline module', () => {
     const listSource = readTimelineView('PersonListView.vue')
     const homeSource = readTimelineView('TimelineHomeView.vue')
+    const personCreationSource = readFileSync(
+      path.resolve(process.cwd(), 'src/composables/timeline/useTimelinePersonCreation.ts'),
+      'utf8',
+    )
 
     expect(listSource).toContain('router.push(`/timeline/person/${person.id}`)')
     expect(listSource).toContain('router.push(`/timeline/person/${created.id}`)')
-    expect(homeSource).toContain('router.push(`/timeline/person/${created.id}`)')
+    expect(homeSource).toContain('useTimelinePersonCreation()')
+    expect(personCreationSource).toContain('router.push(`/timeline/person/${created.id}`)')
   })
 
   it('returns from person map pages to the timeline person list', () => {

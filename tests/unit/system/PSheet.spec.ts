@@ -38,15 +38,15 @@ describe('PSheet.vue', () => {
       }
     })
     expect(wrapper.text()).toContain('Custom header')
-    expect(wrapper.find('.sheet-header').exists()).toBe(true)
+    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
   })
 
-  it('renders header bar when using header close type', () => {
+  it('renders an inline title and floating close control when using header close type', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header', title: 'Inspect' }
     })
-    expect(wrapper.find('.sheet-header').exists()).toBe(true)
-    expect(wrapper.find('.header-close-btn').exists()).toBe(true)
+    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
+    expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(true)
   })
 
   it('applies shifted class when isShifted prop is true', () => {
@@ -127,12 +127,12 @@ describe('PSheet.vue', () => {
 
     const panel = wrapper.get('.p-sheet-panel')
     expect(panel.classes()).toContain('is-bottom')
-    expect(wrapper.find('.sheet-header').exists()).toBe(true)
-    expect(wrapper.find('.header-close-btn').exists()).toBe(true)
+    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
+    expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'PSheetTab' }).exists()).toBe(false)
     expect(wrapper.find('.sheet-content').classes()).not.toContain('sheet-content--compact')
 
-    await wrapper.find('.header-close-btn').trigger('click')
+    await wrapper.find('.sheet-close-btn-floating').trigger('click')
     expect(wrapper.emitted()).toHaveProperty('close')
   })
 
@@ -148,7 +148,7 @@ describe('PSheet.vue', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header' }
     })
-    await wrapper.find('.header-close-btn').trigger('click')
+    await wrapper.find('.sheet-close-btn-floating').trigger('click')
     expect(wrapper.emitted()).toHaveProperty('close')
   })
 
@@ -246,7 +246,7 @@ describe('PSheet.vue', () => {
     await wrapper.setProps({ show: true })
     await nextTick()
 
-    const closeButton = document.querySelector('.header-close-btn')
+    const closeButton = document.querySelector('.sheet-close-btn-floating')
     expect(closeButton).toBeInstanceOf(HTMLButtonElement)
     expect(document.activeElement).toBe(closeButton)
     wrapper.unmount()

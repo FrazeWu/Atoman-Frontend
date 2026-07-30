@@ -121,10 +121,10 @@ describe('useResponsiveShell', () => {
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('问题反馈')
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('使用条款')
     expect(wrapper.get('[data-testid="mobile-more-sheet"]').text()).toContain('隐私政策')
-    expect(wrapper.findAll('.header-close-btn')).toHaveLength(1)
+    expect(wrapper.findAll('.sheet-close-btn-floating')).toHaveLength(1)
     expect(wrapper.find('[data-testid="mobile-more-sheet-close"]').exists()).toBe(false)
 
-    await wrapper.get('.header-close-btn').trigger('click')
+    await wrapper.get('.sheet-close-btn-floating').trigger('click')
 
     expect(wrapper.find('[data-testid="mobile-more-sheet"]').exists()).toBe(false)
   })

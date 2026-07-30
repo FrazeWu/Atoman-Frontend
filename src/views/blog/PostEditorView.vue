@@ -189,32 +189,34 @@
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
 import { apiRequest } from '@/api/client'
-import { computed, onBeforeUnmount, onMounted, ref, watch, nextTick } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
-import { useAutoSave } from '@/composables/useAutoSave'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import { useApi } from '@/composables/useApi'
-import { referencePublishErrorMessage } from '@/composables/useReferenceAutocomplete'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
-import type { BlogDraft, Collection } from '@/types'
-import { normalizeBlogCollectionSelection } from '@/utils/blogCollectionSelection'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
-import { useContentLifecycle } from '@/composables/useContentLifecycle'
+import { usePostEditorCollections } from '@/composables/blog/usePostEditorCollections'
+import { usePostEditorPublication } from '@/composables/blog/usePostEditorPublication'
+import {
+  usePostEditorDraftSession,
+  type BlogVisibility,
+  type EditorDraftPayload,
+  type PostEditorContentSource,
+  type PostEditorDraftForm,
+  type SaveTarget,
+} from '@/composables/blog/usePostEditorDraftSession'
 
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
 const studio = useStudioStore()
-const lifecycle = useContentLifecycle()
 
 // ── 布局 ─────────────────────────────────────────────────
 type OutlineItem = {
@@ -232,35 +234,13 @@ type FlattenedOutlineNode = OutlineItem & {
   isActiveBranch: boolean
 }
 
-type DraftSyncState = 'idle' | 'syncing' | 'synced' | 'error'
-type SaveTarget = 'draft' | 'published'
-type BlogVisibility = 'public' | 'followers' | 'private'
-type EditorDraftPayload = {
-  context_key: string
-  source_post_id?: string
-  title: string
-  content: string
-  summary: string
-  cover_url: string
-  visibility: BlogVisibility
-  allow_comments: boolean
-  channel_id?: string
-  collection_ids: string[]
-}
-type DraftCandidate = {
-  source: 'local' | 'server'
-  payload: EditorDraftPayload
-  savedAt: number
-}
-type EditorSessionState = 'awaiting-collab' | 'collab-conflict' | 'collab-active' | 'local-edit'
-
 const editorRef = ref<InstanceType<typeof PEditor> | null>(null)
 const activeHeadingLine = ref<number | null>(null)
 const mobilePanel = ref<'outline' | 'settings' | null>(null)
 const editorMode = ref<'normal' | 'split'>('normal')
 const syncScroll = ref(true)
 
-const saving = ref<'draft' | 'published' | null>(null)
+const saving = ref<SaveTarget | null>(null)
 const preferredPublishStatus = ref<SaveTarget>('published')
 const savedPostId = ref<string | null>(null)
 const scheduling = ref(false)
@@ -276,31 +256,15 @@ const collabRoomId = computed(() => {
 const shouldEnableCollab = computed(() => Boolean(collabRoomId.value))
 const isCollabEditing = computed(() => shouldEnableCollab.value)
 const contentReady = ref(!route.params.id)
-const channelCollections = ref<Collection[]>([])
-const selectedCollectionIds = ref<string[]>([])
-const existingCollectionIds = ref<string[]>([])
 const uploading = ref(false)
 const coverUploading = ref(false)
 const error = ref('')
 const coverUploadError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
-const contentSource = ref<'empty' | 'imported' | 'manual'>('empty')
+const contentSource = ref<PostEditorContentSource>('empty')
 const loadedPostUpdatedAt = ref(0)
-const recoveryModalVisible = ref(false)
-const pendingDraftCandidate = ref<DraftCandidate | null>(null)
-const deferredDraftCandidate = ref<DraftCandidate | null>(null)
-const draftManagerVisible = ref(false)
-const leaveConfirmVisible = ref(false)
-const serverDraftState = ref<DraftSyncState>('idle')
-const serverDraftSavedAt = ref<number | null>(null)
-const draftWatchEnabled = ref(false)
-const isApplyingDraft = ref(false)
-const pendingLeavePath = ref<string | null>(null)
-const allowRouteLeaveOnce = ref(false)
-const editorSessionState = ref<EditorSessionState>(route.params.id ? 'awaiting-collab' : 'local-edit')
-const collabStartupFallbackTriggered = ref(false)
 
-const form = ref({
+const form = ref<PostEditorDraftForm>({
   title: '',
   content: '',
   summary: '',
@@ -308,9 +272,6 @@ const form = ref({
   visibility: 'public' as BlogVisibility,
   allow_comments: true,
 })
-
-let serverSyncTimer: ReturnType<typeof setTimeout> | null = null
-let collabStartupTimer: ReturnType<typeof setTimeout> | null = null
 
 // ── Title-in-editor binding ──────────────────────────────
 const editorBody = computed({
@@ -398,38 +359,27 @@ const jumpToHeading = (line: number) => {
   editorRef.value?.scrollToHeadingLine?.(line)
 }
 
-// ── 合集 ─────────────────────────────────────────────────
-const selectedQueryCollectionId = computed(() => {
-  const raw = route.query.collection
-  return typeof raw === 'string' && raw ? raw : ''
+const {
+  channelCollections,
+  selectedCollectionIds,
+  existingCollectionIds,
+  currentChannelId,
+  defaultCollectionId,
+  selectedNonDefaultCollectionId,
+  primaryCollectionId,
+  derivedChannelId,
+  authHeaders,
+  ensureDefaultSelection,
+  loadChannelCollections,
+  onCollectionSelect,
+  syncPostCollections,
+} = usePostEditorCollections({
+  isEdit,
+  form,
+  preferredPublishStatus,
+  error,
 })
 
-const currentChannelId = computed(() => studio.currentChannel?.id || '')
-
-const defaultCollectionId = computed(() => channelCollections.value.find(c => c.is_default)?.id)
-const selectedNonDefaultCollectionId = computed(() => (
-  channelCollections.value.find(collection => (
-    !collection.is_default && selectedCollectionIds.value.includes(collection.id)
-  ))?.id || ''
-))
-const primaryCollectionId = computed(() => (
-  selectedNonDefaultCollectionId.value
-  || channelCollections.value.find(collection => collection.is_default && selectedCollectionIds.value.includes(collection.id))?.id
-  || ''
-))
-
-const derivedChannelId = computed(() => {
-  const col = channelCollections.value.find(c => selectedCollectionIds.value.includes(c.id))
-  return col?.channel_id || ''
-})
-
-const authHeaders = computed(() => {
-  const headers: Record<string, string> = {}
-  if (authStore.token) {
-    headers.Authorization = `Bearer ${authStore.token}`
-  }
-  return headers
-})
 const draftContextKey = computed(() => isEdit.value ? `blog:post:${String(route.params.id || '')}` : 'blog:new')
 const draftPayload = computed<EditorDraftPayload>(() => ({
   context_key: draftContextKey.value,
@@ -445,206 +395,81 @@ const draftPayload = computed<EditorDraftPayload>(() => ({
 }))
 
 const {
-  autoSaveState,
-  lastSavedAt,
-  triggerAutoSave,
-  loadDraft,
-  clearDraft: clearLocalDraft,
-} = useAutoSave<EditorDraftPayload>({
-  getDraftKey: () => `blog_editor_${draftContextKey.value}`,
-  getPayload: () => draftPayload.value,
-  shouldPersist: (payload) => hasMeaningfulDraft(payload),
+  recoveryModalVisible,
+  pendingDraftCandidate,
+  deferredDraftCandidate,
+  draftManagerVisible,
+  leaveConfirmVisible,
+  serverDraftState,
+  draftStatus,
+  draftRecoveryPreview,
+  deferredDraftSummary,
+  hasDraftManagerAccess,
+  localDraftStatusText,
+  cloudDraftStatusText,
+  leaveConfirmText,
+  isCollabConflict,
+  recoveryModalTitle,
+  recoveryModalLabel,
+  recoveryModalText,
+  keepCurrentContentLabel,
+  hasMeaningfulDraft,
+  formatSavedTime,
+  keepCurrentContent,
+  openDraftManager,
+  closeDraftManager,
+  restorePendingDraft,
+  discardPendingDraft,
+  restoreDeferredFromManager,
+  syncDraftNow,
+  handleCollabReady,
+  clearSavedDrafts,
+  cancelLeave,
+  confirmLeave,
+  clearAllDrafts,
+  allowNextRouteLeave,
+  startDraftSession,
+} = usePostEditorDraftSession({
+  isEdit,
+  draftContextKey,
+  draftPayload,
+  form,
+  contentSource,
+  channelCollections,
+  selectedCollectionIds,
+  loadedPostUpdatedAt,
+  contentReady,
+  saving,
+  ensureDefaultSelection,
+  getReplaceEditorDocument: () => {
+    const replaceDocument = editorRef.value?.replaceDocument
+    if (typeof replaceDocument !== 'function') {
+      throw new Error('协作编辑器尚未就绪，暂时不能恢复草稿到共享文档')
+    }
+    return replaceDocument.bind(editorRef.value)
+  },
 })
 
-type DraftStatus = { text: string; tone: 'ok' | 'warn' | 'muted' }
-
-const draftStatus = computed<DraftStatus>(() => {
-  if (saving.value === 'published') {
-    return { tone: 'warn', text: '发布中…' }
-  }
-  if (saving.value === 'draft') {
-    return { tone: 'warn', text: '草稿保存中…' }
-  }
-  if (serverDraftState.value === 'error') {
-    return { tone: 'warn', text: '云端草稿同步失败，当前仅保存在本地' }
-  }
-  if (autoSaveState.value === 'error') {
-    return { tone: 'warn', text: '本地草稿保存失败，请手动保存或检查浏览器存储权限' }
-  }
-  if (autoSaveState.value === 'saving' || serverDraftState.value === 'syncing') {
-    return { tone: 'warn', text: '草稿同步中…' }
-  }
-  if (deferredDraftCandidate.value) {
-    return { tone: 'warn', text: '检测到可恢复草稿' }
-  }
-  if (lastSavedAt.value || serverDraftSavedAt.value) {
-    const labels = []
-    if (lastSavedAt.value) labels.push(`本地 ${formatSavedTime(lastSavedAt.value)}`)
-    if (serverDraftSavedAt.value) labels.push(`云端 ${formatSavedTime(serverDraftSavedAt.value)}`)
-    return { tone: 'ok', text: `草稿已保存 · ${labels.join(' · ')}` }
-  }
-  return { tone: 'muted', text: '开始写作后会自动保存草稿' }
+const { loadPost, save, schedulePublish } = usePostEditorPublication({
+  isEdit,
+  form,
+  contentSource,
+  contentReady,
+  loadedPostUpdatedAt,
+  saving,
+  savedPostId,
+  scheduling,
+  scheduledAt,
+  error,
+  currentChannelId,
+  primaryCollectionId,
+  selectedNonDefaultCollectionId,
+  selectedCollectionIds,
+  existingCollectionIds,
+  syncPostCollections,
+  clearAllDrafts,
+  allowNextRouteLeave,
 })
-
-const draftRecoveryPreview = computed(() => {
-  const candidate = pendingDraftCandidate.value
-  if (!candidate) return ''
-
-  const sourceText = candidate.payload.summary || candidate.payload.content
-  const plainText = sourceText.replace(/[#*_>`~\-\[\]()]/g, ' ').replace(/\s+/g, ' ').trim()
-  return plainText || '这份草稿还没有正文预览。'
-})
-
-const deferredDraftSummary = computed(() => {
-  const candidate = deferredDraftCandidate.value
-  if (!candidate) return ''
-
-  const sourceText = candidate.payload.summary || candidate.payload.content
-  const plainText = sourceText.replace(/[#*_>`~\-\[\]()]/g, ' ').replace(/\s+/g, ' ').trim()
-  return plainText || '这份草稿还没有正文预览。'
-})
-
-const hasDraftManagerAccess = computed(() => (
-  !!deferredDraftCandidate.value
-  || !!lastSavedAt.value
-  || !!serverDraftSavedAt.value
-  || hasMeaningfulDraft(draftPayload.value)
-  || serverDraftState.value === 'error'
-))
-
-const localDraftStatusText = computed(() => {
-  if (lastSavedAt.value) {
-    return `最近保存于 ${formatSavedTime(lastSavedAt.value)}`
-  }
-  if (autoSaveState.value === 'saving') {
-    return '正在保存中…'
-  }
-  if (autoSaveState.value === 'error') {
-    return '本地草稿保存失败'
-  }
-  if (hasMeaningfulDraft(draftPayload.value)) {
-    return '已有编辑内容，等待下一次自动保存'
-  }
-  return '暂无本地草稿'
-})
-
-const cloudDraftStatusText = computed(() => {
-  if (!authStore.token) {
-    return '未登录，未启用云端草稿'
-  }
-  if (serverDraftState.value === 'syncing') {
-    return '正在同步到云端…'
-  }
-  if (serverDraftState.value === 'error') {
-    return '同步失败，等待手动重试'
-  }
-  if (serverDraftSavedAt.value) {
-    return `最近同步于 ${formatSavedTime(serverDraftSavedAt.value)}`
-  }
-  if (hasMeaningfulDraft(draftPayload.value)) {
-    return '尚未生成云端草稿'
-  }
-  return '暂无云端草稿'
-})
-
-const leaveConfirmText = computed(() => {
-  if (saving.value === 'published') {
-    return '文章正在发布中，离开后可能无法确认本次发布结果。'
-  }
-  if (saving.value === 'draft') {
-    return '文章正在保存草稿，离开后本次保存可能无法完成。'
-  }
-  if (serverDraftState.value === 'syncing') {
-    return '云端草稿仍在同步中，离开后最新改动可能只保留在本地。'
-  }
-  return '本地草稿仍在写入中，离开后最新改动可能不会进入已保存草稿。'
-})
-
-const currentDraftSignature = computed(() => JSON.stringify(draftPayload.value))
-const hasPendingPersistence = computed(() => (
-  autoSaveState.value === 'saving' || serverDraftState.value === 'syncing' || !!saving.value
-))
-const isCollabConflict = computed(() => editorSessionState.value === 'collab-conflict')
-const recoveryModalTitle = computed(() => isCollabConflict.value ? '协作文档与草稿冲突' : '发现未恢复草稿')
-const recoveryModalLabel = computed(() => {
-  if (isCollabConflict.value) {
-    return pendingDraftCandidate.value?.source === 'server' ? '云端草稿待恢复' : '本地草稿待恢复'
-  }
-  return pendingDraftCandidate.value?.source === 'server' ? '云端草稿' : '本地草稿'
-})
-const recoveryModalText = computed(() => {
-  if (!pendingDraftCandidate.value) return ''
-  const sourceText = pendingDraftCandidate.value.source === 'server' ? '云端' : '本地'
-  if (isCollabConflict.value) {
-    return `协作文档与草稿内容不一致。检测到一份较新的${sourceText}草稿，保存于 ${formatSavedTime(pendingDraftCandidate.value.savedAt)}。请选择保留协作文档，或恢复草稿后覆盖共享文档。`
-  }
-  return `检测到一份较新的${sourceText}草稿，保存于 ${formatSavedTime(pendingDraftCandidate.value.savedAt)}。恢复后会覆盖当前编辑区内容。`
-})
-const keepCurrentContentLabel = computed(() => isCollabConflict.value ? '保留协作文档' : '稍后处理')
-
-const ensureDefaultSelection = () => {
-  selectedCollectionIds.value = normalizeBlogCollectionSelection(
-    channelCollections.value,
-    selectedNonDefaultCollectionId.value,
-  )
-}
-
-const hasMeaningfulDraft = (payload: EditorDraftPayload) => {
-  return Boolean(
-    payload.title.trim()
-    || payload.content.trim()
-    || payload.summary.trim()
-    || payload.cover_url.trim()
-    || payload.channel_id
-    || payload.collection_ids.length
-  )
-}
-
-const draftPayloadToMarkdown = (payload: EditorDraftPayload) => `# ${payload.title}\n${payload.content}`
-
-const parseEditorMarkdown = (markdown: string) => {
-  const normalized = markdown || ''
-  const nl = normalized.indexOf('\n')
-  const firstLine = nl >= 0 ? normalized.slice(0, nl) : normalized
-  const title = firstLine.replace(/^#+\s*/, '').trim()
-  const content = nl >= 0 ? normalized.slice(nl + 1) : ''
-
-  return { title, content }
-}
-
-const hasMeaningfulMarkdown = (markdown: string) => {
-  const { title, content } = parseEditorMarkdown(markdown)
-  return Boolean(title.trim() || content.trim())
-}
-
-const normalizeEditorText = (value: string) => value.replace(/\r\n/g, '\n').trim()
-
-const isEquivalentEditorContent = (
-  left: Pick<EditorDraftPayload, 'title' | 'content'>,
-  right: Pick<EditorDraftPayload, 'title' | 'content'>,
-) => {
-  return normalizeEditorText(left.title) === normalizeEditorText(right.title)
-    && normalizeEditorText(left.content) === normalizeEditorText(right.content)
-}
-
-const applyEditorMarkdown = async (markdown: string) => {
-  const { title, content } = parseEditorMarkdown(markdown)
-  form.value.title = title
-  form.value.content = content
-  contentSource.value = hasMeaningfulMarkdown(markdown) ? 'manual' : 'empty'
-  await nextTick()
-}
-
-const parseTimestamp = (value?: string | null) => {
-  if (!value) return 0
-  const parsed = Date.parse(value)
-  return Number.isNaN(parsed) ? 0 : parsed
-}
-
-const formatSavedTime = (value?: number | null) => {
-  if (!value) return '--:--'
-  return new Date(value).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
 
 const handleCoverUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -707,539 +532,6 @@ const removeCover = () => {
   coverUploadError.value = ''
 }
 
-const clearServerSyncTimer = () => {
-  if (serverSyncTimer) {
-    clearTimeout(serverSyncTimer)
-    serverSyncTimer = null
-  }
-}
-
-const clearCollabStartupTimer = () => {
-  if (collabStartupTimer) {
-    clearTimeout(collabStartupTimer)
-    collabStartupTimer = null
-  }
-}
-
-const blogDraftToPayload = (draft: BlogDraft): EditorDraftPayload => ({
-  context_key: draft.context_key,
-  source_post_id: draft.source_post_id,
-  title: draft.title || '',
-  content: draft.content || '',
-  summary: draft.summary || '',
-  cover_url: draft.cover_url || '',
-  visibility: draft.visibility || 'public',
-  allow_comments: draft.allow_comments,
-  channel_id: draft.channel_id,
-  collection_ids: draft.collection_ids || [],
-})
-
-const setPendingDraftCandidate = (candidate: DraftCandidate | null) => {
-  pendingDraftCandidate.value = candidate
-  deferredDraftCandidate.value = candidate
-}
-
-const requireEditorReplaceDocument = () => {
-  const replaceDocument = editorRef.value?.replaceDocument
-  if (typeof replaceDocument !== 'function') {
-    throw new Error('协作编辑器尚未就绪，暂时不能恢复草稿到共享文档')
-  }
-  return replaceDocument.bind(editorRef.value)
-}
-
-const getLatestDraftCandidate = async () => {
-  const localDraft = loadDraft()
-  const serverDraft = await fetchServerDraft()
-  const candidates: DraftCandidate[] = []
-
-  if (localDraft && hasMeaningfulDraft(localDraft.payload)) {
-    lastSavedAt.value = localDraft.saved_at
-    candidates.push({
-      source: 'local',
-      payload: localDraft.payload,
-      savedAt: localDraft.saved_at,
-    })
-  }
-  if (serverDraft) {
-    const payload = blogDraftToPayload(serverDraft)
-    if (hasMeaningfulDraft(payload)) {
-      const savedAt = parseTimestamp(serverDraft.updated_at)
-      serverDraftSavedAt.value = savedAt || serverDraftSavedAt.value
-      candidates.push({
-        source: 'server',
-        payload,
-        savedAt,
-      })
-    }
-  }
-
-  candidates.sort((left, right) => right.savedAt - left.savedAt)
-  return candidates[0] ?? null
-}
-
-const finalizeCollabStartup = () => {
-  clearCollabStartupTimer()
-  editorSessionState.value = 'collab-active'
-  recoveryModalVisible.value = false
-  pendingDraftCandidate.value = null
-}
-
-const fetchServerDraft = async () => {
-  if (!authStore.token) return null
-
-  try {
-    const res = await apiRequest(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
-      headers: authHeaders.value,
-    })
-    if (!res.ok) return null
-
-    const data = await res.json()
-    return (data.data || null) as BlogDraft | null
-  } catch (e) {
-    reportError(e, 'Failed to fetch blog draft:')
-    return null
-  }
-}
-
-const deleteServerDraft = async () => {
-  clearServerSyncTimer()
-  serverDraftState.value = 'idle'
-  serverDraftSavedAt.value = null
-
-  if (!authStore.token) return
-
-  try {
-    await apiRequest(`${api.blog.draft}?context_key=${encodeURIComponent(draftContextKey.value)}`, {
-      method: 'DELETE',
-      headers: authHeaders.value,
-    })
-  } catch (e) {
-    reportError(e, 'Failed to delete blog draft:')
-  }
-}
-
-const syncServerDraft = async () => {
-  if (!authStore.token || !draftWatchEnabled.value) return
-
-  const payload = draftPayload.value
-  if (!hasMeaningfulDraft(payload)) {
-    await deleteServerDraft()
-    return
-  }
-
-  serverDraftState.value = 'syncing'
-  try {
-    const res = await apiRequest(api.blog.draft, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...authHeaders.value },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) throw new Error('Failed to sync draft')
-
-    const data = await res.json()
-    const draft = (data.data || null) as BlogDraft | null
-    serverDraftSavedAt.value = draft ? parseTimestamp(draft.updated_at) : Date.now()
-    serverDraftState.value = 'synced'
-  } catch (e) {
-    reportError(e, 'Failed to sync blog draft:')
-    serverDraftState.value = 'error'
-  }
-}
-
-const scheduleServerDraftSync = () => {
-  clearServerSyncTimer()
-  if (!authStore.token || !draftWatchEnabled.value || isApplyingDraft.value) return
-  serverSyncTimer = setTimeout(() => {
-    void syncServerDraft()
-  }, 1800)
-}
-
-const clearAllDrafts = async () => {
-  clearLocalDraft()
-  await deleteServerDraft()
-  pendingDraftCandidate.value = null
-  deferredDraftCandidate.value = null
-  recoveryModalVisible.value = false
-}
-
-const applyDraftPayload = async (payload: EditorDraftPayload) => {
-  isApplyingDraft.value = true
-  try {
-    form.value = {
-      title: payload.title,
-      content: payload.content,
-      summary: payload.summary,
-      cover_url: payload.cover_url,
-      visibility: payload.visibility,
-      allow_comments: payload.allow_comments,
-    }
-
-    contentSource.value = hasMeaningfulDraft(payload) ? 'manual' : 'empty'
-
-    const allowed = new Set(channelCollections.value.map(collection => collection.id))
-    selectedCollectionIds.value = payload.collection_ids.filter(collectionId => allowed.has(collectionId))
-    if (selectedCollectionIds.value.length === 0) {
-      ensureDefaultSelection()
-    }
-
-    await nextTick()
-  } finally {
-    isApplyingDraft.value = false
-  }
-}
-
-const evaluateDraftRecovery = async () => {
-  const latestCandidate = await getLatestDraftCandidate()
-  if (!latestCandidate) return
-  if (isEdit.value && latestCandidate.savedAt <= loadedPostUpdatedAt.value) {
-    return
-  }
-
-  setPendingDraftCandidate(latestCandidate)
-  recoveryModalVisible.value = true
-}
-
-const fallbackCollabRecovery = async () => {
-  if (!isEdit.value || collabStartupFallbackTriggered.value || editorSessionState.value !== 'awaiting-collab') return
-  collabStartupFallbackTriggered.value = true
-  clearCollabStartupTimer()
-  await evaluateDraftRecovery()
-  if (!recoveryModalVisible.value) {
-    editorSessionState.value = 'local-edit'
-  }
-}
-
-const keepCurrentContent = () => {
-  recoveryModalVisible.value = false
-  pendingDraftCandidate.value = null
-  if (isCollabConflict.value) {
-    finalizeCollabStartup()
-  }
-}
-
-const openDraftManager = () => {
-  draftManagerVisible.value = true
-}
-
-const closeDraftManager = () => {
-  draftManagerVisible.value = false
-}
-
-const reopenDraftRecovery = () => {
-  if (!deferredDraftCandidate.value) return
-  pendingDraftCandidate.value = deferredDraftCandidate.value
-  recoveryModalVisible.value = true
-}
-
-const restorePendingDraft = async () => {
-  const candidate = pendingDraftCandidate.value
-  if (!candidate) return
-
-  if (isCollabConflict.value) {
-    const markdown = draftPayloadToMarkdown(candidate.payload)
-    const replaceDocument = requireEditorReplaceDocument()
-    await applyDraftPayload(candidate.payload)
-    replaceDocument(markdown)
-    deferredDraftCandidate.value = null
-    finalizeCollabStartup()
-    return
-  }
-
-  recoveryModalVisible.value = false
-  deferredDraftCandidate.value = null
-  pendingDraftCandidate.value = null
-  await applyDraftPayload(candidate.payload)
-}
-
-const discardPendingDraft = async () => {
-  await clearAllDrafts()
-}
-
-const restoreDeferredFromManager = async () => {
-  if (!deferredDraftCandidate.value) return
-  pendingDraftCandidate.value = deferredDraftCandidate.value
-  draftManagerVisible.value = false
-  await restorePendingDraft()
-}
-
-const syncDraftNow = async () => {
-  clearServerSyncTimer()
-  await syncServerDraft()
-}
-
-const handleCollabReady = async (markdown: string) => {
-  if (!isEdit.value) return
-
-  clearCollabStartupTimer()
-  editorSessionState.value = 'awaiting-collab'
-  await applyEditorMarkdown(markdown)
-
-  const latestCandidate = await getLatestDraftCandidate()
-  if (!latestCandidate) {
-    finalizeCollabStartup()
-    return
-  }
-
-  const draftMarkdown = draftPayloadToMarkdown(latestCandidate.payload)
-  const hasCollabContent = hasMeaningfulMarkdown(markdown)
-  const hasDraftContent = hasMeaningfulDraft(latestCandidate.payload)
-
-  if (
-    hasCollabContent
-    && hasDraftContent
-    && !isEquivalentEditorContent(parseEditorMarkdown(markdown), latestCandidate.payload)
-  ) {
-    setPendingDraftCandidate(latestCandidate)
-    editorSessionState.value = 'collab-conflict'
-    recoveryModalVisible.value = true
-    return
-  }
-
-  if (!hasCollabContent && hasDraftContent) {
-    await applyDraftPayload(latestCandidate.payload)
-    requireEditorReplaceDocument()(draftMarkdown)
-  }
-
-  deferredDraftCandidate.value = null
-  finalizeCollabStartup()
-}
-
-const clearSavedDrafts = async () => {
-  await clearAllDrafts()
-  draftManagerVisible.value = false
-}
-
-const cancelLeave = () => {
-  leaveConfirmVisible.value = false
-  pendingLeavePath.value = null
-}
-
-const confirmLeave = async () => {
-  const targetPath = pendingLeavePath.value
-  leaveConfirmVisible.value = false
-  pendingLeavePath.value = null
-  if (!targetPath) return
-
-  allowRouteLeaveOnce.value = true
-  await router.push(targetPath)
-}
-
-const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-  if (!hasPendingPersistence.value) return
-  event.preventDefault()
-  event.returnValue = ''
-}
-
-const loadChannelCollections = async () => {
-  if (!authStore.isAuthenticated) {
-    channelCollections.value = []
-    selectedCollectionIds.value = []
-    existingCollectionIds.value = []
-    return
-  }
-
-  const channelId = currentChannelId.value
-  if (!channelId) {
-    channelCollections.value = []
-    selectedCollectionIds.value = []
-    return
-  }
-
-  try {
-	  await Promise.all([studio.loadCollections('blog'), studio.loadSettings('blog')])
-	  channelCollections.value = studio.collections.blog
-	  if (!isEdit.value) {
-		const queryCollection = selectedQueryCollectionId.value
-		const settings = studio.settings.blog
-		preferredPublishStatus.value = settings?.default_publish_status || 'published'
-		if (settings?.default_visibility) {
-		  form.value.visibility = settings.default_visibility === 'subscribers' ? 'followers' : settings.default_visibility
-		}
-		selectedCollectionIds.value = normalizeBlogCollectionSelection(
-		  channelCollections.value,
-		  queryCollection || settings?.default_collection_id || null,
-		)
-	  }
-    if (isEdit.value) {
-      const ordinaryCollection = channelCollections.value.find(collection => (
-        !collection.is_default && existingCollectionIds.value.includes(collection.id)
-      ))
-      selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, ordinaryCollection?.id)
-    }
-  } catch (e) {
-    reportError(e)
-    error.value = '加载合集失败'
-  }
-}
-
-const onCollectionSelect = (id: string) => {
-  selectedCollectionIds.value = normalizeBlogCollectionSelection(channelCollections.value, id || null)
-}
-
-const uniqueCollectionIds = (ids: string[]) => Array.from(new Set(ids))
-
-const diffCollectionIds = (targetIds: string[], existingIds: string[]) => ({
-  toAdd: targetIds.filter(id => !existingIds.includes(id)),
-  toRemove: existingIds.filter(id => !targetIds.includes(id)),
-})
-
-// ── 同步合集 ─────────────────────────────────────────────
-const syncPostCollections = async (postId: string) => {
-  const target = uniqueCollectionIds(selectedCollectionIds.value)
-  const existing = uniqueCollectionIds(existingCollectionIds.value)
-  const { toAdd, toRemove } = diffCollectionIds(target, existing)
-  for (const id of toAdd) {
-    const res = await apiRequest(api.blog.postCollections(postId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders.value },
-      body: JSON.stringify({ collection_id: id }),
-    })
-    if (!res.ok) throw new Error('添加文章合集失败')
-  }
-  for (const id of toRemove) {
-    const res = await apiRequest(api.blog.postCollection(postId, id), {
-      method: 'DELETE', headers: authHeaders.value,
-    })
-    if (!res.ok) throw new Error('移除文章合集失败')
-  }
-  existingCollectionIds.value = [...target]
-}
-
-// ── 加载文章 ─────────────────────────────────────────────
-const loadPost = async () => {
-  if (!isEdit.value) return
-  try {
-    const postId = String(route.params.id || '')
-    if (!postId) return
-    const res = await apiRequest(api.blog.post(postId), {
-      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
-    })
-    if (res.ok) {
-      const d = await res.json()
-      const p = d.data || d
-      form.value = {
-        title: p.title,
-        content: p.content || '',
-        summary: p.summary || '',
-        cover_url: p.cover_url || '',
-        visibility: p.visibility || 'public',
-        allow_comments: p.allow_comments,
-      }
-      loadedPostUpdatedAt.value = parseTimestamp(p.updated_at)
-      contentSource.value = 'manual'
-      const contentChannelId = p.channel_id || p.collections?.[0]?.channel_id
-      if (contentChannelId && studio.currentChannel?.id !== contentChannelId) {
-        await studio.selectChannel(contentChannelId)
-      }
-      existingCollectionIds.value = (p.collections || []).map((c: Collection) => c.id)
-      selectedCollectionIds.value = [...existingCollectionIds.value]
-    }
-  } catch (e) {
-    reportError(e)
-  } finally {
-    contentReady.value = true
-    await nextTick()
-  }
-}
-
-// ── 保存 ─────────────────────────────────────────────────
-const save = async (status: SaveTarget, redirect = true): Promise<string | null> => {
-  if (saving.value) return null
-  if (savedPostId.value) {
-    if (redirect) {
-      allowRouteLeaveOnce.value = true
-      await router.push(`/post/${savedPostId.value}`)
-    }
-    return savedPostId.value
-  }
-  if (!form.value.title.trim()) { error.value = '请输入文章标题'; return null }
-  if (!form.value.content.trim()) { error.value = '请输入文章内容'; return null }
-  if (!currentChannelId.value) { error.value = '请先创建频道'; return null }
-  if (status === 'published' && selectedCollectionIds.value.length === 0) { error.value = '请先选择合集'; return null }
-  error.value = ''
-  saving.value = status
-  const payload = { ...form.value, status }
-  try {
-    let res: Response
-    if (isEdit.value) {
-      const postId = String(route.params.id || '')
-      res = await apiRequest(api.blog.post(postId), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({
-          ...payload,
-          channel_id: currentChannelId.value,
-          collection_id: primaryCollectionId.value || undefined,
-        }),
-      })
-    } else {
-      res = await apiRequest(api.blog.posts, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-        body: JSON.stringify({
-          ...payload,
-          channel_id: currentChannelId.value,
-          collection_id: primaryCollectionId.value || undefined,
-        }),
-      })
-    }
-    if (res.ok) {
-      const d = await res.json()
-      const savedPost = d.data || d
-      savedPostId.value = String(savedPost.id)
-      await clearAllDrafts()
-      if (isEdit.value) await syncPostCollections(String(savedPost.id))
-      allowRouteLeaveOnce.value = true
-      if (!redirect) return savedPostId.value
-      if (status === 'draft') {
-        await router.push({
-          path: '/studio/blog/content',
-          query: selectedNonDefaultCollectionId.value ? { collection_id: selectedNonDefaultCollectionId.value } : undefined,
-        })
-      } else {
-        await router.push(`/post/${savedPost.id}`)
-      }
-      return savedPostId.value
-    } else {
-      const err = await res.json()
-      error.value = referencePublishErrorMessage(
-        err,
-        typeof err.error === 'string' ? err.error : '保存失败，请重试',
-      )
-    }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '网络错误，请重试'
-  } finally {
-    saving.value = null
-  }
-  return null
-}
-
-const schedulePublish = async () => {
-  if (!selectedCollectionIds.value.length) {
-    error.value = '请先选择合集'
-    return
-  }
-  const publishAt = new Date(scheduledAt.value)
-  if (!Number.isFinite(publishAt.getTime()) || publishAt.getTime() <= Date.now()) {
-    error.value = '请选择未来的发布时间'
-    return
-  }
-  scheduling.value = true
-  error.value = ''
-  try {
-    const postID = await save('draft', false)
-    if (!postID) return
-    await lifecycle.schedule('blog', postID, publishAt.toISOString())
-    allowRouteLeaveOnce.value = true
-    await router.push('/studio/blog/content')
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '设置失败，请重试'
-  } finally {
-    scheduling.value = false
-  }
-}
-
 // ── 导入 Markdown ─────────────────────────────────────────
 const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -1285,51 +577,14 @@ watch(() => form.value.title, (nv, ov) => {
   if (!ov && nv && contentSource.value === 'empty') contentSource.value = 'manual'
 })
 
-watch(currentDraftSignature, () => {
-  if (!draftWatchEnabled.value || isApplyingDraft.value || !contentReady.value) return
-  if (contentSource.value === 'empty' && hasMeaningfulDraft(draftPayload.value)) {
-    contentSource.value = 'manual'
-  }
-  triggerAutoSave()
-  scheduleServerDraftSync()
-})
-
 watch(() => currentChannelId.value, loadChannelCollections)
-
-onBeforeRouteLeave((to) => {
-  if (allowRouteLeaveOnce.value) {
-    allowRouteLeaveOnce.value = false
-    return true
-  }
-  if (!hasPendingPersistence.value) return true
-  pendingLeavePath.value = to.fullPath
-  leaveConfirmVisible.value = true
-  return false
-})
 
 // ── 初始化 ───────────────────────────────────────────────
 onMounted(async () => {
-  window.addEventListener('beforeunload', handleBeforeUnload)
   await studio.loadState()
   await loadPost()
   await loadChannelCollections()
-  draftWatchEnabled.value = true
-  if (isEdit.value) {
-    editorSessionState.value = 'awaiting-collab'
-    collabStartupFallbackTriggered.value = false
-    clearCollabStartupTimer()
-    collabStartupTimer = setTimeout(() => {
-      void fallbackCollabRecovery()
-    }, 1500)
-  } else {
-    await evaluateDraftRecovery()
-  }
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload)
-  clearServerSyncTimer()
-  clearCollabStartupTimer()
+  await startDraftSession()
 })
 </script>
 

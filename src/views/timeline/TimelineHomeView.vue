@@ -398,15 +398,13 @@
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
-import type { TimelineEvent, TimelineRevision } from '@/types'
+import type { TimelineEvent } from '@/types'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -418,17 +416,16 @@ import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 import TimelineEventFormSection from '@/components/timeline/TimelineEventFormSection.vue'
 import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProposal.vue'
 import { moduleRooms } from '@/config/moduleRooms'
-import { useApi } from '@/composables/useApi'
 import { useTimelineComparison } from '@/composables/timeline/useTimelineComparison'
+import { useTimelineEventEditor } from '@/composables/timeline/useTimelineEventEditor'
+import { useTimelineHistory } from '@/composables/timeline/useTimelineHistory'
+import { useTimelinePersonCreation } from '@/composables/timeline/useTimelinePersonCreation'
 
 const TimelineMapPane = defineAsyncComponent(() => import('@/views/timeline/TimelineMapPane.vue'))
-
-const api = useApi()
 
 const store = useTimelineStore()
 const authStore = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 
 const { events, loading, error } = storeToRefs(store)
 
@@ -470,240 +467,55 @@ const {
   fetchEventById,
 } = useTimelineComparison({ sortedEvents })
 
+const {
+  detailEvent,
+  showForm,
+  editingEvent,
+  deletingEvent,
+  submitting,
+  formError,
+  form,
+  tagsInput,
+  openDetail,
+  refreshDecidedEvent,
+  openCreate,
+  openEdit,
+  closeForm,
+  submitForm,
+  confirmDelete,
+  doDelete,
+} = useTimelineEventEditor({
+  events,
+  setActiveCompare,
+  upsertHydratedEvent,
+  removeHydratedEvent,
+  removeCompareId,
+  fetchEventById,
+})
+
+const {
+  historyEvent,
+  historyRevisions,
+  loadingHistory,
+  closeHistory,
+  openHistory,
+} = useTimelineHistory()
+
+const {
+  showPersonForm,
+  personSubmitting,
+  personForm,
+  personTagsInput,
+  submitPerson,
+} = useTimelinePersonCreation()
+
 const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 
 const canEdit = (event: TimelineEvent) =>
   authStore.isAuthenticated &&
   (event.user_id === authStore.user?.uuid || isAdminRole(authStore.user?.role))
 
-const detailEvent = ref<TimelineEvent | null>(null)
-const showForm = ref(false)
-const editingEvent = ref<TimelineEvent | null>(null)
-const deletingEvent = ref<TimelineEvent | null>(null)
-const submitting = ref(false)
-const formError = ref('')
-
-const emptyForm = () => ({
-  title: '',
-  event_date: '',
-  end_date: '',
-  location: '',
-  latitude: null as number | null,
-  longitude: null as number | null,
-  source: '',
-  category: '',
-  description: '',
-  content: '',
-  is_public: true,
-})
-
-const form = ref(emptyForm())
-const tagsInput = ref('')
-
-const isFiniteCoordinate = (value: number | null) => typeof value === 'number' && Number.isFinite(value)
-
-const getCoordinateValidationError = () => {
-  const { latitude, longitude } = form.value
-  const hasLatitude = isFiniteCoordinate(latitude)
-  const hasLongitude = isFiniteCoordinate(longitude)
-
-  if (hasLatitude !== hasLongitude) {
-    return '经纬度需要同时填写，或同时留空。'
-  }
-
-  if (hasLatitude && latitude !== null && (latitude < -90 || latitude > 90)) {
-    return '纬度必须在 -90 到 90 之间。'
-  }
-
-  if (hasLongitude && longitude !== null && (longitude < -180 || longitude > 180)) {
-    return '经度必须在 -180 到 180 之间。'
-  }
-
-  return ''
-}
-
-const openDetail = (event: TimelineEvent) => {
-  setActiveCompare(event.id)
-  detailEvent.value = event
-}
-
-const refreshDecidedEvent = async () => {
-  if (!detailEvent.value) return
-  const refreshed = await fetchEventById(detailEvent.value.id)
-  if (!refreshed) return
-  detailEvent.value = refreshed
-  const index = events.value.findIndex(({ id }) => id === refreshed.id)
-  if (index >= 0) events.value[index] = refreshed
-}
-
-const openCreate = () => {
-  editingEvent.value = null
-  form.value = emptyForm()
-  tagsInput.value = ''
-  formError.value = ''
-  showForm.value = true
-}
-
-const openEdit = (event: TimelineEvent) => {
-  setActiveCompare(event.id)
-
-  editingEvent.value = event
-  form.value = {
-    title: event.title,
-    event_date: event.event_date.slice(0, 16).replace(' ', 'T'),
-    end_date: event.end_date ? event.end_date.slice(0, 16).replace(' ', 'T') : '',
-    location: event.location || '',
-    latitude: event.latitude ?? null,
-    longitude: event.longitude ?? null,
-    source: event.source || '',
-    category: event.category || '',
-    description: event.description || '',
-    content: event.content || '',
-    is_public: event.is_public ?? true,
-  }
-  tagsInput.value = (event.tags || []).join(', ')
-  detailEvent.value = null
-  formError.value = ''
-  showForm.value = true
-}
-
-const closeForm = () => {
-  showForm.value = false
-  editingEvent.value = null
-  formError.value = ''
-}
-
-// History
-const historyEvent = ref<TimelineEvent | null>(null)
-const historyRevisions = ref<TimelineRevision[]>([])
-const loadingHistory = ref(false)
-let historyRequestSequence = 0
-
-const closeHistory = () => {
-  historyRequestSequence += 1
-  historyEvent.value = null
-  historyRevisions.value = []
-  loadingHistory.value = false
-}
-
-const openHistory = async (event: TimelineEvent) => {
-  const requestSequence = ++historyRequestSequence
-  const targetEventId = event.id
-  const isCurrentRequest = () =>
-    requestSequence === historyRequestSequence && historyEvent.value?.id === targetEventId
-
-  historyEvent.value = event
-  historyRevisions.value = []
-  loadingHistory.value = true
-  try {
-    const res = await apiRequest(`${api.url}/timeline/events/${targetEventId}/history`, {
-      headers: { Authorization: `Bearer ${authStore.token}` },
-    })
-    if (!isCurrentRequest()) return
-    if (!res.ok) return
-
-    const d = await res.json()
-    if (!isCurrentRequest()) return
-    historyRevisions.value = d.data || []
-  } catch {
-    if (!isCurrentRequest()) return
-    historyRevisions.value = []
-  } finally {
-    if (isCurrentRequest()) loadingHistory.value = false
-  }
-}
-
-onBeforeUnmount(closeHistory)
 onBeforeUnmount(() => store.cancelEventRequests())
-
-const submitForm = async () => {
-  if (!form.value.title || !form.value.event_date || !form.value.location || !form.value.source) return
-
-  const coordinateError = getCoordinateValidationError()
-  if (coordinateError) {
-    formError.value = coordinateError
-    return
-  }
-
-  formError.value = ''
-  submitting.value = true
-
-  try {
-    const tags = tagsInput.value.split(',').map((tag) => tag.trim()).filter(Boolean)
-    const payload = {
-      ...form.value,
-      latitude: typeof form.value.latitude === 'number' && Number.isFinite(form.value.latitude)
-        ? form.value.latitude
-        : null,
-      longitude: typeof form.value.longitude === 'number' && Number.isFinite(form.value.longitude)
-        ? form.value.longitude
-        : null,
-      tags,
-    }
-
-    const savedEvent = editingEvent.value
-      ? await store.updateEvent(editingEvent.value.id, payload)
-      : await store.createEvent(payload)
-
-    if (savedEvent) {
-      upsertHydratedEvent(savedEvent)
-      if (detailEvent.value?.id === savedEvent.id) {
-        detailEvent.value = savedEvent
-      }
-    }
-
-    closeForm()
-  } catch (error) {
-    reportError(error)
-    formError.value = error instanceof Error ? error.message : '保存失败，请稍后重试。'
-  } finally {
-    submitting.value = false
-  }
-}
-
-const confirmDelete = (event: TimelineEvent) => {
-  detailEvent.value = null
-  deletingEvent.value = event
-}
-
-const doDelete = async () => {
-  if (!deletingEvent.value) return
-
-  const deletingId = deletingEvent.value.id
-
-  await store.deleteEvent(deletingId)
-  removeCompareId(deletingId)
-  removeHydratedEvent(deletingId)
-
-  if (detailEvent.value?.id === deletingId) {
-    detailEvent.value = null
-  }
-
-  deletingEvent.value = null
-}
-
-const showPersonForm = ref(false)
-const personSubmitting = ref(false)
-const personForm = ref({ name: '', bio: '', birth_date: '', death_date: '' })
-const personTagsInput = ref('')
-
-const submitPerson = async () => {
-  if (!personForm.value.name) return
-
-  personSubmitting.value = true
-  try {
-    const tags = personTagsInput.value.split(',').map((tag) => tag.trim()).filter(Boolean)
-    const created = await store.createPerson({ ...personForm.value, tags })
-    showPersonForm.value = false
-    personForm.value = { name: '', bio: '', birth_date: '', death_date: '' }
-    personTagsInput.value = ''
-    router.push(`/timeline/person/${created.id}`)
-  } catch (error) {
-    reportError(error)
-  } finally {
-    personSubmitting.value = false
-  }
-}
 
 const applyFilter = () => {
   store.fetchEvents({

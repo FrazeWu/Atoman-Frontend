@@ -172,7 +172,7 @@ import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } 
 import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Star, Disc3, Users, History,
-  MessageSquare, Folder, Archive, BookOpen, Clock, Mic
+  MessageSquare, Folder, Archive, BookOpen, Clock, Mic, PenLine
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'
@@ -188,7 +188,8 @@ import { useForumStore } from '@/stores/forum'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardList } from '@/composables/useKeyboardList'
 import { modulePathUrl, moduleUrl } from '@/router/siteUrls'
-import type { Subscription, TimelineItem } from '@/types'
+import type { TimelineItem } from '@/types'
+import { findSubscriptionByTimelineItem } from '@/utils/feedSubscriptions'
 
 const props = defineProps<{
   module?: string
@@ -245,30 +246,6 @@ const subscriptions = computed(() => feedStore ? feedStore.subscriptions : [])
 const groups = computed(() => feedStore ? feedStore.groups : [])
 const querySourceId = computed(() => (route && typeof route.query.source_id === 'string') ? route.query.source_id : null)
 
-const findSubscriptionByTimelineItem = (item: TimelineItem): Subscription | undefined => {
-  if (!feedStore) return undefined
-  if (item.type === 'feed_item' && item.feed_item) {
-    const sourceId = item.feed_item.feed_source?.id || item.feed_item.feed_source_id
-    if (!sourceId) return undefined
-    return subscriptions.value.find((sub) => (
-      sub.feed_source_id === sourceId
-      || sub.feed_source?.id === sourceId
-      || (!!item.feed_item?.feed_source?.rss_url && sub.feed_source?.rss_url === item.feed_item.feed_source.rss_url)
-    ))
-  }
-
-  if (item.type === 'post' && item.post) {
-    const channelId = item.post.channel_id || item.post.channel?.id
-    if (!channelId) return undefined
-    return subscriptions.value.find((sub) => (
-      sub.feed_source?.source_type === 'internal_channel'
-      && sub.feed_source.source_id === channelId
-    ))
-  }
-
-  return undefined
-}
-
 const subscriptionUnreadCounts = computed(() => {
   if (!feedStore) return {}
   const counts: Record<string, number> = {}
@@ -284,7 +261,7 @@ const subscriptionUnreadCounts = computed(() => {
 
   feedStore.timeline.forEach((item: TimelineItem) => {
     if (item.is_read) return
-    const subscription = findSubscriptionByTimelineItem(item)
+    const subscription = findSubscriptionByTimelineItem(item, subscriptions.value)
     if (!subscription) return
     counts[subscription.id] = (counts[subscription.id] || 0) + 1
   })
@@ -319,6 +296,7 @@ const openManageSheet = () => {
 
 // 3. Blog Navigation Items
 const blogNavItems = [
+  { to: '/studio/blog/new', label: '写短话', icon: PenLine },
   { to: '/posts', label: '探索', icon: Compass, exact: true },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },

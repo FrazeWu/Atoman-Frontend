@@ -91,7 +91,7 @@ describe('MusicLyricsImportPreview.vue', () => {
     cancel?.click()
     expect(wrapper.emitted('cancel')).toHaveLength(1)
 
-    await document.body.querySelector<HTMLButtonElement>('.p-modal-close')?.click()
+    await document.body.querySelector<HTMLButtonElement>('.p-modal-close-floating')?.click()
     expect(wrapper.emitted('cancel')).toHaveLength(2)
   })
 

@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { apiRequest } from '@/api/client'
-import { configureApiXHR } from '@/api/transport'
+import { uploadFormDataWithProgress } from '@/api/upload'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -18,6 +18,7 @@ import { useApi } from '@/composables/useApi'
 import { useStudioStore } from '@/stores/studio'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
+import { useMediaCreationSteps } from '@/composables/useMediaCreationSteps'
 import { errorMessage } from '@/utils/logger'
 
 const api = useApi()
@@ -43,13 +44,11 @@ const selectedCollectionId = ref('')
 const selectedCollectionFromQuery = computed(() => (
   typeof route.query.collection === 'string' ? route.query.collection : ''
 ))
-const currentStep = ref(isEdit.value ? 2 : 1)
-const maxStep = ref(isEdit.value ? 2 : 1)
-const creationSteps = [
-  { value: 1, label: '媒体', description: '选择来源并上传' },
-  { value: 2, label: '信息', description: '填写内容资料' },
-  { value: 3, label: '发布', description: '检查并确认' },
-]
+const { creationSteps, currentStep, maxStep, goNext, goPrevious } = useMediaCreationSteps({
+  isEditing: isEdit.value,
+  validateMedia,
+  validateInformation,
+})
 
 // Upload state
 const audioUploadProgress = ref(0)   // 0-100, -1 = error
@@ -86,32 +85,6 @@ const effectiveCoverLabel = computed(() =>
   form.value.episode_cover_url ? '单集封面' : selectedCollection.value?.cover_url ? '合集封面' : '',
 )
 const audioBusy = computed(() => audioUploading.value || audioProcessing.value)
-// ── Upload helpers ─────────────────────────────────────────
-
-function uploadWithProgress(
-  url: string,
-  formData: FormData,
-  onProgress: (pct: number) => void,
-): Promise<{ url: string }> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', url)
-	configureApiXHR(xhr, 'POST')
-    xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
-    })
-    xhr.addEventListener('load', () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText))
-      } else {
-        try { reject(JSON.parse(xhr.responseText)) } catch { reject({ error: '上传失败' }) }
-      }
-    })
-    xhr.addEventListener('error', () => reject({ error: '网络错误，请重试' }))
-    xhr.send(formData)
-  })
-}
-
 function titleFromFilename(filename: string) {
   return filename.replace(/\.[^/.]+$/, '').trim()
 }
@@ -125,10 +98,11 @@ async function uploadAudioFile(file: File, sourceName: string) {
   try {
     const fd = new FormData()
     fd.append('audio', file)
-    const result = await uploadWithProgress(
+    const result = await uploadFormDataWithProgress<{ url: string }>(
       `${api.url}/podcast/upload-audio`,
       fd,
       (pct) => { audioUploadProgress.value = pct },
+      () => ({ error: '上传失败' }),
     )
     form.value.audio_url = result.url
     if (!form.value.title.trim()) {
@@ -313,24 +287,6 @@ function validate(status: 'draft' | 'published'): boolean {
     return false
   }
   return true
-}
-
-function goNext() {
-  if (currentStep.value === 1) {
-    if (!validateMedia()) return
-    maxStep.value = Math.max(maxStep.value, 2)
-    currentStep.value = 2
-    return
-  }
-  if (currentStep.value === 2) {
-    if (!validateInformation()) return
-    maxStep.value = 3
-    currentStep.value = 3
-  }
-}
-
-function goPrevious() {
-  currentStep.value = Math.max(1, currentStep.value - 1)
 }
 
 function buildPayload(status: 'draft' | 'published') {

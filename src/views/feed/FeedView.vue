@@ -373,7 +373,6 @@ import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.v
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
 import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFeedRecommendations.vue'
 import { useAuthStore } from '@/stores/auth'
-import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { useUIStore } from '@/stores/ui'
@@ -381,17 +380,17 @@ import { useKeyboardList } from '@/composables/useKeyboardList'
 import { useFeedSubscriptionManager } from '@/composables/feed/useFeedSubscriptionManager'
 import { useFeedTimelineController } from '@/composables/feed/useFeedTimelineController'
 import { useFeedArticleBrowser } from '@/composables/feed/useFeedArticleBrowser'
+import { useFeedItemActions } from '@/composables/feed/useFeedItemActions'
+import {
+  useFeedTimelinePresentation,
+  type FeedSourceTypeFilter,
+} from '@/composables/feed/useFeedTimelinePresentation'
 import { ChevronDown, Filter, RefreshCw } from 'lucide-vue-next'
-import type {
-  FeedItem,
-  TimelineItem,
-} from '@/types'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const playerStore = usePlayerStore()
 const feedStore = useFeedStore()
 const onboardingStore = useOnboardingStore()
 const uiStore = useUIStore()
@@ -414,7 +413,7 @@ const showOnboardingRecommendations = computed(() => (
 const groups = computed(() => feedStore.groups)
 const starredIds = computed(() => feedStore.starredItemIds)
 const readingListIds = computed(() => feedStore.readingListItemIds)
-const sourceTypeFilter = ref<'all' | 'internal' | 'blog' | 'podcast'>('all')
+const sourceTypeFilter = ref<FeedSourceTypeFilter>('all')
 const activeTheme = ref('')
 
 const {
@@ -465,66 +464,39 @@ const currentSourceUnreadCount = computed(() =>
   Math.max(0, currentSourceSubscription.value?.unread_count || 0),
 )
 
-function findSubscriptionByTimelineItem(item: TimelineItem) {
-  if (item.type === 'feed_item' && item.feed_item) {
-    const sourceId = item.feed_item.feed_source?.id || item.feed_item.feed_source_id
-    if (!sourceId) return undefined
-    return subscriptions.value.find((sub) => (
-      sub.feed_source_id === sourceId
-      || sub.feed_source?.id === sourceId
-      || (!!item.feed_item?.feed_source?.rss_url && sub.feed_source?.rss_url === item.feed_item.feed_source.rss_url)
-    ))
-  }
-
-  if (item.type === 'post' && item.post) {
-    const channelId = item.post.channel_id || item.post.channel?.id
-    if (!channelId) return undefined
-    return subscriptions.value.find((sub) => (
-      sub.feed_source?.source_type === 'internal_channel'
-      && sub.feed_source.source_id === channelId
-    ))
-  }
-
-  return undefined
-}
-
-const visibleTimeline = computed(() => {
-  const hiddenKeywords = feedStore.filterRules.hiddenKeywords.map((keyword) => keyword.toLocaleLowerCase())
-
-  return timeline.value.filter((item) => {
-    if (!matchesSourceTypeFilter(item, sourceTypeFilter.value)) return false
-    if (!matchesThemeFilter(item, activeTheme.value)) return false
-
-    if (!querySourceId.value && findSubscriptionByTimelineItem(item)?.is_muted) return false
-
-    if (!hiddenKeywords.length) return true
-
-    const title = item.type === 'feed_item'
-      ? (item.feed_item?.title || '')
-      : (item.post?.title || '')
-    const summary = item.type === 'feed_item'
-      ? stripHtml(item.feed_item?.summary || '')
-      : (item.post?.summary || '')
-
-    const haystack = `${title}\n${summary}`.toLocaleLowerCase()
-    return !hiddenKeywords.some((keyword) => haystack.includes(keyword))
-  })
+const {
+  visibleTimeline,
+  themeFilters,
+  expandedDuplicateItemIds,
+  getExternalBadge,
+  feedItemActionIDs,
+  itemKey,
+  formatDate,
+  stripHtml,
+  toggleDuplicateSources,
+} = useFeedTimelinePresentation({
+  timeline,
+  subscriptions,
+  querySourceId,
+  sourceTypeFilter,
+  activeTheme,
+  hiddenKeywords: computed(() => feedStore.filterRules.hiddenKeywords),
 })
 
-const themeFilters = computed(() => {
-  const counts = new Map<string, number>()
-
-  timeline.value.forEach((item) => {
-    extractThemesFromItem(item).forEach((theme) => {
-      counts.set(theme, (counts.get(theme) || 0) + 1)
-    })
-  })
-
-  return Array.from(counts.entries())
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 6)
-    .map(([theme]) => theme)
+const {
+  toggleStar,
+  toggleReadingList,
+  toggleRead,
+  applyAutomationRules,
+  playPodcast,
+  isPodcastPlaying,
+  playFeedItemFromSheet,
+} = useFeedItemActions({
+  timeline,
+  subscriptions,
+  readingListIds,
+  allRead,
+  feedItemActionIDs,
 })
 
 const { focusedIndex, scrollToFocused } = useKeyboardList({
@@ -601,7 +573,6 @@ const {
   updateAutomationRules,
 } = useFeedSubscriptionManager({ currentPage, refreshTimeline: () => fetchTimeline() })
 
-const expandedDuplicateItemIds = ref(new Set<string>())
 const headerRef = ref<HTMLElement | null>(null)
 const pageRootRef = ref<HTMLElement | null>(null)
 const headerBottom = computed(() => {
@@ -609,11 +580,6 @@ const headerBottom = computed(() => {
   const height = headerRef.value?.offsetHeight || 160
   return `${height}px`
 })
-
-const feedItemActionIDs = (feedItem: FeedItem) => Array.from(new Set([
-  feedItem.id,
-  ...(feedItem.duplicate_item_ids || []),
-].filter(Boolean)))
 
 const {
   showArticleSheet,
@@ -639,238 +605,14 @@ const {
   subscriptions,
   focusedIndex,
   itemKey: (item) => itemKey(item),
-  markItemsReadAndRefresh: (ids) => markItemsReadAndRefresh(ids),
   feedItemActionIDs,
 })
-
-const getExternalBadge = (item: FeedItem) => {
-  if (item.enclosure_url) {
-    if (item.enclosure_type?.startsWith('audio/')) return '播客'
-    if (item.enclosure_type?.startsWith('video/')) return '视频'
-  }
-  // Check common RSS feed type indicators or categories if available in the future
-  return '文章'
-}
-
-const matchesSourceTypeFilter = (
-  item: TimelineItem,
-  filter: 'all' | 'internal' | 'blog' | 'podcast',
-) => {
-  if (filter === 'all') return true
-  if (filter === 'internal') return item.type === 'post'
-  if (item.type !== 'feed_item' || !item.feed_item) return false
-
-  const badge = getExternalBadge(item.feed_item)
-  if (filter === 'podcast') return badge === '播客'
-  if (filter === 'blog') return badge === '文章'
-  return true
-}
-
-const extractThemesFromItem = (item: TimelineItem) => {
-  const parts = item.type === 'feed_item'
-    ? [
-        item.feed_item?.title || '',
-        item.feed_item?.summary || '',
-        item.feed_item?.feed_source?.title || '',
-      ]
-    : [
-        item.post?.title || '',
-        item.post?.summary || '',
-        item.post?.channel?.name || '',
-      ]
-
-  const text = parts.join(' ')
-  const matches = text.match(/\b[A-Z][A-Z0-9+\-]{1,}\b/g) || []
-  return Array.from(new Set(matches.map((value) => value.trim()).filter(Boolean)))
-}
-
-const matchesThemeFilter = (item: TimelineItem, theme: string) => {
-  if (!theme) return true
-  return extractThemesFromItem(item).includes(theme)
-}
-
-const toggleStar = async (feedItemId: string) => {
-  if (!authStore.isAuthenticated) return
-  await feedStore.toggleStar(feedItemId)
-}
-
-const toggleReadingList = async (feedItemId: string) => {
-  if (!authStore.isAuthenticated) return
-  await feedStore.toggleReadingListItem(feedItemId)
-}
-
-const toggleRead = (item: TimelineItem) => {
-  if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item) return
-  const itemIDs = feedItemActionIDs(item.feed_item)
-  const nextIsRead = !item.is_read
-  void (async () => {
-    const success = nextIsRead
-      ? await feedStore.markItemsRead(itemIDs)
-      : await feedStore.markItemsUnread(itemIDs)
-    if (!success) return
-    item.is_read = nextIsRead
-    if (!nextIsRead) allRead.value = false
-    await feedStore.fetchSubscriptions()
-  })()
-}
-
-const setFeedItemsReadState = (ids: string[], isRead: boolean) => {
-  const targetIds = new Set(ids)
-  const selectedItems = selectedArticle.value ? [selectedArticle.value] : []
-  for (const items of [timeline.value, sourceArticles.value, selectedItems]) {
-    items.forEach((item) => {
-      if (item.type === 'feed_item' && item.feed_item && targetIds.has(item.feed_item.id)) {
-        item.is_read = isRead
-      }
-    })
-  }
-}
-
-const markItemsReadAndRefresh = async (ids: string[]) => {
-  const success = await feedStore.markItemsRead(ids)
-  if (success) {
-    await feedStore.fetchSubscriptions()
-    return
-  }
-  setFeedItemsReadState(ids, false)
-}
-
-const markItemsUnreadAndRefresh = async (ids: string[]) => {
-  const success = await feedStore.markItemsUnread(ids)
-  if (success) {
-    await feedStore.fetchSubscriptions()
-    return
-  }
-  setFeedItemsReadState(ids, true)
-}
-
-const itemKey = (item: TimelineItem) => {
-  if (item.type === 'post' && item.post) return `post-${item.post.id}`
-  if (item.type === 'feed_item' && item.feed_item) return `feed-${item.feed_item.id}`
-  return `${item.type}-${item.published_at || ''}`
-}
-
-const formatDate = (date?: string) => {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
-}
-
-const stripHtml = (html: string) =>
-  html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .trim()
 
 const scrollToTop = async () => {
   await nextTick()
   pageRootRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const toggleDuplicateSources = (feedItemID: string) => {
-  const next = new Set(expandedDuplicateItemIds.value)
-  if (next.has(feedItemID)) next.delete(feedItemID)
-  else next.add(feedItemID)
-  expandedDuplicateItemIds.value = next
-}
-
-const applyAutomationRules = async (items: TimelineItem[]) => {
-  if (!authStore.isAuthenticated) return
-
-  const autoReadSubscriptionSourceIds = new Set(
-    subscriptions.value
-      .filter((sub) => sub.auto_mark_read)
-      .map((sub) => sub.feed_source?.id || sub.feed_source_id)
-      .filter(Boolean),
-  )
-  const autoReadingListSubscriptionSourceIds = new Set(
-    subscriptions.value
-      .filter((sub) => sub.auto_add_reading_list)
-      .map((sub) => sub.feed_source?.id || sub.feed_source_id)
-      .filter(Boolean),
-  )
-  if (!autoReadSubscriptionSourceIds.size && !autoReadingListSubscriptionSourceIds.size) return
-
-  const pendingReadItems = items
-    .filter((item) => (
-      item.type === 'feed_item'
-      && item.feed_item
-      && !item.is_read
-      && autoReadSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
-    ))
-  const pendingReadIds = Array.from(new Set(
-    pendingReadItems.flatMap((item) => feedItemActionIDs(item.feed_item!)),
-  ))
-
-  items.forEach((item) => {
-    if (
-      item.type === 'feed_item'
-      && item.feed_item
-      && pendingReadItems.includes(item)
-    ) {
-      item.is_read = true
-    }
-  })
-
-  if (pendingReadIds.length) {
-    await markItemsReadAndRefresh(pendingReadIds)
-  }
-
-  const pendingReadingListIds = items
-    .filter((item) => (
-      item.type === 'feed_item'
-      && item.feed_item
-      && !readingListIds.value.has(item.feed_item.id)
-      && autoReadingListSubscriptionSourceIds.has(item.feed_item.feed_source?.id || item.feed_item.feed_source_id || '')
-    ))
-    .map((item) => item.feed_item!.id)
-
-  for (const feedItemId of pendingReadingListIds) {
-    await feedStore.toggleReadingListItem(feedItemId)
-  }
-}
-
-const onItemClick = (item: TimelineItem) => {
-  if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
-  item.is_read = true
-  void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
-}
-
-const playPodcast = (feedItem: FeedItem, event: Event) => {
-  event.preventDefault()
-  event.stopPropagation()
-  playFeedItemFromSheet(feedItem)
-}
-
-const isPodcastPlaying = (feedItem: FeedItem) =>
-  playerStore.currentSong?.audio_url === feedItem.enclosure_url && playerStore.isPlaying
-
-const playFeedItemFromSheet = (feedItem: FeedItem) => {
-  playerStore.setQueueFromCurrentItems(timeline.value)
-
-  const timelineItem = timeline.value.find(
-    (entry) => entry.type === 'feed_item' && entry.feed_item?.id === feedItem.id,
-  )
-  if (authStore.isAuthenticated && timelineItem && !timelineItem.is_read) {
-    timelineItem.is_read = true
-    void markItemsReadAndRefresh(feedItemActionIDs(feedItem))
-  }
-  const tempSong = playerStore.createPodcastSong(feedItem)
-  if (!tempSong) return
-  playerStore.playQueuedSong(tempSong)
-}
-
-watch(subscriptions, async (nextSubscriptions, previousSubscriptions) => {
-  if (!authStore.isAuthenticated || !timeline.value.length) return
-
-  const previousCount = previousSubscriptions?.length || 0
-  const nextCount = nextSubscriptions.length
-  if (!nextCount || nextCount === previousCount) return
-
-  await applyAutomationRules(timeline.value)
-}, { deep: true })
 
 watch(() => route.query.manage_subscriptions, async (value) => {
   if (value !== '1') return

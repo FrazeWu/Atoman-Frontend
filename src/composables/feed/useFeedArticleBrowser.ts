@@ -13,7 +13,6 @@ interface FeedArticleBrowserOptions {
   subscriptions: ComputedRef<Subscription[]>
   focusedIndex: Ref<number>
   itemKey: (item: TimelineItem) => string
-  markItemsReadAndRefresh: (ids: string[]) => Promise<void>
   feedItemActionIDs: (item: FeedItem) => string[]
 }
 
@@ -22,7 +21,6 @@ export function useFeedArticleBrowser({
   subscriptions,
   focusedIndex,
   itemKey,
-  markItemsReadAndRefresh,
   feedItemActionIDs,
 }: FeedArticleBrowserOptions) {
   const authStore = useAuthStore()
@@ -44,7 +42,14 @@ export function useFeedArticleBrowser({
   const markReadOnOpen = (item: TimelineItem) => {
     if (!authStore.isAuthenticated || item.type !== 'feed_item' || !item.feed_item || item.is_read) return
     item.is_read = true
-    void markItemsReadAndRefresh(feedItemActionIDs(item.feed_item))
+    void (async () => {
+      const success = await feedStore.markItemsRead(feedItemActionIDs(item.feed_item!))
+      if (success) {
+        await feedStore.fetchSubscriptions()
+        return
+      }
+      item.is_read = false
+    })()
   }
 
   const openArticleSheet = (item: TimelineItem, index?: number) => {

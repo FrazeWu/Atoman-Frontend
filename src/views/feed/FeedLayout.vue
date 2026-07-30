@@ -39,7 +39,8 @@ import { useFeedStore } from '@/stores/feed'
 import { useSidebar } from '@/composables/useSidebar'
 import { useKeyboardLayout } from '@/composables/useKeyboardLayout'
 import { moduleUrl } from '@/router/siteUrls'
-import type { Subscription, TimelineItem } from '@/types'
+import type { TimelineItem } from '@/types'
+import { findSubscriptionByTimelineItem } from '@/utils/feedSubscriptions'
 
 const router = useRouter()
 const route = useRoute()
@@ -56,29 +57,6 @@ const subscriptions = computed(() => feedStore.subscriptions)
 const groups = computed(() => feedStore.groups)
 const querySourceId = computed(() => typeof route.query.source_id === 'string' ? route.query.source_id : null)
 
-const findSubscriptionByTimelineItem = (item: TimelineItem): Subscription | undefined => {
-  if (item.type === 'feed_item' && item.feed_item) {
-    const sourceId = item.feed_item.feed_source?.id || item.feed_item.feed_source_id
-    if (!sourceId) return undefined
-    return subscriptions.value.find((sub) => (
-      sub.feed_source_id === sourceId
-      || sub.feed_source?.id === sourceId
-      || (!!item.feed_item?.feed_source?.rss_url && sub.feed_source?.rss_url === item.feed_item.feed_source.rss_url)
-    ))
-  }
-
-  if (item.type === 'post' && item.post) {
-    const channelId = item.post.channel_id || item.post.channel?.id
-    if (!channelId) return undefined
-    return subscriptions.value.find((sub) => (
-      sub.feed_source?.source_type === 'internal_channel'
-      && sub.feed_source.source_id === channelId
-    ))
-  }
-
-  return undefined
-}
-
 const subscriptionUnreadCounts = computed(() => {
   const counts: Record<string, number> = {}
   const hasServerUnreadCounts = subscriptions.value.some((sub) => typeof sub.unread_count === 'number')
@@ -93,7 +71,7 @@ const subscriptionUnreadCounts = computed(() => {
 
   feedStore.timeline.forEach((item: TimelineItem) => {
     if (item.is_read) return
-    const subscription = findSubscriptionByTimelineItem(item)
+    const subscription = findSubscriptionByTimelineItem(item, subscriptions.value)
     if (!subscription) return
     counts[subscription.id] = (counts[subscription.id] || 0) + 1
   })

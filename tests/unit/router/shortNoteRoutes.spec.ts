@@ -9,14 +9,10 @@ describe('short note routes and API contracts', () => {
     const routes = blogRoot?.children ?? []
     const blogPaths = routes.map((route) => route.path)
 
-    expect(blogPaths).toEqual(expect.arrayContaining([
-      'notes',
-      'notes/new',
-      'notes/:id',
-      'notes/:id/edit',
-    ]))
+    expect(blogPaths).toEqual(expect.arrayContaining(['notes', 'notes/:id', 'notes/:id/edit']))
+    expect(blogPaths).not.toContain('notes/new')
 
-    for (const path of ['notes', 'notes/new', 'notes/:id', 'notes/:id/edit']) {
+    for (const path of ['notes', 'notes/:id', 'notes/:id/edit']) {
       expect(routes.find((route) => route.path === path)?.component).toBeTruthy()
     }
   })

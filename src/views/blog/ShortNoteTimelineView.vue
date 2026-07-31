@@ -1,8 +1,7 @@
 <template>
   <div class="a-page-md short-note-timeline">
-    <PPageHeader title="短话">
-      <template #action><PButton v-if="authStore.isAuthenticated" to="/posts/notes/new">写短话</PButton></template>
-    </PPageHeader>
+    <PPageHeader title="短话" />
+    <ShortNoteComposer v-if="authStore.isAuthenticated" :submitting="publishing" @submit="publish" />
     <div v-if="loading && !notes.length" class="short-note-timeline__loading">
       <div v-for="index in 4" :key="index" class="a-skeleton" style="height:9rem" />
     </div>
@@ -22,6 +21,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
+import ShortNoteComposer from '@/components/shortnote/ShortNoteComposer.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { ShortNote } from '@/types'
@@ -34,6 +34,7 @@ const loading = ref(false)
 const error = ref('')
 const page = ref(1)
 const hasMore = ref(false)
+const publishing = ref(false)
 
 async function load(reset = false) {
   if (loading.value) return
@@ -52,6 +53,23 @@ async function load(reset = false) {
   }
 }
 function loadMore() { page.value += 1; void load() }
+async function publish(payload: { content: string; media_urls: string[] }) {
+  if (publishing.value) return
+  publishing.value = true
+  error.value = ''
+  try {
+    const response = await apiRequestEnvelope<ShortNote>(api.blog.shortNotes, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
+      body: JSON.stringify(payload),
+    })
+    notes.value.unshift(response.data)
+  } catch {
+    error.value = '发布失败，请重试'
+  } finally {
+    publishing.value = false
+  }
+}
 async function remove(note: ShortNote) {
   if (!window.confirm('确定删除这条短话吗？')) return
   try {

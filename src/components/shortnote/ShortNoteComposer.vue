@@ -1,9 +1,9 @@
 <template>
-  <form class="short-note-composer" @submit.prevent="submit">
+  <form class="short-note-composer" :class="{ 'is-compact': compact }" @submit.prevent="submit">
     <PTextarea
       v-model="content"
       aria-label="短话内容"
-      :rows="6"
+      :rows="compact ? 3 : 6"
       :maxlength="500"
       placeholder="写点什么"
       :disabled="submitting || uploading"
@@ -44,8 +44,9 @@ const props = withDefaults(defineProps<{
   initialMediaUrls?: string[]
   submitting?: boolean
   submitLabel?: string
+  compact?: boolean
 }>(), {
-  initialContent: '', initialMediaUrls: () => [], submitting: false, submitLabel: '发布',
+  initialContent: '', initialMediaUrls: () => [], submitting: false, submitLabel: '发布', compact: false,
 })
 
 const emit = defineEmits<{ submit: [payload: { content: string; media_urls: string[] }] }>()
@@ -98,7 +99,8 @@ function submit() {
 </script>
 
 <style scoped>
-.short-note-composer { display:grid; gap:1rem; }
+.short-note-composer { display:grid; gap:1rem; padding:1rem 0; border-bottom:1px solid var(--a-color-border-soft); }
+.short-note-composer.is-compact { gap:.7rem; }
 .short-note-composer__count { padding:.7rem; color:var(--a-color-muted); font-size:.75rem; }
 .short-note-composer__media { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.5rem; }
 .short-note-composer__preview { position:relative; aspect-ratio:1; overflow:hidden; border-radius:var(--a-radius-control); background:var(--a-color-bg-subtle); }

@@ -1,21 +1,43 @@
 <template>
-  <div class="a-page-md short-note-timeline">
+  <div class="a-page short-note-timeline">
     <PPageHeader title="短话" />
-    <ShortNoteComposer v-if="authStore.isAuthenticated" :submitting="publishing" @submit="publish" />
-    <div v-if="loading && !notes.length" class="short-note-timeline__loading">
-      <div v-for="index in 4" :key="index" class="a-skeleton" style="height:9rem" />
+    <div class="short-note-timeline__layout">
+      <main class="short-note-timeline__stream">
+        <ShortNoteComposer v-if="authStore.isAuthenticated" compact :submitting="publishing" @submit="publish" />
+        <div v-if="loading && !notes.length" class="short-note-timeline__loading">
+          <div v-for="index in 4" :key="index" class="a-skeleton" style="height:9rem" />
+        </div>
+        <PEmpty v-else-if="!notes.length" title="还没有短话" description="写下第一条短话。" />
+        <div v-else>
+          <ShortNoteCard v-for="note in notes" :key="note.id" :note="note" @delete="remove" />
+        </div>
+        <p v-if="error" class="short-note-timeline__error" role="alert">{{ error }}</p>
+        <div v-if="hasMore" class="short-note-timeline__more"><PButton outline :loading="loading" @click="loadMore">加载更多</PButton></div>
+      </main>
+
+      <aside class="short-note-timeline__rail" aria-label="短话推荐">
+        <section class="short-note-timeline__rail-section">
+          <h2>热门短话</h2>
+          <RouterLink v-for="note in hotNotes" :key="note.id" :to="`/posts/notes/${note.id}`" class="short-note-timeline__rail-note">
+            <strong>{{ noteTitle(note) }}</strong>
+            <span>{{ note.likes_count }} 喜欢 · {{ note.comments_count }} 评论</span>
+          </RouterLink>
+        </section>
+        <section class="short-note-timeline__rail-section">
+          <h2>最新动态</h2>
+          <RouterLink v-for="note in latestNotes" :key="note.id" :to="`/posts/notes/${note.id}`" class="short-note-timeline__rail-note">
+            <strong>{{ note.user?.display_name || note.user?.username || '匿名用户' }}</strong>
+            <span>{{ noteTitle(note) }}</span>
+          </RouterLink>
+        </section>
+      </aside>
     </div>
-    <PEmpty v-else-if="!notes.length" title="还没有短话" description="写下第一条短话。" />
-    <div v-else>
-      <ShortNoteCard v-for="note in notes" :key="note.id" :note="note" @delete="remove" />
-    </div>
-    <p v-if="error" class="short-note-timeline__error" role="alert">{{ error }}</p>
-    <div v-if="hasMore" class="short-note-timeline__more"><PButton outline :loading="loading" @click="loadMore">加载更多</PButton></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -35,6 +57,14 @@ const error = ref('')
 const page = ref(1)
 const hasMore = ref(false)
 const publishing = ref(false)
+const hotNotes = computed(() => [...notes.value]
+  .sort((left, right) => (right.likes_count + right.comments_count) - (left.likes_count + left.comments_count))
+  .slice(0, 4))
+const latestNotes = computed(() => notes.value.slice(0, 4))
+
+function noteTitle(note: ShortNote) {
+  return note.content.length > 42 ? `${note.content.slice(0, 42)}...` : note.content
+}
 
 async function load(reset = false) {
   if (loading.value) return
@@ -81,8 +111,23 @@ onMounted(() => void load())
 </script>
 
 <style scoped>
-.short-note-timeline { padding-top:2rem; }
+.short-note-timeline { max-width:75rem; padding-top:2rem; }
+.short-note-timeline__layout { display:grid; grid-template-columns:minmax(0, 40rem) minmax(16rem, 20rem); gap:2rem; align-items:start; }
+.short-note-timeline__stream { min-width:0; border-top:1px solid var(--a-color-border-soft); }
+.short-note-timeline__rail { position:sticky; top:1.5rem; display:grid; gap:1rem; }
+.short-note-timeline__rail-section { border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); overflow:hidden; }
+.short-note-timeline__rail-section h2 { margin:0; padding:.85rem 1rem; border-bottom:1px solid var(--a-color-border-soft); font-size:.95rem; }
+.short-note-timeline__rail-note { display:grid; gap:.3rem; padding:.8rem 1rem; color:inherit; text-decoration:none; border-bottom:1px solid var(--a-color-border-soft); }
+.short-note-timeline__rail-note:last-child { border-bottom:0; }
+.short-note-timeline__rail-note:hover { background:var(--a-color-bg-subtle); }
+.short-note-timeline__rail-note strong { font-size:.85rem; line-height:1.4; font-weight:600; }
+.short-note-timeline__rail-note span { color:var(--a-color-muted); font-size:.75rem; line-height:1.4; }
 .short-note-timeline__loading { display:grid; gap:1rem; }
 .short-note-timeline__more { display:flex; justify-content:center; margin-top:1.5rem; }
 .short-note-timeline__error { color:var(--a-color-danger); }
+@media (max-width: 1024px) {
+  .short-note-timeline { max-width:42rem; }
+  .short-note-timeline__layout { display:block; }
+  .short-note-timeline__rail { display:none; }
+}
 </style>

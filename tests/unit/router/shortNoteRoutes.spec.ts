@@ -6,7 +6,8 @@ import { moduleRoutes } from '@/router/routes/modules'
 describe('short note routes and API contracts', () => {
   it('maps the short-note pages inside the blog module', () => {
     const blogRoot = moduleRoutes.blog.find((route) => route.path === '/')
-    const blogPaths = blogRoot?.children?.map((route) => route.path) ?? []
+    const routes = blogRoot?.children ?? []
+    const blogPaths = routes.map((route) => route.path)
 
     expect(blogPaths).toEqual(expect.arrayContaining([
       'notes',
@@ -14,6 +15,10 @@ describe('short note routes and API contracts', () => {
       'notes/:id',
       'notes/:id/edit',
     ]))
+
+    for (const path of ['notes', 'notes/new', 'notes/:id', 'notes/:id/edit']) {
+      expect(routes.find((route) => route.path === path)?.component).toBeTruthy()
+    }
   })
 
   it('exposes short note API endpoints', () => {

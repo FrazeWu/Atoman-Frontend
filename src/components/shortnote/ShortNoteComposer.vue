@@ -11,9 +11,12 @@
       <template #suffix><span class="short-note-composer__count">{{ charCount }}/500</span></template>
     </PTextarea>
 
-    <div v-if="mediaUrls.length" class="short-note-composer__media">
+    <div v-if="mediaUrls.length" ref="mediaElement" data-testid="short-note-media" class="short-note-composer__media">
       <div v-for="(url, index) in mediaUrls" :key="url" class="short-note-composer__preview">
         <img :src="url" alt="上传的图片" />
+        <button type="button" data-testid="short-note-drag-handle" class="short-note-composer__drag-handle" aria-label="拖拽排序图片" title="拖拽排序图片">
+          <GripVertical :size="16" />
+        </button>
         <button type="button" aria-label="移除图片" @click="removeImage(index)">移除</button>
       </div>
     </div>
@@ -31,8 +34,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { ImagePlus } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { GripVertical, ImagePlus } from 'lucide-vue-next'
+import Sortable from 'sortablejs'
 import { apiRequest } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
@@ -54,12 +58,38 @@ const api = useApi()
 const authStore = useAuthStore()
 const content = ref(props.initialContent)
 const mediaUrls = ref([...props.initialMediaUrls])
+const mediaElement = ref<HTMLElement | null>(null)
+let sortable: Sortable | null = null
 const uploading = ref(false)
 const uploadError = ref('')
 const charCount = computed(() => Array.from(content.value).length)
 
 watch(() => props.initialContent, value => { content.value = value })
 watch(() => props.initialMediaUrls, value => { mediaUrls.value = [...value] }, { deep: true })
+watch(mediaUrls, () => void nextTick(syncSortable), { deep: true, flush: 'post' })
+
+function syncSortable() {
+  if (mediaUrls.value.length < 2 || !mediaElement.value) {
+    sortable?.destroy()
+    sortable = null
+    return
+  }
+  if (sortable) return
+  sortable = new Sortable(mediaElement.value, {
+    animation: 150,
+    handle: '.short-note-composer__drag-handle',
+    onEnd(event) {
+      const oldIndex = event.oldIndex
+      const newIndex = event.newIndex
+      if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+      const [url] = mediaUrls.value.splice(oldIndex, 1)
+      mediaUrls.value.splice(newIndex, 0, url)
+    },
+  })
+}
+
+onMounted(() => void nextTick(syncSortable))
+onBeforeUnmount(() => sortable?.destroy())
 
 function removeImage(index: number) { mediaUrls.value.splice(index, 1) }
 
@@ -106,6 +136,8 @@ function submit() {
 .short-note-composer__preview { position:relative; aspect-ratio:1; overflow:hidden; border-radius:var(--a-radius-control); background:var(--a-color-bg-subtle); }
 .short-note-composer__preview img { width:100%; height:100%; object-fit:cover; }
 .short-note-composer__preview button { position:absolute; right:.25rem; bottom:.25rem; border:0; padding:.25rem .45rem; background:rgba(0,0,0,.7); color:#fff; cursor:pointer; font:inherit; font-size:.75rem; }
+.short-note-composer__preview .short-note-composer__drag-handle { right:auto; left:.25rem; display:grid; width:2rem; height:2rem; place-items:center; padding:0; cursor:grab; touch-action:none; }
+.short-note-composer__preview .short-note-composer__drag-handle:active { cursor:grabbing; }
 .short-note-composer__actions { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 .short-note-composer__image-button { display:inline-flex; align-items:center; gap:.4rem; color:var(--a-color-muted); cursor:pointer; font-size:.875rem; }
 .short-note-composer__image-button.is-disabled { opacity:.5; cursor:not-allowed; }

@@ -7,6 +7,29 @@ import AppTopbar from '@/components/system/AppTopbar.vue'
 import { useAuthStore } from '@/stores/auth'
 
 describe('AppTopbar session restoration', () => {
+  it('keeps global search available when no session is restored', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const authStore = useAuthStore()
+    vi.spyOn(authStore, 'restoreSession').mockResolvedValue(false)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/feed', component: { template: '<div />' } },
+        { path: '/login', component: { template: '<div />' } },
+      ],
+    })
+
+    await router.push('/feed')
+    await router.isReady()
+    const wrapper = mount(AppTopbar, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="topbar-search-pill"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/login"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('switches to authenticated controls after restoring a session on a public route', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

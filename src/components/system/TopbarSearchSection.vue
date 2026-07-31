@@ -2,7 +2,6 @@
   <section class="topbar-search-section">
     <header class="topbar-search-section__header">
       <h3>{{ section.label }}</h3>
-      <button class="topbar-search-section__more" type="button" @click="$emit('openMore', section.moreHref)">查看更多</button>
     </header>
 
     <button
@@ -30,7 +29,6 @@ defineProps<{
 
 defineEmits<{
   openItem: [href: string]
-  openMore: [href: string]
 }>()
 </script>
 
@@ -51,15 +49,6 @@ defineEmits<{
   margin: 0;
   font-size: 0.82rem;
   font-weight: 500;
-}
-
-.topbar-search-section__more {
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
-  font-size: 0.76rem;
-  font-weight: 500;
-  cursor: pointer;
 }
 
 .topbar-search-section__item {

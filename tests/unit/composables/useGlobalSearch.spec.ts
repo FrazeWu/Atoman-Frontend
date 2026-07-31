@@ -1,76 +1,111 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { referenceApi, type ReferenceTarget } from '@/api/references'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 
-vi.mock('@/api/musicV1', () => ({
-  listMusicAlbums: vi.fn(),
-  listMusicArtists: vi.fn(),
+vi.mock('@/api/references', () => ({
+  referenceApi: {
+    search: vi.fn(),
+  },
 }))
 
-const fetchJson = (body: unknown) =>
-  Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+const target = (value: Partial<ReferenceTarget> & Pick<ReferenceTarget, 'type' | 'id' | 'label' | 'module' | 'path'>): ReferenceTarget => ({
+  available: true,
+  ...value,
+})
 
 describe('useGlobalSearch', () => {
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
-  it('aggregates forum, blog, and music results into ordered sections', async () => {
-    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      if (url.includes('/api/v1/forum/search?')) {
-        return fetchJson({
-          data: [
-            {
-              id: 'topic-1',
-              title: 'Forum Topic',
-              content: 'Forum excerpt',
-              user: { username: 'alice', display_name: 'Alice' },
-              category: { name: 'General' },
-              created_at: '2026-07-01T00:00:00Z',
-            },
-          ],
-          total: 1,
-        })
-      }
-      if (url.includes('/api/v1/blog/posts?')) {
-        return fetchJson([
-          {
-            id: 'post-1',
-            user_id: 'user-1',
-            title: 'Blog Post',
-            content: 'content',
-            summary: 'Blog excerpt',
-            status: 'published',
-            visibility: 'public',
-            allow_comments: true,
-            pinned: false,
-            channel: { id: 'channel-1', user_id: 'user-1', name: 'Channel', slug: 'channel', created_at: '', updated_at: '' },
-            user: { username: 'bob', email: 'bob@example.com', display_name: 'Bob' },
-            created_at: '2026-07-01T00:00:00Z',
-            updated_at: '2026-07-01T00:00:00Z',
-          },
-        ])
-      }
-      throw new Error(`未 mock fetch: ${url}`)
-    })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
-    const { listMusicAlbums, listMusicArtists } = await import('@/api/musicV1')
-    vi.mocked(listMusicAlbums).mockResolvedValue({
-      data: [{ id: 'album-1', title: 'Album Name', artists: [{ id: 'artist-1', name: 'Artist Name' }], entry_status: 'open' }],
-      meta: { page: 1, page_size: 3, total: 1, has_more: false },
-    })
-    vi.mocked(listMusicArtists).mockResolvedValue({
-      data: [{ id: 'artist-2', name: 'Artist Only', entry_status: 'open' }],
-      meta: { page: 1, page_size: 3, total: 1, has_more: false },
-    })
+  it('groups unified reference results and builds module paths', async () => {
+    vi.mocked(referenceApi.search).mockResolvedValue([
+      target({ type: 'user', id: 'user-1', label: 'Alice', subtitle: '@alice', module: 'blog', path: '/users/alice' }),
+      target({ type: 'post', id: 'post-1', label: 'Blog Post', module: 'blog', path: '/post/post-1' }),
+      target({ type: 'thread', id: 'thread-1', label: 'Forum Topic', module: 'forum', path: '/topic/thread-1' }),
+      target({ type: 'album', id: 'album-1', label: 'Album Name', module: 'music', path: '/album/album-1' }),
+    ])
 
     const search = useGlobalSearch()
     await search.search('atom')
 
-    expect(search.sections.value.map((section) => section.type)).toEqual(['forum', 'blog', 'music'])
-    expect(search.sections.value[0]?.items[0]).toMatchObject({ title: 'Forum Topic', href: '/forum/topic/topic-1' })
-    expect(search.sections.value[1]?.items[0]).toMatchObject({ title: 'Blog Post', href: '/posts/post/post-1' })
-    expect(search.sections.value[2]?.items.map((item) => item.title)).toEqual(['Album Name', 'Artist Only'])
-    expect(search.sections.value[2]?.items.map((item) => item.href)).toEqual(['/music/album/album-1', '/music/artist/artist-2'])
+    expect(referenceApi.search).toHaveBeenCalledWith(expect.any(Array), 'atom', 2, expect.any(AbortSignal))
+    expect(search.sections.value.map((section) => section.type)).toEqual(['user', 'blog', 'forum', 'music'])
+    expect(search.sections.value[0]?.items[0]).toMatchObject({ title: 'Alice', href: '/users/alice', meta: '用户' })
+    expect(search.sections.value[1]?.items[0]).toMatchObject({ title: 'Blog Post', href: '/posts/post/post-1', meta: '文章' })
+    expect(search.sections.value[2]?.items[0]).toMatchObject({ title: 'Forum Topic', href: '/forum/topic/thread-1' })
+    expect(search.sections.value[3]?.items[0]).toMatchObject({ title: 'Album Name', href: '/music/album/album-1' })
+  })
+
+  it('filters results from disabled modules', async () => {
+    vi.mocked(referenceApi.search).mockResolvedValue([
+      target({ type: 'post', id: 'post-1', label: 'Blog Post', module: 'blog', path: '/post/post-1' }),
+      target({ type: 'video', id: 'video-1', label: 'Video', module: 'video', path: '/videos/watch/video-1' }),
+    ])
+
+    const search = useGlobalSearch({ isModuleVisible: (module) => module !== 'video' })
+    await search.search('atom')
+
+    expect(search.sections.value.map((section) => section.type)).toEqual(['blog'])
+  })
+
+  it('mixes resource types within the same module preview', async () => {
+    vi.mocked(referenceApi.search).mockResolvedValue([
+      target({ type: 'artist', id: 'artist-1', label: 'First Artist', module: 'music', path: '/artist/artist-1' }),
+      target({ type: 'artist', id: 'artist-2', label: 'Second Artist', module: 'music', path: '/artist/artist-2' }),
+      target({ type: 'album', id: 'album-1', label: 'Album', module: 'music', path: '/album/album-1' }),
+    ])
+
+    const search = useGlobalSearch()
+    await search.search('atom')
+
+    expect(search.sections.value[0]?.items.map((item) => item.title)).toEqual(['First Artist', 'Album'])
+  })
+
+  it('reports request failures instead of presenting them as empty results', async () => {
+    vi.mocked(referenceApi.search).mockRejectedValue(new Error('network unavailable'))
+
+    const search = useGlobalSearch()
+    await search.search('atom')
+
+    expect(search.sections.value).toEqual([])
+    expect(search.error.value).toBe('搜索暂不可用')
+    expect(search.loading.value).toBe(false)
+  })
+
+  it('keeps the newest result when an older request finishes later', async () => {
+    let resolveFirst: ((items: ReferenceTarget[]) => void) | undefined
+    vi.mocked(referenceApi.search)
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValueOnce([
+        target({ type: 'post', id: 'new', label: 'New Result', module: 'blog', path: '/post/new' }),
+      ])
+
+    const search = useGlobalSearch()
+    const first = search.search('first')
+    await search.search('second')
+    resolveFirst?.([
+      target({ type: 'post', id: 'old', label: 'Old Result', module: 'blog', path: '/post/old' }),
+    ])
+    await first
+
+    expect(search.sections.value[0]?.items[0]?.title).toBe('New Result')
+  })
+
+  it('debounces preview searches', async () => {
+    vi.useFakeTimers()
+    vi.mocked(referenceApi.search).mockResolvedValue([])
+    const search = useGlobalSearch()
+
+    search.scheduleSearch('atom')
+    await vi.advanceTimersByTimeAsync(249)
+    expect(referenceApi.search).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(referenceApi.search).toHaveBeenCalledOnce()
   })
 })

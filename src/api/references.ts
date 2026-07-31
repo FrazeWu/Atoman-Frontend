@@ -35,9 +35,11 @@ export interface ResolvedReference {
 const base = '/api/v1/references'
 
 export const referenceApi = {
-  search(targetType: ReferenceTargetType, query = '', limit = 10) {
-    const params = new URLSearchParams({ type: targetType, q: query, limit: String(limit) })
-    return apiGet<ReferenceTarget[]>(`${base}/search?${params.toString()}`)
+  search(targetTypes: ReferenceTargetType | readonly ReferenceTargetType[], query = '', limit = 10, signal?: AbortSignal) {
+    const params = new URLSearchParams({ q: query, limit: String(limit) })
+    const types = Array.isArray(targetTypes) ? targetTypes : [targetTypes]
+    types.forEach((targetType) => params.append('type', targetType))
+    return apiGet<ReferenceTarget[]>(`${base}/search?${params.toString()}`, { signal })
   },
   resolve(content: string) {
     return apiPostJson<ResolvedReference[]>(`${base}/resolve`, { content })

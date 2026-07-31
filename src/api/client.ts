@@ -69,10 +69,11 @@ async function unwrapResponse<T>(response: Response): Promise<T> {
   return success.data
 }
 
-export async function apiGet<T>(url: string): Promise<T> {
+export async function apiGet<T>(url: string, options: { signal?: AbortSignal } = {}): Promise<T> {
   return unwrapResponse<T>(await apiFetch(url, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
+    ...(options.signal ? { signal: options.signal } : {}),
   }))
 }
 

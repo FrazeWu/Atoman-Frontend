@@ -41,6 +41,7 @@
       </nav>
 
       <div class="nav-right">
+        <AppTopbarGlobalSearch v-if="!isAuthRoute" />
         <button
           type="button"
           class="theme-toggle-btn"
@@ -69,6 +70,7 @@ import { useModuleNav, moduleUrl } from '@/composables/useSubdomainNav'
 import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
+import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
 
 const { toggleSidebar } = useSidebar()
 const hasSidebar = computed(() => route.matched.some((record) => record.meta.hasSidebar))

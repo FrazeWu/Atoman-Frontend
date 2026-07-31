@@ -37,7 +37,6 @@ const shellFiles = [
   'src/components/setting/SettingRolesPanel.vue',
 ]
 const blogFeedFiles = [
-  'src/components/blog/CommentSection.vue',
   'src/components/blog/PostCoverField.vue',
   'src/components/blog/PostEditorSidebar.vue',
   'src/components/blog/PostEditorTopbar.vue',
@@ -80,7 +79,6 @@ const remainingModuleFiles = [
   'src/views/timeline/PersonMapView.vue',
   'src/views/timeline/TimelineHomeView.vue',
   'src/views/timeline/TimelineMapPane.vue',
-  'src/views/portal/HomeView.vue',
   'src/views/portal/PortalView.vue',
   'src/views/system/AboutView.vue',
   'src/views/system/NotFoundView.vue',

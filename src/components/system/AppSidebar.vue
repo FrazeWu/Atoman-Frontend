@@ -298,6 +298,7 @@ const openManageSheet = () => {
 const blogNavItems = [
   { to: '/studio/blog/new', label: '写短话', icon: PenLine },
   { to: '/posts', label: '探索', icon: Compass, exact: true },
+  { to: '/posts/notes', label: '短话', icon: MessageSquare },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },
   { to: '/posts/bookmarks', label: '收藏', icon: Bookmark },
 ]

@@ -105,6 +105,10 @@ export function useApi() {
       collectionPostOrder: (id: number | string) => `${apiUrl}/blog/collections/${id}/posts/order`,
       uploadImage: `${apiUrl}/blog/upload-image`,
 
+      shortNotes: `${apiUrl}/short-notes`,
+      shortNote: (id: number | string) => `${apiUrl}/short-notes/${id}`,
+      shortNoteLike: (id: number | string) => `${apiUrl}/short-notes/${id}/like`,
+
       comments: `${apiUrl}/blog/comments`,
       postComments: (id: number | string) => `${apiUrl}/blog/posts/${id}/comments`,
 
@@ -145,6 +149,7 @@ export function useApi() {
       blogLikes: `${apiUrl}/blog/likes`,
       blogPostComments: (postId: number | string) => `${apiUrl}/blog/posts/${postId}/comments`,
       blogComment: (commentId: number | string) => `${apiUrl}/blog/comments/${commentId}`,
+      shortNoteComments: (noteId: number | string) => `${apiUrl}/discussions/short_note/${noteId}/comments`,
       forumTopicLike: (topicId: number | string) => `${apiUrl}/forum/topics/${topicId}/like`,
       forumTopicComments: (topicId: number | string) => `${apiUrl}/discussions/forum_topic/${topicId}/comments`,
       forumComment: (commentId: number | string) => `${apiUrl}/comments/${commentId}`,

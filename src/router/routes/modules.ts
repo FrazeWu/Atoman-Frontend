@@ -20,6 +20,9 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       meta: { hasSidebar: true },
       children: [
         { path: '', component: () => import('@/views/blog/BlogHomeView.vue') },
+        { path: 'notes', component: () => import('@/views/blog/ShortNoteTimelineView.vue') },
+        { path: 'notes/:id', component: () => import('@/views/blog/ShortNoteDetailView.vue') },
+        { path: 'notes/:id/edit', component: () => import('@/views/blog/ShortNoteComposerView.vue'), meta: { requiresAuth: true } },
         { path: 'subscriptions', component: () => import('@/views/blog/BlogSubscriptionsView.vue'), meta: { requiresAuth: true } },
         { path: 'bookmarks', component: () => import('@/views/blog/BookmarkView.vue'), meta: { requiresAuth: true } },
       ],

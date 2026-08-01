@@ -9,15 +9,21 @@
     >
       {{ liked ? '已喜欢' : '喜欢' }} {{ likeCount }}
     </button>
-    <span class="interaction-bar__count">评论 {{ commentCount }}</span>
+    <RouterLink v-if="commentHref" :to="commentHref" class="interaction-bar__count interaction-bar__comment">
+      评论 {{ commentCount }}
+    </RouterLink>
+    <span v-else class="interaction-bar__count">评论 {{ commentCount }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
+
 const props = defineProps<{
   liked: boolean
   likeCount: number
   commentCount: number
+  commentHref?: string
   disabled?: boolean
 }>()
 
@@ -65,5 +71,15 @@ function toggleLike() {
 
 .interaction-bar__count {
   font-size: 0.875rem;
+}
+
+.interaction-bar__comment {
+  color: inherit;
+  text-decoration: none;
+}
+
+.interaction-bar__comment:hover {
+  color: var(--a-color-fg);
+  text-decoration: underline;
 }
 </style>

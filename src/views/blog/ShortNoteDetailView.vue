@@ -5,7 +5,7 @@
     <p v-else-if="error" class="short-note-detail__error" role="alert">{{ error }}</p>
     <template v-else-if="note">
       <ShortNoteCard :note="note" @delete="remove" />
-      <CommentSection :target="{ kind: 'short_note', resourceId: note.id }" />
+      <CommentSection id="comments" :target="{ kind: 'short_note', resourceId: note.id }" />
     </template>
   </div>
 </template>

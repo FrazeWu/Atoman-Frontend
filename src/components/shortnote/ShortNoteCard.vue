@@ -21,6 +21,7 @@
       :liked="interactions.liked.value"
       :like-count="interactions.likeCount.value"
       :comment-count="interactions.commentCount.value"
+      :comment-href="`/posts/notes/${note.id}#comments`"
       :disabled="!authStore.isAuthenticated"
       @like="interactions.like"
       @unlike="interactions.unlike"

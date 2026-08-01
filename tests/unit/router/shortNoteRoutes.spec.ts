@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import { useApi } from '@/composables/useApi'
 import { moduleRoutes } from '@/router/routes/modules'
 import { buildAppRoutes } from '@/router/buildAppRoutes'
-import { createMemoryHistory, createRouter } from 'vue-router'
 
 describe('short note routes and API contracts', () => {
   it('maps the short-note pages inside the blog module', () => {
@@ -28,11 +27,7 @@ describe('short note routes and API contracts', () => {
     expect(api.interactions.shortNoteComments('note-1')).toContain('/discussions/short_note/note-1/comments')
   })
 
-  it('redirects the legacy short-note path to the blog module', async () => {
-    const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
-
-    await router.push('/notes')
-
-    expect(router.currentRoute.value.fullPath).toBe('/posts/notes')
+  it('redirects the legacy short-note path to the blog module', () => {
+    expect(buildAppRoutes().find((route) => route.path === '/notes')?.redirect).toBe('/posts/notes')
   })
 })

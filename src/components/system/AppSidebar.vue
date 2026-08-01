@@ -172,7 +172,7 @@ import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } 
 import { getActivePinia } from 'pinia'
 import {
   Rss, Compass, Bookmark, Star, Disc3, Users, History,
-  MessageSquare, Folder, Archive, BookOpen, Clock, Mic, PenLine
+  MessageSquare, Folder, Archive, BookOpen, Clock, Mic
 } from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'
@@ -296,7 +296,6 @@ const openManageSheet = () => {
 
 // 3. Blog Navigation Items
 const blogNavItems = [
-  { to: '/studio/blog/new', label: '写短话', icon: PenLine },
   { to: '/posts', label: '探索', icon: Compass, exact: true },
   { to: '/posts/notes', label: '短话', icon: MessageSquare },
   { to: '/posts/subscriptions', label: '订阅', icon: Rss },

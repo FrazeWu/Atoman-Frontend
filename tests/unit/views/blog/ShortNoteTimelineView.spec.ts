@@ -9,6 +9,7 @@ describe('ShortNoteTimelineView', () => {
     expect(source).toContain('<ShortNoteComposer')
     expect(source).toContain('@submit="publish"')
     expect(source).toContain('notes.value.unshift(response.data)')
+    expect(source).toContain('composerKey.value += 1')
     expect(source).not.toContain('to="/posts/notes/new"')
   })
 

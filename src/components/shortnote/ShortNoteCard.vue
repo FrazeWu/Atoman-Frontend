@@ -14,7 +14,7 @@
     <RouterLink :to="`/posts/notes/${note.id}`" class="short-note-card__body">
       <p>{{ note.content }}</p>
       <div v-if="note.media.length" class="short-note-card__media" :class="`count-${note.media.length}`">
-        <img v-for="item in note.media" :key="item.id" :src="item.url" alt="短话图片" loading="lazy" />
+        <img v-for="item in note.media" :key="item.id" :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
       </div>
     </RouterLink>
     <InteractionBar
@@ -36,6 +36,7 @@ import InteractionBar from '@/components/shared/InteractionBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractions } from '@/composables/useInteractions'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 import type { ShortNote } from '@/types'
 
 const props = defineProps<{ note: ShortNote }>()

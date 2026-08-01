@@ -14,6 +14,7 @@ const normalizeVersion = (value: string | undefined) => {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiProxyTarget = env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8080'
+  const objectStorageProxyTarget = env.VITE_DEV_OBJECT_STORAGE_PROXY_TARGET || 'http://127.0.0.1:9100'
   const appVersion = normalizeVersion(env.VITE_APP_VERSION || packageJson.version)
 
   return {
@@ -33,6 +34,11 @@ export default defineConfig(({ mode }) => {
           target: apiProxyTarget,
           changeOrigin: true,
         },
+        '/__object-storage': {
+          target: objectStorageProxyTarget,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/__object-storage/, ''),
+        },
       },
     },
     preview: {
@@ -46,6 +52,11 @@ export default defineConfig(({ mode }) => {
         '/uploads': {
           target: apiProxyTarget,
           changeOrigin: true,
+        },
+        '/__object-storage': {
+          target: objectStorageProxyTarget,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/__object-storage/, ''),
         },
       },
     },

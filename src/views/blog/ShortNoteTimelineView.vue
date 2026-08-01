@@ -3,7 +3,7 @@
     <PPageHeader title="短话" />
     <div class="short-note-timeline__layout">
       <main class="short-note-timeline__stream">
-        <ShortNoteComposer v-if="authStore.isAuthenticated" compact :submitting="publishing" @submit="publish" />
+        <ShortNoteComposer v-if="authStore.isAuthenticated" :key="composerKey" compact :submitting="publishing" @submit="publish" />
         <div v-if="loading && !notes.length" class="short-note-timeline__loading">
           <div v-for="index in 4" :key="index" class="a-skeleton" style="height:9rem" />
         </div>
@@ -57,6 +57,7 @@ const error = ref('')
 const page = ref(1)
 const hasMore = ref(false)
 const publishing = ref(false)
+const composerKey = ref(0)
 const hotNotes = computed(() => [...notes.value]
   .sort((left, right) => (right.likes_count + right.comments_count) - (left.likes_count + left.comments_count))
   .slice(0, 4))
@@ -94,6 +95,7 @@ async function publish(payload: { content: string; media_urls: string[] }) {
       body: JSON.stringify(payload),
     })
     notes.value.unshift(response.data)
+    composerKey.value += 1
   } catch {
     error.value = '发布失败，请重试'
   } finally {

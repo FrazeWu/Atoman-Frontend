@@ -46,6 +46,7 @@ export function buildAppRoutes(): RouteRecordRaw[] {
 	...studioRoutes,
     ...userRoutes,
     ...channelRoutes,
+    { path: '/notes', redirect: '/posts/notes' },
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },

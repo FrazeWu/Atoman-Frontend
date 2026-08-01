@@ -8,11 +8,12 @@ import { buildAppRoutes } from '@/router/buildAppRoutes'
 const source = readFileSync(resolve(process.cwd(), 'src/components/system/AppSidebar.vue'), 'utf8')
 
 describe('AppSidebar blog navigation', () => {
-  it('provides a short-note entry that opens the studio post editor', async () => {
-    expect(source).toContain("{ to: '/studio/blog/new', label: '写短话', icon: PenLine }")
+  it('keeps only the short-note timeline entry', async () => {
+    expect(source).not.toContain("label: '写短话'")
+    expect(source).toContain("{ to: '/posts/notes', label: '短话', icon: MessageSquare }")
 
     const router = createRouter({ history: createMemoryHistory(), routes: buildAppRoutes() })
-    await router.push('/studio/blog/new')
-    expect(router.currentRoute.value.name).toBe('studio-blog-new')
+    await router.push('/posts/notes')
+    expect(router.currentRoute.value.fullPath).toBe('/posts/notes')
   })
 })

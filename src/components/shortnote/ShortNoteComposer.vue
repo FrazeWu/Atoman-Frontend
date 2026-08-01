@@ -6,14 +6,14 @@
       :rows="compact ? 3 : 6"
       :maxlength="500"
       placeholder="写点什么"
-      :disabled="submitting || uploading"
+      :disabled="submitting"
     >
       <template #suffix><span class="short-note-composer__count">{{ charCount }}/500</span></template>
     </PTextarea>
 
     <div v-if="mediaUrls.length" ref="mediaElement" data-testid="short-note-media" class="short-note-composer__media">
       <div v-for="(url, index) in mediaUrls" :key="url" class="short-note-composer__preview">
-        <img :src="url" alt="上传的图片" />
+        <img :src="resolveMediaURL(url)" alt="上传的图片" />
         <button type="button" data-testid="short-note-drag-handle" class="short-note-composer__drag-handle" aria-label="拖拽排序图片" title="拖拽排序图片">
           <GripVertical :size="16" />
         </button>
@@ -28,7 +28,7 @@
         <span>{{ uploading ? '上传中...' : `图片 ${mediaUrls.length}/9` }}</span>
         <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple :disabled="uploading || mediaUrls.length >= 9" @change="uploadImages" />
       </label>
-      <PButton :disabled="!content.trim()" :loading="submitting">{{ submitLabel }}</PButton>
+      <PButton type="submit" :disabled="!content.trim()" :loading="submitting">{{ submitLabel }}</PButton>
     </div>
   </form>
 </template>
@@ -42,6 +42,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   initialContent?: string

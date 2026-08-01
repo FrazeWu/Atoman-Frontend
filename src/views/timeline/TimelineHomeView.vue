@@ -9,41 +9,17 @@
       </template>
     </PPageHeader>
 
-    <div class="tl-toolbar">
-      <div class="tl-filter-group">
-        <label class="filter-label">起始年份</label>
-        <input v-model.number="yearStart" type="number" placeholder="如 1800" class="a-input" style="width:120px" />
-      </div>
-      <div class="tl-filter-group">
-        <label class="filter-label">结束年份</label>
-        <input v-model.number="yearEnd" type="number" placeholder="如 2000" class="a-input" style="width:120px" />
-      </div>
-      <div class="tl-filter-group">
-        <label class="filter-label">分类</label>
-        <input v-model="filterCategory" type="text" placeholder="政治 / 文化 / 科技…" class="a-input" style="width:160px" />
-      </div>
-      <PButton outline @click="applyFilter">筛选</PButton>
-      <PButton outline @click="resetFilter">重置</PButton>
-
-      <div v-if="batchSelectedIds.length" class="tl-toolbar-batch">
-        <span class="tl-toolbar-batch-count">已勾选 {{ batchSelectedIds.length }} 条</span>
-        <button class="tl-action-btn" @click="addBatchToCompare">加入对比池</button>
-        <button class="tl-action-btn tl-action-btn-secondary" @click="clearBatchSelection">清空勾选</button>
-      </div>
-
-      <div class="tl-mode-switch" style="margin-left:auto">
-        <button
-          class="tl-mode-btn"
-          :class="{ 'tl-mode-btn-active': viewMode === 'lanes' }"
-          @click="viewMode = 'lanes'"
-        >泳道浏览</button>
-        <button
-          class="tl-mode-btn"
-          :class="{ 'tl-mode-btn-active': viewMode === 'map' }"
-          @click="viewMode = 'map'"
-        >地图在线查看</button>
-      </div>
-    </div>
+    <TimelineToolbar
+      v-model:year-start="yearStart"
+      v-model:year-end="yearEnd"
+      v-model:category="filterCategory"
+      v-model:view-mode="viewMode"
+      :batch-selected-count="batchSelectedIds.length"
+      @apply="applyFilter"
+      @reset="resetFilter"
+      @add-batch-to-compare="addBatchToCompare"
+      @clear-batch-selection="clearBatchSelection"
+    />
 
     <div v-if="loading && events.length === 0" class="tl-state-block">
       <p class="font-bold">加载中...</p>
@@ -261,46 +237,17 @@
       </main>
     </div>
 
-    <PModal v-if="detailEvent" size="lg" @close="detailEvent = null">
-      <div class="a-modal-header">
-        <h2 class="a-modal-title">{{ detailEvent.title }}</h2>
-        <button class="a-modal-close" @click="detailEvent = null">✕</button>
-      </div>
-      <div class="a-modal-body">
-        <div class="tl-detail-meta">
-          <span>{{ formatDatetime(detailEvent.event_date) }}</span>
-          <span v-if="detailEvent.end_date"> — {{ formatDatetime(detailEvent.end_date) }}</span>
-          <span v-if="detailEvent.category" class="tl-badge">{{ detailEvent.category }}</span>
-        </div>
-        <div v-if="detailEvent.location" class="tl-detail-field">
-          <span class="tl-field-label">所在位置</span>
-          <span>{{ detailEvent.location }}</span>
-        </div>
-        <div v-if="detailEvent.source" class="tl-detail-field">
-          <span class="tl-field-label">来源</span>
-          <span>{{ detailEvent.source }}</span>
-        </div>
-        <p v-if="detailEvent.description" class="tl-detail-desc">{{ detailEvent.description }}</p>
-        <div v-if="detailEvent.content" class="tl-detail-content" v-html="renderContent(detailEvent.content)" />
-        <div v-if="detailEvent.tags?.length" class="tl-tags">
-          <span v-for="tag in detailEvent.tags" :key="tag" class="a-badge">{{ tag }}</span>
-        </div>
-        <TimelineRevisionProposal
-          :target-id="detailEvent.id"
-          target-kind="event"
-          :target-owner-id="detailEvent.user_id"
-          :current-coordinates="{ latitude: detailEvent.latitude, longitude: detailEvent.longitude }"
-          @decided="refreshDecidedEvent"
-        />
-      </div>
-      <template #footer>
-        <div class="a-modal-footer" v-if="canEdit(detailEvent)">
-          <PButton outline @click="openEdit(detailEvent)">编辑</PButton>
-          <PButton outline @click="openHistory(detailEvent)">历史版本</PButton>
-          <PButton variant="danger" @click="confirmDelete(detailEvent)">删除</PButton>
-        </div>
-      </template>
-    </PModal>
+    <TimelineEventDetailModal
+      v-if="detailEvent"
+      :event="detailEvent"
+      :can-edit="canEdit(detailEvent)"
+      :format-datetime="formatDatetime"
+      @close="detailEvent = null"
+      @edit="openEdit(detailEvent!)"
+      @history="openHistory(detailEvent!)"
+      @delete="confirmDelete(detailEvent!)"
+      @decided="refreshDecidedEvent"
+    />
 
     <PModal v-if="showForm" size="lg" @close="closeForm">
       <div class="a-modal-header">
@@ -414,7 +361,8 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 import TimelineEventFormSection from '@/components/timeline/TimelineEventFormSection.vue'
-import TimelineRevisionProposal from '@/components/timeline/TimelineRevisionProposal.vue'
+import TimelineEventDetailModal from '@/components/timeline/TimelineEventDetailModal.vue'
+import TimelineToolbar from '@/components/timeline/TimelineToolbar.vue'
 import { moduleRooms } from '@/config/moduleRooms'
 import { useTimelineComparison } from '@/composables/timeline/useTimelineComparison'
 import { useTimelineEventEditor } from '@/composables/timeline/useTimelineEventEditor'
@@ -508,8 +456,6 @@ const {
   personTagsInput,
   submitPerson,
 } = useTimelinePersonCreation()
-
-const renderContent = (content: string) => content.replace(/\n/g, '<br>')
 
 const canEdit = (event: TimelineEvent) =>
   authStore.isAuthenticated &&

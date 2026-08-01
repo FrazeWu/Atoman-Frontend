@@ -106,106 +106,30 @@
     />
 
     <section class="feed-content">
-      <div
-        v-if="currentSourceSubscription"
-        data-test="feed-current-source"
-        class="feed-current-source"
-      >
-        <div class="feed-current-source__main">
-          <span class="a-font-meta">当前来源</span>
-          <strong>{{ currentSourceTitle }}</strong>
-          <span v-if="currentSourceUnreadCount > 0" class="feed-current-source__count a-font-meta">
-            {{ currentSourceUnreadCount }} 未读
-          </span>
-        </div>
-        <button
-          type="button"
-          data-test="feed-clear-source"
-          class="feed-current-source__clear a-font-meta"
-          @click="clearSourceFilter"
-        >
-          返回全部
-        </button>
-      </div>
-
-      <div class="feed-actions">
-        <form class="feed-search" data-test="feed-search-form" @submit.prevent="submitSearch">
-          <input
-            v-model="searchInput"
-            data-test="feed-search-input"
-            class="feed-search__input"
-            type="search"
-            placeholder="搜索标题、来源、摘要"
-            aria-label="搜索订阅内容"
-          />
-          <PPress type="submit" label="搜索" />
-          <PPress
-            v-if="activeSearchLabel"
-            variant="secondary"
-            data-test="feed-search-clear"
-            label="清空"
-            @click="clearSearch"
-          />
-        </form>
-        <div class="source-type-filters" aria-label="来源类型筛选">
-          <PSegmentedControl
-            v-model="sourceTypeFilter"
-            :options="sourceTypeFilterOptions"
-          />
-        </div>
-        <label v-if="!querySourceId" class="feed-merge-duplicates">
-          <input
-            v-model="mergeDuplicates"
-            data-test="feed-merge-duplicates"
-            type="checkbox"
-            @change="updateMergeDuplicates"
-          />
-          <span>合并同题</span>
-        </label>
-        <div v-if="themeFilters.length" class="theme-filters" aria-label="主题筛选">
-          <button
-            v-for="theme in themeFilters"
-            :key="theme"
-            type="button"
-            class="theme-filter-btn"
-            :class="{ active: activeTheme === theme }"
-            :data-test="`theme-filter-${theme.toLowerCase()}`"
-            @click="activeTheme = activeTheme === theme ? '' : theme"
-          >
-            {{ theme }}
-          </button>
-        </div>
-        <button
-          v-if="authStore.isAuthenticated"
-          class="filter-toggle-btn"
-          :class="{ active: unreadOnly }"
-          @click="toggleUnreadOnly"
-          :title="unreadOnly ? '显示全部' : '只看未读'"
-        >
-          <Filter :size="20" aria-hidden="true" />
-        </button>
-        <div v-if="authStore.isAuthenticated" style="width: 2rem"></div>
-        <PPress
-          v-if="authStore.isAuthenticated"
-          variant="secondary"
-          :loading="markingAllRead"
-          loading-text="处理中..."
-          @click="toggleAllRead"
-          :label="bulkReadLabel"
-        />
-      </div>
-
-      <div v-if="hasNewTimelineContent" class="feed-new-content-region" aria-live="polite">
-        <button
-          type="button"
-          class="feed-new-content"
-          data-test="feed-new-content"
-          @click="refreshNewTimelineContent"
-        >
-          <RefreshCw :size="16" aria-hidden="true" />
-          <span>有新内容，点击刷新</span>
-        </button>
-      </div>
+      <FeedTimelineToolbar
+        v-model:search-input="searchInput"
+        v-model:source-type-filter="sourceTypeFilter"
+        v-model:merge-duplicates="mergeDuplicates"
+        v-model:active-theme="activeTheme"
+        :current-source-title="currentSourceSubscription ? currentSourceTitle : ''"
+        :current-source-unread-count="currentSourceUnreadCount"
+        :active-search-label="activeSearchLabel"
+        :source-type-filter-options="sourceTypeFilterOptions"
+        :query-source-id="querySourceId"
+        :theme-filters="themeFilters"
+        :authenticated="authStore.isAuthenticated"
+        :unread-only="unreadOnly"
+        :marking-all-read="markingAllRead"
+        :bulk-read-label="bulkReadLabel"
+        :has-new-timeline-content="hasNewTimelineContent"
+        @search="submitSearch"
+        @clear-search="clearSearch"
+        @clear-source="clearSourceFilter"
+        @update-merge-duplicates="updateMergeDuplicates"
+        @toggle-unread="toggleUnreadOnly"
+        @toggle-all-read="toggleAllRead"
+        @refresh-new-content="refreshNewTimelineContent"
+      />
 
       <div v-if="loadingTimeline" class="feed-loading">
         <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
@@ -358,7 +282,6 @@ import PClip from '@/components/ui/PClip.vue'
 import PPress from '@/components/ui/PPress.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
 const sourceTypeFilterOptions = [
   { label: '全部', value: 'all', test: 'source-type-filter-all' },
@@ -371,6 +294,7 @@ import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.v
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
 import FeedTimelineFooter from '@/components/feed/FeedTimelineFooter.vue'
+import FeedTimelineToolbar from '@/components/feed/FeedTimelineToolbar.vue'
 import OnboardingFeedRecommendations from '@/components/onboarding/OnboardingFeedRecommendations.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -385,7 +309,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown, Filter, RefreshCw } from 'lucide-vue-next'
+import { ChevronDown } from 'lucide-vue-next'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()

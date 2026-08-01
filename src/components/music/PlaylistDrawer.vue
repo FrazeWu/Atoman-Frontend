@@ -10,6 +10,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
   createPlaylistBookmark,
   deletePlaylistBookmark,
@@ -58,7 +59,7 @@ const removingSongIds = ref<Set<string>>(new Set())
 const reordering = ref(false)
 const pendingSongOrders = new Map<string, MusicSongListItem[]>()
 const confirmedSongOrders = new Map<string, MusicSongListItem[]>()
-let playlistLoadGeneration = 0
+const playlistRequests = useRequestGeneration()
 
 async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolean) {
   if (!authStore.isAuthenticated) {
@@ -81,8 +82,7 @@ async function loadBookmarkState(playlistId: string, isCurrentLoad: () => boolea
 }
 
 async function loadPlaylist(playlistId: string | null) {
-  const loadGeneration = ++playlistLoadGeneration
-  const isCurrentLoad = () => loadGeneration === playlistLoadGeneration
+  const { generation: loadGeneration, isCurrent: isCurrentLoad } = playlistRequests.beginRequest()
   bookmarkLoading.value = false
 
   if (!playlistId) {
@@ -372,10 +372,10 @@ async function toggleBookmark() {
   if (!targetPlaylist || bookmarkLoading.value) return
 
   const playlistId = String(targetPlaylist.id)
-  const loadGeneration = playlistLoadGeneration
+  const loadGeneration = playlistRequests.currentGeneration()
   const wasBookmarked = isBookmarked.value
   const isCurrentTarget = () => (
-    loadGeneration === playlistLoadGeneration && String(playlist.value?.id) === playlistId
+    playlistRequests.isCurrent(loadGeneration) && String(playlist.value?.id) === playlistId
   )
 
   await authStore.restoreSession()

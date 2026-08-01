@@ -11,6 +11,7 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { Plus, Play, Heart } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
   createAlbumBookmark,
@@ -43,7 +44,7 @@ const redirectMessage = ref('')
 const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
-let albumLoadGeneration = 0
+const albumRequests = useRequestGeneration()
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
@@ -164,8 +165,7 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
 }
 
 async function loadAlbum(albumId: string | null) {
-  const loadGeneration = ++albumLoadGeneration
-  const isCurrentLoad = () => loadGeneration === albumLoadGeneration
+  const { generation: loadGeneration, isCurrent: isCurrentLoad } = albumRequests.beginRequest()
   bookmarkLoading.value = false
 
   if (!albumId) {
@@ -222,10 +222,10 @@ async function toggleAlbumBookmark() {
   if (!targetAlbum || bookmarkLoading.value) return
 
   const albumId = String(targetAlbum.id)
-  const loadGeneration = albumLoadGeneration
+  const loadGeneration = albumRequests.currentGeneration()
   const wasBookmarked = isBookmarked.value
   const isCurrentTarget = () => (
-    loadGeneration === albumLoadGeneration && String(album.value?.id) === albumId
+    albumRequests.isCurrent(loadGeneration) && String(album.value?.id) === albumId
   )
 
   bookmarkLoading.value = true

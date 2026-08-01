@@ -91,27 +91,19 @@
       </div>
     </div>
 
-    <PModal v-if="recoveryModalVisible && pendingDraftCandidate" :title="recoveryModalTitle" size="md" @close="keepCurrentContent">
-      <div class="draft-recovery-body">
-        <span class="a-label">{{ recoveryModalLabel }}</span>
-        <p class="draft-recovery-text">
-          {{ recoveryModalText }}
-        </p>
-
-        <div class="draft-recovery-preview a-card-sm">
-          <strong>{{ pendingDraftCandidate.payload.title || '未命名草稿' }}</strong>
-          <p class="a-muted">{{ draftRecoveryPreview }}</p>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="draft-recovery-actions">
-          <PButton type="button" variant="secondary" @click="keepCurrentContent">{{ keepCurrentContentLabel }}</PButton>
-          <PButton v-if="!isCollabConflict" type="button" variant="ghost" @click="discardPendingDraft">丢弃草稿</PButton>
-          <PButton type="button" variant="primary" @click="restorePendingDraft">恢复草稿</PButton>
-        </div>
-      </template>
-    </PModal>
+    <PostEditorDraftRecoveryModal
+      v-if="recoveryModalVisible && pendingDraftCandidate"
+      :title="recoveryModalTitle"
+      :label="recoveryModalLabel"
+      :message="recoveryModalText"
+      :draft-title="pendingDraftCandidate.payload.title"
+      :preview="draftRecoveryPreview"
+      :keep-label="keepCurrentContentLabel"
+      :collab-conflict="isCollabConflict"
+      @keep="keepCurrentContent"
+      @discard="discardPendingDraft"
+      @restore="restorePendingDraft"
+    />
 
     <PModal v-if="draftManagerVisible" title="草稿管理" size="md" @close="closeDraftManager">
       <div class="draft-manager-body">
@@ -198,6 +190,7 @@ import PostEditorSidebar from '@/components/blog/PostEditorSidebar.vue'
 import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
+import PostEditorDraftRecoveryModal from '@/components/blog/PostEditorDraftRecoveryModal.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'

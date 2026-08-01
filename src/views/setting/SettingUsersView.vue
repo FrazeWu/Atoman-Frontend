@@ -13,39 +13,18 @@
       <PTab label="操作记录" :active="view === 'audit'" @click="view = 'audit'" />
     </nav>
 
-    <PSurface v-if="view === 'users'" :layer="1" class="setting-users__toolbar">
-      <form class="setting-users__filters" @submit.prevent="applyFilters">
-        <PInput
-          v-model="filters.q"
-          data-test="user-search"
-          label="搜索"
-          type="search"
-          placeholder="用户名、邮箱或显示名"
-        />
-        <PSelect
-          v-model="filters.role"
-          data-test="user-role-filter"
-          label="角色"
-          :options="roleFilterOptions"
-        />
-        <PSelect
-          v-model="filters.status"
-          data-test="user-status-filter"
-          label="状态"
-          :options="statusOptions"
-        />
-        <PSelect
-          v-model="filters.activity"
-          data-test="user-activity-filter"
-          label="登录时间"
-          :options="activityOptions"
-        />
-        <PButton type="submit" variant="secondary" :loading="loading" loading-text="查询中...">
-          <Search :size="16" aria-hidden="true" />
-          查询
-        </PButton>
-      </form>
-    </PSurface>
+    <AdminUserFilterBar
+      v-if="view === 'users'"
+      v-model:query="filters.q"
+      v-model:role="filters.role"
+      v-model:status="filters.status"
+      v-model:activity="filters.activity"
+      :loading="loading"
+      :role-options="roleFilterOptions"
+      :status-options="statusOptions"
+      :activity-options="activityOptions"
+      @apply="applyFilters"
+    />
 
     <p v-if="error" class="setting-users__notice setting-users__notice--error" role="alert">{{ error }}</p>
     <p v-else-if="message" class="setting-users__notice" role="status">{{ message }}</p>
@@ -283,7 +262,6 @@ import {
   EyeOff,
   KeyRound,
   Pencil,
-  Search,
   Trash2,
   UserPlus,
   UserRoundCheck,
@@ -303,6 +281,7 @@ import {
 } from '@/api/adminUsers'
 import AdminUserAuditView from '@/components/admin/AdminUserAuditView.vue'
 import AdminUserDetailSheet from '@/components/admin/AdminUserDetailSheet.vue'
+import AdminUserFilterBar from '@/components/admin/AdminUserFilterBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'

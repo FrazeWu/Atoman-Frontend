@@ -1,6 +1,6 @@
 <template>
   <div class="setting-feed-panel">
-    <div class="setting-feed-panel__header">
+    <div v-if="showHeader" class="setting-feed-panel__header">
       <div>
         <h3 class="a-subtitle">订阅源管理</h3>
         <p class="a-muted">管理站点 RSS 订阅源，支持增改查与手工爬取。</p>
@@ -246,10 +246,13 @@ import {
   type AdminOnboardingFeedRecommendation,
 } from '@/stores/adminFeedFulltext'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   fullTextMode: 'disabled' | 'per_source'
   allowAddSource?: boolean
-}>()
+  showHeader?: boolean
+}>(), {
+  showHeader: true,
+})
 
 const authStore = useAuthStore()
 const adminFeedFulltextStore = useAdminFeedFulltextStore()
@@ -585,6 +588,8 @@ async function retryItem(itemId: string) {
 onMounted(() => {
   refresh()
 })
+
+defineExpose({ refresh })
 </script>
 
 <style scoped>

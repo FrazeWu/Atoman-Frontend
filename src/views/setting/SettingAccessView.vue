@@ -1,63 +1,19 @@
 <template>
   <section class="setting-access settings-center">
-    <PSectionHeader
-      title="站点设置"
-      kicker="SITE ACCESS"
-      description="管理模块开放状态与站点功能。"
-    />
+    <PSectionHeader title="站点设置" kicker="SITE ACCESS" description="管理模块开放状态与站点功能。" />
 
-    <p v-if="error" class="setting-access__message setting-access__message--error">{{ error }}</p>
+    <p v-if="error" class="setting-access__message setting-access__message--error">
+      {{ error }}
+    </p>
     <p v-else-if="saved" class="setting-access__message">已保存</p>
 
-    <PSurface class="setting-access__module-toggle-bar settings-center__section-card" :layer="1">
-      <div class="setting-access__bar-head">
-        <div>
-          <h2 class="a-title-sm">启用模块</h2>
-          <p class="a-muted">模块总开关统一放在这里，不在下方模块章节重复出现。</p>
-        </div>
-      </div>
+    <div class="setting-access__sections settings-center__sections">
+      <SettingManagementOverview />
 
-      <div class="setting-access__module-toggle-grid">
-        <label
-          v-for="key in moduleNavOrder"
-          :key="key"
-          class="setting-access__module-toggle-item settings-block"
-        >
-          <div class="settings-block__copy">
-            <strong>{{ moduleRooms[key].name }}</strong>
-            <small>{{ moduleRooms[key].helper }}</small>
-          </div>
-          <div class="settings-block__control">
-            <input v-model="draft.modules[key].enabled" type="checkbox" />
-          </div>
-        </label>
-      </div>
-    </PSurface>
-
-    <div class="settings-center__shell">
-      <aside class="settings-center__sidebar" aria-label="模块目录">
-        <nav class="setting-access__module-nav settings-center__nav">
-        <button
-          v-for="key in moduleNavOrder"
-          :key="key"
-          type="button"
-          class="setting-access__module-nav-item settings-center__nav-item"
-          :class="{ 'is-active': activeSection === key }"
-          @click="scrollToSection(key)"
-        >
-          <span class="settings-center__kicker">{{ moduleKeyLabel(key) }}</span>
-          <strong>{{ moduleRooms[key].name }}</strong>
-          <small>{{ moduleRooms[key].helper }}</small>
-        </button>
-        </nav>
-      </aside>
-
-      <div class="setting-access__sections settings-center__sections">
         <section
           v-for="key in moduleNavOrder"
           :id="`module-${key}`"
           :key="key"
-          :ref="(el) => registerSection(key, el)"
           class="setting-access__section settings-center__section"
         >
           <PSurface :layer="1" class="setting-access__section-card settings-center__section-card">
@@ -72,7 +28,23 @@
               </span>
             </div>
 
-            <p class="setting-access__module-helper">{{ moduleRooms[key].helper }}</p>
+            <p class="setting-access__module-helper">
+              {{ moduleRooms[key].helper }}
+            </p>
+
+            <label class="setting-access__module-enabled settings-block">
+              <div class="settings-block__copy">
+                <strong>模块开放</strong>
+                <small>控制站内入口与相关功能。</small>
+              </div>
+              <div class="settings-block__control">
+                <input
+                  v-model="draft.modules[key].enabled"
+                  :data-test="`module-enabled-${key}`"
+                  type="checkbox"
+                />
+              </div>
+            </label>
 
             <div v-if="key === 'feed'" class="setting-access__module-body">
               <div class="setting-access__setting-block settings-block">
@@ -98,7 +70,22 @@
                 </div>
               </div>
 
-              <SettingFeedSourcePanel :full-text-mode="draft.settings.feed.full_text_mode" />
+              <div class="setting-access__setting-block settings-block">
+                <div class="setting-access__setting-copy settings-block__copy">
+                  <strong>订阅源管理</strong>
+                  <small>管理订阅源、推荐和抓取任务。</small>
+                </div>
+                <div class="setting-access__setting-control settings-block__control">
+                  <PButton
+                    data-test="subscription-management-detail-link"
+                    to="/site/setting/subscriptions"
+                    variant="secondary"
+                    size="sm"
+                  >
+                    查看详情
+                  </PButton>
+                </div>
+              </div>
             </div>
 
             <div v-else-if="key === 'music'" class="setting-access__module-body">
@@ -112,11 +99,7 @@
                   <small>控制文章评论开放范围。</small>
                 </div>
                 <div class="setting-access__setting-control settings-block__control settings-block__control--stack">
-                  <label
-                    v-for="mode in blogCommentModes"
-                    :key="mode.value"
-                    class="setting-access__radio-row"
-                  >
+                  <label v-for="mode in blogCommentModes" :key="mode.value" class="setting-access__radio-row">
                     <input v-model="draft.settings.blog.comment_mode" type="radio" :value="mode.value" />
                     <div>
                       <strong>{{ mode.label }}</strong>
@@ -140,9 +123,7 @@
 
               <SettingForumModeratorPanel v-if="draft.modules.forum.enabled" />
 
-              <PButton variant="secondary" to="/site/setting/community">
-                社区管理
-              </PButton>
+              <PButton variant="secondary" to="/site/setting/community"> 社区管理 </PButton>
             </div>
 
             <div v-else class="setting-access__module-body">
@@ -158,12 +139,7 @@
             </div>
           </PSurface>
         </section>
-      </div>
     </div>
-
-    <PSurface v-if="isOwner" id="site-setting-roles" :layer="1" class="setting-access__section-card settings-center__section-card">
-      <SettingRolesPanel />
-    </PSurface>
 
     <div class="setting-access__actions">
       <PButton variant="secondary" to="/">返回首页</PButton>
@@ -173,39 +149,49 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
-import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
 import SettingMusicReviewPanel from '@/components/setting/SettingMusicReviewPanel.vue'
-import SettingRolesPanel from '@/components/setting/SettingRolesPanel.vue'
+import SettingManagementOverview from '@/components/setting/SettingManagementOverview.vue'
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { mergeSiteAccess, type SiteAccess } from '@/config/siteAccess'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
-import { isOwnerRole } from '@/utils/roles'
-import { getSectionDomId, resolveActiveSectionByScroll, resolveInitialSettingSection } from '@/views/setting/settingAccessSections'
+import {
+  getSectionDomId,
+  resolveActiveSectionByScroll,
+  resolveInitialSettingSection
+} from '@/views/setting/settingAccessSections'
 
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
-const isOwner = isOwnerRole(authStore.user?.role)
-
+const route = useRoute()
 const draft = ref<SiteAccess>(mergeSiteAccess(siteAccessStore.access))
 const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
-const activeSection = ref<ModuleRoomKey>('feed')
 
 const blogCommentModes = [
-  { value: 'all', label: '全部可评论', description: '游客可匿名评论，已登录用户正常署名。' },
-  { value: 'authenticated', label: '仅登录用户可评论', description: '保持当前默认行为。' },
-  { value: 'disabled', label: '关闭评论', description: '全站文章评论入口关闭。' },
+  {
+    value: 'all',
+    label: '全部可评论',
+    description: '游客可匿名评论，已登录用户正常署名。'
+  },
+  {
+    value: 'authenticated',
+    label: '仅登录用户可评论',
+    description: '保持当前默认行为。'
+  },
+  {
+    value: 'disabled',
+    label: '关闭评论',
+    description: '全站文章评论入口关闭。'
+  }
 ] as const
-
-const sectionMap = new Map<ModuleRoomKey, HTMLElement>()
-let ticking = false
 
 watch(
   () => siteAccessStore.access,
@@ -226,54 +212,6 @@ function moduleKeyLabel(key: ModuleRoomKey) {
   return `/${key.toUpperCase()}`
 }
 
-function scrollToSection(key: ModuleRoomKey) {
-  const target = document.getElementById(getSectionDomId(key))
-  target?.scrollIntoView({ behavior: 'auto', block: 'start' })
-  activeSection.value = key
-}
-
-function registerSection(key: ModuleRoomKey, element: Element | { $el?: Element | null } | null) {
-  const resolved = element instanceof HTMLElement
-    ? element
-    : element && '$el' in element && element.$el instanceof HTMLElement
-      ? element.$el
-      : null
-
-  if (!resolved) {
-    sectionMap.delete(key)
-    return
-  }
-
-  sectionMap.set(key, resolved)
-}
-
-function syncActiveSection() {
-  const positions = moduleNavOrder
-    .map((key) => {
-      const element = sectionMap.get(key) ?? document.getElementById(getSectionDomId(key))
-      if (!element) return null
-      return {
-        key,
-        top: element.getBoundingClientRect().top + window.scrollY,
-      }
-    })
-    .filter((entry): entry is { key: ModuleRoomKey; top: number } => Boolean(entry))
-
-  const nextActive = resolveActiveSectionByScroll(positions, window.scrollY)
-  if (nextActive) {
-    activeSection.value = nextActive
-  }
-}
-
-function handleScroll() {
-  if (ticking) return
-  ticking = true
-  window.requestAnimationFrame(() => {
-    syncActiveSection()
-    ticking = false
-  })
-}
-
 async function save() {
   saving.value = true
   saved.value = false
@@ -290,22 +228,19 @@ async function save() {
 }
 
 onMounted(() => {
-  nextTick(() => {
-    const initialSection = resolveInitialSettingSection(window.location.hash)
-    if (initialSection) {
-      scrollToSection(initialSection)
-    } else {
-      syncActiveSection()
-    }
-  })
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  window.addEventListener('resize', handleScroll)
+  scrollToRouteSection()
 })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('resize', handleScroll)
-})
+watch(() => route?.hash ?? window.location.hash, scrollToRouteSection)
+
+function scrollToRouteSection() {
+  nextTick(() => {
+    const initialSection = resolveInitialSettingSection(route?.hash ?? window.location.hash)
+    if (initialSection) {
+      document.getElementById(getSectionDomId(initialSection))?.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }
+  })
+}
 </script>
 
 <style scoped>
@@ -313,39 +248,7 @@ onBeforeUnmount(() => {
   gap: 1.5rem;
 }
 
-.setting-access__module-toggle-bar {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.setting-access__bar-head h2,
-.setting-access__bar-head p {
-  margin: 0;
-}
-
-.setting-access__module-toggle-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-}
-
-.setting-access__module-toggle-item {
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
-}
-
-.setting-access__module-toggle-item strong,
-.setting-access__module-toggle-item small {
-  display: block;
-}
-
-.setting-access__module-toggle-item small {
-  color: var(--a-color-text-secondary);
-  font-size: var(--a-text-xs);
-}
-
-.setting-access__module-toggle-item input,
+.setting-access__module-enabled input,
 .setting-access__setting-block input,
 .setting-access__radio-row input,
 .setting-access__section-state input,
@@ -353,10 +256,6 @@ onBeforeUnmount(() => {
   width: 18px;
   height: 18px;
   accent-color: var(--a-color-text);
-}
-
-.setting-access__module-nav {
-  width: 100%;
 }
 
 .setting-access__section-head h2,
@@ -418,12 +317,6 @@ onBeforeUnmount(() => {
 
 .setting-access__message--error {
   color: var(--a-color-danger);
-}
-
-@media (max-width: 900px) {
-  .setting-access__module-nav {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
 }
 
 @media (max-width: 640px) {

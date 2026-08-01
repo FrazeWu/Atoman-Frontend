@@ -46,6 +46,14 @@ export function buildAppRoutes(): RouteRecordRaw[] {
 	...studioRoutes,
     ...userRoutes,
     ...channelRoutes,
+    {
+      path: '/post/:id',
+      redirect: to => ({
+        path: `/posts/post/${String(to.params.id)}`,
+        query: to.query,
+        hash: to.hash,
+      }),
+    },
     { path: '/notes', redirect: '/posts/notes' },
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/bookmarks', redirect: '/posts/bookmarks' },

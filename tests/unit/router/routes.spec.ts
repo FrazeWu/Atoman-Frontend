@@ -83,6 +83,17 @@ describe('host-scoped route tables', () => {
     expect(appRoutePaths).not.toContain('/feed/inbox')
   })
 
+  it('redirects legacy post links to the canonical blog route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: buildAppRoutes(),
+    })
+
+    await router.push('/post/post-1?source=legacy#comments')
+
+    expect(router.currentRoute.value.fullPath).toBe('/posts/post/post-1?source=legacy#comments')
+  })
+
   it('registers Studio as the only creator workspace', () => {
     const routes = buildAppRoutes()
     const appRoutePaths = paths(routes)

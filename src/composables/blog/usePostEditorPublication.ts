@@ -104,7 +104,7 @@ export function usePostEditorPublication({
     if (savedPostId.value) {
       if (redirect) {
         allowNextRouteLeave()
-        await router.push(`/post/${savedPostId.value}`)
+        await router.push(`/posts/post/${savedPostId.value}`)
       }
       return savedPostId.value
     }
@@ -157,7 +157,7 @@ export function usePostEditorPublication({
             : undefined,
         })
       } else {
-        await router.push(`/post/${savedPost.id}`)
+        await router.push(`/posts/post/${savedPost.id}`)
       }
       return savedPostId.value
     } catch (cause) {

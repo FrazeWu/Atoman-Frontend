@@ -80,29 +80,17 @@ function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
   )
 }
 
-const stepCopy: Record<CreationStepKey, { index: number; title: string; subtitle: string; cta: string }> = {
+const stepCopy: Record<CreationStepKey, { cta: string }> = {
   artist: {
-    index: 1,
-    title: '创建艺术家',
-    subtitle: '',
     cta: '下一步',
   },
   albumImport: {
-    index: 2,
-    title: '上传专辑',
-    subtitle: '',
     cta: '继续',
   },
   albumDetails: {
-    index: 3,
-    title: '完善专辑',
-    subtitle: '',
     cta: '继续',
   },
   preview: {
-    index: 4,
-    title: '预览专辑',
-    subtitle: '',
     cta: '提交',
   },
 }
@@ -214,6 +202,7 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
         artist_id: '',
         name: contributor.name.trim(),
         legal_name: flow.draft.artist.legalName.trim(),
+        ...(contributor.avatarUrl.trim() ? { image_url: contributor.avatarUrl.trim() } : {}),
         stage_names: artistStageNames,
         birth_place: flow.draft.artist.birthPlace.trim(),
         artist_form: flow.draft.artist.kind,
@@ -249,6 +238,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
+      ...(flow.draft.artist.avatarUrl.trim() ? { image_url: flow.draft.artist.avatarUrl.trim() } : {}),
       stage_names: flow.draft.artist.stageNames
         .filter((item) => item.name.trim())
         .map((item) => ({
@@ -262,6 +252,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
     artists,
     album: {
       title: flow.draft.albumDetails.title.trim(),
+      ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
@@ -393,14 +384,6 @@ async function completeCreation() {
     @close="requestClose"
   >
     <div v-if="creationFlow" class="creation-flow">
-      <div class="drawer-header">
-        <div class="header-meta">
-          <p class="step-label">第 {{ activeStep.index }} 步</p>
-        </div>
-        <h3 class="title">{{ activeStep.title }}</h3>
-        <p v-if="activeStep.subtitle" class="subtitle">{{ activeStep.subtitle }}</p>
-      </div>
-
       <div class="drawer-body">
         <p
           v-if="creationFlow.errorMessage"
@@ -452,47 +435,6 @@ async function completeCreation() {
 
 <style scoped>
 .creation-flow { display: flex; flex-direction: column; min-height: 100%; }
-.drawer-header {
-  margin: -2.5rem -2.5rem 0;
-  padding: 1.5rem 2rem 1.1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: transparent;
-}
-.header-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: baseline;
-  flex-wrap: wrap;
-}
-.eyebrow {
-  margin: 0 0 0.45rem;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.step-label {
-  margin: 0;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-.title {
-  margin: 0.2rem 0 0;
-  font-family: var(--a-font-sans);
-  font-size: 2.05rem;
-  line-height: 1.05;
-}
-.subtitle {
-  margin: 0.55rem 0 0;
-  color: var(--a-color-muted);
-  line-height: 1.7;
-  max-width: 34rem;
-}
 .drawer-body { display: flex; flex: 1; flex-direction: column; gap: 1.5rem; padding: 1.5rem 0 0; }
 .error-message {
   margin: 0;

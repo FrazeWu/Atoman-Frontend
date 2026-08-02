@@ -7,8 +7,6 @@
     @close="$emit('close')"
   >
     <div class="add-sub-form">
-      <h2 class="a-title-sm mb-8">添加订阅</h2>
-
       <div class="form-fields">
         <PField label="来源地址" required>
           <PInput

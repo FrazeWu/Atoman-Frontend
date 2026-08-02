@@ -123,6 +123,7 @@ describe('PlaylistDrawer', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="playlist-edit-button"]').trigger('click')
+    expect(wrapper.text()).not.toContain('编辑歌单')
     await wrapper.get('[data-testid="playlist-name-input"]').setValue('深夜歌单')
     await wrapper.get('[data-testid="playlist-description-input"]').setValue('新简介')
     await wrapper.get('[data-testid="playlist-public-toggle"]').setValue(true)

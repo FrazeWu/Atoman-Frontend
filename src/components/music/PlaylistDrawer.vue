@@ -6,7 +6,6 @@ import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -583,6 +582,7 @@ watch(playlist, syncEditForm, { immediate: true })
 
   <PSheet
     :show="editing"
+    title="编辑歌单"
     @close="cancelEditPlaylist"
     width="540px"
     :index="editSheetIndex"
@@ -590,13 +590,6 @@ watch(playlist, syncEditForm, { immediate: true })
     :show-backdrop="false"
   >
     <div class="playlist-edit-sheet">
-      <PPageHeader
-        title="编辑歌单"
-        sub="修改名称、可见性、简介和封面。"
-        accent
-        mb="0"
-      />
-
       <div class="playlist-edit-panel">
         <PInput
           data-testid="playlist-name-input"
@@ -679,9 +672,7 @@ watch(playlist, syncEditForm, { immediate: true })
 
 <style scoped>
 :global(.playlist-drawer) {
-  background: color-mix(in srgb, var(--a-color-bg) 92%, transparent) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }

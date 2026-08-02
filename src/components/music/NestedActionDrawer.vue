@@ -61,13 +61,6 @@ const titleMap: Record<string, string> = {
 }
 
 const displayTitle = computed(() => titleMap[currentAction.value || ''] || 'Action')
-const subtitleMap: Record<string, string> = {
-  revise: '补充专辑信息。',
-  revise_artist: '',
-  history: '查看各个版本的修改内容，并恢复到需要的版本。',
-  artist_history: '查看各个版本的修改内容。',
-  discussion: '',
-}
 
 const artistDraft = reactive({
   name: '',
@@ -497,12 +490,6 @@ async function submitEdit() {
     :is-shifted="shifted"
     :is-top-layer="topLayer"
   >
-    <div class="drawer-header">
-      <p class="eyebrow">Music Wiki</p>
-      <h3 class="title">{{ displayTitle }}</h3>
-      <p v-if="subtitleMap[currentAction || '']" class="subtitle">{{ subtitleMap[currentAction || ''] }}</p>
-    </div>
-
     <div class="drawer-body">
       <form v-if="isArtistForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
         <section class="form-section">
@@ -884,10 +871,6 @@ async function submitEdit() {
 </template>
 
 <style scoped>
-.drawer-header { margin: -2.5rem -2.5rem 0; padding: 1.8rem 2rem 1rem; border-bottom: 1px solid var(--a-color-border-soft); background: var(--a-color-surface); }
-.eyebrow { margin: 0 0 0.45rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-size: 0.78rem; font-weight: 500; letter-spacing: 0; text-transform: uppercase; }
-.title { font-family: var(--a-font-sans); font-size: 1.7rem; margin: 0; }
-.subtitle { margin: 0.55rem 0 0; color: var(--a-color-muted); line-height: 1.6; max-width: 28rem; }
 .drawer-body { margin: 0 -2.5rem; padding: 1.6rem 2rem 2rem; }
 
 .wiki-form { display: flex; flex-direction: column; gap: 1.1rem; }

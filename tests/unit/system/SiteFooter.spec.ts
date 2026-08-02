@@ -94,7 +94,7 @@ describe('SiteFooter', () => {
   })
 
   it.each([
-    ['about', '关于凹凸庵', '我们希望打造一个纯粹、求真的网络空间。'],
+    ['about', '关于', '我们希望打造一个纯粹、求真的网络空间。'],
     ['contact', '联系我们', 'support@atoman.org'],
     ['feedback', '问题反馈', '发送给 @fazong'],
     ['terms', '使用条款', '不得发布违反良法、侵权的内容。'],
@@ -107,7 +107,8 @@ describe('SiteFooter', () => {
     const sheet = wrapper.get('.site-footer-sheet')
     expect(sheet.classes()).toContain('is-bottom')
     expect(sheet.attributes('role')).toBe('dialog')
-    expect(sheet.text()).toContain(title)
+    expect(sheet.attributes('aria-label')).toBe(title)
+    expect(sheet.find('h1, h2').exists()).toBe(false)
     expect(sheet.text()).toContain(content)
   })
 

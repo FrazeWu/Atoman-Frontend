@@ -75,6 +75,7 @@ export type MusicAlbumImportCommitArtist = {
   artist_id: string
   name: string
   legal_name: string
+  image_url?: string
   stage_names: MusicAlbumImportCommitStageName[]
   birth_place: string
   artist_form: 'person' | 'group'
@@ -88,12 +89,14 @@ export type MusicAlbumImportCommitInput = {
   artist: {
     name: string
     legal_name: string
+    image_url?: string
     stage_names: MusicAlbumImportCommitStageName[]
     birth_place: string
   }
   artists?: MusicAlbumImportCommitArtist[]
   album: {
     title: string
+    cover_url?: string
     release_date?: string
     release_year: number
     tracks: MusicAlbumImportCommitTrack[]

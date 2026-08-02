@@ -18,12 +18,13 @@ test.describe('Feed', () => {
     await authenticatedPage.goto('/feed')
 
     await authenticatedPage.getByRole('button', { name: '+ 订阅' }).click()
-    await expect(authenticatedPage.getByRole('heading', { name: '添加订阅' })).toBeVisible()
+    const addSheet = authenticatedPage.getByRole('dialog', { name: '添加订阅' })
+    await expect(addSheet).toBeVisible()
     await expect(authenticatedPage.getByPlaceholder('输入网站、RSS 或 GitHub 仓库地址')).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: '确认订阅' })).toBeVisible()
 
     await authenticatedPage.locator('.add-sub-form').getByRole('button', { name: '取消', exact: true }).click()
-    await expect(authenticatedPage.getByRole('heading', { name: '添加订阅' })).toBeHidden()
+    await expect(addSheet).toBeHidden()
   })
 
   test('authenticated user sees mark all read button', async ({ authenticatedPage }) => {
@@ -41,7 +42,7 @@ test.describe('Feed', () => {
     await authenticatedPage.goto('/feed')
 
     await authenticatedPage.getByRole('button', { name: '订阅源管理' }).click()
-    await expect(authenticatedPage.getByRole('heading', { name: '订阅源管理' })).toBeVisible()
+    await expect(authenticatedPage.getByRole('dialog', { name: '订阅源管理' })).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: '导入 OPML' })).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: '导出 OPML' })).toBeVisible()
     await expect(authenticatedPage.getByRole('button', { name: '全部检查' })).toBeVisible()

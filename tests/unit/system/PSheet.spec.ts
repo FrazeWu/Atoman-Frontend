@@ -25,9 +25,11 @@ describe('PSheet.vue', () => {
     })
     expect(wrapper.find('.p-sheet-panel').exists()).toBe(true)
     expect(wrapper.text()).toContain('Sheet body')
-    expect(wrapper.text()).toContain('TEST TITLE')
+    expect(wrapper.text()).not.toContain('TEST TITLE')
     expect(wrapper.find('.sheet-header').exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'PSheetTab' }).exists()).toBe(true)
+    expect(wrapper.find('.tab-label').exists()).toBe(false)
+    expect(wrapper.get('.p-sheet-panel').attributes('aria-label')).toBe('TEST TITLE')
   })
 
   it('renders custom header content when header slot is provided', () => {
@@ -41,12 +43,13 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
   })
 
-  it('renders an inline title and floating close control when using header close type', () => {
+  it('renders only the floating close control when using header close type', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header', title: 'Inspect' }
     })
-    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
+    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(false)
     expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(true)
+    expect(wrapper.get('.sheet-content').classes()).toContain('sheet-content--has-close')
   })
 
   it('applies shifted class when isShifted prop is true', () => {
@@ -127,7 +130,7 @@ describe('PSheet.vue', () => {
 
     const panel = wrapper.get('.p-sheet-panel')
     expect(panel.classes()).toContain('is-bottom')
-    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
+    expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(false)
     expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'PSheetTab' }).exists()).toBe(false)
     expect(wrapper.find('.sheet-content').classes()).not.toContain('sheet-content--compact')

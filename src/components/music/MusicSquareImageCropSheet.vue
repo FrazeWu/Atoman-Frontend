@@ -226,7 +226,6 @@ onBeforeUnmount(() => {
   >
     <div class="crop-sheet" data-testid="music-square-crop-sheet">
       <div class="crop-sheet__copy">
-        <p class="crop-sheet__title">固定 1:1 裁剪</p>
         <p class="crop-sheet__hint">拖动图片调整位置，再用滑杆缩放。</p>
       </div>
 
@@ -297,14 +296,8 @@ onBeforeUnmount(() => {
   gap: 0.25rem;
 }
 
-.crop-sheet__title,
 .crop-sheet__hint {
   margin: 0;
-}
-
-.crop-sheet__title {
-  font-size: 0.95rem;
-  font-weight: 600;
 }
 
 .crop-sheet__hint {

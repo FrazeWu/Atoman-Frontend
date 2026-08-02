@@ -8,7 +8,6 @@
   >
     <div class="manage-sheet">
       <div class="manage-heading">
-        <h2 class="a-title-sm">订阅源管理</h2>
         <p class="a-muted manage-copy">整理已有订阅源的名称和分组。</p>
         <div class="manage-toolbar">
           <input

@@ -79,22 +79,18 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
   >
-    <template #header>
-      <div class="post-sheet-header">
-        <span class="a-label a-muted">文章预览</span>
-        <PButton v-if="isOwner" variant="secondary" size="sm" @click="editPost">
-          <Pencil :size="15" aria-hidden="true" />
-          编辑
-        </PButton>
-      </div>
-    </template>
-
     <div v-if="loading" class="post-sheet-loading" aria-label="正在加载文章">
       <div class="a-skeleton post-sheet-title-skeleton" />
       <div v-for="index in 6" :key="index" class="a-skeleton post-sheet-line-skeleton" />
     </div>
     <PEmpty v-else-if="errorMessage" kicker="" title="加载失败" :description="errorMessage" />
     <article v-else-if="post" class="post-sheet-article">
+      <div v-if="isOwner" class="post-sheet-actions">
+        <PButton variant="secondary" size="sm" @click="editPost">
+          <Pencil :size="15" aria-hidden="true" />
+          编辑
+        </PButton>
+      </div>
       <img v-if="post.cover_url" :src="post.cover_url" :alt="post.title" class="post-sheet-cover" />
       <div class="post-sheet-meta">
         <span>{{ post.user?.display_name || post.user?.username || '未知作者' }}</span>
@@ -108,13 +104,17 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
 </template>
 
 <style scoped>
-.post-sheet-header,
+.post-sheet-actions,
 .post-sheet-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   width: 100%;
+}
+
+.post-sheet-actions {
+  justify-content: flex-end;
+  margin-bottom: 1rem;
 }
 
 .post-sheet-loading,

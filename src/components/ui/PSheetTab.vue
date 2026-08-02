@@ -1,7 +1,12 @@
 <template>
-  <button class="sheet-tab" type="button" :aria-label="`返回${title}`" :title="`返回${title}`" @click="$emit('click')">
+  <button
+    class="sheet-tab"
+    type="button"
+    :aria-label="`返回${title}`"
+    :title="`返回${title}`"
+    @click="$emit('click')"
+  >
     <X class="close-icon" :size="16" aria-hidden="true" />
-    <span class="tab-label">{{ title }}</span>
   </button>
 </template>
 
@@ -19,12 +24,12 @@ defineEmits(['click'])
 .sheet-tab {
   background-color: white;
   color: var(--a-color-fg);
-  padding-left: 12px;
-  padding-right: 18px;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   position: relative;
   cursor: pointer;
@@ -42,15 +47,6 @@ defineEmits(['click'])
   font-weight: 500;
   color: currentColor;
   line-height: 1;
-}
-
-.tab-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
 }
 
 .sheet-tab:hover {

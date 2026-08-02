@@ -7,8 +7,6 @@
     @close="$emit('close')"
   >
     <div class="rule-editor-sheet">
-      <h2 class="a-title-sm">{{ mode === 'create' ? '新建规则' : '编辑规则' }}</h2>
-
       <div class="rule-editor-fields">
         <PField label="名称">
           <PInput v-model="draft.name" data-test="rule-name-input" placeholder="例如：播客自动整理" />

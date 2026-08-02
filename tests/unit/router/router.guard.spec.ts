@@ -139,6 +139,17 @@ describe('router auth guards', () => {
     expect(restoreSessionSpy).toHaveBeenCalled()
   })
 
+  it('redirects unauthenticated users from the music collection', async () => {
+    const router = await createMusicAppGuardRouter()
+    const auth = useAuthStore()
+    await auth.logout()
+
+    await router.push('/music/starred')
+
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.query.redirect).toBe('/music/starred')
+  })
+
   it.each([
     ['artist creation', '/music?editor=artist-create&name=Seed%20Artist'],
     ['album editing', '/music?editor=album-edit&album=album-42'],

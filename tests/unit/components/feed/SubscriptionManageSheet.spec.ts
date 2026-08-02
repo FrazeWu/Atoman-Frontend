@@ -91,6 +91,12 @@ const mountSheet = () => mount(SubscriptionManageSheet, {
 })
 
 describe('SubscriptionManageSheet', () => {
+  it('does not render a duplicate sheet title', () => {
+    const wrapper = mountSheet()
+
+    expect(wrapper.find('h2').exists()).toBe(false)
+  })
+
   it('shows the source name instead of the raw rss url in subscription cards', () => {
     const wrapper = mountSheet()
 

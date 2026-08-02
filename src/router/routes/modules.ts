@@ -46,7 +46,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: '', component: () => import('@/views/music/HomeView.vue') },
         { path: 'discover', component: () => import('@/views/music/ExploreView.vue') },
         { path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
-        { path: 'starred', component: () => import('@/views/music/StarredView.vue') },
+        { path: 'starred', component: () => import('@/views/music/StarredView.vue'), meta: { requiresAuth: true } },
         { path: 'history', component: () => import('@/views/music/HistoryView.vue'), meta: { requiresAuth: true } },
         {
           path: 'artist/new',

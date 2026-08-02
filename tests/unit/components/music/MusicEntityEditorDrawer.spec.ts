@@ -17,6 +17,7 @@ const drawerState = ref({
     draft: {
       artist: {
         id: string | null
+        avatarUrl: string
         legalName: string
         stageNames: Array<{
           id: string
@@ -33,6 +34,7 @@ const drawerState = ref({
       }
       albumDetails: {
         title: string
+        coverUrl: string
         releaseYear: string
       }
       tracks: Array<{ title: string }>
@@ -100,13 +102,6 @@ vi.mock('@/components/ui/PSheet.vue', () => ({
   },
 }))
 
-vi.mock('@/components/ui/PPageHeader.vue', () => ({
-  default: {
-    props: ['title'],
-    template: '<div data-testid="page-header">{{ title }}</div>',
-  },
-}))
-
 vi.mock('@/components/ui/PButton.vue', () => ({
   default: {
     template: '<button><slot /></button>',
@@ -130,6 +125,7 @@ function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' | 'prev
     draft: {
       artist: {
         id: null,
+        avatarUrl: '',
         legalName: 'Seed Artist',
         stageNames: [
           {
@@ -148,6 +144,7 @@ function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' | 'prev
       },
       albumDetails: {
         title: '',
+        coverUrl: '',
         releaseYear: '',
       },
       tracks: [],
@@ -200,7 +197,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
     expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
     expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('新建艺术家')
+    expect(wrapper.text()).not.toContain('新建艺术家')
   })
 
   it('keeps artist edit mode on the legacy artist form path', async () => {
@@ -210,7 +207,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
 
     expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
-    expect(wrapper.text()).toContain('编辑艺术家')
+    expect(wrapper.text()).not.toContain('编辑艺术家')
 
     await flushPromises()
     expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')

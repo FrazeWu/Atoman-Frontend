@@ -150,7 +150,9 @@ describe('useResponsiveShell', () => {
     await wrapper.get('[data-footer-panel="about"]').trigger('click')
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.get('.site-footer-sheet').text()).toContain('关于凹凸庵')
+    const sheet = wrapper.get('.site-footer-sheet')
+    expect(sheet.text()).toContain('我们希望打造一个纯粹、求真的网络空间。')
+    expect(sheet.find('h1, h2').exists()).toBe(false)
   })
 
   it('shows account settings and logout in the mobile more sheet', async () => {

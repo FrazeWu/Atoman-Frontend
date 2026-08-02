@@ -29,6 +29,7 @@ describe('MusicSquareImageCropSheet.vue', () => {
 
     const confirmButton = wrapper.get('[data-testid="music-square-crop-confirm"]')
     expect((confirmButton.element as HTMLButtonElement).disabled).toBe(true)
+    expect(wrapper.text()).not.toContain('固定 1:1 裁剪')
 
     createObjectURLMock.mockRestore()
     revokeObjectURLMock.mockRestore()

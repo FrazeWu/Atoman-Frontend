@@ -52,6 +52,13 @@ describe('SubscriptionAddSheet', () => {
     vi.useRealTimers()
   })
 
+  it('does not render a duplicate sheet title', () => {
+    const wrapper = mountSheet()
+
+    expect(wrapper.find('h2').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('添加订阅')
+  })
+
   it('resolves input after typing and submits unified payload for an existing source', async () => {
     vi.useFakeTimers()
     resolveSubscriptionInput.mockResolvedValue({

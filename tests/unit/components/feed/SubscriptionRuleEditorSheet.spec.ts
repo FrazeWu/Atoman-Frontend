@@ -67,6 +67,12 @@ const mountEditor = (props: {
 })
 
 describe('SubscriptionRuleEditorSheet', () => {
+  it('does not render a duplicate sheet title', () => {
+    const wrapper = mountEditor()
+
+    expect(wrapper.find('h2').exists()).toBe(false)
+  })
+
   it('does not submit a rule without any action', async () => {
     const wrapper = mountEditor()
 

@@ -31,7 +31,6 @@ import type {
   MusicTrackDraft,
 } from '@/components/music/types'
 import PButton from '@/components/ui/PButton.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import type { Artist } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -387,6 +386,7 @@ function buildCommitInput(): MusicAlbumImportCommitInput {
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
+      ...(flow.draft.artist.avatarUrl.trim() ? { image_url: flow.draft.artist.avatarUrl.trim() } : {}),
       stage_names: flow.draft.artist.stageNames
         .filter((item) => item.name.trim())
         .map((item) => ({
@@ -399,6 +399,7 @@ function buildCommitInput(): MusicAlbumImportCommitInput {
     },
     album: {
       title: flow.draft.albumDetails.title.trim(),
+      ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       release_year: Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10) || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
         title: track.title.trim(),
@@ -500,10 +501,6 @@ async function finishAlbumCreate() {
     @close="closeCurrentEditor"
   >
     <div class="entity-editor">
-      <div class="entity-editor__header">
-        <PPageHeader :title="sheetTitle" accent mb="0" />
-      </div>
-
       <div v-if="isCreateFlowActive && creationFlow" class="entity-editor__body">
         <p v-if="creationFlow.errorMessage" class="entity-editor__error">{{ creationFlow.errorMessage }}</p>
         <MusicCreationArtistStep v-if="albumCreateStep === 'artist'" />
@@ -583,10 +580,6 @@ async function finishAlbumCreate() {
   display: flex;
   min-height: 100%;
   flex-direction: column;
-}
-
-.entity-editor__header {
-  margin-bottom: 1rem;
 }
 
 .entity-editor__body {

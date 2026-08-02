@@ -272,12 +272,6 @@ watch(
     :index="sheetIndex"
     panel-class="album-drawer"
   >
-    <div class="drawer-header">
-      <div>
-        <div class="kicker">Album Notes</div>
-      </div>
-    </div>
-
     <div class="drawer-body">
 	  <p v-if="redirectMessage" class="state-line">{{ redirectMessage }}</p>
 	  <p v-if="album?.entry_status === 'closed' && !album?.redirect_to" class="state-line">该条目已关闭</p>
@@ -420,29 +414,11 @@ watch(
 
 <style scoped>
 :global(.album-drawer) {
-  background: color-mix(in srgb, var(--a-color-bg) 92%, transparent) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
-.drawer-header {
-  margin: -2.5rem -2.5rem 0;
-  padding: 1.5rem 2.5rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-.kicker {
-  font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: bold;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  color: var(--a-color-muted);
-}
 .drawer-body { margin: 0 -2.5rem; padding: 2rem 2.5rem; }
 
 .album-meta-row {

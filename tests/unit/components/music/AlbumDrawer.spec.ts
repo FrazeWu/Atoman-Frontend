@@ -98,10 +98,11 @@ describe('AlbumDrawer.vue', () => {
     deleteAlbumBookmark.mockResolvedValue({ deleted: true })
   })
 
-  it('renders correctly', () => {
+  it('does not render redundant sheet headings', () => {
     const wrapper = mount(AlbumDrawer, {
     })
-    expect(wrapper.text()).toContain('Album Notes')
+    expect(wrapper.text()).not.toContain('Album Notes')
+    expect(wrapper.text()).not.toContain('专辑详情')
   })
 
   it('opens the merge target when the album is closed with redirect_to', async () => {

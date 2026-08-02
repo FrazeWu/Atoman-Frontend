@@ -169,7 +169,8 @@ describe('NestedActionDrawer.vue', () => {
 
   it('renders when action is present', () => {
     const wrapper = mountDrawer()
-    expect(wrapper.html()).toContain('Music Wiki')
+    expect(wrapper.find('.drawer-header').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Music Wiki')
   })
 
   it('keeps a revision draft when another action becomes globally active', async () => {

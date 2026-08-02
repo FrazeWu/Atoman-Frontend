@@ -9,8 +9,10 @@ type PolicyDocument = { title: string; intro: string; sections: PolicySection[] 
 const props = withDefaults(defineProps<{
   kind: PolicyKind
   headingLevel?: 'h1' | 'h2'
+  showTitle?: boolean
 }>(), {
   headingLevel: 'h2',
+  showTitle: true,
 })
 
 const documents: Record<PolicyKind, PolicyDocument> = {
@@ -82,8 +84,8 @@ const document = computed(() => documents[props.kind])
 
 <template>
   <article class="site-policy-content">
-    <component :is="headingLevel" class="site-policy-title">{{ document.title }}</component>
-    <p class="site-policy-updated">更新日期：2026 年 7 月 13 日</p>
+    <component v-if="showTitle" :is="headingLevel" class="site-policy-title">{{ document.title }}</component>
+    <p class="site-policy-updated" :class="{ 'site-policy-updated--flush': !showTitle }">更新日期：2026 年 7 月 13 日</p>
     <p class="site-policy-intro">{{ document.intro }}</p>
 
     <section v-for="section in document.sections" :key="section.title" class="site-policy-section">
@@ -115,6 +117,10 @@ const document = computed(() => documents[props.kind])
   margin: var(--a-space-2) 0 0;
   color: var(--a-color-muted);
   font-size: var(--a-text-xs);
+}
+
+.site-policy-updated--flush {
+  margin-top: 0;
 }
 
 .site-policy-intro,

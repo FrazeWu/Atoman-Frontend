@@ -277,6 +277,61 @@ describe('MusicCreationFlowDrawer', () => {
     expect(drawerMocks.state.value.creationFlow).toBeNull()
   })
 
+  it('提交时携带已上传的艺人头像和专辑封面', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    const base = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'preview',
+      draft: {
+        ...base.draft,
+        artist: {
+          ...base.draft.artist,
+          id: null,
+          avatarUrl: 'https://assets.atoman.test/music/covers/uploads/avatar.webp',
+          legalName: 'Kanye Omari West',
+          stageNames: [{
+            ...base.draft.artist.stageNames[0],
+            name: 'Ye',
+          }],
+        },
+        albumImport: {
+          ...base.draft.albumImport,
+          importId: 'import-1',
+          status: 'ready',
+        },
+        albumDetails: {
+          ...base.draft.albumDetails,
+          title: 'The College Dropout',
+          coverUrl: 'https://assets.atoman.test/music/covers/uploads/cover.webp',
+          contributors: [{
+            id: 'contributor-new',
+            artistId: null,
+            name: 'Ye',
+            avatarUrl: 'https://assets.atoman.test/music/covers/uploads/avatar.webp',
+            kind: 'person',
+            locked: true,
+          }],
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
+      artist: expect.objectContaining({
+        image_url: 'https://assets.atoman.test/music/covers/uploads/avatar.webp',
+      }),
+      artists: [expect.objectContaining({
+        image_url: 'https://assets.atoman.test/music/covers/uploads/avatar.webp',
+      })],
+      album: expect.objectContaining({
+        cover_url: 'https://assets.atoman.test/music/covers/uploads/cover.webp',
+      }),
+    }))
+  })
+
   it('详情完成后进入独立预览步骤，预览展示导入结果并提交', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({

@@ -19,7 +19,7 @@ describe('music module routes', () => {
     expect(children.find((route) => route.path === 'artists')).toBeTruthy()
     expect(lazyImportPath(children.find((route) => route.path === 'artists')?.component)).toContain('ArtistsView.vue')
 
-    expect(children.find((route) => route.path === 'starred')).toBeTruthy()
+    expect(children.find((route) => route.path === 'starred')?.meta?.requiresAuth).toBe(true)
     expect(lazyImportPath(children.find((route) => route.path === 'starred')?.component)).toContain('StarredView.vue')
 
     expect(children.find((route) => route.path === 'history')?.meta?.requiresAuth).toBe(true)

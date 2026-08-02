@@ -43,12 +43,16 @@
             <X :size="20" aria-hidden="true" />
           </button>
 
-          <div class="sheet-content hide-scrollbar" :class="{ 'sheet-content--compact': !hasHeader }">
+          <div
+            class="sheet-content hide-scrollbar"
+            :class="{
+              'sheet-content--compact': !hasHeader,
+              'sheet-content--has-close': showHeaderClose,
+            }"
+          >
             <div :class="{ 'sheet-content-inner': readingMode }">
-              <div v-if="slots.header || title" class="sheet-content-header-inline">
-                <slot name="header">
-                  <span class="sheet-title-inline">{{ title }}</span>
-                </slot>
+              <div v-if="slots.header" class="sheet-content-header-inline">
+                <slot name="header" />
               </div>
               <slot />
             </div>
@@ -293,13 +297,15 @@ const sheetStyle = computed(() => {
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
+  width: 44px;
+  height: 44px;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
   color: var(--a-color-muted);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0;
   line-height: 1;
   z-index: 1002;
   display: flex;
@@ -319,12 +325,6 @@ const sheetStyle = computed(() => {
   padding-right: 3rem; /* Leave room for floating close button */
 }
 
-.sheet-title-inline {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--a-color-fg);
-}
-
 .sheet-content {
   flex: 1;
   overflow-y: auto;
@@ -335,6 +335,10 @@ const sheetStyle = computed(() => {
 
 .sheet-content--compact {
   padding-top: 1.5rem;
+}
+
+.sheet-content--has-close {
+  padding-right: 5rem;
 }
 
 .sheet-content-inner {
@@ -367,6 +371,27 @@ const sheetStyle = computed(() => {
     visibility: hidden;
     transform: none;
     opacity: 0;
+  }
+
+  .p-sheet-panel.is-right .sheet-tab-position {
+    top: 0.5rem !important;
+    left: 0.5rem;
+    transform: none;
+  }
+
+  .p-sheet-panel.is-left .sheet-tab-position {
+    top: 0.5rem !important;
+    right: 0.5rem;
+    transform: none;
+  }
+
+  .p-sheet-panel.is-right .sheet-content,
+  .p-sheet-panel.is-left .sheet-content {
+    padding-top: 4rem;
+  }
+
+  .sheet-content--has-close {
+    padding-top: 4.5rem;
   }
 }
 

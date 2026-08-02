@@ -281,12 +281,6 @@ function handleSave() {
     @close="emit('close')"
     panel-class="lyric-editor-drawer"
   >
-    <template #header>
-      <div class="music-lyric-editor-drawer__header">
-        <h2>编辑歌词</h2>
-      </div>
-    </template>
-
     <div class="music-lyric-editor-drawer__body">
       <div class="music-lyric-editor-drawer__toolbar">
         <PSegmentedControl
@@ -463,13 +457,6 @@ function handleSave() {
 </template>
 
 <style scoped>
-.music-lyric-editor-drawer__header h2 {
-  margin: 0;
-  color: var(--a-color-text);
-  font-size: 1rem;
-  font-weight: 900;
-}
-
 .music-lyric-editor-drawer__body {
   display: grid;
   min-width: 0;

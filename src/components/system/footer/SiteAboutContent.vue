@@ -3,15 +3,17 @@ import { ExternalLink } from 'lucide-vue-next'
 
 withDefaults(defineProps<{
   headingLevel?: 'h1' | 'h2'
+  showTitle?: boolean
 }>(), {
   headingLevel: 'h2',
+  showTitle: true,
 })
 </script>
 
 <template>
   <article class="site-info-content">
-    <component :is="headingLevel" class="site-info-title">关于凹凸庵</component>
-    <p class="site-info-lead">
+    <component v-if="showTitle" :is="headingLevel" class="site-info-title">关于凹凸庵</component>
+    <p class="site-info-lead" :class="{ 'site-info-lead--flush': !showTitle }">
       凹凸庵是一个开源、可自托管的内容社区，提供写作、订阅、音乐与影像归档、播客、论坛、辩论和时间线等内容空间。
     </p>
 
@@ -60,6 +62,10 @@ withDefaults(defineProps<{
 
 .site-info-lead {
   margin: var(--a-space-5) 0 0;
+}
+
+.site-info-lead--flush {
+  margin-top: 0;
 }
 
 .site-info-section {

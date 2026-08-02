@@ -45,10 +45,9 @@ async function copyEmail() {
     reading-mode
     @close="$emit('close')"
   >
-    <SiteAboutContent v-if="panel === 'about'" />
+    <SiteAboutContent v-if="panel === 'about'" :show-title="false" />
 
     <article v-else-if="panel === 'contact'" class="footer-sheet-content">
-      <h2>联系我们</h2>
       <p class="footer-sheet-lead">合作、版权或其他事务，请通过邮件联系我们。</p>
       <a class="footer-sheet-email" :href="`mailto:${supportEmail}`">{{ supportEmail }}</a>
       <div class="footer-sheet-actions">
@@ -65,7 +64,6 @@ async function copyEmail() {
     </article>
 
     <article v-else-if="panel === 'feedback'" class="footer-sheet-content">
-      <h2>问题反馈</h2>
       <p class="footer-sheet-lead">遇到功能异常或有改进建议，请选择合适的反馈方式。</p>
       <div class="footer-feedback-channels">
         <section class="footer-feedback-channel">
@@ -103,14 +101,16 @@ async function copyEmail() {
       </div>
     </article>
 
-    <SitePolicyContent v-else-if="panel === 'terms'" kind="terms" />
-    <SitePolicyContent v-else-if="panel === 'privacy'" kind="privacy" />
+    <SitePolicyContent v-else-if="panel === 'terms'" kind="terms" :show-title="false" />
+    <SitePolicyContent v-else-if="panel === 'privacy'" kind="privacy" :show-title="false" />
   </PSheet>
 </template>
 
 <style>
 .site-footer-sheet .sheet-content {
   padding: clamp(1.25rem, 4vw, 2.5rem);
+  padding-top: 4.5rem;
+  padding-right: max(5rem, clamp(1.25rem, 4vw, 2.5rem));
   overscroll-behavior: contain;
 }
 
@@ -124,16 +124,8 @@ async function copyEmail() {
   color: var(--a-color-fg);
 }
 
-.footer-sheet-content h2 {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: var(--a-font-weight-black);
-  line-height: 1.2;
-  letter-spacing: 0;
-}
-
 .footer-sheet-lead {
-  margin: var(--a-space-5) 0 0;
+  margin: 0;
   color: var(--a-color-text-secondary);
   font-size: var(--a-text-md);
   line-height: 1.75;
@@ -238,10 +230,6 @@ async function copyEmail() {
   .site-footer-sheet {
     height: calc(100dvh - max(2rem, env(safe-area-inset-top))) !important;
     max-height: calc(100dvh - var(--a-content-bottom-offset));
-  }
-
-  .footer-sheet-content h2 {
-    font-size: 1.625rem;
   }
 
   .footer-sheet-actions {

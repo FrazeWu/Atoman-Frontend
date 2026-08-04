@@ -282,11 +282,11 @@
         <div class="form-row">
           <div class="form-group" style="flex:1">
             <label class="form-label">出生年份</label>
-            <PInput v-model="personForm.birth_date" placeholder="YYYY-MM-DD" />
+            <PInput v-model="personForm.birth_date" placeholder="yyyy/mm/dd" />
           </div>
           <div class="form-group" style="flex:1">
             <label class="form-label">去世年份</label>
-            <PInput v-model="personForm.death_date" placeholder="YYYY-MM-DD" />
+            <PInput v-model="personForm.death_date" placeholder="yyyy/mm/dd" />
           </div>
         </div>
         <div class="form-group">

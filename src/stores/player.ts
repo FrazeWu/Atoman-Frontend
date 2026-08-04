@@ -317,6 +317,16 @@ export const usePlayerStore = defineStore('player', () => {
     startSong(song);
   };
 
+  const addToQueue = (song: Song, playNext = false) => {
+    if (queue.value.some(item => item.id === song.id)) return;
+    if (playNext && currentSong.value) {
+      const index = queue.value.findIndex(item => item.id === currentSong.value?.id);
+      queue.value.splice(Math.max(0, index + 1), 0, song);
+      return;
+    }
+    queue.value.push(song);
+  };
+
   const playAlbum = (albumSongs: Song[], startIndex = 0) => {
     if (albumSongs.length === 0) return;
 
@@ -526,6 +536,7 @@ export const usePlayerStore = defineStore('player', () => {
     fetchSongs,
     playSong,
     playQueuedSong,
+    addToQueue,
     playAlbum,
     togglePlay,
     playNext,

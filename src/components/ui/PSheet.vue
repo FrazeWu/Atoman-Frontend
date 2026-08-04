@@ -22,14 +22,18 @@
           tabindex="-1"
           @keydown.esc="isTopLayer && $emit('close')"
         >
-          <!-- Left/Right Edge Close Tab (Taped Component Style) -->
-          <PSheetTab
+          <!-- Close button on the opening side of the sheet -->
+          <button
             v-if="showBookmarkTab"
-            class="sheet-tab-position"
-            :style="{ top: computedHandleTop }"
-            :title="title"
+            ref="closeButtonRef"
+            class="sheet-close-btn-bookmark"
+            type="button"
+            :aria-label="`关闭${title}`"
+            :title="`关闭${title}`"
             @click="$emit('close')"
-          />
+          >
+            <X :size="20" aria-hidden="true" />
+          </button>
 
           <button
             v-if="showHeaderClose"
@@ -48,6 +52,7 @@
             :class="{
               'sheet-content--compact': !hasHeader,
               'sheet-content--has-close': showHeaderClose,
+              'sheet-content--has-bookmark-close': showBookmarkTab,
             }"
           >
             <div :class="{ 'sheet-content-inner': readingMode }">
@@ -68,7 +73,6 @@ import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { X } from 'lucide-vue-next'
 import { useSheetStore } from '@/stores/sheet'
-import PSheetTab from './PSheetTab.vue'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
@@ -164,9 +168,7 @@ const computedWidth = computed(() => {
   return `calc(100% - var(--a-sidebar-width) - ${32 + (sheetIndex.value * 32)}px)`
 })
 
-const computedHandleTop = computed(() => {
-  return `${32 + (sheetIndex.value * 56)}px`
-})
+
 
 const hasCustomWidth = computed(() => props.width && props.width !== 'min(100%, 480px)')
 const sheetShift = computed(() => (
@@ -222,9 +224,7 @@ const sheetStyle = computed(() => {
 .p-sheet-layer {
   position: fixed;
   bottom: var(--a-content-bottom-offset);
-  background: color-mix(in srgb, var(--a-color-bg) 85%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   z-index: var(--a-z-sheet);
@@ -277,20 +277,46 @@ const sheetStyle = computed(() => {
   opacity: 0;
 }
 
-.sheet-tab-position {
+.sheet-close-btn-bookmark {
   position: absolute;
-  top: 32px;
-  z-index: 1001;
+  top: 1.5rem;
+  width: 44px;
+  height: 44px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, opacity 0.2s;
+  opacity: 0.6;
 }
 
-.is-right .sheet-tab-position {
-  left: 0;
-  transform: translateX(-100%);
+.is-right .sheet-close-btn-bookmark {
+  left: 1.5rem;
 }
 
-.is-left .sheet-tab-position {
-  right: 0;
-  transform: translateX(100%) scaleX(-1);
+.is-left .sheet-close-btn-bookmark {
+  right: 1.5rem;
+}
+
+.sheet-close-btn-bookmark:hover {
+  opacity: 1;
+  color: var(--a-color-fg);
+}
+
+.is-right .sheet-content--has-bookmark-close {
+  padding-left: 5rem;
+}
+
+.is-left .sheet-content--has-bookmark-close {
+  padding-right: 5rem;
 }
 
 .sheet-close-btn-floating {
@@ -373,17 +399,7 @@ const sheetStyle = computed(() => {
     opacity: 0;
   }
 
-  .p-sheet-panel.is-right .sheet-tab-position {
-    top: 0.5rem !important;
-    left: 0.5rem;
-    transform: none;
-  }
 
-  .p-sheet-panel.is-left .sheet-tab-position {
-    top: 0.5rem !important;
-    right: 0.5rem;
-    transform: none;
-  }
 
   .p-sheet-panel.is-right .sheet-content,
   .p-sheet-panel.is-left .sheet-content {

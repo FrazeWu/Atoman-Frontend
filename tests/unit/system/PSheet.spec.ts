@@ -27,8 +27,7 @@ describe('PSheet.vue', () => {
     expect(wrapper.text()).toContain('Sheet body')
     expect(wrapper.text()).not.toContain('TEST TITLE')
     expect(wrapper.find('.sheet-header').exists()).toBe(false)
-    expect(wrapper.findComponent({ name: 'PSheetTab' }).exists()).toBe(true)
-    expect(wrapper.find('.tab-label').exists()).toBe(false)
+    expect(wrapper.find('.sheet-close-btn-bookmark').exists()).toBe(true)
     expect(wrapper.get('.p-sheet-panel').attributes('aria-label')).toBe('TEST TITLE')
   })
 
@@ -132,7 +131,7 @@ describe('PSheet.vue', () => {
     expect(panel.classes()).toContain('is-bottom')
     expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(false)
     expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(true)
-    expect(wrapper.findComponent({ name: 'PSheetTab' }).exists()).toBe(false)
+    expect(wrapper.find('.sheet-close-btn-bookmark').exists()).toBe(false)
     expect(wrapper.find('.sheet-content').classes()).not.toContain('sheet-content--compact')
 
     await wrapper.find('.sheet-close-btn-floating').trigger('click')
@@ -161,7 +160,7 @@ describe('PSheet.vue', () => {
     })
     // PSheetTab is a component, we can find it by component or by its expected class if we know it
     // From PSheet.vue: <PSheetTab ... class="sheet-tab-position" ... />
-    await wrapper.findComponent({ name: 'PSheetTab' }).trigger('click')
+    await wrapper.find('.sheet-close-btn-bookmark').trigger('click')
     expect(wrapper.emitted()).toHaveProperty('close')
   })
 
@@ -172,9 +171,6 @@ describe('PSheet.vue', () => {
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
     expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 64px)')
     expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 64px)')
-
-    const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
-    expect(tab.style.top).toBe('88px')
   })
 
   it('defaults to index 0 styles', () => {
@@ -184,9 +180,6 @@ describe('PSheet.vue', () => {
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
     expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 32px)')
     expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 32px)')
-
-    const tab = wrapper.findComponent({ name: 'PSheetTab' }).element as HTMLElement
-    expect(tab.style.top).toBe('32px')
   })
 
   it('exposes only the top layer as a modal dialog', () => {

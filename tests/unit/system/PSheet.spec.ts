@@ -69,10 +69,10 @@ describe('PSheet.vue', () => {
       },
     })
 
-    expect(wrapper.get('.p-sheet-panel').attributes('style')).toContain('--a-sheet-shift: 64px')
+    expect(wrapper.get('.p-sheet-panel').attributes('style')).toContain('right: 64px')
   })
 
-  it('reserves the full stack edge for every custom-width layer', () => {
+  it('reserves the right offset for every custom-width layer', () => {
     const bottom = mount(PSheet, {
       props: {
         show: true,
@@ -90,11 +90,8 @@ describe('PSheet.vue', () => {
       },
     })
 
-    for (const wrapper of [bottom, top]) {
-      const style = wrapper.get('.p-sheet-panel').attributes('style')
-      expect(style).toContain('--a-sheet-stack-edge: 64px')
-      expect(style).toContain('max-width: calc(100vw - var(--a-sidebar-width) - 16px - var(--a-sheet-stack-edge))')
-    }
+    expect(bottom.get('.p-sheet-panel').attributes('style')).toContain('right: 64px')
+    expect(top.get('.p-sheet-panel').attributes('style')).toContain('right: 0px')
   })
 
   it('accepts custom width via prop', () => {

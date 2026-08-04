@@ -171,10 +171,8 @@ const computedWidth = computed(() => {
 
 
 const hasCustomWidth = computed(() => props.width && props.width !== 'min(100%, 480px)')
-const sheetShift = computed(() => (
-  hasCustomWidth.value ? Math.max(0, props.stackSize - props.layerIndex - 1) * 32 : 0
-))
-const sheetStackEdge = computed(() => Math.max(0, props.stackSize - 1) * 32)
+const layerIdx = computed(() => props.layerIndex ?? sheetIndex.value)
+const rightOffset = computed(() => Math.max(0, props.stackSize - layerIdx.value - 1) * 32)
 
 const sheetStyle = computed(() => {
   if (props.side === 'bottom') {
@@ -185,18 +183,15 @@ const sheetStyle = computed(() => {
       left: 0,
       right: 0,
       top: 'auto',
-      '--a-sheet-shift': `${sheetShift.value}px`,
     }
   }
 
   if (hasCustomWidth.value) {
     return {
       width: props.width,
-      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px - var(--a-sheet-stack-edge))',
+      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
       top: props.top,
-      right: 0,
-      '--a-sheet-shift': `${sheetShift.value}px`,
-      '--a-sheet-stack-edge': `${sheetStackEdge.value}px`,
+      right: `${rightOffset.value}px`,
     }
   }
   return {
@@ -204,19 +199,17 @@ const sheetStyle = computed(() => {
     'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
     top: props.top,
     left: computedLeft.value,
-    right: 0,
-    '--a-sheet-shift': `${sheetShift.value}px`,
+    right: `${rightOffset.value}px`,
   }
 })
 </script>
 
 <style scoped>
 .p-sheet-panel {
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s, right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .p-sheet-panel.is-shifted {
-  transform: translateX(calc(-1 * var(--a-sheet-shift, 0px)));
   opacity: 0.6;
   pointer-events: none;
 }

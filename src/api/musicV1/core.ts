@@ -45,6 +45,7 @@ export const musicV1Endpoints = {
   artistRevisions: (artistId: string) => `${apiV1Base()}/artists/${artistId}/revisions`,
   artistRevision: (artistId: string, version: number) => `${apiV1Base()}/artists/${artistId}/revisions/${version}`,
   albums: () => `${apiV1Base()}/music/albums`,
+  songs: () => `${apiV1Base()}/songs`,
   album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
   albumMerge: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}/merge`,
   songLyrics: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics`,

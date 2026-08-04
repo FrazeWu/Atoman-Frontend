@@ -54,6 +54,24 @@ type MusicPlaylistSongEnvelope = {
 
 type MusicPlaylistMutationResult = Record<string, unknown>
 
+export type MusicSongSearchResult = {
+  id: string
+  title: string
+  artist: string
+  album: string
+  album_id?: string
+  audio_url: string
+  cover_url?: string
+}
+
+export async function searchMusicSongs(query: string): Promise<MusicSongSearchResult[]> {
+  return apiGet<MusicSongSearchResult[]>(`${musicV1Endpoints.songs()}${queryString({ q: query })}`)
+}
+
+export async function getMusicSong(songId: string): Promise<MusicSongSearchResult> {
+  return apiGet<MusicSongSearchResult>(`${musicV1Endpoints.songs()}/${songId}`)
+}
+
 export async function listMusicAlbums(filters: MusicListFilters = {}): Promise<MusicListResponse<MusicAlbumListItem>> {
   const response = await apiGetEnvelope<MusicAlbumListItem[], PaginationMeta>(`${musicV1Endpoints.albums()}${queryString(filters)}`)
   return listResponseWithPaginationFallback(response, filters)

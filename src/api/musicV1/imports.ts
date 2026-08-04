@@ -144,6 +144,11 @@ export async function getMusicAlbumImport(importId: string): Promise<MusicAlbumI
   return normalizeMusicAlbumImport(await apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId)))
 }
 
+export async function listMusicAlbumImports(): Promise<MusicAlbumImport[]> {
+  const imports = await apiGet<MusicAlbumImport[]>(musicV1Endpoints.albumImports())
+  return imports.map(normalizeMusicAlbumImport)
+}
+
 export async function commitMusicAlbumImport(
   importId: string,
   input: MusicAlbumImportCommitInput,

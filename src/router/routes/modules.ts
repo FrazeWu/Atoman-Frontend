@@ -45,9 +45,11 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       children: [
         { path: '', component: () => import('@/views/music/HomeView.vue') },
         { path: 'discover', component: () => import('@/views/music/ExploreView.vue') },
+        { path: 'songs', component: () => import('@/views/music/SongsView.vue') },
         { path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
         { path: 'starred', component: () => import('@/views/music/StarredView.vue'), meta: { requiresAuth: true } },
         { path: 'history', component: () => import('@/views/music/HistoryView.vue'), meta: { requiresAuth: true } },
+        { path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: { requiresAuth: true } },
         {
           path: 'artist/new',
           redirect: (to) => {
@@ -61,6 +63,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         },
         { path: 'artist/:artistId', component: () => import('@/views/music/MusicArtistRouteView.vue') },
         { path: 'album/:albumId', component: () => import('@/views/music/MusicAlbumRouteView.vue') },
+        { path: 'song/:songId', component: () => import('@/views/music/MusicSongRouteView.vue') },
         { path: 'playlist/:playlistId', component: () => import('@/views/music/MusicPlaylistRouteView.vue') },
         {
           path: 'album/:albumId/edit',

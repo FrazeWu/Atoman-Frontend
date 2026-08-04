@@ -309,6 +309,7 @@ const musicNavItems = [
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
   { to: modulePathUrl('music', '/starred'), label: '收藏', icon: Star },
   { to: modulePathUrl('music', '/history'), label: '播放历史', icon: History },
+  { to: modulePathUrl('music', '/imports'), label: '导入记录', icon: Archive },
 ]
 
 // 5. Forum Logic

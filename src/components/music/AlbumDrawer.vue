@@ -329,12 +329,6 @@ watch(
           编辑
         </PButton>
         <PButton
-          variant="warning"
-          @click="openNestedAction('revise', { albumId })"
-        >
-          修改
-        </PButton>
-        <PButton
           variant="secondary"
           dot
           @click="openNestedAction('history', { albumId })"

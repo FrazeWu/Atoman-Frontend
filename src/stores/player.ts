@@ -1,17 +1,23 @@
-import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
-import { defineStore } from 'pinia';
-import { ref, watch } from 'vue';
-import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from '@/types';
-import { useApi } from '@/composables/useApi'
-import { recordMusicSongPlay } from '@/api/musicV1'
-import { readPodcastProgress, writePodcastProgress } from '@/composables/usePodcastProgress'
-import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
-import { useAuthStore } from '@/stores/auth'
+import { reportError } from "@/utils/logger";
+import { apiRequest } from "@/api/client";
+import { defineStore } from "pinia";
+import { ref, watch } from "vue";
+import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
+import { useApi } from "@/composables/useApi";
+import { recordMusicSongPlay } from "@/api/musicV1";
+import {
+  readPodcastProgress,
+  writePodcastProgress,
+} from "@/composables/usePodcastProgress";
+import {
+  createContentConsumptionTracker,
+  useContentLifecycle,
+} from "@/composables/useContentLifecycle";
+import { useAuthStore } from "@/stores/auth";
 
 const api = useApi();
 
-export type PlaybackMode = 'loop' | 'single' | 'random';
+export type PlaybackMode = "loop" | "single" | "random";
 
 type PersistedPlaybackState = {
   song?: Song;
@@ -25,20 +31,21 @@ type PersistedPlaybackState = {
 };
 
 function resolveUploadedMediaUrl(url: string) {
-  if (!url.startsWith('/uploads/')) return url;
-  if (!api.url.startsWith('http://') && !api.url.startsWith('https://')) return url;
+  if (!url.startsWith("/uploads/")) return url;
+  if (!api.url.startsWith("http://") && !api.url.startsWith("https://"))
+    return url;
   return `${new URL(api.url).origin}${url}`;
 }
 
-export const usePlayerStore = defineStore('player', () => {
+export const usePlayerStore = defineStore("player", () => {
   const lifecycle = useContentLifecycle();
   const authStore = useAuthStore();
   const songs = ref<Song[]>([]);
   const currentSong = ref<Song | null>(null);
   const isPlaying = ref(false);
   const isShuffled = ref(false);
-  const repeatMode = ref<RepeatMode>('all');
-  const playbackMode = ref<PlaybackMode>('loop');
+  const repeatMode = ref<RepeatMode>("all");
+  const playbackMode = ref<PlaybackMode>("loop");
   const volume = ref(1);
   const currentTime = ref(0);
   const duration = ref(0);
@@ -47,10 +54,14 @@ export const usePlayerStore = defineStore('player', () => {
   const songLibraryLoaded = ref(false);
   const showLyrics = ref(false);
   const showQueue = ref(false);
-  const isPinned = ref(typeof localStorage === 'undefined' || localStorage.getItem('playerPinned') !== 'false');
+  const isPinned = ref(
+    typeof localStorage === "undefined" ||
+      localStorage.getItem("playerPinned") !== "false",
+  );
 
   watch(isPinned, (value) => {
-    if (typeof localStorage !== 'undefined') localStorage.setItem('playerPinned', String(value));
+    if (typeof localStorage !== "undefined")
+      localStorage.setItem("playerPinned", String(value));
   });
 
   // Album-based queue
@@ -58,22 +69,26 @@ export const usePlayerStore = defineStore('player', () => {
   const currentAlbum = ref<Song[] | null>(null);
 
   // Sync isShuffled and repeatMode based on playbackMode
-  watch(playbackMode, (mode) => {
-    switch (mode) {
-      case 'loop':
-        isShuffled.value = false;
-        repeatMode.value = 'all';
-        break;
-      case 'single':
-        isShuffled.value = false;
-        repeatMode.value = 'one';
-        break;
-      case 'random':
-        isShuffled.value = true;
-        repeatMode.value = 'all';
-        break;
-    }
-  }, { immediate: true });
+  watch(
+    playbackMode,
+    (mode) => {
+      switch (mode) {
+        case "loop":
+          isShuffled.value = false;
+          repeatMode.value = "all";
+          break;
+        case "single":
+          isShuffled.value = false;
+          repeatMode.value = "one";
+          break;
+        case "random":
+          isShuffled.value = true;
+          repeatMode.value = "all";
+          break;
+      }
+    },
+    { immediate: true },
+  );
 
   let audio: HTMLAudioElement | null = null;
   let songsRequest: Promise<void> | null = null;
@@ -83,7 +98,9 @@ export const usePlayerStore = defineStore('player', () => {
   let listenedMs = 0;
   let listeningSongId: string | null = null;
   let playReported = false;
-  let podcastTracker: ReturnType<typeof createContentConsumptionTracker> | null = null;
+  let podcastTracker: ReturnType<
+    typeof createContentConsumptionTracker
+  > | null = null;
 
   const clearListeningTimer = () => {
     if (listeningTimer === null) return;
@@ -106,20 +123,26 @@ export const usePlayerStore = defineStore('player', () => {
     listeningStartedAt = null;
     listeningTimer = null;
     void recordMusicSongPlay(songId).catch((error) => {
-      reportError(error, 'Failed to record music play:');
+      reportError(error, "Failed to record music play:");
     });
   };
 
   const resumeListening = () => {
     if (!listeningSongId || playReported || listeningStartedAt !== null) return;
     listeningStartedAt = Date.now();
-    listeningTimer = setTimeout(reportCurrentPlay, Math.max(0, listeningThresholdMs - listenedMs));
+    listeningTimer = setTimeout(
+      reportCurrentPlay,
+      Math.max(0, listeningThresholdMs - listenedMs),
+    );
   };
 
   const resetListening = (song: Song) => {
     pauseListening();
     listenedMs = 0;
-    listeningSongId = !song.source_type || song.source_type === 'music' ? String(song.id) : null;
+    listeningSongId =
+      !song.source_type || song.source_type === "music"
+        ? String(song.id)
+        : null;
     playReported = false;
   };
 
@@ -127,14 +150,16 @@ export const usePlayerStore = defineStore('player', () => {
     if (audio) return audio;
 
     const nextAudio = new Audio();
-    nextAudio.addEventListener('timeupdate', () => {
+    nextAudio.addEventListener("timeupdate", () => {
       currentTime.value = nextAudio.currentTime;
       savePodcastProgress();
     });
-    nextAudio.addEventListener('durationchange', () => {
-      duration.value = Number.isFinite(nextAudio.duration) ? nextAudio.duration : 0;
+    nextAudio.addEventListener("durationchange", () => {
+      duration.value = Number.isFinite(nextAudio.duration)
+        ? nextAudio.duration
+        : 0;
     });
-    nextAudio.addEventListener('ended', () => {
+    nextAudio.addEventListener("ended", () => {
       savePodcastProgress(true);
       playNext();
     });
@@ -154,7 +179,9 @@ export const usePlayerStore = defineStore('player', () => {
   const syncCurrentSongFromLibrary = (library: Song[]) => {
     if (!currentSong.value) return;
 
-    const refreshedSong = library.find((song) => song.id === currentSong.value?.id);
+    const refreshedSong = library.find(
+      (song) => song.id === currentSong.value?.id,
+    );
     if (!refreshedSong) return;
 
     currentSong.value = refreshedSong;
@@ -169,7 +196,8 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const attemptPlay = (player: HTMLAudioElement) => {
-    player.play()
+    player
+      .play()
       .then(() => {
         isPlaying.value = true;
         resumeListening();
@@ -181,10 +209,10 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const savePlaybackState = () => {
-    if (typeof localStorage === 'undefined') return;
+    if (typeof localStorage === "undefined") return;
 
     if (!currentSong.value) {
-      localStorage.removeItem('playbackState');
+      localStorage.removeItem("playbackState");
       return;
     }
 
@@ -199,36 +227,57 @@ export const usePlayerStore = defineStore('player', () => {
       playbackMode: playbackMode.value,
     };
 
-    localStorage.setItem('playbackState', JSON.stringify(state));
+    localStorage.setItem("playbackState", JSON.stringify(state));
   };
 
   const restorePlaybackState = () => {
-    if (typeof localStorage === 'undefined') return;
+    if (typeof localStorage === "undefined") return;
 
-    const savedState = localStorage.getItem('playbackState');
+    const savedState = localStorage.getItem("playbackState");
     if (!savedState) return;
 
     try {
       const state = JSON.parse(savedState) as PersistedPlaybackState;
-      volume.value = typeof state.volume === 'number' ? state.volume : 1;
+      volume.value = typeof state.volume === "number" ? state.volume : 1;
       isShuffled.value = Boolean(state.isShuffled);
-      repeatMode.value = state.repeatMode || 'all';
-      playbackMode.value = state.playbackMode || 'loop';
-      currentTime.value = typeof state.currentTime === 'number' ? state.currentTime : 0;
+      repeatMode.value = state.repeatMode || "all";
+      playbackMode.value = state.playbackMode || "loop";
+      currentTime.value =
+        typeof state.currentTime === "number" ? state.currentTime : 0;
       currentSong.value = state.song || null;
-      queue.value = Array.isArray(state.queue) ? state.queue : (state.song ? [state.song] : []);
-      currentAlbum.value = Array.isArray(state.currentAlbum) ? state.currentAlbum : null;
+      queue.value = Array.isArray(state.queue)
+        ? state.queue
+        : state.song
+          ? [state.song]
+          : [];
+      currentAlbum.value = Array.isArray(state.currentAlbum)
+        ? state.currentAlbum
+        : null;
       isPlaying.value = false;
     } catch (error) {
-      reportError(error, 'Failed to restore playback state:');
+      reportError(error, "Failed to restore playback state:");
     }
   };
 
   restorePlaybackState();
 
-  watch([currentSong, currentTime, volume, isPlaying, isShuffled, repeatMode, playbackMode, queue, currentAlbum], () => {
-    savePlaybackState();
-  }, { deep: true });
+  watch(
+    [
+      currentSong,
+      currentTime,
+      volume,
+      isPlaying,
+      isShuffled,
+      repeatMode,
+      playbackMode,
+      queue,
+      currentAlbum,
+    ],
+    () => {
+      savePlaybackState();
+    },
+    { deep: true },
+  );
 
   const fetchSongs = async (force = false) => {
     if (songsRequest) return songsRequest;
@@ -243,13 +292,13 @@ export const usePlayerStore = defineStore('player', () => {
           return;
         }
 
-        const library = await response.json() as Song[];
+        const library = (await response.json()) as Song[];
         songs.value = library;
         songLibraryLoaded.value = true;
         syncCurrentSongFromLibrary(library);
       } catch (error) {
         songLibraryLoaded.value = false;
-        reportError(error, 'Failed to fetch songs:');
+        reportError(error, "Failed to fetch songs:");
       } finally {
         songLibraryBootstrapped.value = true;
         songLibraryLoading.value = false;
@@ -267,29 +316,43 @@ export const usePlayerStore = defineStore('player', () => {
     player.src = song.audio_url;
     player.volume = volume.value;
     currentSong.value = song;
-    const savedProgress = song.source_type === 'podcast_episode' && song.source_id
-      ? readPodcastProgress(song.source_id)
-      : null;
-    currentTime.value = savedProgress?.completed ? 0 : savedProgress?.position_sec || 0;
+    const savedProgress =
+      song.source_type === "podcast_episode" && song.source_id
+        ? readPodcastProgress(song.source_id)
+        : null;
+    currentTime.value = savedProgress?.completed
+      ? 0
+      : savedProgress?.position_sec || 0;
     duration.value = 0;
     podcastTracker = null;
-    if (song.source_type === 'podcast_episode' && song.source_id) {
+    if (song.source_type === "podcast_episode" && song.source_id) {
       const episodeID = song.source_id;
       podcastTracker = createContentConsumptionTracker({
         onEvent: (event) => {
-          void lifecycle.recordEvent({
-            module: 'podcast', content_id: episodeID, event,
-            position_sec: Math.floor(currentTime.value), duration_sec: Math.floor(duration.value),
-            progress: duration.value > 0 ? currentTime.value / duration.value : 0,
-          }).catch(() => undefined);
+          void lifecycle
+            .recordEvent({
+              module: "podcast",
+              content_id: episodeID,
+              event,
+              position_sec: Math.floor(currentTime.value),
+              duration_sec: Math.floor(duration.value),
+              progress:
+                duration.value > 0 ? currentTime.value / duration.value : 0,
+            })
+            .catch(() => undefined);
         },
         onProgress: (progress) => {
           if (!authStore.token) return;
-          void lifecycle.saveProgress({
-            module: 'podcast', content_id: episodeID,
-            position_sec: Math.floor(currentTime.value), duration_sec: Math.floor(duration.value),
-            progress, completed: progress >= 0.95,
-          }).catch(() => undefined);
+          void lifecycle
+            .saveProgress({
+              module: "podcast",
+              content_id: episodeID,
+              position_sec: Math.floor(currentTime.value),
+              duration_sec: Math.floor(duration.value),
+              progress,
+              completed: progress >= 0.95,
+            })
+            .catch(() => undefined);
         },
       });
       podcastTracker.open();
@@ -318,13 +381,37 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const addToQueue = (song: Song, playNext = false) => {
-    if (queue.value.some(item => item.id === song.id)) return;
+    if (queue.value.some((item) => item.id === song.id)) return;
     if (playNext && currentSong.value) {
-      const index = queue.value.findIndex(item => item.id === currentSong.value?.id);
+      const index = queue.value.findIndex(
+        (item) => item.id === currentSong.value?.id,
+      );
       queue.value.splice(Math.max(0, index + 1), 0, song);
       return;
     }
     queue.value.push(song);
+  };
+
+  const removeFromQueue = (songID: Song["id"]) => {
+    if (currentSong.value?.id === songID) return;
+    queue.value = queue.value.filter((song) => song.id !== songID);
+  };
+
+  const clearQueue = () => {
+    queue.value = currentSong.value ? [currentSong.value] : [];
+  };
+
+  const moveQueueItem = (from: number, to: number) => {
+    if (
+      from === to ||
+      from < 0 ||
+      to < 0 ||
+      from >= queue.value.length ||
+      to >= queue.value.length
+    )
+      return;
+    const [song] = queue.value.splice(from, 1);
+    queue.value.splice(to, 0, song);
   };
 
   const playAlbum = (albumSongs: Song[], startIndex = 0) => {
@@ -354,30 +441,34 @@ export const usePlayerStore = defineStore('player', () => {
       isPlaying.value = false;
       pauseListening();
     } else {
-      if (listeningSongId !== String(currentSong.value.id)) resetListening(currentSong.value);
+      if (listeningSongId !== String(currentSong.value.id))
+        resetListening(currentSong.value);
       attemptPlay(player);
     }
   };
 
-  const getActiveList = () => queue.value.length > 0 ? queue.value : songs.value;
+  const getActiveList = () =>
+    queue.value.length > 0 ? queue.value : songs.value;
 
   const playNext = () => {
     const list = getActiveList();
     if (!currentSong.value || list.length === 0) return;
 
-    const currentIndex = list.findIndex((song) => song.id === currentSong.value?.id);
+    const currentIndex = list.findIndex(
+      (song) => song.id === currentSong.value?.id,
+    );
     const player = ensureAudio();
 
     let nextIndex;
     if (isShuffled.value) {
       nextIndex = Math.floor(Math.random() * list.length);
-    } else if (repeatMode.value === 'one') {
+    } else if (repeatMode.value === "one") {
       player.currentTime = 0;
       currentTime.value = 0;
       resetListening(currentSong.value);
       attemptPlay(player);
       return;
-    } else if (repeatMode.value === 'all' || currentIndex < list.length - 1) {
+    } else if (repeatMode.value === "all" || currentIndex < list.length - 1) {
       nextIndex = (currentIndex + 1) % list.length;
     } else {
       isPlaying.value = false;
@@ -391,7 +482,9 @@ export const usePlayerStore = defineStore('player', () => {
     const list = getActiveList();
     if (!currentSong.value || list.length === 0) return;
 
-    const currentIndex = list.findIndex((song) => song.id === currentSong.value?.id);
+    const currentIndex = list.findIndex(
+      (song) => song.id === currentSong.value?.id,
+    );
     const prevIndex = (currentIndex - 1 + list.length) % list.length;
     startSong(list[prevIndex]);
   };
@@ -401,67 +494,79 @@ export const usePlayerStore = defineStore('player', () => {
   };
 
   const toggleRepeat = () => {
-    const modes: RepeatMode[] = ['none', 'all', 'one'];
-    const nextMode = modes[(modes.indexOf(repeatMode.value) + 1) % modes.length];
+    const modes: RepeatMode[] = ["none", "all", "one"];
+    const nextMode =
+      modes[(modes.indexOf(repeatMode.value) + 1) % modes.length];
     repeatMode.value = nextMode;
   };
 
   const cyclePlaybackMode = () => {
-    const modes: PlaybackMode[] = ['loop', 'single', 'random'];
+    const modes: PlaybackMode[] = ["loop", "single", "random"];
     const currentIndex = modes.indexOf(playbackMode.value);
     playbackMode.value = modes[(currentIndex + 1) % modes.length];
   };
 
-  const createPodcastSong = (feedItem: TimelineItem['feed_item']): Song | null => {
+  const createPodcastSong = (
+    feedItem: TimelineItem["feed_item"],
+  ): Song | null => {
     if (!feedItem) return null;
 
     return {
       id: Number(feedItem.id),
-      source_type: 'feed_podcast',
+      source_type: "feed_podcast",
       source_id: String(feedItem.id),
-      title: feedItem.title || '未知播客',
-      artist: feedItem.author || feedItem.feed_source?.title || 'Podcast',
-      album: feedItem.feed_source?.title || 'Podcast',
+      title: feedItem.title || "未知播客",
+      artist: feedItem.author || feedItem.feed_source?.title || "Podcast",
+      album: feedItem.feed_source?.title || "Podcast",
       album_id: -1,
-      year: new Date(feedItem.published_at || '').getFullYear() || 0,
-      release_date: feedItem.published_at || '',
-      lyrics: feedItem.summary || '',
-      audio_url: feedItem.enclosure_url || '',
-      media_kind: 'feed_item',
-      cover_url: feedItem.image_url || feedItem.feed_source?.cover_url || '',
-      status: 'approved' as const,
+      year: new Date(feedItem.published_at || "").getFullYear() || 0,
+      release_date: feedItem.published_at || "",
+      lyrics: feedItem.summary || "",
+      audio_url: feedItem.enclosure_url || "",
+      media_kind: "feed_item",
+      cover_url: feedItem.image_url || feedItem.feed_source?.cover_url || "",
+      status: "approved" as const,
     };
   };
 
   const episodeCover = (episode: PodcastEpisode) =>
-    episode.episode_cover_url
-    || episode.post?.cover_url
-    || episode.post?.collections?.[0]?.cover_url
-    || episode.collections?.[0]?.cover_url
-    || episode.channel?.cover_url
-    || '';
+    episode.episode_cover_url ||
+    episode.post?.cover_url ||
+    episode.post?.collections?.[0]?.cover_url ||
+    episode.collections?.[0]?.cover_url ||
+    episode.channel?.cover_url ||
+    "";
 
   const createPodcastEpisodeSong = (episode: PodcastEpisode): Song => ({
     id: `podcast:${episode.id}`,
-    source_type: 'podcast_episode',
+    source_type: "podcast_episode",
     source_id: episode.id,
-    title: episode.post?.title || '未命名单集',
-    artist: episode.channel?.name || '播客',
-    album: episode.post?.collections?.[0]?.name || episode.collections?.[0]?.name || episode.channel?.name || '播客',
-    album_id: episode.post?.collections?.[0]?.id || episode.collections?.[0]?.id || episode.channel_id,
-    year: new Date(episode.created_at || '').getFullYear() || 0,
-    release_date: episode.created_at || '',
-    lyrics: episode.post?.content || '',
+    title: episode.post?.title || "未命名单集",
+    artist: episode.channel?.name || "播客",
+    album:
+      episode.post?.collections?.[0]?.name ||
+      episode.collections?.[0]?.name ||
+      episode.channel?.name ||
+      "播客",
+    album_id:
+      episode.post?.collections?.[0]?.id ||
+      episode.collections?.[0]?.id ||
+      episode.channel_id,
+    year: new Date(episode.created_at || "").getFullYear() || 0,
+    release_date: episode.created_at || "",
+    lyrics: episode.post?.content || "",
     audio_url: resolveUploadedMediaUrl(episode.audio_url),
     cover_url: resolveUploadedMediaUrl(episodeCover(episode)),
     track_number: episode.episode_number,
-    status: 'approved',
+    status: "approved",
   });
 
   const setQueueFromCurrentItems = (items: TimelineItem[]) => {
     const podcastSongs: Song[] = items
-      .filter(item => item.type === 'feed_item' && item.feed_item?.enclosure_url)
-      .map(item => createPodcastSong(item.feed_item))
+      .filter(
+        (item) => item.type === "feed_item" && item.feed_item?.enclosure_url,
+      )
+      .map((item) => createPodcastSong(item.feed_item))
       .filter((song): song is Song => Boolean(song));
     queue.value = podcastSongs;
   };
@@ -472,7 +577,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   function savePodcastProgress(completed = false) {
     const song = currentSong.value;
-    if (song?.source_type !== 'podcast_episode' || !song.source_id) return;
+    if (song?.source_type !== "podcast_episode" || !song.source_id) return;
     const playerDuration = audio?.duration;
     const durationSec = Number.isFinite(playerDuration)
       ? Math.floor(playerDuration || 0)
@@ -484,7 +589,13 @@ export const usePlayerStore = defineStore('player', () => {
       completed,
       last_played_at: new Date().toISOString(),
     });
-    podcastTracker?.update(completed ? 1 : (durationSec > 0 ? Math.floor(audio?.currentTime ?? currentTime.value) / durationSec : 0));
+    podcastTracker?.update(
+      completed
+        ? 1
+        : durationSec > 0
+          ? Math.floor(audio?.currentTime ?? currentTime.value) / durationSec
+          : 0,
+    );
   }
 
   const setVolume = (v: number) => {
@@ -503,7 +614,10 @@ export const usePlayerStore = defineStore('player', () => {
 
   const skip = (seconds: number) => {
     if (!audio) return;
-    const newTime = Math.max(0, Math.min(audio.currentTime + seconds, duration.value));
+    const newTime = Math.max(
+      0,
+      Math.min(audio.currentTime + seconds, duration.value),
+    );
     seek(newTime);
   };
 
@@ -537,6 +651,9 @@ export const usePlayerStore = defineStore('player', () => {
     playSong,
     playQueuedSong,
     addToQueue,
+    removeFromQueue,
+    clearQueue,
+    moveQueueItem,
     playAlbum,
     togglePlay,
     playNext,

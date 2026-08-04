@@ -324,13 +324,13 @@ watch(
         </PButton>
         <div class="spacer"></div>
         <PButton
-          variant="secondary"
+          variant="warning"
           @click="album?.id && openMusicEditor({ entity: 'album', mode: 'edit', id: album.id })"
         >
           编辑
         </PButton>
         <PButton
-          variant="secondary"
+          variant="warning"
           @click="openNestedAction('revise', { albumId })"
         >
           修改

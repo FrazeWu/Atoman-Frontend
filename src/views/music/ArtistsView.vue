@@ -19,6 +19,7 @@ import { MusicArtistCard } from '@/components/music'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PButton from '@/components/ui/PButton.vue'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import {
   filterArtistRecommendationsByBookmarks,
@@ -304,10 +305,14 @@ function handleSearchBlur() {
               </template>
             </SearchSurface>
           </div>
-          <button class="ui-action search-side-action" type="button" @click="openMusicCreationFlow({ startStep: 'artist' })">
-            <span class="action-indicator" aria-hidden="true" />
+          <PButton
+            variant="primary"
+            class="search-side-action"
+            dot
+            @click="openMusicCreationFlow({ startStep: 'artist' })"
+          >
             添加艺术家
-          </button>
+          </PButton>
         </div>
         <div class="toolbar-right">
           <div class="recommendation-tabs" aria-label="艺术家推荐模式">
@@ -325,15 +330,14 @@ function handleSearchBlur() {
       <div v-else-if="!artists.length" class="empty-state">
         <p class="state-line">{{ activeTab === 'subscribed' ? '暂无订阅的艺术家' : '没有匹配的艺术家' }}</p>
         <div class="empty-actions">
-          <button
-            class="ui-action"
-            type="button"
+          <PButton
+            variant="primary"
             data-testid="empty-add-artist"
+            dot
             @click="openMusicCreationFlow({ startStep: 'artist' })"
           >
-            <span class="action-indicator" aria-hidden="true" />
             添加艺术家
-          </button>
+          </PButton>
         </div>
       </div>
 

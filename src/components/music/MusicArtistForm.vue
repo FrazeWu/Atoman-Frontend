@@ -71,7 +71,7 @@
     </div>
 
     <div class="music-artist-form__actions">
-      <PButton type="submit" class="music-artist-form__submit" :disabled="submitting">
+      <PButton type="submit" :variant="submitVariant" class="music-artist-form__submit" :disabled="submitting">
         {{ submitting ? submittingLabel : submitLabel }}
       </PButton>
     </div>
@@ -93,10 +93,12 @@ const props = withDefaults(defineProps<{
   submitLabel: string
   submitting?: boolean
   submittingLabel?: string
+  submitVariant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'warning'
 }>(), {
   initialValue: () => ({}),
   submitting: false,
   submittingLabel: '提交中...',
+  submitVariant: 'primary',
 })
 
 const emit = defineEmits<{

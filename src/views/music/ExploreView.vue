@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import PButton from '@/components/ui/PButton.vue'
 import {
   createAlbumBookmark,
   createArtistBookmark,
@@ -404,16 +405,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             </template>
           </SearchSurface>
         </div>
-        <button
+        <PButton
           v-if="contentMode === 'albums'"
-          type="button"
-          class="ui-action search-side-action"
+          variant="primary"
+          class="search-side-action"
           data-testid="add-album"
+          dot
           @click="openMusicCreationFlow()"
         >
-          <span class="action-indicator" aria-hidden="true" />
           添加专辑
-        </button>
+        </PButton>
       </div>
     </div>
 

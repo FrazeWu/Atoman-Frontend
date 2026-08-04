@@ -178,14 +178,14 @@ watch(
           {{ isBookmarked ? '已订阅' : '订阅' }}
         </PButton>
         <PButton
-          variant="secondary"
+          variant="warning"
           dot
           @click="artistId && openMusicEditor({ entity: 'artist', mode: 'edit', id: artistId })"
         >
           修改艺术家信息
         </PButton>
         <PButton
-          variant="secondary"
+          variant="primary"
           dot
           @click="openMusicEditor({
             entity: 'album',

@@ -390,7 +390,10 @@ function buildCommitInput(): MusicAlbumImportCommitInput {
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
+      bio: flow.draft.artist.bio.trim(),
       ...(flow.draft.artist.avatarUrl.trim() ? { image_url: flow.draft.artist.avatarUrl.trim() } : {}),
+      nationality: flow.draft.artist.nationality.trim(),
+      birth_date: flow.draft.artist.birthDate.trim(),
       stage_names: flow.draft.artist.stageNames
         .filter((item) => item.name.trim())
         .map((item) => ({
@@ -401,8 +404,11 @@ function buildCommitInput(): MusicAlbumImportCommitInput {
         })),
       birth_place: flow.draft.artist.birthPlace.trim(),
     },
+    artist_source: flow.draft.artist.source.trim(),
     album: {
       title: flow.draft.albumDetails.title.trim(),
+      description: flow.draft.albumDetails.bio.trim(),
+      album_type: flow.draft.albumDetails.type.trim() || 'album',
       ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       release_year: Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10) || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
@@ -410,6 +416,7 @@ function buildCommitInput(): MusicAlbumImportCommitInput {
         trackNumber: index + 1,
       })),
     },
+    album_source: flow.draft.albumDetails.source.trim(),
   }
 }
 
@@ -547,6 +554,7 @@ async function finishAlbumCreate() {
           :submitting="artistSubmitting"
           :submit-label="isCreateMode ? '创建艺术家' : '保存艺术家'"
           :submitting-label="isCreateMode ? '正在创建...' : '正在保存...'"
+          :submit-variant="isCreateMode ? 'primary' : 'warning'"
           @submit="handleArtistSubmit"
         />
       </div>
@@ -571,7 +579,7 @@ async function finishAlbumCreate() {
 
           <div class="entity-editor__actions">
             <PButton variant="secondary" :disabled="albumSubmitting" @click="closeCurrentEditor">取消</PButton>
-            <PButton :loading="albumSubmitting" loading-text="正在保存..." @click="handleAlbumEditSubmit">保存全部</PButton>
+            <PButton variant="warning" :loading="albumSubmitting" loading-text="正在保存..." @click="handleAlbumEditSubmit">保存全部</PButton>
           </div>
         </template>
       </div>

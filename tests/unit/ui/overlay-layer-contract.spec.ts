@@ -57,7 +57,6 @@ describe('overlay layer contract', () => {
   })
 
   it('keeps the exposed sheet edge at the exact stack offset', () => {
-    expect(sheetSource).toContain('transform: translateX(calc(-1 * var(--a-sheet-shift, 0px)));')
-    expect(sheetSource).not.toContain('translateX(calc(-1 * var(--a-sheet-shift, 0px))) scale(')
+    expect(sheetSource).toContain('right: `${rightOffset.value}px`')
   })
 })

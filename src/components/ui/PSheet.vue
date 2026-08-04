@@ -15,7 +15,7 @@
           :style="sheetStyle"
           role="dialog"
           :aria-modal="isTopLayer ? 'true' : undefined"
-          :aria-label="title"
+          :aria-label="title || ariaLabel || undefined"
           :aria-hidden="isTopLayer ? undefined : 'true'"
           :inert="isTopLayer ? undefined : true"
           :data-layer-index="layerIndex"
@@ -79,6 +79,7 @@ const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'tes
 const props = withDefaults(defineProps<{
   show: boolean
   title?: string
+  ariaLabel?: string
   width?: string
   maxWidth?: string
   height?: string

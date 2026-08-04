@@ -25,7 +25,7 @@ describe('MusicLayout.vue', () => {
       },
     })
     const items = wrapper.findAll('.sidebar-item')
-    expect(items.length).toBe(5)
+    expect(items.length).toBe(6)
     expect(items[0].text()).toContain('发现')
     expect(items[0].attributes('data-to')).toBe('/music/discover')
     expect(items[1].text()).toContain('专辑')
@@ -36,6 +36,8 @@ describe('MusicLayout.vue', () => {
     expect(items[3].attributes('data-to')).toBe('/music/starred')
     expect(items[4].text()).toContain('播放历史')
     expect(items[4].attributes('data-to')).toBe('/music/history')
+    expect(items[5].text()).toContain('导入记录')
+    expect(items[5].attributes('data-to')).toBe('/music/imports')
   })
 
   it('marks the music main content area for module-specific scroll behavior', () => {

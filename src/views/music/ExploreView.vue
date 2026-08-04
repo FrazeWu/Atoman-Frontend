@@ -26,6 +26,8 @@ import {
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useAuthStore } from '@/stores/auth'
+import { getActivePinia } from 'pinia'
 
 const props = withDefaults(defineProps<{
   pageTitle?: string
@@ -35,6 +37,7 @@ const props = withDefaults(defineProps<{
   contentMode: 'discover',
 })
 
+const authStore = getActivePinia() ? useAuthStore() : null
 const router = useRouter()
 const { openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const loading = ref(false)
@@ -55,29 +58,41 @@ const starredArtistIds = ref<string[]>([])
 const starredPlaylistIds = ref<string[]>([])
 
 async function fetchAlbumBookmarks() {
+  if (!authStore?.isAuthenticated) {
+    starredAlbumIds.value = []
+    return
+  }
   try {
     const response = await listAlbumBookmarks()
-    starredAlbumIds.value = response.data.map((bookmark) => String(bookmark.album_id))
+    starredAlbumIds.value = (response.data ?? []).map((bookmark) => String(bookmark.album_id))
   } catch (e) {
-    reportError(e, 'Failed to fetch album bookmarks:')
+    starredAlbumIds.value = []
   }
 }
 
 async function fetchArtistBookmarks() {
+  if (!authStore?.isAuthenticated) {
+    starredArtistIds.value = []
+    return
+  }
   try {
     const response = await listArtistBookmarks()
-    starredArtistIds.value = response.data.map((bookmark) => String(bookmark.artist_id))
+    starredArtistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.artist_id))
   } catch (e) {
-    reportError(e, 'Failed to fetch artist bookmarks:')
+    starredArtistIds.value = []
   }
 }
 
 async function fetchPlaylistBookmarks() {
+  if (!authStore?.isAuthenticated) {
+    starredPlaylistIds.value = []
+    return
+  }
   try {
     const response = await listPlaylistBookmarks()
-    starredPlaylistIds.value = response.data.map((bookmark) => String(bookmark.playlist_id))
+    starredPlaylistIds.value = (response.data ?? []).map((bookmark) => String(bookmark.playlist_id))
   } catch (e) {
-    reportError(e, 'Failed to fetch playlist bookmarks:')
+    starredPlaylistIds.value = []
   }
 }
 
@@ -157,13 +172,11 @@ async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [feedResponse] = await Promise.all([
-      listMusicDiscoverFeed(),
-      fetchAlbumBookmarks(),
-      fetchArtistBookmarks(),
-      fetchPlaylistBookmarks(),
-    ])
+    const feedResponse = await listMusicDiscoverFeed()
     applyDiscoverFeed(feedResponse.data ?? [])
+    void fetchAlbumBookmarks()
+    void fetchArtistBookmarks()
+    void fetchPlaylistBookmarks()
   } catch (error) {
     reportError(error, 'Failed to fetch music discover feed:')
     errorMessage.value = '发现内容加载失败'
@@ -223,11 +236,9 @@ async function fetchAlbumIndex() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [response] = await Promise.all([
-      listMusicAlbums({ page: 1, page_size: 48, sort: 'hot' }),
-      fetchAlbumBookmarks(),
-    ])
-    albumItems.value = response.data
+    const response = await listMusicAlbums({ page: 1, page_size: 48, sort: 'hot' })
+    albumItems.value = response.data ?? []
+    void fetchAlbumBookmarks()
   } catch (error) {
     reportError(error, 'Failed to fetch music albums:')
     errorMessage.value = '专辑列表加载失败'

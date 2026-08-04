@@ -273,6 +273,7 @@ function handleSave() {
 <template>
   <PSheet
     :show="show"
+    aria-label="编辑歌词"
     width="min(1080px, calc(100vw - var(--a-sidebar-width) - 16px))"
     max-width="calc(100vw - var(--a-sidebar-width) - 16px)"
     close-type="header"

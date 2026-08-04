@@ -139,6 +139,7 @@ const canGoForward = computed(() => {
       && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
   }
   return !!flow.draft.albumImport.importId
+    && flow.draft.albumImport.status === 'ready'
     && !!flow.draft.albumDetails.title.trim()
     && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
 })
@@ -202,7 +203,10 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
         artist_id: '',
         name: contributor.name.trim(),
         legal_name: flow.draft.artist.legalName.trim(),
+        bio: flow.draft.artist.bio.trim(),
         ...(contributor.avatarUrl.trim() ? { image_url: contributor.avatarUrl.trim() } : {}),
+        nationality: flow.draft.artist.nationality.trim(),
+        birth_date: formatDateFromParts(flow.draft.artist.birthDateParts),
         stage_names: artistStageNames,
         birth_place: flow.draft.artist.birthPlace.trim(),
         artist_form: flow.draft.artist.kind,
@@ -216,8 +220,11 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
       artist_id: contributor.artistId,
       name: contributor.name.trim(),
       legal_name: '',
+      bio: '',
       stage_names: [],
       birth_place: '',
+      nationality: '',
+      birth_date: '',
       artist_form: contributor.kind,
       active_start_date: '',
       active_end_date: '',
@@ -238,7 +245,10 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
     artist: {
       name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
       legal_name: flow.draft.artist.legalName.trim(),
+      bio: flow.draft.artist.bio.trim(),
       ...(flow.draft.artist.avatarUrl.trim() ? { image_url: flow.draft.artist.avatarUrl.trim() } : {}),
+      nationality: flow.draft.artist.nationality.trim(),
+      birth_date: formatDateFromParts(flow.draft.artist.birthDateParts),
       stage_names: flow.draft.artist.stageNames
         .filter((item) => item.name.trim())
         .map((item) => ({
@@ -250,8 +260,11 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       birth_place: flow.draft.artist.birthPlace.trim(),
     },
     artists,
+    artist_source: flow.draft.artist.source.trim(),
     album: {
       title: flow.draft.albumDetails.title.trim(),
+      description: flow.draft.albumDetails.bio.trim(),
+      album_type: flow.draft.albumDetails.type.trim() || 'album',
       ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
@@ -260,6 +273,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
         trackNumber: index + 1,
       })),
     },
+    album_source: flow.draft.albumDetails.source.trim(),
   }
 }
 
@@ -373,7 +387,6 @@ async function completeCreation() {
 <template>
   <PSheet
     :show="isOpen"
-    :title="layer?.title ?? '创建音乐条目'"
     width="560px"
     :index="sheetIndex"
     :layer-index="layerIndex"

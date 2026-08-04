@@ -481,7 +481,6 @@ async function submitEdit() {
 <template>
   <PSheet
     :show="isOpen"
-    :title="layer?.title ?? displayTitle"
     @close="closeCurrentAction"
     width="500px"
     :index="sheetIndex"

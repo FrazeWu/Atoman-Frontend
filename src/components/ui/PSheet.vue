@@ -95,7 +95,7 @@ const props = withDefaults(defineProps<{
   showBackdrop?: boolean
   abovePlayer?: boolean
 }>(), {
-  title: 'VIEW',
+  title: '',
   width: 'min(100%, 480px)',
   top: '56px',
   side: 'right',

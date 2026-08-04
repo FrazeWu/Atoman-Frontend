@@ -500,7 +500,6 @@ async function finishAlbumCreate() {
 <template>
   <PSheet
     :show="isOpen"
-    :title="layer?.title ?? sheetTitle"
     width="560px"
     :index="sheetIndex"
     :layer-index="layerIndex"

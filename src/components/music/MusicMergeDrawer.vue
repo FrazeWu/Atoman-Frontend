@@ -96,7 +96,6 @@ async function merge() {
 <template>
   <PSheet
     :show="isOpen"
-    title="合并重复条目"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

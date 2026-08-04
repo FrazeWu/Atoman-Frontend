@@ -423,7 +423,6 @@ watch(playlist, syncEditForm, { immediate: true })
 <template>
   <PSheet
     :show="isOpen"
-    :title="layer?.title ?? '歌单详情'"
     @close="closeCurrentPlaylist"
     width="680px"
     :is-shifted="shifted"
@@ -582,7 +581,6 @@ watch(playlist, syncEditForm, { immediate: true })
 
   <PSheet
     :show="editing"
-    title="编辑歌单"
     @close="cancelEditPlaylist"
     width="540px"
     :index="editSheetIndex"

@@ -262,7 +262,6 @@ watch(
 <template>
   <PSheet
     :show="isOpen"
-    :title="layer?.title ?? '专辑详情'"
     @close="closeCurrentAlbum"
     width="700px"
     :is-shifted="shifted"

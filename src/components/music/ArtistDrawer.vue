@@ -138,7 +138,6 @@ watch(
   <PSheet
     panel-class="artist-drawer"
     :show="isOpen"
-    :title="layer?.title ?? '艺术家详情'"
     @close="closeCurrentArtist"
     width="900px"
     :is-shifted="shifted"

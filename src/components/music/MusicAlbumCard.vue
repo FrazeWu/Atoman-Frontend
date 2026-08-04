@@ -19,6 +19,7 @@
 
       <!-- Bookmark Button on Top Right -->
       <button
+        v-if="showBookmark"
         type="button"
         class="bookmark-btn"
         :class="{ 'is-bookmarked': isBookmarked }"
@@ -91,10 +92,12 @@ export interface MusicAlbumCardItem {
 const props = withDefaults(defineProps<{
   album: MusicAlbumCardItem
   isBookmarked?: boolean
+  showBookmark?: boolean
   playCount?: number | string
   listenerCount?: number | string
 }>(), {
   isBookmarked: false,
+  showBookmark: true,
 })
 
 const publicAssetBase = import.meta.env.VITE_R2_PUBLIC_BASE_URL?.trim().replace(/\/$/, '') || ''

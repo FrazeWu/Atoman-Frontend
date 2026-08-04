@@ -25,6 +25,7 @@ import type {
   MusicEditFilters,
   MusicEditRequest,
   MusicEditSummary,
+  MusicHome,
   MusicListFilters,
   MusicListResponse,
   MusicListeningHistory,
@@ -213,6 +214,10 @@ export async function listMusicListeningHistory(
 ): Promise<MusicListResponse<MusicListeningHistory>> {
   const response = await apiGetEnvelope<MusicListeningHistory[], PaginationMeta>(`${musicV1Endpoints.history()}${queryString(filters)}`)
   return listResponseWithPaginationFallback(response, filters)
+}
+
+export async function getMusicHome(): Promise<MusicHome> {
+  return apiGet<MusicHome>(musicV1Endpoints.home())
 }
 
 export async function getMusicSongLyrics(songId: string): Promise<MusicSongLyrics> {

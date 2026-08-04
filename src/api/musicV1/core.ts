@@ -69,6 +69,7 @@ export const musicV1Endpoints = {
   playlistSong: (playlistId: string, songId: string) => `${apiV1Base()}/music/playlists/${playlistId}/songs/${songId}`,
   plays: () => `${apiV1Base()}/music/plays`,
   history: () => `${apiV1Base()}/music/history`,
+  home: () => `${apiV1Base()}/music/home`,
   albumRevisions: (albumId: string) => `${apiV1Base()}/albums/${albumId}/revisions`,
   albumRevision: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) => `${apiV1Base()}/albums/${albumId}/revisions/${version}/revert`,

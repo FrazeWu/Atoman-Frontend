@@ -85,7 +85,7 @@ let meta = reactive<MusicAlbumMetaDraft>({
   albumType: 'album',
 })
 
-let cover = reactive<MusicCoverDraft>({
+const cover = ref<MusicCoverDraft>({
   file: null,
   previewUrl: '',
   asset: null,
@@ -180,17 +180,21 @@ function resetAlbumState() {
     releaseDate: '',
     albumType: 'album',
   })
-  cover = reactive({
+  cover.value = {
     file: null,
     previewUrl: '',
     asset: null,
-  })
+  }
   tracks.value = []
   notes = reactive({
     editNote: '',
     reviewNote: '',
   })
   sources.value = []
+}
+
+function updateCover(value: MusicCoverDraft) {
+  cover.value = value
 }
 
 async function loadArtist(artistId: string) {
@@ -269,13 +273,13 @@ function hydrateAlbumDraft(result: MusicAlbumListItem) {
     albumType: normalizeAlbumType(result.album_type),
   })
 
-  cover = reactive({
+  cover.value = {
     file: null,
     previewUrl: result.cover_url ?? '',
     asset: result.cover_url
       ? { url: result.cover_url, key: '', content_type: '', size: 0 }
       : null,
-  })
+  }
 
   tracks.value = [...(result.songs ?? [])]
     .filter((song) => song.status !== 'closed')
@@ -324,9 +328,9 @@ async function handleAlbumEditSubmit() {
       .filter((track) => track.removed || track.title.trim())
       .map((track, index) => toTrackPayload(track, index))
 
-    let coverAsset = cover.asset
-    if (cover.file) {
-      coverAsset = await uploadMusicAsset(cover.file, 'music.cover')
+    let coverAsset = cover.value.asset
+    if (cover.value.file) {
+      coverAsset = await uploadMusicAsset(cover.value.file, 'music.cover')
     }
 
     await submitMusicEdit(buildUpdateAlbumEdit(current.id, {
@@ -559,7 +563,7 @@ async function finishAlbumCreate() {
             :notes="notes"
             :sources="sources"
             @update:meta="(value) => (meta = value)"
-            @update:cover="(value) => (cover = value)"
+            @update:cover="updateCover"
             @update:tracks="(value) => (tracks = value)"
             @update:notes="(value) => (notes = value)"
             @update:sources="(value) => (sources = value)"

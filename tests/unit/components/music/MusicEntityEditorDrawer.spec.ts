@@ -1,5 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
 
@@ -54,6 +54,10 @@ const mocks = vi.hoisted(() => ({
   setMusicCreationStep: vi.fn(),
   routerReplace: vi.fn(),
   getMusicArtist: vi.fn(),
+  getMusicAlbum: vi.fn(),
+  uploadMusicAsset: vi.fn(),
+  submitMusicEdit: vi.fn(),
+  buildUpdateAlbumEdit: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -75,7 +79,11 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 }))
 
 vi.mock('@/components/music', () => ({
-  AlbumEditorShell: { template: '<div data-testid="album-editor-shell-stub" />' },
+  AlbumEditorShell: {
+    name: 'AlbumEditorShell',
+    emits: ['update:cover'],
+    template: '<div data-testid="album-editor-shell-stub" />',
+  },
   MusicArtistForm: { template: '<div data-testid="music-artist-form-stub" />' },
 }))
 
@@ -111,12 +119,12 @@ vi.mock('@/components/ui/PButton.vue', () => ({
 vi.mock('@/api/musicV1', () => ({
   createMusicArtist: vi.fn(),
   getMusicArtist: mocks.getMusicArtist,
-  getMusicAlbum: vi.fn(),
+  getMusicAlbum: mocks.getMusicAlbum,
   updateMusicArtist: vi.fn(),
-  submitMusicEdit: vi.fn(),
-  uploadMusicAsset: vi.fn(),
+  submitMusicEdit: mocks.submitMusicEdit,
+  uploadMusicAsset: mocks.uploadMusicAsset,
   commitMusicAlbumImport: vi.fn(),
-  buildUpdateAlbumEdit: vi.fn(),
+  buildUpdateAlbumEdit: mocks.buildUpdateAlbumEdit,
 }))
 
 function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' | 'preview' = 'artist') {
@@ -181,7 +189,25 @@ describe('MusicEntityEditorDrawer.vue', () => {
     mocks.setMusicCreationStep.mockReset()
     mocks.routerReplace.mockReset()
     mocks.getMusicArtist.mockReset()
+    mocks.getMusicAlbum.mockReset()
+    mocks.uploadMusicAsset.mockReset()
+    mocks.submitMusicEdit.mockReset()
+    mocks.buildUpdateAlbumEdit.mockReset()
     mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Test Artist' })
+    mocks.getMusicAlbum.mockResolvedValue({
+      id: 'album-1',
+      title: 'Test Album',
+      entry_status: 'open',
+      songs: [],
+    })
+    mocks.uploadMusicAsset.mockResolvedValue({
+      url: 'https://assets.example.test/covers/new.webp',
+      key: 'music/covers/new.webp',
+      content_type: 'image/webp',
+      size: 1,
+    })
+    mocks.submitMusicEdit.mockResolvedValue({})
+    mocks.buildUpdateAlbumEdit.mockReturnValue({ id: 'edit-request' })
   })
 
   afterEach(() => {
@@ -212,5 +238,28 @@ describe('MusicEntityEditorDrawer.vue', () => {
     await flushPromises()
     expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')
     expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it('uploads the selected replacement cover when saving an album', async () => {
+    drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
+    const file = new File(['cover'], 'cover.webp', { type: 'image/webp' })
+    const wrapper = mountDrawer()
+
+    await flushPromises()
+    wrapper.getComponent({ name: 'AlbumEditorShell' }).vm.$emit('update:cover', {
+      file,
+      previewUrl: 'data:image/webp;base64,Y292ZXI=',
+      asset: null,
+    })
+    await nextTick()
+
+    const saveButton = wrapper.findAll('button').find((button) => button.text() === '保存全部')
+    await saveButton?.trigger('click')
+    await flushPromises()
+
+    expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(file, 'music.cover')
+    expect(mocks.buildUpdateAlbumEdit).toHaveBeenCalledWith('album-1', expect.objectContaining({
+      cover: expect.objectContaining({ url: 'https://assets.example.test/covers/new.webp' }),
+    }))
   })
 })

@@ -370,6 +370,12 @@ export type MusicListeningHistory = {
   song: MusicSongListItem
 }
 
+export type MusicHome = {
+  personalized: boolean
+  recently_played: MusicListeningHistory[]
+  for_you: MusicAlbumListItem[]
+}
+
 export type MusicPlaylistSummary = {
   id: string
   name: string

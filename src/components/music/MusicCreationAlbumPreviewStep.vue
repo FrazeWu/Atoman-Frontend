@@ -16,7 +16,7 @@ const uploadProgress = computed(() => {
 })
 const uploadSpeed = computed(() => Math.round((albumImport.value?.uploadSpeed ?? 0) / 1024))
 const stageLabel = computed(() => ({
-  upload: '上传中', queued: '等待处理', extracting: '解压中', analyzing: '分析中', transcoding: '转码中', ready: '已就绪', completed: '已完成',
+  upload: '上传中', queued: '等待处理', extracting: '解压中', analyzing: '分析中', transcoding: '转码中', ready: '已就绪', completed: '已完成', failed: '处理失败',
 }[albumImport.value?.stage ?? 'upload'] ?? '处理中'))
 </script>
 
@@ -27,6 +27,7 @@ const stageLabel = computed(() => ({
       <span v-if="albumImport.totalBytesTotal > 0">上传进度 {{ uploadProgress }}%</span>
       <span v-if="albumImport.totalBytesTotal > 0">{{ uploadSpeed }} KB/s</span>
     </section>
+    <p v-if="albumImport.errorMessage" class="album-preview-step__error">{{ albumImport.errorMessage }}</p>
     <div v-if="coverUrl" class="album-preview-step__cover">
       <img :src="coverUrl" alt="专辑封面预览" />
     </div>
@@ -56,5 +57,6 @@ const stageLabel = computed(() => ({
 .album-preview-step__cover img { display: block; width: min(100%, 16rem); aspect-ratio: 1; object-fit: cover; }
 .album-preview-step__section { display: grid; gap: 0.5rem; }
 .album-preview-step__section h4, .album-preview-step__section p { margin: 0; }
+.album-preview-step__error { margin: 0; color: var(--a-color-accent-destructive); }
 .album-preview-step__tracks, .album-preview-step__failures { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
 </style>

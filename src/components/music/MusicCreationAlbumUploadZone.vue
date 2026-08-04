@@ -200,6 +200,14 @@ function formatUploadSpeed(bytesPerSecond: number) {
       </li>
     </ul>
 
+    <p
+      v-if="albumImportDraft.status === 'uploading' && albumImportDraft.uploadSpeed > 0"
+      class="state-line"
+      data-testid="album-import-speed"
+    >
+      上传速度 {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
+    </p>
+
     <!-- Error -->
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <button
@@ -217,13 +225,6 @@ function formatUploadSpeed(bytesPerSecond: number) {
         上传进度 {{ albumImportDraft.uploadProgress }}%
       </p>
       <p v-else class="state-line">上传后会自动识别封面和曲目信息。</p>
-      <p
-        v-if="albumImportDraft.uploadProgress > 0 || albumImportDraft.uploadSpeed > 0"
-        class="state-line"
-        data-testid="album-import-speed"
-      >
-        {{ formatUploadSpeed(albumImportDraft.uploadSpeed) }}
-      </p>
     </div>
 
     <!-- Multi-file mode progress -->

@@ -87,6 +87,13 @@ function handleInput(event: Event) {
     input.setSelectionRange(cursorIndex, cursorIndex)
   })
 }
+
+function handleSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  const digitCount = internalDigits.value.length
+  const cursorIndex = getBirthDateCursorIndex(digitCount)
+  input.setSelectionRange(cursorIndex, cursorIndex)
+}
 </script>
 
 <template>
@@ -103,6 +110,8 @@ function handleInput(event: Event) {
         class="birth-date-input"
         :placeholder="placeholder || 'yyyy/mm/dd'"
         @input="handleInput"
+        @click="handleSelect"
+        @focus="handleSelect"
       >
       <button
         type="button"

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import JSZip from 'jszip'
 import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
+import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 import * as musicApi from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
@@ -140,6 +141,33 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     const draft = useMusicDrawers().state.value.creationFlow?.draft.albumImport
     expect(draft?.files).toEqual([])
     expect(draft?.derivedTracks).toEqual([])
+  })
+
+  it('上传有文件列表时仍显示当前上传速度', async () => {
+    const drawers = useMusicDrawers()
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+      status: 'uploading',
+      uploadSpeed: 128 * 1024,
+      files: [{
+        fileId: 'file-1',
+        relativePath: 'album.zip',
+        fileName: 'album.zip',
+        role: 'archive',
+        detectedFormat: 'zip',
+        size: 1024,
+        uploadStatus: 'uploading',
+        processingStatus: 'pending',
+        discNumber: 0,
+        trackNumber: 0,
+        title: '',
+        errorMessage: '',
+      }],
+    })
+
+    const wrapper = mount(MusicCreationAlbumUploadZone)
+
+    expect(wrapper.get('[data-testid="album-import-speed"]').text()).toContain('上传速度 128 KB/s')
   })
 
   it('轮询提取、分析和就绪三个阶段，并应用最终快照', async () => {

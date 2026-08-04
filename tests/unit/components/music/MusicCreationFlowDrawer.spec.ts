@@ -246,33 +246,43 @@ describe('MusicCreationFlowDrawer', () => {
     await flushPromises()
 
     expect(commitMusicAlbumImportMock).toHaveBeenCalledTimes(1)
-    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', {
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
       artist_id: 'artist-seeded',
-      artist: {
+      artist: expect.objectContaining({
         name: 'Seeded Artist',
         legal_name: 'Seeded Artist',
+        bio: '',
+        nationality: '',
+        birth_date: '',
         stage_names: [],
         birth_place: '',
-      },
+      }),
       artists: [
-        {
+        expect.objectContaining({
           artist_id: 'artist-seeded',
           name: 'Seeded Artist',
           legal_name: '',
+          bio: '',
           stage_names: [],
           birth_place: '',
+          nationality: '',
+          birth_date: '',
           artist_form: 'person',
           active_start_date: '',
           active_end_date: '',
           members: [],
-        },
+        }),
       ],
-      album: {
+      artist_source: '',
+      album: expect.objectContaining({
         title: 'Imported Album',
+        description: '',
+        album_type: 'album',
         release_year: 0,
         tracks: [],
-      },
-    })
+      }),
+      album_source: '',
+    }))
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
     expect(drawerMocks.state.value.creationFlow).toBeNull()
   })
@@ -368,7 +378,7 @@ describe('MusicCreationFlowDrawer', () => {
   })
 
   it.each(['uploading', 'extracting'] as const)(
-    '%s 状态允许在预览页提交专辑导入，并在提交后关闭抽屉',
+    '%s 状态在预览页禁止提交，且保留抽屉',
     async (status) => {
       commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
       drawerMocks.state.value.creationFlow = createFlowState({
@@ -390,13 +400,13 @@ describe('MusicCreationFlowDrawer', () => {
       const wrapper = mount(MusicCreationFlowDrawer)
       const finishButton = wrapper.get('[data-testid="music-creation-finish-button"]')
 
-      expect(finishButton.attributes('disabled')).toBeUndefined()
+      expect(finishButton.attributes('disabled')).toBeDefined()
 
       await finishButton.trigger('click')
       await flushPromises()
 
-      expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
-      expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
+      expect(commitMusicAlbumImportMock).not.toHaveBeenCalled()
+      expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
     },
   )
 
@@ -457,33 +467,43 @@ describe('MusicCreationFlowDrawer', () => {
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
     await flushPromises()
 
-    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', {
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
       artist_id: 'artist-existing',
-      artist: {
+      artist: expect.objectContaining({
         name: '',
         legal_name: '',
+        bio: '',
+        nationality: '',
+        birth_date: '',
         stage_names: [],
         birth_place: '',
-      },
+      }),
       artists: [
-        {
+        expect.objectContaining({
           artist_id: 'artist-existing',
           name: 'Seeded Artist',
           legal_name: '',
+          bio: '',
           stage_names: [],
           birth_place: '',
+          nationality: '',
+          birth_date: '',
           artist_form: 'person',
           active_start_date: '',
           active_end_date: '',
           members: [],
-        },
+        }),
       ],
-      album: {
+      artist_source: '',
+      album: expect.objectContaining({
         title: 'Graduation',
+        description: '',
+        album_type: 'album',
         release_year: 2007,
         tracks: [],
-      },
-    })
+      }),
+      album_source: '',
+    }))
   })
 
   it('填写发行日期时会同时提交 release_date 和推导后的 release_year', async () => {
@@ -520,34 +540,86 @@ describe('MusicCreationFlowDrawer', () => {
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
     await flushPromises()
 
-    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', {
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
       artist_id: 'artist-seeded',
-      artist: {
+      artist: expect.objectContaining({
         name: 'Seeded Artist',
         legal_name: 'Seeded Artist',
+        bio: '',
+        nationality: '',
+        birth_date: '',
         stage_names: [],
         birth_place: '',
-      },
+      }),
       artists: [
-        {
+        expect.objectContaining({
           artist_id: 'artist-seeded',
           name: 'Seeded Artist',
           legal_name: '',
+          bio: '',
           stage_names: [],
           birth_place: '',
+          nationality: '',
+          birth_date: '',
           artist_form: 'person',
           active_start_date: '',
           active_end_date: '',
           members: [],
-        },
+        }),
       ],
-      album: {
+      artist_source: '',
+      album: expect.objectContaining({
         title: 'Late Registration',
+        description: '',
+        album_type: 'album',
         release_date: '2005-08-30',
         release_year: 2005,
         tracks: [],
+      }),
+      album_source: '',
+    }))
+  })
+
+  it('提交时保留艺术家和专辑的补充信息', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    const base = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'preview',
+      draft: {
+        ...base.draft,
+        artist: {
+          ...base.draft.artist,
+          id: null,
+          legalName: 'Tahliah Debrett Barnett',
+          nationality: '英国',
+          birthDateParts: { year: '1988', month: '01', day: '16' },
+          bio: '英国歌手',
+          source: 'https://example.com/artist',
+          stageNames: [{ ...base.draft.artist.stageNames[0], name: 'FKA twigs' }],
+        },
+        albumImport: { ...base.draft.albumImport, importId: 'import-1', status: 'ready' },
+        albumDetails: {
+          ...base.draft.albumDetails,
+          title: 'LP1',
+          type: 'ep',
+          bio: '首张录音室专辑',
+          source: 'https://example.com/album',
+          contributors: [{ id: 'new-artist', artistId: null, name: 'FKA twigs', avatarUrl: '', kind: 'person', locked: true }],
+        },
       },
     })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
+      artist: expect.objectContaining({ bio: '英国歌手', nationality: '英国', birth_date: '1988-01-16' }),
+      artists: [expect.objectContaining({ bio: '英国歌手', nationality: '英国', birth_date: '1988-01-16' })],
+      artist_source: 'https://example.com/artist',
+      album: expect.objectContaining({ description: '首张录音室专辑', album_type: 'ep' }),
+      album_source: 'https://example.com/album',
+    }))
   })
 
   it('提交时按当前曲目顺序重新生成连续 trackNumber', async () => {

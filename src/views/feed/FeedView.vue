@@ -283,7 +283,7 @@ import PPress from '@/components/ui/PPress.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 
-const sourceTypeFilterOptions = [
+const sourceTypeFilterOptions: Array<{ label: string; value: FeedSourceTypeFilter; test: string }> = [
   { label: '全部', value: 'all', test: 'source-type-filter-all' },
   { label: '站内', value: 'internal', test: 'source-type-filter-internal' },
   { label: '文章', value: 'blog', test: 'source-type-filter-blog' },

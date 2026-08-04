@@ -348,7 +348,7 @@ const canEditRole = computed(() => {
   return !editingUser.value || editingUser.value.role === 'user' || editingUser.value.role === 'admin'
 })
 const selectedUser = computed(() => users.value.find(user => user.uuid === selectedUserId.value) || null)
-const roleFilterOptions = [
+const roleFilterOptions: Array<{ label: string; value: AdminUserRole | '' }> = [
   { label: '全部角色', value: '' },
   { label: '普通用户', value: 'user' },
   { label: '版主', value: 'moderator' },
@@ -359,12 +359,12 @@ const editableRoleOptions = [
   { label: '普通用户', value: 'user' },
   { label: '管理员', value: 'admin' },
 ]
-const statusOptions = [
+const statusOptions: Array<{ label: string; value: 'all' | 'active' | 'inactive' }> = [
   { label: '全部状态', value: 'all' },
   { label: '正常', value: 'active' },
   { label: '已停用', value: 'inactive' },
 ]
-const activityOptions = [
+const activityOptions: Array<{ label: string; value: 'all' | '7d' | 'inactive_30d' | 'never' }> = [
   { label: '全部时间', value: 'all' },
   { label: '最近 7 天登录', value: '7d' },
   { label: '30 天未登录', value: 'inactive_30d' },

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { installRouteGuards } from '@/router/guards'
 import { buildAppRoutes } from '@/router/buildAppRoutes'
+import { installChunkLoadRecovery } from '@/router/chunkLoadRecovery'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,5 +12,6 @@ const router = createRouter({
 })
 
 installRouteGuards(router)
+installChunkLoadRecovery(router)
 
 export default router

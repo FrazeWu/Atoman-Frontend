@@ -5,7 +5,7 @@ import type {
   MusicListFilters,
   MusicListResponse,
   MusicRecommendationMode,
-} from "./types";
+} from './types'
 
 type PaginationFallbackFilters = Pick<MusicListFilters, "page" | "page_size">;
 

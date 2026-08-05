@@ -42,6 +42,10 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({
     query: mocks.routeQuery,
   }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+  }),
 }))
 
 describe('Music ArtistsView query sync', () => {

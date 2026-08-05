@@ -620,9 +620,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .player {
   position: fixed;
-  bottom: calc(
-    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height)
-  );
+  bottom: calc(var(--a-footer-reserve-height, 0px) + env(safe-area-inset-bottom, 0px));
   width: 100%;
   z-index: var(--a-z-player, 720);
   background: rgba(255, 255, 255, 0.82);

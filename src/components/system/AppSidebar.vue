@@ -171,7 +171,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
-  Rss, Compass, Bookmark, Star, Disc3, Users, History,
+  Rss, Compass, Bookmark, Star, Disc3, Users, Library, History,
   MessageSquare, Folder, Archive, BookOpen, Clock, Mic
 } from 'lucide-vue-next'
 

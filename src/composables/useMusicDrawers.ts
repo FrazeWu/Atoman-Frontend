@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import type { MusicAlbumImport } from '@/api/musicV1'
 import type {
   MusicCreationDraft,
   MusicCreationFlowState,
@@ -258,6 +259,40 @@ export function useMusicDrawers() {
     })
   }
 
+  const resumeMusicCreationFlow = (snapshot: MusicAlbumImport) => {
+    openMusicCreationFlow({ startStep: 'artist' })
+    const flow = state.value.creationFlow
+    if (!flow) return
+    flow.draft.albumImport = {
+      importId: snapshot.importId,
+      inputMode: snapshot.inputMode,
+      archiveName: snapshot.archiveName,
+      status: snapshot.status,
+      stage: snapshot.stage,
+      uploadProgress: snapshot.uploadProgress,
+      uploadSpeed: snapshot.uploadSpeed,
+      files: snapshot.files,
+      totalBytesLoaded: snapshot.progress.current,
+      totalBytesTotal: snapshot.progress.total,
+      coverUrl: snapshot.coverUrl,
+      coverKey: snapshot.coverKey,
+      derivedAlbumTitle: snapshot.derivedAlbumTitle,
+      derivedCover: snapshot.derivedCover,
+      derivedTracks: snapshot.derivedTracks,
+      lastSyncedAt: snapshot.lastSyncedAt,
+      errorMessage: snapshot.errorMessage,
+    }
+    flow.draft.albumDetails.title = snapshot.derivedAlbumTitle
+    flow.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover
+    flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+      id: `import-track-${index + 1}`,
+      sequence: index + 1,
+      title: track.title,
+      audioKey: track.audioKey,
+      origin: track.origin,
+    }))
+  }
+
   const setMusicCreationStep = (step: MusicCreationFlowStep) => {
     if (state.value.creationFlow) state.value.creationFlow.step = step
   }
@@ -323,6 +358,7 @@ export function useMusicDrawers() {
     openNestedAction, closeNestedAction,
     openMusicEditor, closeMusicEditor,
     openMusicCreationFlow,
+    resumeMusicCreationFlow,
     setMusicCreationStep,
     closeMusicCreationFlow,
     closeAll,

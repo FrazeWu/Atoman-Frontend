@@ -8,12 +8,14 @@ import {
   type MusicAlbumImport,
 } from "@/api/musicV1";
 import PButton from "@/components/ui/PButton.vue";
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const imports = ref<MusicAlbumImport[]>([]);
 const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
+const { resumeMusicCreationFlow } = useMusicDrawers()
 
 const selectedImport = computed(
   () =>
@@ -91,6 +93,11 @@ async function cancelImport() {
     actionBusy.value = null;
   }
 }
+
+function continueImport() {
+  if (!selectedImport.value) return
+  resumeMusicCreationFlow(selectedImport.value)
+}
 </script>
 
 <template>
@@ -165,6 +172,11 @@ async function cancelImport() {
             v-if="!['committed', 'canceled'].includes(selectedImport.status)"
             class="music-imports-view__actions"
           >
+            <PButton
+              v-if="!['committed', 'canceled'].includes(selectedImport.status)"
+              variant="secondary"
+              @click="continueImport"
+            >继续编辑</PButton>
             <PButton
               variant="secondary"
               :loading="actionBusy === 'cancel'"

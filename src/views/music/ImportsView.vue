@@ -4,6 +4,7 @@ import {
   cancelMusicAlbumImportSession,
   deleteMusicAlbumImportFile,
   listMusicAlbumImports,
+  replaceAndUploadMusicAlbumImportFile,
   retryMusicAlbumImportFile,
   type MusicAlbumImport,
 } from "@/api/musicV1";
@@ -15,6 +16,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
+const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
 
 const selectedImport = computed(
@@ -78,6 +80,19 @@ async function deleteFile(fileId: string) {
   } finally {
     actionBusy.value = null;
   }
+}
+
+function chooseReplacement(fileId: string) { replacementInputs.value[fileId]?.click() }
+async function replaceFile(fileId: string, event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!selectedImport.value || !file) return
+  actionBusy.value = fileId
+  try {
+    await replaceAndUploadMusicAlbumImportFile(selectedImport.value.importId, fileId, file)
+    await loadImports()
+  } catch { errorMessage.value = '替换文件失败' }
+  finally { actionBusy.value = null; input.value = '' }
 }
 
 async function cancelImport() {
@@ -189,6 +204,7 @@ function continueImport() {
             class="music-imports-view__files"
           >
             <li v-for="file in selectedImport.files" :key="file.fileId">
+              <input :ref="node => replacementInputs[file.fileId] = node as HTMLInputElement | null" class="music-imports-view__file-input" type="file" @change="replaceFile(file.fileId, $event)" />
               <span>{{ file.title || file.fileName }}</span
               ><small v-if="file.errorMessage">{{ file.errorMessage }}</small>
               <PButton
@@ -201,6 +217,12 @@ function continueImport() {
                 @click="retryFile(file.fileId)"
                 >重试</PButton
               >
+              <PButton
+                v-if="file.uploadStatus === 'failed' || file.processingStatus === 'failed'"
+                variant="secondary"
+                :disabled="actionBusy === file.fileId"
+                @click="chooseReplacement(file.fileId)"
+              >替换文件</PButton>
               <PButton
                 v-if="file.uploadStatus === 'failed'"
                 variant="danger"
@@ -322,6 +344,7 @@ function continueImport() {
   color: var(--a-color-accent-destructive);
   width: 100%;
 }
+.music-imports-view__file-input { display: none; }
 @media (max-width: 700px) {
   .music-imports-view {
     padding: 1rem;

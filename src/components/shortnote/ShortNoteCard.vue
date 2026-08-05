@@ -2,35 +2,68 @@
   <article class="short-note-card">
     <header class="short-note-card__header">
       <PAvatar :src="note.user?.avatar_url" :name="author" size="sm" />
-      <div>
-        <strong>{{ author }}</strong>
-        <p>{{ formatDate(note.created_at) }}<span v-if="note.edited"> · 已编辑</span></p>
+      <div class="short-note-card__meta">
+        <span class="short-note-card__author">{{ author }}</span>
+        <span class="short-note-card__time">
+          {{ formatDate(note.created_at) }}
+          <span v-if="note.edited" class="short-note-card__edited">· 已编辑</span>
+        </span>
       </div>
       <div v-if="isOwner" class="short-note-card__owner-actions">
-        <RouterLink :to="`/posts/notes/${note.id}/edit`" aria-label="编辑短话" title="编辑短话"><Pencil :size="16" /></RouterLink>
-        <button type="button" aria-label="删除短话" title="删除短话" @click="$emit('delete', note)"><Trash2 :size="16" /></button>
+        <RouterLink
+          :to="`/posts/notes/${note.id}/edit`"
+          class="short-note-card__action-btn"
+          aria-label="编辑短话"
+          title="编辑短话"
+        >
+          <Pencil :size="15" />
+        </RouterLink>
+        <button
+          type="button"
+          class="short-note-card__action-btn is-danger"
+          aria-label="删除短话"
+          title="删除短话"
+          @click="$emit('delete', note)"
+        >
+          <Trash2 :size="15" />
+        </button>
       </div>
     </header>
+
     <RouterLink :to="`/posts/notes/${note.id}`" class="short-note-card__body">
-      <p>{{ note.content }}</p>
-      <div v-if="note.media.length" class="short-note-card__media" :class="`count-${note.media.length}`">
-        <img v-for="item in note.media" :key="item.id" :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
+      <p class="short-note-card__content">{{ note.content }}</p>
+
+      <div
+        v-if="note.media.length"
+        class="short-note-card__media"
+        :class="`count-${Math.min(note.media.length, 9)}`"
+      >
+        <div
+          v-for="item in note.media"
+          :key="item.id"
+          class="short-note-card__media-item"
+        >
+          <img :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
+        </div>
       </div>
     </RouterLink>
-    <InteractionBar
-      :liked="interactions.liked.value"
-      :like-count="interactions.likeCount.value"
-      :comment-count="interactions.commentCount.value"
-      :comment-href="`/posts/notes/${note.id}#comments`"
-      :disabled="!authStore.isAuthenticated"
-      @like="interactions.like"
-      @unlike="interactions.unlike"
-    />
+
+    <footer class="short-note-card__footer">
+      <InteractionBar
+        :liked="interactions.liked.value"
+        :like-count="interactions.likeCount.value"
+        :comment-count="interactions.commentCount.value"
+        :comment-href="`/posts/notes/${note.id}#comments`"
+        :disabled="!authStore.isAuthenticated"
+        @like="interactions.like"
+        @unlike="interactions.unlike"
+      />
+    </footer>
   </article>
 </template>
 
 <script setup lang="ts">
-import { watchEffect } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
@@ -44,27 +77,184 @@ const props = defineProps<{ note: ShortNote }>()
 defineEmits<{ delete: [note: ShortNote] }>()
 const authStore = useAuthStore()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
-const author = props.note.user?.display_name || props.note.user?.username || '匿名用户'
-const isOwner = () => authStore.user?.uuid === props.note.user_id
+const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
+const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
+
 watchEffect(() => {
   interactions.liked.value = props.note.liked
   interactions.likeCount.value = props.note.likes_count
   interactions.commentCount.value = props.note.comments_count
 })
-function formatDate(value: string) { return new Date(value).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 </script>
 
 <style scoped>
-.short-note-card { padding:1rem 0 0; border-bottom:1px solid var(--a-color-border-soft); }
-.short-note-card__header { display:flex; align-items:center; gap:.7rem; margin-bottom:.55rem; }
-.short-note-card__header strong { font-size:.875rem; font-weight:650; }
-.short-note-card__header p { margin:.1rem 0 0; color:var(--a-color-muted); font-size:.75rem; }
-.short-note-card__owner-actions { display:flex; gap:.2rem; margin-left:auto; }
-.short-note-card__owner-actions a, .short-note-card__owner-actions button { display:grid; width:2rem; height:2rem; place-items:center; color:var(--a-color-muted); text-decoration:none; background:none; border:0; border-radius:50%; cursor:pointer; }
-.short-note-card__owner-actions a:hover, .short-note-card__owner-actions button:hover { background:var(--a-color-bg-subtle); color:var(--a-color-fg); }
-.short-note-card__body { display:block; color:inherit; text-decoration:none; }
-.short-note-card__body > p { margin:0 0 .75rem; white-space:pre-wrap; font-size:.95rem; line-height:1.6; }
-.short-note-card__media { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.25rem; margin-bottom:.75rem; max-width:31rem; overflow:hidden; border-radius:var(--a-radius-control); }
-.short-note-card__media.count-1 { grid-template-columns:minmax(0, 20rem); }
-.short-note-card__media img { width:100%; aspect-ratio:1; object-fit:cover; background:var(--a-color-bg-subtle); }
+.short-note-card {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.short-note-card:hover {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.short-note-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.short-note-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.short-note-card__author {
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--a-color-fg);
+  line-height: 1.2;
+}
+
+.short-note-card__time {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.short-note-card__edited {
+  color: var(--a-color-muted-soft);
+  margin-left: 0.2rem;
+}
+
+.short-note-card__owner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.short-note-card__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--a-color-muted);
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.short-note-card__action-btn:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+}
+
+.short-note-card__action-btn.is-danger:hover {
+  background: #fef2f2;
+  color: var(--a-color-danger);
+  border-color: var(--a-color-danger-border);
+}
+
+.short-note-card__body {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.short-note-card__content {
+  margin: 0 0 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--a-color-fg);
+}
+
+/* 智能媒体图格 Grid 布局 */
+.short-note-card__media {
+  display: grid;
+  gap: 0.4rem;
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.short-note-card__media.count-1 {
+  grid-template-columns: 1fr;
+  max-width: 26rem;
+}
+
+.short-note-card__media.count-1 .short-note-card__media-item {
+  max-height: 22rem;
+  aspect-ratio: auto;
+}
+
+.short-note-card__media.count-2 {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 30rem;
+}
+
+.short-note-card__media.count-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.short-note-card__media.count-4 {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 28rem;
+}
+
+.short-note-card__media.count-5,
+.short-note-card__media.count-6,
+.short-note-card__media.count-7,
+.short-note-card__media.count-8,
+.short-note-card__media.count-9 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.short-note-card__media-item {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--a-color-surface-muted);
+  border-radius: var(--a-radius-base);
+}
+
+.short-note-card__media-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.short-note-card:hover .short-note-card__media-item img {
+  transform: scale(1.02);
+}
+
+.short-note-card__footer {
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--a-color-border-soft);
+}
 </style>
+

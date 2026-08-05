@@ -6,7 +6,6 @@
     v-bind="componentAttrs"
     @click="handleClick"
   >
-    <span v-if="dot" class="p-button-dot" aria-hidden="true" />
     <slot>{{ computedLabel }}</slot>
   </component>
 </template>
@@ -30,7 +29,6 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   loading?: boolean
   loadingText?: string
-  dot?: boolean
 }>(), {
   tag: 'button',
   to: undefined,
@@ -46,7 +44,6 @@ const props = withDefaults(defineProps<{
   disabled: false,
   loading: false,
   loadingText: '处理中...',
-  dot: false,
 })
 
 const emit = defineEmits<{
@@ -134,14 +131,6 @@ const handleClick = (event: MouseEvent) => {
 .p-button:focus-visible {
   outline: 2px solid var(--a-color-primary);
   outline-offset: 2px;
-}
-
-.p-button-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
-  flex-shrink: 0;
 }
 
 .p-button--sm {

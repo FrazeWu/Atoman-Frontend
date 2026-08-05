@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   listPlaylistBookmarks: vi.fn(),
   createMusicPlaylist: vi.fn(),
   routerPush: vi.fn(),
+  requireLogin: vi.fn(),
+  isAuthenticated: { value: true },
 }))
 
 vi.mock('vue-router', () => ({
@@ -21,12 +23,22 @@ vi.mock('@/api/musicV1', () => ({
   createMusicPlaylist: mocks.createMusicPlaylist,
 }))
 
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({
+    isAuthenticated: mocks.isAuthenticated,
+    requireLogin: mocks.requireLogin,
+  }),
+}))
+
 describe('MusicSidebarPlaylists', () => {
   beforeEach(() => {
     mocks.listMusicPlaylists.mockReset()
     mocks.listPlaylistBookmarks.mockReset()
     mocks.createMusicPlaylist.mockReset()
     mocks.routerPush.mockReset()
+    mocks.requireLogin.mockReset()
+    mocks.requireLogin.mockReturnValue(true)
+    mocks.isAuthenticated.value = true
     useMusicDrawers().closeAll()
 
     mocks.listMusicPlaylists.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } })
@@ -56,6 +68,18 @@ describe('MusicSidebarPlaylists', () => {
       name: '新歌单',
       is_public: false,
     })
+  })
+
+  it('does not request private playlists for guests', async () => {
+    mocks.isAuthenticated.value = false
+
+    mount(MusicSidebarPlaylists, {
+      props: { collapsed: false },
+    })
+    await flushPromises()
+
+    expect(mocks.listMusicPlaylists).not.toHaveBeenCalled()
+    expect(mocks.listPlaylistBookmarks).not.toHaveBeenCalled()
   })
 
   it('shows bookmarked playlists under my playlists', async () => {

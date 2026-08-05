@@ -122,6 +122,7 @@ export const usePlayerStore = defineStore("player", () => {
     playReported = true;
     listeningStartedAt = null;
     listeningTimer = null;
+    if (!authStore.isAuthenticated) return;
     void recordMusicSongPlay(songId).catch((error) => {
       reportError(error, "Failed to record music play:");
     });

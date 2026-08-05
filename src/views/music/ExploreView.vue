@@ -26,6 +26,7 @@ import {
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useAuthStore } from '@/stores/auth'
 import { getActivePinia } from 'pinia'
 
@@ -40,6 +41,7 @@ const props = withDefaults(defineProps<{
 const authStore = getActivePinia() ? useAuthStore() : null
 const router = useRouter()
 const { openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
+const { requireLogin } = useLoginRedirect()
 const loading = ref(false)
 const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
@@ -97,6 +99,7 @@ async function fetchPlaylistBookmarks() {
 }
 
 async function handleToggleAlbumBookmark(albumId: string) {
+  if (!requireLogin()) return
   const isCurrentlyBookmarked = starredAlbumIds.value.includes(albumId)
   try {
     if (isCurrentlyBookmarked) {
@@ -121,6 +124,7 @@ async function handleToggleAlbumBookmark(albumId: string) {
 }
 
 async function handleToggleArtistBookmark(artistId: string) {
+  if (!requireLogin()) return
   const isCurrentlyBookmarked = starredArtistIds.value.includes(artistId)
   try {
     if (isCurrentlyBookmarked) {
@@ -145,6 +149,7 @@ async function handleToggleArtistBookmark(artistId: string) {
 }
 
 async function handleTogglePlaylistBookmark(playlistId: string) {
+  if (!requireLogin()) return
   const isCurrentlyBookmarked = starredPlaylistIds.value.includes(playlistId)
   try {
     if (isCurrentlyBookmarked) {
@@ -328,6 +333,11 @@ function openArtistResult(artist: MusicArtistListItem) {
   router.push(`/music/artist/${artist.id}`)
 }
 
+function startAlbumCreation() {
+  if (!requireLogin()) return
+  openMusicCreationFlow()
+}
+
 function handleSearchFocus() {
   searchOpen.value = true
 }
@@ -421,8 +431,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           variant="primary"
           class="search-side-action"
           data-testid="add-album"
-          dot
-          @click="openMusicCreationFlow()"
+          @click="startAlbumCreation"
         >
           添加专辑
         </PButton>

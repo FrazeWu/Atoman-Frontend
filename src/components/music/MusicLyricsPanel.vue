@@ -19,12 +19,11 @@
         </PButton>
         <PButton
           class="music-lyrics-panel__action-btn"
-          v-if="isAuthenticated"
           type="button"
           variant="secondary"
           :disabled="saving || reverting"
           data-testid="lyrics-edit-trigger"
-          @click="isLyricEditorOpen = true"
+          @click="openLyricEditor"
         >
           编辑歌词
         </PButton>
@@ -96,7 +95,6 @@
               </p>
             </div>
             <button
-              v-if="isAuthenticated"
               type="button"
               class="music-lyrics-panel__version-action"
               :disabled="saving || reverting"
@@ -202,6 +200,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
 import { buildMusicLyricsVersionPreview, type MusicLyricsVersionDiffKind } from '@/utils/musicLyricsVersionDiff'
@@ -221,6 +220,7 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 
 const {
   lyrics,
@@ -376,6 +376,11 @@ function handleOpenAnnotations(payload: { line: MusicSongLyricsLine; annotationI
   selectedAnnotationIds.value = payload.annotationIds
 }
 
+function openLyricEditor() {
+  if (!requireLogin()) return
+  isLyricEditorOpen.value = true
+}
+
 function handleSelectText(payload: {
   line: MusicSongLyricsLine
   selectedText: string
@@ -500,9 +505,9 @@ function selectVersionPreview(version: number) {
 }
 
 async function handleRevertVersion(version: number) {
+  if (!requireLogin()) return
   if (
-    !isAuthenticated.value
-    || saving.value
+    saving.value
     || reverting.value
     || versionsSongId.value !== props.songId
     || selectedVersionNumber.value !== version
@@ -531,7 +536,7 @@ async function handleSaveLyrics(payload: {
   format: 'plain' | 'lrc'
   editSummary: string
 }) {
-  if (!isAuthenticated.value || saving.value || reverting.value) return
+  if (!requireLogin() || saving.value || reverting.value) return
   const input: UpdateMusicSongLyricsInput = {
     content: payload.content,
     translation: payload.translation,

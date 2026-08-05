@@ -27,6 +27,8 @@ const {
   deleteAlbumBookmark,
   listMusicPlaylists,
   addMusicPlaylistSong,
+  requireLogin,
+  isAuthenticated,
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   openMusicEditor: vi.fn(),
@@ -38,6 +40,8 @@ const {
   deleteAlbumBookmark: vi.fn(),
   listMusicPlaylists: vi.fn(() => Promise.resolve({ data: [] })),
   addMusicPlaylistSong: vi.fn(() => Promise.resolve({})),
+  requireLogin: vi.fn(),
+  isAuthenticated: { value: true },
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -51,6 +55,10 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     openMusicEditor,
     openAlbum,
   })
+}))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ isAuthenticated, requireLogin }),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -78,6 +86,9 @@ describe('AlbumDrawer.vue', () => {
     listAlbumBookmarks.mockReset()
     createAlbumBookmark.mockReset()
     deleteAlbumBookmark.mockReset()
+    requireLogin.mockReset()
+    requireLogin.mockReturnValue(true)
+    isAuthenticated.value = true
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Test Album',
@@ -103,6 +114,17 @@ describe('AlbumDrawer.vue', () => {
     })
     expect(wrapper.text()).not.toContain('Album Notes')
     expect(wrapper.text()).not.toContain('专辑详情')
+  })
+
+  it('does not request private music data while a guest reads an album', async () => {
+    isAuthenticated.value = false
+    const wrapper = mount(AlbumDrawer)
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Test Album')
+    expect(listAlbumBookmarks).not.toHaveBeenCalled()
+    expect(listMusicPlaylists).not.toHaveBeenCalled()
   })
 
   it('opens the merge target when the album is closed with redirect_to', async () => {

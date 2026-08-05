@@ -109,6 +109,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, ListMusic, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 
 defineProps<{
   collapsed?: boolean
@@ -119,12 +120,17 @@ const bookmarkedPlaylists = ref<MusicPlaylistSummary[]>([])
 const route = useRoute()
 const router = useRouter()
 const { state } = useMusicDrawers()
+const { isAuthenticated, requireLogin } = useLoginRedirect()
 
 const isCreating = ref(false)
 const newPlaylistName = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 
 async function fetchPlaylists() {
+  if (!isAuthenticated.value) {
+    playlists.value = []
+    return
+  }
   try {
     const response = await listMusicPlaylists()
     const list = [...(response.data || [])]
@@ -146,6 +152,10 @@ async function fetchPlaylists() {
 }
 
 async function fetchBookmarkedPlaylists() {
+  if (!isAuthenticated.value) {
+    bookmarkedPlaylists.value = []
+    return
+  }
   try {
     const response = await listPlaylistBookmarks()
     bookmarkedPlaylists.value = (response.data || [])
@@ -170,6 +180,7 @@ function openPlaylistRoute(playlistId: string) {
 }
 
 function startCreatePlaylist() {
+  if (!requireLogin()) return
   isCreating.value = true
   newPlaylistName.value = ''
   nextTick(() => {
@@ -178,6 +189,7 @@ function startCreatePlaylist() {
 }
 
 function startCreatePlaylistFromCollapsed() {
+  if (!requireLogin()) return
   const name = prompt('请输入新建歌单名称：')
   if (name && name.trim()) {
     createPlaylistWithName(name.trim())
@@ -203,6 +215,7 @@ function handleInputBlur() {
 }
 
 async function createPlaylistWithName(name: string) {
+  if (!requireLogin()) return
   try {
     const created = await createMusicPlaylist({ name, is_public: false })
     await fetchPlaylists()

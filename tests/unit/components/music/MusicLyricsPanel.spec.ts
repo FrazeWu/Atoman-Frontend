@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   revertVersion: vi.fn(),
   currentLine: vi.fn(),
   removePendingMusicLyricsAnnotation: vi.fn(),
+  requireLogin: vi.fn(),
 }))
 
 const apiMocks = vi.hoisted(() => ({
@@ -89,6 +90,10 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => authState,
+}))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: mocks.requireLogin }),
 }))
 
 vi.mock('@/composables/usePendingMusicLyricsAnnotations', () => ({
@@ -222,6 +227,8 @@ describe('MusicLyricsPanel.vue', () => {
       username: 'fafa',
       email: 'fafa@example.com',
     }
+    mocks.requireLogin.mockReset()
+    mocks.requireLogin.mockImplementation(() => authState.isAuthenticated)
     lyricsState.lyrics.value = {
       song_id: 'song-1',
       format: 'plain',
@@ -677,17 +684,22 @@ describe('MusicLyricsPanel.vue', () => {
     expect(actionButtons.map((button) => button.text())).toEqual(['编辑', '删除'])
   })
 
-  it('匿名用户只读歌词和版本，不触发注释或版本写操作', async () => {
+  it('匿名用户可读歌词和版本，写操作跳转登录', async () => {
     authState.isAuthenticated = false
     authState.user = null
     const wrapper = await mountPanel()
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="lyrics-edit-trigger"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="lyrics-edit-trigger"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
+    expect(mocks.requireLogin).toHaveBeenCalled()
+    expect(wrapper.find('.lyric-editor-drawer-stub').exists()).toBe(false)
     await wrapper.get('[data-testid="lyrics-versions-trigger"]').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('修正错字')
-    expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(false)
+    await openVersionPreview(wrapper)
+    expect(wrapper.find('[data-testid="lyrics-revert-version-2"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="lyrics-revert-version-2"]').trigger('click')
 
     await wrapper.get('[data-line-id="line-1"] .select-text').trigger('click')
     expect(wrapper.find('.annotation-editor-stub').exists()).toBe(false)

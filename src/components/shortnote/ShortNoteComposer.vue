@@ -1,41 +1,70 @@
 <template>
   <form class="short-note-composer" :class="{ 'is-compact': compact }" @submit.prevent="submit">
-    <PTextarea
-      v-model="content"
-      aria-label="短话内容"
-      :rows="compact ? 3 : 6"
-      :maxlength="500"
-      placeholder="写点什么"
-      :disabled="submitting"
-    >
-      <template #suffix><span class="short-note-composer__count">{{ charCount }}/500</span></template>
-    </PTextarea>
+    <div class="short-note-composer__field">
+      <PTextarea
+        v-model="content"
+        aria-label="短话内容"
+        :rows="compact ? 3 : 5"
+        :maxlength="500"
+        placeholder="写点什么..."
+        :disabled="submitting"
+      >
+        <template #suffix>
+          <span class="short-note-composer__count" :class="{ 'is-limit': charCount >= 500 }">
+            {{ charCount }}/500
+          </span>
+        </template>
+      </PTextarea>
+    </div>
 
     <div v-if="mediaUrls.length" ref="mediaElement" data-testid="short-note-media" class="short-note-composer__media">
       <div v-for="(url, index) in mediaUrls" :key="url" class="short-note-composer__preview">
         <img :src="resolveMediaURL(url)" alt="上传的图片" />
-        <button type="button" data-testid="short-note-drag-handle" class="short-note-composer__drag-handle" aria-label="拖拽排序图片" title="拖拽排序图片">
-          <GripVertical :size="16" />
+        <button
+          type="button"
+          data-testid="short-note-drag-handle"
+          class="short-note-composer__drag-handle"
+          aria-label="拖拽排序图片"
+          title="拖拽排序图片"
+        >
+          <GripVertical :size="14" />
         </button>
-        <button type="button" aria-label="移除图片" @click="removeImage(index)">移除</button>
+        <button
+          type="button"
+          class="short-note-composer__remove-btn"
+          aria-label="移除图片"
+          title="移除图片"
+          @click="removeImage(index)"
+        >
+          <X :size="14" />
+        </button>
       </div>
     </div>
 
     <p v-if="uploadError" class="short-note-composer__error" role="alert">{{ uploadError }}</p>
+
     <div class="short-note-composer__actions">
       <label class="short-note-composer__image-button" :class="{ 'is-disabled': uploading || mediaUrls.length >= 9 }">
-        <ImagePlus :size="18" aria-hidden="true" />
+        <ImagePlus :size="16" aria-hidden="true" />
         <span>{{ uploading ? '上传中...' : `图片 ${mediaUrls.length}/9` }}</span>
-        <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple :disabled="uploading || mediaUrls.length >= 9" @change="uploadImages" />
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          multiple
+          :disabled="uploading || mediaUrls.length >= 9"
+          @change="uploadImages"
+        />
       </label>
-      <PButton type="submit" :disabled="!content.trim()" :loading="submitting">{{ submitLabel }}</PButton>
+      <PButton type="submit" :disabled="!content.trim() || charCount > 500" :loading="submitting">
+        {{ submitLabel }}
+      </PButton>
     </div>
   </form>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { GripVertical, ImagePlus } from 'lucide-vue-next'
+import { GripVertical, ImagePlus, X } from 'lucide-vue-next'
 import Sortable from 'sortablejs'
 import { apiRequest } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
@@ -130,18 +159,157 @@ function submit() {
 </script>
 
 <style scoped>
-.short-note-composer { display:grid; gap:1rem; padding:1rem 0; border-bottom:1px solid var(--a-color-border-soft); }
-.short-note-composer.is-compact { gap:.7rem; }
-.short-note-composer__count { padding:.7rem; color:var(--a-color-muted); font-size:.75rem; }
-.short-note-composer__media { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.5rem; }
-.short-note-composer__preview { position:relative; aspect-ratio:1; overflow:hidden; border-radius:var(--a-radius-control); background:var(--a-color-bg-subtle); }
-.short-note-composer__preview img { width:100%; height:100%; object-fit:cover; }
-.short-note-composer__preview button { position:absolute; right:.25rem; bottom:.25rem; border:0; padding:.25rem .45rem; background:rgba(0,0,0,.7); color:#fff; cursor:pointer; font:inherit; font-size:.75rem; }
-.short-note-composer__preview .short-note-composer__drag-handle { right:auto; left:.25rem; display:grid; width:2rem; height:2rem; place-items:center; padding:0; cursor:grab; touch-action:none; }
-.short-note-composer__preview .short-note-composer__drag-handle:active { cursor:grabbing; }
-.short-note-composer__actions { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-.short-note-composer__image-button { display:inline-flex; align-items:center; gap:.4rem; color:var(--a-color-muted); cursor:pointer; font-size:.875rem; }
-.short-note-composer__image-button.is-disabled { opacity:.5; cursor:not-allowed; }
-.short-note-composer__image-button input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
-.short-note-composer__error { margin:0; color:var(--a-color-danger); font-size:.875rem; }
+.short-note-composer {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.short-note-composer:focus-within {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-md);
+}
+
+.short-note-composer.is-compact {
+  gap: 0.85rem;
+}
+
+.short-note-composer__count {
+  padding: 0.5rem 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  transition: color 0.2s ease;
+}
+
+.short-note-composer__count.is-limit {
+  color: var(--a-color-danger);
+  font-weight: 600;
+}
+
+.short-note-composer__media {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.short-note-composer__preview {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.short-note-composer__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.short-note-composer__drag-handle {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.3rem;
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  cursor: grab;
+  touch-action: none;
+  transition: background 0.15s ease;
+}
+
+.short-note-composer__drag-handle:active {
+  cursor: grabbing;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.short-note-composer__remove-btn {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.short-note-composer__remove-btn:hover {
+  background: var(--a-color-danger);
+  transform: scale(1.05);
+}
+
+.short-note-composer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.short-note-composer__image-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.short-note-composer__image-button:hover:not(.is-disabled) {
+  background: var(--a-color-bg);
+  border-color: var(--a-color-border);
+  color: var(--a-color-primary);
+}
+
+.short-note-composer__image-button.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.short-note-composer__image-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.short-note-composer__error {
+  margin: 0;
+  color: var(--a-color-danger);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .short-note-composer__media {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 </style>
+

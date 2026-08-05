@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
     creationFlow: null as unknown,
   },
   routeQuery: {} as Record<string, string>,
+  requireLogin: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -60,6 +61,10 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   }),
 }))
 
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: mocks.requireLogin }),
+}))
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({
     query: mocks.routeQuery,
@@ -78,6 +83,8 @@ describe('Music ArtistsView.vue', () => {
     mocks.openNestedAction.mockReset()
     mocks.openMusicEditor.mockReset()
     mocks.openMusicCreationFlow.mockReset()
+    mocks.requireLogin.mockReset()
+    mocks.requireLogin.mockReturnValue(true)
     mocks.drawerStateValue = {
       artistId: null,
       albumId: null,

@@ -11,6 +11,7 @@ import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { Plus, Play, Heart } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import {
@@ -30,6 +31,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeAlbum, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
+const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
 const isOpen = computed(() => props.layer !== undefined || albumId.value !== null)
@@ -113,6 +115,11 @@ function handleCoverError() {
 }
 
 async function loadPlaylists() {
+  if (!isAuthenticated.value) {
+    playlists.value = []
+    playlistsLoaded.value = false
+    return
+  }
   try {
     const res = await listMusicPlaylists()
     playlists.value = res.data
@@ -128,6 +135,10 @@ async function loadPlaylists() {
 }
 
 async function loadFavorites() {
+  if (!isAuthenticated.value) {
+    favoriteSongIds.value = new Set()
+    return
+  }
   try {
     await loadFavoriteSongs()
   } catch (err) {
@@ -140,6 +151,7 @@ async function loadFavorites() {
 }
 
 async function toggleTrackFavorite(songId: string) {
+  if (!requireLogin()) return
   try {
     const result = await toggleFavoriteSong(songId)
     toastMessage.value = result.message
@@ -153,6 +165,7 @@ async function toggleTrackFavorite(songId: string) {
 }
 
 async function addTrackToPlaylist(playlistId: string, songId: string) {
+  if (!requireLogin()) return
   try {
     await addSongToPlaylist(playlistId, songId)
     toastMessage.value = '已成功添加到歌单'
@@ -190,24 +203,31 @@ async function loadAlbum(albumId: string | null) {
     }
     redirectMessage.value = ''
     album.value = albumResponse
-    try {
-      const bookmarksResponse = await listAlbumBookmarks()
-      if (!isCurrentLoad()) return
-      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
-    } catch (error) {
-      if (!isCurrentLoad()) return
-      if (error instanceof ApiErrorResponseError && error.status === 401) {
-        isBookmarked.value = false
-      } else {
-        throw error
+    if (isAuthenticated.value) {
+      try {
+        const bookmarksResponse = await listAlbumBookmarks()
+        if (!isCurrentLoad()) return
+        isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.album_id) === String(albumId))
+      } catch (error) {
+        if (!isCurrentLoad()) return
+        if (error instanceof ApiErrorResponseError && error.status === 401) {
+          isBookmarked.value = false
+        } else {
+          throw error
+        }
       }
+
+      await Promise.all([
+        playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
+        loadFavorites(),
+      ])
+    } else {
+      isBookmarked.value = false
+      playlists.value = []
+      playlistsLoaded.value = false
+      favoriteSongIds.value = new Set()
     }
     isCoverBroken.value = false
-
-    await Promise.all([
-      playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
-      loadFavorites(),
-    ])
   } catch (error) {
     if (!isCurrentLoad()) return
     reportError(error, 'Failed to fetch album:')
@@ -220,6 +240,7 @@ async function loadAlbum(albumId: string | null) {
 async function toggleAlbumBookmark() {
   const targetAlbum = album.value
   if (!targetAlbum || bookmarkLoading.value) return
+  if (!requireLogin()) return
 
   const albumId = String(targetAlbum.id)
   const loadGeneration = albumRequests.currentGeneration()
@@ -248,6 +269,21 @@ async function toggleAlbumBookmark() {
   } finally {
     if (isCurrentTarget()) bookmarkLoading.value = false
   }
+}
+
+function editAlbum() {
+  const currentAlbumId = album.value?.id
+  if (!currentAlbumId || !requireLogin()) return
+  openMusicEditor({ entity: 'album', mode: 'edit', id: currentAlbumId })
+}
+
+function mergeAlbum() {
+  if (!requireLogin()) return
+  openNestedAction('merge_album', { albumId: albumId.value, title: album.value?.title || '' })
+}
+
+function guardPlaylistMenu(event: MouseEvent) {
+  if (!requireLogin()) event.stopPropagation()
 }
 
 watch(albumId, loadAlbum, { immediate: true })
@@ -324,21 +360,21 @@ watch(
         <div class="spacer"></div>
         <PButton
           variant="warning"
-          @click="album?.id && openMusicEditor({ entity: 'album', mode: 'edit', id: album.id })"
+          data-testid="album-edit-action"
+          @click="editAlbum"
         >
           编辑
         </PButton>
         <PButton
           variant="secondary"
-          dot
           @click="openNestedAction('history', { albumId })"
         >
           版本
         </PButton>
         <PButton
           variant="secondary"
-          dot
-          @click="openNestedAction('merge_album', { albumId, title: album?.title || '' })"
+          data-testid="album-merge-action"
+          @click="mergeAlbum"
         >
           合并重复条目
         </PButton>
@@ -378,7 +414,7 @@ watch(
 
             <PDropdown class="track-add-dropdown" position="right">
               <template #trigger>
-                <button class="track-add-btn" type="button" title="添加到歌单">
+                <button class="track-add-btn" type="button" title="添加到歌单" @click="guardPlaylistMenu">
                   <Plus :size="12" />
                 </button>
               </template>

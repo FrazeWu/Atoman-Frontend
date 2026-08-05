@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   createAlbumDiscussion: vi.fn(),
   replyAlbumDiscussion: vi.fn(),
   deleteAlbumDiscussion: vi.fn(),
+  requireLogin: vi.fn(),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -35,6 +36,10 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     isLayerShifted: () => true,
     isTopLayer: () => false,
   }),
+}))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: mocks.requireLogin }),
 }))
 
 vi.mock('@/api/musicV1', async (importOriginal) => {
@@ -129,6 +134,8 @@ describe('NestedActionDrawer.vue', () => {
     mocks.createAlbumDiscussion.mockReset()
     mocks.replyAlbumDiscussion.mockReset()
     mocks.deleteAlbumDiscussion.mockReset()
+    mocks.requireLogin.mockReset()
+    mocks.requireLogin.mockReturnValue(true)
 
     mocks.listMusicArtists.mockResolvedValue({
       data: [{ id: 'artist-2', name: 'Selected Artist', entry_status: 'open' }],
@@ -358,6 +365,24 @@ describe('NestedActionDrawer.vue', () => {
 
     expect(mocks.createAlbumDiscussion).toHaveBeenCalledWith('album-1', '新讨论内容')
     expect(mocks.listAlbumDiscussions).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps discussions public and redirects guest write attempts', async () => {
+    mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'discussion', nestedPayload: null }
+    mocks.listAlbumDiscussions.mockResolvedValue([buildDiscussion()])
+    mocks.requireLogin.mockReturnValue(false)
+
+    const wrapper = mountDrawer()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('主讨论内容')
+    expect(mocks.listAlbumDiscussions).toHaveBeenCalledWith('album-1')
+
+    await wrapper.get('[data-test="discussion-create-input"]').setValue('游客讨论')
+    await wrapper.get('[data-test="discussion-create-submit"]').trigger('submit')
+
+    expect(mocks.requireLogin).toHaveBeenCalled()
+    expect(mocks.createAlbumDiscussion).not.toHaveBeenCalled()
   })
 
   it('allows replying to an album discussion', async () => {

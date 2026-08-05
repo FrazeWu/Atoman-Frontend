@@ -341,11 +341,25 @@ export async function replaceMusicAlbumImportFile(
   importId: string,
   fileId: string,
   input: RegisterMusicAlbumImportFileInput,
-): Promise<MusicAlbumImport> {
-  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(
+): Promise<MusicAlbumImportFile> {
+  return apiPostJson<MusicAlbumImportFile>(
     musicV1Endpoints.albumImportFileReplace(importId, fileId),
     input,
-  ))
+  )
+}
+
+export async function replaceAndUploadMusicAlbumImportFile(importId: string, fileId: string, file: File): Promise<void> {
+  const partSize = 16 * 1024 * 1024
+  await replaceMusicAlbumImportFile(importId, fileId, { relativePath: file.name, fileName: file.name, fileSize: file.size, contentType: file.type || 'application/octet-stream' })
+  const totalParts = Math.max(1, Math.ceil(file.size / partSize))
+  for (let partNumber = 1; partNumber <= totalParts; partNumber += 1) {
+    const start = (partNumber - 1) * partSize
+    const upload = await createMusicAlbumImportFilePartUpload(importId, fileId, partNumber, partSize)
+    const chunk = file.slice(start, Math.min(start + partSize, file.size))
+    const etag = await uploadAlbumArchivePart(upload.uploadUrl, chunk)
+    await completeMusicAlbumImportFilePart(importId, fileId, partNumber, etag, chunk.size)
+  }
+  await completeMusicAlbumImportFile(importId, fileId)
 }
 
 export async function deleteMusicAlbumImportFile(

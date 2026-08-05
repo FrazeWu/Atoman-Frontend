@@ -4,6 +4,8 @@ import PChoiceField from '@/components/ui/PChoiceField.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import PButton from '@/components/ui/PButton.vue'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import {
@@ -27,6 +29,7 @@ import {
 type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeNestedAction, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { requireLogin } = useLoginRedirect()
 const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
 const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
   ? payload.value as Record<string, unknown>
@@ -206,6 +209,7 @@ async function loadArtistHistory(artistId: string) {
 }
 
 async function handleRevert(version: number) {
+  if (!requireLogin()) return
   if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
@@ -231,10 +235,12 @@ function formatDiscussionAuthor(discussion: MusicDiscussion) {
 }
 
 function toggleReply(discussionId: string) {
+  if (!requireLogin()) return
   replyingToId.value = replyingToId.value === discussionId ? null : discussionId
 }
 
 async function handleCreateDiscussion() {
+  if (!requireLogin()) return
   if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
@@ -262,6 +268,7 @@ async function handleCreateDiscussion() {
 }
 
 async function handleReplyDiscussion(discussionId: string) {
+  if (!requireLogin()) return
   if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
@@ -290,6 +297,7 @@ async function handleReplyDiscussion(discussionId: string) {
 }
 
 async function handleDeleteDiscussion(discussionId: string) {
+  if (!requireLogin()) return
   if (!albumId.value) {
     errorMessage.value = '缺少专辑 ID'
     return
@@ -429,6 +437,7 @@ function summarizeRevisionDiff(current: MusicRevisionSummary | null, previous: M
 }
 
 async function submitEdit() {
+  if (!requireLogin()) return
   errorMessage.value = ''
   successMessage.value = ''
 
@@ -616,7 +625,7 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <button class="primary-action" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
+        <PButton variant="warning" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
       </form>
 
       <form v-else-if="isAlbumForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
@@ -722,7 +731,7 @@ async function submitEdit() {
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
-        <button class="primary-action" type="submit" :disabled="!canSubmit">{{ submitting ? '提交中...' : '提交修改' }}</button>
+        <PButton variant="warning" type="submit" :loading="submitting" loading-text="提交中..." :disabled="!canSubmit">提交修改</PButton>
       </form>
 
       <!-- History placeholder -->
@@ -793,7 +802,7 @@ async function submitEdit() {
             label="添加讨论"
             placeholder="写下你对这张专辑的看法"
           />
-          <button class="primary-action discussion-submit" type="submit" :disabled="submitting">发布</button>
+          <PButton variant="primary" type="submit" :loading="submitting" loading-text="发布中...">发布</PButton>
         </form>
 
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -841,7 +850,7 @@ async function submitEdit() {
                 :rows="3"
                 label="回复内容"
               />
-              <button class="primary-action discussion-submit" type="submit" :disabled="submitting">发送回复</button>
+              <PButton variant="primary" type="submit" :loading="submitting" loading-text="发送中...">发送回复</PButton>
             </form>
           </div>
 
@@ -882,9 +891,7 @@ async function submitEdit() {
   background: var(--a-color-surface);
 }
 .section-heading { display: flex; align-items: flex-start; gap: 0.75rem; }
-.section-dot,
-.field-label-marker,
-.upload-trigger-dot {
+.section-dot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 4px;

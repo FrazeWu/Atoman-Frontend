@@ -17,6 +17,10 @@ const transportApi = vi.hoisted(() => ({
   apiFetch: vi.fn(),
 }))
 
+const loginRedirect = vi.hoisted(() => ({
+  requireLogin: vi.fn(),
+}))
+
 vi.mock('@/composables/useApi', () => ({
   useApiUrl: () => '',
   useApi: () => ({ url: '', podcast: { bookmarks: '/api/v1/podcast/bookmarks' } }),
@@ -29,6 +33,10 @@ vi.mock('@/api/musicV1', () => ({
 
 vi.mock('@/api/transport', () => ({
   apiFetch: transportApi.apiFetch,
+}))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: loginRedirect.requireLogin }),
 }))
 
 vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
@@ -61,6 +69,8 @@ describe('AudioPlayer', () => {
     musicApi.listMusicPlaylists.mockResolvedValue({ data: [] })
     musicApi.recordMusicSongPlay.mockResolvedValue(undefined)
     transportApi.apiFetch.mockResolvedValue(new Response(null, { status: 201 }))
+    loginRedirect.requireLogin.mockReset()
+    loginRedirect.requireLogin.mockReturnValue(true)
   })
 
   it('uses cookie-aware transport when bookmarking a podcast in a cookie session', async () => {

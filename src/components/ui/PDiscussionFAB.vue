@@ -1,12 +1,12 @@
 <!-- web/src/components/ui/PDiscussionFAB.vue -->
 <template>
   <button class="discussion-fab" @click="$emit('click')">
-    <div class="fab-label">讨论 ({{ count }})</div>
+    <div class="fab-label">讨论<template v-if="count !== undefined"> ({{ count }})</template></div>
   </button>
 </template>
 
 <script setup lang="ts">
-defineProps<{ count: string | number }>()
+defineProps<{ count?: string | number }>()
 defineEmits(['click'])
 </script>
 

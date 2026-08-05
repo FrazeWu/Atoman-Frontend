@@ -7,6 +7,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import {
@@ -22,6 +23,7 @@ import {
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 const { state, closeArtist, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openNestedAction } = useMusicDrawers()
+const { isAuthenticated, requireLogin } = useLoginRedirect()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
@@ -84,15 +86,19 @@ async function loadArtist(artistId: string | null) {
     const albumsResponse = await listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 })
     artist.value = artistResponse
     albums.value = artistResponse.albums?.length ? artistResponse.albums : albumsResponse.data
-    try {
-      const bookmarksResponse = await listArtistBookmarks()
-      isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
-    } catch (error) {
-      if (error instanceof ApiErrorResponseError && error.status === 401) {
-        isBookmarked.value = false
-      } else {
-        throw error
+    if (isAuthenticated.value) {
+      try {
+        const bookmarksResponse = await listArtistBookmarks()
+        isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
+      } catch (error) {
+        if (error instanceof ApiErrorResponseError && error.status === 401) {
+          isBookmarked.value = false
+        } else {
+          throw error
+        }
       }
+    } else {
+      isBookmarked.value = false
     }
   } catch (error) {
     reportError(error, 'Failed to fetch artist:')
@@ -106,6 +112,7 @@ async function loadArtist(artistId: string | null) {
 async function toggleArtistBookmark() {
   const currentArtistId = artistId.value
   if (!currentArtistId || bookmarkLoading.value) return
+  if (!requireLogin()) return
   bookmarkLoading.value = true
   try {
     if (isBookmarked.value) {
@@ -120,6 +127,30 @@ async function toggleArtistBookmark() {
   } finally {
     bookmarkLoading.value = false
   }
+}
+
+function editArtist() {
+  const currentArtistId = artistId.value
+  if (!currentArtistId || !requireLogin()) return
+  openMusicEditor({ entity: 'artist', mode: 'edit', id: currentArtistId })
+}
+
+function createAlbum() {
+  if (!requireLogin()) return
+  openMusicEditor({
+    entity: 'album',
+    mode: 'create',
+    seed: {
+      artistId: artistId.value,
+      artistName: artist.value?.name || '',
+      artistLegalName: artist.value?.legal_name || '',
+    },
+  })
+}
+
+function mergeArtist() {
+  if (!requireLogin()) return
+  openNestedAction('merge_artist', { artistId: artistId.value, name: artist.value?.name || '' })
 }
 
 watch(
@@ -170,7 +201,6 @@ watch(
         <PButton
           variant="secondary"
           :disabled="bookmarkLoading"
-          dot
           data-testid="artist-bookmark-toggle"
           @click="toggleArtistBookmark"
         >
@@ -178,34 +208,26 @@ watch(
         </PButton>
         <PButton
           variant="warning"
-          dot
-          @click="artistId && openMusicEditor({ entity: 'artist', mode: 'edit', id: artistId })"
+          data-testid="artist-edit-action"
+          @click="editArtist"
         >
           修改艺术家信息
         </PButton>
         <PButton
           variant="primary"
-          dot
-          @click="openMusicEditor({
-            entity: 'album',
-            mode: 'create',
-            seed: {
-              artistId: artistId || null,
-              artistName: artist?.name || '',
-              artistLegalName: artist?.legal_name || '',
-            },
-          })"
+          data-testid="artist-create-album-action"
+          @click="createAlbum"
         >
           添加新专辑
         </PButton>
         <PButton
           variant="secondary"
-          dot
-          @click="openNestedAction('merge_artist', { artistId, name: artist?.name || '' })"
+          data-testid="artist-merge-action"
+          @click="mergeArtist"
         >
           合并重复条目
         </PButton>
-        <PButton variant="secondary" dot @click="openNestedAction('artist_history', { artistId })">
+        <PButton variant="secondary" @click="openNestedAction('artist_history', { artistId })">
           版本
         </PButton>
       </div>

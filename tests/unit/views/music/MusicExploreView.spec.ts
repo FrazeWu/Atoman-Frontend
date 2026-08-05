@@ -1,5 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useAuthStore } from '@/stores/auth'
 import ExploreView from '@/views/music/ExploreView.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -22,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   openArtist: vi.fn(),
   openPlaylist: vi.fn(),
   openMusicCreationFlow: vi.fn(),
+  requireLogin: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -60,7 +63,15 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   }),
 }))
 
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: mocks.requireLogin }),
+}))
+
 describe('Music ExploreView.vue', () => {
+  afterEach(() => {
+    setActivePinia(undefined)
+  })
+
   beforeEach(() => {
     mocks.listMusicDiscoverFeed.mockReset()
     mocks.listMusicAlbums.mockReset()
@@ -81,6 +92,8 @@ describe('Music ExploreView.vue', () => {
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
     mocks.openMusicCreationFlow.mockReset()
+    mocks.requireLogin.mockReset()
+    mocks.requireLogin.mockReturnValue(true)
 
     mocks.listMusicDiscoverFeed.mockResolvedValue({
       data: [
@@ -427,6 +440,33 @@ describe('Music ExploreView.vue', () => {
 
     expect(mocks.createPlaylistBookmark).toHaveBeenCalledWith('playlist-1')
     expect(wrapper.text()).toContain('收藏 8')
+  })
+
+  it('routes guests to login instead of silently failing to bookmark an album', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().isAuthenticated = false
+    mocks.requireLogin.mockReturnValue(false)
+
+    const wrapper = mount(ExploreView, {
+      props: {
+        pageTitle: '专辑',
+        contentMode: 'albums',
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
+          RouterLink: { props: ['to'], template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="discover-album-card"] button[aria-label="收藏"]').trigger('click')
+
+    expect(mocks.requireLogin).toHaveBeenCalled()
+    expect(mocks.createAlbumBookmark).not.toHaveBeenCalled()
   })
 
   it('toggles artist bookmark from the discover feed', async () => {

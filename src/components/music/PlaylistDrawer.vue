@@ -9,6 +9,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import {
   createPlaylistBookmark,
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: num
 const { state, closePlaylist, refreshPlaylists, isLayerShifted, isTopLayer } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 
 const playlistId = computed(() => props.layer?.payload.playlistId ?? state.value.playlistId)
 const isOpen = computed(() => props.layer !== undefined || playlistId.value !== null)
@@ -126,6 +128,7 @@ function syncEditForm(detail: MusicPlaylistDetail | null) {
 }
 
 function startEditPlaylist() {
+  if (!requireLogin()) return
   syncEditForm(playlist.value)
   editing.value = true
 }
@@ -136,6 +139,7 @@ function cancelEditPlaylist() {
 }
 
 function openCoverPicker() {
+  if (!requireLogin()) return
   coverInput.value?.click()
 }
 
@@ -143,6 +147,10 @@ async function handleCoverChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  if (!requireLogin()) {
+    input.value = ''
+    return
+  }
 
   coverUploading.value = true
   try {
@@ -158,12 +166,7 @@ async function handleCoverChange(event: Event) {
 }
 
 async function savePlaylist() {
-  if (!playlist.value) return
-  await authStore.restoreSession()
-  if (!authStore.isAuthenticated) {
-    errorMessage.value = '请先登录'
-    return
-  }
+  if (!playlist.value || !requireLogin()) return
 
   if (!editName.value.trim()) {
     errorMessage.value = '请输入歌单名称'
@@ -200,14 +203,8 @@ async function savePlaylist() {
 }
 
 async function deletePlaylist() {
-  if (!playlist.value || deleting.value) return
+  if (!playlist.value || deleting.value || !requireLogin()) return
   if (!window.confirm('删除后无法恢复，确定删除这张歌单吗？')) return
-
-  await authStore.restoreSession()
-  if (!authStore.isAuthenticated) {
-    errorMessage.value = '请先登录'
-    return
-  }
 
   deleting.value = true
   errorMessage.value = ''
@@ -229,7 +226,7 @@ async function deletePlaylist() {
 }
 
 async function removePlaylistSong(songId: string) {
-  if (!playlist.value || removingSongIds.value.has(songId)) return
+  if (!playlist.value || removingSongIds.value.has(songId) || !requireLogin()) return
 
   removingSongIds.value = new Set([...removingSongIds.value, songId])
   errorMessage.value = ''
@@ -253,7 +250,7 @@ async function removePlaylistSong(songId: string) {
 
 async function persistSongOrder(nextSongs: MusicSongListItem[]) {
   const current = playlist.value
-  if (!current || !canEditPlaylist.value) return
+  if (!current || !requireLogin() || !canEditPlaylist.value) return
 
   playlist.value = { ...current, songs: nextSongs }
   pendingSongOrders.set(current.id, nextSongs)
@@ -349,8 +346,8 @@ const canEditPlaylist = computed(() => {
   return authStore.user?.uuid === playlist.value.user_id
 })
 const canBookmarkPlaylist = computed(() => {
-  if (!authStore.isAuthenticated) return false
   if (!playlist.value?.is_public) return false
+  if (!authStore.isAuthenticated) return true
   if (!playlist.value?.user_id) return true
   return authStore.user?.uuid !== playlist.value.user_id
 })
@@ -368,7 +365,7 @@ function playTrack(track: MusicSongListItem) {
 
 async function toggleBookmark() {
   const targetPlaylist = playlist.value
-  if (!targetPlaylist || bookmarkLoading.value) return
+  if (!targetPlaylist || bookmarkLoading.value || !requireLogin()) return
 
   const playlistId = String(targetPlaylist.id)
   const loadGeneration = playlistRequests.currentGeneration()
@@ -376,13 +373,6 @@ async function toggleBookmark() {
   const isCurrentTarget = () => (
     playlistRequests.isCurrent(loadGeneration) && String(playlist.value?.id) === playlistId
   )
-
-  await authStore.restoreSession()
-  if (!isCurrentTarget()) return
-  if (!authStore.isAuthenticated) {
-    errorMessage.value = '请先登录'
-    return
-  }
 
   bookmarkLoading.value = true
   errorMessage.value = ''

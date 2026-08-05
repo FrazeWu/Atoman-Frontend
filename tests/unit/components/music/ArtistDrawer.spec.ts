@@ -18,6 +18,8 @@ const musicDrawerMocks = vi.hoisted(() => ({
   openAlbum: vi.fn(),
   openMusicEditor: vi.fn(),
   openMusicCreationFlow: vi.fn(),
+  requireLogin: vi.fn(),
+  isAuthenticated: { value: true },
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -31,6 +33,13 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     openMusicEditor: musicDrawerMocks.openMusicEditor,
     openMusicCreationFlow: musicDrawerMocks.openMusicCreationFlow,
   })
+}))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({
+    isAuthenticated: musicDrawerMocks.isAuthenticated,
+    requireLogin: musicDrawerMocks.requireLogin,
+  }),
 }))
 
 const {
@@ -68,6 +77,9 @@ describe('ArtistDrawer.vue', () => {
     musicDrawerMocks.openAlbum.mockReset()
     musicDrawerMocks.openMusicEditor.mockReset()
     musicDrawerMocks.openMusicCreationFlow.mockReset()
+    musicDrawerMocks.requireLogin.mockReset()
+    musicDrawerMocks.requireLogin.mockReturnValue(true)
+    musicDrawerMocks.isAuthenticated.value = true
 
     getMusicArtist.mockResolvedValue({
       id: '1',
@@ -196,6 +208,16 @@ describe('ArtistDrawer.vue', () => {
     expect(wrapper.text()).toContain('Ye')
     expect(wrapper.text()).toContain('本名：Kanye Omari West')
     expect(wrapper.text()).not.toContain('艺术家信息加载失败')
+  })
+
+  it('does not request private bookmarks while a guest reads artist details', async () => {
+    musicDrawerMocks.isAuthenticated.value = false
+
+    const wrapper = mount(ArtistDrawer)
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Ye')
+    expect(listArtistBookmarks).not.toHaveBeenCalled()
   })
 
   it('re-fetches artist data when artistRefreshToken changes', async () => {

@@ -63,14 +63,4 @@ describe('PButton', () => {
     expect(wrapper.get('.p-button').classes()).toContain('p-button--secondary')
   })
 
-  it('renders dot when dot prop is true', () => {
-    const wrapper = mount(PButton, {
-      props: {
-        label: '保存',
-        dot: true,
-      },
-    })
-
-    expect(wrapper.find('.p-button-dot').exists()).toBe(true)
-  })
 })

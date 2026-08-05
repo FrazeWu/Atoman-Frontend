@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   closePlaylist: vi.fn(),
   refreshPlaylists: vi.fn(),
   restoreSession: vi.fn(),
+  requireLogin: vi.fn(),
   auth: {
     isAuthenticated: true,
     user: { uuid: 'user-1' } as { uuid: string } | null,
@@ -36,6 +37,10 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     isLayerShifted: () => false,
     isTopLayer: () => true,
   }),
+}))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: mocks.requireLogin }),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -77,6 +82,8 @@ describe('PlaylistDrawer', () => {
     mocks.closePlaylist.mockReset()
     mocks.refreshPlaylists.mockReset()
     mocks.restoreSession.mockReset()
+    mocks.requireLogin.mockReset()
+    mocks.requireLogin.mockImplementation(() => mocks.auth.isAuthenticated)
 
     mocks.getMusicPlaylist.mockResolvedValue({
       id: 'playlist-1',
@@ -205,6 +212,31 @@ describe('PlaylistDrawer', () => {
     expect(mocks.createPlaylistBookmark).toHaveBeenCalledWith('playlist-1')
     expect(mocks.refreshPlaylists).toHaveBeenCalled()
     expect(wrapper.get('[data-testid="playlist-bookmark-button"]').text()).toContain('取消收藏')
+  })
+
+  it('keeps public playlist details visible and redirects guests who bookmark', async () => {
+    mocks.auth.isAuthenticated = false
+    mocks.auth.user = null
+    mocks.getMusicPlaylist.mockResolvedValue({
+      id: 'playlist-1',
+      user_id: 'user-2',
+      owner_username: 'bob',
+      name: '公开歌单',
+      description: '',
+      cover_url: '',
+      is_public: true,
+      song_count: 0,
+      songs: [],
+    })
+
+    const wrapper = mount(PlaylistDrawer)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('公开歌单')
+    await wrapper.get('[data-testid="playlist-bookmark-button"]').trigger('click')
+
+    expect(mocks.requireLogin).toHaveBeenCalled()
+    expect(mocks.createPlaylistBookmark).not.toHaveBeenCalled()
   })
 
   it('removes songs from an owned playlist', async () => {

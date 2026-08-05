@@ -88,7 +88,7 @@
             position="right"
           >
             <template #trigger>
-              <button class="player-add-btn" type="button" title="添加到歌单">
+              <button class="player-add-btn" type="button" title="添加到歌单" @click="guardPlaylistMenu">
                 <Plus :size="16" />
               </button>
             </template>
@@ -325,12 +325,14 @@ import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import PDropdown from "@/components/ui/PDropdown.vue";
 import PToast from "@/components/ui/PToast.vue";
 import { useMusicFavoritePlaylist } from "@/composables/useMusicFavoritePlaylist";
+import { useLoginRedirect } from "@/composables/useLoginRedirect";
 import { listMusicPlaylists, type MusicPlaylistSummary } from "@/api/musicV1";
 import { reportError } from "@/utils/logger";
 
 const player = usePlayerStore();
 const route = useRoute();
 const authStore = useAuthStore();
+const { requireLogin } = useLoginRedirect();
 const api = useApi();
 const playerInnerRef = ref<HTMLElement | null>(null);
 const playerInfoRef = ref<HTMLElement | null>(null);
@@ -439,6 +441,11 @@ const {
 } = useMusicFavoritePlaylist();
 
 async function loadPlaylists() {
+  if (!authStore.isAuthenticated) {
+    playlists.value = [];
+    playlistsLoaded.value = true;
+    return;
+  }
   try {
     const res = await listMusicPlaylists();
     playlists.value = res.data || [];
@@ -454,6 +461,10 @@ async function loadPlaylists() {
 }
 
 async function loadFavorites() {
+  if (!authStore.isAuthenticated) {
+    favoriteSongIds.value = new Set();
+    return;
+  }
   try {
     await loadFavoriteSongs();
   } catch (err) {
@@ -462,6 +473,7 @@ async function loadFavorites() {
 }
 
 async function toggleTrackFavorite(songId: string) {
+  if (!requireLogin()) return;
   try {
     const result = await toggleFavoriteSong(songId);
     toastMessage.value = result.message;
@@ -477,11 +489,7 @@ async function toggleTrackFavorite(songId: string) {
 async function addPodcastBookmark() {
   const episodeId = player.currentSong?.source_id;
   if (!episodeId) return;
-  if (!authStore.token) {
-    toastMessage.value = "请先登录";
-    toastVisible.value = true;
-    return;
-  }
+  if (!requireLogin()) return;
   try {
     const res = await postPodcastEpisode(episodeId);
     if (!res.ok) throw new Error("bookmark failed");
@@ -497,11 +505,7 @@ async function addPodcastBookmark() {
 async function addPodcastListenLater() {
   const episodeId = player.currentSong?.source_id;
   if (!episodeId) return;
-  if (!authStore.token) {
-    toastMessage.value = "请先登录";
-    toastVisible.value = true;
-    return;
-  }
+  if (!requireLogin()) return;
   try {
     const res = await postPodcastEpisode(episodeId);
     if (!res.ok) throw new Error("listen later failed");
@@ -529,6 +533,7 @@ function postPodcastEpisode(episodeId: string) {
 }
 
 async function addTrackToPlaylist(playlistId: string, songId: string) {
+  if (!requireLogin()) return;
   try {
     await addSongToPlaylist(playlistId, songId);
     toastMessage.value = "已成功添加到歌单";
@@ -538,6 +543,10 @@ async function addTrackToPlaylist(playlistId: string, songId: string) {
     toastMessage.value = "添加失败";
     toastVisible.value = true;
   }
+}
+
+function guardPlaylistMenu(event: MouseEvent) {
+  if (!requireLogin()) event.stopPropagation();
 }
 
 watch(

@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { usePlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
 
 const mocks = vi.hoisted(() => ({
 	recordMusicSongPlay: vi.fn(),
@@ -35,8 +36,9 @@ describe('player store', () => {
     setActivePinia(createPinia())
     vi.restoreAllMocks()
     audioInstances.length = 0
-		mocks.recordMusicSongPlay.mockReset()
-		mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true })
+    mocks.recordMusicSongPlay.mockReset()
+    mocks.recordMusicSongPlay.mockResolvedValue({ recorded: true })
+    useAuthStore().isAuthenticated = true
     // localStorage.clear()
   })
 
@@ -56,6 +58,20 @@ describe('player store', () => {
 
 		await vi.advanceTimersByTimeAsync(5000)
 		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
+		vi.useRealTimers()
+	})
+
+	it('plays music for guests without writing listening history', async () => {
+		vi.useFakeTimers()
+		useAuthStore().isAuthenticated = false
+		const player = usePlayerStore()
+		const song = { id: 'guest-song', title: 'Guest Song', audio_url: 'guest.mp3' } as any
+
+		player.playSong(song)
+		await audioInstances[0].play.mock.results[0]?.value
+		await vi.advanceTimersByTimeAsync(5000)
+
+		expect(mocks.recordMusicSongPlay).not.toHaveBeenCalled()
 		vi.useRealTimers()
 	})
 

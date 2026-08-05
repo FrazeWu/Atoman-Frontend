@@ -21,6 +21,7 @@ import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import {
   filterArtistRecommendationsByBookmarks,
   MUSIC_RECOMMENDATION_MODE_OPTIONS,
@@ -36,6 +37,7 @@ const tabOptions = [
 ]
 
 const route = useRoute()
+const { requireLogin } = useLoginRedirect()
 const {
   isMainShifted,
   openAlbum,
@@ -84,6 +86,7 @@ async function fetchBookmarks() {
 }
 
 async function handleToggleBookmark(artistId: string) {
+  if (!requireLogin()) return
   const isCurrentlyBookmarked = starredArtistIds.value.includes(artistId)
   try {
     if (isCurrentlyBookmarked) {
@@ -213,6 +216,11 @@ function openArtistCard(artistId: string) {
   searchQuery.value = ''
 }
 
+function startArtistCreation() {
+  if (!requireLogin()) return
+  openMusicCreationFlow({ startStep: 'artist' })
+}
+
 onMounted(() => {
   if (typeof route.query.q === 'string' && route.query.q.trim()) {
     searchQuery.value = route.query.q.trim()
@@ -308,8 +316,7 @@ function handleSearchBlur() {
           <PButton
             variant="primary"
             class="search-side-action"
-            dot
-            @click="openMusicCreationFlow({ startStep: 'artist' })"
+            @click="startArtistCreation"
           >
             添加艺术家
           </PButton>
@@ -333,8 +340,7 @@ function handleSearchBlur() {
           <PButton
             variant="primary"
             data-testid="empty-add-artist"
-            dot
-            @click="openMusicCreationFlow({ startStep: 'artist' })"
+            @click="startArtistCreation"
           >
             添加艺术家
           </PButton>

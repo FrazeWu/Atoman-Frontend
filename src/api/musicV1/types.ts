@@ -116,6 +116,7 @@ export type MusicAlbumImportCommitInput = {
 
 export type MusicAlbumImport = {
   importId: string;
+  targetAlbumId: string;
   status: MusicAlbumImportStatus;
   archiveName: string;
   uploadProgress: number;
@@ -227,6 +228,7 @@ export function normalizeMusicAlbumImport(
 ): MusicAlbumImport {
   return {
     ...snapshot,
+    targetAlbumId: snapshot.targetAlbumId ?? '',
     derivedTracks: arrayOrEmpty(snapshot.derivedTracks),
     files: arrayOrEmpty(snapshot.files),
     errors: arrayOrEmpty(snapshot.errors),

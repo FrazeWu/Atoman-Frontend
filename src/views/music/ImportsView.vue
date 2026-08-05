@@ -16,6 +16,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
+const activeGroup = ref<'draft' | 'processing' | 'failed' | 'completed'>('processing')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
 
@@ -23,6 +24,13 @@ const selectedImport = computed(
   () =>
     imports.value.find((item) => item.importId === selectedId.value) ?? null,
 );
+const importGroups = computed(() => ({
+  draft: imports.value.filter(item => ['pending_upload', 'uploading', 'uploaded', 'ready', 'needs_attention'].includes(item.status)),
+  processing: imports.value.filter(item => ['queued', 'extracting', 'analyzing', 'transcoding'].includes(item.status)),
+  failed: imports.value.filter(item => item.status === 'failed'),
+  completed: imports.value.filter(item => ['committed', 'canceled'].includes(item.status)),
+}))
+const visibleImports = computed(() => importGroups.value[activeGroup.value])
 const statusText: Record<string, string> = {
   pending_upload: "等待上传",
   uploading: "上传中",
@@ -139,8 +147,14 @@ function continueImport() {
 
     <div v-else class="music-imports-view__layout">
       <section class="music-imports-view__list" aria-label="导入记录">
+        <div class="music-imports-view__filters" role="tablist" aria-label="导入状态">
+          <button v-for="group in [{ key: 'processing', label: '处理中' }, { key: 'draft', label: '草稿' }, { key: 'failed', label: '失败' }, { key: 'completed', label: '已完成' }]" :key="group.key" type="button" :class="{ 'music-imports-view__filter--active': activeGroup === group.key }" :aria-selected="activeGroup === group.key" role="tab" @click="activeGroup = group.key as 'draft' | 'processing' | 'failed' | 'completed'">
+            {{ group.label }} {{ importGroups[group.key as keyof typeof importGroups].length }}
+          </button>
+        </div>
+        <p v-if="!visibleImports.length" class="music-imports-view__state">暂无记录</p>
         <button
-          v-for="item in imports"
+          v-for="item in visibleImports"
           :key="item.importId"
           type="button"
           :class="[
@@ -284,6 +298,24 @@ function continueImport() {
   display: grid;
   align-content: start;
   gap: 0.5rem;
+}
+.music-imports-view__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.music-imports-view__filters button {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+.music-imports-view__filter--active {
+  border-bottom-color: var(--a-color-accent) !important;
+  color: var(--a-color-text) !important;
 }
 .music-imports-view__item {
   display: grid;

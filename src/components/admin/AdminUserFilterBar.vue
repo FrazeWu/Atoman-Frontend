@@ -44,8 +44,49 @@ const activityValue = computed({ get: () => props.activity, set: value => emit('
 </script>
 
 <style scoped>
-.admin-user-filter-bar { padding: 1rem; border: 1px solid var(--a-color-border-soft); }
-.admin-user-filter-bar__form { display: grid; grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(130px, 165px)) auto; gap: 0.75rem; align-items: end; }
-@media (max-width: 900px) { .admin-user-filter-bar__form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .admin-user-filter-bar__form { grid-template-columns: 1fr; } }
+.admin-user-filter-bar {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.admin-user-filter-bar__form {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(120px, 1fr)) auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.admin-user-filter-bar__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 1024px) {
+  .admin-user-filter-bar__form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-user-filter-bar__form > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .admin-user-filter-bar__form > :last-child {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-user-filter-bar {
+    padding: 0.85rem 1rem;
+  }
+
+  .admin-user-filter-bar__form {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

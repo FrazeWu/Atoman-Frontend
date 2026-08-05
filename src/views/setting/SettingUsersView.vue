@@ -789,19 +789,35 @@ onMounted(() => {
 
 .setting-users__actions,
 .setting-users__pagination > div {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .setting-users__icon-button {
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   padding: 0;
+  border-radius: var(--a-radius-control);
+  transition: all 0.15s ease;
+}
+
+.setting-users__icon-button:hover {
+  background: var(--a-color-surface-muted);
 }
 
 .setting-users__pagination {
-  padding: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .setting-users__form {
@@ -812,6 +828,7 @@ onMounted(() => {
 .setting-users__form-error {
   margin: 0;
   font-size: 0.85rem;
+  color: var(--a-color-danger);
 }
 
 .setting-users__password-toggle {
@@ -821,9 +838,15 @@ onMounted(() => {
   padding: 0;
   place-items: center;
   border: 0;
+  border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-text-secondary);
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.setting-users__password-toggle:hover {
+  color: var(--a-color-fg);
 }
 
 .setting-users__password-toggle:focus-visible {
@@ -870,14 +893,7 @@ onMounted(() => {
   .setting-users__pagination {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .setting-users__filters {
-    grid-template-columns: 1fr;
-  }
-
-  .setting-users__filters > :last-child {
-    width: 100%;
+    gap: 0.85rem;
   }
 
   .setting-users__table thead {
@@ -893,34 +909,65 @@ onMounted(() => {
     box-sizing: border-box;
   }
 
-  .setting-users__identity-button { max-width: 100%; }
+  .setting-users__table tbody {
+    display: grid;
+    gap: 0.85rem;
+    padding: 0.85rem;
+  }
 
   .setting-users__table tr {
-    padding: 0.7rem 0;
-    border-bottom: 1px solid var(--a-color-border);
+    padding: 0.85rem;
+    background: var(--a-color-bg);
+    border: 1px solid var(--a-color-border-soft);
+    border-radius: var(--a-radius-card);
+    box-shadow: var(--a-shadow-sm);
   }
 
   .setting-users__table td {
-    display: grid;
-    grid-template-columns: 88px minmax(0, 1fr);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.45rem 0.75rem;
+    padding: 0.4rem 0;
     border: 0;
+    border-bottom: 1px dashed var(--a-color-border-soft);
+  }
+
+  .setting-users__table td:last-child {
+    border-bottom: 0;
+    padding-top: 0.65rem;
+  }
+
+  .setting-users__table td[data-label="用户"] {
+    border-bottom: 1px solid var(--a-color-border-soft);
+    padding-bottom: 0.65rem;
   }
 
   .setting-users__table td::before {
     content: attr(data-label);
     color: var(--a-color-muted);
-    font-size: 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .setting-users__table td[data-label="用户"]::before {
+    display: none;
+  }
+
+  .setting-users__identity-button {
+    max-width: 100%;
+    width: 100%;
   }
 
   .setting-users__actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    width: 100%;
   }
 
   .setting-users__pagination > div {
     justify-content: space-between;
+    width: 100%;
   }
 }
 </style>

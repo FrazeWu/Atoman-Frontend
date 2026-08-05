@@ -269,12 +269,13 @@ export function useAlbumImportUpload() {
     const draft = albumImportDraft.value
     if (!draft?.importId) return
     try {
-      const snapshot = await replaceMusicAlbumImportFile(draft.importId, fileId, {
+      await replaceMusicAlbumImportFile(draft.importId, fileId, {
         relativePath: file.name,
         fileName: file.name,
         fileSize: file.size,
         contentType: file.type || 'application/octet-stream',
       })
+      const snapshot = await getMusicAlbumImport(draft.importId)
       applyImportSnapshot(snapshot)
       selectedFiles.set(fileId, file)
       await uploadSingleFileMultipart(draft.importId, file, fileId)

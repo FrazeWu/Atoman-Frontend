@@ -49,6 +49,7 @@ const {
   setMusicCreationStep,
   isLayerShifted,
   isTopLayer,
+  returnToLayer,
 } = useMusicDrawers()
 
 const editor = computed(() => props.layer?.payload ?? state.value.musicEditor)
@@ -515,7 +516,7 @@ async function finishAlbumCreate() {
 <template>
   <PSheet
     :show="isOpen"
-    width="560px"
+    :title="sheetTitle"
     :index="sheetIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
@@ -524,6 +525,7 @@ async function finishAlbumCreate() {
     close-type="header"
     panel-class="entity-editor-drawer"
     @close="closeCurrentEditor"
+    @activate="props.layer && returnToLayer(props.layer.key)"
   >
     <div class="entity-editor">
       <div v-if="isCreateFlowActive && creationFlow" class="entity-editor__body">

@@ -13,7 +13,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 
-const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closeMusicCreationFlow, returnToLayer, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
 const router = useRouter()
 
 const creationFlow = computed(() => state.value.creationFlow)
@@ -415,7 +415,7 @@ async function completeCreation() {
 <template>
   <PSheet
     :show="isOpen"
-    width="560px"
+    title="创建音乐条目"
     :index="sheetIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
@@ -423,6 +423,7 @@ async function completeCreation() {
     :is-top-layer="topLayer"
     panel-class="creation-flow-drawer"
     @close="requestClose"
+    @activate="props.layer && returnToLayer(props.layer.key)"
   >
     <div v-if="creationFlow" class="creation-flow">
       <div class="drawer-body">

@@ -30,7 +30,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 
 type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
 const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closePlaylist, refreshPlaylists, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerShifted, isTopLayer } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
@@ -42,6 +42,7 @@ const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true
 const editSheetIndex = computed(() => props.layerIndex + 1)
 const closeCurrentPlaylist = () => closePlaylist(props.layer?.key)
 const playlist = ref<MusicPlaylistDetail | null>(null)
+const sheetTitle = computed(() => playlist.value?.name ? `歌单 · ${playlist.value.name}` : (props.layer?.title ?? '歌单'))
 const loading = ref(false)
 const errorMessage = ref('')
 const editing = ref(false)
@@ -134,6 +135,14 @@ function startEditPlaylist() {
 function cancelEditPlaylist() {
   syncEditForm(playlist.value)
   editing.value = false
+}
+
+function returnCurrentPlaylist() {
+  if (editing.value) {
+    cancelEditPlaylist()
+    return
+  }
+  if (props.layer) returnToLayer(props.layer.key)
 }
 
 async function handleCoverChange(event: Event) {
@@ -406,12 +415,13 @@ watch(playlist, syncEditForm, { immediate: true })
 <template>
   <PSheet
     :show="isOpen"
+    :title="sheetTitle"
     @close="closeCurrentPlaylist"
-    width="680px"
-    :is-shifted="shifted"
-    :is-top-layer="topLayer"
+    @activate="returnCurrentPlaylist"
+    :is-shifted="shifted || editing"
+    :is-top-layer="topLayer && !editing"
     :layer-index="layerIndex"
-    :stack-size="stackSize"
+    :stack-size="stackSize + (editing ? 1 : 0)"
     :index="layerIndex"
     panel-class="playlist-drawer"
   >

@@ -180,6 +180,10 @@ watch(sheetStack.layers, (layers) => {
 }, { flush: 'sync' })
 
 export function useMusicDrawers() {
+  const returnToLayer = (key: string) => {
+    if (sheetStack.layers.value.some(layer => layer.key === key)) sheetStack.popTo(key)
+  }
+
   const closeLayerAndAbove = (key: string) => {
     if (!sheetStack.layers.value.some(layer => layer.key === key)) return
     sheetStack.popTo(key)
@@ -381,6 +385,7 @@ export function useMusicDrawers() {
     topLayer: sheetStack.top,
     popLayer: sheetStack.pop,
     popToLayer: sheetStack.popTo,
+    returnToLayer,
     isTopLayer: sheetStack.isTop,
     isLayerShifted: sheetStack.isShifted,
   }

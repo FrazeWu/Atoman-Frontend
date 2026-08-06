@@ -35,6 +35,7 @@
           :ref="element => setOptionRef(index, element)"
           type="button"
           class="p-select-option"
+          :class="{ 'p-select-option--selected': option.value === modelValue }"
           :disabled="option.disabled"
           role="option"
           :aria-selected="option.value === modelValue"
@@ -42,7 +43,6 @@
           @click="selectOption(option)"
           @keydown="handleOptionKeydown($event, index, option)"
         >
-          <span class="p-select-marker">{{ option.value === modelValue ? '•' : '' }}</span>
           <span>{{ option.label }}</span>
         </button>
         <div v-if="normalizedOptions.length === 0" class="p-select-empty">暂无选项</div>
@@ -259,10 +259,10 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-select-option {
-  display: grid;
-  grid-template-columns: 1rem 1fr;
-  gap: 0.45rem;
-  padding: 0.55rem 0.75rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 1.25rem;
   border: 0;
   background: transparent;
   color: var(--a-color-text);
@@ -277,14 +277,22 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   background-color: var(--a-color-surface);
 }
 
+.p-select-option--selected::before {
+  content: '';
+  position: absolute;
+  left: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  background-color: var(--a-color-text);
+  border-radius: 2px;
+}
+
 .p-select-option:focus-visible {
   outline: 2px solid var(--a-color-text);
   outline-offset: -2px;
   background: var(--a-color-surface-muted);
-}
-
-.p-select-marker {
-  color: var(--a-color-text);
 }
 
 .p-select-empty,

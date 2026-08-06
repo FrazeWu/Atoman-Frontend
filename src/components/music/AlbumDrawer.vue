@@ -31,7 +31,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeAlbum, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
+const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
@@ -41,6 +41,8 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : i
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentAlbum = () => closeAlbum(props.layer?.key)
 const album = ref<MusicAlbumListItem | null>(null)
+const sheetTitle = computed(() => album.value?.title ? `专辑 · ${album.value.title}` : (props.layer?.title ?? '专辑'))
+const returnCurrentAlbum = () => props.layer && returnToLayer(props.layer.key)
 const loading = ref(false)
 const errorMessage = ref('')
 const redirectMessage = ref('')
@@ -413,8 +415,9 @@ watch(
 <template>
   <PSheet
     :show="isOpen"
+    :title="sheetTitle"
     @close="closeCurrentAlbum"
-    width="700px"
+    @activate="returnCurrentAlbum"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     :layer-index="layerIndex"

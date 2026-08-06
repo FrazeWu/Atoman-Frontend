@@ -14,22 +14,45 @@
           :class="[`is-${side}`, panelClass, { 'is-shifted': isShifted }]"
           :style="sheetStyle"
           role="dialog"
-          :aria-modal="isTopLayer ? 'true' : undefined"
-          :aria-label="title || ariaLabel || undefined"
-          :aria-hidden="isTopLayer ? undefined : 'true'"
-          :inert="isTopLayer ? undefined : true"
-          :data-layer-index="layerIndex"
+          :aria-label="railTitle"
+          :data-layer-index="effectiveLayerIndex"
           tabindex="-1"
           @keydown.esc="isTopLayer && $emit('close')"
         >
-          <!-- Close button on the opening side of the sheet -->
+          <div v-if="showLayerRail" class="sheet-layer-rail">
+            <button
+              ref="closeButtonRef"
+              class="sheet-close-btn-bookmark"
+              type="button"
+              :aria-label="closeLabel"
+              :title="closeLabel"
+              @click="$emit('close')"
+            >
+              <X :size="20" aria-hidden="true" />
+            </button>
+
+            <button
+              v-if="!isTopLayer"
+              class="sheet-layer-title sheet-layer-title--action"
+              type="button"
+              :aria-label="`返回${railTitle}`"
+              :title="`返回${railTitle}`"
+              @click="$emit('activate')"
+            >
+              <span>{{ railTitle }}</span>
+            </button>
+            <span v-else class="sheet-layer-title" :title="railTitle" aria-hidden="true">
+              <span>{{ railTitle }}</span>
+            </span>
+          </div>
+
           <button
-            v-if="showBookmarkTab"
+            v-else-if="showBookmarkTab"
             ref="closeButtonRef"
-            class="sheet-close-btn-bookmark"
+            class="sheet-close-btn-bookmark sheet-close-btn-bookmark--legacy"
             type="button"
-            :aria-label="`关闭${title}`"
-            :title="`关闭${title}`"
+            :aria-label="closeLabel"
+            :title="closeLabel"
             @click="$emit('close')"
           >
             <X :size="20" aria-hidden="true" />
@@ -52,8 +75,10 @@
             :class="{
               'sheet-content--compact': !hasHeader,
               'sheet-content--has-close': showHeaderClose,
-              'sheet-content--has-bookmark-close': showBookmarkTab,
+              'sheet-content--has-bookmark-close': showLayerRail,
             }"
+            :aria-hidden="isTopLayer ? undefined : 'true'"
+            :inert="isTopLayer ? undefined : true"
           >
             <div :class="{ 'sheet-content-inner': readingMode }">
               <div v-if="slots.header" class="sheet-content-header-inline">
@@ -69,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, useSlots, watch } from 'vue'
+import { computed, inject, nextTick, provide, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { X } from 'lucide-vue-next'
 import { useSheetStore } from '@/stores/sheet'
@@ -104,13 +129,12 @@ const props = withDefaults(defineProps<{
   readingMode: false,
   isShifted: false,
   isTopLayer: true,
-  layerIndex: 0,
   stackSize: 1,
   showBackdrop: true,
   abovePlayer: false,
 })
 
-defineEmits(['close'])
+defineEmits(['close', 'activate'])
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
@@ -137,9 +161,14 @@ const effectiveCloseType = computed(() => {
   return props.closeType
 })
 
-const showBookmarkTab = computed(() => effectiveCloseType.value === 'bookmark' || effectiveCloseType.value === 'both')
-const showHeaderClose = computed(() => effectiveCloseType.value === 'header' || effectiveCloseType.value === 'both')
+const showLayerRail = computed(() => props.side === 'right')
+const showBookmarkTab = computed(() => !showLayerRail.value && (effectiveCloseType.value === 'bookmark' || effectiveCloseType.value === 'both'))
+const showHeaderClose = computed(() => !showLayerRail.value && (effectiveCloseType.value === 'header' || effectiveCloseType.value === 'both'))
 const hasHeader = computed(() => Boolean(slots.header) || showHeaderClose.value)
+const railTitle = computed(() => props.title || props.ariaLabel || '页面')
+const closeLabel = computed(() => props.isTopLayer
+  ? `关闭${railTitle.value}`
+  : `关闭${railTitle.value}及上方页面`)
 
 const transitionName = computed(() => {
   if (props.side === 'left') return 'slide-left'
@@ -161,19 +190,14 @@ const sheetIndex = computed(() => {
   return 0
 })
 
-const computedLeft = computed(() => {
-  return `calc(var(--a-sidebar-width) + ${32 + (sheetIndex.value * 32)}px)`
-})
-
-const computedWidth = computed(() => {
-  return `calc(100% - var(--a-sidebar-width) - ${32 + (sheetIndex.value * 32)}px)`
-})
-
-
-
-const hasCustomWidth = computed(() => props.width && props.width !== 'min(100%, 480px)')
-const layerIdx = computed(() => props.layerIndex ?? sheetIndex.value)
-const rightOffset = computed(() => Math.max(0, props.stackSize - layerIdx.value - 1) * 32)
+const parentLayerIndex = inject('p-sheet-layer-index', computed(() => -1))
+const effectiveLayerIndex = computed(() => (
+  props.layerIndex
+  ?? props.index
+  ?? (parentLayerIndex.value >= 0 ? parentLayerIndex.value + 1 : sheetIndex.value)
+))
+provide('p-sheet-layer-index', effectiveLayerIndex)
+const layerInset = computed(() => 16 + (effectiveLayerIndex.value * 80))
 
 const sheetStyle = computed(() => {
   if (props.side === 'bottom') {
@@ -187,20 +211,21 @@ const sheetStyle = computed(() => {
     }
   }
 
-  if (hasCustomWidth.value) {
+  if (props.side === 'right') {
     return {
-      width: props.width,
-      'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
+      width: 'auto',
+      'max-width': 'none',
       top: props.top,
-      right: `${rightOffset.value}px`,
+      left: `calc(var(--a-sidebar-width) + ${layerInset.value}px)`,
+      right: 0,
     }
   }
+
   return {
-    width: computedWidth.value,
+    width: props.width,
     'max-width': props.maxWidth || 'calc(100vw - var(--a-sidebar-width) - 16px)',
     top: props.top,
-    left: computedLeft.value,
-    right: `${rightOffset.value}px`,
+    left: 0,
   }
 })
 </script>
@@ -211,7 +236,10 @@ const sheetStyle = computed(() => {
 }
 
 .p-sheet-panel.is-shifted {
-  opacity: 0.6;
+  opacity: 1;
+}
+
+.p-sheet-panel.is-shifted .sheet-content {
   pointer-events: none;
 }
 
@@ -271,11 +299,23 @@ const sheetStyle = computed(() => {
   opacity: 0;
 }
 
-.sheet-close-btn-bookmark {
+.sheet-layer-rail {
   position: absolute;
-  top: 1.5rem;
+  inset: 0 auto 0 0;
+  z-index: 1002;
+  display: flex;
+  width: 80px;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid var(--a-color-border-soft);
+  background: #ffffff;
+}
+
+.sheet-close-btn-bookmark {
+  flex: 0 0 auto;
   width: 44px;
   height: 44px;
+  margin-top: 1.5rem;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -284,7 +324,6 @@ const sheetStyle = computed(() => {
   cursor: pointer;
   padding: 0;
   line-height: 1;
-  z-index: 1002;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -292,11 +331,9 @@ const sheetStyle = computed(() => {
   opacity: 0.6;
 }
 
-.is-right .sheet-close-btn-bookmark {
-  left: 1.5rem;
-}
-
-.is-left .sheet-close-btn-bookmark {
+.sheet-close-btn-bookmark--legacy {
+  position: absolute;
+  top: 0;
   right: 1.5rem;
 }
 
@@ -305,8 +342,45 @@ const sheetStyle = computed(() => {
   color: var(--a-color-fg);
 }
 
+.sheet-layer-title {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-start;
+  width: 44px;
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.5rem 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  letter-spacing: 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.sheet-layer-title > span {
+  display: block;
+  max-height: 12em;
+  overflow: hidden;
+}
+
+.sheet-layer-title--action {
+  cursor: pointer;
+}
+
+.sheet-layer-title--action:hover,
+.sheet-layer-title--action:focus-visible {
+  color: var(--a-color-fg);
+  outline: none;
+}
+
 .is-right .sheet-content--has-bookmark-close {
-  padding-left: 5rem;
+  padding-left: 7.5rem;
 }
 
 .is-left .sheet-content--has-bookmark-close {
@@ -390,7 +464,7 @@ const sheetStyle = computed(() => {
   .p-sheet-panel.is-shifted {
     visibility: hidden;
     transform: none;
-    opacity: 0;
+    opacity: 1;
   }
 
 

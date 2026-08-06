@@ -34,12 +34,15 @@ export function useBlogSheets() {
     stack.pop()
   }
 
+  const returnToLayer = (key: string) => stack.popTo(key)
+
   return {
     layers: stack.layers,
     top: stack.top,
     openCollection,
     openPost,
     closeLayer,
+    returnToLayer,
     closeTop: stack.pop,
     closeAll: stack.clear,
     isTop: stack.isTop,

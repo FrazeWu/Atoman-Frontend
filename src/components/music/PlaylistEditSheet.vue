@@ -34,8 +34,10 @@ const coverInput = ref<HTMLInputElement | null>(null)
 <template>
   <PSheet
     :show="show"
-    width="540px"
+    title="编辑歌单"
     :index="index"
+    :layer-index="index"
+    :stack-size="index + 1"
     close-type="header"
     :show-backdrop="false"
     @close="emit('close')"

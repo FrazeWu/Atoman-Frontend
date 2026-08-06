@@ -81,7 +81,6 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
   <PSheet
     show
     :title="collection?.name || layer.title"
-    width="860px"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
@@ -89,6 +88,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
     :is-top-layer="sheets.isTop(layer.key)"
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
+    @activate="sheets.returnToLayer(layer.key)"
   >
     <template #header>
       <div class="collection-sheet-header">

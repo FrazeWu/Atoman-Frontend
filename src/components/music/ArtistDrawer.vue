@@ -23,7 +23,7 @@ import {
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeArtist, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, returnToLayer, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
@@ -31,6 +31,8 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : i
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)
+const sheetTitle = computed(() => artist.value?.name ? `艺术家 · ${artist.value.name}` : (props.layer?.title ?? '艺术家'))
+const returnCurrentArtist = () => props.layer && returnToLayer(props.layer.key)
 const albums = ref<MusicAlbumListItem[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
@@ -226,8 +228,9 @@ watch(
   <PSheet
     panel-class="artist-drawer"
     :show="isOpen"
+    :title="sheetTitle"
     @close="closeCurrentArtist"
-    width="900px"
+    @activate="returnCurrentArtist"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     :layer-index="layerIndex"

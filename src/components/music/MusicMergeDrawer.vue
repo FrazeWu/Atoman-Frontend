@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: numbe
 const {
   state,
   closeNestedAction,
+  returnToLayer,
   isLayerShifted,
   isTopLayer,
 } = useMusicDrawers()
@@ -35,6 +36,8 @@ const sourceId = computed(() => {
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : false)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentAction = () => closeNestedAction(props.layer?.key)
+const returnCurrentAction = () => props.layer && returnToLayer(props.layer.key)
+const sheetTitle = computed(() => entity.value === 'album' ? '合并专辑' : '合并艺术家')
 const query = ref('')
 const targets = ref<MergeTarget[]>([])
 const selected = ref<MergeTarget | null>(null)
@@ -96,12 +99,14 @@ async function merge() {
 <template>
   <PSheet
     :show="isOpen"
+    :title="sheetTitle"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
     @close="closeCurrentAction"
+    @activate="returnCurrentAction"
   >
     <div class="merge-drawer">
       <p v-if="errorMessage" class="merge-error">{{ errorMessage }}</p>

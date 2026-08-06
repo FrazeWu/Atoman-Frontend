@@ -74,10 +74,10 @@ watch(() => props.layer.payload.postId, () => void loadPost(), { immediate: true
     :stack-size="stackSize"
     :is-shifted="sheets.isShifted(layer.key)"
     :is-top-layer="sheets.isTop(layer.key)"
-    width="min(100%, 980px)"
     reading-mode
     close-type="both"
     @close="sheets.closeLayer(layer.key)"
+    @activate="sheets.returnToLayer(layer.key)"
   >
     <div v-if="loading" class="post-sheet-loading" aria-label="正在加载文章">
       <div class="a-skeleton post-sheet-title-skeleton" />

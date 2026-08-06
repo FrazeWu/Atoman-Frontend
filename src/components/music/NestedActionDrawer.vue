@@ -28,7 +28,7 @@ import {
 
 type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeNestedAction, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closeNestedAction, returnToLayer, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
 const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
 const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
@@ -64,6 +64,7 @@ const titleMap: Record<string, string> = {
 }
 
 const displayTitle = computed(() => titleMap[currentAction.value || ''] || 'Action')
+const returnCurrentAction = () => props.layer && returnToLayer(props.layer.key)
 
 const artistDraft = reactive({
   name: '',
@@ -492,8 +493,9 @@ async function submitEdit() {
 <template>
   <PSheet
     :show="isOpen"
+    :title="displayTitle"
     @close="closeCurrentAction"
-    width="500px"
+    @activate="returnCurrentAction"
     :index="sheetIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

@@ -1,4 +1,4 @@
-import { onBeforeUnmount } from 'vue'
+import { getCurrentInstance, onBeforeUnmount } from 'vue'
 
 export type AudioSyncMessage = 
   | { type: 'PLAY_REQUEST', tabId: string }
@@ -83,11 +83,9 @@ export function useAudioPlayerSync() {
     }
   }
 
-  onBeforeUnmount(() => {
-    if (channel) {
-      channel.close()
-    }
-  })
+  if (getCurrentInstance()) {
+    onBeforeUnmount(() => channel?.close())
+  }
 
   return {
     broadcastPlayRequest,

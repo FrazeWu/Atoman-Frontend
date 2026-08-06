@@ -20,8 +20,12 @@ export async function loginViaUI(page: Page, email: string, password: string): P
   await page.goto('/login')
   await page.getByPlaceholder('输入用户名或邮箱').fill(email)
   await page.getByPlaceholder('输入密码').fill(password)
-	await page.getByRole('button', { name: '登录' }).click()
-  await page.waitForURL(/^(?!\/login)/)
+  const loginResponse = page.waitForResponse((response) => (
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/auth/login'
+  ))
+  await page.getByRole('button', { name: '登录' }).click()
+  if (!(await loginResponse).ok()) throw new Error('登录失败')
+  await page.waitForURL((url) => url.pathname !== '/login')
 }
 
 export async function logoutViaUI(page: Page): Promise<void> {

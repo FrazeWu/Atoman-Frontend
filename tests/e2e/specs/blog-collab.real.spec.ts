@@ -1,19 +1,15 @@
 import { randomUUID } from 'node:crypto'
-import { expect } from '@playwright/test'
 
-import { test } from '../fixtures/base'
-import { ADMIN_PASSWORD, ADMIN_USERNAME, loginViaUI } from '../helpers/auth'
+import { expect, test } from '../fixtures/base'
 
 const enabled = process.env.BLOG_COLLAB_REAL_E2E === '1'
 test.describe('Blog collaboration', () => {
   test.setTimeout(60_000)
   test.skip(!enabled, 'requires BLOG_COLLAB_REAL_E2E=1 and a local backend')
 
-  test('syncs editor content between two authenticated pages', async ({ page }) => {
-    await loginViaUI(page, ADMIN_USERNAME, ADMIN_PASSWORD)
-
+  test('syncs editor content between two authenticated pages', async ({ authenticatedPage: page }) => {
     const sessionResponse = await page.request.get('/api/v1/auth/session')
-    expect(sessionResponse.ok()).toBeTruthy()
+    expect(sessionResponse.status()).toBe(200)
     const session = await sessionResponse.json() as { csrf_token?: string; data?: { csrf_token?: string } }
     const csrfToken = session.csrf_token || session.data?.csrf_token
     expect(csrfToken).toBeTruthy()
@@ -42,7 +38,7 @@ test.describe('Blog collaboration', () => {
           visibility: 'private',
         },
       })
-      expect(created.ok()).toBeTruthy()
+      expect(created.ok(), await created.text()).toBeTruthy()
       const createdPayload = await created.json() as { data?: { id?: string } }
       postId = createdPayload.data?.id
       expect(postId).toBeTruthy()

@@ -356,6 +356,8 @@ export type MusicAlbumListItem = {
   cover_url?: string;
   description?: string;
   album_type?: string;
+  edition_type?: 'original' | 'deluxe' | 'reissue' | 'regional' | 'live';
+  canonical_album_id?: string | null;
   hot_score?: number;
   play_count?: number;
   bookmark_count?: number;
@@ -369,6 +371,7 @@ export type MusicAlbumListItem = {
     status?: string;
     play_count?: number;
   }>;
+  other_versions?: MusicAlbumListItem[];
   entry_status: MusicEntryStatus;
   redirect_to?: string | null;
 };

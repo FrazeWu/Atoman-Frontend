@@ -1,9 +1,8 @@
 <template>
   <PSheet
     :show="show"
-    :title="mode === 'create' ? 'CREATE_SUBSCRIPTION_RULE' : 'EDIT_SUBSCRIPTION_RULE'"
+    :title="mode === 'create' ? '创建订阅规则' : '编辑订阅规则'"
     close-type="header"
-    width="min(100%, 560px)"
     @close="$emit('close')"
   >
     <div class="rule-editor-sheet">

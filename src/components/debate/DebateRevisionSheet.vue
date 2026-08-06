@@ -2,7 +2,6 @@
   <PSheet
     :show="show"
     title="版本"
-    width="min(100%, 760px)"
     close-type="header"
     @close="closeSheet"
   >

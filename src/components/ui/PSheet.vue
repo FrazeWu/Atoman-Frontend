@@ -467,7 +467,20 @@ const sheetStyle = computed(() => {
     opacity: 1;
   }
 
+  .sheet-layer-rail {
+    right: auto;
+    bottom: auto;
+    width: 64px;
+    border-right: 0;
+  }
 
+  .sheet-layer-title {
+    display: none;
+  }
+
+  .is-right .sheet-content--has-bookmark-close {
+    padding-left: 2.5rem;
+  }
 
   .p-sheet-panel.is-right .sheet-content,
   .p-sheet-panel.is-left .sheet-content {

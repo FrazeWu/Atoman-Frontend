@@ -1,10 +1,15 @@
 <template>
   <PSheet
     :show="show"
+    :title="sourceTitle || '订阅源文章'"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-shifted="isShifted"
+    :is-top-layer="isTopLayer"
     close-type="header"
     reading-mode
-    :width="'calc(100vw - var(--a-sidebar-width))'"
     @close="$emit('close')"
+    @activate="$emit('activate')"
   >
     <template #header>
       <div
@@ -117,13 +122,22 @@ const props = withDefaults(defineProps<{
   items: TimelineItem[]
   loading?: boolean
   subscribeBusy?: boolean
+  layerIndex?: number
+  stackSize?: number
+  isShifted?: boolean
+  isTopLayer?: boolean
 }>(), {
   loading: false,
   subscribeBusy: false,
+  layerIndex: 0,
+  stackSize: 1,
+  isShifted: false,
+  isTopLayer: true,
 })
 
 defineEmits<{
   (e: 'close'): void
+  (e: 'activate'): void
   (e: 'subscribe'): void
   (e: 'open-article', item: TimelineItem): void
 }>()

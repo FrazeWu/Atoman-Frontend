@@ -2,7 +2,6 @@
   <PSheet
     :show="show"
     title="编辑辩题"
-    width="min(100%, 760px)"
     close-type="header"
     @close="closeEditor"
   >

@@ -4,7 +4,6 @@
     :title="sheetTitle"
     close-type="bookmark"
     reading-mode
-    :width="'calc(100vw - var(--a-sidebar-width))'"
     :index="index"
     @close="$emit('close')"
   >

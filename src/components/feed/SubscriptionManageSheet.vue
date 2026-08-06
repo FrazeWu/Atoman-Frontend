@@ -3,7 +3,6 @@
     :show="show"
     title="订阅源管理"
     close-type="header"
-    width="min(100%, 640px)"
     @close="$emit('close')"
   >
     <div class="manage-sheet">

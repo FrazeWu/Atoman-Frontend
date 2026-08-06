@@ -2,7 +2,6 @@
   <PSheet
     :show="show"
     :title="`${config.label}合集`"
-    width="min(100%, 520px)"
     close-type="header"
     @close="$emit('close')"
   >

@@ -100,7 +100,11 @@
       :items="sourceArticles"
       :loading="sourceArticlesLoading"
       :subscribe-busy="sourceSubscribeBusy"
-      @close="showSourceSheet = false"
+      :stack-size="showArticleSheet ? 2 : 1"
+      :is-shifted="showArticleSheet"
+      :is-top-layer="!showArticleSheet"
+      @close="closeSourceStack"
+      @activate="returnToSource"
       @subscribe="subscribeSelectedSource"
       @open-article="openSourceArticle"
     />
@@ -531,6 +535,15 @@ const {
   itemKey: (item) => itemKey(item),
   feedItemActionIDs,
 })
+
+const returnToSource = () => {
+  showArticleSheet.value = false
+}
+
+const closeSourceStack = () => {
+  showArticleSheet.value = false
+  showSourceSheet.value = false
+}
 
 const scrollToTop = async () => {
   await nextTick()

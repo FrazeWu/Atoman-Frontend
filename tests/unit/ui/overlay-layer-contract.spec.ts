@@ -56,7 +56,9 @@ describe('overlay layer contract', () => {
     expect(playerSource).toContain('height: var(--a-mobile-player-height);')
   })
 
-  it('keeps the exposed sheet edge at the exact stack offset', () => {
-    expect(sheetSource).toContain('right: `${rightOffset.value}px`')
+  it('keeps one visible page rail for every lower sheet layer', () => {
+    expect(sheetSource).toContain('const layerInset = computed(() => 16 + (effectiveLayerIndex.value * 80))')
+    expect(sheetSource).toContain('width: 80px;')
+    expect(sheetSource).not.toContain('opacity: 0.6;\n  pointer-events: none;')
   })
 })

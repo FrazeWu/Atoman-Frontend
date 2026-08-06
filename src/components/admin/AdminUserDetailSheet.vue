@@ -2,8 +2,6 @@
   <PSheet
     :show="show"
     :title="detail ? detail.display_name || detail.username : '用户详情'"
-    width="min(760px, 100vw)"
-    max-width="760px"
     close-type="header"
     panel-class="admin-user-detail-sheet"
     @close="emit('close')"

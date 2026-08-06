@@ -57,6 +57,7 @@ defineEmits(['click'])
 
 <style scoped>
 .p-sidebar-item {
+  position: relative;
   border-radius: var(--a-radius-control);
   background: transparent;
   box-shadow: none;
@@ -77,5 +78,16 @@ defineEmits(['click'])
   color: var(--a-color-text);
   box-shadow: none;
   font-weight: 700;
+}
+.p-sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  background-color: var(--a-color-text);
+  border-radius: 2px;
 }
 </style>

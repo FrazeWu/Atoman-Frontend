@@ -2,7 +2,6 @@
   <PSheet
     :show="show"
     title="讨论"
-    width="min(100%, 720px)"
     close-type="header"
     @close="emit('close')"
   >

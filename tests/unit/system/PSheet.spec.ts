@@ -16,7 +16,7 @@ describe('PSheet.vue', () => {
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*0/)
   })
 
-  it('renders body content and bookmark tab, but no default title bar', () => {
+  it('renders body content and the vertical page rail', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, title: 'TEST TITLE' },
       slots: {
@@ -25,7 +25,7 @@ describe('PSheet.vue', () => {
     })
     expect(wrapper.find('.p-sheet-panel').exists()).toBe(true)
     expect(wrapper.text()).toContain('Sheet body')
-    expect(wrapper.text()).not.toContain('TEST TITLE')
+    expect(wrapper.get('.sheet-layer-title').text()).toBe('TEST TITLE')
     expect(wrapper.find('.sheet-header').exists()).toBe(false)
     expect(wrapper.find('.sheet-close-btn-bookmark').exists()).toBe(true)
     expect(wrapper.get('.p-sheet-panel').attributes('aria-label')).toBe('TEST TITLE')
@@ -42,13 +42,14 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
   })
 
-  it('renders only the floating close control when using header close type', () => {
+  it('keeps right sheets on the page rail when header close type is requested', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header', title: 'Inspect' }
     })
     expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(false)
-    expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(true)
-    expect(wrapper.get('.sheet-content').classes()).toContain('sheet-content--has-close')
+    expect(wrapper.find('.sheet-close-btn-floating').exists()).toBe(false)
+    expect(wrapper.find('.sheet-close-btn-bookmark').exists()).toBe(true)
+    expect(wrapper.get('.sheet-content').classes()).toContain('sheet-content--has-bookmark-close')
   })
 
   it('applies shifted class when isShifted prop is true', () => {
@@ -58,7 +59,7 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.p-sheet-panel').classes()).toContain('is-shifted')
   })
 
-  it('exposes one 32px edge for each sheet above the current layer', () => {
+  it('moves each new layer right by one 80px page rail', () => {
     const wrapper = mount(PSheet, {
       props: {
         show: true,
@@ -69,10 +70,13 @@ describe('PSheet.vue', () => {
       },
     })
 
-    expect(wrapper.get('.p-sheet-panel').attributes('style')).toContain('right: 64px')
+    const panel = wrapper.get('.p-sheet-panel').element as HTMLElement
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 16px)')
+    expect(panel.style.right).toBe('0px')
+    expect(panel.style.width).toBe('auto')
   })
 
-  it('reserves the right offset for every custom-width layer', () => {
+  it('derives panel width from the left edge instead of custom widths', () => {
     const bottom = mount(PSheet, {
       props: {
         show: true,
@@ -90,16 +94,17 @@ describe('PSheet.vue', () => {
       },
     })
 
-    expect(bottom.get('.p-sheet-panel').attributes('style')).toContain('right: 64px')
-    expect(top.get('.p-sheet-panel').attributes('style')).toContain('right: 0px')
+    expect((bottom.get('.p-sheet-panel').element as HTMLElement).style.left).toBe('calc(var(--a-sidebar-width) + 16px)')
+    expect((top.get('.p-sheet-panel').element as HTMLElement).style.left).toBe('calc(var(--a-sidebar-width) + 176px)')
   })
 
-  it('accepts custom width via prop', () => {
+  it('ignores custom width for adaptive right sheets', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, width: '900px' }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.width).toBe('900px')
+    expect(panel.style.width).toBe('auto')
+    expect(panel.style.maxWidth).toBe('none')
   })
 
   it('uses compact content spacing when there is no header bar', () => {
@@ -109,11 +114,11 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.sheet-content').classes()).toContain('sheet-content--compact')
   })
 
-  it('keeps regular content spacing when header bar is rendered', () => {
+  it('uses compact spacing for right sheets without a custom header slot', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header', title: 'Inspect' }
     })
-    expect(wrapper.find('.sheet-content').classes()).not.toContain('sheet-content--compact')
+    expect(wrapper.find('.sheet-content').classes()).toContain('sheet-content--compact')
   })
 
   it('uses a header close affordance for bottom sheets by default', async () => {
@@ -143,11 +148,11 @@ describe('PSheet.vue', () => {
     expect(wrapper.emitted()).toHaveProperty('close')
   })
 
-  it('emits close event when header close button is clicked', async () => {
+  it('emits close event from the page rail for right sheets', async () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header' }
     })
-    await wrapper.find('.sheet-close-btn-floating').trigger('click')
+    await wrapper.get('.sheet-close-btn-bookmark').trigger('click')
     expect(wrapper.emitted()).toHaveProperty('close')
   })
 
@@ -166,8 +171,8 @@ describe('PSheet.vue', () => {
       props: { show: true, index: 1 }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 64px)')
-    expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 64px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 96px)')
+    expect(panel.style.width).toBe('auto')
   })
 
   it('defaults to index 0 styles', () => {
@@ -175,19 +180,41 @@ describe('PSheet.vue', () => {
       props: { show: true }
     })
     const panel = wrapper.find('.p-sheet-panel').element as HTMLElement
-    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 32px)')
-    expect(panel.style.width).toBe('calc(100% - var(--a-sidebar-width) - 32px)')
+    expect(panel.style.left).toBe('calc(var(--a-sidebar-width) + 16px)')
+    expect(panel.style.width).toBe('auto')
   })
 
-  it('exposes only the top layer as a modal dialog', () => {
+  it('exposes the top layer as a non-modal dialog so lower rails remain reachable', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, title: '专辑详情', isTopLayer: true, layerIndex: 2 },
     })
     const panel = wrapper.get('.p-sheet-panel')
     expect(panel.attributes('role')).toBe('dialog')
-    expect(panel.attributes('aria-modal')).toBe('true')
+    expect(panel.attributes('aria-modal')).toBeUndefined()
     expect(panel.attributes('aria-label')).toBe('专辑详情')
     expect(panel.attributes('data-layer-index')).toBe('2')
+  })
+
+  it('keeps a lower rail actionable while making its content inert', async () => {
+    const wrapper = mount(PSheet, {
+      props: {
+        show: true,
+        title: '艺术家 · Kanye West',
+        isShifted: true,
+        isTopLayer: false,
+        layerIndex: 0,
+        stackSize: 3,
+      },
+      slots: { default: '<button class="body-action">正文操作</button>' },
+    })
+
+    const content = wrapper.get('.sheet-content')
+    expect(content.attributes('inert')).toBeDefined()
+    expect(content.attributes('aria-hidden')).toBe('true')
+    expect(wrapper.get('.sheet-close-btn-bookmark').attributes('aria-label')).toContain('及上方页面')
+
+    await wrapper.get('.sheet-layer-title--action').trigger('click')
+    expect(wrapper.emitted('activate')).toHaveLength(1)
   })
 
   it('only lets the top layer close with Escape', async () => {

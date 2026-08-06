@@ -1047,7 +1047,15 @@ body:has(.app-shell.has-sidebar) {
 
 .a-sidebar-item.active::before,
 .p-sidebar-item.active::before {
-  display: none;
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  background-color: var(--a-color-fg);
+  border-radius: 2px;
 }
 
 .a-sidebar-item.active::after,

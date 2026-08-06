@@ -6,6 +6,7 @@ import ExploreView from '@/views/music/ExploreView.vue'
 
 const mocks = vi.hoisted(() => ({
   listMusicDiscoverFeed: vi.fn(),
+  getMusicHome: vi.fn(),
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
   listRecommendedArtists: vi.fn(),
@@ -25,10 +26,13 @@ const mocks = vi.hoisted(() => ({
   openPlaylist: vi.fn(),
   openMusicCreationFlow: vi.fn(),
   requireLogin: vi.fn(),
+  playSong: vi.fn(),
+  routeQuery: {} as Record<string, string>,
 }))
 
 vi.mock('@/api/musicV1', () => ({
   listMusicDiscoverFeed: mocks.listMusicDiscoverFeed,
+  getMusicHome: mocks.getMusicHome,
   listMusicAlbums: mocks.listMusicAlbums,
   listMusicArtists: mocks.listMusicArtists,
   listRecommendedArtists: mocks.listRecommendedArtists,
@@ -48,6 +52,7 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mocks.push,
   }),
+  useRoute: () => ({ query: mocks.routeQuery }),
   RouterLink: {
     props: ['to'],
     template: '<a :href="typeof to === \'string\' ? to : \'#\'"><slot /></a>',
@@ -57,14 +62,23 @@ vi.mock('vue-router', () => ({
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     openAlbum: mocks.openAlbum,
+    closeAlbum: vi.fn(),
     openArtist: mocks.openArtist,
+    closeArtist: vi.fn(),
     openPlaylist: mocks.openPlaylist,
     openMusicCreationFlow: mocks.openMusicCreationFlow,
+    closeMusicCreationFlow: vi.fn(),
+    openMusicEditor: vi.fn(),
+    closeMusicEditor: vi.fn(),
   }),
 }))
 
 vi.mock('@/composables/useLoginRedirect', () => ({
   useLoginRedirect: () => ({ requireLogin: mocks.requireLogin }),
+}))
+
+vi.mock('@/stores/player', () => ({
+  usePlayerStore: () => ({ playSong: mocks.playSong }),
 }))
 
 describe('Music ExploreView.vue', () => {
@@ -74,6 +88,7 @@ describe('Music ExploreView.vue', () => {
 
   beforeEach(() => {
     mocks.listMusicDiscoverFeed.mockReset()
+    mocks.getMusicHome.mockReset()
     mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.listRecommendedArtists.mockReset()
@@ -93,7 +108,28 @@ describe('Music ExploreView.vue', () => {
     mocks.openPlaylist.mockReset()
     mocks.openMusicCreationFlow.mockReset()
     mocks.requireLogin.mockReset()
+    mocks.playSong.mockReset()
     mocks.requireLogin.mockReturnValue(true)
+    mocks.routeQuery = {}
+
+    mocks.getMusicHome.mockResolvedValue({
+      personalized: true,
+      recently_played: [
+        {
+          id: 'history-1',
+          song: {
+            id: 'song-1',
+            title: 'Runaway',
+            audio_url: '/uploads/runaway.mp3',
+            artists: [{ id: 'artist-1', name: 'Ye' }],
+            album: { id: 'album-1', title: '2049', cover_url: '/uploads/2049.jpg' },
+          },
+        },
+      ],
+      for_you: [{ id: 'album-2', title: 'Late Registration', artists: [{ id: 'artist-1', name: 'Ye' }] }],
+      for_you_reason: '基于最近播放',
+      sections: [{ key: 'popular', title: '热门', albums: [{ id: 'album-3', title: 'Graduation', artists: [{ id: 'artist-1', name: 'Ye' }] }] }],
+    })
 
     mocks.listMusicDiscoverFeed.mockResolvedValue({
       data: [
@@ -234,7 +270,7 @@ describe('Music ExploreView.vue', () => {
     await flushPromises()
 
     expect(mocks.listMusicDiscoverFeed).not.toHaveBeenCalled()
-    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 48, sort: 'hot' })
+    expect(mocks.listMusicAlbums).toHaveBeenCalledWith({ page: 1, page_size: 2000, sort: 'hot' })
     expect(wrapper.find('[aria-label="专辑列表"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="discover-album-card"]')).toHaveLength(1)
     expect(wrapper.findAll('[data-testid="discover-artist-card"]')).toHaveLength(0)
@@ -326,6 +362,23 @@ describe('Music ExploreView.vue', () => {
 
     const sections = wrapper.findAll('[data-testid="discover-section-title"]').map(node => node.text())
     expect(sections).toEqual(['专辑', '歌单', '艺人'])
+  })
+
+  it('shows the former music home sections on the discover page', async () => {
+    const wrapper = mount(ExploreView)
+    await flushPromises()
+
+    expect(mocks.getMusicHome).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('最近播放')
+    expect(wrapper.text()).toContain('Runaway')
+    expect(wrapper.text()).toContain('为你发现')
+    expect(wrapper.text()).toContain('热门')
+
+    await wrapper.get('[aria-label="打开专辑 Late Registration"]').trigger('click')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-2')
+
+    await wrapper.get('.recently-played-item').trigger('click')
+    expect(mocks.playSong).toHaveBeenCalledWith(expect.objectContaining({ id: 'song-1' }))
   })
 
   it('keeps the playlist section structure visible when public playlists are empty', async () => {

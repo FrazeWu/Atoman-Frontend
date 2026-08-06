@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -19,6 +19,9 @@ import {
   listMusicDiscoverFeed,
   listMusicAlbums,
   listMusicArtists,
+  getMusicHome,
+  type MusicHome,
+  type MusicSongListItem,
   type MusicDiscoverItem,
   type MusicAlbumListItem,
   type MusicArtistListItem,
@@ -27,8 +30,11 @@ import {
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useAuthStore } from '@/stores/auth'
+import { usePlayerStore } from '@/stores/player'
+import type { Song } from '@/types'
 import { getActivePinia } from 'pinia'
 
 const props = withDefaults(defineProps<{
@@ -41,7 +47,30 @@ const props = withDefaults(defineProps<{
 
 const authStore = getActivePinia() ? useAuthStore() : null
 const router = useRouter()
-const { openAlbum, openArtist, openMusicCreationFlow } = useMusicDrawers()
+const route = useRoute()
+const player = usePlayerStore()
+const musicHome = ref<MusicHome | null>(null)
+const musicHomeLoading = ref(false)
+const {
+  openAlbum,
+  closeAlbum,
+  openArtist,
+  closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
+  openMusicEditor,
+  closeMusicEditor,
+} = useMusicDrawers()
+const { applyRouteSelection } = useMusicRouteSelection({
+  openAlbum,
+  closeAlbum,
+  openArtist,
+  closeArtist,
+  openMusicCreationFlow,
+  closeMusicCreationFlow,
+  openMusicEditor,
+  closeMusicEditor,
+})
 const { requireLogin } = useLoginRedirect()
 const loading = ref(false)
 const errorMessage = ref('')
@@ -252,6 +281,47 @@ async function fetchDiscoverFeed() {
   }
 }
 
+async function fetchMusicHome() {
+  musicHomeLoading.value = true
+  try {
+    musicHome.value = await getMusicHome()
+  } catch (error) {
+    reportError(error, 'Failed to fetch music home:')
+    musicHome.value = null
+  } finally {
+    musicHomeLoading.value = false
+  }
+}
+
+function toPlayableSong(song: MusicSongListItem): Song | null {
+  if (!song.audio_url) return null
+  return {
+    id: song.id,
+    title: song.title,
+    artist: song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家',
+    album: song.album?.title || '',
+    album_id: song.album?.id || '',
+    year: 0,
+    release_date: '',
+    lyrics: song.lyrics || '',
+    audio_url: song.audio_url,
+    cover_url: song.cover_url || song.album?.cover_url || '',
+    track_number: song.track_number || 0,
+    status: (song.status as Song['status']) || 'approved',
+    artists: song.artists?.map((artist) => ({
+      id: artist.id,
+      name: artist.name,
+      username: '',
+      email: '',
+    })),
+  }
+}
+
+function playRecentSong(song: MusicSongListItem) {
+  const playable = toPlayableSong(song)
+  if (playable) player.playSong(playable)
+}
+
 function applyDiscoverFeed(items: MusicDiscoverItem[]) {
   discoverAlbums.value = items
     .filter((item) => item.type === 'album')
@@ -424,7 +494,21 @@ onMounted(() => {
     return
   }
   fetchDiscoverFeed()
+  fetchMusicHome()
 })
+
+watch(
+  () => [route.query.artist, route.query.album, route.query.editor, route.query.name],
+  () => applyRouteSelection(route.query),
+  { immediate: true },
+)
+
+watch(
+  () => [authStore?.isAuthenticated, authStore?.token, authStore?.user?.uuid],
+  () => {
+    if (props.contentMode === 'discover') void fetchMusicHome()
+  },
+)
 
 const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
 const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchArtists.value.length > 0)
@@ -508,6 +592,60 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         </PButton>
       </div>
     </div>
+
+    <div v-if="contentMode === 'discover' && musicHomeLoading" class="state-line">正在加载...</div>
+    <template v-if="contentMode === 'discover' && musicHome">
+      <section v-if="musicHome.personalized && musicHome.recently_played.length" class="music-home-section" aria-labelledby="recently-played-title">
+        <header class="music-home-section__header">
+          <h2 id="recently-played-title">最近播放</h2>
+        </header>
+        <div class="recently-played-list">
+          <button
+            v-for="item in musicHome.recently_played"
+            :key="item.id"
+            type="button"
+            class="recently-played-item"
+            :disabled="!item.song.audio_url"
+            @click="playRecentSong(item.song)"
+          >
+            <img v-if="item.song.cover_url || item.song.album?.cover_url" :src="item.song.cover_url || item.song.album?.cover_url" :alt="item.song.title" />
+            <span v-else class="recently-played-item__cover" aria-hidden="true" />
+            <span class="recently-played-item__copy">
+              <strong>{{ item.song.title }}</strong>
+              <span>{{ item.song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家' }}<template v-if="item.song.album?.title"> · {{ item.song.album.title }}</template></span>
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section v-if="musicHome.personalized && musicHome.for_you.length" class="music-home-section" aria-labelledby="for-you-title">
+        <header class="music-home-section__header">
+          <h2 id="for-you-title">为你发现</h2>
+        </header>
+        <div class="music-home-albums">
+          <button
+            v-for="album in musicHome.for_you"
+            :key="album.id"
+            type="button"
+            class="music-home-album-button"
+            :aria-label="`打开专辑 ${album.title}`"
+            @click="openAlbum(String(album.id))"
+          >
+            <MusicAlbumCard :album="album" :show-bookmark="false" />
+          </button>
+        </div>
+        <p v-if="musicHome.for_you_reason" class="music-home-section__reason">{{ musicHome.for_you_reason }}</p>
+      </section>
+
+      <section v-for="section in musicHome.sections" :key="section.key" class="music-home-section" :aria-labelledby="`home-${section.key}`">
+        <header class="music-home-section__header"><h2 :id="`home-${section.key}`">{{ section.title }}</h2></header>
+        <div class="music-home-albums">
+          <button v-for="album in section.albums" :key="album.id" type="button" class="music-home-album-button" :aria-label="`打开专辑 ${album.title}`" @click="openAlbum(String(album.id))">
+            <MusicAlbumCard :album="album" :show-bookmark="false" />
+          </button>
+        </div>
+      </section>
+    </template>
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
@@ -742,6 +880,106 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   color: #8a2f2f;
 }
 
+.music-home-section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.music-home-section__header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.music-home-section__reason {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.875rem;
+}
+
+.recently-played-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.recently-played-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-bg);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recently-played-item:hover,
+.recently-played-item:focus-visible {
+  border-color: var(--a-color-muted-soft);
+}
+
+.recently-played-item:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.recently-played-item img,
+.recently-played-item__cover {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--a-color-surface-muted);
+}
+
+.recently-played-item__copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.recently-played-item__copy strong,
+.recently-played-item__copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recently-played-item__copy strong {
+  font-size: 0.86rem;
+}
+
+.recently-played-item__copy span {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.music-home-albums {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.music-home-album-button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.music-home-album-button:focus-visible {
+  outline: 2px solid var(--a-color-focus, var(--a-color-text));
+  outline-offset: 3px;
+}
+
 .discover-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
@@ -866,6 +1104,11 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   .discover-layout--albums,
   .discover-layout--playlists,
   .discover-layout--artists {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recently-played-list,
+  .music-home-albums {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

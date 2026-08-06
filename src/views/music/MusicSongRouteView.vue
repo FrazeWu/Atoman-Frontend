@@ -37,6 +37,7 @@ const roleGroups = computed(() => {
   }
   return [...groups.entries()]
 })
+const roleLabels: Record<string, string> = { primary: '艺术家', featured: '合作艺人', producer: '制作人', writer: '作词', composer: '作曲' }
 
 async function load(songId: unknown) {
   if (typeof songId !== 'string' || !songId) return
@@ -65,7 +66,7 @@ watch(() => route.params.songId, load, { immediate: true })
         <p class="song-detail__album">{{ detail.song.album?.title || '单曲' }}</p>
         <h1>{{ detail.song.title }}</h1>
         <div v-for="[role, artists] in roleGroups" :key="role" class="song-detail__artists">
-          <span>{{ role === 'primary' ? '艺术家' : role }}</span>
+          <span>{{ roleLabels[role] || role }}</span>
           <RouterLink v-for="artist in artists" :key="artist.id" :to="`/music/artist/${artist.id}`">{{ artist.name }}</RouterLink>
         </div>
         <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>

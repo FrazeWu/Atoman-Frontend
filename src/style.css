@@ -280,6 +280,16 @@ body:has(.app-shell.has-sidebar) {
   align-items: start;
 }
 
+/* User settings: content left, directory nav right */
+.user-settings__shell {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.user-settings__directory-trigger {
+  display: none;
+  align-self: start;
+}
+
 .settings-center__sidebar {
   position: sticky;
   top: 5rem;
@@ -434,6 +444,16 @@ body:has(.app-shell.has-sidebar) {
   border: 1px solid var(--a-color-border-soft);
   padding: 0.9rem 1rem;
   color: var(--a-color-text-secondary);
+}
+
+@media (max-width: 1023px) {
+  .user-settings__shell {
+    grid-template-columns: 1fr;
+  }
+
+  .user-settings__directory-trigger {
+    display: inline-flex;
+  }
 }
 
 @media (max-width: 900px) {

@@ -7,26 +7,17 @@
       rule
     />
 
-    <div class="settings-center__shell">
-      <aside class="settings-center__sidebar" aria-label="设置导航">
-        <PSurface :layer="1">
-          <nav class="settings-center__nav">
-            <button
-              v-for="item in settingSections"
-              :key="item.key"
-              type="button"
-              class="settings-center__nav-item"
-              :class="{ 'settings-center__nav-item--active': activeSection === item.key }"
-              @click="scrollToSection(item.key)"
-            >
-              <span class="settings-center__kicker">{{ item.kicker }}</span>
-              <strong>{{ item.label }}</strong>
-              <small>{{ item.description }}</small>
-            </button>
-          </nav>
-        </PSurface>
-      </aside>
+    <PButton
+      class="user-settings__directory-trigger"
+      variant="secondary"
+      size="sm"
+      @click="mobileDirectoryOpen = true"
+    >
+      <ListTree :size="16" aria-hidden="true" />
+      目录
+    </PButton>
 
+    <div class="settings-center__shell user-settings__shell">
       <div class="settings-center__sections">
         <section
           v-for="item in settingSections"
@@ -90,19 +81,32 @@
           </PSurface>
         </section>
       </div>
+
+      <PDirectoryNav
+        v-model:collapsed="directoryCollapsed"
+        :items="directoryNavItems"
+        :active-id="activeSection"
+        :mobile-open="mobileDirectoryOpen"
+        aria-label="设置导航"
+        @select="scrollToSection"
+        @close-mobile="mobileDirectoryOpen = false"
+      />
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ListTree } from 'lucide-vue-next'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'
 import AccountSecurityPanel from '@/components/user/AccountSecurityPanel.vue'
 import PasswordSettingsPanel from '@/components/user/PasswordSettingsPanel.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
+import PButton from '@/components/ui/PButton.vue'
+import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -130,9 +134,15 @@ const router = useRouter()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const activeSection = ref<UserSettingSectionKey>('general')
+const directoryCollapsed = ref(false)
+const mobileDirectoryOpen = ref(false)
 const ruleBusy = ref(false)
 const sectionMap = new Map<UserSettingSectionKey, HTMLElement>()
 let ticking = false
+
+const directoryNavItems = computed(() =>
+  settingSections.map((s) => ({ id: s.key, label: s.label }))
+)
 
 const sectionDomId = (key: UserSettingSectionKey) => `user-setting-${key}`
 
@@ -188,9 +198,10 @@ const onScroll = () => {
   })
 }
 
-const scrollToSection = (key: UserSettingSectionKey) => {
-  document.getElementById(sectionDomId(key))?.scrollIntoView({ behavior: 'auto', block: 'start' })
-  activeSection.value = key
+const scrollToSection = (key: string) => {
+  const typedKey = key as UserSettingSectionKey
+  document.getElementById(sectionDomId(typedKey))?.scrollIntoView({ behavior: 'auto', block: 'start' })
+  activeSection.value = typedKey
 }
 
 const withRuleBusy = async (task: () => Promise<void>) => {

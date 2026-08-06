@@ -147,6 +147,21 @@ const localFilteredAlbums = computed(() => {
   return results
 })
 
+const filteredDiscoverAlbums = computed(() => {
+  let results = discoverAlbums.value
+  if (filterYear.value !== 'all') {
+    results = results.filter(a => {
+      if (!a.year) return false
+      if (filterYear.value === '2020s') return a.year >= 2020
+      if (filterYear.value === '2010s') return a.year >= 2010 && a.year < 2020
+      if (filterYear.value === '2000s') return a.year >= 2000 && a.year < 2010
+      if (filterYear.value === '1990s') return a.year < 2000
+      return true
+    })
+  }
+  return results
+})
+
 async function fetchAlbumBookmarks() {
   if (!authStore?.isAuthenticated) {
     starredAlbumIds.value = []
@@ -576,13 +591,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             </template>
           </SearchSurface>
         </div>
-        <div class="filters-row" v-if="contentMode === 'albums'">
+        <div class="filters-row">
           <PSelect v-model="filterYear" :options="yearOptions" aria-label="发行年代" />
           <PSelect v-model="filterGenre" :options="genreOptions" aria-label="流派" />
           <PSelect v-model="filterLanguage" :options="languageOptions" aria-label="语言" />
         </div>
         <PButton
-          v-if="contentMode === 'albums'"
           variant="primary"
           class="search-side-action"
           data-testid="add-album"
@@ -671,7 +685,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         </div>
         <div class="discover-layout discover-layout--albums" aria-label="发现专辑分区">
           <MusicAlbumCard
-            v-for="item in discoverAlbums"
+            v-for="item in filteredDiscoverAlbums"
             :key="item.id"
             class="discover-layout__item"
             :album="item"

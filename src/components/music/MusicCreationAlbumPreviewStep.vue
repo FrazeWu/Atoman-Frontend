@@ -43,6 +43,9 @@ const stageLabel = computed(() => stageLabels[albumImport.value?.stage ?? 'uploa
       <span v-if="albumImport.totalBytesTotal > 0">上传进度 {{ uploadProgress }}%</span>
       <span v-if="albumImport.totalBytesTotal > 0">{{ uploadSpeed }} KB/s</span>
     </section>
+    <p v-if="albumImport.status !== 'ready'" class="album-preview-step__hint">
+      已开启导入中心后台托管，直接提交即可，解包与格式提取将在后台自动完成。
+    </p>
     <p v-if="albumImport.errorMessage" class="album-preview-step__error">{{ albumImport.errorMessage }}</p>
     <div v-if="coverUrl" class="album-preview-step__cover">
       <img :src="coverUrl" alt="专辑封面预览" />
@@ -74,5 +77,6 @@ const stageLabel = computed(() => stageLabels[albumImport.value?.stage ?? 'uploa
 .album-preview-step__section { display: grid; gap: 0.5rem; }
 .album-preview-step__section h4, .album-preview-step__section p { margin: 0; }
 .album-preview-step__error { margin: 0; color: var(--a-color-accent-destructive); }
+.album-preview-step__hint { margin: 0; padding: 0.5rem 0.75rem; background: var(--a-color-surface-muted); border-radius: 4px; color: var(--a-color-muted); font-size: 0.82rem; }
 .album-preview-step__tracks, .album-preview-step__failures { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
 </style>

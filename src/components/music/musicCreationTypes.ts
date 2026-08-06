@@ -122,6 +122,7 @@ export interface MusicCreationFlowState {
   tracksCustomized: boolean
   titleCustomized: boolean
   dirty: boolean
+  assetUploading: boolean
   submitting: boolean
   errorMessage: string
 }

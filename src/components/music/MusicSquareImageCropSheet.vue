@@ -22,6 +22,7 @@ const MAX_ZOOM = 3
 const resolvedSourceUrl = ref('')
 const resolvedObjectUrl = ref('')
 const loading = ref(false)
+const confirming = ref(false)
 const loadErrorMessage = ref('')
 const naturalSize = ref({ width: 0, height: 0 })
 const zoom = ref(1)
@@ -165,42 +166,48 @@ function onPointerEnd(event: PointerEvent) {
 }
 
 async function emitConfirm() {
-  if (!isImageReady.value) return
+  if (!isImageReady.value || confirming.value) return
   const image = imageRef.value
   if (!image || !naturalSize.value.width || !naturalSize.value.height) return
 
-  const scale = displayScale.value
-  const cropSize = VIEWPORT_SIZE / scale
-  const sourceX = (naturalSize.value.width / 2) - (cropSize / 2) - (offset.value.x / scale)
-  const sourceY = (naturalSize.value.height / 2) - (cropSize / 2) - (offset.value.y / scale)
-  const outputSize = 1024
+  confirming.value = true
 
-  const canvas = document.createElement('canvas')
-  canvas.width = outputSize
-  canvas.height = outputSize
+  try {
+    const scale = displayScale.value
+    const cropSize = VIEWPORT_SIZE / scale
+    const sourceX = (naturalSize.value.width / 2) - (cropSize / 2) - (offset.value.x / scale)
+    const sourceY = (naturalSize.value.height / 2) - (cropSize / 2) - (offset.value.y / scale)
+    const outputSize = 1024
 
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('裁剪失败')
+    const canvas = document.createElement('canvas')
+    canvas.width = outputSize
+    canvas.height = outputSize
 
-  context.drawImage(
-    image,
-    sourceX,
-    sourceY,
-    cropSize,
-    cropSize,
-    0,
-    0,
-    outputSize,
-    outputSize,
-  )
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('裁剪失败')
 
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, mimeType.value || 'image/png', 0.92)
-  })
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      cropSize,
+      cropSize,
+      0,
+      0,
+      outputSize,
+      outputSize,
+    )
 
-  if (!blob) throw new Error('裁剪失败')
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, mimeType.value || 'image/png', 0.92)
+    })
 
-  emit('confirm', new File([blob], fileName.value, { type: blob.type || mimeType.value }))
+    if (!blob) throw new Error('裁剪失败')
+
+    emit('confirm', new File([blob], fileName.value, { type: blob.type || mimeType.value }))
+  } finally {
+    confirming.value = false
+  }
 }
 
 watch(
@@ -271,10 +278,10 @@ onBeforeUnmount(() => {
         <PButton
           type="button"
           data-testid="music-square-crop-confirm"
-          :disabled="loading || !!loadErrorMessage || !isImageReady"
+          :disabled="loading || confirming || !!loadErrorMessage || !isImageReady"
           @click="emitConfirm"
         >
-          确认
+          {{ confirming ? '处理中...' : '确认' }}
         </PButton>
       </div>
     </div>

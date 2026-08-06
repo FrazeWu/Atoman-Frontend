@@ -320,8 +320,11 @@ describe('MusicCreationArtistStep.vue', () => {
 
     await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger('click')
 
+    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="artist-avatar-preview-image"]').attributes('src')).toBe('blob:artist-avatar-preview')
+    expect(wrapper.get('[data-testid="artist-avatar-preview"]').classes()).toContain('is-uploading')
     expect(drawers.state.value.creationFlow?.draft.artist.avatarUrl).toBe('')
+    expect(drawers.state.value.creationFlow?.assetUploading).toBe(true)
 
     resolveUpload?.({
       key: 'music/avatar-cropped.png',
@@ -332,7 +335,7 @@ describe('MusicCreationArtistStep.vue', () => {
     expect(vi.mocked(uploadMusicAsset)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(uploadMusicAsset).mock.calls[0]?.[1]).toBe('music.cover')
     expect(drawers.state.value.creationFlow?.draft.artist.avatarUrl).toBe('https://img.example/avatar-cropped.png')
+    expect(drawers.state.value.creationFlow?.assetUploading).toBe(false)
     expect(wrapper.get('[data-testid="artist-avatar-preview"]').classes()).toContain('is-square')
-    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
   })
 })

@@ -120,21 +120,25 @@ function clearPendingAvatarCrop() {
 }
 
 async function confirmAvatarCrop(file: File) {
-  if (!artistDraft.value) return
+  const flow = creationFlow.value
+  const draft = artistDraft.value
+  if (!flow || !draft) return
 
   replaceAvatarPreviewUrl(file)
   avatarUploading.value = true
   avatarErrorMessage.value = ''
+  flow.assetUploading = true
+  clearPendingAvatarCrop()
 
   try {
     const asset = await uploadMusicAsset(file, 'music.cover')
-    artistDraft.value.avatarAsset = asset
-    artistDraft.value.avatarUrl = asset.url
+    draft.avatarAsset = asset
+    draft.avatarUrl = asset.url
   } catch (error) {
     avatarErrorMessage.value = error instanceof Error ? error.message : '头像上传失败'
   } finally {
     avatarUploading.value = false
-    clearPendingAvatarCrop()
+    flow.assetUploading = false
   }
 }
 

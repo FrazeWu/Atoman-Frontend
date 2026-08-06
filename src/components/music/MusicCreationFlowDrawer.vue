@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
+import PToast from '@/components/ui/PToast.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import MusicCreationArtistStep from './MusicCreationArtistStep.vue'
 import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
@@ -15,6 +16,9 @@ const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: num
 
 const { state, closeMusicCreationFlow, returnToLayer, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
 const router = useRouter()
+
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
 const creationFlow = computed(() => state.value.creationFlow)
 const isOpen = computed(() => props.layer !== undefined || creationFlow.value !== null)
@@ -109,16 +113,13 @@ const shouldShowFinishButton = computed(() => {
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.submitting) return '提交中…'
-  if (
-    creationFlow.value?.step === 'albumDetails'
-    && creationFlow.value.draft.albumImport.status !== 'ready'
-  ) return '处理中…'
+  if (creationFlow.value?.assetUploading) return '图片上传中…'
   return activeStep.value.cta
 })
 const forwardBlockReason = computed(() => {
   const flow = creationFlow.value
   if (!flow || flow.step !== 'albumDetails') return ''
-  if (flow.draft.albumImport.status !== 'ready') return '处理完成后即可继续'
+  if (flow.assetUploading) return '图片上传完成后即可继续'
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
   if (!(flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)) {
     return '请添加创作者'
@@ -128,6 +129,7 @@ const forwardBlockReason = computed(() => {
 const canGoForward = computed(() => {
   const flow = creationFlow.value
   if (!flow) return false
+  if (flow.assetUploading) return false
   if (flow.step === 'artist') {
     if (flow.draft.artist.kind === 'group') {
       const namedMembers = flow.draft.artist.members.filter((member) => member.name.trim())
@@ -151,12 +153,10 @@ const canGoForward = computed(() => {
   }
   if (flow.step === 'albumDetails') {
     return !!flow.draft.albumImport.importId
-      && flow.draft.albumImport.status === 'ready'
       && !!flow.draft.albumDetails.title.trim()
       && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
   }
   return !!flow.draft.albumImport.importId
-    && flow.draft.albumImport.status === 'ready'
     && !!flow.draft.albumDetails.title.trim()
     && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
 })
@@ -382,7 +382,7 @@ function goBackStep() {
 
 async function completeCreation() {
   const flow = creationFlow.value
-  if (!flow || flow.submitting) return
+  if (!flow || flow.submitting || flow.assetUploading) return
 
   flow.submitting = true
   flow.errorMessage = ''
@@ -400,6 +400,8 @@ async function completeCreation() {
     const result = await commitMusicAlbumImport(importId, buildCommitInput(flow))
     const artistId = await committedArtistId(flow, result)
     refreshArtist()
+    toastMessage.value = '已提交至导入中心，后台将继续处理'
+    toastVisible.value = true
     closeCurrentCreationFlow()
     if (artistId) await router.push(`/music/artist/${artistId}`)
   } catch (error) {
@@ -413,6 +415,7 @@ async function completeCreation() {
 </script>
 
 <template>
+  <PToast v-model="toastVisible" :message="toastMessage" />
   <PSheet
     :show="isOpen"
     title="创建音乐条目"

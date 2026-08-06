@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
@@ -33,7 +33,13 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     drawers.closeAll()
     vi.mocked(uploadMusicAsset).mockReset()
     vi.mocked(listMusicArtists).mockReset()
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => 'blob:album-cover-preview'),
+      revokeObjectURL: vi.fn(),
+    })
   })
+
+  afterEach(() => vi.unstubAllGlobals())
 
   it('renders album details fields in the confirmed order and shows seeded draft values', () => {
     const drawers = useMusicDrawers()
@@ -388,10 +394,10 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
   })
 
   it('opens square crop sheet before applying manual album cover preview', async () => {
-    vi.mocked(uploadMusicAsset).mockResolvedValue({
-      key: 'music/cover-cropped.png',
-      url: 'https://img.example/cover-cropped.png',
-    })
+    let resolveUpload: ((value: { key: string; url: string }) => void) | null = null
+    vi.mocked(uploadMusicAsset).mockImplementation(() => new Promise((resolve) => {
+      resolveUpload = resolve
+    }))
 
     const drawers = useMusicDrawers()
     drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
@@ -416,12 +422,22 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(flow.draft.albumDetails.coverUrl).toBe('')
 
     await wrapper.get('[data-testid="music-square-crop-confirm"]').trigger('click')
-    await flushPromises()
 
+    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('img[alt="封面预览"]').attributes('src')).toBe('blob:album-cover-preview')
+    expect(wrapper.text()).toContain('正在上传封面...')
+    expect(flow.assetUploading).toBe(true)
     expect(vi.mocked(uploadMusicAsset)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(uploadMusicAsset).mock.calls[0]?.[1]).toBe('music.cover')
+
+    resolveUpload?.({
+      key: 'music/cover-cropped.png',
+      url: 'https://img.example/cover-cropped.png',
+    })
+    await flushPromises()
+
     expect(flow.draft.albumDetails.coverUrl).toBe('https://img.example/cover-cropped.png')
-    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
+    expect(flow.assetUploading).toBe(false)
   })
 
   it('识别封面在确认裁剪前保持待选状态，并可在取消后重新打开', async () => {

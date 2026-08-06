@@ -108,6 +108,7 @@ const createFlowState = (overrides: Partial<MusicCreationFlowState> = {}): Music
   tracksCustomized: false,
   titleCustomized: false,
   dirty: false,
+  assetUploading: false,
   submitting: false,
   errorMessage: '',
   ...overrides,
@@ -401,7 +402,7 @@ describe('MusicCreationFlowDrawer', () => {
     expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
   })
 
-  it('导入未就绪时不能从详情进入预览', async () => {
+  it('导入在处理中时仍可从详情进入预览', async () => {
     drawerMocks.state.value.creationFlow = createFlowState({
       step: 'albumDetails',
       draft: {
@@ -422,16 +423,15 @@ describe('MusicCreationFlowDrawer', () => {
     const wrapper = mount(MusicCreationFlowDrawer)
     const nextButton = wrapper.get('[data-testid="artist-next-button"]')
 
-    expect(nextButton.attributes('disabled')).toBeDefined()
-    expect(nextButton.text()).toBe('处理中…')
-    expect(wrapper.get('[data-testid="creation-flow-block-reason"]').text()).toBe('处理完成后即可继续')
+    expect(nextButton.attributes('disabled')).toBeUndefined()
+    expect(nextButton.text()).toBe('继续')
     await nextButton.trigger('click')
 
-    expect(drawerMocks.state.value.creationFlow?.step).toBe('albumDetails')
+    expect(drawerMocks.state.value.creationFlow?.step).toBe('preview')
   })
 
   it.each(['uploading', 'extracting'] as const)(
-    '%s 状态在预览页禁止提交，且保留抽屉',
+    '%s 状态在预览页允许提交至导入中心并关闭抽屉',
     async (status) => {
       commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
       drawerMocks.state.value.creationFlow = createFlowState({
@@ -452,14 +452,13 @@ describe('MusicCreationFlowDrawer', () => {
 
       const wrapper = mount(MusicCreationFlowDrawer)
       const finishButton = wrapper.get('[data-testid="music-creation-finish-button"]')
-
-      expect(finishButton.attributes('disabled')).toBeDefined()
+      expect(finishButton.attributes('disabled')).toBeUndefined()
 
       await finishButton.trigger('click')
       await flushPromises()
 
-      expect(commitMusicAlbumImportMock).not.toHaveBeenCalled()
-      expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
+      expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
+      expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalled()
     },
   )
 

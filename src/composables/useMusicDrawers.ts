@@ -252,6 +252,7 @@ export function useMusicDrawers() {
       tracksCustomized: false,
       titleCustomized: false,
       dirty: false,
+      assetUploading: false,
       submitting: false,
       errorMessage: '',
     }

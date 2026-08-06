@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { GripVertical, ImageUp, Plus, X } from 'lucide-vue-next'
 import {
   uploadMusicAsset,
@@ -26,6 +26,7 @@ const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ??
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
 const coverUploading = ref(false)
 const coverErrorMessage = ref('')
+const coverPreviewUrl = ref('')
 const draggedTrackId = ref<string | null>(null)
 
 const albumTypeOptions = [
@@ -71,6 +72,18 @@ const unresolvedImportedCoverUrl = computed(() => {
   if (handledImportedCoverUrl.value === nextCoverUrl) return ''
   return nextCoverUrl
 })
+const coverDisplayUrl = computed(() => coverPreviewUrl.value || albumDetailsDraft.value?.coverUrl || '')
+
+function clearCoverPreviewUrl() {
+  if (!coverPreviewUrl.value) return
+  URL.revokeObjectURL(coverPreviewUrl.value)
+  coverPreviewUrl.value = ''
+}
+
+function replaceCoverPreviewUrl(file: File) {
+  clearCoverPreviewUrl()
+  coverPreviewUrl.value = URL.createObjectURL(file)
+}
 
 function requiredLabel(label: string) {
   return `${label}*`
@@ -315,27 +328,33 @@ function clearPendingCoverCrop() {
 }
 
 async function confirmCoverCrop(file: File) {
-  if (!creationFlow.value || !albumDetailsDraft.value) return
+  const flow = creationFlow.value
+  const draft = albumDetailsDraft.value
+  if (!flow || !draft) return
 
   const importedSourceUrl = pendingCoverCrop.value?.kind === 'imported'
     ? pendingCoverCrop.value.sourceUrl?.trim() || ''
     : ''
 
+  replaceCoverPreviewUrl(file)
   coverUploading.value = true
   coverErrorMessage.value = ''
+  flow.assetUploading = true
+  if (importedSourceUrl) {
+    handledImportedCoverUrl.value = importedSourceUrl
+  }
+  pendingCoverCrop.value = null
 
   try {
     const asset = await uploadMusicAsset(file, 'music.cover')
-    albumDetailsDraft.value.coverAsset = asset
-    albumDetailsDraft.value.coverUrl = asset.url
-    if (importedSourceUrl) {
-      handledImportedCoverUrl.value = importedSourceUrl
-    }
-    pendingCoverCrop.value = null
+    draft.coverAsset = asset
+    draft.coverUrl = asset.url
+    clearCoverPreviewUrl()
   } catch (error) {
     coverErrorMessage.value = error instanceof Error ? error.message : '封面上传失败'
   } finally {
     coverUploading.value = false
+    flow.assetUploading = false
   }
 }
 
@@ -385,6 +404,10 @@ watch(
   },
   { immediate: true },
 )
+
+onBeforeUnmount(() => {
+  clearCoverPreviewUrl()
+})
 </script>
 
 <template>
@@ -453,14 +476,14 @@ watch(
             <div
               class="custom-file-picker square-picker"
               :class="{
-                'has-cover': !!albumDetailsDraft.coverUrl,
+                'has-cover': !!coverDisplayUrl,
                 'is-disabled': coverUploading,
               }"
               @click="coverInputRef?.click()"
             >
               <img
-                v-if="albumDetailsDraft.coverUrl"
-                :src="albumDetailsDraft.coverUrl"
+                v-if="coverDisplayUrl"
+                :src="coverDisplayUrl"
                 alt="封面预览"
                 class="cover-picker-image"
               />
@@ -476,13 +499,13 @@ watch(
               <PButton
                 type="button"
                 variant="secondary"
-                :class="{ 'cover-change-button': !!albumDetailsDraft.coverUrl }"
+                :class="{ 'cover-change-button': !!coverDisplayUrl }"
                 data-testid="album-details-cover-change-button"
                 :disabled="coverUploading"
                 @click.stop="coverInputRef?.click()"
               >
-                <ImageUp v-if="albumDetailsDraft.coverUrl" :size="16" aria-hidden="true" />
-                {{ albumDetailsDraft.coverUrl ? '更换封面' : '浏览文件' }}
+                <ImageUp v-if="coverDisplayUrl" :size="16" aria-hidden="true" />
+                {{ coverDisplayUrl ? '更换封面' : '浏览文件' }}
               </PButton>
             </div>
           </div>

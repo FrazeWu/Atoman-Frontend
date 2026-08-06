@@ -144,8 +144,15 @@ describe('App responsive shell', () => {
 describe('shared responsive shell CSS', () => {
   const hasSidebarBlock = getBlock('.has-sidebar')
   const mainContentBlock = getBlock('.a-main-content')
+  const desktopBlock = getMediaBlock('(min-width: 768px)')
   const tabletBlock = getMediaBlock('(max-width: 1023px)')
   const mobileBlock = getMediaBlock('(max-width: 767px)')
+
+  it('keeps teleported overlays aligned when the desktop sidebar collapses', () => {
+    expect(styleSource).toContain('--a-sidebar-collapsed-width: 4.5rem;')
+    expect(desktopBlock).toContain('body:has(.app-shell.has-sidebar .a-module-layout.is-sidebar-collapsed)')
+    expect(desktopBlock).toContain('--a-sidebar-width: var(--a-sidebar-collapsed-width);')
+  })
 
   it('defines a tablet band that narrows sidebar occupancy before mobile', () => {
     expect(tabletBlock).toContain('.has-sidebar')

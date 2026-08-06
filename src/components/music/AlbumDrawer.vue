@@ -853,6 +853,39 @@ watch(
   padding: 1.5rem 2rem;
   margin-bottom: 2rem;
 }
+
+@media (max-width: 767px) {
+  .drawer-body {
+    margin: 0;
+    padding: 1rem 0;
+  }
+
+  .album-meta-row {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .album-info {
+    min-width: 0;
+  }
+
+  .album-title {
+    overflow-wrap: anywhere;
+  }
+
+  .action-bar {
+    flex-wrap: wrap;
+  }
+
+  .spacer {
+    display: none;
+  }
+
+  .content-section {
+    padding: 1rem;
+  }
+}
+
 .section-title {
   font-family: var(--a-font-sans);
   font-size: 0.72rem;

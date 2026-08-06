@@ -14,6 +14,7 @@ describe('PSheet.vue', () => {
 
     expect(source).toMatch(/\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*var\(--a-sidebar-width\)/)
     expect(source).toMatch(/@media \(max-width: 767px\)[\s\S]*?\.p-sheet-backdrop\s*\{[\s\S]*?left:\s*0/)
+    expect(source).toMatch(/\.p-sheet-panel\s*\{[\s\S]*?transition:[^;]*left 0\.2s ease/)
   })
 
   it('renders body content and the vertical page rail', () => {

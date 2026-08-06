@@ -75,7 +75,7 @@
             :class="{
               'sheet-content--compact': !hasHeader,
               'sheet-content--has-close': showHeaderClose,
-              'sheet-content--has-bookmark-close': showLayerRail,
+              'sheet-content--has-bookmark-close': showLayerRail || showBookmarkTab,
             }"
             :aria-hidden="isTopLayer ? undefined : 'true'"
             :inert="isTopLayer ? undefined : true"
@@ -232,7 +232,7 @@ const sheetStyle = computed(() => {
 
 <style scoped>
 .p-sheet-panel {
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s, right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s, left 0.2s ease, right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .p-sheet-panel.is-shifted {
@@ -307,7 +307,6 @@ const sheetStyle = computed(() => {
   width: 80px;
   flex-direction: column;
   align-items: center;
-  border-right: 1px solid var(--a-color-border-soft);
   background: #ffffff;
 }
 
@@ -329,6 +328,11 @@ const sheetStyle = computed(() => {
   justify-content: center;
   transition: color 0.2s, opacity 0.2s;
   opacity: 0.6;
+}
+
+.sheet-layer-rail .sheet-close-btn-bookmark {
+  align-self: flex-start;
+  margin-left: 4px;
 }
 
 .sheet-close-btn-bookmark--legacy {
@@ -471,7 +475,6 @@ const sheetStyle = computed(() => {
     right: auto;
     bottom: auto;
     width: 64px;
-    border-right: 0;
   }
 
   .sheet-layer-title {
@@ -479,12 +482,12 @@ const sheetStyle = computed(() => {
   }
 
   .is-right .sheet-content--has-bookmark-close {
-    padding-left: 2.5rem;
+    padding-left: 1rem;
   }
 
   .p-sheet-panel.is-right .sheet-content,
   .p-sheet-panel.is-left .sheet-content {
-    padding-top: 4rem;
+    padding: 4rem 1rem 1rem;
   }
 
   .sheet-content--has-close {

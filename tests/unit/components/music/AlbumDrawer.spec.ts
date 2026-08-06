@@ -288,6 +288,39 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
 
+  it('keeps track specifications hidden until detailed display is selected', async () => {
+    getMusicAlbum.mockResolvedValue({
+      id: '1',
+      title: 'Archive Album',
+      entry_status: 'open',
+      songs: [{
+        id: 'song-1',
+        title: 'Master',
+        track_number: 1,
+        audio_url: 'https://cdn.test/master.mp3',
+        source_file_name: '01 - Master.flac',
+        source_container: 'flac',
+        source_bit_depth: 24,
+        source_sample_rate_hz: 96000,
+        source_channels: 2,
+        source_size_bytes: 95 * 1024 * 1024,
+        source_lossless: true,
+        playback_container: 'mp3',
+        playback_bitrate_kbps: 320,
+      }],
+    })
+
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('01 - Master.flac')
+    await wrapper.get('[data-testid="album-track-display-detailed"]').trigger('click')
+
+    expect(wrapper.text()).toContain('FLAC · 无损 · 24-bit · 96 kHz · 2 ch · 95.0 MB')
+    expect(wrapper.text()).toContain('01 - Master.flac')
+    expect(wrapper.text()).toContain('MP3 · 320 kbps')
+  })
+
   it('opens unified album editor when clicking 编辑', async () => {
     const wrapper = mount(AlbumDrawer, {
     })

@@ -9,6 +9,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { Plus, Play, Heart, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -52,6 +53,11 @@ const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const trackDisplayMode = ref<'simple' | 'detailed'>('simple')
+const trackDisplayOptions = [
+  { label: '简单', value: 'simple', testid: 'album-track-display-simple' },
+  { label: '详细', value: 'detailed', testid: 'album-track-display-detailed' },
+]
 const {
   favoriteSongIds,
   loadFavoriteSongs,
@@ -167,6 +173,40 @@ function formatDuration(value: unknown): string {
 
 function getTrackDurationLabel(track: AlbumTrack | Record<string, unknown>): string {
   return formatDuration((track as { duration_sec?: unknown }).duration_sec ?? (track as { duration?: unknown }).duration)
+}
+
+function formatFileSize(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return ''
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(value >= 100 * 1024 * 1024 ? 0 : 1)} MB`
+}
+
+function formatSampleRate(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return ''
+  return `${value >= 1000 ? value / 1000 : value} kHz`
+}
+
+function sourceSpecification(track: AlbumTrack) {
+  const parts = [
+    track.source_container?.toUpperCase(),
+    track.source_lossless ? '无损' : '',
+    track.source_bit_depth ? `${track.source_bit_depth}-bit` : '',
+    formatSampleRate(track.source_sample_rate_hz),
+    track.source_channels ? `${track.source_channels} ch` : '',
+    track.source_bitrate_kbps ? `${track.source_bitrate_kbps} kbps` : '',
+    formatFileSize(track.source_size_bytes),
+  ]
+  return parts.filter(Boolean).join(' · ')
+}
+
+function playbackSpecification(track: AlbumTrack) {
+  const parts = [
+    track.playback_container?.toUpperCase(),
+    track.playback_bitrate_kbps ? `${track.playback_bitrate_kbps} kbps` : '',
+    formatSampleRate(track.playback_sample_rate_hz),
+    track.playback_channels ? `${track.playback_channels} ch` : '',
+  ]
+  return parts.filter(Boolean).join(' · ')
 }
 
 function playAlbum() {
@@ -465,9 +505,12 @@ watch(
       </div>
 
       <div class="content-section">
-        <div class="section-title">Tracklist</div>
+        <div class="tracklist-heading">
+          <div class="section-title">曲目</div>
+          <PSegmentedControl v-model="trackDisplayMode" :options="trackDisplayOptions" aria-label="曲目显示方式" />
+        </div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
-        <div v-for="(track, index) in tracks" :key="track.id" class="track">
+        <div v-for="(track, index) in tracks" :key="track.id" class="track" :class="{ 'track--detailed': trackDisplayMode === 'detailed' }">
           <div class="track-main">
             <button
               class="track-play-btn"
@@ -516,6 +559,18 @@ watch(
                 </button>
               </div>
             </PDropdown>
+          </div>
+          <div v-if="trackDisplayMode === 'detailed'" class="track-specification">
+            <p v-if="sourceSpecification(track)" class="track-specification__line">
+              <span>源文件</span>{{ sourceSpecification(track) }}
+            </p>
+            <p v-if="track.source_file_name" class="track-specification__line track-specification__file">
+              <span>文件名</span>{{ track.source_file_name }}
+            </p>
+            <p v-if="playbackSpecification(track)" class="track-specification__line">
+              <span>播放版本</span>{{ playbackSpecification(track) }}
+            </p>
+            <p v-if="!sourceSpecification(track) && !playbackSpecification(track)" class="track-specification__empty">暂无规格信息</p>
           </div>
         </div>
       </div>
@@ -806,6 +861,15 @@ watch(
   color: var(--a-color-muted);
   font-weight: 500;
 }
+.tracklist-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.tracklist-heading .section-title {
+  flex: 1;
+}
 .track {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -815,6 +879,10 @@ watch(
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 8%, transparent);
   font-size: 0.9rem;
   transition: background-color 0.15s ease;
+}
+.track--detailed {
+  grid-template-rows: auto auto;
+  align-items: start;
 }
 .track:last-child { border-bottom: none; }
 .track:hover {
@@ -867,6 +935,34 @@ watch(
   align-items: center;
   gap: 0.75rem;
   flex-shrink: 0;
+}
+.track-specification {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.1rem 0 0.15rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.track-specification__line,
+.track-specification__empty {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.track-specification__line span {
+  display: inline-block;
+  min-width: 4.5rem;
+  margin-right: 0.5rem;
+  color: var(--a-color-text-secondary);
+  font-weight: 600;
+}
+.track-specification__file {
+  font-family: var(--a-font-mono, monospace);
+}
+.track-specification__empty {
+  color: var(--a-color-muted-soft);
 }
 .track-unavailable {
   font-family: var(--a-font-sans);

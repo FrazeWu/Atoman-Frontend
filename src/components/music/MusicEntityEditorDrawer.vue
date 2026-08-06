@@ -273,7 +273,7 @@ function hydrateAlbumDraft(result: MusicAlbumListItem) {
   meta = reactive({
     artist: (result.artists ?? []).map(toArtistDraft),
     album: result.title ?? '',
-    releaseDate: result.release_date ?? '',
+    releaseDate: result.release_date?.slice(0, 10) ?? '',
     albumType: normalizeAlbumType(result.album_type),
   })
 

@@ -270,6 +270,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
       title: 'Test Album',
       entry_status: 'open',
       artists: [{ id: artistId, name: 'Test Artist' }],
+      release_date: '2007-11-10T00:00:00Z',
       songs: [],
     })
     drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
@@ -291,6 +292,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
     expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(file, 'music.cover')
     expect(mocks.buildUpdateAlbumEdit).toHaveBeenCalledWith('album-1', expect.objectContaining({
       artist_ids: [artistId],
+      release_date: '2007-11-10',
       cover: expect.objectContaining({ url: 'https://assets.example.test/covers/new.webp' }),
     }))
   })

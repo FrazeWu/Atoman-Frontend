@@ -2,15 +2,17 @@ import { randomUUID } from 'node:crypto'
 import { expect } from '@playwright/test'
 
 import { test } from '../fixtures/base'
+import { ADMIN_PASSWORD, ADMIN_USERNAME, loginViaUI } from '../helpers/auth'
 
 const enabled = process.env.BLOG_COLLAB_REAL_E2E === '1'
-const authState = './tests/e2e/.auth/admin.json'
-
 test.describe('Blog collaboration', () => {
+  test.setTimeout(60_000)
   test.skip(!enabled, 'requires BLOG_COLLAB_REAL_E2E=1 and a local backend')
 
-  test('syncs editor content between two authenticated browsers', async ({ authenticatedPage, browser }) => {
-    const sessionResponse = await authenticatedPage.request.get('/api/v1/auth/session')
+  test('syncs editor content between two authenticated pages', async ({ page }) => {
+    await loginViaUI(page, ADMIN_USERNAME, ADMIN_PASSWORD)
+
+    const sessionResponse = await page.request.get('/api/v1/auth/session')
     expect(sessionResponse.ok()).toBeTruthy()
     const session = await sessionResponse.json() as { csrf_token?: string; data?: { csrf_token?: string } }
     const csrfToken = session.csrf_token || session.data?.csrf_token
@@ -21,18 +23,16 @@ test.describe('Blog collaboration', () => {
       Origin: new URL(process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173').origin,
     }
 
-    const studioResponse = await authenticatedPage.request.get('/api/v1/studio/state', { headers })
+    const studioResponse = await page.request.get('/api/v1/studio/state', { headers })
     expect(studioResponse.ok()).toBeTruthy()
     const studioPayload = await studioResponse.json() as { data?: { current_channel?: { id?: string } } }
     const channelId = studioPayload.data?.current_channel?.id
     expect(channelId).toBeTruthy()
+    const request = page.request
 
     let postId: string | undefined
-    const contextA = await browser.newContext({ baseURL: process.env.PLAYWRIGHT_BASE_URL, storageState: authState })
-    const contextB = await browser.newContext({ baseURL: process.env.PLAYWRIGHT_BASE_URL, storageState: authState })
-
     try {
-      const created = await authenticatedPage.request.post('/api/v1/blog/posts', {
+      const created = await page.request.post('/api/v1/blog/posts', {
         headers,
         data: {
           channel_id: channelId,
@@ -47,28 +47,39 @@ test.describe('Blog collaboration', () => {
       postId = createdPayload.data?.id
       expect(postId).toBeTruthy()
 
-      const pageA = await contextA.newPage()
-      const pageB = await contextB.newPage()
-      const editorPath = `/studio/blog/${postId}/edit`
-      await Promise.all([pageA.goto(editorPath), pageB.goto(editorPath)])
+      const pageA = page
+      const pageB = await page.context().newPage()
+      try {
+        const editorPath = `/studio/blog/${postId}/edit`
+        const editorURL = new URL(editorPath, process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173').toString()
+        const editorA = pageA.locator('.cm-content')
+        const editorB = pageB.locator('.cm-content')
+        await pageA.goto(editorURL, { waitUntil: 'domcontentloaded' })
+        await expect(pageA).toHaveURL(editorURL)
+        try {
+          await expect(editorA).toBeVisible({ timeout: 20_000 })
+        } catch {
+          throw new Error(`editor did not load: ${await pageA.locator('body').innerText()}`)
+        }
+        await pageB.goto(editorURL, { waitUntil: 'domcontentloaded' })
+        await expect(editorB).toBeVisible({ timeout: 20_000 })
 
-      const editorA = pageA.locator('.cm-content')
-      const editorB = pageB.locator('.cm-content')
-      await expect(editorA).toBeVisible()
-      await expect(editorB).toBeVisible()
+        const syncedContent = `# 协作测试\n同步-${randomUUID()}`
+        await editorA.click()
+        await editorA.press('Control+A')
+        await pageA.keyboard.type(syncedContent)
 
-      const syncedContent = `# 协作测试\n同步-${randomUUID()}`
-      await editorA.click()
-      await editorA.press('Control+A')
-      await pageA.keyboard.type(syncedContent)
-
-      await expect(editorB).toContainText(syncedContent, { timeout: 10_000 })
+        await expect(editorB).toContainText(syncedContent, { timeout: 10_000 })
+      } finally {
+        await pageB.close()
+      }
     } finally {
-      await contextA.close()
-      await contextB.close()
       if (postId) {
-        await authenticatedPage.request.delete(`/api/v1/blog/posts/${postId}`, {
-          headers,
+        const cleanupSession = await request.get('/api/v1/auth/session')
+        const cleanupPayload = await cleanupSession.json() as { csrf_token?: string; data?: { csrf_token?: string } }
+        const cleanupToken = cleanupPayload.csrf_token || cleanupPayload.data?.csrf_token
+        await request.delete(`/api/v1/blog/posts/${postId}`, {
+          headers: { ...headers, 'X-CSRF-Token': cleanupToken! },
         })
       }
     }

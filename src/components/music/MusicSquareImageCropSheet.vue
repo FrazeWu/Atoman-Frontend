@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -105,15 +104,16 @@ async function resolveSource() {
     }
 
     if (props.sourceUrl?.trim()) {
-      const response = await apiRequest(props.sourceUrl)
-      if (!response.ok) throw new Error('图片加载失败')
+      const proxyUrl = `/media/cover?url=${encodeURIComponent(props.sourceUrl.trim())}`
+      const response = await fetch(proxyUrl)
+      if (!response.ok) throw new Error('封面加载失败，请重新选择图片')
       const blob = await response.blob()
       resolvedObjectUrl.value = URL.createObjectURL(blob)
       resolvedSourceUrl.value = resolvedObjectUrl.value
       return
     }
-  } catch (error) {
-    loadErrorMessage.value = error instanceof Error ? error.message : '图片加载失败'
+  } catch {
+    loadErrorMessage.value = '封面加载失败，请重新选择图片'
   } finally {
     loading.value = false
   }

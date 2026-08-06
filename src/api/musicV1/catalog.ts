@@ -377,6 +377,16 @@ export async function listMusicListeningHistory(
   return listResponseWithPaginationFallback(response, filters);
 }
 
+export async function listMusicLibrary<T>(
+  kind: 'song' | 'album' | 'artist' | 'playlist',
+  filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {},
+): Promise<MusicListResponse<T>> {
+  const response = await apiGetEnvelope<T[], PaginationMeta>(
+    `${musicV1Endpoints.library()}${queryString({ kind, ...filters })}`,
+  )
+  return listResponseWithPaginationFallback(response, filters)
+}
+
 export async function getMusicHome(): Promise<MusicHome> {
   return apiGet<MusicHome>(musicV1Endpoints.home());
 }

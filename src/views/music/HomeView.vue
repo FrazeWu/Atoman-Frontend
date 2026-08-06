@@ -58,8 +58,6 @@ async function loadPendingRebindNotifications() {
 
 async function loadMusicHome() {
   musicHome.value = null
-  if (!authStore?.isAuthenticated) return
-
   musicHomeLoading.value = true
   try {
     musicHome.value = await getMusicHome()
@@ -174,8 +172,15 @@ watch(
               <MusicAlbumCard :album="album" :show-bookmark="false" />
             </button>
           </div>
+          <p v-if="musicHome.for_you_reason" class="music-home-section__reason">{{ musicHome.for_you_reason }}</p>
         </section>
       </template>
+      <section v-for="section in musicHome?.sections ?? []" :key="section.key" class="music-home-section" :aria-labelledby="`home-${section.key}`">
+        <header class="music-home-section__header"><h2 :id="`home-${section.key}`">{{ section.title }}</h2></header>
+        <div class="music-home-albums">
+          <button v-for="album in section.albums" :key="album.id" type="button" class="music-home-album-button" :aria-label="`打开专辑 ${album.title}`" @click="openAlbum(album.id)"><MusicAlbumCard :album="album" :show-bookmark="false" /></button>
+        </div>
+      </section>
       <ExploreView page-title="专辑" content-mode="albums" />
     </div>
   </div>
@@ -215,6 +220,7 @@ watch(
   font-size: 1rem;
   font-weight: 600;
 }
+.music-home-section__reason { margin: 0; color: var(--a-color-muted); font-size: 0.875rem; }
 
 .recently-played-list {
   display: grid;

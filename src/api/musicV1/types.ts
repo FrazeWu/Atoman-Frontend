@@ -414,6 +414,8 @@ export type MusicHome = {
   personalized: boolean;
   recently_played: MusicListeningHistory[];
   for_you: MusicAlbumListItem[];
+  for_you_reason?: string;
+  sections: Array<{ key: string; title: string; albums: MusicAlbumListItem[] }>;
 };
 
 export type MusicPlaylistSummary = {

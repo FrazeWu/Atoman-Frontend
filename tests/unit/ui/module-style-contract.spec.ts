@@ -15,7 +15,7 @@ const videoFiles = [
 const musicFiles = [
   'src/views/music/ArtistsView.vue',
   'src/views/music/ExploreView.vue',
-  'src/views/music/StarredView.vue',
+  'src/views/music/LibraryView.vue',
   'src/components/music/ArtistDrawer.vue',
   'src/components/music/AlbumDrawer.vue',
   'src/components/music/PlaylistDrawer.vue',

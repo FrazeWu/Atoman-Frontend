@@ -778,6 +778,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   .search-shell,
   .search-shell.is-open {
     max-width: 100%;
+    width: 100%;
+    flex: 0 0 36px;
   }
 
   .search-shell.is-open :deep(.search-frame) {

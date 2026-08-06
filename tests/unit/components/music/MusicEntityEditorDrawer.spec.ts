@@ -57,7 +57,7 @@ const mocks = vi.hoisted(() => ({
   getMusicAlbum: vi.fn(),
   uploadMusicAsset: vi.fn(),
   submitMusicEdit: vi.fn(),
-	buildUpdateArtistEdit: vi.fn(),
+  buildUpdateArtistEdit: vi.fn(),
   buildUpdateAlbumEdit: vi.fn(),
 }))
 
@@ -85,7 +85,7 @@ vi.mock('@/components/music', () => ({
     emits: ['update:cover'],
     template: '<div data-testid="album-editor-shell-stub" />',
   },
-	MusicArtistForm: { name: 'MusicArtistForm', emits: ['submit'], template: '<div data-testid="music-artist-form-stub" />' },
+  MusicArtistForm: { name: 'MusicArtistForm', emits: ['submit'], template: '<div data-testid="music-artist-form-stub" />' },
 }))
 
 vi.mock('@/components/music/MusicCreationArtistStep.vue', () => ({
@@ -124,7 +124,7 @@ vi.mock('@/api/musicV1', () => ({
   submitMusicEdit: mocks.submitMusicEdit,
   uploadMusicAsset: mocks.uploadMusicAsset,
   commitMusicAlbumImport: vi.fn(),
-	buildUpdateArtistEdit: mocks.buildUpdateArtistEdit,
+  buildUpdateArtistEdit: mocks.buildUpdateArtistEdit,
   buildUpdateAlbumEdit: mocks.buildUpdateAlbumEdit,
 }))
 
@@ -193,7 +193,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
     mocks.getMusicAlbum.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.submitMusicEdit.mockReset()
-		mocks.buildUpdateArtistEdit.mockReset()
+    mocks.buildUpdateArtistEdit.mockReset()
     mocks.buildUpdateAlbumEdit.mockReset()
     mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Test Artist' })
     mocks.getMusicAlbum.mockResolvedValue({
@@ -209,7 +209,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
       size: 1,
     })
     mocks.submitMusicEdit.mockResolvedValue({})
-		mocks.buildUpdateArtistEdit.mockReturnValue({ id: 'artist-edit-request' })
+    mocks.buildUpdateArtistEdit.mockReturnValue({ id: 'artist-edit-request' })
     mocks.buildUpdateAlbumEdit.mockReturnValue({ id: 'edit-request' })
   })
 
@@ -243,25 +243,25 @@ describe('MusicEntityEditorDrawer.vue', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-	it('submits artist edits through the auditable music edit flow', async () => {
-		drawerState.value.musicEditor = { entity: 'artist', mode: 'edit', id: 'artist-1' }
-		const wrapper = mountDrawer()
-		await flushPromises()
+  it('submits artist edits through the auditable music edit flow', async () => {
+    drawerState.value.musicEditor = { entity: 'artist', mode: 'edit', id: 'artist-1' }
+    const wrapper = mountDrawer()
+    await flushPromises()
 
-		wrapper.getComponent({ name: 'MusicArtistForm' }).vm.$emit('submit', {
-			name: 'Updated Artist',
-			bio: 'Updated biography',
-		})
-		await flushPromises()
+    wrapper.getComponent({ name: 'MusicArtistForm' }).vm.$emit('submit', {
+      name: 'Updated Artist',
+      bio: 'Updated biography',
+    })
+    await flushPromises()
 
-		expect(mocks.buildUpdateArtistEdit).toHaveBeenCalledWith('artist-1', {
-			name: 'Updated Artist',
-			bio: 'Updated biography',
-			reason: '编辑艺术家',
-			sources: [],
-		})
-		expect(mocks.submitMusicEdit).toHaveBeenCalledWith({ id: 'artist-edit-request' })
-	})
+    expect(mocks.buildUpdateArtistEdit).toHaveBeenCalledWith('artist-1', {
+      name: 'Updated Artist',
+      bio: 'Updated biography',
+      reason: '编辑艺术家',
+      sources: [],
+    })
+    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({ id: 'artist-edit-request' })
+  })
 
   it('uploads the selected replacement cover when saving an album', async () => {
     drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }

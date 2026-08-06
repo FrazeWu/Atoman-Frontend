@@ -226,19 +226,19 @@ describe('NestedActionDrawer.vue', () => {
     await wrapper.get('[data-test="edit-reason-input"]').setValue('update bio and name')
     await wrapper.get('[data-test="music-edit-submit"]').trigger('submit')
 
-		expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
-			type: 'update_artist',
-			entity_type: 'artist',
-			entity_id: 'artist-1',
-			payload: {},
-			changes: {
-				name: 'Revised Artist',
-				bio: 'revised biography',
-			},
-			reason: 'update bio and name',
-			sources: [],
-		})
-		expect(mocks.closeNestedAction).toHaveBeenCalled()
+    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
+      type: 'update_artist',
+      entity_type: 'artist',
+      entity_id: 'artist-1',
+      payload: {},
+      changes: {
+        name: 'Revised Artist',
+        bio: 'revised biography',
+      },
+      reason: 'update bio and name',
+      sources: [],
+    })
+    expect(mocks.closeNestedAction).toHaveBeenCalled()
   })
 
   it('renders and submits the revise album wiki edit form', async () => {

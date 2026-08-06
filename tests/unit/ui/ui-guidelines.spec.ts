@@ -26,7 +26,7 @@ describe('UI 准则', () => {
       'src/views/auth/LoginView.vue',
       'src/views/blog/PostEditorView.vue',
       'src/views/feed/FeedItemDetailView.vue',
-      'src/views/music/StarredView.vue',
+      'src/views/music/LibraryView.vue',
       'src/views/portal/PortalView.vue',
     ].map(read)
 

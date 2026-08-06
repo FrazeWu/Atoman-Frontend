@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, nextTick, reactive } from 'vue'
 import { createPinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import HomeView from '@/views/music/HomeView.vue'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   closeMusicEditor: vi.fn(),
   routeQuery: {} as Record<string, string>,
   listPendingMusicLyricsAnnotations: vi.fn(),
-	getMusicHome: vi.fn(),
+  getMusicHome: vi.fn(),
   routerPush: vi.fn(),
 }))
 
@@ -62,7 +62,7 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/api/musicV1', () => ({
   listPendingMusicLyricsAnnotations: mocks.listPendingMusicLyricsAnnotations,
-	getMusicHome: mocks.getMusicHome,
+  getMusicHome: mocks.getMusicHome,
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -72,6 +72,14 @@ vi.mock('@/stores/auth', () => ({
 vi.mock('@/router', () => ({
   default: { push: mocks.routerPush },
 }))
+
+const mountedWrappers: Array<ReturnType<typeof mount>> = []
+
+function mountHome() {
+  const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+  mountedWrappers.push(wrapper)
+  return wrapper
+}
 
 describe('Music HomeView.vue (Album Landing)', () => {
   beforeEach(() => {
@@ -84,9 +92,9 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.openMusicEditor.mockReset()
     mocks.closeMusicEditor.mockReset()
     mocks.listPendingMusicLyricsAnnotations.mockReset()
-		mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
-		mocks.getMusicHome.mockReset()
-		mocks.getMusicHome.mockResolvedValue({ personalized: false, recently_played: [], for_you: [], sections: [] })
+    mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
+    mocks.getMusicHome.mockReset()
+    mocks.getMusicHome.mockResolvedValue({ personalized: false, recently_played: [], for_you: [], sections: [] })
     mocks.routerPush.mockReset()
     authStore.isAuthenticated = false
     authStore.token = null
@@ -94,8 +102,12 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.routeQuery = {}
   })
 
+  afterEach(() => {
+    mountedWrappers.splice(0).forEach(wrapper => wrapper.unmount())
+  })
+
   it('renders the album landing content for the music module entry', () => {
-    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    const wrapper = mountHome()
 
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('专辑首页')
@@ -103,40 +115,40 @@ describe('Music HomeView.vue (Album Landing)', () => {
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-content-mode')).toBe('albums')
   })
 
-	it('ignores an older guest response after the authenticated home request finishes', async () => {
-		let resolveGuest!: (value: unknown) => void
-		let resolveAuthenticated!: (value: unknown) => void
-		const guestRequest = new Promise(resolve => { resolveGuest = resolve })
-		const authenticatedRequest = new Promise(resolve => { resolveAuthenticated = resolve })
-		mocks.getMusicHome
-			.mockReturnValueOnce(guestRequest)
-			.mockReturnValueOnce(authenticatedRequest)
+  it('ignores an older guest response after the authenticated home request finishes', async () => {
+    let resolveGuest!: (value: unknown) => void
+    let resolveAuthenticated!: (value: unknown) => void
+    const guestRequest = new Promise(resolve => { resolveGuest = resolve })
+    const authenticatedRequest = new Promise(resolve => { resolveAuthenticated = resolve })
+    mocks.getMusicHome
+      .mockReturnValueOnce(guestRequest)
+      .mockReturnValueOnce(authenticatedRequest)
 
-		const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
-		authStore.isAuthenticated = true
-		authStore.token = 'cookie-session'
-		authStore.user = { uuid: 'user-1' }
-		await nextTick()
+    const wrapper = mountHome()
+    authStore.isAuthenticated = true
+    authStore.token = 'cookie-session'
+    authStore.user = { uuid: 'user-1' }
+    await nextTick()
 
-		resolveAuthenticated({
-			personalized: false,
-			recently_played: [],
-			for_you: [],
-			sections: [{ key: 'signed-in', title: '登录结果', albums: [] }],
-		})
-		await flushPromises()
-		expect(wrapper.text()).toContain('登录结果')
+    resolveAuthenticated({
+      personalized: false,
+      recently_played: [],
+      for_you: [],
+      sections: [{ key: 'signed-in', title: '登录结果', albums: [] }],
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('登录结果')
 
-		resolveGuest({
-			personalized: false,
-			recently_played: [],
-			for_you: [],
-			sections: [{ key: 'guest', title: '游客结果', albums: [] }],
-		})
-		await flushPromises()
-		expect(wrapper.text()).toContain('登录结果')
-		expect(wrapper.text()).not.toContain('游客结果')
-	})
+    resolveGuest({
+      personalized: false,
+      recently_played: [],
+      for_you: [],
+      sections: [{ key: 'guest', title: '游客结果', albums: [] }],
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('登录结果')
+    expect(wrapper.text()).not.toContain('游客结果')
+  })
 
   it('opens drawers from route query state on mount', () => {
     mocks.routeQuery = {
@@ -144,7 +156,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       artist: 'artist-1',
     }
 
-    mount(HomeView, { global: { plugins: [createPinia()] } })
+    mountHome()
 
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
@@ -156,7 +168,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       editor: 'album-edit',
     }
 
-    mount(HomeView, { global: { plugins: [createPinia()] } })
+    mountHome()
 
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({
       entity: 'album',
@@ -171,7 +183,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       name: 'Seed Artist',
     }
 
-    mount(HomeView, { global: { plugins: [createPinia()] } })
+    mountHome()
 
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({
       entity: 'artist',
@@ -190,7 +202,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       { annotation_id: 'annotation-2', song_id: 'song-2', album_id: 'album-2' },
     ])
 
-    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    const wrapper = mountHome()
     await nextTick()
     await nextTick()
 
@@ -212,7 +224,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
     authStore.user = { uuid: 'user-1' }
     mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
 
-    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    const wrapper = mountHome()
     await nextTick()
     await nextTick()
 
@@ -228,7 +240,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       { annotation_id: 'annotation-1', song_id: 'song-1', album_id: 'album-1' },
     ])
 
-    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    const wrapper = mountHome()
     await flushPromises()
     expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(true)
 
@@ -245,7 +257,7 @@ describe('Music HomeView.vue (Album Landing)', () => {
       { annotation_id: 'annotation-a', song_id: 'song-a', album_id: 'album-a' },
     ])
 
-    const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+    const wrapper = mountHome()
     await flushPromises()
     expect(wrapper.find('[data-testid="music-pending-rebind"]').exists()).toBe(true)
 

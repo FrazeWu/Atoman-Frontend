@@ -49,7 +49,11 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         { path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
         {
           path: 'starred',
-          redirect: to => ({ path: to.path.replace(/starred$/, 'library'), query: to.query, hash: to.hash }),
+          redirect: to => ({
+            path: to.path.startsWith('/music/') ? '/music/library' : '/library',
+            query: to.query,
+            hash: to.hash,
+          }),
           meta: { requiresAuth: true },
         },
         { path: 'library', component: () => import('@/views/music/LibraryView.vue'), meta: { requiresAuth: true } },

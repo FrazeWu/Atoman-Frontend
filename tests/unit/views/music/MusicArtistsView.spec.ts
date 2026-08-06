@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestingPinia } from '@pinia/testing'
 import { ApiErrorResponseError } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 import ArtistsView from '@/views/music/ArtistsView.vue'
 
 vi.mock('@/components/music/ArtistDrawer.vue', () => ({ default: { template: '<div data-testid="artist-drawer-stub" />' } }))
@@ -136,6 +137,7 @@ describe('Music ArtistsView.vue', () => {
     await flushPromises()
 
     expect(mocks.listRecommendedArtists).toHaveBeenCalledWith('hot')
+    expect(mocks.listArtistBookmarks).not.toHaveBeenCalled()
     expect(mocks.getMusicArtist).toHaveBeenCalledWith('artist-1')
     expect(wrapper.find('h1').text()).toContain('艺术家')
     expect(wrapper.find('.search-input').exists()).toBe(true)
@@ -230,6 +232,7 @@ describe('Music ArtistsView.vue', () => {
     )
 
     const pinia = createTestingPinia({ createSpy: vi.fn })
+    useAuthStore(pinia).isAuthenticated = true
     const wrapper = mount(ArtistsView, {
       global: {
         plugins: [pinia],
@@ -239,5 +242,6 @@ describe('Music ArtistsView.vue', () => {
 
     expect(wrapper.text()).toContain('Hot Artist')
     expect(wrapper.text()).not.toContain('艺术家列表加载失败')
+    expect(mocks.listArtistBookmarks).toHaveBeenCalled()
   })
 })

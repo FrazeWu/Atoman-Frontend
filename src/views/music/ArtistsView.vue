@@ -22,6 +22,7 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useAuthStore } from '@/stores/auth'
 import {
   filterArtistRecommendationsByBookmarks,
   MUSIC_RECOMMENDATION_MODE_OPTIONS,
@@ -37,6 +38,7 @@ const tabOptions = [
 ]
 
 const route = useRoute()
+const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 const {
   isMainShifted,
@@ -73,6 +75,10 @@ const { applyRouteSelection } = useMusicRouteSelection({
 })
 
 async function fetchBookmarks() {
+  if (!authStore.isAuthenticated) {
+    starredArtistIds.value = []
+    return
+  }
   try {
     const response = await listArtistBookmarks()
     starredArtistIds.value = response.data.map((bookmark) => String(bookmark.artist_id))
@@ -177,6 +183,10 @@ watch(activeTab, () => {
 })
 
 watch(recommendationMode, () => {
+  fetchArtists()
+})
+
+watch(() => authStore.isAuthenticated, () => {
   fetchArtists()
 })
 
@@ -528,6 +538,8 @@ function handleSearchBlur() {
   .search-shell,
   .search-shell.is-open {
     max-width: 100%;
+    width: 100%;
+    flex: 0 0 36px;
   }
 
   .search-shell.is-open :deep(.search-frame) {

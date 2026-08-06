@@ -216,6 +216,35 @@ describe('useMusicDrawers music creation flow', () => {
     expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([])
   })
 
+  it('resumes a committed import repair at album details with its original artists', () => {
+    const drawers = useMusicDrawers()
+    drawers.resumeMusicCreationFlow({
+      importId: 'import-1',
+      targetAlbumId: 'album-1',
+      status: 'ready',
+      inputMode: 'auto',
+      stage: 'ready',
+      progress: { current: 1, total: 1 },
+      files: [],
+      errors: [],
+      archiveName: 'Discovery.zip',
+      uploadProgress: 100,
+      uploadSpeed: 0,
+      coverUrl: 'https://cdn.example.com/discovery.jpg',
+      coverKey: '',
+      derivedAlbumTitle: 'Discovery',
+      derivedCover: '',
+      derivedTracks: [{ title: 'One More Time', audioKey: 'track-1', origin: 'archive' }],
+      lastSyncedAt: '',
+      errorMessage: '',
+    }, [{ id: 'artist-1', name: 'Daft Punk' }])
+
+    expect(drawers.state.value.creationFlow?.step).toBe('albumDetails')
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.contributors).toEqual([
+      expect.objectContaining({ artistId: 'artist-1', name: 'Daft Punk', locked: true }),
+    ])
+  })
+
   it('clears the creation flow draft when closeMusicCreationFlow is called', () => {
     const drawers = useMusicDrawers()
 

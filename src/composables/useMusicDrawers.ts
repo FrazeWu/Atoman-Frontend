@@ -259,8 +259,9 @@ export function useMusicDrawers() {
     })
   }
 
-  const resumeMusicCreationFlow = (snapshot: MusicAlbumImport) => {
-    openMusicCreationFlow({ startStep: 'artist' })
+  const resumeMusicCreationFlow = (snapshot: MusicAlbumImport, contributors: Array<{ id: string; name: string; imageUrl?: string; kind?: 'person' | 'group' }> = []) => {
+    const isRepair = !!snapshot.targetAlbumId
+    openMusicCreationFlow({ startStep: isRepair ? 'albumDetails' : 'artist' })
     const flow = state.value.creationFlow
     if (!flow) return
     flow.draft.albumImport = {
@@ -284,6 +285,16 @@ export function useMusicDrawers() {
     }
     flow.draft.albumDetails.title = snapshot.derivedAlbumTitle
     flow.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover
+    if (contributors.length > 0) {
+      flow.draft.albumDetails.contributors = contributors.map((artist) => ({
+        id: `contributor-${artist.id}`,
+        artistId: artist.id,
+        name: artist.name,
+        avatarUrl: artist.imageUrl ?? '',
+        kind: artist.kind ?? 'person',
+        locked: true,
+      }))
+    }
     flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
       id: `import-track-${index + 1}`,
       sequence: index + 1,

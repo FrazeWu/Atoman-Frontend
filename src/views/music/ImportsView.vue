@@ -3,7 +3,9 @@ import { computed, onMounted, ref } from "vue";
 import {
   cancelMusicAlbumImportSession,
   deleteMusicAlbumImportFile,
+  getMusicAlbum,
   listMusicAlbumImports,
+  repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
   retryMusicAlbumImportFile,
   type MusicAlbumImport,
@@ -117,9 +119,41 @@ async function cancelImport() {
   }
 }
 
-function continueImport() {
+async function repairImport() {
+  if (!selectedImport.value?.targetAlbumId) return
+  actionBusy.value = 'repair'
+  errorMessage.value = ''
+  try {
+    const session = await repairMusicAlbumImport(selectedImport.value.importId)
+    imports.value = imports.value.map((item) => item.importId === session.importId ? session : item)
+    await resumeImport(session)
+  } catch {
+    errorMessage.value = '无法开始修复'
+  } finally {
+    actionBusy.value = null
+  }
+}
+
+async function resumeImport(snapshot: MusicAlbumImport) {
+  if (!snapshot.targetAlbumId) {
+    resumeMusicCreationFlow(snapshot)
+    return
+  }
+  const album = await getMusicAlbum(snapshot.targetAlbumId)
+  resumeMusicCreationFlow(snapshot, (album.artists ?? []).map((artist) => ({
+    id: String(artist.id),
+    name: artist.name,
+  })))
+}
+
+async function continueImport() {
   if (!selectedImport.value) return
-  resumeMusicCreationFlow(selectedImport.value)
+  errorMessage.value = ''
+  try {
+    await resumeImport(selectedImport.value)
+  } catch {
+    errorMessage.value = '无法继续编辑'
+  }
 }
 </script>
 
@@ -210,8 +244,11 @@ function continueImport() {
               variant="secondary"
               :loading="actionBusy === 'cancel'"
               @click="cancelImport"
-              >取消导入</PButton
+            >取消导入</PButton
             >
+          </div>
+          <div v-else-if="selectedImport.status === 'committed' && selectedImport.targetAlbumId" class="music-imports-view__actions">
+            <PButton variant="secondary" :loading="actionBusy === 'repair'" @click="repairImport">修复资料</PButton>
           </div>
           <ul
             v-if="selectedImport.files.length"

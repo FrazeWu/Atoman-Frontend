@@ -52,7 +52,7 @@ const entriesStatusOptions = [
   { label: '已确认', value: 'confirmed' },
   { label: '争议', value: 'disputed' },
 ]
-type MusicQualityIssue = { type: string; entity_type: 'album' | 'song' | 'import'; entity_id: string; title: string }
+type MusicQualityIssue = { type: string; entity_type: 'album' | 'artist' | 'song' | 'import'; entity_id: string; title: string }
 const qualityIssues = ref<MusicQualityIssue[]>([])
 const qualityLoading = ref(false)
 const qualityFilter = ref('all')
@@ -61,6 +61,8 @@ const qualityOptions = [
   { label: '缺少封面', value: 'missing_cover' },
   { label: '缺少曲目', value: 'missing_tracks' },
   { label: '缺少音频', value: 'missing_audio' },
+  { label: '缺少关键信息', value: 'missing_metadata' },
+  { label: '重复候选', value: 'duplicate_candidate' },
   { label: '导入失败', value: 'import_failed' },
 ]
 
@@ -78,11 +80,12 @@ async function fetchQualityIssues() {
 }
 
 function qualityLabel(type: string) {
-  return ({ missing_cover: '缺少封面', missing_tracks: '缺少曲目', missing_audio: '缺少音频', import_failed: '导入失败' } as Record<string, string>)[type] ?? type
+  return ({ missing_cover: '缺少封面', missing_tracks: '缺少曲目', missing_audio: '缺少音频', missing_metadata: '缺少关键信息', duplicate_candidate: '重复候选', import_failed: '导入失败' } as Record<string, string>)[type] ?? type
 }
 
 function qualityPath(issue: MusicQualityIssue) {
   if (issue.entity_type === 'album') return `/music/album/${issue.entity_id}`
+  if (issue.entity_type === 'artist') return `/music/artist/${issue.entity_id}`
   if (issue.entity_type === 'song') return `/music/song/${issue.entity_id}`
   return '/music/imports'
 }

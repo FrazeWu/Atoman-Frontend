@@ -143,6 +143,8 @@ export const musicV1Endpoints = {
     `${apiV1Base()}/music/imports/albums/${importId}/complete`,
   albumImportSessionCancel: (importId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}`,
+  albumImportRepair: (importId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/repair`,
   albumImportCommit: (importId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/commit`,
   discover: (mode?: MusicBrowseMode) =>

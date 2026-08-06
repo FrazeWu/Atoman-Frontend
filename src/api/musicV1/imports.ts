@@ -156,6 +156,10 @@ export async function commitMusicAlbumImport(
   return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportCommit(importId), input))
 }
 
+export async function repairMusicAlbumImport(importId: string): Promise<MusicAlbumImport> {
+  return normalizeMusicAlbumImport(await apiPostJson<MusicAlbumImport>(musicV1Endpoints.albumImportRepair(importId), {}))
+}
+
 const maxAlbumArchiveBytes = 2 * 1024 * 1024 * 1024
 
 const SUPPORTED_ARCHIVE_EXTENSIONS = [

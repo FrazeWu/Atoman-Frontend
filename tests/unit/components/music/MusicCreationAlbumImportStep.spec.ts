@@ -180,7 +180,13 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     vi.spyOn(musicApi, 'getMusicAlbumImport')
       .mockResolvedValueOnce(snapshot({ status: 'extracting', stage: 'extracting' }))
       .mockResolvedValueOnce(snapshot({ status: 'analyzing', stage: 'analyzing' }))
-      .mockResolvedValueOnce(snapshot({ status: 'ready', stage: 'ready', derivedAlbumTitle: 'Stages' }))
+      .mockResolvedValueOnce(snapshot({
+        status: 'ready',
+        stage: 'ready',
+        inputMode: 'archive',
+        progress: { current: 12, total: 12 },
+        derivedAlbumTitle: 'Stages',
+      }))
 
     const wrapper = mount(MusicCreationAlbumSeedStep)
     setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
@@ -188,7 +194,13 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     await vi.advanceTimersByTimeAsync(8000)
 
     expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(3)
-    expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport.status).toBe('ready')
+    expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport).toEqual(expect.objectContaining({
+      status: 'ready',
+      stage: 'ready',
+      inputMode: 'archive',
+      totalBytesLoaded: 12,
+      totalBytesTotal: 12,
+    }))
     expect(useMusicDrawers().state.value.creationFlow?.draft.albumDetails.title).toBe('Stages')
   })
 

@@ -377,6 +377,33 @@ describe('MusicCreationFlowDrawer', () => {
     expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
   })
 
+  it('导入未就绪时不能从详情进入预览', async () => {
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'albumDetails',
+      draft: {
+        ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Still Processing',
+        },
+        albumImport: {
+          ...createFlowState().draft.albumImport,
+          importId: 'import-1',
+          status: 'extracting',
+          stage: 'extracting',
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    const nextButton = wrapper.get('[data-testid="artist-next-button"]')
+
+    expect(nextButton.attributes('disabled')).toBeDefined()
+    await nextButton.trigger('click')
+
+    expect(drawerMocks.state.value.creationFlow?.step).toBe('albumDetails')
+  })
+
   it.each(['uploading', 'extracting'] as const)(
     '%s 状态在预览页禁止提交，且保留抽屉',
     async (status) => {

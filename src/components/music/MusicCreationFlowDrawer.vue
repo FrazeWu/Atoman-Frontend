@@ -135,6 +135,7 @@ const canGoForward = computed(() => {
   }
   if (flow.step === 'albumDetails') {
     return !!flow.draft.albumImport.importId
+      && flow.draft.albumImport.status === 'ready'
       && !!flow.draft.albumDetails.title.trim()
       && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
   }

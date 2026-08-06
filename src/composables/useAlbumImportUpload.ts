@@ -41,17 +41,22 @@ export function useAlbumImportUpload() {
     const derivedTracks = snapshot.derivedTracks ?? []
 
     creationFlow.value.draft.albumImport.importId = snapshot.importId
+    creationFlow.value.draft.albumImport.inputMode = snapshot.inputMode
     creationFlow.value.draft.albumImport.status = snapshot.status
+    creationFlow.value.draft.albumImport.stage = snapshot.stage
     creationFlow.value.draft.albumImport.archiveName = snapshot.archiveName
     creationFlow.value.draft.albumImport.uploadProgress = snapshot.uploadProgress
     creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed
+    creationFlow.value.draft.albumImport.totalBytesLoaded = snapshot.progress.current
+    creationFlow.value.draft.albumImport.totalBytesTotal = snapshot.progress.total
     creationFlow.value.draft.albumImport.coverUrl = snapshot.coverUrl
     creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
     creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle
     creationFlow.value.draft.albumImport.derivedCover = snapshot.derivedCover
     creationFlow.value.draft.albumImport.derivedTracks = derivedTracks
     creationFlow.value.draft.albumImport.lastSyncedAt = snapshot.lastSyncedAt
-    creationFlow.value.draft.albumImport.errorMessage = snapshot.errorMessage
+    creationFlow.value.draft.albumImport.errorMessage =
+      snapshot.errorMessage || snapshot.errors?.[0]?.message || ''
     creationFlow.value.draft.albumImport.files = snapshot.files ?? []
     if (!creationFlow.value.titleCustomized) {
       creationFlow.value.draft.albumDetails.title =

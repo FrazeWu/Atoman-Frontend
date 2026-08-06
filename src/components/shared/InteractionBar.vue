@@ -43,9 +43,10 @@
       :to="commentHref"
       class="interaction-bar__item interaction-bar__comment-item"
       :class="{ 'is-link': Boolean(commentHref) }"
+      :aria-label="commentHref ? `查看 ${commentCount} 条评论` : `${commentCount} 条评论`"
       :title="commentHref ? '查看评论' : undefined"
     >
-      <MessageSquare :size="15" class="interaction-bar__icon" />
+      <MessageSquare :size="15" class="interaction-bar__icon" aria-hidden="true" />
       <span class="interaction-bar__count">{{ commentCount }}</span>
     </component>
   </div>

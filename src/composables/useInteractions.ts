@@ -108,7 +108,9 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       return
     }
     if (moduleName === 'forum') {
-      const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.topicLike, {
+      const topicLike = selectedEndpoints.topicLike
+      if (!topicLike) return
+      const payload = await apiRequestEnvelope<unknown>(topicLike, {
         method: 'POST',
         headers: headers(),
       })
@@ -147,7 +149,9 @@ export function useInteractions(moduleName: InteractionModule, targetType: Inter
       return
     }
     if (moduleName === 'forum') {
-      const payload = await apiRequestEnvelope<unknown>(selectedEndpoints.topicLike, {
+      const topicLike = selectedEndpoints.topicLike
+      if (!topicLike) return
+      const payload = await apiRequestEnvelope<unknown>(topicLike, {
         method: 'POST',
         headers: headers(),
       })

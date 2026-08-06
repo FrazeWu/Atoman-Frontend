@@ -8,7 +8,7 @@
         :to="item.to"
         :index="index + 1"
         :icon="item.icon"
-        :is-focused="uiStore && uiStore.focusedSection === 'sidebar' && focusedSidebarIndex === index"
+        :is-focused="Boolean(uiStore && uiStore.focusedSection === 'sidebar' && focusedSidebarIndex === index)"
         :exact="item.exact"
       >
         {{ item.label }}
@@ -49,7 +49,7 @@
         :to="moduleUrl('forum')"
         index="1"
         :icon="MessageSquare"
-        :active="route && !$route.query.category_id && !$route.query.tag"
+        :active="Boolean(route && !$route.query.category_id && !$route.query.tag)"
         exact
       >
         所有话题
@@ -61,7 +61,7 @@
           v-for="cat in forumStore.categories"
           :key="cat.id"
           :icon="Folder"
-          :active="route && $route.query.category_id === String(cat.id)"
+          :active="Boolean(route && $route.query.category_id === String(cat.id))"
           @click="selectCategory(cat.id)"
         >
           <span class="sidebar-cat-dot" :style="{ background: cat.color || 'var(--a-color-fg)' }" />
@@ -77,7 +77,7 @@
             v-for="tag in popularTags"
             :key="tag"
             class="forum-sidebar-tag"
-            :class="{ active: route && $route.query.tag === tag }"
+            :class="{ active: Boolean(route && $route.query.tag === tag) }"
             @click="selectTag(tag)"
           >
             {{ tag }}
@@ -92,7 +92,7 @@
         to="/debate"
         :index="1"
         :icon="MessageSquare"
-        :active="route && !$route.query.status"
+        :active="Boolean(route && !$route.query.status)"
         exact
       >
         全部辩题
@@ -101,7 +101,7 @@
         to="/debate?status=archived"
         :index="2"
         :icon="Archive"
-        :active="route && $route.query.status === 'archived'"
+        :active="Boolean(route && $route.query.status === 'archived')"
       >
         已归档
       </PSidebarItem>
@@ -109,7 +109,7 @@
         to="/debate/rules"
         :index="3"
         :icon="BookOpen"
-        :active="route && route.path === '/debate/rules'"
+        :active="Boolean(route && route.path === '/debate/rules')"
       >
         规则
       </PSidebarItem>

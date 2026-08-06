@@ -70,9 +70,9 @@ async function fetchRecommendedEpisodes() {
       ? data.data.map((item) => ({
           id: item.id,
           title: item.title,
-          summary: item.summary,
-          targetPath: item.target_path,
-          scoreLabel: item.score_label,
+          summary: item.summary ?? '',
+          targetPath: item.target_path || `/podcasts/episode/${item.id}`,
+          scoreLabel: item.score_label ?? '',
           imageUrl: item.image_url || item.episode_cover_url || item.channel_cover_url || '',
         }))
       : []

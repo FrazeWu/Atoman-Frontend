@@ -306,7 +306,7 @@ export async function getMusicPlaylist(
     ...playlist,
     songs: (songsResponse.data || [])
       .map((item) => item.song)
-      .filter(Boolean)
+      .filter((song): song is MusicSongListItem => Boolean(song))
       .map((song) => ({
         ...song,
         cover_url: song.cover_url || song.album?.cover_url || "",

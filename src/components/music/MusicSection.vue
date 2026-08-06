@@ -14,6 +14,7 @@
 
 <script setup lang="ts">
 defineSlots<{
+  default?: () => unknown
   title?: () => unknown
   actions?: () => unknown
 }>()

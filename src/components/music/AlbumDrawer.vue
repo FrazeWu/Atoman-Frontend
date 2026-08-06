@@ -9,7 +9,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
-import { Plus, Play, Heart } from 'lucide-vue-next'
+import { Plus, Play, Heart, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -59,7 +59,73 @@ const {
   addSongToPlaylist,
 } = useMusicFavoritePlaylist()
 
-const artistNames = computed(() => album.value?.artists?.map((artist) => artist.name).join(' / ') || 'Unknown Artist')
+const artistNames = computed(() => {
+  if (resolvedAlbumArtists.value.length > 0) {
+    return resolvedAlbumArtists.value.map((a) => a.name).join(' / ')
+  }
+  return 'Unknown Artist'
+})
+
+const resolvedAlbumArtists = computed(() => {
+  if (!album.value) return []
+  const list: Array<{ id: string; name: string; avatarUrl?: string }> = []
+  const seenIds = new Set<string>()
+  const seenNames = new Set<string>()
+
+  // 1. 探查 album.artists
+  if (Array.isArray(album.value.artists)) {
+    for (const a of album.value.artists) {
+      const raw = a as Record<string, unknown>
+      const id = String(raw.id || raw.artistId || raw.artist_id || '')
+      const name = String(raw.name || '').trim()
+      if (name) {
+        const lowerName = name.toLowerCase()
+        if (id && !seenIds.has(id)) {
+          seenIds.add(id)
+          seenNames.add(lowerName)
+          list.push({ id, name, avatarUrl: String(raw.avatar_url || raw.avatarUrl || raw.image_url || '') })
+        } else if (!id && !seenNames.has(lowerName)) {
+          seenNames.add(lowerName)
+          list.push({ id: '', name })
+        }
+      }
+    }
+  }
+
+  // 2. 探查 album.contributors
+  const rawAlbum = album.value as Record<string, unknown>
+  if (Array.isArray(rawAlbum.contributors)) {
+    for (const c of rawAlbum.contributors) {
+      const raw = c as Record<string, unknown>
+      const id = String(raw.artistId || raw.artist_id || raw.id || '')
+      const name = String(raw.name || '').trim()
+      const lowerName = name.toLowerCase()
+      if (name && !seenNames.has(lowerName)) {
+        seenNames.add(lowerName)
+        if (id) seenIds.add(id)
+        list.push({ id, name, avatarUrl: String(raw.avatarUrl || raw.avatar_url || '') })
+      }
+    }
+  }
+
+  // 3. 如果依然为空，探查单字符串 artist / artist_name
+  if (list.length === 0) {
+    const singleArtistName = String(rawAlbum.artist || rawAlbum.artist_name || '').trim()
+    if (singleArtistName && singleArtistName !== 'Unknown Artist') {
+      const singleArtistId = String(rawAlbum.artist_id || rawAlbum.artistId || '')
+      list.push({ id: singleArtistId, name: singleArtistName })
+    }
+  }
+
+  return list
+})
+
+function navigateToArtist(artist: { id: string; name: string }) {
+  const target = artist.id || artist.name
+  if (target) {
+    openArtist(target)
+  }
+}
 const releaseYear = computed(() => {
   const year = album.value?.release_date?.slice(0, 4)
   if (!year || year === '0001' || year === '0000' || year === '----') return ''
@@ -86,6 +152,8 @@ const editionLabels: Record<string, string> = {
   live: '现场版',
 }
 
+type AlbumTrack = NonNullable<MusicAlbumListItem['songs']>[number]
+
 function formatDuration(value: unknown): string {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     const minutes = Math.floor(value / 60)
@@ -97,7 +165,7 @@ function formatDuration(value: unknown): string {
   return ''
 }
 
-function getTrackDurationLabel(track: MusicAlbumListItem['songs'][number] | Record<string, unknown>): string {
+function getTrackDurationLabel(track: AlbumTrack | Record<string, unknown>): string {
   return formatDuration((track as { duration_sec?: unknown }).duration_sec ?? (track as { duration?: unknown }).duration)
 }
 
@@ -106,11 +174,11 @@ function playAlbum() {
   player.playAlbum(playableSongs.value)
 }
 
-function canPlayTrack(track: MusicAlbumListItem['songs'][number]) {
+function canPlayTrack(track: AlbumTrack) {
   return playableSongIdSet.value.has(String(track.id))
 }
 
-function playTrack(track: MusicAlbumListItem['songs'][number]) {
+function playTrack(track: AlbumTrack) {
   if (!canPlayTrack(track)) return
   const startIndex = playableSongs.value.findIndex((song) => String(song.id) === String(track.id))
   if (startIndex < 0) return
@@ -330,17 +398,18 @@ watch(
           <h2 class="album-title">{{ album?.title || `Album ${albumId}` }}</h2>
           <div class="meta-tags">
             <span class="artist-name">
-              <template v-for="(artist, index) in album?.artists" :key="artist.id">
+              <template v-for="(artist, index) in resolvedAlbumArtists" :key="artist.id || artist.name">
                 <span v-if="index > 0" class="artist-separator"> / </span>
                 <button
                   class="artist-link"
                   type="button"
-                  @click="openArtist(String(artist.id))"
+                  :data-testid="`album-header-artist-link-${artist.id || index}`"
+                  @click="navigateToArtist(artist)"
                 >
                   {{ artist.name }}
                 </button>
               </template>
-              <template v-if="!album?.artists?.length">Unknown Artist</template>
+              <template v-if="!resolvedAlbumArtists.length">Unknown Artist</template>
             </span>
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
           </div>
@@ -450,6 +519,30 @@ watch(
           </div>
         </div>
       </div>
+
+      <!-- 底部参与艺术家区块 (可点击跳转) -->
+      <section v-if="resolvedAlbumArtists.length" class="content-section album-artists-section">
+        <div class="section-title">参与艺术家</div>
+        <div class="artist-cards-grid">
+          <button
+            v-for="artist in resolvedAlbumArtists"
+            :key="artist.id || artist.name"
+            type="button"
+            class="album-artist-card"
+            :data-testid="`album-artist-link-${artist.id || artist.name}`"
+            @click="navigateToArtist(artist)"
+          >
+            <div class="artist-card-avatar">
+              <img v-if="artist.avatarUrl" :src="artist.avatarUrl" alt="" class="avatar-card-img" />
+              <UserRound v-else :size="18" />
+            </div>
+            <div class="artist-card-info">
+              <span class="artist-card-name">{{ artist.name }}</span>
+              <span class="artist-card-role">主要创作者</span>
+            </div>
+          </button>
+        </div>
+      </section>
     </div>
     <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId })" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />
@@ -552,6 +645,80 @@ watch(
 .artist-separator {
   color: var(--a-color-border-soft);
   margin: 0 0.15rem;
+}
+
+.album-artists-section {
+  margin-top: 2.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.artist-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.album-artist-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.album-artist-card:hover {
+  border-color: var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-bg));
+  transform: translateY(-1px);
+}
+
+.artist-card-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-muted);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 999px;
+}
+
+.artist-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow: hidden;
+}
+
+.artist-card-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist-card-role {
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
 }
 .release-year::before {
   content: "•";

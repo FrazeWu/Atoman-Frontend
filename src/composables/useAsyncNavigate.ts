@@ -1,6 +1,7 @@
 import { reportError } from '@/utils/logger'
 import { useTransitionStore } from '@/stores/transition'
 import { useSheetStore } from '@/stores/sheet'
+import { useTransitionRelay } from '@/composables/useTransitionRelay'
 import { useRouter } from 'vue-router'
 
 export function useAsyncNavigate() {
@@ -48,7 +49,6 @@ export function useAsyncNavigate() {
         transition.reset()
         await router.push(targetUrl)
         transition.triggerEntry()
-        const { useTransitionRelay } = await import('@/composables/useTransitionRelay')
         const { checkRelay } = useTransitionRelay()
         checkRelay()
       } else {

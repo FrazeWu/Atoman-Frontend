@@ -242,6 +242,7 @@ import PInput from '@/components/ui/PInput.vue'
 import { useAuthStore } from '@/stores/auth'
 import {
   useAdminFeedFulltextStore,
+  type AdminFeedFulltextItemRow,
   type AdminFeedFulltextSourceRow,
   type AdminOnboardingFeedRecommendation,
 } from '@/stores/adminFeedFulltext'
@@ -271,7 +272,7 @@ const itemsSheetOpen = ref(false)
 const itemsSheetLoading = ref(false)
 const itemsSheetError = ref('')
 const selectedSource = ref<AdminFeedFulltextSourceRow | null>(null)
-const selectedSourceItems = ref([])
+const selectedSourceItems = ref<AdminFeedFulltextItemRow[]>([])
 const opmlInput = ref<HTMLInputElement | null>(null)
 const opmlFailures = ref<Array<{ url: string; reason: string }>>([])
 const retryingOPMLURLs = ref(new Set<string>())

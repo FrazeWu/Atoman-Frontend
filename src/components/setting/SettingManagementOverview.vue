@@ -91,7 +91,7 @@ async function loadUsers() {
   try {
     const response = await listAdminUsers({ page: 1, page_size: 5 })
     users.value = response.data
-    usersMeta.value = response.meta
+    usersMeta.value = response.meta ?? { page: 1, page_size: 5, total: response.data.length, has_more: false }
   } catch (cause) {
     usersError.value = cause instanceof Error ? cause.message : '加载用户失败'
   } finally {

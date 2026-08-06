@@ -272,7 +272,7 @@ const jumpToNotification = async (notification: Notification) => {
   await router.push(targetPath)
 }
 
-const notificationTargetPath = (notification: Notification): RouteLocationRaw | string => {
+const notificationTargetPath = (notification: Notification): RouteLocationRaw | string | null => {
   if (notification.source_url) {
     return notification.source_url
   }

@@ -83,7 +83,7 @@
                 ]"
               >
                 <span>{{ versionDiffLabel(line.kind) }}</span>
-                <template v-if="line.kind === 'modified' && line.current?.text === line.target?.text">
+                <template v-if="line.kind === 'modified' && line.current && line.target && line.current.text === line.target.text">
                   <span class="music-lyrics-panel__version-diff-original">{{ line.current.text }}</span>
                   <del class="music-lyrics-panel__version-diff-translation">当前译文：{{ line.current.translation || '无译文' }}</del>
                   <ins class="music-lyrics-panel__version-diff-translation">目标译文：{{ line.target.translation || '无译文' }}</ins>

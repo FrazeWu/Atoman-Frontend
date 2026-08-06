@@ -16,7 +16,7 @@ import { useApi } from '@/composables/useApi'
 import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { buildSourceAvatarLabel, buildSourceColor } from '@/utils/feedSourcePresentation'
-import type { FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory } from '@/types'
+import type { FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory } from '@/types'
 
 type RecommendationMode = 'hot' | 'featured' | 'discover'
 type RecommendTarget = 'articles' | 'channels' | 'mixed'
@@ -176,11 +176,14 @@ function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSourc
     recentItemCount: payload.recentItemCount ?? payload.recent_item_count ?? 0,
     lastPublishedAt: payload.lastPublishedAt ?? payload.last_published_at,
     subscribed: Boolean(payload.subscribed),
-    recentItems: (payload.recentItems ?? payload.recent_items ?? []).map((item) => ({
-      id: item.id,
-      title: item.title,
-      publishedAt: item.publishedAt ?? item.published_at,
-    })),
+    recentItems: (payload.recentItems ?? payload.recent_items ?? []).map((item) => {
+      const recent = item as FeedExploreRecentItem & { published_at?: string }
+      return {
+        id: recent.id,
+        title: recent.title,
+        publishedAt: recent.publishedAt ?? recent.published_at,
+      }
+    }),
   }
 }
 

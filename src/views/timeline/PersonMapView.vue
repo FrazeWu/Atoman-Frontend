@@ -242,7 +242,6 @@ import LineString from 'ol/geom/LineString'
 import { fromLonLat, toLonLat } from 'ol/proj'
 import { Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style'
 import Overlay from 'ol/Overlay'
-import type MapBrowserEvent from 'ol/MapBrowserEvent'
 import { useTimelineStore } from '@/stores/timeline'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
@@ -341,7 +340,7 @@ const renderMap = () => {
     if (locs.length === 1) {
       olMap.getView().setCenter(fromLonLat([locs[0].longitude, locs[0].latitude]))
       olMap.getView().setZoom(6)
-    } else {
+    } else if (extent) {
       olMap.getView().fit(extent, { padding: [60, 60, 60, 60], maxZoom: 8 })
     }
   }
@@ -373,7 +372,7 @@ const initMap = () => {
     }),
   })
 
-  olMap.on('click', (evt: MapBrowserEvent<PointerEvent>) => {
+  olMap.on('click', (evt) => {
     // If in picking mode, capture coordinates
     if (pickingCoords.value) {
       const lonLat = toLonLat(evt.coordinate)
@@ -411,7 +410,7 @@ const initMap = () => {
     renderMap()
   })
 
-  olMap.on('pointermove', (evt: MapBrowserEvent<PointerEvent>) => {
+  olMap.on('pointermove', (evt) => {
     if (pickingCoords.value) {
       olMap!.getTargetElement().style.cursor = 'crosshair'
       return

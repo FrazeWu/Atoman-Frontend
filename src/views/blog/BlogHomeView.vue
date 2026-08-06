@@ -300,10 +300,10 @@ const fetchRecommendedPosts = async () => {
       ? data.data.map((item) => ({
           id: item.id,
           title: item.title,
-          summary: item.summary,
-          image_url: item.image_url,
-          targetPath: item.target_path,
-          score_label: item.score_label,
+          summary: item.summary ?? '',
+          image_url: item.image_url ?? '',
+          targetPath: item.target_path || `/posts/post/${item.id}`,
+          score_label: item.score_label ?? '',
         }))
       : []
   } catch (error) {

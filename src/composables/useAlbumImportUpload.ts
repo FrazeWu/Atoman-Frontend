@@ -151,6 +151,7 @@ export function useAlbumImportUpload() {
 
   async function handleFilesUpload(fileList: FileList) {
     if (!creationFlow.value || !albumImportDraft.value) return
+    const flow = creationFlow.value
     const files = Array.from(fileList)
     if (files.length === 0) return
 
@@ -181,11 +182,11 @@ export function useAlbumImportUpload() {
           audioKey: '',
           origin: 'local_preview',
         }))
-        if (!creationFlow.value.titleCustomized) {
-          creationFlow.value.draft.albumDetails.title = preview.title
+        if (!flow.titleCustomized) {
+          flow.draft.albumDetails.title = preview.title
         }
-        if (!creationFlow.value.tracksCustomized && preview.tracks.length > 0) {
-          creationFlow.value.draft.tracks = preview.tracks.map((title, index) => ({
+        if (!flow.tracksCustomized && preview.tracks.length > 0) {
+          flow.draft.tracks = preview.tracks.map((title, index) => ({
             id: `preview-track-${index + 1}`,
             sequence: index + 1,
             title,

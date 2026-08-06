@@ -13,6 +13,7 @@ describe('InteractionBar', () => {
     })
 
     expect(wrapper.get('a').attributes('href')).toBe('/posts/notes/note-1#comments')
-    expect(wrapper.get('a').text()).toBe('评论 3')
+    expect(wrapper.get('a').text()).toBe('3')
+    expect(wrapper.get('a').attributes('aria-label')).toBe('查看 3 条评论')
   })
 })

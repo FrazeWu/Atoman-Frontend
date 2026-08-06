@@ -6,6 +6,7 @@ import { UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -50,12 +51,68 @@ const hasMemberGroups = computed(() => (
   && (memberGroups.value.current.length > 0 || memberGroups.value.former.length > 0)
 ))
 
-function releaseYear(album: MusicAlbumListItem) {
+type AlbumSortMode = 'date-desc' | 'date-asc' | 'hot-desc'
+const albumSortMode = ref<AlbumSortMode>('date-desc')
+
+const albumSortOptions = [
+  { label: '最新发布 (降序)', value: 'date-desc' },
+  { label: '最早发布 (升序)', value: 'date-asc' },
+  { label: '按热度排序', value: 'hot-desc' },
+]
+
+function formatAlbumTypeLabel(type?: string) {
+  if (!type) return '专辑'
+  const lower = type.toLowerCase()
+  if (lower === 'ep') return 'EP'
+  if (lower === 'single') return '单曲'
+  if (lower === 'compilation') return '精选集'
+  if (lower === 'live') return '现场专辑'
+  if (lower === 'soundtrack') return '原声带'
+  if (lower === 'demo') return 'Demo'
+  return type
+}
+
+function formatAlbumReleaseDate(album: MusicAlbumListItem) {
+  if (album.release_date) {
+    const cleaned = album.release_date.split('T')[0].replace(/-/g, '/')
+    if (cleaned.length >= 4) return cleaned
+  }
   if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
     return String(album.year)
   }
-  return album.release_date ? album.release_date.slice(0, 4) : '----'
+  return '----'
 }
+
+function albumTrackCount(album: MusicAlbumListItem) {
+  if (Array.isArray(album.songs) && album.songs.length > 0) return album.songs.length
+  const raw = album as Record<string, unknown>
+  if (Array.isArray(raw.tracks) && raw.tracks.length > 0) return raw.tracks.length
+  if (typeof raw.song_count === 'number') return raw.song_count
+  if (typeof raw.track_count === 'number') return raw.track_count
+  if (typeof raw.songs_count === 'number') return raw.songs_count
+  if (typeof raw.tracks_count === 'number') return raw.tracks_count
+  return 0
+}
+
+const sortedAlbums = computed(() => {
+  const list = [...albums.value]
+  if (albumSortMode.value === 'date-asc') {
+    return list.sort((a, b) => {
+      const dateA = a.release_date || (a.year ? `${a.year}-01-01` : '')
+      const dateB = b.release_date || (b.year ? `${b.year}-01-01` : '')
+      return dateA.localeCompare(dateB)
+    })
+  } else if (albumSortMode.value === 'hot-desc') {
+    return list.sort((a, b) => (b.hot_score ?? b.play_count ?? 0) - (a.hot_score ?? a.play_count ?? 0))
+  } else {
+    // date-desc (最新发布在前面)
+    return list.sort((a, b) => {
+      const dateA = a.release_date || (a.year ? `${a.year}-01-01` : '')
+      const dateB = b.release_date || (b.year ? `${b.year}-01-01` : '')
+      return dateB.localeCompare(dateA)
+    })
+  }
+})
 
 function formatMemberPeriod(joinDate?: string, leaveDate?: string) {
   const start = joinDate || '未知'
@@ -282,20 +339,28 @@ watch(
 
       <div class="album-list-header">
         <h3>专辑列表</h3>
+        <div class="album-sort-controls">
+          <PSelect
+            v-model="albumSortMode"
+            :options="albumSortOptions"
+            class="album-sort-pselect"
+            data-testid="artist-album-sort-select"
+          />
+        </div>
       </div>
 
       <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="loading" class="state-line">正在加载专辑...</p>
-      <p v-else-if="!albums.length" class="state-line">暂无专辑，可以添加新专辑。</p>
+      <p v-else-if="!sortedAlbums.length" class="state-line">暂无专辑，可以添加新专辑。</p>
 
       <div
-        v-for="album in albums"
+        v-for="album in sortedAlbums"
         :key="album.id"
         class="album-row"
         @click="openAlbum(album.id)"
       >
         <div class="album-row-left">
-          <div class="album-year">{{ releaseYear(album) }}</div>
+          <div class="album-year">{{ formatAlbumReleaseDate(album) }}</div>
         </div>
         <div class="album-row-right">
           <div class="album-row-cover">
@@ -304,7 +369,18 @@ watch(
           </div>
           <div class="album-row-info">
             <div class="album-row-title">{{ album.title }}</div>
-            <div class="album-row-meta">{{ album.songs?.length || 0 }} 首 · 专辑</div>
+            <div v-if="album.description" class="album-row-description">
+              {{ album.description }}
+            </div>
+            <div class="album-row-meta">
+              <span class="album-meta-tag">{{ formatAlbumTypeLabel(album.album_type) }}</span>
+              <span class="album-meta-divider">•</span>
+              <span>{{ albumTrackCount(album) }} 首曲目</span>
+              <template v-if="album.play_count">
+                <span class="album-meta-divider">•</span>
+                <span>{{ album.play_count }} 次播放</span>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -345,7 +421,13 @@ watch(
 .artist-bio { margin: 0.75rem 0 0; max-width: 44rem; color: var(--a-color-muted); line-height: 1.6; }
 
 .drawer-body { display: flex; flex-direction: column; }
-.actions { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 2rem; border: 1px solid var(--a-color-border-soft); align-self: flex-start; }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
 .member-sections {
   display: grid;
   gap: 1.5rem;
@@ -452,6 +534,9 @@ watch(
 }
 
 .album-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 1.5rem;
   padding-bottom: 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
@@ -466,9 +551,22 @@ watch(
   color: var(--a-color-muted);
 }
 .album-list-header h3 { font-size: 1.15rem; font-weight: 500; margin: 0; letter-spacing: 0; }
+
+.album-sort-controls {
+  min-width: 150px;
+}
+
+.album-sort-pselect :deep(.p-select-trigger) {
+  min-height: 34px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8125rem;
+  background: var(--a-color-bg);
+}
+
 .album-row {
   display: flex;
-  gap: 1.4rem;
+  align-items: center;
+  gap: 1.2rem;
   margin-bottom: 0;
   position: relative;
   cursor: pointer;
@@ -485,9 +583,15 @@ watch(
   background: var(--a-color-surface);
   border-left-color: var(--a-color-text);
 }
-.album-row-left { width: 80px; flex-shrink: 0; text-align: right; padding-top: 0.35rem; }
-.album-year { font-family: var(--a-font-sans); font-size: 1.25rem; font-weight: 500; color: var(--a-color-text); }
-.album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; }
+.album-row-left {
+  width: 105px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.album-year { font-family: var(--a-font-sans); font-size: 0.9rem; font-weight: 600; color: var(--a-color-muted); white-space: nowrap; }
+.album-row-right { flex: 1; display: flex; background: transparent; border: none; padding: 0; gap: 1rem; align-items: center; }
 .album-row-cover {
   width: 80px;
   height: 80px;
@@ -507,9 +611,34 @@ watch(
   overflow: hidden;
 }
 .album-row-img { width: 100%; height: 100%; object-fit: cover; }
-.album-row-info { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; }
-.album-row-title { font-family: var(--a-font-sans); font-size: 1.35rem; font-weight: 500; letter-spacing: 0; }
-.album-row-meta { font-family: var(--a-font-sans); font-size: 0.75rem; color: var(--a-color-muted); text-transform: uppercase; letter-spacing: 0; }
+.album-row-info { display: flex; flex-direction: column; justify-content: center; gap: 0.25rem; flex: 1; min-width: 0; }
+.album-row-title { font-family: var(--a-font-sans); font-size: 1.25rem; font-weight: 500; letter-spacing: 0; }
+.album-row-description {
+  font-size: 0.8125rem;
+  color: var(--a-color-muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0.15rem;
+}
+.album-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--a-font-sans);
+  font-size: 0.78rem;
+  color: var(--a-color-muted);
+  margin-top: 0.15rem;
+}
+.album-meta-divider {
+  opacity: 0.5;
+}
+.album-meta-tag {
+  font-weight: 600;
+  color: var(--a-color-text);
+}
 .state-line { margin: 0 0 1.5rem; color: var(--a-color-muted); font-family: var(--a-font-sans); font-weight: 500; }
 .state-line--error { color: var(--a-color-accent-destructive); }
 

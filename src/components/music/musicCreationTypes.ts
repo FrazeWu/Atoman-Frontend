@@ -46,9 +46,9 @@ export interface MusicCreationArtistDraft {
   members: MusicCreationArtistMemberDraft[]
   nationality: string
   birthPlace: string
-  birthDateParts?: MusicCreationDatePartsDraft
-  activeStartDateParts?: MusicCreationDatePartsDraft
-  activeEndDateParts?: MusicCreationDatePartsDraft
+  birthDateParts: MusicCreationDatePartsDraft
+  activeStartDateParts: MusicCreationDatePartsDraft
+  activeEndDateParts: MusicCreationDatePartsDraft
   birthDate: string
   bio: string
   source: string
@@ -99,8 +99,8 @@ export interface MusicCreationAlbumDetailsDraft {
   coverUrl: string
   coverAsset?: UploadAsset | null
   title: string
-  contributors?: MusicCreationAlbumContributorDraft[]
-  releaseDateParts?: MusicCreationDatePartsDraft
+  contributors: MusicCreationAlbumContributorDraft[]
+  releaseDateParts: MusicCreationDatePartsDraft
   releaseDate: string
   type: string
   releaseYear: string

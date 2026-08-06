@@ -52,7 +52,7 @@ async function loadCollection() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const headers = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
+    const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     const [collectionRes, publishedRes, draftsRes] = await Promise.all([
       apiRequest(api.blog.collection(collectionId.value), { headers }),
       apiRequest(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),

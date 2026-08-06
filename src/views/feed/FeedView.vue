@@ -115,7 +115,7 @@
         :current-source-unread-count="currentSourceUnreadCount"
         :active-search-label="activeSearchLabel"
         :source-type-filter-options="sourceTypeFilterOptions"
-        :query-source-id="querySourceId"
+        :query-source-id="querySourceId ?? undefined"
         :theme-filters="themeFilters"
         :authenticated="authStore.isAuthenticated"
         :unread-only="unreadOnly"
@@ -141,7 +141,7 @@
         <template v-for="(item, index) in visibleTimeline" :key="itemKey(item)">
           <PEntry
             v-if="item.type === 'post' && item.post"
-            :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
+            :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
             :is-read="item.is_read"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
             @click="openArticleSheet(item, index)"
@@ -174,7 +174,7 @@
 
           <PEntry
             v-else-if="item.type === 'feed_item' && item.feed_item"
-            :is-open="showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item)"
+            :is-open="Boolean(showArticleSheet && selectedArticle && itemKey(selectedArticle) === itemKey(item))"
             :is-read="item.is_read"
             :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
             @click="openArticleSheet(item, index)"

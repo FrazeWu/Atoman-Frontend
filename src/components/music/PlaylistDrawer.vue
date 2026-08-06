@@ -5,8 +5,7 @@ import { computed, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PInput from '@/components/ui/PInput.vue'
-import PTextarea from '@/components/ui/PTextarea.vue'
+import PlaylistEditSheet from '@/components/music/PlaylistEditSheet.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -53,7 +52,6 @@ const editDescription = ref('')
 const editIsPublic = ref(false)
 const editCoverUrl = ref('')
 const coverUploading = ref(false)
-const coverInput = ref<HTMLInputElement | null>(null)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const removingSongIds = ref<Set<string>>(new Set())
@@ -136,11 +134,6 @@ function startEditPlaylist() {
 function cancelEditPlaylist() {
   syncEditForm(playlist.value)
   editing.value = false
-}
-
-function openCoverPicker() {
-  if (!requireLogin()) return
-  coverInput.value?.click()
 }
 
 async function handleCoverChange(event: Event) {
@@ -569,93 +562,24 @@ watch(playlist, syncEditForm, { immediate: true })
     </div>
   </PSheet>
 
-  <PSheet
+  <PlaylistEditSheet
     :show="editing"
-    @close="cancelEditPlaylist"
-    width="540px"
     :index="editSheetIndex"
-    close-type="header"
-    :show-backdrop="false"
-  >
-    <div class="playlist-edit-sheet">
-      <div class="playlist-edit-panel">
-        <PInput
-          data-testid="playlist-name-input"
-          :model-value="editName"
-          placeholder="歌单名称"
-          @update:model-value="(value) => editName = value"
-        />
-
-        <div class="playlist-edit-row">
-          <label class="playlist-edit-toggle">
-            <input
-              data-testid="playlist-public-toggle"
-              type="checkbox"
-              :checked="editIsPublic"
-              @change="editIsPublic = ($event.target as HTMLInputElement).checked"
-            />
-            <span>设为公开</span>
-          </label>
-        </div>
-
-        <div class="playlist-cover-editor">
-          <input
-            ref="coverInput"
-            data-testid="playlist-cover-input"
-            class="playlist-cover-input"
-            type="file"
-            accept="image/*"
-            @change="handleCoverChange"
-          />
-          <button
-            type="button"
-            class="playlist-cover-preview playlist-cover-preview--button"
-            :disabled="coverUploading"
-            @click="openCoverPicker"
-          >
-            <img v-if="editCoverPreview" :src="editCoverPreview" alt="歌单封面预览" class="playlist-cover-preview__image" />
-            <div v-else class="playlist-cover-preview__empty">点击上传</div>
-            <span v-if="coverUploading" class="playlist-cover-preview__badge">上传中...</span>
-          </button>
-        </div>
-
-        <PTextarea
-          data-testid="playlist-description-input"
-          :model-value="editDescription"
-          :rows="4"
-          placeholder="一句话介绍这张歌单"
-          @update:model-value="(value) => editDescription = value"
-        />
-
-        <div class="playlist-edit-actions">
-          <PButton
-            data-testid="playlist-delete-button"
-            variant="danger"
-            :loading="deleting"
-            :disabled="saving"
-            @click="deletePlaylist"
-          >
-            删除
-          </PButton>
-          <PButton
-            variant="secondary"
-            :disabled="saving || deleting"
-            @click="cancelEditPlaylist"
-          >
-            取消
-          </PButton>
-          <PButton
-            data-testid="playlist-save-button"
-            :loading="saving"
-            :disabled="deleting"
-            @click="savePlaylist"
-          >
-            保存
-          </PButton>
-        </div>
-      </div>
-    </div>
-  </PSheet>
+    :name="editName"
+    :description="editDescription"
+    :is-public="editIsPublic"
+    :cover-preview="editCoverPreview"
+    :cover-uploading="coverUploading"
+    :saving="saving"
+    :deleting="deleting"
+    @close="cancelEditPlaylist"
+    @save="savePlaylist"
+    @delete="deletePlaylist"
+    @cover-change="handleCoverChange"
+    @update:name="editName = $event"
+    @update:description="editDescription = $event"
+    @update:is-public="editIsPublic = $event"
+  />
 </template>
 
 <style scoped>
@@ -763,100 +687,6 @@ watch(playlist, syncEditForm, { immediate: true })
   font-size: 0.76rem;
   font-weight: 500;
   color: var(--a-color-muted);
-}
-
-.playlist-edit-sheet {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.playlist-edit-panel {
-  display: grid;
-  gap: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
-  padding: 1rem;
-}
-
-.playlist-edit-row {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.playlist-edit-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.92rem;
-  color: var(--a-color-fg);
-}
-
-.playlist-cover-editor {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.playlist-cover-input {
-  display: none;
-}
-
-.playlist-cover-preview {
-  width: 120px;
-  height: 120px;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  overflow: hidden;
-  position: relative;
-}
-
-.playlist-cover-preview--button {
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s ease, transform 0.15s ease;
-}
-
-.playlist-cover-preview--button:hover {
-  border-color: var(--a-color-text);
-}
-
-.playlist-cover-preview--button:disabled {
-  cursor: wait;
-  opacity: 0.72;
-}
-
-.playlist-cover-preview__image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.playlist-cover-preview__empty {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--a-color-muted);
-  font-size: 0.86rem;
-}
-
-.playlist-cover-preview__badge {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  padding: 0.2rem 0.4rem;
-  background: rgba(0, 0, 0, 0.68);
-  color: #fff;
-  font-size: 0.7rem;
-  border-radius: 4px;
-}
-
-.playlist-edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
 }
 
 .stat-author {

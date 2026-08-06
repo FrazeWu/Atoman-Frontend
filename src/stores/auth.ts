@@ -201,7 +201,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (restoreSessionInFlight) return restoreSessionInFlight
     sessionActionGeneration += 1
     const restoreGeneration = sessionGeneration
-    let currentRestore: Promise<boolean>
+    let currentRestore!: Promise<boolean>
     currentRestore = (async () => {
       try {
         const response = await apiRequest(`${API_URL}/auth/session`, { credentials: 'include' })

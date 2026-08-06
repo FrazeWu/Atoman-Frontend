@@ -218,7 +218,7 @@ export function usePostEditorDraftSession({
     clearTimeout(collabStartupTimer)
     collabStartupTimer = null
   }
-  const authHeaders = () => authStore.token
+  const authHeaders = (): Record<string, string> => authStore.token
     ? { Authorization: `Bearer ${authStore.token}` }
     : {}
 

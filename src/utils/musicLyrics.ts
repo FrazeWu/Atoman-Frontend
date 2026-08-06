@@ -26,9 +26,10 @@ function buildLrcLineId(startTimeMs: number, index: number) {
 function parseLrcTimestamp(token: string): number | null {
   const match = token.match(/^(\d{2,}):(\d{2})(?:\.(\d{1,3}))?$/)
   if (!match) return null
-  const minutes = Number(match[1])
-  const seconds = Number(match[2])
-  const fraction = (match[3] ?? '').padEnd(3, '0').slice(0, 3)
+  const [, minutesToken = '', secondsToken = '', fractionToken = ''] = match
+  const minutes = Number(minutesToken)
+  const seconds = Number(secondsToken)
+  const fraction = fractionToken.padEnd(3, '0').slice(0, 3)
   return (minutes * 60 * 1000) + (seconds * 1000) + Number(fraction || '0')
 }
 
@@ -84,7 +85,7 @@ export function mergeLyricsWithTranslation(
     )
     return lines.map((line) => ({
       ...line,
-      translation: line.startTimeMs === null ? '' : (translationByTime.get(line.startTimeMs) ?? ''),
+      translation: typeof line.startTimeMs === 'number' ? (translationByTime.get(line.startTimeMs) ?? '') : '',
     }))
   }
 
@@ -100,6 +101,7 @@ export function buildLyricsAnnotationIndex(annotations: MusicLyricsAnnotation[])
   const rangesByLine = new Map<string, MusicLyricsAnnotationRange[]>()
 
   for (const annotation of activeAnnotations) {
+    if (!annotation.line_id) continue
     const lineAnnotations = annotationsByLine.get(annotation.line_id) ?? []
     lineAnnotations.push(annotation)
     annotationsByLine.set(annotation.line_id, lineAnnotations)
@@ -117,7 +119,7 @@ export function buildLyricsAnnotationIndex(annotations: MusicLyricsAnnotation[])
 
   for (const list of annotationsByLine.values()) {
     list.sort((left, right) => (
-      right.net_score - left.net_score
+      (right.net_score ?? 0) - (left.net_score ?? 0)
       || right.upvotes - left.upvotes
       || left.id.localeCompare(right.id)
     ))
@@ -138,9 +140,9 @@ export function computeCurrentLyricLine(lines: MusicSongLyricsLine[], currentTim
   let activeLine: MusicSongLyricsLine | null = null
 
   for (const line of lines) {
-    if (line.startTimeMs === null) continue
+    if (typeof line.startTimeMs !== 'number') continue
     if (line.startTimeMs > currentTimeMs) break
-    if (line.endTimeMs !== null && currentTimeMs >= line.endTimeMs) continue
+    if (typeof line.endTimeMs === 'number' && currentTimeMs >= line.endTimeMs) continue
     activeLine = line
   }
 

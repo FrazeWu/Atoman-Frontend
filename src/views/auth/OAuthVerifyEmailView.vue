@@ -101,11 +101,13 @@ async function submit() {
   error.value = ''
   try {
     const result = await verifyPendingOAuthEmail(code.value)
-    const nextPath = {
-      complete_profile: '/auth/oauth/complete-profile',
-      confirm_account: '/auth/oauth/confirm-account',
-      set_password: '/auth/oauth/set-password',
-    }[result.stage]
+    const nextPath = result.stage === 'complete_profile'
+      ? '/auth/oauth/complete-profile'
+      : result.stage === 'confirm_account'
+        ? '/auth/oauth/confirm-account'
+        : result.stage === 'set_password'
+          ? '/auth/oauth/set-password'
+          : ''
     if (!nextPath) throw new Error('登录请求已失效，请重新登录')
     await router.replace(nextPath)
   } catch (cause) {

@@ -93,7 +93,7 @@ const loading = ref(true)
 const error = ref('')
 const trendCanvas = ref<HTMLCanvasElement | null>(null)
 const analytics = computed(() => studio.analytics[module.value])
-const rangeOptions = [
+const rangeOptions: Array<{ label: string; value: 7 | 28 | 90 }> = [
   { label: '7 天', value: 7 },
   { label: '28 天', value: 28 },
   { label: '90 天', value: 90 },

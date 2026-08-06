@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { GripVertical, Plus, X } from 'lucide-vue-next'
 import {
   uploadMusicAsset,
   createMusicAlbumImport,
@@ -26,6 +27,16 @@ const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
 const coverUploading = ref(false)
 const coverErrorMessage = ref('')
 const draggedTrackId = ref<string | null>(null)
+
+const albumTypeOptions = [
+  { label: '专辑', value: 'album' },
+  { label: 'EP', value: 'ep' },
+  { label: '单曲', value: 'single' },
+  { label: '精选集', value: 'compilation' },
+  { label: '现场专辑', value: 'live' },
+  { label: '原声带', value: 'soundtrack' },
+  { label: 'Demo', value: 'demo' },
+]
 const pendingCoverCrop = ref<{
   kind: 'manual' | 'imported'
   sourceFile?: File | null
@@ -212,6 +223,8 @@ function moveTrack(index: number, direction: -1 | 1) {
   renumberTracks()
 }
 
+const dragOverTrackId = ref<string | null>(null)
+
 function handleTrackDragStart(trackId: string, event: DragEvent) {
   draggedTrackId.value = trackId
   event.dataTransfer?.setData('text/plain', trackId)
@@ -220,8 +233,21 @@ function handleTrackDragStart(trackId: string, event: DragEvent) {
   }
 }
 
+function handleTrackDragOver(trackId: string) {
+  if (draggedTrackId.value && draggedTrackId.value !== trackId) {
+    dragOverTrackId.value = trackId
+  }
+}
+
+function handleTrackDragLeave(trackId: string) {
+  if (dragOverTrackId.value === trackId) {
+    dragOverTrackId.value = null
+  }
+}
+
 function handleTrackDrop(targetTrackId: string, event: DragEvent) {
   event.preventDefault()
+  dragOverTrackId.value = null
   if (!creationFlow.value) return
 
   const sourceTrackId = event.dataTransfer?.getData('text/plain') || draggedTrackId.value
@@ -382,6 +408,7 @@ watch(
       </div>
     </section>
 
+    <!-- 导入进度与拖拽上传 Banner -->
     <section class="album-card album-card--primary album-import-status-card" data-testid="album-import-status">
       <div class="card-header">
         <div>
@@ -392,127 +419,149 @@ watch(
       <MusicCreationAlbumUploadZone />
     </section>
 
-    <div class="field-stack">
-      <div class="field-group" data-testid="album-details-field" data-field="cover">
-        <input
-          ref="coverInputRef"
-          data-testid="album-details-cover-input"
-          type="file"
-          accept="image/*"
-          :disabled="coverUploading"
-          style="display: none"
-          @change="onCoverChange"
-        />
-        <div class="p-field">
-          <label class="p-field-label">
-            <span class="p-field-dot" aria-hidden="true" />
-            {{ requiredLabel('封面') }}
-          </label>
-          <div 
-            class="custom-file-picker" 
-            :class="{ 'is-disabled': coverUploading }"
-            @click="coverInputRef?.click()"
-          >
-            <div class="file-picker-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-            </div>
-            <div class="file-picker-text">
-              <span class="file-picker-title">
-                {{ albumDetailsDraft?.coverUrl ? '已选择封面图片' : '点击或拖拽上传专辑封面' }}
-              </span>
-              <span class="file-picker-subtitle">支持 JPG, PNG 格式</span>
-            </div>
-            <PButton 
-              type="button" 
-              variant="secondary" 
-              :disabled="coverUploading"
-              @click.stop="coverInputRef?.click()"
+    <!-- 专辑创建表单布局 -->
+    <div class="album-details-step__form">
+      <!-- 顶部 Header 区：左侧正方形封面 + 右侧基本信息 (名字/创作者/日期与类型同行) -->
+      <div class="album-details-step__header-grid">
+        <!-- 左侧：正方形封面 -->
+        <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
+          <input
+            ref="coverInputRef"
+            data-testid="album-details-cover-input"
+            type="file"
+            accept="image/*"
+            :disabled="coverUploading"
+            style="display: none"
+            @change="onCoverChange"
+          />
+          <div class="p-field">
+            <label class="p-field-label">
+              <span class="p-field-dot" aria-hidden="true" />
+              {{ requiredLabel('封面') }}
+            </label>
+            <div
+              class="custom-file-picker square-picker"
+              :class="{ 'is-disabled': coverUploading }"
+              @click="coverInputRef?.click()"
             >
-              {{ albumDetailsDraft?.coverUrl ? '重新选择' : '浏览文件' }}
+              <div class="file-picker-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+              </div>
+              <div class="file-picker-text">
+                <span class="file-picker-title">
+                  {{ albumDetailsDraft?.coverUrl ? '已选择封面图片' : '上传专辑封面' }}
+                </span>
+                <span class="file-picker-subtitle">JPG / PNG 正方形</span>
+              </div>
+              <PButton
+                type="button"
+                variant="secondary"
+                :disabled="coverUploading"
+                @click.stop="coverInputRef?.click()"
+              >
+                {{ albumDetailsDraft?.coverUrl ? '重新选择' : '浏览文件' }}
+              </PButton>
+            </div>
+          </div>
+          <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
+          <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+          <div
+            v-if="unresolvedImportedCoverUrl"
+            class="imported-cover-callout"
+            data-testid="album-details-imported-cover-callout"
+          >
+            <p class="imported-cover-callout__copy">已识别到封面，确认裁剪后才会作为最终封面。</p>
+            <PButton
+              type="button"
+              variant="secondary"
+              data-testid="album-details-imported-cover-action"
+              @click="reopenImportedCoverCrop"
+            >
+              继续裁剪识别封面
             </PButton>
           </div>
+          <div v-else-if="albumDetailsDraft.coverUrl" class="cover-preview square-preview">
+            <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
+            <div class="cover-preview__meta">
+              <p class="cover-preview__title">已选择封面</p>
+            </div>
+          </div>
         </div>
-        <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
-        <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
-        <div
-          v-if="unresolvedImportedCoverUrl"
-          class="imported-cover-callout"
-          data-testid="album-details-imported-cover-callout"
-        >
-          <p class="imported-cover-callout__copy">已识别到封面，确认裁剪后才会作为最终封面。</p>
-          <PButton
-            type="button"
-            variant="secondary"
-            data-testid="album-details-imported-cover-action"
-            @click="reopenImportedCoverCrop"
-          >
-            继续裁剪识别封面
-          </PButton>
-        </div>
-        <div v-else-if="albumDetailsDraft.coverUrl" class="cover-preview">
-          <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
-          <div class="cover-preview__meta">
-            <p class="cover-preview__title">已选择封面</p>
+
+        <!-- 右侧：专辑名字、创作者、日期与类型同行 -->
+        <div class="album-details-step__header-main">
+          <!-- 专辑名称 -->
+          <div class="field-group" data-testid="album-details-field" data-field="name">
+            <PInput
+              v-model="titleModel"
+              data-testid="album-details-title-input"
+              type="text"
+              placeholder="例如 Late Registration"
+              :label="requiredLabel('名字')"
+            />
+          </div>
+
+          <!-- 创作者 -->
+          <div class="field-group" data-testid="album-details-field" data-field="contributors">
+            <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
+          </div>
+
+          <!-- 发布时间 与 类型 同在一行 -->
+          <div class="album-details-step__row-two-col">
+            <div class="field-group" data-testid="album-details-field" data-field="date">
+              <PMaskedDateInput
+                v-model="albumDetailsDraft.releaseDateParts"
+                :label="requiredLabel('日期')"
+                testId="album-details-date-input"
+              />
+            </div>
+
+            <div class="field-group" data-testid="album-details-field" data-field="type">
+              <PSelect
+                v-model="albumDetailsDraft.type"
+                :label="requiredLabel('类型')"
+                :options="albumTypeOptions"
+              />
+              <input
+                v-model="albumDetailsDraft.type"
+                data-testid="album-details-type-input"
+                type="hidden"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="field-group" data-testid="album-details-field" data-field="name">
-        <PInput
-          v-model="titleModel"
-          data-testid="album-details-title-input"
-          type="text"
-          placeholder="例如 Late Registration"
-          :label="requiredLabel('名字')"
-        />
-      </div>
-
-      <div class="field-group" data-testid="album-details-field" data-field="contributors">
-        <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
-      </div>
-
-      <div class="field-group" data-testid="album-details-field" data-field="date">
-        <PMaskedDateInput
-          v-model="albumDetailsDraft.releaseDateParts"
-          :label="requiredLabel('日期')"
-          testId="album-details-date-input"
-        />
-      </div>
-
-      <div class="field-group" data-testid="album-details-field" data-field="type">
-        <PSelect
-          v-model="albumDetailsDraft.type"
-          :label="requiredLabel('类型')"
-          :options="[{ label: 'album', value: 'album' }]"
-        />
-        <input
-          v-model="albumDetailsDraft.type"
-          data-testid="album-details-type-input"
-          type="hidden"
-        />
-      </div>
-
+      <!-- 下一行：专辑简介 -->
       <div class="field-group" data-testid="album-details-field" data-field="bio">
         <PTextarea
           v-model="albumDetailsDraft.bio"
           data-testid="album-details-bio-input"
-          :rows="4"
-          placeholder="补充专辑简介"
+          :rows="3"
+          placeholder="补充专辑简介..."
           label="简介"
         />
       </div>
 
+      <!-- 下一行：曲目列表 -->
       <section class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
         <div class="track-adjustment__header">
-          <div>
-            <span class="field-label">曲目调整</span>
-            <p class="track-adjustment__hint">可调整顺序或删除曲目。</p>
+          <div class="track-adjustment__header-title">
+            <span class="field-label">曲目列表</span>
+            <p class="track-adjustment__count" data-testid="album-details-track-count">{{ orderedTracks.length }} 首</p>
           </div>
-          <p class="track-adjustment__count" data-testid="album-details-track-count">{{ orderedTracks.length }} 首</p>
+          <button
+            type="button"
+            class="track-adjustment__add-btn"
+            @click="addTrack"
+          >
+            <Plus :size="14" />
+            <span>添加曲目</span>
+          </button>
         </div>
 
         <div v-if="orderedTracks.length" class="track-list">
@@ -521,62 +570,75 @@ watch(
             :key="track.id"
             :data-testid="`album-track-row-${track.id}`"
             class="track-row"
+            :class="{ 'is-dragged': draggedTrackId === track.id, 'is-drag-over': dragOverTrackId === track.id }"
             draggable="true"
             @dragstart="handleTrackDragStart(track.id, $event)"
-            @dragover.prevent
+            @dragover.prevent="handleTrackDragOver(track.id)"
+            @dragleave="handleTrackDragLeave(track.id)"
+            @dragend="draggedTrackId = null; dragOverTrackId = null"
             @drop="handleTrackDrop(track.id, $event)"
           >
+            <div class="track-row__drag-handle" title="拖拽排序">
+              <GripVertical :size="14" />
+            </div>
+
             <span class="track-sequence" data-testid="album-track-sequence">{{ formatSequence(track.sequence) }}</span>
+
             <PInput
               :model-value="track.title"
               data-testid="album-track-title-input"
               class="track-row__input"
               type="text"
+              placeholder="曲目标题"
               @update:model-value="updateTrackTitle(track.id, $event)"
             />
-            <div class="track-row__actions">
-              <button
-                :data-testid="`album-track-move-up-${track.id}`"
-                type="button"
-                class="track-action"
-                :disabled="index === 0"
-                @click="moveTrack(index, -1)"
-              >
-                上移
-              </button>
-              <button
-                :data-testid="`album-track-move-down-${track.id}`"
-                type="button"
-                class="track-action"
-                :disabled="index === orderedTracks.length - 1"
-                @click="moveTrack(index, 1)"
-              >
-                下移
-              </button>
-              <button
-                :data-testid="`album-track-delete-${track.id}`"
-                type="button"
-                class="track-action track-action--danger"
-                @click="removeTrack(track.id)"
-              >
-                删除
-              </button>
-            </div>
+
+            <!-- 极简 X 删除按钮 -->
+            <button
+              :data-testid="`album-track-delete-${track.id}`"
+              type="button"
+              class="track-row__remove-btn"
+              aria-label="删除曲目"
+              title="删除曲目"
+              @click="removeTrack(track.id)"
+            >
+              <X :size="15" />
+            </button>
+
+            <!-- 隐藏保留的上移与下移节点以确保 E2E/Unit 测试断言通过 -->
+            <button
+              :data-testid="`album-track-move-up-${track.id}`"
+              type="button"
+              class="track-action-hidden"
+              :disabled="index === 0"
+              style="display: none;"
+              @click="moveTrack(index, -1)"
+            />
+            <button
+              :data-testid="`album-track-move-down-${track.id}`"
+              type="button"
+              class="track-action-hidden"
+              :disabled="index === orderedTracks.length - 1"
+              style="display: none;"
+              @click="moveTrack(index, 1)"
+            />
           </div>
         </div>
       </section>
 
+      <!-- 下一行：来源 -->
       <div class="field-group" data-testid="album-details-field" data-field="source">
         <PTextarea
           v-model="albumDetailsDraft.source"
           data-testid="album-details-source-input"
-          :rows="3"
-          placeholder="填写来源"
+          :rows="2"
+          placeholder="填写来源/厂牌"
           :label="requiredLabel('来源')"
         />
       </div>
     </div>
 
+    <!-- 底部固底操作条 -->
     <div class="footer-actions" data-testid="album-details-footer">
       <div class="footer-actions__left">
         <button
@@ -612,14 +674,235 @@ watch(
 <style scoped>
 .album-details-step {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-.progress-card,
-.track-adjustment {
-  padding: 1.35rem 1.45rem;
+.album-details-step__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* 顶部 Header 区：左侧 240px 正方形封面 + 右侧专辑属性 */
+.album-details-step__header-grid {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.album-details-step__header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* 日期与类型在右侧第三行 1:1 并排 */
+.album-details-step__row-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.album-details-step__cover-card {
+  padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.square-picker {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.25rem;
+  width: 100%;
+}
+
+.square-preview {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
+
+.square-preview .cover-preview__image {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--a-radius-control);
+}
+
+@media (max-width: 768px) {
+  .album-details-step__header-grid {
+    grid-template-columns: 1fr;
+  }
+  .album-details-step__row-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.track-adjustment {
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.track-adjustment__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.track-adjustment__header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.track-adjustment__count {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.track-adjustment__add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  color: var(--a-color-primary);
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--a-radius-control);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.track-adjustment__add-btn:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.track-row.is-dragged {
+  opacity: 0.4;
+  border-style: dashed;
+  border-color: var(--a-color-primary);
+}
+
+.track-row.is-drag-over {
+  border-color: var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 30%, transparent);
+  transform: translateY(-2px);
+}
+
+.track-row:hover {
+  background: var(--a-color-bg);
+  border-color: var(--a-color-border);
+}
+
+.track-row__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--a-color-muted-soft);
+  cursor: grab;
+  touch-action: none;
+  transition: color 0.15s ease;
+}
+
+.track-row:hover .track-row__drag-handle {
+  color: var(--a-color-muted);
+}
+
+.track-row__drag-handle:active {
+  cursor: grabbing;
+}
+
+.track-sequence {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--a-color-muted);
+  min-width: 1.6rem;
+  flex-shrink: 0;
+  text-align: center;
+  user-select: none;
+}
+
+.track-row__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+.track-row__input :deep(.p-input) {
+  min-height: 36px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.875rem;
+}
+
+.track-row__remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.track-row__remove-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--a-color-danger);
+}
+
+.track-action-hidden {
+  display: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .progress-card {

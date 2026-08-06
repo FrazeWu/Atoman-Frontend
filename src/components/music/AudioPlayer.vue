@@ -296,8 +296,8 @@
 import {
   computed,
   nextTick,
-  onBeforeUnmount,
   onMounted,
+  onUnmounted,
   ref,
   watch,
 } from "vue";
@@ -307,6 +307,7 @@ import { apiRequest } from "@/api/client";
 import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from "@/composables/useApi";
+import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import {
   Repeat,
   Shuffle,
@@ -334,60 +335,50 @@ const route = useRoute();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
 const api = useApi();
-const playerInnerRef = ref<HTMLElement | null>(null);
 const playerInfoRef = ref<HTMLElement | null>(null);
 const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
-const isMetaCollapsed = ref(false);
-const isMobileViewport = ref(false);
-const playerHovered = ref(true);
-const effectivePinned = computed(
-  () => player.isPinned || isMobileViewport.value,
-);
 
-let resizeObserver: ResizeObserver | null = null;
-let viewportQuery: MediaQueryList | null = null;
-let hideTimer: number | null = null;
-const META_COLLAPSE_GAP = 12;
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (e.code !== 'Space' && e.key !== ' ') return
+  const active = document.activeElement
+  if (active) {
+    const tagName = active.tagName.toLowerCase()
+    if (
+      tagName === 'input' ||
+      tagName === 'textarea' ||
+      tagName === 'select' ||
+      (active as HTMLElement).isContentEditable
+    ) {
+      return
+    }
+  }
+  if (!player.currentSong) return
+  e.preventDefault()
+  player.togglePlay()
+}
 
-const clearHideTimer = () => {
-  if (hideTimer === null) return;
-  window.clearTimeout(hideTimer);
-  hideTimer = null;
-};
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handleGlobalKeydown)
+  }
+})
 
-const revealPlayer = () => {
-  clearHideTimer();
-  playerHovered.value = true;
-};
-
-const scheduleAutoHide = () => {
-  if (effectivePinned.value) return;
-  clearHideTimer();
-  hideTimer = window.setTimeout(() => {
-    playerHovered.value = false;
-    hideTimer = null;
-  }, 500);
-};
-
-const togglePlayerPin = () => {
-  player.togglePinned();
-  playerHovered.value = player.isPinned;
-  clearHideTimer();
-};
-
-const syncViewport = () => {
-  isMobileViewport.value = viewportQuery?.matches ?? false;
-};
-
-watch(
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleGlobalKeydown)
+  }
+})
+const {
   effectivePinned,
-  (pinned) => {
-    document.documentElement.dataset.playerActive = "true";
-    document.documentElement.dataset.playerPinned = String(pinned);
-  },
-  { immediate: true },
-);
+  isMetaCollapsed,
+  playerHovered,
+  playerInnerRef,
+  revealPlayer,
+  scheduleAutoHide,
+  togglePlayerPin,
+  updateMetaCollapse,
+} = useAudioPlayerChrome(computed(() => player.isPinned), () => player.togglePinned());
 
 const progressPct = computed(() => {
   if (!player.duration) return 0;
@@ -422,12 +413,6 @@ const isPodcastEpisode = computed(
   () => player.currentSong?.source_type === "podcast_episode",
 );
 const featureLabel = computed(() => (isPodcast.value ? "说明" : "词"));
-
-const updateMetaCollapse = () => {
-  const playerInner = playerInnerRef.value;
-  if (!playerInner) return;
-  isMetaCollapsed.value = playerInner.getBoundingClientRect().width <= 760;
-};
 
 const playlists = ref<MusicPlaylistSummary[]>([]);
 const playlistsLoaded = ref(false);
@@ -589,32 +574,6 @@ watch(
   },
 );
 
-onMounted(() => {
-  viewportQuery = window.matchMedia?.("(max-width: 767px)") ?? null;
-  syncViewport();
-  viewportQuery?.addEventListener("change", syncViewport);
-
-  resizeObserver = new ResizeObserver(() => {
-    updateMetaCollapse();
-  });
-
-  if (playerInnerRef.value) {
-    resizeObserver.observe(playerInnerRef.value);
-  }
-
-  void nextTick(() => {
-    updateMetaCollapse();
-  });
-});
-
-onBeforeUnmount(() => {
-  clearHideTimer();
-  viewportQuery?.removeEventListener("change", syncViewport);
-  delete document.documentElement.dataset.playerActive;
-  delete document.documentElement.dataset.playerPinned;
-  resizeObserver?.disconnect();
-  resizeObserver = null;
-});
 </script>
 
 <style scoped>

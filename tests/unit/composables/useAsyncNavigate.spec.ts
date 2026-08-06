@@ -6,6 +6,7 @@ const triggerExit = vi.fn()
 const triggerEntry = vi.fn()
 const resetTransition = vi.fn()
 const routerPush = vi.fn()
+const checkRelay = vi.fn()
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: routerPush }),
@@ -21,6 +22,10 @@ vi.mock('@/stores/transition', () => ({
     triggerEntry,
     reset: resetTransition,
   }),
+}))
+
+vi.mock('@/composables/useTransitionRelay', () => ({
+  useTransitionRelay: () => ({ checkRelay }),
 }))
 
 function mockFailingStorage() {
@@ -56,6 +61,7 @@ describe('useAsyncNavigate', () => {
     triggerExit.mockReset()
     triggerEntry.mockReset()
     resetTransition.mockReset()
+    checkRelay.mockReset()
     document.body.style.cursor = 'default'
   })
 
@@ -103,6 +109,17 @@ describe('useAsyncNavigate', () => {
 
     expect(routerPush).toHaveBeenCalledWith('/music')
     await navigation
+  })
+
+  it('checks the transition relay after detail navigation', async () => {
+    const { navigateWithShutter } = useAsyncNavigate()
+
+    const navigation = navigateWithShutter(async () => ({ id: 1 }), '/posts/1', 'post')
+    await vi.advanceTimersByTimeAsync(500)
+    await navigation
+
+    expect(routerPush).toHaveBeenCalledWith('/posts/1')
+    expect(checkRelay).toHaveBeenCalledTimes(1)
   })
 
   it('only completes the latest overlapping module navigation', async () => {

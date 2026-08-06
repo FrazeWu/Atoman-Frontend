@@ -44,14 +44,14 @@ function parseLrcVersionLines(content: string): MusicSongLyricsLine[] {
     const line = rawLine.trim()
     if (!line) continue
     const match = line.match(/^\[([^\]]+)\](.*)$/)
-    const timeMs = match ? parseLrcTimestamp(match[1]) : null
+    const timeMs = match?.[1] ? parseLrcTimestamp(match[1]) : null
     if (timeMs === null) continue
     lines.push({
       id: `lrc-${timeMs}-${lines.length}`,
       lineNumber: lines.length,
       startTimeMs: timeMs,
       endTimeMs: null,
-      text: match[2].trim(),
+      text: (match?.[2] ?? '').trim(),
       translation: '',
     })
   }

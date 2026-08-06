@@ -15,9 +15,19 @@ const uploadProgress = computed(() => {
   return total > 0 ? Math.round((loaded / total) * 100) : 0
 })
 const uploadSpeed = computed(() => Math.round((albumImport.value?.uploadSpeed ?? 0) / 1024))
-const stageLabel = computed(() => ({
-  upload: '上传中', queued: '等待处理', extracting: '解压中', analyzing: '分析中', transcoding: '转码中', ready: '已就绪', completed: '已完成', failed: '处理失败',
-}[albumImport.value?.stage ?? 'upload'] ?? '处理中'))
+const stageLabels = {
+  upload: '上传中',
+  queued: '等待处理',
+  extracting: '解压中',
+  analyzing: '分析中',
+  transcoding: '转码中',
+  committing: '正在保存',
+  ready: '已就绪',
+  completed: '已完成',
+  failed: '处理失败',
+  canceled: '已取消',
+} as const
+const stageLabel = computed(() => stageLabels[albumImport.value?.stage ?? 'upload'])
 </script>
 
 <template>

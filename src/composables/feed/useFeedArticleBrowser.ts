@@ -168,7 +168,7 @@ export function useFeedArticleBrowser({
     sourceArticlesLoading.value = true
     try {
       const params = buildFeedTimelineQuery({ limit: 100, sourceId: source.subscriptionId })
-      const headers = authStore.isAuthenticated
+      const headers: HeadersInit = authStore.isAuthenticated
         ? { Authorization: `Bearer ${authStore.token}` }
         : {}
       const response = await apiRequest(`${apiURL}/feed/timeline?${params}`, { headers })

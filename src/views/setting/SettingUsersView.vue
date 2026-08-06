@@ -450,7 +450,7 @@ async function loadUsers(page = meta.value.page) {
       page_size: meta.value.page_size,
     })
     users.value = response.data
-    meta.value = response.meta
+    meta.value = response.meta ?? { ...meta.value, page, total: response.data.length, has_more: false }
   } catch (cause) {
     error.value = errorText(cause, '加载用户失败，请重试')
   } finally {

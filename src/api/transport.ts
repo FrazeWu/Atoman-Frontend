@@ -205,7 +205,7 @@ async function request(input: RequestInfo | URL, init: RequestInit = {}, origina
     method: requestMethod(input, init),
     headers,
     data: prepared.body,
-    signal: prepared.signal,
+    signal: prepared.signal ?? undefined,
     withCredentials: prepared.credentials === 'include',
     adapter: import.meta.env.MODE === 'test' ? axiosFetchAdapter : undefined,
     atomanOriginalInit: init,

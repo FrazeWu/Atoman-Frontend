@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { defineAsyncComponent, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import BlogCollectionSheet from '@/components/blog/BlogCollectionSheet.vue'
-import BlogPostSheet from '@/components/blog/BlogPostSheet.vue'
 import { useBlogSheets } from '@/composables/useBlogSheets'
+
+const BlogCollectionSheet = defineAsyncComponent(() => import('@/components/blog/BlogCollectionSheet.vue'))
+const BlogPostSheet = defineAsyncComponent(() => import('@/components/blog/BlogPostSheet.vue'))
 
 const route = useRoute()
 const { layers, closeAll } = useBlogSheets()

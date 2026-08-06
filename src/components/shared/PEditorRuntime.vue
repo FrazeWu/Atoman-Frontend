@@ -164,6 +164,7 @@ import {
   updateResourceReferenceLabels,
   type ResourceReferenceLabels,
 } from './editor/resourceReferenceExtension'
+import { enhancePreviewCodeBlocks } from './editor/previewEnhancements'
 
 interface Peer { clientId: number; name: string; color: string }
 interface Props {
@@ -335,7 +336,7 @@ function resourceReferenceExtensions() {
     : []
 }
 
-function editorContentAttributes() {
+function editorContentAttributes(): Record<string, string> {
   return props.editorAriaLabel ? { 'aria-label': props.editorAriaLabel } : {}
 }
 
@@ -936,56 +937,9 @@ function onContainerKeydown(e: KeyboardEvent) {
   }
 }
 
-function enhancePreviewDom() {
-  const root = previewPaneRef.value
-  if (!root) return
-
-  const blocks = root.querySelectorAll('pre > code')
-  blocks.forEach((code) => {
-    const pre = code.parentElement
-    if (!pre || pre.dataset.enhanced === 'true') return
-    pre.dataset.enhanced = 'true'
-
-    const langMatch = code.className.match(/(?:language|lang)-(\w+)/)
-    const detectedLanguage = langMatch ? langMatch[1] : ''
-
-    const titlebar = document.createElement('div')
-    titlebar.className = 'code-block-titlebar'
-
-    const lights = document.createElement('div')
-    lights.className = 'code-block-lights'
-    lights.innerHTML = '<span class="code-block-dot dot-red"></span><span class="code-block-dot dot-yellow"></span><span class="code-block-dot dot-green"></span>'
-    titlebar.append(lights)
-
-    if (detectedLanguage) {
-      const langLabel = document.createElement('span')
-      langLabel.className = 'code-block-lang'
-      langLabel.textContent = detectedLanguage
-      titlebar.append(langLabel)
-    }
-
-    const copyButton = document.createElement('button')
-    copyButton.type = 'button'
-    copyButton.className = 'code-block-copy'
-    copyButton.textContent = '复制'
-    copyButton.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(code.textContent || '')
-        copyButton.textContent = '已复制'
-        window.setTimeout(() => { copyButton.textContent = '复制' }, 1500)
-      } catch {
-        copyButton.textContent = '复制失败'
-        window.setTimeout(() => { copyButton.textContent = '复制' }, 1500)
-      }
-    })
-    titlebar.append(copyButton)
-    pre.prepend(titlebar)
-  })
-}
-
 watch(svPreviewHtml, async () => {
   await nextTick()
-  enhancePreviewDom()
+  enhancePreviewCodeBlocks(previewPaneRef.value)
 })
 
 defineExpose({

@@ -51,7 +51,7 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
             hash: to.hash,
           }),
         },
-        { path: 'discover', component: () => import('@/views/music/ExploreView.vue') },
+        { path: 'discover', component: () => import('@/views/music/DiscoverView.vue') },
         { path: 'songs', component: () => import('@/views/music/SongsView.vue') },
         { path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
         {

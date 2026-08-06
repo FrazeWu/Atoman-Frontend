@@ -31,9 +31,9 @@ vi.mock('@/composables/useMusicDrawers', () => ({
   }),
 }))
 
-vi.mock('@/views/music/HomeView.vue', () => ({
+vi.mock('@/views/music/AlbumsView.vue', () => ({
   default: {
-    name: 'HomeViewStub',
+    name: 'AlbumsViewStub',
     template: '<div data-testid="music-home-view-stub" />',
   },
 }))

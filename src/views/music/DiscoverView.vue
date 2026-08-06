@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
+import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'

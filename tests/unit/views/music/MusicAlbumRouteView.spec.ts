@@ -40,7 +40,7 @@ vi.mock('@/utils/musicMedia', () => ({
   ],
 }))
 
-vi.mock('@/views/music/HomeView.vue', () => ({
+vi.mock('@/views/music/AlbumsView.vue', () => ({
   default: { template: '<div data-testid="music-home-view-stub" />' },
 }))
 

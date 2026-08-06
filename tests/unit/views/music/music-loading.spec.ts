@@ -1,12 +1,12 @@
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 
-const musicHomeSource = readFileSync(
-  path.resolve(process.cwd(), 'src/views/music/HomeView.vue'),
+const musicAlbumsSource = readFileSync(
+  path.resolve(process.cwd(), 'src/views/music/AlbumsView.vue'),
   'utf8',
 )
-const musicExploreSource = readFileSync(
-  path.resolve(process.cwd(), 'src/views/music/ExploreView.vue'),
+const musicDiscoverSource = readFileSync(
+  path.resolve(process.cwd(), 'src/views/music/DiscoverView.vue'),
   'utf8',
 )
 
@@ -16,11 +16,11 @@ const playerStoreSource = readFileSync(
 )
 
 describe('music loading boundaries', () => {
-  it('keeps the music home view as a thin shell and leaves album loading to ExploreView', () => {
-    expect(musicHomeSource).not.toContain('player.fetchSongs()')
-    expect(musicHomeSource).toContain('<ExploreView page-title="专辑" content-mode="albums" />')
-    expect(musicExploreSource).toContain('listMusicDiscoverFeed')
-    expect(musicExploreSource).toContain('listMusicAlbums')
+  it('keeps the music home view as a thin shell and leaves album loading to DiscoverView', () => {
+    expect(musicAlbumsSource).not.toContain('player.fetchSongs()')
+    expect(musicAlbumsSource).toContain('<DiscoverView page-title="专辑" content-mode="albums" />')
+    expect(musicDiscoverSource).toContain('listMusicDiscoverFeed')
+    expect(musicDiscoverSource).toContain('listMusicAlbums')
   })
 
   it('keeps the player audio element lazily created', () => {

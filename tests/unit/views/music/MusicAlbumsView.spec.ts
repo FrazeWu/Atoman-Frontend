@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { computed, nextTick, reactive } from 'vue'
 import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import HomeView from '@/views/music/HomeView.vue'
+import AlbumsView from '@/views/music/AlbumsView.vue'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 
 const mocks = vi.hoisted(() => ({
@@ -25,9 +25,9 @@ const authStore = reactive({
   user: null as null | { uuid: string },
 })
 
-vi.mock('@/views/music/ExploreView.vue', () => ({
+vi.mock('@/views/music/DiscoverView.vue', () => ({
   default: {
-    name: 'ExploreViewStub',
+    name: 'DiscoverViewStub',
     props: ['pageTitle', 'contentMode'],
     template: '<div data-testid="music-explore-view-stub" :data-page-title="pageTitle" :data-content-mode="contentMode">专辑首页</div>',
   },
@@ -74,12 +74,12 @@ vi.mock('@/router', () => ({
 const mountedWrappers: Array<ReturnType<typeof mount>> = []
 
 function mountHome() {
-  const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+  const wrapper = mount(AlbumsView, { global: { plugins: [createPinia()] } })
   mountedWrappers.push(wrapper)
   return wrapper
 }
 
-describe('Music HomeView.vue (Album Landing)', () => {
+describe('Music AlbumsView.vue (Album Landing)', () => {
   beforeEach(() => {
     mocks.openAlbum.mockReset()
     mocks.closeAlbum.mockReset()

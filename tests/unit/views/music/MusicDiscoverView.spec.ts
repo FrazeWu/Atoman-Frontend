@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuthStore } from '@/stores/auth'
-import ExploreView from '@/views/music/ExploreView.vue'
+import DiscoverView from '@/views/music/DiscoverView.vue'
 
 const mocks = vi.hoisted(() => ({
   listMusicDiscoverFeed: vi.fn(),
@@ -81,7 +81,7 @@ vi.mock('@/stores/player', () => ({
   usePlayerStore: () => ({ playSong: mocks.playSong }),
 }))
 
-describe('Music ExploreView.vue', () => {
+describe('Music DiscoverView.vue', () => {
   afterEach(() => {
     setActivePinia(undefined)
   })
@@ -216,7 +216,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('uses 发现 as the default page title', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: {
@@ -234,7 +234,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('uses the external page title when provided', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       props: {
         pageTitle: '专辑',
       },
@@ -255,7 +255,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('renders album-only content when used in albums mode', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       props: {
         pageTitle: '专辑',
         contentMode: 'albums',
@@ -280,7 +280,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('opens the album creation flow from the album landing page', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       props: {
         pageTitle: '专辑',
         contentMode: 'albums',
@@ -294,7 +294,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('shows album and artist groups in search dropdown', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span><slot /><slot name="action" /></div>' },
@@ -330,7 +330,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('renders discover sections from the backend discover feed', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
@@ -365,7 +365,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('shows the former music home sections on the discover page', async () => {
-    const wrapper = mount(ExploreView)
+    const wrapper = mount(DiscoverView)
     await flushPromises()
 
     expect(mocks.getMusicHome).toHaveBeenCalledTimes(1)
@@ -401,7 +401,7 @@ describe('Music ExploreView.vue', () => {
       ],
     })
 
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
@@ -419,7 +419,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('opens playlist route when clicking a discover playlist card', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
@@ -436,7 +436,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('opens album drawer when clicking a discover album card', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
@@ -453,7 +453,7 @@ describe('Music ExploreView.vue', () => {
   })
 
   it('opens artist drawer when clicking a discover artist card', async () => {
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
@@ -476,7 +476,7 @@ describe('Music ExploreView.vue', () => {
       created_at: '2026-07-05T00:00:00Z',
     })
 
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },
@@ -501,7 +501,7 @@ describe('Music ExploreView.vue', () => {
     useAuthStore().isAuthenticated = false
     mocks.requireLogin.mockReturnValue(false)
 
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       props: {
         pageTitle: '专辑',
         contentMode: 'albums',
@@ -529,7 +529,7 @@ describe('Music ExploreView.vue', () => {
       created_at: '2026-07-05T00:00:00Z',
     })
 
-    const wrapper = mount(ExploreView, {
+    const wrapper = mount(DiscoverView, {
       global: {
         stubs: {
           PPageHeader: { props: ['title'], template: '<div><span>{{ title }}</span></div>' },

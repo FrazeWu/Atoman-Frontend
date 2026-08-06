@@ -4,7 +4,7 @@ import { getActivePinia } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
-import ExploreView from '@/views/music/ExploreView.vue'
+import DiscoverView from '@/views/music/DiscoverView.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import { usePendingMusicLyricsAnnotations } from '@/composables/usePendingMusicLyricsAnnotations'
@@ -81,7 +81,7 @@ watch(
       </PButton>
     </div>
     <div class="main-level-1" :class="{ 'is-shifted': isMainShifted }">
-      <ExploreView page-title="专辑" content-mode="albums" />
+      <DiscoverView page-title="专辑" content-mode="albums" />
     </div>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import HomeView from '@/views/music/HomeView.vue'
+import AlbumsView from '@/views/music/AlbumsView.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicSheetRouteSync } from '@/composables/useMusicSheetRouteSync'
 
@@ -22,5 +22,5 @@ watch(
 </script>
 
 <template>
-  <HomeView />
+  <AlbumsView />
 </template>

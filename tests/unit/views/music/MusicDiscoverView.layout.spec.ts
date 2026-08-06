@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const source = readFileSync(resolve(__dirname, '../../../../src/views/music/ExploreView.vue'), 'utf8')
+const source = readFileSync(resolve(__dirname, '../../../../src/views/music/DiscoverView.vue'), 'utf8')
 
 function getBlock(selector: string) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -10,7 +10,7 @@ function getBlock(selector: string) {
   return match?.[1] ?? ''
 }
 
-describe('Music ExploreView layout', () => {
+describe('Music DiscoverView layout', () => {
   it('does not keep oversized discover-card variants', () => {
     expect(getBlock('.discover-layout__item--album-hero')).toBe('')
     expect(getBlock('.discover-layout__item--album-hero :deep(.cover-frame)')).toBe('')

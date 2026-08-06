@@ -9,6 +9,7 @@ import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import {
+  buildUpdateArtistEdit,
   buildUpdateAlbumEdit,
   createAlbumDiscussion,
   deleteAlbumDiscussion,
@@ -20,7 +21,6 @@ import {
   replyAlbumDiscussion,
   revertAlbumRevision,
   submitMusicEdit,
-  updateMusicArtist,
   type MusicDiscussion,
   type MusicRevisionSummary,
   type MusicSource,
@@ -456,13 +456,15 @@ async function submitEdit() {
       if (!artistId.value) {
         throw new Error('缺少艺术家 ID')
       }
-      await updateMusicArtist(artistId.value, {
+      await submitMusicEdit(buildUpdateArtistEdit(artistId.value, {
         name: trimmed(artistDraft.name) || undefined,
         bio: trimmed(artistDraft.bio) || undefined,
         image_url: trimmed(artistDraft.imageUrl) || undefined,
         nationality: trimmed(artistDraft.nationality) || undefined,
         birth_year: optionalNumber(artistDraft.birthYear),
-      })
+        reason,
+        sources: sourcesFromDraft(),
+      }))
     } else if (action === 'revise') {
       if (!albumId.value) {
         throw new Error('缺少专辑 ID')

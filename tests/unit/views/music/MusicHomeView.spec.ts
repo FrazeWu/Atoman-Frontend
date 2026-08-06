@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   closeMusicEditor: vi.fn(),
   routeQuery: {} as Record<string, string>,
   listPendingMusicLyricsAnnotations: vi.fn(),
+	getMusicHome: vi.fn(),
   routerPush: vi.fn(),
 }))
 
@@ -61,6 +62,7 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/api/musicV1', () => ({
   listPendingMusicLyricsAnnotations: mocks.listPendingMusicLyricsAnnotations,
+	getMusicHome: mocks.getMusicHome,
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -82,6 +84,9 @@ describe('Music HomeView.vue (Album Landing)', () => {
     mocks.openMusicEditor.mockReset()
     mocks.closeMusicEditor.mockReset()
     mocks.listPendingMusicLyricsAnnotations.mockReset()
+		mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([])
+		mocks.getMusicHome.mockReset()
+		mocks.getMusicHome.mockResolvedValue({ personalized: false, recently_played: [], for_you: [], sections: [] })
     mocks.routerPush.mockReset()
     authStore.isAuthenticated = false
     authStore.token = null
@@ -97,6 +102,41 @@ describe('Music HomeView.vue (Album Landing)', () => {
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-page-title')).toBe('专辑')
     expect(wrapper.find('[data-testid="music-explore-view-stub"]').attributes('data-content-mode')).toBe('albums')
   })
+
+	it('ignores an older guest response after the authenticated home request finishes', async () => {
+		let resolveGuest!: (value: unknown) => void
+		let resolveAuthenticated!: (value: unknown) => void
+		const guestRequest = new Promise(resolve => { resolveGuest = resolve })
+		const authenticatedRequest = new Promise(resolve => { resolveAuthenticated = resolve })
+		mocks.getMusicHome
+			.mockReturnValueOnce(guestRequest)
+			.mockReturnValueOnce(authenticatedRequest)
+
+		const wrapper = mount(HomeView, { global: { plugins: [createPinia()] } })
+		authStore.isAuthenticated = true
+		authStore.token = 'cookie-session'
+		authStore.user = { uuid: 'user-1' }
+		await nextTick()
+
+		resolveAuthenticated({
+			personalized: false,
+			recently_played: [],
+			for_you: [],
+			sections: [{ key: 'signed-in', title: '登录结果', albums: [] }],
+		})
+		await flushPromises()
+		expect(wrapper.text()).toContain('登录结果')
+
+		resolveGuest({
+			personalized: false,
+			recently_played: [],
+			for_you: [],
+			sections: [{ key: 'guest', title: '游客结果', albums: [] }],
+		})
+		await flushPromises()
+		expect(wrapper.text()).toContain('登录结果')
+		expect(wrapper.text()).not.toContain('游客结果')
+	})
 
   it('opens drawers from route query state on mount', () => {
     mocks.routeQuery = {

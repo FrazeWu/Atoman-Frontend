@@ -3,13 +3,13 @@ import { reportError } from '@/utils/logger'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  buildUpdateArtistEdit,
   buildUpdateAlbumEdit,
   commitMusicAlbumImport,
   createMusicArtist,
   getMusicAlbum,
   getMusicArtist,
   submitMusicEdit,
-  updateMusicArtist,
   uploadMusicAsset,
   type MusicAlbumImportCommitInput,
   type MusicAlbumListItem,
@@ -226,7 +226,11 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
   artistErrorMessage.value = ''
   try {
     if (current.id) {
-      await updateMusicArtist(current.id, value)
+      await submitMusicEdit(buildUpdateArtistEdit(current.id, {
+        ...value,
+        reason: '编辑艺术家',
+        sources: [],
+      }))
     } else {
       const name = value.name?.trim()
       if (!name) throw new Error('请输入艺术家名称')

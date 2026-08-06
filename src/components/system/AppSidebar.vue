@@ -307,8 +307,7 @@ const musicNavItems = [
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass },
   { to: moduleUrl('music'), label: '专辑', icon: Disc3, exact: true },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
-  { to: modulePathUrl('music', '/starred'), label: '收藏', icon: Star },
-	{ to: modulePathUrl('music', '/library'), label: '音乐库', icon: Library },
+  { to: modulePathUrl('music', '/library'), label: '音乐库', icon: Library },
   { to: modulePathUrl('music', '/history'), label: '播放历史', icon: History },
   { to: modulePathUrl('music', '/imports'), label: '导入记录', icon: Archive },
 ]

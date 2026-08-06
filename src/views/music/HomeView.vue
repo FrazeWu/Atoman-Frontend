@@ -9,6 +9,7 @@ import PButton from '@/components/ui/PButton.vue'
 import { MusicAlbumCard } from '@/components/music'
 import { useAuthStore } from '@/stores/auth'
 import { usePendingMusicLyricsAnnotations } from '@/composables/usePendingMusicLyricsAnnotations'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { getMusicHome, type MusicHome, type MusicSongListItem } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
@@ -19,6 +20,7 @@ const authStore = getActivePinia() ? useAuthStore() : null
 const player = usePlayerStore()
 const musicHome = ref<MusicHome | null>(null)
 const musicHomeLoading = ref(false)
+const musicHomeRequests = useRequestGeneration()
 const { pendingMusicLyricsAnnotations: pendingRebindNotifications, loadPendingMusicLyricsAnnotations } = usePendingMusicLyricsAnnotations()
 const pendingRebindCount = computed(() => pendingRebindNotifications.value.length)
 const pendingRebindUserId = computed(() => {
@@ -57,14 +59,16 @@ async function loadPendingRebindNotifications() {
 }
 
 async function loadMusicHome() {
+  const { isCurrent } = musicHomeRequests.beginRequest()
   musicHome.value = null
   musicHomeLoading.value = true
   try {
-    musicHome.value = await getMusicHome()
+    const response = await getMusicHome()
+    if (isCurrent()) musicHome.value = response
   } catch (error) {
-    reportError(error, '加载音乐首页失败')
+    if (isCurrent()) reportError(error, '加载音乐首页失败')
   } finally {
-    musicHomeLoading.value = false
+    if (isCurrent()) musicHomeLoading.value = false
   }
 }
 

@@ -61,7 +61,7 @@ describe('player store', () => {
 		vi.useRealTimers()
 	})
 
-	it('plays music for guests without writing listening history', async () => {
+	it('reports guest plays so the backend can count them without writing history', async () => {
 		vi.useFakeTimers()
 		useAuthStore().isAuthenticated = false
 		const player = usePlayerStore()
@@ -71,7 +71,8 @@ describe('player store', () => {
 		await audioInstances[0].play.mock.results[0]?.value
 		await vi.advanceTimersByTimeAsync(5000)
 
-		expect(mocks.recordMusicSongPlay).not.toHaveBeenCalled()
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1)
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith('guest-song')
 		vi.useRealTimers()
 	})
 

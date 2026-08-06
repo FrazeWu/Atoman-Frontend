@@ -930,7 +930,7 @@ onMounted(() => {
     gap: 0.75rem;
     padding: 0.4rem 0;
     border: 0;
-    border-bottom: 1px dashed var(--a-color-border-soft);
+    border-bottom: 1px solid var(--a-color-border-soft);
   }
 
   .setting-users__table td:last-child {

@@ -23,7 +23,7 @@ describe('music v1 API layering', () => {
 
     for (const [module, expected] of Object.entries(expectedDependencies)) {
       const source = readFileSync(path.resolve(process.cwd(), `src/api/musicV1/${module}.ts`), 'utf8')
-      const dependencies = [...source.matchAll(/from '\.\/([^']+)'/g)]
+      const dependencies = [...source.matchAll(/from ['"]\.\/([^'"]+)['"]/g)]
         .map((match) => match[1])
         .filter((dependency) => dependency !== module)
 

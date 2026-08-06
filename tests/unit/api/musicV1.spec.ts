@@ -21,7 +21,6 @@ import {
   listAlbumDiscussions,
   replyAlbumDiscussion,
   startMusicAlbumImportMultipart,
-  updateMusicArtist,
   type MusicAlbumListItem,
   musicV1Endpoints,
   uploadMusicAlbumArchiveMultipart,
@@ -186,35 +185,14 @@ describe('api v1 client', () => {
     expect(error.details).toEqual({ field: 'sources' })
   })
 
-  it('retries playlist updates with cookie credentials on same-origin absolute URL after a not-found response', async () => {
-    vi.stubGlobal('window', {
-      location: { origin: 'http://localhost:5176' },
-    })
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({ error: { message: 'Not found' } }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } },
-      ))
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({ data: { id: 'playlist-1', name: 'Playlist', description: '', is_public: true, song_count: 0, songs: [] } }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )))
+  it('does not retry playlist updates after a not-found response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ error: { message: 'Not found' } }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } },
+    )))
 
-    const result = await updateMusicPlaylist('playlist-1', { is_public: true })
-
-    expect(result).toMatchObject({ id: 'playlist-1', is_public: true })
-    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/api/v1/music/playlists/playlist-1')
-    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    })
-    expect(vi.mocked(fetch).mock.calls[1][0]).toBe('http://localhost:5176/api/v1/music/playlists/playlist-1')
-    expect(vi.mocked(fetch).mock.calls[1][1]).toMatchObject({
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    })
+    await expect(updateMusicPlaylist('playlist-1', { is_public: true })).rejects.toMatchObject({ status: 404 })
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 
   it('sends PATCH JSON requests with credentials and Accept headers', async () => {
@@ -416,23 +394,6 @@ describe('music v1 adapter', () => {
       body: JSON.stringify({ name: 'Kanye West', bio: 'Artist bio' }),
     })
     expect(result).toEqual({ id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' })
-  })
-
-  it('updates artists through the direct wiki endpoint', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { id: 'artist_uuid', name: 'Ye', bio: 'Updated bio', entry_status: 'open' } }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )))
-
-    const result = await updateMusicArtist('artist_uuid', { name: 'Ye', bio: 'Updated bio' })
-
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists/artist_uuid', {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ name: 'Ye', bio: 'Updated bio' }),
-    })
-    expect(result.name).toBe('Ye')
   })
 
   it('gets album details through the direct wiki endpoint', async () => {
@@ -996,7 +957,7 @@ describe('music merge API contract', () => {
   it('declares merge endpoints as returning review edits', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1/catalog.ts'), 'utf8')
 
-    expect(source).toMatch(/mergeMusicArtists\([^\n]+\): Promise<MusicEditSummary>/)
-    expect(source).toMatch(/mergeMusicAlbums\([^\n]+\): Promise<MusicEditSummary>/)
+    expect(source).toMatch(/mergeMusicArtists\([\s\S]*?\): Promise<MusicEditSummary>/)
+    expect(source).toMatch(/mergeMusicAlbums\([\s\S]*?\): Promise<MusicEditSummary>/)
   })
 })

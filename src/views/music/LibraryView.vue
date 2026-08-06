@@ -56,11 +56,18 @@ function playable(song: MusicSongListItem): Song {
 }
 
 async function load(nextPage = 1) {
+  if (nextPage > 1 && (loading.value || loadingMore.value || !hasMore.value)) return
   const requestedKind = kind.value
   const requestedSort = sort.value
   const { isCurrent } = requests.beginRequest()
-  if (nextPage > 1) loadingMore.value = true
-  else loading.value = true
+  if (nextPage > 1) {
+    loadingMore.value = true
+  } else {
+    page.value = 1
+    hasMore.value = false
+    loadingMore.value = false
+    loading.value = true
+  }
   error.value = ''
   try {
     if (requestedKind === 'song') {
@@ -91,7 +98,7 @@ async function load(nextPage = 1) {
     page.value = nextPage
   } catch { if (isCurrent()) error.value = '音乐库加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
 }
-watch([kind, sort], () => { void load() }); onMounted(() => { void load() })
+watch([kind, sort], () => { void load() }, { flush: 'sync' }); onMounted(() => { void load() })
 </script>
 
 <template>
@@ -106,7 +113,7 @@ watch([kind, sort], () => { void load() }); onMounted(() => { void load() })
       <button v-for="artist in filteredItems as MusicArtistListItem[]" v-else-if="kind === 'artist'" :key="artist.id" class="music-library__row" @click="openArtist(artist.id)"><Users :size="18"/><span><strong>{{ artist.name }}</strong><small>{{ artist.legal_name || artist.bio }}</small></span></button>
       <button v-for="playlist in filteredItems as MusicPlaylistSummary[]" v-else :key="playlist.id" class="music-library__row" @click="openPlaylist(playlist.id)"><ListMusic :size="18"/><span><strong>{{ playlist.name }}</strong><small>{{ playlist.song_count }} 首</small></span></button>
     </div>
-    <button v-if="hasMore" type="button" class="music-library__more" :disabled="loadingMore" @click="load(page + 1)">{{ loadingMore ? '正在加载' : '加载更多' }}</button>
+    <button v-if="hasMore && !loading" type="button" class="music-library__more" :disabled="loading || loadingMore" @click="load(page + 1)">{{ loadingMore ? '正在加载' : '加载更多' }}</button>
   </main>
 </template>
 

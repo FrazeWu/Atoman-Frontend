@@ -446,12 +446,14 @@ export type MusicArtistBookmark = {
   id: string;
   artist_id: string;
   created_at: string;
+  artist?: MusicArtistListItem;
 };
 
 export type MusicAlbumBookmark = {
   id: string;
   album_id: string;
   created_at: string;
+  album?: MusicAlbumListItem;
 };
 
 export type MusicSongBookmark = {

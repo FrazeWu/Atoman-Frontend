@@ -254,7 +254,6 @@ function formatDate(value: string) {
 
 .short-note-card__footer {
   padding-top: 0.75rem;
-  border-top: 1px dashed var(--a-color-border-soft);
+  border-top: 1px solid var(--a-color-border-soft);
 }
 </style>
-

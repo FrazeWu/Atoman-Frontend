@@ -443,7 +443,7 @@ function audioLabel(track: MusicTrackDraft) {
 
 .music-tracks__lyrics-drawer {
   padding: 0.75rem 0.75rem 0.75rem 2.5rem;
-  border-top: 1px dashed var(--a-color-border-soft);
+  border-top: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg-subtle, rgba(0, 0, 0, 0.02));
 }
 

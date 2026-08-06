@@ -1,5 +1,4 @@
 import {
-  ApiErrorResponseError,
   apiDeleteJson,
   apiGet,
   apiGetEnvelope,
@@ -22,7 +21,6 @@ import type {
   MusicArtistBookmark,
   MusicArtistInput,
   MusicArtistListItem,
-  MusicArtistUpdateInput,
   MusicBrowseMode,
   MusicDiscoverItem,
   MusicDiscussion,
@@ -281,24 +279,10 @@ export async function updateMusicPlaylist(
   playlistId: string,
   input: UpdateMusicPlaylistInput,
 ): Promise<MusicPlaylistDetail> {
-  try {
-    return await apiPatchJson<MusicPlaylistDetail>(
-      musicV1Endpoints.playlist(playlistId),
-      input,
-    );
-  } catch (error) {
-    const shouldRetryWithBearer =
-      error instanceof ApiErrorResponseError &&
-      error.status === 404 &&
-      typeof window !== "undefined";
-    if (!shouldRetryWithBearer) throw error;
-
-    const absoluteUrl = new URL(
-      musicV1Endpoints.playlist(playlistId),
-      window.location.origin,
-    ).toString();
-    return apiPatchJson<MusicPlaylistDetail>(absoluteUrl, input);
-  }
+  return apiPatchJson<MusicPlaylistDetail>(
+    musicV1Endpoints.playlist(playlistId),
+    input,
+  );
 }
 
 export async function deleteMusicPlaylist(
@@ -647,16 +631,6 @@ export async function createMusicArtist(
   input: MusicArtistInput,
 ): Promise<MusicArtistListItem> {
   return apiPostJson<MusicArtistListItem>(musicV1Endpoints.artists(), input);
-}
-
-export async function updateMusicArtist(
-  artistId: string,
-  input: MusicArtistUpdateInput,
-): Promise<MusicArtistListItem> {
-  return apiPatchJson<MusicArtistListItem>(
-    musicV1Endpoints.artist(artistId),
-    input,
-  );
 }
 
 export async function mergeMusicArtists(

@@ -399,6 +399,8 @@ describe('MusicCreationFlowDrawer', () => {
     const nextButton = wrapper.get('[data-testid="artist-next-button"]')
 
     expect(nextButton.attributes('disabled')).toBeDefined()
+    expect(nextButton.text()).toBe('处理中…')
+    expect(wrapper.get('[data-testid="creation-flow-block-reason"]').text()).toBe('处理完成后即可继续')
     await nextButton.trigger('click')
 
     expect(drawerMocks.state.value.creationFlow?.step).toBe('albumDetails')

@@ -45,10 +45,16 @@ export function useAlbumImportUpload() {
     creationFlow.value.draft.albumImport.status = snapshot.status
     creationFlow.value.draft.albumImport.stage = snapshot.stage
     creationFlow.value.draft.albumImport.archiveName = snapshot.archiveName
-    creationFlow.value.draft.albumImport.uploadProgress = snapshot.uploadProgress
-    creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed
-    creationFlow.value.draft.albumImport.totalBytesLoaded = snapshot.progress.current
-    creationFlow.value.draft.albumImport.totalBytesTotal = snapshot.progress.total
+    if (snapshot.stage === 'upload') {
+      creationFlow.value.draft.albumImport.uploadProgress = snapshot.uploadProgress
+      creationFlow.value.draft.albumImport.uploadSpeed = snapshot.uploadSpeed
+      if (snapshot.progress.total > 0) {
+        creationFlow.value.draft.albumImport.totalBytesLoaded = snapshot.progress.current
+        creationFlow.value.draft.albumImport.totalBytesTotal = snapshot.progress.total
+      }
+    } else {
+      creationFlow.value.draft.albumImport.uploadSpeed = 0
+    }
     creationFlow.value.draft.albumImport.coverUrl = snapshot.coverUrl
     creationFlow.value.draft.albumImport.coverKey = snapshot.coverKey
     creationFlow.value.draft.albumImport.derivedAlbumTitle = snapshot.derivedAlbumTitle

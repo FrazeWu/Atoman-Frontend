@@ -174,7 +174,22 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     vi.useFakeTimers()
     const archive = new File(['zip'], 'stages.zip', { type: 'application/zip' })
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
-    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [] }))
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({
+      files: [{
+        fileId: 'file-1',
+        relativePath: archive.name,
+        fileName: archive.name,
+        role: 'archive',
+        detectedFormat: 'zip',
+        size: archive.size,
+        uploadStatus: 'pending',
+        processingStatus: 'pending',
+        discNumber: 0,
+        trackNumber: 0,
+        title: '',
+        errorMessage: '',
+      }],
+    }))
     mockUploadTransport()
     vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', stage: 'queued' }))
     vi.spyOn(musicApi, 'getMusicAlbumImport')
@@ -198,8 +213,8 @@ describe('MusicCreationAlbumImportStep.vue', () => {
       status: 'ready',
       stage: 'ready',
       inputMode: 'archive',
-      totalBytesLoaded: 12,
-      totalBytesTotal: 12,
+      totalBytesLoaded: archive.size,
+      totalBytesTotal: archive.size,
     }))
     expect(useMusicDrawers().state.value.creationFlow?.draft.albumDetails.title).toBe('Stages')
   })

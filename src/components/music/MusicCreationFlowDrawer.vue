@@ -107,7 +107,21 @@ const shouldShowFinishButton = computed(() => {
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => {
   if (creationFlow.value?.submitting) return '提交中…'
+  if (
+    creationFlow.value?.step === 'albumDetails'
+    && creationFlow.value.draft.albumImport.status !== 'ready'
+  ) return '处理中…'
   return activeStep.value.cta
+})
+const forwardBlockReason = computed(() => {
+  const flow = creationFlow.value
+  if (!flow || flow.step !== 'albumDetails') return ''
+  if (flow.draft.albumImport.status !== 'ready') return '处理完成后即可继续'
+  if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
+  if (!(flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)) {
+    return '请添加创作者'
+  }
+  return ''
 })
 const canGoForward = computed(() => {
   const flow = creationFlow.value
@@ -415,6 +429,13 @@ async function completeCreation() {
         <MusicCreationAlbumPreviewStep v-else-if="creationFlow.step === 'preview'" />
 
         <div v-if="showFooterActions" class="footer-actions" data-testid="creation-flow-footer">
+          <p
+            v-if="forwardBlockReason"
+            class="forward-block-reason"
+            data-testid="creation-flow-block-reason"
+          >
+            {{ forwardBlockReason }}
+          </p>
           <button
             data-testid="music-creation-close-button"
             type="button"
@@ -457,7 +478,13 @@ async function completeCreation() {
   font-size: 0.82rem;
   font-weight: 800;
 }
-.footer-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: auto; }
+.footer-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 1rem; margin-top: auto; }
+.forward-block-reason {
+  margin: 0 auto 0 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+}
 [data-testid="music-creation-close-button"] { display: none !important; }
 .ui-action,
 .primary-action {

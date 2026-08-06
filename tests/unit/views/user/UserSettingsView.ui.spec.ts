@@ -39,7 +39,7 @@ describe('UserSettingsView UI', () => {
     })
 
     expect(wrapper.find('.settings-center').exists()).toBe(true)
-    expect(wrapper.find('.settings-center__nav').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'PDirectoryNav' }).exists() || wrapper.find('.p-directory-nav').exists()).toBe(true)
     expect(wrapper.find('.oauth-identities').exists()).toBe(true)
     expect(wrapper.findAll('.settings-block').length).toBeGreaterThanOrEqual(3)
   })

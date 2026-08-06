@@ -3,76 +3,91 @@
     <div class="settings-block">
       <div class="settings-block__copy">
         <strong>资料预览</strong>
-        <small>保存后会显示在主页。</small>
+        <small>个人主页和公开名片上显示的完整资料。</small>
       </div>
       <div class="settings-block__control user-blog-settings-panel__identity">
-      <div style="width:5rem;height:5rem;border-radius:var(--a-radius-none);background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.875rem;font-weight:900;flex-shrink:0;overflow:hidden">
-        <img v-if="form.avatar_url" :src="form.avatar_url" alt="avatar" style="width:100%;height:100%;object-fit:cover" />
-        <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
-      </div>
-      <div>
-        <p style="font-weight:900;font-size:1.125rem">{{ form.display_name || authStore.user?.username }}</p>
-        <p class="a-muted" style="font-size:.875rem">@{{ authStore.user?.username }}</p>
-      </div>
+        <div class="avatar-preview-box">
+          <img v-if="form.avatar_url" :src="form.avatar_url" alt="avatar" />
+          <span v-else>{{ (form.display_name || authStore.user?.username || '?').charAt(0).toUpperCase() }}</span>
+        </div>
+        <div class="identity-info">
+          <strong>{{ form.display_name || authStore.user?.username }}</strong>
+          <small class="a-muted">@{{ authStore.user?.username }}</small>
+        </div>
       </div>
     </div>
 
     <form class="user-blog-settings-panel__form" @submit.prevent="save">
-      <div class="a-field user-blog-settings-panel__field">
-        <label class="a-field-label">显示名称</label>
-        <input v-model="form.display_name" placeholder="用于展示的名称" class="a-input" />
-      </div>
-      <div class="a-field user-blog-settings-panel__field">
-        <label class="a-field-label">个人简介</label>
-        <textarea v-model="form.bio" placeholder="介绍一下自己..." rows="4" class="a-textarea" />
-      </div>
-      <div class="a-field user-blog-settings-panel__field">
-        <label class="a-field-label">个人网站</label>
-        <input v-model="form.website" placeholder="https://yoursite.com" type="url" class="a-input" />
-      </div>
-      <div class="a-field user-blog-settings-panel__field">
-        <label class="a-field-label">所在地</label>
-        <input v-model="form.location" placeholder="城市或地区" class="a-input" />
-      </div>
-      <div class="a-field user-blog-settings-panel__field">
-        <label class="a-field-label">头像 URL</label>
-        <input v-model="form.avatar_url" placeholder="https://example.com/avatar.jpg" class="a-input" />
+      <div class="form-grid">
+        <PInput
+          v-model="form.display_name"
+          label="显示名称"
+          placeholder="用于展示的名称"
+        />
+        <PInput
+          v-model="form.avatar_url"
+          label="头像 URL"
+          placeholder="https://example.com/avatar.jpg"
+        />
+        <PInput
+          v-model="form.website"
+          label="个人网站"
+          type="url"
+          placeholder="https://yoursite.com"
+        />
+        <PInput
+          v-model="form.location"
+          label="所在地"
+          placeholder="城市或地区"
+        />
+        <div class="form-field-full">
+          <PTextarea
+            v-model="form.bio"
+            label="个人简介"
+            placeholder="介绍一下自己..."
+            :rows="3"
+          />
+        </div>
       </div>
 
       <section v-if="includeAccountExtras" class="settings-section">
-        <h2 class="a-subtitle">通知设置</h2>
-        <label class="settings-toggle">
-          <input v-model="notificationPrefs.like" type="checkbox" />
-          <span>点赞提醒</span>
-        </label>
-        <label class="settings-toggle">
-          <input v-model="notificationPrefs.interaction" type="checkbox" />
-          <span>互动提醒</span>
-        </label>
-        <label class="settings-toggle">
-          <input v-model="notificationPrefs.reply" type="checkbox" />
-          <span>回复提醒</span>
-        </label>
-        <label class="settings-toggle">
-          <input v-model="notificationPrefs.collaboration" type="checkbox" />
-          <span>协作提醒</span>
-        </label>
-        <p class="a-muted">私信、@我、账号安全和关键权限变化始终提醒。</p>
+        <h3 class="section-title">通知设置</h3>
+        <div class="toggles-grid">
+          <label class="settings-toggle">
+            <input v-model="notificationPrefs.like" type="checkbox" />
+            <span>点赞提醒</span>
+          </label>
+          <label class="settings-toggle">
+            <input v-model="notificationPrefs.interaction" type="checkbox" />
+            <span>互动提醒</span>
+          </label>
+          <label class="settings-toggle">
+            <input v-model="notificationPrefs.reply" type="checkbox" />
+            <span>回复提醒</span>
+          </label>
+          <label class="settings-toggle">
+            <input v-model="notificationPrefs.collaboration" type="checkbox" />
+            <span>协作提醒</span>
+          </label>
+        </div>
+        <small class="a-muted">私信、@我、账号安全和关键权限变化始终提醒。</small>
       </section>
 
       <section v-if="includeAccountExtras" class="settings-section">
-        <h2 class="a-subtitle">已拉黑用户</h2>
-        <div v-if="userBlocksStore.blockedUsers.length === 0" class="a-muted">暂无拉黑用户</div>
+        <h3 class="section-title">已拉黑用户</h3>
+        <div v-if="userBlocksStore.blockedUsers.length === 0" class="a-muted text-sm">暂无拉黑用户</div>
         <div v-for="item in userBlocksStore.blockedUsers" :key="item.id" class="blocked-user-row">
           <span>{{ item.blocked?.display_name || item.blocked?.username || item.blocked_id }}</span>
-          <PButton variant="secondary" type="button" @click="userBlocksStore.unblockUser(item.blocked_id)">取消拉黑</PButton>
+          <PButton variant="secondary" size="sm" type="button" @click="userBlocksStore.unblockUser(item.blocked_id)">取消拉黑</PButton>
         </div>
       </section>
 
-      <div v-if="error" class="a-error">{{ error }}</div>
-      <div v-if="success" class="a-success">✓ 保存成功</div>
+      <div class="form-submit-row">
+        <div v-if="error" class="a-error">{{ error }}</div>
+        <div v-if="success" class="a-success">✓ 更改保存成功</div>
 
-      <PButton block type="submit" :loading="saving" loadingText="保存中...">保存更改</PButton>
+        <PButton variant="primary" type="submit" :loading="saving" loading-text="保存中...">保存更改</PButton>
+      </div>
     </form>
   </div>
 </template>
@@ -82,6 +97,8 @@ import { reportError } from '@/utils/logger'
 import { apiRequest } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
@@ -188,35 +205,106 @@ onMounted(async () => {
 <style scoped>
 .user-blog-settings-panel {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .user-blog-settings-panel__identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   justify-content: flex-start;
+}
+
+.avatar-preview-box {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 6px;
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-preview-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.identity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.identity-info strong {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.user-blog-settings-panel__form {
-  display: grid;
-  gap: 0;
-}
-
-.user-blog-settings-panel__field {
-  padding: 1rem 0;
-  border-top: 1px solid var(--a-color-border-soft);
+.form-field-full {
+  grid-column: 1 / -1;
 }
 
 .settings-section {
-  border-top: 1.5px solid var(--a-color-border-soft);
-  padding-top: 1.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.75rem;
 }
 
-.settings-toggle,
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.toggles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.75rem;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .blocked-user-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+}
+
+.form-submit-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

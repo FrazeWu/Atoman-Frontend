@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import {
   cancelMusicAlbumImportSession,
   deleteMusicAlbumImportFile,
@@ -11,6 +11,7 @@ import {
   type MusicAlbumImport,
 } from "@/api/musicV1";
 import PButton from "@/components/ui/PButton.vue";
+import PInput from "@/components/ui/PInput.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const imports = ref<MusicAlbumImport[]>([]);
@@ -19,25 +20,39 @@ const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
 const activeGroup = ref<'draft' | 'processing' | 'failed' | 'completed'>('processing')
+const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const selectedImport = computed(
-  () =>
-    imports.value.find((item) => item.importId === selectedId.value) ?? null,
+  () => imports.value.find((item) => item.importId === selectedId.value) ?? null,
 );
-const importGroups = computed(() => ({
-  draft: imports.value.filter(item => ['pending_upload', 'uploading', 'uploaded', 'ready', 'needs_attention'].includes(item.status)),
-  processing: imports.value.filter(item => ['queued', 'extracting', 'analyzing', 'transcoding'].includes(item.status)),
-  failed: imports.value.filter(item => item.status === 'failed'),
-  completed: imports.value.filter(item => ['committed', 'canceled'].includes(item.status)),
-}))
+
+const importGroups = computed(() => {
+  const filtered = imports.value.filter((item) => {
+    if (!searchQuery.value.trim()) return true
+    const q = searchQuery.value.trim().toLowerCase()
+    const title = getDisplayTitle(item).toLowerCase()
+    const archive = (item.archiveName || '').toLowerCase()
+    return title.includes(q) || archive.includes(q)
+  })
+
+  return {
+    draft: filtered.filter(item => ['pending_upload', 'uploading', 'uploaded', 'ready', 'needs_attention'].includes(item.status)),
+    processing: filtered.filter(item => ['queued', 'extracting', 'analyzing', 'transcoding'].includes(item.status)),
+    failed: filtered.filter(item => item.status === 'failed'),
+    completed: filtered.filter(item => ['committed', 'canceled'].includes(item.status)),
+  }
+})
+
 const visibleImports = computed(() => importGroups.value[activeGroup.value])
+
 const statusText: Record<string, string> = {
   pending_upload: "等待上传",
   uploading: "上传中",
   uploaded: "等待处理",
-  queued: "等待处理",
+  queued: "排队中",
   extracting: "解压中",
   analyzing: "分析中",
   transcoding: "处理中",
@@ -48,17 +63,72 @@ const statusText: Record<string, string> = {
   committed: "已完成",
 };
 
-async function loadImports() {
-  loading.value = true;
+function cleanFileName(fileName?: string): string {
+  if (!fileName) return ''
+  return fileName.replace(/\.(zip|rar|7z|tar|gz|tgz|bz2|xz|mp3|flac|wav|m4a|aac|ogg)$/i, '').trim()
+}
+
+function getDisplayTitle(item: MusicAlbumImport): string {
+  if (item.derivedAlbumTitle?.trim()) return item.derivedAlbumTitle.trim()
+
+  const archive = cleanFileName(item.archiveName)
+  if (archive && archive.toLowerCase() !== 'archive') return archive
+
+  if (item.derivedTracks?.length > 0 && item.derivedTracks[0]?.title?.trim()) {
+    return item.derivedTracks[0].title.trim()
+  }
+
+  if (item.files?.length > 0) {
+    const first = item.files[0]
+    const fileTitle = first.title?.trim() || cleanFileName(first.fileName)
+    if (fileTitle) return fileTitle
+  }
+
+  return `导入任务 #${item.importId.slice(0, 8)}`
+}
+
+function formatDate(isoString?: string): string {
+  if (!isoString) return ''
+  try {
+    const date = new Date(isoString)
+    if (Number.isNaN(date.getTime())) return ''
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${month}-${day} ${hours}:${minutes}`
+  } catch {
+    return ''
+  }
+}
+
+async function loadImports(silent = false) {
+  if (!silent) loading.value = true;
   errorMessage.value = "";
   try {
     imports.value = await listMusicAlbumImports();
-    if (!selectedId.value && imports.value[0])
+    if (!selectedId.value && imports.value[0]) {
       selectedId.value = imports.value[0].importId;
+    }
+    checkPollState()
   } catch {
-    errorMessage.value = "导入记录加载失败";
+    if (!silent) errorMessage.value = "导入记录加载失败";
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
+  }
+}
+
+function checkPollState() {
+  const hasProcessing = imports.value.some((item) =>
+    ['queued', 'extracting', 'analyzing', 'transcoding', 'uploading', 'pending_upload'].includes(item.status)
+  )
+  if (hasProcessing && !pollTimer) {
+    pollTimer = setInterval(() => {
+      void loadImports(true)
+    }, 3000)
+  } else if (!hasProcessing && pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
 }
 
@@ -66,16 +136,41 @@ onMounted(() => {
   void loadImports();
 });
 
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+})
+
 async function retryFile(fileId: string) {
   if (!selectedImport.value) return;
   actionBusy.value = fileId;
   try {
     await retryMusicAlbumImportFile(selectedImport.value.importId, fileId);
-    await loadImports();
+    await loadImports(true);
   } catch {
     errorMessage.value = "重试失败";
   } finally {
     actionBusy.value = null;
+  }
+}
+
+async function retryAllFailedFiles() {
+  if (!selectedImport.value) return
+  const failedFiles = selectedImport.value.files.filter(f => f.uploadStatus === 'failed' || f.processingStatus === 'failed')
+  if (!failedFiles.length) return
+
+  actionBusy.value = 'retry-all'
+  try {
+    for (const f of failedFiles) {
+      await retryMusicAlbumImportFile(selectedImport.value.importId, f.fileId)
+    }
+    await loadImports(true)
+  } catch {
+    errorMessage.value = '一键重试部分失败'
+  } finally {
+    actionBusy.value = null
   }
 }
 
@@ -84,7 +179,7 @@ async function deleteFile(fileId: string) {
   actionBusy.value = fileId;
   try {
     await deleteMusicAlbumImportFile(selectedImport.value.importId, fileId);
-    await loadImports();
+    await loadImports(true);
   } catch {
     errorMessage.value = "删除失败";
   } finally {
@@ -100,7 +195,7 @@ async function replaceFile(fileId: string, event: Event) {
   actionBusy.value = fileId
   try {
     await replaceAndUploadMusicAlbumImportFile(selectedImport.value.importId, fileId, file)
-    await loadImports()
+    await loadImports(true)
   } catch { errorMessage.value = '替换文件失败' }
   finally { actionBusy.value = null; input.value = '' }
 }
@@ -111,7 +206,7 @@ async function cancelImport() {
   try {
     await cancelMusicAlbumImportSession(selectedImport.value.importId);
     selectedId.value = null;
-    await loadImports();
+    await loadImports(true);
   } catch {
     errorMessage.value = "取消失败";
   } finally {
@@ -161,10 +256,10 @@ async function continueImport() {
   <div class="music-imports-view">
     <header class="music-imports-view__header">
       <div>
-        <h1>导入记录</h1>
-        <p>保留最近 7 天的专辑导入</p>
+        <h1>导入中心</h1>
+        <p>保留最近 7 天的专辑导入任务（实时自动同步）</p>
       </div>
-      <PButton variant="secondary" :loading="loading" @click="loadImports"
+      <PButton variant="secondary" :loading="loading" @click="() => loadImports(false)"
         >刷新</PButton
       >
     </header>
@@ -181,6 +276,9 @@ async function continueImport() {
 
     <div v-else class="music-imports-view__layout">
       <section class="music-imports-view__list" aria-label="导入记录">
+        <div class="music-imports-view__search">
+          <PInput v-model="searchQuery" placeholder="搜索标题或文件名…" />
+        </div>
         <div class="music-imports-view__filters" role="tablist" aria-label="导入状态">
           <button v-for="group in [{ key: 'processing', label: '处理中' }, { key: 'draft', label: '草稿' }, { key: 'failed', label: '失败' }, { key: 'completed', label: '已完成' }]" :key="group.key" type="button" :class="{ 'music-imports-view__filter--active': activeGroup === group.key }" :aria-selected="activeGroup === group.key" role="tab" @click="activeGroup = group.key as 'draft' | 'processing' | 'failed' | 'completed'">
             {{ group.label }} {{ importGroups[group.key as keyof typeof importGroups].length }}
@@ -200,97 +298,120 @@ async function continueImport() {
           ]"
           @click="selectedId = item.importId"
         >
-          <strong>{{
-            item.derivedAlbumTitle || item.archiveName || "未命名专辑"
-          }}</strong>
-          <span>{{ statusText[item.status] ?? item.status }}</span>
-          <small>{{ item.derivedTracks.length }} 首曲目</small>
+          <div class="item-header">
+            <strong>{{ getDisplayTitle(item) }}</strong>
+            <span class="status-badge" :data-status="item.status">{{ statusText[item.status] ?? item.status }}</span>
+          </div>
+          <div class="item-sub">
+            <small v-if="item.derivedTracks.length">{{ item.derivedTracks.length }} 首曲目</small>
+            <small v-if="item.archiveName" class="archive-name">{{ item.archiveName }}</small>
+            <small v-if="formatDate(item.lastSyncedAt)" class="sync-time">{{ formatDate(item.lastSyncedAt) }}</small>
+          </div>
         </button>
       </section>
 
       <section v-if="selectedImport" class="music-imports-view__detail">
-        <img
-          v-if="selectedImport.coverUrl || selectedImport.derivedCover"
-          :src="selectedImport.coverUrl || selectedImport.derivedCover"
-          alt="专辑封面"
-        />
-        <div>
-          <h2>
-            {{
-              selectedImport.derivedAlbumTitle ||
-              selectedImport.archiveName ||
-              "未命名专辑"
-            }}
-          </h2>
-          <p>
-            {{ statusText[selectedImport.status] ?? selectedImport.status }}
-          </p>
+        <div class="cover-wrapper">
+          <img
+            v-if="selectedImport.coverUrl || selectedImport.derivedCover"
+            :src="selectedImport.coverUrl || selectedImport.derivedCover"
+            alt="专辑封面"
+          />
+          <div v-else class="no-cover">无封面</div>
+        </div>
+        <div class="detail-main">
+          <h2>{{ getDisplayTitle(selectedImport) }}</h2>
+          <div class="detail-meta">
+            <span class="status-badge" :data-status="selectedImport.status">{{ statusText[selectedImport.status] ?? selectedImport.status }}</span>
+            <span v-if="selectedImport.archiveName" class="meta-archive">文件: {{ selectedImport.archiveName }}</span>
+            <span v-if="formatDate(selectedImport.lastSyncedAt)" class="meta-time">更新于 {{ formatDate(selectedImport.lastSyncedAt) }}</span>
+          </div>
+
           <p
             v-if="selectedImport.errorMessage"
             class="music-imports-view__error"
           >
             {{ selectedImport.errorMessage }}
           </p>
-          <div
-            v-if="!['committed', 'canceled'].includes(selectedImport.status)"
-            class="music-imports-view__actions"
-          >
+
+          <div class="music-imports-view__actions">
+            <PButton
+              v-if="!['committed', 'canceled'].includes(selectedImport.status)"
+              variant="primary"
+              @click="continueImport"
+            >继续编辑 / 提交</PButton>
+
+            <PButton
+              v-if="selectedImport.files.some(f => f.uploadStatus === 'failed' || f.processingStatus === 'failed')"
+              variant="secondary"
+              :loading="actionBusy === 'retry-all'"
+              @click="retryAllFailedFiles"
+            >一键重试失败文件</PButton>
+
             <PButton
               v-if="!['committed', 'canceled'].includes(selectedImport.status)"
               variant="secondary"
-              @click="continueImport"
-            >继续编辑</PButton>
-            <PButton
-              variant="secondary"
               :loading="actionBusy === 'cancel'"
               @click="cancelImport"
-            >取消导入</PButton
-            >
+            >取消导入</PButton>
+
+            <PButton
+              v-else-if="selectedImport.status === 'committed' && selectedImport.targetAlbumId"
+              variant="secondary"
+              :loading="actionBusy === 'repair'"
+              @click="repairImport"
+            >修复资料</PButton>
           </div>
-          <div v-else-if="selectedImport.status === 'committed' && selectedImport.targetAlbumId" class="music-imports-view__actions">
-            <PButton variant="secondary" :loading="actionBusy === 'repair'" @click="repairImport">修复资料</PButton>
-          </div>
+
           <ul
             v-if="selectedImport.files.length"
             class="music-imports-view__files"
           >
             <li v-for="file in selectedImport.files" :key="file.fileId">
               <input :ref="node => replacementInputs[file.fileId] = node as HTMLInputElement | null" class="music-imports-view__file-input" type="file" @change="replaceFile(file.fileId, $event)" />
-              <span>{{ file.title || file.fileName }}</span
-              ><small v-if="file.errorMessage">{{ file.errorMessage }}</small>
-              <PButton
-                v-if="
-                  file.uploadStatus === 'failed' ||
-                  file.processingStatus === 'failed'
-                "
-                variant="secondary"
-                :loading="actionBusy === file.fileId"
-                @click="retryFile(file.fileId)"
-                >重试</PButton
-              >
-              <PButton
-                v-if="file.uploadStatus === 'failed' || file.processingStatus === 'failed'"
-                variant="secondary"
-                :disabled="actionBusy === file.fileId"
-                @click="chooseReplacement(file.fileId)"
-              >替换文件</PButton>
-              <PButton
-                v-if="file.uploadStatus === 'failed'"
-                variant="danger"
-                :disabled="actionBusy === file.fileId"
-                @click="deleteFile(file.fileId)"
-                >删除</PButton
-              >
+              <div class="file-name-cell">
+                <span class="file-title">{{ file.title || file.fileName }}</span>
+                <small v-if="file.errorMessage" class="file-err">{{ file.errorMessage }}</small>
+              </div>
+              <div class="file-actions">
+                <PButton
+                  v-if="
+                    file.uploadStatus === 'failed' ||
+                    file.processingStatus === 'failed'
+                  "
+                  variant="secondary"
+                  :loading="actionBusy === file.fileId"
+                  @click="retryFile(file.fileId)"
+                  >重试</PButton
+                >
+                <PButton
+                  v-if="file.uploadStatus === 'failed' || file.processingStatus === 'failed'"
+                  variant="secondary"
+                  :disabled="actionBusy === file.fileId"
+                  @click="chooseReplacement(file.fileId)"
+                >替换文件</PButton>
+                <PButton
+                  v-if="file.uploadStatus === 'failed'"
+                  variant="danger"
+                  :disabled="actionBusy === file.fileId"
+                  @click="deleteFile(file.fileId)"
+                  >删除</PButton
+                >
+              </div>
             </li>
           </ul>
-          <ol v-if="selectedImport.derivedTracks.length">
-            <li
-              v-for="track in selectedImport.derivedTracks"
-              :key="`${track.audioKey}-${track.title}`"
-            >
-              {{ track.title }}
-            </li>
-          </ol>
+
+          <div v-if="selectedImport.derivedTracks.length" class="detail-tracks-section">
+            <h3>可辨识曲目列表 ({{ selectedImport.derivedTracks.length }})</h3>
+            <ol class="detail-tracks-list">
+              <li
+                v-for="track in selectedImport.derivedTracks"
+                :key="`${track.audioKey}-${track.title}`"
+              >
+                {{ track.title }}
+              </li>
+            </ol>
+          </div>
           <p v-else class="music-imports-view__state">尚未识别到曲目</p>
         </div>
       </section>
@@ -328,13 +449,16 @@ async function continueImport() {
 }
 .music-imports-view__layout {
   display: grid;
-  grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(15rem, 24rem) minmax(0, 1fr);
+  gap: 1.25rem;
 }
 .music-imports-view__list {
   display: grid;
   align-content: start;
-  gap: 0.5rem;
+  gap: 0.6rem;
+}
+.music-imports-view__search {
+  margin-bottom: 0.25rem;
 }
 .music-imports-view__filters {
   display: flex;
@@ -343,78 +467,212 @@ async function continueImport() {
 }
 .music-imports-view__filters button {
   min-height: 2.25rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--a-color-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
 }
 .music-imports-view__filter--active {
   border-bottom-color: var(--a-color-accent) !important;
   color: var(--a-color-text) !important;
+  font-weight: 600 !important;
 }
 .music-imports-view__item {
   display: grid;
-  gap: 0.25rem;
-  padding: 0.75rem;
+  gap: 0.4rem;
+  padding: 0.85rem;
   text-align: left;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 6px;
   background: var(--a-color-bg);
   color: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.music-imports-view__item:hover {
+  background-color: var(--a-color-surface-muted);
 }
 .music-imports-view__item--selected {
   border-color: var(--a-color-accent);
+  background-color: var(--a-color-surface-muted);
 }
-.music-imports-view__item span,
-.music-imports-view__item small {
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.item-header strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
+  border: 1px solid var(--a-color-border-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-badge[data-status="ready"] {
+  background: color-mix(in srgb, #22c55e 12%, transparent);
+  color: #16a34a;
+  border-color: color-mix(in srgb, #22c55e 25%, transparent);
+}
+.status-badge[data-status="failed"] {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  color: #dc2626;
+  border-color: color-mix(in srgb, #ef4444 25%, transparent);
+}
+.status-badge[data-status="extracting"],
+.status-badge[data-status="analyzing"],
+.status-badge[data-status="transcoding"] {
+  background: color-mix(in srgb, #3b82f6 12%, transparent);
+  color: #2563eb;
+  border-color: color-mix(in srgb, #3b82f6 25%, transparent);
+}
+.item-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+  flex-wrap: wrap;
+}
+.archive-name {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sync-time {
+  margin-left: auto;
 }
 .music-imports-view__detail {
   display: grid;
   grid-template-columns: 9rem minmax(0, 1fr);
   align-content: start;
-  gap: 1rem;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 6px;
+  background: var(--a-color-bg);
 }
-.music-imports-view__detail img {
+.cover-wrapper {
   width: 9rem;
   aspect-ratio: 1;
-  object-fit: cover;
 }
-.music-imports-view__detail ol {
-  margin: 0.75rem 0 0;
-  padding-left: 1.25rem;
+.cover-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.no-cover {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--a-color-surface-muted);
+  border: 1px dashed var(--a-color-border-soft);
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+.detail-main {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+.detail-main h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--a-color-muted);
+  flex-wrap: wrap;
 }
 .music-imports-view__actions {
-  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 .music-imports-view__files {
   display: grid;
   gap: 0.5rem;
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: 0;
   padding: 0;
 }
 .music-imports-view__files li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  padding: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-surface-muted);
 }
-.music-imports-view__files span {
+.file-name-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   flex: 1;
-  min-width: 12rem;
 }
-.music-imports-view__files small {
+.file-title {
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+.file-err {
   color: var(--a-color-accent-destructive);
-  width: 100%;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.file-actions button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem !important;
 }
 .music-imports-view__file-input { display: none; }
-@media (max-width: 700px) {
+.detail-tracks-section {
+  margin-top: 0.5rem;
+}
+.detail-tracks-section h3 {
+  font-size: 0.85rem;
+  color: var(--a-color-muted);
+  margin: 0 0 0.5rem;
+}
+.detail-tracks-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+@media (max-width: 768px) {
   .music-imports-view {
     padding: 1rem;
   }
@@ -422,8 +680,8 @@ async function continueImport() {
   .music-imports-view__detail {
     grid-template-columns: 1fr;
   }
-  .music-imports-view__detail img {
-    width: min(100%, 14rem);
+  .cover-wrapper {
+    width: min(100%, 10rem);
   }
 }
 </style>

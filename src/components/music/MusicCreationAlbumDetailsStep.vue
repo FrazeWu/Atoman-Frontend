@@ -51,8 +51,18 @@ const titleModel = computed({
       creationFlow.value.titleCustomized = true
     }
     albumDetailsDraft.value.title = value
+    if (albumImportDraft.value && value.trim()) {
+      albumImportDraft.value.derivedAlbumTitle = value.trim()
+    }
   },
 })
+
+function handleTitleBlur() {
+  const val = titleModel.value.trim()
+  if (albumImportDraft.value && val) {
+    albumImportDraft.value.derivedAlbumTitle = val
+  }
+}
 const unresolvedImportedCoverUrl = computed(() => {
   const coverUrl = albumImportDraft.value?.coverUrl?.trim() || ''
   const derivedCover = albumImportDraft.value?.derivedCover?.trim() || ''
@@ -505,6 +515,7 @@ watch(
               type="text"
               placeholder="例如 Late Registration"
               :label="requiredLabel('名字')"
+              @blur="handleTitleBlur"
             />
           </div>
 

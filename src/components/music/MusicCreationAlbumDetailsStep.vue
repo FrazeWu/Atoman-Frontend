@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { GripVertical, Plus, X } from 'lucide-vue-next'
+import { GripVertical, ImageUp, Plus, X } from 'lucide-vue-next'
 import {
   uploadMusicAsset,
   createMusicAlbumImport,
@@ -442,40 +442,42 @@ watch(
             </label>
             <div
               class="custom-file-picker square-picker"
-              :class="{ 'is-disabled': coverUploading }"
+              :class="{
+                'has-cover': !!albumDetailsDraft.coverUrl,
+                'is-disabled': coverUploading,
+              }"
               @click="coverInputRef?.click()"
             >
-              <div class="file-picker-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </div>
-              <div class="file-picker-text">
-                <span class="file-picker-title">
-                  {{ albumDetailsDraft?.coverUrl ? '已选择封面图片' : '上传专辑封面' }}
-                </span>
-                <span class="file-picker-subtitle">JPG / PNG 正方形</span>
-              </div>
+              <img
+                v-if="albumDetailsDraft.coverUrl"
+                :src="albumDetailsDraft.coverUrl"
+                alt="封面预览"
+                class="cover-picker-image"
+              />
+              <template v-else>
+                <div class="file-picker-icon">
+                  <ImageUp :size="28" aria-hidden="true" />
+                </div>
+                <div class="file-picker-text">
+                  <span class="file-picker-title">上传专辑封面</span>
+                  <span class="file-picker-subtitle">JPG / PNG 正方形</span>
+                </div>
+              </template>
               <PButton
                 type="button"
                 variant="secondary"
+                :class="{ 'cover-change-button': !!albumDetailsDraft.coverUrl }"
+                data-testid="album-details-cover-change-button"
                 :disabled="coverUploading"
                 @click.stop="coverInputRef?.click()"
               >
-                {{ albumDetailsDraft?.coverUrl ? '重新选择' : '浏览文件' }}
+                <ImageUp v-if="albumDetailsDraft.coverUrl" :size="16" aria-hidden="true" />
+                {{ albumDetailsDraft.coverUrl ? '更换封面' : '浏览文件' }}
               </PButton>
             </div>
           </div>
           <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
           <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
-          <div v-if="albumDetailsDraft.coverUrl" class="cover-preview square-preview">
-            <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
-            <div class="cover-preview__meta">
-              <p class="cover-preview__title">已选择封面</p>
-            </div>
-          </div>
           <div
             v-if="unresolvedImportedCoverUrl"
             class="imported-cover-callout"
@@ -724,19 +726,6 @@ watch(
   text-align: center;
   padding: 1.25rem;
   width: 100%;
-}
-
-.square-preview {
-  aspect-ratio: 1 / 1;
-  width: 100%;
-}
-
-.square-preview .cover-preview__image {
-  width: 100%;
-  height: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: var(--a-radius-control);
 }
 
 @media (max-width: 768px) {
@@ -1051,40 +1040,6 @@ watch(
   font-size: 0.9rem;
 }
 
-.cover-preview {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 0.85rem;
-  align-items: center;
-  padding: 0.85rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
-}
-
-.cover-preview__image {
-  width: 84px;
-  height: 84px;
-  object-fit: cover;
-}
-
-.cover-preview__title,
-.cover-preview__sub {
-  margin: 0;
-}
-
-.cover-preview__title {
-  font-family: var(--a-font-sans);
-  font-size: 0.84rem;
-  font-weight: 800;
-}
-
-.cover-preview__sub {
-  margin-top: 0.25rem;
-  color: var(--a-color-muted);
-  line-height: 1.5;
-  font-size: 0.9rem;
-}
-
 .track-adjustment {
   display: grid;
   gap: 0.9rem;
@@ -1245,6 +1200,23 @@ watch(
 .custom-file-picker.is-disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+.custom-file-picker.has-cover {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background: var(--a-color-surface-muted);
+}
+.cover-picker-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-change-button {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  box-shadow: var(--a-shadow-sm);
 }
 .file-picker-icon {
   color: var(--a-color-muted);

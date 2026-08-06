@@ -381,13 +381,14 @@ function audioLabel(track: MusicTrackDraft) {
 
 .music-tracks__title-cell {
   flex: 1;
-  min-width: 0;
+  min-width: 120px;
 }
 
 .music-tracks__row-actions {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 .music-tracks__audio-input {
@@ -470,6 +471,19 @@ function audioLabel(track: MusicTrackDraft) {
 }
 
 @media (max-width: 640px) {
+  .music-tracks__row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .music-tracks__title-cell {
+    flex: 1 1 100%;
+    order: 3;
+    min-width: 0;
+  }
+  .music-tracks__row-actions {
+    margin-left: auto;
+    order: 2;
+  }
   .btn-text {
     display: none;
   }

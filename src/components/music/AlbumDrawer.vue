@@ -514,20 +514,18 @@ watch(
         </div>
         <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
         <div v-for="(track, index) in tracks" :key="track.id" class="track" :class="{ 'track--detailed': trackDisplayMode === 'detailed' }">
-          <div class="track-main">
-            <button
-              class="track-play-btn"
-              type="button"
-              :disabled="!canPlayTrack(track)"
-              :data-testid="`track-play-${track.id}`"
-              @click="playTrack(track)"
-              aria-label="播放"
-            >
-              <span class="track-num">{{ index + 1 }}</span>
-              <Play class="track-play-icon" :size="14" fill="currentColor" />
-            </button>
-            <div class="track-title">{{ track.title }}</div>
-          </div>
+          <button
+            class="track-play-btn"
+            type="button"
+            :disabled="!canPlayTrack(track)"
+            :data-testid="`track-play-${track.id}`"
+            @click="playTrack(track)"
+            aria-label="播放"
+          >
+            <span class="track-num">{{ index + 1 }}</span>
+            <Play class="track-play-icon" :size="14" fill="currentColor" />
+          </button>
+          <div class="track-title" :title="track.title">{{ track.title }}</div>
           <div class="track-meta">
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
@@ -924,9 +922,6 @@ watch(
 .track:hover {
   background-color: var(--a-color-surface-muted);
 }
-.track-main {
-  display: contents;
-}
 .track-play-btn {
   width: 24px;
   height: 24px;
@@ -962,9 +957,11 @@ watch(
 .track-title {
   color: var(--a-color-text);
   font-size: 0.9rem;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  word-break: break-word;
 }
 .track-meta {
   display: flex;
@@ -1025,13 +1022,14 @@ watch(
   background: transparent;
   border: 0;
   color: var(--a-color-muted);
-  opacity: 0;
+  opacity: 0.4;
   cursor: pointer;
   width: 1.5rem;
   height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
   transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
 .track-fav-btn.is-active {
@@ -1042,18 +1040,19 @@ watch(
   background: transparent;
   border: 0;
   color: var(--a-color-muted);
-  opacity: 0;
+  opacity: 0.4;
   cursor: pointer;
   width: 1.5rem;
   height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
   transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 .track:hover .track-add-btn,
 .track:hover .track-fav-btn {
-  opacity: 0.7;
+  opacity: 0.8;
 }
 .track-add-btn:hover,
 .track-fav-btn:hover {

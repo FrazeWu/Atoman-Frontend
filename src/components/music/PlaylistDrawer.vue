@@ -929,4 +929,14 @@ watch(playlist, syncEditForm, { immediate: true })
   font-size: 0.82rem;
   font-weight: 500;
 }
+
+@media (max-width: 640px) {
+  .tracks-header,
+  .track-row {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+  .col-album {
+    display: none;
+  }
+}
 </style>

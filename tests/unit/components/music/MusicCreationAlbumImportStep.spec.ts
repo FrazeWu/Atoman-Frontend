@@ -239,4 +239,35 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
     expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(2)
   })
+
+  it('会话处理失败后可直接重试而不重复上传', async () => {
+    vi.useFakeTimers()
+    const fileRecord = { fileId: 'file-1', relativePath: 'album.zip', fileName: 'album.zip', role: 'archive', detectedFormat: 'zip', size: 1024, uploadStatus: 'uploaded' as const, processingStatus: 'pending' as const, discNumber: 0, trackNumber: 0, title: '', errorMessage: '' }
+    vi.spyOn(musicApi, 'retryMusicAlbumImportFile').mockResolvedValue(snapshot({
+      status: 'queued',
+      stage: 'queued',
+      files: [fileRecord],
+    }))
+    const createPart = vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload')
+
+    const drawers = useMusicDrawers()
+    if (!drawers.state.value.creationFlow) throw new Error('creation flow missing')
+    Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
+      importId: 'import-1',
+      status: 'needs_attention',
+      stage: 'failed',
+      errorMessage: '处理空间不足',
+      files: [fileRecord],
+    })
+    const wrapper = mount(MusicCreationAlbumUploadZone)
+
+    expect(wrapper.text()).toContain('处理失败，请重试')
+    expect(wrapper.text()).not.toContain('处理空间不足')
+    await wrapper.get('[data-testid="album-import-processing-retry"]').trigger('click')
+    await flushPromises()
+
+    expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
+    expect(createPart).not.toHaveBeenCalled()
+    expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('queued')
+  })
 })

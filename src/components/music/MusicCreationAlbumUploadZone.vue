@@ -54,6 +54,15 @@ const isBackendProcessing = computed(() => {
   const status = albumImportDraft.value?.status
   return ['queued', 'extracting', 'analyzing', 'transcoding'].includes(status || '')
 })
+const processingRetryFile = computed(() => {
+  const draft = albumImportDraft.value
+  if (!draft || !['failed', 'needs_attention'].includes(draft.status)) return null
+  return draft.files.find((file) => file.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(file.role)) ?? null
+})
+const processingErrorMessage = computed(() => {
+  if (errorMessage.value) return errorMessage.value
+  return albumImportDraft.value?.errorMessage ? '处理失败，请重试' : ''
+})
 
 const stageLabelMap: Record<string, string> = {
   queued: '等待处理',
@@ -209,7 +218,18 @@ function formatUploadSpeed(bytesPerSecond: number) {
     </p>
 
     <!-- Error -->
-    <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
+    <p v-if="processingErrorMessage" class="state-line state-line--error">
+      {{ processingErrorMessage }}
+    </p>
+    <button
+      v-if="processingRetryFile"
+      type="button"
+      class="import-file-action"
+      data-testid="album-import-processing-retry"
+      @click="handleRetryFile(processingRetryFile.fileId)"
+    >
+      重试处理
+    </button>
     <button
       v-if="uploading"
       type="button"

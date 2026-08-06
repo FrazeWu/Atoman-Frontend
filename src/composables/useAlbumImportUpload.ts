@@ -252,13 +252,17 @@ export function useAlbumImportUpload() {
   async function handleRetryFile(fileId: string) {
     const draft = albumImportDraft.value
     if (!draft?.importId) return
+    const needsUpload = draft.files.find((file) => file.fileId === fileId)?.uploadStatus === 'failed'
+    errorMessage.value = ''
     try {
       const snapshot = await retryMusicAlbumImportFile(draft.importId, fileId)
       applyImportSnapshot(snapshot)
       const file = selectedFiles.get(fileId)
-      if (file) {
+      if (needsUpload && file) {
         await uploadSingleFileMultipart(draft.importId, file, fileId)
         await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
+      } else if (!needsUpload) {
+        startPolling(draft.importId)
       }
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '重试失败'

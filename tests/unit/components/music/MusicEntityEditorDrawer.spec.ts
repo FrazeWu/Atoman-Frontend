@@ -208,7 +208,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
       content_type: 'image/webp',
       size: 1,
     })
-    mocks.submitMusicEdit.mockResolvedValue({})
+    mocks.submitMusicEdit.mockResolvedValue({ status: 'applied' })
     mocks.buildUpdateArtistEdit.mockReturnValue({ id: 'artist-edit-request' })
     mocks.buildUpdateAlbumEdit.mockReturnValue({ id: 'edit-request' })
   })
@@ -264,6 +264,14 @@ describe('MusicEntityEditorDrawer.vue', () => {
   })
 
   it('uploads the selected replacement cover when saving an album', async () => {
+    const artistId = '5f37b1a2-80ef-4c4f-963f-c7c3c260e662'
+    mocks.getMusicAlbum.mockResolvedValue({
+      id: 'album-1',
+      title: 'Test Album',
+      entry_status: 'open',
+      artists: [{ id: artistId, name: 'Test Artist' }],
+      songs: [],
+    })
     drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
     const file = new File(['cover'], 'cover.webp', { type: 'image/webp' })
     const wrapper = mountDrawer()
@@ -282,7 +290,23 @@ describe('MusicEntityEditorDrawer.vue', () => {
 
     expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(file, 'music.cover')
     expect(mocks.buildUpdateAlbumEdit).toHaveBeenCalledWith('album-1', expect.objectContaining({
+      artist_ids: [artistId],
       cover: expect.objectContaining({ url: 'https://assets.example.test/covers/new.webp' }),
     }))
+  })
+
+  it('keeps the album editor open when the edit is not applied', async () => {
+    mocks.submitMusicEdit.mockResolvedValue({ status: 'failed_prerequisite' })
+    drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
+    const wrapper = mountDrawer()
+
+    await flushPromises()
+    const saveButton = wrapper.findAll('button').find((button) => button.text() === '保存全部')
+    await saveButton?.trigger('click')
+    await flushPromises()
+
+    expect(mocks.refreshAlbum).not.toHaveBeenCalled()
+    expect(mocks.closeMusicEditor).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('保存失败')
   })
 })

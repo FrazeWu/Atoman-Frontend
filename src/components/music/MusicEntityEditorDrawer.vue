@@ -306,7 +306,7 @@ function hydrateAlbumDraft(result: MusicAlbumListItem) {
 
 function toArtistDraft(artist: { id: string; name: string }): Artist {
   return {
-    id: Number.parseInt(artist.id, 10),
+    id: artist.id,
     name: artist.name,
   }
 }
@@ -337,7 +337,7 @@ async function handleAlbumEditSubmit() {
       coverAsset = await uploadMusicAsset(cover.value.file, 'music.cover')
     }
 
-    await submitMusicEdit(buildUpdateAlbumEdit(current.id, {
+    const edit = await submitMusicEdit(buildUpdateAlbumEdit(current.id, {
       title: meta.album.trim(),
       artist_ids: meta.artist.map((artist) => String(artist.id)).filter(Boolean),
       release_date: meta.releaseDate || undefined,
@@ -349,6 +349,9 @@ async function handleAlbumEditSubmit() {
         .filter((source) => source.url.trim())
         .map((source) => ({ type: 'url', title: source.title.trim(), url: source.url.trim() })),
     }))
+    if (edit.status !== 'applied') {
+      throw new Error(edit.status)
+    }
 
     refreshAlbum()
     closeCurrentEditor()

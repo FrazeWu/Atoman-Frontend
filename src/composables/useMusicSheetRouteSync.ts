@@ -13,12 +13,20 @@ export function useMusicSheetRouteSync(router: Router) {
 
     watch(drawers.layers, async (layers, previousLayers) => {
       const top = layers.at(-1)
-      const previousTop = previousLayers.at(-1)
       const currentPath = router.currentRoute.value.path
 
-      if (layers.length < previousLayers.length && previousTop?.route === currentPath) {
-        router.back()
-        return
+      if (layers.length < previousLayers.length) {
+        const removedRouteCount = previousLayers
+          .slice(layers.length)
+          .filter(layer => layer.route).length
+        const currentRouteWasRemoved = previousLayers
+          .slice(layers.length)
+          .some(layer => layer.route === currentPath)
+
+        if (currentRouteWasRemoved && removedRouteCount > 0) {
+          router.go(-removedRouteCount)
+          return
+        }
       }
 
       if (top?.route && top.route !== currentPath) {

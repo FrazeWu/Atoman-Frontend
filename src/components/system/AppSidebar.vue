@@ -167,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
@@ -303,7 +303,7 @@ const blogNavItems = [
 ]
 
 // 4. Music Navigation Items
-const musicNavItems = [
+const musicNavItems: { to: string; label: string; icon: Component; exact?: boolean }[] = [
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass },
   { to: modulePathUrl('music', '/albums'), label: '专辑', icon: Disc3 },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },

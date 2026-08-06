@@ -33,4 +33,31 @@ describe('useMusicSheetRouteSync', () => {
     expect(router.currentRoute.value.path).toBe('/music/artist/artist-1')
     expect(drawers.layers.value.map(layer => layer.key)).toEqual(['artist:artist-1'])
   })
+
+  it('returns across multiple routed layers without reopening an intermediate sheet', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/music', component: { template: '<div />' } },
+        { path: '/music/artist/:artistId', component: { template: '<div />' } },
+        { path: '/music/album/:albumId', component: { template: '<div />' } },
+      ],
+    })
+    useMusicSheetRouteSync(router)
+    const drawers = useMusicDrawers()
+
+    await router.push('/music')
+    drawers.openAlbum('album-1')
+    await flushPromises()
+    drawers.openArtist('artist-2')
+    await flushPromises()
+    drawers.openAlbum('album-3')
+    await flushPromises()
+
+    drawers.returnToLayer('album:album-1')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/music/album/album-1')
+    expect(drawers.layers.value.map(layer => layer.key)).toEqual(['album:album-1'])
+  })
 })

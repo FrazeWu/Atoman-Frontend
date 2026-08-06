@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import * as musicApi from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -13,6 +14,7 @@ type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 
 const { state, closeMusicCreationFlow, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
+const router = useRouter()
 
 const creationFlow = computed(() => state.value.creationFlow)
 const isOpen = computed(() => props.layer !== undefined || creationFlow.value !== null)
@@ -159,8 +161,17 @@ const canGoForward = computed(() => {
     && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
-  commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<unknown>
+  commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<musicApi.MusicAlbumImport>
 }).commitMusicAlbumImport
+
+async function committedArtistId(flow: NonNullable<typeof creationFlow.value>, result: musicApi.MusicAlbumImport) {
+  const existingArtistId = flow.draft.artist.id?.trim()
+  if (existingArtistId) return existingArtistId
+  if (!result?.targetAlbumId) return ''
+
+  const album = await musicApi.getMusicAlbum(result.targetAlbumId)
+  return album.artists?.[0]?.id ?? ''
+}
 
 function formatArtistDate(parts?: { year: string; month: string; day: string }) {
   if (!parts) return ''
@@ -386,9 +397,11 @@ async function completeCreation() {
       throw new Error('commitMusicAlbumImport is unavailable')
     }
 
-    await commitMusicAlbumImport(importId, buildCommitInput(flow))
-    if (flow.draft.artist.id) refreshArtist()
+    const result = await commitMusicAlbumImport(importId, buildCommitInput(flow))
+    const artistId = await committedArtistId(flow, result)
+    refreshArtist()
     closeCurrentCreationFlow()
+    if (artistId) await router.push(`/music/artist/${artistId}`)
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

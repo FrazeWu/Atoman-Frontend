@@ -121,6 +121,7 @@ const drawerMocks = {
   closeMusicCreationFlow: vi.fn(),
   refreshArtist: vi.fn(),
   setMusicCreationStep: vi.fn(),
+  routerPush: vi.fn(),
 }
 
 vi.mock('@/api/musicV1', async () => {
@@ -137,6 +138,10 @@ vi.mock('@/components/ui/PSheet.vue', () => ({
     props: ['show', 'width', 'index'],
     template: '<section v-if="show"><slot /></section>',
   },
+}))
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: drawerMocks.routerPush }),
 }))
 
 vi.mock('@/components/music/MusicCreationArtistStep.vue', () => ({
@@ -172,6 +177,7 @@ describe('MusicCreationFlowDrawer', () => {
     })
     drawerMocks.refreshArtist.mockReset()
     drawerMocks.setMusicCreationStep.mockReset()
+    drawerMocks.routerPush.mockReset()
     drawerMocks.setMusicCreationStep.mockImplementation((step: MusicCreationFlowState['step']) => {
       if (drawerMocks.state.value.creationFlow) {
         drawerMocks.state.value.creationFlow.step = step
@@ -285,6 +291,24 @@ describe('MusicCreationFlowDrawer', () => {
     }))
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
     expect(drawerMocks.state.value.creationFlow).toBeNull()
+  })
+
+  it('提交成功后跳转到已有艺术家的详情页', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', targetAlbumId: 'album-1', status: 'committed' })
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'preview',
+      draft: {
+        ...createFlowState().draft,
+        albumDetails: { ...createFlowState().draft.albumDetails, title: 'Imported Album' },
+        albumImport: { ...createFlowState().draft.albumImport, status: 'ready' },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/artist/artist-seeded')
   })
 
   it('提交时携带已上传的艺人头像和专辑封面', async () => {

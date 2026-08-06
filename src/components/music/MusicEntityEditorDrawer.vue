@@ -427,6 +427,15 @@ function buildCommitInput(): MusicAlbumImportCommitInput {
   }
 }
 
+async function committedArtistId(flow: NonNullable<typeof creationFlow.value>, targetAlbumId: string) {
+  const existingArtistId = flow.draft.artist.id?.trim()
+  if (existingArtistId) return existingArtistId
+  if (!targetAlbumId) return ''
+
+  const album = await getMusicAlbum(targetAlbumId)
+  return album.artists?.[0]?.id ?? ''
+}
+
 const albumCreateStep = computed(() => creationFlow.value?.step ?? 'artist')
 const canGoNext = computed(() => {
   const flow = creationFlow.value
@@ -488,12 +497,11 @@ async function finishAlbumCreate() {
   flow.errorMessage = ''
   try {
     const result = await commitMusicAlbumImport(importId, buildCommitInput())
+    const artistId = await committedArtistId(flow, result.targetAlbumId)
     refreshArtist()
     closeMusicCreationFlow()
     closeCurrentEditor()
-    if (result.importId) {
-      await router.replace('/music')
-    }
+    if (artistId) await router.push(`/music/artist/${artistId}`)
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

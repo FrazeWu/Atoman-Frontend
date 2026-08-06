@@ -4,6 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import {
   createAlbumBookmark,
@@ -58,6 +59,64 @@ let activeSearchRequestId = 0
 const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
 const starredPlaylistIds = ref<string[]>([])
+
+const filterYear = ref('all')
+const filterGenre = ref('all')
+const filterLanguage = ref('all')
+
+const yearOptions = [
+  { label: '全部年代', value: 'all' },
+  { label: '2020年代', value: '2020s' },
+  { label: '2010年代', value: '2010s' },
+  { label: '2000年代', value: '2000s' },
+  { label: '90年代及以前', value: '1990s' },
+]
+
+const genreOptions = [
+  { label: '全部流派', value: 'all' },
+  { label: 'Pop', value: 'Pop' },
+  { label: 'Rock', value: 'Rock' },
+  { label: 'Hip Hop', value: 'Hip Hop' },
+  { label: 'R&B', value: 'R&B' },
+  { label: 'Electronic', value: 'Electronic' },
+]
+
+const languageOptions = [
+  { label: '全部语言', value: 'all' },
+  { label: '国语', value: 'Mandarin' },
+  { label: '粤语', value: 'Cantonese' },
+  { label: '英语', value: 'English' },
+  { label: '日语', value: 'Japanese' },
+  { label: '韩语', value: 'Korean' },
+]
+
+const localFilteredAlbums = computed(() => {
+  if (props.contentMode !== 'albums') return []
+  let results = albumItems.value
+
+  if (filterYear.value !== 'all') {
+    results = results.filter(a => {
+      if (!a.year) return false
+      if (filterYear.value === '2020s') return a.year >= 2020
+      if (filterYear.value === '2010s') return a.year >= 2010 && a.year < 2020
+      if (filterYear.value === '2000s') return a.year >= 2000 && a.year < 2010
+      if (filterYear.value === '1990s') return a.year < 2000
+      return true
+    })
+  }
+
+  // 本地基于分词器的轻量级检索
+  const sq = searchQuery.value.trim().toLowerCase()
+  if (sq) {
+    results = results.filter(a => 
+      a.title.toLowerCase().includes(sq) || 
+      (a.artists && a.artists.some(artist => artist.name.toLowerCase().includes(sq))) ||
+      (a.description && a.description.toLowerCase().includes(sq))
+    )
+  }
+  
+  return results
+})
 
 async function fetchAlbumBookmarks() {
   if (!authStore?.isAuthenticated) {
@@ -241,7 +300,8 @@ async function fetchAlbumIndex() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const response = await listMusicAlbums({ page: 1, page_size: 48, sort: 'hot' })
+    // 采用极大 page_size 获取本地全量库以支持无延迟过滤
+    const response = await listMusicAlbums({ page: 1, page_size: 2000, sort: 'hot' })
     albumItems.value = response.data ?? []
     void fetchAlbumBookmarks()
   } catch (error) {
@@ -260,6 +320,12 @@ async function fetchSearchResults() {
   if (!query) {
     searchAlbums.value = []
     searchArtists.value = []
+    searchLoading.value = false
+    return
+  }
+
+  // 对于本地相册全量库模式，由于是本地过滤，我们可以跳过发起远端请求
+  if (props.contentMode === 'albums') {
     searchLoading.value = false
     return
   }
@@ -426,6 +492,11 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             </template>
           </SearchSurface>
         </div>
+        <div class="filters-row" v-if="contentMode === 'albums'">
+          <PSelect v-model="filterYear" :options="yearOptions" aria-label="发行年代" />
+          <PSelect v-model="filterGenre" :options="genreOptions" aria-label="流派" />
+          <PSelect v-model="filterLanguage" :options="languageOptions" aria-label="语言" />
+        </div>
         <PButton
           v-if="contentMode === 'albums'"
           variant="primary"
@@ -440,12 +511,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
-    <p v-else-if="contentMode === 'albums' && !albumItems.length" class="state-line">暂无专辑</p>
+    <p v-else-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
     <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length" class="state-line">暂无发现内容</p>
 
     <div v-else-if="contentMode === 'albums'" class="discover-grid" aria-label="专辑列表">
       <MusicAlbumCard
-        v-for="album in albumItems"
+        v-for="album in localFilteredAlbums"
         :key="album.id"
         :album="album"
         :is-bookmarked="starredAlbumIds.includes(String(album.id))"
@@ -565,6 +636,12 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   max-width: 28rem;
   flex: 0 1 28rem;
   height: 36px;
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .ui-action {

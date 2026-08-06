@@ -3,9 +3,15 @@ import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const { state } = useMusicDrawers()
+const albumDetails = computed(() => state.value.creationFlow?.draft.albumDetails ?? null)
 const albumImport = computed(() => state.value.creationFlow?.draft.albumImport ?? null)
 const tracks = computed(() => state.value.creationFlow?.draft.tracks ?? [])
-const coverUrl = computed(() => albumImport.value?.coverUrl || albumImport.value?.derivedCover || '')
+const coverUrl = computed(() => (
+  albumDetails.value?.coverUrl
+  || albumImport.value?.coverUrl
+  || albumImport.value?.derivedCover
+  || ''
+))
 const failedFiles = computed(() => (albumImport.value?.files ?? []).filter((file) => (
   file.uploadStatus === 'failed' || file.processingStatus === 'failed'
 )))

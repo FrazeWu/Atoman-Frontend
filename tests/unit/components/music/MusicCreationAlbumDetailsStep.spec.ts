@@ -441,4 +441,22 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(true)
   })
+
+  it('已有封面时不自动打开识别封面裁剪', async () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
+    drawers.setMusicCreationStep('albumDetails')
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    flow.draft.albumDetails.coverUrl = 'https://img.example/manual-cover.jpg'
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+
+    flow.draft.albumImport.derivedCover = 'https://img.example/imported-cover.jpg'
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('img[alt="封面预览"]').attributes('src')).toBe('https://img.example/manual-cover.jpg')
+    expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(true)
+  })
 })

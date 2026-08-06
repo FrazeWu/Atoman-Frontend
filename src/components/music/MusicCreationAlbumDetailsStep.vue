@@ -346,6 +346,7 @@ watch(
   () => unresolvedImportedCoverUrl.value,
   (nextCoverUrl) => {
     if (!creationFlow.value || !nextCoverUrl) return
+    if (albumDetailsDraft.value?.coverUrl.trim()) return
     if (pendingCoverCrop.value?.kind === 'manual') return
     if (handledImportedCoverUrl.value === nextCoverUrl) return
 
@@ -469,6 +470,12 @@ watch(
           </div>
           <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
           <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+          <div v-if="albumDetailsDraft.coverUrl" class="cover-preview square-preview">
+            <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
+            <div class="cover-preview__meta">
+              <p class="cover-preview__title">已选择封面</p>
+            </div>
+          </div>
           <div
             v-if="unresolvedImportedCoverUrl"
             class="imported-cover-callout"
@@ -483,12 +490,6 @@ watch(
             >
               继续裁剪识别封面
             </PButton>
-          </div>
-          <div v-else-if="albumDetailsDraft.coverUrl" class="cover-preview square-preview">
-            <img :src="albumDetailsDraft.coverUrl" alt="封面预览" class="cover-preview__image" />
-            <div class="cover-preview__meta">
-              <p class="cover-preview__title">已选择封面</p>
-            </div>
           </div>
         </div>
 

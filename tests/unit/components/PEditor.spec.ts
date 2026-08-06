@@ -9,6 +9,7 @@ const collabMockState = vi.hoisted(() => ({
   initialText: '',
   asyncText: '',
   asyncMergedText: '',
+  urls: [] as string[],
 }))
 
 vi.mock('y-websocket', () => {
@@ -40,7 +41,8 @@ vi.mock('y-websocket', () => {
     awareness = new MockAwareness()
     private syncListeners: Array<(isSynced: boolean) => void> = []
 
-    constructor(_url: string, _roomId: string, doc: { getText: (name: string) => { length: number; insert: (index: number, text: string) => void; delete: (index: number, length: number) => void } }) {
+    constructor(url: string, _roomId: string, doc: { getText: (name: string) => { length: number; insert: (index: number, text: string) => void; delete: (index: number, length: number) => void } }) {
+      collabMockState.urls.push(url)
       if (collabMockState.initialText) {
         const text = doc.getText('codemirror')
         if (text.length === 0) {
@@ -132,6 +134,7 @@ describe('PEditor', () => {
     collabMockState.initialText = ''
     collabMockState.asyncText = ''
     collabMockState.asyncMergedText = ''
+    collabMockState.urls = []
     consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -212,6 +215,7 @@ describe('PEditor', () => {
     expect(wrapper.attributes('data-editor-mode')).toBe(FUTURE_SPLIT_MODE)
     expect(wrapper.find('.cm-editor').exists()).toBe(true)
     expect(wrapper.find(FUTURE_PREVIEW_PANE).exists()).toBe(true)
+    expect(collabMockState.urls).toEqual(['ws://localhost:3000/api/v1/collab/ws'])
   })
 
   it('does not expose a misleading mode toggle in collab mode', async () => {

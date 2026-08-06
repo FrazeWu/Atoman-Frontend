@@ -51,4 +51,17 @@ describe('MusicCreationAlbumPreviewStep.vue', () => {
     expect(wrapper.text()).toContain('处理失败')
     expect(wrapper.text()).toContain('压缩包已加密，请上传无密码压缩包或直接上传音频文件')
   })
+
+  it('优先预览已经确认的封面', () => {
+    const drawers = useMusicDrawers()
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    flow.draft.albumDetails.coverUrl = 'https://img.example/manual-cover.jpg'
+    flow.draft.albumImport.coverUrl = 'https://img.example/imported-cover.jpg'
+
+    const wrapper = mount(MusicCreationAlbumPreviewStep)
+
+    expect(wrapper.get('img[alt="专辑封面预览"]').attributes('src')).toBe('https://img.example/manual-cover.jpg')
+  })
 })

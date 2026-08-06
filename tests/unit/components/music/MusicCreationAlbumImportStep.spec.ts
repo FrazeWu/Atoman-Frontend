@@ -126,6 +126,28 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     ] })
   })
 
+  it('手动封面与识别封面同时存在时明确显示手动封面', async () => {
+    const drawers = useMusicDrawers()
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    flow.draft.albumImport.derivedCover = 'https://img.example/imported-cover.jpg'
+    vi.spyOn(musicApi, 'uploadMusicAsset').mockResolvedValue({
+      key: 'music/manual-cover.jpg',
+      url: 'https://img.example/manual-cover.jpg',
+    })
+
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    const input = wrapper.get('[data-testid="album-details-cover-input"]')
+    setFiles(input.element as HTMLInputElement, [new File(['cover'], 'manual-cover.jpg', { type: 'image/jpeg' })])
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="album-import-cover-preview"]').attributes('src')).toBe('https://img.example/imported-cover.jpg')
+    expect(wrapper.get('[data-testid="album-selected-cover-preview"]').attributes('src')).toBe('https://img.example/manual-cover.jpg')
+    expect(flow.draft.albumDetails.coverUrl).toBe('https://img.example/manual-cover.jpg')
+  })
+
   it('接受会话快照中的空数组而不崩溃', async () => {
     const file = new File(['audio'], 'song.mp3', { type: 'audio/mpeg' })
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())

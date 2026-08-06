@@ -554,7 +554,7 @@ function initCodeMirror() {
   if (props.enableCollab && props.collabRoomId) {
     ydoc = new Y.Doc()
     provider = new WebsocketProvider(
-      useWebSocketUrl(`/api/v1/collab/ws/${props.collabRoomId}`),
+      useWebSocketUrl('/api/v1/collab/ws'),
       props.collabRoomId,
       ydoc,
       { connect: true },

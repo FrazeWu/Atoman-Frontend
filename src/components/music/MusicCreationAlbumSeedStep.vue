@@ -163,7 +163,7 @@ async function onCoverChange(event: Event) {
             <strong>{{ albumImportDraft.derivedAlbumTitle || '等待上传' }}</strong>
           </div>
           <div class="info-chip">
-            <span class="summary-label">封面</span>
+            <span class="summary-label">识别封面</span>
             <div v-if="resolvedCoverUrl" class="cover-summary">
               <img
                 :src="resolvedCoverUrl"
@@ -231,6 +231,14 @@ async function onCoverChange(event: Event) {
             </div>
             <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
             <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+            <div v-else-if="albumDetailsDraft.coverUrl" class="cover-summary cover-summary--selected">
+              <img
+                :src="albumDetailsDraft.coverUrl"
+                alt="已选择专辑封面"
+                class="cover-summary__image"
+                data-testid="album-selected-cover-preview"
+              />
+            </div>
           </div>
 
           <div class="field-group">

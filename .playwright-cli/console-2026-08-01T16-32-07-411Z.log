@@ -1,0 +1,10 @@
+[    2013ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/notifications/unread-counts:0
+[    2212ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/admin/users?status=all&activity=all&page=1&page_size=5:0
+[    2252ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/admin/feed/fulltext/sources?page=1&limit=5&sort=pending_count:0
+[    2283ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/forum/moderation/moderators:0
+[    2301ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/edits?status=open&page_size=50:0
+[    2310ms] [ERROR] Vue: mounted hook: ApiErrorResponseError: Login required
+    at unwrapResponseEnvelope (http://localhost:5173/src/api/client.ts:40:11)
+    at async listMusicEdits (http://localhost:5173/src/api/musicV1/catalog.ts:268:20)
+    at async fetchReviewItems (http://localhost:5173/src/components/setting/SettingMusicReviewPanel.vue:46:24)
+    at async http://localhost:5173/src/components/setting/SettingMusicReviewPanel.vue:119:7 @ http://localhost:5173/src/utils/logger.ts:10

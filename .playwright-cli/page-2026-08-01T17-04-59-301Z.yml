@@ -1,0 +1,197 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e12]:
+          - generic [ref=e13]: ATOMAN
+          - generic [ref=e14]:
+            - generic [ref=e15]: v0.0.2
+            - generic [ref=e16]: beta
+      - generic [ref=e34]:
+        - button "切换主题" [ref=e41] [cursor=pointer]
+        - link "通知" [ref=e79] [cursor=pointer]:
+          - /url: /inbox
+        - link "创作中心" [ref=e81] [cursor=pointer]:
+          - /url: /studio
+        - link "设置" [ref=e86] [cursor=pointer]:
+          - /url: /users/admin/settings
+        - button "A admin ▾" [ref=e91] [cursor=pointer]:
+          - generic [ref=e92]: A
+          - generic [ref=e93]: admin
+          - generic [ref=e94]: ▾
+  - main [ref=e45]:
+    - generic [ref=e96]:
+      - main [ref=e457]:
+        - generic [ref=e458]:
+          - generic [ref=e459]:
+            - heading "用户管理" [level=2] [ref=e460]
+            - paragraph [ref=e461]: 管理账号、权限和登录状态。
+          - button "新增用户" [ref=e462] [cursor=pointer]
+        - navigation "用户管理视图" [ref=e466]:
+          - button "用户" [pressed] [ref=e467] [cursor=pointer]
+          - button "操作记录" [ref=e468] [cursor=pointer]
+        - generic [ref=e470]:
+          - generic [ref=e471]:
+            - generic [ref=e472]: 搜索
+            - searchbox "搜索" [ref=e474]
+          - generic [ref=e475]:
+            - generic [ref=e476]: 角色
+            - button "角色" [ref=e478] [cursor=pointer]:
+              - generic [ref=e479]: 全部角色
+              - generic [ref=e480]: ▾
+          - generic [ref=e481]:
+            - generic [ref=e482]: 状态
+            - button "状态" [ref=e484] [cursor=pointer]:
+              - generic [ref=e485]: 全部状态
+              - generic [ref=e486]: ▾
+          - generic [ref=e487]:
+            - generic [ref=e488]: 登录时间
+            - button "登录时间" [ref=e490] [cursor=pointer]:
+              - generic [ref=e491]: 全部时间
+              - generic [ref=e492]: ▾
+          - button "查询" [ref=e493] [cursor=pointer]
+        - generic [ref=e497]:
+          - table [ref=e499]:
+            - rowgroup [ref=e500]:
+              - row [ref=e501]:
+                - columnheader "用户" [ref=e502]
+                - columnheader "角色与状态" [ref=e503]
+                - columnheader "最后登录" [ref=e504]
+                - columnheader "登录位置" [ref=e505]
+                - columnheader "会话" [ref=e506]
+                - columnheader "注册时间" [ref=e507]
+                - columnheader "操作" [ref=e508]
+            - rowgroup [ref=e510]:
+              - row [ref=e511]:
+                - cell [ref=e512]:
+                  - button "查看yo的详情" [ref=e513] [cursor=pointer]:
+                    - generic [ref=e516]:
+                      - strong [ref=e517]: yo
+                      - generic [ref=e518]: "@ogiso · convassd@gmail.com"
+                - cell "普通用户 正常" [ref=e521]:
+                  - generic [ref=e522]:
+                    - generic [ref=e523]: 普通用户
+                    - generic [ref=e524]: 正常
+                - cell "从未登录" [ref=e526]
+                - cell "未知 无记录" [ref=e527]:
+                  - generic [ref=e528]:
+                    - generic [ref=e529]: 未知
+                    - generic [ref=e530]: 无记录
+                - cell "2 个" [ref=e531]
+                - cell "2026/07/25" [ref=e532]
+                - cell [ref=e533]:
+                  - generic [ref=e534]:
+                    - button "编辑用户" [ref=e535] [cursor=pointer]
+                    - button "重置密码" [ref=e539] [cursor=pointer]
+                    - button "停用账号" [ref=e543] [cursor=pointer]
+                    - button "删除用户" [ref=e549] [cursor=pointer]
+              - row [ref=e553]:
+                - cell [ref=e554]:
+                  - button "查看FrazeWu的详情" [ref=e555] [cursor=pointer]:
+                    - generic [ref=e558]:
+                      - strong [ref=e559]: FrazeWu
+                      - generic [ref=e560]: "@wogmail2 · fz.wu@icloud.com"
+                - cell "普通用户 正常" [ref=e563]:
+                  - generic [ref=e564]:
+                    - generic [ref=e565]: 普通用户
+                    - generic [ref=e566]: 正常
+                - cell "从未登录" [ref=e568]
+                - cell "未知 无记录" [ref=e569]:
+                  - generic [ref=e570]:
+                    - generic [ref=e571]: 未知
+                    - generic [ref=e572]: 无记录
+                - cell "0 个" [ref=e573]
+                - cell "2026/07/19" [ref=e574]
+                - cell [ref=e575]:
+                  - generic [ref=e576]:
+                    - button "编辑用户" [ref=e577] [cursor=pointer]
+                    - button "重置密码" [ref=e581] [cursor=pointer]
+                    - button "停用账号" [ref=e585] [cursor=pointer]
+                    - button "删除用户" [ref=e591] [cursor=pointer]
+              - row [ref=e595]:
+                - cell [ref=e596]:
+                  - button "查看法的详情" [ref=e597] [cursor=pointer]:
+                    - generic [ref=e600]:
+                      - strong [ref=e601]: 法
+                      - generic [ref=e602]: "@wogmail · fzwu.scsc@gmail.com"
+                - cell "普通用户 正常" [ref=e605]:
+                  - generic [ref=e606]:
+                    - generic [ref=e607]: 普通用户
+                    - generic [ref=e608]: 正常
+                - cell "从未登录" [ref=e610]
+                - cell "未知 无记录" [ref=e611]:
+                  - generic [ref=e612]:
+                    - generic [ref=e613]: 未知
+                    - generic [ref=e614]: 无记录
+                - cell "0 个" [ref=e615]
+                - cell "2026/07/19" [ref=e616]
+                - cell [ref=e617]:
+                  - generic [ref=e618]:
+                    - button "编辑用户" [ref=e619] [cursor=pointer]
+                    - button "重置密码" [ref=e623] [cursor=pointer]
+                    - button "停用账号" [ref=e627] [cursor=pointer]
+                    - button "删除用户" [ref=e633] [cursor=pointer]
+              - row [ref=e637]:
+                - cell [ref=e638]:
+                  - button "查看法宗的详情" [ref=e639] [cursor=pointer]:
+                    - generic [ref=e640]: 法
+                    - generic [ref=e642]:
+                      - strong [ref=e643]: 法宗
+                      - generic [ref=e644]: "@fazong · fazongwu@163.com"
+                - cell "普通用户 正常" [ref=e647]:
+                  - generic [ref=e648]:
+                    - generic [ref=e649]: 普通用户
+                    - generic [ref=e650]: 正常
+                - cell "从未登录" [ref=e652]
+                - cell "未知 无记录" [ref=e653]:
+                  - generic [ref=e654]:
+                    - generic [ref=e655]: 未知
+                    - generic [ref=e656]: 无记录
+                - cell "1 个" [ref=e657]
+                - cell "2026/07/14" [ref=e658]
+                - cell [ref=e659]:
+                  - generic [ref=e660]:
+                    - button "编辑用户" [ref=e661] [cursor=pointer]
+                    - button "重置密码" [ref=e665] [cursor=pointer]
+                    - button "停用账号" [ref=e669] [cursor=pointer]
+                    - button "删除用户" [ref=e675] [cursor=pointer]
+              - row [ref=e679]:
+                - cell [ref=e680]:
+                  - button "查看admin的详情" [ref=e681] [cursor=pointer]:
+                    - generic [ref=e682]: A
+                    - generic [ref=e684]:
+                      - strong [ref=e685]: admin
+                      - generic [ref=e686]: "@admin · admin@atoman.org"
+                - cell "站长 正常" [ref=e689]:
+                  - generic [ref=e690]:
+                    - generic [ref=e691]: 站长
+                    - generic [ref=e692]: 正常
+                - cell "08/01 19:04" [ref=e694]
+                - cell "本地网络 127.0.0.1" [ref=e695]:
+                  - generic [ref=e696]:
+                    - generic [ref=e697]: 本地网络
+                    - generic [ref=e698]: 127.0.0.1
+                - cell "10 个" [ref=e699]
+                - cell "2026/07/14" [ref=e700]
+                - cell "不可操作" [ref=e701]
+          - generic [ref=e702]:
+            - generic [ref=e703]: 第 1 页，共 5 位用户
+            - generic [ref=e704]:
+              - button "上一页" [disabled] [ref=e705]
+              - button "下一页" [disabled] [ref=e708]
+      - complementary "站点管理目录" [ref=e439]:
+        - generic [ref=e440]:
+          - strong [ref=e441]: 目录
+          - button "收起目录" [ref=e442] [cursor=pointer]
+        - navigation "站点管理目录" [ref=e446]:
+          - button "用户管理" [active] [ref=e447] [cursor=pointer]
+          - button "订阅源管理" [ref=e448] [cursor=pointer]
+          - button "订阅" [ref=e449] [cursor=pointer]
+          - button "博客" [ref=e450] [cursor=pointer]
+          - button "音乐" [ref=e451] [cursor=pointer]
+          - button "论坛" [ref=e452] [cursor=pointer]
+          - button "辩论" [ref=e453] [cursor=pointer]
+          - button "时间线" [ref=e454] [cursor=pointer]
+          - button "播客" [ref=e455] [cursor=pointer]
+          - button "视频" [ref=e456] [cursor=pointer]

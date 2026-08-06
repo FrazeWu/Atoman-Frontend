@@ -1,0 +1,271 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - button "Toggle sidebar" [ref=e60] [cursor=pointer]
+          - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e12]:
+              - generic [ref=e13]: ATOMAN
+              - generic [ref=e14]:
+                - generic [ref=e15]: v0.0.2
+                - generic [ref=e16]: beta
+        - navigation [ref=e17]:
+          - link "订阅" [ref=e18] [cursor=pointer]:
+            - /url: /feed
+          - link "博客" [ref=e20] [cursor=pointer]:
+            - /url: /posts
+          - link "音乐" [ref=e22] [cursor=pointer]:
+            - /url: /music
+          - link "视频" [ref=e24] [cursor=pointer]:
+            - /url: /videos
+          - link "播客" [ref=e26] [cursor=pointer]:
+            - /url: /podcasts
+          - link "论坛" [ref=e28] [cursor=pointer]:
+            - /url: /forum
+          - link "辩论" [ref=e30] [cursor=pointer]:
+            - /url: /debate
+          - link "时间线" [ref=e32] [cursor=pointer]:
+            - /url: /timeline
+        - generic [ref=e34]:
+          - button "打开全局搜索" [ref=e36] [cursor=pointer]:
+            - generic [ref=e40]: 搜索
+          - button "切换主题" [ref=e41] [cursor=pointer]
+          - link "登录" [ref=e44] [cursor=pointer]:
+            - /url: /login
+    - main [ref=e45]:
+      - generic [ref=e62]:
+        - complementary [ref=e63]:
+          - navigation [ref=e64]:
+            - link "发现" [ref=e65] [cursor=pointer]:
+              - /url: /music/discover
+            - link "专辑" [ref=e71] [cursor=pointer]:
+              - /url: /music
+            - link "艺人" [ref=e79] [cursor=pointer]:
+              - /url: /music/artists
+            - link "收藏" [ref=e87] [cursor=pointer]:
+              - /url: /music/starred
+            - link "音乐库" [ref=e92] [cursor=pointer]:
+              - /url: /music/library
+            - link "播放历史" [ref=e97] [cursor=pointer]:
+              - /url: /music/history
+            - link "导入记录" [ref=e104] [cursor=pointer]:
+              - /url: /music/imports
+          - region "歌单类别" [ref=e111]:
+            - generic [ref=e112]:
+              - paragraph [ref=e113]: 我的歌单
+              - button "新建歌单" [ref=e114] [cursor=pointer]
+            - paragraph [ref=e117]: 暂无歌单
+        - main [ref=e118]:
+          - generic [ref=e119]:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - heading "专辑" [level=1]
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - textbox "搜索专辑或艺术家..."
+                            - button "搜索"
+                    - button "添加专辑"
+                - generic "专辑列表":
+                  - generic:
+                    - generic:
+                      - img "Late Registration"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "1"
+                    - generic:
+                      - generic:
+                        - heading "Late Registration" [level=3]
+                        - paragraph: Ye · 2007
+                  - generic:
+                    - generic:
+                      - img "The College Dropout"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "15"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "The College Dropout" [level=3]
+                        - paragraph: Ye · 2004
+                  - generic:
+                    - generic:
+                      - img "2003 Toyota Corolla"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "10"
+                          - generic: "1"
+                    - generic:
+                      - generic:
+                        - heading "2003 Toyota Corolla" [level=3]
+                        - paragraph: 2003 Toyota Corolla · 2021
+                  - generic:
+                    - generic:
+                      - img "Páramo"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Páramo" [level=3]
+                        - paragraph: Callejas · 2021
+                  - generic:
+                    - generic:
+                      - img "Elevación"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Elevación" [level=3]
+                        - paragraph: DCM · 2016
+                  - generic:
+                    - generic:
+                      - 'img "Dear Fellow Australians: An Independent Inquiry into Australian Values"'
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - 'heading "Dear Fellow Australians: An Independent Inquiry into Australian Values" [level=3]'
+                        - paragraph: Buttress O'Kneel · 2007
+                  - generic:
+                    - generic:
+                      - img "Geo-Sync Deluxe"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "21"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Geo-Sync Deluxe" [level=3]
+                        - paragraph: BLUnderwood · 未知年份
+                  - generic:
+                    - generic:
+                      - img "Sometimes EP"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Sometimes EP" [level=3]
+                        - paragraph: AFM · 2019
+                  - generic:
+                    - generic:
+                      - img "Violent Playground"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Violent Playground" [level=3]
+                        - paragraph: Logical Disorder · 2010
+                  - generic:
+                    - generic:
+                      - img "Phantastico Dogma Remixes"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Phantastico Dogma Remixes" [level=3]
+                        - paragraph: In Vitro · 2010
+                  - generic:
+                    - generic:
+                      - img "The Four Seasons"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "The Four Seasons" [level=3]
+                        - paragraph: Memphis · 未知年份
+                  - generic:
+                    - generic:
+                      - img "Nicolas Falcon"
+                      - button "收藏"
+                      - generic:
+                        - generic:
+                          - generic: "1"
+                          - generic: "0"
+                    - generic:
+                      - generic:
+                        - heading "Nicolas Falcon" [level=3]
+                        - paragraph: Nicolas Falcon · 未知年份
+    - contentinfo [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic "需要管理员权限" [ref=e49]: 凹凸庵
+          - navigation "站点信息" [ref=e50]:
+            - button "关于" [ref=e51] [cursor=pointer]
+            - button "联系我们" [ref=e52] [cursor=pointer]
+            - button "问题反馈" [ref=e53] [cursor=pointer]
+        - generic [ref=e54]:
+          - generic [ref=e55]: © 2026 凹凸庵
+          - generic [ref=e56]:
+            - button "使用条款" [ref=e57] [cursor=pointer]
+            - button "隐私政策" [ref=e58] [cursor=pointer]
+            - generic "当前版本" [ref=e59]: v0.0.2
+  - generic:
+    - dialog:
+      - button
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=2]: Ye
+                  - paragraph: 本名：Kanye Omari West
+          - generic:
+            - generic:
+              - button: 订阅
+              - button: 修改艺术家信息
+              - button: 添加新专辑
+              - button: 合并重复条目
+              - button: 版本
+            - generic:
+              - heading [level=3]: 专辑列表
+            - generic:
+              - generic: "2004"
+              - generic:
+                - generic:
+                  - generic: The College Dropout
+                  - generic: 0 首 · 专辑
+            - generic:
+              - generic: "2007"
+              - generic:
+                - generic:
+                  - generic: Late Registration
+                  - generic: 0 首 · 专辑
+  - dialog [ref=e161]:
+    - button "关闭" [active] [ref=e162] [cursor=pointer]
+    - paragraph [ref=e170]: 暂无版本历史。

@@ -1,0 +1,12 @@
+[    2501ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5174/api/v1/music/playlists:0
+[    2505ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5174/api/v1/music/bookmarks/playlists:0
+[    2514ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5174/api/v1/music/bookmarks/albums:0
+[    2524ms] [ERROR] Failed to fetch album bookmarks:: ApiErrorResponseError: Login required
+    at unwrapResponseEnvelope (http://127.0.0.1:5174/src/api/client.ts:40:11)
+    at async fetchAlbumBookmarks (http://127.0.0.1:5174/src/views/music/ExploreView.vue?t=1785608099453:51:26)
+    at async Promise.all (index 1)
+    at async fetchAlbumIndex (http://127.0.0.1:5174/src/views/music/ExploreView.vue?t=1785608099453:199:28) @ http://127.0.0.1:5174/src/utils/logger.ts:10
+[   33555ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5174/api/v1/music/playlists:0
+[   33557ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5174/api/v1/music/bookmarks/playlists:0
+[   33570ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5174/api/v1/music/bookmarks/artists:0
+[   51093ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:5174/login?redirect=/music/starred:0

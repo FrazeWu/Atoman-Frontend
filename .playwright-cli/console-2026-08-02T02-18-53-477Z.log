@@ -1,0 +1,12 @@
+[    1302ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/playlists:0
+[    1305ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/bookmarks/playlists:0
+[    1307ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/bookmarks/artists:0
+[   12474ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/bookmarks/artists:0
+[   12627ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/bookmarks/playlists:0
+[   12632ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/playlists:0
+[   12640ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/music/bookmarks/albums:0
+[   12672ms] [ERROR] Failed to fetch album bookmarks:: ApiErrorResponseError: Login required
+    at unwrapResponseEnvelope (http://localhost:5173/src/api/client.ts:40:11)
+    at async fetchAlbumBookmarks (http://localhost:5173/src/views/music/ExploreView.vue:51:26)
+    at async Promise.all (index 1)
+    at async fetchAlbumIndex (http://localhost:5173/src/views/music/ExploreView.vue:199:28) @ http://localhost:5173/src/utils/logger.ts:10

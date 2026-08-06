@@ -1,0 +1,88 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Toggle sidebar" [ref=e405] [cursor=pointer]
+        - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e12]:
+            - generic [ref=e13]: ATOMAN
+            - generic [ref=e14]:
+              - generic [ref=e15]: v0.0.2
+              - generic [ref=e16]: beta
+      - navigation [ref=e407]:
+        - link "订阅" [ref=e408] [cursor=pointer]:
+          - /url: /feed
+        - link "博客" [ref=e410] [cursor=pointer]:
+          - /url: /posts
+        - link "音乐" [ref=e412] [cursor=pointer]:
+          - /url: /music
+        - link "视频" [ref=e414] [cursor=pointer]:
+          - /url: /videos
+        - link "播客" [ref=e416] [cursor=pointer]:
+          - /url: /podcasts
+        - link "论坛" [ref=e418] [cursor=pointer]:
+          - /url: /forum
+        - link "辩论" [ref=e420] [cursor=pointer]:
+          - /url: /debate
+        - link "时间线" [ref=e422] [cursor=pointer]:
+          - /url: /timeline
+      - generic [ref=e34]:
+        - button "打开全局搜索" [ref=e425] [cursor=pointer]:
+          - generic [ref=e429]: 搜索
+        - button "切换主题" [ref=e41] [cursor=pointer]
+        - link "登录" [ref=e44] [cursor=pointer]:
+          - /url: /login
+  - main [ref=e45]:
+    - generic [ref=e430]:
+      - complementary [ref=e431]:
+        - navigation [ref=e432]:
+          - link "发现" [ref=e433] [cursor=pointer]:
+            - /url: /music/discover
+          - link "专辑" [ref=e439] [cursor=pointer]:
+            - /url: /music
+          - link "艺人" [ref=e447] [cursor=pointer]:
+            - /url: /music/artists
+          - link "收藏" [ref=e455] [cursor=pointer]:
+            - /url: /music/starred
+          - link "播放历史" [ref=e460] [cursor=pointer]:
+            - /url: /music/history
+        - region "歌单类别" [ref=e468]:
+          - generic [ref=e469]:
+            - paragraph [ref=e470]: 我的歌单
+            - button "新建歌单" [ref=e471] [cursor=pointer]
+          - paragraph [ref=e474]: 暂无歌单
+      - main [ref=e475]:
+        - generic [ref=e477]:
+          - generic [ref=e479]:
+            - heading "艺术家" [level=1] [ref=e481]
+            - generic "艺术家列表模式" [ref=e483]:
+              - radiogroup [ref=e484]:
+                - radio "全部" [checked] [ref=e486] [cursor=pointer]
+                - radio "已订阅" [ref=e488] [cursor=pointer]
+          - generic [ref=e490]:
+            - generic [ref=e491]:
+              - generic [ref=e495]:
+                - textbox "搜索艺术家..." [ref=e497]
+                - button "搜索" [ref=e498] [cursor=pointer]
+              - button "添加艺术家" [ref=e499] [cursor=pointer]
+            - generic "艺术家推荐模式" [ref=e502]:
+              - radiogroup [ref=e503]:
+                - radio "热度" [checked] [ref=e505] [cursor=pointer]
+                - radio "精选" [ref=e507] [cursor=pointer]
+                - radio "探索" [ref=e509] [cursor=pointer]
+          - paragraph [ref=e511]: 正在加载艺术家...
+  - contentinfo [ref=e512]:
+    - generic [ref=e513]:
+      - generic [ref=e514]:
+        - generic "需要管理员权限" [ref=e515]: 凹凸庵
+        - navigation "站点信息" [ref=e516]:
+          - button "关于" [ref=e517] [cursor=pointer]
+          - button "联系我们" [ref=e518] [cursor=pointer]
+          - button "问题反馈" [ref=e519] [cursor=pointer]
+      - generic [ref=e520]:
+        - generic [ref=e521]: © 2026 凹凸庵
+        - generic [ref=e522]:
+          - button "使用条款" [ref=e523] [cursor=pointer]
+          - button "隐私政策" [ref=e524] [cursor=pointer]
+          - generic "当前版本" [ref=e525]: v0.0.2

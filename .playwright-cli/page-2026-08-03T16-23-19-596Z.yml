@@ -1,0 +1,188 @@
+- generic [ref=f1e4]:
+  - banner [ref=f1e5]:
+    - generic [ref=f1e6]:
+      - generic [ref=f1e7]:
+        - button "Toggle sidebar" [ref=f1e58] [cursor=pointer]
+        - link "ATOMAN v0.0.2" [ref=f1e273] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f1e12]:
+            - generic [ref=f1e13]: ATOMAN
+            - generic [ref=f1e14]: v0.0.2
+      - generic [ref=f1e33]:
+        - button "打开全局搜索" [ref=f1e35] [cursor=pointer]
+        - button "切换主题" [ref=f1e40] [cursor=pointer]
+        - link "通知" [ref=f1e60] [cursor=pointer]:
+          - /url: /inbox
+        - link "创作中心" [ref=f1e62] [cursor=pointer]:
+          - /url: /studio
+        - link "设置" [ref=f1e67] [cursor=pointer]:
+          - /url: /users/preview/settings
+  - main [ref=f1e43]:
+    - main [ref=f1e121]:
+      - generic [ref=f1e123]:
+        - region [ref=f1e124]:
+          - heading "最近播放" [level=2] [ref=f1e126]
+          - button "最近播放的歌 最近播放的歌 示例艺术家 · 示例专辑" [active] [ref=f1e128] [cursor=pointer]:
+            - img "最近播放的歌" [ref=f1e129]
+            - generic [ref=f1e130]:
+              - strong [ref=f1e131]: 最近播放的歌
+              - generic [ref=f1e132]: 示例艺术家 · 示例专辑
+        - region [ref=f1e133]:
+          - heading "为你发现" [level=2] [ref=f1e135]
+          - generic [ref=f1e137] [cursor=pointer]:
+            - generic [ref=f1e138]:
+              - img "为你发现" [ref=f1e139]
+              - generic:
+                - generic:
+                  - generic: "12"
+                  - generic: "2"
+            - generic [ref=f1e141]:
+              - heading "为你发现" [level=3] [ref=f1e142]
+              - paragraph [ref=f1e143]: 示例艺术家 · 2024
+        - generic [ref=f1e144]:
+          - heading "专辑" [level=1] [ref=f1e148]
+          - generic [ref=f1e150]:
+            - generic [ref=f1e154]:
+              - textbox "搜索专辑或艺术家..." [ref=f1e156]
+              - button "搜索" [ref=f1e157] [cursor=pointer]
+            - button "添加专辑" [ref=f1e158] [cursor=pointer]
+          - generic "专辑列表" [ref=f1e160]:
+            - generic [ref=f1e161] [cursor=pointer]:
+              - generic [ref=f1e162]:
+                - img "The College Dropout" [ref=f1e163]
+                - button "收藏" [ref=f1e164]
+                - generic:
+                  - generic:
+                    - generic: "15"
+                    - generic: "0"
+              - generic [ref=f1e168]:
+                - heading "The College Dropout" [level=3] [ref=f1e169]
+                - paragraph [ref=f1e170]: Ye · 2004
+            - generic [ref=f1e171] [cursor=pointer]:
+              - generic [ref=f1e172]:
+                - img "2003 Toyota Corolla" [ref=f1e173]
+                - button "收藏" [ref=f1e174]
+                - generic:
+                  - generic:
+                    - generic: "10"
+                    - generic: "1"
+              - generic [ref=f1e178]:
+                - heading "2003 Toyota Corolla" [level=3] [ref=f1e179]
+                - paragraph [ref=f1e180]: 2003 Toyota Corolla · 2021
+            - generic [ref=f1e181] [cursor=pointer]:
+              - generic [ref=f1e182]:
+                - img "Páramo" [ref=f1e183]
+                - button "收藏" [ref=f1e184]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e188]:
+                - heading "Páramo" [level=3] [ref=f1e189]
+                - paragraph [ref=f1e190]: Callejas · 2021
+            - generic [ref=f1e191] [cursor=pointer]:
+              - generic [ref=f1e192]:
+                - img "Elevación" [ref=f1e193]
+                - button "收藏" [ref=f1e194]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e198]:
+                - heading "Elevación" [level=3] [ref=f1e199]
+                - paragraph [ref=f1e200]: DCM · 2016
+            - generic [ref=f1e201] [cursor=pointer]:
+              - generic [ref=f1e202]:
+                - 'img "Dear Fellow Australians: An Independent Inquiry into Australian Values" [ref=f1e203]'
+                - button "收藏" [ref=f1e204]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e208]:
+                - 'heading "Dear Fellow Australians: An Independent Inquiry into Australian Values" [level=3] [ref=f1e209]'
+                - paragraph [ref=f1e210]: Buttress O'Kneel · 2007
+            - generic [ref=f1e211] [cursor=pointer]:
+              - generic [ref=f1e212]:
+                - img "Geo-Sync Deluxe" [ref=f1e213]
+                - button "收藏" [ref=f1e214]
+                - generic:
+                  - generic:
+                    - generic: "21"
+                    - generic: "0"
+              - generic [ref=f1e218]:
+                - heading "Geo-Sync Deluxe" [level=3] [ref=f1e219]
+                - paragraph [ref=f1e220]: BLUnderwood · 未知年份
+            - generic [ref=f1e221] [cursor=pointer]:
+              - generic [ref=f1e222]:
+                - img "Sometimes EP" [ref=f1e223]
+                - button "收藏" [ref=f1e224]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e228]:
+                - heading "Sometimes EP" [level=3] [ref=f1e229]
+                - paragraph [ref=f1e230]: AFM · 2019
+            - generic [ref=f1e231] [cursor=pointer]:
+              - generic [ref=f1e232]:
+                - img "Violent Playground" [ref=f1e233]
+                - button "收藏" [ref=f1e234]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e238]:
+                - heading "Violent Playground" [level=3] [ref=f1e239]
+                - paragraph [ref=f1e240]: Logical Disorder · 2010
+            - generic [ref=f1e241] [cursor=pointer]:
+              - generic [ref=f1e242]:
+                - img "Phantastico Dogma Remixes" [ref=f1e243]
+                - button "收藏" [ref=f1e244]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e248]:
+                - heading "Phantastico Dogma Remixes" [level=3] [ref=f1e249]
+                - paragraph [ref=f1e250]: In Vitro · 2010
+            - generic [ref=f1e251] [cursor=pointer]:
+              - generic [ref=f1e252]:
+                - img "The Four Seasons" [ref=f1e253]
+                - button "收藏" [ref=f1e254]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - generic [ref=f1e258]:
+                - heading "The Four Seasons" [level=3] [ref=f1e259]
+                - paragraph [ref=f1e260]: Memphis · 未知年份
+            - generic [ref=f1e261] [cursor=pointer]:
+              - generic [ref=f1e262]:
+                - img "Nicolas Falcon" [ref=f1e263]
+                - button "收藏" [ref=f1e264]
+                - generic:
+                  - generic:
+                    - generic: "1"
+                    - generic: "0"
+              - generic [ref=f1e268]:
+                - heading "Nicolas Falcon" [level=3] [ref=f1e269]
+                - paragraph [ref=f1e270]: Nicolas Falcon · 未知年份
+  - navigation "移动主导航" [ref=f1e277]:
+    - link "首页" [ref=f1e278] [cursor=pointer]:
+      - /url: /posts
+    - link "订阅" [ref=f1e280] [cursor=pointer]:
+      - /url: /feed
+    - link "创作" [ref=f1e282] [cursor=pointer]:
+      - /url: /posts/manage
+    - generic [ref=f1e284]: 更多
+  - generic [ref=f1e287]:
+    - generic [ref=f1e288]:
+      - generic [ref=f1e289] [cursor=pointer]: ↑
+      - generic:
+        - generic:
+          - heading "最近播放的歌" [level=3]
+        - generic:
+          - paragraph: TRACK // 示例艺术家
+    - button "播放" [ref=f1e294] [cursor=pointer]
+    - button "1" [ref=f1e296] [cursor=pointer]

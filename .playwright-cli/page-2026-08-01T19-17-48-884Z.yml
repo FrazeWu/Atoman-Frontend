@@ -1,0 +1,409 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - button "Toggle sidebar" [ref=e60] [cursor=pointer]
+          - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e12]:
+              - generic [ref=e13]: ATOMAN
+              - generic [ref=e14]:
+                - generic [ref=e15]: v0.0.2
+                - generic [ref=e16]: beta
+        - navigation [ref=e17]:
+          - link "订阅" [ref=e18] [cursor=pointer]:
+            - /url: /feed
+          - link "博客" [ref=e20] [cursor=pointer]:
+            - /url: /posts
+          - link "音乐" [ref=e22] [cursor=pointer]:
+            - /url: /music
+          - link "视频" [ref=e24] [cursor=pointer]:
+            - /url: /videos
+          - link "播客" [ref=e26] [cursor=pointer]:
+            - /url: /podcasts
+          - link "论坛" [ref=e28] [cursor=pointer]:
+            - /url: /forum
+          - link "辩论" [ref=e30] [cursor=pointer]:
+            - /url: /debate
+          - link "时间线" [ref=e32] [cursor=pointer]:
+            - /url: /timeline
+        - generic [ref=e34]:
+          - button "打开全局搜索" [ref=e36] [cursor=pointer]:
+            - generic [ref=e40]: 搜索
+          - button "切换主题" [ref=e41] [cursor=pointer]
+          - link "登录" [ref=e44] [cursor=pointer]:
+            - /url: /login
+    - main [ref=e45]:
+      - generic [ref=e62]:
+        - complementary [ref=e63]:
+          - navigation [ref=e64]:
+            - link "发现" [ref=e65] [cursor=pointer]:
+              - /url: /music/discover
+            - link "专辑" [ref=e71] [cursor=pointer]:
+              - /url: /music
+            - link "艺人" [ref=e79] [cursor=pointer]:
+              - /url: /music/artists
+            - link "收藏" [ref=e87] [cursor=pointer]:
+              - /url: /music/starred
+            - link "播放历史" [ref=e92] [cursor=pointer]:
+              - /url: /music/history
+          - region "歌单类别" [ref=e100]:
+            - generic [ref=e101]:
+              - paragraph [ref=e102]: 我的歌单
+              - button "新建歌单" [ref=e103] [cursor=pointer]
+            - paragraph [ref=e106]: 暂无歌单
+        - main [ref=e107]:
+          - generic [ref=e239]:
+            - heading "专辑" [level=1] [ref=e243]
+            - generic [ref=e245]:
+              - generic [ref=e249]:
+                - textbox "搜索专辑或艺术家..." [ref=e251]
+                - button "搜索" [ref=e252] [cursor=pointer]
+              - button "添加专辑" [ref=e253] [cursor=pointer]
+            - generic "专辑列表" [ref=e255]:
+              - generic [ref=e256] [cursor=pointer]:
+                - generic [ref=e257]:
+                  - img "The College Dropout" [ref=e258]
+                  - button "收藏" [ref=e259]
+                  - generic:
+                    - generic:
+                      - generic: "15"
+                      - generic: "0"
+                - generic [ref=e263]:
+                  - heading "The College Dropout" [level=3] [ref=e264]
+                  - paragraph [ref=e265]: Ye · 2004
+              - generic [ref=e266] [cursor=pointer]:
+                - generic [ref=e267]:
+                  - img "2003 Toyota Corolla" [ref=e268]
+                  - button "收藏" [ref=e269]
+                  - generic:
+                    - generic:
+                      - generic: "10"
+                      - generic: "1"
+                - generic [ref=e273]:
+                  - heading "2003 Toyota Corolla" [level=3] [ref=e274]
+                  - paragraph [ref=e275]: 2003 Toyota Corolla · 2021
+              - generic [ref=e276] [cursor=pointer]:
+                - generic [ref=e277]:
+                  - img "Páramo" [ref=e278]
+                  - button "收藏" [ref=e279]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e283]:
+                  - heading "Páramo" [level=3] [ref=e284]
+                  - paragraph [ref=e285]: Callejas · 2021
+              - generic [ref=e286] [cursor=pointer]:
+                - generic [ref=e287]:
+                  - img "Elevación" [ref=e288]
+                  - button "收藏" [ref=e289]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e293]:
+                  - heading "Elevación" [level=3] [ref=e294]
+                  - paragraph [ref=e295]: DCM · 2016
+              - generic [ref=e296] [cursor=pointer]:
+                - generic [ref=e297]:
+                  - 'img "Dear Fellow Australians: An Independent Inquiry into Australian Values" [ref=e298]'
+                  - button "收藏" [ref=e299]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e303]:
+                  - 'heading "Dear Fellow Australians: An Independent Inquiry into Australian Values" [level=3] [ref=e304]'
+                  - paragraph [ref=e305]: Buttress O'Kneel · 2007
+              - generic [ref=e306] [cursor=pointer]:
+                - generic [ref=e307]:
+                  - img "Geo-Sync Deluxe" [ref=e308]
+                  - button "收藏" [ref=e309]
+                  - generic:
+                    - generic:
+                      - generic: "21"
+                      - generic: "0"
+                - generic [ref=e313]:
+                  - heading "Geo-Sync Deluxe" [level=3] [ref=e314]
+                  - paragraph [ref=e315]: BLUnderwood · 未知年份
+              - generic [ref=e316] [cursor=pointer]:
+                - generic [ref=e317]:
+                  - img "Sometimes EP" [ref=e318]
+                  - button "收藏" [ref=e319]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e323]:
+                  - heading "Sometimes EP" [level=3] [ref=e324]
+                  - paragraph [ref=e325]: AFM · 2019
+              - generic [ref=e326] [cursor=pointer]:
+                - generic [ref=e327]:
+                  - img "Violent Playground" [ref=e328]
+                  - button "收藏" [ref=e329]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e333]:
+                  - heading "Violent Playground" [level=3] [ref=e334]
+                  - paragraph [ref=e335]: Logical Disorder · 2010
+              - generic [ref=e336] [cursor=pointer]:
+                - generic [ref=e337]:
+                  - img "Phantastico Dogma Remixes" [ref=e338]
+                  - button "收藏" [ref=e339]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e343]:
+                  - heading "Phantastico Dogma Remixes" [level=3] [ref=e344]
+                  - paragraph [ref=e345]: In Vitro · 2010
+              - generic [ref=e346] [cursor=pointer]:
+                - generic [ref=e347]:
+                  - img "The Four Seasons" [ref=e348]
+                  - button "收藏" [ref=e349]
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: "0"
+                - generic [ref=e353]:
+                  - heading "The Four Seasons" [level=3] [ref=e354]
+                  - paragraph [ref=e355]: Memphis · 未知年份
+              - generic [ref=e356] [cursor=pointer]:
+                - generic [ref=e357]:
+                  - img "Nicolas Falcon" [ref=e358]
+                  - button "收藏" [ref=e359]
+                  - generic:
+                    - generic:
+                      - generic: "1"
+                      - generic: "0"
+                - generic [ref=e363]:
+                  - heading "Nicolas Falcon" [level=3] [ref=e364]
+                  - paragraph [ref=e365]: Nicolas Falcon · 未知年份
+    - contentinfo [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic "需要管理员权限" [ref=e49]: 凹凸庵
+          - navigation "站点信息" [ref=e50]:
+            - button "关于" [ref=e51] [cursor=pointer]
+            - button "联系我们" [ref=e52] [cursor=pointer]
+            - button "问题反馈" [ref=e53] [cursor=pointer]
+        - generic [ref=e54]:
+          - generic [ref=e55]: © 2026 凹凸庵
+          - generic [ref=e56]:
+            - button "使用条款" [ref=e57] [cursor=pointer]
+            - button "隐私政策" [ref=e58] [cursor=pointer]
+            - generic "当前版本" [ref=e59]: v0.0.2
+  - dialog "专辑详情" [active] [ref=e367]:
+    - button "返回专辑详情" [ref=e368] [cursor=pointer]
+    - generic [ref=e373]:
+      - generic [ref=e374]:
+        - generic [ref=e377]:
+          - generic [ref=e378]: album
+          - heading "The College Dropout" [level=2] [ref=e379]
+          - generic [ref=e380]:
+            - button "Ye" [ref=e382] [cursor=pointer]
+            - generic [ref=e383]: •2004
+          - paragraph [ref=e384]: 暂无专辑简介。
+        - generic [ref=e385]:
+          - button "播放全专" [ref=e386] [cursor=pointer]
+          - button "订阅" [ref=e387] [cursor=pointer]
+          - button "编辑" [ref=e389] [cursor=pointer]
+          - button "修改" [ref=e390] [cursor=pointer]
+          - button "版本" [ref=e391] [cursor=pointer]
+          - button "合并重复条目" [ref=e393] [cursor=pointer]
+        - generic [ref=e395]:
+          - generic [ref=e396]: Tracklist
+          - generic [ref=e397]:
+            - generic [ref=e398]:
+              - button "播放" [ref=e399] [cursor=pointer]:
+                - generic [ref=e400]: "1"
+              - generic [ref=e401]: Intro
+            - generic [ref=e402]:
+              - generic [ref=e403]: 0:19
+              - button "添加到最爱" [ref=e404] [cursor=pointer]
+              - button "添加到歌单" [ref=e409] [cursor=pointer]
+          - generic [ref=e411]:
+            - generic [ref=e412]:
+              - button "播放" [ref=e413] [cursor=pointer]:
+                - generic [ref=e414]: "2"
+              - generic [ref=e415]: We Don't Care
+            - generic [ref=e416]:
+              - generic [ref=e417]: 4:00
+              - button "添加到最爱" [ref=e418] [cursor=pointer]
+              - button "添加到歌单" [ref=e423] [cursor=pointer]
+          - generic [ref=e425]:
+            - generic [ref=e426]:
+              - button "播放" [ref=e427] [cursor=pointer]:
+                - generic [ref=e428]: "3"
+              - generic [ref=e429]: Graduation Day
+            - generic [ref=e430]:
+              - generic [ref=e431]: 1:22
+              - button "添加到最爱" [ref=e432] [cursor=pointer]
+              - button "添加到歌单" [ref=e437] [cursor=pointer]
+          - generic [ref=e439]:
+            - generic [ref=e440]:
+              - button "播放" [ref=e441] [cursor=pointer]:
+                - generic [ref=e442]: "4"
+              - generic [ref=e443]: All Falls Down (feat. Syleena Johnson)
+            - generic [ref=e444]:
+              - generic [ref=e445]: 3:44
+              - button "添加到最爱" [ref=e446] [cursor=pointer]
+              - button "添加到歌单" [ref=e451] [cursor=pointer]
+          - generic [ref=e453]:
+            - generic [ref=e454]:
+              - button "播放" [ref=e455] [cursor=pointer]:
+                - generic [ref=e456]: "5"
+              - generic [ref=e457]: I'll Fly Away
+            - generic [ref=e458]:
+              - generic [ref=e459]: 1:10
+              - button "添加到最爱" [ref=e460] [cursor=pointer]
+              - button "添加到歌单" [ref=e465] [cursor=pointer]
+          - generic [ref=e467]:
+            - generic [ref=e468]:
+              - button "播放" [ref=e469] [cursor=pointer]:
+                - generic [ref=e470]: "6"
+              - generic [ref=e471]: Spaceship (feat. GLC & Consequence)
+            - generic [ref=e472]:
+              - generic [ref=e473]: 5:24
+              - button "添加到最爱" [ref=e474] [cursor=pointer]
+              - button "添加到歌单" [ref=e479] [cursor=pointer]
+          - generic [ref=e481]:
+            - generic [ref=e482]:
+              - button "播放" [ref=e483] [cursor=pointer]:
+                - generic [ref=e484]: "7"
+              - generic [ref=e485]: Jesus Walks
+            - generic [ref=e486]:
+              - generic [ref=e487]: 3:14
+              - button "添加到最爱" [ref=e488] [cursor=pointer]
+              - button "添加到歌单" [ref=e493] [cursor=pointer]
+          - generic [ref=e495]:
+            - generic [ref=e496]:
+              - button "播放" [ref=e497] [cursor=pointer]:
+                - generic [ref=e498]: "8"
+              - generic [ref=e499]: Never Let Me Down (feat. JAY-Z & J. Ivy)
+            - generic [ref=e500]:
+              - generic [ref=e501]: 5:24
+              - button "添加到最爱" [ref=e502] [cursor=pointer]
+              - button "添加到歌单" [ref=e507] [cursor=pointer]
+          - generic [ref=e509]:
+            - generic [ref=e510]:
+              - button "播放" [ref=e511] [cursor=pointer]:
+                - generic [ref=e512]: "9"
+              - generic [ref=e513]: Get Em High (feat. Talib Kweli & Common)
+            - generic [ref=e514]:
+              - generic [ref=e515]: 4:49
+              - button "添加到最爱" [ref=e516] [cursor=pointer]
+              - button "添加到歌单" [ref=e521] [cursor=pointer]
+          - generic [ref=e523]:
+            - generic [ref=e524]:
+              - button "播放" [ref=e525] [cursor=pointer]:
+                - generic [ref=e526]: "10"
+              - generic [ref=e527]: Workout Plan
+            - generic [ref=e528]:
+              - generic [ref=e529]: 0:46
+              - button "添加到最爱" [ref=e530] [cursor=pointer]
+              - button "添加到歌单" [ref=e535] [cursor=pointer]
+          - generic [ref=e537]:
+            - generic [ref=e538]:
+              - button "播放" [ref=e539] [cursor=pointer]:
+                - generic [ref=e540]: "11"
+              - generic [ref=e541]: The New Workout Plan
+            - generic [ref=e542]:
+              - generic [ref=e543]: 5:23
+              - button "添加到最爱" [ref=e544] [cursor=pointer]
+              - button "添加到歌单" [ref=e549] [cursor=pointer]
+          - generic [ref=e551]:
+            - generic [ref=e552]:
+              - button "播放" [ref=e553] [cursor=pointer]:
+                - generic [ref=e554]: "12"
+              - generic [ref=e555]: Slow Jamz (feat. Kanye West & Jamie Foxx)
+            - generic [ref=e556]:
+              - generic [ref=e557]: 5:16
+              - button "添加到最爱" [ref=e558] [cursor=pointer]
+              - button "添加到歌单" [ref=e563] [cursor=pointer]
+          - generic [ref=e565]:
+            - generic [ref=e566]:
+              - button "播放" [ref=e567] [cursor=pointer]:
+                - generic [ref=e568]: "13"
+              - generic [ref=e569]: Breathe In Breathe Out (feat. Ludacris)
+            - generic [ref=e570]:
+              - generic [ref=e571]: 4:07
+              - button "添加到最爱" [ref=e572] [cursor=pointer]
+              - button "添加到歌单" [ref=e577] [cursor=pointer]
+          - generic [ref=e579]:
+            - generic [ref=e580]:
+              - button "播放" [ref=e581] [cursor=pointer]:
+                - generic [ref=e582]: "14"
+              - generic [ref=e583]: School Spirit Skit 1
+            - generic [ref=e584]:
+              - generic [ref=e585]: 1:19
+              - button "添加到最爱" [ref=e586] [cursor=pointer]
+              - button "添加到歌单" [ref=e591] [cursor=pointer]
+          - generic [ref=e593]:
+            - generic [ref=e594]:
+              - button "播放" [ref=e595] [cursor=pointer]:
+                - generic [ref=e596]: "15"
+              - generic [ref=e597]: School Spirit
+            - generic [ref=e598]:
+              - generic [ref=e599]: 3:02
+              - button "添加到最爱" [ref=e600] [cursor=pointer]
+              - button "添加到歌单" [ref=e605] [cursor=pointer]
+          - generic [ref=e607]:
+            - generic [ref=e608]:
+              - button "播放" [ref=e609] [cursor=pointer]:
+                - generic [ref=e610]: "16"
+              - generic [ref=e611]: School Spirit Skit 2
+            - generic [ref=e612]:
+              - generic [ref=e613]: 0:44
+              - button "添加到最爱" [ref=e614] [cursor=pointer]
+              - button "添加到歌单" [ref=e619] [cursor=pointer]
+          - generic [ref=e621]:
+            - generic [ref=e622]:
+              - button "播放" [ref=e623] [cursor=pointer]:
+                - generic [ref=e624]: "17"
+              - generic [ref=e625]: Lil Jimmy Skit
+            - generic [ref=e626]:
+              - generic [ref=e627]: 0:54
+              - button "添加到最爱" [ref=e628] [cursor=pointer]
+              - button "添加到歌单" [ref=e633] [cursor=pointer]
+          - generic [ref=e635]:
+            - generic [ref=e636]:
+              - button "播放" [ref=e637] [cursor=pointer]:
+                - generic [ref=e638]: "18"
+              - generic [ref=e639]: Two Words (feat. Mos Def, Freeway & The Boys Choir of Harlem)
+            - generic [ref=e640]:
+              - generic [ref=e641]: 4:26
+              - button "添加到最爱" [ref=e642] [cursor=pointer]
+              - button "添加到歌单" [ref=e647] [cursor=pointer]
+          - generic [ref=e649]:
+            - generic [ref=e650]:
+              - button "播放" [ref=e651] [cursor=pointer]:
+                - generic [ref=e652]: "19"
+              - generic [ref=e653]: Through The Wire
+            - generic [ref=e654]:
+              - generic [ref=e655]: 3:41
+              - button "添加到最爱" [ref=e656] [cursor=pointer]
+              - button "添加到歌单" [ref=e661] [cursor=pointer]
+          - generic [ref=e663]:
+            - generic [ref=e664]:
+              - button "播放" [ref=e665] [cursor=pointer]:
+                - generic [ref=e666]: "20"
+              - generic [ref=e667]: Family Business
+            - generic [ref=e668]:
+              - generic [ref=e669]: 4:39
+              - button "添加到最爱" [ref=e670] [cursor=pointer]
+              - button "添加到歌单" [ref=e675] [cursor=pointer]
+          - generic [ref=e677]:
+            - generic [ref=e678]:
+              - button "播放" [ref=e679] [cursor=pointer]:
+                - generic [ref=e680]: "21"
+              - generic [ref=e681]: Last Call
+            - generic [ref=e682]:
+              - generic [ref=e683]: 12:41
+              - button "添加到最爱" [ref=e684] [cursor=pointer]
+              - button "添加到歌单" [ref=e689] [cursor=pointer]
+      - button "讨论 ()" [ref=e691] [cursor=pointer]

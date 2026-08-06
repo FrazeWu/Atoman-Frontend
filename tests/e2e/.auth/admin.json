@@ -2,10 +2,10 @@
   "cookies": [
     {
       "name": "atoman_session",
-      "value": "DoL0CtcFgAwYi1INJ6yoKwjUdpihorJxov4NkxLrxbk",
+      "value": "V1Ha8naukjgczQkVln2Y4LHLK1JMUGHv4dqB753f_G0",
       "domain": "localhost",
       "path": "/",
-      "expires": 1787992292.819,
+      "expires": 1788619375.327,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"

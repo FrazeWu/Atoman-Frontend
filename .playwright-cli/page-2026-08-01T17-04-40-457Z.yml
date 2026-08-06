@@ -1,0 +1,352 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e12]:
+          - generic [ref=e13]: ATOMAN
+          - generic [ref=e14]:
+            - generic [ref=e15]: v0.0.2
+            - generic [ref=e16]: beta
+      - generic [ref=e34]:
+        - button "切换主题" [ref=e41] [cursor=pointer]
+        - link "通知" [ref=e79] [cursor=pointer]:
+          - /url: /inbox
+        - link "创作中心" [ref=e81] [cursor=pointer]:
+          - /url: /studio
+        - link "设置" [ref=e86] [cursor=pointer]:
+          - /url: /users/admin/settings
+        - button "A admin ▾" [ref=e91] [cursor=pointer]:
+          - generic [ref=e92]: A
+          - generic [ref=e93]: admin
+          - generic [ref=e94]: ▾
+  - main [ref=e45]:
+    - generic [ref=e96]:
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - paragraph [ref=e99]: SITE ACCESS
+          - heading "站点设置" [level=2] [ref=e100]
+          - paragraph [ref=e101]: 管理模块开放状态与站点功能。
+        - generic [ref=e102]:
+          - region [ref=e103]:
+            - generic [ref=e105]:
+              - paragraph [ref=e106]: MANAGEMENT
+              - heading "管理概览" [level=2] [ref=e107]
+            - generic [ref=e108]:
+              - region [ref=e109]:
+                - generic [ref=e110]:
+                  - generic [ref=e111]:
+                    - paragraph [ref=e112]: USERS
+                    - heading "用户管理" [level=3] [ref=e113]
+                    - paragraph [ref=e114]: 5 位用户
+                  - link "查看详情" [ref=e115] [cursor=pointer]:
+                    - /url: /site/setting/users
+                - list [ref=e116]:
+                  - listitem [ref=e117]:
+                    - generic [ref=e118]:
+                      - strong [ref=e119]: yo
+                      - generic [ref=e120]: "@ogiso"
+                    - generic [ref=e121]: 正常
+                  - listitem [ref=e122]:
+                    - generic [ref=e123]:
+                      - strong [ref=e124]: FrazeWu
+                      - generic [ref=e125]: "@wogmail2"
+                    - generic [ref=e126]: 正常
+                  - listitem [ref=e127]:
+                    - generic [ref=e128]:
+                      - strong [ref=e129]: 法
+                      - generic [ref=e130]: "@wogmail"
+                    - generic [ref=e131]: 正常
+                  - listitem [ref=e132]:
+                    - generic [ref=e133]:
+                      - strong [ref=e134]: 法宗
+                      - generic [ref=e135]: "@fazong"
+                    - generic [ref=e136]: 正常
+                  - listitem [ref=e137]:
+                    - generic [ref=e138]:
+                      - strong [ref=e139]: admin
+                      - generic [ref=e140]: "@admin"
+                    - generic [ref=e141]: 正常
+              - region [ref=e142]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]:
+                    - paragraph [ref=e145]: FEED
+                    - heading "订阅源管理" [level=3] [ref=e146]
+                    - paragraph [ref=e147]: 812 个订阅源
+                  - link "查看详情" [ref=e148] [cursor=pointer]:
+                    - /url: /site/setting/subscriptions
+                - list [ref=e149]:
+                  - listitem [ref=e150]:
+                    - generic [ref=e151]:
+                      - strong [ref=e152]: Vercel News
+                      - generic [ref=e153]: 待处理 1362
+                    - generic [ref=e154]: 无效
+                  - listitem [ref=e155]:
+                    - generic [ref=e156]:
+                      - strong [ref=e157]: Node.js Blog
+                      - generic [ref=e158]: 待处理 1043
+                    - generic [ref=e159]: 降级
+                  - listitem [ref=e160]:
+                    - generic [ref=e161]:
+                      - strong [ref=e162]: Hugging Face - Blog
+                      - generic [ref=e163]: 待处理 829
+                    - generic [ref=e164]: 降级
+                  - listitem [ref=e165]:
+                    - generic [ref=e166]:
+                      - strong [ref=e167]: 数据发布
+                      - generic [ref=e168]: 待处理 499
+                    - generic [ref=e169]: 降级
+                  - listitem [ref=e170]:
+                    - generic [ref=e171]:
+                      - strong [ref=e172]: 百度实时热点
+                      - generic [ref=e173]: 待处理 441
+                    - generic [ref=e174]: 已关闭
+          - generic [ref=e176]:
+            - generic [ref=e177]:
+              - generic [ref=e178]:
+                - paragraph [ref=e179]: /FEED
+                - heading "订阅" [level=2] [ref=e180]
+                - paragraph [ref=e181]: 聚合你感兴趣的 RSS 订阅源与内容更新。
+              - generic [ref=e182]: 模块开放中
+            - paragraph [ref=e183]: RSS 与更新流
+            - generic [ref=e184]:
+              - generic [ref=e185]:
+                - strong [ref=e186]: 模块开放
+                - generic [ref=e187]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e189] [cursor=pointer]
+            - generic [ref=e190]:
+              - generic [ref=e191]:
+                - generic [ref=e192]:
+                  - strong [ref=e193]: 全文抓取策略
+                  - generic [ref=e194]: 决定 external_rss 订阅源是否允许逐个开启全文抓取。
+                - generic [ref=e195]:
+                  - generic [ref=e196]:
+                    - radio "按订阅源选择 由管理员在每个订阅源上单独开关全文抓取。" [checked] [ref=e197] [cursor=pointer]
+                    - generic [ref=e198]:
+                      - strong [ref=e199]: 按订阅源选择
+                      - generic [ref=e200]: 由管理员在每个订阅源上单独开关全文抓取。
+                  - generic [ref=e201]:
+                    - radio "全局关闭 所有订阅源都不再做全文抓取。" [ref=e202] [cursor=pointer]
+                    - generic [ref=e203]:
+                      - strong [ref=e204]: 全局关闭
+                      - generic [ref=e205]: 所有订阅源都不再做全文抓取。
+              - generic [ref=e206]:
+                - generic [ref=e207]:
+                  - strong [ref=e208]: 订阅源管理
+                  - generic [ref=e209]: 管理订阅源、推荐和抓取任务。
+                - link "查看详情" [ref=e211] [cursor=pointer]:
+                  - /url: /site/setting/subscriptions
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - paragraph [ref=e216]: /BLOG
+                - heading "博客" [level=2] [ref=e217]
+                - paragraph
+              - generic [ref=e218]: 模块开放中
+            - paragraph [ref=e219]: 内容视图
+            - generic [ref=e220]:
+              - generic [ref=e221]:
+                - strong [ref=e222]: 模块开放
+                - generic [ref=e223]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e225] [cursor=pointer]
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - strong [ref=e229]: 评论权限
+                - generic [ref=e230]: 控制文章评论开放范围。
+              - generic [ref=e231]:
+                - generic [ref=e232]:
+                  - radio "全部可评论 游客可匿名评论，已登录用户正常署名。" [ref=e233] [cursor=pointer]
+                  - generic [ref=e234]:
+                    - strong [ref=e235]: 全部可评论
+                    - generic [ref=e236]: 游客可匿名评论，已登录用户正常署名。
+                - generic [ref=e237]:
+                  - radio "仅登录用户可评论 保持当前默认行为。" [checked] [ref=e238] [cursor=pointer]
+                  - generic [ref=e239]:
+                    - strong [ref=e240]: 仅登录用户可评论
+                    - generic [ref=e241]: 保持当前默认行为。
+                - generic [ref=e242]:
+                  - radio "关闭评论 全站文章评论入口关闭。" [ref=e243] [cursor=pointer]
+                  - generic [ref=e244]:
+                    - strong [ref=e245]: 关闭评论
+                    - generic [ref=e246]: 全站文章评论入口关闭。
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - paragraph [ref=e251]: /MUSIC
+                - heading "音乐" [level=2] [ref=e252]
+                - paragraph [ref=e253]: 整理专辑、歌曲与艺人资料。
+              - generic [ref=e254]: 模块开放中
+            - paragraph [ref=e255]: 音乐档案
+            - generic [ref=e256]:
+              - generic [ref=e257]:
+                - strong [ref=e258]: 模块开放
+                - generic [ref=e259]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e261] [cursor=pointer]
+            - generic [ref=e263]:
+              - generic [ref=e265]:
+                - button "审核队列 (0)" [ref=e266] [cursor=pointer]
+                - button "条目管理" [ref=e267] [cursor=pointer]
+              - generic [ref=e269]:
+                - generic [ref=e271]:
+                  - heading "音乐审核" [level=1] [ref=e272]
+                  - paragraph [ref=e273]: 处理音乐资料的新增、修改和删除请求。
+                - generic [ref=e274]:
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: 状态
+                    - button "状态" [ref=e278] [cursor=pointer]:
+                      - generic [ref=e279]: 待处理
+                      - generic [ref=e280]: ▾
+                  - generic [ref=e281]:
+                    - generic [ref=e282]: 实体类型
+                    - button "实体类型" [ref=e284] [cursor=pointer]:
+                      - generic [ref=e285]: 全部内容
+                      - generic [ref=e286]: ▾
+                - generic [ref=e287]:
+                  - paragraph [ref=e288]: 暂无内容
+                  - paragraph [ref=e289]: 当前没有待处理请求
+          - generic [ref=e291]:
+            - generic [ref=e292]:
+              - generic [ref=e293]:
+                - paragraph [ref=e294]: /FORUM
+                - heading "论坛" [level=2] [ref=e295]
+                - paragraph [ref=e296]: 坐下来发帖、回复、搜索和闲谈。
+              - generic [ref=e297]: 模块开放中
+            - paragraph [ref=e298]: 讨论与发帖
+            - generic [ref=e299]:
+              - generic [ref=e300]:
+                - strong [ref=e301]: 模块开放
+                - generic [ref=e302]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e304] [cursor=pointer]
+            - generic [ref=e305]:
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - strong [ref=e308]: 申请分类
+                  - generic [ref=e309]: 控制普通用户是否可发起新分类申请。
+                - checkbox "申请分类 控制普通用户是否可发起新分类申请。" [checked] [ref=e311] [cursor=pointer]
+              - generic [ref=e312]:
+                - generic [ref=e313]:
+                  - generic [ref=e314]:
+                    - heading "版主管理" [level=3] [ref=e315]
+                    - paragraph [ref=e316]: 为版主分配负责分类，并独立控制审核分类、置顶、锁帖权限。
+                  - button "刷新" [ref=e317] [cursor=pointer]
+                - generic [ref=e318]:
+                  - generic [ref=e319]:
+                    - generic [ref=e320]: 搜索版主用户
+                    - textbox "搜索版主用户" [ref=e322]:
+                      - /placeholder: 输入用户名或显示名
+                  - button "搜索用户" [disabled] [ref=e323]
+                  - generic [ref=e324]:
+                    - generic [ref=e325]: 选择版主
+                    - button "选择版主" [ref=e327] [cursor=pointer]:
+                      - generic [ref=e328]: 先搜索再选择
+                      - generic [ref=e329]: ▾
+                  - generic [ref=e330]:
+                    - generic [ref=e331]: 负责分类
+                    - button "负责分类" [ref=e333] [cursor=pointer]:
+                      - generic [ref=e334]: 全站分类
+                      - generic [ref=e335]: ▾
+                  - generic [ref=e336]:
+                    - generic [ref=e337]:
+                      - generic [ref=e338]: 审核分类申请
+                      - checkbox "审核分类申请" [ref=e339] [cursor=pointer]
+                    - generic [ref=e340]:
+                      - generic [ref=e341]: 置顶话题
+                      - checkbox "置顶话题" [ref=e342] [cursor=pointer]
+                    - generic [ref=e343]:
+                      - generic [ref=e344]: 锁定话题
+                      - checkbox "锁定话题" [ref=e345] [cursor=pointer]
+                  - button "新增分配" [disabled] [ref=e347]
+                - paragraph [ref=e348]: 暂未分配任何版主。
+              - link "社区管理" [ref=e349] [cursor=pointer]:
+                - /url: /site/setting/community
+          - generic [ref=e351]:
+            - generic [ref=e352]:
+              - generic [ref=e353]:
+                - paragraph [ref=e354]: /DEBATE
+                - heading "辩论" [level=2] [ref=e355]
+                - paragraph
+              - generic [ref=e356]: 模块开放中
+            - paragraph [ref=e357]: 辩题讨论
+            - generic [ref=e358]:
+              - generic [ref=e359]:
+                - strong [ref=e360]: 模块开放
+                - generic [ref=e361]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e363] [cursor=pointer]
+            - generic [ref=e365]:
+              - generic [ref=e366]:
+                - strong [ref=e367]: 辩论
+                - generic [ref=e368]: 辩题讨论
+              - generic [ref=e369]: 尚未开放
+          - generic [ref=e372]:
+            - generic [ref=e373]:
+              - generic [ref=e374]:
+                - paragraph [ref=e375]: /TIMELINE
+                - heading "时间线" [level=2] [ref=e376]
+                - paragraph [ref=e377]: 记录人物与事件，查看时间脉络和地图。
+              - generic [ref=e378]: 模块开放中
+            - paragraph [ref=e379]: 人物时间线
+            - generic [ref=e380]:
+              - generic [ref=e381]:
+                - strong [ref=e382]: 模块开放
+                - generic [ref=e383]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e385] [cursor=pointer]
+            - generic [ref=e387]:
+              - generic [ref=e388]:
+                - strong [ref=e389]: 时间线
+                - generic [ref=e390]: 人物时间线
+              - generic [ref=e391]: 尚未开放
+          - generic [ref=e394]:
+            - generic [ref=e395]:
+              - generic [ref=e396]:
+                - paragraph [ref=e397]: /PODCAST
+                - heading "播客" [level=2] [ref=e398]
+                - paragraph
+              - generic [ref=e399]: 模块开放中
+            - paragraph [ref=e400]: 内容视图
+            - generic [ref=e401]:
+              - generic [ref=e402]:
+                - strong [ref=e403]: 模块开放
+                - generic [ref=e404]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e406] [cursor=pointer]
+            - generic [ref=e408]:
+              - generic [ref=e409]:
+                - strong [ref=e410]: 播客
+                - generic [ref=e411]: 内容视图
+              - generic [ref=e412]: 尚未开放
+          - generic [ref=e415]:
+            - generic [ref=e416]:
+              - generic [ref=e417]:
+                - paragraph [ref=e418]: /VIDEO
+                - heading "视频" [level=2] [ref=e419]
+                - paragraph
+              - generic [ref=e420]: 模块开放中
+            - paragraph [ref=e421]: 内容视图
+            - generic [ref=e422]:
+              - generic [ref=e423]:
+                - strong [ref=e424]: 模块开放
+                - generic [ref=e425]: 控制站内入口与相关功能。
+              - checkbox "模块开放 控制站内入口与相关功能。" [checked] [ref=e427] [cursor=pointer]
+            - generic [ref=e429]:
+              - generic [ref=e430]:
+                - strong [ref=e431]: 视频
+                - generic [ref=e432]: 内容视图
+              - generic [ref=e433]: 尚未开放
+        - generic [ref=e435]:
+          - link "返回首页" [ref=e436] [cursor=pointer]:
+            - /url: /
+          - button "保存设置" [ref=e437] [cursor=pointer]
+      - complementary "站点管理目录" [ref=e439]:
+        - generic [ref=e440]:
+          - strong [ref=e441]: 目录
+          - button "收起目录" [ref=e442] [cursor=pointer]
+        - navigation "站点管理目录" [ref=e446]:
+          - button "用户管理" [ref=e447] [cursor=pointer]
+          - button "订阅源管理" [ref=e448] [cursor=pointer]
+          - button "订阅" [ref=e449] [cursor=pointer]
+          - button "博客" [ref=e450] [cursor=pointer]
+          - button "音乐" [ref=e451] [cursor=pointer]
+          - button "论坛" [ref=e452] [cursor=pointer]
+          - button "辩论" [ref=e453] [cursor=pointer]
+          - button "时间线" [ref=e454] [cursor=pointer]
+          - button "播客" [ref=e455] [cursor=pointer]
+          - button "视频" [ref=e456] [cursor=pointer]

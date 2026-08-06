@@ -18,7 +18,7 @@ import {
   type MusicAlbumImportInputMode,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
-import { readAlbumImportPreview } from '@/utils/musicImportPreview'
+import { readAlbumImportPreview, shouldIgnoreAlbumImportPath } from '@/utils/musicImportPreview'
 
 // Global state for album import upload so it survives step transitions
 const uploading = ref(false)
@@ -152,8 +152,14 @@ export function useAlbumImportUpload() {
   async function handleFilesUpload(fileList: FileList) {
     if (!creationFlow.value || !albumImportDraft.value) return
     const flow = creationFlow.value
-    const files = Array.from(fileList)
-    if (files.length === 0) return
+    const files = Array.from(fileList).filter((file) => {
+      const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name
+      return !shouldIgnoreAlbumImportPath(relativePath)
+    })
+    if (files.length === 0) {
+      errorMessage.value = '未发现可导入的音频文件'
+      return
+    }
 
     uploading.value = true
     errorMessage.value = ''
@@ -192,6 +198,9 @@ export function useAlbumImportUpload() {
             title,
             origin: 'local_preview',
           }))
+        }
+        if (preview.albumCoverFile) {
+          draft.derivedCover = URL.createObjectURL(preview.albumCoverFile)
         }
       }).catch(() => {
         // 后台提取会在上传完成后提供完整信息。

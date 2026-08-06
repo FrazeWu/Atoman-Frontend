@@ -1,0 +1,46 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e12]:
+          - generic [ref=e13]: ATOMAN
+          - generic [ref=e14]:
+            - generic [ref=e15]: v0.0.2
+            - generic [ref=e16]: beta
+      - generic [ref=e34]:
+        - button "切换主题" [ref=e41] [cursor=pointer]
+        - link "登录" [ref=e44] [cursor=pointer]:
+          - /url: /login
+  - main [ref=e45]:
+    - generic [ref=e362]:
+      - heading "登录" [level=1] [ref=e364]
+      - generic [ref=e365]:
+        - group "第三方登录" [ref=e366]:
+          - link "使用 Google 继续" [ref=e368] [cursor=pointer]:
+            - /url: /api/v1/auth/oauth/google/start?purpose=login&return_to=%2Fmusic%2Fstarred
+            - generic [ref=e374]: Google
+          - link "使用 GitHub 继续" [ref=e376] [cursor=pointer]:
+            - /url: /api/v1/auth/oauth/github/start?purpose=login&return_to=%2Fmusic%2Fstarred
+            - generic [ref=e379]: GitHub
+          - link "使用 Microsoft 继续" [ref=e381] [cursor=pointer]:
+            - /url: /api/v1/auth/oauth/microsoft/start?purpose=login&return_to=%2Fmusic%2Fstarred
+            - generic [ref=e387]: Microsoft
+        - generic [ref=e388]: 或
+      - generic [ref=e391]:
+        - generic [ref=e392]:
+          - generic [ref=e393]: 用户名或邮箱
+          - textbox "用户名或邮箱" [ref=e395]:
+            - /placeholder: 输入用户名或邮箱
+        - generic [ref=e396]:
+          - generic [ref=e397]: 密码
+          - textbox "密码" [ref=e399]:
+            - /placeholder: 输入密码
+        - button "登录" [ref=e400] [cursor=pointer]
+      - generic [ref=e401]:
+        - generic [ref=e402]:
+          - text: 没有账号？
+          - link "去注册" [ref=e403] [cursor=pointer]:
+            - /url: /register
+        - link "忘记密码" [ref=e404] [cursor=pointer]:
+          - /url: /forgot-password

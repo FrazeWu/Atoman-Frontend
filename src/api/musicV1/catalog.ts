@@ -13,6 +13,7 @@ import {
   musicV1Endpoints,
   queryString,
 } from "./core";
+import { useQueryCache } from "@/composables/useQueryCache";
 import type {
   CreateMusicLyricsAnnotationInput,
   CreateMusicPlaylistInput,
@@ -57,6 +58,8 @@ type MusicPlaylistSongEnvelope = {
 };
 
 type MusicPlaylistMutationResult = Record<string, unknown>;
+
+const queryCache = useQueryCache();
 
 export type MusicSongSearchResult = {
   id: string;
@@ -265,8 +268,13 @@ export async function listMusicStarred(): Promise<MusicStarredItem[]> {
 
 export async function getMusicAlbum(
   albumId: string,
+  options?: { force?: boolean }
 ): Promise<MusicAlbumListItem> {
-  return apiGet<MusicAlbumListItem>(musicV1Endpoints.album(albumId));
+  return queryCache.fetchWithCache(
+    `music:album:${albumId}`,
+    () => apiGet<MusicAlbumListItem>(musicV1Endpoints.album(albumId)),
+    options
+  );
 }
 
 export async function createMusicPlaylist(
@@ -621,9 +629,14 @@ export async function listMusicArtists(
 
 export async function getMusicArtist(
   artistId: string,
+  options?: { force?: boolean }
 ): Promise<MusicArtistListItem & { albums?: MusicAlbumListItem[] }> {
-  return apiGet<MusicArtistListItem & { albums?: MusicAlbumListItem[] }>(
-    musicV1Endpoints.artist(artistId),
+  return queryCache.fetchWithCache(
+    `music:artist:${artistId}`,
+    () => apiGet<MusicArtistListItem & { albums?: MusicAlbumListItem[] }>(
+      musicV1Endpoints.artist(artistId),
+    ),
+    options
   );
 }
 

@@ -14,6 +14,7 @@ import {
   useContentLifecycle,
 } from "@/composables/useContentLifecycle";
 import { useAuthStore } from "@/stores/auth";
+import { useAudioPlayerSync } from "@/composables/useAudioPlayerSync";
 
 const api = useApi();
 
@@ -40,6 +41,13 @@ function resolveUploadedMediaUrl(url: string) {
 export const usePlayerStore = defineStore("player", () => {
   const lifecycle = useContentLifecycle();
   const authStore = useAuthStore();
+  const { 
+    broadcastPlayRequest, 
+    setForeignPlayRequestCallback, 
+    setupMediaSession, 
+    updateMediaSessionMetadata, 
+    updateMediaSessionPosition 
+  } = useAudioPlayerSync();
   const songs = ref<Song[]>([]);
   const currentSong = ref<Song | null>(null);
   const isPlaying = ref(false);
@@ -66,7 +74,41 @@ export const usePlayerStore = defineStore("player", () => {
 
   // Album-based queue
   const queue = ref<Song[]>([]);
+  const shuffledQueue = ref<Song[]>([]);
   const currentAlbum = ref<Song[] | null>(null);
+
+  const shuffleArray = <T>(array: T[]): T[] => {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  const recomputeShuffledQueue = () => {
+    if (!isShuffled.value) {
+      shuffledQueue.value = [];
+      return;
+    }
+    const list = queue.value.length > 0 ? queue.value : songs.value;
+    if (list.length === 0) return;
+    
+    const newList = shuffleArray(list);
+    if (currentSong.value) {
+      const idx = newList.findIndex(s => s.id === currentSong.value?.id);
+      if (idx > -1) {
+        newList.splice(idx, 1);
+        newList.unshift(currentSong.value);
+      }
+    }
+    shuffledQueue.value = newList;
+  };
+
+  watch(isShuffled, () => recomputeShuffledQueue());
+  watch(queue, () => {
+    if (isShuffled.value) recomputeShuffledQueue();
+  }, { deep: true });
 
   // Sync isShuffled and repeatMode based on playbackMode
   watch(
@@ -92,6 +134,18 @@ export const usePlayerStore = defineStore("player", () => {
 
   let audio: HTMLAudioElement | null = null;
   let songsRequest: Promise<void> | null = null;
+  
+  setForeignPlayRequestCallback(() => {
+    if (isPlaying.value && audio) {
+      savePodcastProgress();
+      audio.pause();
+      isPlaying.value = false;
+      pauseListening();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
+    }
+  });
   const listeningThresholdMs = 5000;
   let listeningTimer: ReturnType<typeof setTimeout> | null = null;
   let listeningStartedAt: number | null = null;
@@ -153,11 +207,23 @@ export const usePlayerStore = defineStore("player", () => {
     nextAudio.addEventListener("timeupdate", () => {
       currentTime.value = nextAudio.currentTime;
       savePodcastProgress();
+      if (duration.value > 0) {
+        updateMediaSessionPosition({
+          duration: duration.value,
+          playbackRate: nextAudio.playbackRate,
+          position: currentTime.value
+        });
+      }
     });
     nextAudio.addEventListener("durationchange", () => {
       duration.value = Number.isFinite(nextAudio.duration)
         ? nextAudio.duration
         : 0;
+      updateMediaSessionPosition({
+        duration: duration.value,
+        playbackRate: nextAudio.playbackRate,
+        position: currentTime.value
+      });
     });
     nextAudio.addEventListener("ended", () => {
       savePodcastProgress(true);
@@ -171,6 +237,18 @@ export const usePlayerStore = defineStore("player", () => {
         nextAudio.currentTime = currentTime.value;
       }
     }
+
+    setupMediaSession({
+      play: togglePlay,
+      pause: togglePlay,
+      previoustrack: playPrevious,
+      nexttrack: playNext,
+      seekto: (details) => {
+        if (details.seekTime !== undefined) {
+          seek(details.seekTime);
+        }
+      }
+    });
 
     audio = nextAudio;
     return nextAudio;
@@ -200,11 +278,18 @@ export const usePlayerStore = defineStore("player", () => {
       .play()
       .then(() => {
         isPlaying.value = true;
+        broadcastPlayRequest();
         resumeListening();
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'playing';
+        }
       })
       .catch(() => {
         isPlaying.value = false;
         pauseListening();
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
       });
   };
 
@@ -325,6 +410,14 @@ export const usePlayerStore = defineStore("player", () => {
       : savedProgress?.position_sec || 0;
     duration.value = 0;
     podcastTracker = null;
+    
+    updateMediaSessionMetadata({
+      title: song.title,
+      artist: song.artist || '未知艺术家',
+      album: song.album || '未知专辑',
+      artworkUrl: song.cover_url || ''
+    });
+
     if (song.source_type === "podcast_episode" && song.source_id) {
       const episodeID = song.source_id;
       podcastTracker = createContentConsumptionTracker({
@@ -440,6 +533,9 @@ export const usePlayerStore = defineStore("player", () => {
       player.pause();
       isPlaying.value = false;
       pauseListening();
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'paused';
+      }
     } else {
       if (listeningSongId !== String(currentSong.value.id))
         resetListening(currentSong.value);
@@ -447,8 +543,10 @@ export const usePlayerStore = defineStore("player", () => {
     }
   };
 
-  const getActiveList = () =>
-    queue.value.length > 0 ? queue.value : songs.value;
+  const getActiveList = () => {
+    if (isShuffled.value && shuffledQueue.value.length > 0) return shuffledQueue.value;
+    return queue.value.length > 0 ? queue.value : songs.value;
+  };
 
   const playNext = () => {
     const list = getActiveList();
@@ -460,9 +558,7 @@ export const usePlayerStore = defineStore("player", () => {
     const player = ensureAudio();
 
     let nextIndex;
-    if (isShuffled.value) {
-      nextIndex = Math.floor(Math.random() * list.length);
-    } else if (repeatMode.value === "one") {
+    if (repeatMode.value === "one") {
       player.currentTime = 0;
       currentTime.value = 0;
       resetListening(currentSong.value);

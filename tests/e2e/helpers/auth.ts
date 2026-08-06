@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 
-const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'admin123'
+const ADMIN_USERNAME = process.env.E2E_USERNAME || 'admin'
+const ADMIN_PASSWORD = process.env.E2E_PASSWORD || 'admin123'
 
 export async function mockAuthenticatedSession(page: Page, user: Record<string, unknown> = {
 	uuid: 'user-1',

@@ -1,0 +1,48 @@
+- generic [ref=f16e4]:
+  - banner [ref=f16e5]:
+    - generic [ref=f16e6]:
+      - link "ATOMAN v0.0.2 beta" [ref=f16e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f16e12]:
+          - generic [ref=f16e13]: ATOMAN
+          - generic [ref=f16e14]:
+            - generic [ref=f16e15]: v0.0.2
+            - generic [ref=f16e16]: beta
+      - navigation [ref=f16e17]:
+        - link "订阅" [ref=f16e18] [cursor=pointer]:
+          - /url: /feed
+        - link "博客" [ref=f16e20] [cursor=pointer]:
+          - /url: /posts
+        - link "音乐" [ref=f16e22] [cursor=pointer]:
+          - /url: /music
+        - link "视频" [ref=f16e24] [cursor=pointer]:
+          - /url: /videos
+        - link "播客" [ref=f16e26] [cursor=pointer]:
+          - /url: /podcasts
+        - link "论坛" [ref=f16e28] [cursor=pointer]:
+          - /url: /forum
+        - link "辩论" [ref=f16e30] [cursor=pointer]:
+          - /url: /debate
+        - link "时间线" [ref=f16e32] [cursor=pointer]:
+          - /url: /timeline
+      - generic [ref=f16e34]:
+        - button "打开全局搜索" [ref=f16e36] [cursor=pointer]:
+          - generic [ref=f16e40]: 搜索
+        - button "切换主题" [ref=f16e41] [cursor=pointer]
+        - link "登录" [ref=f16e44] [cursor=pointer]:
+          - /url: /login
+  - main [ref=f16e45]
+  - contentinfo [ref=f16e46]:
+    - generic [ref=f16e47]:
+      - generic [ref=f16e48]:
+        - generic "需要管理员权限" [ref=f16e49]: 凹凸庵
+        - navigation "站点信息" [ref=f16e50]:
+          - button "关于" [ref=f16e51] [cursor=pointer]
+          - button "联系我们" [ref=f16e52] [cursor=pointer]
+          - button "问题反馈" [ref=f16e53] [cursor=pointer]
+      - generic [ref=f16e54]:
+        - generic [ref=f16e55]: © 2026 凹凸庵
+        - generic [ref=f16e56]:
+          - button "使用条款" [ref=f16e57] [cursor=pointer]
+          - button "隐私政策" [ref=f16e58] [cursor=pointer]
+          - generic "当前版本" [ref=f16e59]: v0.0.2

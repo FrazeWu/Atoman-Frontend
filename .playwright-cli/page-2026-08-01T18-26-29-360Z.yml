@@ -1,0 +1,187 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Toggle sidebar" [ref=e60] [cursor=pointer]
+        - link "ATOMAN v0.0.2 beta" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e12]:
+            - generic [ref=e13]: ATOMAN
+            - generic [ref=e14]:
+              - generic [ref=e15]: v0.0.2
+              - generic [ref=e16]: beta
+      - navigation [ref=e17]:
+        - link "订阅" [ref=e18] [cursor=pointer]:
+          - /url: /feed
+        - link "博客" [ref=e20] [cursor=pointer]:
+          - /url: /posts
+        - link "音乐" [ref=e22] [cursor=pointer]:
+          - /url: /music
+        - link "视频" [ref=e24] [cursor=pointer]:
+          - /url: /videos
+        - link "播客" [ref=e26] [cursor=pointer]:
+          - /url: /podcasts
+        - link "论坛" [ref=e28] [cursor=pointer]:
+          - /url: /forum
+        - link "辩论" [ref=e30] [cursor=pointer]:
+          - /url: /debate
+        - link "时间线" [ref=e32] [cursor=pointer]:
+          - /url: /timeline
+      - generic [ref=e34]:
+        - button "打开全局搜索" [ref=e36] [cursor=pointer]:
+          - generic [ref=e40]: 搜索
+        - button "切换主题" [ref=e41] [cursor=pointer]
+        - link "登录" [ref=e44] [cursor=pointer]:
+          - /url: /login
+  - main [ref=e45]:
+    - generic [ref=e62]:
+      - complementary [ref=e63]:
+        - navigation [ref=e64]:
+          - link "发现" [ref=e65] [cursor=pointer]:
+            - /url: /music/discover
+          - link "专辑" [ref=e71] [cursor=pointer]:
+            - /url: /music
+          - link "艺人" [active] [ref=e79] [cursor=pointer]:
+            - /url: /music/artists
+          - link "收藏" [ref=e87] [cursor=pointer]:
+            - /url: /music/starred
+          - link "播放历史" [ref=e92] [cursor=pointer]:
+            - /url: /music/history
+        - region "歌单类别" [ref=e100]:
+          - generic [ref=e101]:
+            - paragraph [ref=e102]: 我的歌单
+            - button "新建歌单" [ref=e103] [cursor=pointer]
+          - paragraph [ref=e106]: 暂无歌单
+      - main [ref=e107]:
+        - generic [ref=e238]:
+          - generic [ref=e240]:
+            - heading "艺术家" [level=1] [ref=e242]
+            - generic "艺术家列表模式" [ref=e244]:
+              - radiogroup [ref=e245]:
+                - radio "全部" [checked] [ref=e247] [cursor=pointer]
+                - radio "已订阅" [ref=e249] [cursor=pointer]
+          - generic [ref=e251]:
+            - generic [ref=e252]:
+              - generic [ref=e256]:
+                - textbox "搜索艺术家..." [ref=e258]
+                - button "搜索" [ref=e259] [cursor=pointer]
+              - button "添加艺术家" [ref=e260] [cursor=pointer]
+            - generic "艺术家推荐模式" [ref=e263]:
+              - radiogroup [ref=e264]:
+                - radio "热度" [checked] [ref=e266] [cursor=pointer]
+                - radio "精选" [ref=e268] [cursor=pointer]
+                - radio "探索" [ref=e270] [cursor=pointer]
+          - generic [ref=e272]:
+            - generic [ref=e273] [cursor=pointer]:
+              - generic [ref=e274]:
+                - img "Ye" [ref=e275]
+                - button "收藏" [ref=e276]
+                - generic:
+                  - generic:
+                    - generic: "15"
+                    - generic: "0"
+              - heading "Ye" [level=3] [ref=e280]
+            - generic [ref=e281] [cursor=pointer]:
+              - generic [ref=e282]:
+                - generic [ref=e283]: "2"
+                - button "收藏" [ref=e284]
+                - generic:
+                  - generic:
+                    - generic: "10"
+                    - generic: "0"
+              - heading "2003 Toyota Corolla" [level=3] [ref=e288]
+            - generic [ref=e289] [cursor=pointer]:
+              - generic [ref=e290]:
+                - generic [ref=e291]: C
+                - button "收藏" [ref=e292]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "Callejas" [level=3] [ref=e296]
+            - generic [ref=e297] [cursor=pointer]:
+              - generic [ref=e298]:
+                - generic [ref=e299]: D
+                - button "收藏" [ref=e300]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "DCM" [level=3] [ref=e304]
+            - generic [ref=e305] [cursor=pointer]:
+              - generic [ref=e306]:
+                - generic [ref=e307]: B
+                - button "收藏" [ref=e308]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "Buttress O'Kneel" [level=3] [ref=e312]
+            - generic [ref=e313] [cursor=pointer]:
+              - generic [ref=e314]:
+                - generic [ref=e315]: B
+                - button "收藏" [ref=e316]
+                - generic:
+                  - generic:
+                    - generic: "14"
+                    - generic: "0"
+              - heading "BLUnderwood" [level=3] [ref=e320]
+            - generic [ref=e321] [cursor=pointer]:
+              - generic [ref=e322]:
+                - generic [ref=e323]: A
+                - button "收藏" [ref=e324]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "AFM" [level=3] [ref=e328]
+            - generic [ref=e329] [cursor=pointer]:
+              - generic [ref=e330]:
+                - generic [ref=e331]: L
+                - button "收藏" [ref=e332]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "Logical Disorder" [level=3] [ref=e336]
+            - generic [ref=e337] [cursor=pointer]:
+              - generic [ref=e338]:
+                - generic [ref=e339]: I
+                - button "收藏" [ref=e340]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "In Vitro" [level=3] [ref=e344]
+            - generic [ref=e345] [cursor=pointer]:
+              - generic [ref=e346]:
+                - generic [ref=e347]: M
+                - button "收藏" [ref=e348]
+                - generic:
+                  - generic:
+                    - generic: "0"
+                    - generic: "0"
+              - heading "Memphis" [level=3] [ref=e352]
+            - generic [ref=e353] [cursor=pointer]:
+              - generic [ref=e354]:
+                - generic [ref=e355]: "N"
+                - button "收藏" [ref=e356]
+                - generic:
+                  - generic:
+                    - generic: "1"
+                    - generic: "0"
+              - heading "Nicolas Falcon" [level=3] [ref=e360]
+  - contentinfo [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - generic "需要管理员权限" [ref=e49]: 凹凸庵
+        - navigation "站点信息" [ref=e50]:
+          - button "关于" [ref=e51] [cursor=pointer]
+          - button "联系我们" [ref=e52] [cursor=pointer]
+          - button "问题反馈" [ref=e53] [cursor=pointer]
+      - generic [ref=e54]:
+        - generic [ref=e55]: © 2026 凹凸庵
+        - generic [ref=e56]:
+          - button "使用条款" [ref=e57] [cursor=pointer]
+          - button "隐私政策" [ref=e58] [cursor=pointer]
+          - generic "当前版本" [ref=e59]: v0.0.2

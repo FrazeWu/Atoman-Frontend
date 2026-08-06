@@ -212,7 +212,9 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  height: 44px;
   min-height: 44px;
+  box-sizing: border-box;
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);

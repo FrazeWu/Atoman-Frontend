@@ -271,16 +271,15 @@ onUnmounted(() => {
 .p-date-input-container {
   position: relative;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .field-label {
   color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .birth-date-field {
@@ -292,12 +291,14 @@ onUnmounted(() => {
 .birth-date-input {
   flex: 1;
   width: 100%;
-  padding: 0.6rem 2.2rem 0.6rem 0.75rem;
+  height: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0.7rem 2.75rem 0.7rem 0.85rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-text);
-  font-family: var(--a-font-sans);
-  font-size: 0.9rem;
+  font: inherit;
   border-radius: var(--a-radius-control);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }

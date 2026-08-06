@@ -82,6 +82,9 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.get('[data-testid="album-details-bio-input"]').element).toHaveValue('second studio album')
     expect(wrapper.get('[data-testid="album-details-source-input"]').element).toHaveValue('https://en.wikipedia.org/wiki/Late_Registration')
     expect(wrapper.get('[data-testid="album-details-track-count"]').text()).toContain('3 首')
+    expect(wrapper.findAll('img[alt="封面预览"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="album-details-cover-change-button"]').text()).toContain('更换封面')
+    expect(wrapper.find('.cover-preview').exists()).toBe(false)
   })
 
   it('shows required markers for mandatory album fields', () => {

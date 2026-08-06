@@ -19,7 +19,7 @@ import MusicEditReviewShell, { type MusicEditReviewItem } from '@/components/mus
 const authStore = useAuthStore()
 const api = useApi()
 
-const activeTab = ref<'review' | 'entries'>('review')
+const activeTab = ref<'review' | 'entries' | 'quality'>('review')
 const reviewItems = ref<MusicEditReviewItem[]>([])
 const loading = ref(true)
 const statusFilter = ref('open')
@@ -52,6 +52,40 @@ const entriesStatusOptions = [
   { label: '已确认', value: 'confirmed' },
   { label: '争议', value: 'disputed' },
 ]
+type MusicQualityIssue = { type: string; entity_type: 'album' | 'song' | 'import'; entity_id: string; title: string }
+const qualityIssues = ref<MusicQualityIssue[]>([])
+const qualityLoading = ref(false)
+const qualityFilter = ref('all')
+const qualityOptions = [
+  { label: '全部问题', value: 'all' },
+  { label: '缺少封面', value: 'missing_cover' },
+  { label: '缺少曲目', value: 'missing_tracks' },
+  { label: '缺少音频', value: 'missing_audio' },
+  { label: '导入失败', value: 'import_failed' },
+]
+
+async function fetchQualityIssues() {
+  qualityLoading.value = true
+  try {
+    const response = await apiRequest(`${api.music.adminMusicQuality}?type=${qualityFilter.value}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+    const data = await response.json() as { data?: MusicQualityIssue[] }
+    qualityIssues.value = data.data ?? []
+  } catch (error) {
+    reportError(error, '加载音乐资料问题失败')
+  } finally {
+    qualityLoading.value = false
+  }
+}
+
+function qualityLabel(type: string) {
+  return ({ missing_cover: '缺少封面', missing_tracks: '缺少曲目', missing_audio: '缺少音频', import_failed: '导入失败' } as Record<string, string>)[type] ?? type
+}
+
+function qualityPath(issue: MusicQualityIssue) {
+  if (issue.entity_type === 'album') return `/music/album/${issue.entity_id}`
+  if (issue.entity_type === 'song') return `/music/song/${issue.entity_id}`
+  return '/music/imports'
+}
 
 async function fetchReviewItems() {
   loading.value = true
@@ -129,6 +163,8 @@ watch([entriesTypeFilter, entriesStatusFilter], () => {
   if (activeTab.value === 'entries') fetchEntries()
 })
 
+watch(qualityFilter, () => { if (activeTab.value === 'quality') void fetchQualityIssues() })
+
 watch([statusFilter, entityTypeFilter], () => {
   if (activeTab.value === 'review') {
     void fetchReviewItems()
@@ -141,6 +177,7 @@ onMounted(async () => {
   }
   await fetchReviewItems()
   await fetchEntries()
+  await fetchQualityIssues()
 })
 </script>
 
@@ -153,6 +190,9 @@ onMounted(async () => {
         </button>
         <button :class="['admin-tab', activeTab === 'entries' ? 'admin-tab-active' : '']" @click="activeTab = 'entries'; fetchEntries()">
           条目管理
+        </button>
+        <button :class="['admin-tab', activeTab === 'quality' ? 'admin-tab-active' : '']" @click="activeTab = 'quality'; fetchQualityIssues()">
+          资料问题 ({{ qualityIssues.length }})
         </button>
       </div>
     </div>
@@ -180,6 +220,18 @@ onMounted(async () => {
           </div>
         </div>
         <div v-if="entries.length === 0" class="text-gray-400 py-8 text-center">暂无条目</div>
+      </div>
+    </div>
+
+    <div v-else-if="activeTab === 'quality'">
+      <div class="entries-filters"><PSelect v-model="qualityFilter" :options="qualityOptions" class="filter-select" /></div>
+      <div v-if="qualityLoading" class="text-center py-12 text-gray-400">加载中...</div>
+      <div v-else class="entries-list">
+        <RouterLink v-for="issue in qualityIssues" :key="`${issue.type}-${issue.entity_id}`" :to="qualityPath(issue)" class="entry-row">
+          <div class="entry-info"><span class="entry-name">{{ issue.title || '未命名导入' }}</span><span class="entry-type">{{ issue.entity_type === 'import' ? '导入' : issue.entity_type === 'album' ? '专辑' : '歌曲' }}</span></div>
+          <span class="entry-status entry-status-disputed">{{ qualityLabel(issue.type) }}</span>
+        </RouterLink>
+        <div v-if="!qualityIssues.length" class="text-gray-400 py-8 text-center">暂无资料问题</div>
       </div>
     </div>
 

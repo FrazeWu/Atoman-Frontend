@@ -75,6 +75,7 @@ export function useApi() {
       artistEntryStatus: (id: number | string) => `${apiUrl}/artists/${id}/entry-status`,
       artistDiscussions: (id: number | string) => `${apiUrl}/artists/${id}/discussions`,
       adminMusicReview: `${apiUrl}/admin/music/entries`,
+      adminMusicQuality: `${apiUrl}/admin/music/quality`,
       adminMusicConfirm: (id: number | string, type: 'album' | 'artist') =>
         type === 'album' ? `${apiUrl}/albums/${id}/entry-status` : `${apiUrl}/artists/${id}/entry-status`,
     },

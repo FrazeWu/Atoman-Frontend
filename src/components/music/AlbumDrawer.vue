@@ -165,14 +165,6 @@ const discussionCount = computed(() => {
   if (!currentAlbum) return undefined
   return currentAlbum.discussion_count ?? currentAlbum.open_discussion_count
 })
-const editionLabels: Record<string, string> = {
-  original: '原版',
-  deluxe: '豪华版',
-  reissue: '重发版',
-  regional: '地区版',
-  live: '现场版',
-}
-
 type AlbumTrack = NonNullable<MusicAlbumListItem['songs']>[number]
 
 function formatDuration(value: unknown): string {
@@ -473,14 +465,6 @@ watch(
         </div>
       </div>
 
-      <section v-if="album?.other_versions?.length" class="content-section album-versions">
-        <div class="section-title">其他版本</div>
-        <button v-for="version in album.other_versions" :key="version.id" type="button" class="album-version" @click="openAlbum(version.id)">
-          <span>{{ version.title }}</span>
-          <small>{{ editionLabels[version.edition_type || 'original'] || version.edition_type }}</small>
-        </button>
-      </section>
-
       <div class="action-bar">
         <PButton
           variant="primary"
@@ -633,9 +617,6 @@ watch(
   margin-bottom: 2.25rem;
   align-items: flex-start;
 }
-.album-versions { display: grid; gap: 0.5rem; }
-.album-version { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; padding: 0.5rem 0; border: 0; border-bottom: 1px solid var(--a-color-border-soft); background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.album-version small { color: var(--a-color-muted); }
 .album-cover {
   width: 180px;
   height: 180px;

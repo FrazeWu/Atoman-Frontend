@@ -15,11 +15,14 @@ import {
   deleteAlbumDiscussion,
   getAlbumRevision,
   getArtistRevision,
+  getSongRevision,
   listAlbumDiscussions,
   listAlbumRevisions,
   listArtistRevisions,
+  listSongRevisions,
   replyAlbumDiscussion,
   revertAlbumRevision,
+  revertSongRevision,
   type MusicDiscussion,
   type MusicRevisionSummary,
   type MusicSource,
@@ -27,7 +30,7 @@ import {
 
 type ActionLayer = Extract<MusicSheetLayer, { kind: 'action' }>
 const props = withDefaults(defineProps<{ layer?: ActionLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeNestedAction, returnToLayer, refreshAlbum, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closeNestedAction, returnToLayer, refreshAlbum, refreshSong, isLayerShifted, isTopLayer } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
 const payload = computed(() => props.layer?.payload.data ?? state.value.nestedPayload)
 const payloadRecord = computed(() => payload.value && typeof payload.value === 'object'
@@ -35,11 +38,13 @@ const payloadRecord = computed(() => payload.value && typeof payload.value === '
   : {})
 const albumId = computed(() => String(payloadRecord.value.albumId ?? state.value.albumId ?? '') || null)
 const artistId = computed(() => String(payloadRecord.value.artistId ?? state.value.artistId ?? '') || null)
+const songId = computed(() => String(payloadRecord.value.songId ?? '') || null)
 const currentAction = computed(() => props.layer?.payload.action ?? state.value.nestedAction)
 const isOpen = computed(() => (
   currentAction.value === 'revise'
   || currentAction.value === 'history'
   || currentAction.value === 'artist_history'
+  || currentAction.value === 'song_history'
   || currentAction.value === 'discussion'
   || currentAction.value === 'revise_artist'
 ))
@@ -59,6 +64,7 @@ const titleMap: Record<string, string> = {
   revise_artist: '修改艺术家',
   history: '版本历史',
   artist_history: '版本历史',
+  song_history: '版本历史',
   discussion: '讨论'
 }
 
@@ -110,7 +116,7 @@ const albumTypeOptions = [
   { label: 'Single', value: 'single' },
 ]
 
-watch(() => [currentAction.value, albumId.value, artistId.value] as const, () => {
+watch(() => [currentAction.value, albumId.value, artistId.value, songId.value] as const, () => {
   errorMessage.value = ''
   successMessage.value = ''
   artistDraft.name = ''
@@ -142,6 +148,9 @@ watch(() => [currentAction.value, albumId.value, artistId.value] as const, () =>
   }
   if (currentAction.value === 'artist_history' && artistId.value) {
     void loadArtistHistory(artistId.value)
+  }
+  if (currentAction.value === 'song_history' && songId.value) {
+    void loadSongHistory(songId.value)
   }
   if (currentAction.value === 'discussion' && albumId.value) {
     void loadAlbumDiscussions(albumId.value)
@@ -208,10 +217,24 @@ async function loadArtistHistory(artistId: string) {
   }
 }
 
+async function loadSongHistory(id: string) {
+  revisionLoading.value = true
+  errorMessage.value = ''
+  try {
+    revisions.value = await listSongRevisions(id)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
+  } finally {
+    revisionLoading.value = false
+  }
+}
+
 async function handleRevert(version: number) {
   if (!requireLogin()) return
-  if (!albumId.value) {
-    errorMessage.value = '缺少专辑 ID'
+  const isSongHistory = currentAction.value === 'song_history'
+  const entityId = isSongHistory ? songId.value : albumId.value
+  if (!entityId) {
+    errorMessage.value = isSongHistory ? '缺少歌曲 ID' : '缺少专辑 ID'
     return
   }
 
@@ -219,10 +242,16 @@ async function handleRevert(version: number) {
   errorMessage.value = ''
   successMessage.value = ''
   try {
-    await revertAlbumRevision(albumId.value, version, `回滚到版本 v${version}`)
+    if (isSongHistory) {
+      await revertSongRevision(entityId, version, `回滚到版本 v${version}`)
+      refreshSong()
+      await loadSongHistory(entityId)
+    } else {
+      await revertAlbumRevision(entityId, version, `回滚到版本 v${version}`)
+      refreshAlbum()
+      await loadAlbumHistory(entityId)
+    }
     successMessage.value = `已回滚到版本 v${version}`
-    refreshAlbum()
-    await loadAlbumHistory(albumId.value)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '恢复失败，请稍后重试'
   } finally {
@@ -318,6 +347,25 @@ async function handleDeleteDiscussion(discussionId: string) {
 }
 
 async function viewRevisionDiff(revision: MusicRevisionSummary) {
+	if (currentAction.value === 'song_history') {
+		if (!songId.value) {
+			errorMessage.value = '缺少歌曲 ID'
+			return
+		}
+		diffLoading.value = true
+		errorMessage.value = ''
+		try {
+			selectedRevision.value = await getSongRevision(songId.value, revision.version_number)
+			previousRevision.value = revision.previous_revision_id
+				? await getSongRevision(songId.value, revision.version_number - 1)
+				: null
+		} catch (error) {
+			errorMessage.value = error instanceof Error ? error.message : '加载修改内容失败'
+		} finally {
+			diffLoading.value = false
+		}
+		return
+	}
 	if (currentAction.value === 'artist_history') {
 		if (!artistId.value) {
 			errorMessage.value = '缺少艺术家 ID'
@@ -387,6 +435,20 @@ function summarizeRevisionDiff(current: MusicRevisionSummary | null, previous: M
 		return Object.entries(labels)
 			.filter(([key]) => currentArtist[key] !== previousArtist[key])
 			.map(([key, label]) => `${label}：${String(previousArtist[key] ?? '空')} -> ${String(currentArtist[key] ?? '空')}`)
+	}
+	if (current.content_type === 'song') {
+		const labels: Record<string, string> = {
+			title: '歌曲名',
+			track_number: '曲序',
+			disc_number: '碟号',
+			lyrics: '歌词',
+			cover_url: '封面',
+			audio_url: '音频',
+			artist_credits: '创作者',
+		}
+		return Object.entries(labels)
+			.filter(([key]) => JSON.stringify(currentSnapshot[key]) !== JSON.stringify(previousSnapshot[key]))
+			.map(([key, label]) => key === 'artist_credits' ? `${label}已更新` : `${label}：${String(previousSnapshot[key] ?? '空')} -> ${String(currentSnapshot[key] ?? '空')}`)
 	}
   const currentAlbum = normalizeSnapshot(currentSnapshot.album)
   const previousAlbum = normalizeSnapshot(previousSnapshot.album)
@@ -738,7 +800,7 @@ async function submitEdit() {
       </form>
 
       <!-- History placeholder -->
-      <div v-else-if="currentAction === 'history' || currentAction === 'artist_history'" class="history-panel">
+      <div v-else-if="currentAction === 'history' || currentAction === 'artist_history' || currentAction === 'song_history'" class="history-panel">
         <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
         <p v-else-if="revisionLoading" class="history-state">正在加载版本...</p>
         <p v-else-if="!revisions.length" class="history-state">暂无版本历史。</p>
@@ -764,7 +826,7 @@ async function submitEdit() {
               查看修改
             </button>
             <button
-				v-if="currentAction === 'history'"
+				v-if="currentAction === 'history' || currentAction === 'song_history'"
               class="primary-action history-revert"
               type="button"
               :data-test="`history-revert-button-${revision.version_number}`"

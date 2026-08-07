@@ -80,11 +80,11 @@
               class="music-tracks__action-btn"
               :class="{ 'music-tracks__action-btn--active': Boolean(track.lyrics?.trim()) || expandedLyrics[track.id] }"
               :disabled="track.removed"
-              :title="track.lyrics?.trim() ? '包含歌词（点击编辑）' : '添加歌词'"
+			  title="编辑曲目信息"
               @click="toggleLyrics(track.id)"
             >
               <FileText :size="14" />
-              <span class="btn-text">歌词</span>
+			  <span class="btn-text">信息</span>
             </PButton>
 
             <!-- Move Up / Move Down -->
@@ -132,7 +132,7 @@
         <!-- Expanded Lyrics Editor Drawer -->
         <div v-if="expandedLyrics[track.id] && !track.removed" class="music-tracks__lyrics-drawer">
           <div class="music-tracks__lyrics-header">
-            <span class="lyrics-title">编辑歌词 - {{ track.title || `曲目 ${index + 1}` }}</span>
+			<span class="lyrics-title">编辑曲目信息 - {{ track.title || `曲目 ${index + 1}` }}</span>
             <button type="button" class="lyrics-close-btn" @click="toggleLyrics(track.id)">
               <X :size="14" />
             </button>
@@ -143,6 +143,25 @@
             :rows="5"
             @update:model-value="(value) => updateTrack(track.id, 'lyrics', value)"
           />
+		  <div class="music-tracks__details-grid">
+			<PInput
+			  :model-value="track.discNumber"
+			  type="number"
+			  label="碟号"
+			  min="1"
+			  @update:model-value="(value) => updateTrack(track.id, 'discNumber', value)"
+			/>
+			<input
+			  type="file"
+			  accept="image/*"
+			  aria-label="选择曲目封面"
+			  @change="(event) => onCoverFileChange(track.id, event)"
+			>
+		  </div>
+		  <MusicCreationContributorPicker
+			:model-value="track.contributors"
+			@update:model-value="(value) => updateContributors(track.id, value)"
+		  />
         </div>
       </div>
     </div>
@@ -166,7 +185,9 @@ import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import MusicCreationContributorPicker from './MusicCreationContributorPicker.vue'
 import type { MusicTrackDraft } from './types'
+import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 
 const props = defineProps<{
   tracks: MusicTrackDraft[]
@@ -192,10 +213,21 @@ function toggleLyrics(id: string) {
   expandedLyrics.value[id] = !expandedLyrics.value[id]
 }
 
-function updateTrack(id: string, field: 'title' | 'trackNumber' | 'lyrics', value: string) {
+function updateTrack(id: string, field: 'title' | 'trackNumber' | 'discNumber' | 'lyrics', value: string) {
   tracks.value = tracks.value.map((track) =>
     track.id === id ? { ...track, [field]: value } : track,
   )
+}
+
+function updateContributors(id: string, contributors: MusicCreationAlbumContributorDraft[]) {
+	tracks.value = tracks.value.map(track => track.id === id ? { ...track, contributors } : track)
+}
+
+function onCoverFileChange(id: string, event: Event) {
+	const input = event.target as HTMLInputElement
+	const coverFile = input.files?.[0]
+	if (coverFile) tracks.value = tracks.value.map(track => track.id === id ? { ...track, coverFile } : track)
+	input.value = ''
 }
 
 function moveTrack(index: number, direction: -1 | 1) {
@@ -256,10 +288,15 @@ function addTrack() {
     id: `track-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title: '',
     trackNumber: String(tracks.value.length + 1),
+	discNumber: '1',
     lyrics: '',
     audioUrl: '',
     audioAsset: null,
+	pendingAudioAsset: null,
     file: null,
+	coverUrl: '',
+	coverFile: null,
+	contributors: [],
     isExisting: false,
   }
   tracks.value = [...tracks.value, newTrack]

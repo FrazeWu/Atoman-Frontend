@@ -7,7 +7,7 @@ const drawerState = ref({
   artistId: null as string | null,
   albumId: null as string | null,
   musicEditor: null as null | {
-    entity: 'artist' | 'album'
+    entity: 'artist' | 'album' | 'song'
     mode: 'create' | 'edit'
     id?: string
     seed?: Record<string, unknown>
@@ -18,14 +18,18 @@ const mocks = vi.hoisted(() => ({
   closeMusicEditor: vi.fn(),
   refreshAlbum: vi.fn(),
   refreshArtist: vi.fn(),
+  refreshSong: vi.fn(),
   closeMusicCreationFlow: vi.fn(),
   routerReplace: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
+	getMusicSongDetail: vi.fn(),
 	createMusicArtist: vi.fn(),
   uploadMusicAsset: vi.fn(),
 	  submitArtistRevision: vi.fn(),
 	  submitAlbumRevision: vi.fn(),
+	  submitSongRevision: vi.fn(),
+	  queueMusicSongAudioReplacement: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -40,15 +44,19 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     closeMusicEditor: mocks.closeMusicEditor,
     refreshAlbum: mocks.refreshAlbum,
     refreshArtist: mocks.refreshArtist,
+    refreshSong: mocks.refreshSong,
     closeMusicCreationFlow: mocks.closeMusicCreationFlow,
+		isLayerShifted: vi.fn(() => false),
+		isTopLayer: vi.fn(() => true),
+		returnToLayer: vi.fn(),
   }),
 }))
 
 vi.mock('@/components/music', () => ({
   AlbumEditorShell: {
     name: 'AlbumEditorShell',
-    props: ['meta'],
-    emits: ['update:cover', 'update:meta'],
+    props: ['meta', 'tracks'],
+    emits: ['update:cover', 'update:meta', 'update:tracks'],
     template: '<div data-testid="album-editor-shell-stub" />',
   },
   MusicArtistForm: { name: 'MusicArtistForm', emits: ['submit'], template: '<div data-testid="music-artist-form-stub" />' },
@@ -67,12 +75,19 @@ vi.mock('@/components/ui/PButton.vue', () => ({
   },
 }))
 
+vi.mock('@/components/music/MusicCreationContributorPicker.vue', () => ({
+	default: { props: ['modelValue'], template: '<div data-testid="song-contributors" />' },
+}))
+
 vi.mock('@/api/musicV1', () => ({
 	createMusicArtist: mocks.createMusicArtist,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
+	getMusicSongDetail: mocks.getMusicSongDetail,
 	  submitArtistRevision: mocks.submitArtistRevision,
 	  submitAlbumRevision: mocks.submitAlbumRevision,
+	  submitSongRevision: mocks.submitSongRevision,
+	  queueMusicSongAudioReplacement: mocks.queueMusicSongAudioReplacement,
 	  uploadMusicAsset: mocks.uploadMusicAsset,
 }))
 
@@ -96,14 +111,18 @@ describe('MusicEntityEditorDrawer.vue', () => {
     mocks.closeMusicEditor.mockReset()
     mocks.refreshAlbum.mockReset()
     mocks.refreshArtist.mockReset()
+    mocks.refreshSong.mockReset()
     mocks.closeMusicCreationFlow.mockReset()
     mocks.routerReplace.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.getMusicAlbum.mockReset()
+	mocks.getMusicSongDetail.mockReset()
 	mocks.createMusicArtist.mockReset()
     mocks.uploadMusicAsset.mockReset()
 	    mocks.submitArtistRevision.mockReset()
 	    mocks.submitAlbumRevision.mockReset()
+	    mocks.submitSongRevision.mockReset()
+	    mocks.queueMusicSongAudioReplacement.mockReset()
     mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Test Artist' })
 	mocks.createMusicArtist.mockResolvedValue({ id: 'artist-created', name: 'Created Artist', entry_status: 'open' })
     mocks.getMusicAlbum.mockResolvedValue({
@@ -112,6 +131,12 @@ describe('MusicEntityEditorDrawer.vue', () => {
       entry_status: 'open',
       songs: [],
     })
+		mocks.getMusicSongDetail.mockResolvedValue({
+			song: { id: 'song-1', title: 'Original Song', track_number: 2, disc_number: 1, lyrics: 'Lyrics' },
+			artists: [{ id: 'artist-1', name: 'Test Artist', role: 'primary', position: 1 }],
+			bookmarked: false,
+			playable: true,
+		})
     mocks.uploadMusicAsset.mockResolvedValue({
       url: 'https://assets.example.test/covers/new.webp',
       key: 'music/covers/new.webp',
@@ -120,6 +145,8 @@ describe('MusicEntityEditorDrawer.vue', () => {
     })
 	    mocks.submitArtistRevision.mockResolvedValue({ status: 'approved' })
 	    mocks.submitAlbumRevision.mockResolvedValue({ status: 'approved' })
+	    mocks.submitSongRevision.mockResolvedValue({ status: 'approved' })
+	    mocks.queueMusicSongAudioReplacement.mockResolvedValue({ status: 'pending' })
   })
 
   afterEach(() => {
@@ -245,4 +272,79 @@ describe('MusicEntityEditorDrawer.vue', () => {
     expect(mocks.closeMusicEditor).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('保存失败')
   })
+
+	it('submits song metadata and credits through a song revision', async () => {
+		drawerState.value.musicEditor = { entity: 'song', mode: 'edit', id: 'song-1' }
+		const wrapper = mountDrawer()
+		await flushPromises()
+
+		wrapper.findAllComponents({ name: 'PInput' })[0]?.vm.$emit('update:modelValue', 'Updated Song')
+		await nextTick()
+		const saveButton = wrapper.findAll('button').find(button => button.text() === '保存歌曲')
+		await saveButton?.trigger('click')
+		await flushPromises()
+
+		expect(mocks.submitSongRevision).toHaveBeenCalledWith('song-1', expect.objectContaining({
+			title: 'Updated Song',
+			track_number: 2,
+			disc_number: 1,
+			lyrics: 'Lyrics',
+			artist_credits: [{
+				artist_id: 'artist-1',
+				position: 1,
+				roles: [{ role: 'primary' }],
+			}],
+		}))
+		expect(mocks.refreshSong).toHaveBeenCalled()
+	})
+
+	it('reports only the failed track audio queue after album metadata is saved', async () => {
+		mocks.getMusicAlbum.mockResolvedValue({
+			id: 'album-1',
+			title: 'Test Album',
+			entry_status: 'open',
+			artists: [{ id: 'artist-1', name: 'Test Artist' }],
+			songs: [{ id: 'song-1', title: 'Existing Song', track_number: 1, disc_number: 1, audio_url: 'old.mp3' }],
+		})
+		mocks.queueMusicSongAudioReplacement.mockRejectedValue(new Error('queue unavailable'))
+		drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
+		const wrapper = mountDrawer()
+		await flushPromises()
+
+		const editor = wrapper.getComponent({ name: 'AlbumEditorShell' })
+		const file = new File(['audio'], 'replacement.mp3', { type: 'audio/mpeg' })
+		editor.vm.$emit('update:tracks', editor.props('tracks').map((track: Record<string, unknown>) => ({ ...track, file })))
+		await nextTick()
+		const saveButton = wrapper.findAll('button').find(button => button.text() === '保存全部')
+		await saveButton?.trigger('click')
+		await flushPromises()
+
+		expect(mocks.submitAlbumRevision).toHaveBeenCalled()
+		expect(mocks.queueMusicSongAudioReplacement).toHaveBeenCalled()
+		expect(mocks.refreshAlbum).toHaveBeenCalled()
+		expect(mocks.closeMusicEditor).not.toHaveBeenCalled()
+		expect(wrapper.text()).toContain('专辑资料已保存，但部分音频替换提交失败，请重试')
+	})
+
+	it('keeps the saved metadata result clear when audio replacement queueing fails', async () => {
+		mocks.queueMusicSongAudioReplacement.mockRejectedValue(new Error('queue unavailable'))
+		drawerState.value.musicEditor = { entity: 'song', mode: 'edit', id: 'song-1' }
+		const wrapper = mountDrawer()
+		await flushPromises()
+
+		const audioFile = new File(['audio'], 'replacement.mp3', { type: 'audio/mpeg' })
+		const audioInput = wrapper.find('input[accept="audio/*"]')
+		Object.defineProperty(audioInput.element, 'files', { value: [audioFile] })
+		await audioInput.trigger('change')
+		const saveButton = wrapper.findAll('button').find(button => button.text() === '保存歌曲')
+		await saveButton?.trigger('click')
+		await flushPromises()
+
+		expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(audioFile, 'music.audio')
+		expect(mocks.submitSongRevision).toHaveBeenCalled()
+		expect(mocks.queueMusicSongAudioReplacement).toHaveBeenCalled()
+		expect(mocks.refreshSong).toHaveBeenCalled()
+		expect(mocks.closeMusicEditor).not.toHaveBeenCalled()
+		expect(wrapper.text()).toContain('歌曲资料已保存，但音频替换提交失败，请重试')
+	})
 })

@@ -6,7 +6,10 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 import {
   listMusicAlbums,
   listMusicArtists,
-  submitMusicEdit,
+	mergeMusicAlbums,
+	mergeMusicArtists,
+	previewMusicAlbumMerge,
+	type MusicAlbumMergePreview,
 } from '@/api/musicV1'
 
 type MergeTarget = { id: string; label: string; meta: string }
@@ -45,6 +48,7 @@ const confirming = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const albumPreview = ref<MusicAlbumMergePreview | null>(null)
 
 async function search() {
   errorMessage.value = ''
@@ -72,21 +76,27 @@ async function search() {
   }
 }
 
+async function prepareConfirmation() {
+	if (!selected.value || !sourceId.value) return
+	if (entity.value === 'artist') { confirming.value = true; return }
+	loading.value = true
+	errorMessage.value = ''
+	try {
+		albumPreview.value = await previewMusicAlbumMerge(selected.value.id, sourceId.value)
+		confirming.value = true
+	} catch { errorMessage.value = '无法生成曲目匹配预览' }
+	finally { loading.value = false }
+}
+
 async function merge() {
   if (!selected.value || !sourceId.value || loading.value) return
   errorMessage.value = ''
   successMessage.value = ''
   loading.value = true
   try {
-    const entityType = entity.value
-    await submitMusicEdit({
-      type: entityType === 'artist' ? 'merge_artist' : 'merge_album',
-      entity_type: entityType,
-      entity_id: sourceId.value,
-      changes: { target_id: selected.value.id },
-      reason: entityType === 'artist' ? '合并重复艺术家' : '合并重复专辑',
-    })
-    successMessage.value = '已提交审核'
+		if (entity.value === 'artist') await mergeMusicArtists(selected.value.id, sourceId.value)
+		else await mergeMusicAlbums(selected.value.id, sourceId.value, albumPreview.value?.matches ?? [])
+    successMessage.value = '合并完成'
     window.setTimeout(closeCurrentAction, 1200)
   } catch {
     errorMessage.value = '提交失败，请重试'
@@ -137,15 +147,21 @@ async function merge() {
           <span>{{ target.meta }}</span>
         </button>
 
-        <button data-test="merge-continue" type="button" :disabled="!selected" @click="confirming = true">继续</button>
+		<button data-test="merge-continue" type="button" :disabled="!selected || loading" @click="prepareConfirmation">继续</button>
       </template>
 
       <template v-else-if="!successMessage">
-        <p>审核通过后，当前条目将并入目标条目</p>
+		<p>确认后，当前条目将并入目标条目</p>
         <strong>{{ selected?.label }}</strong>
+		<ul v-if="entity === 'album' && albumPreview?.matches.length" class="merge-matches">
+		  <li v-for="match in albumPreview.matches" :key="match.source_song.id">
+			<span>{{ match.source_song.title }}</span><span>→</span><span>{{ match.target_song.title }}</span><small>{{ match.reason }}</small>
+		  </li>
+		</ul>
+		<p v-else-if="entity === 'album'">未匹配的曲目会移入保留专辑</p>
         <div class="merge-confirm-actions">
           <button type="button" :disabled="loading" @click="confirming = false">返回</button>
-          <button data-test="merge-confirm" type="button" :disabled="loading" @click="merge">提交审核</button>
+          <button data-test="merge-confirm" type="button" :disabled="loading" @click="merge">确认合并</button>
         </div>
       </template>
     </div>
@@ -163,4 +179,7 @@ async function merge() {
 .merge-target.is-selected { border-color: var(--a-color-text); }
 .merge-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .merge-error { color: var(--a-color-danger); }
+.merge-matches { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.merge-matches li { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: center; }
+.merge-matches small { grid-column: 1 / -1; color: var(--a-color-muted); }
 </style>

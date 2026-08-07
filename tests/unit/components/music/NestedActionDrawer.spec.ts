@@ -13,14 +13,18 @@ const mocks = vi.hoisted(() => ({
   },
   closeNestedAction: vi.fn(),
   refreshAlbum: vi.fn(),
+  refreshSong: vi.fn(),
 	  submitArtistRevision: vi.fn(),
 	  submitAlbumRevision: vi.fn(),
   listMusicArtists: vi.fn(),
   uploadMusicAsset: vi.fn(),
   listAlbumRevisions: vi.fn(),
   listArtistRevisions: vi.fn(),
+  listSongRevisions: vi.fn(),
   getAlbumRevision: vi.fn(),
+  getSongRevision: vi.fn(),
   revertAlbumRevision: vi.fn(),
+  revertSongRevision: vi.fn(),
   listAlbumDiscussions: vi.fn(),
   createAlbumDiscussion: vi.fn(),
   replyAlbumDiscussion: vi.fn(),
@@ -33,6 +37,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: mocks.drawerState,
     closeNestedAction: mocks.closeNestedAction,
     refreshAlbum: mocks.refreshAlbum,
+    refreshSong: mocks.refreshSong,
     isLayerShifted: () => true,
     isTopLayer: () => false,
   }),
@@ -52,8 +57,11 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
 	    submitAlbumRevision: mocks.submitAlbumRevision,
     listAlbumRevisions: mocks.listAlbumRevisions,
     listArtistRevisions: mocks.listArtistRevisions,
+    listSongRevisions: mocks.listSongRevisions,
     getAlbumRevision: mocks.getAlbumRevision,
+    getSongRevision: mocks.getSongRevision,
     revertAlbumRevision: mocks.revertAlbumRevision,
+    revertSongRevision: mocks.revertSongRevision,
     listAlbumDiscussions: mocks.listAlbumDiscussions,
     createAlbumDiscussion: mocks.createAlbumDiscussion,
     replyAlbumDiscussion: mocks.replyAlbumDiscussion,
@@ -122,14 +130,18 @@ describe('NestedActionDrawer.vue', () => {
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'history', nestedPayload: null }
     mocks.closeNestedAction.mockReset()
     mocks.refreshAlbum.mockReset()
+    mocks.refreshSong.mockReset()
 	    mocks.submitArtistRevision.mockReset()
 	    mocks.submitAlbumRevision.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.listAlbumRevisions.mockReset()
     mocks.listArtistRevisions.mockReset()
+    mocks.listSongRevisions.mockReset()
     mocks.getAlbumRevision.mockReset()
+    mocks.getSongRevision.mockReset()
     mocks.revertAlbumRevision.mockReset()
+    mocks.revertSongRevision.mockReset()
     mocks.listAlbumDiscussions.mockReset()
     mocks.createAlbumDiscussion.mockReset()
     mocks.replyAlbumDiscussion.mockReset()
@@ -151,8 +163,11 @@ describe('NestedActionDrawer.vue', () => {
 	    mocks.submitAlbumRevision.mockResolvedValue(buildRevision())
     mocks.listAlbumRevisions.mockResolvedValue([])
     mocks.listArtistRevisions.mockResolvedValue([])
+    mocks.listSongRevisions.mockResolvedValue([])
     mocks.getAlbumRevision.mockResolvedValue(buildRevision())
+    mocks.getSongRevision.mockResolvedValue(buildRevision({ content_type: 'song', content_snapshot: { title: 'Song' } }))
     mocks.revertAlbumRevision.mockResolvedValue(buildRevision({ is_current: true, version_number: 1 }))
+    mocks.revertSongRevision.mockResolvedValue(buildRevision({ content_type: 'song', is_current: true, version_number: 1 }))
     mocks.listAlbumDiscussions.mockResolvedValue([])
     mocks.createAlbumDiscussion.mockResolvedValue(buildDiscussion())
     mocks.replyAlbumDiscussion.mockResolvedValue(buildDiscussion({ id: 'discussion-2', parent_id: 'discussion-1', can_delete: true }))
@@ -326,6 +341,32 @@ describe('NestedActionDrawer.vue', () => {
     expect(mocks.refreshAlbum).toHaveBeenCalled()
     expect(mocks.listAlbumRevisions).toHaveBeenCalledTimes(2)
     expect(wrapper.text()).toContain('已回滚到版本 v1')
+  })
+
+  it('loads and reverts song history for any logged-in user', async () => {
+    const revision = buildRevision({
+      content_type: 'song',
+      content_id: 'song-1',
+      version_number: 1,
+      previous_revision_id: null,
+      content_snapshot: { title: 'Original Song' },
+    })
+    mocks.drawerState.value = {
+      artistId: null,
+      albumId: null,
+      nestedAction: 'song_history',
+      nestedPayload: { songId: 'song-1' },
+    }
+    mocks.listSongRevisions.mockResolvedValue([revision])
+    const wrapper = mountDrawer()
+    await flushPromises()
+
+    expect(mocks.listSongRevisions).toHaveBeenCalledWith('song-1')
+    await wrapper.get('[data-test="history-revert-button-1"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.revertSongRevision).toHaveBeenCalledWith('song-1', 1, '回滚到版本 v1')
+    expect(mocks.refreshSong).toHaveBeenCalled()
   })
 
   it('loads album discussions and allows creating a new root discussion', async () => {

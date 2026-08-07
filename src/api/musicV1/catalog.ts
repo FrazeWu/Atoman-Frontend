@@ -19,11 +19,10 @@ import type {
   CreateMusicPlaylistInput,
   MusicAlbumBookmark,
   MusicAlbumListItem,
+	MusicAlbumMergePreview,
   MusicArtistBookmark,
   MusicArtistInput,
   MusicArtistListItem,
-  MusicBrowseMode,
-  MusicDiscoverItem,
   MusicDiscussion,
   MusicEditFilters,
   MusicEditRequest,
@@ -42,6 +41,7 @@ import type {
   MusicRevisionSummary,
   MusicSongBookmark,
   MusicSearchResults,
+  MusicSearchKind,
   MusicSongDetail,
   MusicSongListItem,
   MusicSongLyrics,
@@ -79,16 +79,28 @@ export async function searchMusicSongs(
   );
 }
 
-export async function searchMusic(query: string): Promise<MusicSearchResults> {
+export async function searchMusic(query: string, options: { type?: MusicSearchKind; page?: number; page_size?: number; signal?: AbortSignal } = {}): Promise<MusicSearchResults> {
   return apiGet<MusicSearchResults>(
-    `${musicV1Endpoints.search()}${queryString({ q: query })}`,
+    `${musicV1Endpoints.search()}${queryString({ q: query, type: options.type, page: options.page, page_size: options.page_size })}`,
+    { signal: options.signal },
   );
+}
+
+export async function recordMusicSearchInteraction(input: { query: string; entity_type: MusicSearchKind; entity_id: string }): Promise<void> {
+  await apiPostJson<void>(musicV1Endpoints.searchInteractions(), input)
 }
 
 export async function getMusicSongDetail(
   songId: string,
 ): Promise<MusicSongDetail> {
   return apiGet<MusicSongDetail>(musicV1Endpoints.songDetail(songId));
+}
+
+export async function queueMusicSongAudioReplacement(songId: string, input: { audio_url: string; source_key?: string }) {
+  return apiPostJson<{ id: string; song_id: string; status: string }>(
+    musicV1Endpoints.songAudioReplacements(songId),
+    input,
+  )
 }
 
 export async function addMusicSongToLater(
@@ -277,6 +289,27 @@ export async function getMusicAlbum(
   );
 }
 
+export async function previewMusicAlbumMerge(targetAlbumId: string, sourceAlbumId: string) {
+  return apiPostJson<MusicAlbumMergePreview>(musicV1Endpoints.albumMergePreview(targetAlbumId), {
+    source_album_id: sourceAlbumId,
+  })
+}
+
+export async function mergeMusicAlbums(targetAlbumId: string, sourceAlbumId: string, matches: MusicAlbumMergePreview['matches']) {
+  return apiPostJson<{ merged: boolean; redirect_to: string }>(musicV1Endpoints.albumMerge(targetAlbumId), {
+    source_album_id: sourceAlbumId,
+    confirmed: true,
+    song_matches: matches.map(match => ({
+      source_song_id: match.source_song.id,
+      target_song_id: match.target_song.id,
+    })),
+  })
+}
+
+export async function mergeMusicArtists(targetArtistId: string, sourceArtistId: string) {
+  return apiPostJson<{ message: string }>(musicV1Endpoints.artistMerge(targetArtistId), { source_id: sourceArtistId })
+}
+
 export async function createMusicPlaylist(
   input: CreateMusicPlaylistInput,
 ): Promise<MusicPlaylistDetail> {
@@ -374,8 +407,8 @@ export async function clearMusicListeningHistory(): Promise<void> {
 }
 
 export async function listMusicLibrary<T>(
-  kind: 'song' | 'album' | 'artist' | 'playlist',
-  filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {},
+  kind: 'song' | 'album' | 'artist' | 'playlist' | 'later',
+  filters: Pick<MusicListFilters, 'q' | 'sort' | 'page' | 'page_size'> = {},
 ): Promise<MusicListResponse<T>> {
   const response = await apiGetEnvelope<T[], PaginationMeta>(
     `${musicV1Endpoints.library()}${queryString({ kind, ...filters })}`,
@@ -383,8 +416,8 @@ export async function listMusicLibrary<T>(
   return listResponseWithPaginationFallback(response, filters)
 }
 
-export async function getMusicHome(): Promise<MusicHome> {
-  return apiGet<MusicHome>(musicV1Endpoints.home());
+export async function getMusicHome(filters: { page?: number; page_size?: number } = {}): Promise<MusicHome> {
+  return apiGet<MusicHome>(`${musicV1Endpoints.home()}${queryString(filters)}`);
 }
 
 export async function getMusicSongLyrics(
@@ -493,6 +526,24 @@ export async function listArtistRevisions(
   return response.data;
 }
 
+export async function listSongRevisions(
+  songId: string,
+): Promise<MusicRevisionSummary[]> {
+  const response = await apiGetEnvelope<MusicRevisionSummary[]>(
+    musicV1Endpoints.songRevisions(songId),
+  );
+  return response.data;
+}
+
+export async function getSongRevision(
+  songId: string,
+  version: number,
+): Promise<MusicRevisionSummary> {
+  return apiGet<MusicRevisionSummary>(
+    musicV1Endpoints.songRevision(songId, version),
+  );
+}
+
 export async function getArtistRevision(
   artistId: string,
   version: number,
@@ -521,6 +572,17 @@ export async function revertAlbumRevision(
     {
       edit_summary: editSummary,
     },
+  );
+}
+
+export async function revertSongRevision(
+  songId: string,
+  version: number,
+  editSummary: string,
+): Promise<MusicRevisionSummary> {
+  return apiPostJson<MusicRevisionSummary>(
+    musicV1Endpoints.songRevert(songId, version),
+    { edit_summary: editSummary },
   );
 }
 
@@ -610,12 +672,6 @@ export async function listRecommendedAlbums(mode: MusicRecommendationMode) {
   );
 }
 
-export async function listMusicDiscoverFeed(mode?: MusicBrowseMode) {
-  return apiGetEnvelope<MusicDiscoverItem[], PaginationMeta>(
-    musicV1Endpoints.discover(mode),
-  );
-}
-
 export async function listRecommendedArtists(mode: MusicRecommendationMode) {
   return apiGetEnvelope<MusicRecommendationItem[]>(
     musicV1Endpoints.recommendArtists(mode),
@@ -648,30 +704,6 @@ export async function createMusicArtist(
   input: MusicArtistInput,
 ): Promise<MusicArtistListItem> {
   return apiPostJson<MusicArtistListItem>(musicV1Endpoints.artists(), input);
-}
-
-export async function mergeMusicArtists(
-  targetArtistId: string,
-  sourceArtistId: string,
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(
-    musicV1Endpoints.artistMerge(targetArtistId),
-    {
-      source_id: sourceArtistId,
-    },
-  );
-}
-
-export async function mergeMusicAlbums(
-  targetAlbumId: string,
-  sourceAlbumId: string,
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(
-    musicV1Endpoints.albumMerge(targetAlbumId),
-    {
-      source_album_id: sourceAlbumId,
-    },
-  );
 }
 
 export async function submitMusicEdit(

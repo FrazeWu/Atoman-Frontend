@@ -1,4 +1,4 @@
-import type { ApiList, UploadAsset } from "../types";
+import type { ApiList, PaginationMeta, UploadAsset } from "../types";
 
 export type MusicEntryStatus =
   "open" | "disputed" | "confirmed" | "protected" | "closed";
@@ -19,7 +19,6 @@ export type MusicEditType =
   | "delete_artist"
   | "create_album"
   | "update_album"
-  | "merge_album"
   | "delete_album"
   | "create_song"
   | "update_song"
@@ -92,9 +91,17 @@ export type MusicAlbumImportCommitArtist = {
 export type MusicAlbumArtistRole =
   | "primary"
   | "featured"
-  | "producer"
+  | "vocals"
+  | "backing_vocals"
   | "writer"
   | "composer"
+  | "arranger"
+  | "producer"
+  | "vocal_producer"
+  | "recording_engineer"
+  | "mixing_engineer"
+  | "mastering_engineer"
+  | "remixer"
   | "custom";
 
 export type MusicAlbumArtistRoleInput = {
@@ -396,9 +403,9 @@ export type MusicAlbumListItem = {
   release_date?: string;
   cover_url?: string;
   description?: string;
+  reason?: string;
+  section?: string;
   album_type?: string;
-  edition_type?: 'original' | 'deluxe' | 'reissue' | 'regional' | 'live';
-  canonical_album_id?: string | null;
   hot_score?: number;
   play_count?: number;
   bookmark_count?: number;
@@ -406,6 +413,7 @@ export type MusicAlbumListItem = {
     id: string;
     title: string;
     track_number?: number;
+    disc_number?: number;
     audio_url?: string;
     cover_url?: string;
     lyrics?: string;
@@ -426,16 +434,34 @@ export type MusicAlbumListItem = {
     playback_bitrate_kbps?: number;
     playback_sample_rate_hz?: number;
     playback_channels?: number;
+    artist_credits?: Array<{
+      song_id: string;
+      artist_id: string;
+      artist?: MusicArtistListItem;
+      role: MusicAlbumArtistRole;
+      custom_role?: string;
+      position: number;
+    }>;
   }>;
-  other_versions?: MusicAlbumListItem[];
   entry_status: MusicEntryStatus;
   redirect_to?: string | null;
+};
+
+export type MusicAlbumMergePreview = {
+  source_album: MusicAlbumListItem;
+  target_album: MusicAlbumListItem;
+  matches: Array<{
+    source_song: MusicSongListItem;
+    target_song: MusicSongListItem;
+    reason: string;
+  }>;
 };
 
 export type MusicSongListItem = {
   id: string;
   title: string;
   track_number?: number;
+  disc_number?: number;
   audio_url?: string;
   cover_url?: string;
   lyrics?: string;
@@ -451,11 +477,19 @@ export type MusicSearchResults = {
   albums: MusicAlbumListItem[];
   artists: MusicArtistListItem[];
   playlists: MusicPlaylistSummary[];
+  meta: {
+    page: number;
+    page_size: number;
+    totals: Record<MusicSearchKind, number>;
+    has_more: Record<MusicSearchKind, boolean>;
+  };
 };
+
+export type MusicSearchKind = "song" | "album" | "artist" | "playlist";
 
 export type MusicSongDetail = {
   song: MusicSongListItem;
-  artists: Array<{ id: string; name: string; role: string }>;
+  artists: Array<{ id: string; name: string; role: MusicAlbumArtistRole; custom_role?: string; position: number }>;
   previous?: MusicSongListItem;
   next?: MusicSongListItem;
   bookmarked: boolean;
@@ -471,10 +505,14 @@ export type MusicListeningHistory = {
 
 export type MusicHome = {
   personalized: boolean;
+  continue_listening?: MusicListeningHistory;
   recently_played: MusicListeningHistory[];
   for_you: MusicAlbumListItem[];
   for_you_reason?: string;
   sections: Array<{ key: string; title: string; albums: MusicAlbumListItem[] }>;
+  discover: MusicDiscoverItem[];
+  discover_has_more: boolean;
+  discover_meta: PaginationMeta;
 };
 
 export type MusicPlaylistSummary = {
@@ -490,6 +528,8 @@ export type MusicPlaylistSummary = {
   kind?: "user" | "favorite" | "later";
   play_count?: number;
   bookmark_count?: number;
+  reason?: string;
+  section?: string;
 };
 
 export type MusicPlaylistDetail = MusicPlaylistSummary & {
@@ -554,8 +594,11 @@ export type MusicAlbumTrackEditInput = {
   id?: string;
   title: string;
   track_number: number;
+  disc_number?: number;
   lyrics?: string;
   audio_url?: string;
+  cover_url?: string;
+  artist_credits?: MusicAlbumArtistCreditInput[];
   removed?: boolean;
 };
 
@@ -597,12 +640,16 @@ export type MusicRecommendationItem = {
   score_label?: string;
   play_count?: number;
   bookmark_count?: number;
+  reason?: string;
+  section?: string;
 };
 
 export type MusicDiscoverItemType = "album" | "artist" | "playlist";
 
 export type MusicDiscoverAlbumItem = MusicRecommendationItem & {
   type: "album";
+  section?: string;
+  reason?: string;
   cover_url?: string;
   cover_s3_key?: string;
   release_date?: string;
@@ -612,6 +659,8 @@ export type MusicDiscoverAlbumItem = MusicRecommendationItem & {
 
 export type MusicDiscoverArtistItem = MusicArtistListItem & {
   type: "artist";
+  section?: string;
+  reason?: string;
   title?: string;
   summary?: string;
   target_path: string;
@@ -619,6 +668,8 @@ export type MusicDiscoverArtistItem = MusicArtistListItem & {
 
 export type MusicDiscoverPlaylistItem = {
   type: "playlist";
+  section?: string;
+  reason?: string;
   id: string;
   title: string;
   description?: string;
@@ -673,6 +724,16 @@ export type AlbumEditDraft = {
   tracks?: MusicAlbumTrackEditInput[];
   reason: string;
   sources: MusicSource[];
+};
+
+export type SongEditDraft = {
+  title?: string;
+  track_number?: number;
+  disc_number?: number;
+  lyrics?: string;
+  cover?: UploadAsset | null;
+  artist_credits?: MusicAlbumArtistCreditInput[];
+  reason: string;
 };
 
 export type ArtistEditDraft = {

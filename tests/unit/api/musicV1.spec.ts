@@ -14,7 +14,7 @@ import {
   getMusicArtist,
   listMusicArtists,
   listMusicAlbums,
-  listMusicDiscoverFeed,
+  getMusicHome,
   listMusicEdits,
   createAlbumDiscussion,
   deleteAlbumDiscussion,
@@ -234,25 +234,31 @@ describe('music v1 adapter', () => {
     expect(musicV1Endpoints.artist('artist_uuid')).toBe('https://api.atoman.org/api/v1/music/artists/artist_uuid')
   })
 
-  it('requests the discover feed from GET /api/v1/music/discover and returns the list payload', async () => {
+  it('requests music home from GET /api/v1/music/home and returns its discover payload', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       JSON.stringify({
-        data: [
-          { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
-          { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
-        ],
-        meta: { page: 1, page_size: 20, total: 2, has_more: false },
+        data: {
+          personalized: false,
+          recently_played: [],
+          for_you: [],
+          sections: [],
+          discover: [
+            { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
+            { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
+          ],
+          discover_has_more: false,
+        },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
 
-    const result = await listMusicDiscoverFeed()
+    const result = await getMusicHome()
 
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/discover', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/music/home', {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
-    expect(result.data).toEqual([
+    expect(result.discover).toEqual([
       { type: 'album', id: 'album-1', title: 'Album', target_path: '/music?album=album-1' },
       { type: 'playlist', id: 'playlist-1', title: 'Playlist', song_count: 8, target_path: '/music/playlists/playlist-1' },
     ])

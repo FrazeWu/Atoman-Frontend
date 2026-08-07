@@ -48,6 +48,31 @@ export function albumContributorsFromResponse(album: MusicAlbumListItem): MusicC
   return [...contributors.values()]
 }
 
+export function songContributorsFromCredits(
+  credits: NonNullable<NonNullable<MusicAlbumListItem['songs']>[number]['artist_credits']>,
+): MusicCreationAlbumContributorDraft[] {
+  const contributors = new Map<string, MusicCreationAlbumContributorDraft>()
+  for (const credit of [...credits].sort((left, right) => left.position - right.position)) {
+    if (!credit.artist) continue
+    const current = contributors.get(credit.artist_id) ?? {
+      id: `song-contributor-${credit.artist_id}`,
+      artistId: credit.artist_id,
+      name: credit.artist.name,
+      avatarUrl: credit.artist.image_url ?? '',
+      kind: credit.artist.artist_form === 'group' ? 'group' : 'person',
+      locked: false,
+      roles: [],
+    }
+    current.roles.push({
+      id: `song-role-${credit.artist_id}-${credit.role}-${credit.custom_role ?? ''}`,
+      role: credit.role,
+      label: credit.custom_role ?? '',
+    })
+    contributors.set(credit.artist_id, current)
+  }
+  return [...contributors.values()]
+}
+
 export function albumArtistCreditsFromContributors(
   contributors: MusicCreationAlbumContributorDraft[],
 ): MusicAlbumArtistCreditInput[] {
@@ -78,8 +103,16 @@ export function hasValidAlbumContributors(contributors: MusicCreationAlbumContri
 
 export const albumArtistRoleLabels: Record<Exclude<MusicAlbumArtistRole, 'custom'>, string> = {
   primary: '主艺术家',
-  featured: '客席',
-  producer: '制作人',
-  writer: '词作者',
+  featured: '合作艺术家',
+  vocals: '演唱',
+  backing_vocals: '和声',
+  writer: '作词',
   composer: '作曲',
+  arranger: '编曲',
+  producer: '制作人',
+  vocal_producer: '人声制作',
+  recording_engineer: '录音',
+  mixing_engineer: '混音',
+  mastering_engineer: '母带',
+  remixer: '重混',
 }

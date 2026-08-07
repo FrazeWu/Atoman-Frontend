@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock3, Heart, ListPlus, Play, StepForward } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, StepForward } from 'lucide-vue-next'
 import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
 import PToast from '@/components/ui/PToast.vue'
@@ -14,7 +14,7 @@ import { reportError } from '@/utils/logger'
 
 const route = useRoute()
 const player = usePlayerStore()
-const { openAlbum, openArtist } = useMusicDrawers()
+const { state, openAlbum, openArtist, openMusicEditor, openNestedAction } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
 const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const detail = ref<MusicSongDetail | null>(null)
@@ -43,7 +43,9 @@ function playable(song: MusicSongListItem): Song {
 const roleGroups = computed(() => {
   const groups = new Map<string, Array<{ id: string; name: string }>>()
   for (const artist of detail.value?.artists ?? []) {
-    const role = artist.role || 'primary'
+    const role = artist.role === 'custom'
+      ? artist.custom_role?.trim() || '自定义'
+      : artist.role || 'primary'
     groups.set(role, [...(groups.get(role) ?? []), artist])
   }
   return [...groups.entries()]
@@ -94,6 +96,16 @@ async function addToLater() {
   }
 }
 
+function editSong() {
+  if (!detail.value || !requireLogin()) return
+  openMusicEditor({ entity: 'song', mode: 'edit', id: String(detail.value.song.id) })
+}
+
+function openSongHistory() {
+  if (!detail.value || !requireLogin()) return
+  openNestedAction('song_history', { songId: String(detail.value.song.id) })
+}
+
 async function load(songId: unknown) {
   if (typeof songId !== 'string' || !songId) return
   loading.value = true
@@ -109,7 +121,7 @@ async function load(songId: unknown) {
   }
 }
 
-watch(() => route.params.songId, load, { immediate: true })
+watch([() => route.params.songId, () => state.value.songRefreshToken], ([songId]) => load(songId), { immediate: true })
 </script>
 
 <template>
@@ -132,6 +144,8 @@ watch(() => route.params.songId, load, { immediate: true })
           <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" />下一首</PButton>
           <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" />加入队列</PButton>
           <PButton variant="secondary" :loading="actionBusy === 'later'" @click="addToLater"><Clock3 :size="16" aria-hidden="true" />稍后播放</PButton>
+          <PButton variant="secondary" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
+          <PButton variant="secondary" @click="openSongHistory"><History :size="16" aria-hidden="true" />版本记录</PButton>
         </div>
       </div>
       <section v-if="detail.song.lyrics" class="song-detail__lyrics">

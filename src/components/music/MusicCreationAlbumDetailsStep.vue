@@ -34,11 +34,26 @@ const albumTypeOptions = [
   { label: '专辑', value: 'album' },
   { label: 'EP', value: 'ep' },
   { label: '单曲', value: 'single' },
+	{ label: '混音带', value: 'mixtape' },
   { label: '精选集', value: 'compilation' },
-  { label: '现场专辑', value: 'live' },
   { label: '原声带', value: 'soundtrack' },
+	{ label: '现场专辑', value: 'live' },
+	{ label: '重混专辑', value: 'remix' },
   { label: 'Demo', value: 'demo' },
+	{ label: '自定义', value: 'custom' },
 ]
+const knownAlbumTypes = albumTypeOptions.filter(item => item.value !== 'custom').map(item => item.value)
+const albumTypeSelection = computed<string>({
+	get: () => {
+		const value = albumDetailsDraft.value?.type ?? ''
+		return knownAlbumTypes.includes(value) ? value : value ? 'custom' : ''
+	},
+	set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value },
+})
+const customAlbumType = computed<string>({
+	get: () => albumDetailsDraft.value?.type === 'custom' ? '' : knownAlbumTypes.includes(albumDetailsDraft.value?.type ?? '') ? '' : albumDetailsDraft.value?.type ?? '',
+	set: (value: string) => { if (albumDetailsDraft.value) albumDetailsDraft.value.type = value },
+})
 const pendingCoverCrop = ref<{
   kind: 'manual' | 'imported'
   sourceFile?: File | null
@@ -562,10 +577,11 @@ onBeforeUnmount(() => {
 
             <div class="field-group" data-testid="album-details-field" data-field="type">
               <PSelect
-                v-model="albumDetailsDraft.type"
+				v-model="albumTypeSelection"
                 :label="requiredLabel('类型')"
                 :options="albumTypeOptions"
               />
+			  <PInput v-if="albumTypeSelection === 'custom'" v-model="customAlbumType" placeholder="输入专辑类型" />
               <input
                 v-model="albumDetailsDraft.type"
                 data-testid="album-details-type-input"

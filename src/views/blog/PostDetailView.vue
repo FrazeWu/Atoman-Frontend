@@ -31,6 +31,7 @@
         @toggle-academic="isAcademic = $event"
       />
 
+      <div :class="isAcademic ? 'a-page' : 'a-page-md'">
         <!-- Markdown content -->
         <div 
           class="prose-blog" 

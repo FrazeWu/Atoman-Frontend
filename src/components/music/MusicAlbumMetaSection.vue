@@ -17,6 +17,7 @@
 
       <div class="album-meta-card__field">
         <PSelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
+		<PInput v-if="albumTypeModel === 'custom'" v-model="customAlbumTypeModel" label="自定义类型" placeholder="输入专辑类型" />
       </div>
 
       <div class="album-meta-card__field album-meta-card__field--full">
@@ -39,7 +40,7 @@ const props = defineProps<{
 	contributors: MusicCreationAlbumContributorDraft[]
   album: string
   releaseDate: string
-  albumType?: 'single' | 'ep' | 'album'
+  albumType?: string
   description: string
 }>()
 
@@ -47,7 +48,7 @@ const emit = defineEmits<{
 	(e: 'update:contributors', value: MusicCreationAlbumContributorDraft[]): void
   (e: 'update:album', value: string): void
   (e: 'update:releaseDate', value: string): void
-  (e: 'update:albumType', value?: 'single' | 'ep' | 'album'): void
+  (e: 'update:albumType', value?: string): void
   (e: 'update:description', value: string): void
 }>()
 
@@ -61,15 +62,28 @@ const releaseDateModel = computed({
   set: (value) => emit('update:releaseDate', value),
 })
 
-const albumTypeOptions: Array<{ label: string; value: 'single' | 'ep' | 'album' }> = [
-  { label: 'Single', value: 'single' },
+const knownAlbumTypes = ['album', 'ep', 'single', 'mixtape', 'compilation', 'soundtrack', 'live', 'remix', 'demo']
+const albumTypeOptions = [
+  { label: '专辑', value: 'album' },
   { label: 'EP', value: 'ep' },
-  { label: 'Album', value: 'album' },
+  { label: '单曲', value: 'single' },
+  { label: '混音带', value: 'mixtape' },
+  { label: '精选集', value: 'compilation' },
+  { label: '原声带', value: 'soundtrack' },
+  { label: '现场专辑', value: 'live' },
+  { label: '重混专辑', value: 'remix' },
+  { label: 'Demo', value: 'demo' },
+  { label: '自定义', value: 'custom' },
 ]
 
 const albumTypeModel = computed({
-  get: () => props.albumType ?? '',
-  set: (value) => emit('update:albumType', value ? value as 'single' | 'ep' | 'album' : undefined),
+  get: () => knownAlbumTypes.includes(props.albumType ?? '') ? props.albumType : props.albumType ? 'custom' : '',
+  set: (value) => emit('update:albumType', value === 'custom' ? 'custom' : value || undefined),
+})
+
+const customAlbumTypeModel = computed({
+  get: () => props.albumType === 'custom' ? '' : knownAlbumTypes.includes(props.albumType ?? '') ? '' : props.albumType ?? '',
+  set: (value) => emit('update:albumType', value),
 })
 
 const descriptionModel = computed({

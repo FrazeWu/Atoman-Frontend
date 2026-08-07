@@ -19,7 +19,7 @@ describe('music loading boundaries', () => {
   it('keeps the music home view as a thin shell and leaves album loading to DiscoverView', () => {
     expect(musicAlbumsSource).not.toContain('player.fetchSongs()')
     expect(musicAlbumsSource).toContain('<DiscoverView page-title="专辑" content-mode="albums" />')
-    expect(musicDiscoverSource).toContain('listMusicDiscoverFeed')
+    expect(musicDiscoverSource).toContain('getMusicHome')
     expect(musicDiscoverSource).toContain('listMusicAlbums')
   })
 

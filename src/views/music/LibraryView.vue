@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { ListMusic, Music2, Disc3, Users } from 'lucide-vue-next'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { Clock3, ListMusic, Music2, Disc3, Users } from 'lucide-vue-next'
 import {
   listMusicLibrary,
   type MusicAlbumBookmark,
@@ -19,10 +19,12 @@ import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
-type LibraryKind = 'song' | 'album' | 'artist' | 'playlist'
+type LibraryKind = 'song' | 'album' | 'artist' | 'playlist' | 'later'
+type LibrarySongEnvelope = MusicSongBookmark | { song?: MusicSongListItem }
 const kind = ref<LibraryKind>('song')
-const sort = ref<'latest' | 'popular'>('latest')
+const sort = ref<'latest' | 'popular' | 'name'>('latest')
 const query = ref('')
+const requestedQuery = ref('')
 const loading = ref(false)
 const loadingMore = ref(false)
 const error = ref('')
@@ -39,17 +41,9 @@ const requests = useRequestGeneration()
 const options = [
   { label: '歌曲', value: 'song' }, { label: '专辑', value: 'album' },
   { label: '艺人', value: 'artist' }, { label: '歌单', value: 'playlist' },
+  { label: '稍后播放', value: 'later' },
 ]
-const items = computed(() => ({ song: songs.value, album: albums.value, artist: artists.value, playlist: playlists.value })[kind.value])
-const filteredItems = computed(() => {
-  const keyword = query.value.trim().toLocaleLowerCase()
-  if (!keyword) return items.value
-  return items.value.filter(item => {
-    if ('title' in item) return `${item.title} ${'artists' in item ? item.artists?.map(artist => artist.name).join(' ') || '' : ''}`.toLocaleLowerCase().includes(keyword)
-    if ('name' in item) return `${item.name} ${'legal_name' in item ? item.legal_name || '' : ''}`.toLocaleLowerCase().includes(keyword)
-    return false
-  })
-})
+let queryTimer: ReturnType<typeof setTimeout> | undefined
 
 function playable(song: MusicSongListItem): Song {
   return { id: song.id, title: song.title, artist: song.artists?.map(item => item.name).join(' / ') || '未知艺术家', album: song.album?.title || '', album_id: song.album?.id || '', year: 0, release_date: '', lyrics: song.lyrics || '', audio_url: song.audio_url || '', cover_url: song.cover_url || song.album?.cover_url || '', status: 'approved' }
@@ -59,6 +53,7 @@ async function load(nextPage = 1) {
   if (nextPage > 1 && (loading.value || loadingMore.value || !hasMore.value)) return
   const requestedKind = kind.value
   const requestedSort = sort.value
+  const keyword = requestedQuery.value
   const { isCurrent } = requests.beginRequest()
   if (nextPage > 1) {
     loadingMore.value = true
@@ -70,26 +65,26 @@ async function load(nextPage = 1) {
   }
   error.value = ''
   try {
-    if (requestedKind === 'song') {
-      const response = await listMusicLibrary<MusicSongBookmark>('song', { sort: requestedSort, page: nextPage, page_size: 24 })
+    if (requestedKind === 'song' || requestedKind === 'later') {
+      const response = await listMusicLibrary<LibrarySongEnvelope>(requestedKind, { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.song).filter((song): song is MusicSongListItem => Boolean(song))
       if (!isCurrent()) return
       songs.value = nextPage === 1 ? rows : [...songs.value, ...rows]
       hasMore.value = response.meta.has_more
     } else if (requestedKind === 'album') {
-      const response = await listMusicLibrary<MusicAlbumBookmark>('album', { sort: requestedSort, page: nextPage, page_size: 24 })
+      const response = await listMusicLibrary<MusicAlbumBookmark>('album', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.album).filter((album): album is MusicAlbumListItem => Boolean(album))
       if (!isCurrent()) return
       albums.value = nextPage === 1 ? rows : [...albums.value, ...rows]
       hasMore.value = response.meta.has_more
     } else if (requestedKind === 'artist') {
-      const response = await listMusicLibrary<MusicArtistBookmark>('artist', { sort: requestedSort, page: nextPage, page_size: 24 })
+      const response = await listMusicLibrary<MusicArtistBookmark>('artist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.artist).filter((artist): artist is MusicArtistListItem => Boolean(artist))
       if (!isCurrent()) return
       artists.value = nextPage === 1 ? rows : [...artists.value, ...rows]
       hasMore.value = response.meta.has_more
     } else {
-      const response = await listMusicLibrary<MusicPlaylistBookmark>('playlist', { sort: requestedSort, page: nextPage, page_size: 24 })
+      const response = await listMusicLibrary<MusicPlaylistBookmark>('playlist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.playlist).filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
       if (!isCurrent()) return
       playlists.value = nextPage === 1 ? rows : [...playlists.value, ...rows]
@@ -99,22 +94,30 @@ async function load(nextPage = 1) {
   } catch { if (isCurrent()) error.value = '收藏加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
 }
 watch([kind, sort], () => { void load() }, { flush: 'sync' }); onMounted(() => { void load() })
+watch(query, value => {
+  clearTimeout(queryTimer)
+  queryTimer = setTimeout(() => {
+    requestedQuery.value = value.trim()
+    void load()
+  }, 250)
+})
+onUnmounted(() => clearTimeout(queryTimer))
 </script>
 
 <template>
   <main class="music-library">
     <PPageHeader title="收藏" mb="0"><template #action><PSegmentedControl v-model="kind" :options="options" /></template></PPageHeader>
-    <div class="music-library__sort"><button :class="{ active: sort === 'latest' }" @click="sort = 'latest'">最近收藏</button><button :class="{ active: sort === 'popular' }" @click="sort = 'popular'">热度</button></div>
+    <div class="music-library__sort"><button :class="{ active: sort === 'latest' }" @click="sort = 'latest'">最近收藏</button><button :class="{ active: sort === 'name' }" @click="sort = 'name'">名称</button><button :class="{ active: sort === 'popular' }" @click="sort = 'popular'">热度</button></div>
     <input v-model="query" class="music-library__search" type="search" placeholder="搜索收藏" aria-label="搜索收藏">
-    <p v-if="loading" class="state">正在加载</p><p v-else-if="error" class="state error">{{ error }}</p><p v-else-if="!filteredItems.length" class="state">这里还没有内容</p>
+    <p v-if="loading" class="state">正在加载</p><p v-else-if="error" class="state error">{{ error }}</p><p v-else-if="kind === 'album' ? !albums.length : kind === 'artist' ? !artists.length : kind === 'playlist' ? !playlists.length : !songs.length" class="state">这里还没有内容</p>
     <div v-else class="music-library__list">
-      <div v-for="song in filteredItems as MusicSongListItem[]" v-if="kind === 'song'" :key="song.id" class="music-library__row music-library__song-row">
-        <button type="button" class="music-library__play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))"><Music2 :size="18"/></button>
+      <div v-for="song in songs" v-if="kind === 'song' || kind === 'later'" :key="song.id" class="music-library__row music-library__song-row">
+        <button type="button" class="music-library__play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))"><Clock3 v-if="kind === 'later'" :size="18"/><Music2 v-else :size="18"/></button>
         <span><RouterLink :to="`/music/song/${song.id}`"><strong>{{ song.title }}</strong></RouterLink><small><template v-if="song.artists?.length"><template v-for="(artist, index) in song.artists" :key="artist.id"><span v-if="index" aria-hidden="true"> / </span><button type="button" :data-testid="`library-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button></template></template><span v-else>未知艺术家</span><template v-if="song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`library-song-album-${song.album.id}`" @click="openAlbum(String(song.album.id))">{{ song.album.title }}</button></template></small></span>
       </div>
-      <button v-for="album in filteredItems as MusicAlbumListItem[]" v-else-if="kind === 'album'" :key="album.id" class="music-library__row" @click="openAlbum(album.id)"><Disc3 :size="18"/><span><strong>{{ album.title }}</strong><small>{{ album.artists?.map(item => item.name).join(' / ') }}</small></span></button>
-      <button v-for="artist in filteredItems as MusicArtistListItem[]" v-else-if="kind === 'artist'" :key="artist.id" class="music-library__row" @click="openArtist(artist.id)"><Users :size="18"/><span><strong>{{ artist.name }}</strong><small>{{ artist.legal_name || artist.bio }}</small></span></button>
-      <button v-for="playlist in filteredItems as MusicPlaylistSummary[]" v-else :key="playlist.id" class="music-library__row" @click="openPlaylist(playlist.id)"><ListMusic :size="18"/><span><strong>{{ playlist.name }}</strong><small>{{ playlist.song_count }} 首</small></span></button>
+      <button v-for="album in albums" v-else-if="kind === 'album'" :key="album.id" class="music-library__row" @click="openAlbum(album.id)"><Disc3 :size="18"/><span><strong>{{ album.title }}</strong><small>{{ album.artists?.map(item => item.name).join(' / ') }}</small></span></button>
+      <button v-for="artist in artists" v-else-if="kind === 'artist'" :key="artist.id" class="music-library__row" @click="openArtist(artist.id)"><Users :size="18"/><span><strong>{{ artist.name }}</strong><small>{{ artist.legal_name || artist.bio }}</small></span></button>
+      <button v-for="playlist in playlists" v-else :key="playlist.id" class="music-library__row" @click="openPlaylist(playlist.id)"><ListMusic :size="18"/><span><strong>{{ playlist.name }}</strong><small>{{ playlist.song_count }} 首</small></span></button>
     </div>
     <button v-if="hasMore && !loading" type="button" class="music-library__more" :disabled="loading || loadingMore" @click="load(page + 1)">{{ loadingMore ? '正在加载' : '加载更多' }}</button>
   </main>

@@ -4,11 +4,16 @@ import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 export type MusicTrackDraft = {
   id: string
   trackNumber: string
+  discNumber: string
   title: string
   lyrics?: string
   audioUrl?: string
   audioAsset?: UploadAsset | null
+  pendingAudioAsset?: UploadAsset | null
   file?: File | null
+  coverUrl?: string
+  coverFile?: File | null
+  contributors: MusicCreationAlbumContributorDraft[]
   songId?: string
   isExisting?: boolean
   removed?: boolean
@@ -24,7 +29,7 @@ export type MusicAlbumMetaDraft = {
 	contributors: MusicCreationAlbumContributorDraft[]
   album: string
   releaseDate: string
-  albumType?: 'single' | 'ep' | 'album'
+  albumType?: string
   description: string
 }
 

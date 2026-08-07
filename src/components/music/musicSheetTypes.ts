@@ -1,8 +1,8 @@
 import type { BaseSheetLayer } from '@/composables/useSheetStack'
 import type { MusicCreationFlowStep } from './musicCreationTypes'
 
-export type NestedActionType = 'revise' | 'history' | 'artist_history' | 'add_album' | 'add_artist' | 'discussion' | 'revise_artist' | 'merge_artist' | 'merge_album' | 'link_album' | null
-export type MusicEditorEntity = 'artist' | 'album'
+export type NestedActionType = 'revise' | 'history' | 'artist_history' | 'song_history' | 'add_album' | 'add_artist' | 'discussion' | 'revise_artist' | 'merge_artist' | 'merge_album' | 'link_album' | null
+export type MusicEditorEntity = 'artist' | 'album' | 'song'
 export type MusicEditorMode = 'create' | 'edit'
 
 export interface MusicEditorState {

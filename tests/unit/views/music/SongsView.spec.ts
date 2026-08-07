@@ -34,6 +34,7 @@ describe('SongsView', () => {
         album: { id: 'album-1', title: 'Album 1' },
       }],
       albums: [], artists: [], playlists: [],
+      meta: { page: 1, page_size: 20, totals: { song: 1, album: 0, artist: 0, playlist: 0 }, has_more: { song: false, album: false, artist: false, playlist: false } },
     })
   })
 
@@ -57,5 +58,27 @@ describe('SongsView', () => {
 
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+  })
+
+  it('aborts an obsolete search request when the query changes', async () => {
+    let firstSignal: AbortSignal | undefined
+    mocks.searchMusic.mockImplementation((keyword: string, options: { signal?: AbortSignal }) => {
+      if (keyword === 'First') {
+        firstSignal = options.signal
+        return new Promise((_resolve, reject) => options.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))))
+      }
+      return Promise.resolve({
+        songs: [], albums: [], artists: [], playlists: [],
+        meta: { page: 1, page_size: 20, totals: { song: 0, album: 0, artist: 0, playlist: 0 }, has_more: { song: false, album: false, artist: false, playlist: false } },
+      })
+    })
+    const wrapper = mount(SongsView, { global: { stubs: { RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' } } } })
+    await wrapper.get('input[type="search"]').setValue('First')
+    await vi.advanceTimersByTimeAsync(250)
+    await wrapper.get('input[type="search"]').setValue('Second')
+    expect(firstSignal?.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    expect(mocks.searchMusic).toHaveBeenLastCalledWith('Second', expect.objectContaining({ page: 1, page_size: 20 }))
   })
 })

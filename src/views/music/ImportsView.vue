@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   cancelMusicAlbumImportSession,
+  deleteMusicAlbumImportRecord,
   deleteMusicAlbumImportFile,
   getMusicAlbum,
   listMusicAlbumImports,
@@ -25,6 +26,8 @@ const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
+const page = ref(1)
+const hasMore = ref(false)
 const activeGroup = ref<MusicImportGroup>('in_progress')
 const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
@@ -89,11 +92,14 @@ function formatDate(isoString?: string): string {
   }
 }
 
-async function loadImports(silent = false) {
+async function loadImports(silent = false, nextPage = 1) {
   if (!silent) loading.value = true;
   errorMessage.value = "";
   try {
-    imports.value = await listMusicAlbumImports();
+    const response = await listMusicAlbumImports({ page: nextPage, page_size: 50 });
+    imports.value = nextPage === 1 ? response.data : uniqueMusicAlbumImports([...imports.value, ...response.data]);
+    page.value = nextPage
+    hasMore.value = response.meta.has_more
     const selected = albumImports.value.find((item) => item.importId === selectedId.value)
     if (selected) {
       activeGroup.value = musicImportGroupForStatus(selected.status)
@@ -106,6 +112,21 @@ async function loadImports(silent = false) {
     if (!silent) errorMessage.value = "导入记录加载失败";
   } finally {
     if (!silent) loading.value = false;
+  }
+}
+
+async function deleteRecord() {
+  if (!selectedImport.value) return
+  if (!window.confirm('确认删除这条导入记录？已发布的专辑和歌曲不会被删除。')) return
+  actionBusy.value = 'delete-record'
+  try {
+    await deleteMusicAlbumImportRecord(selectedImport.value.importId)
+    selectedId.value = null
+    await loadImports(true)
+  } catch {
+    errorMessage.value = '删除记录失败'
+  } finally {
+    actionBusy.value = null
   }
 }
 
@@ -375,6 +396,12 @@ async function continueImport() {
               :loading="actionBusy === 'repair'"
               @click="repairImport"
             >修复资料</PButton>
+            <PButton
+              v-if="['committed', 'canceled'].includes(selectedImport.status)"
+              variant="danger"
+              :loading="actionBusy === 'delete-record'"
+              @click="deleteRecord"
+            >删除记录</PButton>
           </div>
 
           <ul
@@ -427,6 +454,7 @@ async function continueImport() {
         </div>
       </section>
     </div>
+    <PButton v-if="hasMore" variant="secondary" @click="loadImports(false, page + 1)">加载更多</PButton>
   </div>
 </template>
 

@@ -1,8 +1,8 @@
 import { apiFetch } from '@/api/transport'
-import { apiDeleteJson, apiGet, apiPostJson, apiPostMultipart } from '../client'
+import { apiDeleteJson, apiGet, apiGetEnvelope, apiPostJson, apiPostMultipart } from '../client'
 import { configureApiXHR } from '../transport'
-import type { UploadAsset, UploadPurpose } from '../types'
-import { musicV1Endpoints } from './core'
+import type { PaginationMeta, UploadAsset, UploadPurpose } from '../types'
+import { listResponseWithPaginationFallback, musicV1Endpoints, queryString } from './core'
 import {
   normalizeMusicAlbumImport,
   type AlbumEditDraft,
@@ -14,8 +14,10 @@ import {
   type MusicAlbumImportFilePartUpload,
   type MusicAlbumImportMultipart,
   type MusicAlbumImportMultipartPart,
+	type MusicListResponse,
 	type MusicAlbumImportMultipartPartUpload,
 	type MusicRevisionSummary,
+  type SongEditDraft,
   type MusicAlbumTrackEditInput,
   type MusicEditRequest,
   type MusicSource,
@@ -98,6 +100,21 @@ export function submitAlbumRevision(albumId: string, draft: AlbumEditDraft): Pro
 	})
 }
 
+export function submitSongRevision(songId: string, draft: SongEditDraft): Promise<MusicRevisionSummary> {
+	return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.songRevisions(songId), {
+		base_revision: 0,
+		changes: {
+			...(draft.title !== undefined ? { title: draft.title } : {}),
+			...(draft.track_number !== undefined ? { track_number: draft.track_number } : {}),
+			...(draft.disc_number !== undefined ? { disc_number: draft.disc_number } : {}),
+			...(draft.lyrics !== undefined ? { lyrics: draft.lyrics } : {}),
+			...(draft.cover ? { cover_url: draft.cover.url } : {}),
+			...(draft.artist_credits !== undefined ? { artist_credits: draft.artist_credits } : {}),
+		},
+		edit_summary: draft.reason,
+	})
+}
+
 export function buildDeleteAlbumEdit(albumId: string, reason: string): MusicEditRequest {
   return {
     type: 'delete_album',
@@ -138,9 +155,12 @@ export async function getMusicAlbumImport(importId: string): Promise<MusicAlbumI
   return normalizeMusicAlbumImport(await apiGet<MusicAlbumImport>(musicV1Endpoints.albumImport(importId)))
 }
 
-export async function listMusicAlbumImports(): Promise<MusicAlbumImport[]> {
-  const imports = await apiGet<MusicAlbumImport[]>(musicV1Endpoints.albumImports())
-  return imports.map(normalizeMusicAlbumImport)
+export async function listMusicAlbumImports(filters: { page?: number; page_size?: number } = {}): Promise<MusicListResponse<MusicAlbumImport>> {
+  const response = await apiGetEnvelope<MusicAlbumImport[], PaginationMeta>(
+    `${musicV1Endpoints.albumImports()}${queryString(filters)}`,
+  )
+  const normalized = listResponseWithPaginationFallback(response, filters)
+  return { ...normalized, data: normalized.data.map(normalizeMusicAlbumImport) }
 }
 
 export async function commitMusicAlbumImport(
@@ -373,6 +393,10 @@ export async function completeMusicAlbumImportSession(importId: string): Promise
 
 export async function cancelMusicAlbumImportSession(importId: string): Promise<void> {
   await apiDeleteJson<void>(musicV1Endpoints.albumImportSessionCancel(importId))
+}
+
+export async function deleteMusicAlbumImportRecord(importId: string): Promise<void> {
+  await apiDeleteJson<void>(musicV1Endpoints.albumImportRecord(importId))
 }
 
 export async function uploadMusicAlbumArchive(

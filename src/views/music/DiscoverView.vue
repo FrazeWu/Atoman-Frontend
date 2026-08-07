@@ -16,7 +16,6 @@ import {
   listAlbumBookmarks,
   listArtistBookmarks,
   listPlaylistBookmarks,
-  listMusicDiscoverFeed,
   listMusicAlbums,
   listMusicArtists,
   getMusicHome,
@@ -77,6 +76,8 @@ const errorMessage = ref('')
 const discoverAlbums = ref<MusicAlbumListItem[]>([])
 const discoverArtists = ref<MusicRecommendationItem[]>([])
 const discoverPlaylists = ref<MusicPlaylistSummary[]>([])
+const discoverLoadingMore = ref(false)
+const discoverPage = ref(1)
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
@@ -276,35 +277,27 @@ async function handleTogglePlaylistBookmark(playlistId: string) {
   }
 }
 
-async function fetchDiscoverFeed() {
+async function fetchMusicHome() {
+  musicHomeLoading.value = true
   loading.value = true
   errorMessage.value = ''
   try {
-    const feedResponse = await listMusicDiscoverFeed()
-    applyDiscoverFeed(feedResponse.data ?? [])
+    musicHome.value = await getMusicHome({ page: 1, page_size: 24 })
+    discoverPage.value = 1
+    applyDiscoverFeed(musicHome.value.discover ?? [])
     void fetchAlbumBookmarks()
     void fetchArtistBookmarks()
     void fetchPlaylistBookmarks()
   } catch (error) {
-    reportError(error, 'Failed to fetch music discover feed:')
-    errorMessage.value = '发现内容加载失败'
+    reportError(error, 'Failed to fetch music home:')
+    musicHome.value = null
     discoverAlbums.value = []
     discoverArtists.value = []
     discoverPlaylists.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-async function fetchMusicHome() {
-  musicHomeLoading.value = true
-  try {
-    musicHome.value = await getMusicHome()
-  } catch (error) {
-    reportError(error, 'Failed to fetch music home:')
-    musicHome.value = null
+    errorMessage.value = '发现内容加载失败'
   } finally {
     musicHomeLoading.value = false
+    loading.value = false
   }
 }
 
@@ -337,8 +330,14 @@ function playRecentSong(song: MusicSongListItem) {
   if (playable) player.playSong(playable)
 }
 
-function applyDiscoverFeed(items: MusicDiscoverItem[]) {
-  discoverAlbums.value = items
+function mergeDiscoverByID<T extends { id: string }>(current: T[], incoming: T[]): T[] {
+  const byID = new Map(current.map((item) => [String(item.id), item]))
+  incoming.forEach((item) => byID.set(String(item.id), item))
+  return [...byID.values()]
+}
+
+function applyDiscoverFeed(items: MusicDiscoverItem[], append = false) {
+  const albums = items
       .filter((item) => item.type === 'album')
       .map((item) => ({
         id: item.id,
@@ -348,12 +347,14 @@ function applyDiscoverFeed(items: MusicDiscoverItem[]) {
         release_date: item.release_date,
         cover_url: item.cover_url || item.image_url,
         description: item.summary,
+        reason: item.reason,
+        section: item.section,
         play_count: item.play_count,
         bookmark_count: item.bookmark_count,
         entry_status: 'open' as const,
       }))
 
-  discoverArtists.value = items
+  const artists = items
     .filter((item) => item.type === 'artist')
     .map((item) => ({
       id: item.id,
@@ -363,9 +364,11 @@ function applyDiscoverFeed(items: MusicDiscoverItem[]) {
       target_path: item.target_path,
       play_count: item.play_count,
       bookmark_count: item.bookmark_count,
+      reason: item.reason,
+      section: item.section,
     }))
 
-  discoverPlaylists.value = items
+  const playlists = items
     .filter((item) => item.type === 'playlist')
     .map((item) => ({
       id: item.id,
@@ -378,7 +381,31 @@ function applyDiscoverFeed(items: MusicDiscoverItem[]) {
       is_favorite: false,
       play_count: item.play_count,
       bookmark_count: item.bookmark_count,
+      reason: item.reason,
+      section: item.section,
     }))
+
+  discoverAlbums.value = append ? mergeDiscoverByID(discoverAlbums.value, albums) : albums
+  discoverArtists.value = append ? mergeDiscoverByID(discoverArtists.value, artists) : artists
+  discoverPlaylists.value = append ? mergeDiscoverByID(discoverPlaylists.value, playlists) : playlists
+}
+
+async function loadMoreDiscover() {
+  if (!musicHome.value?.discover_meta.has_more || discoverLoadingMore.value) return
+  discoverLoadingMore.value = true
+  try {
+    const nextPage = discoverPage.value + 1
+    const next = await getMusicHome({ page: nextPage, page_size: musicHome.value.discover_meta.page_size || 24 })
+    applyDiscoverFeed(next.discover ?? [], true)
+    discoverPage.value = nextPage
+    musicHome.value.discover_meta = next.discover_meta
+    musicHome.value.discover_has_more = next.discover_has_more
+  } catch (error) {
+    reportError(error, 'Failed to load more music discovery:')
+    errorMessage.value = '更多内容加载失败'
+  } finally {
+    discoverLoadingMore.value = false
+  }
 }
 
 async function fetchAlbumIndex() {
@@ -443,6 +470,7 @@ function artistCardItem(item: MusicRecommendationItem) {
     image_url: item.image_url,
     play_count: item.play_count,
     bookmark_count: item.bookmark_count,
+    reason: item.reason,
   }
 }
 
@@ -456,6 +484,7 @@ function playlistCardItem(item: MusicPlaylistSummary) {
     owner_username: item.owner_username,
     play_count: item.play_count,
     bookmark_count: item.bookmark_count,
+    reason: item.reason,
   }
 }
 
@@ -507,7 +536,6 @@ onMounted(() => {
     fetchAlbumIndex()
     return
   }
-  fetchDiscoverFeed()
   fetchMusicHome()
 })
 
@@ -608,6 +636,18 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
     <div v-if="contentMode === 'discover' && musicHomeLoading" class="state-line">正在加载...</div>
     <template v-if="contentMode === 'discover' && musicHome">
+      <section v-if="musicHome.continue_listening?.song" class="music-home-section" aria-labelledby="continue-listening-title">
+        <header class="music-home-section__header"><h2 id="continue-listening-title">继续播放</h2></header>
+        <div class="recently-played-list">
+          <div class="recently-played-item">
+            <button type="button" class="recently-played-item__play" :disabled="!musicHome.continue_listening.song.audio_url" :aria-label="`播放 ${musicHome.continue_listening.song.title}`" @click="playRecentSong(musicHome.continue_listening.song)">
+              <img v-if="musicHome.continue_listening.song.cover_url || musicHome.continue_listening.song.album?.cover_url" :src="musicHome.continue_listening.song.cover_url || musicHome.continue_listening.song.album?.cover_url" :alt="musicHome.continue_listening.song.title" />
+              <span v-else class="recently-played-item__cover" aria-hidden="true" />
+            </button>
+            <span class="recently-played-item__copy"><RouterLink :to="`/music/song/${musicHome.continue_listening.song.id}`"><strong>{{ musicHome.continue_listening.song.title }}</strong></RouterLink></span>
+          </div>
+        </div>
+      </section>
       <section v-if="musicHome.personalized && musicHome.recently_played.length" class="music-home-section" aria-labelledby="recently-played-title">
         <header class="music-home-section__header">
           <h2 id="recently-played-title">最近播放</h2>
@@ -674,7 +714,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     <p v-if="errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
     <p v-else-if="loading" class="state-line">正在加载...</p>
     <p v-else-if="contentMode === 'albums' && !localFilteredAlbums.length" class="state-line">暂无专辑</p>
-    <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length" class="state-line">暂无发现内容</p>
+    <p v-else-if="contentMode === 'discover' && !discoverAlbums.length && !discoverPlaylists.length && !discoverArtists.length && !musicHome?.sections.length && !musicHome?.for_you.length && !musicHome?.recently_played.length" class="state-line">暂无发现内容</p>
 
     <div v-else-if="contentMode === 'albums'" class="discover-grid" aria-label="专辑列表">
       <MusicAlbumCard
@@ -695,9 +735,8 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           <h2 class="discover-section__title" data-testid="discover-section-title">专辑</h2>
         </div>
         <div class="discover-layout discover-layout--albums" aria-label="发现专辑分区">
-          <MusicAlbumCard
-            v-for="item in filteredDiscoverAlbums"
-            :key="item.id"
+          <div v-for="item in filteredDiscoverAlbums" :key="item.id" class="discover-result">
+            <MusicAlbumCard
             class="discover-layout__item"
             :album="item"
             :is-bookmarked="starredAlbumIds.includes(String(item.id))"
@@ -705,51 +744,28 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             @click="openDiscoverAlbum(item)"
             @click-artist="openArtist"
             @toggle-bookmark="handleToggleAlbumBookmark(String(item.id))"
-          />
+            />
+            <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
+          </div>
         </div>
       </section>
 
-      <section class="discover-section">
+      <section v-if="discoverPlaylists.length" class="discover-section">
         <div class="discover-section__header">
           <h2 class="discover-section__title" data-testid="discover-section-title">歌单</h2>
         </div>
         <div class="discover-layout discover-layout--playlists" aria-label="发现歌单分区">
-          <template v-if="discoverPlaylists.length">
+          <div v-for="item in discoverPlaylists" :key="item.id" class="discover-result">
             <MusicPlaylistCard
-              v-for="item in discoverPlaylists"
-              :key="item.id"
-              class="discover-layout__item"
-              :playlist="playlistCardItem(item)"
-              :is-bookmarked="starredPlaylistIds.includes(String(item.id))"
-              data-testid="discover-playlist-card"
-              @click="openDiscoverPlaylist(item)"
-              @toggle-bookmark="handleTogglePlaylistBookmark(String(item.id))"
+            class="discover-layout__item"
+            :playlist="playlistCardItem(item)"
+            :is-bookmarked="starredPlaylistIds.includes(String(item.id))"
+            data-testid="discover-playlist-card"
+            @click="openDiscoverPlaylist(item)"
+            @toggle-bookmark="handleTogglePlaylistBookmark(String(item.id))"
             />
-          </template>
-          <template v-else>
-            <article
-              class="discover-layout__item discover-layout__playlist-placeholder"
-              data-testid="discover-playlist-placeholder"
-            >
-              <p class="discover-placeholder__eyebrow">Playlist</p>
-              <h3 class="discover-placeholder__title">暂无公开歌单</h3>
-              <p class="discover-placeholder__copy">这里会保留歌单高块结构，等公开歌单接入后直接落位。</p>
-            </article>
-            <article
-              class="discover-layout__item discover-layout__playlist-placeholder"
-              data-testid="discover-playlist-placeholder"
-            >
-              <p class="discover-placeholder__eyebrow">Playlist</p>
-              <h3 class="discover-placeholder__title discover-placeholder__title--compact">留给精选歌单</h3>
-            </article>
-            <article
-              class="discover-layout__item discover-layout__playlist-placeholder"
-              data-testid="discover-playlist-placeholder"
-            >
-              <p class="discover-placeholder__eyebrow">Playlist</p>
-              <h3 class="discover-placeholder__title discover-placeholder__title--compact">留给场景歌单</h3>
-            </article>
-          </template>
+            <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
+          </div>
         </div>
       </section>
 
@@ -758,18 +774,20 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           <h2 class="discover-section__title" data-testid="discover-section-title">艺人</h2>
         </div>
         <div class="discover-layout discover-layout--artists" aria-label="发现艺人分区">
-          <MusicArtistCard
-            v-for="item in discoverArtists"
-            :key="item.id"
+          <div v-for="item in discoverArtists" :key="item.id" class="discover-result">
+            <MusicArtistCard
             class="discover-layout__item discover-layout__item--artist"
             :artist="artistCardItem(item)"
             :is-bookmarked="starredArtistIds.includes(String(item.id))"
             data-testid="discover-artist-card"
             @click="openDiscoverArtist(item)"
             @toggle-bookmark="handleToggleArtistBookmark(String(item.id))"
-          />
+            />
+            <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
+          </div>
         </div>
       </section>
+      <PButton v-if="musicHome?.discover_meta.has_more" variant="secondary" :disabled="discoverLoadingMore" class="discover-load-more" @click="loadMoreDiscover">{{ discoverLoadingMore ? '加载中' : '加载更多' }}</PButton>
     </div>
   </section>
 </template>
@@ -793,12 +811,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   align-items: center;
   gap: 1rem;
   flex: 1 1 auto;
+  flex-wrap: wrap;
 }
 
 .search-shell {
   position: relative;
   max-width: 28rem;
-  flex: 0 1 28rem;
+  min-width: 17rem;
+  flex: 1 1 20rem;
   height: 36px;
 }
 
@@ -806,6 +826,17 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.filters-row :deep(.p-field) {
+  flex: 0 0 7rem;
+  min-width: 7rem;
+}
+
+.filters-row :deep(.p-select-trigger) {
+  gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .ui-action {
@@ -1078,6 +1109,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   min-width: 0;
 }
 
+.discover-result { display: grid; min-width: 0; gap: 0.35rem; align-content: start; }
+.discover-result__reason { margin: 0; color: var(--a-color-muted); font-size: 0.75rem; line-height: 1.4; }
+.discover-load-more { align-self: center; min-width: 8rem; }
+
 .discover-layout__playlist-placeholder {
   min-height: 13rem;
   padding: 1rem;
@@ -1125,13 +1160,21 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     align-items: stretch;
   }
 
-  .toolbar-left { flex-wrap: wrap; }
-
   .search-shell,
   .search-shell.is-open {
+    min-width: 0;
     max-width: 100%;
     width: 100%;
     flex: 0 0 36px;
+  }
+
+  .filters-row {
+    flex-wrap: wrap;
+  }
+
+  .filters-row :deep(.p-field) {
+    flex: 1 1 8rem;
+    min-width: 0;
   }
 
   .search-shell.is-open :deep(.search-frame) {

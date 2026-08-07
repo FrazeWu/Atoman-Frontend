@@ -68,6 +68,10 @@ const { sidebarCollapsed } = useSidebar()
   display: inline-flex;
 }
 
+:deep(.p-sidebar-item-label) {
+  white-space: nowrap;
+}
+
 .p-sidebar.is-collapsed :deep(.p-sidebar-item-icon) {
   display: inline-flex;
 }
@@ -102,9 +106,38 @@ const { sidebarCollapsed } = useSidebar()
   padding-top: 1.25rem;
 }
 
-@media (max-width: 768px) {
-  .p-sidebar.is-collapsed {
+@media (max-width: 1023px) {
+  .p-sidebar {
     width: var(--a-sidebar-collapsed-width, 4.5rem);
+  }
+
+  .p-sidebar-bottom {
+    display: none;
+  }
+
+  .p-sidebar :deep(.p-sidebar-item-label) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .p-sidebar :deep(.p-sidebar-item) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    min-height: 3.5rem;
+    padding: 0;
+  }
+
+  .p-sidebar-nav {
+    padding-top: 1.25rem;
   }
 }
 </style>

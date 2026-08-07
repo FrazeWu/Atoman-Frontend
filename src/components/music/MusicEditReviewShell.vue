@@ -141,7 +141,6 @@ const editTypeText: Partial<Record<MusicEditType, string>> = {
   delete_artist: '删除艺人',
   create_album: '新增专辑',
   update_album: '修改专辑',
-  merge_album: '合并专辑',
   delete_album: '删除专辑',
   create_song: '新增单曲',
   update_song: '修改单曲',

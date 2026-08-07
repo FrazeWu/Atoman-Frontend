@@ -56,6 +56,9 @@ type MusicQualityIssue = { type: string; entity_type: 'album' | 'artist' | 'song
 const qualityIssues = ref<MusicQualityIssue[]>([])
 const qualityLoading = ref(false)
 const qualityFilter = ref('all')
+const qualityPage = ref(1)
+const qualityTotal = ref(0)
+const qualityHasMore = ref(false)
 const qualityOptions = [
   { label: '全部问题', value: 'all' },
   { label: '缺少封面', value: 'missing_cover' },
@@ -63,15 +66,19 @@ const qualityOptions = [
   { label: '缺少音频', value: 'missing_audio' },
   { label: '缺少关键信息', value: 'missing_metadata' },
   { label: '重复候选', value: 'duplicate_candidate' },
+  { label: '处理失败', value: 'processing_failed' },
   { label: '导入失败', value: 'import_failed' },
 ]
 
-async function fetchQualityIssues() {
+async function fetchQualityIssues(page = qualityPage.value) {
   qualityLoading.value = true
   try {
-    const response = await apiRequest(`${api.music.adminMusicQuality}?type=${qualityFilter.value}`, { headers: { Authorization: `Bearer ${authStore.token}` } })
-    const data = await response.json() as { data?: MusicQualityIssue[] }
+    const response = await apiRequest(`${api.music.adminMusicQuality}?type=${qualityFilter.value}&page=${page}&page_size=30`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+    const data = await response.json() as { data?: MusicQualityIssue[]; total?: number; has_more?: boolean }
     qualityIssues.value = data.data ?? []
+    qualityPage.value = page
+    qualityTotal.value = data.total ?? qualityIssues.value.length
+    qualityHasMore.value = data.has_more ?? false
   } catch (error) {
     reportError(error, '加载音乐资料问题失败')
   } finally {
@@ -80,7 +87,7 @@ async function fetchQualityIssues() {
 }
 
 function qualityLabel(type: string) {
-  return ({ missing_cover: '缺少封面', missing_tracks: '缺少曲目', missing_audio: '缺少音频', missing_metadata: '缺少关键信息', duplicate_candidate: '重复候选', import_failed: '导入失败' } as Record<string, string>)[type] ?? type
+  return ({ missing_cover: '缺少封面', missing_tracks: '缺少曲目', missing_audio: '缺少音频', missing_metadata: '缺少关键信息', duplicate_candidate: '重复候选', processing_failed: '处理失败', import_failed: '导入失败' } as Record<string, string>)[type] ?? type
 }
 
 function qualityPath(issue: MusicQualityIssue) {
@@ -166,7 +173,7 @@ watch([entriesTypeFilter, entriesStatusFilter], () => {
   if (activeTab.value === 'entries') fetchEntries()
 })
 
-watch(qualityFilter, () => { if (activeTab.value === 'quality') void fetchQualityIssues() })
+watch(qualityFilter, () => { qualityPage.value = 1; if (activeTab.value === 'quality') void fetchQualityIssues(1) })
 
 watch([statusFilter, entityTypeFilter], () => {
   if (activeTab.value === 'review') {
@@ -211,7 +218,7 @@ onMounted(async () => {
       <div v-else class="entries-list">
         <div v-for="entry in entries" :key="entry.id" class="entry-row">
           <div class="entry-info">
-            <RouterLink :to="entry.type === 'album' ? `/album/${entry.id}` : `/artist/${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
+            <RouterLink :to="entry.type === 'album' ? `/music/album/${entry.id}` : `/music/artist/${entry.id}`" class="entry-name">{{ entry.name }}</RouterLink>
             <span class="entry-type">{{ entry.type === 'album' ? '专辑' : '艺术家' }}</span>
             <span v-if="entry.album_type" class="entry-album-type">{{ entry.album_type.toUpperCase() }}</span>
           </div>
@@ -227,14 +234,19 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="activeTab === 'quality'">
-      <div class="entries-filters"><PSelect v-model="qualityFilter" :options="qualityOptions" class="filter-select" /></div>
+      <div class="entries-filters"><PSelect v-model="qualityFilter" :options="qualityOptions" class="filter-select" /><span class="entries-total">共 {{ qualityTotal }} 条</span></div>
       <div v-if="qualityLoading" class="text-center py-12 text-gray-400">加载中...</div>
       <div v-else class="entries-list">
         <RouterLink v-for="issue in qualityIssues" :key="`${issue.type}-${issue.entity_id}`" :to="qualityPath(issue)" class="entry-row">
-          <div class="entry-info"><span class="entry-name">{{ issue.title || '未命名导入' }}</span><span class="entry-type">{{ issue.entity_type === 'import' ? '导入' : issue.entity_type === 'album' ? '专辑' : '歌曲' }}</span></div>
+          <div class="entry-info"><span class="entry-name">{{ issue.title || '未命名导入' }}</span><span class="entry-type">{{ issue.entity_type === 'import' ? '导入' : issue.entity_type === 'album' ? '专辑' : issue.entity_type === 'artist' ? '艺术家' : '歌曲' }}</span></div>
           <span class="entry-status entry-status-disputed">{{ qualityLabel(issue.type) }}</span>
         </RouterLink>
         <div v-if="!qualityIssues.length" class="text-gray-400 py-8 text-center">暂无资料问题</div>
+        <div v-if="qualityPage > 1 || qualityHasMore" class="quality-pagination">
+          <button type="button" :disabled="qualityLoading || qualityPage <= 1" @click="fetchQualityIssues(qualityPage - 1)">上一页</button>
+          <span>第 {{ qualityPage }} 页</span>
+          <button type="button" :disabled="qualityLoading || !qualityHasMore" @click="fetchQualityIssues(qualityPage + 1)">下一页</button>
+        </div>
       </div>
     </div>
 
@@ -335,4 +347,7 @@ onMounted(async () => {
 .entry-disc { font-size: 0.75rem; color: var(--a-color-muted); }
 .entry-editor { font-size: 0.75rem; color: var(--a-color-muted-soft); }
 .entry-date { font-size: 0.75rem; color: var(--a-color-muted-soft); }
+.quality-pagination { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 1rem; color: var(--a-color-muted); font-size: 0.75rem; }
+.quality-pagination button { min-height: 2.75rem; padding: 0.5rem 0.85rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: inherit; cursor: pointer; }
+.quality-pagination button:disabled { cursor: default; opacity: 0.45; }
 </style>

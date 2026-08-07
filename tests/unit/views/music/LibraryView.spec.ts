@@ -60,6 +60,23 @@ describe('LibraryView', () => {
     expect(wrapper.get('h1').text()).toBe('收藏')
     expect(wrapper.get('input[type="search"]').attributes('placeholder')).toBe('搜索收藏')
     expect(wrapper.text()).not.toContain('音乐库')
+    expect(wrapper.text()).toContain('稍后播放')
+  })
+
+  it('searches the whole library after a 250ms debounce', async () => {
+    vi.useFakeTimers()
+    mocks.listMusicLibrary.mockResolvedValue({
+      data: [],
+      meta: { page: 1, page_size: 24, total: 0, has_more: false },
+    })
+    const wrapper = mount(LibraryView)
+    await flushPromises()
+    await wrapper.get('input[type="search"]').setValue('Late Registration')
+    expect(mocks.listMusicLibrary).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(250)
+    await flushPromises()
+    expect(mocks.listMusicLibrary).toHaveBeenLastCalledWith('song', expect.objectContaining({ q: 'Late Registration', page: 1 }))
+    vi.useRealTimers()
   })
 
   it('resets old pagination before loading a different collection kind', async () => {

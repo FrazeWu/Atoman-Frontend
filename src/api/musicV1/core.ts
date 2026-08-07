@@ -1,7 +1,6 @@
 import { useApiUrl } from "@/composables/useApi";
 import type { ApiSuccess, PaginationMeta } from "../types";
 import type {
-  MusicBrowseMode,
   MusicListFilters,
   MusicListResponse,
   MusicRecommendationMode,
@@ -52,13 +51,23 @@ export const musicV1Endpoints = {
   albums: () => `${apiV1Base()}/music/albums`,
   songs: () => `${apiV1Base()}/songs`,
   search: () => `${apiV1Base()}/music/search`,
+  searchInteractions: () => `${apiV1Base()}/music/search/interactions`,
   songDetail: (songId: string) => `${apiV1Base()}/music/songs/${songId}`,
+  songAudioReplacements: (songId: string) => `${apiV1Base()}/music/songs/${songId}/audio-replacements`,
+  songRevisions: (songId: string) =>
+    `${apiV1Base()}/songs/${songId}/revisions`,
+  songRevision: (songId: string, version: number) =>
+    `${apiV1Base()}/songs/${songId}/revisions/${version}`,
+  songRevert: (songId: string, version: number) =>
+    `${apiV1Base()}/songs/${songId}/revisions/${version}/revert`,
   library: () => `${apiV1Base()}/music/library`,
   laterPlaylistSong: (songId: string) =>
     `${apiV1Base()}/music/playlists/later/${songId}`,
   album: (albumId: string) => `${apiV1Base()}/music/albums/${albumId}`,
   albumMerge: (albumId: string) =>
     `${apiV1Base()}/music/albums/${albumId}/merge`,
+  albumMergePreview: (albumId: string) =>
+    `${apiV1Base()}/music/albums/${albumId}/merge/preview`,
   songLyrics: (songId: string) => `${apiV1Base()}/music/songs/${songId}/lyrics`,
   lyricAnnotations: (songId: string) =>
     `${apiV1Base()}/music/songs/${songId}/lyrics/annotations`,
@@ -143,12 +152,12 @@ export const musicV1Endpoints = {
     `${apiV1Base()}/music/imports/albums/${importId}/complete`,
   albumImportSessionCancel: (importId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}`,
+  albumImportRecord: (importId: string) =>
+    `${apiV1Base()}/music/imports/albums/${importId}/record`,
   albumImportRepair: (importId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/repair`,
   albumImportCommit: (importId: string) =>
     `${apiV1Base()}/music/imports/albums/${importId}/commit`,
-  discover: (mode?: MusicBrowseMode) =>
-    `${apiV1Base()}/music/discover${mode ? `?mode=${mode}` : ""}`,
   recommendAlbums: (mode: MusicRecommendationMode) =>
     `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
   recommendArtists: (mode: MusicRecommendationMode) =>

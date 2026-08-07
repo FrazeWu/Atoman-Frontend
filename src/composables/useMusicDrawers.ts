@@ -17,6 +17,7 @@ interface DrawerState {
   albumId: string | null
   playlistId: string | null
   albumRefreshToken: number
+  songRefreshToken: number
   playlistRefreshToken: number
   nestedAction: NestedActionType
   nestedPayload: unknown
@@ -152,6 +153,7 @@ const state = ref<DrawerState>({
   albumId: null,
   playlistId: null,
   albumRefreshToken: 0,
+  songRefreshToken: 0,
   playlistRefreshToken: 0,
   nestedAction: null,
   nestedPayload: null,
@@ -203,6 +205,7 @@ export function useMusicDrawers() {
   }
   const closeAlbum = (key = sheetStack.top.value?.key ?? '') => closeLayerAndAbove(key)
   const refreshAlbum = () => { state.value.albumRefreshToken += 1 }
+  const refreshSong = () => { state.value.songRefreshToken += 1 }
 
   const openPlaylist = (id: string) => {
     sheetStack.push({
@@ -218,13 +221,13 @@ export function useMusicDrawers() {
   
   const openNestedAction = (action: Exclude<NestedActionType, null>, payload: unknown = null) => {
     const payloadOwner = payload && typeof payload === 'object'
-      ? ('albumId' in payload ? String(payload.albumId) : 'artistId' in payload ? String(payload.artistId) : null)
+      ? ('albumId' in payload ? String(payload.albumId) : 'artistId' in payload ? String(payload.artistId) : 'songId' in payload ? String(payload.songId) : null)
       : null
     const ownerId = payloadOwner ?? state.value.albumId ?? state.value.artistId ?? 'root'
     sheetStack.push({
       key: `action:${action}:${ownerId}`,
       kind: 'action',
-		title: action === 'history' || action === 'artist_history'
+		title: action === 'history' || action === 'artist_history' || action === 'song_history'
 			? '历史记录'
 			: action === 'link_album' ? '关联现有专辑' : '操作',
       payload: { action, data: payload },
@@ -341,6 +344,7 @@ export function useMusicDrawers() {
     state.value.albumId = null
     state.value.playlistId = null
     state.value.albumRefreshToken = 0
+    state.value.songRefreshToken = 0
     state.value.playlistRefreshToken = 0
     state.value.nestedAction = null
     state.value.nestedPayload = null
@@ -379,7 +383,7 @@ export function useMusicDrawers() {
   return {
     state,
     openArtist, closeArtist, refreshArtist,
-    openAlbum, closeAlbum, refreshAlbum,
+    openAlbum, closeAlbum, refreshAlbum, refreshSong,
     openPlaylist, closePlaylist, refreshPlaylists,
     openNestedAction, closeNestedAction,
     openMusicEditor, closeMusicEditor,

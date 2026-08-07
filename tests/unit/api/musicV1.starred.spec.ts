@@ -216,8 +216,8 @@ describe('music v1 starred and playlist adapters', () => {
 
   it('merges artists through the admin endpoint with the backend payload', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { id: 'edit-artist', type: 'merge_artist', status: 'open' } }),
-      { status: 201, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ data: { message: 'Artists merged successfully' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
 
     const result = await mergeMusicArtists('artist-target', 'artist-source')
@@ -228,26 +228,33 @@ describe('music v1 starred and playlist adapters', () => {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ source_id: 'artist-source' }),
     })
-    expect(result.id).toBe('edit-artist')
-    expect(result.status).toBe('open')
+    expect(result.message).toBe('Artists merged successfully')
   })
 
   it('merges albums through the music namespace', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: { id: 'edit-album', type: 'merge_album', status: 'open' } }),
-      { status: 201, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({ data: { merged: true, redirect_to: 'album-target' } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
 
-    const result = await mergeMusicAlbums('album-target', 'album-source')
+    const result = await mergeMusicAlbums('album-target', 'album-source', [{
+      source_song: { id: 'song-source', title: 'Same Song', entry_status: 'open' },
+      target_song: { id: 'song-target', title: 'Same Song', entry_status: 'open' },
+      reason: '曲名一致',
+    }])
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/albums/album-target/merge', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ source_album_id: 'album-source' }),
+      body: JSON.stringify({
+        source_album_id: 'album-source',
+        confirmed: true,
+        song_matches: [{ source_song_id: 'song-source', target_song_id: 'song-target' }],
+      }),
     })
-    expect(result.id).toBe('edit-album')
-    expect(result.status).toBe('open')
+    expect(result.merged).toBe(true)
+    expect(result.redirect_to).toBe('album-target')
   })
 
   it('gets playlist details with songs', async () => {

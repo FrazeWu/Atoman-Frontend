@@ -369,6 +369,10 @@ export async function listMusicListeningHistory(
   return listResponseWithPaginationFallback(response, filters);
 }
 
+export async function clearMusicListeningHistory(): Promise<void> {
+  await apiDeleteJson<void>(musicV1Endpoints.history())
+}
+
 export async function listMusicLibrary<T>(
   kind: 'song' | 'album' | 'artist' | 'playlist',
   filters: Pick<MusicListFilters, 'sort' | 'page' | 'page_size'> = {},

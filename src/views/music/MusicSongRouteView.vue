@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Play } from 'lucide-vue-next'
-import { getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
+import { ChevronLeft, ChevronRight, Clock3, Heart, ListPlus, Play, StepForward } from 'lucide-vue-next'
+import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
+import PToast from '@/components/ui/PToast.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { useRoute } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
+import { reportError } from '@/utils/logger'
 
 const route = useRoute()
 const player = usePlayerStore()
 const { openAlbum, openArtist } = useMusicDrawers()
+const { requireLogin } = useLoginRedirect()
+const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
+const actionBusy = ref('')
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
 function playable(song: MusicSongListItem): Song {
   return {
@@ -39,7 +48,51 @@ const roleGroups = computed(() => {
   }
   return [...groups.entries()]
 })
-const roleLabels: Record<string, string> = { primary: '艺术家', featured: '合作艺人', producer: '制作人', writer: '作词', composer: '作曲' }
+const roleLabels: Record<string, string> = {
+  primary: '主艺术家', featured: '合作艺术家', vocals: '演唱', backing_vocals: '和声',
+  writer: '作词', composer: '作曲', arranger: '编曲', producer: '制作人', vocal_producer: '人声制作',
+  recording_engineer: '录音', mixing_engineer: '混音', mastering_engineer: '母带', remixer: '重混',
+}
+
+function showToast(message: string) {
+  toastMessage.value = message
+  toastVisible.value = true
+}
+
+function queueSong(playNext: boolean) {
+  if (!detail.value?.playable) return
+  player.addToQueue(playable(detail.value.song), playNext)
+  showToast(playNext ? '已设为下一首' : '已加入队列')
+}
+
+async function toggleFavorite() {
+  if (!detail.value || !requireLogin()) return
+  actionBusy.value = 'favorite'
+  try {
+    const result = await toggleFavoriteSong(String(detail.value.song.id))
+    detail.value.bookmarked = result.isFavorite
+    showToast(result.message)
+  } catch (cause) {
+    reportError(cause, '切换歌曲收藏失败')
+    showToast('操作失败')
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
+async function addToLater() {
+  if (!detail.value || !requireLogin()) return
+  actionBusy.value = 'later'
+  try {
+    await addMusicSongToLater(String(detail.value.song.id))
+    showToast('已加入稍后播放')
+  } catch (cause) {
+    reportError(cause, '加入稍后播放失败')
+    showToast('操作失败')
+  } finally {
+    actionBusy.value = ''
+  }
+}
 
 async function load(songId: unknown) {
   if (typeof songId !== 'string' || !songId) return
@@ -47,6 +100,7 @@ async function load(songId: unknown) {
   error.value = ''
   try {
     detail.value = await getMusicSongDetail(songId)
+    favoriteSongIds.value = new Set(detail.value.bookmarked ? [String(detail.value.song.id)] : [])
   } catch {
     detail.value = null
     error.value = '歌曲无法加载'
@@ -72,13 +126,24 @@ watch(() => route.params.songId, load, { immediate: true })
           <span>{{ roleLabels[role] || role }}</span>
           <button v-for="artist in artists" :key="artist.id" type="button" class="song-detail__entity-link" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
         </div>
-        <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
+        <div class="song-detail__actions">
+          <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
+          <PButton variant="secondary" :loading="actionBusy === 'favorite'" @click="toggleFavorite"><Heart :size="16" :fill="detail.bookmarked ? 'currentColor' : 'none'" aria-hidden="true" />{{ detail.bookmarked ? '已收藏' : '收藏' }}</PButton>
+          <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" />下一首</PButton>
+          <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" />加入队列</PButton>
+          <PButton variant="secondary" :loading="actionBusy === 'later'" @click="addToLater"><Clock3 :size="16" aria-hidden="true" />稍后播放</PButton>
+        </div>
       </div>
+      <section v-if="detail.song.lyrics" class="song-detail__lyrics">
+        <h2>歌词</h2>
+        <pre>{{ detail.song.lyrics }}</pre>
+      </section>
       <nav class="song-detail__navigation" aria-label="相邻曲目">
         <RouterLink v-if="detail.previous" :to="`/music/song/${detail.previous.id}`"><ChevronLeft :size="16" aria-hidden="true" />{{ detail.previous.title }}</RouterLink>
         <RouterLink v-if="detail.next" :to="`/music/song/${detail.next.id}`">{{ detail.next.title }}<ChevronRight :size="16" aria-hidden="true" /></RouterLink>
       </nav>
     </section>
+    <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </main>
 </template>
 
@@ -93,6 +158,10 @@ watch(() => route.params.songId, load, { immediate: true })
 .song-detail__artists a { color: inherit; }
 .song-detail__entity-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; }
 .song-detail__navigation { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
+.song-detail__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.song-detail__lyrics { grid-column: 1 / -1; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
+.song-detail__lyrics h2 { margin: 0 0 0.75rem; font-size: 1rem; }
+.song-detail__lyrics pre { margin: 0; max-height: 18rem; overflow: auto; white-space: pre-wrap; font: inherit; line-height: 1.7; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }
 @media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__content { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } }

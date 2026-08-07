@@ -180,35 +180,16 @@
 
         <div v-else class="profile-content__list">
           <template v-for="item in contentItems" :key="itemKey(item)">
-            <!-- Short note: bubble -->
-            <article v-if="item.type === 'note'" class="profile-note-bubble">
-              <RouterLink :to="`/posts/notes/${item.data.id}`" class="profile-note-bubble__body">
-                <p class="profile-note-bubble__text">{{ item.data.content }}</p>
-                <div
-                  v-if="item.data.media?.length"
-                  class="profile-note-bubble__media"
-                  :class="`count-${Math.min(item.data.media.length, 4)}`"
-                >
-                  <img
-                    v-for="m in item.data.media.slice(0, 4)"
-                    :key="m.id"
-                    :src="resolveMediaURL(m.url)"
-                    alt="短话图片"
-                    loading="lazy"
-                    class="profile-note-bubble__img"
-                  />
-                </div>
-              </RouterLink>
-              <footer class="profile-note-bubble__footer">
-                <span class="profile-note-bubble__time">{{ formatDate(item.data.created_at) }}</span>
-                <span class="profile-note-bubble__stat">♥ {{ item.data.likes_count }}</span>
-                <span class="profile-note-bubble__stat">💬 {{ item.data.comments_count }}</span>
-              </footer>
-            </article>
+            <!-- Short note: card with lightbox and sheet support -->
+            <ShortNoteCard
+              v-if="item.type === 'note'"
+              :note="item.data"
+              @delete="removeNote"
+            />
 
             <!-- Blog post: entry card -->
             <PEntry
-              v-else
+              v-else-if="item.type === 'post'"
               :title="item.data.title"
               :summary="item.data.summary"
               class="profile-content__entry a-cursor-pointer"
@@ -286,6 +267,8 @@ import PButton from '@/components/ui/PButton.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PToast from '@/components/ui/PToast.vue'
+import { apiRequestEnvelope } from '@/api/client'
+import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
@@ -316,6 +299,20 @@ const readingListIds = computed(() => feedStore.readingListItemIds)
 
 const toggleStar = (id: string) => { void feedStore.togglePostBookmark(id) }
 const toggleReadingList = (id: string) => { void feedStore.toggleReadingListItem(id) }
+
+async function removeNote(noteToRemove: ShortNote) {
+  if (!window.confirm('确定删除这条短话吗？')) return
+  try {
+    await apiRequestEnvelope(api.blog.shortNote(noteToRemove.id), {
+      method: 'DELETE',
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
+    })
+    allNotes.value = allNotes.value.filter(item => item.id !== noteToRemove.id)
+  } catch {
+    toastMessage.value = '删除失败，请重试'
+    toastVisible.value = true
+  }
+}
 
 // ── Profile data ──────────────────────────────────────────
 const profile = ref<UserProfile | null>(null)

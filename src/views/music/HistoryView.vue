@@ -1,26 +1,37 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref } from 'vue'
-import { Clock3, Play } from 'lucide-vue-next'
+import { Clock3, Heart, ListPlus, MoreHorizontal, Play, StepForward, Trash2 } from 'lucide-vue-next'
 import {
+  addMusicSongToLater,
+  clearMusicListeningHistory,
   listMusicListeningHistory,
   type MusicListeningHistory,
 } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PDropdown from '@/components/ui/PDropdown.vue'
+import PToast from '@/components/ui/PToast.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 
 const pageSize = 20
 const player = usePlayerStore()
 const { openAlbum, openArtist } = useMusicDrawers()
+const { requireLogin } = useLoginRedirect()
+const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const historyItems = ref<MusicListeningHistory[]>([])
 const currentPage = ref(0)
 const hasMore = ref(false)
 const loading = ref(false)
 const loadingMore = ref(false)
 const errorMessage = ref('')
+const actionBusy = ref('')
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
 const playableSongs = computed<Song[]>(() => historyItems.value
   .filter((item) => Boolean(item.song.audio_url))
@@ -73,6 +84,64 @@ function playHistorySong(songId: string) {
   if (index >= 0) player.playAlbum(playableSongs.value, index)
 }
 
+function historySong(songId: string) {
+  return playableSongs.value.find((song) => String(song.id) === songId)
+}
+
+function queueHistorySong(songId: string, playNext: boolean) {
+  const song = historySong(songId)
+  if (!song) return
+  player.addToQueue(song, playNext)
+  toastMessage.value = playNext ? '已设为下一首' : '已加入队列'
+  toastVisible.value = true
+}
+
+async function toggleHistoryFavorite(songId: string) {
+  if (!requireLogin()) return
+  actionBusy.value = `favorite:${songId}`
+  try {
+    const result = await toggleFavoriteSong(songId)
+    toastMessage.value = result.message
+    toastVisible.value = true
+  } catch (error) {
+    reportError(error, '切换歌曲收藏失败')
+    errorMessage.value = '收藏操作失败'
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
+async function addHistoryToLater(songId: string) {
+  if (!requireLogin()) return
+  actionBusy.value = `later:${songId}`
+  try {
+    await addMusicSongToLater(songId)
+    toastMessage.value = '已加入稍后播放'
+    toastVisible.value = true
+  } catch (error) {
+    reportError(error, '加入稍后播放失败')
+    errorMessage.value = '操作失败'
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
+async function clearHistory() {
+  if (!historyItems.value.length || !window.confirm('确认清空全部播放历史？')) return
+  actionBusy.value = 'clear'
+  try {
+    await clearMusicListeningHistory()
+    historyItems.value = []
+    currentPage.value = 0
+    hasMore.value = false
+  } catch (error) {
+    reportError(error, '清空播放历史失败')
+    errorMessage.value = '清空失败'
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
 function formatPlayedAt(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -86,12 +155,18 @@ function formatPlayedAt(value: string) {
   })
 }
 
-onMounted(() => loadPage(1))
+onMounted(() => {
+  void loadPage(1)
+  void loadFavoriteSongs().catch(() => undefined)
+})
 </script>
 
 <template>
   <div class="music-history-view">
     <PPageHeader title="播放历史" mb="0" />
+    <div v-if="historyItems.length" class="history-toolbar">
+      <PButton variant="secondary" :loading="actionBusy === 'clear'" @click="clearHistory"><Trash2 :size="16" aria-hidden="true" />清空历史</PButton>
+    </div>
 
     <p v-if="loading" class="history-state">正在加载...</p>
     <p v-else-if="errorMessage && !historyItems.length" class="history-state history-state--error">
@@ -149,6 +224,17 @@ onMounted(() => loadPage(1))
           <time class="history-time" :datetime="item.last_played_at">
             {{ formatPlayedAt(item.last_played_at) }}
           </time>
+          <div class="history-actions">
+            <button type="button" :class="{ 'is-active': favoriteSongIds.has(String(item.song.id)) }" :aria-label="`${favoriteSongIds.has(String(item.song.id)) ? '取消收藏' : '收藏'} ${item.song.title}`" title="收藏" @click="toggleHistoryFavorite(String(item.song.id))"><Heart :size="16" :fill="favoriteSongIds.has(String(item.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></button>
+            <PDropdown position="right">
+              <template #trigger><button type="button" :aria-label="`${item.song.title} 的更多操作`" title="更多操作"><MoreHorizontal :size="17" aria-hidden="true" /></button></template>
+              <div class="history-action-menu">
+                <button type="button" :disabled="!item.song.audio_url" @click="queueHistorySong(String(item.song.id), true)"><StepForward :size="16" aria-hidden="true" />下一首播放</button>
+                <button type="button" :disabled="!item.song.audio_url" @click="queueHistorySong(String(item.song.id), false)"><ListPlus :size="16" aria-hidden="true" />加入队列</button>
+                <button type="button" :disabled="actionBusy === `later:${item.song.id}`" @click="addHistoryToLater(String(item.song.id))"><Clock3 :size="16" aria-hidden="true" />稍后播放</button>
+              </div>
+            </PDropdown>
+          </div>
         </li>
       </ol>
 
@@ -165,6 +251,7 @@ onMounted(() => loadPage(1))
         </PButton>
       </div>
     </template>
+    <PToast v-model="toastVisible" :message="toastMessage" type="success" />
   </div>
 </template>
 
@@ -183,7 +270,7 @@ onMounted(() => loadPage(1))
 
 .history-row {
   display: grid;
-  grid-template-columns: minmax(15rem, 1.8fr) minmax(10rem, 1fr) 7rem 10rem;
+  grid-template-columns: minmax(15rem, 1.8fr) minmax(10rem, 1fr) 7rem 10rem 4.5rem;
   gap: 1rem;
   align-items: center;
   min-height: 72px;
@@ -294,6 +381,14 @@ onMounted(() => loadPage(1))
   display: flex;
   justify-content: center;
 }
+.history-toolbar { display: flex; justify-content: flex-end; }
+.history-actions { display: flex; justify-content: flex-end; gap: 0.25rem; }
+.history-actions > button,
+.history-actions :deep(.p-dropdown-root > div:first-child > button) { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.history-actions button.is-active { color: var(--a-color-accent); }
+.history-action-menu { min-width: 11rem; padding: 0.3rem; }
+.history-action-menu button { width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.history-action-menu button:hover { background: var(--a-color-surface-muted); }
 
 .history-state {
   margin: 0;

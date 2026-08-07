@@ -39,9 +39,10 @@
         :class="`count-${Math.min(note.media.length, 9)}`"
       >
         <div
-          v-for="item in note.media"
+          v-for="(item, idx) in note.media"
           :key="item.id"
           class="short-note-card__media-item"
+          @click.stop.prevent="openLightbox(idx)"
         >
           <img :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
         </div>
@@ -54,21 +55,29 @@
         :like-count="interactions.likeCount.value"
         :comment-count="interactions.commentCount.value"
         :disabled="!authStore.isAuthenticated"
-        @like="interactions.like"
-        @unlike="interactions.unlike"
+        @like="handleLike"
+        @unlike="handleUnlike"
         @comment="openShortNoteSheet"
       />
     </footer>
+
+    <PImageLightbox
+      v-model:show="showLightbox"
+      :images="mediaUrls"
+      :index="lightboxIndex"
+    />
   </article>
 </template>
 
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
 import { Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
+import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import { useBlogSheets } from '@/composables/useBlogSheets'
+import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractions } from '@/composables/useInteractions'
 import { resolveMediaURL } from '@/utils/mediaUrl'
@@ -78,15 +87,46 @@ const props = defineProps<{ note: ShortNote }>()
 defineEmits<{ delete: [note: ShortNote] }>()
 const authStore = useAuthStore()
 const blogSheets = useBlogSheets()
+const { getNoteState, updateNoteState } = useShortNoteSync()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
 
+const showLightbox = ref(false)
+const lightboxIndex = ref(0)
+const mediaUrls = computed(() => props.note.media.map(m => resolveMediaURL(m.url)))
+
+function openLightbox(idx: number) {
+  lightboxIndex.value = idx
+  showLightbox.value = true
+}
+
 watchEffect(() => {
-  interactions.liked.value = props.note.liked
-  interactions.likeCount.value = props.note.likes_count
-  interactions.commentCount.value = props.note.comments_count
+  const synced = getNoteState(props.note.id)
+  interactions.liked.value = synced?.liked ?? props.note.liked
+  interactions.likeCount.value = synced?.likeCount ?? props.note.likes_count
+  interactions.commentCount.value = synced?.commentCount ?? props.note.comments_count
 })
+
+watch(() => [interactions.liked.value, interactions.likeCount.value, interactions.commentCount.value], () => {
+  updateNoteState(props.note.id, {
+    liked: interactions.liked.value,
+    likeCount: interactions.likeCount.value,
+    commentCount: interactions.commentCount.value,
+  })
+})
+
+function handleLike() {
+  void interactions.like().then(() => {
+    updateNoteState(props.note.id, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
+  })
+}
+
+function handleUnlike() {
+  void interactions.unlike().then(() => {
+    updateNoteState(props.note.id, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
+  })
+}
 
 function openShortNoteSheet() {
   const title = props.note.content

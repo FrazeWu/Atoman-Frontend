@@ -1,0 +1,263 @@
+<template>
+  <Teleport to="body">
+    <Transition name="lightbox-fade">
+      <div
+        v-if="show && images.length"
+        class="p-lightbox-backdrop"
+        role="dialog"
+        aria-label="图片预览"
+        aria-modal="true"
+        tabindex="-1"
+        @click.self="close"
+        @keydown="handleKeydown"
+      >
+        <div class="p-lightbox-header">
+          <span v-if="images.length > 1" class="p-lightbox-counter">
+            {{ currentIndex + 1 }} / {{ images.length }}
+          </span>
+          <button
+            type="button"
+            class="p-lightbox-close"
+            aria-label="关闭预览"
+            title="关闭预览"
+            @click="close"
+          >
+            <X :size="22" />
+          </button>
+        </div>
+
+        <button
+          v-if="images.length > 1 && currentIndex > 0"
+          type="button"
+          class="p-lightbox-nav is-prev"
+          aria-label="上一张图片"
+          title="上一张"
+          @click.stop="prev"
+        >
+          <ChevronLeft :size="28" />
+        </button>
+
+        <div class="p-lightbox-stage" @click.self="close">
+          <Transition name="lightbox-zoom" mode="out-in">
+            <img
+              :key="currentImageUrl"
+              :src="currentImageUrl"
+              alt="预览大图"
+              class="p-lightbox-image"
+            />
+          </Transition>
+        </div>
+
+        <button
+          v-if="images.length > 1 && currentIndex < images.length - 1"
+          type="button"
+          class="p-lightbox-nav is-next"
+          aria-label="下一张图片"
+          title="下一张"
+          @click.stop="next"
+        >
+          <ChevronRight :size="28" />
+        </button>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
+
+const props = withDefaults(defineProps<{
+  show: boolean
+  images: string[]
+  index?: number
+}>(), {
+  index: 0,
+})
+
+const emit = defineEmits<{
+  'update:show': [value: boolean]
+  close: []
+  change: [index: number]
+}>()
+
+const currentIndex = ref(props.index)
+
+watch(() => props.index, (val) => {
+  currentIndex.value = Math.max(0, Math.min(val, props.images.length - 1))
+})
+
+watch(() => props.show, (val) => {
+  if (val) {
+    currentIndex.value = Math.max(0, Math.min(props.index, props.images.length - 1))
+  }
+})
+
+const currentImageUrl = computed(() => props.images[currentIndex.value] || '')
+
+function close() {
+  emit('update:show', false)
+  emit('close')
+}
+
+function prev() {
+  if (currentIndex.value > 0) {
+    currentIndex.value -= 1
+    emit('change', currentIndex.value)
+  }
+}
+
+function next() {
+  if (currentIndex.value < props.images.length - 1) {
+    currentIndex.value += 1
+    emit('change', currentIndex.value)
+  }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') close()
+  if (e.key === 'ArrowLeft') prev()
+  if (e.key === 'ArrowRight') next()
+}
+</script>
+
+<style scoped>
+.p-lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--a-z-modal, 9999);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  user-select: none;
+}
+
+.p-lightbox-header {
+  position: absolute;
+  top: 1rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+}
+
+.p-lightbox-counter {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+}
+
+.p-lightbox-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.p-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.p-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.15s ease;
+}
+
+.p-lightbox-nav.is-prev {
+  left: 1.5rem;
+}
+
+.p-lightbox-nav.is-next {
+  right: 1.5rem;
+}
+
+.p-lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.p-lightbox-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.p-lightbox-image {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: var(--a-radius-control, 0.5rem);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-fade-enter-active,
+.lightbox-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.lightbox-fade-enter-from,
+.lightbox-fade-leave-to {
+  opacity: 0;
+}
+
+.lightbox-zoom-enter-active,
+.lightbox-zoom-leave-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lightbox-zoom-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.lightbox-zoom-leave-to {
+  opacity: 0;
+  transform: scale(1.05);
+}
+
+@media (max-width: 640px) {
+  .p-lightbox-nav.is-prev {
+    left: 0.5rem;
+  }
+  .p-lightbox-nav.is-next {
+    right: 0.5rem;
+  }
+  .p-lightbox-stage {
+    padding: 3rem 0.5rem;
+  }
+}
+</style>

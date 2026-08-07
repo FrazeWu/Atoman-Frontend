@@ -6,10 +6,12 @@ import { apiRequestEnvelope } from '@/api/client'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PImageLightbox from '@/components/ui/PImageLightbox.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
+import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useInteractions } from '@/composables/useInteractions'
 import { useAuthStore } from '@/stores/auth'
 import { resolveMediaURL } from '@/utils/mediaUrl'
@@ -29,16 +31,26 @@ const api = useApi()
 const authStore = useAuthStore()
 const router = useRouter()
 const sheets = useBlogSheets()
+const { getNoteState, updateNoteState } = useShortNoteSync()
 
 const note = ref<ShortNote | null>(null)
 const loading = ref(false)
 const errorMessage = ref('')
+
+const showLightbox = ref(false)
+const lightboxIndex = ref(0)
+const mediaUrls = computed(() => note.value?.media.map(m => resolveMediaURL(m.url)) || [])
 
 const noteId = computed(() => props.layer.payload.noteId)
 const interactions = useInteractions('blog', 'short_note', noteId)
 
 const author = computed(() => note.value?.user?.display_name || note.value?.user?.username || '匿名用户')
 const isOwner = computed(() => authStore.user?.uuid === note.value?.user_id)
+
+function openLightbox(idx: number) {
+  lightboxIndex.value = idx
+  showLightbox.value = true
+}
 
 async function loadNote() {
   loading.value = true
@@ -47,9 +59,10 @@ async function loadNote() {
     const res = await apiRequestEnvelope<ShortNote>(api.blog.shortNote(noteId.value))
     note.value = res.data
     if (note.value) {
-      interactions.liked.value = note.value.liked
-      interactions.likeCount.value = note.value.likes_count
-      interactions.commentCount.value = note.value.comments_count
+      const synced = getNoteState(noteId.value)
+      interactions.liked.value = synced?.liked ?? note.value.liked
+      interactions.likeCount.value = synced?.likeCount ?? note.value.likes_count
+      interactions.commentCount.value = synced?.commentCount ?? note.value.comments_count
     }
   } catch {
     note.value = null
@@ -57,6 +70,23 @@ async function loadNote() {
   } finally {
     loading.value = false
   }
+}
+
+function handleLike() {
+  void interactions.like().then(() => {
+    updateNoteState(noteId.value, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
+  })
+}
+
+function handleUnlike() {
+  void interactions.unlike().then(() => {
+    updateNoteState(noteId.value, { liked: interactions.liked.value, likeCount: interactions.likeCount.value })
+  })
+}
+
+function handleCommentCountChange(count: number) {
+  interactions.commentCount.value = count
+  updateNoteState(noteId.value, { commentCount: count })
 }
 
 async function remove() {
@@ -150,9 +180,10 @@ watch(noteId, () => void loadNote(), { immediate: true })
           :class="`count-${Math.min(note.media.length, 9)}`"
         >
           <div
-            v-for="item in note.media"
+            v-for="(item, idx) in note.media"
             :key="item.id"
             class="short-note-sheet-media-item"
+            @click.stop.prevent="openLightbox(idx)"
           >
             <img :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
           </div>
@@ -164,8 +195,8 @@ watch(noteId, () => void loadNote(), { immediate: true })
             :like-count="interactions.likeCount.value"
             :comment-count="interactions.commentCount.value"
             :disabled="!authStore.isAuthenticated"
-            @like="interactions.like"
-            @unlike="interactions.unlike"
+            @like="handleLike"
+            @unlike="handleUnlike"
           />
         </footer>
       </article>
@@ -174,10 +205,16 @@ watch(noteId, () => void loadNote(), { immediate: true })
         <CommentSection
           id="comments"
           :target="{ kind: 'short_note', resourceId: note.id }"
-          @count-change="interactions.commentCount.value = $event"
+          @count-change="handleCommentCountChange"
         />
       </div>
     </div>
+
+    <PImageLightbox
+      v-model:show="showLightbox"
+      :images="mediaUrls"
+      :index="lightboxIndex"
+    />
   </PSheet>
 </template>
 

@@ -24,65 +24,12 @@
 
     <!-- Post content -->
     <article v-else-if="post">
-      <!-- Cover image -->
-      <div v-if="post.cover_url" style="width:100%;max-height:20rem;overflow:hidden">
-        <img :src="post.cover_url" :alt="post.title" style="width:100%;object-fit:cover;max-height:20rem" />
-      </div>
-
-      <div :class="isAcademic ? 'a-page' : 'a-page-md'" style="padding-top:3rem; transition: max-width 0.3s ease;">
-        <!-- Breadcrumb -->
-        <RouterLink to="/" class="a-link">← 文章</RouterLink>
-
-        <!-- Title -->
-        <h1 
-          :class="isAcademic ? 'academic-title' : 'a-title'" 
-          :style="!isAcademic ? 'margin-top:1.5rem;margin-bottom:1rem' : ''"
-        >
-          {{ post.title }}
-        </h1>
-
-        <!-- Meta -->
-        <div :class="isAcademic ? 'academic-meta' : 'normal-meta'">
-          <template v-if="isAcademic">
-            <span class="academic-author">{{ post.user?.display_name || post.user?.username }}</span>
-            <span class="academic-date">{{ formatDate(post.created_at) }}</span>
-            <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem">
-              <button
-                @click="isAcademic = false"
-                class="a-btn a-btn--sm a-btn--secondary"
-                style="border-radius: var(--a-radius-none); font-weight: 500; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
-              >
-                📖 极简单栏
-              </button>
-              <RouterLink v-if="isOwner" :to="`/posts/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
-            </div>
-          </template>
-          <template v-else>
-            <a :href="userUrl(post.user?.username || '')" style="display:flex;align-items:center;gap:.5rem;text-decoration:none">
-              <div style="width:2rem;height:2rem;border-radius:var(--a-radius-none);background:var(--a-color-fg);display:flex;align-items:center;justify-content:center;color:var(--a-color-bg);font-weight: 500;font-size:.75rem">
-                {{ (post.user?.display_name || post.user?.username || '?').charAt(0).toUpperCase() }}
-              </div>
-              <span style="font-weight: 500;font-size:.875rem">{{ post.user?.display_name || post.user?.username }}</span>
-            </a>
-            <span class="a-label a-muted">{{ formatDate(post.created_at) }}</span>
-            <div style="margin-left:auto; display:flex; gap:0.5rem; align-items:center;">
-              <button
-                @click="isAcademic = true"
-                class="a-btn a-btn--sm a-btn--secondary"
-                style="border-radius: var(--a-radius-none); font-weight: 500; height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;"
-              >
-                🔬 学术双栏
-              </button>
-              <RouterLink v-if="isOwner" :to="`/posts/post/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary" style="border-radius: var(--a-radius-none); height: 1.85rem; min-height: auto; padding: 0.25rem 0.75rem;">编辑</RouterLink>
-            </div>
-          </template>
-        </div>
-
-        <!-- Abstract -->
-        <div v-if="isAcademic && post.summary" class="academic-abstract">
-          <h3 class="abstract-title">Abstract</h3>
-          <p class="abstract-content">{{ post.summary }}</p>
-        </div>
+      <PostHeader
+        :post="post"
+        :is-owner="isOwner"
+        :is-academic="isAcademic"
+        @toggle-academic="isAcademic = $event"
+      />
 
         <!-- Markdown content -->
         <div 
@@ -156,6 +103,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
+import PostHeader from '@/components/blog/PostHeader.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useApi } from '@/composables/useApi'

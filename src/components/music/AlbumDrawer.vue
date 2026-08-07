@@ -256,13 +256,13 @@ async function loadPlaylists() {
   }
 }
 
-async function loadFavorites() {
+async function loadFavorites(songIds: string[]) {
   if (!isAuthenticated.value) {
     favoriteSongIds.value = new Set()
     return
   }
   try {
-    await loadFavoriteSongs()
+    await loadFavoriteSongs(songIds)
   } catch (err) {
     if (err instanceof ApiErrorResponseError && err.status === 401) {
       favoriteSongIds.value = new Set()
@@ -341,7 +341,7 @@ async function loadAlbum(albumId: string | null) {
 
       await Promise.all([
         playlistsLoaded.value ? Promise.resolve() : loadPlaylists(),
-        loadFavorites(),
+        loadFavorites((albumResponse.songs || []).map(song => String(song.id))),
       ])
     } else {
       isBookmarked.value = false
@@ -531,7 +531,7 @@ watch(
               type="button"
               class="track-fav-btn"
               :class="{ 'is-active': favoriteSongIds.has(String(track.id)) }"
-              title="添加到最爱"
+              title="收藏"
               @click="toggleTrackFavorite(String(track.id))"
             >
               <Heart :size="12" :fill="favoriteSongIds.has(String(track.id)) ? 'currentColor' : 'none'" />

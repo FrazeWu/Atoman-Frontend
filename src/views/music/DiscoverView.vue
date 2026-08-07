@@ -378,7 +378,6 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], append = false) {
       song_count: item.song_count,
       owner_username: item.owner_username,
       is_public: true,
-      is_favorite: false,
       play_count: item.play_count,
       bookmark_count: item.bookmark_count,
       reason: item.reason,

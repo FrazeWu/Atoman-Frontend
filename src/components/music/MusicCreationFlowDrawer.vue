@@ -150,9 +150,6 @@ const forwardBlockReason = computed(() => {
     return ''
   }
   if (!['albumDetails', 'preview'].includes(flow.step)) return ''
-  if (flow.step === 'preview' && (flow.draft.albumImport.files.length === 0 || !flow.draft.albumImport.files.every((file) => file.uploadStatus === 'uploaded'))) {
-    return '文件上传完成后即可提交'
-  }
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
 	if (!flow.draft.albumDetails.contributors?.length) {
 		return '请添加创作者'
@@ -193,8 +190,6 @@ const canGoForward = computed(() => {
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 	}
 	return !!flow.draft.albumImport.importId
-		&& flow.draft.albumImport.files.length > 0
-		&& flow.draft.albumImport.files.every((file) => file.uploadStatus === 'uploaded')
 		&& !!flow.draft.albumDetails.title.trim()
 		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 })
@@ -443,38 +438,31 @@ function handlePrimaryAction() {
   }
 }
 
-function buildCreateArtistEdit(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicEditRequest {
+function buildCreateArtistInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicArtistInput {
   const artist = flow.draft.artist
   const primaryStageName = artist.stageNames.find((item) => item.isPrimary && item.name.trim())
     ?? artist.stageNames.find((item) => item.name.trim())
-  const source = artist.source.trim()
 
   return {
-    type: 'create_artist',
-    entity_type: 'artist',
-    payload: {
-      name: primaryStageName?.name.trim() || artist.legalName.trim(),
-      legal_name: artist.legalName.trim(),
-      stage_names: artist.stageNames
-        .filter((item) => item.name.trim())
-        .map((item) => ({
-          name: item.name.trim(),
-          is_primary: item.isPrimary,
-          start_date_text: item.startDateText.trim(),
-          end_date_text: item.endDateText.trim(),
-        })),
-      bio: artist.bio.trim(),
-      image_url: artist.avatarUrl.trim(),
-      nationality: artist.nationality.trim(),
-      birth_place: artist.birthPlace.trim(),
-      birth_date: formatDateFromParts(artist.birthDateParts),
-      artist_form: artist.kind,
-      active_start_date: formatArtistDate(artist.activeStartDateParts),
-      active_end_date: formatArtistDate(artist.activeEndDateParts),
-    },
-    changes: {},
-    reason: '创建艺术家并关联现有专辑',
-    sources: source ? [{ type: 'url', url: source }] : [],
+    name: primaryStageName?.name.trim() || artist.legalName.trim(),
+    legal_name: artist.legalName.trim(),
+    stage_names: artist.stageNames
+      .filter((item) => item.name.trim())
+      .map((item) => ({
+        name: item.name.trim(),
+        is_primary: item.isPrimary,
+        start_date_text: item.startDateText.trim(),
+        end_date_text: item.endDateText.trim(),
+      })),
+    bio: artist.bio.trim(),
+    image_url: artist.avatarUrl.trim(),
+    nationality: artist.nationality.trim(),
+    birth_place: artist.birthPlace.trim(),
+    birth_date: formatDateFromParts(artist.birthDateParts),
+    artist_form: artist.kind,
+    active_start_date: formatArtistDate(artist.activeStartDateParts),
+    active_end_date: formatArtistDate(artist.activeEndDateParts),
+    members: buildArtistMembers(flow),
   }
 }
 
@@ -489,9 +477,9 @@ async function createArtistAndLinkAlbum() {
   flow.submitting = true
   flow.errorMessage = ''
   try {
-    const edit = await musicApi.submitMusicEdit(buildCreateArtistEdit(flow))
-    const artistId = edit.entity_id?.trim()
-    if (edit.status !== 'applied' || !artistId) {
+    const artist = await musicApi.createMusicArtist(buildCreateArtistInput(flow))
+    const artistId = artist.id?.trim()
+    if (!artistId) {
       throw new Error('创建艺术家失败，请检查资料后重试')
     }
 
@@ -543,12 +531,13 @@ async function completeCreation() {
       throw new Error('commitMusicAlbumImport is unavailable')
     }
 
-    await commitMusicAlbumImport(importId, buildCommitInput(flow))
+    const committedImport = await commitMusicAlbumImport(importId, buildCommitInput(flow))
     await musicApi.completeMusicAlbumImportSession(importId)
     toastMessage.value = '已提交至导入中心，后台将继续处理'
     toastVisible.value = true
+    const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     closeCurrentCreationFlow()
-    await router.push('/music/imports')
+    await router.push(artistId ? `/music/artist/${artistId}` : '/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

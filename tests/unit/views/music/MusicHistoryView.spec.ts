@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   playAlbum: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
+  loadFavoriteSongs: vi.fn(),
+  toggleFavoriteSong: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -20,6 +22,21 @@ vi.mock('@/stores/player', () => ({
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({ openAlbum: mocks.openAlbum, openArtist: mocks.openArtist }),
 }))
+
+vi.mock('@/composables/useLoginRedirect', () => ({
+  useLoginRedirect: () => ({ requireLogin: () => false }),
+}))
+
+vi.mock('@/composables/useMusicFavoritePlaylist', async () => {
+  const { ref } = await import('vue')
+  return {
+    useMusicFavoritePlaylist: () => ({
+      favoriteSongIds: ref(new Set<string>()),
+      loadFavoriteSongs: mocks.loadFavoriteSongs,
+      toggleFavoriteSong: mocks.toggleFavoriteSong,
+    }),
+  }
+})
 
 function historyItem(id: string, title: string) {
   return {
@@ -44,6 +61,9 @@ describe('Music HistoryView.vue', () => {
     mocks.playAlbum.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
+    mocks.loadFavoriteSongs.mockReset()
+    mocks.loadFavoriteSongs.mockResolvedValue(new Set())
+    mocks.toggleFavoriteSong.mockReset()
   })
 
   it('appends the next history page and hides load more at the end', async () => {

@@ -2,31 +2,6 @@ import type { ApiList, PaginationMeta, UploadAsset } from "../types";
 
 export type MusicEntryStatus =
   "open" | "disputed" | "confirmed" | "protected" | "closed";
-export type MusicEntityType = "artist" | "album" | "song";
-export type MusicEditStatus =
-  | "open"
-  | "applied"
-  | "rejected"
-  | "cancelled"
-  | "failed_dependency"
-  | "failed_prerequisite"
-  | "reverted"
-  | "internal_error";
-export type MusicEditType =
-  | "create_artist"
-  | "update_artist"
-  | "merge_artist"
-  | "delete_artist"
-  | "create_album"
-  | "update_album"
-  | "delete_album"
-  | "create_song"
-  | "update_song"
-  | "move_song"
-  | "delete_song"
-  | "update_lyrics"
-  | "change_entry_status";
-
 export type MusicSource = {
   type: "url" | string;
   url?: string;
@@ -290,33 +265,6 @@ export type UploadMusicAlbumArchiveOptions = {
   onProgress?: (progress: MusicAlbumArchiveUploadProgress) => void;
 };
 
-export type MusicEditRequest = {
-  type: MusicEditType;
-  entity_type: MusicEntityType;
-  entity_id?: string;
-  payload?: Record<string, unknown>;
-  changes?: Record<string, unknown>;
-  reason: string;
-  sources?: MusicSource[];
-};
-
-export type MusicEditSummary = {
-  id: string;
-  type: MusicEditType;
-  status: MusicEditStatus;
-  entity_type: MusicEntityType;
-  entity_id?: string;
-  submitted_by: string;
-  reason: string;
-  payload: Record<string, unknown>;
-  changes: Record<string, unknown>;
-  sources: MusicSource[];
-  auto_applied: boolean;
-  votable: boolean;
-  votes?: { yes: number; no: number };
-  created_at: string;
-};
-
 export type MusicRevisionSummary = {
   id: string;
   content_type: "album" | "song" | "artist";
@@ -524,8 +472,7 @@ export type MusicPlaylistSummary = {
   user_id?: string;
   owner_username?: string;
   is_public?: boolean;
-  is_favorite: boolean;
-  kind?: "user" | "favorite" | "later";
+	kind?: "user" | "later";
   play_count?: number;
   bookmark_count?: number;
   reason?: string;
@@ -604,12 +551,19 @@ export type MusicAlbumTrackEditInput = {
 
 export type MusicArtistInput = {
   name: string;
+  legal_name?: string;
+  stage_names?: MusicAlbumImportCommitStageName[];
   bio?: string;
   image_url?: string;
   nationality?: string;
+  birth_place?: string;
   birth_date?: string;
   birth_year?: number;
   death_year?: number;
+  artist_form?: 'person' | 'group';
+  active_start_date?: string;
+  active_end_date?: string;
+  members?: MusicAlbumImportCommitMember[];
 };
 
 export type MusicAlbumInput = {
@@ -692,16 +646,6 @@ export type MusicListFilters = {
   album_id?: string;
   year?: string | number;
   status?: MusicEntryStatus;
-  page?: number;
-  page_size?: number;
-  sort?: string;
-};
-
-export type MusicEditFilters = {
-  status?: MusicEditStatus;
-  entity_type?: MusicEntityType;
-  type?: MusicEditType;
-  submitted_by?: string;
   page?: number;
   page_size?: number;
   sort?: string;

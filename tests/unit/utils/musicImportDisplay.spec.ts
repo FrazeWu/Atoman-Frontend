@@ -58,9 +58,9 @@ describe('music import album display', () => {
   })
 
   it('maps import statuses to the four center groups', () => {
-    expect(musicImportGroupForStatus('ready')).toBe('draft')
-    expect(musicImportGroupForStatus('analyzing')).toBe('processing')
-    expect(musicImportGroupForStatus('failed')).toBe('failed')
-    expect(musicImportGroupForStatus('committed')).toBe('completed')
+    expect(musicImportGroupForStatus('ready')).toBe('in_progress')
+    expect(musicImportGroupForStatus('analyzing')).toBe('in_progress')
+    expect(musicImportGroupForStatus('failed')).toBe('needs_attention')
+    expect(musicImportGroupForStatus('committed')).toBe('published')
   })
 })

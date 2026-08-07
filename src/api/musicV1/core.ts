@@ -87,7 +87,8 @@ export const musicV1Endpoints = {
   albumBookmarks: () => `${apiV1Base()}/music/bookmarks/albums`,
   albumBookmark: (albumId: string) =>
     `${apiV1Base()}/music/bookmarks/albums/${albumId}`,
-  songBookmarks: () => `${apiV1Base()}/music/bookmarks/songs`,
+	songBookmarks: () => `${apiV1Base()}/music/bookmarks/songs`,
+	songBookmarkStatus: () => `${apiV1Base()}/music/bookmarks/songs/status`,
   songBookmark: (songId: string) =>
     `${apiV1Base()}/music/bookmarks/songs/${songId}`,
   playlistBookmarks: () => `${apiV1Base()}/music/bookmarks/playlists`,
@@ -162,11 +163,4 @@ export const musicV1Endpoints = {
     `${apiV1Base()}/music/recommend/albums?mode=${mode}`,
   recommendArtists: (mode: MusicRecommendationMode) =>
     `${apiV1Base()}/music/recommend/artists?mode=${mode}`,
-  edits: () => `${apiV1Base()}/music/edits`,
-  edit: (editId: string) => `${apiV1Base()}/music/edits/${editId}`,
-  editVotes: (editId: string) => `${apiV1Base()}/music/edits/${editId}/votes`,
-  editApprove: (editId: string) =>
-    `${apiV1Base()}/music/edits/${editId}/approve`,
-  editReject: (editId: string) => `${apiV1Base()}/music/edits/${editId}/reject`,
-  editCancel: (editId: string) => `${apiV1Base()}/music/edits/${editId}/cancel`,
 };

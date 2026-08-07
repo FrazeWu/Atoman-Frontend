@@ -39,7 +39,6 @@ describe('UI 准则', () => {
     expect(read('src/components/ui/PEmpty.vue')).toContain("kicker: '暂无内容'")
     expect(read('src/components/music/MusicSidebarPlaylists.vue')).not.toContain('PLAYLISTS')
     expect(read('src/views/forum/ForumLayout.vue')).not.toMatch(/CATEGORIES|TAGS/)
-    expect(read('src/components/music/MusicEditReviewShell.vue')).not.toMatch(/Music edit|approve \/ reject \/ cancel|music edits/)
     expect(read('src/components/setting/SettingFeedSourcePanel.vue')).not.toContain('方便后台识别')
     expect(read('src/components/setting/SettingMusicReviewPanel.vue')).not.toMatch(/后台审核|后台驳回|后台取消/)
   })

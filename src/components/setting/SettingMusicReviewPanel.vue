@@ -6,24 +6,11 @@ import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { isAdminRole } from '@/utils/roles'
 import PSelect from '@/components/ui/PSelect.vue'
-import {
-  listMusicEdits,
-  approveMusicEdit,
-  rejectMusicEdit,
-  cancelMusicEdit,
-  type MusicEntityType,
-  type MusicEditStatus,
-} from '@/api/musicV1'
-import MusicEditReviewShell, { type MusicEditReviewItem } from '@/components/music/MusicEditReviewShell.vue'
 
 const authStore = useAuthStore()
 const api = useApi()
 
-const activeTab = ref<'review' | 'entries' | 'quality'>('review')
-const reviewItems = ref<MusicEditReviewItem[]>([])
-const loading = ref(true)
-const statusFilter = ref('open')
-const entityTypeFilter = ref('')
+const activeTab = ref<'entries' | 'quality'>('entries')
 
 type MusicReviewEntry = {
   id: string
@@ -97,51 +84,6 @@ function qualityPath(issue: MusicQualityIssue) {
   return '/music/imports'
 }
 
-async function fetchReviewItems() {
-  loading.value = true
-  try {
-    const result = await listMusicEdits({
-      status: statusFilter.value ? (statusFilter.value as MusicEditStatus) : undefined,
-      entity_type: entityTypeFilter.value ? (entityTypeFilter.value as MusicEntityType) : undefined,
-      page_size: 50,
-    })
-
-    reviewItems.value = result.data.map((item) => ({
-      id: item.id,
-      type: item.type,
-      status: item.status,
-      entityType: item.entity_type,
-      targetTitle: item.entity_id || item.type,
-      reason: item.reason || item.type,
-      createdAt: item.created_at,
-      submittedBy: item.submitted_by,
-      votes: item.votes,
-      payload: item.payload,
-      changes: item.changes,
-      sources: item.sources,
-    }))
-  } finally {
-    loading.value = false
-  }
-}
-
-async function runReviewAction(action: (id: string, reason: string) => Promise<unknown>, id: string, reason: string) {
-  await action(id, reason)
-  await fetchReviewItems()
-}
-
-function approve(id: string) {
-  return runReviewAction(approveMusicEdit, id, '已通过')
-}
-
-function reject(id: string) {
-  return runReviewAction(rejectMusicEdit, id, '已驳回')
-}
-
-function cancel(id: string) {
-  return runReviewAction(cancelMusicEdit, id, '已取消')
-}
-
 const fetchEntries = async () => {
   entriesLoading.value = true
   try {
@@ -175,17 +117,10 @@ watch([entriesTypeFilter, entriesStatusFilter], () => {
 
 watch(qualityFilter, () => { qualityPage.value = 1; if (activeTab.value === 'quality') void fetchQualityIssues(1) })
 
-watch([statusFilter, entityTypeFilter], () => {
-  if (activeTab.value === 'review') {
-    void fetchReviewItems()
-  }
-})
-
 onMounted(async () => {
   if (!authStore.isAuthenticated || !isAdminRole(authStore.user?.role)) {
     return
   }
-  await fetchReviewItems()
   await fetchEntries()
   await fetchQualityIssues()
 })
@@ -195,9 +130,6 @@ onMounted(async () => {
   <div class="setting-music-review-panel">
     <div>
       <div class="admin-tabs">
-        <button :class="['admin-tab', activeTab === 'review' ? 'admin-tab-active' : '']" @click="activeTab = 'review'">
-          审核队列 ({{ reviewItems.length }})
-        </button>
         <button :class="['admin-tab', activeTab === 'entries' ? 'admin-tab-active' : '']" @click="activeTab = 'entries'; fetchEntries()">
           条目管理
         </button>
@@ -250,22 +182,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-else>
-      <div v-if="loading" class="text-center py-20">
-        <p class="text-gray-400 font-medium">加载中...</p>
-      </div>
-      <MusicEditReviewShell
-        v-else
-        :items="reviewItems"
-        :status="statusFilter"
-        :entity-type="entityTypeFilter"
-        @update:status="(value) => statusFilter = value"
-        @update:entity-type="(value) => entityTypeFilter = value"
-        @approve="approve"
-        @reject="reject"
-        @cancel="cancel"
-      />
-    </div>
   </div>
 </template>
 

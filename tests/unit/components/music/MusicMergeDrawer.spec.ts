@@ -6,29 +6,28 @@ const mocks = vi.hoisted(() => ({
   state: { value: { artistId: 'artist-source', albumId: null as string | null, nestedAction: 'merge_artist', nestedPayload: { name: '来源艺术家' } } },
   listMusicArtists: vi.fn(),
   listMusicAlbums: vi.fn(),
-  submitMusicEdit: vi.fn(),
+  mergeMusicArtists: vi.fn(),
+  mergeMusicAlbums: vi.fn(),
+  previewMusicAlbumMerge: vi.fn(),
   closeNestedAction: vi.fn(),
-  closeArtist: vi.fn(),
-  closeAlbum: vi.fn(),
-  openArtist: vi.fn(),
-  openAlbum: vi.fn(),
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
     state: mocks.state,
     closeNestedAction: mocks.closeNestedAction,
-    closeArtist: mocks.closeArtist,
-    closeAlbum: mocks.closeAlbum,
-    openArtist: mocks.openArtist,
-    openAlbum: mocks.openAlbum,
+    returnToLayer: vi.fn(),
+    isLayerShifted: () => false,
+    isTopLayer: () => true,
   }),
 }))
 
 vi.mock('@/api/musicV1', () => ({
   listMusicArtists: mocks.listMusicArtists,
   listMusicAlbums: mocks.listMusicAlbums,
-  submitMusicEdit: mocks.submitMusicEdit,
+  mergeMusicArtists: mocks.mergeMusicArtists,
+  mergeMusicAlbums: mocks.mergeMusicAlbums,
+  previewMusicAlbumMerge: mocks.previewMusicAlbumMerge,
 }))
 
 describe('MusicMergeDrawer', () => {
@@ -42,10 +41,10 @@ describe('MusicMergeDrawer', () => {
       ],
       meta: { page: 1, page_size: 20, total: 2, has_more: false },
     })
-    mocks.submitMusicEdit.mockResolvedValue({ id: 'merge-edit', status: 'open' })
+    mocks.mergeMusicArtists.mockResolvedValue({ message: 'merged' })
   })
 
-  it('submits an artist merge for review without navigating to the target', async () => {
+  it('直接合并艺术家', async () => {
     const wrapper = mount(MusicMergeDrawer, {
       global: { stubs: { PSheet: { template: '<section><slot /></section>' } } },
     })
@@ -57,20 +56,12 @@ describe('MusicMergeDrawer', () => {
     expect(wrapper.text()).not.toContain('来源艺术家')
     await wrapper.get('[data-test="merge-target-artist-target"]').trigger('click')
     await wrapper.get('[data-test="merge-continue"]').trigger('click')
-    expect(wrapper.text()).toContain('审核通过后，当前条目将并入目标条目')
+    expect(wrapper.text()).toContain('确认后，当前条目将并入目标条目')
 
     await wrapper.get('[data-test="merge-confirm"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
-      type: 'merge_artist',
-      entity_type: 'artist',
-      entity_id: 'artist-source',
-      changes: { target_id: 'artist-target' },
-      reason: '合并重复艺术家',
-    })
-    expect(wrapper.text()).toContain('已提交审核')
-    expect(mocks.closeArtist).not.toHaveBeenCalled()
-    expect(mocks.openArtist).not.toHaveBeenCalled()
+    expect(mocks.mergeMusicArtists).toHaveBeenCalledWith('artist-target', 'artist-source')
+    expect(wrapper.text()).toContain('合并完成')
   })
 })

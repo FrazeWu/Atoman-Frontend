@@ -59,7 +59,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     vi.unstubAllGlobals()
   })
 
-  it('通过统一文件入口以 archive 自动模式注册、逐文件上传并完成会话', async () => {
+  it('通过统一文件入口以 archive 自动模式注册并逐文件上传', async () => {
     const archive = new File(['zip'], 'graduation.zip', { type: 'application/zip' })
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
     vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({
@@ -79,7 +79,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(musicApi.createMusicAlbumImportFilePartUpload).toHaveBeenCalledWith('import-1', 'file-1', 1, archive.size)
     expect(musicApi.completeMusicAlbumImportFilePart).toHaveBeenCalledWith('import-1', 'file-1', 1, 'etag-1', archive.size)
     expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith('import-1')
+    expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled()
     expect(useMusicDrawers().state.value.creationFlow?.step).toBe('albumDetails')
   })
 
@@ -207,7 +207,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(wrapper.get('[data-testid="album-import-speed"]').text()).toContain('上传速度 128 KB/s')
   })
 
-  it('轮询提取、分析和就绪三个阶段，并应用最终快照', async () => {
+  it('上传后应用后台处理中的最新快照', async () => {
     vi.useFakeTimers()
     const archive = new File(['zip'], 'stages.zip', { type: 'application/zip' })
     vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot({ inputMode: 'archive' }))
@@ -230,30 +230,21 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     mockUploadTransport()
     vi.spyOn(musicApi, 'completeMusicAlbumImportSession').mockResolvedValue(snapshot({ status: 'queued', stage: 'queued' }))
     vi.spyOn(musicApi, 'getMusicAlbumImport')
-      .mockResolvedValueOnce(snapshot({ status: 'extracting', stage: 'extracting' }))
-      .mockResolvedValueOnce(snapshot({ status: 'analyzing', stage: 'analyzing' }))
-      .mockResolvedValueOnce(snapshot({
-        status: 'ready',
-        stage: 'ready',
-        inputMode: 'archive',
-        progress: { current: 12, total: 12 },
-        derivedAlbumTitle: 'Stages',
-      }))
+      .mockResolvedValueOnce(snapshot({ status: 'extracting', stage: 'extracting', inputMode: 'archive' }))
 
     const wrapper = mount(MusicCreationAlbumSeedStep)
     setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
     await fileInput(wrapper).trigger('change')
-    await vi.advanceTimersByTimeAsync(8000)
+    await flushPromises()
 
-    expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(3)
+    expect(musicApi.getMusicAlbumImport).toHaveBeenCalledTimes(1)
     expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport).toEqual(expect.objectContaining({
-      status: 'ready',
-      stage: 'ready',
+      status: 'extracting',
+      stage: 'extracting',
       inputMode: 'archive',
       totalBytesLoaded: archive.size,
       totalBytesTotal: archive.size,
     }))
-    expect(useMusicDrawers().state.value.creationFlow?.draft.albumDetails.title).toBe('Stages')
   })
 
   it('失败文件可重试并可用替换文件重新上传', async () => {
@@ -288,8 +279,8 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     await wrapper.get('.import-file-action').trigger('click')
     await flushPromises()
     expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith('import-1')
-    expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('queued')
+    expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled()
+    expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe('uploaded')
 
     Object.assign(drawers.state.value.creationFlow.draft.albumImport, { status: 'failed', files: [fileRecord] })
     await flushPromises()
@@ -301,7 +292,7 @@ describe('MusicCreationAlbumImportStep.vue', () => {
       relativePath: 'fixed.mp3', fileName: 'fixed.mp3', fileSize: replacement.size, contentType: 'audio/mpeg',
     })
     expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith('import-1', 'file-1')
-    expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(2)
+    expect(musicApi.completeMusicAlbumImportSession).not.toHaveBeenCalled()
   })
 
   it('会话处理失败后可直接重试而不重复上传', async () => {

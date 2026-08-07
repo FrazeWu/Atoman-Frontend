@@ -15,12 +15,10 @@ import {
   type MusicAlbumImportMultipart,
   type MusicAlbumImportMultipartPart,
 	type MusicListResponse,
-	type MusicAlbumImportMultipartPartUpload,
+  type MusicAlbumImportMultipartPartUpload,
 	type MusicRevisionSummary,
   type SongEditDraft,
   type MusicAlbumTrackEditInput,
-  type MusicEditRequest,
-  type MusicSource,
   type MusicUploadTarget,
   type RegisterMusicAlbumImportFileInput,
   type RegisterMusicAlbumImportFilesInput,
@@ -62,34 +60,12 @@ function artistPayloadFromDraft(draft: ArtistEditDraft): Record<string, unknown>
   }
 }
 
-export function buildCreateArtistEdit(draft: ArtistEditDraft): MusicEditRequest {
-  return {
-    type: 'create_artist',
-    entity_type: 'artist',
-    payload: artistPayloadFromDraft(draft),
-    changes: {},
-    reason: draft.reason,
-    sources: draft.sources,
-  }
-}
-
 export function submitArtistRevision(artistId: string, draft: ArtistEditDraft): Promise<MusicRevisionSummary> {
 	return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.artistRevisions(artistId), {
 		base_revision: 0,
 		changes: artistPayloadFromDraft(draft),
 		edit_summary: draft.reason,
 	})
-}
-
-export function buildCreateAlbumEdit(draft: AlbumEditDraft): MusicEditRequest {
-  return {
-    type: 'create_album',
-    entity_type: 'album',
-    payload: albumPayloadFromDraft(draft),
-    changes: {},
-    reason: draft.reason,
-    sources: draft.sources,
-  }
 }
 
 export function submitAlbumRevision(albumId: string, draft: AlbumEditDraft): Promise<MusicRevisionSummary> {
@@ -113,18 +89,6 @@ export function submitSongRevision(songId: string, draft: SongEditDraft): Promis
 		},
 		edit_summary: draft.reason,
 	})
-}
-
-export function buildDeleteAlbumEdit(albumId: string, reason: string): MusicEditRequest {
-  return {
-    type: 'delete_album',
-    entity_type: 'album',
-    entity_id: albumId,
-    payload: {},
-    changes: { target_status: 'closed' },
-    reason,
-    sources: [],
-  }
 }
 
 export async function uploadMusicAsset(
@@ -447,65 +411,5 @@ export async function uploadMusicAlbumArchive(
     })
 
     xhr.send(form)
-  })
-}
-
-function buildSources(source?: string): MusicSource[] {
-  const value = source?.trim()
-  return value ? [{ type: 'url', url: value }] : []
-}
-
-function buildSharedCreationReason() {
-  return 'Create artist and debut album from music creation flow'
-}
-
-export function buildArtistEditFromCreationFlow(artist: {
-  avatarUrl?: string
-  name?: string
-  country?: string
-  birthday?: string
-  bio?: string
-  source?: string
-}): MusicEditRequest {
-  return buildCreateArtistEdit({
-    name: artist.name?.trim() || undefined,
-    bio: artist.bio?.trim() || undefined,
-    image_url: artist.avatarUrl?.trim() || undefined,
-    nationality: artist.country?.trim() || undefined,
-    birth_date: artist.birthday?.trim() || undefined,
-    reason: buildSharedCreationReason(),
-    sources: buildSources(artist.source),
-  })
-}
-
-export function buildAlbumEditFromCreationFlow(
-  album: {
-    coverUrl?: string
-    coverAsset?: UploadAsset | null
-    title?: string
-    releaseDate?: string
-    type?: string
-    bio?: string
-    source?: string
-  },
-  artistId: string,
-): MusicEditRequest {
-  const coverUrl = album.coverUrl?.trim()
-  return buildCreateAlbumEdit({
-    title: album.title?.trim() || undefined,
-    artist_ids: [artistId],
-    release_date: album.releaseDate?.trim() || undefined,
-    cover: album.coverAsset || (coverUrl
-      ? {
-          url: coverUrl,
-          key: '',
-          content_type: '',
-          size: 0,
-        }
-      : null),
-    description: album.bio?.trim() || undefined,
-    album_type: album.type?.trim() || undefined,
-    reason: buildSharedCreationReason(),
-    sources: buildSources(album.source),
   })
 }

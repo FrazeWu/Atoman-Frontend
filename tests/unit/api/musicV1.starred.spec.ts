@@ -15,6 +15,9 @@ import {
   mergeMusicAlbums,
   musicV1Endpoints,
   listSongBookmarks,
+  getSongBookmarkStatus,
+  createSongBookmark,
+  deleteSongBookmark,
   reorderMusicPlaylistSongs,
   updateMusicPlaylist,
 } from '@/api/musicV1'
@@ -55,6 +58,7 @@ describe('music v1 starred and playlist adapters', () => {
     expect(musicV1Endpoints.artistBookmarks()).toBe('/api/v1/music/bookmarks/artists')
     expect(musicV1Endpoints.albumBookmarks()).toBe('/api/v1/music/bookmarks/albums')
     expect(musicV1Endpoints.songBookmarks()).toBe('/api/v1/music/bookmarks/songs')
+		expect(musicV1Endpoints.songBookmarkStatus()).toBe('/api/v1/music/bookmarks/songs/status')
 		expect(musicV1Endpoints.playlistBookmarks()).toBe('/api/v1/music/bookmarks/playlists')
 		expect(musicV1Endpoints.playlistBookmark('playlist-1')).toBe('/api/v1/music/bookmarks/playlists/playlist-1')
     expect(musicV1Endpoints.playlists()).toBe('/api/v1/music/playlists')
@@ -63,6 +67,27 @@ describe('music v1 starred and playlist adapters', () => {
     expect(musicV1Endpoints.albumRevisions('album-1')).toBe('/api/v1/albums/album-1/revisions')
     expect(musicV1Endpoints.albumDiscussions('album-1')).toBe('/api/v1/discussions/music_album/album-1/comments')
   })
+
+	it('queries and mutates standalone song bookmarks', async () => {
+		vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input)
+			if (url.includes('/status')) {
+				return new Response(JSON.stringify({ data: { song_ids: ['song-1'] } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+			}
+			if (url === '/api/v1/music/bookmarks/songs' && init?.method === 'POST') {
+				return new Response(JSON.stringify({ data: { id: 'bookmark-1', song_id: 'song-1' } }), { status: 201, headers: { 'Content-Type': 'application/json' } })
+			}
+			if (url === '/api/v1/music/bookmarks/songs/song-1' && init?.method === 'DELETE') {
+				return new Response(JSON.stringify({ data: { deleted: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+			}
+			throw new Error(`unexpected fetch: ${url}`)
+		}))
+
+		expect(await getSongBookmarkStatus(['song-1', 'song-2'])).toEqual(['song-1'])
+		await createSongBookmark('song-1')
+		await deleteSongBookmark('song-1')
+		expect(fetch).toHaveBeenCalledTimes(3)
+	})
 
   it('lists bookmarks and playlists through existing music endpoints', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {

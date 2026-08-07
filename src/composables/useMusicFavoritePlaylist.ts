@@ -1,51 +1,19 @@
 import { ref } from 'vue'
 import {
   addMusicPlaylistSong,
-  createMusicPlaylist,
-  getMusicPlaylist,
-  listMusicPlaylists,
-  removeMusicPlaylistSong,
-  type MusicPlaylistSummary,
+  createSongBookmark,
+  deleteSongBookmark,
+  getSongBookmarkStatus,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
-const favoriteNames = new Set(['最爱', '我喜欢的单曲', '我喜欢'])
-
-export function isFavoritePlaylistName(name: string) {
-  return favoriteNames.has(name.trim())
-}
-
 export function useMusicFavoritePlaylist() {
   const { refreshPlaylists } = useMusicDrawers()
-  const playlists = ref<MusicPlaylistSummary[]>([])
   const favoriteSongIds = ref<Set<string>>(new Set())
 
-  async function loadPlaylists() {
-    const response = await listMusicPlaylists()
-    playlists.value = response.data || []
-    return playlists.value
-  }
-
-  async function getFavoritePlaylist(createIfMissing = false) {
-    const list = await loadPlaylists()
-    const existing = list.find((playlist) => isFavoritePlaylistName(playlist.name))
-    if (existing || !createIfMissing) return existing || null
-
-    const created = await createMusicPlaylist({ name: '最爱' })
-    playlists.value = [created, ...list]
-    refreshPlaylists()
-    return created
-  }
-
-  async function loadFavoriteSongs() {
-    const favoritePlaylist = await getFavoritePlaylist(false)
-    if (!favoritePlaylist) {
-      favoriteSongIds.value = new Set()
-      return favoriteSongIds.value
-    }
-
-    const detail = await getMusicPlaylist(String(favoritePlaylist.id))
-    favoriteSongIds.value = new Set((detail.songs || []).map((song) => String(song.id)))
+  async function loadFavoriteSongs(songIds: string[] = []) {
+    const uniqueIds = [...new Set(songIds.filter(Boolean))]
+    favoriteSongIds.value = new Set(await getSongBookmarkStatus(uniqueIds))
     return favoriteSongIds.value
   }
 
@@ -60,30 +28,19 @@ export function useMusicFavoritePlaylist() {
   }
 
   async function toggleFavoriteSong(songId: string) {
-    const favoritePlaylist = await getFavoritePlaylist(true)
-    if (!favoritePlaylist) throw new Error('Favorite playlist unavailable')
-
-    const playlistId = String(favoritePlaylist.id)
     if (favoriteSongIds.value.has(songId)) {
-      await removeMusicPlaylistSong(playlistId, songId)
+      await deleteSongBookmark(songId)
       setSongFavorite(songId, false)
-      refreshPlaylists()
-      return { isFavorite: false, message: '已从最爱中移除' }
+      return { isFavorite: false, message: '已取消收藏' }
     }
 
-    await addMusicPlaylistSong(playlistId, songId)
+    await createSongBookmark(songId)
     setSongFavorite(songId, true)
-    refreshPlaylists()
-    return { isFavorite: true, message: '已添加到最爱' }
-  }
-
-  function isFavoritePlaylist(playlistId: string) {
-    return playlists.value.some((playlist) => String(playlist.id) === playlistId && isFavoritePlaylistName(playlist.name))
+    return { isFavorite: true, message: '已收藏' }
   }
 
   async function addSongToPlaylist(playlistId: string, songId: string) {
     await addMusicPlaylistSong(playlistId, songId)
-    if (isFavoritePlaylist(playlistId)) setSongFavorite(songId, true)
     refreshPlaylists()
   }
 
@@ -92,6 +49,5 @@ export function useMusicFavoritePlaylist() {
     loadFavoriteSongs,
     toggleFavoriteSong,
     addSongToPlaylist,
-    isFavoritePlaylist,
   }
 }

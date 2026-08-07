@@ -132,7 +132,8 @@ vi.mock('@/api/musicV1', async () => {
   return {
     ...actual,
     commitMusicAlbumImport: vi.fn(),
-    submitMusicEdit: vi.fn(),
+    completeMusicAlbumImportSession: vi.fn(),
+    createMusicArtist: vi.fn(),
   }
 })
 
@@ -172,12 +173,15 @@ const commitMusicAlbumImportMock = vi.mocked(
     commitMusicAlbumImport: ReturnType<typeof vi.fn>
   }).commitMusicAlbumImport,
 )
-const submitMusicEditMock = vi.mocked(musicApi.submitMusicEdit)
+const createMusicArtistMock = vi.mocked(musicApi.createMusicArtist)
+const completeMusicAlbumImportSessionMock = vi.mocked(musicApi.completeMusicAlbumImportSession)
 
 describe('MusicCreationFlowDrawer', () => {
   beforeEach(() => {
     commitMusicAlbumImportMock.mockReset()
-    submitMusicEditMock.mockReset()
+    createMusicArtistMock.mockReset()
+    completeMusicAlbumImportSessionMock.mockReset()
+    completeMusicAlbumImportSessionMock.mockResolvedValue({ importId: 'import-1', status: 'queued' })
     drawerMocks.closeMusicCreationFlow.mockReset()
     drawerMocks.closeMusicCreationFlow.mockImplementation(() => {
       drawerMocks.state.value.creationFlow = null
@@ -260,40 +264,23 @@ describe('MusicCreationFlowDrawer', () => {
         },
       },
     })
-    submitMusicEditMock.mockResolvedValue({
-      id: 'edit-1',
-      type: 'create_artist',
-      status: 'applied',
-      entity_type: 'artist',
-      entity_id: 'artist-created',
-      submitted_by: 'user-1',
-      reason: '创建艺术家并关联现有专辑',
-      payload: {},
-      changes: {},
-      sources: [],
-      auto_applied: true,
-      votable: false,
-      created_at: '2026-08-07T00:00:00Z',
-    })
+    createMusicArtistMock.mockResolvedValue({ id: 'artist-created', name: 'Ye' })
 
     const wrapper = mount(MusicCreationFlowDrawer)
     expect(wrapper.get('[data-testid="artist-next-button"]').text()).toBe('创建新专辑')
     await wrapper.get('[data-testid="artist-create-and-link-button"]').trigger('click')
     await flushPromises()
 
-    expect(submitMusicEditMock).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'create_artist',
-      entity_type: 'artist',
-      payload: expect.objectContaining({
-        name: 'Ye',
-        legal_name: 'Kanye Omari West',
-        image_url: 'https://img.test/artist.jpg',
-        nationality: '美国',
-        birth_place: 'Atlanta',
-        birth_date: '1977-06-08',
-      }),
-      reason: '创建艺术家并关联现有专辑',
-      sources: [{ type: 'url', url: 'https://example.test/ye' }],
+    expect(createMusicArtistMock).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Ye',
+      legal_name: 'Kanye Omari West',
+      image_url: 'https://img.test/artist.jpg',
+      nationality: '美国',
+      birth_place: 'Atlanta',
+      birth_date: '1977-06-08',
+      artist_form: 'person',
+      stage_names: [expect.objectContaining({ name: 'Ye', is_primary: true })],
+      members: [],
     }))
     expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/artist/artist-created')
     expect(drawerMocks.openNestedAction).toHaveBeenCalledWith('link_album', {
@@ -319,20 +306,7 @@ describe('MusicCreationFlowDrawer', () => {
         },
       },
     })
-    submitMusicEditMock.mockResolvedValue({
-      id: 'edit-failed',
-      type: 'create_artist',
-      status: 'failed_prerequisite',
-      entity_type: 'artist',
-      submitted_by: 'user-1',
-      reason: '创建艺术家并关联现有专辑',
-      payload: {},
-      changes: {},
-      sources: [],
-      auto_applied: false,
-      votable: false,
-      created_at: '2026-08-07T00:00:00Z',
-    })
+    createMusicArtistMock.mockRejectedValue(new Error('创建艺术家失败，请检查资料后重试'))
 
     const wrapper = mount(MusicCreationFlowDrawer)
     await wrapper.get('[data-testid="artist-create-and-link-button"]').trigger('click')

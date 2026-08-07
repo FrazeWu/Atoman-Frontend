@@ -5,9 +5,6 @@ import { ApiErrorResponseError, apiGet, apiGetEnvelope, apiGetRaw, apiPatchJson,
 import * as apiUrlModule from '@/composables/useApi'
 import {
   createMusicArtist,
-  buildCreateAlbumEdit,
-  buildCreateArtistEdit,
-  buildDeleteAlbumEdit,
 	  submitAlbumRevision,
   updateMusicPlaylist,
   getMusicAlbum,
@@ -15,7 +12,6 @@ import {
   listMusicArtists,
   listMusicAlbums,
   getMusicHome,
-  listMusicEdits,
   createAlbumDiscussion,
   deleteAlbumDiscussion,
   listAlbumDiscussions,
@@ -124,7 +120,7 @@ describe('api v1 client', () => {
       { status: 403, headers: { 'Content-Type': 'application/json' } },
     )))
 
-    await expect(apiPostJson('/api/v1/music/edits', { type: 'update_album' })).rejects.toMatchObject({
+    await expect(apiPostJson('/api/v1/albums/album_uuid/revisions', { changes: { title: 'Updated' } })).rejects.toMatchObject({
       status: 403,
       code: 'music.entry_protected',
       message: 'Entry is protected.',
@@ -223,8 +219,8 @@ describe('music v1 adapter', () => {
     expect(musicV1Endpoints.uploads()).toBe('/api/v1/uploads')
     expect(musicV1Endpoints.albums()).toBe('/api/v1/music/albums')
     expect(musicV1Endpoints.album('album_uuid')).toBe('/api/v1/music/albums/album_uuid')
-    expect(musicV1Endpoints.edits()).toBe('/api/v1/music/edits')
-    expect(musicV1Endpoints.editApprove('edit_uuid')).toBe('/api/v1/music/edits/edit_uuid/approve')
+    expect(musicV1Endpoints).not.toHaveProperty('edits')
+    expect(musicV1Endpoints).not.toHaveProperty('editApprove')
   })
 
   it('reuses the shared api base url for music endpoints', () => {
@@ -391,13 +387,25 @@ describe('music v1 adapter', () => {
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     )))
 
-    const result = await createMusicArtist({ name: 'Kanye West', bio: 'Artist bio' })
+    const input = {
+      name: 'Ye',
+      legal_name: 'Kanye Omari West',
+      stage_names: [{ name: 'Ye', is_primary: true, start_date_text: '', end_date_text: '' }],
+      bio: 'Artist bio',
+      nationality: 'US',
+      birth_place: 'Atlanta',
+      birth_date: '1977-06-08',
+      artist_form: 'person' as const,
+      active_start_date: '1996-01-01',
+      members: [],
+    }
+    const result = await createMusicArtist(input)
 
     expect(fetch).toHaveBeenCalledWith('/api/v1/music/artists', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ name: 'Kanye West', bio: 'Artist bio' }),
+      body: JSON.stringify(input),
     })
     expect(result).toEqual({ id: 'artist_uuid', name: 'Kanye West', bio: 'Artist bio', entry_status: 'open' })
   })
@@ -514,93 +522,6 @@ describe('music v1 adapter', () => {
     expect(body.get('entity_type')).toBe('album')
     expect(body.get('entity_id')).toBe('album-1')
     expect(body.get('staging_id')).toBe('stage-1')
-  })
-
-  it('builds create album edit payloads instead of direct CRUD payloads', () => {
-    const edit = buildCreateAlbumEdit({
-      title: 'Album',
-      artist_ids: ['artist_uuid'],
-      release_date: '2026-05-29',
-      cover: { url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/c.png', key: 'music/covers/uploads/users/user-1/2026/06/c.png', content_type: 'image/png', size: 1 },
-      description: 'Description',
-      reason: 'official release information',
-      sources: [{ type: 'url', url: 'https://example.com', title: 'Official' }],
-    })
-
-    expect(edit).toEqual({
-      type: 'create_album',
-      entity_type: 'album',
-      payload: {
-        title: 'Album',
-        artist_ids: ['artist_uuid'],
-        release_date: '2026-05-29',
-        cover_url: 'https://cdn.example.com/assets/music/covers/uploads/users/user-1/2026/06/c.png',
-        cover_key: 'music/covers/uploads/users/user-1/2026/06/c.png',
-        description: 'Description',
-      },
-      changes: {},
-      reason: 'official release information',
-      sources: [{ type: 'url', url: 'https://example.com', title: 'Official' }],
-    })
-  })
-
-  it('builds create artist edit payloads instead of direct CRUD payloads', () => {
-    const edit = buildCreateArtistEdit({
-      name: 'New Artist',
-      bio: 'artist biography',
-      image_url: 'https://example.com/artist.jpg',
-      nationality: 'JP',
-      birth_date: '1990-05-21',
-      birth_year: 1990,
-      reason: 'official profile',
-      sources: [{ type: 'url', url: 'https://example.com/profile', title: 'Official profile' }],
-    })
-
-    expect(edit).toEqual({
-      type: 'create_artist',
-      entity_type: 'artist',
-      payload: {
-        name: 'New Artist',
-        bio: 'artist biography',
-        image_url: 'https://example.com/artist.jpg',
-        nationality: 'JP',
-        birth_date: '1990-05-21',
-        birth_year: 1990,
-      },
-      changes: {},
-      reason: 'official profile',
-      sources: [{ type: 'url', url: 'https://example.com/profile', title: 'Official profile' }],
-    })
-  })
-
-	  it('builds delete album edit payloads', () => {
-    expect(buildDeleteAlbumEdit('album_uuid', 'duplicate album')).toEqual({
-      type: 'delete_album',
-      entity_type: 'album',
-      entity_id: 'album_uuid',
-      payload: {},
-      changes: { target_status: 'closed' },
-      reason: 'duplicate album',
-      sources: [],
-    })
-  })
-
-  it('lists review edits through /api/v1/music/edits', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(
-      JSON.stringify({ data: [], meta: { page: 2, page_size: 20, total: 24, has_more: true } }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    )))
-
-    const result = await listMusicEdits({ status: 'open', entity_type: 'album', page: 1, page_size: 20 })
-
-    expect(fetch).toHaveBeenCalledWith('/api/v1/music/edits?status=open&entity_type=album&page=1&page_size=20', {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    })
-    expect(result).toEqual({
-      data: [],
-      meta: { page: 2, page_size: 20, total: 24, has_more: true },
-    })
   })
 
   it('does not expose revert music edit endpoints or api methods', () => {
@@ -949,10 +870,11 @@ describe('music building-block barrel', () => {
 })
 
 describe('music merge API contract', () => {
-  it('declares merge endpoints as returning review edits', () => {
+  it('使用直接合并接口', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1/catalog.ts'), 'utf8')
 
-    expect(source).toMatch(/mergeMusicArtists\([\s\S]*?\): Promise<MusicEditSummary>/)
-    expect(source).toMatch(/mergeMusicAlbums\([\s\S]*?\): Promise<MusicEditSummary>/)
+    expect(source).toContain('musicV1Endpoints.artistMerge(targetArtistId)')
+    expect(source).toContain('musicV1Endpoints.albumMerge(targetAlbumId)')
+    expect(source).not.toContain('submitMusicEdit')
   })
 })

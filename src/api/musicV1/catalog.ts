@@ -24,9 +24,6 @@ import type {
   MusicArtistInput,
   MusicArtistListItem,
   MusicDiscussion,
-  MusicEditFilters,
-  MusicEditRequest,
-  MusicEditSummary,
   MusicHome,
   MusicListFilters,
   MusicListResponse,
@@ -181,6 +178,22 @@ export async function listSongBookmarks(
   return apiGetEnvelope<MusicSongBookmark[], PaginationMeta>(
     `${musicV1Endpoints.songBookmarks()}${queryString(filters)}`,
   );
+}
+
+export async function getSongBookmarkStatus(songIds: string[]): Promise<string[]> {
+  if (!songIds.length) return []
+  const response = await apiGet<{ song_ids: string[] }>(
+    `${musicV1Endpoints.songBookmarkStatus()}${queryString({ song_ids: songIds.join(',') })}`,
+  )
+  return response.song_ids || []
+}
+
+export async function createSongBookmark(songId: string): Promise<MusicSongBookmark> {
+  return apiPostJson<MusicSongBookmark>(musicV1Endpoints.songBookmarks(), { song_id: songId })
+}
+
+export async function deleteSongBookmark(songId: string): Promise<void> {
+  await apiDeleteJson<void>(musicV1Endpoints.songBookmark(songId))
 }
 
 export async function listPlaylistBookmarks(
@@ -704,57 +717,4 @@ export async function createMusicArtist(
   input: MusicArtistInput,
 ): Promise<MusicArtistListItem> {
   return apiPostJson<MusicArtistListItem>(musicV1Endpoints.artists(), input);
-}
-
-export async function submitMusicEdit(
-  request: MusicEditRequest,
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(musicV1Endpoints.edits(), request);
-}
-
-export async function listMusicEdits(
-  filters: MusicEditFilters = {},
-): Promise<MusicListResponse<MusicEditSummary>> {
-  const response = await apiGetEnvelope<MusicEditSummary[], PaginationMeta>(
-    `${musicV1Endpoints.edits()}${queryString(filters)}`,
-  );
-  return listResponseWithPaginationFallback(response, filters);
-}
-
-export async function voteMusicEdit(
-  editId: string,
-  vote: "yes" | "no",
-  comment = "",
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(musicV1Endpoints.editVotes(editId), {
-    vote,
-    comment,
-  });
-}
-
-export async function approveMusicEdit(
-  editId: string,
-  reason: string,
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(musicV1Endpoints.editApprove(editId), {
-    reason,
-  });
-}
-
-export async function rejectMusicEdit(
-  editId: string,
-  reason: string,
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(musicV1Endpoints.editReject(editId), {
-    reason,
-  });
-}
-
-export async function cancelMusicEdit(
-  editId: string,
-  reason: string,
-): Promise<MusicEditSummary> {
-  return apiPostJson<MusicEditSummary>(musicV1Endpoints.editCancel(editId), {
-    reason,
-  });
 }

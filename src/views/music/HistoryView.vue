@@ -68,6 +68,7 @@ async function loadPage(page: number) {
     historyItems.value = isFirstPage
       ? response.data
       : [...historyItems.value, ...response.data]
+	await loadFavoriteSongs(historyItems.value.map(item => String(item.song.id)))
     currentPage.value = response.meta.page
     hasMore.value = response.meta.has_more
   } catch (error) {
@@ -157,7 +158,6 @@ function formatPlayedAt(value: string) {
 
 onMounted(() => {
   void loadPage(1)
-  void loadFavoriteSongs().catch(() => undefined)
 })
 </script>
 

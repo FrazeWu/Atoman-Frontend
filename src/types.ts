@@ -73,63 +73,6 @@ export interface Song {
   artists?: Artist[];
 }
 
-export interface SongCorrection {
-  id: number;
-  song_id: number;
-  song?: Song;
-  user_id?: number;
-  user?: User;
-  status: 'pending' | 'approved' | 'rejected';
-  field_name: string;
-  current_value: string;
-  corrected_value: string;
-  reason?: string;
-  created_at: string;
-  approved_at?: string;
-  approved_by?: number;
-  rejected_at?: string;
-  rejected_by?: number;
-}
-
-export interface AlbumCorrection {
-  id: number;
-  album_id: number;
-  album?: Album;
-  user_id?: number;
-  user?: User;
-  status: 'pending' | 'approved' | 'rejected';
-  original_title?: string;
-  original_cover_url?: string;
-  original_release_date?: string;
-  original_artist_ids?: string;
-  corrected_title?: string;
-  corrected_cover_url?: string;
-  corrected_cover_source?: 'local' | 's3';
-  corrected_release_date?: string;
-  corrected_artist_ids?: string;
-  reason?: string;
-  created_at: string;
-  approved_at?: string;
-  approved_by?: number;
-  rejected_at?: string;
-  rejected_by?: number;
-}
-
-export interface ArtistCorrection {
-  id: string
-  artist_id: string
-  artist?: Artist
-  user_id?: string
-  user?: User
-  description: string
-  reason?: string
-  status: 'pending' | 'approved' | 'rejected'
-  approved_by?: string
-  approved_at?: string
-  created_at: string
-  updated_at: string
-}
-
 export type RepeatMode = 'none' | 'one' | 'all'
 
 export interface User {

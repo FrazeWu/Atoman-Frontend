@@ -133,15 +133,7 @@ async function fetchPlaylists() {
   }
   try {
     const response = await listMusicPlaylists()
-    const list = [...(response.data || [])]
-    list.sort((a, b) => {
-      const aIsFav = a.name === '最爱' || a.name === '我喜欢的单曲' || a.name === '我喜欢'
-      const bIsFav = b.name === '最爱' || b.name === '我喜欢的单曲' || b.name === '我喜欢'
-      if (aIsFav && !bIsFav) return -1
-      if (!aIsFav && bIsFav) return 1
-      return 0
-    })
-    playlists.value = list
+    playlists.value = response.data || []
   } catch (error) {
     if (error instanceof ApiErrorResponseError && error.status === 401) {
       playlists.value = []

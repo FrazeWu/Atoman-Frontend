@@ -83,7 +83,7 @@
             :class="{
               'is-active': favoriteSongIds.has(String(player.currentSong.id)),
             }"
-            title="添加到最爱"
+            title="收藏"
             @click="toggleTrackFavorite(String(player.currentSong.id))"
           >
             <Heart
@@ -499,13 +499,13 @@ async function loadPlaylists() {
   }
 }
 
-async function loadFavorites() {
+async function loadFavorites(songId?: string) {
   if (!authStore.isAuthenticated) {
     favoriteSongIds.value = new Set();
     return;
   }
   try {
-    await loadFavoriteSongs();
+    await loadFavoriteSongs(songId ? [songId] : []);
   } catch (err) {
     reportError(err, "加载收藏歌曲失败");
   }
@@ -596,7 +596,7 @@ watch(
       if (!playlistsLoaded.value) {
         await loadPlaylists();
       }
-      await loadFavorites();
+      await loadFavorites(String(newId));
     }
   },
   { immediate: true },

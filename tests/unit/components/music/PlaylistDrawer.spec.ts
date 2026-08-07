@@ -439,7 +439,7 @@ describe('PlaylistDrawer', () => {
       .mockReturnValueOnce(firstRequest)
       .mockResolvedValueOnce({
         id: 'playlist-b', user_id: 'user-1', name: '歌单 B', description: '',
-        cover_url: '', is_public: true, is_favorite: false, song_count: 0, songs: [],
+        cover_url: '', is_public: true, kind: 'user', song_count: 0, songs: [],
       })
 
     const wrapper = mount(PlaylistDrawer, {
@@ -454,7 +454,7 @@ describe('PlaylistDrawer', () => {
 
     resolveFirst({
       id: 'playlist-a', user_id: 'user-1', name: '歌单 A', description: '',
-      cover_url: '', is_public: true, is_favorite: false, song_count: 0, songs: [],
+      cover_url: '', is_public: true, kind: 'user', song_count: 0, songs: [],
     })
     await flushPromises()
 

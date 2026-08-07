@@ -131,7 +131,7 @@ const tabs: Array<{ key: InboxPageTab; label: string }> = [
   { key: 'reply', label: '回复我' },
   { key: 'forum', label: '论坛' },
   { key: 'collaboration', label: '协作' },
-  { key: 'system', label: '系统' },
+  { key: 'system', label: '通知' },
   { key: 'dm', label: '私信' },
 ]
 

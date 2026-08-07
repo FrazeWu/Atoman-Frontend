@@ -17,6 +17,7 @@ import {
   listArtistBookmarks,
   listPlaylistBookmarks,
   listMusicDiscoverFeed,
+  listMusicAlbumImports,
   listMusicAlbums,
   listMusicArtists,
   getMusicHome,
@@ -27,6 +28,7 @@ import {
   type MusicArtistListItem,
   type MusicPlaylistSummary,
   type MusicRecommendationItem,
+  type MusicAlbumImport,
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -60,6 +62,7 @@ const {
   closeMusicCreationFlow,
   openMusicEditor,
   closeMusicEditor,
+  resumeMusicCreationFlow,
 } = useMusicDrawers()
 const { applyRouteSelection } = useMusicRouteSelection({
   openAlbum,
@@ -280,8 +283,11 @@ async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const feedResponse = await listMusicDiscoverFeed()
-    applyDiscoverFeed(feedResponse.data ?? [])
+    const [feedResponse, importSessions] = await Promise.all([
+      listMusicDiscoverFeed(),
+      listMusicAlbumImports().catch(() => []),
+    ])
+    applyDiscoverFeed(feedResponse.data ?? [], importSessions)
     void fetchAlbumBookmarks()
     void fetchArtistBookmarks()
     void fetchPlaylistBookmarks()
@@ -337,21 +343,61 @@ function playRecentSong(song: MusicSongListItem) {
   if (playable) player.playSong(playable)
 }
 
-function applyDiscoverFeed(items: MusicDiscoverItem[]) {
-  discoverAlbums.value = items
-    .filter((item) => item.type === 'album')
+function cleanFileName(fileName?: string): string {
+  if (!fileName) return ''
+  return fileName.replace(/\.(zip|rar|7z|tar|gz|tgz|bz2|xz|mp3|flac|wav|m4a|aac|ogg)$/i, '').trim()
+}
+
+function musicImportAlbumTitle(item: MusicAlbumImport): string {
+  if (item.derivedAlbumTitle?.trim()) return item.derivedAlbumTitle.trim()
+
+  const archive = cleanFileName(item.archiveName)
+  if (archive && archive.toLowerCase() !== 'archive') return archive
+
+  if (item.derivedTracks?.length > 0 && item.derivedTracks[0]?.title?.trim()) {
+    return item.derivedTracks[0].title.trim()
+  }
+
+  if (item.files?.length > 0) {
+    const first = item.files[0]
+    const fileTitle = first.title?.trim() || cleanFileName(first.fileName)
+    if (fileTitle) return fileTitle
+  }
+
+  return `导入任务 #${item.importId.slice(0, 8)}`
+}
+
+function applyDiscoverFeed(items: MusicDiscoverItem[], importSessions: MusicAlbumImport[] = []) {
+  const draftAlbums: MusicAlbumListItem[] = (importSessions || [])
+    .filter((item) => !['committed', 'canceled'].includes(item.status))
     .map((item) => ({
-      id: item.id,
-      title: item.title,
-      artists: item.artists,
-      year: typeof item.year === 'number' ? item.year : undefined,
-      release_date: item.release_date,
-      cover_url: item.cover_url || item.image_url,
-      description: item.summary,
-      play_count: item.play_count,
-      bookmark_count: item.bookmark_count,
-      entry_status: 'open',
+      id: item.importId,
+      title: musicImportAlbumTitle(item),
+      artists: [],
+      cover_url: item.coverUrl || item.derivedCover || '',
+      description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
+      status: item.status,
+      entry_status: item.status,
+      importSession: item,
     }))
+
+  discoverAlbums.value = [
+    ...draftAlbums,
+    ...items
+      .filter((item) => item.type === 'album')
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        artists: item.artists,
+        year: typeof item.year === 'number' ? item.year : undefined,
+        release_date: item.release_date,
+        cover_url: item.cover_url || item.image_url,
+        description: item.summary,
+        play_count: item.play_count,
+        bookmark_count: item.bookmark_count,
+        entry_status: 'open',
+      })),
+  ]
 
   discoverArtists.value = items
     .filter((item) => item.type === 'artist')
@@ -385,9 +431,25 @@ async function fetchAlbumIndex() {
   loading.value = true
   errorMessage.value = ''
   try {
-    // 采用极大 page_size 获取本地全量库以支持无延迟过滤
-    const response = await listMusicAlbums({ page: 1, page_size: 2000, sort: 'hot' })
-    albumItems.value = response.data ?? []
+    const [response, importSessions] = await Promise.all([
+      listMusicAlbums({ page: 1, page_size: 2000, sort: 'hot' }),
+      listMusicAlbumImports().catch(() => []),
+    ])
+
+    const draftAlbums: MusicAlbumListItem[] = (importSessions || [])
+      .filter((item) => !['committed', 'canceled'].includes(item.status))
+      .map((item) => ({
+        id: item.importId,
+        title: musicImportAlbumTitle(item),
+        artists: [],
+        cover_url: item.coverUrl || item.derivedCover || '',
+        description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
+        status: item.status,
+        entry_status: item.status,
+        importSession: item,
+      }))
+
+    albumItems.value = [...draftAlbums, ...(response.data ?? [])]
     void fetchAlbumBookmarks()
   } catch (error) {
     reportError(error, 'Failed to fetch music albums:')
@@ -461,6 +523,10 @@ function playlistCardItem(item: MusicPlaylistSummary) {
 }
 
 function openDiscoverAlbum(album: MusicAlbumListItem) {
+  if (album.importSession) {
+    resumeMusicCreationFlow(album.importSession)
+    return
+  }
   openAlbum(String(album.id))
 }
 

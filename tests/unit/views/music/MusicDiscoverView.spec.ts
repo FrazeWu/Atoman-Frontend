@@ -7,6 +7,7 @@ import DiscoverView from '@/views/music/DiscoverView.vue'
 const mocks = vi.hoisted(() => ({
   listMusicDiscoverFeed: vi.fn(),
   getMusicHome: vi.fn(),
+  listMusicAlbumImports: vi.fn(),
   listMusicAlbums: vi.fn(),
   listMusicArtists: vi.fn(),
   listRecommendedArtists: vi.fn(),
@@ -33,6 +34,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/api/musicV1', () => ({
   listMusicDiscoverFeed: mocks.listMusicDiscoverFeed,
   getMusicHome: mocks.getMusicHome,
+  listMusicAlbumImports: mocks.listMusicAlbumImports,
   listMusicAlbums: mocks.listMusicAlbums,
   listMusicArtists: mocks.listMusicArtists,
   listRecommendedArtists: mocks.listRecommendedArtists,
@@ -89,6 +91,7 @@ describe('Music DiscoverView.vue', () => {
   beforeEach(() => {
     mocks.listMusicDiscoverFeed.mockReset()
     mocks.getMusicHome.mockReset()
+    mocks.listMusicAlbumImports.mockReset()
     mocks.listMusicAlbums.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.listRecommendedArtists.mockReset()
@@ -110,6 +113,7 @@ describe('Music DiscoverView.vue', () => {
     mocks.requireLogin.mockReset()
     mocks.playSong.mockReset()
     mocks.requireLogin.mockReturnValue(true)
+    mocks.listMusicAlbumImports.mockResolvedValue([])
     mocks.routeQuery = {}
 
     mocks.getMusicHome.mockResolvedValue({

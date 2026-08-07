@@ -17,6 +17,11 @@
         </svg>
       </div>
 
+      <!-- Status Tag Badge for Draft / Importing Albums -->
+      <span v-if="statusBadgeText" class="status-tag" :data-status="album.status || album.entry_status">
+        {{ statusBadgeText }}
+      </span>
+
       <!-- Bookmark Button on Top Right -->
       <button
         v-if="showBookmark"
@@ -77,6 +82,8 @@ import { computed } from 'vue'
 export interface MusicAlbumCardItem {
   id: string
   title: string
+  status?: string
+  entry_status?: string
   cover_url?: string
   cover_s3_key?: string
   image_url?: string
@@ -98,6 +105,17 @@ const props = withDefaults(defineProps<{
 }>(), {
   isBookmarked: false,
   showBookmark: true,
+})
+
+const statusBadgeText = computed(() => {
+  const s = props.album.status || props.album.entry_status
+  if (!s) return ''
+  if (s === 'ready') return '等待提交'
+  if (['pending_upload', 'uploading'].includes(s)) return '上传中'
+  if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(s)) return '解析中'
+  if (s === 'needs_attention') return '待处理'
+  if (s === 'draft') return '草稿'
+  return ''
 })
 
 const publicAssetBase = import.meta.env.VITE_R2_PUBLIC_BASE_URL?.trim().replace(/\/$/, '') || ''
@@ -327,6 +345,39 @@ const albumYear = computed(() => {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.status-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.2;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.status-tag[data-status="ready"] {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.status-tag[data-status="needs_attention"] {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.status-tag[data-status="extracting"],
+.status-tag[data-status="analyzing"],
+.status-tag[data-status="transcoding"] {
+  background: #2563eb;
+  color: #ffffff;
 }
 
 @media (max-width: 767px) {

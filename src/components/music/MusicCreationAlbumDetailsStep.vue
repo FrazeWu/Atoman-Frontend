@@ -844,7 +844,7 @@ onBeforeUnmount(() => {
 
 .track-row.is-dragged {
   opacity: 0.4;
-  border-style: dashed;
+  border-style: solid;
   border-color: var(--a-color-primary);
 }
 

@@ -1,6 +1,6 @@
 import type { MusicAlbumImport } from '@/api/musicV1'
 
-export type MusicImportGroup = 'draft' | 'processing' | 'failed' | 'completed'
+export type MusicImportGroup = 'in_progress' | 'needs_attention' | 'published' | 'canceled'
 
 export function musicImportAlbumTitle(item: MusicAlbumImport): string {
   return item.albumTitle?.trim()
@@ -9,12 +9,10 @@ export function musicImportAlbumTitle(item: MusicAlbumImport): string {
 }
 
 export function musicImportGroupForStatus(status: string): MusicImportGroup {
-  if (['pending_upload', 'uploading', 'uploaded', 'ready', 'needs_attention'].includes(status)) {
-    return 'draft'
-  }
-  if (status === 'failed') return 'failed'
-  if (['committed', 'canceled'].includes(status)) return 'completed'
-  return 'processing'
+  if (status === 'committed') return 'published'
+  if (status === 'canceled') return 'canceled'
+  if (['needs_attention', 'failed'].includes(status)) return 'needs_attention'
+  return 'in_progress'
 }
 
 export function uniqueMusicAlbumImports(items: MusicAlbumImport[]): MusicAlbumImport[] {

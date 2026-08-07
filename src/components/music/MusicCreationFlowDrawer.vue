@@ -29,6 +29,7 @@ const router = useRouter()
 
 const toastVisible = ref(false)
 const toastMessage = ref('')
+let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const creationFlow = computed(() => state.value.creationFlow)
 const isOpen = computed(() => props.layer !== undefined || creationFlow.value !== null)
@@ -128,8 +129,11 @@ const finishButtonLabel = computed(() => {
 })
 const forwardBlockReason = computed(() => {
   const flow = creationFlow.value
-  if (!flow || flow.step !== 'albumDetails') return ''
+  if (!flow || !['albumDetails', 'preview'].includes(flow.step)) return ''
   if (flow.assetUploading) return '图片上传完成后即可继续'
+  if (flow.step === 'preview' && !flow.draft.albumImport.files.every((file) => file.uploadStatus === 'uploaded')) {
+    return '文件上传完成后即可提交'
+  }
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
 	if (!flow.draft.albumDetails.contributors?.length) {
 		return '请添加创作者'
@@ -170,21 +174,14 @@ const canGoForward = computed(() => {
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 	}
 	return !!flow.draft.albumImport.importId
+		&& flow.draft.albumImport.files.length > 0
+		&& flow.draft.albumImport.files.every((file) => file.uploadStatus === 'uploaded')
 		&& !!flow.draft.albumDetails.title.trim()
 		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<musicApi.MusicAlbumImport>
 }).commitMusicAlbumImport
-
-async function committedArtistId(flow: NonNullable<typeof creationFlow.value>, result: musicApi.MusicAlbumImport) {
-  const existingArtistId = flow.draft.artist.id?.trim()
-  if (existingArtistId) return existingArtistId
-  if (!result?.targetAlbumId) return ''
-
-  const album = await musicApi.getMusicAlbum(result.targetAlbumId)
-  return album.artists?.[0]?.id ?? ''
-}
 
 function formatArtistDate(parts?: { year: string; month: string; day: string }) {
   if (!parts) return ''
@@ -324,6 +321,30 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
   }
 }
 
+function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) {
+  return ['pending_upload', 'uploading', 'uploaded'].includes(flow.draft.albumImport.status)
+    && !!flow.draft.albumImport.importId
+    && !!flow.draft.albumDetails.title.trim()
+    && hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
+}
+
+function scheduleImportAutosave() {
+  if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
+  const flow = creationFlow.value
+  if (!flow || flow.submitting || !canAutosaveImportDetails(flow)) return
+
+  importAutosaveTimer = setTimeout(async () => {
+    const currentFlow = creationFlow.value
+    const importId = currentFlow?.draft.albumImport.importId?.trim()
+    if (!currentFlow || !importId || currentFlow.submitting || !canAutosaveImportDetails(currentFlow)) return
+    try {
+      await musicApi.commitMusicAlbumImport(importId, buildCommitInput(currentFlow))
+    } catch {
+      // 最终提交会再次保存并显示错误，避免打断资料填写。
+    }
+  }, 600)
+}
+
 function syncReadyImportToDraft() {
   const flow = creationFlow.value
   if (!flow) return
@@ -355,6 +376,12 @@ watch(
     syncReadyImportToDraft()
   },
   { immediate: true },
+)
+
+watch(
+  () => creationFlow.value?.draft,
+  () => scheduleImportAutosave(),
+  { deep: true },
 )
 
 watch(
@@ -480,13 +507,12 @@ async function completeCreation() {
       throw new Error('commitMusicAlbumImport is unavailable')
     }
 
-    const result = await commitMusicAlbumImport(importId, buildCommitInput(flow))
-    const artistId = await committedArtistId(flow, result)
-    refreshArtist()
+    await commitMusicAlbumImport(importId, buildCommitInput(flow))
+    await musicApi.completeMusicAlbumImportSession(importId)
     toastMessage.value = '已提交至导入中心，后台将继续处理'
     toastVisible.value = true
     closeCurrentCreationFlow()
-    if (artistId) await router.push(`/music/artist/${artistId}`)
+    await router.push('/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

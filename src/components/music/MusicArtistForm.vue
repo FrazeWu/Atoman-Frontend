@@ -280,7 +280,7 @@ function handleSubmit() {
 .artist-avatar-picker {
   aspect-ratio: 1 / 1;
   width: 100%;
-  border: 1px dashed var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
   cursor: pointer;

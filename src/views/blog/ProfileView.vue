@@ -531,7 +531,7 @@ onMounted(async () => {
 <style scoped>
 .profile-page__skeleton { display: grid; gap: 1rem; }
 .profile-page__skeleton-header { height: 5rem; border-radius: var(--a-radius-card); }
-.profile-page__skeleton-line { height: 1.25rem; border-radius: 4px; }
+.profile-page__skeleton-line { height: 1.25rem; border-radius: var(--a-radius-control); }
 
 .profile-page__not-found {
   display: flex;
@@ -561,7 +561,7 @@ onMounted(async () => {
   justify-content: center;
   width: 5rem;
   height: 5rem;
-  border-radius: 8px;
+  border-radius: var(--a-radius-card);
   background: var(--a-color-text);
   color: var(--a-color-bg);
   font-size: 2rem;
@@ -790,7 +790,7 @@ onMounted(async () => {
   align-items: center;
   padding: 0.35rem 0.85rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 999px;
+  border-radius: var(--a-radius-pill);
   background: var(--a-color-surface);
   color: var(--a-color-text);
   font-size: 0.875rem;
@@ -835,7 +835,7 @@ onMounted(async () => {
   border: 1px solid var(--a-color-border-soft);
   filter: grayscale(100%);
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   margin-top: 0.25rem;
 }
 

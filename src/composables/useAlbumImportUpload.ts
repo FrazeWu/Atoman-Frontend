@@ -8,7 +8,6 @@ import {
   completeMusicAlbumImportFilePart,
   completeMusicAlbumImportFile,
   registerMusicAlbumImportFiles,
-  completeMusicAlbumImportSession,
   getMusicAlbumImport,
   retryMusicAlbumImportFile,
   replaceMusicAlbumImportFile,
@@ -142,14 +141,8 @@ export function useAlbumImportUpload() {
     fileProgress.value = new Map(fileProgress.value).set(fileId, 100)
   }
 
-  async function completeSessionWhenFilesUploaded(importId: string, snapshot: MusicAlbumImport) {
+  async function refreshWhenFilesUploaded(snapshot: MusicAlbumImport) {
     applyImportSnapshot(snapshot)
-    const files = snapshot.files ?? []
-    if (files.length === 0 || !files.every((file) => file.uploadStatus === 'uploaded')) return
-
-    const session = await completeMusicAlbumImportSession(importId)
-    applyImportSnapshot(session)
-    startPolling(importId)
   }
 
   async function handleFilesUpload(fileList: FileList) {
@@ -257,9 +250,7 @@ export function useAlbumImportUpload() {
         await Promise.all(uploadTasks.slice(i, i + 3).map((fn) => fn()))
       }
 
-      const completed = await completeMusicAlbumImportSession(session.importId)
-      applyImportSnapshot(completed)
-      startPolling(session.importId)
+      await refreshWhenFilesUploaded(await getMusicAlbumImport(session.importId))
     } catch (error) {
       draft.status = 'failed'
       draft.errorMessage = error instanceof Error ? error.message : '上传失败'
@@ -296,7 +287,7 @@ export function useAlbumImportUpload() {
       applyImportSnapshot(snapshot)
       if (needsUpload && file) {
         await uploadSingleFileMultipart(draft.importId, file, fileId)
-        await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
+        await refreshWhenFilesUploaded(await getMusicAlbumImport(draft.importId))
       } else if (!needsUpload) {
         startPolling(draft.importId)
       }
@@ -322,7 +313,7 @@ export function useAlbumImportUpload() {
       applyImportSnapshot(snapshot)
       selectedFiles.set(fileId, file)
       await uploadSingleFileMultipart(draft.importId, file, fileId)
-      await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
+      await refreshWhenFilesUploaded(await getMusicAlbumImport(draft.importId))
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '替换失败'
     } finally {

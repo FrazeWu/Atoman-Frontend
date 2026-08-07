@@ -754,7 +754,7 @@ watch(
   justify-content: center;
   width: 2.2rem;
   height: 2.2rem;
-  border-radius: 999px;
+  border-radius: var(--a-radius-pill);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
@@ -766,7 +766,7 @@ watch(
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 999px;
+  border-radius: var(--a-radius-pill);
 }
 
 .artist-card-info {

@@ -17,7 +17,6 @@ import {
   listArtistBookmarks,
   listPlaylistBookmarks,
   listMusicDiscoverFeed,
-  listMusicAlbumImports,
   listMusicAlbums,
   listMusicArtists,
   getMusicHome,
@@ -28,7 +27,6 @@ import {
   type MusicArtistListItem,
   type MusicPlaylistSummary,
   type MusicRecommendationItem,
-  type MusicAlbumImport,
 } from '@/api/musicV1'
 import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -62,7 +60,6 @@ const {
   closeMusicCreationFlow,
   openMusicEditor,
   closeMusicEditor,
-  resumeMusicCreationFlow,
 } = useMusicDrawers()
 const { applyRouteSelection } = useMusicRouteSelection({
   openAlbum,
@@ -283,11 +280,8 @@ async function fetchDiscoverFeed() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [feedResponse, importSessions] = await Promise.all([
-      listMusicDiscoverFeed(),
-      listMusicAlbumImports().catch(() => []),
-    ])
-    applyDiscoverFeed(feedResponse.data ?? [], importSessions)
+    const feedResponse = await listMusicDiscoverFeed()
+    applyDiscoverFeed(feedResponse.data ?? [])
     void fetchAlbumBookmarks()
     void fetchArtistBookmarks()
     void fetchPlaylistBookmarks()
@@ -343,47 +337,8 @@ function playRecentSong(song: MusicSongListItem) {
   if (playable) player.playSong(playable)
 }
 
-function cleanFileName(fileName?: string): string {
-  if (!fileName) return ''
-  return fileName.replace(/\.(zip|rar|7z|tar|gz|tgz|bz2|xz|mp3|flac|wav|m4a|aac|ogg)$/i, '').trim()
-}
-
-function musicImportAlbumTitle(item: MusicAlbumImport): string {
-  if (item.derivedAlbumTitle?.trim()) return item.derivedAlbumTitle.trim()
-
-  const archive = cleanFileName(item.archiveName)
-  if (archive && archive.toLowerCase() !== 'archive') return archive
-
-  if (item.derivedTracks?.length > 0 && item.derivedTracks[0]?.title?.trim()) {
-    return item.derivedTracks[0].title.trim()
-  }
-
-  if (item.files?.length > 0) {
-    const first = item.files[0]
-    const fileTitle = first.title?.trim() || cleanFileName(first.fileName)
-    if (fileTitle) return fileTitle
-  }
-
-  return `导入任务 #${item.importId.slice(0, 8)}`
-}
-
-function applyDiscoverFeed(items: MusicDiscoverItem[], importSessions: MusicAlbumImport[] = []) {
-  const draftAlbums: MusicAlbumListItem[] = (importSessions || [])
-    .filter((item) => !['committed', 'canceled'].includes(item.status))
-    .map((item) => ({
-      id: item.importId,
-      title: musicImportAlbumTitle(item),
-      artists: [],
-      cover_url: item.coverUrl || item.derivedCover || '',
-      description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
-      status: item.status,
-      entry_status: 'open' as const,
-      importSession: item,
-    }))
-
-  discoverAlbums.value = [
-    ...draftAlbums,
-    ...items
+function applyDiscoverFeed(items: MusicDiscoverItem[]) {
+  discoverAlbums.value = items
       .filter((item) => item.type === 'album')
       .map((item) => ({
         id: item.id,
@@ -396,8 +351,7 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], importSessions: MusicAlbu
         play_count: item.play_count,
         bookmark_count: item.bookmark_count,
         entry_status: 'open' as const,
-      })),
-  ]
+      }))
 
   discoverArtists.value = items
     .filter((item) => item.type === 'artist')
@@ -431,25 +385,8 @@ async function fetchAlbumIndex() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [response, importSessions] = await Promise.all([
-      listMusicAlbums({ page: 1, page_size: 2000, sort: 'hot' }),
-      listMusicAlbumImports().catch(() => []),
-    ])
-
-    const draftAlbums: MusicAlbumListItem[] = (importSessions || [])
-      .filter((item) => !['committed', 'canceled'].includes(item.status))
-      .map((item) => ({
-        id: item.importId,
-        title: musicImportAlbumTitle(item),
-        artists: [],
-        cover_url: item.coverUrl || item.derivedCover || '',
-        description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
-        status: item.status,
-        entry_status: 'open' as const,
-        importSession: item,
-      }))
-
-    albumItems.value = [...draftAlbums, ...(response.data ?? [])]
+    const response = await listMusicAlbums({ page: 1, page_size: 2000, sort: 'hot' })
+    albumItems.value = response.data ?? []
     void fetchAlbumBookmarks()
   } catch (error) {
     reportError(error, 'Failed to fetch music albums:')
@@ -523,10 +460,6 @@ function playlistCardItem(item: MusicPlaylistSummary) {
 }
 
 function openDiscoverAlbum(album: MusicAlbumListItem) {
-  if (album.importSession) {
-    resumeMusicCreationFlow(album.importSession)
-    return
-  }
   openAlbum(String(album.id))
 }
 

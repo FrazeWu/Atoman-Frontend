@@ -18,6 +18,7 @@ import {
   musicImportAlbumTitle,
   musicImportGroupForStatus,
   uniqueMusicAlbumImports,
+  type MusicImportGroup,
 } from '@/utils/musicImportDisplay'
 
 const imports = ref<MusicAlbumImport[]>([]);
@@ -25,7 +26,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const selectedId = ref<string | null>(null);
 const actionBusy = ref<string | null>(null);
-const activeGroup = ref<'draft' | 'processing' | 'failed' | 'completed'>('processing')
+const activeGroup = ref<MusicImportGroup>('in_progress')
 const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
@@ -42,10 +43,10 @@ const importGroups = computed(() => {
     return title.includes(q) || archive.includes(q)
   })
 
-  return filtered.reduce<Record<'draft' | 'processing' | 'failed' | 'completed', MusicAlbumImport[]>>((groups, item) => {
+  return filtered.reduce<Record<MusicImportGroup, MusicAlbumImport[]>>((groups, item) => {
     groups[musicImportGroupForStatus(item.status)].push(item)
     return groups
-  }, { draft: [], processing: [], failed: [], completed: [] })
+  }, { in_progress: [], needs_attention: [], published: [], canceled: [] })
 })
 
 const visibleImports = computed(() => importGroups.value[activeGroup.value])
@@ -272,7 +273,7 @@ async function continueImport() {
     <header class="music-imports-view__header">
       <div>
         <h1>导入中心</h1>
-        <p>保留最近 7 天的专辑导入任务（实时自动同步）</p>
+        <p>查看上传、处理和发布状态</p>
       </div>
       <PButton variant="secondary" :loading="loading" @click="() => loadImports(false)"
         >刷新</PButton
@@ -295,7 +296,7 @@ async function continueImport() {
           <PInput v-model="searchQuery" placeholder="搜索标题或文件名…" />
         </div>
         <div class="music-imports-view__filters" role="tablist" aria-label="导入状态">
-          <button v-for="group in [{ key: 'processing', label: '处理中' }, { key: 'draft', label: '草稿' }, { key: 'failed', label: '失败' }, { key: 'completed', label: '已完成' }]" :key="group.key" type="button" :class="{ 'music-imports-view__filter--active': activeGroup === group.key }" :aria-selected="activeGroup === group.key" role="tab" @click="activeGroup = group.key as 'draft' | 'processing' | 'failed' | 'completed'">
+          <button v-for="group in [{ key: 'in_progress', label: '进行中' }, { key: 'needs_attention', label: '需处理' }, { key: 'published', label: '已发布' }, { key: 'canceled', label: '已取消' }]" :key="group.key" type="button" :class="{ 'music-imports-view__filter--active': activeGroup === group.key }" :aria-selected="activeGroup === group.key" role="tab" @click="activeGroup = group.key as 'in_progress' | 'needs_attention' | 'published' | 'canceled'">
             {{ group.label }} {{ importGroups[group.key as keyof typeof importGroups].length }}
           </button>
         </div>
@@ -342,11 +343,11 @@ async function continueImport() {
             <span v-if="formatDate(selectedImport.lastSyncedAt)" class="meta-time">更新于 {{ formatDate(selectedImport.lastSyncedAt) }}</span>
           </div>
 
-          <p v-if="selectedImport.status === 'ready'" class="status-hint status-hint--ready">
-            ✓ 后台音轨解析已完成，请点击下方「提交专辑」确认发布。
+          <p v-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
+            上传尚未完成，可继续填写资料。
           </p>
-          <p v-else-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
-            草稿尚未全部提交，点击「继续编辑」补充详情并上传。
+          <p v-else-if="selectedImport.status === 'needs_attention'" class="status-hint">
+            请重新选择未完成的源文件恢复上传。
           </p>
 
           <p
@@ -362,7 +363,7 @@ async function continueImport() {
               variant="primary"
               @click="continueImport"
             >
-              {{ selectedImport.status === 'ready' ? '提交专辑 / 确认发布' : '继续编辑 / 提交' }}
+              {{ selectedImport.status === 'needs_attention' ? '处理问题' : '继续导入' }}
             </PButton>
 
             <PButton
@@ -406,7 +407,7 @@ async function continueImport() {
                   >重试</PButton
                 >
                 <PButton
-                  v-if="file.uploadStatus === 'failed' || file.processingStatus === 'failed'"
+                  v-if="file.uploadStatus === 'failed' || file.processingStatus === 'failed' || (selectedImport.status === 'needs_attention' && file.uploadStatus !== 'uploaded')"
                   variant="secondary"
                   :disabled="actionBusy === file.fileId"
                   @click="chooseReplacement(file.fileId)"
@@ -606,7 +607,7 @@ async function continueImport() {
   align-items: center;
   justify-content: center;
   background: var(--a-color-surface-muted);
-  border: 1px dashed var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
   font-size: 0.8rem;
   border-radius: 4px;

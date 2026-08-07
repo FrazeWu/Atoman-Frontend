@@ -30,6 +30,27 @@ const markdownRuntimeState = shallowRef<MarkdownRuntimeState>('idle')
 let markdownRuntimePromise: Promise<void> | null = null
 let markdownRuntimeConfigured = false
 
+const markdownHighlightLanguages: Array<[string, () => Promise<{ default: unknown }>]> = [
+  ['bash', () => import('highlight.js/lib/languages/bash')],
+  ['c', () => import('highlight.js/lib/languages/c')],
+  ['cpp', () => import('highlight.js/lib/languages/cpp')],
+  ['csharp', () => import('highlight.js/lib/languages/csharp')],
+  ['css', () => import('highlight.js/lib/languages/css')],
+  ['go', () => import('highlight.js/lib/languages/go')],
+  ['java', () => import('highlight.js/lib/languages/java')],
+  ['javascript', () => import('highlight.js/lib/languages/javascript')],
+  ['json', () => import('highlight.js/lib/languages/json')],
+  ['markdown', () => import('highlight.js/lib/languages/markdown')],
+  ['python', () => import('highlight.js/lib/languages/python')],
+  ['rust', () => import('highlight.js/lib/languages/rust')],
+  ['scss', () => import('highlight.js/lib/languages/scss')],
+  ['shell', () => import('highlight.js/lib/languages/shell')],
+  ['sql', () => import('highlight.js/lib/languages/sql')],
+  ['typescript', () => import('highlight.js/lib/languages/typescript')],
+  ['xml', () => import('highlight.js/lib/languages/xml')],
+  ['yaml', () => import('highlight.js/lib/languages/yaml')],
+]
+
 renderer.heading = function ({ text, depth }) {
   const id = text
     .toLowerCase()
@@ -56,11 +77,11 @@ async function ensureMarkdownRuntime(): Promise<void> {
   markdownRuntimePromise = Promise.all([
     import('katex/dist/katex.min.css'),
     import('highlight.js/styles/atom-one-dark.css'),
-    import('highlight.js'),
+    import('highlight.js/lib/core'),
     import('marked-highlight'),
     import('marked-katex-extension'),
   ])
-    .then(([
+    .then(async ([
       _katexCss,
       _highlightCss,
       highlightModule,
@@ -72,6 +93,13 @@ async function ensureMarkdownRuntime(): Promise<void> {
       const hljs = highlightModule.default
       const { markedHighlight } = markedHighlightModule
       const markedKatex = markedKatexModule.default
+
+      await Promise.all(
+        markdownHighlightLanguages.map(async ([name, loader]) => {
+          const languageModule = await loader()
+          hljs.registerLanguage(name, languageModule.default as Parameters<typeof hljs.registerLanguage>[1])
+        }),
+      )
 
       marked.use(
         markedHighlight({

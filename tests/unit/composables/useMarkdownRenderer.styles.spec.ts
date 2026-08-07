@@ -26,6 +26,6 @@ describe('markdown renderer style loading', () => {
 
     expect(markdownRendererSource).toContain("import('marked-highlight')")
     expect(markdownRendererSource).toContain("import('marked-katex-extension')")
-    expect(markdownRendererSource).toContain("import('highlight.js')")
+    expect(markdownRendererSource).toContain("import('highlight.js/lib/core')")
   })
 })

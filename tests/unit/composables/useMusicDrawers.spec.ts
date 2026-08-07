@@ -275,6 +275,7 @@ describe('useMusicDrawers music creation flow', () => {
     expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
     expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-2')
     expect(drawers.state.value.creationFlow?.draft.albumDetails.title).toBe('Discovery')
+    expect(drawers.layers.value.map((layer) => layer.kind)).toEqual(['creation'])
   })
 
   it('clears the creation flow draft when closeMusicCreationFlow is called', () => {

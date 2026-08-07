@@ -129,9 +129,28 @@ const finishButtonLabel = computed(() => {
 })
 const forwardBlockReason = computed(() => {
   const flow = creationFlow.value
-  if (!flow || !['albumDetails', 'preview'].includes(flow.step)) return ''
+  if (!flow) return ''
   if (flow.assetUploading) return '图片上传完成后即可继续'
-  if (flow.step === 'preview' && !flow.draft.albumImport.files.every((file) => file.uploadStatus === 'uploaded')) {
+  if (flow.step === 'artist') {
+    if (flow.draft.artist.kind === 'group') {
+      const namedMembers = flow.draft.artist.members.filter((member) => member.name.trim())
+      if (!flow.draft.artist.stageNames[0]?.name.trim()) return '请填写组合名称'
+      if (!flow.draft.artist.activeStartDateParts?.year.trim()) return '请填写成立年份'
+      if (namedMembers.length < 2) return '请至少添加两位成员'
+      if (namedMembers.some((member) => !member.joinDateParts.year.trim())) return '请填写成员加入年份'
+      if (!flow.draft.artist.source.trim()) return '请填写资料来源'
+      return ''
+    }
+    if (!flow.draft.artist.avatarUrl.trim()) return '请上传头像'
+    if (!flow.draft.artist.legalName.trim()) return '请填写本名'
+    if (!flow.draft.artist.stageNames[0]?.name.trim()) return '请填写艺名'
+    if (!flow.draft.artist.nationality.trim()) return '请选择国籍'
+    if (!formatDateFromParts(flow.draft.artist.birthDateParts)) return '请填写出生日期'
+    if (!flow.draft.artist.source.trim()) return '请填写资料来源'
+    return ''
+  }
+  if (!['albumDetails', 'preview'].includes(flow.step)) return ''
+  if (flow.step === 'preview' && (flow.draft.albumImport.files.length === 0 || !flow.draft.albumImport.files.every((file) => file.uploadStatus === 'uploaded'))) {
     return '文件上传完成后即可提交'
   }
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
@@ -322,7 +341,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
 }
 
 function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) {
-  return ['pending_upload', 'uploading', 'uploaded'].includes(flow.draft.albumImport.status)
+  return ['pending_upload', 'uploading', 'uploaded', 'queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status)
     && !!flow.draft.albumImport.importId
     && !!flow.draft.albumDetails.title.trim()
     && hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
@@ -408,13 +427,18 @@ function requestClose() {
 }
 
 function handlePrimaryAction() {
-  if (!creationFlow.value) return
-  if (creationFlow.value.step === 'artist') {
-    if (!canGoForward.value) return
+  const flow = creationFlow.value
+  if (!flow) return
+  if (!canGoForward.value) {
+    flow.errorMessage = forwardBlockReason.value || '请完成必填信息'
+    return
+  }
+  flow.errorMessage = ''
+  if (flow.step === 'artist') {
     setMusicCreationStep('albumImport')
-  } else if (creationFlow.value.step === 'albumImport' && canGoForward.value) {
+  } else if (flow.step === 'albumImport') {
     setMusicCreationStep('albumDetails')
-  } else if (creationFlow.value.step === 'albumDetails' && canGoForward.value) {
+  } else if (flow.step === 'albumDetails') {
     setMusicCreationStep('preview')
   }
 }
@@ -456,7 +480,11 @@ function buildCreateArtistEdit(flow: NonNullable<typeof creationFlow.value>): mu
 
 async function createArtistAndLinkAlbum() {
   const flow = creationFlow.value
-  if (!flow || flow.step !== 'artist' || flow.submitting || !canGoForward.value) return
+  if (!flow || flow.step !== 'artist' || flow.submitting) return
+  if (!canGoForward.value) {
+    flow.errorMessage = forwardBlockReason.value || '请完成必填信息'
+    return
+  }
 
   flow.submitting = true
   flow.errorMessage = ''
@@ -492,7 +520,15 @@ function goBackStep() {
 
 async function completeCreation() {
   const flow = creationFlow.value
-  if (!flow || flow.submitting || flow.assetUploading) return
+  if (!flow || flow.submitting) return
+  if (flow.assetUploading) {
+    flow.errorMessage = '图片上传完成后即可继续'
+    return
+  }
+  if (!canGoForward.value) {
+    flow.errorMessage = forwardBlockReason.value || '请完成必填信息'
+    return
+  }
 
   flow.submitting = true
   flow.errorMessage = ''
@@ -584,7 +620,7 @@ async function completeCreation() {
             data-testid="artist-create-and-link-button"
             type="button"
             class="ui-action"
-            :disabled="creationFlow.submitting || !canGoForward"
+            :disabled="creationFlow.submitting"
             @click="createArtistAndLinkAlbum"
           >
             {{ creationFlow.submitting ? '正在创建…' : '关联现有专辑' }}
@@ -593,7 +629,7 @@ async function completeCreation() {
             :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"
             type="button"
             class="primary-action"
-            :disabled="creationFlow.submitting || !canGoForward"
+            :disabled="creationFlow.submitting"
             @click="shouldShowFinishButton ? completeCreation() : handlePrimaryAction()"
           >
             {{ finishButtonLabel }}

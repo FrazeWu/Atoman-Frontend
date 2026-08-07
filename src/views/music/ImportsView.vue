@@ -4,7 +4,6 @@ import {
   cancelMusicAlbumImportSession,
   deleteMusicAlbumImportFile,
   getMusicAlbum,
-  getMusicArtist,
   listMusicAlbumImports,
   repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
@@ -237,16 +236,6 @@ async function repairImport() {
 
 async function resumeImport(snapshot: MusicAlbumImport) {
   if (!snapshot.targetAlbumId) {
-    if (snapshot.artistId) {
-      const artist = await getMusicArtist(snapshot.artistId)
-      resumeMusicCreationFlow(snapshot, [{
-        id: String(artist.id),
-        name: artist.name,
-        imageUrl: artist.image_url,
-        kind: artist.artist_form,
-      }])
-      return
-    }
     resumeMusicCreationFlow(snapshot)
     return
   }

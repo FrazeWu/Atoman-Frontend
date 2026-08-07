@@ -291,6 +291,9 @@ const notificationTargetPath = (notification: Notification): RouteLocationRaw | 
       }
     }
   }
+  if (notification.source_type === 'music_album_import') {
+    return '/music/imports'
+  }
   const topicId = notification.meta.topic_id
   if (notification.source_type === 'forum_reply' && topicId) {
     return `/forum/topic/${topicId}#reply-${notification.source_id}`

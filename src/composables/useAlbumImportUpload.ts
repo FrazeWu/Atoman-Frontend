@@ -68,7 +68,7 @@ export function useAlbumImportUpload() {
         snapshot.derivedAlbumTitle || creationFlow.value.draft.albumDetails.title
     }
 
-    if (!creationFlow.value.tracksCustomized) {
+    if (!creationFlow.value.tracksCustomized && derivedTracks.length > 0) {
       creationFlow.value.draft.tracks = derivedTracks.map((track, index) => ({
         id: `import-track-${index + 1}`,
         sequence: index + 1,

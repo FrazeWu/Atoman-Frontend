@@ -1,4 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -40,6 +42,15 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
   })
 
   afterEach(() => vi.unstubAllGlobals())
+
+  it('keeps track controls in one responsive flex row', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/music/MusicCreationAlbumDetailsStep.vue'), 'utf8')
+    const rowDefinitions = source.match(/\.track-row\s*\{/g) ?? []
+
+    expect(rowDefinitions).toHaveLength(1)
+    expect(source).toMatch(/\.track-row\s*\{[\s\S]*?display:\s*flex;/)
+    expect(source).not.toMatch(/@media \(max-width: 720px\)[\s\S]*?\.track-row\s*\{/)
+  })
 
   it('renders album details fields in the confirmed order and shows seeded draft values', () => {
     const drawers = useMusicDrawers()

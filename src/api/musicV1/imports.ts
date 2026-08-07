@@ -36,6 +36,7 @@ function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
   return {
     ...(draft.title !== undefined ? { title: draft.title } : {}),
     ...(draft.artist_ids !== undefined ? { artist_ids: draft.artist_ids } : {}),
+    ...(draft.artist_credits !== undefined ? { artist_credits: draft.artist_credits } : {}),
     ...(draft.release_date !== undefined ? { release_date: draft.release_date } : {}),
     ...(draft.cover ? { cover_url: draft.cover.url, cover_key: draft.cover.key } : {}),
     ...(draft.description !== undefined ? { description: draft.description } : {}),

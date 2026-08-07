@@ -4,6 +4,8 @@ import { listMusicArtists, type MusicArtistListItem } from '@/api/musicV1'
 import type { MusicArtistKind, MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PInput from '@/components/ui/PInput.vue'
+import MusicAlbumCreditRolesEditor from './MusicAlbumCreditRolesEditor.vue'
+import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 
 const props = defineProps<{
   modelValue: MusicCreationAlbumContributorDraft[]
@@ -36,6 +38,7 @@ function toContributor(artist: MusicArtistListItem): MusicCreationAlbumContribut
     avatarUrl: artist.image_url ?? '',
     kind: inferArtistKind(artist),
     locked: false,
+    roles: [],
   }
 }
 
@@ -73,13 +76,28 @@ watch(query, (value) => {
 })
 
 function addContributor(contributor: MusicCreationAlbumContributorDraft) {
-  emit('update:modelValue', [...props.modelValue, contributor])
+	const hasPrimary = props.modelValue.some((item) => item.roles.some((role) => role.role === 'primary'))
+	emit('update:modelValue', [
+		...props.modelValue,
+		{
+			...contributor,
+			roles: hasPrimary
+				? [{ id: `role-${contributor.artistId}-featured`, role: 'featured', label: '' }]
+				: [primaryAlbumRole(`role-${contributor.artistId}-primary`)],
+		},
+	])
   query.value = ''
   options.value = []
 }
 
 function removeContributor(contributorId: string) {
   emit('update:modelValue', props.modelValue.filter((item) => item.id !== contributorId || item.locked))
+}
+
+function updateContributorRoles(contributorId: string, roles: MusicCreationAlbumContributorDraft['roles']) {
+	emit('update:modelValue', props.modelValue.map((item) => (
+		item.id === contributorId ? { ...item, roles } : item
+	)))
 }
 
 function formatKindLabel(kind: MusicArtistKind) {
@@ -114,6 +132,11 @@ function formatKindLabel(kind: MusicArtistKind) {
         >
           移除
         </button>
+        <MusicAlbumCreditRolesEditor
+          class="contributor-chip__roles"
+          :model-value="contributor.roles"
+          @update:model-value="updateContributorRoles(contributor.id, $event)"
+        />
       </div>
     </div>
 
@@ -173,6 +196,10 @@ function formatKindLabel(kind: MusicArtistKind) {
 .contributor-chip__meta {
   display: grid;
   gap: 0.15rem;
+}
+
+.contributor-chip__roles {
+  grid-column: 2 / -1;
 }
 
 .contributor-chip__name,

@@ -1,5 +1,5 @@
-import type { Artist } from '@/types'
 import type { UploadAsset } from '@/api/types'
+import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 
 export type MusicTrackDraft = {
   id: string
@@ -21,7 +21,7 @@ export type MusicSourceDraft = {
 }
 
 export type MusicAlbumMetaDraft = {
-  artist: Artist[]
+	contributors: MusicCreationAlbumContributorDraft[]
   album: string
   releaseDate: string
   albumType?: 'single' | 'ep' | 'album'

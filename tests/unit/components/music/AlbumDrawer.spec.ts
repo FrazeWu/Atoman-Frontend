@@ -20,6 +20,7 @@ const {
   openNestedAction,
   openMusicEditor,
   openAlbum,
+	openArtist,
   getMusicAlbum,
   playAlbum,
   listAlbumBookmarks,
@@ -33,6 +34,7 @@ const {
   openNestedAction: vi.fn(),
   openMusicEditor: vi.fn(),
   openAlbum: vi.fn(),
+	openArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
   playAlbum: vi.fn(),
   listAlbumBookmarks: vi.fn(),
@@ -54,6 +56,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     openNestedAction,
     openMusicEditor,
     openAlbum,
+	openArtist,
   })
 }))
 
@@ -81,6 +84,7 @@ describe('AlbumDrawer.vue', () => {
     openNestedAction.mockReset()
     openMusicEditor.mockReset()
     openAlbum.mockReset()
+	openArtist.mockReset()
     getMusicAlbum.mockReset()
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
@@ -115,6 +119,26 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('Album Notes')
     expect(wrapper.text()).not.toContain('专辑详情')
   })
+
+	it('groups and displays fixed and custom album creator roles', async () => {
+		getMusicAlbum.mockResolvedValue({
+			id: '1',
+			title: 'Credits Album',
+			entry_status: 'open',
+			artists: [{ id: 'artist-1', name: 'Creator' }],
+			artist_credits: [
+				{ album_id: '1', artist_id: 'artist-1', artist: { id: 'artist-1', name: 'Creator', entry_status: 'open' }, role: 'primary', position: 1 },
+				{ album_id: '1', artist_id: 'artist-1', artist: { id: 'artist-1', name: 'Creator', entry_status: 'open' }, role: 'producer', position: 1 },
+				{ album_id: '1', artist_id: 'artist-1', artist: { id: 'artist-1', name: 'Creator', entry_status: 'open' }, role: 'custom', custom_role: 'Mix Engineer', position: 1 },
+			],
+			songs: [],
+		})
+
+		const wrapper = mount(AlbumDrawer)
+		await flushPromises()
+
+		expect(wrapper.text()).toContain('主艺术家、制作人、Mix Engineer')
+	})
 
   it('does not request private music data while a guest reads an album', async () => {
     isAuthenticated.value = false

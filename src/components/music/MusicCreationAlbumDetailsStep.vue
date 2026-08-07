@@ -15,6 +15,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
+import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const coverInputRef = ref<HTMLInputElement | null>(null)
@@ -198,6 +199,8 @@ function syncLockedNewArtistContributor() {
     avatarUrl: creationFlow.value.draft.artist.avatarUrl,
     kind: creationFlow.value.draft.artist.kind,
     locked: true,
+    roles: albumDetailsDraft.value.contributors.find((item) => item.id === lockedContributorId)?.roles
+      ?? [primaryAlbumRole('role-new-artist-primary')],
   }
 
   const existingIndex = albumDetailsDraft.value.contributors.findIndex((item) => item.id === lockedContributorId)
@@ -861,6 +864,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   color: var(--a-color-muted-soft);
   cursor: grab;
@@ -904,8 +909,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   border: 0;
   background: transparent;
@@ -1074,76 +1079,6 @@ onBeforeUnmount(() => {
   font-size: 0.9rem;
 }
 
-.track-adjustment {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.track-adjustment__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.track-adjustment__hint {
-  margin: 0.35rem 0 0;
-  color: var(--a-color-muted);
-  font-size: 0.82rem;
-}
-
-.track-list {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.track-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.85rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
-}
-
-.track-sequence {
-  min-width: 2rem;
-  color: var(--a-color-muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.track-row__input {
-  padding-block: 0.7rem;
-}
-
-.track-row__actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.track-action {
-  border: 0;
-  border-radius: 0px;
-  padding: 0.65rem 0.95rem;
-  background: color-mix(in srgb, var(--a-color-surface-muted) 78%, white);
-  color: var(--a-color-text);
-  font-size: 0.8rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.track-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.track-action--danger {
-  color: var(--a-color-accent-destructive);
-}
-
 .footer-actions,
 .footer-actions__right {
   display: flex;
@@ -1180,29 +1115,10 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--a-color-text) 86%, black);
 }
 
-.track-title-input {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  padding: 0.5rem 0.75rem;
-  color: var(--a-color-text);
-  font-family: inherit;
-  font-size: 0.95rem;
-  width: 100%;
-  border-radius: 0;
-  transition: all 0.15s ease;
-}
-.track-title-input:focus {
-  outline: none;
-  background: var(--a-color-bg);
-  box-shadow: inset 0 -2px 0 var(--a-color-text);
-}
-
 @media (max-width: 720px) {
   .date-parts-grid,
   .progress-copy,
-  .track-adjustment__header,
-  .track-row {
+  .track-adjustment__header {
     grid-template-columns: 1fr;
   }
 

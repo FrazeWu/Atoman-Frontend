@@ -10,6 +10,7 @@ import MusicCreationAlbumSeedStep from './MusicCreationAlbumSeedStep.vue'
 import MusicCreationAlbumDetailsStep from './MusicCreationAlbumDetailsStep.vue'
 import MusicCreationAlbumPreviewStep from './MusicCreationAlbumPreviewStep.vue'
 import type { MusicSheetLayer } from './musicSheetTypes'
+import { hasValidAlbumContributors } from '@/utils/musicAlbumCredits'
 
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -121,8 +122,11 @@ const forwardBlockReason = computed(() => {
   if (!flow || flow.step !== 'albumDetails') return ''
   if (flow.assetUploading) return '图片上传完成后即可继续'
   if (!flow.draft.albumDetails.title.trim()) return '请填写专辑名'
-  if (!(flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)) {
-    return '请添加创作者'
+	if (!flow.draft.albumDetails.contributors?.length) {
+		return '请添加创作者'
+	}
+	if (!hasValidAlbumContributors(flow.draft.albumDetails.contributors)) {
+		return '请设置创作者身份并保留主艺术家'
   }
   return ''
 })
@@ -151,14 +155,14 @@ const canGoForward = computed(() => {
   if (flow.step === 'albumImport') {
     return !!flow.draft.albumImport.importId
   }
-  if (flow.step === 'albumDetails') {
-    return !!flow.draft.albumImport.importId
-      && !!flow.draft.albumDetails.title.trim()
-      && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
-  }
-  return !!flow.draft.albumImport.importId
-    && !!flow.draft.albumDetails.title.trim()
-    && (flow.draft.albumDetails.contributors?.some((item) => item.name.trim()) ?? false)
+	if (flow.step === 'albumDetails') {
+		return !!flow.draft.albumImport.importId
+			&& !!flow.draft.albumDetails.title.trim()
+			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
+	}
+	return !!flow.draft.albumImport.importId
+		&& !!flow.draft.albumDetails.title.trim()
+		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 })
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<musicApi.MusicAlbumImport>
@@ -227,6 +231,10 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
     if (!contributor.artistId) {
       return {
         artist_id: '',
+		roles: contributor.roles.map((role) => ({
+			role: role.role,
+			...(role.role === 'custom' ? { label: role.label.trim() } : {}),
+		})),
         name: contributor.name.trim(),
         legal_name: flow.draft.artist.legalName.trim(),
         bio: flow.draft.artist.bio.trim(),
@@ -244,6 +252,10 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
 
     return {
       artist_id: contributor.artistId,
+		roles: contributor.roles.map((role) => ({
+			role: role.role,
+			...(role.role === 'custom' ? { label: role.label.trim() } : {}),
+		})),
       name: contributor.name.trim(),
       legal_name: '',
       bio: '',

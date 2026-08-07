@@ -7,11 +7,11 @@
         <h2 class="album-editor-shell__section-title">专辑信息</h2>
       </template>
       <MusicAlbumMetaSection
-        :artist="meta.artist"
+		:contributors="meta.contributors"
         :album="meta.album"
         :release-date="meta.releaseDate"
         :album-type="meta.albumType"
-        @update:artist="(value) => updateMeta('artist', value)"
+		@update:contributors="(value) => updateMeta('contributors', value)"
         @update:album="(value) => updateMeta('album', value)"
         @update:release-date="(value) => updateMeta('releaseDate', value)"
         @update:album-type="(value) => updateMeta('albumType', value)"
@@ -56,7 +56,6 @@ import type {
   MusicSourceDraft,
   MusicTrackDraft,
 } from './types'
-import type { Artist } from '@/types'
 
 const props = defineProps<{
   mode: 'create' | 'edit'

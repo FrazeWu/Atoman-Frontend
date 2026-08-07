@@ -74,6 +74,7 @@ export type MusicAlbumImportCommitMember = {
 
 export type MusicAlbumImportCommitArtist = {
   artist_id: string;
+  roles: MusicAlbumArtistRoleInput[];
   name: string;
   legal_name: string;
   bio: string;
@@ -86,6 +87,34 @@ export type MusicAlbumImportCommitArtist = {
   active_start_date: string;
   active_end_date: string;
   members: MusicAlbumImportCommitMember[];
+};
+
+export type MusicAlbumArtistRole =
+  | "primary"
+  | "featured"
+  | "producer"
+  | "writer"
+  | "composer"
+  | "custom";
+
+export type MusicAlbumArtistRoleInput = {
+  role: MusicAlbumArtistRole;
+  label?: string;
+};
+
+export type MusicAlbumArtistCreditInput = {
+  artist_id: string;
+  roles: MusicAlbumArtistRoleInput[];
+  position: number;
+};
+
+export type MusicAlbumArtistCredit = {
+  album_id: string;
+  artist_id: string;
+  artist?: MusicArtistListItem;
+  role: MusicAlbumArtistRole;
+  custom_role?: string;
+  position: number;
 };
 
 export type MusicAlbumImportCommitInput = {
@@ -117,6 +146,8 @@ export type MusicAlbumImportCommitInput = {
 export type MusicAlbumImport = {
   importId: string;
   targetAlbumId: string;
+  artistId?: string;
+  albumTitle?: string;
   status: MusicAlbumImportStatus;
   archiveName: string;
   uploadProgress: number;
@@ -229,6 +260,8 @@ export function normalizeMusicAlbumImport(
   return {
     ...snapshot,
     targetAlbumId: snapshot.targetAlbumId ?? '',
+    artistId: snapshot.artistId ?? '',
+    albumTitle: snapshot.albumTitle ?? '',
     derivedTracks: arrayOrEmpty(snapshot.derivedTracks),
     files: arrayOrEmpty(snapshot.files),
     errors: arrayOrEmpty(snapshot.errors),
@@ -351,6 +384,7 @@ export type MusicAlbumListItem = {
   id: string;
   title: string;
   artists?: Array<{ id: string; name: string }>;
+  artist_credits?: MusicAlbumArtistCredit[];
   year?: number;
   release_date?: string;
   cover_url?: string;
@@ -624,6 +658,7 @@ export type MusicUploadTarget = {
 export type AlbumEditDraft = {
   title?: string;
   artist_ids?: string[];
+  artist_credits?: MusicAlbumArtistCreditInput[];
   release_date?: string;
   cover?: UploadAsset | null;
   description?: string;

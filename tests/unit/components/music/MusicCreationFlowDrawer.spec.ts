@@ -90,6 +90,7 @@ const createFlowState = (overrides: Partial<MusicCreationFlowState> = {}): Music
           avatarUrl: '',
           kind: 'person',
           locked: false,
+		  roles: [{ id: 'role-primary', role: 'primary', label: '' }],
         },
       ],
       releaseDateParts: {
@@ -345,6 +346,7 @@ describe('MusicCreationFlowDrawer', () => {
             avatarUrl: 'https://assets.atoman.test/music/covers/uploads/avatar.webp',
             kind: 'person',
             locked: true,
+			roles: [{ id: 'role-primary', role: 'primary', label: '' }],
           }],
         },
       },
@@ -656,7 +658,7 @@ describe('MusicCreationFlowDrawer', () => {
           type: 'ep',
           bio: '首张录音室专辑',
           source: 'https://example.com/album',
-          contributors: [{ id: 'new-artist', artistId: null, name: 'FKA twigs', avatarUrl: '', kind: 'person', locked: true }],
+		  contributors: [{ id: 'new-artist', artistId: null, name: 'FKA twigs', avatarUrl: '', kind: 'person', locked: true, roles: [{ id: 'role-primary', role: 'primary', label: '' }] }],
         },
       },
     })
@@ -753,6 +755,7 @@ describe('MusicCreationFlowDrawer', () => {
               avatarUrl: '',
               kind: 'group',
               locked: true,
+			  roles: [{ id: 'role-primary', role: 'primary', label: '' }],
             },
             {
               id: 'contributor-artist-2',
@@ -761,6 +764,7 @@ describe('MusicCreationFlowDrawer', () => {
               avatarUrl: '',
               kind: 'person',
               locked: false,
+			  roles: [{ id: 'role-featured', role: 'featured', label: '' }],
             },
           ],
         },

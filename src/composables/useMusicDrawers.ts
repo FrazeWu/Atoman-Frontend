@@ -7,6 +7,7 @@ import type {
 } from '@/components/music/musicCreationTypes'
 import type { MusicCreationFlowSeed, MusicEditorState, MusicSheetLayer, NestedActionType } from '@/components/music/musicSheetTypes'
 import { createSheetStack } from '@/composables/useSheetStack'
+import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 
 export type { MusicEditorEntity, MusicEditorMode, MusicEditorState } from '@/components/music/musicSheetTypes'
 
@@ -42,6 +43,7 @@ function createSeededContributors(seed?: MusicCreationFlowSeed) {
       avatarUrl: '',
       kind: 'person' as const,
       locked: false,
+      roles: [primaryAlbumRole(`role-${seed.artistId}-primary`)],
     },
   ]
 }
@@ -222,7 +224,9 @@ export function useMusicDrawers() {
     sheetStack.push({
       key: `action:${action}:${ownerId}`,
       kind: 'action',
-      title: action === 'history' || action === 'artist_history' ? '历史记录' : '操作',
+		title: action === 'history' || action === 'artist_history'
+			? '历史记录'
+			: action === 'link_album' ? '关联现有专辑' : '操作',
       payload: { action, data: payload },
     })
   }
@@ -266,7 +270,12 @@ export function useMusicDrawers() {
 
   const resumeMusicCreationFlow = (snapshot: MusicAlbumImport, contributors: Array<{ id: string; name: string; imageUrl?: string; kind?: 'person' | 'group' }> = []) => {
     const isRepair = !!snapshot.targetAlbumId
-    openMusicCreationFlow({ startStep: isRepair ? 'albumDetails' : 'artist' })
+    const artistId = snapshot.artistId?.trim() || contributors[0]?.id || ''
+    openMusicCreationFlow({
+      artistId: artistId || undefined,
+      artistName: contributors[0]?.name ?? '',
+      startStep: isRepair ? 'albumDetails' : artistId ? 'albumImport' : 'artist',
+    })
     const flow = state.value.creationFlow
     if (!flow) return
     flow.draft.albumImport = {
@@ -288,8 +297,7 @@ export function useMusicDrawers() {
       lastSyncedAt: snapshot.lastSyncedAt,
       errorMessage: snapshot.errorMessage,
     }
-    flow.draft.albumDetails.title = snapshot.derivedAlbumTitle
-    flow.draft.albumDetails.coverUrl = snapshot.coverUrl || snapshot.derivedCover
+    flow.draft.albumDetails.title = snapshot.albumTitle?.trim() || snapshot.derivedAlbumTitle
     if (contributors.length > 0) {
       flow.draft.albumDetails.contributors = contributors.map((artist) => ({
         id: `contributor-${artist.id}`,
@@ -298,6 +306,7 @@ export function useMusicDrawers() {
         avatarUrl: artist.imageUrl ?? '',
         kind: artist.kind ?? 'person',
         locked: true,
+        roles: [primaryAlbumRole(`role-${artist.id}-primary`)],
       }))
     }
     flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
@@ -316,11 +325,11 @@ export function useMusicDrawers() {
   const closeMusicCreationFlow = (keyOrEvent?: string | Event) => {
     state.value.creationFlow = null
     const key = typeof keyOrEvent === 'string' ? keyOrEvent : undefined
-    const createEditorKey = !key && state.value.musicEditor?.mode === 'create'
+    const createEditorKey = state.value.musicEditor?.mode === 'create'
       ? sheetStack.layers.value.find(layer => layer.kind === 'editor' && layer.payload.mode === 'create')?.key
       : undefined
-    const targetKey = key
-      ?? createEditorKey
+    const targetKey = createEditorKey
+      ?? key
       ?? sheetStack.layers.value.find(layer => layer.kind === 'creation')?.key
     if (targetKey) closeLayerAndAbove(targetKey)
   }
@@ -352,6 +361,7 @@ export function useMusicDrawers() {
     || state.value.nestedAction === 'revise_artist'
     || state.value.nestedAction === 'artist_history'
     || state.value.nestedAction === 'merge_artist'
+		|| state.value.nestedAction === 'link_album'
     || state.value.creationFlow !== null
     || state.value.musicEditor?.entity === 'artist'
     || state.value.musicEditor?.entity === 'album'

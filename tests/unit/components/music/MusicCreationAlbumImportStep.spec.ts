@@ -83,6 +83,21 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(useMusicDrawers().state.value.creationFlow?.step).toBe('albumDetails')
   })
 
+  it('拒绝过大的压缩包时不会进入上传中状态', async () => {
+    const archive = new File(['zip'], 'too-large.zip', { type: 'application/zip' })
+    Object.defineProperty(archive, 'size', { configurable: true, value: 2 * 1024 * 1024 * 1024 + 1 })
+    const createImport = vi.spyOn(musicApi, 'createMusicAlbumImport')
+
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [archive])
+    await fileInput(wrapper).trigger('change')
+    await flushPromises()
+
+    expect(createImport).not.toHaveBeenCalled()
+    expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport.status).toBe('pending_upload')
+    expect(wrapper.text()).toContain('文件需在 2GB 以内')
+  })
+
   it('在 ZIP 上传期间预填专辑名和曲目', async () => {
     const zip = new JSZip()
     zip.file('01 - Dawn.flac', 'audio')

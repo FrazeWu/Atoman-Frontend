@@ -23,7 +23,7 @@ import {
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeArtist, returnToLayer, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, returnToLayer, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
@@ -196,15 +196,20 @@ function editArtist() {
 
 function createAlbum() {
   if (!requireLogin()) return
-  openMusicEditor({
-    entity: 'album',
-    mode: 'create',
-    seed: {
-      artistId: artistId.value,
-      artistName: artist.value?.name || '',
-      artistLegalName: artist.value?.legal_name || '',
-    },
+  openMusicCreationFlow({
+    artistId: artistId.value,
+    artistName: artist.value?.name || '',
+    artistLegalName: artist.value?.legal_name || '',
+    startStep: 'albumImport',
   })
+}
+
+function linkAlbum() {
+	if (!requireLogin()) return
+	openNestedAction('link_album', {
+		artistId: artistId.value,
+		artistName: artist.value?.name || '',
+	})
 }
 
 function mergeArtist() {
@@ -280,6 +285,13 @@ watch(
         >
           添加新专辑
         </PButton>
+		<PButton
+			variant="secondary"
+			data-testid="artist-link-album-action"
+			@click="linkAlbum"
+		>
+			关联现有专辑
+		</PButton>
         <PButton
           variant="secondary"
           data-testid="artist-merge-action"

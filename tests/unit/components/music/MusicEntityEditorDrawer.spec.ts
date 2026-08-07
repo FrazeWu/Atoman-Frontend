@@ -1,5 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { computed, nextTick, ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicEntityEditorDrawer from '@/components/music/MusicEntityEditorDrawer.vue'
 
@@ -12,49 +12,17 @@ const drawerState = ref({
     id?: string
     seed?: Record<string, unknown>
   },
-  creationFlow: null as null | {
-    step: 'artist' | 'albumImport' | 'albumDetails' | 'preview'
-    draft: {
-      artist: {
-        id: string | null
-        avatarUrl: string
-        legalName: string
-        stageNames: Array<{
-          id: string
-          name: string
-          isPrimary: boolean
-          startDateText: string
-          endDateText: string
-        }>
-        birthPlace: string
-      }
-      albumImport: {
-        importId: string | null
-        status: 'pending_upload' | 'ready'
-      }
-      albumDetails: {
-        title: string
-        coverUrl: string
-        releaseYear: string
-      }
-      tracks: Array<{ title: string }>
-    }
-    dirty: boolean
-    submitting: boolean
-    errorMessage: string
-  },
 })
 
 const mocks = vi.hoisted(() => ({
   closeMusicEditor: vi.fn(),
   refreshAlbum: vi.fn(),
   refreshArtist: vi.fn(),
-  openMusicCreationFlow: vi.fn(),
   closeMusicCreationFlow: vi.fn(),
-  setMusicCreationStep: vi.fn(),
   routerReplace: vi.fn(),
   getMusicArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
+	createMusicArtist: vi.fn(),
   uploadMusicAsset: vi.fn(),
   submitMusicEdit: vi.fn(),
   buildUpdateArtistEdit: vi.fn(),
@@ -73,9 +41,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     closeMusicEditor: mocks.closeMusicEditor,
     refreshAlbum: mocks.refreshAlbum,
     refreshArtist: mocks.refreshArtist,
-    openMusicCreationFlow: mocks.openMusicCreationFlow,
     closeMusicCreationFlow: mocks.closeMusicCreationFlow,
-    setMusicCreationStep: mocks.setMusicCreationStep,
   }),
 }))
 
@@ -86,22 +52,6 @@ vi.mock('@/components/music', () => ({
     template: '<div data-testid="album-editor-shell-stub" />',
   },
   MusicArtistForm: { name: 'MusicArtistForm', emits: ['submit'], template: '<div data-testid="music-artist-form-stub" />' },
-}))
-
-vi.mock('@/components/music/MusicCreationArtistStep.vue', () => ({
-  default: { template: '<div data-testid="music-creation-artist-step-stub" />' },
-}))
-
-vi.mock('@/components/music/MusicCreationAlbumSeedStep.vue', () => ({
-  default: { template: '<div data-testid="music-creation-album-seed-step-stub" />' },
-}))
-
-vi.mock('@/components/music/MusicCreationAlbumDetailsStep.vue', () => ({
-  default: { template: '<div data-testid="music-creation-album-details-step-stub" />' },
-}))
-
-vi.mock('@/components/music/MusicCreationAlbumPreviewStep.vue', () => ({
-  default: { template: '<div data-testid="music-creation-album-preview-step-stub" />' },
 }))
 
 vi.mock('@/components/ui/PSheet.vue', () => ({
@@ -118,51 +68,14 @@ vi.mock('@/components/ui/PButton.vue', () => ({
 }))
 
 vi.mock('@/api/musicV1', () => ({
-  createMusicArtist: vi.fn(),
+	createMusicArtist: mocks.createMusicArtist,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
   submitMusicEdit: mocks.submitMusicEdit,
   uploadMusicAsset: mocks.uploadMusicAsset,
-  commitMusicAlbumImport: vi.fn(),
   buildUpdateArtistEdit: mocks.buildUpdateArtistEdit,
   buildUpdateAlbumEdit: mocks.buildUpdateAlbumEdit,
 }))
-
-function createFlowState(step: 'artist' | 'albumImport' | 'albumDetails' | 'preview' = 'artist') {
-  return {
-    step,
-    draft: {
-      artist: {
-        id: null,
-        avatarUrl: '',
-        legalName: 'Seed Artist',
-        stageNames: [
-          {
-            id: 'primary',
-            name: 'Seed Artist',
-            isPrimary: true,
-            startDateText: '',
-            endDateText: '',
-          },
-        ],
-        birthPlace: '',
-      },
-      albumImport: {
-        importId: null,
-        status: 'pending_upload' as const,
-      },
-      albumDetails: {
-        title: '',
-        coverUrl: '',
-        releaseYear: '',
-      },
-      tracks: [],
-    },
-    dirty: false,
-    submitting: false,
-    errorMessage: '',
-  }
-}
 
 describe('MusicEntityEditorDrawer.vue', () => {
   let consoleError: ReturnType<typeof vi.spyOn>
@@ -180,22 +93,21 @@ describe('MusicEntityEditorDrawer.vue', () => {
       artistId: null,
       albumId: null,
       musicEditor: null,
-      creationFlow: null,
     }
     mocks.closeMusicEditor.mockReset()
     mocks.refreshAlbum.mockReset()
     mocks.refreshArtist.mockReset()
-    mocks.openMusicCreationFlow.mockReset()
     mocks.closeMusicCreationFlow.mockReset()
-    mocks.setMusicCreationStep.mockReset()
     mocks.routerReplace.mockReset()
     mocks.getMusicArtist.mockReset()
     mocks.getMusicAlbum.mockReset()
+	mocks.createMusicArtist.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.submitMusicEdit.mockReset()
     mocks.buildUpdateArtistEdit.mockReset()
     mocks.buildUpdateAlbumEdit.mockReset()
     mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Test Artist' })
+	mocks.createMusicArtist.mockResolvedValue({ id: 'artist-created', name: 'Created Artist', entry_status: 'open' })
     mocks.getMusicAlbum.mockResolvedValue({
       id: 'album-1',
       title: 'Test Album',
@@ -224,8 +136,6 @@ describe('MusicEntityEditorDrawer.vue', () => {
     const wrapper = mountDrawer()
 
     expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
-    expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
     expect(wrapper.text()).not.toContain('新建艺术家')
   })
 
@@ -235,7 +145,6 @@ describe('MusicEntityEditorDrawer.vue', () => {
     const wrapper = mountDrawer()
 
     expect(wrapper.find('[data-testid="music-artist-form-stub"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="music-creation-artist-step-stub"]').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('编辑艺术家')
 
     await flushPromises()
@@ -262,6 +171,16 @@ describe('MusicEntityEditorDrawer.vue', () => {
     })
     expect(mocks.submitMusicEdit).toHaveBeenCalledWith({ id: 'artist-edit-request' })
   })
+
+	it('opens the created artist detail after creating an artist', async () => {
+		drawerState.value.musicEditor = { entity: 'artist', mode: 'create' }
+		const wrapper = mountDrawer()
+
+		wrapper.getComponent({ name: 'MusicArtistForm' }).vm.$emit('submit', { name: 'Created Artist' })
+		await flushPromises()
+
+		expect(mocks.routerReplace).toHaveBeenCalledWith('/music/artist/artist-created')
+	})
 
   it('uploads the selected replacement cover when saving an album', async () => {
     const artistId = '5f37b1a2-80ef-4c4f-963f-c7c3c260e662'
@@ -291,7 +210,11 @@ describe('MusicEntityEditorDrawer.vue', () => {
 
     expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(file, 'music.cover')
     expect(mocks.buildUpdateAlbumEdit).toHaveBeenCalledWith('album-1', expect.objectContaining({
-      artist_ids: [artistId],
+		artist_credits: [{
+			artist_id: artistId,
+			position: 1,
+			roles: [{ role: 'primary' }],
+		}],
       release_date: '2007-11-10',
       cover: expect.objectContaining({ url: 'https://assets.example.test/covers/new.webp' }),
     }))
@@ -299,6 +222,13 @@ describe('MusicEntityEditorDrawer.vue', () => {
 
   it('keeps the album editor open when the edit is not applied', async () => {
     mocks.submitMusicEdit.mockResolvedValue({ status: 'failed_prerequisite' })
+	mocks.getMusicAlbum.mockResolvedValue({
+		id: 'album-1',
+		title: 'Test Album',
+		entry_status: 'open',
+		artists: [{ id: 'artist-1', name: 'Test Artist' }],
+		songs: [],
+	})
     drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
     const wrapper = mountDrawer()
 

@@ -197,6 +197,7 @@ describe('useMusicDrawers music creation flow', () => {
         avatarUrl: '',
         kind: 'person',
         locked: false,
+		roles: [{ id: 'role-artist-7-primary', role: 'primary', label: '' }],
       },
     ])
     expect('name' in (drawers.state.value.creationFlow?.draft.artist ?? {})).toBe(false)
@@ -245,6 +246,37 @@ describe('useMusicDrawers music creation flow', () => {
     ])
   })
 
+  it('resumes an unfinished import at upload when the original artist is stored', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.resumeMusicCreationFlow({
+      importId: 'import-2',
+      targetAlbumId: '',
+      artistId: 'artist-2',
+      albumTitle: 'Discovery',
+      status: 'queued',
+      inputMode: 'folder',
+      stage: 'queued',
+      progress: { current: 0, total: 0 },
+      files: [],
+      errors: [],
+      archiveName: '',
+      uploadProgress: 100,
+      uploadSpeed: 0,
+      coverUrl: '',
+      coverKey: '',
+      derivedAlbumTitle: '',
+      derivedCover: '',
+      derivedTracks: [],
+      lastSyncedAt: '',
+      errorMessage: '',
+    })
+
+    expect(drawers.state.value.creationFlow?.step).toBe('albumImport')
+    expect(drawers.state.value.creationFlow?.draft.artist.id).toBe('artist-2')
+    expect(drawers.state.value.creationFlow?.draft.albumDetails.title).toBe('Discovery')
+  })
+
   it('clears the creation flow draft when closeMusicCreationFlow is called', () => {
     const drawers = useMusicDrawers()
 
@@ -275,5 +307,17 @@ describe('useMusicDrawers music creation flow', () => {
 
     expect(drawers.state.value.creationFlow).toBeNull()
     expect(drawers.state.value.musicEditor).toBeNull()
+  })
+
+  it('opens album creation as one creation layer without an editor layer', () => {
+    const drawers = useMusicDrawers()
+
+    drawers.openArtist('artist-1')
+    drawers.openMusicCreationFlow({ artistId: 'artist-1' })
+
+    expect(drawers.state.value.creationFlow).not.toBeNull()
+    expect(drawers.state.value.musicEditor).toBeNull()
+    expect(drawers.layers.value.some((layer) => layer.kind === 'editor')).toBe(false)
+    expect(drawers.layers.value.map((layer) => layer.kind)).toEqual(['artist', 'creation'])
   })
 })

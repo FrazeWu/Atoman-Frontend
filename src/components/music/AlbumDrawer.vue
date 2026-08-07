@@ -28,6 +28,7 @@ import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, resolveAlbumCoverUrl } from '@/utils/musicMedia'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
+import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/musicAlbumCredits'
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -126,6 +127,18 @@ const resolvedAlbumArtists = computed(() => {
   }
 
   return list
+})
+
+const albumCreatorCredits = computed(() => {
+	if (!album.value) return []
+	return albumContributorsFromResponse(album.value).map((contributor) => ({
+		id: contributor.artistId ?? '',
+		name: contributor.name,
+		avatarUrl: contributor.avatarUrl,
+		roles: contributor.roles.map((role) => (
+			role.role === 'custom' ? role.label : albumArtistRoleLabels[role.role]
+		)).filter(Boolean).join('、'),
+	}))
 })
 
 function navigateToArtist(artist: { id: string; name: string }) {
@@ -577,11 +590,11 @@ watch(
       </div>
 
       <!-- 底部参与艺术家区块 (可点击跳转) -->
-      <section v-if="resolvedAlbumArtists.length" class="content-section album-artists-section">
-        <div class="section-title">参与艺术家</div>
+	  <section v-if="albumCreatorCredits.length" class="content-section album-artists-section">
+		<div class="section-title">创作者</div>
         <div class="artist-cards-grid">
           <button
-            v-for="artist in resolvedAlbumArtists"
+			v-for="artist in albumCreatorCredits"
             :key="artist.id || artist.name"
             type="button"
             class="album-artist-card"
@@ -594,7 +607,7 @@ watch(
             </div>
             <div class="artist-card-info">
               <span class="artist-card-name">{{ artist.name }}</span>
-              <span class="artist-card-role">主要创作者</span>
+			  <span class="artist-card-role">{{ artist.roles }}</span>
             </div>
           </button>
         </div>

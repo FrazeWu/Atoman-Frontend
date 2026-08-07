@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
 
 const { state } = useMusicDrawers()
 const albumDetails = computed(() => state.value.creationFlow?.draft.albumDetails ?? null)
 const albumImport = computed(() => state.value.creationFlow?.draft.albumImport ?? null)
 const tracks = computed(() => state.value.creationFlow?.draft.tracks ?? [])
+const contributors = computed(() => state.value.creationFlow?.draft.albumDetails.contributors ?? [])
 const coverUrl = computed(() => (
   albumDetails.value?.coverUrl
   || albumImport.value?.coverUrl
@@ -34,6 +36,12 @@ const stageLabels = {
   canceled: '已取消',
 } as const
 const stageLabel = computed(() => stageLabels[albumImport.value?.stage ?? 'upload'])
+
+function contributorRolesLabel(contributor: (typeof contributors.value)[number]) {
+	return contributor.roles.map((role) => (
+		role.role === 'custom' ? role.label : albumArtistRoleLabels[role.role]
+	)).filter(Boolean).join('、')
+}
 </script>
 
 <template>
@@ -52,6 +60,15 @@ const stageLabel = computed(() => stageLabels[albumImport.value?.stage ?? 'uploa
     </div>
 
     <section class="album-preview-step__section">
+		<h4>创作者</h4>
+		<ul class="album-preview-step__contributors">
+			<li v-for="contributor in contributors" :key="contributor.id">
+				{{ contributor.name }} · {{ contributorRolesLabel(contributor) }}
+			</li>
+		</ul>
+	</section>
+
+	<section class="album-preview-step__section">
       <h4>曲目</h4>
       <ol v-if="tracks.length" class="album-preview-step__tracks">
         <li v-for="track in tracks" :key="track.id">{{ track.title }}</li>
@@ -78,5 +95,5 @@ const stageLabel = computed(() => stageLabels[albumImport.value?.stage ?? 'uploa
 .album-preview-step__section h4, .album-preview-step__section p { margin: 0; }
 .album-preview-step__error { margin: 0; color: var(--a-color-accent-destructive); }
 .album-preview-step__hint { margin: 0; padding: 0.5rem 0.75rem; background: var(--a-color-surface-muted); border-radius: 4px; color: var(--a-color-muted); font-size: 0.82rem; }
-.album-preview-step__tracks, .album-preview-step__failures { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
+.album-preview-step__tracks, .album-preview-step__failures, .album-preview-step__contributors { display: grid; gap: 0.35rem; margin: 0; padding-left: 1.25rem; }
 </style>

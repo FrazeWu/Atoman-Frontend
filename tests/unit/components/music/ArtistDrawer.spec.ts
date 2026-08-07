@@ -250,23 +250,33 @@ describe('ArtistDrawer.vue', () => {
     })
   })
 
-  it('opens unified album creation editor with seeded artist data from the artist detail action bar', async () => {
+  it('opens the album creation flow with seeded artist data from the artist detail action bar', async () => {
     const wrapper = mount(ArtistDrawer)
 
     await vi.dynamicImportSettled()
 
     await wrapper.get('button:nth-of-type(3)').trigger('click')
 
-    expect(musicDrawerMocks.openMusicEditor).toHaveBeenCalledWith({
-      entity: 'album',
-      mode: 'create',
-      seed: {
-        artistId: '1',
-        artistName: 'Ye',
-        artistLegalName: 'Kanye Omari West',
-      },
+    expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
+      artistId: '1',
+      artistName: 'Ye',
+      artistLegalName: 'Kanye Omari West',
+      startStep: 'albumImport',
     })
+    expect(musicDrawerMocks.openMusicEditor).not.toHaveBeenCalled()
   })
+
+	it('opens the existing album association flow from the artist detail action bar', async () => {
+		const wrapper = mount(ArtistDrawer)
+		await vi.dynamicImportSettled()
+
+		await wrapper.get('[data-testid="artist-link-album-action"]').trigger('click')
+
+		expect(musicDrawerMocks.openNestedAction).toHaveBeenCalledWith('link_album', {
+			artistId: '1',
+			artistName: 'Ye',
+		})
+	})
 
   it('keeps artist details visible when bookmark loading requires login', async () => {
     listArtistBookmarks.mockRejectedValueOnce(

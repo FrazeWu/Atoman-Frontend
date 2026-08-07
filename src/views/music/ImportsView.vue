@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   cancelMusicAlbumImportSession,
   deleteMusicAlbumImportFile,
   getMusicAlbum,
+  getMusicArtist,
   listMusicAlbumImports,
   repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
@@ -13,6 +14,11 @@ import {
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import {
+  musicImportAlbumTitle,
+  musicImportGroupForStatus,
+  uniqueMusicAlbumImports,
+} from '@/utils/musicImportDisplay'
 
 const imports = ref<MusicAlbumImport[]>([]);
 const loading = ref(false);
@@ -25,28 +31,33 @@ const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
-const selectedImport = computed(
-  () => imports.value.find((item) => item.importId === selectedId.value) ?? null,
-);
+const albumImports = computed(() => uniqueMusicAlbumImports(imports.value))
 
 const importGroups = computed(() => {
-  const filtered = imports.value.filter((item) => {
+  const filtered = albumImports.value.filter((item) => {
     if (!searchQuery.value.trim()) return true
     const q = searchQuery.value.trim().toLowerCase()
-    const title = getDisplayTitle(item).toLowerCase()
+    const title = musicImportAlbumTitle(item).toLowerCase()
     const archive = (item.archiveName || '').toLowerCase()
     return title.includes(q) || archive.includes(q)
   })
 
-  return {
-    draft: filtered.filter(item => ['pending_upload', 'uploading', 'uploaded', 'ready', 'needs_attention'].includes(item.status)),
-    processing: filtered.filter(item => ['queued', 'extracting', 'analyzing', 'transcoding'].includes(item.status)),
-    failed: filtered.filter(item => item.status === 'failed'),
-    completed: filtered.filter(item => ['committed', 'canceled'].includes(item.status)),
-  }
+  return filtered.reduce<Record<'draft' | 'processing' | 'failed' | 'completed', MusicAlbumImport[]>>((groups, item) => {
+    groups[musicImportGroupForStatus(item.status)].push(item)
+    return groups
+  }, { draft: [], processing: [], failed: [], completed: [] })
 })
 
 const visibleImports = computed(() => importGroups.value[activeGroup.value])
+const selectedImport = computed(
+  () => visibleImports.value.find((item) => item.importId === selectedId.value) ?? null,
+)
+
+watch(activeGroup, () => {
+  if (!visibleImports.value.some((item) => item.importId === selectedId.value)) {
+    selectedId.value = visibleImports.value[0]?.importId ?? null
+  }
+})
 
 const statusText: Record<string, string> = {
   pending_upload: "等待上传",
@@ -62,30 +73,6 @@ const statusText: Record<string, string> = {
   canceled: "已取消",
   committed: "已完成",
 };
-
-function cleanFileName(fileName?: string): string {
-  if (!fileName) return ''
-  return fileName.replace(/\.(zip|rar|7z|tar|gz|tgz|bz2|xz|mp3|flac|wav|m4a|aac|ogg)$/i, '').trim()
-}
-
-function getDisplayTitle(item: MusicAlbumImport): string {
-  if (item.derivedAlbumTitle?.trim()) return item.derivedAlbumTitle.trim()
-
-  const archive = cleanFileName(item.archiveName)
-  if (archive && archive.toLowerCase() !== 'archive') return archive
-
-  if (item.derivedTracks?.length > 0 && item.derivedTracks[0]?.title?.trim()) {
-    return item.derivedTracks[0].title.trim()
-  }
-
-  if (item.files?.length > 0) {
-    const first = item.files[0]
-    const fileTitle = first.title?.trim() || cleanFileName(first.fileName)
-    if (fileTitle) return fileTitle
-  }
-
-  return `导入任务 #${item.importId.slice(0, 8)}`
-}
 
 function formatDate(isoString?: string): string {
   if (!isoString) return ''
@@ -107,8 +94,12 @@ async function loadImports(silent = false) {
   errorMessage.value = "";
   try {
     imports.value = await listMusicAlbumImports();
-    if (!selectedId.value && imports.value[0]) {
-      selectedId.value = imports.value[0].importId;
+    const selected = albumImports.value.find((item) => item.importId === selectedId.value)
+    if (selected) {
+      activeGroup.value = musicImportGroupForStatus(selected.status)
+    }
+    if (!visibleImports.value.some((item) => item.importId === selectedId.value)) {
+      selectedId.value = visibleImports.value[0]?.importId ?? null;
     }
     checkPollState()
   } catch {
@@ -145,6 +136,11 @@ onUnmounted(() => {
 
 async function retryFile(fileId: string) {
   if (!selectedImport.value) return;
+  const file = selectedImport.value.files.find((item) => item.fileId === fileId)
+  if (!file || file.uploadStatus === 'failed') {
+    errorMessage.value = '上传失败的文件请先替换后再试'
+    return
+  }
   actionBusy.value = fileId;
   try {
     await retryMusicAlbumImportFile(selectedImport.value.importId, fileId);
@@ -158,12 +154,19 @@ async function retryFile(fileId: string) {
 
 async function retryAllFailedFiles() {
   if (!selectedImport.value) return
-  const failedFiles = selectedImport.value.files.filter(f => f.uploadStatus === 'failed' || f.processingStatus === 'failed')
-  if (!failedFiles.length) return
+  const failedFiles = selectedImport.value.files.filter(f => f.processingStatus === 'failed')
+  const attentionFile = selectedImport.value.status === 'needs_attention'
+    ? selectedImport.value.files.find(f => f.uploadStatus === 'uploaded' && ['archive', 'audio'].includes(f.role))
+    : null
+  const retryFiles = failedFiles.length ? failedFiles : attentionFile ? [attentionFile] : []
+  if (!retryFiles.length) {
+    errorMessage.value = '请替换上传失败的文件后再试'
+    return
+  }
 
   actionBusy.value = 'retry-all'
   try {
-    for (const f of failedFiles) {
+    for (const f of retryFiles) {
       await retryMusicAlbumImportFile(selectedImport.value.importId, f.fileId)
     }
     await loadImports(true)
@@ -178,6 +181,7 @@ async function deleteFile(fileId: string) {
   if (!selectedImport.value) return;
   actionBusy.value = fileId;
   try {
+    if (!window.confirm('确认移除这个文件？')) return
     await deleteMusicAlbumImportFile(selectedImport.value.importId, fileId);
     await loadImports(true);
   } catch {
@@ -204,6 +208,7 @@ async function cancelImport() {
   if (!selectedImport.value) return;
   actionBusy.value = "cancel";
   try {
+    if (!window.confirm('确认取消这个导入任务？')) return
     await cancelMusicAlbumImportSession(selectedImport.value.importId);
     selectedId.value = null;
     await loadImports(true);
@@ -231,6 +236,16 @@ async function repairImport() {
 
 async function resumeImport(snapshot: MusicAlbumImport) {
   if (!snapshot.targetAlbumId) {
+    if (snapshot.artistId) {
+      const artist = await getMusicArtist(snapshot.artistId)
+      resumeMusicCreationFlow(snapshot, [{
+        id: String(artist.id),
+        name: artist.name,
+        imageUrl: artist.image_url,
+        kind: artist.artist_form,
+      }])
+      return
+    }
     resumeMusicCreationFlow(snapshot)
     return
   }
@@ -270,7 +285,7 @@ async function continueImport() {
     <p v-else-if="loading && !imports.length" class="music-imports-view__state">
       正在加载
     </p>
-    <p v-else-if="!imports.length" class="music-imports-view__state">
+    <p v-else-if="!albumImports.length" class="music-imports-view__state">
       暂无导入记录
     </p>
 
@@ -299,7 +314,7 @@ async function continueImport() {
           @click="selectedId = item.importId"
         >
           <div class="item-header">
-            <strong>{{ getDisplayTitle(item) }}</strong>
+            <strong>{{ musicImportAlbumTitle(item) }}</strong>
             <span class="status-badge" :data-status="item.status">{{ statusText[item.status] ?? item.status }}</span>
           </div>
           <div class="item-sub">
@@ -320,7 +335,7 @@ async function continueImport() {
           <div v-else class="no-cover">无封面</div>
         </div>
         <div class="detail-main">
-          <h2>{{ getDisplayTitle(selectedImport) }}</h2>
+          <h2>{{ musicImportAlbumTitle(selectedImport) }}</h2>
           <div class="detail-meta">
             <span class="status-badge" :data-status="selectedImport.status">{{ statusText[selectedImport.status] ?? selectedImport.status }}</span>
             <span v-if="selectedImport.archiveName" class="meta-archive">文件: {{ selectedImport.archiveName }}</span>
@@ -342,7 +357,7 @@ async function continueImport() {
             >继续编辑 / 提交</PButton>
 
             <PButton
-              v-if="selectedImport.files.some(f => f.uploadStatus === 'failed' || f.processingStatus === 'failed')"
+              v-if="selectedImport.status === 'needs_attention' || selectedImport.files.some(f => f.processingStatus === 'failed')"
               variant="secondary"
               :loading="actionBusy === 'retry-all'"
               @click="retryAllFailedFiles"
@@ -375,10 +390,7 @@ async function continueImport() {
               </div>
               <div class="file-actions">
                 <PButton
-                  v-if="
-                    file.uploadStatus === 'failed' ||
-                    file.processingStatus === 'failed'
-                  "
+                  v-if="file.processingStatus === 'failed'"
                   variant="secondary"
                   :loading="actionBusy === file.fileId"
                   @click="retryFile(file.fileId)"

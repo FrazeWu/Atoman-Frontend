@@ -5,13 +5,11 @@ import { useRouter } from 'vue-router'
 import {
   buildUpdateArtistEdit,
   buildUpdateAlbumEdit,
-  commitMusicAlbumImport,
   createMusicArtist,
   getMusicAlbum,
   getMusicArtist,
   submitMusicEdit,
   uploadMusicAsset,
-  type MusicAlbumImportCommitInput,
   type MusicAlbumListItem,
   type MusicAlbumTrackEditInput,
   type MusicArtistInput,
@@ -19,10 +17,6 @@ import {
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { AlbumEditorShell, MusicArtistForm } from '@/components/music'
-import MusicCreationArtistStep from '@/components/music/MusicCreationArtistStep.vue'
-import MusicCreationAlbumSeedStep from '@/components/music/MusicCreationAlbumSeedStep.vue'
-import MusicCreationAlbumDetailsStep from '@/components/music/MusicCreationAlbumDetailsStep.vue'
-import MusicCreationAlbumPreviewStep from '@/components/music/MusicCreationAlbumPreviewStep.vue'
 import type {
   MusicAlbumMetaDraft,
   MusicCoverDraft,
@@ -32,8 +26,12 @@ import type {
 } from '@/components/music/types'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
-import type { Artist } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
+import {
+	albumArtistCreditsFromContributors,
+	albumContributorsFromResponse,
+	hasValidAlbumContributors,
+} from '@/utils/musicAlbumCredits'
 
 type EditorLayer = Extract<MusicSheetLayer, { kind: 'editor' }>
 const props = withDefaults(defineProps<{ layer?: EditorLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -44,22 +42,18 @@ const {
   closeMusicEditor,
   refreshAlbum,
   refreshArtist,
-  openMusicCreationFlow,
   closeMusicCreationFlow,
-  setMusicCreationStep,
   isLayerShifted,
   isTopLayer,
   returnToLayer,
 } = useMusicDrawers()
 
 const editor = computed(() => props.layer?.payload ?? state.value.musicEditor)
-const creationFlow = computed(() => state.value.creationFlow)
 const isOpen = computed(() => props.layer !== undefined || editor.value !== null)
 const isArtistEditor = computed(() => editor.value?.entity === 'artist')
 const isAlbumEditor = computed(() => editor.value?.entity === 'album')
 const isCreateMode = computed(() => editor.value?.mode === 'create')
 const isEditMode = computed(() => editor.value?.mode === 'edit')
-const isCreateFlowActive = computed(() => isCreateMode.value && creationFlow.value !== null)
 const sheetIndex = computed(() => {
   if (props.layer) return props.layerIndex
   let count = 0
@@ -80,7 +74,7 @@ const albumSubmitting = ref(false)
 const albumErrorMessage = ref('')
 
 let meta = reactive<MusicAlbumMetaDraft>({
-  artist: [],
+	contributors: [],
   album: '',
   releaseDate: '',
   albumType: 'album',
@@ -102,15 +96,10 @@ let notes = reactive<MusicReviewNotesDraft>({
 let sources = ref<MusicSourceDraft[]>([])
 
 const sheetTitle = computed(() => {
-  if (isCreateFlowActive.value) {
-    return albumCreateStep.value === 'artist' ? '新建艺术家' : '新建专辑'
-  }
   if (isArtistEditor.value) {
     return isCreateMode.value ? '新建艺术家' : '编辑艺术家'
   }
-  if (isAlbumEditor.value) {
-    return isCreateMode.value ? '新建专辑' : '编辑专辑'
-  }
+  if (isAlbumEditor.value && isEditMode.value) return '编辑专辑'
   return '编辑'
 })
 
@@ -141,22 +130,6 @@ watch(editor, async (value) => {
   }
 
   if (value.entity === 'album') {
-    if (value.mode === 'create') {
-      resetAlbumState()
-      const seed = value.seed as {
-        artistId?: string | null
-        artistName?: string
-        artistLegalName?: string
-      } | undefined
-      openMusicCreationFlow({
-        artistId: seed?.artistId ?? null,
-        artistName: seed?.artistName ?? '',
-        artistLegalName: seed?.artistLegalName ?? '',
-        startStep: seed?.artistId ? 'albumImport' : 'artist',
-      })
-      return
-    }
-
     closeMusicCreationFlow()
     resetAlbumState()
     if (value.id) {
@@ -176,7 +149,7 @@ function resetAlbumState() {
   albumSubmitting.value = false
   albumErrorMessage.value = ''
   meta = reactive({
-    artist: [],
+	contributors: [],
     album: '',
     releaseDate: '',
     albumType: 'album',
@@ -226,6 +199,7 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
   artistSubmitting.value = true
   artistErrorMessage.value = ''
   try {
+		let createdArtistId = ''
     if (current.id) {
       await submitMusicEdit(buildUpdateArtistEdit(current.id, {
         ...value,
@@ -244,10 +218,12 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
         birth_year: value.birth_year,
         death_year: value.death_year,
       }
-      await createMusicArtist(payload)
+		const artist = await createMusicArtist(payload)
+		createdArtistId = artist.id
     }
     refreshArtist()
     closeCurrentEditor()
+		if (createdArtistId) await router.replace(`/music/artist/${createdArtistId}`)
   } catch (error) {
     reportError(error, 'Failed to submit artist:')
     artistErrorMessage.value = '保存艺术家失败'
@@ -272,7 +248,7 @@ async function loadAlbum(albumId: string) {
 
 function hydrateAlbumDraft(result: MusicAlbumListItem) {
   meta = reactive({
-    artist: (result.artists ?? []).map(toArtistDraft),
+	contributors: albumContributorsFromResponse(result),
     album: result.title ?? '',
     releaseDate: result.release_date?.slice(0, 10) ?? '',
     albumType: normalizeAlbumType(result.album_type),
@@ -305,13 +281,6 @@ function hydrateAlbumDraft(result: MusicAlbumListItem) {
     }))
 }
 
-function toArtistDraft(artist: { id: string; name: string }): Artist {
-  return {
-    id: artist.id,
-    name: artist.name,
-  }
-}
-
 function normalizeAlbumType(value?: string): 'single' | 'ep' | 'album' {
   if (value === 'single' || value === 'ep') return value
   return 'album'
@@ -324,6 +293,10 @@ async function handleAlbumEditSubmit() {
     albumErrorMessage.value = '专辑名不能为空'
     return
   }
+	if (!hasValidAlbumContributors(meta.contributors)) {
+		albumErrorMessage.value = '请设置创作者身份并保留主艺术家'
+		return
+	}
 
   albumSubmitting.value = true
   albumErrorMessage.value = ''
@@ -340,7 +313,7 @@ async function handleAlbumEditSubmit() {
 
     const edit = await submitMusicEdit(buildUpdateAlbumEdit(current.id, {
       title: meta.album.trim(),
-      artist_ids: meta.artist.map((artist) => String(artist.id)).filter(Boolean),
+		artist_credits: albumArtistCreditsFromContributors(meta.contributors),
       release_date: meta.releaseDate || undefined,
       cover: coverAsset,
       album_type: meta.albumType,
@@ -386,131 +359,6 @@ function toTrackPayload(track: MusicTrackDraft, index: number): MusicAlbumTrackE
   }
 }
 
-function buildCommitInput(): MusicAlbumImportCommitInput {
-  const flow = creationFlow.value
-  if (!flow) throw new Error('缺少创建流程')
-
-  const primaryStageName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())
-    ?? flow.draft.artist.stageNames.find((item) => item.name.trim())
-
-  return {
-    ...(flow.draft.artist.id ? { artist_id: flow.draft.artist.id } : {}),
-    artist: {
-      name: primaryStageName?.name.trim() || flow.draft.artist.legalName.trim(),
-      legal_name: flow.draft.artist.legalName.trim(),
-      bio: flow.draft.artist.bio.trim(),
-      ...(flow.draft.artist.avatarUrl.trim() ? { image_url: flow.draft.artist.avatarUrl.trim() } : {}),
-      nationality: flow.draft.artist.nationality.trim(),
-      birth_date: flow.draft.artist.birthDate.trim(),
-      stage_names: flow.draft.artist.stageNames
-        .filter((item) => item.name.trim())
-        .map((item) => ({
-          name: item.name.trim(),
-          isPrimary: item.isPrimary,
-          startDateText: item.startDateText.trim(),
-          endDateText: item.endDateText.trim(),
-        })),
-      birth_place: flow.draft.artist.birthPlace.trim(),
-    },
-    artist_source: flow.draft.artist.source.trim(),
-    album: {
-      title: flow.draft.albumDetails.title.trim(),
-      description: flow.draft.albumDetails.bio.trim(),
-      album_type: flow.draft.albumDetails.type.trim() || 'album',
-      ...(flow.draft.albumDetails.coverUrl.trim() ? { cover_url: flow.draft.albumDetails.coverUrl.trim() } : {}),
-      release_year: Number.parseInt(flow.draft.albumDetails.releaseYear.trim(), 10) || 0,
-      tracks: flow.draft.tracks.map((track, index) => ({
-        title: track.title.trim(),
-        trackNumber: index + 1,
-      })),
-    },
-    album_source: flow.draft.albumDetails.source.trim(),
-  }
-}
-
-async function committedArtistId(flow: NonNullable<typeof creationFlow.value>, targetAlbumId: string) {
-  const existingArtistId = flow.draft.artist.id?.trim()
-  if (existingArtistId) return existingArtistId
-  if (!targetAlbumId) return ''
-
-  const album = await getMusicAlbum(targetAlbumId)
-  return album.artists?.[0]?.id ?? ''
-}
-
-const albumCreateStep = computed(() => creationFlow.value?.step ?? 'artist')
-const canGoNext = computed(() => {
-  const flow = creationFlow.value
-  if (!flow) return false
-  if (flow.step === 'artist') return !!flow.draft.artist.legalName.trim()
-  if (flow.step === 'albumImport') return flow.draft.albumImport.status === 'ready'
-  if (flow.step === 'albumDetails') return flow.draft.albumImport.status === 'ready'
-  return flow.draft.albumImport.status === 'ready' && !!flow.draft.albumDetails.title.trim()
-})
-
-function goAlbumCreateNext() {
-  const flow = creationFlow.value
-  if (!flow) return
-  if (flow.step === 'artist') {
-    setMusicCreationStep('albumImport')
-    return
-  }
-  if (flow.step === 'albumImport') {
-    setMusicCreationStep('albumDetails')
-    return
-  }
-  if (flow.step === 'albumDetails') {
-    setMusicCreationStep('preview')
-  }
-}
-
-function goAlbumCreateBack() {
-  const flow = creationFlow.value
-  if (!flow) return
-  if (flow.step === 'preview') {
-    setMusicCreationStep('albumDetails')
-    return
-  }
-  if (flow.step === 'albumDetails') {
-    setMusicCreationStep('albumImport')
-    return
-  }
-  if (flow.step === 'albumImport') {
-    setMusicCreationStep('artist')
-  }
-}
-
-async function finishAlbumCreate() {
-  const flow = creationFlow.value
-  if (!flow || flow.submitting) return
-
-  const importId = flow.draft.albumImport.importId?.trim()
-  if (!importId) {
-    flow.errorMessage = '缺少 importId，无法提交专辑导入'
-    return
-  }
-
-  if (flow.draft.albumImport.status !== 'ready') {
-    flow.errorMessage = '请等待压缩包处理完成'
-    return
-  }
-
-  flow.submitting = true
-  flow.errorMessage = ''
-  try {
-    const result = await commitMusicAlbumImport(importId, buildCommitInput())
-    const artistId = await committedArtistId(flow, result.targetAlbumId)
-    refreshArtist()
-    closeMusicCreationFlow()
-    closeCurrentEditor()
-    if (artistId) await router.push(`/music/artist/${artistId}`)
-  } catch (error) {
-    flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
-  } finally {
-    if (creationFlow.value) {
-      creationFlow.value.submitting = false
-    }
-  }
-}
 </script>
 
 <template>
@@ -528,42 +376,7 @@ async function finishAlbumCreate() {
     @activate="props.layer && returnToLayer(props.layer.key)"
   >
     <div class="entity-editor">
-      <div v-if="isCreateFlowActive && creationFlow" class="entity-editor__body">
-        <p v-if="creationFlow.errorMessage" class="entity-editor__error">{{ creationFlow.errorMessage }}</p>
-        <MusicCreationArtistStep v-if="albumCreateStep === 'artist'" />
-        <MusicCreationAlbumSeedStep v-else-if="albumCreateStep === 'albumImport'" />
-        <MusicCreationAlbumDetailsStep v-else-if="albumCreateStep === 'albumDetails'" />
-        <MusicCreationAlbumPreviewStep v-else />
-
-        <div class="entity-editor__actions">
-          <PButton variant="secondary" @click="closeCurrentEditor">关闭</PButton>
-          <PButton
-            v-if="albumCreateStep !== 'artist'"
-            variant="secondary"
-            @click="goAlbumCreateBack"
-          >
-            返回上一步
-          </PButton>
-          <PButton
-            v-if="albumCreateStep !== 'preview'"
-            :disabled="!canGoNext"
-            @click="goAlbumCreateNext"
-          >
-            下一步
-          </PButton>
-          <PButton
-            v-else
-            :loading="creationFlow.submitting"
-            loading-text="提交中..."
-            :disabled="!canGoNext"
-            @click="finishAlbumCreate"
-          >
-            完成
-          </PButton>
-        </div>
-      </div>
-
-      <div v-else-if="isArtistEditor" class="entity-editor__body">
+      <div v-if="isArtistEditor" class="entity-editor__body">
         <p v-if="artistErrorMessage" class="entity-editor__error">{{ artistErrorMessage }}</p>
         <MusicArtistForm
           :initial-value="artistInitialValue"
@@ -575,7 +388,7 @@ async function finishAlbumCreate() {
         />
       </div>
 
-      <div v-else-if="isAlbumEditor" class="entity-editor__body">
+      <div v-else-if="isAlbumEditor && isEditMode" class="entity-editor__body">
         <p v-if="albumErrorMessage" class="entity-editor__error">{{ albumErrorMessage }}</p>
         <p v-else-if="albumLoading" class="entity-editor__state">正在加载专辑资料...</p>
         <template v-else>

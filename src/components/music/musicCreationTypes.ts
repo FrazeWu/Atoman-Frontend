@@ -1,5 +1,6 @@
 import type { UploadAsset } from '@/api/types'
 import type { MusicAlbumImportFile, MusicAlbumImportInputMode, MusicAlbumImportStage, MusicAlbumImportStatus } from '@/api/musicV1'
+import type { MusicAlbumArtistRole } from '@/api/musicV1'
 
 export type MusicCreationFlowStep = 'artist' | 'albumImport' | 'albumDetails' | 'preview'
 export type MusicArtistKind = 'person' | 'group'
@@ -93,6 +94,11 @@ export interface MusicCreationAlbumContributorDraft {
   avatarUrl: string
   kind: MusicArtistKind
   locked: boolean
+  roles: Array<{
+    id: string
+    role: MusicAlbumArtistRole
+    label: string
+  }>
 }
 
 export interface MusicCreationAlbumDetailsDraft {

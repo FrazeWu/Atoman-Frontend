@@ -83,14 +83,17 @@ export function useAlbumImportUpload() {
   function startPolling(importId: string) {
     if (pollTimer) clearTimeout(pollTimer)
     const poll = async () => {
-      if (!albumImportDraft.value || albumImportDraft.value.importId !== importId) return
+      if (!albumImportDraft.value || albumImportDraft.value.importId !== importId) {
+        pollTimer = null
+        return
+      }
       try {
         const snapshot = await getMusicAlbumImport(importId)
         applyImportSnapshot(snapshot)
         const done = ['ready', 'needs_attention', 'failed', 'canceled', 'committed'].includes(
           snapshot.status,
         )
-        if (!done) pollTimer = setTimeout(poll, 3000)
+        pollTimer = done ? null : setTimeout(poll, 3000)
       } catch {
         pollTimer = setTimeout(poll, 5000)
       }
@@ -161,18 +164,25 @@ export function useAlbumImportUpload() {
       return
     }
 
-    uploading.value = true
-    errorMessage.value = ''
-    fileProgress.value = new Map()
-
-    const draft = albumImportDraft.value
-    draft.status = 'uploading'
     const hasRelativePaths = files.some(
       (f) => !!(f as File & { webkitRelativePath?: string }).webkitRelativePath,
     )
     const isArchive = files.length === 1 && SUPPORTED_ARCHIVE_ACCEPT.split(',')
       .some((extension) => files[0].name.toLowerCase().endsWith(extension.trim()))
-    if (isArchive) validateMusicAlbumArchiveFile(files[0])
+    try {
+      if (isArchive) validateMusicAlbumArchiveFile(files[0])
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : '文件无法上传'
+      return
+    }
+
+    uploading.value = true
+    errorMessage.value = ''
+    fileProgress.value = new Map()
+    selectedFiles.clear()
+
+    const draft = albumImportDraft.value
+    draft.status = 'uploading'
     const autoMode: MusicAlbumImportInputMode = isArchive ? 'archive' : hasRelativePaths ? 'folder' : 'files'
     draft.inputMode = autoMode
     draft.totalBytesLoaded = 0
@@ -247,8 +257,8 @@ export function useAlbumImportUpload() {
         await Promise.all(uploadTasks.slice(i, i + 3).map((fn) => fn()))
       }
 
-      await completeMusicAlbumImportSession(session.importId)
-      draft.status = 'queued'
+      const completed = await completeMusicAlbumImportSession(session.importId)
+      applyImportSnapshot(completed)
       startPolling(session.importId)
     } catch (error) {
       draft.status = 'failed'
@@ -264,7 +274,6 @@ export function useAlbumImportUpload() {
     const fileList = input.files
     if (!fileList || fileList.length === 0) return
 
-    const files = Array.from(fileList)
     await handleFilesUpload(fileList)
 
     input.value = ''
@@ -274,11 +283,17 @@ export function useAlbumImportUpload() {
     const draft = albumImportDraft.value
     if (!draft?.importId) return
     const needsUpload = draft.files.find((file) => file.fileId === fileId)?.uploadStatus === 'failed'
+    const file = selectedFiles.get(fileId)
+    if (needsUpload && !file) {
+      errorMessage.value = '请替换文件后重新上传'
+      return
+    }
+
+    uploading.value = true
     errorMessage.value = ''
     try {
       const snapshot = await retryMusicAlbumImportFile(draft.importId, fileId)
       applyImportSnapshot(snapshot)
-      const file = selectedFiles.get(fileId)
       if (needsUpload && file) {
         await uploadSingleFileMultipart(draft.importId, file, fileId)
         await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
@@ -287,12 +302,15 @@ export function useAlbumImportUpload() {
       }
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '重试失败'
+    } finally {
+      uploading.value = false
     }
   }
 
   async function handleReplaceFile(fileId: string, file: File) {
     const draft = albumImportDraft.value
     if (!draft?.importId) return
+    uploading.value = true
     try {
       await replaceMusicAlbumImportFile(draft.importId, fileId, {
         relativePath: file.name,
@@ -307,15 +325,21 @@ export function useAlbumImportUpload() {
       await completeSessionWhenFilesUploaded(draft.importId, await getMusicAlbumImport(draft.importId))
     } catch (error) {
       errorMessage.value = error instanceof Error ? error.message : '替换失败'
+    } finally {
+      uploading.value = false
     }
   }
 
   async function cancelUpload() {
     const importId = albumImportDraft.value?.importId
     if (!importId) return
-    await cancelMusicAlbumImportSession(importId)
-    stopPolling()
-    if (albumImportDraft.value) albumImportDraft.value.status = 'canceled'
+    try {
+      await cancelMusicAlbumImportSession(importId)
+      stopPolling()
+      if (albumImportDraft.value) albumImportDraft.value.status = 'canceled'
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : '取消上传失败'
+    }
   }
 
   async function handleDeleteFile(fileId: string) {

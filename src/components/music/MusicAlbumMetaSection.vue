@@ -2,8 +2,7 @@
   <PSurface class="album-meta-card" tone="soft" :layer="0">
     <div class="album-meta-card__grid">
       <div class="album-meta-card__field album-meta-card__field--artists">
-        <label class="a-label">艺人</label>
-        <ArtistSelect v-model="artistModel" :multiple="true" />
+		<MusicCreationContributorPicker :model-value="contributors" @update:model-value="$emit('update:contributors', $event)" />
       </div>
 
       <div class="album-meta-card__field">
@@ -28,27 +27,22 @@ import { computed } from 'vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
-import ArtistSelect from './ArtistSelect.vue'
-import type { Artist } from '@/types'
+import MusicCreationContributorPicker from './MusicCreationContributorPicker.vue'
+import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 
 const props = defineProps<{
-  artist: Artist[]
+	contributors: MusicCreationAlbumContributorDraft[]
   album: string
   releaseDate: string
   albumType?: 'single' | 'ep' | 'album'
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:artist', value: Artist[]): void
+	(e: 'update:contributors', value: MusicCreationAlbumContributorDraft[]): void
   (e: 'update:album', value: string): void
   (e: 'update:releaseDate', value: string): void
   (e: 'update:albumType', value?: 'single' | 'ep' | 'album'): void
 }>()
-
-const artistModel = computed({
-  get: () => props.artist,
-  set: (value) => emit('update:artist', value),
-})
 
 const albumModel = computed({
   get: () => props.album,

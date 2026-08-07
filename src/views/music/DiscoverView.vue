@@ -377,7 +377,7 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], importSessions: MusicAlbu
       cover_url: item.coverUrl || item.derivedCover || '',
       description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
       status: item.status,
-      entry_status: item.status,
+      entry_status: 'draft',
       importSession: item,
     }))
 
@@ -445,7 +445,7 @@ async function fetchAlbumIndex() {
         cover_url: item.coverUrl || item.derivedCover || '',
         description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
         status: item.status,
-        entry_status: item.status,
+        entry_status: 'draft',
         importSession: item,
       }))
 

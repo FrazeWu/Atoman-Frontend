@@ -236,6 +236,26 @@ describe('ArtistDrawer.vue', () => {
     wrapper.unmount()
   })
 
+  it('uses the fresh album list instead of cached albums embedded in artist data', async () => {
+    getMusicArtist.mockResolvedValueOnce({
+      id: '1',
+      name: 'Ye',
+      albums: [{ id: 'stale-album', title: 'Stale Album', entry_status: 'open' }],
+      entry_status: 'open',
+    })
+    listMusicAlbums.mockResolvedValueOnce({
+      data: [{ id: 'fresh-album', title: 'Reconsider', entry_status: 'open' }],
+      meta: { page: 1, page_size: 100, total: 1, has_more: false },
+    })
+
+    const wrapper = mount(ArtistDrawer)
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Reconsider')
+    expect(wrapper.text()).not.toContain('Stale Album')
+    wrapper.unmount()
+  })
+
   it('opens unified artist editor from the artist detail action bar', async () => {
     const wrapper = mount(ArtistDrawer)
 

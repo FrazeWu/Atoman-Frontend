@@ -56,14 +56,14 @@ export type MusicAlbumImportTrack = {
 
 export type MusicAlbumImportCommitStageName = {
   name: string;
-  isPrimary: boolean;
-  startDateText: string;
-  endDateText: string;
+  is_primary: boolean;
+  start_date_text: string;
+  end_date_text: string;
 };
 
 export type MusicAlbumImportCommitTrack = {
   title: string;
-  trackNumber: number;
+  track_number: number;
 };
 
 export type MusicAlbumImportCommitMember = {

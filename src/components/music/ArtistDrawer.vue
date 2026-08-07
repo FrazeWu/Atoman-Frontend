@@ -134,7 +134,11 @@ async function loadArtist(artistId: string | null) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const resolved = await resolveMusicRedirect(artistId, getMusicArtist)
+    const shouldForceRefresh = state.value.artistRefreshToken > 0
+    const resolved = await resolveMusicRedirect(
+      artistId,
+      (id) => getMusicArtist(id, { force: shouldForceRefresh }),
+    )
     const artistResponse = resolved.entity
     if (resolved.redirected) {
       redirectMessage.value = '已转到合并后的条目'
@@ -144,7 +148,7 @@ async function loadArtist(artistId: string | null) {
     redirectMessage.value = ''
     const albumsResponse = await listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 })
     artist.value = artistResponse
-    albums.value = artistResponse.albums?.length ? artistResponse.albums : albumsResponse.data
+    albums.value = albumsResponse.data
     if (isAuthenticated.value) {
       try {
         const bookmarksResponse = await listArtistBookmarks()

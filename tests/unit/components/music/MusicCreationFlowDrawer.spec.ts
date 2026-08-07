@@ -295,6 +295,69 @@ describe('MusicCreationFlowDrawer', () => {
     expect(drawerMocks.state.value.creationFlow).toBeNull()
   })
 
+  it('提交新艺术家时按后端协议发送阶段名字段', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+    const baseFlow = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'preview',
+      draft: {
+        ...baseFlow.draft,
+        artist: {
+          ...baseFlow.draft.artist,
+          id: null,
+          legalName: '宋冬野',
+          stageNames: [{
+            ...baseFlow.draft.artist.stageNames[0],
+            name: '宋冬野',
+            isPrimary: true,
+            startDateText: '2010',
+            endDateText: '2026',
+          }],
+        },
+        albumImport: {
+          ...baseFlow.draft.albumImport,
+          importId: 'import-1',
+          status: 'ready',
+        },
+        albumDetails: {
+          ...baseFlow.draft.albumDetails,
+          title: '再想想',
+          contributors: [{
+            ...baseFlow.draft.albumDetails.contributors[0],
+            artistId: null,
+            name: '宋冬野',
+          }],
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.objectContaining({
+      artist: expect.objectContaining({
+        stage_names: [{
+          name: '宋冬野',
+          is_primary: true,
+          start_date_text: '2010',
+          end_date_text: '2026',
+        }],
+      }),
+      artists: [expect.objectContaining({
+        name: '宋冬野',
+        stage_names: [{
+          name: '宋冬野',
+          is_primary: true,
+          start_date_text: '2010',
+          end_date_text: '2026',
+        }],
+      })],
+      album: expect.objectContaining({ title: '再想想' }),
+    }))
+    wrapper.unmount()
+  })
+
   it('提交成功后跳转到已有艺术家的详情页', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', targetAlbumId: 'album-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
@@ -676,7 +739,7 @@ describe('MusicCreationFlowDrawer', () => {
     }))
   })
 
-  it('提交时按当前曲目顺序重新生成连续 trackNumber', async () => {
+  it('提交时按当前曲目顺序重新生成连续 track_number', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
     drawerMocks.state.value.creationFlow = createFlowState({
       step: 'preview',
@@ -713,9 +776,9 @@ describe('MusicCreationFlowDrawer', () => {
       album: expect.objectContaining({
         title: 'Dragged Album',
         tracks: [
-          { title: 'Outro', trackNumber: 1 },
-          { title: 'Intro', trackNumber: 2 },
-          { title: 'Middle', trackNumber: 3 },
+          { title: 'Outro', track_number: 1 },
+          { title: 'Intro', track_number: 2 },
+          { title: 'Middle', track_number: 3 },
         ],
       }),
     }))

@@ -222,9 +222,9 @@ function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): 
     .filter((item) => item.name.trim())
     .map((item) => ({
       name: item.name.trim(),
-      isPrimary: item.isPrimary,
-      startDateText: item.startDateText.trim(),
-      endDateText: item.endDateText.trim(),
+      is_primary: item.isPrimary,
+      start_date_text: item.startDateText.trim(),
+      end_date_text: item.endDateText.trim(),
     }))
 
   return buildNormalizedContributors(flow).map((contributor) => {
@@ -291,9 +291,9 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
         .filter((item) => item.name.trim())
         .map((item) => ({
           name: item.name.trim(),
-          isPrimary: item.isPrimary,
-          startDateText: item.startDateText.trim(),
-          endDateText: item.endDateText.trim(),
+          is_primary: item.isPrimary,
+          start_date_text: item.startDateText.trim(),
+          end_date_text: item.endDateText.trim(),
         })),
       birth_place: flow.draft.artist.birthPlace.trim(),
     },
@@ -308,7 +308,7 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       release_year: derivedReleaseYear || 0,
       tracks: flow.draft.tracks.map((track, index) => ({
         title: track.title.trim(),
-        trackNumber: index + 1,
+        track_number: index + 1,
       })),
     },
     album_source: flow.draft.albumDetails.source.trim(),

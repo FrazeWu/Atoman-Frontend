@@ -122,6 +122,7 @@ const drawerMocks = {
   }),
   closeMusicCreationFlow: vi.fn(),
   refreshArtist: vi.fn(),
+  openNestedAction: vi.fn(),
   setMusicCreationStep: vi.fn(),
   routerPush: vi.fn(),
 }
@@ -131,6 +132,7 @@ vi.mock('@/api/musicV1', async () => {
   return {
     ...actual,
     commitMusicAlbumImport: vi.fn(),
+    submitMusicEdit: vi.fn(),
   }
 })
 
@@ -158,6 +160,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: drawerMocks.state,
     closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
     refreshArtist: drawerMocks.refreshArtist,
+    openNestedAction: drawerMocks.openNestedAction,
     setMusicCreationStep: drawerMocks.setMusicCreationStep,
     isMainShifted: computed(() => false),
     isCreationFlowOpen: computed(() => drawerMocks.state.value.creationFlow !== null),
@@ -169,17 +172,21 @@ const commitMusicAlbumImportMock = vi.mocked(
     commitMusicAlbumImport: ReturnType<typeof vi.fn>
   }).commitMusicAlbumImport,
 )
+const submitMusicEditMock = vi.mocked(musicApi.submitMusicEdit)
 
 describe('MusicCreationFlowDrawer', () => {
   beforeEach(() => {
     commitMusicAlbumImportMock.mockReset()
+    submitMusicEditMock.mockReset()
     drawerMocks.closeMusicCreationFlow.mockReset()
     drawerMocks.closeMusicCreationFlow.mockImplementation(() => {
       drawerMocks.state.value.creationFlow = null
     })
     drawerMocks.refreshArtist.mockReset()
+    drawerMocks.openNestedAction.mockReset()
     drawerMocks.setMusicCreationStep.mockReset()
     drawerMocks.routerPush.mockReset()
+    drawerMocks.routerPush.mockResolvedValue(undefined)
     drawerMocks.setMusicCreationStep.mockImplementation((step: MusicCreationFlowState['step']) => {
       if (drawerMocks.state.value.creationFlow) {
         drawerMocks.state.value.creationFlow.step = step
@@ -228,6 +235,112 @@ describe('MusicCreationFlowDrawer', () => {
     ])
 
     wrapper.unmount()
+  })
+
+  it('创建艺术家后直接打开关联现有专辑', async () => {
+    const baseFlow = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'artist',
+      draft: {
+        ...baseFlow.draft,
+        artist: {
+          ...baseFlow.draft.artist,
+          id: null,
+          avatarUrl: 'https://img.test/artist.jpg',
+          legalName: 'Kanye Omari West',
+          stageNames: [{
+            ...baseFlow.draft.artist.stageNames[0],
+            name: 'Ye',
+            isPrimary: true,
+          }],
+          nationality: '美国',
+          birthPlace: 'Atlanta',
+          birthDateParts: { year: '1977', month: '06', day: '08' },
+          source: 'https://example.test/ye',
+        },
+      },
+    })
+    submitMusicEditMock.mockResolvedValue({
+      id: 'edit-1',
+      type: 'create_artist',
+      status: 'applied',
+      entity_type: 'artist',
+      entity_id: 'artist-created',
+      submitted_by: 'user-1',
+      reason: '创建艺术家并关联现有专辑',
+      payload: {},
+      changes: {},
+      sources: [],
+      auto_applied: true,
+      votable: false,
+      created_at: '2026-08-07T00:00:00Z',
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    expect(wrapper.get('[data-testid="artist-next-button"]').text()).toBe('创建新专辑')
+    await wrapper.get('[data-testid="artist-create-and-link-button"]').trigger('click')
+    await flushPromises()
+
+    expect(submitMusicEditMock).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'create_artist',
+      entity_type: 'artist',
+      payload: expect.objectContaining({
+        name: 'Ye',
+        legal_name: 'Kanye Omari West',
+        image_url: 'https://img.test/artist.jpg',
+        nationality: '美国',
+        birth_place: 'Atlanta',
+        birth_date: '1977-06-08',
+      }),
+      reason: '创建艺术家并关联现有专辑',
+      sources: [{ type: 'url', url: 'https://example.test/ye' }],
+    }))
+    expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/artist/artist-created')
+    expect(drawerMocks.openNestedAction).toHaveBeenCalledWith('link_album', {
+      artistId: 'artist-created',
+      artistName: 'Ye',
+    })
+  })
+
+  it('创建艺术家失败时保留当前表单', async () => {
+    const baseFlow = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'artist',
+      draft: {
+        ...baseFlow.draft,
+        artist: {
+          ...baseFlow.draft.artist,
+          avatarUrl: 'https://img.test/artist.jpg',
+          legalName: 'Test Artist',
+          stageNames: [{ ...baseFlow.draft.artist.stageNames[0], name: 'Test Artist' }],
+          nationality: '中国',
+          birthDateParts: { year: '1990', month: '01', day: '01' },
+          source: 'https://example.test/artist',
+        },
+      },
+    })
+    submitMusicEditMock.mockResolvedValue({
+      id: 'edit-failed',
+      type: 'create_artist',
+      status: 'failed_prerequisite',
+      entity_type: 'artist',
+      submitted_by: 'user-1',
+      reason: '创建艺术家并关联现有专辑',
+      payload: {},
+      changes: {},
+      sources: [],
+      auto_applied: false,
+      votable: false,
+      created_at: '2026-08-07T00:00:00Z',
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="artist-create-and-link-button"]').trigger('click')
+    await flushPromises()
+
+    expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
+    expect(drawerMocks.openNestedAction).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="music-creation-error"]').text()).toContain('创建艺术家失败')
   })
 
   it('预览步骤点击提交后只调用一次 commitMusicAlbumImport', async () => {

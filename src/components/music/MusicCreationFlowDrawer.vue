@@ -15,7 +15,16 @@ import { hasValidAlbumContributors } from '@/utils/musicAlbumCredits'
 type CreationLayer = Extract<MusicSheetLayer, { kind: 'creation' }>
 const props = withDefaults(defineProps<{ layer?: CreationLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
 
-const { state, closeMusicCreationFlow, returnToLayer, setMusicCreationStep, refreshArtist, isLayerShifted, isTopLayer } = useMusicDrawers()
+const {
+  state,
+  closeMusicCreationFlow,
+  returnToLayer,
+  setMusicCreationStep,
+  refreshArtist,
+  openNestedAction,
+  isLayerShifted,
+  isTopLayer,
+} = useMusicDrawers()
 const router = useRouter()
 
 const toastVisible = ref(false)
@@ -89,7 +98,7 @@ function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
 
 const stepCopy: Record<CreationStepKey, { cta: string }> = {
   artist: {
-    cta: '下一步',
+    cta: '创建新专辑',
   },
   albumImport: {
     cta: '继续',
@@ -113,7 +122,7 @@ const shouldShowFinishButton = computed(() => {
 })
 const showFooterActions = computed(() => true)
 const finishButtonLabel = computed(() => {
-  if (creationFlow.value?.submitting) return '提交中…'
+  if (creationFlow.value?.submitting && creationFlow.value.step === 'preview') return '提交中…'
   if (creationFlow.value?.assetUploading) return '图片上传中…'
   return activeStep.value.cta
 })
@@ -383,6 +392,68 @@ function handlePrimaryAction() {
   }
 }
 
+function buildCreateArtistEdit(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicEditRequest {
+  const artist = flow.draft.artist
+  const primaryStageName = artist.stageNames.find((item) => item.isPrimary && item.name.trim())
+    ?? artist.stageNames.find((item) => item.name.trim())
+  const source = artist.source.trim()
+
+  return {
+    type: 'create_artist',
+    entity_type: 'artist',
+    payload: {
+      name: primaryStageName?.name.trim() || artist.legalName.trim(),
+      legal_name: artist.legalName.trim(),
+      stage_names: artist.stageNames
+        .filter((item) => item.name.trim())
+        .map((item) => ({
+          name: item.name.trim(),
+          is_primary: item.isPrimary,
+          start_date_text: item.startDateText.trim(),
+          end_date_text: item.endDateText.trim(),
+        })),
+      bio: artist.bio.trim(),
+      image_url: artist.avatarUrl.trim(),
+      nationality: artist.nationality.trim(),
+      birth_place: artist.birthPlace.trim(),
+      birth_date: formatDateFromParts(artist.birthDateParts),
+      artist_form: artist.kind,
+      active_start_date: formatArtistDate(artist.activeStartDateParts),
+      active_end_date: formatArtistDate(artist.activeEndDateParts),
+    },
+    changes: {},
+    reason: '创建艺术家并关联现有专辑',
+    sources: source ? [{ type: 'url', url: source }] : [],
+  }
+}
+
+async function createArtistAndLinkAlbum() {
+  const flow = creationFlow.value
+  if (!flow || flow.step !== 'artist' || flow.submitting || !canGoForward.value) return
+
+  flow.submitting = true
+  flow.errorMessage = ''
+  try {
+    const edit = await musicApi.submitMusicEdit(buildCreateArtistEdit(flow))
+    const artistId = edit.entity_id?.trim()
+    if (edit.status !== 'applied' || !artistId) {
+      throw new Error('创建艺术家失败，请检查资料后重试')
+    }
+
+    const artistName = flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
+      || flow.draft.artist.stageNames.find((item) => item.name.trim())?.name.trim()
+      || flow.draft.artist.legalName.trim()
+    refreshArtist()
+    closeCurrentCreationFlow()
+    await router.push(`/music/artist/${artistId}`)
+    openNestedAction('link_album', { artistId, artistName })
+  } catch (error) {
+    flow.errorMessage = error instanceof Error ? error.message : '创建艺术家失败，请稍后重试'
+  } finally {
+    if (creationFlow.value) creationFlow.value.submitting = false
+  }
+}
+
 function goBackStep() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'preview') {
@@ -481,6 +552,16 @@ async function completeCreation() {
             @click="goBackStep"
           >
             返回上一步
+          </button>
+          <button
+            v-if="creationFlow.step === 'artist'"
+            data-testid="artist-create-and-link-button"
+            type="button"
+            class="ui-action"
+            :disabled="creationFlow.submitting || !canGoForward"
+            @click="createArtistAndLinkAlbum"
+          >
+            {{ creationFlow.submitting ? '正在创建…' : '关联现有专辑' }}
           </button>
           <button
             :data-testid="shouldShowFinishButton ? 'music-creation-finish-button' : 'artist-next-button'"

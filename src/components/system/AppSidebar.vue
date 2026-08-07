@@ -307,9 +307,9 @@ const musicNavItems: { to: string; label: string; icon: Component; exact?: boole
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass },
   { to: modulePathUrl('music', '/albums'), label: '专辑', icon: Disc3 },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
-  { to: modulePathUrl('music', '/library'), label: '音乐库', icon: Library },
-  { to: modulePathUrl('music', '/history'), label: '播放历史', icon: History },
-  { to: modulePathUrl('music', '/imports'), label: '导入记录', icon: Archive },
+  { to: modulePathUrl('music', '/library'), label: '收藏', icon: Library },
+  { to: modulePathUrl('music', '/history'), label: '历史', icon: History },
+  { to: modulePathUrl('music', '/imports'), label: '导入', icon: Archive },
 ]
 
 // 5. Forum Logic

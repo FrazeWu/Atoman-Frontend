@@ -211,7 +211,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-group-name-input"]').setValue('Daft Punk')
-    await wrapper.get('[data-testid="artist-group-start-year-input"]').setValue('1993')
+    await wrapper.get('[data-testid="artist-group-start-date-input"]').setValue('1993/01/01')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-member-name-input-0"]').setValue('Thomas Bangalter')
     await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
@@ -230,7 +230,7 @@ describe('MusicCreationArtistStep.vue', () => {
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-group-name-input"]').setValue('The xx')
-    await wrapper.get('[data-testid="artist-group-start-year-input"]').setValue('2005')
+    await wrapper.get('[data-testid="artist-group-start-date-input"]').setValue('2005/01/01')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-member-name-input-0"]').setValue('Romy')
@@ -268,13 +268,33 @@ describe('MusicCreationArtistStep.vue', () => {
     ])
   })
 
+  it('stores group active dates from the shared masked date inputs', async () => {
+    const drawers = useMusicDrawers()
+    const wrapper = mountArtistStep()
+
+    await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
+    await wrapper.get('[data-testid="artist-group-start-date-input"]').setValue('2005/06/01')
+    await wrapper.get('[data-testid="artist-group-end-date-input"]').setValue('2014/08/31')
+
+    expect(drawers.state.value.creationFlow?.draft.artist.activeStartDateParts).toEqual({
+      year: '2005',
+      month: '06',
+      day: '01',
+    })
+    expect(drawers.state.value.creationFlow?.draft.artist.activeEndDateParts).toEqual({
+      year: '2014',
+      month: '08',
+      day: '31',
+    })
+  })
+
   it('requires group mandatory fields before moving forward', async () => {
     const drawers = useMusicDrawers()
     const wrapper = mountArtistStep()
 
     await wrapper.get('[data-testid="artist-kind-group-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-group-name-input"]').setValue('The xx')
-    await wrapper.get('[data-testid="artist-group-start-year-input"]').setValue('2005')
+    await wrapper.get('[data-testid="artist-group-start-date-input"]').setValue('2005/01/01')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-add-member-button"]').trigger('click')
     await wrapper.get('[data-testid="artist-member-name-input-0"]').setValue('Romy')

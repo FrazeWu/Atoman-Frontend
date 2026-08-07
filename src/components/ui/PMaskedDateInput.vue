@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
-import { getBirthDateDigits, formatBirthDateInput } from '@/components/music/birthDateMask'
+import { formatBirthDateInput, getBirthDateCursorIndex, getBirthDateDigits } from '@/components/music/birthDateMask'
 
 const props = defineProps<{
   modelValue: { year: string; month: string; day: string }
@@ -17,7 +17,7 @@ const emit = defineEmits<{
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
-const internalValue = ref('')
+const internalDigits = ref('')
 const showPopover = ref(false)
 
 const now = new Date()
@@ -48,16 +48,14 @@ function parseDateToParts(value: string) {
 }
 
 function syncFromModel(val: { year: string; month: string; day: string }) {
-  if (!val.year && !val.month && !val.day) {
-    internalValue.value = ''
-    return
-  }
-  const y = val.year.trim()
-  const m = normalizePart(val.month, 2)
-  const d = normalizePart(val.day, 2)
+  const y = val.year.replace(/\D/g, '').slice(0, 4)
+  const m = val.month.replace(/\D/g, '').slice(0, 2)
+  const d = val.day.replace(/\D/g, '').slice(0, 2)
+  const currentParts = parseDateToParts(formatBirthDateInput(internalDigits.value))
 
-  const digits = `${y}${m}${d}`
-  internalValue.value = formatBirthDateInput(digits)
+  if (currentParts.year !== y || currentParts.month !== m || currentParts.day !== d) {
+    internalDigits.value = getBirthDateDigits(`${y}${normalizePart(m, 2)}${normalizePart(d, 2)}`)
+  }
 
   if (y && !isNaN(Number(y))) {
     popoverYear.value = Number(y)
@@ -79,27 +77,28 @@ function handleInput(event: Event) {
   const input = event.target as HTMLInputElement
   const rawValue = input.value
   const cursorPos = input.selectionStart ?? rawValue.length
+  const digitCountBeforeCursor = getBirthDateDigits(rawValue.slice(0, cursorPos)).length
 
   const digits = getBirthDateDigits(rawValue)
   const formatted = formatBirthDateInput(digits)
 
-  internalValue.value = formatted
-
-  // 平滑光标定位
-  let newCursor = cursorPos
-  if (formatted.length > rawValue.length && (formatted[cursorPos - 1] === '/' || formatted[cursorPos] === '/')) {
-    newCursor = cursorPos + 1
-  }
+  internalDigits.value = digits
 
   nextTick(() => {
     if (inputRef.value) {
-      inputRef.value.setSelectionRange(newCursor, newCursor)
+      const cursorIndex = getBirthDateCursorIndex(digitCountBeforeCursor)
+      inputRef.value.setSelectionRange(cursorIndex, cursorIndex)
     }
   })
 
   // 解析并同步给父组件
   const parts = parseDateToParts(formatted)
   emit('update:modelValue', parts)
+}
+
+function handleSelect() {
+  const cursorIndex = getBirthDateCursorIndex(internalDigits.value.length)
+  inputRef.value?.setSelectionRange(cursorIndex, cursorIndex)
 }
 
 function togglePopover() {
@@ -131,7 +130,7 @@ function selectCalendarDay(d: number) {
   const mStr = String(popoverMonth.value).padStart(2, '0')
   const dStr = String(d).padStart(2, '0')
 
-  internalValue.value = `${yStr}/${mStr}/${dStr}`
+  internalDigits.value = `${yStr}${mStr}${dStr}`
   emit('update:modelValue', { year: yStr, month: mStr, day: dStr })
   showPopover.value = false
 }
@@ -143,7 +142,7 @@ function selectToday() {
   const mStr = String(t.getMonth() + 1).padStart(2, '0')
   const dStr = String(t.getDate()).padStart(2, '0')
 
-  internalValue.value = `${yStr}/${mStr}/${dStr}`
+  internalDigits.value = `${yStr}${mStr}${dStr}`
   emit('update:modelValue', { year: yStr, month: mStr, day: dStr })
   showPopover.value = false
 }
@@ -196,13 +195,15 @@ onUnmounted(() => {
     <div class="birth-date-field">
       <input
         ref="inputRef"
-        :value="internalValue"
+        :value="formatBirthDateInput(internalDigits)"
         :data-testid="testId"
         type="text"
         inputmode="numeric"
         class="birth-date-input"
         :placeholder="placeholder || 'yyyy/mm/dd'"
         @input="handleInput"
+        @click="handleSelect"
+        @focus="handleSelect"
       >
       <button
         type="button"

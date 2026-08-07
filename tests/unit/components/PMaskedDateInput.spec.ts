@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
-import { nextTick } from 'vue'
+import { defineComponent, nextTick, ref } from 'vue'
 
 describe('PMaskedDateInput', () => {
   it('renders with initial yyyy/mm/dd placeholder digits when empty', () => {
@@ -46,5 +46,34 @@ describe('PMaskedDateInput', () => {
     // Focus on input
     await inputWrapper.trigger('focus')
     expect(setSelectionRangeSpy).toHaveBeenLastCalledWith(5, 5)
+  })
+
+  it('keeps year, month, and day digits in input order while typing', async () => {
+    const model = ref({ year: '', month: '', day: '' })
+    const wrapper = mount(defineComponent({
+      components: { PMaskedDateInput },
+      setup() {
+        return { model }
+      },
+      template: '<PMaskedDateInput v-model="model" />',
+    }))
+    const inputWrapper = wrapper.find('input[type="text"]')
+    const input = inputWrapper.element as HTMLInputElement
+
+    await inputWrapper.trigger('focus')
+    for (const digit of '20260807') {
+      const start = input.selectionStart ?? 0
+      const end = input.selectionEnd ?? start
+      input.setRangeText(digit, start, end, 'end')
+      await inputWrapper.trigger('input')
+      await nextTick()
+    }
+
+    expect(input.value).toBe('2026/08/07')
+    expect(model.value).toEqual({
+      year: '2026',
+      month: '08',
+      day: '07',
+    })
   })
 })

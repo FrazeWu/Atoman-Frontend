@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { CalendarDays } from 'lucide-vue-next'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -364,64 +363,16 @@ function goNext() {
               />
             </div>
             <div v-if="isGroup" class="field-grid field-grid--duo">
-              <div class="field-group">
-                <span class="field-label">{{ requiredLabel('成立时间') }}</span>
-                <div class="date-parts-grid">
-                  <PInput
-                    v-model="artistDraft.activeStartDateParts.year"
-                    data-testid="artist-group-start-year-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="年"
-                    label="年份"
-                  />
-                  <PInput
-                    v-model="artistDraft.activeStartDateParts.month"
-                    data-testid="artist-group-start-month-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="月"
-                    label="月份"
-                  />
-                  <PInput
-                    v-model="artistDraft.activeStartDateParts.day"
-                    data-testid="artist-group-start-day-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="日"
-                    label="日期"
-                  />
-                </div>
-              </div>
-              <div class="field-group">
-                <span class="field-label">结束时间</span>
-                <div class="date-parts-grid">
-                  <PInput
-                    v-model="artistDraft.activeEndDateParts.year"
-                    data-testid="artist-group-end-year-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="年"
-                    label="年份"
-                  />
-                  <PInput
-                    v-model="artistDraft.activeEndDateParts.month"
-                    data-testid="artist-group-end-month-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="月"
-                    label="月份"
-                  />
-                  <PInput
-                    v-model="artistDraft.activeEndDateParts.day"
-                    data-testid="artist-group-end-day-input"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="日"
-                    label="日期"
-                  />
-                </div>
-              </div>
+              <PMaskedDateInput
+                v-model="artistDraft.activeStartDateParts"
+                :label="requiredLabel('成立时间')"
+                testId="artist-group-start-date-input"
+              />
+              <PMaskedDateInput
+                v-model="artistDraft.activeEndDateParts"
+                label="结束时间"
+                testId="artist-group-end-date-input"
+              />
             </div>
           </div>
         </div>

@@ -384,7 +384,6 @@ export type MusicAlbumListItem = {
   id: string;
   title: string;
   status?: string;
-  entry_status?: string;
   importSession?: MusicAlbumImport;
   artists?: Array<{ id: string; name: string }>;
   artist_credits?: MusicAlbumArtistCredit[];

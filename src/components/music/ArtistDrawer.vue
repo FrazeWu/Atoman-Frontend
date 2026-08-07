@@ -236,6 +236,7 @@ watch(
 <template>
   <PSheet
     panel-class="artist-drawer"
+    content-max-width="64rem"
     :show="isOpen"
     :title="sheetTitle"
     @close="closeCurrentArtist"

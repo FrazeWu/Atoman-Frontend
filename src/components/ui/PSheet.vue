@@ -80,7 +80,10 @@
             :aria-hidden="isTopLayer ? undefined : 'true'"
             :inert="isTopLayer ? undefined : true"
           >
-            <div :class="{ 'sheet-content-inner': readingMode }">
+            <div
+              :class="{ 'sheet-content-inner': readingMode || contentMaxWidth }"
+              :style="contentMaxWidth ? { maxWidth: contentMaxWidth } : undefined"
+            >
               <div v-if="slots.header" class="sheet-content-header-inline">
                 <slot name="header" />
               </div>
@@ -113,6 +116,7 @@ const props = withDefaults(defineProps<{
   side?: 'left' | 'right' | 'bottom'
   closeType?: 'bookmark' | 'header' | 'both'
   readingMode?: boolean // If true, adds 720px max-width to content
+  contentMaxWidth?: string
   isShifted?: boolean
   isTopLayer?: boolean
   layerIndex?: number
@@ -127,6 +131,7 @@ const props = withDefaults(defineProps<{
   side: 'right',
   closeType: 'bookmark',
   readingMode: false,
+  contentMaxWidth: '',
   isShifted: false,
   isTopLayer: true,
   stackSize: 1,

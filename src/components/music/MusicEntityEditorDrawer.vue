@@ -560,6 +560,7 @@ function toTrackPayload(track: MusicTrackDraft, index: number): MusicAlbumTrackE
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    content-max-width="64rem"
     :index="sheetIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

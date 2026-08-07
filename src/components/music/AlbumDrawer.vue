@@ -421,6 +421,7 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    content-max-width="72rem"
     @close="closeCurrentAlbum"
     @activate="returnCurrentAlbum"
     :is-shifted="shifted"
@@ -609,7 +610,7 @@ watch(
   box-shadow: none !important;
 }
 
-.drawer-body { margin: 0 -2.5rem; padding: 2rem 2.5rem; }
+.drawer-body { padding: 2rem 0; }
 
 .album-meta-row {
   display: flex;

@@ -137,6 +137,7 @@ onBeforeUnmount(() => {
 	<PSheet
 		:show="true"
 		title="关联现有专辑"
+		content-max-width="48rem"
 		:index="layerIndex"
 		:layer-index="layerIndex"
 		:stack-size="stackSize"

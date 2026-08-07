@@ -416,6 +416,7 @@ watch(playlist, syncEditForm, { immediate: true })
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    content-max-width="72rem"
     @close="closeCurrentPlaylist"
     @activate="returnCurrentPlaylist"
     :is-shifted="shifted || editing"

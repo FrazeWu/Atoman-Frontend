@@ -116,6 +116,16 @@ const activeStep = computed(() => {
   const step = creationFlow.value?.step ?? 'artist'
   return stepCopy[step]
 })
+const contentMaxWidth = computed(() => {
+  switch (creationFlow.value?.step) {
+    case 'albumDetails':
+      return '72rem'
+    case 'preview':
+      return '48rem'
+    default:
+      return '60rem'
+  }
+})
 const shouldShowFinishButton = computed(() => {
   const flow = creationFlow.value
   if (!flow) return false
@@ -558,6 +568,7 @@ async function completeCreation() {
     :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
+    :content-max-width="contentMaxWidth"
     panel-class="creation-flow-drawer"
     @close="requestClose"
     @activate="props.layer && returnToLayer(props.layer.key)"
@@ -631,7 +642,14 @@ async function completeCreation() {
 
 <style scoped>
 .creation-flow { display: flex; flex-direction: column; min-height: 100%; }
-.drawer-body { display: flex; flex: 1; flex-direction: column; gap: 1.5rem; padding: 1.5rem 0 0; }
+.drawer-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1.5rem 0 0;
+}
 .error-message {
   margin: 0;
   color: var(--a-color-accent-destructive);

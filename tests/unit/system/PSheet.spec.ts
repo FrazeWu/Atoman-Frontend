@@ -50,6 +50,21 @@ describe('PSheet.vue', () => {
     expect(wrapper.find('.sheet-content-header-inline').exists()).toBe(true)
   })
 
+  it('centers header and body inside a configurable content width', () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, contentMaxWidth: '64rem' },
+      slots: {
+        header: '<strong>Centered header</strong>',
+        default: '<p>Centered body</p>',
+      },
+    })
+
+    const content = wrapper.get('.sheet-content-inner')
+    expect((content.element as HTMLElement).style.maxWidth).toBe('64rem')
+    expect(content.text()).toContain('Centered header')
+    expect(content.text()).toContain('Centered body')
+  })
+
   it('keeps right sheets on the page rail when header close type is requested', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'header', title: 'Inspect' }

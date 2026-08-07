@@ -35,6 +35,7 @@ const coverInput = ref<HTMLInputElement | null>(null)
   <PSheet
     :show="show"
     title="编辑歌单"
+    content-max-width="42rem"
     :index="index"
     :layer-index="index"
     :stack-size="index + 1"

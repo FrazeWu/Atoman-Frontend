@@ -52,4 +52,24 @@ describe('music shell matches the established design system', () => {
     expect(albumDetails).not.toContain('#6b4f3a')
     expect(albumDetails).not.toContain('rgba(15, 23, 42, 0.03)')
   })
+
+  it('constrains and centers content in every music sheet', () => {
+    const sheetFiles = [
+      'AlbumDrawer.vue',
+      'ArtistDrawer.vue',
+      'MusicAlbumCreditLinkDrawer.vue',
+      'MusicCreationFlowDrawer.vue',
+      'MusicEntityEditorDrawer.vue',
+      'MusicLyricEditorDrawer.vue',
+      'MusicMergeDrawer.vue',
+      'MusicSquareImageCropSheet.vue',
+      'NestedActionDrawer.vue',
+      'PlaylistDrawer.vue',
+      'PlaylistEditSheet.vue',
+    ]
+
+    for (const file of sheetFiles) {
+      expect(read(`src/components/music/${file}`), file).toContain('content-max-width')
+    }
+  })
 })

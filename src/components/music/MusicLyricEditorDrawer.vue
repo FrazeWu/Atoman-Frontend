@@ -274,6 +274,7 @@ function handleSave() {
   <PSheet
     :show="show"
     aria-label="编辑歌词"
+    content-max-width="72rem"
     close-type="header"
     above-player
     @close="emit('close')"

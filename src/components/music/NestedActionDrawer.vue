@@ -69,6 +69,11 @@ const titleMap: Record<string, string> = {
 }
 
 const displayTitle = computed(() => titleMap[currentAction.value || ''] || 'Action')
+const contentMaxWidth = computed(() => {
+  if (currentAction.value === 'discussion') return '48rem'
+  if (currentAction.value?.includes('history')) return '56rem'
+  return '60rem'
+})
 const returnCurrentAction = () => props.layer && returnToLayer(props.layer.key)
 
 const artistDraft = reactive({
@@ -562,6 +567,7 @@ async function submitEdit() {
     :stack-size="stackSize"
     :is-shifted="shifted"
     :is-top-layer="topLayer"
+    :content-max-width="contentMaxWidth"
   >
     <div class="drawer-body">
       <form v-if="isArtistForm" data-test="music-edit-submit" class="wiki-form" @submit.prevent="submitEdit">
@@ -944,7 +950,7 @@ async function submitEdit() {
 </template>
 
 <style scoped>
-.drawer-body { margin: 0 -2.5rem; padding: 1.6rem 2rem 2rem; }
+.drawer-body { padding: 1.6rem 0 2rem; }
 
 .wiki-form { display: flex; flex-direction: column; gap: 1.1rem; }
 .form-section {

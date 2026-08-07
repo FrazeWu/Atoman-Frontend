@@ -227,6 +227,7 @@ onBeforeUnmount(() => {
   <PSheet
     :show="show"
     :title="title || '裁剪图片'"
+    content-max-width="36rem"
     close-type="header"
     @close="$emit('cancel')"
   >

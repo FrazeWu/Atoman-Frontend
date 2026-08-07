@@ -455,7 +455,7 @@ export type MusicHome = {
   personalized: boolean;
   continue_listening?: MusicListeningHistory;
   recently_played: MusicListeningHistory[];
-  for_you: MusicAlbumListItem[];
+  for_you: Array<MusicAlbumListItem & { reason?: string }>;
   for_you_reason?: string;
   sections: Array<{ key: string; title: string; albums: MusicAlbumListItem[] }>;
   discover: MusicDiscoverItem[];

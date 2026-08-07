@@ -127,7 +127,7 @@ describe('Music DiscoverView.vue', () => {
           },
         },
       ],
-      for_you: [{ id: 'album-2', title: 'Late Registration', artists: [{ id: 'artist-1', name: 'Ye' }] }],
+      for_you: [{ id: 'album-2', title: 'Late Registration', reason: '基于你与 Ye 相关的记录', artists: [{ id: 'artist-1', name: 'Ye' }] }],
       for_you_reason: '基于最近播放',
       sections: [{ key: 'popular', title: '热门', albums: [{ id: 'album-3', title: 'Graduation', artists: [{ id: 'artist-1', name: 'Ye' }] }] }],
       discover: [
@@ -374,6 +374,7 @@ describe('Music DiscoverView.vue', () => {
     expect(wrapper.text()).toContain('最近播放')
     expect(wrapper.text()).toContain('Runaway')
     expect(wrapper.text()).toContain('为你发现')
+    expect(wrapper.text()).toContain('基于你与 Ye 相关的记录')
     expect(wrapper.text()).toContain('热门')
 
     await wrapper.get('[aria-label="打开专辑 Late Registration"]').trigger('click')

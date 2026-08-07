@@ -683,16 +683,16 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           <h2 id="for-you-title">为你发现</h2>
         </header>
         <div class="music-home-albums">
-          <MusicAlbumCard
-            v-for="album in musicHome.for_you"
-            :key="album.id"
-            :album="album"
-            :show-bookmark="false"
-            @click="openAlbum(String(album.id))"
-            @click-artist="openArtist"
-          />
+          <div v-for="album in musicHome.for_you" :key="album.id" class="discover-result">
+            <MusicAlbumCard
+              :album="album"
+              :show-bookmark="false"
+              @click="openAlbum(String(album.id))"
+              @click-artist="openArtist"
+            />
+            <p v-if="album.reason" class="discover-result__reason">{{ album.reason }}</p>
+          </div>
         </div>
-        <p v-if="musicHome.for_you_reason" class="music-home-section__reason">{{ musicHome.for_you_reason }}</p>
       </section>
 
       <section v-for="section in musicHome.sections" :key="section.key" class="music-home-section" :aria-labelledby="`home-${section.key}`">

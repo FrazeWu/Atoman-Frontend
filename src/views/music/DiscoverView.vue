@@ -377,7 +377,7 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], importSessions: MusicAlbu
       cover_url: item.coverUrl || item.derivedCover || '',
       description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
       status: item.status,
-      entry_status: 'draft',
+      entry_status: 'open' as const,
       importSession: item,
     }))
 
@@ -395,7 +395,7 @@ function applyDiscoverFeed(items: MusicDiscoverItem[], importSessions: MusicAlbu
         description: item.summary,
         play_count: item.play_count,
         bookmark_count: item.bookmark_count,
-        entry_status: 'open',
+        entry_status: 'open' as const,
       })),
   ]
 
@@ -445,7 +445,7 @@ async function fetchAlbumIndex() {
         cover_url: item.coverUrl || item.derivedCover || '',
         description: item.status === 'ready' ? '等待确认提交' : '后台解析中...',
         status: item.status,
-        entry_status: 'draft',
+        entry_status: 'open' as const,
         importSession: item,
       }))
 

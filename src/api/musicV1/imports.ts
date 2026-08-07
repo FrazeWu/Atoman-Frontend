@@ -14,7 +14,8 @@ import {
   type MusicAlbumImportFilePartUpload,
   type MusicAlbumImportMultipart,
   type MusicAlbumImportMultipartPart,
-  type MusicAlbumImportMultipartPartUpload,
+	type MusicAlbumImportMultipartPartUpload,
+	type MusicRevisionSummary,
   type MusicAlbumTrackEditInput,
   type MusicEditRequest,
   type MusicSource,
@@ -70,16 +71,12 @@ export function buildCreateArtistEdit(draft: ArtistEditDraft): MusicEditRequest 
   }
 }
 
-export function buildUpdateArtistEdit(artistId: string, draft: ArtistEditDraft): MusicEditRequest {
-  return {
-    type: 'update_artist',
-    entity_type: 'artist',
-    entity_id: artistId,
-    payload: {},
-    changes: artistPayloadFromDraft(draft),
-    reason: draft.reason,
-    sources: draft.sources,
-  }
+export function submitArtistRevision(artistId: string, draft: ArtistEditDraft): Promise<MusicRevisionSummary> {
+	return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.artistRevisions(artistId), {
+		base_revision: 0,
+		changes: artistPayloadFromDraft(draft),
+		edit_summary: draft.reason,
+	})
 }
 
 export function buildCreateAlbumEdit(draft: AlbumEditDraft): MusicEditRequest {
@@ -93,16 +90,12 @@ export function buildCreateAlbumEdit(draft: AlbumEditDraft): MusicEditRequest {
   }
 }
 
-export function buildUpdateAlbumEdit(albumId: string, draft: AlbumEditDraft): MusicEditRequest {
-  return {
-    type: 'update_album',
-    entity_type: 'album',
-    entity_id: albumId,
-    payload: {},
-    changes: albumPayloadFromDraft(draft),
-    reason: draft.reason,
-    sources: draft.sources,
-  }
+export function submitAlbumRevision(albumId: string, draft: AlbumEditDraft): Promise<MusicRevisionSummary> {
+	return apiPostJson<MusicRevisionSummary>(musicV1Endpoints.albumRevisions(albumId), {
+		base_revision: 0,
+		changes: albumPayloadFromDraft(draft),
+		edit_summary: draft.reason,
+	})
 }
 
 export function buildDeleteAlbumEdit(albumId: string, reason: string): MusicEditRequest {

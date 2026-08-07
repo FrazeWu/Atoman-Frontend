@@ -29,6 +29,16 @@ export function useBlogSheets() {
     })
   }
 
+  const openShortNote = (noteId: string, title?: string) => {
+    stack.push({
+      key: `short_note:${noteId}`,
+      kind: 'short_note',
+      title: title || '短话',
+      route: `/posts/notes/${noteId}`,
+      payload: { noteId },
+    })
+  }
+
   const closeLayer = (key: string) => {
     stack.popTo(key)
     stack.pop()
@@ -41,6 +51,7 @@ export function useBlogSheets() {
     top: stack.top,
     openCollection,
     openPost,
+    openShortNote,
     closeLayer,
     returnToLayer,
     closeTop: stack.pop,

@@ -16,4 +16,11 @@ export type BlogPostLayer = BaseSheetLayer & {
   }
 }
 
-export type BlogSheetLayer = BlogCollectionLayer | BlogPostLayer
+export type ShortNoteLayer = BaseSheetLayer & {
+  kind: 'short_note'
+  payload: {
+    noteId: string
+  }
+}
+
+export type BlogSheetLayer = BlogCollectionLayer | BlogPostLayer | ShortNoteLayer

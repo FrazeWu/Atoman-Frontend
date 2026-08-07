@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
   },
   closeNestedAction: vi.fn(),
   refreshAlbum: vi.fn(),
-  submitMusicEdit: vi.fn(),
+	  submitArtistRevision: vi.fn(),
+	  submitAlbumRevision: vi.fn(),
   listMusicArtists: vi.fn(),
   uploadMusicAsset: vi.fn(),
   listAlbumRevisions: vi.fn(),
@@ -47,7 +48,8 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
     ...actual,
     listMusicArtists: mocks.listMusicArtists,
     uploadMusicAsset: mocks.uploadMusicAsset,
-    submitMusicEdit: mocks.submitMusicEdit,
+	    submitArtistRevision: mocks.submitArtistRevision,
+	    submitAlbumRevision: mocks.submitAlbumRevision,
     listAlbumRevisions: mocks.listAlbumRevisions,
     listArtistRevisions: mocks.listArtistRevisions,
     getAlbumRevision: mocks.getAlbumRevision,
@@ -120,7 +122,8 @@ describe('NestedActionDrawer.vue', () => {
     mocks.drawerState.value = { artistId: null, albumId: null, nestedAction: 'history', nestedPayload: null }
     mocks.closeNestedAction.mockReset()
     mocks.refreshAlbum.mockReset()
-    mocks.submitMusicEdit.mockReset()
+	    mocks.submitArtistRevision.mockReset()
+	    mocks.submitAlbumRevision.mockReset()
     mocks.listMusicArtists.mockReset()
     mocks.uploadMusicAsset.mockReset()
     mocks.listAlbumRevisions.mockReset()
@@ -144,17 +147,8 @@ describe('NestedActionDrawer.vue', () => {
       content_type: 'image/png',
       size: 1,
     })
-    mocks.submitMusicEdit.mockResolvedValue({
-      id: 'edit-1',
-      type: 'create_artist',
-      status: 'open',
-      entity_type: 'artist',
-      submitted_by: 'user-1',
-      auto_applied: false,
-      votable: true,
-      votes: { yes: 0, no: 0 },
-      created_at: '2026-06-17T00:00:00Z',
-    })
+	    mocks.submitArtistRevision.mockResolvedValue(buildRevision({ content_type: 'artist' }))
+	    mocks.submitAlbumRevision.mockResolvedValue(buildRevision())
     mocks.listAlbumRevisions.mockResolvedValue([])
     mocks.listArtistRevisions.mockResolvedValue([])
     mocks.getAlbumRevision.mockResolvedValue(buildRevision())
@@ -226,17 +220,11 @@ describe('NestedActionDrawer.vue', () => {
     await wrapper.get('[data-test="edit-reason-input"]').setValue('update bio and name')
     await wrapper.get('[data-test="music-edit-submit"]').trigger('submit')
 
-    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
-      type: 'update_artist',
-      entity_type: 'artist',
-      entity_id: 'artist-1',
-      payload: {},
-      changes: {
-        name: 'Revised Artist',
-        bio: 'revised biography',
-      },
-      reason: 'update bio and name',
-      sources: [],
+	    expect(mocks.submitArtistRevision).toHaveBeenCalledWith('artist-1', {
+	      name: 'Revised Artist',
+	      bio: 'revised biography',
+	      reason: 'update bio and name',
+	      sources: [],
     })
     expect(mocks.closeNestedAction).toHaveBeenCalled()
   })
@@ -255,18 +243,12 @@ describe('NestedActionDrawer.vue', () => {
     await wrapper.get('[data-test="edit-reason-input"]').setValue('official revision')
     await wrapper.get('[data-test="music-edit-submit"]').trigger('submit')
 
-    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({
-      type: 'update_album',
-      entity_type: 'album',
-      entity_id: 'album-1',
-      payload: {},
-      changes: {
-        title: 'Revised Album',
-        release_date: '2026-06-21',
-        album_type: 'album',
-      },
-      reason: 'official revision',
-      sources: [],
+	    expect(mocks.submitAlbumRevision).toHaveBeenCalledWith('album-1', {
+	      title: 'Revised Album',
+	      release_date: '2026-06-21',
+	      album_type: 'album',
+	      reason: 'official revision',
+	      sources: [],
     })
     expect(mocks.closeNestedAction).toHaveBeenCalled()
   })

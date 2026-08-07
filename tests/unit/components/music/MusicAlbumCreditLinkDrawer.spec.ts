@@ -5,8 +5,7 @@ import MusicAlbumCreditLinkDrawer from '@/components/music/MusicAlbumCreditLinkD
 const mocks = vi.hoisted(() => ({
 	listMusicAlbums: vi.fn(),
 	getMusicAlbum: vi.fn(),
-	buildUpdateAlbumEdit: vi.fn(),
-	submitMusicEdit: vi.fn(),
+		submitAlbumRevision: vi.fn(),
 	closeNestedAction: vi.fn(),
 	refreshArtist: vi.fn(),
 	refreshAlbum: vi.fn(),
@@ -16,8 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/api/musicV1', () => ({
 	listMusicAlbums: mocks.listMusicAlbums,
 	getMusicAlbum: mocks.getMusicAlbum,
-	buildUpdateAlbumEdit: mocks.buildUpdateAlbumEdit,
-	submitMusicEdit: mocks.submitMusicEdit,
+		submitAlbumRevision: mocks.submitAlbumRevision,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -62,15 +60,14 @@ describe('MusicAlbumCreditLinkDrawer.vue', () => {
 				position: 1,
 			}],
 		})
-		mocks.buildUpdateAlbumEdit.mockReturnValue({ type: 'update_album' })
-		mocks.submitMusicEdit.mockResolvedValue({ status: 'applied' })
+			mocks.submitAlbumRevision.mockResolvedValue({ status: 'approved' })
 	})
 
 	afterEach(() => {
 		vi.useRealTimers()
 	})
 
-	it('associates one existing album through an applied auditable edit', async () => {
+			it('associates one existing album through a revision', async () => {
 		const wrapper = mount(MusicAlbumCreditLinkDrawer, {
 			props: {
 				layer: {
@@ -90,7 +87,7 @@ describe('MusicAlbumCreditLinkDrawer.vue', () => {
 		await wrapper.findAll('button').find((button) => button.text() === '确认关联')?.trigger('click')
 		await flushPromises()
 
-		expect(mocks.buildUpdateAlbumEdit).toHaveBeenCalledWith('album-1', expect.objectContaining({
+				expect(mocks.submitAlbumRevision).toHaveBeenCalledWith('album-1', expect.objectContaining({
 			artist_credits: [
 				expect.objectContaining({ artist_id: 'artist-primary', roles: [{ role: 'primary' }] }),
 				expect.objectContaining({ artist_id: 'artist-current', roles: [{ role: 'featured' }] }),

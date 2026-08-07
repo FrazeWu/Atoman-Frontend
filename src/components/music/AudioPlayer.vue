@@ -278,16 +278,34 @@
         <div v-if="player.queue.length" class="queue-list">
           <div
             v-for="(song, idx) in player.queue"
-            :key="idx"
+            :key="song.id"
             class="queue-item"
             :class="{ active: player.currentSong?.id === song.id }"
+            @dragover.prevent
+            @drop="dropQueueItem(idx)"
             @click="player.playQueuedSong(song)"
           >
+            <button
+              type="button"
+              class="q-drag"
+              draggable="true"
+              :aria-label="`拖动 ${song.title}`"
+              title="拖动排序"
+              @click.stop
+              @dragstart="startQueueDrag(idx)"
+              @dragend="draggedQueueIndex = null"
+            >
+              <GripVertical :size="16" aria-hidden="true" />
+            </button>
             <span class="q-idx"
               >{{ (idx + 1).toString().padStart(2, "0") }}.</span
             >
             <span class="q-title">{{ song.title }}</span>
             <span class="q-artist">{{ song.artist }}</span>
+            <span class="q-mobile-order">
+              <button type="button" :disabled="idx === 0" :aria-label="`上移 ${song.title}`" title="上移" @click.stop="moveQueueItem(idx, idx - 1)"><ChevronUp :size="16" aria-hidden="true" /></button>
+              <button type="button" :disabled="idx === player.queue.length - 1" :aria-label="`下移 ${song.title}`" title="下移" @click.stop="moveQueueItem(idx, idx + 1)"><ChevronDown :size="16" aria-hidden="true" /></button>
+            </span>
             <button
               v-if="player.currentSong?.id !== song.id"
               type="button"
@@ -337,6 +355,9 @@ import {
   Clock,
   Pin,
   PinOff,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import PDropdown from "@/components/ui/PDropdown.vue";
@@ -347,6 +368,22 @@ import { listMusicPlaylists, type MusicPlaylistSummary } from "@/api/musicV1";
 import { reportError } from "@/utils/logger";
 
 const player = usePlayerStore();
+const draggedQueueIndex = ref<number | null>(null);
+
+function startQueueDrag(index: number) {
+  draggedQueueIndex.value = index;
+}
+
+function moveQueueItem(from: number, to: number) {
+  if (to < 0 || to >= player.queue.length) return;
+  player.moveQueueItem(from, to);
+}
+
+function dropQueueItem(index: number) {
+  if (draggedQueueIndex.value === null) return;
+  moveQueueItem(draggedQueueIndex.value, index);
+  draggedQueueIndex.value = null;
+}
 const route = useRoute();
 const { openAlbum, openArtist } = useMusicDrawers();
 const authStore = useAuthStore();
@@ -1312,6 +1349,20 @@ watch(
   font-size: 0.7rem;
   opacity: 0.5;
 }
+.q-drag,
+.q-mobile-order button {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.q-drag { cursor: grab; }
+.q-drag:active { cursor: grabbing; }
+.q-mobile-order { display: none; }
 .q-title {
   font-family: inherit;
   font-weight: var(--a-font-weight-strong, 700);
@@ -1508,5 +1559,10 @@ watch(
     width: 100%;
     padding: 1.25rem 1rem;
   }
+
+  .q-drag { display: none; }
+  .q-mobile-order { display: inline-flex; }
+  .q-artist,
+  .q-idx { display: none; }
 }
 </style>

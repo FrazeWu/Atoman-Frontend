@@ -17,6 +17,9 @@ const coverUrl = computed(() => (
 const failedFiles = computed(() => (albumImport.value?.files ?? []).filter((file) => (
   file.uploadStatus === 'failed' || file.processingStatus === 'failed'
 )))
+const ignoredFiles = computed(() => (albumImport.value?.files ?? []).filter((file) => (
+  file.processingStatus === 'ignored'
+)))
 const uploadProgress = computed(() => {
   const total = albumImport.value?.totalBytesTotal ?? 0
   const loaded = albumImport.value?.totalBytesLoaded ?? 0
@@ -83,8 +86,17 @@ function contributorRolesLabel(contributor: (typeof contributors.value)[number])
           {{ file.fileName }}{{ file.errorMessage ? `：${file.errorMessage}` : '' }}
         </li>
       </ul>
-    </section>
-  </section>
+		</section>
+
+	<section v-if="ignoredFiles.length" class="album-preview-step__section">
+	  <h4>已忽略文件</h4>
+	  <ul class="album-preview-step__failures">
+	    <li v-for="file in ignoredFiles" :key="file.fileId">
+	      {{ file.fileName }}{{ file.errorMessage ? `：${file.errorMessage}` : '' }}
+	    </li>
+	  </ul>
+	</section>
+	  </section>
 </template>
 
 <style scoped>

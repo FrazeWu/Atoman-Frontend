@@ -9,8 +9,8 @@ import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import {
-  buildUpdateArtistEdit,
-  buildUpdateAlbumEdit,
+	submitAlbumRevision,
+	submitArtistRevision,
   createAlbumDiscussion,
   deleteAlbumDiscussion,
   getAlbumRevision,
@@ -20,7 +20,6 @@ import {
   listArtistRevisions,
   replyAlbumDiscussion,
   revertAlbumRevision,
-  submitMusicEdit,
   type MusicDiscussion,
   type MusicRevisionSummary,
   type MusicSource,
@@ -457,7 +456,7 @@ async function submitEdit() {
       if (!artistId.value) {
         throw new Error('缺少艺术家 ID')
       }
-      await submitMusicEdit(buildUpdateArtistEdit(artistId.value, {
+		await submitArtistRevision(artistId.value, {
         name: trimmed(artistDraft.name) || undefined,
         bio: trimmed(artistDraft.bio) || undefined,
         image_url: trimmed(artistDraft.imageUrl) || undefined,
@@ -465,19 +464,19 @@ async function submitEdit() {
         birth_year: optionalNumber(artistDraft.birthYear),
         reason,
         sources: sourcesFromDraft(),
-      }))
+		})
     } else if (action === 'revise') {
       if (!albumId.value) {
         throw new Error('缺少专辑 ID')
       }
-      await submitMusicEdit(buildUpdateAlbumEdit(albumId.value, {
+		await submitAlbumRevision(albumId.value, {
         title: trimmed(albumDraft.title) || undefined,
         release_date: trimmed(albumDraft.releaseDate) || undefined,
         description: trimmed(albumDraft.description) || undefined,
         album_type: albumDraft.albumType,
         reason,
         sources: sourcesFromDraft(),
-      }))
+		})
     }
 
     successMessage.value = '已保存'

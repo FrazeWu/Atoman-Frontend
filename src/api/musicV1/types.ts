@@ -200,7 +200,12 @@ export type MusicAlbumImportMultipartPartUpload = {
 
 export type MusicAlbumImportFileUploadStatus =
   "pending" | "uploading" | "completing" | "uploaded" | "failed";
-export type MusicAlbumImportFileProcessingStatus = "pending" | "failed";
+export type MusicAlbumImportFileProcessingStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "ignored";
 export type MusicAlbumImportStage =
   | "upload"
   | "queued"

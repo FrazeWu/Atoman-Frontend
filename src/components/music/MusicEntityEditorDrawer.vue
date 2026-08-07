@@ -3,12 +3,11 @@ import { reportError } from '@/utils/logger'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  buildUpdateArtistEdit,
-  buildUpdateAlbumEdit,
-  createMusicArtist,
+	createMusicArtist,
   getMusicAlbum,
   getMusicArtist,
-  submitMusicEdit,
+	submitAlbumRevision,
+	submitArtistRevision,
   uploadMusicAsset,
   type MusicAlbumListItem,
   type MusicAlbumTrackEditInput,
@@ -203,11 +202,11 @@ async function handleArtistSubmit(value: MusicArtistUpdateInput) {
   try {
 		let createdArtistId = ''
     if (current.id) {
-      await submitMusicEdit(buildUpdateArtistEdit(current.id, {
-        ...value,
-        reason: '编辑艺术家',
-        sources: [],
-      }))
+		await submitArtistRevision(current.id, {
+			...value,
+			reason: '编辑艺术家',
+			sources: [],
+		})
     } else {
       const name = value.name?.trim()
       if (!name) throw new Error('请输入艺术家名称')
@@ -314,7 +313,7 @@ async function handleAlbumEditSubmit() {
       coverAsset = await uploadMusicAsset(cover.value.file, 'music.cover')
     }
 
-    const edit = await submitMusicEdit(buildUpdateAlbumEdit(current.id, {
+		await submitAlbumRevision(current.id, {
       title: meta.album.trim(),
 		artist_credits: albumArtistCreditsFromContributors(meta.contributors),
       release_date: meta.releaseDate || undefined,
@@ -326,10 +325,7 @@ async function handleAlbumEditSubmit() {
       sources: sources.value
         .filter((source) => source.url.trim())
         .map((source) => ({ type: 'url', title: source.title.trim(), url: source.url.trim() })),
-    }))
-    if (edit.status !== 'applied') {
-      throw new Error(edit.status)
-    }
+		})
 
     refreshAlbum()
     closeCurrentEditor()

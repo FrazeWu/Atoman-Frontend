@@ -8,7 +8,7 @@ import {
   buildCreateAlbumEdit,
   buildCreateArtistEdit,
   buildDeleteAlbumEdit,
-  buildUpdateAlbumEdit,
+	  submitAlbumRevision,
   updateMusicPlaylist,
   getMusicAlbum,
   getMusicArtist,
@@ -411,8 +411,12 @@ describe('music v1 adapter', () => {
     expect(result).toEqual({ id: 'album_uuid', title: 'Graduation', entry_status: 'open' })
   })
 
-  it('builds update album edits with track collection changes', () => {
-    const result = buildUpdateAlbumEdit('album_uuid', {
+	  it('submits album track changes through revisions', async () => {
+	    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+	      JSON.stringify({ data: { id: 'revision-2', status: 'approved', version_number: 2 } }),
+	      { status: 200, headers: { 'Content-Type': 'application/json' } },
+	    )))
+	    await submitAlbumRevision('album_uuid', {
       title: 'Updated Album',
       artist_ids: ['artist_uuid'],
       release_date: '2026-07-01',
@@ -437,12 +441,11 @@ describe('music v1 adapter', () => {
       sources: [{ type: 'url', url: 'https://example.com/source', title: 'Source' }],
     })
 
-    expect(result).toEqual({
-      type: 'update_album',
-      entity_type: 'album',
-      entity_id: 'album_uuid',
-      payload: {},
-      changes: {
+	    expect(fetch).toHaveBeenCalledWith('/api/v1/albums/album_uuid/revisions', expect.objectContaining({
+	      method: 'POST',
+	      body: JSON.stringify({
+	        base_revision: 0,
+	        changes: {
         title: 'Updated Album',
         artist_ids: ['artist_uuid'],
         release_date: '2026-07-01',
@@ -463,10 +466,10 @@ describe('music v1 adapter', () => {
             audio_key: 'music/album/album-1/staging/stage-1/tracks/new-song.mp3',
           },
         ],
-      },
-      reason: 'Update album tracks',
-      sources: [{ type: 'url', url: 'https://example.com/source', title: 'Source' }],
-    })
+	        },
+	        edit_summary: 'Update album tracks',
+	      }),
+	    }))
   })
 
   it('uploads music cover assets with the correct purpose', async () => {
@@ -564,21 +567,7 @@ describe('music v1 adapter', () => {
     })
   })
 
-  it('builds update and delete album edit payloads', () => {
-    expect(buildUpdateAlbumEdit('album_uuid', {
-      title: 'New title',
-      reason: 'metadata correction',
-      sources: [],
-    })).toEqual({
-      type: 'update_album',
-      entity_type: 'album',
-      entity_id: 'album_uuid',
-      payload: {},
-      changes: { title: 'New title' },
-      reason: 'metadata correction',
-      sources: [],
-    })
-
+	  it('builds delete album edit payloads', () => {
     expect(buildDeleteAlbumEdit('album_uuid', 'duplicate album')).toEqual({
       type: 'delete_album',
       entity_type: 'album',

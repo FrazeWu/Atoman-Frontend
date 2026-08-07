@@ -53,10 +53,10 @@
         :liked="interactions.liked.value"
         :like-count="interactions.likeCount.value"
         :comment-count="interactions.commentCount.value"
-        :comment-href="`/posts/notes/${note.id}#comments`"
         :disabled="!authStore.isAuthenticated"
         @like="interactions.like"
         @unlike="interactions.unlike"
+        @comment="openShortNoteSheet"
       />
     </footer>
   </article>
@@ -68,6 +68,7 @@ import { Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractions } from '@/composables/useInteractions'
 import { resolveMediaURL } from '@/utils/mediaUrl'
@@ -76,6 +77,7 @@ import type { ShortNote } from '@/types'
 const props = defineProps<{ note: ShortNote }>()
 defineEmits<{ delete: [note: ShortNote] }>()
 const authStore = useAuthStore()
+const blogSheets = useBlogSheets()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
 const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
@@ -85,6 +87,13 @@ watchEffect(() => {
   interactions.likeCount.value = props.note.likes_count
   interactions.commentCount.value = props.note.comments_count
 })
+
+function openShortNoteSheet() {
+  const title = props.note.content
+    ? (props.note.content.length > 20 ? `${props.note.content.slice(0, 20)}...` : props.note.content)
+    : '短话'
+  blogSheets.openShortNote(props.note.id, title)
+}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('zh-CN', {

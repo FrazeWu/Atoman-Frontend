@@ -1,50 +1,40 @@
 <template>
   <div class="interaction-bar">
     <!-- 点赞按钮 -->
-    <button
-      type="button"
-      class="interaction-bar__item interaction-bar__like-btn"
-      :class="{
-        'is-active': liked,
-        'is-pop': isLikeAnimating,
-      }"
+    <PLikeButton
+      :liked="liked"
+      :count="likeCount"
       :disabled="disabled"
-      :aria-label="liked ? '取消喜欢' : '喜欢'"
-      :title="liked ? '取消喜欢' : '喜欢'"
-      @click="handleLike"
-    >
-      <Heart :size="15" class="interaction-bar__icon" :class="{ 'is-filled': liked }" />
-      <span class="interaction-bar__count">{{ likeCount }}</span>
-    </button>
+      :icon-type="iconType"
+      size="md"
+      variant="bordered"
+      @like="emit('like')"
+      @unlike="emit('unlike')"
+    />
 
     <!-- 收藏按钮 (可选) -->
-    <button
+    <PBookmarkButton
       v-if="showBookmark"
-      type="button"
-      class="interaction-bar__item interaction-bar__bookmark-btn"
-      :class="{
-        'is-active': bookmarked,
-        'is-pop': isBookmarkAnimating,
-      }"
+      :bookmarked="bookmarked"
+      :count="bookmarkCount"
       :disabled="disabled"
-      :aria-label="bookmarked ? '取消收藏' : '收藏'"
-      :title="bookmarked ? '取消收藏' : '收藏'"
-      @click="handleBookmark"
-    >
-      <Bookmark :size="15" class="interaction-bar__icon" :class="{ 'is-filled': bookmarked }" />
-      <span v-if="bookmarkCount !== undefined" class="interaction-bar__count">{{ bookmarkCount }}</span>
-      <span v-else class="interaction-bar__label">{{ bookmarked ? '已收藏' : '收藏' }}</span>
-    </button>
+      size="md"
+      variant="bordered"
+      @bookmark="emit('bookmark')"
+      @unbookmark="emit('unbookmark')"
+    />
 
     <!-- 评论按钮 (可选) -->
     <component
-      :is="commentHref ? RouterLink : 'span'"
+      :is="commentHref ? RouterLink : 'button'"
       v-if="commentCount !== undefined"
       :to="commentHref"
+      type="button"
       class="interaction-bar__item interaction-bar__comment-item"
       :class="{ 'is-link': Boolean(commentHref) }"
       :aria-label="commentHref ? `查看 ${commentCount} 条评论` : `${commentCount} 条评论`"
-      :title="commentHref ? '查看评论' : undefined"
+      :title="commentHref ? '查看评论' : '评论'"
+      @click="emit('comment', $event)"
     >
       <MessageSquare :size="15" class="interaction-bar__icon" aria-hidden="true" />
       <span class="interaction-bar__count">{{ commentCount }}</span>
@@ -53,9 +43,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Bookmark, Heart, MessageSquare } from 'lucide-vue-next'
+import { MessageSquare } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
+import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
+import PLikeButton from '@/components/ui/PLikeButton.vue'
 
 const props = withDefaults(defineProps<{
   liked: boolean
@@ -66,10 +57,12 @@ const props = withDefaults(defineProps<{
   showBookmark?: boolean
   bookmarked?: boolean
   bookmarkCount?: number
+  iconType?: 'thumbs-up' | 'heart'
 }>(), {
   disabled: false,
   showBookmark: false,
   bookmarked: false,
+  iconType: 'heart',
 })
 
 const emit = defineEmits<{
@@ -77,38 +70,8 @@ const emit = defineEmits<{
   unlike: []
   bookmark: []
   unbookmark: []
+  comment: [event: MouseEvent]
 }>()
-
-const isLikeAnimating = ref(false)
-const isBookmarkAnimating = ref(false)
-
-function handleLike() {
-  if (props.disabled) return
-  isLikeAnimating.value = true
-  setTimeout(() => {
-    isLikeAnimating.value = false
-  }, 200)
-
-  if (props.liked) {
-    emit('unlike')
-  } else {
-    emit('like')
-  }
-}
-
-function handleBookmark() {
-  if (props.disabled) return
-  isBookmarkAnimating.value = true
-  setTimeout(() => {
-    isBookmarkAnimating.value = false
-  }, 200)
-
-  if (props.bookmarked) {
-    emit('unbookmark')
-  } else {
-    emit('bookmark')
-  }
-}
 </script>
 
 <style scoped>

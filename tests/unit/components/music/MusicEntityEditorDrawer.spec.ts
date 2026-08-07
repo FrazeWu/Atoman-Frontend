@@ -24,9 +24,8 @@ const mocks = vi.hoisted(() => ({
   getMusicAlbum: vi.fn(),
 	createMusicArtist: vi.fn(),
   uploadMusicAsset: vi.fn(),
-  submitMusicEdit: vi.fn(),
-  buildUpdateArtistEdit: vi.fn(),
-  buildUpdateAlbumEdit: vi.fn(),
+	  submitArtistRevision: vi.fn(),
+	  submitAlbumRevision: vi.fn(),
 }))
 
 vi.mock('vue-router', () => ({
@@ -72,10 +71,9 @@ vi.mock('@/api/musicV1', () => ({
 	createMusicArtist: mocks.createMusicArtist,
   getMusicArtist: mocks.getMusicArtist,
   getMusicAlbum: mocks.getMusicAlbum,
-  submitMusicEdit: mocks.submitMusicEdit,
-  uploadMusicAsset: mocks.uploadMusicAsset,
-  buildUpdateArtistEdit: mocks.buildUpdateArtistEdit,
-  buildUpdateAlbumEdit: mocks.buildUpdateAlbumEdit,
+	  submitArtistRevision: mocks.submitArtistRevision,
+	  submitAlbumRevision: mocks.submitAlbumRevision,
+	  uploadMusicAsset: mocks.uploadMusicAsset,
 }))
 
 describe('MusicEntityEditorDrawer.vue', () => {
@@ -104,9 +102,8 @@ describe('MusicEntityEditorDrawer.vue', () => {
     mocks.getMusicAlbum.mockReset()
 	mocks.createMusicArtist.mockReset()
     mocks.uploadMusicAsset.mockReset()
-    mocks.submitMusicEdit.mockReset()
-    mocks.buildUpdateArtistEdit.mockReset()
-    mocks.buildUpdateAlbumEdit.mockReset()
+	    mocks.submitArtistRevision.mockReset()
+	    mocks.submitAlbumRevision.mockReset()
     mocks.getMusicArtist.mockResolvedValue({ id: 'artist-1', name: 'Test Artist' })
 	mocks.createMusicArtist.mockResolvedValue({ id: 'artist-created', name: 'Created Artist', entry_status: 'open' })
     mocks.getMusicAlbum.mockResolvedValue({
@@ -121,9 +118,8 @@ describe('MusicEntityEditorDrawer.vue', () => {
       content_type: 'image/webp',
       size: 1,
     })
-    mocks.submitMusicEdit.mockResolvedValue({ status: 'applied' })
-    mocks.buildUpdateArtistEdit.mockReturnValue({ id: 'artist-edit-request' })
-    mocks.buildUpdateAlbumEdit.mockReturnValue({ id: 'edit-request' })
+	    mocks.submitArtistRevision.mockResolvedValue({ status: 'approved' })
+	    mocks.submitAlbumRevision.mockResolvedValue({ status: 'approved' })
   })
 
   afterEach(() => {
@@ -153,7 +149,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('submits artist edits through the auditable music edit flow', async () => {
+	  it('submits artist edits through revisions', async () => {
     drawerState.value.musicEditor = { entity: 'artist', mode: 'edit', id: 'artist-1' }
     const wrapper = mountDrawer()
     await flushPromises()
@@ -164,13 +160,12 @@ describe('MusicEntityEditorDrawer.vue', () => {
     })
     await flushPromises()
 
-    expect(mocks.buildUpdateArtistEdit).toHaveBeenCalledWith('artist-1', {
+	    expect(mocks.submitArtistRevision).toHaveBeenCalledWith('artist-1', {
       name: 'Updated Artist',
       bio: 'Updated biography',
       reason: '编辑艺术家',
       sources: [],
     })
-    expect(mocks.submitMusicEdit).toHaveBeenCalledWith({ id: 'artist-edit-request' })
   })
 
 	it('opens the created artist detail after creating an artist', async () => {
@@ -217,7 +212,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
     await flushPromises()
 
     expect(mocks.uploadMusicAsset).toHaveBeenCalledWith(file, 'music.cover')
-    expect(mocks.buildUpdateAlbumEdit).toHaveBeenCalledWith('album-1', expect.objectContaining({
+	    expect(mocks.submitAlbumRevision).toHaveBeenCalledWith('album-1', expect.objectContaining({
 		artist_credits: [{
 			artist_id: artistId,
 			position: 1,
@@ -229,8 +224,8 @@ describe('MusicEntityEditorDrawer.vue', () => {
     }))
   })
 
-  it('keeps the album editor open when the edit is not applied', async () => {
-    mocks.submitMusicEdit.mockResolvedValue({ status: 'failed_prerequisite' })
+	  it('keeps the album editor open when the revision request fails', async () => {
+	    mocks.submitAlbumRevision.mockRejectedValue(new Error('failed'))
 	mocks.getMusicAlbum.mockResolvedValue({
 		id: 'album-1',
 		title: 'Test Album',

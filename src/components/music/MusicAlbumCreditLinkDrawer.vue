@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
-	buildUpdateAlbumEdit,
 	getMusicAlbum,
 	listMusicAlbums,
-	submitMusicEdit,
+	submitAlbumRevision,
 	type MusicAlbumListItem,
 } from '@/api/musicV1'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -113,12 +112,11 @@ async function submitLink() {
 	submitting.value = true
 	errorMessage.value = ''
 	try {
-		const edit = await submitMusicEdit(buildUpdateAlbumEdit(selectedAlbum.value.id, {
+		await submitAlbumRevision(selectedAlbum.value.id, {
 			artist_credits: albumArtistCreditsFromContributors(contributors),
 			reason: '关联艺术家与专辑',
 			sources: [],
-		}))
-		if (edit.status !== 'applied') throw new Error(edit.status)
+		})
 		refreshArtist()
 		refreshAlbum()
 		closeCurrent()

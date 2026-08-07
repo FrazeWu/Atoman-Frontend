@@ -342,6 +342,13 @@ async function continueImport() {
             <span v-if="formatDate(selectedImport.lastSyncedAt)" class="meta-time">更新于 {{ formatDate(selectedImport.lastSyncedAt) }}</span>
           </div>
 
+          <p v-if="selectedImport.status === 'ready'" class="status-hint status-hint--ready">
+            ✓ 后台音轨解析已完成，请点击下方「提交专辑」确认发布。
+          </p>
+          <p v-else-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
+            草稿尚未全部提交，点击「继续编辑」补充详情并上传。
+          </p>
+
           <p
             v-if="selectedImport.errorMessage"
             class="music-imports-view__error"
@@ -354,7 +361,9 @@ async function continueImport() {
               v-if="!['committed', 'canceled'].includes(selectedImport.status)"
               variant="primary"
               @click="continueImport"
-            >继续编辑 / 提交</PButton>
+            >
+              {{ selectedImport.status === 'ready' ? '提交专辑 / 确认发布' : '继续编辑 / 提交' }}
+            </PButton>
 
             <PButton
               v-if="selectedImport.status === 'needs_attention' || selectedImport.files.some(f => f.processingStatus === 'failed')"
@@ -618,6 +627,20 @@ async function continueImport() {
   font-size: 0.8rem;
   color: var(--a-color-muted);
   flex-wrap: wrap;
+}
+.status-hint {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  font-size: 0.82rem;
+  color: var(--a-color-text-secondary);
+}
+.status-hint--ready {
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  border-color: color-mix(in srgb, #22c55e 25%, transparent);
+  color: #16a34a;
 }
 .music-imports-view__actions {
   display: flex;

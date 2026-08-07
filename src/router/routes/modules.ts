@@ -2,6 +2,10 @@ import type { RouteRecordRaw } from 'vue-router'
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 import { settingRoutes } from '@/router/routes/settings'
 
+function musicBookmarksPath(path: string) {
+  return path.startsWith('/music/') ? '/music/bookmarks' : '/bookmarks'
+}
+
 export function commonModuleRoutes(): RouteRecordRaw[] {
   return [
     { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true } },
@@ -58,13 +62,22 @@ export const moduleRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
         {
           path: 'starred',
           redirect: to => ({
-            path: to.path.startsWith('/music/') ? '/music/library' : '/library',
+            path: musicBookmarksPath(to.path),
             query: to.query,
             hash: to.hash,
           }),
           meta: { requiresAuth: true },
         },
-        { path: 'library', component: () => import('@/views/music/LibraryView.vue'), meta: { requiresAuth: true } },
+        {
+          path: 'library',
+          redirect: to => ({
+            path: musicBookmarksPath(to.path),
+            query: to.query,
+            hash: to.hash,
+          }),
+          meta: { requiresAuth: true },
+        },
+        { path: 'bookmarks', component: () => import('@/views/music/LibraryView.vue'), meta: { requiresAuth: true } },
         { path: 'history', component: () => import('@/views/music/HistoryView.vue'), meta: { requiresAuth: true } },
         { path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: { requiresAuth: true } },
         {

@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   playAlbum: vi.fn(),
   closePlaylist: vi.fn(),
   refreshPlaylists: vi.fn(),
+  openAlbum: vi.fn(),
+  openArtist: vi.fn(),
   restoreSession: vi.fn(),
   requireLogin: vi.fn(),
   auth: {
@@ -34,6 +36,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: { value: { playlistId: 'playlist-1' } },
     closePlaylist: mocks.closePlaylist,
     refreshPlaylists: mocks.refreshPlaylists,
+    openAlbum: mocks.openAlbum,
+    openArtist: mocks.openArtist,
     isLayerShifted: () => false,
     isTopLayer: () => true,
   }),
@@ -81,6 +85,8 @@ describe('PlaylistDrawer', () => {
     mocks.playAlbum.mockReset()
     mocks.closePlaylist.mockReset()
     mocks.refreshPlaylists.mockReset()
+    mocks.openAlbum.mockReset()
+    mocks.openArtist.mockReset()
     mocks.restoreSession.mockReset()
     mocks.requireLogin.mockReset()
     mocks.requireLogin.mockImplementation(() => mocks.auth.isAuthenticated)
@@ -265,6 +271,26 @@ describe('PlaylistDrawer', () => {
     expect(mocks.refreshPlaylists).toHaveBeenCalled()
     expect(wrapper.text()).not.toContain('First Song')
     expect(wrapper.text()).toContain('Second Song')
+  })
+
+  it('opens artist and album details from a playlist track', async () => {
+    mocks.getMusicPlaylist.mockResolvedValue({
+      id: 'playlist-1', user_id: 'user-1', owner_username: 'alice', name: '夜航歌单',
+      description: '', cover_url: '', is_public: false, song_count: 1,
+      songs: [{
+        id: 'song-1', title: 'First Song', entry_status: 'open', audio_url: 'https://cdn.test/1.mp3',
+        artists: [{ id: 'artist-1', name: 'Artist 1' }],
+        album: { id: 'album-1', title: 'Album 1' },
+      }],
+    })
+
+    const wrapper = mount(PlaylistDrawer, { global: { stubs: { RouterLink: true } } })
+    await flushPromises()
+    await wrapper.get('[data-testid="playlist-track-artist-artist-1"]').trigger('click')
+    await wrapper.get('[data-testid="playlist-track-album-album-1"]').trigger('click')
+
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
   })
 
   it('reorders songs in an owned playlist', async () => {

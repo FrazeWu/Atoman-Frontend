@@ -3,7 +3,7 @@
     <div class="music-tracks__header">
       <div>
         <h3 class="music-tracks__title">曲目</h3>
-        <p class="music-tracks__hint">单行可拖拽排序，支持编辑标题、歌词与音频文件。</p>
+        <p class="music-tracks__hint">拖动左侧控件排序，支持编辑标题、歌词与音频文件。</p>
       </div>
       <div class="music-tracks__header-actions">
         <PButton type="button" variant="ghost" @click="addTrack">添加曲目</PButton>
@@ -23,14 +23,17 @@
           'music-tracks__item-wrapper--drag-over': dragOverIndex === index,
           'music-tracks__item-wrapper--removed': track.removed,
         }"
-        draggable="true"
-        @dragstart="onDragStart(index, $event)"
         @dragover.prevent="onDragOver(index)"
         @drop.prevent="onDrop(index)"
-        @dragend="onDragEnd"
       >
         <div class="music-tracks__row">
-          <div class="music-tracks__drag-handle" title="按住拖拽排序">
+          <div
+            class="music-tracks__drag-handle"
+            title="按住拖拽排序"
+            draggable="true"
+            @dragstart="onDragStart(index, $event)"
+            @dragend="onDragEnd"
+          >
             <GripVertical :size="16" aria-hidden="true" />
           </div>
 

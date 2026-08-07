@@ -33,7 +33,7 @@ describe('MusicLayout.vue', () => {
     expect(items[2].text()).toContain('艺人')
     expect(items[2].attributes('data-to')).toBe('/music/artists')
     expect(items[3].text()).toContain('收藏')
-    expect(items[3].attributes('data-to')).toBe('/music/library')
+    expect(items[3].attributes('data-to')).toBe('/music/bookmarks')
     expect(items[4].text()).toContain('历史')
     expect(items[4].attributes('data-to')).toBe('/music/history')
     expect(items[5].text()).toContain('导入')

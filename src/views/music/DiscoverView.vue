@@ -613,21 +613,29 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           <h2 id="recently-played-title">最近播放</h2>
         </header>
         <div class="recently-played-list">
-          <button
+          <div
             v-for="item in musicHome.recently_played"
             :key="item.id"
-            type="button"
             class="recently-played-item"
-            :disabled="!item.song.audio_url"
-            @click="playRecentSong(item.song)"
           >
-            <img v-if="item.song.cover_url || item.song.album?.cover_url" :src="item.song.cover_url || item.song.album?.cover_url" :alt="item.song.title" />
-            <span v-else class="recently-played-item__cover" aria-hidden="true" />
+            <button type="button" class="recently-played-item__play" :disabled="!item.song.audio_url" :aria-label="`播放 ${item.song.title}`" data-testid="recent-song-play" @click="playRecentSong(item.song)">
+              <img v-if="item.song.cover_url || item.song.album?.cover_url" :src="item.song.cover_url || item.song.album?.cover_url" :alt="item.song.title" />
+              <span v-else class="recently-played-item__cover" aria-hidden="true" />
+            </button>
             <span class="recently-played-item__copy">
-              <strong>{{ item.song.title }}</strong>
-              <span>{{ item.song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家' }}<template v-if="item.song.album?.title"> · {{ item.song.album.title }}</template></span>
+              <RouterLink :to="`/music/song/${item.song.id}`"><strong>{{ item.song.title }}</strong></RouterLink>
+              <span class="recently-played-item__links">
+                <template v-if="item.song.artists?.length">
+                  <template v-for="(artist, index) in item.song.artists" :key="artist.id">
+                    <span v-if="index" aria-hidden="true"> / </span>
+                    <button type="button" :data-testid="`recent-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+                  </template>
+                </template>
+                <span v-else>未知艺术家</span>
+                <template v-if="item.song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`recent-song-album-${item.song.album.id}`" @click="openAlbum(String(item.song.album.id))">{{ item.song.album.title }}</button></template>
+              </span>
             </span>
-          </button>
+          </div>
         </div>
       </section>
 
@@ -636,16 +644,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           <h2 id="for-you-title">为你发现</h2>
         </header>
         <div class="music-home-albums">
-          <button
+          <MusicAlbumCard
             v-for="album in musicHome.for_you"
             :key="album.id"
-            type="button"
-            class="music-home-album-button"
-            :aria-label="`打开专辑 ${album.title}`"
+            :album="album"
+            :show-bookmark="false"
             @click="openAlbum(String(album.id))"
-          >
-            <MusicAlbumCard :album="album" :show-bookmark="false" />
-          </button>
+            @click-artist="openArtist"
+          />
         </div>
         <p v-if="musicHome.for_you_reason" class="music-home-section__reason">{{ musicHome.for_you_reason }}</p>
       </section>
@@ -653,9 +659,14 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
       <section v-for="section in musicHome.sections" :key="section.key" class="music-home-section" :aria-labelledby="`home-${section.key}`">
         <header class="music-home-section__header"><h2 :id="`home-${section.key}`">{{ section.title }}</h2></header>
         <div class="music-home-albums">
-          <button v-for="album in section.albums" :key="album.id" type="button" class="music-home-album-button" :aria-label="`打开专辑 ${album.title}`" @click="openAlbum(String(album.id))">
-            <MusicAlbumCard :album="album" :show-bookmark="false" />
-          </button>
+          <MusicAlbumCard
+            v-for="album in section.albums"
+            :key="album.id"
+            :album="album"
+            :show-bookmark="false"
+            @click="openAlbum(String(album.id))"
+            @click-artist="openArtist"
+          />
         </div>
       </section>
     </template>
@@ -673,6 +684,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
         :is-bookmarked="starredAlbumIds.includes(String(album.id))"
         data-testid="discover-album-card"
         @click="router.push(`/music/album/${album.id}`)"
+        @click-artist="openArtist"
         @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
       />
     </div>
@@ -691,6 +703,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             :is-bookmarked="starredAlbumIds.includes(String(item.id))"
             data-testid="discover-album-card"
             @click="openDiscoverAlbum(item)"
+            @click-artist="openArtist"
             @toggle-bookmark="handleToggleAlbumBookmark(String(item.id))"
           />
         </div>
@@ -927,7 +940,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
-  cursor: pointer;
 }
 
 .recently-played-item:hover,
@@ -935,9 +947,17 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   border-color: var(--a-color-muted-soft);
 }
 
-.recently-played-item:disabled {
+.recently-played-item__play {
+  flex: 0 0 42px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recently-played-item__play:disabled {
   cursor: default;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .recently-played-item img,
@@ -972,25 +992,29 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   font-size: 0.75rem;
 }
 
+.recently-played-item__copy > a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.recently-played-item__links button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.recently-played-item__copy > a:hover,
+.recently-played-item__links button:hover {
+  text-decoration: underline;
+}
+
 .music-home-albums {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
-}
-
-.music-home-album-button {
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.music-home-album-button:focus-visible {
-  outline: 2px solid var(--a-color-focus, var(--a-color-text));
-  outline-offset: 3px;
 }
 
 .discover-grid {

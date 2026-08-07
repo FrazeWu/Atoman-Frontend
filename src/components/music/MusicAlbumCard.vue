@@ -1,21 +1,20 @@
 <template>
-  <div
-    class="music-album-card"
-    @click="$emit('click')"
-  >
+  <article class="music-album-card">
     <div class="cover-frame">
-      <img
-        v-if="coverUrl"
-        :src="coverUrl"
-        :alt="album.title"
-        class="cover-image"
-        loading="lazy"
-      />
-      <div v-else class="cover-placeholder">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
-        </svg>
-      </div>
+      <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
+        <img
+          v-if="coverUrl"
+          :src="coverUrl"
+          :alt="album.title"
+          class="cover-image"
+          loading="lazy"
+        />
+        <span v-else class="cover-placeholder">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.25">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.48 0-4.5-2.02-4.5-4.5s2.02-4.5 4.5-4.5 4.5 2.02 4.5 4.5-2.02 4.5-4.5 4.5z"/>
+          </svg>
+        </span>
+      </button>
 
       <!-- Status Tag Badge for Draft / Importing Albums -->
       <span v-if="statusBadgeText" class="status-tag" :data-status="album.status || album.entry_status">
@@ -28,7 +27,7 @@
         type="button"
         class="bookmark-btn"
         :class="{ 'is-bookmarked': isBookmarked }"
-        @click.stop="$emit('toggle-bookmark')"
+        @click="emit('toggle-bookmark')"
         :aria-label="isBookmarked ? '取消收藏' : '收藏'"
       >
         <svg
@@ -69,11 +68,29 @@
 
     <div class="music-info">
       <div class="music-text">
-        <h3 class="music-title a-clamp-1" :title="album.title">{{ album.title }}</h3>
-        <p class="music-summary a-clamp-2" :title="`${artistNames} · ${albumYear}`">{{ artistNames }} · {{ albumYear }}</p>
+        <h3 class="music-title a-clamp-1">
+          <button type="button" class="album-title-btn" :title="album.title" @click="emit('click')">{{ album.title }}</button>
+        </h3>
+        <p class="music-summary a-clamp-2" :title="`${artistNames} · ${albumYear}`">
+          <template v-if="album.artists?.length">
+            <template v-for="(artist, index) in album.artists" :key="artist.id || `${artist.name}-${index}`">
+              <span v-if="index" aria-hidden="true"> / </span>
+              <button
+                v-if="artist.id"
+                type="button"
+                class="artist-link"
+                :aria-label="`打开艺人 ${artist.name}`"
+                @click="emit('click-artist', String(artist.id))"
+              >{{ artist.name }}</button>
+              <span v-else>{{ artist.name }}</span>
+            </template>
+          </template>
+          <template v-else>{{ artistNames }}</template>
+          <span aria-hidden="true"> · </span>{{ albumYear }}
+        </p>
       </div>
     </div>
-  </div>
+  </article>
 </template>
 
 <script setup lang="ts">
@@ -89,7 +106,7 @@ export interface MusicAlbumCardItem {
   image_url?: string
   release_date?: string
   year?: number | string
-  artists?: { name: string }[]
+  artists?: { id?: string; name: string }[]
   summary?: string
   target_path?: string
   play_count?: number
@@ -120,8 +137,9 @@ const statusBadgeText = computed(() => {
 
 const publicAssetBase = import.meta.env.VITE_R2_PUBLIC_BASE_URL?.trim().replace(/\/$/, '') || ''
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'click'): void
+  (e: 'click-artist', artistId: string): void
   (e: 'toggle-bookmark'): void
 }>()
 
@@ -182,7 +200,6 @@ const albumYear = computed(() => {
   text-decoration: none;
   color: inherit;
   background: transparent;
-  cursor: pointer;
   width: 100%;
 }
 
@@ -202,7 +219,28 @@ const albumYear = computed(() => {
   transition: border-color 0.2s, transform 0.2s;
 }
 
+.cover-action {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
 
+.cover-action:focus-visible,
+.album-title-btn:focus-visible,
+.artist-link:focus-visible,
+.bookmark-btn:focus-visible {
+  outline: 2px solid var(--a-color-focus, var(--a-color-text));
+  outline-offset: 2px;
+}
+
+.bookmark-btn:focus-visible {
+  opacity: 1;
+}
 
 .cover-image {
   width: 100%;
@@ -320,7 +358,18 @@ const albumYear = computed(() => {
   transition: color 0.2s;
 }
 
-.music-album-card:hover .music-title {
+.album-title-btn {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.album-title-btn:hover {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
@@ -331,6 +380,20 @@ const albumYear = computed(() => {
   color: var(--a-color-muted-soft);
   line-height: 1.4;
   font-size: 0.775rem;
+}
+
+.artist-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.artist-link:hover {
+  color: var(--a-color-text);
+  text-decoration: underline;
 }
 
 .a-clamp-1 {
@@ -357,6 +420,7 @@ const albumYear = computed(() => {
   font-size: 0.7rem;
   font-weight: 600;
   line-height: 1.2;
+  pointer-events: none;
   background: rgba(0, 0, 0, 0.75);
   color: #ffffff;
   backdrop-filter: blur(4px);

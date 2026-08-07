@@ -32,6 +32,13 @@ describe('PSheet.vue', () => {
     expect(wrapper.get('.p-sheet-panel').attributes('aria-label')).toBe('TEST TITLE')
   })
 
+  it('centers the close control and title on the same page rail axis', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/ui/PSheet.vue'), 'utf8')
+
+    expect(source).toMatch(/\.sheet-layer-rail\s*\{[\s\S]*?align-items:\s*center/)
+    expect(source).not.toMatch(/\.sheet-layer-rail \.sheet-close-btn-bookmark\s*\{/)
+  })
+
   it('renders custom header content when header slot is provided', () => {
     const wrapper = mount(PSheet, {
       props: { show: true },

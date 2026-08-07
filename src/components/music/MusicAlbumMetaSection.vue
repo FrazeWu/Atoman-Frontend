@@ -18,6 +18,10 @@
       <div class="album-meta-card__field">
         <PSelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
       </div>
+
+      <div class="album-meta-card__field album-meta-card__field--full">
+        <PTextarea v-model="descriptionModel" label="专辑简介" placeholder="输入专辑简介" :rows="4" />
+      </div>
     </div>
   </PSurface>
 </template>
@@ -27,6 +31,7 @@ import { computed } from 'vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import MusicCreationContributorPicker from './MusicCreationContributorPicker.vue'
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 
@@ -35,6 +40,7 @@ const props = defineProps<{
   album: string
   releaseDate: string
   albumType?: 'single' | 'ep' | 'album'
+  description: string
 }>()
 
 const emit = defineEmits<{
@@ -42,6 +48,7 @@ const emit = defineEmits<{
   (e: 'update:album', value: string): void
   (e: 'update:releaseDate', value: string): void
   (e: 'update:albumType', value?: 'single' | 'ep' | 'album'): void
+  (e: 'update:description', value: string): void
 }>()
 
 const albumModel = computed({
@@ -64,6 +71,11 @@ const albumTypeModel = computed({
   get: () => props.albumType ?? '',
   set: (value) => emit('update:albumType', value ? value as 'single' | 'ep' | 'album' : undefined),
 })
+
+const descriptionModel = computed({
+  get: () => props.description,
+  set: (value) => emit('update:description', value),
+})
 </script>
 
 <style scoped>
@@ -84,6 +96,10 @@ const albumTypeModel = computed({
 }
 
 .album-meta-card__field--artists {
+  grid-column: 1 / -1;
+}
+
+.album-meta-card__field--full {
   grid-column: 1 / -1;
 }
 

@@ -330,11 +330,6 @@ const sheetStyle = computed(() => {
   opacity: 0.6;
 }
 
-.sheet-layer-rail .sheet-close-btn-bookmark {
-  align-self: flex-start;
-  margin-left: 4px;
-}
-
 .sheet-close-btn-bookmark--legacy {
   position: absolute;
   top: 0;

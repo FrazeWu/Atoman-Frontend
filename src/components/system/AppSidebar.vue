@@ -171,7 +171,7 @@ import { computed, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import {
-  Rss, Compass, Bookmark, Star, Disc3, Users, Library, History,
+  Rss, Compass, Bookmark, Star, Disc3, Users, History,
   MessageSquare, Folder, Archive, BookOpen, Clock, Mic
 } from 'lucide-vue-next'
 
@@ -307,7 +307,7 @@ const musicNavItems: { to: string; label: string; icon: Component; exact?: boole
   { to: modulePathUrl('music', '/discover'), label: '发现', icon: Compass },
   { to: modulePathUrl('music', '/albums'), label: '专辑', icon: Disc3 },
   { to: modulePathUrl('music', '/artists'), label: '艺人', icon: Users },
-  { to: modulePathUrl('music', '/library'), label: '收藏', icon: Library },
+  { to: modulePathUrl('music', '/bookmarks'), label: '收藏', icon: Bookmark },
   { to: modulePathUrl('music', '/history'), label: '历史', icon: History },
   { to: modulePathUrl('music', '/imports'), label: '导入', icon: Archive },
 ]

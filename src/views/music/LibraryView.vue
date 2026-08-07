@@ -96,19 +96,22 @@ async function load(nextPage = 1) {
       hasMore.value = response.meta.has_more
     }
     page.value = nextPage
-  } catch { if (isCurrent()) error.value = '音乐库加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
+  } catch { if (isCurrent()) error.value = '收藏加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
 }
 watch([kind, sort], () => { void load() }, { flush: 'sync' }); onMounted(() => { void load() })
 </script>
 
 <template>
   <main class="music-library">
-    <PPageHeader title="音乐库" mb="0"><template #action><PSegmentedControl v-model="kind" :options="options" /></template></PPageHeader>
+    <PPageHeader title="收藏" mb="0"><template #action><PSegmentedControl v-model="kind" :options="options" /></template></PPageHeader>
     <div class="music-library__sort"><button :class="{ active: sort === 'latest' }" @click="sort = 'latest'">最近收藏</button><button :class="{ active: sort === 'popular' }" @click="sort = 'popular'">热度</button></div>
-    <input v-model="query" class="music-library__search" type="search" placeholder="搜索音乐库" aria-label="搜索音乐库">
+    <input v-model="query" class="music-library__search" type="search" placeholder="搜索收藏" aria-label="搜索收藏">
     <p v-if="loading" class="state">正在加载</p><p v-else-if="error" class="state error">{{ error }}</p><p v-else-if="!filteredItems.length" class="state">这里还没有内容</p>
     <div v-else class="music-library__list">
-      <button v-for="song in filteredItems as MusicSongListItem[]" v-if="kind === 'song'" :key="song.id" class="music-library__row" :disabled="!song.audio_url" @click="player.playSong(playable(song))"><Music2 :size="18"/><span><strong>{{ song.title }}</strong><small>{{ song.artists?.map(item => item.name).join(' / ') || '未知艺术家' }}</small></span></button>
+      <div v-for="song in filteredItems as MusicSongListItem[]" v-if="kind === 'song'" :key="song.id" class="music-library__row music-library__song-row">
+        <button type="button" class="music-library__play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))"><Music2 :size="18"/></button>
+        <span><RouterLink :to="`/music/song/${song.id}`"><strong>{{ song.title }}</strong></RouterLink><small><template v-if="song.artists?.length"><template v-for="(artist, index) in song.artists" :key="artist.id"><span v-if="index" aria-hidden="true"> / </span><button type="button" :data-testid="`library-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button></template></template><span v-else>未知艺术家</span><template v-if="song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`library-song-album-${song.album.id}`" @click="openAlbum(String(song.album.id))">{{ song.album.title }}</button></template></small></span>
+      </div>
       <button v-for="album in filteredItems as MusicAlbumListItem[]" v-else-if="kind === 'album'" :key="album.id" class="music-library__row" @click="openAlbum(album.id)"><Disc3 :size="18"/><span><strong>{{ album.title }}</strong><small>{{ album.artists?.map(item => item.name).join(' / ') }}</small></span></button>
       <button v-for="artist in filteredItems as MusicArtistListItem[]" v-else-if="kind === 'artist'" :key="artist.id" class="music-library__row" @click="openArtist(artist.id)"><Users :size="18"/><span><strong>{{ artist.name }}</strong><small>{{ artist.legal_name || artist.bio }}</small></span></button>
       <button v-for="playlist in filteredItems as MusicPlaylistSummary[]" v-else :key="playlist.id" class="music-library__row" @click="openPlaylist(playlist.id)"><ListMusic :size="18"/><span><strong>{{ playlist.name }}</strong><small>{{ playlist.song_count }} 首</small></span></button>
@@ -118,5 +121,5 @@ watch([kind, sort], () => { void load() }, { flush: 'sync' }); onMounted(() => {
 </template>
 
 <style scoped>
-.music-library{display:grid;gap:1rem}.music-library__sort{display:flex;gap:.4rem}.music-library__sort button,.music-library__more{border:0;background:transparent;color:var(--a-color-muted);padding:.35rem 0;cursor:pointer}.music-library__sort button+button{border-left:1px solid var(--a-color-border-soft);padding-left:.5rem}.music-library__sort .active{color:var(--a-color-text)}.music-library__search{min-height:2.75rem;padding:.6rem .75rem;border:1px solid var(--a-color-border-soft);background:var(--a-color-bg);color:inherit}.music-library__list{display:grid;border-top:1px solid var(--a-color-border-soft)}.music-library__row{display:flex;align-items:center;gap:.8rem;min-height:4rem;padding:.65rem 0;border:0;border-bottom:1px solid var(--a-color-border-soft);background:transparent;color:inherit;text-align:left;cursor:pointer}.music-library__row span{display:grid;gap:.18rem;min-width:0}.music-library__row small,.state{color:var(--a-color-muted)}.error{color:var(--a-color-accent-destructive)}
+.music-library{display:grid;gap:1rem}.music-library__sort{display:flex;gap:.4rem}.music-library__sort button,.music-library__more{border:0;background:transparent;color:var(--a-color-muted);padding:.35rem 0;cursor:pointer}.music-library__sort button+button{border-left:1px solid var(--a-color-border-soft);padding-left:.5rem}.music-library__sort .active{color:var(--a-color-text)}.music-library__search{min-height:2.75rem;padding:.6rem .75rem;border:1px solid var(--a-color-border-soft);background:var(--a-color-bg);color:inherit}.music-library__list{display:grid;border-top:1px solid var(--a-color-border-soft)}.music-library__row{display:flex;align-items:center;gap:.8rem;min-height:4rem;padding:.65rem 0;border:0;border-bottom:1px solid var(--a-color-border-soft);background:transparent;color:inherit;text-align:left;cursor:pointer}.music-library__row span{display:grid;gap:.18rem;min-width:0}.music-library__row small,.state{color:var(--a-color-muted)}.music-library__song-row{cursor:default}.music-library__play,.music-library__song-row small button{border:0;padding:0;background:transparent;color:inherit;cursor:pointer}.music-library__play{display:grid;flex:0 0 2.75rem;min-height:2.75rem;place-items:center}.music-library__play:disabled{cursor:default;opacity:.45}.music-library__song-row a{color:inherit;text-decoration:none}.music-library__song-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.music-library__song-row small button{font:inherit}.music-library__song-row a:hover,.music-library__song-row small button:hover{text-decoration:underline}.error{color:var(--a-color-accent-destructive)}
 </style>

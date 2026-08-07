@@ -20,4 +20,30 @@ describe('MusicAlbumCard', () => {
     const image = wrapper.get('img')
     expect(image.attributes('src')).toBe('https://assets.atoman.org/music/covers/album-1.jpg')
   })
+
+  it('keeps album, artist, and bookmark actions as separate buttons', async () => {
+    const wrapper = mount(MusicAlbumCard, {
+      props: {
+        album: {
+          id: 'album-1',
+          title: 'Album One',
+          artists: [{ id: 'artist-1', name: 'Artist One' }],
+        },
+      },
+    })
+
+    expect(wrapper.find('button button').exists()).toBe(false)
+
+    await wrapper.get('.cover-action').trigger('click')
+    await wrapper.get('.album-title-btn').trigger('click')
+    expect(wrapper.emitted('click')).toHaveLength(2)
+
+    await wrapper.get('.artist-link').trigger('click')
+    expect(wrapper.emitted('click-artist')).toEqual([['artist-1']])
+    expect(wrapper.emitted('click')).toHaveLength(2)
+
+    await wrapper.get('.bookmark-btn').trigger('click')
+    expect(wrapper.emitted('toggle-bookmark')).toHaveLength(1)
+    expect(wrapper.emitted('click')).toHaveLength(2)
+  })
 })

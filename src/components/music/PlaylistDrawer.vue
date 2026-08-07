@@ -30,7 +30,7 @@ import type { MusicSheetLayer } from './musicSheetTypes'
 
 type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
 const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerShifted, isTopLayer } = useMusicDrawers()
+const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerShifted, isTopLayer, openAlbum, openArtist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
@@ -521,15 +521,22 @@ watch(playlist, syncEditForm, { immediate: true })
 
           <div class="col-title">
             <div class="track-meta">
-              <span class="track-name">{{ track.title }}</span>
+              <RouterLink class="track-name" :to="`/music/song/${track.id}`">{{ track.title }}</RouterLink>
               <span class="track-artists-text">
-                {{ track.artists?.map(a => a.name).join(' / ') || '未知艺术家' }}
+                <template v-if="track.artists?.length">
+                  <template v-for="(artist, artistIndex) in track.artists" :key="artist.id">
+                    <span v-if="artistIndex" aria-hidden="true"> / </span>
+                    <button type="button" :data-testid="`playlist-track-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+                  </template>
+                </template>
+                <span v-else>未知艺术家</span>
               </span>
             </div>
           </div>
 
           <div class="col-album">
-            <span class="album-name">{{ track.album?.title || '未归属专辑' }}</span>
+            <button v-if="track.album?.id" type="button" class="album-name" :data-testid="`playlist-track-album-${track.album.id}`" @click="openAlbum(String(track.album.id))">{{ track.album.title }}</button>
+            <span v-else class="album-name">未归属专辑</span>
           </div>
 
           <div class="col-status">
@@ -820,6 +827,7 @@ watch(playlist, syncEditForm, { immediate: true })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .track-artists-text {
@@ -837,6 +845,22 @@ watch(playlist, syncEditForm, { immediate: true })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.track-artists-text button,
+button.album-name {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.track-name:hover,
+.track-artists-text button:hover,
+button.album-name:hover {
+  text-decoration: underline;
 }
 
 .badge-no-audio {

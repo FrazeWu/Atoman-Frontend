@@ -381,8 +381,17 @@ describe('Music DiscoverView.vue', () => {
     await wrapper.get('[aria-label="打开专辑 Late Registration"]').trigger('click')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-2')
 
-    await wrapper.get('.recently-played-item').trigger('click')
+    await wrapper.get('[aria-label="打开艺人 Ye"]').trigger('click')
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(wrapper.find('button button').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="recent-song-play"]').trigger('click')
     expect(mocks.playSong).toHaveBeenCalledWith(expect.objectContaining({ id: 'song-1' }))
+
+    await wrapper.get('[data-testid="recent-song-artist-artist-1"]').trigger('click')
+    await wrapper.get('[data-testid="recent-song-album-album-1"]').trigger('click')
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
   })
 
   it('keeps the playlist section structure visible when public playlists are empty', async () => {
@@ -450,7 +459,7 @@ describe('Music DiscoverView.vue', () => {
     })
     await flushPromises()
 
-    await wrapper.get('[aria-label="发现专辑分区"] [data-testid="discover-album-card"]').trigger('click')
+    await wrapper.get('[aria-label="发现专辑分区"] [data-testid="discover-album-card"] .cover-action').trigger('click')
 
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
     expect(mocks.push).not.toHaveBeenCalledWith('/music?album=album-1')

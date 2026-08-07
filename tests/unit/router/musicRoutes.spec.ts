@@ -31,14 +31,25 @@ describe('music module routes', () => {
     expect(starredRoute?.redirect).toBeTypeOf('function')
     if (typeof starredRoute?.redirect === 'function') {
       expect(starredRoute.redirect({ path: '/music/starred/', query: { sort: 'popular' }, hash: '#saved' } as never)).toEqual({
-        path: '/music/library',
+        path: '/music/bookmarks',
         query: { sort: 'popular' },
         hash: '#saved',
       })
     }
 
-    expect(children.find((route) => route.path === 'library')?.meta?.requiresAuth).toBe(true)
-    expect(lazyImportPath(children.find((route) => route.path === 'library')?.component)).toContain('LibraryView.vue')
+    const libraryRoute = children.find((route) => route.path === 'library')
+    expect(libraryRoute?.meta?.requiresAuth).toBe(true)
+    expect(libraryRoute?.redirect).toBeTypeOf('function')
+    if (typeof libraryRoute?.redirect === 'function') {
+      expect(libraryRoute.redirect({ path: '/music/library', query: { kind: 'album' }, hash: '#saved' } as never)).toEqual({
+        path: '/music/bookmarks',
+        query: { kind: 'album' },
+        hash: '#saved',
+      })
+    }
+
+    expect(children.find((route) => route.path === 'bookmarks')?.meta?.requiresAuth).toBe(true)
+    expect(lazyImportPath(children.find((route) => route.path === 'bookmarks')?.component)).toContain('LibraryView.vue')
 
     expect(children.find((route) => route.path === 'history')?.meta?.requiresAuth).toBe(true)
     expect(lazyImportPath(children.find((route) => route.path === 'history')?.component)).toContain('HistoryView.vue')

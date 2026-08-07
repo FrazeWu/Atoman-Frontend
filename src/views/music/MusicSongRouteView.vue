@@ -6,9 +6,11 @@ import PButton from '@/components/ui/PButton.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { useRoute } from 'vue-router'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const route = useRoute()
 const player = usePlayerStore()
+const { openAlbum, openArtist } = useMusicDrawers()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -63,11 +65,12 @@ watch(() => route.params.songId, load, { immediate: true })
     <section v-else-if="detail" class="song-detail__content">
       <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
       <div class="song-detail__main">
-        <p class="song-detail__album">{{ detail.song.album?.title || '单曲' }}</p>
+        <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
+        <p v-else class="song-detail__album">单曲</p>
         <h1>{{ detail.song.title }}</h1>
         <div v-for="[role, artists] in roleGroups" :key="role" class="song-detail__artists">
           <span>{{ roleLabels[role] || role }}</span>
-          <RouterLink v-for="artist in artists" :key="artist.id" :to="`/music/artist/${artist.id}`">{{ artist.name }}</RouterLink>
+          <button v-for="artist in artists" :key="artist.id" type="button" class="song-detail__entity-link" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
         </div>
         <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
       </div>
@@ -88,6 +91,7 @@ watch(() => route.params.songId, load, { immediate: true })
 .song-detail__album, .song-detail__artists span, .song-detail__state { color: var(--a-color-muted); }
 .song-detail__artists { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .song-detail__artists a { color: inherit; }
+.song-detail__entity-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; }
 .song-detail__navigation { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-accent-destructive); }

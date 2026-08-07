@@ -91,18 +91,32 @@ watch(query, (value) => {
     <section v-if="songs.length">
       <h2>歌曲</h2>
       <div v-for="song in songs" :key="song.id" class="song-result">
-        <button type="button" @click="player.playSong(asSong(song))">
-          <Play :size="16" aria-hidden="true" /><span
-            ><strong>{{ song.title }}</strong
-            ><small
-              >{{
-                song.artists?.map((item) => item.name).join(" / ") ||
-                "未知艺术家"
-              }}
-              · {{ song.album?.title }}</small
-            ></span
-          ></button
-        ><button
+        <button
+          type="button"
+          class="song-play"
+          :disabled="!song.audio_url"
+          :aria-label="`播放 ${song.title}`"
+          @click="player.playSong(asSong(song))"
+        >
+          <Play :size="16" aria-hidden="true" />
+        </button>
+        <span class="song-copy">
+          <RouterLink :to="`/music/song/${song.id}`" class="song-title">{{ song.title }}</RouterLink>
+          <span class="song-links">
+            <template v-if="song.artists?.length">
+              <template v-for="(artist, index) in song.artists" :key="artist.id">
+                <span v-if="index" aria-hidden="true"> / </span>
+                <button type="button" :data-testid="`song-result-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+              </template>
+            </template>
+            <span v-else>未知艺术家</span>
+            <template v-if="song.album?.id">
+              <span aria-hidden="true"> · </span>
+              <button type="button" :data-testid="`song-result-album-${song.album.id}`" @click="openAlbum(String(song.album.id))">{{ song.album.title }}</button>
+            </template>
+          </span>
+        </span>
+        <button
           type="button"
           :title="`加入队列：${song.title}`"
           :aria-label="`加入队列：${song.title}`"
@@ -186,7 +200,7 @@ watch(query, (value) => {
 }
 .song-result {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.75rem 2.75rem;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem 2.75rem;
   border: 1px solid var(--a-color-border-soft);
 }
 .song-result button,
@@ -200,22 +214,56 @@ watch(query, (value) => {
   text-align: left;
   cursor: pointer;
 }
-.song-result > button:first-child {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-.song-result > button:not(:first-child),
+.song-result > button,
 .song-result a {
   display: grid;
   place-items: center;
+}
+.song-result > button,
+.song-result > a {
   border-left: 1px solid var(--a-color-border-soft);
 }
-.song-result span,
+.song-result > .song-play {
+  border-left: 0;
+}
+.song-result > .song-play:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.song-copy,
 .entity {
   display: grid;
   gap: 0.2rem;
   min-width: 0;
+}
+.song-copy {
+  align-content: center;
+  padding: 0.65rem;
+}
+.song-title {
+  justify-self: start;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+.song-links {
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.song-links button {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+}
+.song-title:hover,
+.song-links button:hover {
+  text-decoration: underline;
 }
 .songs-view small,
 .state {

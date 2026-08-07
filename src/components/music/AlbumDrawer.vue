@@ -538,7 +538,7 @@ watch(
             <span class="track-num">{{ index + 1 }}</span>
             <Play class="track-play-icon" :size="14" fill="currentColor" />
           </button>
-          <div class="track-title" :title="track.title">{{ track.title }}</div>
+          <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
           <div class="track-meta">
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
             <div v-if="getTrackDurationLabel(track)" class="track-time">{{ getTrackDurationLabel(track) }}</div>
@@ -972,10 +972,12 @@ watch(
   font-size: 0.9rem;
   min-width: 0;
   overflow: hidden;
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
   word-break: break-word;
 }
+.track-title:hover { text-decoration: underline; }
 .track-meta {
   display: flex;
   align-items: center;

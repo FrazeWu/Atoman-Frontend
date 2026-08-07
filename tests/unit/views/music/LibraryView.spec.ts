@@ -27,7 +27,7 @@ vi.mock('@/stores/player', () => ({
 }))
 
 vi.mock('@/components/ui/PPageHeader.vue', () => ({
-  default: { template: '<header><slot name="action" /></header>' },
+  default: { props: ['title'], template: '<header><h1>{{ title }}</h1><slot name="action" /></header>' },
 }))
 
 vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
@@ -46,6 +46,20 @@ describe('LibraryView', () => {
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
     mocks.playSong.mockReset()
+  })
+
+  it('uses 收藏 as the page name and search label', async () => {
+    mocks.listMusicLibrary.mockResolvedValue({
+      data: [],
+      meta: { page: 1, page_size: 24, total: 0, has_more: false },
+    })
+
+    const wrapper = mount(LibraryView)
+    await flushPromises()
+
+    expect(wrapper.get('h1').text()).toBe('收藏')
+    expect(wrapper.get('input[type="search"]').attributes('placeholder')).toBe('搜索收藏')
+    expect(wrapper.text()).not.toContain('音乐库')
   })
 
   it('resets old pagination before loading a different collection kind', async () => {
@@ -72,5 +86,26 @@ describe('LibraryView', () => {
     })
     await flushPromises()
     expect(wrapper.text()).toContain('Album 1')
+  })
+
+  it('opens artist and album details from a saved song', async () => {
+    mocks.listMusicLibrary.mockResolvedValue({
+      data: [{
+        song: {
+          id: 'song-1', title: 'Song 1', audio_url: '/song-1.mp3', entry_status: 'open',
+          artists: [{ id: 'artist-1', name: 'Artist 1' }],
+          album: { id: 'album-1', title: 'Album 1' },
+        },
+      }],
+      meta: { page: 1, page_size: 24, total: 1, has_more: false },
+    })
+
+    const wrapper = mount(LibraryView, { global: { stubs: { RouterLink: true } } })
+    await flushPromises()
+    await wrapper.get('[data-testid="library-song-artist-artist-1"]').trigger('click')
+    await wrapper.get('[data-testid="library-song-album-album-1"]').trigger('click')
+
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
   })
 })

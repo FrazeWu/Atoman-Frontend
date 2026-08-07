@@ -5,6 +5,8 @@ import HistoryView from '@/views/music/HistoryView.vue'
 const mocks = vi.hoisted(() => ({
   listMusicListeningHistory: vi.fn(),
   playAlbum: vi.fn(),
+  openAlbum: vi.fn(),
+  openArtist: vi.fn(),
 }))
 
 vi.mock('@/api/musicV1', () => ({
@@ -13,6 +15,10 @@ vi.mock('@/api/musicV1', () => ({
 
 vi.mock('@/stores/player', () => ({
   usePlayerStore: () => ({ playAlbum: mocks.playAlbum }),
+}))
+
+vi.mock('@/composables/useMusicDrawers', () => ({
+  useMusicDrawers: () => ({ openAlbum: mocks.openAlbum, openArtist: mocks.openArtist }),
 }))
 
 function historyItem(id: string, title: string) {
@@ -36,6 +42,8 @@ describe('Music HistoryView.vue', () => {
   beforeEach(() => {
     mocks.listMusicListeningHistory.mockReset()
     mocks.playAlbum.mockReset()
+    mocks.openAlbum.mockReset()
+    mocks.openArtist.mockReset()
   })
 
   it('appends the next history page and hides load more at the end', async () => {
@@ -85,5 +93,22 @@ describe('Music HistoryView.vue', () => {
       expect.objectContaining({ id: 'song-2', title: 'Second Song', artist: 'History Artist' }),
     ])
     expect(mocks.playAlbum).toHaveBeenCalledWith(expect.any(Array), 1)
+  })
+
+  it('opens artist and album details from a history row', async () => {
+    mocks.listMusicListeningHistory.mockResolvedValue({
+      data: [historyItem('1', 'First Song')],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    })
+
+    const wrapper = mount(HistoryView, {
+      global: { stubs: { PPageHeader: true, RouterLink: true } },
+    })
+    await flushPromises()
+    await wrapper.get('[data-testid="history-artist-artist-1"]').trigger('click')
+    await wrapper.get('[data-testid="history-album-album-1"]').trigger('click')
+
+    expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
   })
 })

@@ -8,11 +8,13 @@ import {
 } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
 const pageSize = 20
 const player = usePlayerStore()
+const { openAlbum, openArtist } = useMusicDrawers()
 const historyItems = ref<MusicListeningHistory[]>([])
 const currentPage = ref(0)
 const hasMore = ref(false)
@@ -108,15 +110,15 @@ onMounted(() => loadPage(1))
           class="history-row"
           data-testid="history-row"
         >
-          <button
-            type="button"
-            class="history-song"
-            :data-testid="`history-play-${item.song.id}`"
-            :disabled="!item.song.audio_url"
-            :aria-label="`播放 ${item.song.title}`"
-            @click="playHistorySong(String(item.song.id))"
-          >
-            <span class="history-cover">
+          <div class="history-song">
+            <button
+              type="button"
+              class="history-cover"
+              :data-testid="`history-play-${item.song.id}`"
+              :disabled="!item.song.audio_url"
+              :aria-label="`播放 ${item.song.title}`"
+              @click="playHistorySong(String(item.song.id))"
+            >
               <img
                 v-if="item.song.cover_url || item.song.album?.cover_url"
                 :src="item.song.cover_url || item.song.album?.cover_url"
@@ -126,14 +128,23 @@ onMounted(() => loadPage(1))
               <span v-if="item.song.audio_url" class="history-play-icon" aria-hidden="true">
                 <Play :size="15" fill="currentColor" />
               </span>
-            </span>
+            </button>
             <span class="history-copy">
-              <strong>{{ item.song.title }}</strong>
-              <span>{{ item.song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家' }}</span>
+              <RouterLink :to="`/music/song/${item.song.id}`">{{ item.song.title }}</RouterLink>
+              <span class="history-entity-links">
+                <template v-if="item.song.artists?.length">
+                  <template v-for="(artist, index) in item.song.artists" :key="artist.id">
+                    <span v-if="index" aria-hidden="true"> / </span>
+                    <button type="button" :data-testid="`history-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+                  </template>
+                </template>
+                <span v-else>未知艺术家</span>
+              </span>
             </span>
-          </button>
+          </div>
 
-          <span class="history-album">{{ item.song.album?.title || '未知专辑' }}</span>
+          <button v-if="item.song.album?.id" type="button" class="history-album" :data-testid="`history-album-${item.song.album.id}`" @click="openAlbum(String(item.song.album.id))">{{ item.song.album.title }}</button>
+          <span v-else class="history-album">未知专辑</span>
           <span class="history-count">播放 {{ item.play_count }} 次</span>
           <time class="history-time" :datetime="item.last_played_at">
             {{ formatPlayedAt(item.last_played_at) }}
@@ -185,16 +196,8 @@ onMounted(() => loadPage(1))
   align-items: center;
   gap: 0.85rem;
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
   color: inherit;
   text-align: left;
-  cursor: pointer;
-}
-
-.history-song:disabled {
-  cursor: default;
 }
 
 .history-cover {
@@ -206,7 +209,11 @@ onMounted(() => loadPage(1))
   background: var(--a-color-surface-muted);
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
 }
+.history-cover:disabled { cursor: default; }
 
 .history-cover img,
 .history-cover__empty {
@@ -238,7 +245,7 @@ onMounted(() => loadPage(1))
   min-width: 0;
 }
 
-.history-copy strong,
+.history-copy > a,
 .history-copy span,
 .history-album {
   overflow: hidden;
@@ -246,8 +253,11 @@ onMounted(() => loadPage(1))
   white-space: nowrap;
 }
 
-.history-copy strong {
+.history-copy > a {
+  color: inherit;
   font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .history-copy span,
@@ -255,6 +265,18 @@ onMounted(() => loadPage(1))
   color: var(--a-color-muted);
   font-size: 0.8rem;
 }
+.history-entity-links button,
+.history-album {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.history-copy > a:hover,
+.history-entity-links button:hover,
+.history-album:hover { text-decoration: underline; }
 
 .history-count,
 .history-time {

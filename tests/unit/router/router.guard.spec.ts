@@ -147,7 +147,7 @@ describe('router auth guards', () => {
     await router.push('/music/starred')
 
     expect(router.currentRoute.value.path).toBe('/login')
-    expect(router.currentRoute.value.query.redirect).toBe('/music/library')
+    expect(router.currentRoute.value.query.redirect).toBe('/music/bookmarks')
   })
 
   it.each([

@@ -25,6 +25,7 @@ export type MusicAlbumMetaDraft = {
   album: string
   releaseDate: string
   albumType?: 'single' | 'ep' | 'album'
+  description: string
 }
 
 export type MusicCoverDraft = {

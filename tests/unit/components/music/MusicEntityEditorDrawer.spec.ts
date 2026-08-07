@@ -48,7 +48,8 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 vi.mock('@/components/music', () => ({
   AlbumEditorShell: {
     name: 'AlbumEditorShell',
-    emits: ['update:cover'],
+    props: ['meta'],
+    emits: ['update:cover', 'update:meta'],
     template: '<div data-testid="album-editor-shell-stub" />',
   },
   MusicArtistForm: { name: 'MusicArtistForm', emits: ['submit'], template: '<div data-testid="music-artist-form-stub" />' },
@@ -190,6 +191,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
       entry_status: 'open',
       artists: [{ id: artistId, name: 'Test Artist' }],
       release_date: '2007-11-10T00:00:00Z',
+      description: '原专辑简介',
       songs: [],
     })
     drawerState.value.musicEditor = { entity: 'album', mode: 'edit', id: 'album-1' }
@@ -197,7 +199,13 @@ describe('MusicEntityEditorDrawer.vue', () => {
     const wrapper = mountDrawer()
 
     await flushPromises()
-    wrapper.getComponent({ name: 'AlbumEditorShell' }).vm.$emit('update:cover', {
+    const albumEditor = wrapper.getComponent({ name: 'AlbumEditorShell' })
+    expect(albumEditor.props('meta')).toEqual(expect.objectContaining({ description: '原专辑简介' }))
+    albumEditor.vm.$emit('update:meta', {
+      ...albumEditor.props('meta'),
+      description: '更新后的专辑简介',
+    })
+    albumEditor.vm.$emit('update:cover', {
       file,
       previewUrl: 'data:image/webp;base64,Y292ZXI=',
       asset: null,
@@ -216,6 +224,7 @@ describe('MusicEntityEditorDrawer.vue', () => {
 			roles: [{ role: 'primary' }],
 		}],
       release_date: '2007-11-10',
+      description: '更新后的专辑简介',
       cover: expect.objectContaining({ url: 'https://assets.example.test/covers/new.webp' }),
     }))
   })

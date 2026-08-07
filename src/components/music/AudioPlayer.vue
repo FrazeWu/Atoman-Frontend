@@ -39,11 +39,25 @@
           :class="{ 'player-meta--collapsed': isMetaCollapsed }"
         >
           <div class="player-tooltip-wrap">
-            <h3 class="player-title">{{ player.currentSong.title }}</h3>
+            <RouterLink v-if="!isPodcast" class="player-title" :to="`/music/song/${player.currentSong.id}`">{{ player.currentSong.title }}</RouterLink>
+            <h3 v-else class="player-title">{{ player.currentSong.title }}</h3>
             <div class="player-tooltip">{{ player.currentSong.title }}</div>
           </div>
           <div class="player-tooltip-wrap">
-            <p class="player-artist">TRACK // {{ artistText }}</p>
+            <p class="player-artist">
+              TRACK //
+              <template v-if="!isPodcast && player.currentSong.artists?.length">
+                <template v-for="(artist, index) in player.currentSong.artists" :key="artist.id">
+                  <span v-if="index" aria-hidden="true"> / </span>
+                  <button type="button" @click="openArtist(String(artist.id))">{{ artist.name }}</button>
+                </template>
+              </template>
+              <span v-else>{{ artistText }}</span>
+              <template v-if="!isPodcast && player.currentSong.album_id">
+                <span aria-hidden="true"> · </span>
+                <button type="button" @click="openAlbum(String(player.currentSong.album_id))">{{ player.currentSong.album }}</button>
+              </template>
+            </p>
             <div class="player-tooltip player-tooltip--subtle">
               TRACK // {{ artistText }}
             </div>
@@ -188,6 +202,7 @@
                   )
               "
               class="vol-slider"
+              aria-label="音量"
             />
           </div>
           <div class="vol-trigger">
@@ -308,6 +323,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from "@/composables/useApi";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
+import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import {
   Repeat,
   Shuffle,
@@ -332,6 +348,7 @@ import { reportError } from "@/utils/logger";
 
 const player = usePlayerStore();
 const route = useRoute();
+const { openAlbum, openArtist } = useMusicDrawers();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
 const api = useApi();
@@ -710,6 +727,7 @@ watch(
   min-width: 0;
 }
 .player-title {
+  display: block;
   font-family: var(--a-font-sans);
   font-weight: 500;
   font-size: 13px;
@@ -718,6 +736,8 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+  color: inherit;
+  text-decoration: none;
 }
 .player-artist {
   font-family: monospace;
@@ -730,6 +750,22 @@ watch(
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.player-title:hover,
+.player-artist button:hover {
+  text-decoration: underline;
+}
+
+.player-artist button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
 }
 .player-tooltip {
   position: absolute;
@@ -1034,22 +1070,12 @@ watch(
 
 .vol-slider {
   height: 80px;
-  width: 2px;
-  appearance: none;
-  background: var(--a-color-border-soft);
-  cursor: pointer;
-  writing-mode: bt-lr; /* IE/Edge */
-  -webkit-appearance: slider-vertical; /* Webkit */
-}
-.vol-slider::-webkit-slider-runnable-track {
+  width: 20px;
   background: transparent;
-}
-.vol-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 10px;
-  height: 10px;
-  background: var(--a-color-muted);
-  border-radius: 50%;
+  cursor: pointer;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  accent-color: var(--a-color-muted);
 }
 
 .queue-trigger {

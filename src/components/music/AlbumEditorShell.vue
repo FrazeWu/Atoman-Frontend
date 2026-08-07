@@ -11,10 +11,12 @@
         :album="meta.album"
         :release-date="meta.releaseDate"
         :album-type="meta.albumType"
+		:description="meta.description"
 		@update:contributors="(value) => updateMeta('contributors', value)"
         @update:album="(value) => updateMeta('album', value)"
         @update:release-date="(value) => updateMeta('releaseDate', value)"
         @update:album-type="(value) => updateMeta('albumType', value)"
+		@update:description="(value) => updateMeta('description', value)"
       />
     </MusicSection>
 

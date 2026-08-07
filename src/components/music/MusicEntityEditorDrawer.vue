@@ -78,6 +78,7 @@ let meta = reactive<MusicAlbumMetaDraft>({
   album: '',
   releaseDate: '',
   albumType: 'album',
+  description: '',
 })
 
 const cover = ref<MusicCoverDraft>({
@@ -153,6 +154,7 @@ function resetAlbumState() {
     album: '',
     releaseDate: '',
     albumType: 'album',
+    description: '',
   })
   cover.value = {
     file: null,
@@ -252,6 +254,7 @@ function hydrateAlbumDraft(result: MusicAlbumListItem) {
     album: result.title ?? '',
     releaseDate: result.release_date?.slice(0, 10) ?? '',
     albumType: normalizeAlbumType(result.album_type),
+    description: result.description ?? '',
   })
 
   cover.value = {
@@ -317,6 +320,7 @@ async function handleAlbumEditSubmit() {
       release_date: meta.releaseDate || undefined,
       cover: coverAsset,
       album_type: meta.albumType,
+      description: meta.description.trim(),
       tracks: trackPayload,
       reason: notes.editNote.trim() || '编辑专辑与曲目',
       sources: sources.value

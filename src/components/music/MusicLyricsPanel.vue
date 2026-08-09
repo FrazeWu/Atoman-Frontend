@@ -163,6 +163,9 @@
       :content="lyrics?.content ?? ''"
       :translation="lyrics?.translation ?? ''"
       :format="lyrics?.format ?? 'plain'"
+      :lines="lyrics?.lines ?? []"
+      :version="lyrics?.version ?? 0"
+      :translation-language="lyrics?.translation_language ?? ''"
       :saving="saving || reverting"
       :current-time-seconds="currentTimeSeconds"
       @close="isLyricEditorOpen = false"
@@ -531,16 +534,18 @@ async function handleRevertVersion(version: number) {
 }
 
 async function handleSaveLyrics(payload: {
-  content: string
-  translation: string
-  format: 'plain' | 'lrc'
+  target: 'original' | 'translation' | 'timing'
+  language?: string
+  baseVersion: number
+  lines: Array<{ line_key?: string, text: string, translation: string, time_ms: number | null }>
   editSummary: string
 }) {
   if (!requireLogin() || saving.value || reverting.value) return
   const input: UpdateMusicSongLyricsInput = {
-    content: payload.content,
-    translation: payload.translation,
-    format: payload.format,
+    target: payload.target,
+    language: payload.language,
+    base_version: payload.baseVersion,
+    lines: payload.lines,
     edit_summary: payload.editSummary,
   }
 
@@ -560,6 +565,10 @@ async function attemptLyricsSave(songId: string, generation: number, input: Upda
     isLyricEditorOpen.value = false
   } catch (error) {
     if (generation !== activeLyricsSaveGeneration || props.songId !== songId) return
+    if (error instanceof ApiErrorResponseError && error.status === 409 && error.code === 'music.lyrics_version_conflict') {
+      errorMessage.value = '歌词已被其他用户更新，请重新打开编辑器'
+      return
+    }
     const annotationIds = error instanceof ApiErrorResponseError
       && error.status === 409
       && error.code === 'music.annotation_anchor_conflict'

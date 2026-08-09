@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { ArrowDownUp, Clock3, Download, FileSearch, Plus, SkipForward } from 'lucide-vue-next'
-import type { MusicLyricsFormat } from '@/api/musicV1'
+import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -29,6 +29,9 @@ const props = withDefaults(defineProps<{
   saving?: boolean
   songTitle?: string
   currentTimeSeconds?: number
+  lines?: MusicSongLyricsLine[]
+  version?: number
+  translationLanguage?: string
 }>(), {
   content: '',
   translation: '',
@@ -36,28 +39,35 @@ const props = withDefaults(defineProps<{
   saving: false,
   songTitle: '',
   currentTimeSeconds: 0,
+  lines: () => [],
+  version: 0,
+  translationLanguage: '',
 })
 
 const emit = defineEmits<{
   close: []
   seek: [timeSeconds: number]
   save: [payload: {
-    content: string
-    translation: string
-    format: MusicLyricsFormat
+    target: MusicLyricsEditTarget
+    language?: string
+    baseVersion: number
+    lines: Array<{ line_key?: string, text: string, translation: string, time_ms: number | null }>
     editSummary: string
   }]
 }>()
 
-const formatOptions = [
-  { label: '纯文本', value: 'plain', testid: 'mode-plain' },
-  { label: 'LRC', value: 'lrc', testid: 'mode-lrc' },
-] satisfies Array<{ label: string, value: MusicLyricsFormat, testid: string }>
+const targetOptions = [
+  { label: '原文', value: 'original' },
+  { label: '翻译', value: 'translation' },
+  { label: '时间轴', value: 'timing' },
+] satisfies Array<{ label: string, value: MusicLyricsEditTarget }>
 
 const rows = ref<MusicLyricDraftRow[]>([])
 const selectedRowId = ref('')
 const draftFormat = ref<MusicLyricsFormat>('plain')
 const draftEditSummary = ref('')
+const editTarget = ref<MusicLyricsEditTarget>('original')
+const draftLanguage = ref('')
 const originalImportFile = ref<File | null>(null)
 const translationImportFile = ref<File | null>(null)
 const importPreview = ref<MusicLyricDraftParseResult | null>(null)
@@ -68,7 +78,8 @@ const translationInput = ref<HTMLInputElement | null>(null)
 const rowEditorRoot = ref<HTMLElement | null>(null)
 let importGeneration = 0
 
-const validationIssues = computed(() => validateMusicLyricDraft(rows.value, draftFormat.value))
+const effectiveFormat = computed<MusicLyricsFormat>(() => editTarget.value === 'timing' ? 'lrc' : draftFormat.value)
+const validationIssues = computed(() => validateMusicLyricDraft(rows.value, effectiveFormat.value))
 const blockingIssues = computed(() => validationIssues.value.filter(issue => issue.severity === 'error'))
 const hasBlockingIssues = computed(() => blockingIssues.value.length > 0)
 const canSave = computed(() => (
@@ -82,8 +93,8 @@ const currentTimeMs = computed(() => Math.round(props.currentTimeSeconds * 100) 
 const hasSelectedRow = computed(() => rows.value.some(row => row.id === selectedRowId.value))
 
 watch(
-  () => [props.show, props.content, props.translation, props.format] as const,
-  ([show, content, translation, format]) => {
+  () => [props.show, props.content, props.translation, props.format, props.lines, props.translationLanguage] as const,
+  ([show, content, translation, format, lyricLines, translationLanguage]) => {
     importGeneration += 1
     if (!show) {
       selectedRowId.value = ''
@@ -93,9 +104,18 @@ watch(
     }
 
     draftFormat.value = format ?? 'plain'
-    rows.value = parseMusicLyricDraft(content ?? '', translation ?? '', draftFormat.value)
+    rows.value = lyricLines?.length
+      ? lyricLines.map(line => createMusicLyricDraftRow({
+          lineKey: line.line_key ?? line.id,
+          timeMs: line.time_ms ?? line.startTimeMs ?? null,
+          original: line.text,
+          translation: line.translation,
+        }))
+      : parseMusicLyricDraft(content ?? '', translation ?? '', draftFormat.value)
     selectedRowId.value = rows.value.find(row => row.timeMs === null)?.id ?? rows.value[0]?.id ?? ''
     draftEditSummary.value = ''
+    editTarget.value = 'original'
+    draftLanguage.value = translationLanguage || 'zh-CN'
     originalImportFile.value = null
     translationImportFile.value = null
     importPreview.value = null
@@ -108,14 +128,14 @@ watch(
 )
 
 function addRow() {
-  if (props.saving) return
+  if (props.saving || editTarget.value !== 'original') return
   const row = createMusicLyricDraftRow()
   rows.value = [...rows.value, row]
   selectedRowId.value = row.id
 }
 
 function sortRows() {
-  if (props.saving || draftFormat.value !== 'lrc') return
+  if (props.saving || editTarget.value !== 'original' || draftFormat.value !== 'lrc') return
   rows.value = sortMusicLyricDraftRows(rows.value)
 }
 
@@ -134,14 +154,14 @@ function handleRowsUpdate(nextRows: MusicLyricDraftRow[]) {
 }
 
 function writeCurrentTime() {
-  if (draftFormat.value !== 'lrc' || props.saving || !hasSelectedRow.value) return
+  if (editTarget.value !== 'timing' || props.saving || !hasSelectedRow.value) return
   rows.value = rows.value.map(row => (
     row.id === selectedRowId.value ? { ...row, timeMs: currentTimeMs.value } : row
   ))
 }
 
 async function writeCurrentTimeAndSelectNext() {
-  if (draftFormat.value !== 'lrc' || props.saving || !hasSelectedRow.value) return
+  if (editTarget.value !== 'timing' || props.saving || !hasSelectedRow.value) return
   const selectedIndex = rows.value.findIndex(row => row.id === selectedRowId.value)
   writeCurrentTime()
 
@@ -261,10 +281,16 @@ function handleSave() {
   const editSummary = draftEditSummary.value.trim()
   if (!canSave.value || !editSummary) return
 
-  const serialized = serializeMusicLyricDraft(rows.value, draftFormat.value)
   emit('save', {
-    ...serialized,
-    format: draftFormat.value,
+    target: editTarget.value,
+    language: editTarget.value === 'translation' ? draftLanguage.value.trim() : undefined,
+    baseVersion: props.version,
+    lines: rows.value.map(row => ({
+      line_key: row.lineKey,
+      text: row.original,
+      translation: row.translation,
+      time_ms: row.timeMs,
+    })),
     editSummary,
   })
 }
@@ -283,19 +309,19 @@ function handleSave() {
     <div class="music-lyric-editor-drawer__body">
       <div class="music-lyric-editor-drawer__toolbar">
         <PSegmentedControl
-          v-model="draftFormat"
-          :options="formatOptions"
+          v-model="editTarget"
+          :options="targetOptions"
           :disabled="saving"
-          aria-label="歌词格式"
+          aria-label="修改内容"
         />
 
         <div class="music-lyric-editor-drawer__toolbar-actions">
-          <PButton type="button" variant="secondary" :disabled="saving" @click="addRow">
+          <PButton v-if="editTarget === 'original'" type="button" variant="secondary" :disabled="saving" @click="addRow">
             <Plus :size="17" aria-hidden="true" />
             增加行
           </PButton>
           <PButton
-            v-if="draftFormat === 'lrc'"
+            v-if="editTarget === 'original' && draftFormat === 'lrc'"
             type="button"
             variant="secondary"
             :disabled="saving"
@@ -307,7 +333,7 @@ function handleSave() {
         </div>
       </div>
 
-      <div v-if="draftFormat === 'lrc'" class="music-lyric-editor-drawer__timing">
+      <div v-if="editTarget === 'timing'" class="music-lyric-editor-drawer__timing">
         <div class="music-lyric-editor-drawer__current-time">
           <span>当前时间</span>
           <output data-testid="lyrics-current-time" aria-label="当前播放时间">
@@ -343,7 +369,8 @@ function handleSave() {
       <div ref="rowEditorRoot" class="music-lyric-editor-drawer__row-editor">
         <MusicLyricsRowEditor
           :rows="rows"
-          :format="draftFormat"
+          :format="effectiveFormat"
+          :edit-target="editTarget"
           :issues="validationIssues"
           :disabled="saving"
           :selected-row-id="selectedRowId"
@@ -353,7 +380,7 @@ function handleSave() {
         />
       </div>
 
-      <section class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
+      <section v-if="editTarget === 'original'" class="music-lyric-editor-drawer__import" aria-label="导入 LRC">
         <div class="music-lyric-editor-drawer__file-grid">
           <label class="music-lyric-editor-drawer__file-field">
             <span>原文 LRC</span>
@@ -417,6 +444,14 @@ function handleSave() {
           {{ exportError }}
         </p>
       </section>
+
+      <PInput
+        v-if="editTarget === 'translation'"
+        v-model="draftLanguage"
+        label="翻译语言"
+        placeholder="例如 zh-CN"
+        :disabled="saving"
+      />
 
       <PInput
         v-model="draftEditSummary"

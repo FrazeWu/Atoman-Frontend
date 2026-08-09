@@ -718,6 +718,7 @@ export type ArtistEditDraft = {
 };
 
 export type MusicLyricsFormat = "plain" | "lrc";
+export type MusicLyricsEditTarget = "original" | "translation" | "timing";
 export type MusicLyricsAnnotationVote = "up" | "down";
 export type MusicLyricsViewerVote = MusicLyricsAnnotationVote | "none";
 export type MusicLyricsAnnotationStatus = "active" | "deleted" | "needs_rebind";
@@ -770,6 +771,8 @@ export type MusicSongLyricsVersion = {
   translation: string;
   format: MusicLyricsFormat;
   edit_summary: string;
+  target?: MusicLyricsEditTarget | "all" | "restore";
+  language?: string;
   created_at: string;
   created_by: string;
   updated_by?: string;
@@ -786,9 +789,15 @@ export type MusicLyricsAnnotationResolution = {
 };
 
 export type UpdateMusicSongLyricsInput = {
-  content: string;
-  translation: string;
-  format: MusicLyricsFormat;
+  target: MusicLyricsEditTarget;
+  language?: string;
+  base_version: number;
+  lines: Array<{
+    line_key?: string;
+    text: string;
+    translation: string;
+    time_ms: number | null;
+  }>;
   edit_summary: string;
   annotation_resolutions?: MusicLyricsAnnotationResolution[];
 };
@@ -823,6 +832,7 @@ export type MusicSongLyrics = {
   format: MusicLyricsFormat;
   content: string;
   translation: string;
+  translation_language?: string;
   edit_summary: string;
   updated_at: string;
   updated_by?: string;

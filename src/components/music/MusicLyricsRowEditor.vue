@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
 import { ArrowDown, ArrowUp, Play, Trash2 } from 'lucide-vue-next'
-import type { MusicLyricsFormat } from '@/api/musicV1'
+import type { MusicLyricsEditTarget, MusicLyricsFormat } from '@/api/musicV1'
 import {
   formatMusicLyricTime,
   parseMusicLyricTime,
@@ -15,10 +15,12 @@ const props = withDefaults(defineProps<{
   issues?: MusicLyricDraftIssue[]
   disabled?: boolean
   selectedRowId?: string
+  editTarget?: MusicLyricsEditTarget | 'all'
 }>(), {
   issues: () => [],
   disabled: false,
   selectedRowId: '',
+  editTarget: 'all',
 })
 
 const emit = defineEmits<{
@@ -176,7 +178,7 @@ function describedByForField(
             :aria-label="`时间，第 ${index + 1} 行`"
             :aria-invalid="isInvalidTime(row.id)"
             :aria-describedby="describedByForField(row.id, index, 'time')"
-            :disabled="disabled"
+            :disabled="disabled || (editTarget !== 'timing' && editTarget !== 'all')"
             @focus="selectRow(row.id)"
             @input="updateTime(index, $event)"
           />
@@ -186,7 +188,7 @@ function describedByForField(
             type="button"
             title="跳转"
             :aria-label="`跳转到第 ${index + 1} 行时间`"
-            :disabled="disabled || row.timeMs === null"
+            :disabled="disabled || (editTarget !== 'timing' && editTarget !== 'all') || row.timeMs === null"
             @click="seekToRow(row)"
           >
             <Play :size="18" aria-hidden="true" />
@@ -212,7 +214,7 @@ function describedByForField(
           placeholder="原文"
           :aria-label="`原文，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'original')"
-          :disabled="disabled"
+          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all')"
           @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { original: ($event.target as HTMLInputElement).value })"
         />
@@ -228,7 +230,7 @@ function describedByForField(
           placeholder="翻译"
           :aria-label="`翻译，第 ${index + 1} 行`"
           :aria-describedby="describedByForField(row.id, index, 'translation')"
-          :disabled="disabled"
+          :disabled="disabled || (editTarget !== 'translation' && editTarget !== 'all')"
           @focus="selectRow(row.id)"
           @input="emitRowUpdate(index, { translation: ($event.target as HTMLInputElement).value })"
         />
@@ -241,7 +243,7 @@ function describedByForField(
           type="button"
           title="上移"
           :aria-label="`上移第 ${index + 1} 行`"
-          :disabled="disabled || index === 0"
+          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all') || index === 0"
           @click="moveRow(index, -1)"
         >
           <ArrowUp :size="18" aria-hidden="true" />
@@ -252,7 +254,7 @@ function describedByForField(
           type="button"
           title="下移"
           :aria-label="`下移第 ${index + 1} 行`"
-          :disabled="disabled || index === rows.length - 1"
+          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all') || index === rows.length - 1"
           @click="moveRow(index, 1)"
         >
           <ArrowDown :size="18" aria-hidden="true" />
@@ -263,7 +265,7 @@ function describedByForField(
           type="button"
           title="删除"
           :aria-label="`删除第 ${index + 1} 行`"
-          :disabled="disabled"
+          :disabled="disabled || (editTarget !== 'original' && editTarget !== 'all')"
           @click="deleteRow(index)"
         >
           <Trash2 :size="18" aria-hidden="true" />

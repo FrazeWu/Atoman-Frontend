@@ -2,6 +2,7 @@ import type { MusicLyricsFormat } from '@/api/musicV1'
 
 export type MusicLyricDraftRow = {
   id: string
+  lineKey?: string
   timeMs: number | null
   original: string
   translation: string
@@ -35,6 +36,7 @@ export function createMusicLyricDraftRow(
 
   return {
     id: `music-lyric-row-${nextLocalRowId}`,
+    lineKey: partial.lineKey,
     timeMs: partial.timeMs ?? null,
     original: partial.original ?? '',
     translation: partial.translation ?? '',

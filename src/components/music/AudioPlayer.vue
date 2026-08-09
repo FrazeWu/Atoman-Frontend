@@ -182,21 +182,25 @@
 
         <div class="volume-container">
           <div class="volume-control">
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              :value="player.volume"
-              @input="
-                (e) =>
-                  player.setVolume(
-                    parseFloat((e.target as HTMLInputElement).value),
-                  )
-              "
-              class="vol-slider"
-              aria-label="音量"
-            />
+            <span class="vol-percentage">{{ Math.round(player.volume * 100) }}%</span>
+            <div class="vol-slider-wrapper">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                :value="player.volume"
+                :style="{ '--vol-percent': `${player.volume * 100}%` }"
+                @input="
+                  (e) =>
+                    player.setVolume(
+                      parseFloat((e.target as HTMLInputElement).value),
+                    )
+                "
+                class="vol-slider"
+                aria-label="音量"
+              />
+            </div>
           </div>
           <div class="vol-trigger">
             <span
@@ -946,31 +950,39 @@ watch(
 }
 .volume-control {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  width: 44px;
-  height: 112px;
+  transform: translateX(-50%) translateY(6px);
+  width: 48px;
   opacity: 0;
   visibility: hidden;
-  overflow: hidden;
+  pointer-events: none;
   transition:
-    opacity 0.25s ease,
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0.25s;
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 10px;
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  padding: 16px 0;
+  padding: 12px 0 14px 0;
   z-index: 100;
-  box-shadow: none;
-  border-radius: 4px;
+  box-shadow: var(--a-shadow-dropdown, 0 12px 30px rgba(15, 23, 42, 0.12));
+  border-radius: 12px;
 }
 :root.dark .volume-control {
   background: var(--a-color-bg);
   border-color: var(--a-color-border-dark, #334155);
+}
+.volume-control::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 16px;
 }
 .volume-control::after {
   content: "";
@@ -978,13 +990,29 @@ watch(
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
+  border: 5px solid transparent;
   border-top-color: var(--a-color-bg);
 }
-.volume-container:hover .volume-control {
+.volume-container:hover .volume-control,
+.volume-container:focus-within .volume-control {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transform: translateX(-50%) translateY(0);
+}
+.vol-percentage {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--a-font-mono, monospace);
+  color: var(--a-color-muted);
+  user-select: none;
+  line-height: 1;
+}
+.vol-slider-wrapper {
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .vol-trigger {
   display: flex;
@@ -1001,13 +1029,69 @@ watch(
 }
 
 .vol-slider {
-  height: 80px;
-  width: 20px;
-  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 96px;
+  width: 6px;
+  outline: none;
+  border-radius: 3px;
   cursor: pointer;
   writing-mode: vertical-lr;
   direction: rtl;
-  accent-color: var(--a-color-muted);
+  background: linear-gradient(
+    to top,
+    var(--a-color-primary, #2563eb) 0%,
+    var(--a-color-primary, #2563eb) var(--vol-percent, 50%),
+    var(--a-color-surface-muted, #f1f5f9) var(--vol-percent, 50%),
+    var(--a-color-surface-muted, #f1f5f9) 100%
+  );
+  transition: background 0.1s linear;
+}
+
+:root.dark .vol-slider {
+  background: linear-gradient(
+    to top,
+    var(--a-color-primary, #2563eb) 0%,
+    var(--a-color-primary, #2563eb) var(--vol-percent, 50%),
+    rgba(255, 255, 255, 0.12) var(--vol-percent, 50%),
+    rgba(255, 255, 255, 0.12) 100%
+  );
+}
+
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--a-color-bg);
+  border: 2px solid var(--a-color-primary, #2563eb);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vol-slider:hover::-webkit-slider-thumb,
+.vol-slider:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+}
+
+.vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--a-color-bg);
+  border: 2px solid var(--a-color-primary, #2563eb);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vol-slider:hover::-moz-range-thumb,
+.vol-slider:active::-moz-range-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
 }
 
 .queue-trigger {

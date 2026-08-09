@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MusicCreationArtistStep from '@/components/music/MusicCreationArtistStep.vue'
+import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { uploadMusicAsset } from '@/api/musicV1'
 

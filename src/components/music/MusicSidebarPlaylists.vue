@@ -30,17 +30,28 @@
         </div>
 
         <button
+          type="button"
+          class="music-sidebar-playlists__item"
+          :class="{ 'is-active': route.path === '/music/bookmarks' }"
+          data-testid="favorite-songs-link"
+          @click="openFavoritesRoute"
+        >
+          <span class="playlist-icon-frame playlist-icon-frame--favorite">
+            <Heart :size="15" />
+          </span>
+          <span class="music-sidebar-playlists__name">最爱</span>
+        </button>
+
+        <button
           v-for="playlist in playlists"
           :key="playlist.id"
           type="button"
           class="music-sidebar-playlists__item"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
-          :data-testid="playlist.kind === 'favorite' ? 'favorite-songs-link' : undefined"
           @click="openPlaylistRoute(String(playlist.id))"
         >
-          <span class="playlist-icon-frame" :class="{ 'playlist-icon-frame--favorite': playlist.kind === 'favorite' }">
-            <Heart v-if="playlist.kind === 'favorite'" :size="15" />
-            <ListMusic v-else :size="15" />
+          <span class="playlist-icon-frame">
+            <ListMusic :size="15" />
           </span>
           <span class="music-sidebar-playlists__name">{{ playlist.name }}</span>
         </button>
@@ -77,17 +88,25 @@
           <Plus :size="20" />
         </button>
         <button
+          type="button"
+          class="collapsed-icon-btn"
+          :class="{ 'is-active': route.path === '/music/bookmarks' }"
+          title="最爱"
+          data-testid="favorite-songs-link-collapsed"
+          @click="openFavoritesRoute"
+        >
+          <Heart :size="20" />
+        </button>
+        <button
           v-for="playlist in playlists"
           :key="playlist.id"
           type="button"
           class="collapsed-icon-btn"
           :class="{ 'is-active': String(playlist.id) === String(state.playlistId) }"
           :title="playlist.name"
-          :data-testid="playlist.kind === 'favorite' ? 'favorite-songs-link-collapsed' : undefined"
           @click="openPlaylistRoute(String(playlist.id))"
         >
-          <Heart v-if="playlist.kind === 'favorite'" :size="20" />
-          <ListMusic v-else :size="20" />
+          <ListMusic :size="20" />
         </button>
         <button
           v-for="playlist in bookmarkedPlaylists"
@@ -137,12 +156,7 @@ async function fetchPlaylists() {
   }
   try {
     const response = await listMusicPlaylists()
-    playlists.value = [...(response.data || [])].sort((left, right) => {
-      if (left.kind === right.kind) return 0
-      if (left.kind === 'favorite') return -1
-      if (right.kind === 'favorite') return 1
-      return 0
-    })
+    playlists.value = response.data || []
   } catch (error) {
     if (error instanceof ApiErrorResponseError && error.status === 401) {
       playlists.value = []
@@ -178,6 +192,10 @@ function playlistDisplayName(playlist: MusicPlaylistSummary) {
 
 function openPlaylistRoute(playlistId: string) {
   router.push(`/music/playlist/${playlistId}`)
+}
+
+function openFavoritesRoute() {
+  router.push('/music/bookmarks')
 }
 
 function startCreatePlaylist() {

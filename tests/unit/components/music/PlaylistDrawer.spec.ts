@@ -273,29 +273,6 @@ describe('PlaylistDrawer', () => {
     expect(wrapper.text()).toContain('Second Song')
   })
 
-  it('keeps favorite playlist metadata locked while allowing song management', async () => {
-    mocks.getMusicPlaylist.mockResolvedValue({
-      id: 'playlist-1',
-      user_id: 'user-1',
-      owner_username: 'alice',
-      name: '最爱',
-      kind: 'favorite',
-      description: '',
-      cover_url: '',
-      is_public: false,
-      song_count: 1,
-      songs: [
-        { id: 'song-1', title: 'Favorite Song', entry_status: 'open', audio_url: 'https://cdn.test/1.mp3' },
-      ],
-    })
-
-    const wrapper = mount(PlaylistDrawer)
-    await flushPromises()
-
-    expect(wrapper.find('[data-testid="playlist-edit-button"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="playlist-remove-song-song-1"]').exists()).toBe(true)
-  })
-
   it('opens artist and album details from a playlist track', async () => {
     mocks.getMusicPlaylist.mockResolvedValue({
       id: 'playlist-1', user_id: 'user-1', owner_username: 'alice', name: '夜航歌单',

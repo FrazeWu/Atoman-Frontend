@@ -70,11 +70,7 @@ describe('MusicSidebarPlaylists', () => {
     })
   })
 
-  it('opens the favorite system playlist as a real playlist', async () => {
-    mocks.listMusicPlaylists.mockResolvedValue({
-      data: [{ id: 'favorite-1', name: '最爱', kind: 'favorite', song_count: 3, is_public: false }],
-      meta: { page: 1, page_size: 20, total: 1, has_more: false },
-    })
+  it('keeps the favorite songs entry in the playlist section', async () => {
     const wrapper = mount(MusicSidebarPlaylists, {
       props: { collapsed: false },
     })
@@ -83,7 +79,7 @@ describe('MusicSidebarPlaylists', () => {
     expect(wrapper.get('[data-testid="favorite-songs-link"]').text()).toContain('最爱')
     await wrapper.get('[data-testid="favorite-songs-link"]').trigger('click')
 
-    expect(mocks.routerPush).toHaveBeenCalledWith('/music/playlist/favorite-1')
+    expect(mocks.routerPush).toHaveBeenCalledWith('/music/bookmarks')
   })
 
   it('does not request private playlists for guests', async () => {

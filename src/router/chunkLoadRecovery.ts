@@ -2,6 +2,11 @@ import type { Router } from 'vue-router'
 import { reportError } from '@/utils/logger'
 
 const recoveryTimeKey = 'atoman_chunk_load_recovery_time'
+const recoveryAttemptKey = 'atoman_chunk_load_recovery_attempts'
+const recoveryWindowMs = 30000
+const recoveryRetryDelayMs = 1500
+const maxRecoveryAttempts = 3
+let recoveryScheduled = false
 
 // 涵盖 Chrome、Firefox、Safari、Edge 等主流浏览器关于 Chunk/Module 丢失与 MIME 拦截的错误特征
 const chunkLoadErrorPattern = new RegExp([
@@ -75,29 +80,52 @@ function triggerRecoveryReload(targetUrl?: string) {
   try {
     const now = Date.now()
     const lastRecoveryTime = parseInt(sessionStorage.getItem(recoveryTimeKey) || '0', 10)
+    const withinRecoveryWindow = now - lastRecoveryTime < recoveryWindowMs
+    const attempts = withinRecoveryWindow
+      ? parseInt(sessionStorage.getItem(recoveryAttemptKey) || '0', 10)
+      : 0
 
-    // 10秒内只允许触发一次重新加载，防止陷入无限死循环
-    if (now - lastRecoveryTime < 10000) {
-      return
+    if (recoveryScheduled || attempts >= maxRecoveryAttempts) return
+
+    const currentPath = targetUrl || window.location.href
+    const delay = attempts > 0
+      ? Math.max(0, recoveryRetryDelayMs - (now - lastRecoveryTime))
+      : 0
+
+    const reload = () => {
+      recoveryScheduled = false
+      const reloadTime = Date.now()
+      sessionStorage.setItem(recoveryTimeKey, String(reloadTime))
+      sessionStorage.setItem(recoveryAttemptKey, String(attempts + 1))
+
+      const urlObj = new URL(currentPath, window.location.origin)
+      urlObj.searchParams.set('_cc_refresh', String(reloadTime))
+      window.location.replace(urlObj.toString())
     }
 
-    sessionStorage.setItem(recoveryTimeKey, String(now))
-    const currentPath = targetUrl || window.location.href
-
-    // 构造带时间戳的强刷 URL，彻底打穿 Firefox / Cloudflare Pages 对旧 index.html 的 HTTP/Memory 强缓存
-    const urlObj = new URL(currentPath, window.location.origin)
-    urlObj.searchParams.set('_cc_refresh', String(now))
-
-    window.location.replace(urlObj.toString())
+    recoveryScheduled = true
+    if (delay > 0) {
+      window.setTimeout(reload, delay)
+    } else {
+      reload()
+    }
   } catch (e) {
+    recoveryScheduled = false
     reportError(e, 'Failed to trigger chunk recovery reload')
     window.location.reload()
   }
 }
 
 export function installChunkLoadRecovery(router: Router) {
+  let pendingRouteUrl = ''
+
   // 初始化时清理 URL 中的 _cc_refresh 参数
   cleanupRefreshParam()
+
+  // Resource Error 可能先于 router.onError 到达，需提前保存真实导航目标。
+  router.beforeEach((to) => {
+    pendingRouteUrl = window.location.origin + to.fullPath
+  })
 
   // 1. Vue Router 路由加载错误捕获
   router.onError((error, to) => {
@@ -107,13 +135,13 @@ export function installChunkLoadRecovery(router: Router) {
     }
   })
 
-  router.afterEach(() => {
+  router.afterEach((_to, _from, failure) => {
     try {
       cleanupRefreshParam()
-      // 成功完成路由导航 15 秒后清除刷新计时锁
-      const lastTime = parseInt(sessionStorage.getItem(recoveryTimeKey) || '0', 10)
-      if (Date.now() - lastTime > 15000) {
+      if (!failure) {
+        pendingRouteUrl = ''
         sessionStorage.removeItem(recoveryTimeKey)
+        sessionStorage.removeItem(recoveryAttemptKey)
       }
     } catch {
       // Storage restriction fallback
@@ -125,7 +153,7 @@ export function installChunkLoadRecovery(router: Router) {
     if (isChunkLoadError(event.reason)) {
       event.preventDefault()
       reportError(event.reason, '全局检测到 Chunk 资源失效，正在自动刷新并加载最新页面...')
-      triggerRecoveryReload()
+      triggerRecoveryReload(pendingRouteUrl || window.location.href)
     }
   })
 
@@ -137,7 +165,7 @@ export function installChunkLoadRecovery(router: Router) {
       if (isAppChunkElement(target)) {
         const src = (target as HTMLScriptElement).src || (target as HTMLLinkElement).href
         reportError(event.error || event.message, `静态资源加载错误: ${src}`)
-        triggerRecoveryReload()
+        triggerRecoveryReload(pendingRouteUrl || window.location.href)
       }
     },
     true

@@ -13,17 +13,21 @@ describe('chunk load recovery', () => {
   const replace = vi.fn()
   const reload = vi.fn()
   const onError = vi.fn()
+  const routerBeforeEach = vi.fn()
   const routerAfterEach = vi.fn()
   const replaceState = vi.fn()
+  let addEventListener: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     sessionStorage.clear()
     replace.mockReset()
     reload.mockReset()
     onError.mockReset()
+    routerBeforeEach.mockReset()
     routerAfterEach.mockReset()
     reportError.mockReset()
     replaceState.mockReset()
+    addEventListener = vi.spyOn(window, 'addEventListener').mockImplementation(() => undefined)
 
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -46,6 +50,8 @@ describe('chunk load recovery', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
+    addEventListener.mockRestore()
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: originalLocation,
@@ -55,11 +61,14 @@ describe('chunk load recovery', () => {
   function install() {
     installChunkLoadRecovery({
       onError,
+      beforeEach: routerBeforeEach,
       afterEach: routerAfterEach,
     } as unknown as Router)
     return {
       errorHandler: onError.mock.calls[0]?.[0],
+      beforeEachHandler: routerBeforeEach.mock.calls[0]?.[0],
       afterEachHandler: routerAfterEach.mock.calls[0]?.[0],
+      resourceErrorHandler: addEventListener.mock.calls.find(([type]) => type === 'error')?.[1],
     }
   }
 
@@ -123,8 +132,34 @@ describe('chunk load recovery', () => {
     expect(replaceUrl).toContain('_cc_refresh=')
   })
 
-  it('does not repeatedly reload within cooldown window', () => {
+  it('keeps the pending route when a resource error arrives before router.onError', () => {
+    const { beforeEachHandler, resourceErrorHandler } = install()
+    beforeEachHandler({ fullPath: '/posts/notes' })
+
+    const script = document.createElement('script')
+    script.src = 'http://localhost/assets/ShortNoteTimelineView-old.js'
+    resourceErrorHandler({ target: script, error: null, message: 'Failed to load module script' })
+
+    expect(replace).toHaveBeenCalledOnce()
+    expect(replace.mock.calls[0][0]).toContain('/posts/notes?_cc_refresh=')
+  })
+
+  it('delays a second recovery attempt during a deployment transition', async () => {
+    vi.useFakeTimers()
     sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
+    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '1')
+    const { errorHandler } = install()
+
+    errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
+
+    expect(replace).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(replace).toHaveBeenCalledOnce()
+  })
+
+  it('stops after three recovery attempts', () => {
+    sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
+    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '3')
     const { errorHandler } = install()
 
     errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
@@ -132,12 +167,14 @@ describe('chunk load recovery', () => {
     expect(replace).not.toHaveBeenCalled()
   })
 
-  it('clears recovery marker after navigation when cooldown period passes', () => {
-    sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now() - 20000))
+  it('clears recovery state after a successful navigation', () => {
+    sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
+    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '2')
     const { afterEachHandler } = install()
 
     afterEachHandler({}, {}, undefined)
 
     expect(sessionStorage.getItem('atoman_chunk_load_recovery_time')).toBeNull()
+    expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBeNull()
   })
 })

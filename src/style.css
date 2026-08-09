@@ -292,11 +292,6 @@ body:has(.app-shell.has-sidebar) {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.user-settings__directory-trigger {
-  display: none;
-  align-self: start;
-}
-
 .settings-center__sidebar {
   position: sticky;
   top: 5rem;
@@ -472,10 +467,6 @@ body:has(.app-shell.has-sidebar) {
 @media (max-width: 1023px) {
   .user-settings__shell {
     grid-template-columns: 1fr;
-  }
-
-  .user-settings__directory-trigger {
-    display: inline-flex;
   }
 }
 

@@ -7,16 +7,6 @@
       rule
     />
 
-    <PButton
-      class="user-settings__directory-trigger"
-      variant="secondary"
-      size="sm"
-      @click="mobileDirectoryOpen = true"
-    >
-      <ListTree :size="16" aria-hidden="true" />
-      目录
-    </PButton>
-
     <div class="settings-center__shell user-settings__shell">
       <div class="settings-center__sections">
         <section
@@ -86,10 +76,8 @@
         v-model:collapsed="directoryCollapsed"
         :items="directoryNavItems"
         :active-id="activeSection"
-        :mobile-open="mobileDirectoryOpen"
         aria-label="设置导航"
         @select="scrollToSection"
-        @close-mobile="mobileDirectoryOpen = false"
       />
     </div>
   </main>
@@ -98,14 +86,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ListTree } from 'lucide-vue-next'
 import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/components/feed/SubscriptionRulesPanel.vue'
 import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'
 import AccountSecurityPanel from '@/components/user/AccountSecurityPanel.vue'
 import PasswordSettingsPanel from '@/components/user/PasswordSettingsPanel.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
-import PButton from '@/components/ui/PButton.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import UserBlogSettingsPanel from '@/components/user/UserBlogSettingsPanel.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -135,7 +121,6 @@ const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const activeSection = ref<UserSettingSectionKey>('general')
 const directoryCollapsed = ref(false)
-const mobileDirectoryOpen = ref(false)
 const ruleBusy = ref(false)
 const sectionMap = new Map<UserSettingSectionKey, HTMLElement>()
 let ticking = false

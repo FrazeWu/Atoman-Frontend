@@ -10,6 +10,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import {
@@ -45,6 +46,7 @@ const redirectMessage = ref('')
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
+const artistRequests = useRequestGeneration()
 const contributors = ref<MusicContributor[]>([])
 const contributorTotal = ref(0)
 
@@ -129,25 +131,31 @@ function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision
   return `${start} - ${end}`
 }
 
-async function loadArtist(artistId: string | null) {
-  if (!artistId) {
-    artist.value = null
-    albums.value = []
-    isBookmarked.value = false
-    contributors.value = []
-    contributorTotal.value = 0
-    lastLoadKey.value = null
+async function loadArtist(targetArtistId: string | null) {
+  const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
+  if (!targetArtistId) {
+    if (isCurrentLoad()) {
+      artist.value = null
+      albums.value = []
+      isBookmarked.value = false
+      contributors.value = []
+      contributorTotal.value = 0
+      lastLoadKey.value = null
+    }
     return
   }
 
   loading.value = true
+  contributors.value = []
+  contributorTotal.value = 0
   errorMessage.value = ''
   try {
     const shouldForceRefresh = state.value.artistRefreshToken > 0
     const resolved = await resolveMusicRedirect(
-      artistId,
+      targetArtistId,
       (id) => getMusicArtist(id, { force: shouldForceRefresh }),
     )
+    if (!isCurrentLoad()) return
     const artistResponse = resolved.entity
     if (resolved.redirected) {
       redirectMessage.value = '已转到合并后的条目'
@@ -155,16 +163,17 @@ async function loadArtist(artistId: string | null) {
       return
     }
     redirectMessage.value = ''
-    const albumsResponse = await listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 })
+    const albumsResponse = await listMusicAlbums({ artist_id: targetArtistId, page: 1, page_size: 100 })
+    if (!isCurrentLoad()) return
     artist.value = artistResponse
     albums.value = albumsResponse.data
     try {
-      const contributorResponse = await listArtistContributors(artistId)
-      if (artistId !== String(artistId.value)) return
+      const contributorResponse = await listArtistContributors(targetArtistId)
+      if (!isCurrentLoad()) return
       contributors.value = contributorResponse.data
       contributorTotal.value = contributorResponse.total
     } catch (error) {
-      if (artistId !== String(artistId.value)) return
+      if (!isCurrentLoad()) return
       contributors.value = []
       contributorTotal.value = 0
       reportError(error, 'Failed to load artist contributors:')
@@ -172,8 +181,10 @@ async function loadArtist(artistId: string | null) {
     if (isAuthenticated.value) {
       try {
         const bookmarksResponse = await listArtistBookmarks()
-        isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === String(artistId))
+        if (!isCurrentLoad()) return
+        isBookmarked.value = bookmarksResponse.data.some((bookmark) => String(bookmark.artist_id) === targetArtistId)
       } catch (error) {
+        if (!isCurrentLoad()) return
         if (error instanceof ApiErrorResponseError && error.status === 401) {
           isBookmarked.value = false
         } else {
@@ -184,11 +195,12 @@ async function loadArtist(artistId: string | null) {
       isBookmarked.value = false
     }
   } catch (error) {
+    if (!isCurrentLoad()) return
     reportError(error, 'Failed to fetch artist:')
     errorMessage.value = '艺术家信息加载失败'
     lastLoadKey.value = null
   } finally {
-    loading.value = false
+    if (isCurrentLoad()) loading.value = false
   }
 }
 

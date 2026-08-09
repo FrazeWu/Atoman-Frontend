@@ -95,6 +95,10 @@ function buildRevision(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function revisionPage(data: ReturnType<typeof buildRevision>[], total = data.length, offset = 0) {
+  return { data, total, limit: 50, offset }
+}
+
 function buildDiscussion(overrides: Record<string, unknown> = {}) {
   return {
     id: 'discussion-1',
@@ -161,9 +165,9 @@ describe('NestedActionDrawer.vue', () => {
     })
 	    mocks.submitArtistRevision.mockResolvedValue(buildRevision({ content_type: 'artist' }))
 	    mocks.submitAlbumRevision.mockResolvedValue(buildRevision())
-    mocks.listAlbumRevisions.mockResolvedValue([])
-    mocks.listArtistRevisions.mockResolvedValue([])
-    mocks.listSongRevisions.mockResolvedValue([])
+    mocks.listAlbumRevisions.mockResolvedValue(revisionPage([]))
+    mocks.listArtistRevisions.mockResolvedValue(revisionPage([]))
+    mocks.listSongRevisions.mockResolvedValue(revisionPage([]))
     mocks.getAlbumRevision.mockResolvedValue(buildRevision())
     mocks.getSongRevision.mockResolvedValue(buildRevision({ content_type: 'song', content_snapshot: { title: 'Song' } }))
     mocks.revertAlbumRevision.mockResolvedValue(buildRevision({ is_current: true, version_number: 1 }))
@@ -205,16 +209,16 @@ describe('NestedActionDrawer.vue', () => {
 
   it('loads read-only artist revision history', async () => {
     mocks.drawerState.value = { artistId: 'artist-1', albumId: null, nestedAction: 'artist_history', nestedPayload: null }
-    mocks.listArtistRevisions.mockResolvedValue([buildRevision({
+    mocks.listArtistRevisions.mockResolvedValue(revisionPage([buildRevision({
       content_type: 'artist',
       content_id: 'artist-1',
       edit_summary: '修改艺术家信息',
-    })])
+    })]))
 
     const wrapper = mountDrawer()
     await flushPromises()
 
-    expect(mocks.listArtistRevisions).toHaveBeenCalledWith('artist-1')
+    expect(mocks.listArtistRevisions).toHaveBeenCalledWith('artist-1', { limit: 50, offset: 0 })
     expect(wrapper.text()).toContain('修改艺术家信息')
     expect(wrapper.text()).not.toContain('恢复到此版本')
   })
@@ -270,26 +274,47 @@ describe('NestedActionDrawer.vue', () => {
 
   it('loads album revisions when opening history and shows revision metadata', async () => {
     mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'history', nestedPayload: null }
-    mocks.listAlbumRevisions.mockResolvedValue([
+    mocks.listAlbumRevisions.mockResolvedValue(revisionPage([
       buildRevision({ id: 'revision-2', version_number: 3, is_current: true }),
       buildRevision({ id: 'revision-1', version_number: 2 }),
-    ])
+    ]))
 
     const wrapper = mountDrawer()
     await flushPromises()
 
-    expect(mocks.listAlbumRevisions).toHaveBeenCalledWith('album-1')
+    expect(mocks.listAlbumRevisions).toHaveBeenCalledWith('album-1', { limit: 50, offset: 0 })
     expect(wrapper.text()).toContain('v3')
     expect(wrapper.text()).toContain('当前版本')
     expect(wrapper.text()).toContain('更新专辑信息')
     expect(wrapper.text()).toContain('Editor Name')
   })
 
+  it('loads the remaining revision history on demand', async () => {
+    mocks.drawerState.value = { artistId: null, albumId: 'album-1', nestedAction: 'history', nestedPayload: null }
+    mocks.listAlbumRevisions
+      .mockResolvedValueOnce(revisionPage([
+        buildRevision({ id: 'revision-2', version_number: 2, edit_summary: '第一页' }),
+      ], 2))
+      .mockResolvedValueOnce(revisionPage([
+        buildRevision({ id: 'revision-1', version_number: 1, edit_summary: '第二页' }),
+      ], 2, 1))
+
+    const wrapper = mountDrawer()
+    await flushPromises()
+    await wrapper.get('[data-testid="history-load-more"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.listAlbumRevisions).toHaveBeenNthCalledWith(2, 'album-1', { limit: 50, offset: 1 })
+    expect(wrapper.text()).toContain('第一页')
+    expect(wrapper.text()).toContain('第二页')
+    expect(wrapper.find('[data-testid="history-load-more"]').exists()).toBe(false)
+  })
+
   it('shows revision diff summary after viewing a revision diff', async () => {
     mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'history', nestedPayload: null }
-    mocks.listAlbumRevisions.mockResolvedValue([
+    mocks.listAlbumRevisions.mockResolvedValue(revisionPage([
       buildRevision({ id: 'revision-2', version_number: 2, previous_revision_id: 'revision-1' }),
-    ])
+    ]))
     mocks.getAlbumRevision
       .mockResolvedValueOnce(buildRevision({
         version_number: 2,
@@ -329,8 +354,8 @@ describe('NestedActionDrawer.vue', () => {
   it('reverts to a selected revision from history', async () => {
     mocks.drawerState.value = { artistId: 'artist-1', albumId: 'album-1', nestedAction: 'history', nestedPayload: null }
     mocks.listAlbumRevisions
-      .mockResolvedValueOnce([buildRevision({ id: 'revision-1', version_number: 1, previous_revision_id: null })])
-      .mockResolvedValueOnce([buildRevision({ id: 'revision-1', version_number: 1, is_current: true, previous_revision_id: null })])
+      .mockResolvedValueOnce(revisionPage([buildRevision({ id: 'revision-1', version_number: 1, previous_revision_id: null })]))
+      .mockResolvedValueOnce(revisionPage([buildRevision({ id: 'revision-1', version_number: 1, is_current: true, previous_revision_id: null })]))
 
     const wrapper = mountDrawer()
     await flushPromises()
@@ -357,11 +382,11 @@ describe('NestedActionDrawer.vue', () => {
       nestedAction: 'song_history',
       nestedPayload: { songId: 'song-1' },
     }
-    mocks.listSongRevisions.mockResolvedValue([revision])
+    mocks.listSongRevisions.mockResolvedValue(revisionPage([revision]))
     const wrapper = mountDrawer()
     await flushPromises()
 
-    expect(mocks.listSongRevisions).toHaveBeenCalledWith('song-1')
+    expect(mocks.listSongRevisions).toHaveBeenCalledWith('song-1', { limit: 50, offset: 0 })
     await wrapper.get('[data-test="history-revert-button-1"]').trigger('click')
     await flushPromises()
 

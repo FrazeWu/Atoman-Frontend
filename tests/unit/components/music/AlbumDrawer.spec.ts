@@ -24,6 +24,7 @@ const {
   getMusicAlbum,
   playAlbum,
   listAlbumBookmarks,
+  listAlbumContributors,
   createAlbumBookmark,
   deleteAlbumBookmark,
   listMusicPlaylists,
@@ -38,6 +39,7 @@ const {
   getMusicAlbum: vi.fn(),
   playAlbum: vi.fn(),
   listAlbumBookmarks: vi.fn(),
+  listAlbumContributors: vi.fn(),
   createAlbumBookmark: vi.fn(),
   deleteAlbumBookmark: vi.fn(),
   listMusicPlaylists: vi.fn(() => Promise.resolve({ data: [] })),
@@ -67,6 +69,7 @@ vi.mock('@/composables/useLoginRedirect', () => ({
 vi.mock('@/api/musicV1', () => ({
   getMusicAlbum,
   listAlbumBookmarks,
+  listAlbumContributors,
   createAlbumBookmark,
   deleteAlbumBookmark,
   listMusicPlaylists,
@@ -88,6 +91,7 @@ describe('AlbumDrawer.vue', () => {
     getMusicAlbum.mockReset()
     playAlbum.mockReset()
     listAlbumBookmarks.mockReset()
+    listAlbumContributors.mockReset()
     createAlbumBookmark.mockReset()
     deleteAlbumBookmark.mockReset()
     requireLogin.mockReset()
@@ -105,6 +109,10 @@ describe('AlbumDrawer.vue', () => {
       ],
     })
     listAlbumBookmarks.mockResolvedValue({ data: [] })
+    listAlbumContributors.mockResolvedValue({
+      data: [{ user_id: 'user-1', username: 'editor', display_name: 'Editor', avatar_url: '', revision_count: 1, last_contributed_at: '2026-08-09T10:00:00Z' }],
+      total: 1,
+    })
     createAlbumBookmark.mockResolvedValue({
       id: 'album-bookmark-1',
       album_id: '1',
@@ -118,6 +126,16 @@ describe('AlbumDrawer.vue', () => {
     })
     expect(wrapper.text()).not.toContain('Album Notes')
     expect(wrapper.text()).not.toContain('专辑详情')
+  })
+
+  it('opens album history from the contributors block', async () => {
+    const wrapper = mount(AlbumDrawer)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="music-contributors-open-history"]').trigger('click')
+
+    expect(listAlbumContributors).toHaveBeenCalledWith('1')
+    expect(openNestedAction).toHaveBeenCalledWith('history', { albumId: '1' })
   })
 
 	it('groups and displays fixed and custom album creator roles', async () => {

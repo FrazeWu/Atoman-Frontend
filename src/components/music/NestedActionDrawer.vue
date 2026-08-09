@@ -109,6 +109,9 @@ const submitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const revisionLoading = ref(false)
+const revisionLoadingMore = ref(false)
+const revisionTotal = ref(0)
+const revisionPageSize = 50
 const revisions = ref<MusicRevisionSummary[]>([])
 const selectedRevision = ref<MusicRevisionSummary | null>(null)
 const previousRevision = ref<MusicRevisionSummary | null>(null)
@@ -146,6 +149,8 @@ watch(() => [currentAction.value, albumId.value, artistId.value, songId.value] a
   sourceDraft.url = ''
   revisions.value = []
   revisionLoading.value = false
+  revisionLoadingMore.value = false
+  revisionTotal.value = 0
   selectedRevision.value = null
   previousRevision.value = null
   diffLoading.value = false
@@ -205,39 +210,71 @@ function sourcesFromDraft(): MusicSource[] {
   return [{ type: 'url', url, title: trimmed(sourceDraft.title) || undefined }]
 }
 
-async function loadAlbumHistory(albumId: string) {
-  revisionLoading.value = true
+async function loadAlbumHistory(albumId: string, append = false) {
+  if (append) revisionLoadingMore.value = true
+  else revisionLoading.value = true
   errorMessage.value = ''
   try {
-    revisions.value = (await listAlbumRevisions(albumId)).data
+    const page = await listAlbumRevisions(albumId, {
+      limit: revisionPageSize,
+      offset: append ? revisions.value.length : 0,
+    })
+    revisions.value = append ? [...revisions.value, ...page.data] : page.data
+    revisionTotal.value = page.total
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
   } finally {
-    revisionLoading.value = false
+    if (append) revisionLoadingMore.value = false
+    else revisionLoading.value = false
   }
 }
 
-async function loadArtistHistory(artistId: string) {
-  revisionLoading.value = true
+async function loadArtistHistory(artistId: string, append = false) {
+  if (append) revisionLoadingMore.value = true
+  else revisionLoading.value = true
   errorMessage.value = ''
   try {
-    revisions.value = (await listArtistRevisions(artistId)).data
+    const page = await listArtistRevisions(artistId, {
+      limit: revisionPageSize,
+      offset: append ? revisions.value.length : 0,
+    })
+    revisions.value = append ? [...revisions.value, ...page.data] : page.data
+    revisionTotal.value = page.total
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
   } finally {
-    revisionLoading.value = false
+    if (append) revisionLoadingMore.value = false
+    else revisionLoading.value = false
   }
 }
 
-async function loadSongHistory(id: string) {
-  revisionLoading.value = true
+async function loadSongHistory(id: string, append = false) {
+  if (append) revisionLoadingMore.value = true
+  else revisionLoading.value = true
   errorMessage.value = ''
   try {
-    revisions.value = (await listSongRevisions(id)).data
+    const page = await listSongRevisions(id, {
+      limit: revisionPageSize,
+      offset: append ? revisions.value.length : 0,
+    })
+    revisions.value = append ? [...revisions.value, ...page.data] : page.data
+    revisionTotal.value = page.total
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
   } finally {
-    revisionLoading.value = false
+    if (append) revisionLoadingMore.value = false
+    else revisionLoading.value = false
+  }
+}
+
+function loadMoreHistory() {
+  if (revisionLoadingMore.value || revisions.value.length >= revisionTotal.value) return
+  if (currentAction.value === 'history' && albumId.value) {
+    void loadAlbumHistory(albumId.value, true)
+  } else if (currentAction.value === 'artist_history' && artistId.value) {
+    void loadArtistHistory(artistId.value, true)
+  } else if (currentAction.value === 'song_history' && songId.value) {
+    void loadSongHistory(songId.value, true)
   }
 }
 
@@ -848,6 +885,17 @@ async function submitEdit() {
             </button>
           </div>
         </div>
+
+        <PButton
+          v-if="revisions.length < revisionTotal"
+          variant="secondary"
+          :loading="revisionLoadingMore"
+          loading-text="加载中..."
+          data-testid="history-load-more"
+          @click="loadMoreHistory"
+        >
+          加载更多
+        </PButton>
 
         <p v-if="successMessage" class="form-success">{{ successMessage }}</p>
 

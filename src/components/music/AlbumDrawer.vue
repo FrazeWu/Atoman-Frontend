@@ -319,6 +319,8 @@ async function loadAlbum(albumId: string | null) {
   }
 
   loading.value = true
+  contributors.value = []
+  contributorTotal.value = 0
   errorMessage.value = ''
   try {
     const resolved = await resolveMusicRedirect(albumId, getMusicAlbum)

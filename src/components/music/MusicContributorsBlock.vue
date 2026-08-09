@@ -92,12 +92,12 @@ function contributorName(contributor: MusicContributor) {
   min-width: 0;
   display: flex;
   align-items: center;
-  padding-left: 0.5rem;
+  padding-left: 1rem;
 }
 
 .music-contributors__avatar {
   display: inline-flex;
-  margin-left: -0.5rem;
+  margin-left: -1rem;
 }
 
 .music-contributors__avatar :deep(.p-avatar) {

@@ -7,6 +7,22 @@ const recoveryWindowMs = 30000
 const recoveryRetryDelayMs = 1500
 const maxRecoveryAttempts = 3
 let recoveryScheduled = false
+let recoveryResetTimer: number | undefined
+
+function cancelRecoveryReset() {
+  if (recoveryResetTimer === undefined) return
+  window.clearTimeout(recoveryResetTimer)
+  recoveryResetTimer = undefined
+}
+
+function scheduleRecoveryReset() {
+  cancelRecoveryReset()
+  recoveryResetTimer = window.setTimeout(() => {
+    sessionStorage.removeItem(recoveryTimeKey)
+    sessionStorage.removeItem(recoveryAttemptKey)
+    recoveryResetTimer = undefined
+  }, recoveryWindowMs)
+}
 
 // 涵盖 Chrome、Firefox、Safari、Edge 等主流浏览器关于 Chunk/Module 丢失与 MIME 拦截的错误特征
 const chunkLoadErrorPattern = new RegExp([
@@ -78,6 +94,7 @@ export function cleanupRefreshParam() {
 
 function triggerRecoveryReload(targetUrl?: string) {
   try {
+    cancelRecoveryReset()
     const now = Date.now()
     const lastRecoveryTime = parseInt(sessionStorage.getItem(recoveryTimeKey) || '0', 10)
     const withinRecoveryWindow = now - lastRecoveryTime < recoveryWindowMs
@@ -140,8 +157,7 @@ export function installChunkLoadRecovery(router: Router) {
       cleanupRefreshParam()
       if (!failure) {
         pendingRouteUrl = ''
-        sessionStorage.removeItem(recoveryTimeKey)
-        sessionStorage.removeItem(recoveryAttemptKey)
+        scheduleRecoveryReset()
       }
     } catch {
       // Storage restriction fallback

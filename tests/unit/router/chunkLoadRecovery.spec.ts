@@ -167,14 +167,32 @@ describe('chunk load recovery', () => {
     expect(replace).not.toHaveBeenCalled()
   })
 
-  it('clears recovery state after a successful navigation', () => {
+  it('only clears recovery state after the page remains stable', async () => {
+    vi.useFakeTimers()
     sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
     sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '2')
     const { afterEachHandler } = install()
 
     afterEachHandler({}, {}, undefined)
 
+    expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBe('2')
+    await vi.advanceTimersByTimeAsync(30000)
     expect(sessionStorage.getItem('atoman_chunk_load_recovery_time')).toBeNull()
     expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBeNull()
+  })
+
+  it('keeps the recovery limit when another chunk error occurs before the page is stable', async () => {
+    vi.useFakeTimers()
+    sessionStorage.setItem('atoman_chunk_load_recovery_time', String(Date.now()))
+    sessionStorage.setItem('atoman_chunk_load_recovery_attempts', '3')
+    const { afterEachHandler, errorHandler } = install()
+
+    afterEachHandler({}, {}, undefined)
+    await vi.advanceTimersByTimeAsync(10000)
+    errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
+    await vi.advanceTimersByTimeAsync(30000)
+
+    expect(replace).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBe('3')
   })
 })

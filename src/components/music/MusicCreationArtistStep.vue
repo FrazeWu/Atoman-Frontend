@@ -224,13 +224,36 @@ function setArtistKind(kind: 'person' | 'group') {
 function validateAndExpose() {
   const draft = artistDraft.value
   if (!draft) return false
+
+  stageNameErrorMessage.value = ''
+  groupErrorMessage.value = ''
+  membersErrorMessage.value = ''
+  personalErrorMessage.value = ''
+
+  if (draft.stageNames.length > 1) {
+    for (let i = 1; i < draft.stageNames.length; i++) {
+      const item = draft.stageNames[i]
+      if (item.name.trim() && (!item.startDateText.trim() || !item.endDateText.trim())) {
+        stageNameErrorMessage.value = '请为追加艺名补充持续时间'
+        return false
+      }
+    }
+  }
+
   if (draft.kind === 'group') {
     const namedMembers = draft.members.filter((member) => member.name.trim())
+    if (namedMembers.length < 2) {
+      membersErrorMessage.value = '组合至少需要 2 名成员'
+      return false
+    }
     if (namedMembers.some((member) => !member.joinDateParts?.year.trim())) {
       membersErrorMessage.value = '请为每位成员填写加入时间'
       return false
     }
   }
+
+  const { setMusicCreationStep } = useMusicDrawers()
+  setMusicCreationStep('albumImport')
   return true
 }
 

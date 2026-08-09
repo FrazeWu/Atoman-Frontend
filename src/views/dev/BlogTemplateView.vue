@@ -1,10 +1,13 @@
 <template>
-  <div class="a-page blog-template">
-    <PPageHeader title="博客范例" accent>
-      <template #action>
-        <PButton outline to="/posts">返回实际博客</PButton>
-      </template>
-    </PPageHeader>
+  <div class="a-module-layout" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
+    <AppSidebar module="blog" />
+    <main class="a-main-content">
+      <div class="a-page blog-template">
+        <PPageHeader title="博客范例" accent>
+          <template #action>
+            <PButton outline to="/posts">返回实际博客</PButton>
+          </template>
+        </PPageHeader>
 
     <!-- 分类与排序筛选栏 -->
     <div class="blog-template__filters">
@@ -152,6 +155,8 @@
         </section>
       </aside>
     </div>
+    </div>
+    </main>
   </div>
 </template>
 
@@ -163,8 +168,11 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import AppSidebar from '@/components/system/AppSidebar.vue'
+import { useSidebar } from '@/composables/useSidebar'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 
+const { sidebarCollapsed } = useSidebar()
 const blogSheets = useBlogSheets()
 
 const activeCategory = ref('all')

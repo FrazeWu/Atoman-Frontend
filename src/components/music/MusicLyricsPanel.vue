@@ -2,6 +2,10 @@
   <section class="music-lyrics-panel">
     <header class="music-lyrics-panel__header">
       <div class="music-lyrics-panel__heading">
+        <div class="genius-badge" title="Genius 幕后解密与注释">
+          <span class="genius-dot"></span>
+          <span class="genius-text">GENIUS VERIFIED ANNOTATIONS & BEHIND THE LYRICS</span>
+        </div>
         <p class="music-lyrics-panel__eyebrow">歌词</p>
         <h2>{{ songTitle }}</h2>
         <p class="music-lyrics-panel__meta">{{ artistText }}</p>
@@ -116,7 +120,7 @@
         <p v-if="loading" class="music-lyrics-panel__placeholder">加载中</p>
         <p v-else-if="!lyrics?.lines.length" class="music-lyrics-panel__placeholder">暂无歌词</p>
 
-        <div v-else ref="lyricsLinesElement" class="music-lyrics-panel__lines">
+        <div v-else ref="lyricsLinesElement" class="music-lyrics-panel__lines" @wheel="handleUserScroll" @touchmove="handleUserScroll">
           <MusicLyricsLine
             v-for="line in lyrics.lines"
             :key="line.line_key ?? line.id ?? line.text"
@@ -128,6 +132,14 @@
             @select-text="handleSelectText"
             @open-annotations="handleOpenAnnotations"
           />
+          <button
+            v-if="isUserScrolling"
+            type="button"
+            class="lyrics-sync-btn"
+            @click="resumeAutoScroll"
+          >
+            回到当前播放 🎯
+          </button>
         </div>
       </div>
 
@@ -265,10 +277,35 @@ const lyricsLinesElement = ref<HTMLElement | null>(null)
 const pendingLyricsInput = ref<UpdateMusicSongLyricsInput | null>(null)
 const conflictAnnotationIds = ref<string[]>([])
 const pendingLyricsSongId = ref('')
+const isUserScrolling = ref(false)
+let scrollLockTimer: ReturnType<typeof setTimeout> | null = null
 let pendingLyricsSaveGeneration = 0
 let activeLyricsSaveGeneration = 0
 let versionsViewGeneration = 0
 let rebindOperationGeneration = 0
+
+function handleUserScroll() {
+  isUserScrolling.value = true
+  if (scrollLockTimer) clearTimeout(scrollLockTimer)
+  scrollLockTimer = setTimeout(() => {
+    isUserScrolling.value = false
+    scrollToActiveLine()
+  }, 4000)
+}
+
+function resumeAutoScroll() {
+  if (scrollLockTimer) clearTimeout(scrollLockTimer)
+  isUserScrolling.value = false
+  scrollToActiveLine()
+}
+
+function scrollToActiveLine() {
+  if (isUserScrolling.value || !lyricsLinesElement.value || !currentLineId.value) return
+  const activeEl = lyricsLinesElement.value.querySelector('.music-lyrics-line.is-active') as HTMLElement | null
+  if (activeEl) {
+    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
 
 const displayModeOptions = [
   { label: '原文', value: 'original' },
@@ -893,5 +930,59 @@ function cancelLyricsConflict() {
     padding-top: 1rem;
     padding-left: 0;
   }
+}
+
+.genius-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 100, 0.15);
+  border: 1px solid rgba(255, 255, 100, 0.35);
+  border-radius: 4px;
+}
+:root.dark .genius-badge {
+  background: rgba(255, 255, 100, 0.1);
+  border-color: rgba(255, 255, 100, 0.3);
+}
+.genius-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffff64;
+  box-shadow: 0 0 8px #ffff64;
+}
+.genius-text {
+  font-family: var(--a-font-mono, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--a-color-text);
+}
+
+.lyrics-sync-btn {
+  position: sticky;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  font-family: var(--a-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  border: 0;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.lyrics-sync-btn:hover {
+  transform: translateX(-50%) scale(1.05);
 }
 </style>

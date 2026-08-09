@@ -200,6 +200,57 @@ export const usePlayerStore = defineStore("player", () => {
     playReported = false;
   };
 
+  let preloaderAudio: HTMLAudioElement | null = null;
+  let fadeAnimationId: number | null = null;
+
+  const fadeAudioVolume = (
+    playerEl: HTMLAudioElement,
+    targetVol: number,
+    durationMs: number = 300
+  ): Promise<void> => {
+    return new Promise((resolve) => {
+      if (fadeAnimationId !== null) {
+        cancelAnimationFrame(fadeAnimationId);
+        fadeAnimationId = null;
+      }
+      const startVol = playerEl.volume;
+      const startTime = performance.now();
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / durationMs);
+        playerEl.volume = Math.max(0, Math.min(1, startVol + (targetVol - startVol) * progress));
+
+        if (progress < 1) {
+          fadeAnimationId = requestAnimationFrame(step);
+        } else {
+          fadeAnimationId = null;
+          resolve();
+        }
+      };
+
+      fadeAnimationId = requestAnimationFrame(step);
+    });
+  };
+
+  const preloadNextSong = () => {
+    const list = getActiveList();
+    if (!list.length || !currentSong.value) return;
+    const currentIndex = list.findIndex((s) => s.id === currentSong.value?.id);
+    if (currentIndex === -1) return;
+    const nextIndex = (currentIndex + 1) % list.length;
+    const nextSong = list[nextIndex];
+    if (!nextSong || !nextSong.audio_url) return;
+
+    if (!preloaderAudio) {
+      preloaderAudio = new Audio();
+    }
+    if (preloaderAudio.src !== nextSong.audio_url) {
+      preloaderAudio.src = nextSong.audio_url;
+      preloaderAudio.preload = "auto";
+    }
+  };
+
   const ensureAudio = () => {
     if (audio) return audio;
 
@@ -213,6 +264,9 @@ export const usePlayerStore = defineStore("player", () => {
           playbackRate: nextAudio.playbackRate,
           position: currentTime.value
         });
+        if (duration.value - nextAudio.currentTime <= 8) {
+          preloadNextSong();
+        }
       }
     });
     nextAudio.addEventListener("durationchange", () => {
@@ -274,6 +328,8 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   const attemptPlay = (player: HTMLAudioElement) => {
+    const targetVol = volume.value;
+    player.volume = 0;
     player
       .play()
       .then(() => {
@@ -283,6 +339,7 @@ export const usePlayerStore = defineStore("player", () => {
         if ('mediaSession' in navigator) {
           navigator.mediaSession.playbackState = 'playing';
         }
+        void fadeAudioVolume(player, targetVol, 300);
       })
       .catch(() => {
         isPlaying.value = false;
@@ -530,12 +587,14 @@ export const usePlayerStore = defineStore("player", () => {
 
     if (isPlaying.value) {
       savePodcastProgress();
-      player.pause();
       isPlaying.value = false;
       pauseListening();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
+      void fadeAudioVolume(player, 0, 300).then(() => {
+        player.pause();
+      });
     } else {
       if (listeningSongId !== String(currentSong.value.id))
         resetListening(currentSong.value);

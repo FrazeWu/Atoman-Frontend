@@ -696,8 +696,8 @@ watch(
 }
 .cover-wrap {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   cursor: pointer;
@@ -858,7 +858,7 @@ watch(
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   width: min(600px, calc(100% - 780px));
   min-width: 280px;
 }
@@ -945,7 +945,7 @@ watch(
   color: var(--a-color-bg);
   border: 1px solid var(--a-color-text);
   border-radius: 4px;
-  padding: 6px 20px;
+  padding: 4px 16px;
   font-weight: 500;
   font-size: 11px;
   cursor: pointer;
@@ -961,7 +961,7 @@ watch(
 .progress-container {
   width: 100%;
   max-width: 600px;
-  height: 34px;
+  height: 24px;
 }
 
 /* Right Section */

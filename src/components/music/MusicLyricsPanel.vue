@@ -544,11 +544,13 @@ async function handleSaveLyrics(payload: {
   if (!requireLogin() || saving.value || reverting.value) return
   const input: UpdateMusicSongLyricsInput = {
     target: payload.target,
-    language: payload.language,
-    translation_included: payload.translationIncluded,
     base_version: payload.baseVersion,
     lines: payload.lines,
     edit_summary: payload.editSummary,
+    ...(payload.language ? { language: payload.language } : {}),
+    ...(payload.translationIncluded !== undefined
+      ? { translation_included: payload.translationIncluded }
+      : {}),
   }
 
   const songId = props.songId

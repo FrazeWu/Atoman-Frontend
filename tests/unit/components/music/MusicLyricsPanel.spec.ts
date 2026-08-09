@@ -143,7 +143,7 @@ vi.mock('@/components/music/MusicAnnotationEditor.vue', () => ({
 
 vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
   default: {
-    props: ['show', 'songTitle', 'content', 'translation', 'format', 'saving', 'currentTimeSeconds'],
+    props: ['show', 'songTitle', 'content', 'translation', 'format', 'saving', 'currentTimeSeconds', 'lines', 'version'],
     data() {
       return { draftContent: '' }
     },
@@ -166,7 +166,7 @@ vi.mock('@/components/music/MusicLyricEditorDrawer.vue', () => ({
         <input v-model="draftContent" class="drawer-content-input" />
         <span class="drawer-translation">{{ translation }}</span>
         <span class="drawer-format">{{ format }}</span>
-        <button type="button" class="drawer-save" @click="$emit('save', { content: draftContent, translation: 'New translation', format: 'plain', editSummary: '修正歌词' })">
+        <button type="button" class="drawer-save" @click="$emit('save', { target: 'original', baseVersion: version, lines: [{ line_key: lines?.[0]?.line_key, text: draftContent, translation: 'New translation', time_ms: null }], editSummary: '修正歌词' })">
           保存歌词
         </button>
         <button type="button" class="drawer-close" @click="$emit('close')">关闭抽屉</button>
@@ -474,9 +474,9 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('.drawer-save').trigger('click')
 
     expect(mocks.save).toHaveBeenCalledWith('song-1', {
-      content: '新的歌词',
-      translation: 'New translation',
-      format: 'plain',
+      target: 'original',
+      base_version: 3,
+      lines: [{ line_key: 'line-1', text: '新的歌词', translation: 'New translation', time_ms: null }],
       edit_summary: '修正歌词',
     })
   })
@@ -782,9 +782,9 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('.conflict-confirm').trigger('click')
     await flushPromises()
     expect(mocks.save).toHaveBeenLastCalledWith('song-1', {
-      content: '新的歌词',
-      translation: 'New translation',
-      format: 'plain',
+      target: 'original',
+      base_version: 3,
+      lines: [{ line_key: 'line-1', text: '新的歌词', translation: 'New translation', time_ms: null }],
       edit_summary: '修正歌词',
       annotation_resolutions: [
         { annotation_id: 'annotation-2', action: 'needs_rebind' },
@@ -803,7 +803,9 @@ describe('MusicLyricsPanel.vue', () => {
     await wrapper.get('[data-testid="lyrics-edit-trigger"]').trigger('click')
     await wrapper.get('.drawer-content-input').setValue('A 歌曲草稿')
     await wrapper.get('.drawer-save').trigger('click')
-    expect(mocks.save).toHaveBeenCalledWith('song-1', expect.objectContaining({ content: 'A 歌曲草稿' }))
+    expect(mocks.save).toHaveBeenCalledWith('song-1', expect.objectContaining({
+      lines: [expect.objectContaining({ text: 'A 歌曲草稿' })],
+    }))
 
     await wrapper.setProps({ songId: 'song-2' })
     pendingSave.reject(new ApiErrorResponseError(409, 'music.annotation_anchor_conflict', 'conflict', {

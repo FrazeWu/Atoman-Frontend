@@ -146,7 +146,7 @@ import { tags } from '@lezer/highlight'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { yCollab } from 'y-codemirror.next'
-import { useApi, useWebSocketUrl } from '@/composables/useApi'
+import { useApi, useApiWebSocketUrl } from '@/composables/useApi'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
@@ -554,7 +554,7 @@ function initCodeMirror() {
   if (props.enableCollab && props.collabRoomId) {
     ydoc = new Y.Doc()
     provider = new WebsocketProvider(
-      useWebSocketUrl('/api/v1/collab/ws'),
+      useApiWebSocketUrl('collab/ws'),
       props.collabRoomId,
       ydoc,
       { connect: true },

@@ -2,7 +2,7 @@ import { computed, onScopeDispose, ref } from 'vue'
 import { defineStore, getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
-import { useApi } from '@/composables/useApi'
+import { useWebSocketUrl } from '@/composables/useApi'
 import { normalizeDMRealtimeEvent } from '@/api/dm'
 import { registerSessionReset } from '@/stores/sessionReset'
 
@@ -11,8 +11,6 @@ export const useInboxStore = defineStore('inbox', () => {
   if (!pinia) throw new Error('收件箱状态必须在 Pinia 实例中创建')
   const authStore = useAuthStore()
   const notificationStore = useNotificationStore()
-  const api = useApi()
-
   const connected = ref(false)
   const polling = ref(false)
   const initialized = ref(false)
@@ -84,12 +82,7 @@ export const useInboxStore = defineStore('inbox', () => {
     if (!authStore.token || socket) return
     disconnecting = false
     const generation = lifecycleGeneration
-    const apiBase = api.url.replace(/\/api\/v1$/, '')
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = apiBase.startsWith('http')
-      ? apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
-      : `${protocol}//${window.location.host}`
-    const activeSocket = new WebSocket(`${host}/ws/user`)
+    const activeSocket = new WebSocket(useWebSocketUrl('/ws/user'))
     socket = activeSocket
 
     activeSocket.onopen = () => {

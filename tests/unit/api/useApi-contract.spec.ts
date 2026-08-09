@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { globSync } from 'glob'
-import { useApi, useApiUrl, useWebSocketUrl } from '../../../src/composables/useApi'
+import { useApi, useApiUrl, useApiWebSocketUrl, useWebSocketUrl } from '../../../src/composables/useApi'
 
 const projectRoot = process.cwd()
 const allowedApiFiles = new Set([
@@ -57,10 +57,12 @@ describe('API endpoint construction contract', () => {
     const env = import.meta.env as ImportMetaEnv
 
     env.VITE_API_URL = 'https://api.atoman.org/api'
-    expect(useWebSocketUrl('/api/v1/collab/ws/room-1')).toBe('wss://api.atoman.org/api/v1/collab/ws/room-1')
+    expect(useApiWebSocketUrl('collab/ws/room-1')).toBe('wss://api.atoman.org/api/v1/collab/ws/room-1')
+    expect(useWebSocketUrl('/ws/user')).toBe('wss://api.atoman.org/ws/user')
 
     env.VITE_API_URL = 'http://localhost:8080/api'
-    expect(useWebSocketUrl('/api/v1/collab/ws/room-1')).toBe('ws://localhost:8080/api/v1/collab/ws/room-1')
+    expect(useApiWebSocketUrl('collab/ws/room-1')).toBe('ws://localhost:8080/api/v1/collab/ws/room-1')
+    expect(useWebSocketUrl('/ws/user')).toBe('ws://localhost:8080/ws/user')
 
     env.VITE_API_URL = undefined as unknown as string
   })
@@ -111,7 +113,7 @@ describe('API endpoint construction contract', () => {
     expect(offenders).toEqual([])
   })
 
-  it('uses useApi for hardcoded API fetch paths outside API helpers', () => {
+  it('uses configured helpers for hardcoded API paths outside API helpers', () => {
     const offenders = globSync('src/**/*.{ts,vue}', { cwd: projectRoot })
       .filter((file) => !allowedApiFiles.has(file))
       .flatMap((file) => {
@@ -119,7 +121,7 @@ describe('API endpoint construction contract', () => {
         return source
           .split('\n')
           .map((line, index) => ({ file: relative(projectRoot, join(projectRoot, file)), line, lineNumber: index + 1 }))
-          .filter(({ line }) => /fetch\(\s*[`'"]\/api\//.test(line))
+          .filter(({ line }) => /(?:fetch|useWebSocketUrl)\(\s*[`'"]\/api\//.test(line))
           .map(({ file, lineNumber }) => `${file}:${lineNumber}`)
       })
 

@@ -28,6 +28,15 @@ export function useWebSocketUrl(path: string) {
   return path
 }
 
+export function useApiWebSocketUrl(path: string) {
+  const apiUrl = useApiUrl()
+  const apiPath = apiUrl.startsWith('http://') || apiUrl.startsWith('https://')
+    ? new URL(apiUrl).pathname
+    : apiUrl
+  const normalizedPath = path.replace(/^\/+/, '')
+  return useWebSocketUrl(`${apiPath.replace(/\/$/, '')}/${normalizedPath}`)
+}
+
 export function useApi() {
   const apiUrl = useApiUrl();
   const discussionTarget = (kind: string, resourceId: string) =>

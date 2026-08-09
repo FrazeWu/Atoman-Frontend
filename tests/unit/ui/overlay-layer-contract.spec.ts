@@ -43,7 +43,7 @@ describe('overlay layer contract', () => {
 
   it('reserves content and sheet height only for visible fixed chrome', () => {
     expect(styleSource).toContain('--a-topbar-height: 56px;')
-    expect(styleSource).toContain('--a-player-height: 84px;')
+    expect(styleSource).toContain('--a-player-height: 68px;')
     expect(styleSource).toContain('--a-player-reserved-height: 0px;')
     expect(styleSource).toContain("html[data-player-active='true'][data-player-pinned='true']")
     expect(styleSource).toContain('--a-player-reserved-height: var(--a-player-height);')

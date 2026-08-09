@@ -30,6 +30,19 @@
         </div>
 
         <button
+          type="button"
+          class="music-sidebar-playlists__item"
+          :class="{ 'is-active': route.path === '/music/bookmarks' }"
+          data-testid="favorite-songs-link"
+          @click="openFavoritesRoute"
+        >
+          <span class="playlist-icon-frame playlist-icon-frame--favorite">
+            <Heart :size="15" />
+          </span>
+          <span class="music-sidebar-playlists__name">最爱</span>
+        </button>
+
+        <button
           v-for="playlist in playlists"
           :key="playlist.id"
           type="button"
@@ -75,6 +88,16 @@
           <Plus :size="20" />
         </button>
         <button
+          type="button"
+          class="collapsed-icon-btn"
+          :class="{ 'is-active': route.path === '/music/bookmarks' }"
+          title="最爱"
+          data-testid="favorite-songs-link-collapsed"
+          @click="openFavoritesRoute"
+        >
+          <Heart :size="20" />
+        </button>
+        <button
           v-for="playlist in playlists"
           :key="playlist.id"
           type="button"
@@ -106,7 +129,7 @@ import { reportError } from '@/utils/logger'
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useRoute, useRouter } from 'vue-router'
-import { Bookmark, ListMusic, Plus } from 'lucide-vue-next'
+import { Bookmark, Heart, ListMusic, Plus } from 'lucide-vue-next'
 import { listMusicPlaylists, listPlaylistBookmarks, createMusicPlaylist, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -169,6 +192,10 @@ function playlistDisplayName(playlist: MusicPlaylistSummary) {
 
 function openPlaylistRoute(playlistId: string) {
   router.push(`/music/playlist/${playlistId}`)
+}
+
+function openFavoritesRoute() {
+  router.push('/music/bookmarks')
 }
 
 function startCreatePlaylist() {

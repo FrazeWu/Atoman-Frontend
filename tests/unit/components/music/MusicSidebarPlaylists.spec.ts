@@ -70,6 +70,18 @@ describe('MusicSidebarPlaylists', () => {
     })
   })
 
+  it('keeps the favorite songs entry in the playlist section', async () => {
+    const wrapper = mount(MusicSidebarPlaylists, {
+      props: { collapsed: false },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="favorite-songs-link"]').text()).toContain('最爱')
+    await wrapper.get('[data-testid="favorite-songs-link"]').trigger('click')
+
+    expect(mocks.routerPush).toHaveBeenCalledWith('/music/bookmarks')
+  })
+
   it('does not request private playlists for guests', async () => {
     mocks.isAuthenticated.value = false
 

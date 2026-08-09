@@ -149,21 +149,14 @@
           </button>
         </div>
         <div class="progress-container">
-          <span class="time-stamp">{{ formatTime(player.currentTime) }}</span>
-          <input
-            type="range"
-            min="0"
-            :max="player.duration || 100"
-            step="0.1"
-            :value="player.currentTime"
-            @input="handleProgressInput"
-            class="progress-slider"
-            aria-label="播放进度"
-            :style="{
-              '--progress-pct': progressPct + '%',
-            }"
+          <AudioWaveformProgress
+            :song-id="String(player.currentSong.id)"
+            :audio-url="player.currentSong.audio_url"
+            :current-time="player.currentTime"
+            :duration="player.duration"
+            :generate-waveform="!isPodcast"
+            @seek="player.seek"
           />
-          <span class="time-stamp">{{ formatTime(player.duration) }}</span>
         </div>
       </div>
 
@@ -360,6 +353,7 @@ import {
   ChevronDown,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
+import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import PDropdown from "@/components/ui/PDropdown.vue";
 import PToast from "@/components/ui/PToast.vue";
 import { useMusicFavoritePlaylist } from "@/composables/useMusicFavoritePlaylist";
@@ -433,11 +427,6 @@ const {
   togglePlayerPin,
   updateMetaCollapse,
 } = useAudioPlayerChrome(computed(() => player.isPinned), () => player.togglePinned());
-
-const progressPct = computed(() => {
-  if (!player.duration) return 0;
-  return (player.currentTime / player.duration) * 100;
-});
 
 const artistText = computed(() => {
   if (!player.currentSong) return "未知艺术家";
@@ -601,24 +590,6 @@ watch(
   },
   { immediate: true },
 );
-
-const formatTime = (s: number) => {
-  if (!s || isNaN(s)) return "0:00";
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-};
-
-const seek = (e: MouseEvent) => {
-  const bar = e.currentTarget as HTMLElement;
-  const pct = e.offsetX / bar.offsetWidth;
-  player.seek(pct * player.duration);
-};
-
-const handleProgressInput = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-  player.seek(parseFloat(target.value));
-};
 
 watch(
   () => player.currentSong?.id,
@@ -908,83 +879,7 @@ watch(
 .progress-container {
   width: 100%;
   max-width: 600px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.time-stamp {
-  font-family: monospace;
-  font-size: 9px;
-  color: var(--a-color-muted);
-  min-width: 32px;
-}
-.progress-slider {
-  flex: 1;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 20px;
-  background: transparent;
-  outline: none;
-  cursor: pointer;
-}
-.progress-slider::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(
-    to right,
-    var(--a-color-muted) 0%,
-    var(--a-color-muted) var(--progress-pct, 0%),
-    var(--a-color-border-soft) var(--progress-pct, 0%),
-    var(--a-color-border-soft) 100%
-  );
-  transition: height 0.1s ease;
-}
-.progress-slider::-moz-range-track {
-  width: 100%;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(
-    to right,
-    var(--a-color-muted) 0%,
-    var(--a-color-muted) var(--progress-pct, 0%),
-    var(--a-color-border-soft) var(--progress-pct, 0%),
-    var(--a-color-border-soft) 100%
-  );
-}
-.progress-slider:hover::-webkit-slider-runnable-track {
-  height: 4px;
-}
-.progress-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--a-color-muted);
-  margin-top: -4px;
-  opacity: 0;
-  transition:
-    opacity 0.1s ease,
-    margin-top 0.1s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-.progress-slider:hover::-webkit-slider-thumb {
-  opacity: 1;
-  margin-top: -3px;
-}
-.progress-slider::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--a-color-muted);
-  opacity: 0;
-  transition: opacity 0.1s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-.progress-slider:hover::-moz-range-thumb {
-  opacity: 1;
+  height: 34px;
 }
 
 /* Right Section */
@@ -1496,7 +1391,6 @@ watch(
   .feature-link,
   .feature-toggle,
   .volume-container,
-  .progress-container,
   .skip-btn,
   .nav-btn,
   .player-fav-btn,
@@ -1509,7 +1403,7 @@ watch(
     display: grid;
     grid-template-columns: minmax(0, 1fr) 44px 44px;
     gap: 0.75rem;
-    padding: 0 0.75rem;
+    padding: 0 0.75rem 16px;
   }
 
   .player-info,
@@ -1530,7 +1424,10 @@ watch(
   .player-meta--collapsed {
     display: block;
     min-width: 0;
+    max-width: none;
     opacity: 1;
+    pointer-events: auto;
+    transform: none;
   }
 
   .player-controls-hub {
@@ -1538,6 +1435,16 @@ watch(
     transform: none;
     width: auto;
     min-width: 0;
+  }
+
+  .progress-container {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 1px;
+    left: 0.75rem;
+    width: auto;
+    max-width: none;
+    height: 24px;
   }
 
   .ctrl-row {
@@ -1548,6 +1455,11 @@ watch(
   .queue-trigger {
     width: 44px;
     height: 44px;
+  }
+
+  .main-play-btn {
+    padding: 0;
+    white-space: nowrap;
   }
 
   .player-features {

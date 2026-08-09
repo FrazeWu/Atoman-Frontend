@@ -386,8 +386,8 @@ watch(routeParam, () => { void loadChannel() }, { immediate: true })
 .collection-list {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: .5rem;
+  align-items: stretch;
+  gap: 0.45rem;
 }
 
 .collection-count {

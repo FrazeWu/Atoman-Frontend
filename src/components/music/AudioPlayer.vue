@@ -24,7 +24,7 @@
         class="player-info"
         :class="{ 'player-info--collapsed': isMetaCollapsed }"
       >
-        <div class="cover-wrap" @click="player.toggleLyrics">
+        <div class="cover-wrap" data-hint="Genius 全屏 (Shift+F)" @click="openGeniusMode">
           <img
             v-if="player.currentSong.cover_url"
             :src="player.currentSong.cover_url"
@@ -266,6 +266,19 @@
     />
   </Transition>
 
+  <GeniusFullscreenView
+    v-if="player.currentSong"
+    :show="showGeniusFullscreen"
+    :song-id="String(player.currentSong.id)"
+    :song-title="player.currentSong.title"
+    :artist-name="artistText"
+    :album-name="player.currentSong.album"
+    :cover-url="player.currentSong.cover_url"
+    :current-time="player.currentTime"
+    @close="showGeniusFullscreen = false"
+    @seek="player.seek"
+  />
+
   <Transition name="slide-up">
     <div v-if="player.showQueue" class="queue-panel">
       <div class="queue-header">
@@ -366,6 +379,7 @@ import {
   ChevronDown,
 } from "lucide-vue-next";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
+import GeniusFullscreenView from "@/components/music/GeniusFullscreenView.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import PDropdown from "@/components/ui/PDropdown.vue";
 import PToast from "@/components/ui/PToast.vue";
@@ -400,6 +414,13 @@ const playerInfoRef = ref<HTMLElement | null>(null);
 const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
 
+const showGeniusFullscreen = ref(false);
+
+function openGeniusMode() {
+  if (!player.currentSong) return;
+  showGeniusFullscreen.value = true;
+}
+
 function handleGlobalKeydown(e: KeyboardEvent) {
   const active = document.activeElement
   if (active) {
@@ -415,7 +436,10 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
   if (!player.currentSong) return
 
-  if (e.code === 'Space' || e.key === ' ') {
+  if (e.key === 'F' && e.shiftKey) {
+    e.preventDefault()
+    showGeniusFullscreen.value = !showGeniusFullscreen.value
+  } else if (e.code === 'Space' || e.key === ' ') {
     e.preventDefault()
     player.togglePlay()
   } else if (e.altKey && e.key === 'ArrowLeft') {

@@ -59,6 +59,7 @@ export function buildAppRoutes(): RouteRecordRaw[] {
     { path: '/bookmarks', redirect: '/posts/bookmarks' },
     { path: '/dev/showcase', component: () => import('@/views/dev/InteractionShowcaseView.vue') },
     { path: '/dev/album-creation', component: () => import('@/views/dev/AlbumCreationShowcaseView.vue') },
+    { path: '/dev/blog-template', component: () => import('@/views/dev/BlogTemplateView.vue') },
     { path: '/__disabled__', component: () => import('@/views/system/ModuleUnavailableView.vue') },
     { path: '/__not_found__', component: () => import('@/views/system/NotFoundView.vue') },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/system/NotFoundView.vue') },

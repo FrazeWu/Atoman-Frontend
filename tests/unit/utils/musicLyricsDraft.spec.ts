@@ -83,6 +83,7 @@ describe('musicLyricsDraft', () => {
   it('parses trimmed timestamps with one to three minute digits and optional fractions', () => {
     expect(parseMusicLyricTime('01:02.34')).toBe(62_340)
     expect(parseMusicLyricTime('01:02.345')).toBe(62_345)
+    expect(parseMusicLyricTime('00:01.2')).toBe(1200)
     expect(parseMusicLyricTime('1:02.34')).toBe(62_340)
     expect(parseMusicLyricTime('  1:02  ')).toBe(62_000)
     expect(parseMusicLyricTime('123:02')).toBe(7_382_000)

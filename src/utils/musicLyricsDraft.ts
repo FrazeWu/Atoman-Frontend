@@ -186,7 +186,7 @@ export function serializeBilingualLrcDraft(
 }
 
 export function parseMusicLyricTime(value: string): number | null {
-  const match = /^(\d{1,3}):(\d{2})(?:\.(\d{2,3}))?$/.exec(value.trim())
+  const match = /^(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?$/.exec(value.trim())
   if (!match) return null
 
   const minutes = Number(match[1])
@@ -196,7 +196,8 @@ export function parseMusicLyricTime(value: string): number | null {
   const fraction = match[3]
   const milliseconds = fraction === undefined
     ? 0
-    : fraction.length === 2 ? Number(fraction) * 10 : Number(fraction)
+    : fraction.length === 1 ? Number(fraction) * 100
+      : fraction.length === 2 ? Number(fraction) * 10 : Number(fraction)
 
   return (minutes * 60 + seconds) * 1000 + milliseconds
 }
@@ -296,7 +297,7 @@ type ParsedLrcLine = {
 }
 
 const metadataPattern = /^\[[a-z][a-z0-9_-]*:.*\]$/i
-const timestampPattern = /\[(\d{1,3}:\d{2}(?:\.\d{2,3})?)\]/g
+const timestampPattern = /\[(\d{1,3}:\d{2}(?:\.\d{1,3})?)\]/g
 
 function parseLrcDraftLines(
   value: string,
@@ -313,7 +314,7 @@ function parseLrcDraftLines(
     const line = index === 0 ? rawLine.replace(/^\uFEFF/, '') : rawLine
     if (line.trim() === '' || metadataPattern.test(line.trim())) return
 
-    const tagPrefix = /^((?:\[\d{1,3}:\d{2}(?:\.\d{2,3})?\])+)(.*)$/.exec(line)
+    const tagPrefix = /^((?:\[\d{1,3}:\d{2}(?:\.\d{1,3})?\])+)(.*)$/.exec(line)
     if (!tagPrefix) {
       issues.push({
         severity: 'error',

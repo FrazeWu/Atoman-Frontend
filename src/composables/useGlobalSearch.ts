@@ -46,6 +46,7 @@ const globalTargetTypes: readonly ReferenceTargetType[] = [
   'video',
   'person',
   'event',
+  'channel',
 ]
 
 const sectionOrder: readonly GlobalSearchSectionType[] = [

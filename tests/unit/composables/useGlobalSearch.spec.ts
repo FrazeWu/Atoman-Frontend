@@ -33,7 +33,12 @@ describe('useGlobalSearch', () => {
     const search = useGlobalSearch()
     await search.search('atom')
 
-    expect(referenceApi.search).toHaveBeenCalledWith(expect.any(Array), 'atom', 2, expect.any(AbortSignal))
+    const [targetTypes] = vi.mocked(referenceApi.search).mock.calls[0] ?? []
+    expect(targetTypes).toEqual(expect.arrayContaining([
+      'user', 'channel', 'collection', 'post', 'article', 'feed', 'song',
+    ]))
+    expect(targetTypes).not.toContain('comment')
+    expect(referenceApi.search).toHaveBeenCalledWith(targetTypes, 'atom', 2, expect.any(AbortSignal))
     expect(search.sections.value.map((section) => section.type)).toEqual(['user', 'blog', 'forum', 'music'])
     expect(search.sections.value[0]?.items[0]).toMatchObject({ title: 'Alice', href: '/users/alice', meta: '用户' })
     expect(search.sections.value[1]?.items[0]).toMatchObject({ title: 'Blog Post', href: '/posts/post/post-1', meta: '文章' })

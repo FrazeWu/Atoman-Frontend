@@ -12,11 +12,11 @@
 
         <div class="album-meta-card__row-two-col">
           <div class="album-meta-card__field album-meta-card__field--inline">
-            <PMaskedDateInput v-model="releaseDatePartsModel" label="发行日期" />
+            <PMaskedDateInput v-model="releaseDatePartsModel" label="日期" />
           </div>
 
           <div class="album-meta-card__field album-meta-card__field--inline">
-            <PSelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
+            <PSelect v-model="albumTypeModel" label="类型" :options="albumTypeOptions" placeholder="未指定" />
             <PInput v-if="albumTypeModel === 'custom'" v-model="customAlbumTypeModel" label="自定义类型" placeholder="输入专辑类型" />
           </div>
         </div>
@@ -98,7 +98,7 @@ const descriptionModel = computed({
 
 <style scoped>
 .album-meta-card {
-  padding: 1rem;
+  padding: 0;
 }
 
 .album-meta-card__layout {
@@ -111,11 +111,13 @@ const descriptionModel = computed({
 .album-meta-card__fields {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
   min-width: 0;
-  padding: 1rem;
+  padding: 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .album-meta-card__field {
@@ -163,9 +165,11 @@ const descriptionModel = computed({
 .album-meta-card__description {
   display: flex;
   min-height: 100%;
-  padding: 1rem;
+  padding: 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .album-meta-card__description :deep(.p-field) {
@@ -187,7 +191,7 @@ const descriptionModel = computed({
   resize: vertical;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .album-meta-card__layout,
   .album-meta-card__row-two-col {
     grid-template-columns: 1fr;

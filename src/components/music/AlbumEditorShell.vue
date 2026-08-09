@@ -103,8 +103,9 @@ function updateCover(value: MusicCoverDraft) {
 
 .album-editor-shell__meta-cover-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 15rem;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 1.5rem;
+  align-items: start;
 }
 
 .album-editor-shell__notes-grid {
@@ -113,7 +114,7 @@ function updateCover(value: MusicCoverDraft) {
   gap: 1rem;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
 
   .album-editor-shell__meta-cover-grid,
   .album-editor-shell__notes-grid {

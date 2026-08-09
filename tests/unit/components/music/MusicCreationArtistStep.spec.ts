@@ -58,7 +58,7 @@ describe('MusicCreationArtistStep.vue', () => {
   let wrappers: Array<{ unmount: () => void }> = []
 
   function mountArtistStep() {
-    const wrapper = mount(MusicCreationArtistStep, {
+    const wrapper = mount(MusicCreationFlowDrawer, {
       global: {
         stubs: {
           PCountryRegionField: countryRegionFieldStub,

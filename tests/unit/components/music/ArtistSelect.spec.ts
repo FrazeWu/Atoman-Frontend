@@ -9,17 +9,17 @@ vi.mock('@/api/musicV1', () => ({
   })),
 }))
 
-const openMusicEditor = vi.fn()
+const openMusicCreationFlow = vi.fn()
 
 vi.mock('@/composables/useMusicDrawers', () => ({
   useMusicDrawers: () => ({
-    openMusicEditor,
+    openMusicCreationFlow,
   }),
 }))
 
 describe('ArtistSelect', () => {
   it('opens unified artist creation editor with the typed seed name', async () => {
-    openMusicEditor.mockReset()
+    openMusicCreationFlow.mockReset()
     const wrapper = mount(ArtistSelect, {
       props: {
         modelValue: [],
@@ -35,10 +35,9 @@ describe('ArtistSelect', () => {
     await wrapper.get('input').trigger('focus')
     await wrapper.get('.add-artist-link').trigger('mousedown')
 
-    expect(openMusicEditor).toHaveBeenCalledWith({
-      entity: 'artist',
-      mode: 'create',
-      seed: { name: 'Sigur Rós & Jónsi' },
+    expect(openMusicCreationFlow).toHaveBeenCalledWith({
+      startStep: 'artist',
+      artistName: 'Sigur Rós & Jónsi',
     })
   })
 })

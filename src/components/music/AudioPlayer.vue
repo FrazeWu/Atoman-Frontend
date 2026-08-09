@@ -68,13 +68,17 @@
       <!-- Center: Controls -->
       <div ref="playerControlsRef" class="player-controls-hub">
         <div class="ctrl-row">
-          <span class="skip-btn" @click="player.skip(-5)">-5S</span>
-          <span class="nav-btn" @click="player.playPrevious()">上一首</span>
-          <button class="main-play-btn" @click="player.togglePlay()">
+          <span class="skip-btn" data-hint="后退 5S (←)" @click="player.skip(-5)">-5S</span>
+          <span class="nav-btn" data-hint="上一首 (Alt+←)" @click="player.playPrevious()">上一首</span>
+          <button
+            class="main-play-btn"
+            :data-hint="player.isPlaying ? '暂停 (Space)' : '播放 (Space)'"
+            @click="player.togglePlay()"
+          >
             {{ player.isPlaying ? "暂停" : "播放" }}
           </button>
-          <span class="nav-btn" @click="player.playNext()">下一首</span>
-          <span class="skip-btn" @click="player.skip(5)">+5S</span>
+          <span class="nav-btn" data-hint="下一首 (Alt+→)" @click="player.playNext()">下一首</span>
+          <span class="skip-btn" data-hint="前进 5S (→)" @click="player.skip(5)">+5S</span>
 
           <button
             v-if="player.currentSong && !isPodcast"
@@ -83,7 +87,7 @@
             :class="{
               'is-active': favoriteSongIds.has(String(player.currentSong.id)),
             }"
-            title="收藏"
+            data-hint="收藏"
             @click="toggleTrackFavorite(String(player.currentSong.id))"
           >
             <Heart
@@ -102,7 +106,7 @@
             position="right"
           >
             <template #trigger>
-              <button class="player-add-btn" type="button" title="添加到歌单" @click="guardPlaylistMenu">
+              <button class="player-add-btn" type="button" data-hint="添加到歌单" @click="guardPlaylistMenu">
                 <Plus :size="16" />
               </button>
             </template>
@@ -132,7 +136,7 @@
             v-if="isPodcastEpisode"
             type="button"
             class="player-fav-btn"
-            title="收藏单集"
+            data-hint="收藏单集"
             @click="addPodcastBookmark"
           >
             <Heart :size="16" />
@@ -142,7 +146,7 @@
             v-if="isPodcastEpisode"
             type="button"
             class="player-add-btn"
-            title="稍后听"
+            data-hint="稍后听"
             @click="addPodcastListenLater"
           >
             <Clock :size="16" />
@@ -162,11 +166,11 @@
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
-        <div class="feature-link" @click="player.toggleLyrics">
+        <div class="feature-link" data-hint="歌词 (L)" @click="player.toggleLyrics">
           {{ featureLabel }}
         </div>
 
-        <div class="feature-toggle" @click="player.cyclePlaybackMode()">
+        <div class="feature-toggle" data-hint="播放模式" @click="player.cyclePlaybackMode()">
           <div
             v-if="player.playbackMode === 'single'"
             class="repeat-one-wrapper"
@@ -202,7 +206,7 @@
               />
             </div>
           </div>
-          <div class="vol-trigger">
+          <div class="vol-trigger" data-hint="静音 / 解除静音 (M)">
             <span
               class="vol-icon"
               style="display: flex; align-items: center"
@@ -220,6 +224,7 @@
           class="queue-trigger"
           :class="{ active: player.showQueue }"
           type="button"
+          data-hint="播放队列"
           @click="player.toggleQueue()"
         >
           <List :size="22" />
@@ -229,7 +234,7 @@
           class="player-pin-btn"
           type="button"
           :aria-label="player.isPinned ? '取消固定播放器' : '固定播放器'"
-          :title="player.isPinned ? '取消固定播放器' : '固定播放器'"
+          :data-hint="player.isPinned ? '取消固定' : '固定播放器'"
           @click="togglePlayerPin"
         >
           <PinOff v-if="player.isPinned" :size="20" aria-hidden="true" />
@@ -392,7 +397,6 @@ const playerMetaRef = ref<HTMLElement | null>(null);
 const playerControlsRef = ref<HTMLElement | null>(null);
 
 function handleGlobalKeydown(e: KeyboardEvent) {
-  if (e.code !== 'Space' && e.key !== ' ') return
   const active = document.activeElement
   if (active) {
     const tagName = active.tagName.toLowerCase()
@@ -406,8 +410,29 @@ function handleGlobalKeydown(e: KeyboardEvent) {
     }
   }
   if (!player.currentSong) return
-  e.preventDefault()
-  player.togglePlay()
+
+  if (e.code === 'Space' || e.key === ' ') {
+    e.preventDefault()
+    player.togglePlay()
+  } else if (e.altKey && e.key === 'ArrowLeft') {
+    e.preventDefault()
+    player.playPrevious()
+  } else if (e.altKey && e.key === 'ArrowRight') {
+    e.preventDefault()
+    player.playNext()
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    player.skip(-5)
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault()
+    player.skip(5)
+  } else if (e.key === 'm' || e.key === 'M') {
+    e.preventDefault()
+    player.setVolume(player.volume > 0 ? 0 : 0.5)
+  } else if (e.key === 'l' || e.key === 'L') {
+    e.preventDefault()
+    player.toggleLyrics()
+  }
 }
 
 onMounted(() => {
@@ -720,7 +745,7 @@ watch(
   flex-direction: column;
   gap: 4px;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
   transition:
     max-width 0.22s ease,
     opacity 0.18s ease,
@@ -792,8 +817,7 @@ watch(
   font-weight: 800;
   line-height: 1.4;
   letter-spacing: 0.04em;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -801,9 +825,11 @@ watch(
   transition:
     opacity 0.18s ease,
     transform 0.18s ease,
-    visibility 0s linear 0.18s;
-  transition-delay: 0s, 0s, 0s;
-  z-index: 20;
+    visibility 0.18s ease;
+  transition-delay: 0s;
+  z-index: 1000;
+  box-shadow: var(--a-shadow-dropdown, 0 12px 30px rgba(15, 23, 42, 0.12));
+  border-radius: 6px;
 }
 .player-tooltip::after {
   content: "";
@@ -817,7 +843,7 @@ watch(
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-  transition-delay: 0s, 0s, 0s;
+  transition-delay: 1.2s;
 }
 .player-tooltip--subtle {
   font-size: 0.66rem;
@@ -834,17 +860,28 @@ watch(
   align-items: center;
   gap: 10px;
   width: min(600px, calc(100% - 780px));
-  min-width: 320px;
+  min-width: 280px;
 }
 .ctrl-row {
   display: flex;
-  gap: 24px;
+  gap: clamp(8px, 1.8vw, 24px);
   align-items: center;
+  justify-content: center;
   font-family: var(--a-font-sans);
   font-weight: 950;
   font-size: 10px;
   letter-spacing: 0.15em;
   color: var(--a-color-text);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  width: 100%;
+}
+.skip-btn,
+.nav-btn,
+.main-play-btn,
+.player-fav-btn,
+.player-add-dropdown {
+  flex-shrink: 0;
 }
 .skip-btn,
 .nav-btn {
@@ -855,6 +892,47 @@ watch(
   transition:
     opacity 0.2s,
     color 0.2s;
+}
+.skip-btn:hover,
+.nav-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* 延迟 1.2 秒浮现 Tooltip 快捷键提示 */
+[data-hint] {
+  position: relative;
+}
+[data-hint]::before {
+  content: attr(data-hint);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 8px;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+  font-family: var(--a-font-mono, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.16);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+  transition-delay: 0s;
+  z-index: 999;
+}
+[data-hint]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 1.2s;
 }
 .skip-btn:hover,
 .nav-btn:hover {

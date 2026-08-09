@@ -87,6 +87,7 @@
             :class="{
               'is-active': favoriteSongIds.has(String(player.currentSong.id)),
             }"
+            title="收藏"
             data-hint="收藏"
             @click="toggleTrackFavorite(String(player.currentSong.id))"
           >
@@ -106,7 +107,7 @@
             position="right"
           >
             <template #trigger>
-              <button class="player-add-btn" type="button" data-hint="添加到歌单" @click="guardPlaylistMenu">
+              <button class="player-add-btn" type="button" title="添加到歌单" data-hint="添加到歌单" @click="guardPlaylistMenu">
                 <Plus :size="16" />
               </button>
             </template>
@@ -136,6 +137,7 @@
             v-if="isPodcastEpisode"
             type="button"
             class="player-fav-btn"
+            title="收藏单集"
             data-hint="收藏单集"
             @click="addPodcastBookmark"
           >
@@ -146,6 +148,7 @@
             v-if="isPodcastEpisode"
             type="button"
             class="player-add-btn"
+            title="稍后听"
             data-hint="稍后听"
             @click="addPodcastListenLater"
           >
@@ -234,6 +237,7 @@
           class="player-pin-btn"
           type="button"
           :aria-label="player.isPinned ? '取消固定播放器' : '固定播放器'"
+          :title="player.isPinned ? '取消固定播放器' : '固定播放器'"
           :data-hint="player.isPinned ? '取消固定' : '固定播放器'"
           @click="togglePlayerPin"
         >

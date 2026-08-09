@@ -379,6 +379,45 @@ describe('MusicLyricEditorDrawer.vue', () => {
     })
   })
 
+  it('imports a real LRC into an empty song without empty-original errors', async () => {
+    const wrapper = mountDrawer({
+      content: '',
+      translation: '',
+      format: 'plain',
+      version: 0,
+    })
+    expect(draftRows(wrapper)).toEqual([])
+    expect(wrapper.text()).not.toContain('原文不能为空')
+
+    const content = [
+      '[id: ngirwxkr]',
+      '[ar: Kanye West]',
+      '[length: 02:32]',
+      '[00:29.89]Closed on Sunday',
+      '[01:28.20]',
+      '[02:30.52]Chick-Fil-A',
+    ].join('\n')
+    await chooseFile(wrapper, '原文 LRC', fileWithText('Closed On Sunday.lrc', vi.fn().mockResolvedValue(content)))
+    await buttonByText(wrapper, '预览导入').trigger('click')
+    await vi.waitFor(() => expect(document.body.querySelector('[data-testid="lyrics-import-confirm"]')).not.toBeNull())
+    document.body.querySelector<HTMLButtonElement>('[data-testid="lyrics-import-confirm"]')?.click()
+    await wrapper.vm.$nextTick()
+
+    await wrapper.get('[data-testid="lyrics-edit-summary"]').setValue('导入歌词')
+    await wrapper.get('[data-testid="lyrics-save"]').trigger('click')
+    expect(wrapper.emitted('save')?.[0]?.[0]).toEqual({
+      target: 'import',
+      language: undefined,
+      translationIncluded: false,
+      baseVersion: 0,
+      lines: [
+        { line_key: undefined, text: 'Closed on Sunday', translation: '', time_ms: 29890 },
+        { line_key: undefined, text: 'Chick-Fil-A', translation: '', time_ms: 150520 },
+      ],
+      editSummary: '导入歌词',
+    })
+  })
+
   it('preserves matching translation and saves one atomic import without a translation file', async () => {
     const wrapper = mountDrawer({
       content: '[00:01.00]Alpha',

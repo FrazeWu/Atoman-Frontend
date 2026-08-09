@@ -55,6 +55,7 @@ export function parseMusicLyricDraft(
   format: MusicLyricsFormat,
 ): MusicLyricDraftRow[] {
   if (format === 'lrc') return parseBilingualLrcDraft(content, translation).rows
+  if (content === '' && translation === '') return []
 
   const originalLines = splitPhysicalLines(content)
   const translationLines = splitPhysicalLines(translation)

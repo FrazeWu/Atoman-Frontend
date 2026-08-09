@@ -46,15 +46,10 @@ describe('musicLyricsDraft', () => {
     expect(row.id).not.toBe('external-id')
   })
 
-  it('parses empty plain strings as one physical row', () => {
+  it('parses empty plain lyrics as an empty draft', () => {
     const rows = parseMusicLyricDraft('', '', 'plain')
 
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({
-      timeMs: null,
-      original: '',
-      translation: '',
-    })
+    expect(rows).toEqual([])
   })
 
   it('keeps a trailing empty translation line when serializing plain rows', () => {

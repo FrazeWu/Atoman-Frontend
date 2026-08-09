@@ -30,7 +30,7 @@ describe('useMusicFavoritePlaylist', () => {
     expect([...favorite.favoriteSongIds.value]).toEqual(['song-1'])
   })
 
-  it('toggles standalone bookmarks without creating a favorite playlist', async () => {
+  it('toggles favorite songs through the compatibility API', async () => {
     const favorite = useMusicFavoritePlaylist()
     favorite.favoriteSongIds.value = new Set(['song-1'])
 

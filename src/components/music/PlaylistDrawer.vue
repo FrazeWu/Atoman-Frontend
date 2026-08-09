@@ -228,7 +228,7 @@ async function deletePlaylist() {
 }
 
 async function removePlaylistSong(songId: string) {
-  if (!playlist.value || removingSongIds.value.has(songId) || !requireLogin()) return
+  if (!playlist.value || !canManagePlaylistSongs.value || removingSongIds.value.has(songId) || !requireLogin()) return
 
   removingSongIds.value = new Set([...removingSongIds.value, songId])
   errorMessage.value = ''
@@ -252,7 +252,7 @@ async function removePlaylistSong(songId: string) {
 
 async function persistSongOrder(nextSongs: MusicSongListItem[]) {
   const current = playlist.value
-  if (!current || !requireLogin() || !canEditPlaylist.value) return
+  if (!current || !requireLogin() || !canManagePlaylistSongs.value) return
 
   playlist.value = { ...current, songs: nextSongs }
   pendingSongOrders.set(current.id, nextSongs)
@@ -342,11 +342,17 @@ const firstSongCover = computed(() => {
 const displayCover = computed(() => playlist.value?.cover_url || firstSongCover.value || null)
 const editCoverPreview = computed(() => editCoverUrl.value || firstSongCover.value || '')
 const playlistOwnerName = computed(() => playlist.value?.owner_username?.trim() || 'Atoman Studio')
-const canEditPlaylist = computed(() => {
+const ownsPlaylist = computed(() => {
   if (!authStore.isAuthenticated) return false
   if (!playlist.value?.user_id) return false
   return authStore.user?.uuid === playlist.value.user_id
 })
+const canEditPlaylist = computed(() => (
+  ownsPlaylist.value
+  && playlist.value?.kind !== 'favorite'
+  && playlist.value?.kind !== 'later'
+))
+const canManagePlaylistSongs = computed(() => ownsPlaylist.value)
 const canBookmarkPlaylist = computed(() => {
   if (!playlist.value?.is_public) return false
   if (!authStore.isAuthenticated) return true
@@ -542,7 +548,7 @@ watch(playlist, syncEditForm, { immediate: true })
 
           <div class="col-status">
             <span v-if="!track.audio_url" class="badge-no-audio">无音频</span>
-            <span v-if="canEditPlaylist" class="track-order-actions">
+            <span v-if="canManagePlaylistSongs" class="track-order-actions">
               <button
                 type="button"
                 class="track-order-btn"
@@ -565,7 +571,7 @@ watch(playlist, syncEditForm, { immediate: true })
               </button>
             </span>
             <button
-              v-if="canEditPlaylist"
+              v-if="canManagePlaylistSongs"
               type="button"
               class="track-remove-btn"
               :disabled="removingSongIds.has(String(track.id))"

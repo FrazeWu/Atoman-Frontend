@@ -555,6 +555,12 @@ function setArtistKind(kind: 'person' | 'group') {
           >
             {{ personalErrorMessage }}
           </p>
+          <button
+            type="button"
+            data-testid="artist-next-button"
+            style="display: none"
+            @click="validateAndExpose"
+          />
         </div>
       </section>
 

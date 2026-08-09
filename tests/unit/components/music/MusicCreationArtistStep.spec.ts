@@ -5,9 +5,13 @@ import MusicCreationFlowDrawer from '@/components/music/MusicCreationFlowDrawer.
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { uploadMusicAsset } from '@/api/musicV1'
 
-vi.mock('@/api/musicV1', () => ({
-  uploadMusicAsset: vi.fn(),
-}))
+vi.mock('@/api/musicV1', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/musicV1')>()
+  return {
+    ...actual,
+    uploadMusicAsset: vi.fn(),
+  }
+})
 
 vi.mock('naive-ui', () => ({
   NDatePicker: {
@@ -59,7 +63,7 @@ describe('MusicCreationArtistStep.vue', () => {
   let wrappers: Array<{ unmount: () => void }> = []
 
   function mountArtistStep() {
-    const wrapper = mount(MusicCreationFlowDrawer, {
+    const wrapper = mount(MusicCreationArtistStep, {
       global: {
         stubs: {
           PCountryRegionField: countryRegionFieldStub,

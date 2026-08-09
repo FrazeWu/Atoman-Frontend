@@ -6,6 +6,7 @@ import {
   parseBilingualLrcDraft,
   parseMusicLyricDraft,
   parseMusicLyricTime,
+  reconcileImportedLrcRows,
   serializeBilingualLrcDraft,
   serializeMusicLyricDraft,
   sortMusicLyricDraftRows,
@@ -114,6 +115,36 @@ describe('musicLyricsDraft', () => {
       { timeMs: 62_000, original: 'Echo' },
       { timeMs: 3456, original: 'Echo' },
       { timeMs: 5000, original: 'End' },
+    ])
+  })
+
+  it('accepts common metadata and ignores empty original timing markers', () => {
+    const result = parseBilingualLrcDraft(
+      '\uFEFF[id: ngirwxkr]\r\n[ar: Kanye West]\r\n[length: 02:32]\r\n[00:29.89]Closed on Sunday\r\n[01:28.20]\r\n[02:30.52]Chick-Fil-A\r\n[02:31.73]',
+      '',
+    )
+
+    expect(result.issues).toEqual([])
+    expect(result.rows.map(({ timeMs, original }) => ({ timeMs, original }))).toEqual([
+      { timeMs: 29_890, original: 'Closed on Sunday' },
+      { timeMs: 150_520, original: 'Chick-Fil-A' },
+    ])
+  })
+
+  it('keeps stable keys and translations when an original-only import matches existing text', () => {
+    const current = [
+      createMusicLyricDraftRow({ lineKey: 'line-a', timeMs: 1000, original: 'Same', translation: '甲' }),
+      createMusicLyricDraftRow({ lineKey: 'line-b', timeMs: 2000, original: 'Same', translation: '乙' }),
+    ]
+    const imported = parseBilingualLrcDraft('[00:03.00]Same\n[00:04.00]Same', '').rows
+
+    expect(reconcileImportedLrcRows(imported, current, false).map((row) => ({
+      lineKey: row.lineKey,
+      timeMs: row.timeMs,
+      translation: row.translation,
+    }))).toEqual([
+      { lineKey: 'line-a', timeMs: 3000, translation: '甲' },
+      { lineKey: 'line-b', timeMs: 4000, translation: '乙' },
     ])
   })
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { ArrowDownUp, Clock3, Download, FileSearch, Plus, SkipForward } from 'lucide-vue-next'
-import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
+import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicLyricsSaveTarget, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsImportPreview from '@/components/music/MusicLyricsImportPreview.vue'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -13,6 +13,7 @@ import {
   formatMusicLyricTime,
   parseBilingualLrcDraft,
   parseMusicLyricDraft,
+  reconcileImportedLrcRows,
   serializeMusicLyricDraft,
   sortMusicLyricDraftRows,
   validateMusicLyricDraft,
@@ -48,8 +49,9 @@ const emit = defineEmits<{
   close: []
   seek: [timeSeconds: number]
   save: [payload: {
-    target: MusicLyricsEditTarget
+    target: MusicLyricsSaveTarget
     language?: string
+    translationIncluded?: boolean
     baseVersion: number
     lines: Array<{ line_key?: string, text: string, translation: string, time_ms: number | null }>
     editSummary: string
@@ -72,6 +74,8 @@ const originalImportFile = ref<File | null>(null)
 const translationImportFile = ref<File | null>(null)
 const importPreview = ref<MusicLyricDraftParseResult | null>(null)
 const importError = ref('')
+const importMode = ref(false)
+const importIncludesTranslation = ref(false)
 const exportError = ref('')
 const originalInput = ref<HTMLInputElement | null>(null)
 const translationInput = ref<HTMLInputElement | null>(null)
@@ -79,6 +83,7 @@ const rowEditorRoot = ref<HTMLElement | null>(null)
 let importGeneration = 0
 
 const effectiveFormat = computed<MusicLyricsFormat>(() => editTarget.value === 'timing' ? 'lrc' : draftFormat.value)
+const saveTarget = computed<MusicLyricsSaveTarget>(() => importMode.value ? 'import' : editTarget.value)
 const validationIssues = computed(() => validateMusicLyricDraft(rows.value, effectiveFormat.value))
 const blockingIssues = computed(() => validationIssues.value.filter(issue => issue.severity === 'error'))
 const hasBlockingIssues = computed(() => blockingIssues.value.length > 0)
@@ -119,6 +124,8 @@ watch(
     originalImportFile.value = null
     translationImportFile.value = null
     importPreview.value = null
+    importMode.value = false
+    importIncludesTranslation.value = false
     importError.value = ''
     exportError.value = ''
     if (originalInput.value) originalInput.value.value = ''
@@ -126,6 +133,10 @@ watch(
   },
   { immediate: true },
 )
+
+watch(editTarget, (target) => {
+  if (importMode.value && target === 'translation') importIncludesTranslation.value = true
+})
 
 function addRow() {
   if (props.saving || editTarget.value !== 'original') return
@@ -171,7 +182,7 @@ async function writeCurrentTimeAndSelectNext() {
   selectedRowId.value = nextRow.id
   await nextTick()
   rowEditorRoot.value
-    ?.querySelector<HTMLInputElement>(`[data-testid="lyric-original-${nextRow.id}"]`)
+    ?.querySelector<HTMLInputElement>(`[data-testid="lyric-time-${nextRow.id}"]`)
     ?.focus()
 }
 
@@ -233,6 +244,11 @@ async function previewImport() {
       rows: parsed.rows,
       issues: [
         ...locatedParseIssues,
+        ...(parsed.rows.length === 0 ? [{
+          severity: 'error' as const,
+          code: 'empty_import',
+          message: '未找到可导入的歌词',
+        }] : []),
         ...validateMusicLyricDraft(parsed.rows, 'lrc'),
       ],
     }
@@ -256,9 +272,15 @@ function confirmImport() {
     || importPreview.value.issues.some(issue => issue.severity === 'error')
   ) return
 
-  rows.value = importPreview.value.rows
+  importIncludesTranslation.value = Boolean(translationImportFile.value)
+  rows.value = reconcileImportedLrcRows(
+    importPreview.value.rows,
+    rows.value,
+    importIncludesTranslation.value,
+  )
   selectedRowId.value = rows.value[0]?.id ?? ''
   draftFormat.value = 'lrc'
+  importMode.value = true
   importPreview.value = null
 }
 
@@ -282,8 +304,11 @@ function handleSave() {
   if (!canSave.value || !editSummary) return
 
   emit('save', {
-    target: editTarget.value,
-    language: editTarget.value === 'translation' ? draftLanguage.value.trim() : undefined,
+    target: saveTarget.value,
+    language: editTarget.value === 'translation' || (importMode.value && importIncludesTranslation.value)
+      ? draftLanguage.value.trim()
+      : undefined,
+    ...(importMode.value ? { translationIncluded: importIncludesTranslation.value } : {}),
     baseVersion: props.version,
     lines: rows.value.map(row => ({
       line_key: row.lineKey,
@@ -446,7 +471,7 @@ function handleSave() {
       </section>
 
       <PInput
-        v-if="editTarget === 'translation'"
+        v-if="editTarget === 'translation' || (importMode && importIncludesTranslation)"
         v-model="draftLanguage"
         label="翻译语言"
         placeholder="例如 zh-CN"

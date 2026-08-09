@@ -534,8 +534,9 @@ async function handleRevertVersion(version: number) {
 }
 
 async function handleSaveLyrics(payload: {
-  target: 'original' | 'translation' | 'timing'
+  target: 'original' | 'translation' | 'timing' | 'import'
   language?: string
+  translationIncluded?: boolean
   baseVersion: number
   lines: Array<{ line_key?: string, text: string, translation: string, time_ms: number | null }>
   editSummary: string
@@ -544,6 +545,7 @@ async function handleSaveLyrics(payload: {
   const input: UpdateMusicSongLyricsInput = {
     target: payload.target,
     language: payload.language,
+    translation_included: payload.translationIncluded,
     base_version: payload.baseVersion,
     lines: payload.lines,
     edit_summary: payload.editSummary,

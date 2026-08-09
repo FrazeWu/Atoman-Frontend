@@ -125,6 +125,34 @@ export function parseBilingualLrcDraft(
   }
 }
 
+export function reconcileImportedLrcRows(
+  importedRows: readonly MusicLyricDraftRow[],
+  currentRows: readonly MusicLyricDraftRow[],
+  translationIncluded: boolean,
+): MusicLyricDraftRow[] {
+  const currentByText = new Map<string, MusicLyricDraftRow[]>()
+  for (const row of currentRows) {
+    const key = row.original.trim()
+    const matches = currentByText.get(key) ?? []
+    matches.push(row)
+    currentByText.set(key, matches)
+  }
+
+  const occurrences = new Map<string, number>()
+  return importedRows.map((row) => {
+    const key = row.original.trim()
+    const occurrence = occurrences.get(key) ?? 0
+    occurrences.set(key, occurrence + 1)
+    const current = currentByText.get(key)?.[occurrence]
+
+    return {
+      ...row,
+      lineKey: current?.lineKey,
+      translation: translationIncluded ? row.translation : (current?.translation ?? ''),
+    }
+  })
+}
+
 export function serializeBilingualLrcDraft(
   rows: readonly MusicLyricDraftRow[],
 ): MusicLyricDraftSerialized {
@@ -267,7 +295,7 @@ type ParsedLrcLine = {
   sourceLine: number
 }
 
-const metadataPattern = /^\[(?:ar|al|ti|by|re|ve):.*\]$/i
+const metadataPattern = /^\[[a-z][a-z0-9_-]*:.*\]$/i
 const timestampPattern = /\[(\d{1,3}:\d{2}(?:\.\d{2,3})?)\]/g
 
 function parseLrcDraftLines(
@@ -280,8 +308,9 @@ function parseLrcDraftLines(
   const lines: ParsedLrcLine[] = []
   const issues: MusicLyricDraftIssue[] = []
 
-  splitPhysicalLines(value).forEach((line, index) => {
+  splitPhysicalLines(value).forEach((rawLine, index) => {
     const sourceLine = index + 1
+    const line = index === 0 ? rawLine.replace(/^\uFEFF/, '') : rawLine
     if (line.trim() === '' || metadataPattern.test(line.trim())) return
 
     const tagPrefix = /^((?:\[\d{1,3}:\d{2}(?:\.\d{2,3})?\])+)(.*)$/.exec(line)
@@ -297,6 +326,7 @@ function parseLrcDraftLines(
     }
 
     const text = tagPrefix[2]
+    if (source === 'original' && text.trim() === '') return
     for (const match of tagPrefix[1].matchAll(timestampPattern)) {
       const timeMs = parseMusicLyricTime(match[1])
       if (timeMs === null) {

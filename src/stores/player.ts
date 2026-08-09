@@ -328,8 +328,7 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   const attemptPlay = (player: HTMLAudioElement) => {
-    const targetVol = volume.value;
-    player.volume = 0;
+    player.volume = volume.value;
     player
       .play()
       .then(() => {
@@ -339,7 +338,6 @@ export const usePlayerStore = defineStore("player", () => {
         if ('mediaSession' in navigator) {
           navigator.mediaSession.playbackState = 'playing';
         }
-        void fadeAudioVolume(player, targetVol, 300);
       })
       .catch(() => {
         isPlaying.value = false;
@@ -587,14 +585,12 @@ export const usePlayerStore = defineStore("player", () => {
 
     if (isPlaying.value) {
       savePodcastProgress();
+      player.pause();
       isPlaying.value = false;
       pauseListening();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
-      void fadeAudioVolume(player, 0, 300).then(() => {
-        player.pause();
-      });
     } else {
       if (listeningSongId !== String(currentSong.value.id))
         resetListening(currentSong.value);

@@ -1,4 +1,5 @@
 import { apiGet, apiPostJson } from './client'
+import { useApiUrl } from '@/composables/useApi'
 
 export type ReferenceResourceType =
   | 'post' | 'thread' | 'debate' | 'feed' | 'article'
@@ -32,16 +33,16 @@ export interface ResolvedReference {
   available: boolean
 }
 
-const base = '/api/v1/references'
+const base = () => `${useApiUrl()}/references`
 
 export const referenceApi = {
   search(targetTypes: ReferenceTargetType | readonly ReferenceTargetType[], query = '', limit = 10, signal?: AbortSignal) {
     const params = new URLSearchParams({ q: query, limit: String(limit) })
     const types = Array.isArray(targetTypes) ? targetTypes : [targetTypes]
     types.forEach((targetType) => params.append('type', targetType))
-    return apiGet<ReferenceTarget[]>(`${base}/search?${params.toString()}`, { signal })
+    return apiGet<ReferenceTarget[]>(`${base()}/search?${params.toString()}`, { signal })
   },
   resolve(content: string) {
-    return apiPostJson<ResolvedReference[]>(`${base}/resolve`, { content })
+    return apiPostJson<ResolvedReference[]>(`${base()}/resolve`, { content })
   },
 }

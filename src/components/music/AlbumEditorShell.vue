@@ -4,30 +4,30 @@
 
     <MusicSection>
       <template #title>
-        <h2 class="album-editor-shell__section-title">专辑信息</h2>
+        <h2 class="album-editor-shell__section-title">专辑信息与封面</h2>
       </template>
-      <MusicAlbumMetaSection
-		:contributors="meta.contributors"
-        :album="meta.album"
-        :release-date="meta.releaseDate"
-        :album-type="meta.albumType"
-		:description="meta.description"
-		@update:contributors="(value) => updateMeta('contributors', value)"
-        @update:album="(value) => updateMeta('album', value)"
-        @update:release-date="(value) => updateMeta('releaseDate', value)"
-        @update:album-type="(value) => updateMeta('albumType', value)"
-		@update:description="(value) => updateMeta('description', value)"
-      />
+      <div class="album-editor-shell__meta-cover-grid">
+        <MusicAlbumMetaSection
+		  :contributors="meta.contributors"
+          :album="meta.album"
+          :release-date="meta.releaseDate"
+          :album-type="meta.albumType"
+		  :description="meta.description"
+		  @update:contributors="(value) => updateMeta('contributors', value)"
+          @update:album="(value) => updateMeta('album', value)"
+          @update:release-date="(value) => updateMeta('releaseDate', value)"
+          @update:album-type="(value) => updateMeta('albumType', value)"
+		  @update:description="(value) => updateMeta('description', value)"
+        />
+        <MusicCoverSection :cover="cover" @update:cover="updateCover" @select:file="(file) => $emit('select:coverFile', file)" />
+      </div>
     </MusicSection>
 
     <MusicSection>
       <template #title>
-        <h2 class="album-editor-shell__section-title">封面与曲目</h2>
+        <h2 class="album-editor-shell__section-title">曲目列表</h2>
       </template>
-      <div class="album-editor-shell__media-grid">
-        <MusicCoverSection :cover="cover" @update:cover="updateCover" @select:file="(file) => $emit('select:coverFile', file)" />
-        <MusicTracksSection :tracks="tracks" @update:tracks="(value) => $emit('update:tracks', value)" />
-      </div>
+      <MusicTracksSection :tracks="tracks" @update:tracks="(value) => $emit('update:tracks', value)" />
     </MusicSection>
 
     <MusicSection>
@@ -101,7 +101,12 @@ function updateCover(value: MusicCoverDraft) {
   font-weight: 800;
 }
 
-.album-editor-shell__media-grid,
+.album-editor-shell__meta-cover-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 1rem;
+}
+
 .album-editor-shell__notes-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -109,7 +114,8 @@ function updateCover(value: MusicCoverDraft) {
 }
 
 @media (max-width: 960px) {
-  .album-editor-shell__media-grid,
+
+  .album-editor-shell__meta-cover-grid,
   .album-editor-shell__notes-grid {
     grid-template-columns: 1fr;
   }

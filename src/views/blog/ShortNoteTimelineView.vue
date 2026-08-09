@@ -24,13 +24,13 @@
             <h2>热门短话</h2>
           </div>
           <div class="short-note-timeline__rail-list">
-            <RouterLink v-for="note in hotNotes" :key="note.id" :to="`/posts/notes/${note.id}`" class="short-note-timeline__rail-note">
+            <div v-for="note in hotNotes" :key="note.id" class="short-note-timeline__rail-note" @click="openNoteSheet(note)">
               <strong class="short-note-timeline__rail-title">{{ noteTitle(note) }}</strong>
               <div class="short-note-timeline__rail-stats">
                 <span><Heart :size="12" /> {{ note.likes_count }}</span>
                 <span><MessageSquare :size="12" /> {{ note.comments_count }}</span>
               </div>
-            </RouterLink>
+            </div>
           </div>
         </section>
 
@@ -40,10 +40,10 @@
             <h2>最新动态</h2>
           </div>
           <div class="short-note-timeline__rail-list">
-            <RouterLink v-for="note in latestNotes" :key="note.id" :to="`/posts/notes/${note.id}`" class="short-note-timeline__rail-note">
+            <div v-for="note in latestNotes" :key="note.id" class="short-note-timeline__rail-note" @click="openNoteSheet(note)">
               <strong class="short-note-timeline__rail-author">{{ note.user?.display_name || note.user?.username || '匿名用户' }}</strong>
               <span class="short-note-timeline__rail-preview">{{ noteTitle(note) }}</span>
-            </RouterLink>
+            </div>
           </div>
         </section>
       </aside>
@@ -62,12 +62,14 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import ShortNoteComposer from '@/components/shortnote/ShortNoteComposer.vue'
 import { useApi } from '@/composables/useApi'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useAuthStore } from '@/stores/auth'
 import type { ShortNote } from '@/types'
 
 type ListMeta = { has_more?: boolean }
 const api = useApi()
 const authStore = useAuthStore()
+const blogSheets = useBlogSheets()
 const notes = ref<ShortNote[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -82,6 +84,13 @@ const latestNotes = computed(() => notes.value.slice(0, 4))
 
 function noteTitle(note: ShortNote) {
   return note.content.length > 42 ? `${note.content.slice(0, 42)}...` : note.content
+}
+
+function openNoteSheet(note: ShortNote) {
+  const title = note.content
+    ? (note.content.length > 20 ? `${note.content.slice(0, 20)}...` : note.content)
+    : '短话'
+  blogSheets.openShortNote(note.id, title)
 }
 
 async function load(reset = false) {
@@ -211,6 +220,7 @@ onMounted(() => void load())
   color: inherit;
   text-decoration: none;
   border-bottom: 1px solid var(--a-color-border-soft);
+  cursor: pointer;
   transition: background 0.15s ease;
 }
 

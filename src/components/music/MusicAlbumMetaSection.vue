@@ -1,26 +1,29 @@
 <template>
   <PSurface class="album-meta-card" tone="soft" :layer="0">
-    <div class="album-meta-card__grid">
-      <div class="album-meta-card__field album-meta-card__field--artists">
-		<MusicCreationContributorPicker :model-value="contributors" @update:model-value="$emit('update:contributors', $event)" />
+    <div class="album-meta-card__layout">
+      <div class="album-meta-card__fields">
+        <div class="album-meta-card__field album-meta-card__field--inline">
+          <PInput v-model="albumModel" label="专辑名" placeholder="输入专辑名" />
+        </div>
+
+        <div class="album-meta-card__field album-meta-card__field--artists">
+		  <MusicCreationContributorPicker :model-value="contributors" @update:model-value="$emit('update:contributors', $event)" />
+        </div>
+
+        <div class="album-meta-card__row-two-col">
+          <div class="album-meta-card__field album-meta-card__field--inline">
+            <PMaskedDateInput v-model="releaseDatePartsModel" label="发行日期" />
+          </div>
+
+          <div class="album-meta-card__field album-meta-card__field--inline">
+            <PSelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
+            <PInput v-if="albumTypeModel === 'custom'" v-model="customAlbumTypeModel" label="自定义类型" placeholder="输入专辑类型" />
+          </div>
+        </div>
       </div>
 
-      <div class="album-meta-card__field">
-        <label class="a-label">专辑名</label>
-        <PInput v-model="albumModel" placeholder="输入专辑名" />
-      </div>
-
-      <div class="album-meta-card__field">
-		<PMaskedDateInput v-model="releaseDatePartsModel" label="发行日期" />
-      </div>
-
-      <div class="album-meta-card__field">
-        <PSelect v-model="albumTypeModel" label="专辑类型" :options="albumTypeOptions" placeholder="未指定" />
-		<PInput v-if="albumTypeModel === 'custom'" v-model="customAlbumTypeModel" label="自定义类型" placeholder="输入专辑类型" />
-      </div>
-
-      <div class="album-meta-card__field album-meta-card__field--full">
-        <PTextarea v-model="descriptionModel" label="专辑简介" placeholder="输入专辑简介" :rows="4" />
+      <div class="album-meta-card__description">
+        <PTextarea v-model="descriptionModel" label="简介" placeholder="输入专辑简介" :rows="4" />
       </div>
     </div>
   </PSurface>
@@ -98,10 +101,21 @@ const descriptionModel = computed({
   padding: 1rem;
 }
 
-.album-meta-card__grid {
+.album-meta-card__layout {
   display: grid;
-  gap: 0.875rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.05fr) minmax(240px, 0.95fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.album-meta-card__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .album-meta-card__field {
@@ -110,16 +124,72 @@ const descriptionModel = computed({
   gap: 0.4rem;
 }
 
-.album-meta-card__field--artists {
-  grid-column: 1 / -1;
+.album-meta-card__field--inline :deep(.p-field),
+.album-meta-card__field--artists :deep(.picker-search .p-field),
+.album-meta-card__row-two-col > .album-meta-card__field--inline :deep(.p-field) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.album-meta-card__field--full {
-  grid-column: 1 / -1;
+.album-meta-card__field--inline :deep(.p-field-label),
+.album-meta-card__field--artists :deep(.p-field-label),
+.album-meta-card__row-two-col :deep(.field-label) {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.album-meta-card__field--inline :deep(.p-field-label)::after,
+.album-meta-card__field--artists :deep(.p-field-label)::after,
+.album-meta-card__row-two-col :deep(.field-label)::after {
+  content: '：';
+}
+
+.album-meta-card__row-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.album-meta-card__row-two-col > .album-meta-card__field--inline :deep(.p-date-input-container) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.album-meta-card__description {
+  display: flex;
+  min-height: 100%;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+}
+
+.album-meta-card__description :deep(.p-field) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.album-meta-card__description :deep(.p-textarea-wrapper) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.album-meta-card__description :deep(.p-textarea) {
+  flex: 1;
+  min-height: 12rem;
+  resize: vertical;
 }
 
 @media (max-width: 720px) {
-  .album-meta-card__grid {
+  .album-meta-card__layout,
+  .album-meta-card__row-two-col {
     grid-template-columns: 1fr;
   }
 }

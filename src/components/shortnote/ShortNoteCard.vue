@@ -30,7 +30,7 @@
       </div>
     </header>
 
-    <RouterLink :to="`/posts/notes/${note.id}`" class="short-note-card__body">
+    <div class="short-note-card__body" @click="openShortNoteSheet">
       <p class="short-note-card__content">{{ note.content }}</p>
 
       <div
@@ -47,7 +47,7 @@
           <img :src="resolveMediaURL(item.url)" alt="短话图片" loading="lazy" />
         </div>
       </div>
-    </RouterLink>
+    </div>
 
     <footer class="short-note-card__footer">
       <InteractionBar
@@ -230,6 +230,7 @@ function formatDate(value: string) {
   color: inherit;
   text-decoration: none;
   margin-bottom: 1rem;
+  cursor: pointer;
 }
 
 .short-note-card__content {

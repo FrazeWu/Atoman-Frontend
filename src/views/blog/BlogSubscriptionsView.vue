@@ -288,45 +288,56 @@ onUnmounted(() => {
   width: 4.5rem;
   height: 4.5rem;
   object-fit: cover;
-  filter: grayscale(100%);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
+  transition: transform 0.3s ease;
 }
 
 .blog-subscriptions-layout {
   display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+  gap: 1.75rem;
   align-items: start;
 }
 
 .subscription-source-panel {
   position: sticky;
-  top: 1rem;
+  top: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .subscription-source {
   display: flex;
-  min-height: 2.75rem;
+  min-height: 2.85rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border: var(--a-border);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-card);
+  background: transparent;
+  color: var(--a-color-text-secondary);
   cursor: pointer;
-  padding: 0.65rem 0.75rem;
+  padding: 0.65rem 1rem;
   text-align: left;
   font-size: 0.875rem;
   font-weight: 500;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.subscription-source.active,
 .subscription-source:hover {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+}
+
+.subscription-source.active {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+  font-weight: 650;
 }
 
 .subscription-posts {

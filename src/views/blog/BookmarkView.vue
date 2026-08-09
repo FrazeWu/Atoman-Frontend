@@ -246,34 +246,40 @@ watch(sortMode, () => {
   height: 5.5rem;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
-  filter: grayscale(100%);
+  border-radius: var(--a-radius-control);
   flex-shrink: 0;
-  border-radius: 4px;
+  transition: transform 0.3s ease;
 }
+
 .sidebar-item {
   width: 100%;
   text-align: left;
-  padding: 0.75rem 1.25rem;
+  padding: 0.65rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
-  border-radius: 0px;
+  color: var(--a-color-text-secondary);
+  border-radius: var(--a-radius-card);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .sidebar-item:hover {
-  background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
 }
+
 .sidebar-item-active {
   background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-  font-weight: 500;
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
+  font-weight: 650;
 }
 .delete-btn {
   font-size: 0.75rem;

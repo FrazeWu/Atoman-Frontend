@@ -918,6 +918,7 @@ describe('MusicLyricsPanel.vue', () => {
     // 断言头部和关闭按钮存在
     expect(wrapper.find('.music-lyrics-panel__header').exists()).toBe(true)
     expect(wrapper.find('.music-lyrics-panel__close').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('GENIUS')
   })
 })
 

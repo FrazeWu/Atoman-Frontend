@@ -2,10 +2,6 @@
   <section class="music-lyrics-panel">
     <header class="music-lyrics-panel__header">
       <div class="music-lyrics-panel__heading">
-        <div class="genius-badge" title="Genius 幕后解密与注释">
-          <span class="genius-dot"></span>
-          <span class="genius-text">GENIUS VERIFIED ANNOTATIONS & BEHIND THE LYRICS</span>
-        </div>
         <p class="music-lyrics-panel__eyebrow">歌词</p>
         <h2>{{ songTitle }}</h2>
         <p class="music-lyrics-panel__meta">{{ artistText }}</p>
@@ -930,35 +926,6 @@ function cancelLyricsConflict() {
     padding-top: 1rem;
     padding-left: 0;
   }
-}
-
-.genius-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  padding: 3px 8px;
-  background: rgba(255, 255, 100, 0.15);
-  border: 1px solid rgba(255, 255, 100, 0.35);
-  border-radius: 4px;
-}
-:root.dark .genius-badge {
-  background: rgba(255, 255, 100, 0.1);
-  border-color: rgba(255, 255, 100, 0.3);
-}
-.genius-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ffff64;
-  box-shadow: 0 0 8px #ffff64;
-}
-.genius-text {
-  font-family: var(--a-font-mono, monospace);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: var(--a-color-text);
 }
 
 .lyrics-sync-btn {

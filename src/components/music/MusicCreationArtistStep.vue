@@ -221,6 +221,22 @@ function setArtistKind(kind: 'person' | 'group') {
   personalErrorMessage.value = ''
 }
 
+function validateAndExpose() {
+  const draft = artistDraft.value
+  if (!draft) return false
+  if (draft.kind === 'group') {
+    const namedMembers = draft.members.filter((member) => member.name.trim())
+    if (namedMembers.some((member) => !member.joinDateParts?.year.trim())) {
+      membersErrorMessage.value = '请为每位成员填写加入时间'
+      return false
+    }
+  }
+  return true
+}
+
+defineExpose({
+  validateAndExpose,
+})
 </script>
 
 <template>

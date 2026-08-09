@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page">
+  <div class="a-page blog-home">
     <PPageHeader title="文章" accent>
       <template #action>
         <PButton v-if="!authStore.isAuthenticated" to="/login" outline>登录</PButton>
@@ -8,7 +8,7 @@
 
     <ContentContinueSection module="blog" />
 
-    <!-- Filters -->
+    <!-- 筛选控制栏 -->
     <div class="blog-home__filters" aria-label="文章筛选">
       <div class="blog-home__filter-group">
         <PSegmentedControl
@@ -26,177 +26,299 @@
       </div>
     </div>
 
-    <section class="blog-home__recommendations" aria-label="文章推荐">
-      <div class="blog-home__recommendation-header">
-        <div>
-          <h2 class="blog-home__recommendation-title">推荐</h2>
-          <p class="blog-home__recommendation-note">按热度、精选、探索切换当前文章推荐。</p>
+    <!-- 生产环境 Stream + Sticky Rail 主布局 -->
+    <div class="blog-home__layout">
+      <!-- 左侧内容流 Stream -->
+      <main class="blog-home__stream">
+        <!-- 推荐区 section -->
+        <section class="blog-home__recommendations" aria-label="文章推荐">
+          <div class="blog-home__recommendation-header">
+            <div>
+              <h2 class="blog-home__recommendation-title">推荐文章</h2>
+              <p class="blog-home__recommendation-note">按热度、精选、探索切换当前文章推荐。</p>
+            </div>
+            <PSegmentedControl
+              v-model="recommendationMode"
+              :options="recommendationOptions"
+              @change="selectRecommendationMode"
+            />
+          </div>
+
+          <div v-if="recommendationLoading" class="blog-home__skeleton-list">
+            <div v-for="i in 2" :key="i" class="a-skeleton" style="height: 6rem; border-radius: var(--a-radius-card);" />
+          </div>
+          <PEmpty v-else-if="!recommendedPosts.length" title="暂无推荐" description="稍后再来看新的文章推荐。" />
+          <div v-else class="blog-home__recommendation-list">
+            <PEntry
+              v-for="item in recommendedPosts.slice(0, 3)"
+              :key="item.id"
+              :title="item.title"
+              :summary="item.summary"
+              class="blog-home__hero-entry"
+              @click="openRecommendedPost(item)"
+            >
+              <template #visual>
+                <div v-if="item.image_url" class="blog-home__post-visual">
+                  <img :src="item.image_url" :alt="item.title" class="blog-home__post-cover" />
+                </div>
+                <PAvatar v-else size="sm" :name="item.title" />
+              </template>
+              <template #meta>
+                <span v-if="item.score_label">{{ item.score_label }}</span>
+              </template>
+            </PEntry>
+          </div>
+        </section>
+
+        <!-- 主文章列表流 -->
+        <div v-if="loading && !posts.length" class="blog-home__skeleton-list">
+          <div v-for="i in 5" :key="i" class="a-skeleton" style="height: 8rem; border-radius: var(--a-radius-card);" />
         </div>
-        <PSegmentedControl
-          v-model="recommendationMode"
-          :options="recommendationOptions"
-          @change="selectRecommendationMode"
-        />
-      </div>
 
-      <div v-if="recommendationLoading" class="a-grid-2">
-        <div v-for="i in 3" :key="i" class="a-skeleton" style="height:10rem" />
-      </div>
-      <PEmpty v-else-if="!recommendedPosts.length" title="暂无推荐" description="稍后再来看新的文章推荐。" />
-      <div v-else class="blog-home__recommendation-list">
-        <PEntry
-          v-for="item in recommendedPosts"
-          :key="item.id"
-          :title="item.title"
-          :summary="item.summary"
-          @click="openRecommendedPost(item)"
-        >
-          <template #visual>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PBadge type="blog">文章</PBadge>
-              <img
-                v-if="item.image_url"
-                :src="item.image_url"
-                class="blog-entry-cover"
-                style="margin-top:0.25rem"
+        <PEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
+
+        <div v-else class="blog-home__feed">
+          <PEntry
+            v-for="post in posts"
+            :key="post.id"
+            :title="post.title"
+            :summary="post.summary"
+            class="blog-home__entry-card"
+            @click="openPost(post)"
+          >
+            <template #visual>
+              <div v-if="post.cover_url" class="blog-home__post-visual">
+                <img :src="post.cover_url" :alt="post.title" class="blog-home__post-cover" loading="lazy" />
+              </div>
+              <PAvatar
+                v-else
+                :src="post.user?.avatar_url"
+                :name="post.user?.display_name || post.user?.username || '匿名'"
+                size="sm"
               />
-            </div>
-          </template>
+            </template>
 
-          <template #meta>
-            <span>{{ item.score_label }}</span>
-          </template>
-        </PEntry>
-      </div>
-    </section>
+            <template #meta>
+              <span class="blog-home__author">{{ post.user?.display_name || post.user?.username || '匿名' }}</span>
+              <template v-if="post.channel">
+                <span class="blog-home__dot">·</span>
+                <a
+                  :href="channelUrl(String(post.channel.slug || post.channel.id))"
+                  class="blog-home__channel"
+                  @click.stop
+                >
+                  《{{ post.channel.name }}》
+                </a>
+              </template>
+              <span class="blog-home__dot">·</span>
+              <time class="blog-home__time">{{ formatDate(post.created_at) }}</time>
+            </template>
 
-    <!-- Posts list -->
-    <div v-if="loading" class="a-grid-2">
-      <div v-for="i in 6" :key="i" class="a-skeleton" style="height:12rem" />
-    </div>
-    <PEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
-    <div v-else>
-      <PEntry
-        v-for="post in posts"
-        :key="post.id"
-        :title="post.title"
-        :summary="post.summary"
-        @click="openPost(post)"
-      >
-        <template #visual>
-          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-            <PBadge type="blog">文章</PBadge>
-            <img
-              v-if="post.cover_url"
-              :src="post.cover_url"
-              class="blog-entry-cover"
-              style="margin-top:0.25rem"
-            />
-            <PAvatar
-              v-else
-              :src="post.user?.avatar_url"
-              :name="post.user?.display_name || post.user?.username"
-              size="sm"
-              style="margin-top:0.25rem"
-            />
+            <template #actions>
+              <button
+                type="button"
+                class="p-clip"
+                :class="{ active: isBookmarked(post) }"
+                title="收藏"
+                @click.stop="toggleBookmark(post)"
+              >
+                <Bookmark :size="14" />
+              </button>
+              <button
+                type="button"
+                class="p-clip"
+                :class="{ active: isReadingList(post) }"
+                title="稍后阅读"
+                @click.stop="toggleReadingList(post)"
+              >
+                <Clock :size="14" />
+              </button>
+              <button
+                type="button"
+                class="p-clip"
+                :class="{ active: isStarred(post) }"
+                title="星标"
+                @click.stop="toggleStar(post)"
+              >
+                <Star :size="14" />
+              </button>
+            </template>
+          </PEntry>
+        </div>
+
+        <PButton
+          v-if="hasMore"
+          block
+          outline
+          :loading="loading"
+          style="margin-top: 1rem"
+          @click="loadMore"
+        >
+          加载更多
+        </PButton>
+      </main>
+
+      <!-- 右侧智能推荐 Sticky Rail -->
+      <aside class="blog-home__rail" aria-label="侧边推荐">
+        <!-- 热门频道卡片 -->
+        <section v-if="channels.length" class="blog-home__rail-section">
+          <div class="blog-home__rail-header">
+            <Flame :size="16" class="blog-home__rail-icon is-hot" />
+            <h2>热门频道</h2>
           </div>
-        </template>
-
-        <template #meta>
-          <span>《{{ post.channel?.name || '未分类' }}》</span>
-          <span>{{ post.user?.display_name || post.user?.username }}</span>
-          <span>{{ formatDate(post.created_at) }}</span>
-        </template>
-
-        <template #actions>
-          <div style="display:flex;gap:1.5rem;align-items:center;width:100%">
-            <div style="display:flex;gap:1rem;color:var(--a-color-muted-soft);font-size:0.75rem;font-weight: 500">
-              <span>♥ {{ post.likes_count || 0 }}</span>
-              <span>💬 {{ post.comments_count || 0 }}</span>
-            </div>
-            <PClip
-              :active="isStarred(post)"
-              :label="isStarred(post) ? '取消收藏' : '收藏'"
-              @click="toggleStar(post)"
-            />
-            <PClip
-              :active="isReadingList(post)"
-              :label="isReadingList(post) ? '取消稍后阅读' : '稍后阅读'"
-              @click="toggleReadingList(post)"
-            />
+          <div class="blog-home__rail-list">
+            <a
+              v-for="ch in channels.slice(0, 5)"
+              :key="ch.id"
+              :href="channelUrl(String(ch.slug || ch.id))"
+              class="blog-home__channel-item"
+            >
+              <div class="blog-home__channel-info">
+                <strong class="blog-home__channel-name">《{{ ch.name }}》</strong>
+                <span v-if="ch.description" class="blog-home__channel-desc">{{ ch.description }}</span>
+              </div>
+            </a>
           </div>
-        </template>
-      </PEntry>
-    </div>
+        </section>
 
-    <!-- Load more -->
-    <div v-if="hasMore && !loading" style="display:flex;justify-content:center;margin-top:2rem">
-      <PButton outline @click="loadMore">加载更多</PButton>
+        <!-- 推荐精选必读 -->
+        <section v-if="recommendedPosts.length > 3" class="blog-home__rail-section">
+          <div class="blog-home__rail-header">
+            <Sparkles :size="16" class="blog-home__rail-icon is-sparkles" />
+            <h2>精选推荐文章</h2>
+          </div>
+          <div class="blog-home__rail-list">
+            <div
+              v-for="item in recommendedPosts.slice(3, 8)"
+              :key="item.id"
+              class="blog-home__rail-note"
+              @click="openRecommendedPost(item)"
+            >
+              <strong class="blog-home__rail-title">{{ item.title }}</strong>
+              <span v-if="item.score_label" class="blog-home__rail-sub">{{ item.score_label }}</span>
+            </div>
+          </div>
+        </section>
+      </aside>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PEntry from '@/components/ui/PEntry.vue'
-import PClip from '@/components/ui/PClip.vue'
+import { Bookmark, Clock, Flame, Sparkles, Star } from 'lucide-vue-next'
+
+import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
-import PBadge from '@/components/ui/PBadge.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PEntry from '@/components/ui/PEntry.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useFeedStore } from '@/stores/feed'
+
+import { apiRequest } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import type { Post } from '@/types'
+import { channelUrl } from '@/router/siteUrls'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
+import { reportError } from '@/utils/logger'
 
-const authStore = useAuthStore()
-const feedStore = useFeedStore()
-const api = useApi()
-const blogSheets = useBlogSheets()
-const route = useRoute()
-const router = useRouter()
+defineOptions({ name: 'BlogHomeView' })
 
-const PAGE_SIZE = 20
+interface BlogChannel {
+  id: string | number
+  name: string
+  slug?: string
+  description?: string
+}
 
-type BlogHomeListItem = Pick<Post, 'id' | 'title'> & Partial<Pick<Post,
-  'summary' | 'cover_url' | 'likes_count' | 'comments_count' | 'user' | 'channel' | 'created_at'
->> & {
+interface BlogHomeListItem {
+  id: string
+  title: string
+  summary?: string
+  cover_url?: string
+  created_at?: string
+  likes_count?: number
+  comments_count?: number
+  channel?: BlogChannel
+  user?: {
+    username?: string
+    display_name?: string
+    avatar_url?: string
+  }
   source: 'post' | 'feed'
   targetPath: string
 }
 
-type RecommendationPayload = {
+interface RecommendationPayload {
   id: string
   title: string
   summary?: string
   image_url?: string
   target_path?: string
   score_label?: string
-  post?: Post
+  post?: BlogHomeListItem
 }
 
-const postStarredIds = computed(() => feedStore.bookmarkedPostIds)
-const feedStarredIds = computed(() => feedStore.starredItemIds)
-const readingListIds = computed(() => feedStore.readingListItemIds)
+const PAGE_SIZE = 20
 
-const isStarred = (item: BlogHomeListItem) => {
-  return item.source === 'feed'
-    ? feedStarredIds.value.has(item.id)
-    : postStarredIds.value.has(item.id)
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+const feedStore = useFeedStore()
+const blogSheets = useBlogSheets()
+const api = useApi()
+
+const posts = ref<BlogHomeListItem[]>([])
+const recommendedPosts = ref<Array<{
+  id: string
+  title: string
+  summary: string
+  image_url: string
+  targetPath: string
+  score_label: string
+}>>([])
+const channels = ref<BlogChannel[]>([])
+const loading = ref(true)
+const recommendationLoading = ref(false)
+const page = ref(1)
+const hasMore = ref(false)
+const typeFilter = ref('all')
+const sortBy = ref('latest')
+const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
+const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
+let postsRequestSequence = 0
+
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
-const isReadingList = (item: BlogHomeListItem) => {
-  return readingListIds.value.has(item.id)
-}
+const typeOptions = [
+  { label: '全部文章', value: 'all' },
+  { label: '文章', value: 'post' },
+]
 
-const toggleStar = (item: BlogHomeListItem) => {
+const sortOptions = [
+  { label: '最新', value: 'latest' },
+  { label: '最热', value: 'popular' },
+]
+
+const recommendationOptions = [
+  { label: '热度', value: 'hot' },
+  { label: '精选', value: 'featured' },
+  { label: '探索', value: 'discover' },
+]
+
+const isBookmarked = (item: BlogHomeListItem) => Boolean(feedStore.bookmarkedPostIds?.has(item.id))
+const isStarred = (item: BlogHomeListItem) => Boolean(feedStore.starredItemIds?.has(item.id))
+const isReadingList = (item: BlogHomeListItem) => Boolean(feedStore.readingListItemIds?.has(item.id))
+
+const toggleBookmark = (item: BlogHomeListItem) => {
   if (item.source === 'feed') {
     void feedStore.toggleStar(item.id)
     return
@@ -204,8 +326,27 @@ const toggleStar = (item: BlogHomeListItem) => {
   void feedStore.togglePostBookmark(item.id)
 }
 
+const toggleStar = (item: BlogHomeListItem) => {
+  void feedStore.toggleStar(item.id)
+}
+
 const toggleReadingList = (item: BlogHomeListItem) => {
   void feedStore.toggleReadingListItem(item.id)
+}
+
+const selectType = (value: string) => {
+  typeFilter.value = value
+  void fetchPosts()
+}
+
+const selectSort = (value: string) => {
+  sortBy.value = value
+  void fetchPosts()
+}
+
+const selectRecommendationMode = (value: string) => {
+  recommendationMode.value = value as 'hot' | 'featured' | 'discover'
+  void fetchRecommendedPosts()
 }
 
 const openPost = (item: BlogHomeListItem) => {
@@ -230,61 +371,15 @@ const openRecommendedPost = (item: { id: string; title: string; targetPath: stri
   void router.push(item.targetPath)
 }
 
-
-const posts = ref<BlogHomeListItem[]>([])
-const recommendedPosts = ref<Array<{
-  id: string
-  title: string
-  summary: string
-  image_url: string
-  targetPath: string
-  score_label: string
-}>>([])
-const loading = ref(true)
-const recommendationLoading = ref(false)
-const page = ref(1)
-const hasMore = ref(false)
-const typeFilter = ref('all')
-const sortBy = ref('latest')
-const recommendationMode = ref<'hot' | 'featured' | 'discover'>('hot')
-const activeQuery = computed(() => typeof route.query.q === 'string' ? route.query.q.trim() : '')
-let postsRequestSequence = 0
-
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-}
-
-const typeOptions = [
-  { label: '全部', value: 'all' },
-  { label: '文章', value: 'post' },
-]
-
-const sortOptions = [
-  { label: '最新', value: 'latest' },
-  { label: '最热', value: 'popular' },
-]
-
-const recommendationOptions = [
-  { label: '热度', value: 'hot' },
-  { label: '精选', value: 'featured' },
-  { label: '探索', value: 'discover' },
-]
-
-const selectType = (value: string) => {
-  typeFilter.value = value
-  fetchPosts()
-}
-
-const selectSort = (value: string) => {
-  sortBy.value = value
-  fetchPosts()
-}
-
-const selectRecommendationMode = (value: string) => {
-  recommendationMode.value = value as 'hot' | 'featured' | 'discover'
-  void fetchRecommendedPosts()
+const fetchChannels = async () => {
+  try {
+    const res = await apiRequest(api.blog.channels)
+    if (!res.ok) return
+    const d = await res.json() as { data?: BlogChannel[] }
+    channels.value = Array.isArray(d.data) ? d.data : []
+  } catch (error) {
+    reportError(error)
+  }
 }
 
 const fetchRecommendedPosts = async () => {
@@ -390,6 +485,7 @@ const loadMore = () => {
 onMounted(() => {
   void fetchPosts()
   void fetchRecommendedPosts()
+  void fetchChannels()
   if (authStore.isAuthenticated) {
     void feedStore.fetchBookmarkedPostIds()
     void feedStore.fetchStarredIds()
@@ -409,6 +505,11 @@ watch(activeQuery, () => {
 </script>
 
 <style scoped>
+.blog-home {
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
 .blog-home__filters {
   display: flex;
   align-items: center;
@@ -427,8 +528,22 @@ watch(activeQuery, () => {
   margin-left: auto;
 }
 
+/* 生产 Stream + Rail 布局 */
+.blog-home__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 2rem;
+  align-items: start;
+}
+
+.blog-home__stream {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .blog-home__recommendations {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .blog-home__recommendation-header {
@@ -443,25 +558,202 @@ watch(activeQuery, () => {
 .blog-home__recommendation-title {
   margin: 0;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .blog-home__recommendation-note {
-  margin: 0.35rem 0 0;
-  color: var(--a-color-muted-soft);
-  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--a-color-muted);
 }
 
 .blog-home__recommendation-list {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
 }
 
-.blog-entry-cover {
-  width: 4.5rem;
-  height: 4.5rem;
+.blog-home__skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blog-home__feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.blog-home__entry-card {
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.blog-home__entry-card:hover {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.blog-home__author {
+  font-weight: 500;
+  color: var(--a-color-text);
+}
+
+.blog-home__channel {
+  color: var(--a-color-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.blog-home__channel:hover {
+  text-decoration: underline;
+}
+
+.blog-home__dot {
+  color: var(--a-color-muted-soft);
+}
+
+.blog-home__time {
+  color: var(--a-color-muted);
+}
+
+.blog-home__post-visual {
+  width: 6.5rem;
+  height: 6.5rem;
+  border-radius: var(--a-radius-control);
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  flex-shrink: 0;
+}
+
+.blog-home__post-cover {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  filter: grayscale(100%);
-  border-radius: 4px;
+}
+
+/* 侧轨 */
+.blog-home__rail {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.blog-home__rail-section {
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+}
+
+.blog-home__rail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+}
+
+.blog-home__rail-header h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--a-color-fg);
+}
+
+.blog-home__rail-icon.is-hot {
+  color: var(--a-color-warning);
+}
+
+.blog-home__rail-icon.is-sparkles {
+  color: var(--a-color-primary);
+}
+
+.blog-home__rail-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.blog-home__channel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.blog-home__channel-item:last-child {
+  border-bottom: 0;
+}
+
+.blog-home__channel-item:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.blog-home__channel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.blog-home__channel-name {
+  font-size: 0.85rem;
+  color: var(--a-color-fg);
+  font-weight: 600;
+}
+
+.blog-home__channel-desc {
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-home__rail-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.blog-home__rail-note:last-child {
+  border-bottom: 0;
+}
+
+.blog-home__rail-note:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.blog-home__rail-title {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  font-weight: 550;
+  color: var(--a-color-fg);
+}
+
+.blog-home__rail-sub {
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+}
+
+@media (max-width: 1024px) {
+  .blog-home__layout {
+    grid-template-columns: 1fr;
+  }
+  .blog-home__rail {
+    display: none;
+  }
 }
 </style>

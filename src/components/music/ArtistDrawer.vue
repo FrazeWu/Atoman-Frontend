@@ -7,6 +7,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -17,6 +18,8 @@ import {
   createArtistBookmark,
   deleteArtistBookmark,
   listArtistBookmarks,
+  listArtistContributors,
+  type MusicContributor,
   type MusicAlbumListItem,
   type MusicArtistListItem,
 } from '@/api/musicV1'
@@ -42,6 +45,8 @@ const redirectMessage = ref('')
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const lastLoadKey = ref<string | null>(null)
+const contributors = ref<MusicContributor[]>([])
+const contributorTotal = ref(0)
 
 const artistAliases = computed(() => (
   artist.value?.aliases
@@ -129,6 +134,8 @@ async function loadArtist(artistId: string | null) {
     artist.value = null
     albums.value = []
     isBookmarked.value = false
+    contributors.value = []
+    contributorTotal.value = 0
     lastLoadKey.value = null
     return
   }
@@ -151,6 +158,17 @@ async function loadArtist(artistId: string | null) {
     const albumsResponse = await listMusicAlbums({ artist_id: artistId, page: 1, page_size: 100 })
     artist.value = artistResponse
     albums.value = albumsResponse.data
+    try {
+      const contributorResponse = await listArtistContributors(artistId)
+      if (artistId !== String(artistId.value)) return
+      contributors.value = contributorResponse.data
+      contributorTotal.value = contributorResponse.total
+    } catch (error) {
+      if (artistId !== String(artistId.value)) return
+      contributors.value = []
+      contributorTotal.value = 0
+      reportError(error, 'Failed to load artist contributors:')
+    }
     if (isAuthenticated.value) {
       try {
         const bookmarksResponse = await listArtistBookmarks()
@@ -221,6 +239,11 @@ function linkAlbum() {
 function mergeArtist() {
   if (!requireLogin()) return
   openNestedAction('merge_artist', { artistId: artistId.value, name: artist.value?.name || '' })
+}
+
+function openArtistHistory() {
+  if (!artistId.value) return
+  openNestedAction('artist_history', { artistId: artistId.value })
 }
 
 watch(
@@ -410,6 +433,11 @@ watch(
           </div>
         </div>
       </div>
+      <MusicContributorsBlock
+        :contributors="contributors"
+        :total="contributorTotal"
+        @open-history="openArtistHistory"
+      />
     </div>
   </PSheet>
 </template>

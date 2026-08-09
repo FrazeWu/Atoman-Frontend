@@ -10,6 +10,7 @@ import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import { Plus, Play, Heart, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -20,7 +21,9 @@ import {
   deleteAlbumBookmark,
   getMusicAlbum,
   listAlbumBookmarks,
+  listAlbumContributors,
   listMusicPlaylists,
+  type MusicContributor,
   type MusicAlbumListItem,
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
@@ -51,6 +54,8 @@ const isCoverBroken = ref(false)
 const isBookmarked = ref(false)
 const bookmarkLoading = ref(false)
 const albumRequests = useRequestGeneration()
+const contributors = ref<MusicContributor[]>([])
+const contributorTotal = ref(0)
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const playlistsLoaded = ref(false)
@@ -307,6 +312,8 @@ async function loadAlbum(albumId: string | null) {
     if (isCurrentLoad()) {
       album.value = null
       isBookmarked.value = false
+      contributors.value = []
+      contributorTotal.value = 0
     }
     return
   }
@@ -325,6 +332,17 @@ async function loadAlbum(albumId: string | null) {
     }
     redirectMessage.value = ''
     album.value = albumResponse
+    try {
+      const contributorResponse = await listAlbumContributors(albumId)
+      if (!isCurrentLoad()) return
+      contributors.value = contributorResponse.data
+      contributorTotal.value = contributorResponse.total
+    } catch (error) {
+      if (!isCurrentLoad()) return
+      contributors.value = []
+      contributorTotal.value = 0
+      reportError(error, 'Failed to load album contributors:')
+    }
     if (isAuthenticated.value) {
       try {
         const bookmarksResponse = await listAlbumBookmarks()
@@ -402,6 +420,11 @@ function editAlbum() {
 function mergeAlbum() {
   if (!requireLogin()) return
   openNestedAction('merge_album', { albumId: albumId.value, title: album.value?.title || '' })
+}
+
+function openAlbumHistory() {
+  if (!albumId.value) return
+  openNestedAction('history', { albumId: albumId.value })
 }
 
 function guardPlaylistMenu(event: MouseEvent) {
@@ -597,6 +620,11 @@ watch(
           </button>
         </div>
       </section>
+      <MusicContributorsBlock
+        :contributors="contributors"
+        :total="contributorTotal"
+        @open-history="openAlbumHistory"
+      />
     </div>
     <PDiscussionFAB v-if="isOpen" @click="openNestedAction('discussion', { albumId })" :count="discussionCount" />
     <PToast v-model="toastVisible" :message="toastMessage" :type="toastMessage.endsWith('失败') ? 'error' : 'success'" />

@@ -209,7 +209,7 @@ async function loadAlbumHistory(albumId: string) {
   revisionLoading.value = true
   errorMessage.value = ''
   try {
-    revisions.value = await listAlbumRevisions(albumId)
+    revisions.value = (await listAlbumRevisions(albumId)).data
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
   } finally {
@@ -221,7 +221,7 @@ async function loadArtistHistory(artistId: string) {
   revisionLoading.value = true
   errorMessage.value = ''
   try {
-    revisions.value = await listArtistRevisions(artistId)
+    revisions.value = (await listArtistRevisions(artistId)).data
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
   } finally {
@@ -233,7 +233,7 @@ async function loadSongHistory(id: string) {
   revisionLoading.value = true
   errorMessage.value = ''
   try {
-    revisions.value = await listSongRevisions(id)
+    revisions.value = (await listSongRevisions(id)).data
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载历史失败'
   } finally {

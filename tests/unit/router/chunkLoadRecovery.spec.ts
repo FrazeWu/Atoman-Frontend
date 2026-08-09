@@ -191,6 +191,7 @@ describe('chunk load recovery', () => {
     await vi.advanceTimersByTimeAsync(10000)
     errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
     await vi.advanceTimersByTimeAsync(30000)
+    errorHandler(new TypeError('error loading dynamically imported module'), { fullPath: '/forum' })
 
     expect(replace).not.toHaveBeenCalled()
     expect(sessionStorage.getItem('atoman_chunk_load_recovery_attempts')).toBe('3')

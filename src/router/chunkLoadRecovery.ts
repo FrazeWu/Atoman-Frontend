@@ -97,10 +97,7 @@ function triggerRecoveryReload(targetUrl?: string) {
     cancelRecoveryReset()
     const now = Date.now()
     const lastRecoveryTime = parseInt(sessionStorage.getItem(recoveryTimeKey) || '0', 10)
-    const withinRecoveryWindow = now - lastRecoveryTime < recoveryWindowMs
-    const attempts = withinRecoveryWindow
-      ? parseInt(sessionStorage.getItem(recoveryAttemptKey) || '0', 10)
-      : 0
+    const attempts = parseInt(sessionStorage.getItem(recoveryAttemptKey) || '0', 10)
 
     if (recoveryScheduled || attempts >= maxRecoveryAttempts) return
 

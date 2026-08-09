@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <footer class="short-note-card__footer">
+    <footer class="short-note-card__footer" @click.stop>
       <InteractionBar
         :liked="interactions.liked.value"
         :like-count="interactions.likeCount.value"
@@ -128,7 +128,11 @@ function handleUnlike() {
   })
 }
 
-function openShortNoteSheet() {
+function openShortNoteSheet(event?: Event) {
+  if (event) {
+    event.stopPropagation()
+    event.preventDefault()
+  }
   const title = props.note.content
     ? (props.note.content.length > 20 ? `${props.note.content.slice(0, 20)}...` : props.note.content)
     : '短话'

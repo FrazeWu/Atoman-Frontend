@@ -46,6 +46,8 @@ export const musicV1Endpoints = {
     `${apiV1Base()}/admin/artists/${artistId}/merge`,
   artistRevisions: (artistId: string) =>
     `${apiV1Base()}/artists/${artistId}/revisions`,
+  artistContributors: (artistId: string) =>
+    `${apiV1Base()}/artists/${artistId}/contributors`,
   artistRevision: (artistId: string, version: number) =>
     `${apiV1Base()}/artists/${artistId}/revisions/${version}`,
   albums: () => `${apiV1Base()}/music/albums`,
@@ -108,6 +110,8 @@ export const musicV1Endpoints = {
   home: () => `${apiV1Base()}/music/home`,
   albumRevisions: (albumId: string) =>
     `${apiV1Base()}/albums/${albumId}/revisions`,
+  albumContributors: (albumId: string) =>
+    `${apiV1Base()}/albums/${albumId}/contributors`,
   albumRevision: (albumId: string, version: number) =>
     `${apiV1Base()}/albums/${albumId}/revisions/${version}`,
   albumRevert: (albumId: string, version: number) =>

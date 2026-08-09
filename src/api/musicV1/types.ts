@@ -280,14 +280,37 @@ export type MusicRevisionSummary = {
   content_snapshot: unknown;
   editor_id: string;
   editor?: {
+    uuid?: string;
     username?: string;
     display_name?: string;
+    avatar_url?: string;
   };
   edit_summary: string;
   edit_type: string;
   status: string;
   is_current: boolean;
   created_at: string;
+};
+
+export type MusicRevisionPage = {
+  data: MusicRevisionSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type MusicContributor = {
+  user_id: string;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+  revision_count: number;
+  last_contributed_at: string;
+};
+
+export type MusicContributorList = {
+  data: MusicContributor[];
+  total: number;
 };
 
 export type MusicDiscussionAuthor = {

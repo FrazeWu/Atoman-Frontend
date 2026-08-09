@@ -24,6 +24,8 @@ import type {
   MusicArtistInput,
   MusicArtistListItem,
   MusicDiscussion,
+  MusicContributor,
+  MusicContributorList,
   MusicHome,
   MusicListFilters,
   MusicListResponse,
@@ -36,6 +38,7 @@ import type {
   MusicRecommendationItem,
   MusicRecommendationMode,
   MusicRevisionSummary,
+  MusicRevisionPage,
   MusicSongBookmark,
   MusicSearchResults,
   MusicSearchKind,
@@ -523,29 +526,60 @@ export async function revertMusicSongLyricsVersion(
 
 export async function listAlbumRevisions(
   albumId: string,
-): Promise<MusicRevisionSummary[]> {
-  const response = await apiGetEnvelope<MusicRevisionSummary[]>(
-    musicV1Endpoints.albumRevisions(albumId),
+  options: { limit?: number; offset?: number } = {},
+): Promise<MusicRevisionPage> {
+  const response: { data: MusicRevisionSummary[]; total?: number; limit?: number; offset?: number } = await apiGetEnvelope<MusicRevisionSummary[]>(
+    `${musicV1Endpoints.albumRevisions(albumId)}${queryString(options)}`,
   );
-  return response.data;
+  return {
+    data: response.data,
+    total: response.total ?? response.data.length,
+    limit: response.limit ?? options.limit ?? response.data.length,
+    offset: response.offset ?? options.offset ?? 0,
+  };
 }
 
 export async function listArtistRevisions(
   artistId: string,
-): Promise<MusicRevisionSummary[]> {
-  const response = await apiGetEnvelope<MusicRevisionSummary[]>(
-    musicV1Endpoints.artistRevisions(artistId),
+  options: { limit?: number; offset?: number } = {},
+): Promise<MusicRevisionPage> {
+  const response: { data: MusicRevisionSummary[]; total?: number; limit?: number; offset?: number } = await apiGetEnvelope<MusicRevisionSummary[]>(
+    `${musicV1Endpoints.artistRevisions(artistId)}${queryString(options)}`,
   );
-  return response.data;
+  return {
+    data: response.data,
+    total: response.total ?? response.data.length,
+    limit: response.limit ?? options.limit ?? response.data.length,
+    offset: response.offset ?? options.offset ?? 0,
+  };
 }
 
 export async function listSongRevisions(
   songId: string,
-): Promise<MusicRevisionSummary[]> {
-  const response = await apiGetEnvelope<MusicRevisionSummary[]>(
-    musicV1Endpoints.songRevisions(songId),
+  options: { limit?: number; offset?: number } = {},
+): Promise<MusicRevisionPage> {
+  const response: { data: MusicRevisionSummary[]; total?: number; limit?: number; offset?: number } = await apiGetEnvelope<MusicRevisionSummary[]>(
+    `${musicV1Endpoints.songRevisions(songId)}${queryString(options)}`,
   );
-  return response.data;
+  return {
+    data: response.data,
+    total: response.total ?? response.data.length,
+    limit: response.limit ?? options.limit ?? response.data.length,
+    offset: response.offset ?? options.offset ?? 0,
+  };
+}
+
+async function listRevisionContributors(url: string): Promise<MusicContributorList> {
+  const response = await apiGetEnvelope<MusicContributor[], { total?: number }>(url)
+  return { data: response.data, total: response.meta?.total ?? response.data.length }
+}
+
+export function listAlbumContributors(albumId: string): Promise<MusicContributorList> {
+  return listRevisionContributors(musicV1Endpoints.albumContributors(albumId))
+}
+
+export function listArtistContributors(artistId: string): Promise<MusicContributorList> {
+  return listRevisionContributors(musicV1Endpoints.artistContributors(artistId))
 }
 
 export async function getSongRevision(

@@ -177,12 +177,21 @@ const toggleTheme = (event: MouseEvent) => {
   position: sticky;
   top: 0;
   z-index: var(--a-z-navigation);
-  background: var(--a-color-bg);
+  background: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid var(--a-color-border-soft);
   height: var(--a-topbar-height);
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+:root.dark .topbar {
+  background: rgba(11, 15, 25, 0.85);
 }
 .topbar--auth {
-  background: var(--a-color-bg);
+  background: rgba(255, 255, 255, 0.85);
+}
+:root.dark .topbar--auth {
+  background: rgba(11, 15, 25, 0.85);
 }
 .topbar-inner {
   padding: 0 2rem 0 0;

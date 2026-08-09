@@ -250,6 +250,24 @@ function validateAndExpose() {
       membersErrorMessage.value = '请为每位成员填写加入时间'
       return false
     }
+    if (
+      !draft.stageNames[0]?.name.trim() ||
+      !hasDatePartsValue(draft.activeStartDateParts) ||
+      !draft.source.trim()
+    ) {
+      return false
+    }
+  } else {
+    if (
+      !draft.legalName.trim() ||
+      !draft.stageNames[0]?.name.trim() ||
+      !draft.nationality.trim() ||
+      !hasDatePartsValue(draft.birthDateParts) ||
+      !draft.source.trim() ||
+      !draft.avatarUrl.trim()
+    ) {
+      return false
+    }
   }
 
   const { setMusicCreationStep } = useMusicDrawers()

@@ -146,12 +146,11 @@ describe('Music AlbumsView.vue (Album Landing)', () => {
 
     mountHome()
 
-    expect(mocks.openMusicEditor).toHaveBeenCalledWith({
-      entity: 'artist',
-      mode: 'create',
-      seed: { name: 'Seed Artist' },
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({
+      startStep: 'artist',
+      artistName: 'Seed Artist',
     })
-    expect(mocks.openMusicCreationFlow).not.toHaveBeenCalled()
+    expect(mocks.openMusicEditor).not.toHaveBeenCalled()
   })
 
   it('shows the authenticated user exact pending rebind count and opens the first task', async () => {

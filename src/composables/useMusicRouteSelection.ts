@@ -7,6 +7,7 @@ type MusicRouteSelectionHandlers = {
   closeArtist: () => void
   openMusicCreationFlow: (payload?: {
     artistName?: string
+    startStep?: 'artist'
   }) => void
   closeMusicCreationFlow: () => void
   openMusicEditor: (payload: {
@@ -54,13 +55,9 @@ export function useMusicRouteSelection(handlers: MusicRouteSelectionHandlers) {
 
     if (typeof editor === 'string' && nextEditorKey !== lastRouteEditor) {
       if (editor === 'artist-create') {
-        handlers.closeMusicCreationFlow()
-        handlers.openMusicEditor({
-          entity: 'artist',
-          mode: 'create',
-          seed: typeof name === 'string' && name.trim()
-            ? { name: name.trim() }
-            : undefined,
+        handlers.openMusicCreationFlow({
+          startStep: 'artist',
+          artistName: typeof name === 'string' && name.trim() ? name.trim() : undefined,
         })
         lastRouteEditor = nextEditorKey
         return

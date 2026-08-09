@@ -4,12 +4,14 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
-import { uploadMusicAsset } from '@/api/musicV1'
+import { createMusicArtist, listMusicArtists, uploadMusicAsset, type MusicArtistListItem } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 
-const { state, setMusicCreationStep } = useMusicDrawers()
+const { state } = useMusicDrawers()
 
 const creationFlow = computed(() => state.value.creationFlow)
 const artistDraft = computed(() => creationFlow.value?.draft.artist ?? null)
@@ -23,6 +25,13 @@ const personalErrorMessage = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const pendingAvatarFile = ref<File | null>(null)
 const avatarPreviewUrl = ref('')
+const memberResults = ref<Record<string, MusicArtistListItem[]>>({})
+const memberBusyId = ref('')
+let memberSearchTimer: ReturnType<typeof setTimeout> | null = null
+const artistKindOptions = [
+  { label: '个人', value: 'person' as const, testid: 'artist-kind-person-button' },
+  { label: '组合', value: 'group' as const, testid: 'artist-kind-group-button' },
+]
 
 function createEmptyDateParts() {
   return {
@@ -35,28 +44,6 @@ function createEmptyDateParts() {
 function hasDatePartsValue(parts?: { year: string; month: string; day: string }) {
   if (!parts) return false
   return !!parts.year.trim() || !!parts.month.trim() || !!parts.day.trim()
-}
-
-function normalizeDatePart(value: string, length: number) {
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  return trimmed.padStart(length, '0')
-}
-
-function parseDateToParts(value: string) {
-  const [year = '', month = '', day = ''] = value.trim().split(/[-/]/)
-  return { year, month, day }
-}
-
-function formatDateParts(parts?: { year: string; month: string; day: string }) {
-  if (!parts) return ''
-
-  const year = parts.year.trim()
-  const month = normalizeDatePart(parts.month, 2)
-  const day = normalizeDatePart(parts.day, 2)
-
-  if (!year || !month || !day) return ''
-  return `${year}-${month}-${day}`
 }
 
 function requiredLabel(label: string) {
@@ -73,7 +60,7 @@ watch(
     }
 
     if (!hasDatePartsValue(draft.birthDateParts) && draft.birthDate.trim()) {
-      draft.birthDateParts = parseDateToParts(draft.birthDate)
+      draft.birthDateParts = parsePartialDateParts(draft.birthDate)
     }
 
   },
@@ -84,7 +71,7 @@ watch(
   () => artistDraft.value?.birthDateParts,
   (parts) => {
     if (!artistDraft.value) return
-    artistDraft.value.birthDate = formatDateParts(parts)
+    artistDraft.value.birthDate = serializePartialDate(parts)
   },
   { deep: true, immediate: true },
 )
@@ -160,10 +147,64 @@ function addMember() {
 
   artistDraft.value.members.push({
     id: `member-${Date.now()}-${artistDraft.value.members.length + 1}`,
+    artistId: null,
     name: '',
+    disambiguation: '',
     joinDateParts: createEmptyDateParts(),
     leaveDateParts: createEmptyDateParts(),
   })
+}
+
+function updateMemberName(member: NonNullable<typeof artistDraft.value>['members'][number]) {
+  member.artistId = null
+  membersErrorMessage.value = ''
+  if (memberSearchTimer) clearTimeout(memberSearchTimer)
+  memberSearchTimer = setTimeout(() => void searchMember(member), 250)
+}
+
+async function searchMember(member: NonNullable<typeof artistDraft.value>['members'][number]) {
+  const query = member.name.trim()
+  if (!query) {
+    memberResults.value[member.id] = []
+    return
+  }
+  memberBusyId.value = member.id
+  try {
+    const result = await listMusicArtists({ q: query, page: 1, page_size: 8 })
+    memberResults.value[member.id] = result.data.filter((item) => item.entry_status !== 'draft' || item.created_by)
+  } catch (error) {
+    membersErrorMessage.value = error instanceof Error ? error.message : '搜索成员失败'
+  } finally {
+    if (memberBusyId.value === member.id) memberBusyId.value = ''
+  }
+}
+
+function selectMember(member: NonNullable<typeof artistDraft.value>['members'][number], artist: MusicArtistListItem) {
+  member.artistId = artist.id
+  member.name = artist.display_name || artist.name
+  member.disambiguation = artist.disambiguation || ''
+  memberResults.value[member.id] = []
+  membersErrorMessage.value = ''
+}
+
+async function createMemberDraft(member: NonNullable<typeof artistDraft.value>['members'][number]) {
+  if (!member.name.trim()) return
+  memberBusyId.value = member.id
+  membersErrorMessage.value = ''
+  try {
+    const artist = await createMusicArtist({
+      name: member.name.trim(),
+      disambiguation: member.disambiguation.trim() || undefined,
+      draft_context: 'member',
+    })
+    member.artistId = artist.id
+    member.name = artist.display_name || artist.name
+    memberResults.value[member.id] = []
+  } catch (error) {
+    membersErrorMessage.value = error instanceof Error ? error.message : '创建成员草稿失败'
+  } finally {
+    if (memberBusyId.value === member.id) memberBusyId.value = ''
+  }
 }
 
 function removeMember(memberId: string) {
@@ -180,78 +221,6 @@ function setArtistKind(kind: 'person' | 'group') {
   personalErrorMessage.value = ''
 }
 
-function validateStageNames() {
-  if (!artistDraft.value) return false
-
-  const hasInvalidAdditionalStage = artistDraft.value.stageNames.slice(1).some((item) => {
-    return item.name.trim() && !item.startDateText.trim() && !item.endDateText.trim()
-  })
-
-  stageNameErrorMessage.value = hasInvalidAdditionalStage ? '请为追加艺名补充持续时间' : ''
-  return !hasInvalidAdditionalStage
-}
-
-function validateGroupDraft() {
-  if (!artistDraft.value) return false
-
-  const hasGroupName = !!artistDraft.value.stageNames[0]?.name.trim()
-  const hasStartYear = !!artistDraft.value.activeStartDateParts?.year.trim()
-  const namedMembers = artistDraft.value.members.filter((member) => member.name.trim())
-  const hasMissingJoinDate = namedMembers.some((member) => !member.joinDateParts.year.trim())
-
-  groupErrorMessage.value = !hasGroupName
-    ? '请填写组合名'
-    : !hasStartYear
-      ? '请填写组合成立时间'
-      : ''
-  membersErrorMessage.value = namedMembers.length < 2
-    ? '组合至少需要 2 名成员'
-    : hasMissingJoinDate
-      ? '请为每位成员填写加入时间'
-      : ''
-
-  personalErrorMessage.value = !artistDraft.value.source.trim() ? '请填写来源' : ''
-
-  return !groupErrorMessage.value && !membersErrorMessage.value && !personalErrorMessage.value
-}
-
-function validatePersonDraft() {
-  if (!artistDraft.value) return false
-
-  const hasAvatar = !!artistDraft.value.avatarUrl.trim()
-  const hasLegalName = !!artistDraft.value.legalName.trim()
-  const hasPrimaryStageName = !!artistDraft.value.stageNames[0]?.name.trim()
-  const hasNationality = !!artistDraft.value.nationality.trim()
-  const hasBirthDate = !!artistDraft.value.birthDate.trim()
-  const hasSource = !!artistDraft.value.source.trim()
-
-  personalErrorMessage.value = !hasAvatar
-    ? '请上传头像'
-    : !hasLegalName
-      ? '请填写本名'
-      : !hasPrimaryStageName
-        ? '请填写主艺名'
-        : !hasNationality
-          ? '请填写国籍'
-          : !hasBirthDate
-            ? '请填写生日'
-            : !hasSource
-              ? '请填写来源'
-              : ''
-
-  return !personalErrorMessage.value && validateStageNames()
-}
-
-function goNext() {
-  if (!artistDraft.value) return
-  personalErrorMessage.value = ''
-  if (isGroup.value) {
-    if (!validateGroupDraft()) return
-  } else {
-    if (!validatePersonDraft()) return
-  }
-  setMusicCreationStep('albumImport')
-}
 </script>
 
 <template>
@@ -279,26 +248,12 @@ function goNext() {
           </div>
         </div>
 
-        <div class="kind-switch">
-          <button
-            data-testid="artist-kind-person-button"
-            type="button"
-            class="kind-switch__button"
-            :class="{ 'is-active': !isGroup }"
-            @click="setArtistKind('person')"
-          >
-            个人
-          </button>
-          <button
-            data-testid="artist-kind-group-button"
-            type="button"
-            class="kind-switch__button"
-            :class="{ 'is-active': isGroup }"
-            @click="setArtistKind('group')"
-          >
-            组合
-          </button>
-        </div>
+        <PSegmentedControl
+          :model-value="artistDraft.kind"
+          :options="artistKindOptions"
+          aria-label="艺术家类型"
+          @update:model-value="setArtistKind"
+        />
 
         <div class="avatar-upload-section">
           <div class="field-group avatar-label-group">
@@ -372,6 +327,7 @@ function goNext() {
                 v-model="artistDraft.activeEndDateParts"
                 label="结束时间"
                 testId="artist-group-end-date-input"
+                present-when-empty
               />
             </div>
           </div>
@@ -484,7 +440,7 @@ function goNext() {
                 type="text"
                 label="成员名"
                 placeholder="例如 Thomas Bangalter"
-                @update:model-value="membersErrorMessage = ''"
+                @update:model-value="updateMemberName(member)"
               />
               <button
                 type="button"
@@ -495,10 +451,39 @@ function goNext() {
               </button>
             </div>
 
+            <div v-if="memberResults[member.id]?.length" class="member-search-results">
+              <button
+                v-for="result in memberResults[member.id]"
+                :key="result.id"
+                type="button"
+                class="member-search-result"
+                @click="selectMember(member, result)"
+              >
+                {{ result.display_name || result.name }}
+              </button>
+            </div>
+
+            <div v-if="!member.artistId" class="field-grid field-grid--duo">
+              <PInput
+                v-model="member.disambiguation"
+                :data-testid="`artist-member-disambiguation-input-${index}`"
+                label="区分信息"
+                placeholder="例如 南京音乐人"
+              />
+              <button
+                type="button"
+                class="ui-action member-create-action"
+                :disabled="memberBusyId === member.id || !member.name.trim()"
+                @click="createMemberDraft(member)"
+              >
+                {{ memberBusyId === member.id ? '处理中…' : '创建成员草稿' }}
+              </button>
+            </div>
+
             <div class="field-grid field-grid--duo">
               <PMaskedDateInput v-model="member.joinDateParts" :label="requiredLabel('加入时间')" :testId="`artist-member-join-input-${index}`" />
 
-              <PMaskedDateInput v-model="member.leaveDateParts" label="退出时间" :testId="`artist-member-leave-input-${index}`" />
+              <PMaskedDateInput v-model="member.leaveDateParts" label="退出时间" :testId="`artist-member-leave-input-${index}`" present-when-empty />
             </div>
           </div>
 
@@ -535,6 +520,16 @@ function goNext() {
           </div>
 
           <div class="field-group">
+            <PInput
+              v-model="artistDraft.disambiguation"
+              data-testid="artist-disambiguation-input"
+              type="text"
+              label="区分信息"
+              placeholder="同名时填写，例如 南京音乐人"
+            />
+          </div>
+
+          <div class="field-group">
             <PTextarea
               v-model="artistDraft.bio"
               data-testid="artist-bio-input"
@@ -563,17 +558,6 @@ function goNext() {
         </div>
       </section>
 
-      <div class="step-actions">
-        <button
-          data-testid="artist-next-button"
-          type="button"
-          class="primary-action"
-          :disabled="avatarUploading"
-          @click="goNext"
-        >
-          下一步
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -598,6 +582,26 @@ function goNext() {
 .artist-step-shell {
   display: grid;
   gap: 1rem;
+}
+
+.member-search-results {
+  display: grid;
+  border: 1px solid var(--a-color-border-soft);
+}
+.member-search-result {
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.7rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.member-search-result:last-child {
+  border-bottom: 0;
+}
+.member-create-action {
+  align-self: end;
 }
 
 .artist-hero {
@@ -664,35 +668,6 @@ function goNext() {
   gap: 1rem;
   align-items: flex-start;
   flex-wrap: wrap;
-}
-
-.kind-switch {
-  display: inline-flex;
-  gap: 0.5rem;
-}
-
-.kind-switch__button {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  padding: 0.55rem 0.9rem;
-  background: var(--a-color-bg);
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.78rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-}
-
-.kind-switch__button:hover {
-  transform: translateY(1px);
-  border-color: var(--a-color-text);
-}
-
-.kind-switch__button.is-active {
-  border-color: var(--a-color-text);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
 }
 
 .avatar-upload-section {

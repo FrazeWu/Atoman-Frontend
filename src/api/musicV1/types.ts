@@ -1,7 +1,7 @@
 import type { ApiList, PaginationMeta, UploadAsset } from "../types";
 
 export type MusicEntryStatus =
-  "open" | "disputed" | "confirmed" | "protected" | "closed";
+  "draft" | "open" | "disputed" | "confirmed" | "protected" | "closed";
 export type MusicSource = {
   type: "url" | string;
   url?: string;
@@ -42,14 +42,18 @@ export type MusicAlbumImportCommitTrack = {
 
 export type MusicAlbumImportCommitMember = {
   artist_id: string;
+	name?: string;
   join_date: string;
+	join_date_precision?: string;
   leave_date: string;
+	leave_date_precision?: string;
 };
 
 export type MusicAlbumImportCommitArtist = {
   artist_id: string;
   roles: MusicAlbumArtistRoleInput[];
   name: string;
+  disambiguation?: string;
   legal_name: string;
   bio: string;
   image_url?: string;
@@ -113,6 +117,7 @@ export type MusicAlbumImportCommitInput = {
   };
   artists?: MusicAlbumImportCommitArtist[];
   artist_source?: string;
+  artist_sources?: MusicSource[];
   album: {
     title: string;
     description: string;
@@ -123,6 +128,7 @@ export type MusicAlbumImportCommitInput = {
     tracks: MusicAlbumImportCommitTrack[];
   };
   album_source?: string;
+  album_sources?: MusicSource[];
 };
 
 export type MusicAlbumImport = {
@@ -306,14 +312,23 @@ export type MusicDiscussion = {
 export type MusicArtistListItem = {
   id: string;
   name: string;
+  disambiguation?: string;
+  display_name?: string;
+  created_by?: string;
+  sources?: MusicSource[];
   legal_name?: string;
   bio?: string;
   image_url?: string;
   nationality?: string;
   birth_date?: string;
+	birth_date_precision?: string;
   birth_year?: number;
   death_year?: number;
   artist_form?: "person" | "group";
+	active_start_date?: string;
+	active_start_date_precision?: string;
+	active_end_date?: string;
+	active_end_date_precision?: string;
   members?: string;
   member_groups?: {
     current: Array<{
@@ -321,14 +336,20 @@ export type MusicArtistListItem = {
       name: string;
       image_url?: string;
       join_date?: string;
+		join_date_precision?: string;
       leave_date?: string;
+      leave_date_precision?: string;
+      is_published?: boolean;
     }>;
     former: Array<{
       artist_id: string;
       name: string;
       image_url?: string;
       join_date?: string;
+		join_date_precision?: string;
       leave_date?: string;
+      leave_date_precision?: string;
+      is_published?: boolean;
     }>;
   };
   aliases?: Array<{ id?: string; alias: string; is_main_name?: boolean }>;
@@ -349,6 +370,7 @@ export type MusicAlbumListItem = {
   artist_credits?: MusicAlbumArtistCredit[];
   year?: number;
   release_date?: string;
+	release_date_precision?: string;
   cover_url?: string;
   description?: string;
   reason?: string;
@@ -551,6 +573,7 @@ export type MusicAlbumTrackEditInput = {
 
 export type MusicArtistInput = {
   name: string;
+  disambiguation?: string;
   legal_name?: string;
   stage_names?: MusicAlbumImportCommitStageName[];
   bio?: string;
@@ -564,6 +587,8 @@ export type MusicArtistInput = {
   active_start_date?: string;
   active_end_date?: string;
   members?: MusicAlbumImportCommitMember[];
+  sources?: MusicSource[];
+  draft_context?: 'member';
 };
 
 export type MusicAlbumInput = {

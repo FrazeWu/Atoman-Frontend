@@ -11,8 +11,7 @@
       </div>
 
       <div class="album-meta-card__field">
-        <label class="a-label">发行日期</label>
-        <PInput v-model="releaseDateModel" type="date" />
+		<PMaskedDateInput v-model="releaseDatePartsModel" label="发行日期" />
       </div>
 
       <div class="album-meta-card__field">
@@ -34,6 +33,8 @@ import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import MusicCreationContributorPicker from './MusicCreationContributorPicker.vue'
+import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
+import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 
 const props = defineProps<{
@@ -57,9 +58,9 @@ const albumModel = computed({
   set: (value) => emit('update:album', value),
 })
 
-const releaseDateModel = computed({
-  get: () => props.releaseDate,
-  set: (value) => emit('update:releaseDate', value),
+const releaseDatePartsModel = computed({
+	get: () => parsePartialDateParts(props.releaseDate),
+	set: (value) => emit('update:releaseDate', serializePartialDate(value)),
 })
 
 const knownAlbumTypes = ['album', 'ep', 'single', 'mixtape', 'compilation', 'soundtrack', 'live', 'remix', 'demo']

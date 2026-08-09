@@ -5,6 +5,8 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
+import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -91,6 +93,11 @@ const albumDraft = reactive({
   albumType: 'album',
   description: '',
   reason: '',
+})
+
+const albumReleaseDateParts = computed({
+	get: () => parsePartialDateParts(albumDraft.releaseDate),
+	set: value => { albumDraft.releaseDate = serializePartialDate(value) },
 })
 
 const sourceDraft = reactive({
@@ -741,11 +748,9 @@ async function submitEdit() {
 
           <div class="form-grid">
             <div class="field-group">
-              <PInput
-                id="music-album-release-date"
-                v-model="albumDraft.releaseDate"
-                data-test="album-release-date-input"
-                type="date"
+			  <PMaskedDateInput
+				v-model="albumReleaseDateParts"
+				test-id="album-release-date-input"
                 label="发行时间"
               />
             </div>

@@ -113,7 +113,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
 
     expect(wrapper.text()).toContain('上传专辑')
     expect(wrapper.text()).toContain('封面*')
-    expect(wrapper.text()).toContain('名字*')
+    expect(wrapper.text()).toContain('专辑名*')
     expect(wrapper.text()).toContain('日期*')
     expect(wrapper.text()).toContain('类型*')
     expect(wrapper.text()).toContain('来源*')
@@ -244,7 +244,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
       month: '',
       day: '',
     })
-    expect(flow.draft.albumDetails.releaseDate).toBe('')
+	expect(flow.draft.albumDetails.releaseDate).toBe('2007/--/--')
     expect(flow.draft.albumDetails.releaseYear).toBe('2007')
   })
 

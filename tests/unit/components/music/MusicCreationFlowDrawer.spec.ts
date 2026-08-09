@@ -10,6 +10,7 @@ const createFlowState = (overrides: Partial<MusicCreationFlowState> = {}): Music
   draft: {
     artist: {
       id: 'artist-seeded',
+      disambiguation: '',
       avatarUrl: '',
       kind: 'person',
       legalName: 'Seeded Artist',
@@ -79,7 +80,7 @@ const createFlowState = (overrides: Partial<MusicCreationFlowState> = {}): Music
       uploadedAssets: [],
     },
     albumDetails: {
-      coverUrl: '',
+      coverUrl: 'https://img.test/default-cover.jpg',
       coverAsset: null,
       title: '',
       contributors: [
@@ -94,17 +95,17 @@ const createFlowState = (overrides: Partial<MusicCreationFlowState> = {}): Music
         },
       ],
       releaseDateParts: {
-        year: '',
-        month: '',
-        day: '',
+        year: '2020',
+        month: '01',
+        day: '01',
       },
       releaseDate: '',
       type: 'album',
       releaseYear: '',
       bio: '',
-      source: '',
+      source: '资料来源',
     },
-    tracks: [],
+    tracks: [{ id: 'track-default', sequence: 1, title: 'Default Track' }],
   },
   tracksCustomized: false,
   titleCustomized: false,
@@ -231,7 +232,7 @@ describe('MusicCreationFlowDrawer', () => {
 
     const flow = drawerMocks.state.value.creationFlow
     expect(flow?.draft.albumDetails.title).toBe('Imported Album')
-    expect(flow?.draft.albumDetails.coverUrl).toBe('')
+    expect(flow?.draft.albumDetails.coverUrl).toBe('https://img.test/default-cover.jpg')
     expect(flow?.draft.albumImport.derivedCover).toBe('https://img.test/cover.jpg')
     expect(flow?.draft.tracks).toEqual([
       { id: 'import-track-1', sequence: 1, title: 'Track A', audioKey: 'audio-a', origin: 'import' },
@@ -241,7 +242,7 @@ describe('MusicCreationFlowDrawer', () => {
     wrapper.unmount()
   })
 
-  it('创建艺术家后直接打开关联现有专辑', async () => {
+  it('创建艺术家草稿后进入首张专辑导入', async () => {
     const baseFlow = createFlowState()
     drawerMocks.state.value.creationFlow = createFlowState({
       step: 'artist',
@@ -268,7 +269,7 @@ describe('MusicCreationFlowDrawer', () => {
 
     const wrapper = mount(MusicCreationFlowDrawer)
     expect(wrapper.get('[data-testid="artist-next-button"]').text()).toBe('创建新专辑')
-    await wrapper.get('[data-testid="artist-create-and-link-button"]').trigger('click')
+    await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
     await flushPromises()
 
     expect(createMusicArtistMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -281,12 +282,11 @@ describe('MusicCreationFlowDrawer', () => {
       artist_form: 'person',
       stage_names: [expect.objectContaining({ name: 'Ye', is_primary: true })],
       members: [],
+      sources: [{ type: 'url', url: 'https://example.test/ye' }],
     }))
-    expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/artist/artist-created')
-    expect(drawerMocks.openNestedAction).toHaveBeenCalledWith('link_album', {
-      artistId: 'artist-created',
-      artistName: 'Ye',
-    })
+    expect(drawerMocks.state.value.creationFlow?.draft.artist.id).toBe('artist-created')
+    expect(drawerMocks.state.value.creationFlow?.step).toBe('albumImport')
+    expect(drawerMocks.routerPush).not.toHaveBeenCalled()
   })
 
   it('创建艺术家失败时保留当前表单', async () => {
@@ -297,6 +297,7 @@ describe('MusicCreationFlowDrawer', () => {
         ...baseFlow.draft,
         artist: {
           ...baseFlow.draft.artist,
+          id: null,
           avatarUrl: 'https://img.test/artist.jpg',
           legalName: 'Test Artist',
           stageNames: [{ ...baseFlow.draft.artist.stageNames[0], name: 'Test Artist' }],
@@ -309,11 +310,10 @@ describe('MusicCreationFlowDrawer', () => {
     createMusicArtistMock.mockRejectedValue(new Error('创建艺术家失败，请检查资料后重试'))
 
     const wrapper = mount(MusicCreationFlowDrawer)
-    await wrapper.get('[data-testid="artist-create-and-link-button"]').trigger('click')
+    await wrapper.get('[data-testid="artist-next-button"]').trigger('click')
     await flushPromises()
 
     expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
-    expect(drawerMocks.openNestedAction).not.toHaveBeenCalled()
     expect(wrapper.get('[data-testid="music-creation-error"]').text()).toContain('创建艺术家失败')
   })
 
@@ -373,10 +373,10 @@ describe('MusicCreationFlowDrawer', () => {
         title: 'Imported Album',
         description: '',
         album_type: 'album',
-        release_year: 0,
-        tracks: [],
+        release_year: 2020,
+        tracks: [{ title: 'Default Track', track_number: 1 }],
       }),
-      album_source: '',
+      album_source: '资料来源',
     }))
     expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalledTimes(1)
     expect(drawerMocks.state.value.creationFlow).toBeNull()
@@ -460,7 +460,7 @@ describe('MusicCreationFlowDrawer', () => {
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
     await flushPromises()
 
-    expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/artist/artist-seeded')
+    expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/album/album-1')
   })
 
   it('提交时携带已上传的艺人头像和专辑封面', async () => {
@@ -546,7 +546,7 @@ describe('MusicCreationFlowDrawer', () => {
 
     expect(drawerMocks.state.value.creationFlow?.step).toBe('preview')
     expect(wrapper.get('[data-testid="album-import-preview-step"]').text()).toContain('Preview Track')
-    expect(wrapper.get('img[alt="专辑封面预览"]').attributes('src')).toBe('https://img.test/cover.jpg')
+    expect(wrapper.get('img[alt="专辑封面预览"]').attributes('src')).toBe('https://img.test/default-cover.jpg')
     expect(wrapper.text()).toContain('broken.mp3')
 
     await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
@@ -704,9 +704,9 @@ describe('MusicCreationFlowDrawer', () => {
         description: '',
         album_type: 'album',
         release_year: 2007,
-        tracks: [],
+        tracks: [{ title: 'Default Track', track_number: 1 }],
       }),
-      album_source: '',
+      album_source: '资料来源',
     }))
   })
 
@@ -778,9 +778,9 @@ describe('MusicCreationFlowDrawer', () => {
         album_type: 'album',
         release_date: '2005-08-30',
         release_year: 2005,
-        tracks: [],
+        tracks: [{ title: 'Default Track', track_number: 1 }],
       }),
-      album_source: '',
+      album_source: '资料来源',
     }))
   })
 
@@ -969,7 +969,7 @@ describe('MusicCreationFlowDrawer', () => {
 
     const flow = drawerMocks.state.value.creationFlow
     expect(flow?.draft.albumDetails.title).toBe('Imported Album')
-    expect(flow?.draft.albumDetails.coverUrl).toBe('')
+    expect(flow?.draft.albumDetails.coverUrl).toBe('https://img.test/default-cover.jpg')
     expect(flow?.draft.albumImport.derivedCover).toBe('https://img.test/cover.jpg')
     expect(flow?.draft.tracks).toEqual([
       { id: 'manual-1', sequence: 1, title: 'Manual Intro' },

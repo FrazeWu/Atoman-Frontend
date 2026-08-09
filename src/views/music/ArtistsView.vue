@@ -316,7 +316,7 @@ function handleSearchBlur() {
                     data-testid="music-search-result"
                     @mousedown.prevent="openArtistCard(artist.id)"
                   >
-                    <span class="search-dropdown__item-title">{{ artist.name }}</span>
+                    <span class="search-dropdown__item-title">{{ artist.display_name || artist.name }}</span>
                     <span class="search-dropdown__item-meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
                   </button>
                 </div>

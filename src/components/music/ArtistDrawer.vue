@@ -20,6 +20,7 @@ import {
   type MusicAlbumListItem,
   type MusicArtistListItem,
 } from '@/api/musicV1'
+import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
@@ -31,7 +32,8 @@ const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : i
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
 const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)
-const sheetTitle = computed(() => artist.value?.name ? `艺术家 · ${artist.value.name}` : (props.layer?.title ?? '艺术家'))
+const displayName = computed(() => artist.value?.display_name || artist.value?.name || '')
+const sheetTitle = computed(() => displayName.value ? `艺术家 · ${displayName.value}` : (props.layer?.title ?? '艺术家'))
 const returnCurrentArtist = () => props.layer && returnToLayer(props.layer.key)
 const albums = ref<MusicAlbumListItem[]>([])
 const loading = ref(false)
@@ -76,7 +78,7 @@ function formatAlbumTypeLabel(type?: string) {
 
 function formatAlbumReleaseDate(album: MusicAlbumListItem) {
   if (album.release_date) {
-    const cleaned = album.release_date.split('T')[0].replace(/-/g, '/')
+		const cleaned = formatStoredPartialDate(album.release_date, album.release_date_precision).replace(/-/g, '/')
     if (cleaned.length >= 4) return cleaned
   }
   if (typeof album.year === 'number' && Number.isFinite(album.year) && album.year > 0) {
@@ -116,9 +118,9 @@ const sortedAlbums = computed(() => {
   }
 })
 
-function formatMemberPeriod(joinDate?: string, leaveDate?: string) {
-  const start = joinDate || '未知'
-  const end = leaveDate || '至今'
+function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision?: string, leavePrecision?: string) {
+  const start = formatStoredPartialDate(joinDate, joinPrecision) || '未知'
+  const end = formatStoredPartialDate(leaveDate, leavePrecision) || '至今'
   return `${start} - ${end}`
 }
 
@@ -255,7 +257,7 @@ watch(
             <UserRound :size="32" aria-hidden="true" />
           </div>
           <div class="artist-header-info">
-            <h2 class="title">{{ artist?.name || `Artist ${artistId}` }}</h2>
+            <h2 class="title">{{ displayName || `Artist ${artistId}` }}</h2>
             <p v-if="artist?.legal_name" class="artist-meta-line">本名：{{ artist.legal_name }}</p>
             <p v-if="artistAliases.length" class="artist-meta-line">曾用名：{{ artistAliases.join(' / ') }}</p>
           </div>
@@ -312,13 +314,15 @@ watch(
       <div v-if="hasMemberGroups" class="member-sections">
         <div v-if="memberGroups.current.length" class="member-section">
           <h3 class="member-section-title">现成员</h3>
-          <button
+          <component
+            :is="member.is_published === false ? 'div' : 'button'"
             v-for="member in memberGroups.current"
             :key="`current-${member.artist_id}`"
             type="button"
             class="member-row"
+            :class="{ 'member-row--private': member.is_published === false }"
             :data-testid="`artist-member-${member.artist_id}`"
-            @click="openArtist(String(member.artist_id))"
+            @click="member.is_published !== false && openArtist(String(member.artist_id))"
           >
             <div class="member-avatar">
               <img v-if="member.image_url" :src="member.image_url" :alt="member.name" class="member-avatar-img" />
@@ -328,20 +332,22 @@ watch(
             </div>
             <div class="member-info">
               <div class="member-name">{{ member.name }}</div>
-              <div class="member-period">{{ formatMemberPeriod(member.join_date, member.leave_date) }}</div>
+			  <div class="member-period">{{ formatMemberPeriod(member.join_date, member.leave_date, member.join_date_precision, member.leave_date_precision) }}</div>
             </div>
-          </button>
+          </component>
         </div>
 
         <div v-if="memberGroups.former.length" class="member-section">
           <h3 class="member-section-title">前成员</h3>
-          <button
+          <component
+            :is="member.is_published === false ? 'div' : 'button'"
             v-for="member in memberGroups.former"
             :key="`former-${member.artist_id}`"
             type="button"
             class="member-row"
+            :class="{ 'member-row--private': member.is_published === false }"
             :data-testid="`artist-member-${member.artist_id}`"
-            @click="openArtist(String(member.artist_id))"
+            @click="member.is_published !== false && openArtist(String(member.artist_id))"
           >
             <div class="member-avatar">
               <img v-if="member.image_url" :src="member.image_url" :alt="member.name" class="member-avatar-img" />
@@ -351,9 +357,9 @@ watch(
             </div>
             <div class="member-info">
               <div class="member-name">{{ member.name }}</div>
-              <div class="member-period">{{ formatMemberPeriod(member.join_date, member.leave_date) }}</div>
+			  <div class="member-period">{{ formatMemberPeriod(member.join_date, member.leave_date, member.join_date_precision, member.leave_date_precision) }}</div>
             </div>
-          </button>
+          </component>
         </div>
       </div>
 
@@ -481,6 +487,12 @@ watch(
 }
 .member-row:hover {
   background: var(--a-color-surface);
+}
+.member-row--private {
+  cursor: default;
+}
+.member-row--private:hover {
+  background: transparent;
 }
 .member-avatar {
   width: 48px;

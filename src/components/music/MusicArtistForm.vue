@@ -62,39 +62,11 @@
             option-prefix="artist-country-option-"
           />
 
-          <div class="music-artist-form__birth-group">
-            <label class="music-artist-form__birth-label" for="artist-birth-date-input">出生年月日</label>
-            <div class="music-artist-form__birth-field">
-              <input
-                id="artist-birth-date-input"
-                :value="birthDateText"
-                data-test="artist-birth-date-input"
-                type="text"
-                inputmode="numeric"
-                class="music-artist-form__birth-input"
-                placeholder="yyyy/mm/dd"
-                @input="handleBirthDateInput"
-              >
-              <button
-                type="button"
-                class="music-artist-form__birth-trigger"
-                data-test="artist-birth-picker-button"
-                aria-label="选择出生年月日"
-                @click="openBirthDatePicker"
-              >
-                <CalendarDays :size="16" />
-              </button>
-              <input
-                ref="birthDatePickerRef"
-                :value="birthDateNativeValue"
-                type="date"
-                class="music-artist-form__birth-native"
-                tabindex="-1"
-                aria-hidden="true"
-                @change="onBirthDatePickerChange"
-              >
-            </div>
-          </div>
+          <PMaskedDateInput
+			v-model="birthDateParts"
+			label="出生年月日"
+			test-id="artist-birth-date-input"
+		  />
         </div>
       </div>
     </div>
@@ -117,14 +89,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref, watch } from 'vue'
-import { CalendarDays, UserRound } from 'lucide-vue-next'
+import { reactive, ref, watch } from 'vue'
+import { UserRound } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
+import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import { uploadMusicAsset } from '@/api/musicV1'
-import { formatBirthDateInput, getBirthDateCursorIndex, getBirthDateDigits } from '@/components/music/birthDateMask'
+import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import type { MusicArtistUpdateInput } from '@/api/musicV1'
 
 const props = withDefaults(defineProps<{
@@ -157,28 +130,24 @@ const errors = reactive({
 })
 const avatarInputRef = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
-const birthDatePickerRef = ref<HTMLInputElement | null>(null)
-const birthDateDigits = ref('')
+const birthDateParts = ref(parsePartialDateParts(''))
 
 function applyInitialValue(value: MusicArtistUpdateInput = {}) {
   form.name = value.name ?? ''
   form.bio = value.bio ?? ''
   form.image_url = value.image_url ?? ''
   form.nationality = value.nationality ?? ''
-  form.birth_date = value.birth_date ?? ''
-  birthDateDigits.value = getBirthDateDigits(form.birth_date)
+	form.birth_date = value.birth_date ?? ''
+	birthDateParts.value = parsePartialDateParts(form.birth_date)
 }
 
 watch(() => props.initialValue, (value) => {
   applyInitialValue(value)
 }, { immediate: true, deep: true })
 
-const birthDateText = computed(() => formatBirthDateInput(birthDateDigits.value))
-const birthDateNativeValue = computed(() => {
-  const digits = birthDateDigits.value
-  if (digits.length < 8) return ''
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`
-})
+watch(birthDateParts, (parts) => {
+	form.birth_date = serializePartialDate(parts)
+}, { deep: true })
 
 async function onAvatarFileChange(e: Event) {
   const input = e.target as HTMLInputElement
@@ -198,35 +167,6 @@ async function onAvatarFileChange(e: Event) {
     uploadingAvatar.value = false
     input.value = ''
   }
-}
-
-function syncBirthDate(digits: string) {
-  birthDateDigits.value = digits
-  form.birth_date = digits.length === 8
-    ? `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`
-    : ''
-}
-
-function handleBirthDateInput(event: Event) {
-  const input = event.target as HTMLInputElement
-  const selectionStart = input.selectionStart ?? input.value.length
-  const digitCountBeforeCursor = getBirthDateDigits(input.value.slice(0, selectionStart)).length
-  syncBirthDate(getBirthDateDigits(input.value))
-
-  void nextTick(() => {
-    const cursorIndex = getBirthDateCursorIndex(digitCountBeforeCursor)
-    input.setSelectionRange(cursorIndex, cursorIndex)
-  })
-}
-
-function openBirthDatePicker() {
-  birthDatePickerRef.value?.showPicker?.()
-  birthDatePickerRef.value?.focus()
-}
-
-function onBirthDatePickerChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  syncBirthDate(getBirthDateDigits(input.value))
 }
 
 function handleSubmit() {

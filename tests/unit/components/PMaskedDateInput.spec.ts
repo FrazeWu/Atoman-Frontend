@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import { defineComponent, nextTick, ref } from 'vue'
 
@@ -26,26 +26,17 @@ describe('PMaskedDateInput', () => {
     expect(input.value).toBe('2026/08/03')
   })
 
-  it('forces cursor to the first empty slot on click and focus', async () => {
-    const wrapper = mount(PMaskedDateInput, {
-      props: {
-        modelValue: { year: '2026', month: 'mm', day: 'dd' },
-      },
-    })
-    const inputWrapper = wrapper.find('input[type="text"]')
-    const input = inputWrapper.element as HTMLInputElement
-
-    // Mock setSelectionRange
-    const setSelectionRangeSpy = vi.spyOn(input, 'setSelectionRange')
-
-    // Click on input
-    await inputWrapper.trigger('click')
-    // Since '2026' is filled, internalDigits is '2026' (4 digits), first empty slot should be index 5 (month position)
-    expect(setSelectionRangeSpy).toHaveBeenCalledWith(5, 5)
-
-    // Focus on input
-    await inputWrapper.trigger('focus')
-    expect(setSelectionRangeSpy).toHaveBeenLastCalledWith(5, 5)
+  it('accepts an unknown month and automatically marks the day unknown', async () => {
+	const model = ref({ year: '', month: '', day: '' })
+	const wrapper = mount(PMaskedDateInput, {
+		props: {
+			modelValue: model.value,
+			'onUpdate:modelValue': value => { model.value = value },
+		},
+	})
+	await wrapper.find('input[type="text"]').setValue('1990/--/20')
+	expect(model.value).toEqual({ year: '1990', month: '--', day: '--' })
+	expect((wrapper.find('input[type="text"]').element as HTMLInputElement).value).toBe('1990/--/--')
   })
 
   it('keeps year, month, and day digits in input order while typing', async () => {
@@ -76,4 +67,18 @@ describe('PMaskedDateInput', () => {
       day: '07',
     })
   })
+
+	it('shows field help and explains that an empty end date means present', async () => {
+		const wrapper = mount(PMaskedDateInput, {
+			props: {
+				modelValue: { year: '', month: '', day: '' },
+				label: '退出时间',
+				presentWhenEmpty: true,
+				testId: 'leave-date',
+			},
+		})
+		await wrapper.get('[data-testid="leave-date-help-btn"]').trigger('click')
+		expect(wrapper.text()).toContain('不填表示至今')
+		expect(wrapper.text()).toContain('1990/--/--')
+	})
 })

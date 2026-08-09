@@ -10,6 +10,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
+import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 
 const { state, setMusicCreationStep } = useMusicDrawers()
@@ -253,10 +254,9 @@ async function onCoverChange(event: Event) {
 
           <div class="field-grid field-grid--duo">
             <div class="field-group">
-              <PInput
-                v-model="albumDetailsDraft.releaseDate"
-                data-testid="album-details-date-input"
-                type="date"
+			  <PMaskedDateInput
+				v-model="albumDetailsDraft.releaseDateParts"
+				test-id="album-details-date-input"
                 label="发行日期"
               />
             </div>

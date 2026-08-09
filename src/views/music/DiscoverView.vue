@@ -609,7 +609,7 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
                     data-testid="music-explore-artist-result"
                     @mousedown.prevent="openArtistResult(artist)"
                   >
-                    <span class="search-result__title">{{ artist.name }}</span>
+                    <span class="search-result__title">{{ artist.display_name || artist.name }}</span>
                     <span class="search-result__meta">{{ artist.legal_name || artist.bio || '艺术家' }}</span>
                   </button>
                 </section>

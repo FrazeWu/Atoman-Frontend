@@ -7,7 +7,7 @@
       <img
         v-if="imageUrl"
         :src="imageUrl"
-        :alt="artist.name"
+        :alt="displayName"
         class="avatar-image"
         loading="lazy"
       />
@@ -59,8 +59,8 @@
     </div>
 
     <div class="artist-info">
-      <h3 class="artist-title" :title="artist.name">
-        {{ artist.name }}
+      <h3 class="artist-title" :title="displayName">
+        {{ displayName }}
         <span v-if="birthYear" class="birth-year">· {{ birthYear }}</span>
       </h3>
     </div>
@@ -73,6 +73,7 @@ import { computed } from 'vue'
 export interface MusicArtistCardItem {
   id: string
   name: string
+  display_name?: string
   legal_name?: string
   bio?: string
   image_url?: string
@@ -104,9 +105,11 @@ const imageUrl = computed(() => {
   return props.artist.image_url || ''
 })
 
+const displayName = computed(() => props.artist.display_name || props.artist.name)
+
 const artistInitial = computed(() => {
-  if (!props.artist.name) return '?'
-  return props.artist.name.trim().charAt(0).toUpperCase()
+  if (!displayName.value) return '?'
+  return displayName.value.trim().charAt(0).toUpperCase()
 })
 
 const birthYear = computed(() => {

@@ -63,7 +63,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: Artist[]): void
 }>()
 
-const { openMusicEditor } = useMusicDrawers()
+const { openMusicCreationFlow } = useMusicDrawers()
 const wrapRef = ref<HTMLElement | null>(null)
 const query = ref('')
 const open = ref(false)
@@ -87,10 +87,9 @@ const select = (a: Artist) => {
 
 function handleAddArtist() {
   const name = query.value.trim()
-  openMusicEditor({
-    entity: 'artist',
-    mode: 'create',
-    seed: name ? { name } : undefined,
+  openMusicCreationFlow({
+    startStep: 'artist',
+    artistName: name || undefined,
   })
 }
 
@@ -111,7 +110,7 @@ const dedupeArtistsByName = (artists: Artist[]) => {
 
 const toArtistOption = (artist: MusicArtistListItem): Artist => ({
   id: artist.id,
-  name: artist.name,
+  name: artist.display_name || artist.name,
   bio: artist.bio,
   image_url: artist.image_url,
   nationality: artist.nationality,
@@ -120,6 +119,8 @@ const toArtistOption = (artist: MusicArtistListItem): Artist => ({
   members: artist.members,
   entry_status: artist.entry_status === 'closed' || artist.entry_status === 'protected'
     ? 'disputed'
+    : artist.entry_status === 'draft'
+      ? 'disputed'
     : artist.entry_status,
   created_at: artist.created_at,
   updated_at: artist.updated_at,
@@ -130,6 +131,7 @@ const fetchArtists = async () => {
     const result = await listMusicArtists({ page: 1, page_size: 100 })
     allArtists.value = dedupeArtistsByName(
       result.data
+        .filter((artist) => artist.entry_status !== 'draft')
         .map(toArtistOption),
     )
   } catch (e) { reportError(e) }

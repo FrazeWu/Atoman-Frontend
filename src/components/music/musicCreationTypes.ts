@@ -32,13 +32,16 @@ export interface MusicCreationArtistStageNameDraft {
 
 export interface MusicCreationArtistMemberDraft {
   id: string
+  artistId: string | null
   name: string
+  disambiguation: string
   joinDateParts: MusicCreationDatePartsDraft
   leaveDateParts: MusicCreationDatePartsDraft
 }
 
 export interface MusicCreationArtistDraft {
   id: string | null
+  disambiguation: string
   avatarUrl: string
   avatarAsset?: UploadAsset | null
   kind: MusicArtistKind

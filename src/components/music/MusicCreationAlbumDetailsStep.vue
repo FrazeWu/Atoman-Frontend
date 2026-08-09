@@ -16,6 +16,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import MusicCreationAlbumUploadZone from '@/components/music/MusicCreationAlbumUploadZone.vue'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
+import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 
 const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
 const coverInputRef = ref<HTMLInputElement | null>(null)
@@ -118,28 +119,6 @@ function hasDatePartsValue(parts?: { year: string; month: string; day: string })
   return !!parts.year.trim() || !!parts.month.trim() || !!parts.day.trim()
 }
 
-function normalizeDatePart(value: string, length: number) {
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  return trimmed.padStart(length, '0')
-}
-
-function parseDateToParts(value: string) {
-  const [year = '', month = '', day = ''] = value.trim().split('-')
-  return { year, month, day }
-}
-
-function formatDateParts(parts?: { year: string; month: string; day: string }) {
-  if (!parts) return ''
-
-  const year = parts.year.trim()
-  const month = normalizeDatePart(parts.month, 2)
-  const day = normalizeDatePart(parts.day, 2)
-
-  if (!year || !month || !day) return ''
-  return `${year}-${month}-${day}`
-}
-
 watch(
   albumDetailsDraft,
   (draft) => {
@@ -154,7 +133,7 @@ watch(
     }
 
     if (!hasDatePartsValue(draft.releaseDateParts) && draft.releaseDate.trim()) {
-      draft.releaseDateParts = parseDateToParts(draft.releaseDate)
+      draft.releaseDateParts = parsePartialDateParts(draft.releaseDate)
     } else if (!hasDatePartsValue(draft.releaseDateParts) && draft.releaseYear.trim()) {
       draft.releaseDateParts = {
         year: draft.releaseYear.trim(),
@@ -170,7 +149,7 @@ watch(
   () => albumDetailsDraft.value?.releaseDateParts,
   (parts) => {
     if (!albumDetailsDraft.value) return
-    albumDetailsDraft.value.releaseDate = formatDateParts(parts)
+    albumDetailsDraft.value.releaseDate = serializePartialDate(parts)
     albumDetailsDraft.value.releaseYear = parts?.year.trim() ?? ''
   },
   { deep: true, immediate: true },
@@ -460,108 +439,108 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <!-- 导入进度与拖拽上传 Banner -->
-    <section class="album-card album-card--primary album-import-status-card" data-testid="album-import-status">
-      <div class="card-header">
-        <div>
-          <p class="card-kicker">导入进度</p>
-          <p class="card-copy">你可以继续上传并自动识别封面与曲目，或者同时填写下方信息。</p>
-        </div>
-      </div>
-      <MusicCreationAlbumUploadZone />
-    </section>
-
-    <!-- 专辑创建表单布局 -->
-    <div class="album-details-step__form">
-      <!-- 顶部 Header 区：左侧正方形封面 + 右侧基本信息 (名字/创作者/日期与类型同行) -->
-      <div class="album-details-step__header-grid">
-        <!-- 左侧：正方形封面 -->
-        <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
-          <input
-            ref="coverInputRef"
-            data-testid="album-details-cover-input"
-            type="file"
-            accept="image/*"
-            :disabled="coverUploading"
-            style="display: none"
-            @change="onCoverChange"
-          />
-          <div class="p-field">
-            <label class="p-field-label">
-              <span class="p-field-dot" aria-hidden="true" />
-              {{ requiredLabel('封面') }}
-            </label>
-            <div
-              class="custom-file-picker square-picker"
-              :class="{
-                'has-cover': !!coverDisplayUrl,
-                'is-disabled': coverUploading,
-              }"
-              @click="coverInputRef?.click()"
-            >
-              <img
-                v-if="coverDisplayUrl"
-                :src="coverDisplayUrl"
-                alt="封面预览"
-                class="cover-picker-image"
-              />
-              <template v-else>
-                <div class="file-picker-icon">
-                  <ImageUp :size="28" aria-hidden="true" />
-                </div>
-                <div class="file-picker-text">
-                  <span class="file-picker-title">上传专辑封面</span>
-                  <span class="file-picker-subtitle">JPG / PNG 正方形</span>
-                </div>
-              </template>
-              <PButton
-                type="button"
-                variant="secondary"
-                :class="{ 'cover-change-button': !!coverDisplayUrl }"
-                data-testid="album-details-cover-change-button"
-                :disabled="coverUploading"
-                @click.stop="coverInputRef?.click()"
-              >
-                <ImageUp v-if="coverDisplayUrl" :size="16" aria-hidden="true" />
-                {{ coverDisplayUrl ? '更换封面' : '浏览文件' }}
-              </PButton>
-            </div>
+    <!-- 导入进度与封面并排 -->
+    <div class="album-details-step__upload-cover-grid">
+      <section class="album-card album-card--primary album-import-status-card" data-testid="album-import-status">
+        <div class="card-header">
+          <div>
+            <p class="card-kicker">导入进度</p>
+            <p class="card-copy">你可以继续上传并自动识别封面与曲目，或者同时填写下方信息。</p>
           </div>
-          <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
-          <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+        </div>
+        <MusicCreationAlbumUploadZone />
+      </section>
+
+      <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
+        <input
+          ref="coverInputRef"
+          data-testid="album-details-cover-input"
+          type="file"
+          accept="image/*"
+          :disabled="coverUploading"
+          style="display: none"
+          @change="onCoverChange"
+        />
+        <div class="p-field">
+          <label class="p-field-label">
+            <span class="p-field-dot" aria-hidden="true" />
+            {{ requiredLabel('封面') }}
+          </label>
           <div
-            v-if="unresolvedImportedCoverUrl"
-            class="imported-cover-callout"
-            data-testid="album-details-imported-cover-callout"
+            class="custom-file-picker square-picker"
+            :class="{
+              'has-cover': !!coverDisplayUrl,
+              'is-disabled': coverUploading,
+            }"
+            @click="coverInputRef?.click()"
           >
-            <p class="imported-cover-callout__copy">已识别到封面，确认裁剪后才会作为最终封面。</p>
+            <img
+              v-if="coverDisplayUrl"
+              :src="coverDisplayUrl"
+              alt="封面预览"
+              class="cover-picker-image"
+            />
+            <template v-else>
+              <div class="file-picker-icon">
+                <ImageUp :size="28" aria-hidden="true" />
+              </div>
+              <div class="file-picker-text">
+                <span class="file-picker-title">上传专辑封面</span>
+                <span class="file-picker-subtitle">JPG / PNG 正方形</span>
+              </div>
+            </template>
             <PButton
               type="button"
               variant="secondary"
-              data-testid="album-details-imported-cover-action"
-              @click="reopenImportedCoverCrop"
+              :class="{ 'cover-change-button': !!coverDisplayUrl }"
+              data-testid="album-details-cover-change-button"
+              :disabled="coverUploading"
+              @click.stop="coverInputRef?.click()"
             >
-              继续裁剪识别封面
+              <ImageUp v-if="coverDisplayUrl" :size="16" aria-hidden="true" />
+              {{ coverDisplayUrl ? '更换封面' : '浏览文件' }}
             </PButton>
           </div>
         </div>
+        <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
+        <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+        <div
+          v-if="unresolvedImportedCoverUrl"
+          class="imported-cover-callout"
+          data-testid="album-details-imported-cover-callout"
+        >
+          <p class="imported-cover-callout__copy">已识别到封面，确认裁剪后才会作为最终封面。</p>
+          <PButton
+            type="button"
+            variant="secondary"
+            data-testid="album-details-imported-cover-action"
+            @click="reopenImportedCoverCrop"
+          >
+            继续裁剪识别封面
+          </PButton>
+        </div>
+      </div>
+    </div>
 
-        <!-- 右侧：专辑名字、创作者、日期与类型同行 -->
+    <!-- 专辑创建表单布局 -->
+    <div class="album-details-step__form">
+      <!-- 左侧基础信息，右侧简介 -->
+      <div class="album-details-step__content-grid">
         <div class="album-details-step__header-main">
           <!-- 专辑名称 -->
-          <div class="field-group" data-testid="album-details-field" data-field="name">
+          <div class="field-group album-details-step__inline-field" data-testid="album-details-field" data-field="name">
             <PInput
               v-model="titleModel"
               data-testid="album-details-title-input"
               type="text"
               placeholder="例如 Late Registration"
-              :label="requiredLabel('名字')"
+              :label="requiredLabel('专辑名')"
               @blur="handleTitleBlur"
             />
           </div>
 
           <!-- 创作者 -->
-          <div class="field-group" data-testid="album-details-field" data-field="contributors">
+          <div class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
             <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
           </div>
 
@@ -590,17 +569,15 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- 下一行：专辑简介 -->
-      <div class="field-group" data-testid="album-details-field" data-field="bio">
-        <PTextarea
-          v-model="albumDetailsDraft.bio"
-          data-testid="album-details-bio-input"
-          :rows="3"
-          placeholder="补充专辑简介..."
-          label="简介"
-        />
+        <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
+          <PTextarea
+            v-model="albumDetailsDraft.bio"
+            data-testid="album-details-bio-input"
+            :rows="3"
+            placeholder="补充专辑简介..."
+            label="简介"
+          />
+        </div>
       </div>
 
       <!-- 下一行：曲目列表 -->
@@ -739,12 +716,20 @@ onBeforeUnmount(() => {
   gap: 1.5rem;
 }
 
-/* 顶部 Header 区：左侧 240px 正方形封面 + 右侧专辑属性 */
-.album-details-step__header-grid {
+/* 上传专辑与封面并排 */
+.album-details-step__upload-cover-grid {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 240px;
   gap: 1.5rem;
   align-items: start;
+}
+
+/* 左侧专辑信息与右侧简介等高 */
+.album-details-step__content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 1.5rem;
+  align-items: stretch;
 }
 
 .album-details-step__header-main {
@@ -752,6 +737,11 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 1.25rem;
   min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
 }
 
 /* 日期与类型在右侧第三行 1:1 并排 */
@@ -770,6 +760,93 @@ onBeforeUnmount(() => {
   box-shadow: var(--a-shadow-sm);
 }
 
+.album-details-step__bio-field {
+  display: flex;
+  min-height: 100%;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.album-details-step__bio-field :deep(.p-field) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.album-details-step__bio-field :deep(.p-textarea-wrapper) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.album-details-step__bio-field :deep(.p-textarea) {
+  flex: 1;
+  min-height: 12rem;
+  resize: vertical;
+}
+
+.album-details-step__inline-field :deep(.p-field),
+.album-details-step__contributor-field :deep(.picker-search .p-field) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.album-details-step__inline-field :deep(.p-field-label),
+.album-details-step__contributor-field :deep(.p-field-label),
+.album-details-step__row-two-col :deep(.p-field-label),
+.album-details-step__row-two-col :deep(.field-label) {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.album-details-step__inline-field :deep(.p-field-label)::after,
+.album-details-step__contributor-field :deep(.p-field-label)::after,
+.album-details-step__row-two-col :deep(.p-field-label)::after,
+.album-details-step__row-two-col :deep(.field-label)::after {
+  content: '：';
+}
+
+.album-details-step__contributor-field :deep(.picker-search .p-field) {
+  gap: 0.75rem;
+}
+
+.album-details-step__contributor-field :deep(.picker-search .p-field-label) {
+  font-size: 0.8rem;
+}
+
+.album-details-step__row-two-col > .field-group {
+  min-width: 0;
+}
+
+.album-details-step__row-two-col > .field-group :deep(.p-date-input-container) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.album-details-step__row-two-col > .field-group :deep(.p-field) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.album-details-step__row-two-col > .field-group :deep(.field-label-row) {
+  margin: 0;
+}
+
+.album-details-step__row-two-col > .field-group :deep(.birth-date-field),
+.album-details-step__row-two-col > .field-group :deep(.p-select-root) {
+  min-width: 0;
+}
+
 .square-picker {
   aspect-ratio: 1 / 1;
   display: flex;
@@ -782,7 +859,8 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .album-details-step__header-grid {
+  .album-details-step__upload-cover-grid,
+  .album-details-step__content-grid {
     grid-template-columns: 1fr;
   }
   .album-details-step__row-two-col {
@@ -1061,7 +1139,7 @@ onBeforeUnmount(() => {
 }
 
 .album-import-status-card {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
 }
 
 .state-line {

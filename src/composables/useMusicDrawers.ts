@@ -53,6 +53,7 @@ function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
   return {
     artist: {
       id: seed?.artistId ?? null,
+      disambiguation: '',
       avatarUrl: '',
       avatarAsset: null,
       kind: 'person',

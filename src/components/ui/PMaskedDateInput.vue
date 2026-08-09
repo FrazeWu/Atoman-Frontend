@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
-import { formatBirthDateInput, getBirthDateCursorIndex, getBirthDateDigits } from '@/components/music/birthDateMask'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { CalendarDays, ChevronLeft, ChevronRight, CircleHelp } from 'lucide-vue-next'
+import { formatPartialDateInput, parsePartialDateParts, type PartialDateParts } from '@/components/music/birthDateMask'
 
 const props = defineProps<{
   modelValue: { year: string; month: string; day: string }
@@ -9,6 +9,8 @@ const props = defineProps<{
   required?: boolean
   testId?: string
   placeholder?: string
+	helpText?: string
+	presentWhenEmpty?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -17,8 +19,15 @@ const emit = defineEmits<{
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
-const internalDigits = ref('')
+const internalValue = ref('yyyy/mm/dd')
 const showPopover = ref(false)
+const showHelp = ref(false)
+
+const defaultHelpText = computed(() => props.helpText || (
+	props.presentWhenEmpty
+		? '日期不确定时可输入 --，如 1990/05/-- 或 1990/--/--；不填表示至今。'
+		: '日期不确定时可输入 --，如 1990/05/-- 或 1990/--/--。'
+))
 
 const now = new Date()
 const currentYear = now.getFullYear()
@@ -32,36 +41,15 @@ const monthOptions = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1,
 }))
 
-function normalizePart(val: string, len: number) {
-  const trimmed = (val || '').trim()
-  if (!trimmed) return ''
-  return trimmed.padStart(len, '0')
-}
+function syncFromModel(val: PartialDateParts) {
+	const parts = parsePartialDateParts(`${val.year}/${val.month}/${val.day}`)
+	internalValue.value = formatPartialDateInput(parts)
 
-function parseDateToParts(value: string) {
-  const [year = '', month = '', day = ''] = value.trim().split(/[-/]/)
-  return {
-    year: year.replace(/\D/g, ''),
-    month: month.replace(/\D/g, ''),
-    day: day.replace(/\D/g, ''),
-  }
-}
-
-function syncFromModel(val: { year: string; month: string; day: string }) {
-  const y = val.year.replace(/\D/g, '').slice(0, 4)
-  const m = val.month.replace(/\D/g, '').slice(0, 2)
-  const d = val.day.replace(/\D/g, '').slice(0, 2)
-  const currentParts = parseDateToParts(formatBirthDateInput(internalDigits.value))
-
-  if (currentParts.year !== y || currentParts.month !== m || currentParts.day !== d) {
-    internalDigits.value = getBirthDateDigits(`${y}${normalizePart(m, 2)}${normalizePart(d, 2)}`)
-  }
-
-  if (y && !isNaN(Number(y))) {
-    popoverYear.value = Number(y)
-  }
-  if (m && !isNaN(Number(m)) && Number(m) >= 1 && Number(m) <= 12) {
-    popoverMonth.value = Number(m)
+	if (parts.year && !isNaN(Number(parts.year))) {
+		popoverYear.value = Number(parts.year)
+	}
+	if (parts.month !== '--' && Number(parts.month) >= 1 && Number(parts.month) <= 12) {
+		popoverMonth.value = Number(parts.month)
   }
 }
 
@@ -74,35 +62,32 @@ watch(
 )
 
 function handleInput(event: Event) {
-  const input = event.target as HTMLInputElement
-  const rawValue = input.value
-  const cursorPos = input.selectionStart ?? rawValue.length
-  const digitCountBeforeCursor = getBirthDateDigits(rawValue.slice(0, cursorPos)).length
-
-  const digits = getBirthDateDigits(rawValue)
-  const formatted = formatBirthDateInput(digits)
-
-  internalDigits.value = digits
-
-  nextTick(() => {
-    if (inputRef.value) {
-      const cursorIndex = getBirthDateCursorIndex(digitCountBeforeCursor)
-      inputRef.value.setSelectionRange(cursorIndex, cursorIndex)
-    }
-  })
-
-  // 解析并同步给父组件
-  const parts = parseDateToParts(formatted)
-  emit('update:modelValue', parts)
+	const input = event.target as HTMLInputElement
+	const parts = parsePartialDateParts(input.value)
+	internalValue.value = formatPartialDateInput(parts)
+	input.value = internalValue.value
+	const cursor = parts.year.length < 4
+		? parts.year.length
+		: !parts.month ? 5
+			: parts.month !== '--' && parts.month.length < 2 ? 5 + parts.month.length
+				: !parts.day ? 8
+					: parts.day !== '--' && parts.day.length < 2 ? 8 + parts.day.length : 10
+	input.setSelectionRange(cursor, cursor)
+	emit('update:modelValue', parts)
 }
 
 function handleSelect() {
-  const cursorIndex = getBirthDateCursorIndex(internalDigits.value.length)
-  inputRef.value?.setSelectionRange(cursorIndex, cursorIndex)
+	if (internalValue.value === 'yyyy/mm/dd') inputRef.value?.select()
 }
 
 function togglePopover() {
-  showPopover.value = !showPopover.value
+	showPopover.value = !showPopover.value
+	showHelp.value = false
+}
+
+function toggleHelp() {
+	showHelp.value = !showHelp.value
+	showPopover.value = false
 }
 
 function closePopover() {
@@ -130,7 +115,7 @@ function selectCalendarDay(d: number) {
   const mStr = String(popoverMonth.value).padStart(2, '0')
   const dStr = String(d).padStart(2, '0')
 
-  internalDigits.value = `${yStr}${mStr}${dStr}`
+	internalValue.value = `${yStr}/${mStr}/${dStr}`
   emit('update:modelValue', { year: yStr, month: mStr, day: dStr })
   showPopover.value = false
 }
@@ -142,7 +127,7 @@ function selectToday() {
   const mStr = String(t.getMonth() + 1).padStart(2, '0')
   const dStr = String(t.getDate()).padStart(2, '0')
 
-  internalDigits.value = `${yStr}${mStr}${dStr}`
+	internalValue.value = `${yStr}/${mStr}/${dStr}`
   emit('update:modelValue', { year: yStr, month: mStr, day: dStr })
   showPopover.value = false
 }
@@ -170,8 +155,9 @@ const calendarDays = computed(() => {
 
 // 点击外部关闭 Popover
 function handleClickOutside(e: MouseEvent) {
-  if (containerRef.value && !containerRef.value.contains(e.target as Node)) {
-    showPopover.value = false
+	if (containerRef.value && !containerRef.value.contains(e.target as Node)) {
+		showPopover.value = false
+		showHelp.value = false
   }
 }
 
@@ -188,17 +174,34 @@ onUnmounted(() => {
 
 <template>
   <div ref="containerRef" class="field-group p-date-input-container">
-    <label v-if="label" class="field-label">
-      {{ label }}{{ required ? '*' : '' }}
-    </label>
+    <div v-if="label" class="field-label-row">
+      <label class="field-label">
+        {{ label }}{{ required ? '*' : '' }}
+      </label>
+      <button
+        type="button"
+        class="date-help-trigger"
+        :aria-label="`${label}填写说明`"
+        :aria-expanded="showHelp"
+        :data-testid="testId ? `${testId}-help-btn` : undefined"
+        @click.stop="toggleHelp"
+      >
+        <CircleHelp :size="15" aria-hidden="true" />
+      </button>
+    </div>
+
+    <div v-if="showHelp" class="date-help-popover" role="status" @click.stop>
+      {{ defaultHelpText }}
+    </div>
 
     <div class="birth-date-field">
       <input
         ref="inputRef"
-        :value="formatBirthDateInput(internalDigits)"
+        :value="internalValue"
         :data-testid="testId"
+		:data-test="testId"
         type="text"
-        inputmode="numeric"
+        inputmode="text"
         class="birth-date-input"
         :placeholder="placeholder || 'yyyy/mm/dd'"
         @input="handleInput"
@@ -209,6 +212,7 @@ onUnmounted(() => {
         type="button"
         class="birth-date-trigger"
         :data-testid="testId ? `${testId}-picker-btn` : undefined"
+		:data-test="testId ? `${testId}-picker-btn` : undefined"
         aria-label="选择日期"
         @click.stop="togglePopover"
       >
@@ -281,6 +285,48 @@ onUnmounted(() => {
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.date-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+
+.date-help-trigger:hover,
+.date-help-trigger:focus-visible {
+  color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+}
+
+.date-help-popover {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 121;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  box-shadow: var(--a-shadow-md);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .birth-date-field {

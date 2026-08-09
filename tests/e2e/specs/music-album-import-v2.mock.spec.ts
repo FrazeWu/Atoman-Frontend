@@ -131,7 +131,7 @@ test('通过真实专辑创建界面完成 v2 分片导入并显示识别曲目'
     `POST /api/v1/music/imports/albums/${importId}/complete`,
   ]))
   await expect.poll(() => importPolls).toBeGreaterThan(0)
-  await expect(creationDialog.getByLabel('名字*')).toHaveValue('E2E Import Album')
+  await expect(creationDialog.getByLabel('专辑名*')).toHaveValue('E2E Import Album')
 
   await expect(creationDialog.getByTestId('album-import-status')).toBeVisible()
   await creationDialog.getByRole('button', { name: '继续' }).click()

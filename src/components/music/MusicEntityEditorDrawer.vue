@@ -33,6 +33,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
+import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import {
 	albumArtistCreditsFromContributors,
 	albumContributorsFromResponse,
@@ -239,7 +240,7 @@ async function loadArtist(artistId: string) {
       bio: artist.bio ?? '',
       image_url: artist.image_url ?? '',
       nationality: artist.nationality ?? '',
-      birth_date: artist.birth_date ?? '',
+      birth_date: formatStoredPartialDate(artist.birth_date, artist.birth_date_precision),
       birth_year: artist.birth_year,
       death_year: artist.death_year,
     }
@@ -420,7 +421,7 @@ function hydrateAlbumDraft(result: MusicAlbumListItem) {
   meta = reactive({
 	contributors: albumContributorsFromResponse(result),
     album: result.title ?? '',
-    releaseDate: result.release_date?.slice(0, 10) ?? '',
+    releaseDate: formatStoredPartialDate(result.release_date, result.release_date_precision),
     albumType: normalizeAlbumType(result.album_type),
     description: result.description ?? '',
   })

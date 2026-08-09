@@ -34,7 +34,7 @@ function toContributor(artist: MusicArtistListItem): MusicCreationAlbumContribut
   return {
     id: `contributor-${artist.id}`,
     artistId: artist.id,
-    name: artist.name,
+    name: artist.display_name || artist.name,
     avatarUrl: artist.image_url ?? '',
     kind: inferArtistKind(artist),
     locked: false,

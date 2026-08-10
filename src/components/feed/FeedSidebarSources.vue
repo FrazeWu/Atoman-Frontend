@@ -1,5 +1,5 @@
 <template>
-  <section class="feed-sidebar-sources" :class="{ 'is-collapsed': collapsed }" aria-label="订阅源类别">
+  <section class="feed-sidebar-sources" :class="[`sidebar-${variant}`, { 'is-collapsed': collapsed }]" aria-label="订阅源类别">
     <template v-if="!collapsed">
       <header class="feed-sidebar-sources__header">
         <p class="feed-sidebar-sources__eyebrow a-font-meta">订阅源类别 / SOURCES</p>
@@ -96,6 +96,9 @@ import { computed, ref } from 'vue'
 
 import type { Subscription, SubscriptionGroup } from '@/types'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
+import { useSidebarStyle } from '@/composables/useSidebarStyle'
+
+const { variant } = useSidebarStyle()
 
 const props = withDefaults(
   defineProps<{
@@ -377,12 +380,64 @@ function toggleGroup(groupId: string) {
   border-color: var(--a-color-border-soft);
 }
 
-.feed-sidebar-sources__item.is-active {
+.feed-sidebar-sources__item.is-active,
+.feed-sidebar-sources__all.is-active {
   background-color: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
   font-weight: 650;
+}
+
+/* 方案 1：浮雕精制双色块 (Pill Accent Card) */
+.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__item.is-active,
+.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__all.is-active {
+  position: relative;
+}
+.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__item.is-active::before,
+.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__all.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.5px;
+  height: 18px;
+  border-radius: 99px;
+  background: var(--a-color-fg);
+}
+
+/* 方案 2：极简深色指示条 (Minimal Left Line) */
+.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__item,
+.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__all {
+  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
+  border-left: 3px solid transparent;
+}
+.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__item.is-active,
+.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__all.is-active {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: var(--a-color-fg);
+  border-left-color: var(--a-color-fg);
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+  font-weight: 650;
+}
+
+/* 方案 3：胶囊悬浮水晶块 (Floating Pill Glass) */
+.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__item,
+.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__all {
+  border-radius: 9999px;
+}
+.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__item.is-active,
+.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__all.is-active {
+  background-color: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  font-weight: 650;
+  transform: translateX(4px);
 }
 
 .feed-sidebar-sources__badge {

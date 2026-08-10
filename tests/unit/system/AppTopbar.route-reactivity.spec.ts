@@ -60,4 +60,27 @@ describe('AppTopbar route reactivity', () => {
 
     expect(router.currentRoute.value.path).toBe('/')
   })
+
+  it('expands the bottom line after the main content scrolls', async () => {
+    const router = await makeRouter()
+    const wrapper = mount(AppTopbar, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const mainContent = document.createElement('main')
+    mainContent.className = 'a-main-content'
+    document.body.append(mainContent)
+
+    expect(wrapper.get('.topbar').classes()).not.toContain('is-scrolled')
+
+    mainContent.scrollTop = 24
+    mainContent.dispatchEvent(new Event('scroll', { bubbles: true }))
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('.topbar').classes()).toContain('is-scrolled')
+
+    mainContent.remove()
+    wrapper.unmount()
+  })
 })

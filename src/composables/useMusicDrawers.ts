@@ -239,9 +239,9 @@ export function useMusicDrawers() {
   const openMusicEditor = (editor: MusicEditorState) => {
     state.value.creationFlow = null
     sheetStack.push({
-      key: `editor:${editor.entity}:${editor.mode}:${editor.id ?? 'new'}`,
+      key: `editor:${editor.entity}:${editor.mode}:${editor.id}`,
       kind: 'editor',
-      title: editor.mode === 'create' ? '创建条目' : '修改条目',
+      title: '修改条目',
       payload: editor,
     })
   }
@@ -255,6 +255,10 @@ export function useMusicDrawers() {
 
   const openMusicCreationFlow = (seed: MusicCreationFlowSeed = {}) => {
     state.value.creationFlow = {
+      mode: seed.mode ?? 'create',
+      entity: seed.entity,
+      targetId: seed.entity === 'album' ? seed.albumId ?? null : seed.artistId ?? null,
+      loading: false,
       step: seed.startStep ?? 'albumImport',
       draft: createEmptyDraft(seed),
       tracksCustomized: false,
@@ -265,7 +269,7 @@ export function useMusicDrawers() {
       errorMessage: '',
     }
     sheetStack.push({
-      key: `creation:${seed.artistId ?? 'new'}`,
+      key: `creation:${seed.mode ?? 'create'}:${seed.entity ?? 'album'}:${seed.albumId ?? seed.artistId ?? 'new'}`,
       kind: 'creation',
       title: '创建音乐条目',
       payload: seed,
@@ -329,11 +333,7 @@ export function useMusicDrawers() {
   const closeMusicCreationFlow = (keyOrEvent?: string | Event) => {
     state.value.creationFlow = null
     const key = typeof keyOrEvent === 'string' ? keyOrEvent : undefined
-    const createEditorKey = state.value.musicEditor?.mode === 'create'
-      ? sheetStack.layers.value.find(layer => layer.kind === 'editor' && layer.payload.mode === 'create')?.key
-      : undefined
-    const targetKey = createEditorKey
-      ?? key
+    const targetKey = key
       ?? sheetStack.layers.value.find(layer => layer.kind === 'creation')?.key
     if (targetKey) closeLayerAndAbove(targetKey)
   }
@@ -368,15 +368,12 @@ export function useMusicDrawers() {
     || state.value.nestedAction === 'merge_artist'
 		|| state.value.nestedAction === 'link_album'
     || state.value.creationFlow !== null
-    || state.value.musicEditor?.entity === 'artist'
-    || state.value.musicEditor?.entity === 'album'
   ))
   const isAlbumShifted = computed(() => (
     state.value.nestedAction === 'revise'
     || state.value.nestedAction === 'history'
     || state.value.nestedAction === 'discussion'
     || state.value.nestedAction === 'merge_album'
-    || (state.value.musicEditor?.entity === 'album' && state.value.musicEditor?.mode === 'edit')
   ))
   const isCreationFlowOpen = computed(() => state.value.creationFlow !== null)
   const isMusicEditorOpen = computed(() => state.value.musicEditor !== null)

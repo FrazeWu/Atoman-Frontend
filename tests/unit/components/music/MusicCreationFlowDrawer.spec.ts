@@ -123,9 +123,11 @@ const drawerMocks = {
   }),
   closeMusicCreationFlow: vi.fn(),
   refreshArtist: vi.fn(),
+  refreshAlbum: vi.fn(),
   openNestedAction: vi.fn(),
   setMusicCreationStep: vi.fn(),
   routerPush: vi.fn(),
+  routerReplace: vi.fn(),
 }
 
 vi.mock('@/api/musicV1', async () => {
@@ -135,6 +137,10 @@ vi.mock('@/api/musicV1', async () => {
     commitMusicAlbumImport: vi.fn(),
     completeMusicAlbumImportSession: vi.fn(),
     createMusicArtist: vi.fn(),
+    getMusicArtist: vi.fn(),
+    getMusicAlbum: vi.fn(),
+    submitArtistRevision: vi.fn(),
+    submitAlbumRevision: vi.fn(),
   }
 })
 
@@ -147,7 +153,7 @@ vi.mock('@/components/ui/PSheet.vue', () => ({
 }))
 
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: drawerMocks.routerPush }),
+  useRouter: () => ({ push: drawerMocks.routerPush, replace: drawerMocks.routerReplace }),
 }))
 
 vi.mock('@/components/music/MusicCreationArtistStep.vue', () => ({
@@ -162,6 +168,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     state: drawerMocks.state,
     closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
     refreshArtist: drawerMocks.refreshArtist,
+    refreshAlbum: drawerMocks.refreshAlbum,
     openNestedAction: drawerMocks.openNestedAction,
     setMusicCreationStep: drawerMocks.setMusicCreationStep,
     isMainShifted: computed(() => false),
@@ -175,12 +182,20 @@ const commitMusicAlbumImportMock = vi.mocked(
   }).commitMusicAlbumImport,
 )
 const createMusicArtistMock = vi.mocked(musicApi.createMusicArtist)
+const getMusicArtistMock = vi.mocked(musicApi.getMusicArtist)
+const getMusicAlbumMock = vi.mocked(musicApi.getMusicAlbum)
+const submitArtistRevisionMock = vi.mocked(musicApi.submitArtistRevision)
+const submitAlbumRevisionMock = vi.mocked(musicApi.submitAlbumRevision)
 const completeMusicAlbumImportSessionMock = vi.mocked(musicApi.completeMusicAlbumImportSession)
 
 describe('MusicCreationFlowDrawer', () => {
   beforeEach(() => {
     commitMusicAlbumImportMock.mockReset()
     createMusicArtistMock.mockReset()
+    getMusicArtistMock.mockReset()
+    getMusicAlbumMock.mockReset()
+    submitArtistRevisionMock.mockReset()
+    submitAlbumRevisionMock.mockReset()
     completeMusicAlbumImportSessionMock.mockReset()
     completeMusicAlbumImportSessionMock.mockResolvedValue({ importId: 'import-1', status: 'queued' })
     drawerMocks.closeMusicCreationFlow.mockReset()
@@ -188,10 +203,13 @@ describe('MusicCreationFlowDrawer', () => {
       drawerMocks.state.value.creationFlow = null
     })
     drawerMocks.refreshArtist.mockReset()
+    drawerMocks.refreshAlbum.mockReset()
     drawerMocks.openNestedAction.mockReset()
     drawerMocks.setMusicCreationStep.mockReset()
     drawerMocks.routerPush.mockReset()
+    drawerMocks.routerReplace.mockReset()
     drawerMocks.routerPush.mockResolvedValue(undefined)
+    drawerMocks.routerReplace.mockResolvedValue(undefined)
     drawerMocks.setMusicCreationStep.mockImplementation((step: MusicCreationFlowState['step']) => {
       if (drawerMocks.state.value.creationFlow) {
         drawerMocks.state.value.creationFlow.step = step
@@ -315,6 +333,85 @@ describe('MusicCreationFlowDrawer', () => {
 
     expect(drawerMocks.closeMusicCreationFlow).not.toHaveBeenCalled()
     expect(wrapper.get('[data-testid="music-creation-error"]').text()).toContain('创建艺术家失败')
+  })
+
+  it('修改艺术家复用创建表单并提交完整修订', async () => {
+    drawerMocks.state.value.creationFlow = createFlowState({
+      mode: 'edit',
+      entity: 'artist',
+      targetId: 'artist-1',
+      step: 'artist',
+    })
+    getMusicArtistMock.mockResolvedValue({
+      id: 'artist-1',
+      name: 'Jean Grae',
+      legal_name: 'Tsidi Ibrahim',
+      image_url: 'https://img.test/jean.jpg',
+      nationality: 'US',
+      birth_date: '1976-11-26',
+      birth_date_precision: 'day',
+      artist_form: 'person',
+      stage_names_json: '[{"name":"Jean Grae","is_primary":true}]',
+      sources: [{ type: 'url', url: 'https://example.test/jean' }],
+      member_groups: { current: [], former: [] },
+      entry_status: 'open',
+    })
+    submitArtistRevisionMock.mockResolvedValue({ status: 'approved' })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="music-creation-finish-button"]').text()).toBe('保存')
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(submitArtistRevisionMock).toHaveBeenCalledWith('artist-1', expect.objectContaining({
+      name: 'Jean Grae',
+      legal_name: 'Tsidi Ibrahim',
+      artist_form: 'person',
+      birth_date: '1976-11-26',
+    }))
+    expect(drawerMocks.refreshArtist).toHaveBeenCalled()
+  })
+
+  it('修改专辑无需压缩包即可提交修订', async () => {
+    const base = createFlowState()
+    drawerMocks.state.value.creationFlow = createFlowState({
+      mode: 'edit',
+      entity: 'album',
+      targetId: 'album-1',
+      step: 'albumDetails',
+      draft: {
+        ...base.draft,
+        albumImport: { ...base.draft.albumImport, importId: null, archiveName: '' },
+      },
+    })
+    getMusicAlbumMock.mockResolvedValue({
+      id: 'album-1',
+      title: 'Attack of the Attacking Things',
+      cover_url: 'https://img.test/album.jpg',
+      release_date: '2002-01-01',
+      release_date_precision: 'day',
+      album_type: 'album',
+      description: 'Album bio',
+      sources: [{ type: 'url', url: 'https://example.test/album' }],
+      artists: [{ id: 'artist-1', name: 'Jean Grae' }],
+      songs: [{ id: 'song-1', title: 'Track One', track_number: 1, status: 'open', artist_credits: [] }],
+    })
+    submitAlbumRevisionMock.mockResolvedValue({ status: 'approved' })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="music-creation-finish-button"]').text()).toBe('保存')
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(submitAlbumRevisionMock).toHaveBeenCalledWith('album-1', expect.objectContaining({
+      title: 'Attack of the Attacking Things',
+      release_date: '2002-01-01',
+    }))
+    expect(drawerMocks.refreshAlbum).toHaveBeenCalled()
   })
 
   it('预览步骤点击提交后只调用一次 commitMusicAlbumImport', async () => {

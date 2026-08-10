@@ -26,7 +26,6 @@ const {
   closeArtist,
   openMusicCreationFlow,
   closeMusicCreationFlow,
-  openMusicEditor,
   closeMusicEditor,
 } = useMusicDrawers()
 const { applyRouteSelection } = useMusicRouteSelection({
@@ -36,7 +35,6 @@ const { applyRouteSelection } = useMusicRouteSelection({
   closeArtist,
   openMusicCreationFlow,
   closeMusicCreationFlow,
-  openMusicEditor,
   closeMusicEditor,
 })
 

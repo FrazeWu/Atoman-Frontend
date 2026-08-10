@@ -19,6 +19,7 @@ vi.mock('@/components/ui/PDiscussionFAB.vue', () => ({
 const {
   openNestedAction,
   openMusicEditor,
+  openMusicCreationFlow,
   openAlbum,
 	openArtist,
   getMusicAlbum,
@@ -34,6 +35,7 @@ const {
 } = vi.hoisted(() => ({
   openNestedAction: vi.fn(),
   openMusicEditor: vi.fn(),
+  openMusicCreationFlow: vi.fn(),
   openAlbum: vi.fn(),
 	openArtist: vi.fn(),
   getMusicAlbum: vi.fn(),
@@ -57,6 +59,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
     isTopLayer: () => true,
     openNestedAction,
     openMusicEditor,
+    openMusicCreationFlow,
     openAlbum,
 	openArtist,
   })
@@ -86,6 +89,7 @@ describe('AlbumDrawer.vue', () => {
   beforeEach(() => {
     openNestedAction.mockReset()
     openMusicEditor.mockReset()
+    openMusicCreationFlow.mockReset()
     openAlbum.mockReset()
 	openArtist.mockReset()
     getMusicAlbum.mockReset()
@@ -372,10 +376,11 @@ describe('AlbumDrawer.vue', () => {
     const buttons = wrapper.findAllComponents({ name: 'PButton' })
     await buttons[2].trigger('click')
 
-    expect(openMusicEditor).toHaveBeenCalledWith({
-      entity: 'album',
+    expect(openMusicCreationFlow).toHaveBeenCalledWith({
       mode: 'edit',
-      id: '1',
+      entity: 'album',
+      albumId: '1',
+      startStep: 'albumDetails',
     })
   })
 

@@ -340,9 +340,11 @@ export type MusicArtistListItem = {
   created_by?: string;
   sources?: MusicSource[];
   legal_name?: string;
+  stage_names_json?: string;
   bio?: string;
   image_url?: string;
   nationality?: string;
+  birth_place?: string;
   birth_date?: string;
 	birth_date_precision?: string;
   birth_year?: number;
@@ -387,6 +389,7 @@ export type MusicArtistListItem = {
 export type MusicAlbumListItem = {
   id: string;
   title: string;
+  sources?: MusicSource[];
   status?: string;
   importSession?: MusicAlbumImport;
   artists?: Array<{ id: string; name: string }>;
@@ -730,12 +733,20 @@ export type SongEditDraft = {
 
 export type ArtistEditDraft = {
   name?: string;
+  disambiguation?: string;
+  legal_name?: string;
+  stage_names_json?: string;
   bio?: string;
   image_url?: string;
   nationality?: string;
+  birth_place?: string;
   birth_date?: string;
   birth_year?: number;
   death_year?: number;
+  artist_form?: 'person' | 'group';
+  active_start_date?: string;
+  active_end_date?: string;
+  members?: MusicAlbumImportCommitMember[];
   reason: string;
   sources: MusicSource[];
 };

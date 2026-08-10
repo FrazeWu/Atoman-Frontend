@@ -37,21 +37,14 @@ describe('useMusicDrawers', () => {
     expect(state.value.nestedAction).toBeNull()
   })
 
-  it('manages unified music editor state', () => {
+  it('manages song editor state', () => {
     const { state, openMusicEditor, closeMusicEditor } = useMusicDrawers()
 
-    openMusicEditor({ entity: 'artist', mode: 'create', seed: { name: 'Ye' } })
+    openMusicEditor({ entity: 'song', mode: 'edit', id: 'song-1' })
     expect(state.value.musicEditor).toEqual({
-      entity: 'artist',
-      mode: 'create',
-      seed: { name: 'Ye' },
-    })
-
-    openMusicEditor({ entity: 'album', mode: 'edit', id: 'album-1' })
-    expect(state.value.musicEditor).toEqual({
-      entity: 'album',
+      entity: 'song',
       mode: 'edit',
-      id: 'album-1',
+      id: 'song-1',
     })
 
     closeMusicEditor()
@@ -82,18 +75,11 @@ describe('useMusicDrawers', () => {
     expect(isMainShifted.value).toBe(true)
   })
 
-  it('computes shifted states correctly with unified music editor', () => {
-    const { isMainShifted, isArtistShifted, isAlbumShifted, openMusicEditor } = useMusicDrawers()
+  it('shifts the main content while the song editor is open', () => {
+    const { isMainShifted, openMusicEditor } = useMusicDrawers()
 
-    openMusicEditor({ entity: 'artist', mode: 'create' })
+    openMusicEditor({ entity: 'song', mode: 'edit', id: 'song-1' })
     expect(isMainShifted.value).toBe(true)
-    expect(isArtistShifted.value).toBe(true)
-    expect(isAlbumShifted.value).toBe(false)
-
-    openMusicEditor({ entity: 'album', mode: 'edit', id: 'album-1' })
-    expect(isMainShifted.value).toBe(true)
-    expect(isArtistShifted.value).toBe(true)
-    expect(isAlbumShifted.value).toBe(true)
   })
 
   it('computes isArtistShifted correctly with add_album', () => {
@@ -291,7 +277,7 @@ describe('useMusicDrawers music creation flow', () => {
   it('clears creationFlow together when closing the music editor', () => {
     const drawers = useMusicDrawers()
 
-    drawers.openMusicEditor({ entity: 'artist', mode: 'create' })
+    drawers.openMusicEditor({ entity: 'song', mode: 'edit', id: 'song-1' })
     drawers.openMusicCreationFlow()
     drawers.closeMusicEditor()
 
@@ -299,15 +285,15 @@ describe('useMusicDrawers music creation flow', () => {
     expect(drawers.state.value.creationFlow).toBeNull()
   })
 
-  it('clears create-mode musicEditor when closing the creation flow', () => {
+  it('keeps the underlying song editor when closing the creation flow', () => {
     const drawers = useMusicDrawers()
 
-    drawers.openMusicEditor({ entity: 'artist', mode: 'create' })
+    drawers.openMusicEditor({ entity: 'song', mode: 'edit', id: 'song-1' })
     drawers.openMusicCreationFlow()
     drawers.closeMusicCreationFlow()
 
     expect(drawers.state.value.creationFlow).toBeNull()
-    expect(drawers.state.value.musicEditor).toBeNull()
+    expect(drawers.state.value.musicEditor).toEqual({ entity: 'song', mode: 'edit', id: 'song-1' })
   })
 
   it('opens album creation as one creation layer without an editor layer', () => {

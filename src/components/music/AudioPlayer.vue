@@ -643,19 +643,18 @@ watch(
   bottom: calc(var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height));
   width: 100%;
   z-index: var(--a-z-player, 720);
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
   border-top: 1px solid var(--a-color-border-soft);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
   height: var(--a-player-height);
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 :root.dark .player {
-  background: rgba(15, 23, 42, 0.68);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(15, 23, 42, 0.64);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
   border-top: 1px solid var(--a-color-border-dark, #334155);
 }
 

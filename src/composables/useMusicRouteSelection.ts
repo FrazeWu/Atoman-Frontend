@@ -6,16 +6,14 @@ type MusicRouteSelectionHandlers = {
   openArtist: (artistId: string) => void
   closeArtist: () => void
   openMusicCreationFlow: (payload?: {
+    mode?: 'create' | 'edit'
+    entity?: 'artist' | 'album'
     artistName?: string
-    startStep?: 'artist'
+    artistId?: string | null
+    albumId?: string | null
+    startStep?: 'artist' | 'albumImport' | 'albumDetails' | 'preview'
   }) => void
   closeMusicCreationFlow: () => void
-  openMusicEditor: (payload: {
-    entity: 'artist' | 'album'
-    mode: 'create' | 'edit'
-    id?: string
-    seed?: { name: string }
-  }) => void
   closeMusicEditor: () => void
 }
 
@@ -64,10 +62,11 @@ export function useMusicRouteSelection(handlers: MusicRouteSelectionHandlers) {
       }
 
       if (editor === 'album-edit' && typeof album === 'string' && album) {
-        handlers.openMusicEditor({
-          entity: 'album',
+        handlers.openMusicCreationFlow({
           mode: 'edit',
-          id: album,
+          entity: 'album',
+          albumId: album,
+          startStep: 'albumDetails',
         })
         lastRouteEditor = nextEditorKey
         return

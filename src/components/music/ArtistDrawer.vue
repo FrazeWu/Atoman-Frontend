@@ -28,7 +28,7 @@ import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeArtist, returnToLayer, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicEditor, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
+const { state, closeArtist, returnToLayer, isArtistShifted, isLayerShifted, isTopLayer, openArtist, openAlbum, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const artistId = computed(() => props.layer?.payload.artistId ?? state.value.artistId)
 const isOpen = computed(() => props.layer !== undefined || artistId.value !== null)
@@ -227,7 +227,12 @@ async function toggleArtistBookmark() {
 function editArtist() {
   const currentArtistId = artistId.value
   if (!currentArtistId || !requireLogin()) return
-  openMusicEditor({ entity: 'artist', mode: 'edit', id: currentArtistId })
+  openMusicCreationFlow({
+    mode: 'edit',
+    entity: 'artist',
+    artistId: currentArtistId,
+    startStep: 'artist',
+  })
 }
 
 function createAlbum() {

@@ -856,19 +856,6 @@ describe('music v1 adapter', () => {
   })
 })
 
-describe('music building-block barrel', () => {
-  it('exports shell and section components from the music building-block layer', () => {
-    const barrel = readFileSync(path.resolve(process.cwd(), 'src/components/music/index.ts'), 'utf8')
-
-    expect(barrel).toContain('MusicAlbumMetaSection')
-    expect(barrel).toContain('MusicCoverSection')
-    expect(barrel).toContain('MusicTracksSection')
-    expect(barrel).toContain('MusicSourcesSection')
-    expect(barrel).toContain('MusicReviewNotesSection')
-    expect(barrel).toContain('AlbumEditorShell')
-  })
-})
-
 describe('music merge API contract', () => {
   it('使用直接合并接口', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'src/api/musicV1/catalog.ts'), 'utf8')

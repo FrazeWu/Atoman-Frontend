@@ -18,6 +18,11 @@ export interface MusicCreationTrackDraft {
   audioUrl?: string
   audioKey?: string
   origin?: string
+  songId?: string
+  discNumber?: number
+  lyrics?: string
+  coverUrl?: string
+  contributors?: MusicCreationAlbumContributorDraft[]
 }
 
 export interface MusicCreationArtistStageNameDraft {
@@ -126,6 +131,10 @@ export interface MusicCreationDraft {
 }
 
 export interface MusicCreationFlowState {
+  mode?: 'create' | 'edit'
+  entity?: 'artist' | 'album'
+  targetId?: string | null
+  loading?: boolean
   step: MusicCreationFlowStep
   draft: MusicCreationDraft
   tracksCustomized: boolean

@@ -4,7 +4,6 @@ import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
-import PSelect from '@/components/ui/PSelect.vue'
 import PButton from '@/components/ui/PButton.vue'
 import {
   createAlbumBookmark,
@@ -57,7 +56,6 @@ const {
   closeArtist,
   openMusicCreationFlow,
   closeMusicCreationFlow,
-  openMusicEditor,
   closeMusicEditor,
 } = useMusicDrawers()
 const { applyRouteSelection } = useMusicRouteSelection({
@@ -67,7 +65,6 @@ const { applyRouteSelection } = useMusicRouteSelection({
   closeArtist,
   openMusicCreationFlow,
   closeMusicCreationFlow,
-  openMusicEditor,
   closeMusicEditor,
 })
 const { requireLogin } = useLoginRedirect()
@@ -90,50 +87,9 @@ const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
 const starredPlaylistIds = ref<string[]>([])
 
-const filterYear = ref('all')
-const filterGenre = ref('all')
-const filterLanguage = ref('all')
-
-const yearOptions = [
-  { label: '全部年代', value: 'all' },
-  { label: '2020年代', value: '2020s' },
-  { label: '2010年代', value: '2010s' },
-  { label: '2000年代', value: '2000s' },
-  { label: '90年代及以前', value: '1990s' },
-]
-
-const genreOptions = [
-  { label: '全部流派', value: 'all' },
-  { label: 'Pop', value: 'Pop' },
-  { label: 'Rock', value: 'Rock' },
-  { label: 'Hip Hop', value: 'Hip Hop' },
-  { label: 'R&B', value: 'R&B' },
-  { label: 'Electronic', value: 'Electronic' },
-]
-
-const languageOptions = [
-  { label: '全部语言', value: 'all' },
-  { label: '国语', value: 'Mandarin' },
-  { label: '粤语', value: 'Cantonese' },
-  { label: '英语', value: 'English' },
-  { label: '日语', value: 'Japanese' },
-  { label: '韩语', value: 'Korean' },
-]
-
 const localFilteredAlbums = computed(() => {
   if (props.contentMode !== 'albums') return []
   let results = albumItems.value
-
-  if (filterYear.value !== 'all') {
-    results = results.filter(a => {
-      if (!a.year) return false
-      if (filterYear.value === '2020s') return a.year >= 2020
-      if (filterYear.value === '2010s') return a.year >= 2010 && a.year < 2020
-      if (filterYear.value === '2000s') return a.year >= 2000 && a.year < 2010
-      if (filterYear.value === '1990s') return a.year < 2000
-      return true
-    })
-  }
 
   // 本地基于分词器的轻量级检索
   const sq = searchQuery.value.trim().toLowerCase()
@@ -148,20 +104,7 @@ const localFilteredAlbums = computed(() => {
   return results
 })
 
-const filteredDiscoverAlbums = computed(() => {
-  let results = discoverAlbums.value
-  if (filterYear.value !== 'all') {
-    results = results.filter(a => {
-      if (!a.year) return false
-      if (filterYear.value === '2020s') return a.year >= 2020
-      if (filterYear.value === '2010s') return a.year >= 2010 && a.year < 2020
-      if (filterYear.value === '2000s') return a.year >= 2000 && a.year < 2010
-      if (filterYear.value === '1990s') return a.year < 2000
-      return true
-    })
-  }
-  return results
-})
+const filteredDiscoverAlbums = computed(() => discoverAlbums.value)
 
 async function fetchAlbumBookmarks() {
   if (!authStore?.isAuthenticated) {
@@ -617,11 +560,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
             </template>
           </SearchSurface>
         </div>
-        <div class="filters-row">
-          <PSelect v-model="filterYear" :options="yearOptions" aria-label="发行年代" />
-          <PSelect v-model="filterGenre" :options="genreOptions" aria-label="流派" />
-          <PSelect v-model="filterLanguage" :options="languageOptions" aria-label="语言" />
-        </div>
         <PButton
           variant="primary"
           class="search-side-action"
@@ -819,23 +757,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
   min-width: 17rem;
   flex: 1 1 20rem;
   height: 36px;
-}
-
-.filters-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 0 0 auto;
-}
-
-.filters-row :deep(.p-field) {
-  flex: 0 0 7rem;
-  min-width: 7rem;
-}
-
-.filters-row :deep(.p-select-trigger) {
-  gap: 0.5rem;
-  white-space: nowrap;
 }
 
 .ui-action {
@@ -1167,15 +1088,6 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
     max-width: 100%;
     width: 100%;
     flex: 0 0 36px;
-  }
-
-  .filters-row {
-    flex-wrap: wrap;
-  }
-
-  .filters-row :deep(.p-field) {
-    flex: 1 1 8rem;
-    min-width: 0;
   }
 
   .search-shell.is-open :deep(.search-frame) {

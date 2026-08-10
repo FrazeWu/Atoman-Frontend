@@ -1,5 +1,5 @@
 <template>
-  <header class="topbar" :class="{ 'topbar--auth': isAuthRoute }">
+  <header class="topbar" :class="{ 'topbar--auth': isAuthRoute, 'is-scrolled': isScrolled }">
     <div class="topbar-inner" :class="{ 'topbar-inner--auth': isAuthRoute }">
       <div class="brand-link">
         <button
@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, onMounted, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { Menu, Sun, Moon } from 'lucide-vue-next'
 import { useSidebar } from '@/composables/useSidebar'
@@ -104,6 +104,16 @@ const siteContext = computed(() => {
 const isRoomActive = (key: ModuleRoomKey) => isRoomRouteActive(key, siteContext.value)
 
 const isDark = ref(false)
+const isScrolled = ref(false)
+
+const handleScroll = (event: Event) => {
+  const target = event.target
+  if (target === document || target === window) {
+    isScrolled.value = (window.scrollY || document.documentElement.scrollTop) > 0
+  } else if (target instanceof HTMLElement && target.classList.contains('a-main-content')) {
+    isScrolled.value = target.scrollTop > 0
+  }
+}
 
 onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark'
@@ -113,6 +123,16 @@ onMounted(() => {
   if (!isAuthRoute.value) {
     void authStore.restoreSession()
   }
+
+  window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+  const mainContent = document.querySelector('.a-main-content')
+  isScrolled.value = mainContent instanceof HTMLElement
+    ? mainContent.scrollTop > 0
+    : window.scrollY > 0
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll, { capture: true })
 })
 
 watch(isAuthRoute, (isAuthRoute, wasAuthRoute) => {
@@ -177,23 +197,36 @@ const toggleTheme = (event: MouseEvent) => {
   position: sticky;
   top: 0;
   z-index: var(--a-z-navigation);
-  background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid var(--a-color-border-soft);
+  background: rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
   height: var(--a-topbar-height);
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
+.topbar::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + var(--a-sidebar-width, 0px) / 2);
+  bottom: 0;
+  width: 20px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: var(--a-color-fg);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.topbar.is-scrolled::after {
+  width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
+}
 :root.dark .topbar {
-  background: rgba(11, 15, 25, 0.68);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(11, 15, 25, 0.64);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
 }
 .topbar--auth {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.58);
 }
 :root.dark .topbar--auth {
-  background: rgba(11, 15, 25, 0.68);
+  background: rgba(11, 15, 25, 0.64);
 }
 .topbar-inner {
   padding: 0 2rem 0 0;

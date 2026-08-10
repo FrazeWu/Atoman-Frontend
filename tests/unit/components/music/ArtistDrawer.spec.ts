@@ -281,10 +281,11 @@ describe('ArtistDrawer.vue', () => {
 
     await wrapper.get('button:nth-of-type(2)').trigger('click')
 
-    expect(musicDrawerMocks.openMusicEditor).toHaveBeenCalledWith({
-      entity: 'artist',
+    expect(musicDrawerMocks.openMusicCreationFlow).toHaveBeenCalledWith({
       mode: 'edit',
-      id: '1',
+      entity: 'artist',
+      artistId: '1',
+      startStep: 'artist',
     })
   })
 

@@ -369,8 +369,10 @@ const sheetStyle = computed(() => {
 
 .sheet-layer-title > span {
   display: block;
-  max-height: 12em;
+  max-height: 100%;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sheet-layer-title--action {

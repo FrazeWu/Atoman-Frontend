@@ -51,12 +51,21 @@ function albumPayloadFromDraft(draft: AlbumEditDraft): Record<string, unknown> {
 function artistPayloadFromDraft(draft: ArtistEditDraft): Record<string, unknown> {
   return {
     ...(draft.name !== undefined ? { name: draft.name } : {}),
+    ...(draft.disambiguation !== undefined ? { disambiguation: draft.disambiguation } : {}),
+    ...(draft.legal_name !== undefined ? { legal_name: draft.legal_name } : {}),
+    ...(draft.stage_names_json !== undefined ? { stage_names_json: draft.stage_names_json } : {}),
     ...(draft.bio !== undefined ? { bio: draft.bio } : {}),
     ...(draft.image_url !== undefined ? { image_url: draft.image_url } : {}),
     ...(draft.nationality !== undefined ? { nationality: draft.nationality } : {}),
+    ...(draft.birth_place !== undefined ? { birth_place: draft.birth_place } : {}),
     ...(draft.birth_date !== undefined ? { birth_date: draft.birth_date } : {}),
     ...(draft.birth_year !== undefined ? { birth_year: draft.birth_year } : {}),
     ...(draft.death_year !== undefined ? { death_year: draft.death_year } : {}),
+    ...(draft.artist_form !== undefined ? { artist_form: draft.artist_form } : {}),
+    ...(draft.active_start_date !== undefined ? { active_start_date: draft.active_start_date } : {}),
+    ...(draft.active_end_date !== undefined ? { active_end_date: draft.active_end_date } : {}),
+    ...(draft.members !== undefined ? { members: draft.members } : {}),
+    ...(draft.sources !== undefined ? { sources: draft.sources } : {}),
   }
 }
 

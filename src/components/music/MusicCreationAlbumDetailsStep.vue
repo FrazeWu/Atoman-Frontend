@@ -23,6 +23,7 @@ const coverInputRef = ref<HTMLInputElement | null>(null)
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 const creationFlow = computed(() => state.value.creationFlow)
+const isEditMode = computed(() => creationFlow.value?.mode === 'edit')
 const albumDetailsDraft = computed(() => creationFlow.value?.draft.albumDetails ?? null)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
 const tracksDraft = computed(() => creationFlow.value?.draft.tracks ?? [])
@@ -421,7 +422,7 @@ onBeforeUnmount(() => {
     <section class="progress-card">
       <div class="progress-copy">
         <p class="progress-label" data-testid="album-details-progress-label">
-          {{ isTest ? '第 3 步 / 完善专辑' : '第 2 步 / 新建专辑' }}
+          {{ isEditMode ? '编辑专辑' : isTest ? '第 3 步 / 完善专辑' : '第 2 步 / 新建专辑' }}
         </p>
       </div>
       <p class="progress-value" data-testid="album-details-progress-value">

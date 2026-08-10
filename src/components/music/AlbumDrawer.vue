@@ -35,7 +35,7 @@ import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/mu
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicEditor } = useMusicDrawers()
+const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerShifted, isTopLayer, openAlbum, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
@@ -416,7 +416,12 @@ async function toggleAlbumBookmark() {
 function editAlbum() {
   const currentAlbumId = album.value?.id
   if (!currentAlbumId || !requireLogin()) return
-  openMusicEditor({ entity: 'album', mode: 'edit', id: currentAlbumId })
+  openMusicCreationFlow({
+    mode: 'edit',
+    entity: 'album',
+    albumId: currentAlbumId,
+    startStep: 'albumDetails',
+  })
 }
 
 function mergeAlbum() {

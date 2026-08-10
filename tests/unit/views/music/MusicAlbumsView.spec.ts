@@ -131,11 +131,13 @@ describe('Music AlbumsView.vue (Album Landing)', () => {
 
     mountHome()
 
-    expect(mocks.openMusicEditor).toHaveBeenCalledWith({
-      entity: 'album',
+    expect(mocks.openMusicCreationFlow).toHaveBeenCalledWith({
       mode: 'edit',
-      id: 'album-9',
+      entity: 'album',
+      albumId: 'album-9',
+      startStep: 'albumDetails',
     })
+    expect(mocks.openMusicEditor).not.toHaveBeenCalled()
   })
 
   it('opens the unified artist creation entry from route query state on mount', () => {

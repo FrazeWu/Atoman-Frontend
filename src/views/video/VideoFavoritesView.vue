@@ -1,56 +1,49 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import { useAuthStore } from '@/stores/auth'
 
-const tabs = ['视频', '频道', '合集', '稍后看'] as const
-const activeTab = ref<(typeof tabs)[number]>('视频')
+const authStore = useAuthStore()
+const activeTab = ref<string>('video')
+const tabOptions = [
+  { label: '视频', value: 'video' },
+  { label: '频道', value: 'channel' },
+  { label: '合集', value: 'collection' },
+  { label: '稍后看', value: 'watchLater' },
+]
 </script>
 
 <template>
   <div class="a-page-xl video-favorites-view">
-    <PPageHeader title="收藏" accent />
+    <PPageHeader title="视频收藏" mb="1.25rem">
+      <template #action>
+        <PSegmentedControl v-model="activeTab" :options="tabOptions" />
+      </template>
+    </PPageHeader>
 
-    <div class="video-favorites-tabs" role="tablist" aria-label="视频收藏">
-      <button
-        v-for="tab in tabs"
-        :key="tab"
-        type="button"
-        class="video-favorites-tab"
-        :class="{ 'video-favorites-tab--active': activeTab === tab }"
-        role="tab"
-        :aria-selected="activeTab === tab"
-        @click="activeTab = tab"
+    <div v-if="!authStore.isAuthenticated" class="video-favorites-unauth">
+      <PEmpty
+        title="请登录后查看视频收藏"
+        description="登录账号以同步你收藏的视频、频道与稍后看清单。"
       >
-        {{ tab }}
-      </button>
+        <template #action>
+          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+        </template>
+      </PEmpty>
     </div>
+
+    <PEmpty v-else title="暂无收藏内容" description="浏览视频页面，收藏你感兴趣的视频或频道。" />
   </div>
 </template>
 
 <style scoped>
 .video-favorites-view {
   min-height: 100%;
+  padding-bottom: 3rem;
 }
-
-.video-favorites-tabs {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 1.5rem;
-}
-
-.video-favorites-tab {
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-muted);
-  font: inherit;
-  font-weight: 500;
-  padding: 0.45rem 0.8rem;
-  cursor: pointer;
-}
-
-.video-favorites-tab--active {
-  border-color: var(--a-color-fg);
-  color: var(--a-color-fg);
+.video-favorites-unauth {
+  padding: 3rem 0;
 }
 </style>

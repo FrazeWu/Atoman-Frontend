@@ -80,7 +80,7 @@ watch(sort, fetchVideos)
 
 <template>
   <div class="vh-wrap">
-    <PPageHeader title="视频" accent mb="1.5rem" />
+    <PPageHeader title="视频" mb="1.25rem" />
 
     <ContentContinueSection module="video" />
 
@@ -109,13 +109,13 @@ watch(sort, fetchVideos)
           </div>
         </div>
       </div>
-      <PEmpty v-else-if="recommendedVideos.length === 0" title="暂无推荐" description="稍后再来看新的视频推荐。" />
+      <PEmpty v-else-if="recommendedVideos.length === 0" title="暂无推荐" description="探索更多频道或搜索你感兴趣的视频。" />
       <div v-else class="vh-grid vh-grid--recommendation">
         <PVideoCard v-for="video in recommendedVideos" :key="video.id" :video="video as Video" />
       </div>
     </section>
 
-    <!-- Sticky filter bar (YouTube style) -->
+    <!-- Sticky filter bar -->
     <div class="vh-bar">
       <div class="vh-bar-inner">
         <button
@@ -145,7 +145,7 @@ watch(sort, fetchVideos)
       </div>
     </div>
 
-    <div v-else-if="videos.length === 0" class="vh-empty">暂无视频</div>
+    <PEmpty v-else-if="videos.length === 0" title="暂无视频" description="作者发布新的视频后会在这里呈现。" />
 
     <div v-else class="vh-grid">
       <PVideoCard v-for="v in videos" :key="v.id" :video="v" />

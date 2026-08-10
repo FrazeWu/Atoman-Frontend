@@ -520,9 +520,8 @@ onMounted(async () => {
 <template>
   <div class="a-page-xl feed-recommend-page">
     <PPageHeader
-      title="探索"
-      accent
-      mb="1rem"
+      title="探索订阅源"
+      mb="1.25rem"
     >
       <template #action><PPress variant="secondary" label="返回订阅" @click="openTarget('/feed')" /></template>
     </PPageHeader>

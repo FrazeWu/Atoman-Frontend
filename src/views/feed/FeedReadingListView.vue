@@ -1,6 +1,6 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <PPageHeader title="稍后阅读" sub="你保存的文章">
+    <PPageHeader title="稍后阅读" mb="1.25rem">
       <template #action>
         <RouterLink to="/feed" style="text-decoration:none">
           <PPress variant="secondary" label="← 返回订阅" />
@@ -8,13 +8,25 @@
       </template>
     </PPageHeader>
 
-    <div v-if="loading" class="feed-loading">
-      <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
+    <div v-if="!authStore.isAuthenticated" class="feed-unauth">
+      <PEmpty
+        title="请登录后查看稍后阅读"
+        description="登录账号以同步你的稍后阅读文章清单。"
+      >
+        <template #action>
+          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+        </template>
+      </PEmpty>
     </div>
 
-    <PEmpty v-else-if="errorMessage" :text="errorMessage" />
+    <template v-else>
+      <div v-if="loading" class="feed-loading">
+        <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
+      </div>
 
-    <PEmpty v-else-if="!items.length" text="阅读列表为空" sub="在文章或订阅中点击「稍后阅读」保存" />
+      <PEmpty v-else-if="errorMessage" title="加载失败" :description="errorMessage" />
+
+      <PEmpty v-else-if="!items.length" title="稍后阅读列表为空" description="在文章或订阅列表中点击「稍后阅读」保存内容。" />
 
     <div v-else class="feed-timeline">
       <template v-for="(entry, index) in items" :key="`${entry.target_type}:${entry.target_id}`">
@@ -35,6 +47,7 @@
         @change-page="changePage"
       />
     </div>
+    </template>
 
     <FeedArticleSheet
       :show="showArticleSheet"

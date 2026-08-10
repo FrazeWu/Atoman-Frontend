@@ -1,6 +1,6 @@
 <template>
   <div ref="pageRootRef" class="a-page-xl feed-subpage">
-    <PPageHeader title="收藏" accent sub="你保存的文章合集">
+    <PPageHeader title="订阅收藏" mb="1.25rem">
       <template #action>
         <div style="display:flex;gap:0.75rem;align-items:center">
           <PPress variant="secondary" label="← 返回订阅" @click="router.push('/feed')" />
@@ -8,23 +8,35 @@
       </template>
     </PPageHeader>
 
-    <div v-if="loading" class="feed-loading">
-      <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
-    </div>
-
-    <div v-if="!loading && starGroups.length > 1" class="star-groups-bar">
-      <button 
-        v-for="group in starGroups" 
-        :key="group.id"
-        class="star-group-button a-font-meta"
-        :class="{ active: activeStarGroupId === group.id }"
-        @click="selectStarGroup(group.id)"
+    <div v-if="!authStore.isAuthenticated" class="feed-unauth">
+      <PEmpty
+        title="请登录后查看订阅收藏"
+        description="登录账号以同步你收藏的文章合集与订阅内容。"
       >
-        {{ group.name }}
-      </button>
+        <template #action>
+          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+        </template>
+      </PEmpty>
     </div>
 
-    <PEmpty v-else-if="!items.length" text="还没有收藏任何文章" sub="在订阅时间线中点击「收藏」保存" />
+    <template v-else>
+      <div v-if="loading" class="feed-loading">
+        <div v-for="i in 5" :key="i" class="a-skeleton feed-skeleton" />
+      </div>
+
+      <div v-if="!loading && starGroups.length > 1" class="star-groups-bar">
+        <button 
+          v-for="group in starGroups" 
+          :key="group.id"
+          class="star-group-button a-font-meta"
+          :class="{ active: activeStarGroupId === group.id }"
+          @click="selectStarGroup(group.id)"
+        >
+          {{ group.name }}
+        </button>
+      </div>
+
+      <PEmpty v-else-if="!items.length" title="暂无收藏文章" description="在订阅时间线中点击「收藏」保存喜爱的文章。" />
 
     <div v-else class="feed-timeline">
       <template v-for="(item, index) in items" :key="item.id">
@@ -112,6 +124,7 @@
       @previous="openPreviousArticle"
       @next="openNextArticle"
     />
+    </template>
   </div>
 </template>
 

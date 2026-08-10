@@ -286,15 +286,17 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__all {
   width: 100%;
-  position: relative;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-card);
-  padding: 0.55rem 0.75rem;
+  border-top: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-left: 3.5px solid transparent;
+  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
+  padding: 0.45rem 0.65rem;
   background: transparent;
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 500;
   text-align: left;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -304,16 +306,19 @@ function toggleGroup(groupId: string) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   width: 100%;
-  position: relative;
-  border: 1px solid transparent;
-  padding: 0.55rem 0.75rem;
+  border-top: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-left: 3.5px solid transparent;
+  padding: 0.45rem 0.65rem;
   background: transparent;
   color: var(--a-color-text-secondary);
   text-align: left;
   cursor: pointer;
-  border-radius: var(--a-radius-card);
+  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
+  font-size: 0.82rem;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -327,20 +332,8 @@ function toggleGroup(groupId: string) {
 .feed-sidebar-sources__item.is-active {
   background-color: rgba(0, 0, 0, 0.04);
   color: var(--a-color-fg);
+  border-left-color: var(--a-color-fg);
   font-weight: 650;
-}
-
-.feed-sidebar-sources__all.is-active::before,
-.feed-sidebar-sources__item.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3.5px;
-  height: 16px;
-  border-radius: 0 99px 99px 0;
-  background: var(--a-color-fg);
 }
 
 .feed-sidebar-sources__badge {

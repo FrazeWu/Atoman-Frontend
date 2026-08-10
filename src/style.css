@@ -972,7 +972,7 @@ body:has(.app-shell.has-sidebar) {
 
 /* ─── Sidebar Page Layout ─────────────────────────────── */
 .has-sidebar {
-  --a-sidebar-width: 16rem;
+  --a-sidebar-width: 12rem;
   --a-mobile-nav-offset: 0px;
   --a-content-bottom-offset: calc(var(--a-player-reserved-height) + var(--a-mobile-nav-reserved-height) + var(--a-footer-reserved-height));
 }

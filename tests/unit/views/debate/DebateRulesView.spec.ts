@@ -5,7 +5,7 @@ import DebateRulesView from '@/views/debate/DebateRulesView.vue'
 
 describe('DebateRulesView', () => {
   it('explains the motivation and every public debate rule section', () => {
-    const wrapper = shallowMount(DebateRulesView)
+    const wrapper = shallowMount(DebateRulesView, { global: { stubs: { PPageHeader: false } } })
 
     expect(wrapper.get('h1').text()).toBe('辩论规则')
     expect(wrapper.text()).toContain('观点冲突不会自然消失')

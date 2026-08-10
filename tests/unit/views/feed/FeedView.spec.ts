@@ -40,7 +40,7 @@ const feedViewStubs = {
   PClip: {
     props: ['label'],
     emits: ['click'],
-    template: '<button type="button" class="p-clip-stub" @click="$emit(\'click\')">{{ label }}</button>',
+    template: '<button type="button" class="p-clip-stub" @click="$emit(\'click\')">{{ label }}<slot /></button>',
   },
   PShortcutHints: true,
   SubscriptionAddSheet: true,
@@ -300,6 +300,9 @@ describe('FeedView', () => {
       }
       return new Response(JSON.stringify({ data: [] }), { status: 200 })
     })
+    const authStore = useAuthStore()
+    authStore.token = 'test-token'
+    authStore.isAuthenticated = true
     const feedStore = useFeedStore()
     const markRead = vi.spyOn(feedStore, 'markItemsRead').mockResolvedValue(true)
     const toggleStar = vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(undefined as any)

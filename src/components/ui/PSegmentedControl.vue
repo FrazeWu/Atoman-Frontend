@@ -30,7 +30,7 @@
       @click="selectOption(option.value)"
     >
       <slot name="label" :option="option" :active="modelValue === option.value">
-        <span class="p-segmented-control-label"> {{ option.label }} </span>
+        <span class="p-segmented-control-label">{{ option.label }}</span>
       </slot>
     </button>
   </div>

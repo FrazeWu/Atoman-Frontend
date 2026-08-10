@@ -18,8 +18,8 @@
     </div>
 
     <!-- Empty -->
-    <PEmpty v-else-if="error && persons.length === 0" title="加载失败" description="人物数据加载失败，请重试。" />
-    <PEmpty v-else-if="persons.length === 0" title="暂无历史人物" description="建立人物档案与地图轨迹。" />
+    <PEmpty v-else-if="error && persons.length === 0" text="人物加载失败，请重试" title="加载失败" description="人物数据加载失败，请重试。" />
+    <PEmpty v-else-if="persons.length === 0" text="暂无历史人物" title="暂无历史人物" description="建立人物档案与地图轨迹。" />
 
     <!-- List -->
     <div v-else class="person-list">

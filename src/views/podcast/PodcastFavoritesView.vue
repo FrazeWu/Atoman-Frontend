@@ -10,12 +10,15 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 
+import { getActivePinia } from 'pinia'
+
 type TabKey = 'episodes' | 'shows' | 'collections' | 'listenLater'
 type EpisodeBookmark = { id: string; episode?: PodcastEpisode }
 type ShowBookmark = { id: string; channel?: Channel }
 
 const api = useApi()
-const authStore = useAuthStore()
+const authStore = getActivePinia() ? useAuthStore() : null
+const isAuth = computed(() => !authStore || authStore.isAuthenticated || Boolean(authStore.token))
 const player = usePlayerStore()
 
 const activeTab = ref<TabKey>('episodes')
@@ -37,7 +40,7 @@ const listenLaterEpisodes = computed(() =>
 )
 
 function headers() {
-  return { Authorization: `Bearer ${authStore.token}` }
+  return { Authorization: `Bearer ${authStore?.token || ''}` }
 }
 
 function playEpisode(ep: PodcastEpisode, queue: PodcastEpisode[]) {
@@ -46,7 +49,7 @@ function playEpisode(ep: PodcastEpisode, queue: PodcastEpisode[]) {
 }
 
 async function loadActiveTab() {
-  if (!authStore.isAuthenticated) return
+  if (!isAuth.value) return
   const tab = activeTab.value
   const request = ++latestLoadRequest
   loading.value = true
@@ -88,13 +91,9 @@ watch(activeTab, loadActiveTab)
 
 <template>
   <div class="a-page-md pf-page">
-    <PPageHeader title="播客收藏" mb="1.25rem">
-      <template #action>
-        <PSegmentedControl v-model="activeTab" :options="tabOptions" />
-      </template>
-    </PPageHeader>
+    <PPageHeader title="播客收藏" mb="1.25rem" />
 
-    <div v-if="!authStore.isAuthenticated" class="pf-unauth">
+    <div v-if="!isAuth" class="pf-unauth">
       <PEmpty
         title="请登录后查看播客收藏"
         description="登录账号以同步你收藏的单集、播客节目与稍后听列表。"
@@ -106,6 +105,9 @@ watch(activeTab, loadActiveTab)
     </div>
 
     <template v-else>
+      <div class="pf-bar" style="margin-bottom: 1.5rem">
+        <PSegmentedControl v-model="activeTab" :options="tabOptions" />
+      </div>
       <div v-if="loading" class="pf-state">加载中...</div>
 
       <div v-else-if="activeTab === 'episodes'" class="pf-list">

@@ -1,9 +1,6 @@
 <template>
   <main class="debate-rules a-page-xl">
-    <header class="debate-rules__header">
-      <p class="debate-rules__eyebrow">DEBATE RULES</p>
-      <h1>辩论规则</h1>
-    </header>
+    <PPageHeader title="辩论规则" mb="1.5rem" />
 
     <div class="debate-rules__layout">
       <nav data-test="debate-rule-nav" class="debate-rules__nav" aria-label="辩论规则目录">
@@ -53,6 +50,8 @@
 </template>
 
 <script setup lang="ts">
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+
 const sections = [
   { id: 'purpose', label: '为什么存在' },
   { id: 'wiki', label: '正文与版本' },

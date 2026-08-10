@@ -1,9 +1,9 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:6rem">
-    <PPageHeader :title="moduleRooms.debate.name" accent :sub="moduleRooms.debate.homepageSub">
+    <PPageHeader title="辩论" mb="1.25rem">
       <template #action>
         <PButton to="/debate/rules" outline>规则</PButton>
-        <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">新建辩题</PButton>
+        <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">发起辩题</PButton>
       </template>
     </PPageHeader>
 
@@ -32,8 +32,8 @@
     </div>
 
     <!-- Empty State -->
-    <PEmpty v-else-if="error && debates.length === 0" text="辩题加载失败" />
-    <PEmpty v-else-if="debates.length === 0" text="暂无辩题" />
+    <PEmpty v-else-if="error && debates.length === 0" title="加载失败" description="请刷新页面或稍后重试。" />
+    <PEmpty v-else-if="debates.length === 0" title="暂无辩题" description="成为第一个发起辩论探讨的人。" />
 
     <!-- Debate List -->
     <div v-else class="debate-list">

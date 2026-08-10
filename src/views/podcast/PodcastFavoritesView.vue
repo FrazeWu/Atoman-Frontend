@@ -7,6 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PButton from '@/components/ui/PButton.vue'
 
 type TabKey = 'episodes' | 'shows' | 'collections' | 'listenLater'
 type EpisodeBookmark = { id: string; episode?: PodcastEpisode }
@@ -23,11 +25,11 @@ const listenLaterRows = ref<EpisodeBookmark[]>([])
 const loading = ref(false)
 let latestLoadRequest = 0
 
-const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: 'episodes', label: '单集' },
-  { key: 'shows', label: '节目' },
-  { key: 'collections', label: '合集' },
-  { key: 'listenLater', label: '稍后听' },
+const tabOptions = [
+  { label: '单集', value: 'episodes' },
+  { label: '节目', value: 'shows' },
+  { label: '合集', value: 'collections' },
+  { label: '稍后听', value: 'listenLater' },
 ]
 
 const listenLaterEpisodes = computed(() =>
@@ -44,6 +46,7 @@ function playEpisode(ep: PodcastEpisode, queue: PodcastEpisode[]) {
 }
 
 async function loadActiveTab() {
+  if (!authStore.isAuthenticated) return
   const tab = activeTab.value
   const request = ++latestLoadRequest
   loading.value = true
@@ -84,67 +87,71 @@ watch(activeTab, loadActiveTab)
 </script>
 
 <template>
-  <div class="a-page-md">
-    <PPageHeader title="收藏" accent />
+  <div class="a-page-md pf-page">
+    <PPageHeader title="播客收藏" mb="1.25rem">
+      <template #action>
+        <PSegmentedControl v-model="activeTab" :options="tabOptions" />
+      </template>
+    </PPageHeader>
 
-    <div class="pf-tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        type="button"
-        :class="{ active: activeTab === tab.key }"
-        @click="activeTab = tab.key"
+    <div v-if="!authStore.isAuthenticated" class="pf-unauth">
+      <PEmpty
+        title="请登录后查看播客收藏"
+        description="登录账号以同步你收藏的单集、播客节目与稍后听列表。"
       >
-        {{ tab.label }}
-      </button>
+        <template #action>
+          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+        </template>
+      </PEmpty>
     </div>
 
-    <div v-if="loading" class="pf-state">加载中...</div>
+    <template v-else>
+      <div v-if="loading" class="pf-state">加载中...</div>
 
-    <div v-else-if="activeTab === 'episodes'" class="pf-list">
-      <PEmpty v-if="episodeBookmarks.length === 0" title="暂无收藏单集" />
-      <article v-for="bookmark in episodeBookmarks" :key="bookmark.id" class="pf-row">
-        <RouterLink v-if="bookmark.episode" :to="`/podcasts/episode/${bookmark.episode.id}`" class="pf-title">
-          {{ bookmark.episode.post?.title || '未命名单集' }}
+      <div v-else-if="activeTab === 'episodes'" class="pf-list">
+        <PEmpty v-if="episodeBookmarks.length === 0" title="暂无收藏单集" description="收听播客时收藏喜爱的单集。" />
+        <article v-for="bookmark in episodeBookmarks" :key="bookmark.id" class="pf-row">
+          <RouterLink v-if="bookmark.episode" :to="`/podcasts/episode/${bookmark.episode.id}`" class="pf-title">
+            {{ bookmark.episode.post?.title || '未命名单集' }}
+          </RouterLink>
+          <PButton v-if="bookmark.episode" size="sm" @click="playEpisode(bookmark.episode, episodeBookmarks.map(item => item.episode).filter(Boolean) as PodcastEpisode[])">播放</PButton>
+        </article>
+      </div>
+
+      <div v-else-if="activeTab === 'shows'" class="pf-list">
+        <PEmpty v-if="showBookmarks.length === 0" title="暂无收藏节目" description="发现页面收藏你喜爱的播客节目。" />
+        <RouterLink
+          v-for="bookmark in showBookmarks"
+          :key="bookmark.id"
+          :to="`/podcasts/show/${bookmark.channel?.slug}`"
+          class="pf-row pf-title"
+        >
+          {{ bookmark.channel?.name || '节目' }}
         </RouterLink>
-        <button v-if="bookmark.episode" type="button" @click="playEpisode(bookmark.episode, episodeBookmarks.map(item => item.episode).filter(Boolean) as PodcastEpisode[])">播放</button>
-      </article>
-    </div>
+      </div>
 
-    <div v-else-if="activeTab === 'shows'" class="pf-list">
-      <PEmpty v-if="showBookmarks.length === 0" title="暂无收藏节目" />
-      <RouterLink
-        v-for="bookmark in showBookmarks"
-        :key="bookmark.id"
-        :to="`/podcasts/show/${bookmark.channel?.slug}`"
-        class="pf-row pf-title"
-      >
-        {{ bookmark.channel?.name || '节目' }}
-      </RouterLink>
-    </div>
+      <PEmpty v-else-if="activeTab === 'collections'" title="暂无收藏合集" description="作者整理合集后将呈现在这里。" />
 
-    <PEmpty v-else-if="activeTab === 'collections'" title="暂无收藏合集" />
-
-    <div v-else class="pf-list">
-      <PEmpty v-if="listenLaterRows.length === 0" title="暂无稍后听" />
-      <article v-for="row in listenLaterRows" :key="row.id" class="pf-row">
-        <RouterLink v-if="row.episode" :to="`/podcasts/episode/${row.episode.id}`" class="pf-title">
-          {{ row.episode.post?.title || '未命名单集' }}
-        </RouterLink>
-        <button v-if="row.episode" type="button" @click="playEpisode(row.episode, listenLaterEpisodes)">播放</button>
-      </article>
-    </div>
+      <div v-else class="pf-list">
+        <PEmpty v-if="listenLaterRows.length === 0" title="暂无稍后听" description="添加单集至稍后听列表，随时复听。" />
+        <article v-for="row in listenLaterRows" :key="row.id" class="pf-row">
+          <RouterLink v-if="row.episode" :to="`/podcasts/episode/${row.episode.id}`" class="pf-title">
+            {{ row.episode.post?.title || '未命名单集' }}
+          </RouterLink>
+          <PButton v-if="row.episode" size="sm" @click="playEpisode(row.episode, listenLaterEpisodes)">播放</PButton>
+        </article>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.pf-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.pf-tabs button,
-.pf-row button { border: 1px solid #111827; border-radius: 6px; background: #fff; padding: 0.35rem 0.65rem; font-size: 0.8125rem; cursor: pointer; }
-.pf-tabs button.active { color: #fff; background: #111827; }
-.pf-state { color: #6b7280; font-size: 0.875rem; }
-.pf-list { display: grid; gap: 0.75rem; }
-.pf-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e5e7eb; padding: 0.875rem 0; }
-.pf-title { min-width: 0; color: #111827; font-weight: 500; text-decoration: none; }
+.pf-page { padding-bottom: 3rem; }
+.pf-unauth { padding: 3rem 0; }
+.pf-state { color: var(--a-color-muted); font-size: 0.875rem; text-align: center; padding: 2rem 0; }
+.pf-list { display: grid; gap: 0.6rem; }
+.pf-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.pf-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
+.pf-title { min-width: 0; color: var(--a-color-fg); font-weight: 600; text-decoration: none; font-size: 0.925rem; }
 .pf-title:hover { text-decoration: underline; }
 </style>

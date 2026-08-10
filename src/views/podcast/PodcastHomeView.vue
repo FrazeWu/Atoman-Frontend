@@ -102,8 +102,7 @@ function playEpisode(ep: PodcastEpisode) {
 
 <template>
   <div class="a-page-lg ph-page">
-    <PPageHeader title="播客" accent mb="2rem">
-    </PPageHeader>
+    <PPageHeader title="播客" mb="1.5rem" />
 
     <ContentContinueSection module="podcast" />
 
@@ -127,7 +126,7 @@ function playEpisode(ep: PodcastEpisode) {
           <PSkeleton width="50%" height="16px" variant="text" />
         </div>
       </div>
-      <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" />
+      <PEmpty v-else-if="recommendedEpisodes.length === 0" title="暂无推荐" description="探索更多播客频道以接收个性化单集推荐。" />
       <div v-else class="ph-recommendation-grid">
         <RouterLink
           v-for="item in recommendedEpisodes"
@@ -165,7 +164,7 @@ function playEpisode(ep: PodcastEpisode) {
           </div>
         </div>
       </div>
-      <PEmpty v-else-if="episodes.length === 0" title="暂无单集" />
+      <PEmpty v-else-if="episodes.length === 0" title="暂无单集" description="作者发布新内容后会在这里呈现。" />
       <div v-else class="ph-episode-list">
         <article v-for="ep in episodes" :key="ep.id" class="ph-episode-row">
           <div class="ph-episode-cover">
@@ -249,15 +248,17 @@ function playEpisode(ep: PodcastEpisode) {
   grid-template-columns: 6.5rem minmax(0, 1fr);
   min-height: 7rem;
   overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg);
   color: inherit;
   text-decoration: none;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .ph-recommendation-card:hover {
-  background: var(--a-color-surface);
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
   box-shadow: var(--a-shadow-sm);
 }
 
@@ -324,6 +325,7 @@ function playEpisode(ep: PodcastEpisode) {
 
 .ph-episode-list {
   display: grid;
+  gap: 0.6rem;
 }
 
 .ph-episode-row {
@@ -331,9 +333,18 @@ function playEpisode(ep: PodcastEpisode) {
   grid-template-columns: 5rem minmax(0, 1fr) 40px;
   gap: 1rem;
   align-items: center;
-  min-height: 7rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  min-height: 5.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ph-episode-row:hover {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
 }
 
 .ph-episode-cover {

@@ -84,50 +84,66 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="a-page-md">
-    <PPageHeader title="订阅" accent />
-    <p v-if="message" class="psub-message">{{ message }}</p>
-    <div v-if="shows.length" class="psub-sources">
-      <div v-for="show in shows" :key="show.id">
-        <span>{{ show.channel?.name || '播客' }}</span>
-        <ContentNotificationMode v-if="show.channel?.id" source-type="internal_channel" :source-id="show.channel.id" />
-      </div>
+  <div class="a-page-md psub-page">
+    <PPageHeader title="播客订阅" mb="1.25rem" />
+
+    <div v-if="!authStore.isAuthenticated" class="psub-unauth">
+      <PEmpty
+        title="请登录后查看播客订阅"
+        description="登录账号以同步你订阅的播客节目和最新更新。"
+      >
+        <template #action>
+          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+        </template>
+      </PEmpty>
     </div>
 
-    <div v-if="loading" class="psub-state">加载中...</div>
-    <PEmpty v-else-if="episodes.length === 0" title="暂无更新" description="订阅节目后会显示新单集。" />
-    <div v-else class="psub-list">
-      <article v-for="ep in episodes" :key="ep.id" class="psub-row">
-        <div class="psub-main">
-          <RouterLink :to="`/podcasts/episode/${ep.id}`" class="psub-title">
-            {{ ep.post?.title || '未命名单集' }}
-          </RouterLink>
-          <div class="psub-meta">
-            <span>{{ ep.channel?.name || '播客' }}</span>
-            <span v-if="ep.duration_sec">{{ fmtDuration(ep.duration_sec) }}</span>
-            <span>{{ progressText(ep) }}</span>
+    <template v-else>
+      <p v-if="message" class="psub-message">{{ message }}</p>
+      <div v-if="shows.length" class="psub-sources">
+        <div v-for="show in shows" :key="show.id">
+          <span>{{ show.channel?.name || '播客' }}</span>
+          <ContentNotificationMode v-if="show.channel?.id" source-type="internal_channel" :source-id="show.channel.id" />
+        </div>
+      </div>
+
+      <div v-if="loading" class="psub-state">加载中...</div>
+      <PEmpty v-else-if="episodes.length === 0" title="暂无更新" description="订阅节目后新发布的单集将显示在这里。" />
+      <div v-else class="psub-list">
+        <article v-for="ep in episodes" :key="ep.id" class="psub-row">
+          <div class="psub-main">
+            <RouterLink :to="`/podcasts/episode/${ep.id}`" class="psub-title">
+              {{ ep.post?.title || '未命名单集' }}
+            </RouterLink>
+            <div class="psub-meta">
+              <span>{{ ep.channel?.name || '播客' }}</span>
+              <span v-if="ep.duration_sec">{{ fmtDuration(ep.duration_sec) }}</span>
+              <span>{{ progressText(ep) }}</span>
+            </div>
           </div>
-        </div>
-        <div class="psub-actions">
-          <button type="button" @click="playEpisode(ep)">播放</button>
-          <button type="button" @click="listenLater(ep)">稍后听</button>
-        </div>
-      </article>
-    </div>
+          <div class="psub-actions">
+            <PButton size="sm" @click="playEpisode(ep)">播放</PButton>
+            <PButton size="sm" outline @click="listenLater(ep)">稍后听</PButton>
+          </div>
+        </article>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
+.psub-page { padding-bottom: 3rem; }
+.psub-unauth { padding: 3rem 0; }
 .psub-state,
-.psub-message { color: #6b7280; font-size: 0.875rem; }
-.psub-sources { display: grid; gap: 0.75rem; margin-bottom: 1.25rem; padding-block: 0.75rem; border-block: 1px solid var(--a-color-border-soft); }
+.psub-message { color: var(--a-color-muted); font-size: 0.875rem; }
+.psub-sources { display: grid; gap: 0.75rem; margin-bottom: 1.25rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
 .psub-sources > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.psub-list { display: grid; gap: 0.75rem; }
-.psub-row { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e5e7eb; padding: 0.875rem 0; }
+.psub-list { display: grid; gap: 0.6rem; }
+.psub-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); padding: 0.85rem 1rem; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.psub-row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
 .psub-main { min-width: 0; }
-.psub-title { color: #111827; font-weight: 500; text-decoration: none; }
+.psub-title { color: var(--a-color-fg); font-weight: 600; text-decoration: none; font-size: 0.925rem; }
 .psub-title:hover { text-decoration: underline; }
-.psub-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.25rem; color: #6b7280; font-size: 0.75rem; }
+.psub-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.775rem; }
 .psub-actions { display: flex; flex: 0 0 auto; gap: 0.5rem; }
-.psub-actions button { border: 1px solid #111827; border-radius: 6px; background: #fff; padding: 0.25rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
 </style>

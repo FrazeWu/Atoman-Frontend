@@ -30,45 +30,6 @@
     <div class="blog-home__layout">
       <!-- 左侧内容流 Stream -->
       <main class="blog-home__stream">
-        <!-- 推荐区 section -->
-        <section class="blog-home__recommendations" aria-label="文章推荐">
-          <div class="blog-home__recommendation-header">
-            <div>
-              <h2 class="blog-home__recommendation-title">推荐文章</h2>
-              <p class="blog-home__recommendation-note">按热度、精选、探索切换当前文章推荐。</p>
-            </div>
-            <PSegmentedControl
-              v-model="recommendationMode"
-              :options="recommendationOptions"
-              @change="selectRecommendationMode"
-            />
-          </div>
-
-          <div v-if="recommendationLoading" class="blog-home__skeleton-list">
-            <div v-for="i in 2" :key="i" class="a-skeleton" style="height: 6rem; border-radius: var(--a-radius-card);" />
-          </div>
-          <PEmpty v-else-if="!recommendedPosts.length" title="暂无推荐" description="稍后再来看新的文章推荐。" />
-          <div v-else class="blog-home__recommendation-list">
-            <PEntry
-              v-for="item in recommendedPosts.slice(0, 3)"
-              :key="item.id"
-              :title="item.title"
-              :summary="item.summary"
-              class="blog-home__hero-entry"
-              @click="openRecommendedPost(item)"
-            >
-              <template #visual>
-                <div v-if="item.image_url" class="blog-home__post-visual">
-                  <img :src="item.image_url" :alt="item.title" class="blog-home__post-cover" />
-                </div>
-                <PAvatar v-else size="sm" :name="item.title" />
-              </template>
-              <template #meta>
-                <span v-if="item.score_label">{{ item.score_label }}</span>
-              </template>
-            </PEntry>
-          </div>
-        </section>
 
         <!-- 主文章列表流 -->
         <div v-if="loading && !posts.length" class="blog-home__skeleton-list">

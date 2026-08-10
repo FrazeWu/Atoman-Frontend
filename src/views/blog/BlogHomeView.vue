@@ -39,53 +39,19 @@
         <PEmpty v-else-if="!posts.length" title="暂无内容" description="还没有发布任何内容" />
 
         <div v-else class="blog-home__feed">
-          <PEntry
+          <BlogItemCard
             v-for="post in posts"
             :key="post.id"
-            :title="post.title"
-            :summary="post.summary"
-            class="blog-home__entry-card"
+            :item="post"
+            type="post"
+            :bookmarked="isBookmarked(post)"
+            :in-reading-list="isReadingList(post)"
+            :starred="isStarred(post)"
             @click="openPost(post)"
-          >
-            <template #visual>
-              <div v-if="post.cover_url" class="blog-home__post-visual">
-                <img :src="post.cover_url" :alt="post.title" class="blog-home__post-cover" loading="lazy" />
-              </div>
-              <PAvatar
-                v-else
-                :src="post.user?.avatar_url"
-                :name="post.user?.display_name || post.user?.username || '匿名'"
-                size="sm"
-              />
-            </template>
-
-            <template #meta>
-              <span class="blog-home__author">{{ post.user?.display_name || post.user?.username || '匿名' }}</span>
-              <template v-if="post.channel">
-                <span class="blog-home__dot">·</span>
-                <a
-                  :href="channelUrl(String(post.channel.slug || post.channel.id))"
-                  class="blog-home__channel"
-                  @click.stop
-                >
-                  《{{ post.channel.name }}》
-                </a>
-              </template>
-              <span class="blog-home__dot">·</span>
-              <time class="blog-home__time">{{ formatDate(post.created_at) }}</time>
-            </template>
-
-            <template #actions>
-              <EntryActions
-                :bookmarked="isBookmarked(post)"
-                :in-reading-list="isReadingList(post)"
-                :starred="isStarred(post)"
-                @toggle-bookmark="toggleBookmark(post)"
-                @toggle-reading-list="toggleReadingList(post)"
-                @toggle-star="toggleStar(post)"
-              />
-            </template>
-          </PEntry>
+            @toggle-bookmark="toggleBookmark(post)"
+            @toggle-reading-list="toggleReadingList(post)"
+            @toggle-star="toggleStar(post)"
+          />
         </div>
 
         <PButton
@@ -152,6 +118,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Clock, Flame, Sparkles, Star } from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'

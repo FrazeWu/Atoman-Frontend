@@ -299,7 +299,7 @@ describe('FeedRecommendedView', () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/themes?category=all'))
     expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/articles?mode=hot'))
-    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
+    expect(fetchSpy).not.toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
 
     expect(wrapper.text()).toContain('Article 1')
     expect(wrapper.text()).not.toContain('Channel 1')
@@ -307,6 +307,7 @@ describe('FeedRecommendedView', () => {
     await wrapper.findAll('.segmented-option').find((node) => node.text() === '频道')?.trigger('click')
     await flushPromises()
 
+    expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining('/feed/recommend/channels?mode=hot'))
     expect(wrapper.text()).toContain('Channel 1')
   })
 
@@ -506,7 +507,7 @@ describe('FeedRecommendedView', () => {
     await featuredTab?.trigger('click')
     await flushPromises()
 
-    expect(fetchSpy).toHaveBeenLastCalledWith(expect.stringContaining('/feed/recommend/channels?mode=featured'))
+    expect(fetchSpy).toHaveBeenLastCalledWith(expect.stringContaining('/feed/recommend/articles?mode=featured'))
     expect(wrapper.text()).toContain('Article featured')
   })
 

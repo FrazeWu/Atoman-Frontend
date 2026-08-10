@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { apiRequest } from '@/api/client'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PPress from '@/components/ui/PPress.vue'
@@ -235,21 +235,25 @@ async function fetchRecommendations() {
       theme: theme.value,
     })
     const [articleRes, channelRes] = await Promise.all([
-      apiRequest(`${api.url}/feed/recommend/articles?${params.toString()}`),
-      apiRequest(`${api.url}/feed/recommend/channels?${params.toString()}`),
+      target.value !== 'channels'
+        ? apiRequest(`${api.url}/feed/recommend/articles?${params.toString()}`)
+        : Promise.resolve(null),
+      target.value !== 'articles'
+        ? apiRequest(`${api.url}/feed/recommend/channels?${params.toString()}`)
+        : Promise.resolve(null),
     ])
 
-    if (!articleRes.ok || !channelRes.ok) {
-      throw new Error(`feed recommend failed: ${articleRes.status}/${channelRes.status}`)
+    if ((articleRes && !articleRes.ok) || (channelRes && !channelRes.ok)) {
+      throw new Error(`feed recommend failed: ${articleRes?.status ?? '-'}/${channelRes?.status ?? '-'}`)
     }
 
     const [articlePayload, channelPayload] = await Promise.all([
-      articleRes.json(),
-      channelRes.json(),
+      articleRes?.json() ?? Promise.resolve(null),
+      channelRes?.json() ?? Promise.resolve(null),
     ])
 
-    articles.value = Array.isArray(articlePayload.data) ? articlePayload.data : []
-    channels.value = Array.isArray(channelPayload.data) ? channelPayload.data : []
+    articles.value = Array.isArray(articlePayload?.data) ? articlePayload.data : []
+    channels.value = Array.isArray(channelPayload?.data) ? channelPayload.data : []
     if (authStore.isAuthenticated && channels.value.length) {
       const subscribedStates = await Promise.all(
         channels.value.map((item) => feedStore.isSubscribedToChannel(item.id)),
@@ -259,8 +263,8 @@ async function fetchRecommendations() {
         subscribed: subscribedStates[index] ?? false,
       }))
     }
-    totalArticles.value = articlePayload.meta?.total ?? articlePayload.total ?? articles.value.length
-    totalChannels.value = channelPayload.meta?.total ?? channelPayload.total ?? channels.value.length
+    totalArticles.value = articlePayload?.meta?.total ?? articlePayload?.total ?? articles.value.length
+    totalChannels.value = channelPayload?.meta?.total ?? channelPayload?.total ?? channels.value.length
   } catch (error) {
     reportError(error, 'Failed to fetch feed recommendations:')
     errorMessage.value = '推荐内容加载失败'
@@ -452,8 +456,16 @@ watch(externalPage, () => {
   if (sourceScope.value === 'external') void fetchExternalSources()
 })
 
-watch([target], () => {
+let recommendationsMounted = false
+
+watch(target, () => {
   syncQuery()
+  if (!recommendationsMounted) return
+  if (page.value === 1) {
+    fetchRecommendations()
+  } else {
+    page.value = 1
+  }
 })
 
 watch([mode], () => {
@@ -481,7 +493,7 @@ watch(category, async (nextCategory, previousCategory) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   mode.value = normalizeMode(route.query.mode)
   target.value = normalizeTarget(route.query.target)
   category.value = normalizeCategory(route.query.category)
@@ -499,6 +511,8 @@ onMounted(() => {
     feedStore.fetchReadingListIds()
     feedStore.fetchBookmarkedPostIds()
   }
+  await nextTick()
+  recommendationsMounted = true
 })
 </script>
 

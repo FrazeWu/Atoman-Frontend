@@ -140,18 +140,17 @@ const compactCount = (value: number) => {
   align-items: start;
   padding: 1.15rem 1.25rem;
   border: 1px solid var(--a-color-border-soft);
-  border-left: 3px solid color-mix(in srgb, var(--feed-source-color, var(--a-color-border)) 24%, var(--a-color-border-soft));
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
-  border-radius: 4px;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  border-radius: var(--a-radius-card);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 }
 
 .feed-source-card:hover,
 .feed-source-card:focus-visible {
-  border-left-color: color-mix(in srgb, var(--feed-source-color, var(--a-color-text)) 68%, var(--a-color-text));
+  border-color: var(--a-color-border);
   box-shadow: var(--a-shadow-sm);
 }
 

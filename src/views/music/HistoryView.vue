@@ -12,17 +12,18 @@ import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PToast from '@/components/ui/PToast.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
-import { useLoginRedirect } from '@/composables/useLoginRedirect'
 
 const pageSize = 20
 const player = usePlayerStore()
+const authStore = useAuthStore()
 const { openAlbum, openArtist } = useMusicDrawers()
-const { requireLogin } = useLoginRedirect()
-const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
 const historyItems = ref<MusicListeningHistory[]>([])
 const currentPage = ref(0)
 const hasMore = ref(false)
@@ -57,94 +58,92 @@ const playableSongs = computed<Song[]>(() => historyItems.value
   })))
 
 async function loadPage(page: number) {
+  if (!authStore.isAuthenticated) return
   if (loading.value || loadingMore.value) return
-  const isFirstPage = page === 1
-  if (isFirstPage) loading.value = true
-  else loadingMore.value = true
+  const isFirst = page === 1
+  if (isFirst) {
+    loading.value = true
+  } else {
+    loadingMore.value = true
+  }
   errorMessage.value = ''
-
   try {
     const response = await listMusicListeningHistory({ page, page_size: pageSize })
-    historyItems.value = isFirstPage
-      ? response.data
-      : [...historyItems.value, ...response.data]
-	await loadFavoriteSongs(historyItems.value.map(item => String(item.song.id)))
-    currentPage.value = response.meta.page
-    hasMore.value = response.meta.has_more
+    if (isFirst) {
+      historyItems.value = response.data
+    } else {
+      const byId = new Map(historyItems.value.map((item) => [item.id, item]))
+      response.data.forEach((item) => byId.set(item.id, item))
+      historyItems.value = Array.from(byId.values())
+    }
+    currentPage.value = page
+    hasMore.value = Boolean(response.meta.has_more)
   } catch (error) {
     reportError(error, 'Failed to load music listening history:')
-    errorMessage.value = '播放历史加载失败'
+    errorMessage.value = '加载播放历史失败'
   } finally {
     loading.value = false
     loadingMore.value = false
   }
 }
 
-function playHistorySong(songId: string) {
-  const index = playableSongs.value.findIndex((song) => String(song.id) === songId)
-  if (index >= 0) player.playAlbum(playableSongs.value, index)
-}
-
-function historySong(songId: string) {
-  return playableSongs.value.find((song) => String(song.id) === songId)
-}
-
-function queueHistorySong(songId: string, playNext: boolean) {
-  const song = historySong(songId)
-  if (!song) return
-  player.addToQueue(song, playNext)
-  toastMessage.value = playNext ? '已设为下一首' : '已加入队列'
-  toastVisible.value = true
-}
-
-async function toggleHistoryFavorite(songId: string) {
-  if (!requireLogin()) return
-  actionBusy.value = `favorite:${songId}`
-  try {
-    const result = await toggleFavoriteSong(songId)
-    toastMessage.value = result.message
-    toastVisible.value = true
-  } catch (error) {
-    reportError(error, '切换歌曲收藏失败')
-    errorMessage.value = '收藏操作失败'
-  } finally {
-    actionBusy.value = ''
-  }
-}
-
-async function addHistoryToLater(songId: string) {
-  if (!requireLogin()) return
-  actionBusy.value = `later:${songId}`
-  try {
-    await addMusicSongToLater(songId)
-    toastMessage.value = '已加入稍后播放'
-    toastVisible.value = true
-  } catch (error) {
-    reportError(error, '加入稍后播放失败')
-    errorMessage.value = '操作失败'
-  } finally {
-    actionBusy.value = ''
-  }
-}
-
 async function clearHistory() {
-  if (!historyItems.value.length || !window.confirm('确认清空全部播放历史？')) return
+  if (actionBusy.value || !historyItems.value.length) return
+  if (!window.confirm('确定要清空播放历史吗？')) return
   actionBusy.value = 'clear'
   try {
     await clearMusicListeningHistory()
     historyItems.value = []
-    currentPage.value = 0
     hasMore.value = false
+    currentPage.value = 0
+    toastMessage.value = '播放历史已清空'
+    toastVisible.value = true
   } catch (error) {
-    reportError(error, '清空播放历史失败')
-    errorMessage.value = '清空失败'
+    reportError(error, 'Failed to clear music listening history:')
+    toastMessage.value = '清空历史失败，请重试'
+    toastVisible.value = true
   } finally {
     actionBusy.value = ''
   }
 }
 
-function formatPlayedAt(value: string) {
-  const date = new Date(value)
+function playHistorySong(songId: string) {
+  const targetIndex = playableSongs.value.findIndex((song) => song.id === songId)
+  if (targetIndex < 0) return
+  player.playAlbum(playableSongs.value, targetIndex)
+}
+
+function queueHistorySong(songId: string, next: boolean) {
+  const target = playableSongs.value.find((song) => song.id === songId)
+  if (!target) return
+  player.addToQueue(target, next)
+  toastMessage.value = next ? '已设为下一首播放' : '已加入播放队列'
+  toastVisible.value = true
+}
+
+async function addHistoryToLater(songId: string) {
+  if (actionBusy.value === `later:${songId}`) return
+  actionBusy.value = `later:${songId}`
+  try {
+    await addMusicSongToLater(songId)
+    toastMessage.value = '已添加至稍后播放'
+    toastVisible.value = true
+  } catch (error) {
+    reportError(error, 'Failed to add song to later:')
+    toastMessage.value = '添加至稍后播放失败'
+    toastVisible.value = true
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
+function toggleHistoryFavorite(songId: string) {
+  void toggleFavoriteSong(songId)
+}
+
+function formatPlayedAt(rawDate: string): string {
+  if (!rawDate) return ''
+  const date = new Date(rawDate)
   if (Number.isNaN(date.getTime())) return ''
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
@@ -164,17 +163,16 @@ onMounted(() => {
 <template>
   <div class="music-history-view">
     <PPageHeader title="播放历史" mb="0" />
-    <div v-if="historyItems.length" class="history-toolbar">
-      <PButton variant="secondary" :loading="actionBusy === 'clear'" @click="clearHistory"><Trash2 :size="16" aria-hidden="true" />清空历史</PButton>
-    </div>
 
-    <p v-if="loading" class="history-state">正在加载...</p>
-    <p v-else-if="errorMessage && !historyItems.length" class="history-state history-state--error">
-      {{ errorMessage }}
-    </p>
-    <div v-else-if="!historyItems.length" class="history-empty" role="status">
-      <Clock3 :size="28" aria-hidden="true" />
-      <h2>暂无播放记录</h2>
+    <div v-if="!authStore.isAuthenticated" class="history-unauth">
+      <PEmpty
+        title="请登录后查看播放历史"
+        description="登录账号以记录与跨端同步你的音乐播放历史。"
+      >
+        <template #action>
+          <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
+        </template>
+      </PEmpty>
     </div>
 
     <template v-else>

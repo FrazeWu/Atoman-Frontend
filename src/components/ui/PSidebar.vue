@@ -54,11 +54,8 @@ const { sidebarCollapsed } = useSidebar()
   padding: 0 1.25rem;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
-  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
-  border-left: 3.5px solid transparent;
-  border-top: 1px solid transparent;
-  border-right: 1px solid transparent;
-  border-bottom: 1px solid transparent;
+  border-radius: var(--a-radius-card);
+  border: 1px solid transparent;
 }
 
 :deep(.p-sidebar-item:hover) {
@@ -74,8 +71,19 @@ const { sidebarCollapsed } = useSidebar()
 :deep(.p-sidebar-item.active) {
   background: rgba(0, 0, 0, 0.04);
   color: var(--a-color-fg);
-  border-left-color: var(--a-color-fg);
   font-weight: 650;
+}
+
+:deep(.p-sidebar-item.active::before) {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.5px;
+  height: 16px;
+  border-radius: 0 99px 99px 0;
+  background: var(--a-color-fg);
 }
 
 :deep(.p-sidebar-item-icon) {

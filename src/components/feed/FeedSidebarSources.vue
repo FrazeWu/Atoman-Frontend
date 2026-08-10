@@ -291,12 +291,12 @@ function toggleGroup(groupId: string) {
   border-bottom: 1px solid transparent;
   border-left: 3.5px solid transparent;
   border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
-  padding: 0.45rem 0.65rem;
+  padding: 0.5rem 0.75rem;
   background: transparent;
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 500;
   text-align: left;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -306,19 +306,19 @@ function toggleGroup(groupId: string) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   width: 100%;
   border-top: 1px solid transparent;
   border-right: 1px solid transparent;
   border-bottom: 1px solid transparent;
   border-left: 3.5px solid transparent;
-  padding: 0.45rem 0.65rem;
+  padding: 0.5rem 0.75rem;
   background: transparent;
   color: var(--a-color-text-secondary);
   text-align: left;
   cursor: pointer;
   border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

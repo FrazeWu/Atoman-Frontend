@@ -50,10 +50,11 @@ const { sidebarCollapsed } = useSidebar()
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2.35rem;
-  padding: 0 0.75rem;
-  font-size: 0.85rem;
+  gap: 0.6rem;
+  min-height: 2.6rem;
+  padding: 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;

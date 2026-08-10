@@ -60,32 +60,28 @@ defineEmits(['click'])
   display: block;
   text-decoration: none;
   color: inherit;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding: 0.75rem 1.5rem;
-  margin: 0 -1.5rem;
-  transition: all 0.15s ease;
-  border-radius: var(--a-radius-none, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  padding: 1.25rem;
+  margin: 0 0 1rem 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  border-left: 2px solid transparent;
   outline: none;
 }
-.p-entry:last-child {
-  border-bottom: none;
-}
+
 .p-entry:hover {
-  background-color: var(--a-color-surface);
-  border-left-color: var(--a-color-text);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
 }
-.p-entry.is-open {
-  background-color: var(--a-color-surface);
-  border-left-color: var(--a-color-text);
-  border-bottom-color: transparent;
-}
+
+.p-entry.is-open,
 .p-entry.is-focused {
-  background-color: var(--a-color-surface);
-  border-left-color: var(--a-color-text);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
 }
 
 /* 2. Read State Weakening (Disabled - items do not turn grey) */

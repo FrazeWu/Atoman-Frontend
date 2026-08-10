@@ -244,15 +244,21 @@
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="starredIds.has(item.feed_item.id)"
-                :label="starredIds.has(item.feed_item.id) ? '取消收藏' : '收藏'"
+                :title="starredIds.has(item.feed_item.id) ? '取消收藏' : '收藏'"
                 @click="toggleStar(item.feed_item.id)"
-              />
+              >
+                <Star :size="14" :fill="starredIds.has(item.feed_item.id) ? 'currentColor' : 'none'" />
+                <span style="margin-left: 0.25rem;">{{ starredIds.has(item.feed_item.id) ? '已收藏' : '收藏' }}</span>
+              </PClip>
               <PClip
                 v-if="authStore.isAuthenticated"
                 :active="readingListIds.has(item.feed_item.id)"
-                :label="readingListIds.has(item.feed_item.id) ? '移除' : '稍后阅读'"
+                :title="readingListIds.has(item.feed_item.id) ? '移除稍后阅读' : '稍后阅读'"
                 @click="toggleReadingList(item.feed_item.id)"
-              />
+              >
+                <Clock :size="14" />
+                <span style="margin-left: 0.25rem;">{{ readingListIds.has(item.feed_item.id) ? '已加入稍后阅读' : '稍后阅读' }}</span>
+              </PClip>
               <div style="flex:1"></div>
               <a :href="item.feed_item.link" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
                 ↗ 原文
@@ -313,7 +319,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown, Star, Clock, Bookmark } from 'lucide-vue-next'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 
 const route = useRoute()

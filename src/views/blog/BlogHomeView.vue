@@ -76,33 +76,30 @@
             </template>
 
             <template #actions>
-              <button
-                type="button"
-                class="p-clip"
-                :class="{ active: isBookmarked(post) }"
-                title="收藏"
+              <PClip
+                :active="isBookmarked(post)"
+                :title="isBookmarked(post) ? '取消收藏' : '收藏'"
                 @click.stop="toggleBookmark(post)"
               >
-                <Bookmark :size="14" />
-              </button>
-              <button
-                type="button"
-                class="p-clip"
-                :class="{ active: isReadingList(post) }"
-                title="稍后阅读"
+                <Bookmark :size="14" :fill="isBookmarked(post) ? 'currentColor' : 'none'" />
+                <span style="margin-left: 0.25rem;">{{ isBookmarked(post) ? '已收藏' : '收藏' }}</span>
+              </PClip>
+              <PClip
+                :active="isReadingList(post)"
+                :title="isReadingList(post) ? '取消稍后阅读' : '稍后阅读'"
                 @click.stop="toggleReadingList(post)"
               >
                 <Clock :size="14" />
-              </button>
-              <button
-                type="button"
-                class="p-clip"
-                :class="{ active: isStarred(post) }"
-                title="星标"
+                <span style="margin-left: 0.25rem;">{{ isReadingList(post) ? '已加入稍后阅读' : '稍后阅读' }}</span>
+              </PClip>
+              <PClip
+                :active="isStarred(post)"
+                :title="isStarred(post) ? '取消精选星标' : '精选星标'"
                 @click.stop="toggleStar(post)"
               >
-                <Star :size="14" />
-              </button>
+                <Star :size="14" :fill="isStarred(post) ? 'currentColor' : 'none'" />
+                <span style="margin-left: 0.25rem;">{{ isStarred(post) ? '已星标' : '星标' }}</span>
+              </PClip>
             </template>
           </PEntry>
         </div>
@@ -173,6 +170,7 @@ import { Bookmark, Clock, Flame, Sparkles, Star } from 'lucide-vue-next'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PClip from '@/components/ui/PClip.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'

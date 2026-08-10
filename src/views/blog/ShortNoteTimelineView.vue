@@ -268,9 +268,11 @@ onMounted(() => void load())
   color: var(--a-color-muted);
   font-size: 0.8rem;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .short-note-timeline__loading {

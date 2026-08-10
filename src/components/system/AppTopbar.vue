@@ -389,6 +389,17 @@ const toggleTheme = (event: MouseEvent) => {
   }
 }
 
+@media (max-width: 420px) {
+  .topbar-inner {
+    padding-right: 0.5rem;
+  }
+
+  .brand-link {
+    padding-inline: 0.5rem;
+  }
+
+}
+
 .topbar-collapse-btn {
   display: inline-flex;
   align-items: center;
@@ -426,5 +437,11 @@ const toggleTheme = (event: MouseEvent) => {
 }
 .theme-toggle-btn:hover {
   background: var(--a-color-surface-muted);
+}
+
+@media (max-width: 420px) {
+  .topbar-collapse-btn {
+    margin-left: 0;
+  }
 }
 </style>

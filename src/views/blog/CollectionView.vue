@@ -44,33 +44,17 @@
 
         <PEmpty v-if="!posts.length" text="当前合集暂无文章" />
         <div v-else class="post-list">
-          <PEntry
+          <BlogItemCard
             v-for="post in posts"
             :key="post.id"
-            :title="post.title"
-            :summary="post.summary || summarize(post.content)"
+            :item="post"
+            type="post"
+            :bookmarked="starredIds.has(post.id)"
+            :in-reading-list="readingListIds.has(post.id)"
             @click="blogSheets.openPost(post.id, post.title, collectionId)"
-          >
-            <template #meta>
-              <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
-              <span>{{ formatDate(post.updated_at) }}</span>
-            </template>
-            <template #actions>
-              <div style="display:flex;gap:.75rem;align-items:center">
-                <PClip
-                  :active="starredIds.has(post.id)"
-                  :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
-                  @click="toggleStar(post.id)"
-                />
-                <PClip
-                  :active="readingListIds.has(post.id)"
-                  :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
-                  @click="toggleReadingList(post.id)"
-                />
-                <PLink :href="`/posts/post/${post.id}`" label="查看" />
-              </div>
-            </template>
-          </PEntry>
+            @toggle-bookmark="toggleStar(post.id)"
+            @toggle-reading-list="toggleReadingList(post.id)"
+          />
         </div>
       </section>
 
@@ -113,6 +97,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PPress from '@/components/ui/PPress.vue'

@@ -18,81 +18,13 @@
 
     <div v-else class="feed-timeline">
       <template v-for="(entry, index) in items" :key="`${entry.target_type}:${entry.target_id}`">
-        <PEntry
-          v-if="entry.feed_item"
-          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-          :is-open="showArticleSheet && selectedArticle?.feed_item?.id === entry.target_id"
-          :force-show-actions="true"
-          @click="openArticleSheet(entry, index)"
-          :title="entry.feed_item.title"
-          :summary="stripHtml(entry.feed_item.summary || '')"
-        >
-          <template #visual>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-              <PBadge type="external" fill>外部</PBadge>
-              <PBadge type="external">{{ getExternalBadge(entry.feed_item) }}</PBadge>
-              <img
-                v-if="entry.feed_item.image_url"
-                :src="entry.feed_item.image_url"
-                style="width:4.5rem;height:4.5rem;object-fit:cover;border:1px solid var(--a-color-border-soft);filter:grayscale(100%);flex-shrink:0;border-radius:4px;margin-top:0.25rem;"
-              />
-            </div>
-          </template>
-
-          <template #meta>
-            <a 
-              v-if="getFeedSourceHomeUrl(entry.feed_item)"
-              :href="getFeedSourceHomeUrl(entry.feed_item)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="a-label a-muted feed-source-link"
-              @click.stop
-            >
-              {{ entry.feed_item.feed_source?.title || 'RSS' }} ↗
-            </a>
-            <span v-else class="a-label a-muted">{{ entry.feed_item.feed_source?.title || 'RSS' }}</span>
-            <span v-if="entry.feed_item.author" class="a-label a-muted">· {{ entry.feed_item.author }}</span>
-            <span style="color:var(--a-color-muted-soft)">{{ formatDate(entry.feed_item.published_at) }}</span>
-            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight: 500">
-              添加于 {{ formatDate(entry.created_at) }}
-            </span>
-          </template>
-
-          <template #actions>
-            <PClip
-              active
-              label="移除"
-              @click="remove(entry.target_type, entry.target_id)"
-            />
-            <div style="flex:1"></div>
-            <a v-if="entry.feed_item.link" :href="entry.feed_item.link" target="_blank" rel="noopener noreferrer" class="feed-item-external-link">
-              ↗ 原文
-            </a>
-          </template>
-        </PEntry>
-
-        <PEntry
-          v-else-if="entry.post"
-          :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-          :force-show-actions="true"
-          :title="entry.post.title"
-          :summary="entry.post.summary || ''"
-          @click="router.push(`/posts/post/${entry.post.id}`)"
-        >
-          <template #visual>
-            <PBadge type="blog" fill>站内</PBadge>
-          </template>
-          <template #meta>
-            <span class="a-label a-muted">{{ entry.post.user?.username || entry.post.channel?.name || '文章' }}</span>
-            <span style="color:var(--a-color-muted-soft)">{{ formatDate(entry.post.published_at || entry.post.created_at) }}</span>
-            <span style="color:var(--a-color-success);font-size:0.7rem;font-weight:500">添加于 {{ formatDate(entry.created_at) }}</span>
-          </template>
-          <template #actions>
-            <PClip active label="移除" @click="remove(entry.target_type, entry.target_id)" />
-            <div style="flex:1"></div>
-            <RouterLink :to="`/posts/post/${entry.post.id}`" class="feed-item-external-link" @click.stop>阅读</RouterLink>
-          </template>
-        </PEntry>
+        <BlogItemCard
+          :item="entry.feed_item || entry.post"
+          :type="entry.feed_item ? 'feed_item' : 'post'"
+          in-reading-list
+          @click="entry.feed_item ? openArticleSheet(entry, index) : (entry.post && router.push(`/posts/post/${entry.post.id}`))"
+          @toggle-reading-list="remove(entry.target_type, entry.target_id)"
+        />
       </template>
 
       <FeedTimelineFooter
@@ -125,6 +57,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PPress from '@/components/ui/PPress.vue'

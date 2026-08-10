@@ -8,6 +8,7 @@ import PPress from '@/components/ui/PPress.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PEntry from '@/components/ui/PEntry.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PClip from '@/components/ui/PClip.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
@@ -608,41 +609,17 @@ onMounted(async () => {
         />
 
         <div v-else class="feed-timeline">
-          <PEntry
+          <BlogItemCard
             v-for="item in visibleArticles"
             :key="item.id"
-            :title="item.title"
-            :summary="item.summary"
+            :item="item"
+            :type="item.target_path.includes('/posts/') ? 'post' : 'feed_item'"
+            :starred="isStarred(item)"
+            :in-reading-list="isReadingList(item)"
             @click="openTarget(item.target_path)"
-          >
-            <template #visual>
-              <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start;flex-shrink:0">
-                <PBadge type="external" fill>外部</PBadge>
-                <PBadge type="external">{{ normalizeItemCategory(item) === 'podcast' ? '播客' : normalizeItemCategory(item) === 'video' ? '视频' : normalizeItemCategory(item) === 'news' ? '新闻' : normalizeItemCategory(item) === 'social' ? '社交' : normalizeItemCategory(item) === 'forum' ? '论坛' : '文章' }}</PBadge>
-              </div>
-            </template>
-            <template #meta>
-              <span class="a-label a-muted">{{ item.score_label || '推荐' }}</span>
-            </template>
-            <template #actions>
-              <PClip
-                v-if="authStore.isAuthenticated"
-                :active="isStarred(item)"
-                :label="isStarred(item) ? '取消收藏' : '收藏'"
-                @click.stop="toggleStar(item)"
-              />
-              <PClip
-                v-if="authStore.isAuthenticated && !item.target_path.includes('/posts/')"
-                :active="isReadingList(item)"
-                :label="isReadingList(item) ? '移除' : '稍后阅读'"
-                @click.stop="toggleReadingList(item)"
-              />
-              <div style="flex:1"></div>
-              <a :href="item.target_path" target="_blank" rel="noopener noreferrer" class="feed-item-external-link" @click.stop>
-                ↗ 原文
-              </a>
-            </template>
-          </PEntry>
+            @toggle-star="toggleStar(item)"
+            @toggle-reading-list="toggleReadingList(item)"
+          />
         </div>
 
         <FeedTimelineFooter

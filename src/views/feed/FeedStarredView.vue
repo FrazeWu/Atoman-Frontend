@@ -429,11 +429,29 @@ onUnmounted(() => {
   letter-spacing: 0;
 }
 
-.star-group-button.active,
+.star-group-button {
+  border-radius: var(--a-radius-card);
+  border: 1px solid transparent;
+  padding: 0.4rem 0.75rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .star-group-button:hover {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-text);
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border-soft);
+}
+
+.star-group-button.active {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
+  font-weight: 650;
 }
 
 .star-group-select {

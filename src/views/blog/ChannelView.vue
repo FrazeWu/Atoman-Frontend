@@ -71,33 +71,17 @@
         <main class="post-main">
           <PEmpty v-if="!filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
           <div v-else class="post-list">
-            <PEntry
+            <BlogItemCard
               v-for="post in filteredPosts"
               :key="post.id"
-              :title="post.title"
-              :summary="post.summary || summarize(post.content)"
+              :item="post"
+              type="post"
+              :bookmarked="starredIds.has(post.id)"
+              :in-reading-list="readingListIds.has(post.id)"
               @click="blogSheets.openPost(post.id, post.title, activeCollectionId || undefined)"
-            >
-              <template #meta>
-                <span v-if="post.status !== 'published'" class="a-badge" style="margin-right:0.5rem">草稿</span>
-                <span>{{ formatDate(post.updated_at) }}</span>
-              </template>
-              <template #actions>
-                <div style="display:flex;gap:.75rem;align-items:center">
-                  <PClip
-                    :active="starredIds.has(post.id)"
-                    :label="starredIds.has(post.id) ? '取消收藏' : '收藏'"
-                    @click="toggleStar(post.id)"
-                  />
-                  <PClip
-                    :active="readingListIds.has(post.id)"
-                    :label="readingListIds.has(post.id) ? '取消稍后阅读' : '稍后阅读'"
-                    @click="toggleReadingList(post.id)"
-                  />
-                  <PLink :href="`/posts/post/${post.id}`" label="查看" />
-                </div>
-              </template>
-            </PEntry>
+              @toggle-bookmark="toggleStar(post.id)"
+              @toggle-reading-list="toggleReadingList(post.id)"
+            />
           </div>
         </main>
       </div>
@@ -138,6 +122,7 @@ import PToast from '@/components/ui/PToast.vue'
 import PCard from '@/components/ui/PCard.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PEntry from '@/components/ui/PEntry.vue'
+import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'

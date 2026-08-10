@@ -941,6 +941,7 @@ body:has(.app-shell.has-sidebar) {
 /* ─── Misc ────────────────────────────────────────────── */
 .a-divider { border: none; border-top: var(--a-border); margin: 2rem 0; }
 .a-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
 .a-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .a-grayscale { filter: grayscale(1); }
 .a-cursor-pointer { cursor: pointer; }

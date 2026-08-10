@@ -1,5 +1,5 @@
 <template>
-  <article class="short-note-card">
+  <article :id="`note-${note.id}`" class="short-note-card">
     <header class="short-note-card__header">
       <PAvatar :src="note.user?.avatar_url" :name="author" size="sm" />
       <div class="short-note-card__meta">
@@ -30,7 +30,7 @@
       </div>
     </header>
 
-    <div class="short-note-card__body" @click="openShortNoteSheet">
+    <div class="short-note-card__body" @click="toggleComments">
       <p class="short-note-card__content">{{ note.content }}</p>
 
       <div
@@ -57,9 +57,14 @@
         :disabled="!authStore.isAuthenticated"
         @like="handleLike"
         @unlike="handleUnlike"
-        @comment="openShortNoteSheet"
+        @comment="toggleComments"
       />
     </footer>
+
+    <!-- 行内评论区，替代弹出页 -->
+    <div v-if="showComments" class="short-note-card__inline-comments" @click.stop>
+      <CommentSection :target="{ kind: 'short_note', resourceId: note.id }" />
+    </div>
 
     <PImageLightbox
       v-model:show="showLightbox"
@@ -73,10 +78,10 @@
 import { computed, ref, watch, watchEffect } from 'vue'
 import { Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
-import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractions } from '@/composables/useInteractions'
@@ -86,7 +91,6 @@ import type { ShortNote } from '@/types'
 const props = defineProps<{ note: ShortNote }>()
 defineEmits<{ delete: [note: ShortNote] }>()
 const authStore = useAuthStore()
-const blogSheets = useBlogSheets()
 const { getNoteState, updateNoteState } = useShortNoteSync()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
 const author = computed(() => props.note.user?.display_name || props.note.user?.username || '匿名用户')
@@ -94,11 +98,20 @@ const isOwner = computed(() => authStore.user?.uuid === props.note.user_id)
 
 const showLightbox = ref(false)
 const lightboxIndex = ref(0)
+const showComments = ref(false)
 const mediaUrls = computed(() => props.note.media.map(m => resolveMediaURL(m.url)))
 
 function openLightbox(idx: number) {
   lightboxIndex.value = idx
   showLightbox.value = true
+}
+
+function toggleComments(event?: Event) {
+  if (event) {
+    event.stopPropagation()
+    event.preventDefault()
+  }
+  showComments.value = !showComments.value
 }
 
 watchEffect(() => {
@@ -128,17 +141,6 @@ function handleUnlike() {
   })
 }
 
-function openShortNoteSheet(event?: Event) {
-  if (event) {
-    event.stopPropagation()
-    event.preventDefault()
-  }
-  const title = props.note.content
-    ? (props.note.content.length > 20 ? `${props.note.content.slice(0, 20)}...` : props.note.content)
-    : '短话'
-  blogSheets.openShortNote(props.note.id, title)
-}
-
 function formatDate(value: string) {
   return new Date(value).toLocaleString('zh-CN', {
     month: 'numeric',
@@ -151,148 +153,119 @@ function formatDate(value: string) {
 
 <style scoped>
 .short-note-card {
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 1.25rem 0;
+  transition: background 0.15s ease;
 }
 
 .short-note-card:hover {
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  background: var(--a-color-surface-muted);
 }
 
 .short-note-card__header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
 }
 
 .short-note-card__meta {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .short-note-card__author {
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--a-color-fg);
-  line-height: 1.2;
 }
 
 .short-note-card__time {
-  color: var(--a-color-muted);
   font-size: 0.75rem;
-  line-height: 1.2;
-}
-
-.short-note-card__edited {
-  color: var(--a-color-muted-soft);
-  margin-left: 0.2rem;
+  color: var(--a-color-muted);
 }
 
 .short-note-card__owner-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin-left: auto;
 }
 
 .short-note-card__action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  color: var(--a-color-muted);
-  text-decoration: none;
+  width: 1.85rem;
+  height: 1.85rem;
+  color: var(--a-color-text-secondary);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 50%;
+  border: 0;
+  border-radius: var(--a-radius-control);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .short-note-card__action-btn:hover {
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-surface);
   color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
 }
 
 .short-note-card__action-btn.is-danger:hover {
-  background: #fef2f2;
+  background: rgba(225, 29, 72, 0.1);
   color: var(--a-color-danger);
-  border-color: var(--a-color-danger-border);
 }
 
 .short-note-card__body {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-  margin-bottom: 1rem;
   cursor: pointer;
+  margin-bottom: 0.85rem;
 }
 
 .short-note-card__content {
-  margin: 0 0 0.85rem;
-  white-space: pre-wrap;
-  word-break: break-word;
+  margin: 0 0 0.75rem;
   font-size: 0.95rem;
   line-height: 1.6;
   color: var(--a-color-fg);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-/* 智能媒体图格 Grid 布局 */
 .short-note-card__media {
   display: grid;
-  gap: 0.4rem;
-  border-radius: var(--a-radius-control);
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  border-radius: var(--a-radius-card);
   overflow: hidden;
-  max-width: 100%;
 }
 
 .short-note-card__media.count-1 {
-  grid-template-columns: 1fr;
-  max-width: 26rem;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 24rem;
 }
 
-.short-note-card__media.count-1 .short-note-card__media-item {
-  max-height: 22rem;
-  aspect-ratio: auto;
-}
-
-.short-note-card__media.count-2 {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 30rem;
-}
-
-.short-note-card__media.count-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
+.short-note-card__media.count-2,
 .short-note-card__media.count-4 {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: 28rem;
 }
 
+.short-note-card__media.count-3,
 .short-note-card__media.count-5,
 .short-note-card__media.count-6,
 .short-note-card__media.count-7,
 .short-note-card__media.count-8,
 .short-note-card__media.count-9 {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .short-note-card__media-item {
   position: relative;
   aspect-ratio: 1;
   overflow: hidden;
+  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
-  border-radius: var(--a-radius-base);
 }
 
 .short-note-card__media-item img {
@@ -302,12 +275,22 @@ function formatDate(value: string) {
   transition: transform 0.3s ease;
 }
 
-.short-note-card:hover .short-note-card__media-item img {
-  transform: scale(1.02);
+.short-note-card__media-item:hover img {
+  transform: scale(1.04);
 }
 
 .short-note-card__footer {
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--a-color-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 行内评论区样式 */
+.short-note-card__inline-comments {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
 }
 </style>

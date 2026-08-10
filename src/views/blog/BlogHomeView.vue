@@ -741,6 +741,11 @@ watch(activeQuery, () => {
   line-height: 1.4;
   font-weight: 550;
   color: var(--a-color-fg);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .blog-home__rail-sub {

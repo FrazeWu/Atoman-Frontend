@@ -21,7 +21,7 @@
 
         <!-- Title -->
         <h3 
-          class="feed-entry-title a-clamp-2"
+          class="feed-entry-title a-clamp-1"
         >
           <slot name="title">{{ title }}</slot>
         </h3>
@@ -98,13 +98,17 @@ defineEmits(['click'])
 
 /* Underline logic: trigger only on specific element hover */
 .feed-entry-title {
-  display: inline-block; /* Ensure underline fits content if it was smaller, but h3 is block */
-  width: fit-content;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
   font-family: var(--a-font-sans);
-  font-size: 1.15rem; /* Slightly smaller for tighter layout */
-  font-weight: 500;
-  line-height: 1.3;
-  margin-bottom: 0;
+  font-size: 1.05rem;
+  font-weight: 550;
+  line-height: 1.35;
+  margin-bottom: 0.15rem;
   color: var(--a-color-fg);
   transition: all 0.2s;
 }

@@ -87,10 +87,10 @@ function noteTitle(note: ShortNote) {
 }
 
 function openNoteSheet(note: ShortNote) {
-  const title = note.content
-    ? (note.content.length > 20 ? `${note.content.slice(0, 20)}...` : note.content)
-    : '短话'
-  blogSheets.openShortNote(note.id, title)
+  const el = document.getElementById(`note-${note.id}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
 
 async function load(reset = false) {
@@ -237,6 +237,11 @@ onMounted(() => void load())
   line-height: 1.45;
   font-weight: 550;
   color: var(--a-color-fg);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .short-note-timeline__rail-stats {

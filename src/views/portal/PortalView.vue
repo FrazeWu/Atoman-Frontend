@@ -69,7 +69,12 @@
               :class="{ 'has-image': item.image_url }"
             >
               <div v-if="item.image_url" class="portal-hot__recommendation-image">
-                <img :src="item.image_url" :alt="item.title" loading="lazy" />
+                <img
+                  :src="item.image_url"
+                  :alt="item.title"
+                  :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
+                  :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                />
                 <div class="portal-hot__image-overlay"></div>
               </div>
               <div class="portal-hot__recommendation-body">
@@ -115,7 +120,12 @@
                 class="portal-hot__card"
               >
                 <div v-if="item.image_url" class="portal-hot__thumb">
-                  <img :src="item.image_url" :alt="item.title" loading="lazy" />
+                  <img
+                    :src="item.image_url"
+                    :alt="item.title"
+                    :loading="isPriorityImage(item) ? 'eager' : 'lazy'"
+                    :fetchpriority="isPriorityImage(item) ? 'high' : 'auto'"
+                  />
                   <div class="portal-hot__thumb-overlay"></div>
                 </div>
                 <div class="portal-hot__card-body">
@@ -230,6 +240,11 @@ const displaySections = computed(() => visibleSections.value
     items: section.items.filter((item) => !recommendedItemKeys.value.has(`${item.module}:${item.id}`)),
   }))
   .filter((section) => section.items.length > 0))
+const priorityImageKey = computed(() => {
+  const item = recommendationItems.value.find((candidate) => candidate.image_url)
+    ?? displaySections.value.flatMap((section) => section.items).find((candidate) => candidate.image_url)
+  return item ? `${item.module}:${item.id}` : ''
+})
 const otherRooms = computed(() => visibleRooms.value)
 const hasContent = computed(() => visibleFeatured.value.length > 0 || displaySections.value.length > 0)
 
@@ -265,6 +280,10 @@ function moduleLabel(value: string) {
 
 function moduleHomePath(value: string) {
   return isModuleRoomKey(value) ? moduleUrl(value) : '/'
+}
+
+function isPriorityImage(item: PortalHotItem) {
+  return `${item.module}:${item.id}` === priorityImageKey.value
 }
 
 onMounted(loadHotContent)

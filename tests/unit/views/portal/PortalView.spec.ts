@@ -100,5 +100,49 @@ describe('PortalView', () => {
     for (const item of featured) {
       expect(wrapper.text().split(item.title)).toHaveLength(2)
     }
+
+    const recommendationImages = wrapper.findAll('.portal-hot__recommendation-image img')
+    expect(recommendationImages[0].attributes('loading')).toBe('eager')
+    expect(recommendationImages[0].attributes('fetchpriority')).toBe('high')
+    expect(recommendationImages[1].attributes('loading')).toBe('lazy')
+    expect(recommendationImages[1].attributes('fetchpriority')).toBe('auto')
+  })
+
+  it('推荐内容无图时优先加载模块区第一张图片', async () => {
+    const textOnlyFeatured = featured.map((item) => ({ ...item, image_url: '' }))
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          featured: textOnlyFeatured,
+          sections: [
+            { module: 'blog', title: '热门文章', items: textOnlyFeatured },
+            {
+              module: 'music',
+              title: '热门音乐',
+              items: [{ ...featured[3], id: 'album-2', image_url: 'https://example.com/album-2.jpg' }],
+            },
+          ],
+        },
+      }),
+    } as Response)
+
+    const wrapper = mount(PortalView, {
+      global: {
+        stubs: {
+          PButton: true,
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const image = wrapper.get('.portal-hot__thumb img')
+    expect(image.attributes('loading')).toBe('eager')
+    expect(image.attributes('fetchpriority')).toBe('high')
   })
 })

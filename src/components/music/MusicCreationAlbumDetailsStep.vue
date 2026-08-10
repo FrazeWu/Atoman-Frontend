@@ -605,27 +605,32 @@ onBeforeUnmount(() => {
             :data-testid="`album-track-row-${track.id}`"
             class="track-row"
             :class="{ 'is-dragged': draggedTrackId === track.id, 'is-drag-over': dragOverTrackId === track.id }"
-            draggable="true"
-            @dragstart="handleTrackDragStart(track.id, $event)"
             @dragover.prevent="handleTrackDragOver(track.id)"
             @dragleave="handleTrackDragLeave(track.id)"
             @dragend="draggedTrackId = null; dragOverTrackId = null"
             @drop="handleTrackDrop(track.id, $event)"
           >
-            <div class="track-row__drag-handle" title="拖拽排序">
+            <div
+              :data-testid="`album-track-drag-handle-${track.id}`"
+              class="track-row__drag-handle"
+              draggable="true"
+              title="拖拽排序"
+              @dragstart="handleTrackDragStart(track.id, $event)"
+            >
               <GripVertical :size="14" />
             </div>
 
             <span class="track-sequence" data-testid="album-track-sequence">{{ formatSequence(track.sequence) }}</span>
 
-            <PInput
-              :model-value="track.title"
-              data-testid="album-track-title-input"
-              class="track-row__input"
-              type="text"
-              placeholder="曲目标题"
-              @update:model-value="updateTrackTitle(track.id, $event)"
-            />
+            <div class="track-row__input">
+              <PInput
+                :model-value="track.title"
+                data-testid="album-track-title-input"
+                type="text"
+                placeholder="曲目标题"
+                @update:model-value="updateTrackTitle(track.id, $event)"
+              />
+            </div>
 
             <!-- 极简 X 删除按钮 -->
             <button

@@ -52,6 +52,22 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(source).not.toMatch(/@media \(max-width: 720px\)[\s\S]*?\.track-row\s*\{/)
   })
 
+  it('keeps text editing separate from drag sorting', () => {
+    const drawers = useMusicDrawers()
+    drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
+    drawers.setMusicCreationStep('albumDetails')
+
+    const flow = drawers.state.value.creationFlow
+    if (!flow) throw new Error('creation flow missing')
+
+    flow.draft.tracks = [{ id: 'track-1', sequence: 1, title: 'Track title' }]
+    const wrapper = mount(MusicCreationAlbumDetailsStep)
+
+    expect(wrapper.get('[data-testid="album-track-row-track-1"]').attributes('draggable')).toBeUndefined()
+    expect(wrapper.get('[data-testid="album-track-drag-handle-track-1"]').attributes('draggable')).toBe('true')
+    expect(wrapper.get('[data-testid="album-track-title-input"]').element.closest('.track-row__input')).not.toBeNull()
+  })
+
   it('renders album details fields in the confirmed order and shows seeded draft values', () => {
     const drawers = useMusicDrawers()
     drawers.openMusicCreationFlow({ artistId: 'artist-seeded' })
@@ -316,7 +332,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
       effectAllowed: 'move',
     }
 
-    await wrapper.get('[data-testid="album-track-row-track-3"]').trigger('dragstart', { dataTransfer })
+    await wrapper.get('[data-testid="album-track-drag-handle-track-3"]').trigger('dragstart', { dataTransfer })
     await wrapper.get('[data-testid="album-track-row-track-1"]').trigger('dragover', { preventDefault: vi.fn(), dataTransfer })
     await wrapper.get('[data-testid="album-track-row-track-1"]').trigger('drop', { preventDefault: vi.fn(), dataTransfer })
 
@@ -348,7 +364,7 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
       effectAllowed: 'move',
     }
 
-    await wrapper.get('[data-testid="album-track-row-track-1"]').trigger('dragstart', { dataTransfer })
+    await wrapper.get('[data-testid="album-track-drag-handle-track-1"]').trigger('dragstart', { dataTransfer })
     await wrapper.get('[data-testid="album-track-row-track-3"]').trigger('dragover', { preventDefault: vi.fn(), dataTransfer })
     await wrapper.get('[data-testid="album-track-row-track-3"]').trigger('drop', { preventDefault: vi.fn(), dataTransfer })
 

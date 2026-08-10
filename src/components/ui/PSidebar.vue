@@ -82,10 +82,16 @@ const { sidebarCollapsed } = useSidebar()
 }
 
 :deep(.p-sidebar-item-icon) {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  flex-shrink: 0;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
+  max-inline-size: 1.5rem;
+  max-block-size: 1.5rem;
+  flex: 0 0 1.5rem;
   font-family: var(--a-font-sans);
   text-align: center;
 }
@@ -106,6 +112,15 @@ const { sidebarCollapsed } = useSidebar()
   display: inline-flex;
 }
 
+.p-sidebar.is-collapsed :deep(.p-sidebar-item-svg) {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  min-inline-size: 1.125rem;
+  min-block-size: 1.125rem;
+  max-inline-size: 1.125rem;
+  max-block-size: 1.125rem;
+}
+
 .p-sidebar.is-collapsed :deep(.p-sidebar-item-label) {
   position: absolute;
   width: 1px;
@@ -119,8 +134,13 @@ const { sidebarCollapsed } = useSidebar()
 }
 
 :deep(.p-sidebar-item-svg) {
-  width: 1.375rem;
-  height: 1.375rem;
+  inline-size: 1.375rem;
+  block-size: 1.375rem;
+  min-inline-size: 1.375rem;
+  min-block-size: 1.375rem;
+  max-inline-size: 1.375rem;
+  max-block-size: 1.375rem;
+  flex: none;
 }
 
 .p-sidebar.is-collapsed :deep(.p-sidebar-item) {
@@ -128,7 +148,7 @@ const { sidebarCollapsed } = useSidebar()
   align-items: center;
   justify-content: center;
   gap: 0;
-  min-height: 3.5rem;
+  min-height: 2.6rem;
   padding: 0;
   border-radius: var(--a-radius-card);
   border-left-color: transparent;
@@ -137,10 +157,6 @@ const { sidebarCollapsed } = useSidebar()
 .p-sidebar.is-collapsed :deep(.p-sidebar-item.active) {
   border-left-color: transparent;
   background: var(--a-color-surface-muted);
-}
-
-.p-sidebar.is-collapsed .p-sidebar-nav {
-  padding-top: 1.25rem;
 }
 
 @media (max-width: 1023px) {
@@ -169,12 +185,17 @@ const { sidebarCollapsed } = useSidebar()
     align-items: center;
     justify-content: center;
     gap: 0;
-    min-height: 3.5rem;
     padding: 0;
   }
 
-  .p-sidebar-nav {
-    padding-top: 1.25rem;
+  .p-sidebar :deep(.p-sidebar-item-svg) {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    min-inline-size: 1.125rem;
+    min-block-size: 1.125rem;
+    max-inline-size: 1.125rem;
+    max-block-size: 1.125rem;
   }
+
 }
 </style>

@@ -1043,13 +1043,13 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
 .music-home-albums {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.25rem;
 }
 
 .discover-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 1.25rem;
   margin-top: 1.5rem;
 }
@@ -1099,7 +1099,9 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 @media (max-width: 1100px) {
   .discover-layout--albums,
   .discover-layout--playlists,
-  .discover-layout--artists {
+  .discover-layout--artists,
+  .music-home-albums,
+  .discover-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
@@ -1182,12 +1184,10 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
 
   .discover-layout--albums,
   .discover-layout--playlists,
-  .discover-layout--artists {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+  .discover-layout--artists,
   .recently-played-list,
-  .music-home-albums {
+  .music-home-albums,
+  .discover-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

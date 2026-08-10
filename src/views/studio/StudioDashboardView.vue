@@ -1,25 +1,23 @@
 <template>
   <section class="studio-dashboard">
-    <header class="studio-dashboard__header">
-      <h1>Dashboard</h1>
-      <p v-if="studio.dashboard" data-testid="dashboard-subscriber-count">
-        频道订阅 {{ formatNumber(studio.dashboard.channel_subscriber_count) }}
-      </p>
-    </header>
+    <PPageHeader title="创作工作台" mb="1.5rem">
+      <template v-if="studio.dashboard" #action>
+        <span data-testid="dashboard-subscriber-count" style="color:var(--a-color-muted);font-size:0.875rem">
+          频道订阅 {{ formatNumber(studio.dashboard.channel_subscriber_count) }}
+        </span>
+      </template>
+    </PPageHeader>
 
     <p v-if="loading" class="studio-dashboard__state">加载中...</p>
-    <div v-else-if="error" class="studio-dashboard__state" role="alert">
-      <p>{{ error }}</p>
-      <button type="button" @click="load">重试</button>
-    </div>
-    <p v-else-if="!studio.dashboard" class="studio-dashboard__state">暂无内容</p>
+    <PEmpty v-else-if="error" title="加载失败" :description="error" />
+    <PEmpty v-else-if="!studio.dashboard" title="暂无创作内容" description="在此管理你的博客文章、播客单集与视频。" />
     <div v-else class="studio-dashboard__sections">
       <p v-if="retryError" class="studio-dashboard__retry-error" role="alert">{{ retryError }}</p>
       <StudioDashboardSection
         v-for="section in orderedSections"
         :key="section.module"
         :section="section"
-		:can-create="canCreate(section.module)"
+        :can-create="canCreate(section.module)"
         @retry="retrySection"
       />
     </div>
@@ -28,6 +26,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import StudioDashboardSection from '@/components/studio/StudioDashboardSection.vue'
 import { useStudioStore } from '@/stores/studio'
 import { useSiteAccessStore } from '@/stores/siteAccess'

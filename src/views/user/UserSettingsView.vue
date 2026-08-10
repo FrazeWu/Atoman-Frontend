@@ -1,11 +1,6 @@
 <template>
   <main class="user-settings settings-center a-page-xl">
-    <PSectionHeader
-      title="设置"
-      kicker="USER SETTINGS"
-      description="管理与你账号相关的偏好。"
-      rule
-    />
+    <PPageHeader title="账号设置" mb="1.5rem" />
 
     <div class="settings-center__shell user-settings__shell">
       <div class="settings-center__sections">
@@ -90,6 +85,7 @@ import SubscriptionRulesPanel, { type SubscriptionRuleSavePayload } from '@/comp
 import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'
 import AccountSecurityPanel from '@/components/user/AccountSecurityPanel.vue'
 import PasswordSettingsPanel from '@/components/user/PasswordSettingsPanel.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PSurface from '@/components/ui/PSurface.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'

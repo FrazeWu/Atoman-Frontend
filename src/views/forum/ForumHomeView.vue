@@ -1,7 +1,7 @@
 <template>
   <div class="forum-page">
     <main class="forum-main">
-      <PPageHeader title="论坛" accent sub="浏览话题，参与讨论" mb="1.5rem">
+      <PPageHeader title="论坛" mb="1.25rem">
         <template #action>
           <div class="forum-header-actions">
             <PButton
@@ -45,7 +45,7 @@
       </div>
 
       <!-- Empty state -->
-      <PEmpty v-else-if="forumStore.topics.length === 0" text="暂无话题，来发第一个吧" />
+      <PEmpty v-else-if="forumStore.topics.length === 0" title="暂无话题" description="成为第一个发起探讨的人。" />
 
       <!-- Topic rows -->
       <div v-else ref="topicListRef" class="topic-list">
@@ -113,7 +113,7 @@
     <div class="forum-modal-fields">
       <PInput v-model="catReqForm.name" label="分类名称 *" placeholder="分类名称" />
       <PTextarea v-model="catReqForm.description" label="描述" :rows="3" placeholder="分类用途说明" />
-      <PTextarea v-model="catReqForm.reason" label="申请理由 *" :rows="4" placeholder="说明为什么需要此分区" />
+      <PTextarea v-model="catReqForm.reason" label="补充说明 *" :rows="4" placeholder="说明为什么需要此分区" />
     </div>
     <div class="forum-modal-actions">
       <PButton outline @click="catReqModalOpen = false">取消</PButton>

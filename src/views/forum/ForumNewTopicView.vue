@@ -1,6 +1,6 @@
 <template>
   <div class="a-page">
-    <PPageHeader title="发布话题" sub="选择分类，填写标题和正文">
+    <PPageHeader title="发布话题">
       <template #action>
         <PButton outline @click="router.back()">取消</PButton>
       </template>

@@ -26,7 +26,7 @@
         找到 {{ forumStore.searchTotal }} 条结果
       </p>
 
-      <PEmpty v-if="forumStore.searchResults.length === 0 && searchQuery" text="没有找到匹配的话题" />
+      <PEmpty v-if="forumStore.searchResults.length === 0 && searchQuery" title="未找到相关话题" description="尝试更换关键词或在其它分类中查找。" />
 
       <div v-if="forumStore.searchResults.length > 0" class="search-results-list">
         <PEntry

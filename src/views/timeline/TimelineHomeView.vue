@@ -1,6 +1,6 @@
 <template>
   <div class="a-page-xl tl-page">
-    <PPageHeader :title="moduleRooms.timeline.name" accent :sub="moduleRooms.timeline.homepageSub">
+    <PPageHeader title="时间线" mb="1.25rem">
       <template #action>
         <div class="tl-page-actions">
           <PButton v-if="authStore.isAuthenticated" outline @click="showPersonForm = true">新建人物</PButton>
@@ -27,10 +27,11 @@
 
     <PEmpty
       v-else-if="!loading && error && events.length === 0"
-      text="历史事件加载失败，请重试"
+      title="加载失败"
+      description="历史事件加载失败，请刷新页面或稍后重试。"
     />
 
-    <PEmpty v-else-if="!loading && events.length === 0 && compareIds.length === 0" text="暂无历史事件" />
+    <PEmpty v-else-if="!loading && events.length === 0 && compareIds.length === 0" title="暂无历史事件" description="根据年份与分类筛选或创建新事件。" />
 
     <div v-else class="tl-shell">
       <aside class="tl-source-panel">

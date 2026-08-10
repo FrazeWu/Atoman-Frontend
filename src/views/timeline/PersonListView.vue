@@ -1,6 +1,6 @@
 <template>
   <div class="a-page-xl" style="padding-bottom:6rem">
-    <PPageHeader title="历史人物" accent sub="人物地图轨迹">
+    <PPageHeader title="历史人物" mb="1.25rem">
       <template #action>
         <PButton v-if="authStore.isAuthenticated" @click="showForm = true">新建人物</PButton>
       </template>
@@ -18,8 +18,8 @@
     </div>
 
     <!-- Empty -->
-    <PEmpty v-else-if="error && persons.length === 0" text="人物加载失败，请重试" />
-    <PEmpty v-else-if="persons.length === 0" text="暂无历史人物" />
+    <PEmpty v-else-if="error && persons.length === 0" title="加载失败" description="人物数据加载失败，请重试。" />
+    <PEmpty v-else-if="persons.length === 0" title="暂无历史人物" description="建立人物档案与地图轨迹。" />
 
     <!-- List -->
     <div v-else class="person-list">

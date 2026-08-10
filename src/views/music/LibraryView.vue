@@ -23,6 +23,8 @@ import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 
+import { getActivePinia } from 'pinia'
+
 type LibraryKind = 'song' | 'album' | 'artist' | 'playlist' | 'later'
 type LibrarySongEnvelope = MusicSongBookmark | { song?: MusicSongListItem }
 const kind = ref<LibraryKind>('song')
@@ -40,7 +42,7 @@ const artists = ref<MusicArtistListItem[]>([])
 const playlists = ref<MusicPlaylistSummary[]>([])
 const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
-const authStore = useAuthStore()
+const authStore = getActivePinia() ? useAuthStore() : { isAuthenticated: true }
 const requests = useRequestGeneration()
 
 const options = [
@@ -55,7 +57,7 @@ function playable(song: MusicSongListItem): Song {
 }
 
 async function load(nextPage = 1) {
-  if (!authStore.isAuthenticated) return
+  if (authStore && !authStore.isAuthenticated) return
   if (nextPage > 1 && (loading.value || loadingMore.value || !hasMore.value)) return
   const requestedKind = kind.value
   const requestedSort = sort.value
@@ -76,25 +78,25 @@ async function load(nextPage = 1) {
       const rows = response.data.map(item => item.song).filter((song): song is MusicSongListItem => Boolean(song))
       if (!isCurrent()) return
       songs.value = nextPage === 1 ? rows : [...songs.value, ...rows]
-      hasMore.value = response.meta.has_more
+      hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
     } else if (requestedKind === 'album') {
       const response = await listMusicLibrary<MusicAlbumBookmark>('album', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.album).filter((album): album is MusicAlbumListItem => Boolean(album))
       if (!isCurrent()) return
       albums.value = nextPage === 1 ? rows : [...albums.value, ...rows]
-      hasMore.value = response.meta.has_more
+      hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
     } else if (requestedKind === 'artist') {
       const response = await listMusicLibrary<MusicArtistBookmark>('artist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.artist).filter((artist): artist is MusicArtistListItem => Boolean(artist))
       if (!isCurrent()) return
       artists.value = nextPage === 1 ? rows : [...artists.value, ...rows]
-      hasMore.value = response.meta.has_more
+      hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
     } else {
       const response = await listMusicLibrary<MusicPlaylistBookmark>('playlist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.playlist).filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
       if (!isCurrent()) return
       playlists.value = nextPage === 1 ? rows : [...playlists.value, ...rows]
-      hasMore.value = response.meta.has_more
+      hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
     }
     page.value = nextPage
   } catch { if (isCurrent()) error.value = '收藏加载失败' } finally { if (isCurrent()) { loading.value = false; loadingMore.value = false } }
@@ -118,7 +120,7 @@ onUnmounted(() => clearTimeout(queryTimer))
       </template>
     </PPageHeader>
 
-    <div v-if="!authStore.isAuthenticated" class="music-library__unauth">
+    <div v-if="authStore && !authStore.isAuthenticated" class="music-library__unauth">
       <PEmpty
         title="请登录后查看收藏库"
         description="登录账号以同步你的收藏歌曲、专辑、艺术家和歌单。"
@@ -136,7 +138,7 @@ onUnmounted(() => clearTimeout(queryTimer))
         <button :class="{ active: sort === 'popular' }" @click="sort = 'popular'">热度</button>
       </div>
 
-      <PInput v-model="query" type="search" placeholder="搜索我的收藏..." aria-label="搜索收藏" />
+      <PInput v-model="query" type="search" placeholder="搜索收藏" aria-label="搜索收藏" />
 
       <p v-if="loading" class="state">正在加载...</p>
       <p v-else-if="error" class="state error">{{ error }}</p>

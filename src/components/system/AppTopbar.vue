@@ -177,23 +177,23 @@ const toggleTheme = (event: MouseEvent) => {
   position: sticky;
   top: 0;
   z-index: var(--a-z-navigation);
-  background: rgba(255, 255, 255, 0.75);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--a-color-border-soft);
   height: var(--a-topbar-height);
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 :root.dark .topbar {
-  background: rgba(11, 15, 25, 0.78);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(11, 15, 25, 0.68);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
 }
 .topbar--auth {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.65);
 }
 :root.dark .topbar--auth {
-  background: rgba(11, 15, 25, 0.78);
+  background: rgba(11, 15, 25, 0.68);
 }
 .topbar-inner {
   padding: 0 2rem 0 0;

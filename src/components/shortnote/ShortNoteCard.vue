@@ -153,13 +153,17 @@ function formatDate(value: string) {
 
 <style scoped>
 .short-note-card {
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding: 1.25rem 0;
-  transition: background 0.15s ease;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .short-note-card:hover {
-  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
 }
 
 .short-note-card__header {

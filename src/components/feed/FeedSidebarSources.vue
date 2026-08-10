@@ -286,8 +286,11 @@ function toggleGroup(groupId: string) {
 
 .feed-sidebar-sources__all {
   width: 100%;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-card);
+  border-top: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-left: 3.5px solid transparent;
+  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
   padding: 0.55rem 0.75rem;
   background: transparent;
   color: var(--a-color-text-secondary);
@@ -299,145 +302,37 @@ function toggleGroup(groupId: string) {
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.feed-sidebar-sources__all:hover,
-.feed-sidebar-sources__filter:hover {
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
-}
-
-.feed-sidebar-sources__all.is-active,
-.feed-sidebar-sources__filter.is-active {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
-  font-weight: 650;
-}
-
-.feed-sidebar-sources__group {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.feed-sidebar-sources__group-title {
-  margin: 0;
-  border: 0;
-  padding: 0.25rem 0.35rem;
-  background: transparent;
-  color: var(--a-color-muted);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-align: left;
-  cursor: pointer;
-}
-
-.feed-sidebar-sources__items {
-  display: grid;
-  gap: 0.35rem;
-}
-
 .feed-sidebar-sources__item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.55rem;
   width: 100%;
-  border: 1px solid transparent;
+  border-top: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-left: 3.5px solid transparent;
   padding: 0.55rem 0.75rem;
   background: transparent;
   color: var(--a-color-text-secondary);
   text-align: left;
   cursor: pointer;
-  border-radius: var(--a-radius-card);
+  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.feed-sidebar-sources__count {
-  min-width: 1.35rem;
-  padding: 0.15rem 0.4rem;
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  font-size: 0.62rem;
-  text-align: center;
-  border-radius: var(--a-radius-pill);
-}
-
-.feed-sidebar-sources__health {
-  color: var(--a-color-accent-destructive);
-  font-size: 0.58rem;
-  letter-spacing: 0;
-}
-
-.feed-sidebar-sources__health.is-error {
-  color: var(--a-color-danger);
-}
-
+.feed-sidebar-sources__all:hover,
 .feed-sidebar-sources__item:hover {
-  background-color: var(--a-color-surface);
+  background: var(--a-color-surface);
   color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
 }
 
-.feed-sidebar-sources__item.is-active,
-.feed-sidebar-sources__all.is-active {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
-  font-weight: 650;
-}
-
-/* 方案 1：浮雕精制双色块 (Pill Accent Card) */
-.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__item.is-active,
-.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__all.is-active {
-  position: relative;
-}
-.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__item.is-active::before,
-.feed-sidebar-sources.sidebar-variant-1 .feed-sidebar-sources__all.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0.45rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3.5px;
-  height: 18px;
-  border-radius: 99px;
-  background: var(--a-color-fg);
-}
-
-/* 方案 2：极简深色指示条 (Minimal Left Line) */
-.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__item,
-.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__all {
-  border-radius: 0 var(--a-radius-card) var(--a-radius-card) 0;
-  border-left: 3px solid transparent;
-}
-.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__item.is-active,
-.feed-sidebar-sources.sidebar-variant-2 .feed-sidebar-sources__all.is-active {
+.feed-sidebar-sources__all.is-active,
+.feed-sidebar-sources__item.is-active {
   background-color: rgba(0, 0, 0, 0.04);
   color: var(--a-color-fg);
   border-left-color: var(--a-color-fg);
-  border-top-color: transparent;
-  border-right-color: transparent;
-  border-bottom-color: transparent;
-  box-shadow: none;
   font-weight: 650;
-}
-
-/* 方案 3：胶囊悬浮水晶块 (Floating Pill Glass) */
-.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__item,
-.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__all {
-  border-radius: 9999px;
-}
-.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__item.is-active,
-.feed-sidebar-sources.sidebar-variant-3 .feed-sidebar-sources__all.is-active {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  font-weight: 650;
-  transform: translateX(4px);
 }
 
 .feed-sidebar-sources__badge {

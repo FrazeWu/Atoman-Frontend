@@ -271,7 +271,7 @@ export function useAlbumImportUpload() {
             session.importId,
             file,
             registeredFile.fileId,
-            () => generation === operationGeneration && albumImportDraft.value === draft && draft.importId === session.importId,
+            () => generation === operationGeneration,
           )
         })
 

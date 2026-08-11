@@ -679,10 +679,13 @@ describe('MusicCreationFlowDrawer', () => {
     expect(drawerMocks.state.value.creationFlow?.step).toBe('preview')
   })
 
-  it.each(['uploading', 'extracting'] as const)(
-    '%s 状态在预览页允许提交至导入中心并关闭抽屉',
-    async (status) => {
-      commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })
+  it.each([
+    ['uploading', [{ fileId: 'file-1', uploadStatus: 'uploading' }]],
+    ['extracting', []],
+  ] as const)(
+    '%s 状态可提前提交且不重复完成上传会话',
+    async (status, files) => {
+      commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status, files })
       drawerMocks.state.value.creationFlow = createFlowState({
         step: 'preview',
         draft: {
@@ -707,9 +710,42 @@ describe('MusicCreationFlowDrawer', () => {
       await flushPromises()
 
       expect(commitMusicAlbumImportMock).toHaveBeenCalledWith('import-1', expect.any(Object))
+      expect(completeMusicAlbumImportSessionMock).not.toHaveBeenCalled()
       expect(drawerMocks.closeMusicCreationFlow).toHaveBeenCalled()
+      expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/imports')
     },
   )
+
+  it('提前提交时所有文件已上传则立即完成上传会话', async () => {
+    commitMusicAlbumImportMock.mockResolvedValue({
+      importId: 'import-1',
+      status: 'uploading',
+      files: [{ fileId: 'file-1', uploadStatus: 'uploaded' }],
+    })
+    drawerMocks.state.value.creationFlow = createFlowState({
+      step: 'preview',
+      draft: {
+        ...createFlowState().draft,
+        albumDetails: {
+          ...createFlowState().draft.albumDetails,
+          title: 'Uploaded Album',
+        },
+        albumImport: {
+          ...createFlowState().draft.albumImport,
+          importId: 'import-1',
+          status: 'uploading',
+        },
+      },
+    })
+
+    const wrapper = mount(MusicCreationFlowDrawer)
+    await wrapper.get('[data-testid="music-creation-finish-button"]').trigger('click')
+    await flushPromises()
+
+    expect(completeMusicAlbumImportSessionMock).toHaveBeenCalledTimes(1)
+    expect(completeMusicAlbumImportSessionMock).toHaveBeenCalledWith('import-1')
+    expect(drawerMocks.routerPush).toHaveBeenCalledWith('/music/imports')
+  })
 
   it('从已有艺术家进入时提交 artist_id 复用现有艺术家', async () => {
     commitMusicAlbumImportMock.mockResolvedValue({ importId: 'import-1', status: 'committed' })

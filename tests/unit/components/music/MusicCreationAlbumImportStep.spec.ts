@@ -83,6 +83,39 @@ describe('MusicCreationAlbumImportStep.vue', () => {
     expect(useMusicDrawers().state.value.creationFlow?.step).toBe('albumDetails')
   })
 
+  it('关闭创建抽屉后继续完成已开始的上传', async () => {
+    const audio = new File(['audio'], 'track.mp3', { type: 'audio/mpeg' })
+    const fileRecord = {
+      fileId: 'file-1', relativePath: 'track.mp3', fileName: 'track.mp3', role: 'audio',
+      detectedFormat: 'mp3', size: audio.size, uploadStatus: 'pending' as const,
+      processingStatus: 'pending' as const, discNumber: 1, trackNumber: 1, title: '', errorMessage: '',
+    }
+    vi.spyOn(musicApi, 'createMusicAlbumImport').mockResolvedValue(snapshot())
+    vi.spyOn(musicApi, 'registerMusicAlbumImportFiles').mockResolvedValue(snapshot({ files: [fileRecord] }))
+    vi.spyOn(musicApi, 'createMusicAlbumImportFilePartUpload').mockResolvedValue({ partNumber: 1, uploadUrl: 'https://upload.test/part-1' })
+    const completePart = vi.spyOn(musicApi, 'completeMusicAlbumImportFilePart').mockResolvedValue(fileRecord)
+    const completeFile = vi.spyOn(musicApi, 'completeMusicAlbumImportFile').mockResolvedValue({ ...fileRecord, uploadStatus: 'uploaded' })
+    vi.spyOn(musicApi, 'getMusicAlbumImport').mockResolvedValue(snapshot())
+
+    let resolveUpload!: (response: Response) => void
+    const uploadResponse = new Promise<Response>((resolve) => {
+      resolveUpload = resolve
+    })
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(uploadResponse))
+
+    const wrapper = mount(MusicCreationAlbumSeedStep)
+    setFiles(fileInput(wrapper).element as HTMLInputElement, [audio])
+    await fileInput(wrapper).trigger('change')
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled())
+
+    useMusicDrawers().closeMusicCreationFlow()
+    resolveUpload(new Response('', { status: 200, headers: { ETag: 'etag-1' } }))
+    await vi.waitFor(() => expect(completeFile).toHaveBeenCalled())
+
+    expect(completePart).toHaveBeenCalledWith('import-1', 'file-1', 1, 'etag-1', audio.size)
+    expect(completeFile).toHaveBeenCalledWith('import-1', 'file-1')
+  })
+
   it('拒绝过大的压缩包时不会进入上传中状态', async () => {
     const archive = new File(['zip'], 'too-large.zip', { type: 'application/zip' })
     Object.defineProperty(archive, 'size', { configurable: true, value: 2 * 1024 * 1024 * 1024 + 1 })

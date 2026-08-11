@@ -779,14 +779,21 @@ async function completeCreation() {
     if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
     await flushImportAutosave()
     const committedImport = await commitMusicAlbumImport(importId, buildCommitInput(flow))
-    await musicApi.completeMusicAlbumImportSession(importId)
+    const uploadsComplete = committedImport.status === 'uploading'
+      && committedImport.files.length > 0
+      && committedImport.files.every((file) => file.uploadStatus === 'uploaded')
+    if (uploadsComplete) {
+      await musicApi.completeMusicAlbumImportSession(importId)
+    }
     toastMessage.value = '已提交至导入中心，后台将继续处理'
     toastVisible.value = true
     const albumId = committedImport.targetAlbumId?.trim()
     const artistId = committedImport.artistId?.trim() || flow.draft.artist.id?.trim()
     refreshArtist()
     closeCurrentCreationFlow()
-    await router.push(albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports')
+    await router.push(committedImport.status === 'committed'
+      ? albumId ? `/music/album/${albumId}` : artistId ? `/music/artist/${artistId}` : '/music/imports'
+      : '/music/imports')
   } catch (error) {
     flow.errorMessage = error instanceof Error ? error.message : '提交失败，请稍后重试'
   } finally {

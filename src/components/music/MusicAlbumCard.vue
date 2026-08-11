@@ -211,12 +211,18 @@ const albumYear = computed(() => {
 .cover-frame {
   position: relative;
   aspect-ratio: 1 / 1;
-  background: var(--a-color-surface);
-  border-radius: 4px;
+  background: var(--a-color-surface-muted, #f4f4f5);
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+.music-album-card:hover .cover-frame {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--a-color-primary, #2563eb) 35%, var(--a-color-border-soft));
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.15);
 }
 
 .cover-action {
@@ -246,8 +252,12 @@ const albumYear = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.2s ease;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
   display: block;
+}
+
+.cover-action:hover .cover-image {
+  transform: scale(1.05);
 }
 
 .cover-placeholder {

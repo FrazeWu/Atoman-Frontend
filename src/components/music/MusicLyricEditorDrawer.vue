@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { Download, FileUp, Languages, Plus } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Clock, Download, FileUp, Languages, Plus } from 'lucide-vue-next'
 import type { MusicLyricsEditTarget, MusicLyricsFormat, MusicSongLyricsLine } from '@/api/musicV1'
 import MusicLyricsRowEditor from '@/components/music/MusicLyricsRowEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -9,6 +9,7 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import {
   createMusicLyricDraftRow,
+  formatMusicLyricTime,
   parseBilingualLrcDraft,
   parseMusicLyricDraft,
   reconcileImportedLrcRows,
@@ -148,6 +149,41 @@ function addRow() {
   rows.value = [...rows.value, row]
   selectedRowId.value = row.id
 }
+
+function stampCurrentTime() {
+  if (props.saving || editTarget.value !== 'original' || !selectedRowId.value) return
+  const index = rows.value.findIndex((row) => row.id === selectedRowId.value)
+  if (index < 0) return
+
+  const timeMs = Math.round((props.currentTimeSeconds ?? 0) * 1000)
+  const nextRows = [...rows.value]
+  nextRows[index] = { ...nextRows[index], timeMs }
+  rows.value = nextRows
+
+  if (index < rows.value.length - 1) {
+    selectedRowId.value = rows.value[index + 1]!.id
+  }
+}
+
+function handleGlobalKeydown(event: KeyboardEvent) {
+  if (!props.show || props.saving || editTarget.value !== 'original') return
+  if (
+    (event.ctrlKey && event.code === 'Space')
+    || (event.altKey && event.key.toLowerCase() === 's')
+    || (event.shiftKey && event.key === 'Enter')
+  ) {
+    event.preventDefault()
+    stampCurrentTime()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
 
 function handleRowsUpdate(nextRows: MusicLyricDraftRow[]) {
   const oldIndex = rows.value.findIndex(row => row.id === selectedRowId.value)
@@ -308,6 +344,18 @@ function handleSave() {
         />
 
         <div class="music-lyric-editor-drawer__toolbar-actions">
+          <PButton
+            v-if="editTarget === 'original' && draftFormat === 'lrc'"
+            type="button"
+            variant="secondary"
+            :disabled="saving || !selectedRowId"
+            title="快捷键 Ctrl+Space / Shift+Enter"
+            @click="stampCurrentTime"
+          >
+            <Clock :size="17" aria-hidden="true" />
+            打点 ({{ formatMusicLyricTime(Math.round((currentTimeSeconds ?? 0) * 1000)) }})
+          </PButton>
+
           <PButton v-if="editTarget === 'original'" type="button" variant="secondary" :disabled="saving" @click="addRow">
             <Plus :size="17" aria-hidden="true" />
             增加行

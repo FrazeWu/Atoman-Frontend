@@ -108,25 +108,33 @@ function formatDate(value?: string) {
 <style scoped>
 .post-header__cover-wrap {
   width: 100%;
-  max-height: 20rem;
+  max-height: 22rem;
   overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
 }
 
 .post-header__cover {
   width: 100%;
   object-fit: cover;
-  max-height: 20rem;
+  max-height: 22rem;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.post-header__cover-wrap:hover .post-header__cover {
+  transform: scale(1.02);
 }
 
 .post-header__body {
-  padding-top: 3rem;
+  padding-top: 2rem;
   transition: max-width 0.3s ease;
 }
 
 .post-header__actions,
 .post-header__right-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
   align-items: center;
 }
 
@@ -135,36 +143,47 @@ function formatDate(value?: string) {
 }
 
 .post-header__mode-btn {
-  border-radius: var(--a-radius-none);
-  font-weight: 500;
-  height: 1.85rem;
-  min-height: auto;
-  padding: 0.25rem 0.75rem;
+  border-radius: 9999px !important;
+  font-weight: 600 !important;
+  height: 2rem !important;
+  min-height: auto !important;
+  padding: 0.25rem 0.85rem !important;
+  transition: transform 0.15s ease, background-color 0.2s ease !important;
+}
+
+.post-header__mode-btn:hover {
+  transform: translateY(-1px);
 }
 
 .post-header__author-link {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   text-decoration: none;
   color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.post-header__author-link:hover {
+  opacity: 0.85;
 }
 
 .post-header__avatar {
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--a-radius-none);
-  background: var(--a-color-fg);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--a-color-primary, #3b82f6), #8b5cf6);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--a-color-bg);
-  font-weight: 500;
-  font-size: 0.75rem;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .post-header__author-name {
-  font-weight: 500;
-  font-size: 0.875rem;
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 </style>

@@ -4,6 +4,10 @@ import LibraryView from '@/views/music/LibraryView.vue'
 
 const mocks = vi.hoisted(() => ({
   listMusicLibrary: vi.fn(),
+  deleteAlbumBookmark: vi.fn(),
+  deleteArtistBookmark: vi.fn(),
+  deletePlaylistBookmark: vi.fn(),
+  deleteSongBookmark: vi.fn(),
   openAlbum: vi.fn(),
   openArtist: vi.fn(),
   openPlaylist: vi.fn(),
@@ -12,6 +16,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/api/musicV1', () => ({
   listMusicLibrary: mocks.listMusicLibrary,
+  deleteAlbumBookmark: mocks.deleteAlbumBookmark,
+  deleteArtistBookmark: mocks.deleteArtistBookmark,
+  deletePlaylistBookmark: mocks.deletePlaylistBookmark,
+  deleteSongBookmark: mocks.deleteSongBookmark,
 }))
 
 vi.mock('@/composables/useMusicDrawers', () => ({
@@ -42,6 +50,10 @@ vi.mock('@/components/ui/PSegmentedControl.vue', () => ({
 describe('LibraryView', () => {
   beforeEach(() => {
     mocks.listMusicLibrary.mockReset()
+    mocks.deleteAlbumBookmark.mockReset()
+    mocks.deleteArtistBookmark.mockReset()
+    mocks.deletePlaylistBookmark.mockReset()
+    mocks.deleteSongBookmark.mockReset()
     mocks.openAlbum.mockReset()
     mocks.openArtist.mockReset()
     mocks.openPlaylist.mockReset()
@@ -106,6 +118,7 @@ describe('LibraryView', () => {
   })
 
   it('opens artist and album details from a saved song', async () => {
+    mocks.deleteSongBookmark.mockResolvedValue(undefined)
     mocks.listMusicLibrary.mockResolvedValue({
       data: [{
         song: {
@@ -119,10 +132,40 @@ describe('LibraryView', () => {
 
     const wrapper = mount(LibraryView, { global: { stubs: { RouterLink: true } } })
     await flushPromises()
+    expect(wrapper.findAll('[data-testid="library-song-card"]')).toHaveLength(1)
     await wrapper.get('[data-testid="library-song-artist-artist-1"]').trigger('click')
     await wrapper.get('[data-testid="library-song-album-album-1"]').trigger('click')
 
     expect(mocks.openArtist).toHaveBeenCalledWith('artist-1')
     expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+
+    await wrapper.get('[aria-label="取消收藏 Song 1"]').trigger('click')
+    await flushPromises()
+    expect(mocks.deleteSongBookmark).toHaveBeenCalledWith('song-1')
+    expect(wrapper.find('[data-testid="library-song-card"]').exists()).toBe(false)
+  })
+
+  it('renders album bookmarks as cards and removes them in place', async () => {
+    mocks.listMusicLibrary
+      .mockResolvedValueOnce({ data: [], meta: { page: 1, page_size: 24, total: 0, has_more: false } })
+      .mockResolvedValueOnce({
+        data: [{ album: { id: 'album-1', title: 'Album 1', artists: [{ id: 'artist-1', name: 'Artist 1' }] } }],
+        meta: { page: 1, page_size: 24, total: 1, has_more: false },
+      })
+    mocks.deleteAlbumBookmark.mockResolvedValue({ deleted: true })
+
+    const wrapper = mount(LibraryView)
+    await flushPromises()
+    await wrapper.get('[data-option="album"]').trigger('click')
+    await flushPromises()
+
+    const card = wrapper.get('[data-testid="library-album-card"]')
+    await card.get('[aria-label="打开专辑 Album 1"]').trigger('click')
+    expect(mocks.openAlbum).toHaveBeenCalledWith('album-1')
+
+    await card.get('[aria-label="取消收藏"]').trigger('click')
+    await flushPromises()
+    expect(mocks.deleteAlbumBookmark).toHaveBeenCalledWith('album-1')
+    expect(wrapper.find('[data-testid="library-album-card"]').exists()).toBe(false)
   })
 })

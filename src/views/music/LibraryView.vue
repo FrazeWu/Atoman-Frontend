@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from 'vue'
-import { Clock3, ListMusic, Music2, Disc3, Users } from 'lucide-vue-next'
+import { Bookmark, Clock3, Music2, Play } from 'lucide-vue-next'
 import {
+  deleteAlbumBookmark,
+  deleteArtistBookmark,
+  deletePlaylistBookmark,
+  deleteSongBookmark,
   listMusicLibrary,
   type MusicAlbumBookmark,
   type MusicAlbumListItem,
@@ -17,6 +21,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PButton from '@/components/ui/PButton.vue'
+import { MusicAlbumCard, MusicArtistCard, MusicPlaylistCard } from '@/components/music'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { usePlayerStore } from '@/stores/player'
@@ -40,6 +45,7 @@ const songs = ref<MusicSongListItem[]>([])
 const albums = ref<MusicAlbumListItem[]>([])
 const artists = ref<MusicArtistListItem[]>([])
 const playlists = ref<MusicPlaylistSummary[]>([])
+const removingKey = ref('')
 const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = getActivePinia() ? useAuthStore() : { isAuthenticated: true }
@@ -54,6 +60,36 @@ let queryTimer: ReturnType<typeof setTimeout> | undefined
 
 function playable(song: MusicSongListItem): Song {
   return { id: song.id, title: song.title, artist: song.artists?.map(item => item.name).join(' / ') || '未知艺术家', album: song.album?.title || '', album_id: song.album?.id || '', year: 0, release_date: '', lyrics: song.lyrics || '', audio_url: song.audio_url || '', cover_url: song.cover_url || song.album?.cover_url || '', status: 'approved' }
+}
+
+function playlistCardItem(playlist: MusicPlaylistSummary) {
+  return { ...playlist, title: playlist.name }
+}
+
+async function removeBookmark(itemKind: Exclude<LibraryKind, 'later'>, id: string) {
+  const key = `${itemKind}:${id}`
+  if (removingKey.value) return
+  removingKey.value = key
+  error.value = ''
+  try {
+    if (itemKind === 'song') {
+      await deleteSongBookmark(id)
+      songs.value = songs.value.filter(item => String(item.id) !== id)
+    } else if (itemKind === 'album') {
+      await deleteAlbumBookmark(id)
+      albums.value = albums.value.filter(item => String(item.id) !== id)
+    } else if (itemKind === 'artist') {
+      await deleteArtistBookmark(id)
+      artists.value = artists.value.filter(item => String(item.id) !== id)
+    } else {
+      await deletePlaylistBookmark(id)
+      playlists.value = playlists.value.filter(item => String(item.id) !== id)
+    }
+  } catch {
+    error.value = '取消收藏失败'
+  } finally {
+    removingKey.value = ''
+  }
 }
 
 async function load(nextPage = 1) {
@@ -163,14 +199,65 @@ onUnmounted(() => clearTimeout(queryTimer))
         title="这里还没有收藏内容"
         description="浏览发现页面，收藏你喜爱的歌曲、专辑或艺术家。"
       />
-      <div v-else class="music-library__list">
-        <div v-for="song in songs" v-if="kind === 'song' || kind === 'later'" :key="song.id" class="music-library__row music-library__song-row">
-          <button type="button" class="music-library__play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))"><Clock3 v-if="kind === 'later'" :size="18"/><Music2 v-else :size="18"/></button>
-          <span><RouterLink :to="`/music/song/${song.id}`"><strong>{{ song.title }}</strong></RouterLink><small><template v-if="song.artists?.length"><template v-for="(artist, index) in song.artists" :key="artist.id"><span v-if="index" aria-hidden="true"> / </span><button type="button" :data-testid="`library-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button></template></template><span v-else>未知艺术家</span><template v-if="song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`library-song-album-${song.album.id}`" @click="openAlbum(String(song.album.id))">{{ song.album.title }}</button></template></small></span>
-        </div>
-        <button v-for="album in albums" v-else-if="kind === 'album'" :key="album.id" class="music-library__row" @click="openAlbum(album.id)"><Disc3 :size="18"/><span><strong>{{ album.title }}</strong><small>{{ album.artists?.map(item => item.name).join(' / ') }}</small></span></button>
-        <button v-for="artist in artists" v-else-if="kind === 'artist'" :key="artist.id" class="music-library__row" @click="openArtist(artist.id)"><Users :size="18"/><span><strong>{{ artist.name }}</strong><small>{{ artist.legal_name || artist.bio }}</small></span></button>
-        <button v-for="playlist in playlists" v-else :key="playlist.id" class="music-library__row" @click="openPlaylist(playlist.id)"><ListMusic :size="18"/><span><strong>{{ playlist.name }}</strong><small>{{ playlist.song_count }} 首</small></span></button>
+      <div v-else class="music-library__cards">
+        <article v-for="song in songs" v-if="kind === 'song' || kind === 'later'" :key="song.id" class="music-library__song-card" data-testid="library-song-card">
+          <div class="music-library__song-cover">
+            <button type="button" class="music-library__song-play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))">
+              <img v-if="song.cover_url || song.album?.cover_url" :src="song.cover_url || song.album?.cover_url" :alt="song.title" loading="lazy" />
+              <span v-else class="music-library__song-placeholder" aria-hidden="true"><Music2 :size="28" /></span>
+              <span v-if="song.audio_url" class="music-library__play-indicator" aria-hidden="true"><Play :size="18" fill="currentColor" /></span>
+            </button>
+            <button
+              v-if="kind === 'song'"
+              type="button"
+              class="music-library__bookmark"
+              :disabled="removingKey === `song:${song.id}`"
+              :aria-label="`取消收藏 ${song.title}`"
+              @click="removeBookmark('song', String(song.id))"
+            ><Bookmark :size="16" fill="currentColor" aria-hidden="true" /></button>
+            <span v-else class="music-library__later-label"><Clock3 :size="14" aria-hidden="true" />稍后播放</span>
+          </div>
+          <div class="music-library__song-info">
+            <h3><RouterLink :to="`/music/song/${song.id}`">{{ song.title }}</RouterLink></h3>
+            <p>
+              <template v-if="song.artists?.length"><template v-for="(artist, index) in song.artists" :key="artist.id"><span v-if="index" aria-hidden="true"> / </span><button type="button" :data-testid="`library-song-artist-${artist.id}`" @click="openArtist(String(artist.id))">{{ artist.name }}</button></template></template><span v-else>未知艺术家</span><template v-if="song.album?.id"><span aria-hidden="true"> · </span><button type="button" :data-testid="`library-song-album-${song.album.id}`" @click="openAlbum(String(song.album.id))">{{ song.album.title }}</button></template>
+            </p>
+          </div>
+        </article>
+
+        <MusicAlbumCard
+          v-for="album in albums"
+          v-else-if="kind === 'album'"
+          :key="album.id"
+          :album="album"
+          :is-bookmarked="true"
+          data-testid="library-album-card"
+          @click="openAlbum(String(album.id))"
+          @click-artist="openArtist"
+          @toggle-bookmark="removeBookmark('album', String(album.id))"
+        />
+
+        <MusicArtistCard
+          v-for="artist in artists"
+          v-else-if="kind === 'artist'"
+          :key="artist.id"
+          :artist="artist"
+          :is-bookmarked="true"
+          data-testid="library-artist-card"
+          @click="openArtist(String(artist.id))"
+          @toggle-bookmark="removeBookmark('artist', String(artist.id))"
+        />
+
+        <MusicPlaylistCard
+          v-for="playlist in playlists"
+          v-else
+          :key="playlist.id"
+          :playlist="playlistCardItem(playlist)"
+          :is-bookmarked="true"
+          data-testid="library-playlist-card"
+          @click="openPlaylist(String(playlist.id))"
+          @toggle-bookmark="removeBookmark('playlist', String(playlist.id))"
+        />
       </div>
       <PButton v-if="hasMore && !loading" variant="secondary" class="music-library__more" :loading="loadingMore" @click="load(page + 1)">{{ loadingMore ? '正在加载' : '加载更多' }}</PButton>
     </template>
@@ -178,26 +265,39 @@ onUnmounted(() => clearTimeout(queryTimer))
 </template>
 
 <style scoped>
-.music-library { display: grid; gap: 1.25rem; max-width: 56rem; margin: 0 auto; padding: 1.5rem 0 3rem; }
+.music-library { display: grid; gap: 1.25rem; max-width: 72rem; margin: 0 auto; padding: 1.5rem 0 3rem; }
 .music-library__unauth { padding: 3rem 0; }
 .music-library__sort { display: flex; gap: 0.4rem; }
 .music-library__sort button { border: 0; background: transparent; color: var(--a-color-muted); padding: 0.35rem 0.6rem; border-radius: var(--a-radius-control); cursor: pointer; transition: all 0.15s ease; }
 .music-library__sort button.active { color: var(--a-color-fg); font-weight: 600; background: var(--a-color-surface-muted); }
-.music-library__list { display: grid; gap: 0.5rem; }
-.music-library__row { display: flex; align-items: center; gap: 0.8rem; min-height: 3.5rem; padding: 0.65rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); color: inherit; text-align: left; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-.music-library__row:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); background: var(--a-color-surface-muted); }
-.music-library__row span { display: grid; gap: 0.18rem; min-width: 0; }
-.music-library__row small, .state { color: var(--a-color-muted); }
-.music-library__song-row { cursor: default; }
-.music-library__play, .music-library__song-row small button { border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; }
-.music-library__play { display: grid; flex: 0 0 2.5rem; min-height: 2.5rem; place-items: center; border-radius: var(--a-radius-control); transition: background 0.15s ease; }
-.music-library__play:hover:not(:disabled) { background: var(--a-color-surface-muted); }
-.music-library__play:disabled { cursor: default; opacity: 0.45; }
-.music-library__song-row a { color: inherit; text-decoration: none; }
-.music-library__song-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.music-library__song-row small button { font: inherit; }
-.music-library__song-row a:hover, .music-library__song-row small button:hover { text-decoration: underline; }
+.music-library__cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.25rem; }
+.music-library__cards > * { min-width: 0; align-self: start; }
+.music-library__cards :deep(.bookmark-btn) { opacity: 1; }
+.music-library__song-card { display: grid; gap: 0.75rem; min-width: 0; }
+.music-library__song-cover { position: relative; aspect-ratio: 1; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: 4px; background: var(--a-color-surface); }
+.music-library__song-play { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.music-library__song-play:disabled { cursor: default; }
+.music-library__song-play img, .music-library__song-placeholder { width: 100%; height: 100%; display: grid; place-items: center; object-fit: cover; color: var(--a-color-muted); background: var(--a-color-surface-muted); }
+.music-library__play-indicator { position: absolute; left: 0.6rem; bottom: 0.6rem; display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 50%; background: var(--a-color-bg); color: var(--a-color-fg); box-shadow: var(--a-shadow-sm); }
+.music-library__bookmark { position: absolute; z-index: 2; top: 0.5rem; right: 0.5rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; padding: 0; border: 1px solid var(--a-color-border-soft); border-radius: 50%; background: var(--a-color-bg); color: #eaaa08; cursor: pointer; box-shadow: var(--a-shadow-sm); }
+.music-library__bookmark:disabled { cursor: default; opacity: 0.55; }
+.music-library__later-label { position: absolute; z-index: 2; top: 0.6rem; right: 0.6rem; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.5rem; border-radius: 4px; background: var(--a-color-bg); color: var(--a-color-muted); font-size: 0.72rem; }
+.music-library__song-info { display: grid; gap: 0.25rem; min-width: 0; }
+.music-library__song-info h3, .music-library__song-info p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.music-library__song-info h3 { font-size: 1rem; font-weight: 500; }
+.music-library__song-info p { color: var(--a-color-muted); font-size: 0.82rem; }
+.music-library__song-info a, .music-library__song-info button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-decoration: none; cursor: pointer; }
+.music-library__song-info a:hover, .music-library__song-info button:hover { text-decoration: underline; }
+.music-library__song-play:focus-visible, .music-library__bookmark:focus-visible, .music-library__song-info a:focus-visible, .music-library__song-info button:focus-visible { outline: 2px solid var(--a-color-focus, var(--a-color-text)); outline-offset: 2px; }
 .music-library__more { justify-self: center; margin-top: 1rem; }
 .state { text-align: center; padding: 2rem 0; color: var(--a-color-muted); }
 .error { color: var(--a-color-accent-destructive); }
+
+@media (max-width: 1100px) {
+  .music-library__cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .music-library__cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+}
 </style>

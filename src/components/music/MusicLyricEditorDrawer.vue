@@ -622,8 +622,8 @@ function handleSave() {
   gap: 1rem;
   padding: 1rem 1.15rem;
   overflow: hidden;
-  border: 1px dashed var(--a-color-border-soft);
-  border-radius: 10px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface, var(--a-color-bg));
   color: var(--a-color-muted);
   transition: border-color 200ms ease, background-color 200ms ease, transform 150ms ease;

@@ -181,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -495,13 +495,13 @@ const handleCoverUpload = async (event: Event) => {
     const formData = new FormData()
     formData.append('image', file)
 
-    const res = await apiRequest(api.blog.uploadImage, {
+    const res = await apiRequestResult(api.blog.uploadImage, {
       method: 'POST',
       headers: authHeaders.value,
       body: formData,
     })
 
-    const data = await res.json().catch(() => null)
+    const data = await Promise.resolve(res.data).catch(() => null)
     if (!res.ok) {
       throw new Error(data?.error || '封面上传失败')
     }

@@ -13,25 +13,6 @@ vi.mock('@/api/musicV1', async (importOriginal) => {
   }
 })
 
-vi.mock('naive-ui', () => ({
-  NDatePicker: {
-    inheritAttrs: false,
-    props: ['formattedValue', 'formatted-value'],
-    emits: ['update:formattedValue', 'update:formatted-value'],
-    template: `
-      <input
-        type="text"
-        data-testid="artist-birth-input"
-        :value="formattedValue || $props['formatted-value']"
-        @input="
-          $emit('update:formattedValue', $event.target.value);
-          $emit('update:formatted-value', $event.target.value)
-        "
-      />
-    `,
-  },
-}))
-
 vi.mock('@/components/music/MusicSquareImageCropSheet.vue', () => ({
   default: {
     props: ['show'],

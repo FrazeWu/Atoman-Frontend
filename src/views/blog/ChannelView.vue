@@ -106,7 +106,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -201,9 +201,9 @@ const fetchChannel = async (param: string, slug: boolean, generation: number) =>
     const url = slug
       ? api.blog.channelBySlug(param)
       : api.blog.channel(param)
-    const res = await apiRequest(url)
+    const res = await apiRequestResult(url)
     if (generation !== loadGeneration || !res.ok) return null
-    const data = await res.json()
+    const data = await Promise.resolve(res.data)
     if (generation !== loadGeneration) return null
     const loadedChannel = (data.data || null) as Channel | null
     channel.value = loadedChannel
@@ -227,9 +227,9 @@ const fetchCollections = async (loadedChannel: Channel, param: string, slug: boo
     const url = slug
       ? api.blog.channelCollectionsBySlug(param)
       : api.blog.channelCollections(loadedChannel.id)
-    const res = await apiRequest(url)
+    const res = await apiRequestResult(url)
     if (!res.ok || generation !== loadGeneration) return
-    const data = await res.json()
+    const data = await Promise.resolve(res.data)
     if (generation === loadGeneration) collections.value = data.data || []
   } catch {
     return
@@ -247,10 +247,10 @@ const fetchPosts = async (loadedChannel: Channel, generation: number) => {
         page: String(page),
         page_size: '100',
       })
-      const res = await apiRequest(`${api.blog.posts}?${params}`, { headers })
+      const res = await apiRequestResult(`${api.blog.posts}?${params}`, { headers })
       if (generation !== loadGeneration) return
       if (!res.ok) return
-      const data = await res.json()
+      const data = await Promise.resolve(res.data)
       if (generation !== loadGeneration) return
       loadedPosts.push(...(data.data || []))
       if (!data.meta?.has_more) break
@@ -271,15 +271,15 @@ const saveCollection = async () => {
   if (!collectionForm.value.name.trim() || !channel.value) return
   collectionSaving.value = true
   try {
-    let res: Response
+    let res: Awaited<ReturnType<typeof apiRequestResult>>
     if (editingCollection.value) {
-      res = await apiRequest(api.blog.collection(editingCollection.value.id), {
+      res = await apiRequestResult(api.blog.collection(editingCollection.value.id), {
         method: 'PUT',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)
       })
     } else {
-      res = await apiRequest(api.blog.channelCollections(channel.value.id), {
+      res = await apiRequestResult(api.blog.channelCollections(channel.value.id), {
         method: 'POST',
         headers: { ...authHeader.value, 'Content-Type': 'application/json' },
         body: JSON.stringify(collectionForm.value)

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, StepForward } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Clock3, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
 import { addMusicSongToLater, getMusicSongDetail, type MusicSongDetail, type MusicSongListItem, type MusicSongLyrics } from '@/api/musicV1'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PDropdown from '@/components/ui/PDropdown.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PToast from '@/components/ui/PToast.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -16,12 +17,15 @@ import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
 import { reportError } from '@/utils/logger'
+import { getActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const player = usePlayerStore()
 const { state, openAlbum, openArtist, openMusicEditor, openNestedAction } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
-const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const authStore = getActivePinia() ? useAuthStore() : { isAuthenticated: false }
+const { favoriteSongIds, playlists, loadFavoriteSongs, loadPlaylists, toggleFavoriteSong, addSongToPlaylist } = useMusicFavoritePlaylist()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -97,14 +101,35 @@ async function toggleFavorite() {
   actionBusy.value = 'favorite'
   try {
     const result = await toggleFavoriteSong(String(detail.value.song.id))
-    detail.value.bookmarked = result.isFavorite
     showToast(result.message)
   } catch (cause) {
-    reportError(cause, '切换歌曲收藏失败')
+    reportError(cause, '更新最爱歌单失败')
     showToast('操作失败')
   } finally {
     actionBusy.value = ''
   }
+}
+
+async function addToPlaylist(playlistId: string) {
+  if (!detail.value || !requireLogin()) return
+  actionBusy.value = 'playlist'
+  try {
+    await addSongToPlaylist(playlistId, String(detail.value.song.id))
+    showToast('已添加到歌单')
+  } catch (cause) {
+    reportError(cause, '添加歌曲到歌单失败')
+    showToast('添加失败')
+  } finally {
+    actionBusy.value = ''
+  }
+}
+
+function preparePlaylistMenu(event: MouseEvent) {
+  if (!requireLogin()) {
+    event.stopPropagation()
+    return
+  }
+  if (!playlists.value.length) void loadPlaylists()
 }
 
 async function addToLater() {
@@ -152,7 +177,16 @@ async function loadDetail(songId: unknown) {
     const response = await getMusicSongDetail(songId)
     if (!request.isCurrent()) return
     detail.value = response
-    favoriteSongIds.value = new Set(detail.value.bookmarked ? [String(detail.value.song.id)] : [])
+    try {
+      if (!authStore.isAuthenticated) {
+        favoriteSongIds.value = new Set()
+        return
+      }
+      await loadFavoriteSongs([String(detail.value.song.id)])
+    } catch (cause) {
+      reportError(cause, '加载最爱状态失败')
+      favoriteSongIds.value = new Set()
+    }
   } catch {
     if (!request.isCurrent()) return
     detail.value = null
@@ -197,7 +231,16 @@ watch(
         </div>
         <div class="song-detail__actions">
           <PButton :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
-          <PButton variant="secondary" :loading="actionBusy === 'favorite'" @click="toggleFavorite"><Heart :size="16" :fill="detail.bookmarked ? 'currentColor' : 'none'" aria-hidden="true" />{{ detail.bookmarked ? '已收藏' : '收藏' }}</PButton>
+          <PButton variant="secondary" :loading="actionBusy === 'favorite'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" />{{ favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱' }}</PButton>
+          <PDropdown position="right">
+            <template #trigger>
+              <PButton variant="secondary" @click="preparePlaylistMenu"><Plus :size="16" aria-hidden="true" />添加到歌单</PButton>
+            </template>
+            <div class="song-detail__playlist-menu">
+              <p v-if="!playlists.length">暂无歌单</p>
+              <button v-for="playlist in playlists" :key="playlist.id" type="button" @click="addToPlaylist(String(playlist.id))">{{ playlist.name }}</button>
+            </div>
+          </PDropdown>
           <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(true)"><StepForward :size="16" aria-hidden="true" />下一首</PButton>
           <PButton variant="secondary" :disabled="!detail.playable" @click="queueSong(false)"><ListPlus :size="16" aria-hidden="true" />加入队列</PButton>
           <PButton variant="secondary" :loading="actionBusy === 'later'" @click="addToLater"><Clock3 :size="16" aria-hidden="true" />稍后播放</PButton>
@@ -255,6 +298,10 @@ watch(
 .song-detail__entity-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; }
 .song-detail__navigation { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
 .song-detail__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.song-detail__playlist-menu { display: grid; min-width: 12rem; padding: 0.35rem; }
+.song-detail__playlist-menu p { margin: 0; padding: 0.65rem; color: var(--a-color-muted); }
+.song-detail__playlist-menu button { border: 0; border-radius: var(--a-radius-control); padding: 0.6rem 0.7rem; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.song-detail__playlist-menu button:hover { background: var(--a-color-surface-muted); }
 .song-detail__lyrics { grid-column: 1 / -1; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
 .song-detail__lyrics-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
 .song-detail__lyrics h2 { margin: 0; font-size: 1rem; }

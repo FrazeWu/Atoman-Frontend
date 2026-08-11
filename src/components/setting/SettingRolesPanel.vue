@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PCard from '@/components/ui/PCard.vue'
@@ -100,13 +100,13 @@ async function loadUsers() {
     if (query.value) params.set('q', query.value)
     params.set('limit', '50')
 
-    const response = await apiRequest(`${api.users.roles}?${params.toString()}`, {
+    const response = await apiRequestResult(`${api.users.roles}?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${authStore.token}`,
       },
       credentials: 'include',
     })
-    const data = await response.json()
+    const data = await Promise.resolve(response.data)
     if (!response.ok) {
       throw new Error(data.error || '加载用户失败')
     }
@@ -125,7 +125,7 @@ async function updateRole(userUUID: string, role: 'user' | 'admin') {
   message.value = ''
 
   try {
-    const response = await apiRequest(api.users.role(userUUID), {
+    const response = await apiRequestResult(api.users.role(userUUID), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ async function updateRole(userUUID: string, role: 'user' | 'admin') {
       credentials: 'include',
       body: JSON.stringify({ role }),
     })
-    const data = await response.json()
+    const data = await Promise.resolve(response.data)
     if (!response.ok) {
       throw new Error(data.error || '更新角色失败')
     }

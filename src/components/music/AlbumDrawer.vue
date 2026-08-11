@@ -12,7 +12,7 @@ import PToast from '@/components/ui/PToast.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MusicContributorsBlock from '@/components/music/MusicContributorsBlock.vue'
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
-import { FileText, Plus, Play, Heart, UserRound } from 'lucide-vue-next'
+import { ChevronDown, FileText, Heart, History, Merge, MoreHorizontal, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -63,6 +63,7 @@ const playlistsLoaded = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const trackDisplayMode = ref<'simple' | 'detailed'>('simple')
+const expandedTrackId = ref<string | null>(null)
 const lyricTrack = ref<{ id: string; title: string } | null>(null)
 const trackDisplayOptions = [
   { label: '简单', value: 'simple', testid: 'album-track-display-simple' },
@@ -237,6 +238,10 @@ function playTrack(track: AlbumTrack) {
   const startIndex = playableSongs.value.findIndex((song) => String(song.id) === String(track.id))
   if (startIndex < 0) return
   player.playAlbum(playableSongs.value, startIndex)
+}
+
+function toggleTrackDetails(trackId: string) {
+  expandedTrackId.value = expandedTrackId.value === trackId ? null : trackId
 }
 
 function handleCoverError() {
@@ -446,6 +451,9 @@ function guardPlaylistMenu(event: MouseEvent) {
 }
 
 watch(albumId, loadAlbum, { immediate: true })
+watch(trackDisplayMode, (mode) => {
+  if (mode === 'simple') expandedTrackId.value = null
+})
 watch(
   () => state.value.albumRefreshToken,
   () => {
@@ -483,8 +491,14 @@ watch(
 
       <div v-else class="album-meta-row">
         <div class="album-cover">
-          <img v-if="coverUrl && !isCoverBroken" :src="coverUrl" alt="" class="album-cover-img" @error="handleCoverError" />
-          <span v-else>COVER</span>
+          <img
+            v-if="coverUrl && !isCoverBroken"
+            :src="coverUrl"
+            :alt="`${album?.title || '专辑'}封面`"
+            class="album-cover-img"
+            @error="handleCoverError"
+          />
+          <span v-else>暂无封面</span>
         </div>
         <div class="album-info">
           <div class="album-type">{{ album?.album_type || '专辑' }}</div>
@@ -505,48 +519,52 @@ watch(
               <template v-if="!resolvedAlbumArtists.length">Unknown Artist</template>
             </span>
             <span v-if="releaseYear" class="release-year">{{ releaseYear }}</span>
+            <span v-if="tracks.length" class="track-count">{{ tracks.length }} 首</span>
           </div>
           <p class="summary">{{ album?.description || '暂无专辑简介。' }}</p>
+          <div class="album-actions">
+            <PButton
+              variant="primary"
+              :disabled="!playableSongs.length"
+              data-testid="album-play-action"
+              @click="playAlbum"
+            >
+              <Play :size="16" fill="currentColor" aria-hidden="true" />
+              播放
+            </PButton>
+            <PButton
+              variant="secondary"
+              :disabled="bookmarkLoading"
+              data-testid="album-bookmark-toggle"
+              @click="toggleAlbumBookmark"
+            >
+              {{ isBookmarked ? '已订阅' : '订阅' }}
+            </PButton>
+            <PDropdown class="album-more-dropdown" position="right">
+              <template #trigger>
+                <button class="album-more-trigger" type="button" aria-label="更多专辑操作" title="更多操作">
+                  <MoreHorizontal :size="19" aria-hidden="true" />
+                </button>
+              </template>
+              <template #default="{ close }">
+                <div class="album-more-menu">
+                  <button type="button" data-testid="album-edit-action" @click="close(); editAlbum()">
+                    <Pencil :size="16" aria-hidden="true" />
+                    编辑专辑
+                  </button>
+                  <button type="button" @click="close(); openNestedAction('history', { albumId })">
+                    <History :size="16" aria-hidden="true" />
+                    查看版本
+                  </button>
+                  <button type="button" data-testid="album-merge-action" @click="close(); mergeAlbum()">
+                    <Merge :size="16" aria-hidden="true" />
+                    合并重复条目
+                  </button>
+                </div>
+              </template>
+            </PDropdown>
+          </div>
         </div>
-      </div>
-
-      <div class="action-bar">
-        <PButton
-          variant="primary"
-          :disabled="!playableSongs.length"
-          @click="playAlbum"
-        >
-          播放全专
-        </PButton>
-        <PButton
-          variant="secondary"
-          :disabled="bookmarkLoading"
-          data-testid="album-bookmark-toggle"
-          @click="toggleAlbumBookmark"
-        >
-          {{ isBookmarked ? '已订阅' : '订阅' }}
-        </PButton>
-        <div class="spacer"></div>
-        <PButton
-          variant="warning"
-          data-testid="album-edit-action"
-          @click="editAlbum"
-        >
-          编辑
-        </PButton>
-        <PButton
-          variant="secondary"
-          @click="openNestedAction('history', { albumId })"
-        >
-          版本
-        </PButton>
-        <PButton
-          variant="secondary"
-          data-testid="album-merge-action"
-          @click="mergeAlbum"
-        >
-          合并重复条目
-        </PButton>
       </div>
 
       <div class="content-section">
@@ -562,7 +580,7 @@ watch(
             :disabled="!canPlayTrack(track)"
             :data-testid="`track-play-${track.id}`"
             @click="playTrack(track)"
-            aria-label="播放"
+            :aria-label="`播放 ${track.title}`"
           >
             <span class="track-num">{{ index + 1 }}</span>
             <Play class="track-play-icon" :size="14" fill="currentColor" />
@@ -576,7 +594,8 @@ watch(
               type="button"
               class="track-fav-btn"
               :class="{ 'is-active': favoriteSongIds.has(String(track.id)) }"
-              title="收藏"
+			  :title="favoriteSongIds.has(String(track.id)) ? '移出最爱' : '加入最爱'"
+			  :aria-label="`${favoriteSongIds.has(String(track.id)) ? '移出最爱' : '加入最爱'} ${track.title}`"
               @click="toggleTrackFavorite(String(track.id))"
             >
               <Heart :size="12" :fill="favoriteSongIds.has(String(track.id)) ? 'currentColor' : 'none'" />
@@ -584,7 +603,13 @@ watch(
 
             <PDropdown class="track-add-dropdown" position="right">
               <template #trigger>
-                <button class="track-add-btn" type="button" title="添加到歌单" @click="guardPlaylistMenu">
+                <button
+                  class="track-add-btn"
+                  type="button"
+                  title="添加到歌单"
+                  :aria-label="`将 ${track.title} 添加到歌单`"
+                  @click="guardPlaylistMenu"
+                >
                   <Plus :size="12" />
                 </button>
               </template>
@@ -602,8 +627,20 @@ watch(
                 </button>
               </div>
             </PDropdown>
+            <button
+              v-if="trackDisplayMode === 'detailed'"
+              type="button"
+              class="track-detail-btn"
+              :class="{ 'is-expanded': expandedTrackId === String(track.id) }"
+              :aria-expanded="expandedTrackId === String(track.id)"
+              :aria-label="`${expandedTrackId === String(track.id) ? '收起' : '展开'} ${track.title} 的详细信息`"
+              :data-testid="`track-details-${track.id}`"
+              @click="toggleTrackDetails(String(track.id))"
+            >
+              <ChevronDown :size="16" aria-hidden="true" />
+            </button>
           </div>
-          <div v-if="trackDisplayMode === 'detailed'" class="track-specification">
+          <div v-if="trackDisplayMode === 'detailed' && expandedTrackId === String(track.id)" class="track-specification">
             <PButton
               type="button"
               size="sm"
@@ -629,8 +666,7 @@ watch(
         </div>
       </div>
 
-      <!-- 底部参与艺术家区块 (可点击跳转) -->
-	  <section v-if="albumCreatorCredits.length" class="content-section album-artists-section">
+		  <section v-if="albumCreatorCredits.length" class="content-section album-artists-section">
 		<div class="section-title">创作者</div>
         <div class="artist-cards-grid">
           <button
@@ -665,22 +701,22 @@ watch(
 
 <style scoped>
 :global(.album-drawer) {
-  background: var(--a-color-bg) !important;
+  background: #ffffff !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
-.drawer-body { padding: 2rem 0; }
+.drawer-body { padding: 2rem 0 3rem; }
 
 .album-meta-row {
   display: flex;
-  gap: 2.25rem;
-  margin-bottom: 2.25rem;
+  gap: 2rem;
+  margin-bottom: 3rem;
   align-items: flex-start;
 }
 .album-cover {
-  width: 180px;
-  height: 180px;
+  width: 220px;
+  height: 220px;
   background: var(--a-color-surface-muted);
   flex-shrink: 0;
   display: flex;
@@ -726,7 +762,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
   font-family: var(--a-font-sans);
   font-size: 0.8rem;
   font-weight: 500;
@@ -836,80 +872,75 @@ watch(
   font-size: 0.75rem;
   color: var(--a-color-muted);
 }
-.release-year::before {
+.release-year::before,
+.track-count::before {
   content: "•";
   margin-right: 0.75rem;
   color: var(--a-color-border-soft);
 }
-.summary { color: var(--a-color-muted); font-size: 0.875rem; line-height: 1.6; margin: 0; white-space: pre-wrap; }
-
-.action-bar {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
+.summary {
+  display: -webkit-box;
+  max-width: 44rem;
+  overflow: hidden;
+  color: var(--a-color-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
-.spacer { flex: 1; }
-.ui-action {
-  display: inline-flex;
+
+.album-actions {
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.album-more-trigger {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
-  padding: 0.55rem 1.1rem;
-  font-weight: 500;
-  background: var(--a-color-bg);
+  background: transparent;
   color: var(--a-color-text);
   cursor: pointer;
-  font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  transition: all 0.15s ease;
 }
-.ui-action--static {
-  cursor: default;
+.album-more-trigger:hover,
+.album-more-trigger:focus-visible {
+  background: var(--a-color-surface-muted);
 }
-.ui-action:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.album-more-menu {
+  display: grid;
+  min-width: 12rem;
+  padding: 0.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: #ffffff;
 }
-.ui-action:disabled:hover {
-  background: var(--a-color-bg);
+.album-more-menu button {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  background: transparent;
   color: var(--a-color-text);
-  border-color: var(--a-color-border-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.ui-action--static:hover {
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  border-color: var(--a-color-border-soft);
-}
-.ui-action:hover {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-fg);
-}
-.ui-action--primary {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-fg);
-}
-.ui-action--primary:hover {
-  background: var(--a-color-text-secondary);
-  border-color: var(--a-color-text-secondary);
-}
-.action-indicator {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 4px;
-  background: currentColor;
-  opacity: 0.6;
+.album-more-menu button:hover,
+.album-more-menu button:focus-visible {
+  background: var(--a-color-surface-muted);
 }
 
 .content-section {
-  background: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
-  padding: 1.5rem 2rem;
-  margin-bottom: 2rem;
+  padding: 0;
+  margin-bottom: 3rem;
 }
 
 @media (max-width: 767px) {
@@ -921,6 +952,14 @@ watch(
   .album-meta-row {
     flex-direction: column;
     gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .album-cover {
+    width: min(72vw, 17.5rem);
+    height: auto;
+    aspect-ratio: 1;
+    align-self: center;
   }
 
   .album-info {
@@ -928,19 +967,32 @@ watch(
   }
 
   .album-title {
+    font-size: 1.85rem;
     overflow-wrap: anywhere;
   }
 
-  .action-bar {
+  .meta-tags {
+    row-gap: 0.35rem;
     flex-wrap: wrap;
   }
 
-  .spacer {
-    display: none;
+  .album-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.75rem;
+  }
+
+  .album-actions :deep(.p-button) {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .album-more-trigger {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .content-section {
-    padding: 1rem;
+    margin-bottom: 2.25rem;
   }
 }
 
@@ -1031,6 +1083,29 @@ watch(
   gap: 0.75rem;
   flex-shrink: 0;
 }
+.track-detail-btn {
+  display: inline-grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+.track-detail-btn svg {
+  transition: transform 0.15s ease;
+}
+.track-detail-btn.is-expanded svg {
+  transform: rotate(180deg);
+}
+.track-detail-btn:hover,
+.track-detail-btn:focus-visible {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+}
 .track-specification {
   grid-column: 2 / -1;
   display: grid;
@@ -1120,6 +1195,37 @@ watch(
 .track-fav-btn:hover {
   opacity: 1 !important;
   background-color: var(--a-color-surface-muted);
+}
+
+@media (max-width: 767px) {
+  .track {
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+  }
+
+  .track-play-btn,
+  .track-fav-btn,
+  .track-add-btn,
+  .track-detail-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .track-meta {
+    gap: 0.5rem;
+  }
+
+  .track--detailed .track-meta {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    justify-content: flex-end;
+  }
+
+  .track-specification {
+    grid-column: 1 / -1;
+    padding: 0.5rem 0 0.75rem 3.25rem;
+  }
 }
 .track-add-menu {
   background: var(--a-color-bg);

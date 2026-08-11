@@ -147,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
@@ -246,7 +246,7 @@ const openReportModal = (targetId: string) => {
 
 const submitReport = async () => {
   if (!reportForm.value.reason.trim()) { alert('请选择举报原因'); return }
-  const res = await apiRequest(`${api.url}/forum/report`, {
+  const res = await apiRequestResult(`${api.url}/forum/report`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -265,7 +265,7 @@ const submitReport = async () => {
   } else if (res.status === 409) {
     reportFeedback.value = '您已举报过此内容'
   } else {
-    const d = await res.json().catch(() => ({}))
+    const d = await Promise.resolve(res.data).catch(() => ({}))
     reportFeedback.value = `举报失败: ${(d as { error?: string }).error || '未知错误'}`
   }
 }
@@ -273,7 +273,7 @@ const submitReport = async () => {
 const toggleFeatured = async () => {
   const topic = forumStore.currentTopic!
   const method = topic.featured ? 'DELETE' : 'POST'
-  const res = await apiRequest(`${api.url}/forum/topics/${topic.id}/feature`, {
+  const res = await apiRequestResult(`${api.url}/forum/topics/${topic.id}/feature`, {
     method,
     headers: { Authorization: `Bearer ${authStore.token}` },
   })

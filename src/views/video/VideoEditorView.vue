@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { apiRequest } from '@/api/client'
-import { uploadFormDataWithProgress } from '@/api/upload'
+import { cancelVideoImport, getVideo, getVideoImport, saveVideo, submitVideoImport, updateVideoImport, uploadVideoCover, type VideoImportPayload } from '@/api/video'
 import { useStudioStore } from '@/stores/studio'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -16,18 +15,18 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, Video as VideoIcon } from 'lucide-vue-next'
 import VideoCoverPanel from '@/components/video/VideoCoverPanel.vue'
 import type { Video, Collection } from '@/types'
-import { useApi } from '@/composables/useApi'
 import ContentScheduleControl from '@/components/content/ContentScheduleControl.vue'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
 import { useMediaCreationSteps } from '@/composables/useMediaCreationSteps'
+import { useVideoImportUpload } from '@/composables/useVideoImportUpload'
 import { errorMessage } from '@/utils/logger'
 
-const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const studio = useStudioStore()
 const lifecycle = useContentLifecycle()
+const videoImportUpload = useVideoImportUpload()
 
 const isEdit = computed(() => !!route.params.id)
 const savingDraft = ref(false)
@@ -52,13 +51,17 @@ const { creationSteps, currentStep, maxStep, goNext, goPrevious } = useMediaCrea
 })
 
 // Upload state
-const videoUploadProgress = ref(0)   // 0-100, -1 = error
-const videoUploading = ref(false)
-let videoUploadTask: Promise<void> | null = null
+const videoImportId = ref('')
+const startingVideoImport = ref(false)
+const videoImportState = computed(() => videoImportId.value ? videoImportUpload.uploads.value[videoImportId.value] : undefined)
+const videoUploading = computed(() => startingVideoImport.value || !!videoImportState.value?.uploading)
+const videoUploadProgress = computed(() => videoImportState.value?.progress ?? 0)
+const videoUploaded = computed(() => !!videoImportState.value?.task.upload_completed_at)
 const coverUploading = ref(false)
 const generatedCoverPreview = ref('')
 const generatedCoverBlob = ref<Blob | null>(null)
 const generatedCoverReady = ref(false)
+let importAutosaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = ref({
   channel_id: '' as string,
@@ -76,8 +79,9 @@ const storageOptions = [
   { label: '外部链接', value: 'external' },
 ]
 
-function onStorageTypeChange(value: 'local' | 'external') {
+async function onStorageTypeChange(value: 'local' | 'external') {
   if (value === form.value.storage_type) return
+  if (videoImportId.value) await resetVideoImport()
   form.value.storage_type = value
   form.value.video_url = ''
   urlError.value = ''
@@ -143,15 +147,8 @@ async function uploadCoverBlob(blob: Blob) {
   coverUploading.value = true
   errorMsg.value = ''
   try {
-    const fd = new FormData()
-    fd.append('cover', new File([blob], `auto-cover-${Date.now()}.jpg`, { type: 'image/jpeg' }))
-    const res = await apiRequest(`${api.url}/videos/upload-cover`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${authStore.token}` },
-      body: fd,
-    })
-    if (!res.ok) throw await res.json()
-    const result = await res.json()
+    const file = new File([blob], `auto-cover-${Date.now()}.jpg`, { type: 'image/jpeg' })
+    const result = await uploadVideoCover(file, authStore.token ?? undefined)
     form.value.thumbnail_url = result.url
   } catch (err) {
     errorMsg.value = errorMessage(err, '封面上传失败')
@@ -168,30 +165,10 @@ async function useGeneratedCover() {
 async function onVideoFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
-  videoUploading.value = true
-  videoUploadProgress.value = 0
+  ;(e.target as HTMLInputElement).value = ''
+  startingVideoImport.value = true
   urlError.value = ''
   clearGeneratedCover()
-  const uploadTask = (async () => {
-    try {
-      const fd = new FormData()
-      fd.append('video', file)
-      const result = await uploadFormDataWithProgress<{ url: string }>(
-        `${api.url}/videos/upload-video`,
-        fd,
-        (pct) => { videoUploadProgress.value = pct },
-      )
-      form.value.video_url = result.url
-    } catch (err) {
-      videoUploadProgress.value = -1
-      urlError.value = errorMessage(err, '视频上传失败')
-    } finally {
-      videoUploading.value = false
-      videoUploadTask = null
-    }
-  })()
-  videoUploadTask = uploadTask
-
   void (async () => {
     try {
       const generated = await extractFirstFrame(file)
@@ -203,8 +180,29 @@ async function onVideoFileChange(e: Event) {
       errorMsg.value = '自动封面生成失败，可手动上传封面'
     }
   })()
+  try {
+    if (videoImportId.value) {
+      const task = videoImportState.value?.task ?? await getVideoImport(videoImportId.value, authStore.token ?? undefined)
+      await videoImportUpload.resume(task, file)
+    } else {
+      const task = await videoImportUpload.start(file, form.value.channel_id || null)
+      videoImportId.value = task.id
+    }
+  } catch (err) {
+    urlError.value = errorMessage(err, '视频上传失败')
+  } finally {
+    startingVideoImport.value = false
+  }
+}
 
-  await uploadTask
+async function resetVideoImport() {
+  const id = videoImportId.value
+  if (!id) return
+  videoImportUpload.stop(id)
+  await cancelVideoImport(id, authStore.token ?? undefined).catch(() => {})
+  videoImportId.value = ''
+  urlError.value = ''
+  maxStep.value = 1
 }
 
 async function onCoverFileChange(e: Event) {
@@ -212,15 +210,7 @@ async function onCoverFileChange(e: Event) {
   if (!file) return
   coverUploading.value = true
   try {
-    const fd = new FormData()
-    fd.append('cover', file)
-    const res = await apiRequest(`${api.url}/videos/upload-cover`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${authStore.token}` },
-      body: fd,
-    })
-    if (!res.ok) throw await res.json()
-    const result = await res.json()
+    const result = await uploadVideoCover(file, authStore.token ?? undefined)
     form.value.thumbnail_url = result.url
   } catch (err) {
     errorMsg.value = errorMessage(err, '封面上传失败')
@@ -232,17 +222,11 @@ async function onCoverFileChange(e: Event) {
 // ── Form logic ────────────────────────────────────────────
 
 function validateMedia(): boolean {
-  const hasMedia = form.value.video_url.trim() || (form.value.storage_type === 'local' && videoUploading.value)
+  const hasMedia = form.value.storage_type === 'local' ? videoImportId.value : form.value.video_url.trim()
   urlError.value = hasMedia ? '' : (
     form.value.storage_type === 'local' ? '请先上传视频文件' : '请填写视频链接'
   )
   return !urlError.value
-}
-
-async function waitForVideoUpload(): Promise<boolean> {
-  const pendingTask = videoUploadTask
-  if (pendingTask) await pendingTask
-  return validateMedia()
 }
 
 function validateInformation(): boolean {
@@ -280,21 +264,34 @@ function buildPayload(status: 'draft' | 'published') {
   }
 }
 
-async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video> {
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }
-  if (isEdit.value) {
-    const res = await apiRequest(`${api.url}/videos/${route.params.id}`, {
-      method: 'PUT', headers, body: JSON.stringify(payload),
-    })
-    if (!res.ok) throw await res.json()
-    return res.json()
-  } else {
-    const res = await apiRequest(`${api.url}/videos`, {
-      method: 'POST', headers, body: JSON.stringify(payload),
-    })
-    if (!res.ok) throw await res.json()
-    return res.json()
+function buildImportPayload(): VideoImportPayload {
+  return {
+    channel_id: form.value.channel_id || null,
+    title: form.value.title.trim(),
+    description: form.value.description,
+    thumbnail_url: form.value.thumbnail_url,
+    visibility: form.value.visibility,
+    tags: form.value.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+    collection_ids: [...selectedCollectionIds.value],
   }
+}
+
+function scheduleImportAutosave() {
+  if (!videoImportId.value || isEdit.value || form.value.storage_type !== 'local') return
+  if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
+  importAutosaveTimer = setTimeout(() => {
+    importAutosaveTimer = null
+    void updateVideoImport(videoImportId.value, buildImportPayload(), authStore.token ?? undefined).catch(() => {})
+  }, 600)
+}
+
+watch([form, selectedCollectionIds, videoImportId], scheduleImportAutosave, { deep: true })
+onBeforeUnmount(() => {
+  if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
+})
+
+async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<Video> {
+  return saveVideo(payload, authStore.token ?? undefined, isEdit.value ? String(route.params.id) : undefined)
 }
 
 async function loadCollections(channelID: string) {
@@ -322,11 +319,7 @@ function toggleCollection(id: string, checked: boolean) {
 
 async function loadVideo() {
   const id = route.params.id as string
-  const res = await apiRequest(`${api.url}/videos/${id}`, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (!res.ok) return
-  const v: Video = await res.json()
+  const v = await getVideo(id, authStore.token ?? undefined)
   if (v.channel_id && studio.currentChannel?.id !== v.channel_id) {
     await studio.selectChannel(v.channel_id)
   }
@@ -353,6 +346,26 @@ onMounted(async () => {
     return
   }
   form.value.channel_id = studio.currentChannel?.id || ''
+  const resumeImportId = typeof route.query.import === 'string' ? route.query.import : ''
+  if (resumeImportId) {
+    try {
+      const task = await getVideoImport(resumeImportId, authStore.token ?? undefined)
+      videoImportUpload.applyTask(task)
+      videoImportId.value = task.id
+      form.value = {
+        channel_id: task.payload.channel_id || studio.currentChannel?.id || '', title: task.payload.title,
+        description: task.payload.description, storage_type: 'local', video_url: '',
+        thumbnail_url: task.payload.thumbnail_url, visibility: task.payload.visibility || 'public', tags: task.payload.tags.join(', '),
+      }
+      await loadCollections(form.value.channel_id)
+      selectedCollectionIds.value = [...task.payload.collection_ids]
+      currentStep.value = 2
+      maxStep.value = task.payload.title ? 3 : 2
+      return
+    } catch (err) {
+      errorMsg.value = errorMessage(err, '导入任务加载失败')
+    }
+  }
   await Promise.all([loadCollections(form.value.channel_id), studio.loadSettings('video')])
 	const settings = studio.settings.video
 	preferredPublishStatus.value = settings?.default_publish_status || 'published'
@@ -370,7 +383,11 @@ async function saveDraft() {
   errorMsg.value = ''
   draftSaved.value = false
   try {
-    if (!await waitForVideoUpload()) return
+    if (!isEdit.value && form.value.storage_type === 'local') {
+      await submitVideoImport(videoImportId.value, buildImportPayload(), 'draft', null, authStore.token ?? undefined)
+      await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
+      return
+    }
     await apiSave(buildPayload('draft'))
     draftSaved.value = true
     await router.push({
@@ -395,7 +412,11 @@ async function doPublish() {
   publishing.value = true
   errorMsg.value = ''
   try {
-    if (!await waitForVideoUpload()) return
+    if (!isEdit.value && form.value.storage_type === 'local') {
+      await submitVideoImport(videoImportId.value, buildImportPayload(), 'published', null, authStore.token ?? undefined)
+      await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
+      return
+    }
     const v = await apiSave(buildPayload('published'))
     router.push(`/videos/watch/${isEdit.value ? route.params.id : v.id}`)
   } catch (e) {
@@ -415,7 +436,11 @@ async function schedulePublish() {
   scheduling.value = true
   errorMsg.value = ''
   try {
-    if (!await waitForVideoUpload()) return
+    if (!isEdit.value && form.value.storage_type === 'local') {
+      await submitVideoImport(videoImportId.value, buildImportPayload(), 'scheduled', publishAt.toISOString(), authStore.token ?? undefined)
+      await router.push({ path: '/studio/video/imports', query: { task: videoImportId.value } })
+      return
+    }
     const video = await apiSave(buildPayload('draft'))
     await lifecycle.schedule('video', video.id, publishAt.toISOString())
     await router.push({ path: '/studio/video/content', query: { status: 'scheduled' } })
@@ -498,10 +523,10 @@ async function schedulePublish() {
             <label class="ve-field-label">视频文件 *</label>
 
             <!-- 已上传 -->
-            <div v-if="form.video_url && !videoUploading" class="ve-uploaded">
+            <div v-if="(form.video_url || videoUploaded) && !videoUploading" class="ve-uploaded">
               <CheckCircle2 :size="18" aria-hidden="true" />
               <span class="ve-uploaded-name">视频已上传</span>
-              <button type="button" class="ve-reupload" @click="form.video_url = ''; maxStep = 1">重新上传</button>
+              <button type="button" class="ve-reupload" @click="resetVideoImport">重新上传</button>
             </div>
 
             <!-- 未上传 / 上传中 -->
@@ -515,7 +540,7 @@ async function schedulePublish() {
                   @change="onVideoFileChange"
                 />
                 <Upload v-if="!videoUploading" :size="30" aria-hidden="true" />
-                <span v-if="!videoUploading" class="ve-drop-hint">选择视频文件</span>
+                <span v-if="!videoUploading" class="ve-drop-hint">{{ videoImportId ? '选择原文件继续上传' : '选择视频文件' }}</span>
                 <span v-if="!videoUploading" class="ve-drop-sub">MP4、WebM 或 MOV，最大 2 GB</span>
                 <span v-if="videoUploading" class="ve-uploading-label">上传中 {{ videoUploadProgress }}%</span>
               </label>
@@ -525,7 +550,7 @@ async function schedulePublish() {
                 <div class="ve-progress-bar" :style="{ width: videoUploadProgress + '%' }" />
               </div>
 
-              <p v-if="urlError" class="ve-field-error">{{ urlError }}</p>
+              <p v-if="urlError || videoImportState?.error" class="ve-field-error">{{ urlError || videoImportState?.error }}</p>
             </template>
           </div>
 

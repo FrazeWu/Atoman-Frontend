@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { getRecommendedVideos, getVideo, recordVideoView } from '@/api/video'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { CommentTargetRef } from '@/api/comments'
@@ -11,7 +11,6 @@ import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import VideoContinueList from '@/components/video/VideoContinueList.vue'
-import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'
 import { useAuthStore } from '@/stores/auth'
 import { isModeratorRole } from '@/utils/roles'
@@ -29,7 +28,6 @@ type VideoDetailResponse = Video & {
   CommentCount?: number
 }
 
-const api = useApi()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -112,13 +110,10 @@ async function load(id: string) {
   lastProgressSave = 0
   consumptionTracker = null
   try {
-    const [vRes, rRes] = await Promise.all([
-      apiRequest(`${api.url}/videos/${id}`),
-      apiRequest(`${api.url}/videos/${id}/recommended`),
+    const [detail, recommendations] = await Promise.all([
+      getVideo<VideoDetailResponse>(id),
+      getRecommendedVideos<Video[]>(id).catch(() => []),
     ])
-    if (seq !== loadSeq) return
-    if (!vRes.ok) { error.value = '视频不存在'; return }
-    const detail = await vRes.json() as VideoDetailResponse
     if (seq !== loadSeq) return
     video.value = detail
     consumptionTracker = createContentConsumptionTracker({
@@ -137,12 +132,9 @@ async function load(id: string) {
     })
     consumptionTracker.open()
     syncInteractionState(detail)
-    if (rRes.ok) {
-      const data = await rRes.json()
-      if (seq === loadSeq) recommended.value = data
-    }
+    if (seq === loadSeq) recommended.value = recommendations
     // Fire-and-forget view count increment
-    if (seq === loadSeq) apiRequest(`${api.url}/videos/${id}/view`, { method: 'POST' })
+    if (seq === loadSeq) void recordVideoView(id)
   } catch {
     if (seq === loadSeq) error.value = '加载失败，请重试'
   } finally {

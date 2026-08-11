@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
@@ -252,7 +252,7 @@ async function loadHotContent() {
   loading.value = true
   error.value = ''
   try {
-    const response = await apiRequest(`${api.url}/portal/hot?limit=6`, {
+    const response = await apiRequestResult(`${api.url}/portal/hot?limit=6`, {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     })
@@ -261,7 +261,7 @@ async function loadHotContent() {
       return
     }
     if (!response.ok) throw new Error('服务端返回异常')
-    const payload = await response.json() as { data?: PortalHotResponse }
+    const payload = await Promise.resolve(response.data) as { data?: PortalHotResponse }
     hotContent.value = payload.data ?? { featured: [], sections: [] }
   } catch (err) {
     error.value = err instanceof Error ? err.message : '未知错误'

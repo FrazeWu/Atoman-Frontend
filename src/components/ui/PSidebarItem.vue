@@ -58,11 +58,11 @@ defineEmits(['click'])
 <style scoped>
 .p-sidebar-item {
   position: relative;
-  border-radius: var(--a-radius-card);
+  border-radius: var(--a-radius-control);
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .p-sidebar-item:hover,
 .p-sidebar-item.is-focused {

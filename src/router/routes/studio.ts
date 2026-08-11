@@ -19,6 +19,7 @@ export const studioRoutes: RouteRecordRaw[] = [{
       children: [
         { path: '', redirect: to => `/studio/${String(to.params.module)}/content` },
         { path: 'content', name: 'studio-content', component: () => import('@/views/studio/StudioContentView.vue') },
+        { path: 'imports', name: 'studio-imports', component: () => import('@/views/video/VideoImportsView.vue') },
         { path: 'analytics', name: 'studio-analytics', component: () => import('@/views/studio/StudioAnalyticsView.vue') },
         { path: 'interactions', name: 'studio-interactions', component: () => import('@/views/studio/StudioInteractionsView.vue') },
         { path: 'settings', name: 'studio-settings', component: () => import('@/views/studio/StudioSettingsView.vue') },

@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 
 import PButton from '@/components/ui/PButton.vue'
@@ -221,14 +221,14 @@ async function refresh() {
   error.value = ''
   try {
     const [categoryRes, assignmentRes] = await Promise.all([
-      apiRequest(api.v1.forum.categories),
-      apiRequest(api.v1.forum.moderators, {
+      apiRequestResult(api.v1.forum.categories),
+      apiRequestResult(api.v1.forum.moderators, {
         headers: authHeaders(),
       }),
     ])
 
-    const categoryData = await categoryRes.json().catch(() => ({}))
-    const assignmentData = await assignmentRes.json().catch(() => ({}))
+    const categoryData = categoryRes.data || {}
+    const assignmentData = assignmentRes.data || {}
 
     if (!categoryRes.ok) {
       throw new Error(categoryData.error?.message || categoryData.error || '加载论坛分类失败')
@@ -255,10 +255,10 @@ async function searchUsers() {
       q: query.value.trim(),
       limit: '20',
     })
-    const response = await apiRequest(`${api.users.search}?${params.toString()}`, {
+    const response = await apiRequestResult(`${api.users.search}?${params.toString()}`, {
       headers: authHeaders(),
     })
-    const data = await response.json().catch(() => ({}))
+    const data = await Promise.resolve(response.data).catch(() => ({}))
     if (!response.ok) {
       throw new Error(data.error || '搜索用户失败')
     }
@@ -289,12 +289,12 @@ async function saveAssignment() {
       : api.v1.forum.moderators
     const method = editingId.value ? 'PUT' : 'POST'
 
-    const response = await apiRequest(url, {
+    const response = await apiRequestResult(url, {
       method,
       headers: authHeaders(true),
       body: JSON.stringify(payload),
     })
-    const data = await response.json().catch(() => ({}))
+    const data = await Promise.resolve(response.data).catch(() => ({}))
     if (!response.ok) {
       throw new Error(data.error?.message || data.error || '保存版主分配失败')
     }
@@ -337,12 +337,12 @@ async function removeAssignment(id: string) {
   error.value = ''
   message.value = ''
   try {
-    const response = await apiRequest(api.v1.forum.moderator(id), {
+    const response = await apiRequestResult(api.v1.forum.moderator(id), {
       method: 'DELETE',
       headers: authHeaders(),
     })
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
+      const data = await Promise.resolve(response.data).catch(() => ({}))
       throw new Error(data.error?.message || data.error || '删除版主分配失败')
     }
     message.value = '版主分配已删除'

@@ -200,7 +200,8 @@ describe('podcast routing prefix', () => {
     const secondResponse = deferredResponse()
     const fetchMock = vi.fn((url: string) => {
       if (url.endsWith('/podcast/episodes/episode-a')) return Promise.resolve(makeJsonResponse(episode('episode-a', '单集 A')))
-      return secondResponse.promise
+      if (url.endsWith('/podcast/episodes/episode-b')) return secondResponse.promise
+      return Promise.resolve(makeJsonResponse({ data: [], meta: { total: 0 } }))
     })
     vi.stubGlobal('fetch', fetchMock)
     const router = createRouter({

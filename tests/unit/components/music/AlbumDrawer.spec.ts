@@ -132,12 +132,14 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.text()).not.toContain('专辑详情')
   })
 
-  it('shows lyric editing only in the detailed track layout', async () => {
+  it('shows lyric editing only after expanding a track in the detailed layout', async () => {
     const wrapper = mount(AlbumDrawer)
     await flushPromises()
     expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="album-track-display-detailed"]').trigger('click')
+    expect(wrapper.find('[data-testid="track-edit-lyrics-101"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="track-details-101"]').trigger('click')
     expect(wrapper.get('[data-testid="track-edit-lyrics-101"]').text()).toContain('编辑歌词')
   })
 
@@ -343,7 +345,7 @@ describe('AlbumDrawer.vue', () => {
     expect(wrapper.get('.track-time').text()).toBe('2:05')
   })
 
-  it('keeps track specifications hidden until detailed display is selected', async () => {
+  it('keeps track specifications hidden until a detailed track is expanded', async () => {
     getMusicAlbum.mockResolvedValue({
       id: '1',
       title: 'Archive Album',
@@ -370,20 +372,22 @@ describe('AlbumDrawer.vue', () => {
 
     expect(wrapper.text()).not.toContain('01 - Master.flac')
     await wrapper.get('[data-testid="album-track-display-detailed"]').trigger('click')
+    expect(wrapper.text()).not.toContain('01 - Master.flac')
+    await wrapper.get('[data-testid="track-details-song-1"]').trigger('click')
 
     expect(wrapper.text()).toContain('FLAC · 无损 · 24-bit · 96 kHz · 2 ch · 95.0 MB')
     expect(wrapper.text()).toContain('01 - Master.flac')
     expect(wrapper.text()).toContain('MP3 · 320 kbps')
   })
 
-  it('opens unified album editor when clicking 编辑', async () => {
+  it('opens unified album editor from the more menu', async () => {
     const wrapper = mount(AlbumDrawer, {
     })
 
     await flushPromises()
 
-    const buttons = wrapper.findAllComponents({ name: 'PButton' })
-    await buttons[2].trigger('click')
+    await wrapper.get('.album-more-trigger').trigger('click')
+    await wrapper.get('[data-testid="album-edit-action"]').trigger('click')
 
     expect(openMusicCreationFlow).toHaveBeenCalledWith({
       mode: 'edit',
@@ -431,7 +435,7 @@ describe('AlbumDrawer.vue', () => {
     await wrapper.get('.album-cover-img').trigger('error')
 
     expect(wrapper.find('.album-cover-img').exists()).toBe(false)
-    expect(wrapper.get('.album-cover').text()).toContain('COVER')
+    expect(wrapper.get('.album-cover').text()).toContain('暂无封面')
   })
 
   it('creates an album bookmark when clicking 订阅 and reflects the new state', async () => {

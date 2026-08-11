@@ -95,8 +95,8 @@
             :class="{
               'is-active': favoriteSongIds.has(String(player.currentSong.id)),
             }"
-            title="收藏"
-            data-hint="收藏"
+			:title="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '加入最爱'"
+			:data-hint="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '加入最爱'"
             @click="toggleTrackFavorite(String(player.currentSong.id))"
           >
             <Heart
@@ -474,7 +474,7 @@ async function loadFavorites(songId?: string) {
   try {
     await loadFavoriteSongs(songId ? [songId] : []);
   } catch (err) {
-    reportError(err, "加载收藏歌曲失败");
+    reportError(err, "加载最爱歌单失败");
   }
 }
 
@@ -486,7 +486,7 @@ async function toggleTrackFavorite(songId: string) {
     toastVisible.value = true;
     await loadPlaylists();
   } catch (err) {
-    reportError(err, "切换歌曲收藏失败");
+    reportError(err, "更新最爱歌单失败");
     toastMessage.value = "操作失败";
     toastVisible.value = true;
   }

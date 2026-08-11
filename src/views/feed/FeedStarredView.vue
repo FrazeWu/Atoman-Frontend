@@ -130,7 +130,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -308,11 +308,11 @@ const fetchStarred = async () => {
     const params = new URLSearchParams({ page: String(page.value), limit: String(pageLimit) })
     if (groupId) params.set('group_id', groupId)
 
-    const res = await apiRequest(`${api.url}/feed/stars?${params.toString()}`, {
+    const res = await apiRequestResult(`${api.url}/feed/stars?${params.toString()}`, {
       headers: authHeaders(),
     })
     if (res.ok) {
-      const data = await res.json()
+      const data = await Promise.resolve(res.data)
       if (requestId !== starredRequestSeq || activeStarGroupId.value !== groupId) return
 
       const newItems: StarredFeedItem[] = data.items || []

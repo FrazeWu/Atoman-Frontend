@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
 
 import PSheet from '@/components/ui/PSheet.vue'
@@ -54,15 +54,15 @@ async function loadCollection() {
   try {
     const headers: HeadersInit = authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}
     const [collectionRes, publishedRes, draftsRes] = await Promise.all([
-      apiRequest(api.blog.collection(collectionId.value), { headers }),
-      apiRequest(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),
-      apiRequest(api.blog.drafts, { headers }),
+      apiRequestResult(api.blog.collection(collectionId.value), { headers }),
+      apiRequestResult(`${api.blog.posts}?collection_id=${collectionId.value}`, { headers }),
+      apiRequestResult(api.blog.drafts, { headers }),
     ])
     if (!collectionRes.ok || !publishedRes.ok || !draftsRes.ok) throw new Error('load failed')
 
-    collection.value = (await collectionRes.json()).data
-    const published = ((await publishedRes.json()).data || []) as Post[]
-    const drafts = (((await draftsRes.json()).data || []) as Post[]).filter(post =>
+    collection.value = collectionRes.data.data
+    const published = (publishedRes.data.data || []) as Post[]
+    const drafts = ((draftsRes.data.data || []) as Post[]).filter(post =>
       post.collections?.some(item => item.id === collectionId.value),
     )
     posts.value = Array.from(new Map([...published, ...drafts].map(post => [post.id, post])).values())

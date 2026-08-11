@@ -183,8 +183,6 @@ describe('PSheet.vue', () => {
     const wrapper = mount(PSheet, {
       props: { show: true, closeType: 'bookmark' }
     })
-    // PSheetTab is a component, we can find it by component or by its expected class if we know it
-    // From PSheet.vue: <PSheetTab ... class="sheet-tab-position" ... />
     await wrapper.find('.sheet-close-btn-bookmark').trigger('click')
     expect(wrapper.emitted()).toHaveProperty('close')
   })

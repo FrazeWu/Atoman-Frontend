@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import { useApiUrl } from '@/composables/useApi'
@@ -70,7 +70,7 @@ async function submit() {
   error.value = ''
   success.value = false
   try {
-    const response = await apiRequest(`${useApiUrl()}/users/me/password`, {
+    const response = await apiRequestResult(`${useApiUrl()}/users/me/password`, {
       method: hasPassword.value ? 'PUT' : 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -81,7 +81,7 @@ async function submit() {
       }),
     })
     if (!response.ok) {
-      const payload = await response.json().catch(() => ({})) as { error?: string }
+      const payload = await Promise.resolve(response.data).catch(() => ({})) as { error?: string }
       throw new Error(payload.error || '修改密码失败')
     }
     currentPassword.value = ''

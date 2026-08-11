@@ -404,6 +404,7 @@ describe('feed store', () => {
     expect(result.type).toBe('application/x-opml+xml')
     expect(await result.text()).toBe('opml')
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/opml/export', {
+      credentials: 'include',
       headers: { Authorization: 'Bearer token' },
     })
   })
@@ -418,6 +419,7 @@ describe('feed store', () => {
 
     expect(feed.timeline).toHaveLength(1)
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/timeline', {
+      credentials: 'include',
       headers: { Authorization: 'Bearer token' },
     })
   })
@@ -437,6 +439,7 @@ describe('feed store', () => {
 
     expect(feed.timeline).toHaveLength(1)
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/timeline?source_type=external_rss&source_id=source-1&unread_only=true&q=citrus+notes', {
+      credentials: 'include',
       headers: { Authorization: 'Bearer token' },
     })
   })

@@ -99,7 +99,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
@@ -250,10 +250,10 @@ const fetchPost = async () => {
     }
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
-    const res = await apiRequest(api.blog.post(requestedID), { headers })
+    const res = await apiRequestResult(api.blog.post(requestedID), { headers })
     if (!isCurrentLoad()) return
     if (res.ok) {
-      const d = await res.json()
+      const d = await Promise.resolve(res.data)
       if (!isCurrentLoad()) return
       const detail = (d.data || d) as PostDetailResponse
       post.value = detail
@@ -275,7 +275,7 @@ const fetchPost = async () => {
       })
 
       if (detail.channel_id) {
-        void apiRequest(`${api.url}/feed/events/read`, {
+        void apiRequestResult(`${api.url}/feed/events/read`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -332,11 +332,11 @@ watch(postId, () => {
 
 const fetchBookmarkState = async (postId: string): Promise<boolean | null> => {
   try {
-    const res = await apiRequest(api.blog.bookmarks, {
+    const res = await apiRequestResult(api.blog.bookmarks, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     if (res.ok) {
-      const d = await res.json()
+      const d = await Promise.resolve(res.data)
       const items = d.data || []
       return items.some((b: { post_id: string }) => b.post_id === postId)
     }
@@ -405,9 +405,9 @@ const fetchPostEmbeds = async (content: string) => {
   const entries = await Promise.all(
     ids.map(async (id) => {
       try {
-        const res = await apiRequest(api.blog.post(id), { headers: authHeaders() })
+        const res = await apiRequestResult(api.blog.post(id), { headers: authHeaders() })
         if (!res.ok) return null
-        const payload = await res.json()
+        const payload = await Promise.resolve(res.data)
         const embedPost = (payload.data || payload) as Post
         return [
           id,
@@ -435,9 +435,9 @@ const fetchMusicEmbeds = async (content: string) => {
   const entries = await Promise.all(
     ids.map(async (id) => {
       try {
-        const res = await apiRequest(api.v1.music.album(id), { headers: authHeaders() })
+        const res = await apiRequestResult(api.v1.music.album(id), { headers: authHeaders() })
         if (!res.ok) return null
-        const payload = await res.json()
+        const payload = await Promise.resolve(res.data)
         const album = (payload.data || payload) as import('@/types').Album
         return [
           id,
@@ -518,18 +518,18 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
   background: #181825;
   color: #cdd6f4;
   padding: 1.25rem;
-  border-radius: 10px;
+  border-radius: var(--a-radius-control);
   border: 1px solid var(--a-color-border-soft);
   overflow-x: auto;
   margin: 1.75rem 0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
 }
 .prose-blog :deep(pre code) { background: none; border: none; padding: 0; color: inherit; }
 .prose-blog :deep(blockquote) {
   border-left: 3px solid var(--a-color-primary, #3b82f6);
   padding: 0.75rem 1.25rem;
   margin: 1.75rem 0;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
   font-style: italic;
   color: var(--a-color-muted);
   background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 5%, var(--a-color-surface-muted, rgba(255, 255, 255, 0.04)));
@@ -541,14 +541,14 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 }
 .prose-blog :deep(li) { margin: 0.4rem 0; }
 .prose-blog :deep(img) {
-  border-radius: 10px;
+  border-radius: var(--a-radius-control);
   border: 1px solid var(--a-color-border-soft);
   width: 100%;
   margin: 1.75rem 0;
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 .prose-blog :deep(hr) { border: 0; border-top: 1px solid var(--a-color-border-soft); margin: 2.25rem 0; }
-.prose-blog :deep(table) { border-collapse: collapse; width: 100%; margin: 1.75rem 0; border-radius: 8px; overflow: hidden; }
+.prose-blog :deep(table) { border-collapse: collapse; width: 100%; margin: 1.75rem 0; border-radius: var(--a-radius-control); overflow: hidden; }
 .prose-blog :deep(th), .prose-blog :deep(td) { border: 1px solid var(--a-color-border-soft); padding: 0.7rem 1.1rem; }
 .prose-blog :deep(th) { background: var(--a-color-surface-muted); color: var(--a-color-fg); font-weight: 600; text-align: left; }
 
@@ -559,7 +559,7 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
 }
 
 .post-detail-actions .a-toggle-btn {
-  border-radius: 9999px !important;
+  border-radius: var(--a-radius-control) !important;
   padding: 0.45rem 1rem !important;
   font-weight: 600 !important;
   font-size: 0.82rem !important;
@@ -637,7 +637,7 @@ onUnmounted(() => window.removeEventListener('scroll', trackReadingProgress))
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .a-toggle-btn:hover {

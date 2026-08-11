@@ -89,18 +89,16 @@ export const musicV1Endpoints = {
   albumBookmarks: () => `${apiV1Base()}/music/bookmarks/albums`,
   albumBookmark: (albumId: string) =>
     `${apiV1Base()}/music/bookmarks/albums/${albumId}`,
-	songBookmarks: () => `${apiV1Base()}/music/bookmarks/songs`,
-	songBookmarkStatus: () => `${apiV1Base()}/music/bookmarks/songs/status`,
-  songBookmark: (songId: string) =>
-    `${apiV1Base()}/music/bookmarks/songs/${songId}`,
   playlistBookmarks: () => `${apiV1Base()}/music/bookmarks/playlists`,
   playlistBookmark: (playlistId: string) =>
     `${apiV1Base()}/music/bookmarks/playlists/${playlistId}`,
   playlists: () => `${apiV1Base()}/music/playlists`,
   playlist: (playlistId: string) =>
     `${apiV1Base()}/music/playlists/${playlistId}`,
-  playlistSongs: (playlistId: string) =>
-    `${apiV1Base()}/music/playlists/${playlistId}/songs`,
+	  playlistSongs: (playlistId: string) =>
+	    `${apiV1Base()}/music/playlists/${playlistId}/songs`,
+	  playlistSongStatus: (playlistId: string) =>
+	    `${apiV1Base()}/music/playlists/${playlistId}/songs/status`,
   playlistSongsOrder: (playlistId: string) =>
     `${apiV1Base()}/music/playlists/${playlistId}/songs/order`,
   playlistSong: (playlistId: string, songId: string) =>

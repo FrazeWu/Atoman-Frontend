@@ -112,7 +112,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, watch } from 'vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -167,11 +167,11 @@ const fetchAll = async () => {
   loadingPosts.value = true
   try {
     const [fRes, bRes] = await Promise.all([
-      apiRequest(api.blog.bookmarkFolders, { headers: authHeader.value }),
-      apiRequest(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
+      apiRequestResult(api.blog.bookmarkFolders, { headers: authHeader.value }),
+      apiRequestResult(`${api.blog.bookmarks}?sort=${sortMode.value}`, { headers: authHeader.value })
     ])
     if (requestSequence !== fetchAllSequence || !fRes.ok || !bRes.ok) return false
-    const [foldersData, bookmarksData] = await Promise.all([fRes.json(), bRes.json()])
+    const [foldersData, bookmarksData] = [fRes.data, bRes.data]
     if (requestSequence !== fetchAllSequence) return false
     folders.value = foldersData.data || []
     bookmarks.value = bookmarksData.data || []
@@ -187,7 +187,7 @@ const fetchAll = async () => {
 const createFolder = async () => {
   if (!newFolderName.value.trim()) return
   try {
-    const res = await apiRequest(api.blog.bookmarkFolders, {
+    const res = await apiRequestResult(api.blog.bookmarkFolders, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader.value },
       body: JSON.stringify({ name: newFolderName.value })
@@ -204,7 +204,7 @@ const createFolder = async () => {
 
 const deleteFolder = async (id: string) => {
   try {
-    const res = await apiRequest(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
+    const res = await apiRequestResult(api.blog.bookmarkFolder(id), { method: 'DELETE', headers: authHeader.value })
     if (!res.ok) return false
     if (activeFolder.value === id) activeFolder.value = null
     await fetchAll()

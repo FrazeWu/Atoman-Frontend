@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -206,11 +206,11 @@ function syncQuery() {
 async function fetchThemes() {
   themesLoading.value = true
   try {
-    const response = await apiRequest(`${api.url}/feed/recommend/themes?category=${normalizedCategoryParam(category.value)}`)
+    const response = await apiRequestResult(`${api.url}/feed/recommend/themes?category=${normalizedCategoryParam(category.value)}`)
     if (!response.ok) {
       throw new Error(`theme fetch failed: ${response.status}`)
     }
-    const payload = await response.json()
+    const payload = await Promise.resolve(response.data)
     themes.value = Array.isArray(payload.data) ? payload.data : []
     if (theme.value !== ALL_THEME && !themes.value.some((item) => item.id === theme.value)) {
       theme.value = ALL_THEME
@@ -237,10 +237,10 @@ async function fetchRecommendations() {
     })
     const [articleRes, channelRes] = await Promise.all([
       target.value !== 'channels'
-        ? apiRequest(`${api.url}/feed/recommend/articles?${params.toString()}`)
+        ? apiRequestResult(`${api.url}/feed/recommend/articles?${params.toString()}`)
         : Promise.resolve(null),
       target.value !== 'articles'
-        ? apiRequest(`${api.url}/feed/recommend/channels?${params.toString()}`)
+        ? apiRequestResult(`${api.url}/feed/recommend/channels?${params.toString()}`)
         : Promise.resolve(null),
     ])
 
@@ -249,8 +249,8 @@ async function fetchRecommendations() {
     }
 
     const [articlePayload, channelPayload] = await Promise.all([
-      articleRes?.json() ?? Promise.resolve(null),
-      channelRes?.json() ?? Promise.resolve(null),
+      articleRes?.data ?? null,
+      channelRes?.data ?? null,
     ])
 
     articles.value = Array.isArray(articlePayload?.data) ? articlePayload.data : []
@@ -284,10 +284,10 @@ async function fetchExternalSources() {
     const params = new URLSearchParams({ page: String(externalPage.value), limit: String(externalPageSize) })
     if (category.value !== ALL_CATEGORY) params.set('category', category.value)
     if (externalSearch.value.trim()) params.set('q', externalSearch.value.trim())
-    const res = await apiRequest(`${api.url}/feed/explore/sources?${params}`, authStore.isAuthenticated
+    const res = await apiRequestResult(`${api.url}/feed/explore/sources?${params}`, authStore.isAuthenticated
       ? { headers: { Authorization: `Bearer ${authStore.token}` } }
       : undefined)
-    const data = await res.json()
+    const data = await Promise.resolve(res.data)
     externalSources.value = res.ok && Array.isArray(data.data)
       ? data.data.map((item: ExploreSourcePayload) => normalizeExploreSource(item))
       : []

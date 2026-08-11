@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -273,13 +273,13 @@ const fetchItems = async () => {
   loading.value = true
   errorMessage.value = ''
   try {
-    const res = await apiRequest(`${api.url}/feed/reading-list?page=${targetPage}&limit=${pageLimit}`, {
+    const res = await apiRequestResult(`${api.url}/feed/reading-list?page=${targetPage}&limit=${pageLimit}`, {
       headers: authHeaders(),
     })
     if (requestId !== readingListRequestId) return
     if (!res.ok) throw new Error(`Failed to load reading list (${res.status})`)
 
-    const data = await res.json()
+    const data = await Promise.resolve(res.data)
     if (requestId !== readingListRequestId) return
     const rawItems: Array<ReadingListEntry & { feed_item_id?: string }> = Array.isArray(data.data)
       ? data.data
@@ -310,7 +310,7 @@ const fetchItems = async () => {
 }
 
 const remove = async (targetType: ReadingListEntry['target_type'], targetId: string) => {
-  const res = await apiRequest(`${api.url}/feed/reading-list/${targetType}/${targetId}`, {
+  const res = await apiRequestResult(`${api.url}/feed/reading-list/${targetType}/${targetId}`, {
     method: 'DELETE',
     headers: authHeaders(),
   })

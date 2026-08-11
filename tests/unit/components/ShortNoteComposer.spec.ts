@@ -3,11 +3,11 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 
 import ShortNoteComposer from '@/components/shortnote/ShortNoteComposer.vue'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 
-vi.mock('@/api/client', () => ({ apiRequest: vi.fn() }))
+vi.mock('@/api/client', () => ({ apiRequestResult: vi.fn() }))
 
-const mockedApiRequest = vi.mocked(apiRequest)
+const mockedApiRequestResult = vi.mocked(apiRequestResult)
 
 function uploadFile(wrapper: ReturnType<typeof mount>, file: File) {
   const input = wrapper.get('input[type="file"]')
@@ -15,7 +15,7 @@ function uploadFile(wrapper: ReturnType<typeof mount>, file: File) {
   return input.trigger('change')
 }
 
-afterEach(() => mockedApiRequest.mockReset())
+afterEach(() => mockedApiRequestResult.mockReset())
 
 describe('ShortNoteComposer', () => {
   it('shows the 500-character limit and an image picker', () => {
@@ -48,7 +48,14 @@ describe('ShortNoteComposer', () => {
 
   it('keeps text input enabled while an image is uploading', async () => {
     let completeUpload: ((response: Response) => void) | undefined
-    mockedApiRequest.mockImplementation(() => new Promise<Response>((resolve) => { completeUpload = resolve }))
+    mockedApiRequestResult.mockImplementation(() => new Promise((resolve) => {
+      completeUpload = response => resolve({
+        ok: response.ok,
+        status: response.status,
+        data: { url: 'https://cdn.example.test/image.jpg' },
+        headers: response.headers,
+      })
+    }))
     const wrapper = mount(ShortNoteComposer, { global: { plugins: [createPinia()] } })
 
     await uploadFile(wrapper, new File(['image'], 'image.jpg', { type: 'image/jpeg' }))
@@ -59,10 +66,12 @@ describe('ShortNoteComposer', () => {
   })
 
   it('uses the local object-storage proxy for MinIO previews', async () => {
-    mockedApiRequest.mockResolvedValue({
+    mockedApiRequestResult.mockResolvedValue({
       ok: true,
-      json: async () => ({ url: 'http://localhost:9100/atoman-dev/blog/images/user/image.jpg' }),
-    } as Response)
+      status: 200,
+      data: { url: 'http://localhost:9100/atoman-dev/blog/images/user/image.jpg' },
+      headers: new Headers(),
+    })
     const wrapper = mount(ShortNoteComposer, { global: { plugins: [createPinia()] } })
 
     await uploadFile(wrapper, new File(['image'], 'image.jpg', { type: 'image/jpeg' }))

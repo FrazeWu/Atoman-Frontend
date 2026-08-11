@@ -397,13 +397,14 @@ describe('debate store', () => {
     const store = useDebateStore()
 
     await store.fetchVotes('topic-1')
-    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics/topic-1/votes', { headers: {} })
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics/topic-1/votes', { credentials: 'include', headers: {} })
 
     const auth = useAuthStore()
     auth.token = 'vote-token'
     await store.setVote('topic-1', 'yes')
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/debate/topics/topic-1/vote', {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer vote-token' },
       body: JSON.stringify({ direction: 'yes' }),
     })
@@ -411,6 +412,7 @@ describe('debate store', () => {
     await store.removeVote('topic-1')
     expect(fetch).toHaveBeenNthCalledWith(3, '/api/v1/debate/topics/topic-1/vote', {
       method: 'DELETE',
+      credentials: 'include',
       headers: { Authorization: 'Bearer vote-token' },
     })
     expect(store.voteSummary).toEqual(voteData)
@@ -457,11 +459,13 @@ describe('debate store', () => {
 
     expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics/topic-1/revisions/revision-1/revert', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer editor-token' },
       body: JSON.stringify({ base_revision: 'revision-2', edit_summary: '恢复旧版本' }),
     })
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/debate/topics/topic-1/references/relation-1/reconfirm', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer editor-token' },
       body: JSON.stringify({ base_revision: 'revision-3', edit_summary: '刷新引用' }),
     })

@@ -146,7 +146,14 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     const wrapper = mount(MusicCreationAlbumDetailsStep)
 
     const fieldOrder = wrapper.findAll('[data-testid="album-details-field"]').map((node) => node.attributes('data-field'))
-    expect(fieldOrder).toEqual(['cover', 'name', 'contributors', 'date', 'type', 'bio', 'track-adjustment', 'source'])
+    expect(fieldOrder).toEqual(['cover', 'name', 'date', 'type', 'bio', 'contributors', 'track-adjustment', 'source'])
+
+    const basicFields = wrapper.get('[data-testid="album-details-basic-fields"]')
+    expect(basicFields.find('[data-field="name"]').exists()).toBe(true)
+    expect(basicFields.find('[data-field="date"]').exists()).toBe(true)
+    expect(basicFields.find('[data-field="type"]').exists()).toBe(true)
+    expect(wrapper.get('.album-details-step__content-grid').find('[data-field="contributors"]').exists()).toBe(false)
+    expect(wrapper.get('.album-details-step__contributor-field').text()).toContain('搜索其他艺人')
 
     expect(wrapper.get('[data-testid="album-details-progress-label"]').text()).toContain('第 3 步')
     expect(wrapper.get('[data-testid="album-details-progress-value"]').text()).toContain('3 / 3')
@@ -259,6 +266,12 @@ describe('MusicCreationAlbumDetailsStep.vue', () => {
     expect(wrapper.get('[data-testid="album-contributor-chip-new-artist"]').text()).toContain('Sweet Trip')
     expect(wrapper.get('[data-testid="album-contributor-chip-new-artist"]').text()).toContain('组合')
     expect(wrapper.find('[data-testid="album-contributor-remove-new-artist"]').exists()).toBe(false)
+
+    const fixedRoles = wrapper.get('.credit-roles__fixed')
+    const customRole = wrapper.get('.credit-roles__custom-add')
+    expect(fixedRoles.findAll('.credit-role-option')).toHaveLength(13)
+    expect(fixedRoles.element.parentElement).toBe(customRole.element.parentElement)
+    expect(fixedRoles.element.nextElementSibling).toBe(customRole.element)
   })
 
   it('uses releaseDateParts as the primary release date draft and derives legacy fields', async () => {

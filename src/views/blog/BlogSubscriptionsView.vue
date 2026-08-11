@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import PEntry from '@/components/ui/PEntry.vue'
 import PClip from '@/components/ui/PClip.vue'
@@ -231,10 +231,10 @@ const fetchTimeline = async (append = false) => {
       'Authorization': `Bearer ${authStore.token}`
     }
 
-    const res = await apiRequest(`${api.feed.timeline}?${params}`, { headers })
+    const res = await apiRequestResult(`${api.feed.timeline}?${params}`, { headers })
     if (requestSequence !== timelineRequestSequence) return false
     if (!res.ok) throw new Error(`Failed to fetch timeline (${res.status})`)
-    const d = await res.json()
+    const d = await Promise.resolve(res.data)
     if (requestSequence !== timelineRequestSequence) return false
       // timeline returns list of items with { type, post, rss_item, ... }
       const rawData: TimelineItem[] = d.data || []

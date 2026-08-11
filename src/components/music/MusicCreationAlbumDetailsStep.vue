@@ -349,9 +349,9 @@ watch(
     <div class="album-details-step__form">
       <!-- 左侧基础信息，右侧简介 -->
       <div class="album-details-step__content-grid">
-        <div class="album-details-step__header-main">
+        <div class="album-details-step__header-main" data-testid="album-details-basic-fields">
           <!-- 专辑名称 -->
-          <div class="field-group album-details-step__inline-field" data-testid="album-details-field" data-field="name">
+          <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="name">
             <PInput
               v-model="titleModel"
               data-testid="album-details-title-input"
@@ -362,34 +362,31 @@ watch(
             />
           </div>
 
-          <!-- 创作者 -->
-          <div class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
-            <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
+          <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
+            <PMaskedDateInput
+              v-model="albumDetailsDraft.releaseDateParts"
+              :label="requiredLabel('日期')"
+              testId="album-details-date-input"
+            />
           </div>
 
-          <!-- 发布时间 与 类型 同在一行 -->
-          <div class="album-details-step__row-two-col">
-            <div class="field-group" data-testid="album-details-field" data-field="date">
-              <PMaskedDateInput
-                v-model="albumDetailsDraft.releaseDateParts"
-                :label="requiredLabel('日期')"
-                testId="album-details-date-input"
-              />
-            </div>
-
-            <div class="field-group" data-testid="album-details-field" data-field="type">
-              <PSelect
-				v-model="albumTypeSelection"
-                :label="requiredLabel('类型')"
-                :options="albumTypeOptions"
-              />
-			  <PInput v-if="albumTypeSelection === 'custom'" v-model="customAlbumType" placeholder="输入专辑类型" />
-              <input
-                v-model="albumDetailsDraft.type"
-                data-testid="album-details-type-input"
-                type="hidden"
-              />
-            </div>
+          <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
+            <PSelect
+              v-model="albumTypeSelection"
+              :label="requiredLabel('类型')"
+              :options="albumTypeOptions"
+            />
+            <PInput
+              v-if="albumTypeSelection === 'custom'"
+              v-model="customAlbumType"
+              label="自定义类型"
+              placeholder="输入专辑类型"
+            />
+            <input
+              v-model="albumDetailsDraft.type"
+              data-testid="album-details-type-input"
+              type="hidden"
+            />
           </div>
         </div>
         <div class="field-group album-details-step__bio-field" data-testid="album-details-field" data-field="bio">
@@ -402,6 +399,11 @@ watch(
           />
         </div>
       </div>
+
+      <section class="field-group album-details-step__contributor-field" data-testid="album-details-field" data-field="contributors">
+        <span class="field-label">创作者</span>
+        <MusicCreationContributorPicker v-model="albumDetailsDraft.contributors" />
+      </section>
 
       <!-- 下一行：曲目列表 -->
       <section class="track-adjustment" data-testid="album-details-field" data-field="track-adjustment">
@@ -629,62 +631,57 @@ watch(
   resize: vertical;
 }
 
-.album-details-step__inline-field :deep(.p-field),
+.album-details-step__basic-field :deep(.p-field),
+.album-details-step__basic-field :deep(.p-date-input-container),
 .album-details-step__contributor-field :deep(.picker-search .p-field) {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: 4.75rem minmax(0, 1fr);
   align-items: center;
   gap: 0.75rem;
 }
 
-.album-details-step__inline-field :deep(.p-field-label),
+.album-details-step__basic-field :deep(.p-field-label),
+.album-details-step__basic-field :deep(.field-label),
 .album-details-step__contributor-field :deep(.p-field-label),
-.album-details-step__row-two-col :deep(.p-field-label),
-.album-details-step__row-two-col :deep(.field-label) {
+.album-details-step__contributor-field > .field-label {
   margin: 0;
   white-space: nowrap;
 }
 
-.album-details-step__inline-field :deep(.p-field-label)::after,
+.album-details-step__basic-field :deep(.p-field-label)::after,
+.album-details-step__basic-field :deep(.field-label)::after,
 .album-details-step__contributor-field :deep(.p-field-label)::after,
-.album-details-step__row-two-col :deep(.p-field-label)::after,
-.album-details-step__row-two-col :deep(.field-label)::after {
+.album-details-step__contributor-field > .field-label::after {
   content: '：';
 }
 
+.album-details-step__basic-field,
+.album-details-step__basic-field :deep(.birth-date-field),
+.album-details-step__basic-field :deep(.p-select-root) {
+  min-width: 0;
+}
+
+.album-details-step__basic-field :deep(.field-label-row) {
+  margin: 0;
+}
+
+.album-details-step__contributor-field {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card);
+  box-shadow: var(--a-shadow-sm);
+}
+
 .album-details-step__contributor-field :deep(.picker-search .p-field) {
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.75rem;
 }
 
 .album-details-step__contributor-field :deep(.picker-search .p-field-label) {
   font-size: 0.8rem;
-}
-
-.album-details-step__row-two-col > .field-group {
-  min-width: 0;
-}
-
-.album-details-step__row-two-col > .field-group :deep(.p-date-input-container) {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.album-details-step__row-two-col > .field-group :deep(.p-field) {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.album-details-step__row-two-col > .field-group :deep(.field-label-row) {
-  margin: 0;
-}
-
-.album-details-step__row-two-col > .field-group :deep(.birth-date-field),
-.album-details-step__row-two-col > .field-group :deep(.p-select-root) {
-  min-width: 0;
 }
 
 .square-picker {
@@ -701,9 +698,6 @@ watch(
 @media (max-width: 768px) {
   .album-details-step__upload-cover-grid,
   .album-details-step__content-grid {
-    grid-template-columns: 1fr;
-  }
-  .album-details-step__row-two-col {
     grid-template-columns: 1fr;
   }
 }

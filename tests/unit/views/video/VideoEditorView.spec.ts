@@ -8,30 +8,15 @@ import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 
 let autoCompleteUpload = true
-const pendingUploads: FakeXMLHttpRequest[] = []
+let releaseUpload: (() => void) | null = null
 
-class FakeXMLHttpRequest {
-  status = 200
-  responseText = JSON.stringify({ url: '/uploads/video/files/user-1/video.mp4' })
-  upload = { addEventListener: vi.fn() }
-  private listeners: Record<string, Array<() => void>> = {}
-  open = vi.fn()
-  setRequestHeader = vi.fn()
-  addEventListener(event: string, listener: () => void) {
-    this.listeners[event] ??= []
-    this.listeners[event].push(listener)
-  }
-  send() {
-    if (autoCompleteUpload) {
-      queueMicrotask(() => this.complete())
-      return
-    }
-    pendingUploads.push(this)
-  }
-  complete() {
-    this.listeners.load?.forEach(listener => listener())
-  }
-}
+const importTask = (overrides: Record<string, unknown> = {}) => ({
+  id: 'import-1', status: 'uploading', file_name: 'clip.mp4', file_size: 5, content_type: 'video/mp4',
+  part_size: 10 * 1024 * 1024, progress_current: 0, progress_total: 5, completed_parts: [],
+  payload: { channel_id: 'channel-1', title: '', description: '', thumbnail_url: '', visibility: 'public', tags: [], collection_ids: [] },
+  publish_mode: '', error_message: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  ...overrides,
+})
 
 const makeJsonResponse = (data: unknown) => new Response(JSON.stringify(data), {
   status: 200,
@@ -45,6 +30,7 @@ async function setup(path = '/studio/video/new?collection=collection-2', default
       { path: '/studio/video/new', component: VideoEditorView },
       { path: '/studio/video/:id/edit', component: VideoEditorView },
       { path: '/studio/video/content', component: { template: '<div />' } },
+      { path: '/studio/video/imports', component: { template: '<div />' } },
       { path: '/videos/watch/:id', component: { template: '<div />' } },
     ],
   })
@@ -80,12 +66,28 @@ describe('VideoEditorView', () => {
 
   beforeEach(() => {
     autoCompleteUpload = true
-    pendingUploads.length = 0
-    vi.stubGlobal('XMLHttpRequest', FakeXMLHttpRequest)
+    releaseUpload = null
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/users/me/default-channels')) return makeJsonResponse({ data: { blog: null, podcast: null, video: null } })
       if (url.includes('/blog/channels?')) return makeJsonResponse({ data: [] })
+      if (url.endsWith('/videos/imports') && init?.method === 'POST') return makeJsonResponse(importTask())
+      if (url.endsWith('/videos/imports/import-1/parts/1') && init?.method === 'POST') return makeJsonResponse({ part_number: 1, upload_url: 'https://storage.test/part-1' })
+      if (url === 'https://storage.test/part-1' && init?.method === 'PUT') {
+        if (!autoCompleteUpload) await new Promise<void>(resolve => { releaseUpload = resolve })
+        return new Response('', { status: 200, headers: { ETag: '"etag-1"' } })
+      }
+      if (url.endsWith('/videos/imports/import-1/parts/1/complete') && init?.method === 'POST') {
+        return makeJsonResponse(importTask({ progress_current: 5, completed_parts: [1] }))
+      }
+      if (url.endsWith('/videos/imports/import-1/complete') && init?.method === 'POST') {
+        return makeJsonResponse(importTask({ status: 'awaiting_submit', progress_current: 5, completed_parts: [1], upload_completed_at: new Date().toISOString() }))
+      }
+      if (url.endsWith('/videos/imports/import-1') && init?.method === 'PUT') return makeJsonResponse(importTask())
+      if (url.endsWith('/videos/imports/import-1/submit') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body))
+        return makeJsonResponse(importTask({ publish_mode: body.publish_mode, publish_requested_at: new Date().toISOString() }))
+      }
       if (url.endsWith('/videos') && init?.method === 'POST') return makeJsonResponse({ id: 'video-1' })
       throw new Error(`unexpected fetch: ${url}`)
     }))
@@ -116,7 +118,7 @@ describe('VideoEditorView', () => {
     expect(wrapper.vm.$.setupState.preferredPublishStatus).toBe('draft')
   })
 
-  it('keeps the uploaded video when automatic cover extraction fails', async () => {
+  it('keeps the import task when automatic cover extraction fails', async () => {
     const { wrapper } = await setup('/studio/video/new')
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
@@ -124,8 +126,9 @@ describe('VideoEditorView', () => {
 
     await fileInput.trigger('change')
 
-    await vi.waitFor(() => expect(wrapper.vm.$.setupState.errorMsg).toBe('自动封面生成失败，可手动上传封面'))
-    expect(wrapper.vm.$.setupState.form.video_url).toBe('/uploads/video/files/user-1/video.mp4')
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoUploaded).toBe(true))
+    expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1')
+    expect(wrapper.vm.$.setupState.errorMsg).toBe('自动封面生成失败，可手动上传封面')
     expect(wrapper.vm.$.setupState.urlError).toBe('')
     expect(wrapper.text()).toContain('自动封面生成失败，可手动上传封面')
   })
@@ -138,42 +141,40 @@ describe('VideoEditorView', () => {
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
 
     await fileInput.trigger('change')
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1'))
     expect(wrapper.vm.$.setupState.videoUploading).toBe(true)
 
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')
 
-    pendingUploads[0]?.complete()
+    releaseUpload?.()
     await flushPromises()
   })
 
-  it('waits for the pending video upload before saving', async () => {
+  it('submits draft intent without waiting for the pending upload', async () => {
     autoCompleteUpload = false
     const { wrapper, router } = await setup('/studio/video/new')
     const fileInput = wrapper.find('input[type="file"][accept*="video/mp4"]')
     const file = new File(['video'], 'clip.mp4', { type: 'video/mp4' })
     Object.defineProperty(fileInput.element, 'files', { value: [file], configurable: true })
     await fileInput.trigger('change')
+    await vi.waitFor(() => expect(wrapper.vm.$.setupState.videoImportId).toBe('import-1'))
 
     wrapper.vm.$.setupState.form.title = 'Uploading video'
-    const savePromise = wrapper.vm.$.setupState.saveDraft()
+    await wrapper.vm.$.setupState.saveDraft()
     await flushPromises()
 
     const fetchMock = vi.mocked(fetch)
-    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos') && init?.method === 'POST')).toBe(false)
-
-    pendingUploads[0]?.complete()
-    await savePromise
-    await flushPromises()
-
-    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos') && init?.method === 'POST')).toBe(true)
-    expect(router.currentRoute.value.fullPath).toBe('/studio/video/content')
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith('/videos/imports/import-1/submit') && init?.method === 'POST')).toBe(true)
+    expect(router.currentRoute.value.fullPath).toBe('/studio/video/imports?task=import-1')
+    releaseUpload?.()
   })
 
   it('keeps the media information and publish steps inside Studio', async () => {
     const { wrapper } = await setup('/studio/video/new')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('媒体')
 
+    wrapper.vm.$.setupState.form.storage_type = 'external'
     wrapper.vm.$.setupState.form.video_url = 'https://example.com/video.mp4'
     await wrapper.get('[data-testid="creator-next"]').trigger('click')
     expect(wrapper.get('[aria-current="step"]').text()).toContain('信息')

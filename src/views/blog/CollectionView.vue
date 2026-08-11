@@ -88,7 +88,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -180,9 +180,9 @@ const summarize = (content: string) => {
 const fetchCollection = async () => {
   loading.value = true
   try {
-    const res = await apiRequest(api.blog.collection(collectionId.value))
+    const res = await apiRequestResult(api.blog.collection(collectionId.value))
     if (res.ok) {
-      const data = await res.json()
+      const data = await Promise.resolve(res.data)
       collection.value = data.data
       if (collection.value?.channel_id) {
         await fetchChannel()
@@ -213,9 +213,9 @@ watch(collectionId, () => {
 const fetchChannel = async () => {
   if (!channelId.value) return
   try {
-    const res = await apiRequest(api.blog.channel(channelId.value))
+    const res = await apiRequestResult(api.blog.channel(channelId.value))
     if (res.ok) {
-      const data = await res.json()
+      const data = await Promise.resolve(res.data)
       channel.value = data.data
     }
   } catch (e) {
@@ -228,9 +228,9 @@ const fetchPosts = async () => {
   try {
     const loadedPosts: Post[] = []
     for (let page = 1; ; page += 1) {
-      const res = await apiRequest(`${api.blog.posts}?collection_id=${encodeURIComponent(collectionId.value)}&page_size=100&page=${page}`)
+      const res = await apiRequestResult(`${api.blog.posts}?collection_id=${encodeURIComponent(collectionId.value)}&page_size=100&page=${page}`)
       if (!res.ok) throw new Error(`Failed to fetch collection posts (${res.status})`)
-      const data = await res.json()
+      const data = await Promise.resolve(res.data)
       loadedPosts.push(...((data.data || []) as Post[]))
       if (!data.meta?.has_more) break
     }
@@ -253,7 +253,7 @@ const saveCollection = async () => {
 
   saving.value = true
   try {
-    const res = await apiRequest(api.blog.collection(collection.value.id), {
+    const res = await apiRequestResult(api.blog.collection(collection.value.id), {
       method: 'PUT',
       headers: { ...authHeader.value, 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
@@ -276,7 +276,7 @@ const deleteCollection = async () => {
   if (!collection.value) return
 
   try {
-    const res = await apiRequest(api.blog.collection(collection.value.id), {
+    const res = await apiRequestResult(api.blog.collection(collection.value.id), {
       method: 'DELETE',
       headers: authHeader.value
     })

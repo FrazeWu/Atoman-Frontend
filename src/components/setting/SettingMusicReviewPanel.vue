@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { reportError } from '@/utils/logger'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -60,8 +60,8 @@ const qualityOptions = [
 async function fetchQualityIssues(page = qualityPage.value) {
   qualityLoading.value = true
   try {
-    const response = await apiRequest(`${api.music.adminMusicQuality}?type=${qualityFilter.value}&page=${page}&page_size=30`, { headers: { Authorization: `Bearer ${authStore.token}` } })
-    const data = await response.json() as { data?: MusicQualityIssue[]; total?: number; has_more?: boolean }
+    const response = await apiRequestResult(`${api.music.adminMusicQuality}?type=${qualityFilter.value}&page=${page}&page_size=30`, { headers: { Authorization: `Bearer ${authStore.token}` } })
+    const data = await Promise.resolve(response.data) as { data?: MusicQualityIssue[]; total?: number; has_more?: boolean }
     qualityIssues.value = data.data ?? []
     qualityPage.value = page
     qualityTotal.value = data.total ?? qualityIssues.value.length
@@ -92,10 +92,10 @@ const fetchEntries = async () => {
       status: entriesStatusFilter.value,
       page_size: '30',
     })
-    const res = await apiRequest(`${api.music.adminMusicReview}?${params}`, {
+    const res = await apiRequestResult(`${api.music.adminMusicReview}?${params}`, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
-    const data = await res.json() as { data?: MusicReviewEntry[]; total?: number }
+    const data = await Promise.resolve(res.data) as { data?: MusicReviewEntry[]; total?: number }
     entries.value = data.data || []
     entriesTotal.value = data.total || 0
   } catch (e) {

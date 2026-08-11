@@ -49,10 +49,26 @@ export async function apiRequestJson<T>(input: RequestInfo | URL, init?: Request
   return payload as T
 }
 
+export interface ApiResult<T> {
+  ok: boolean
+  status: number
+  data: T
+  headers: Headers
+}
+
+export async function apiRequestResult<T = any>(input: RequestInfo | URL, init?: RequestInit): Promise<ApiResult<T>> {
+  const response = await apiRequest(input, init)
+  const data = await parseJson(response).catch(() => ({})) as T
+  return { ok: response.ok, status: response.status, data, headers: response.headers }
+}
+
 async function parseJson(response: Response): Promise<unknown> {
-  const text = await response.text()
-  if (!text) return {}
-  return JSON.parse(text)
+  if (typeof response.text === 'function') {
+    const text = await response.text()
+    if (!text) return {}
+    return JSON.parse(text)
+  }
+  return response.json()
 }
 
 async function unwrapResponseEnvelope<T, M = Record<string, unknown>>(response: Response): Promise<ApiSuccess<T, M>> {

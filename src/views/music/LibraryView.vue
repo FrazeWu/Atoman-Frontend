@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { Bookmark, Music2, Play, X } from 'lucide-vue-next'
+import { Music2, Play, X } from 'lucide-vue-next'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,
   deletePlaylistBookmark,
-  deleteSongBookmark,
   listMusicLibrary,
+  listMusicPlaylists,
   removeMusicSongFromLater,
   type MusicAlbumBookmark,
   type MusicAlbumListItem,
@@ -14,7 +14,6 @@ import {
   type MusicArtistListItem,
   type MusicPlaylistBookmark,
   type MusicPlaylistSummary,
-  type MusicSongBookmark,
   type MusicSongListItem,
 } from '@/api/musicV1'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -31,9 +30,9 @@ import type { Song } from '@/types'
 
 import { getActivePinia } from 'pinia'
 
-type LibraryKind = 'song' | 'album' | 'artist' | 'playlist' | 'later'
-type LibrarySongEnvelope = MusicSongBookmark | { song?: MusicSongListItem }
-const kind = ref<LibraryKind>('song')
+type LibraryKind = 'album' | 'artist' | 'playlist' | 'later'
+type LibrarySongEnvelope = { song?: MusicSongListItem }
+const kind = ref<LibraryKind>('album')
 const sort = ref<'latest' | 'popular' | 'name'>('latest')
 const query = ref('')
 const requestedQuery = ref('')
@@ -46,6 +45,7 @@ const songs = ref<MusicSongListItem[]>([])
 const albums = ref<MusicAlbumListItem[]>([])
 const artists = ref<MusicArtistListItem[]>([])
 const playlists = ref<MusicPlaylistSummary[]>([])
+const favoritePlaylistId = ref('')
 const removingKey = ref('')
 const playingAll = ref(false)
 const { openAlbum, openArtist, openPlaylist } = useMusicDrawers()
@@ -55,8 +55,8 @@ const requests = useRequestGeneration()
 const playableSongs = computed(() => songs.value.filter(song => Boolean(song.audio_url)).map(playable))
 
 const options = [
-  { label: '歌曲', value: 'song' }, { label: '专辑', value: 'album' },
-  { label: '艺人', value: 'artist' }, { label: '歌单', value: 'playlist' },
+  { label: '专辑', value: 'album' }, { label: '艺人', value: 'artist' },
+  { label: '歌单', value: 'playlist' },
   { label: '稍后播放', value: 'later' },
 ]
 let queryTimer: ReturnType<typeof setTimeout> | undefined
@@ -107,10 +107,7 @@ async function removeLibraryItem(itemKind: LibraryKind, id: string) {
   removingKey.value = key
   error.value = ''
   try {
-    if (itemKind === 'song') {
-      await deleteSongBookmark(id)
-      songs.value = songs.value.filter(item => String(item.id) !== id)
-    } else if (itemKind === 'later') {
+    if (itemKind === 'later') {
       await removeMusicSongFromLater(id)
       songs.value = songs.value.filter(item => String(item.id) !== id)
     } else if (itemKind === 'album') {
@@ -147,7 +144,7 @@ async function load(nextPage = 1) {
   }
   error.value = ''
   try {
-    if (requestedKind === 'song' || requestedKind === 'later') {
+    if (requestedKind === 'later') {
       const response = await listMusicLibrary<LibrarySongEnvelope>(requestedKind, { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
       const rows = response.data.map(item => item.song).filter((song): song is MusicSongListItem => Boolean(song))
       if (!isCurrent()) return
@@ -166,10 +163,18 @@ async function load(nextPage = 1) {
       artists.value = nextPage === 1 ? rows : [...artists.value, ...rows]
       hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
     } else {
-      const response = await listMusicLibrary<MusicPlaylistBookmark>('playlist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 })
+      const [response, ownedResponse] = await Promise.all([
+        listMusicLibrary<MusicPlaylistBookmark>('playlist', { q: keyword, sort: requestedSort, page: nextPage, page_size: 24 }),
+        nextPage === 1 ? listMusicPlaylists({ page: 1, page_size: 100 }) : Promise.resolve(null),
+      ])
       const rows = response.data.map(item => item.playlist).filter((playlist): playlist is MusicPlaylistSummary => Boolean(playlist))
+      const favorite = ownedResponse?.data.find(playlist => playlist.kind === 'favorite')
+      favoritePlaylistId.value = favorite ? String(favorite.id) : favoritePlaylistId.value
+      const pageRows = favorite && !rows.some(playlist => String(playlist.id) === String(favorite.id))
+        ? [favorite, ...rows]
+        : rows
       if (!isCurrent()) return
-      playlists.value = nextPage === 1 ? rows : [...playlists.value, ...rows]
+      playlists.value = nextPage === 1 ? pageRows : [...playlists.value, ...pageRows]
       hasMore.value = Boolean(response.meta?.has_more ?? (response.meta as any)?.hasMore)
     }
     page.value = nextPage
@@ -213,7 +218,7 @@ onUnmounted(() => clearTimeout(queryTimer))
     <div v-if="authStore && !authStore.isAuthenticated" class="music-library__unauth">
       <PEmpty
         title="请登录后查看收藏库"
-        description="登录账号以同步你的收藏歌曲、专辑、艺术家和歌单。"
+        description="登录账号以同步你的专辑、艺术家和歌单。"
       >
         <template #action>
           <RouterLink to="/login" class="a-btn a-btn--primary">立即登录</RouterLink>
@@ -245,10 +250,10 @@ onUnmounted(() => clearTimeout(queryTimer))
       <PEmpty
         v-else-if="kind === 'album' ? !albums.length : kind === 'artist' ? !artists.length : kind === 'playlist' ? !playlists.length : !songs.length"
         title="这里还没有收藏内容"
-        description="浏览发现页面，收藏你喜爱的歌曲、专辑或艺术家。"
+        description="浏览发现页面，收藏你喜爱的专辑、艺术家或歌单。"
       />
       <div v-else class="music-library__cards">
-        <article v-for="song in songs" v-if="kind === 'song' || kind === 'later'" :key="song.id" class="music-library__song-card" data-testid="library-song-card">
+        <article v-for="song in songs" v-if="kind === 'later'" :key="song.id" class="music-library__song-card" data-testid="library-song-card">
           <div class="music-library__song-cover">
             <button type="button" class="music-library__song-play" :disabled="!song.audio_url" :aria-label="`播放 ${song.title}`" @click="player.playSong(playable(song))">
               <img v-if="song.cover_url || song.album?.cover_url" :src="song.cover_url || song.album?.cover_url" :alt="song.title" loading="lazy" />
@@ -256,15 +261,6 @@ onUnmounted(() => clearTimeout(queryTimer))
               <span v-if="song.audio_url" class="music-library__play-indicator" aria-hidden="true"><Play :size="18" fill="currentColor" /></span>
             </button>
             <button
-              v-if="kind === 'song'"
-              type="button"
-              class="music-library__bookmark"
-              :disabled="removingKey === `song:${song.id}`"
-              :aria-label="`取消收藏 ${song.title}`"
-              @click="removeLibraryItem('song', String(song.id))"
-            ><Bookmark :size="16" fill="currentColor" aria-hidden="true" /></button>
-            <button
-              v-else
               type="button"
               class="music-library__later-remove"
               :disabled="removingKey === `later:${song.id}`"
@@ -309,7 +305,8 @@ onUnmounted(() => clearTimeout(queryTimer))
           v-else
           :key="playlist.id"
           :playlist="playlistCardItem(playlist)"
-          :is-bookmarked="true"
+          :is-bookmarked="String(playlist.id) !== favoritePlaylistId"
+          :show-bookmark-button="String(playlist.id) !== favoritePlaylistId"
           data-testid="library-playlist-card"
           @click="openPlaylist(String(playlist.id))"
           @toggle-bookmark="removeLibraryItem('playlist', String(playlist.id))"
@@ -336,8 +333,6 @@ onUnmounted(() => clearTimeout(queryTimer))
 .music-library__song-play:disabled { cursor: default; }
 .music-library__song-play img, .music-library__song-placeholder { width: 100%; height: 100%; display: grid; place-items: center; object-fit: cover; color: var(--a-color-muted); background: var(--a-color-surface-muted); }
 .music-library__play-indicator { position: absolute; left: 0.6rem; bottom: 0.6rem; display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 50%; background: var(--a-color-bg); color: var(--a-color-fg); box-shadow: var(--a-shadow-sm); }
-.music-library__bookmark { position: absolute; z-index: 2; top: 0.5rem; right: 0.5rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; padding: 0; border: 1px solid var(--a-color-border-soft); border-radius: 50%; background: var(--a-color-bg); color: #eaaa08; cursor: pointer; box-shadow: var(--a-shadow-sm); }
-.music-library__bookmark:disabled { cursor: default; opacity: 0.55; }
 .music-library__later-remove { position: absolute; z-index: 2; top: 0.5rem; right: 0.5rem; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; padding: 0; border: 1px solid var(--a-color-border-soft); border-radius: 50%; background: var(--a-color-bg); color: var(--a-color-muted); cursor: pointer; box-shadow: var(--a-shadow-sm); }
 .music-library__later-remove:hover { color: var(--a-color-accent-destructive); }
 .music-library__later-remove:disabled { cursor: default; opacity: 0.55; }
@@ -347,7 +342,7 @@ onUnmounted(() => clearTimeout(queryTimer))
 .music-library__song-info p { color: var(--a-color-muted); font-size: 0.82rem; }
 .music-library__song-info a, .music-library__song-info button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-decoration: none; cursor: pointer; }
 .music-library__song-info a:hover, .music-library__song-info button:hover { text-decoration: underline; }
-.music-library__song-play:focus-visible, .music-library__bookmark:focus-visible, .music-library__later-remove:focus-visible, .music-library__song-info a:focus-visible, .music-library__song-info button:focus-visible { outline: 2px solid var(--a-color-focus, var(--a-color-text)); outline-offset: 2px; }
+.music-library__song-play:focus-visible, .music-library__later-remove:focus-visible, .music-library__song-info a:focus-visible, .music-library__song-info button:focus-visible { outline: 2px solid var(--a-color-focus, var(--a-color-text)); outline-offset: 2px; }
 .music-library__more { justify-self: center; margin-top: 1rem; }
 .state { text-align: center; padding: 2rem 0; color: var(--a-color-muted); }
 .error { color: var(--a-color-accent-destructive); }

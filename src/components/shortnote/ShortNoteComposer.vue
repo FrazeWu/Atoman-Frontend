@@ -66,7 +66,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { GripVertical, ImagePlus, X } from 'lucide-vue-next'
 import Sortable from 'sortablejs'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
@@ -134,12 +134,12 @@ async function uploadImages(event: Event) {
     for (const file of files) {
       const body = new FormData()
       body.append('image', file)
-      const response = await apiRequest(api.blog.uploadImage, {
+      const response = await apiRequestResult(api.blog.uploadImage, {
         method: 'POST',
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         body,
       })
-      const payload = await response.json().catch(() => null) as { data?: { url?: string }; url?: string; error?: string } | null
+      const payload = await Promise.resolve(response.data).catch(() => null) as { data?: { url?: string }; url?: string; error?: string } | null
       const url = payload?.data?.url ?? payload?.url
       if (!response.ok || !url) throw new Error(payload?.error || '图片上传失败')
       mediaUrls.value.push(url)

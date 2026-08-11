@@ -47,7 +47,7 @@ function mountView() {
 }
 
 async function openCreateForm(wrapper: ReturnType<typeof mountView>) {
-  await wrapper.findAll('button').find(button => button.text() === '新建辩题')!.trigger('click')
+  await wrapper.findAll('button').find(button => button.text() === '发起辩题')!.trigger('click')
 }
 
 describe('DebateHomeView node wording', () => {
@@ -77,7 +77,7 @@ describe('DebateHomeView node wording', () => {
     const wrapper = mountView()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('新建辩题')
+    expect(wrapper.text()).toContain('发起辩题')
     expect(wrapper.text()).toContain('结论 · 是')
     expect(wrapper.get('[data-test="status-filter"]').attributes('data-options')).toBe(',active,archived')
     expect(wrapper.text()).not.toContain('已结题')

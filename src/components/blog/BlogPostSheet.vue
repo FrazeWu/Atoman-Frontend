@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, ref, watch } from 'vue'
 import { Pencil } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
@@ -39,11 +39,11 @@ async function loadPost() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const res = await apiRequest(api.blog.post(props.layer.payload.postId), {
+    const res = await apiRequestResult(api.blog.post(props.layer.payload.postId), {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!res.ok) throw new Error('load failed')
-    const payload = await res.json()
+    const payload = await Promise.resolve(res.data)
     post.value = payload.data || payload
   } catch {
     post.value = null

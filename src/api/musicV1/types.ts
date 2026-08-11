@@ -500,7 +500,6 @@ export type MusicSongDetail = {
   artists: Array<{ id: string; name: string; role: MusicAlbumArtistRole; custom_role?: string; position: number }>;
   previous?: MusicSongListItem;
   next?: MusicSongListItem;
-  bookmarked: boolean;
   playable: boolean;
 };
 
@@ -543,7 +542,7 @@ export type MusicPlaylistDetail = MusicPlaylistSummary & {
   songs: MusicSongListItem[];
 };
 
-export type MusicStarredKind = "artist" | "album" | "song" | "playlist";
+export type MusicStarredKind = "artist" | "album" | "playlist";
 
 export type MusicArtistBookmark = {
   id: string;
@@ -557,13 +556,6 @@ export type MusicAlbumBookmark = {
   album_id: string;
   created_at: string;
   album?: MusicAlbumListItem;
-};
-
-export type MusicSongBookmark = {
-  id: string;
-  song_id: string;
-  created_at: string;
-  song?: MusicSongListItem;
 };
 
 export type MusicPlaylistBookmark = {

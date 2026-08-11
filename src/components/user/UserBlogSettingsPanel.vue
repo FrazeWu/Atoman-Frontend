@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { onMounted, ref } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -141,11 +141,11 @@ const success = ref(false)
 
 const loadProfile = async () => {
   try {
-    const res = await apiRequest(api.users.me, {
+    const res = await apiRequestResult(api.users.me, {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (res.ok) {
-      const d = await res.json()
+      const d = await Promise.resolve(res.data)
       const u = d.data || d
       form.value = {
         display_name: u.display_name || '',
@@ -183,7 +183,7 @@ const save = async () => {
     ))
     if (!preferencesSaved) throw new Error('通知设置保存失败')
 
-    const res = await apiRequest(api.users.settings, {
+    const res = await apiRequestResult(api.users.settings, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -192,7 +192,7 @@ const save = async () => {
       body: JSON.stringify(form.value),
     })
     if (!res.ok) throw new Error('资料保存失败')
-    const d = await res.json()
+    const d = await Promise.resolve(res.data)
     const updated = d.data || d
     if (authStore.user) {
       authStore.updateUser({

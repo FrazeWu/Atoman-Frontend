@@ -243,7 +243,7 @@ watch(
             {{ formatPlayedAt(item.last_played_at) }}
           </time>
           <div class="history-actions">
-            <button type="button" :class="{ 'is-active': favoriteSongIds.has(String(item.song.id)) }" :aria-label="`${favoriteSongIds.has(String(item.song.id)) ? '取消收藏' : '收藏'} ${item.song.title}`" title="收藏" @click="toggleHistoryFavorite(String(item.song.id))"><Heart :size="16" :fill="favoriteSongIds.has(String(item.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></button>
+            <button type="button" :class="{ 'is-active': favoriteSongIds.has(String(item.song.id)) }" :aria-label="`${favoriteSongIds.has(String(item.song.id)) ? '移出最爱' : '加入最爱'} ${item.song.title}`" title="加入最爱" @click="toggleHistoryFavorite(String(item.song.id))"><Heart :size="16" :fill="favoriteSongIds.has(String(item.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></button>
             <PDropdown position="right">
               <template #trigger><button type="button" :aria-label="`${item.song.title} 的更多操作`" title="更多操作"><MoreHorizontal :size="17" aria-hidden="true" /></button></template>
               <div class="history-action-menu">

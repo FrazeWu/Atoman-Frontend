@@ -128,7 +128,7 @@ import PEntry from '@/components/ui/PEntry.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { channelUrl } from '@/router/siteUrls'
@@ -284,9 +284,9 @@ const openRecommendedPost = (item: { id: string; title: string; targetPath: stri
 
 const fetchChannels = async () => {
   try {
-    const res = await apiRequest(api.blog.channels)
+    const res = await apiRequestResult(api.blog.channels)
     if (!res.ok) return
-    const d = await res.json() as { data?: BlogChannel[] }
+    const d = await Promise.resolve(res.data) as { data?: BlogChannel[] }
     channels.value = Array.isArray(d.data) ? d.data : []
   } catch (error) {
     reportError(error)
@@ -299,9 +299,9 @@ const fetchRecommendedPosts = async () => {
     const headers: Record<string, string> = {}
     if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
 
-    const res = await apiRequest(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=1&page_size=20`, { headers })
+    const res = await apiRequestResult(`${api.url}/blog/recommend/posts?mode=${recommendationMode.value}&page=1&page_size=20`, { headers })
     if (!res.ok) return
-    const data = await res.json() as { data?: RecommendationPayload[] }
+    const data = await Promise.resolve(res.data) as { data?: RecommendationPayload[] }
     recommendedPosts.value = Array.isArray(data.data)
       ? data.data.map((item) => ({
           id: item.id,
@@ -337,10 +337,10 @@ const fetchPosts = async (append = false) => {
       ? `${api.url}/feed/recommend/articles?mode=hot&page=${targetPage}&page_size=${PAGE_SIZE}`
       : `${api.blog.posts}?${query.toString()}`
 
-    const res = await apiRequest(endpoint, { headers })
+    const res = await apiRequestResult(endpoint, { headers })
     if (requestSequence !== postsRequestSequence) return false
     if (res.ok) {
-      const d = await res.json() as { data?: RecommendationPayload[]; meta?: { has_more?: boolean } }
+      const d = await Promise.resolve(res.data) as { data?: RecommendationPayload[]; meta?: { has_more?: boolean } }
       if (requestSequence !== postsRequestSequence) return false
       const rawData = d.data || []
       const extractedPosts = rawData.map((item): BlogHomeListItem | null => {

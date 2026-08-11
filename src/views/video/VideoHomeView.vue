@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { getVideoRecommendations, listVideos } from '@/api/video'
 import { computed, ref, onMounted, watch } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import type { Video } from '@/types'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
-import { useApiUrl } from '@/composables/useApi'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 
-const API_URL = useApiUrl()
 const videos = ref<Video[]>([])
 const recommendedVideos = ref<Array<{
   id: string
@@ -38,11 +36,8 @@ async function fetchVideos() {
   const seq = ++fetchVideosSeq
   loading.value = true
   try {
-    const res = await apiRequest(`${API_URL}/videos?sort=${sort.value}`)
-    if (res.ok) {
-      const data = await res.json()
-      if (seq === fetchVideosSeq) videos.value = data
-    }
+    const data = await listVideos(sort.value)
+    if (seq === fetchVideosSeq) videos.value = data
   } finally {
     if (seq === fetchVideosSeq) loading.value = false
   }
@@ -51,12 +46,7 @@ async function fetchVideos() {
 async function fetchRecommendedVideos() {
   recommendationLoading.value = true
   try {
-    const res = await apiRequest(`${API_URL}/videos/recommend/items?mode=${recommendationMode.value}&page=1&page_size=8`)
-    if (!res.ok) {
-      recommendedVideos.value = []
-      return
-    }
-    const data = await res.json() as { data?: RecommendedVideoPayload[] }
+    const data = await getVideoRecommendations<RecommendedVideoPayload>(recommendationMode.value)
     recommendedVideos.value = Array.isArray(data.data)
       ? data.data.map((item) => ({
           id: item.id,
@@ -66,6 +56,8 @@ async function fetchRecommendedVideos() {
           view_count: 0,
         }))
       : []
+  } catch {
+    recommendedVideos.value = []
   } finally {
     recommendationLoading.value = false
   }

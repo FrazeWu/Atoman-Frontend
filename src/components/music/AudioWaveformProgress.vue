@@ -275,7 +275,7 @@ onBeforeUnmount(() => waveformController?.abort())
   transform: translate(-50%, -50%);
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast);
-  font-family: var(--a-font-mono);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   line-height: 16px;

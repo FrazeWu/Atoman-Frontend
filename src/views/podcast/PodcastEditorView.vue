@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { apiRequest } from '@/api/client'
+import { getPodcastEpisode, savePodcastEpisode, uploadPodcastCover } from '@/api/podcast'
 import { uploadFormDataWithProgress } from '@/api/upload'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -245,15 +245,7 @@ async function onCoverFileChange(e: Event) {
   if (!file) return
   coverUploading.value = true
   try {
-    const fd = new FormData()
-    fd.append('cover', file)
-    const res = await apiRequest(`${api.url}/podcast/upload-cover`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${authStore.token}` },
-      body: fd,
-    })
-    if (!res.ok) throw await res.json()
-    const result = await res.json()
+    const result = await uploadPodcastCover(file, authStore.token ?? undefined)
     form.value.episode_cover_url = result.url
   } catch (err) {
     errorMsg.value = errorMessage(err, '封面上传失败')
@@ -305,20 +297,11 @@ function buildPayload(status: 'draft' | 'published') {
 }
 
 async function apiSave(payload: ReturnType<typeof buildPayload>): Promise<PodcastEpisode> {
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` }
-  if (isEdit.value) {
-    const res = await apiRequest(`${api.url}/podcast/episodes/${route.params.id}`, {
-      method: 'PUT', headers, body: JSON.stringify(payload),
-    })
-    if (!res.ok) throw await res.json()
-    return res.json()
-  } else {
-    const res = await apiRequest(`${api.url}/podcast/episodes`, {
-      method: 'POST', headers, body: JSON.stringify(payload),
-    })
-    if (!res.ok) throw await res.json()
-    return res.json()
-  }
+  return savePodcastEpisode<PodcastEpisode>(
+    payload,
+    authStore.token ?? undefined,
+    isEdit.value ? String(route.params.id) : undefined,
+  )
 }
 
 async function loadCollections(channelID: string) {
@@ -346,11 +329,7 @@ async function loadCollections(channelID: string) {
 
 async function loadEpisode() {
   const id = route.params.id as string
-  const res = await apiRequest(`${api.url}/podcast/episodes/${id}`, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (!res.ok) return
-  const ep: PodcastEpisode = await res.json()
+  const ep = await getPodcastEpisode(id, authStore.token ?? undefined)
   if (ep.channel_id && studio.currentChannel?.id !== ep.channel_id) {
     await studio.selectChannel(ep.channel_id)
   }

@@ -6,6 +6,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 const styleSource = read('src/style.css')
 const sheetSource = read('src/components/ui/PSheet.vue')
 const playerSource = read('src/components/music/AudioPlayer.vue')
+const playerQueueSource = read('src/components/music/AudioPlayerQueue.vue')
 const lyricsSource = read('src/components/music/MusicLyricsPanel.vue')
 const lyricEditorSource = read('src/components/music/MusicLyricEditorDrawer.vue')
 const topbarSource = read('src/components/system/AppTopbar.vue')
@@ -29,7 +30,7 @@ describe('overlay layer contract', () => {
 
     expect(sheetSource).toContain('z-index: var(--a-z-sheet);')
     expect(playerSource).toContain('z-index: var(--a-z-player-lyrics);')
-    expect(playerSource).toContain('z-index: var(--a-z-player-queue);')
+    expect(playerQueueSource).toContain('z-index: var(--a-z-player-queue);')
     expect(lyricsSource).toContain('z-index: var(--a-z-player-lyrics);')
     expect(topbarSource).toContain('z-index: var(--a-z-navigation);')
     expect(mobileNavSource).toContain('z-index: var(--a-z-navigation);')

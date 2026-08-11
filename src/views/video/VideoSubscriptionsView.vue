@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { getVideoResource } from '@/api/video'
 import { onMounted, ref } from 'vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import ContentNotificationMode from '@/components/content/ContentNotificationMode.vue'
 
@@ -23,7 +22,6 @@ type SourceBookmark = {
   collection?: { id: string; name: string }
 }
 
-const api = useApi()
 const authStore = useAuthStore()
 const videos = ref<SubscriptionVideo[]>([])
 const channelBookmarks = ref<SourceBookmark[]>([])
@@ -32,12 +30,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await apiRequest(`${api.url}${path}`, {
-    headers: { Authorization: `Bearer ${authStore.token}` },
-  })
-  if (!res.ok) throw new Error('load failed')
-  const payload = await res.json()
-  return (payload.data ?? payload) as T
+  return getVideoResource<T>(path, authStore.token ?? undefined)
 }
 
 onMounted(async () => {

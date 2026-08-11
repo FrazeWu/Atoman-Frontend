@@ -442,6 +442,11 @@ describe('ChannelView', () => {
             props: ['title', 'summary'],
             template: '<article><h3>{{ title }}</h3><div @click.stop><slot name="actions" /></div></article>',
           },
+          BlogItemCard: {
+            props: ['bookmarked'],
+            emits: ['toggle-bookmark'],
+            template: '<article><button type="button" @click="$emit(\'toggle-bookmark\')">{{ bookmarked ? \'取消收藏\' : \'收藏\' }}</button></article>',
+          },
           PClip: {
             props: ['label', 'active'],
             emits: ['click'],

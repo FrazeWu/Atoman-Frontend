@@ -146,7 +146,7 @@ function formatKindLabel(kind: MusicArtistKind) {
         data-testid="album-contributor-search-input"
         type="text"
         placeholder="搜索已有艺人"
-        label="创作者"
+        label="搜索其他艺人"
       />
     </div>
 

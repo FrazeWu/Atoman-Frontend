@@ -1,19 +1,40 @@
 import { ref } from 'vue'
 import {
   addMusicPlaylistSong,
-  createSongBookmark,
-  deleteSongBookmark,
-  getSongBookmarkStatus,
+  getMusicPlaylistSongStatus,
+  listMusicPlaylists,
+  removeMusicPlaylistSong,
+  type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 export function useMusicFavoritePlaylist() {
   const { refreshPlaylists } = useMusicDrawers()
   const favoriteSongIds = ref<Set<string>>(new Set())
+	const playlists = ref<MusicPlaylistSummary[]>([])
+	const favoritePlaylistId = ref('')
+
+	async function loadPlaylists() {
+		const response = await listMusicPlaylists({ page: 1, page_size: 100 })
+		playlists.value = response.data || []
+		favoritePlaylistId.value = String(playlists.value.find(playlist => playlist.kind === 'favorite')?.id || '')
+		return playlists.value
+	}
+
+	async function requireFavoritePlaylistId() {
+		if (!favoritePlaylistId.value) await loadPlaylists()
+		if (!favoritePlaylistId.value) throw new Error('Favorite playlist is unavailable')
+		return favoritePlaylistId.value
+	}
 
   async function loadFavoriteSongs(songIds: string[] = []) {
     const uniqueIds = [...new Set(songIds.filter(Boolean))]
-    favoriteSongIds.value = new Set(await getSongBookmarkStatus(uniqueIds))
+		if (!uniqueIds.length) {
+			favoriteSongIds.value = new Set()
+			return favoriteSongIds.value
+		}
+		const playlistId = await requireFavoritePlaylistId()
+		favoriteSongIds.value = new Set(await getMusicPlaylistSongStatus(playlistId, uniqueIds))
     return favoriteSongIds.value
   }
 
@@ -28,15 +49,16 @@ export function useMusicFavoritePlaylist() {
   }
 
   async function toggleFavoriteSong(songId: string) {
+		const playlistId = await requireFavoritePlaylistId()
     if (favoriteSongIds.value.has(songId)) {
-      await deleteSongBookmark(songId)
+			await removeMusicPlaylistSong(playlistId, songId)
       setSongFavorite(songId, false)
-      return { isFavorite: false, message: '已取消收藏' }
+			return { isFavorite: false, message: '已移出最爱' }
     }
 
-    await createSongBookmark(songId)
+		await addMusicPlaylistSong(playlistId, songId)
     setSongFavorite(songId, true)
-    return { isFavorite: true, message: '已收藏' }
+		return { isFavorite: true, message: '已加入最爱' }
   }
 
   async function addSongToPlaylist(playlistId: string, songId: string) {
@@ -46,6 +68,9 @@ export function useMusicFavoritePlaylist() {
 
   return {
     favoriteSongIds,
+		favoritePlaylistId,
+		playlists,
+		loadPlaylists,
     loadFavoriteSongs,
     toggleFavoriteSong,
     addSongToPlaylist,

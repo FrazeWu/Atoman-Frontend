@@ -79,7 +79,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
@@ -134,7 +134,7 @@ const onEnded = () => {
 
 const reportReadEvent = (eventType: 'detail_open' | 'original_click') => {
   if (!item.value?.feed_source_id) return
-  void apiRequest(`${api.url}/feed/events/read`, {
+  void apiRequestResult(`${api.url}/feed/events/read`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -155,12 +155,12 @@ const trackOriginalClick = () => {
 const fetchItem = async () => {
   loading.value = true
   try {
-    const res = await apiRequest(`${api.url}/feed/items/${route.params.id}`, {
+    const res = await apiRequestResult(`${api.url}/feed/items/${route.params.id}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
 
     if (res.ok) {
-      const data = await res.json()
+      const data = await Promise.resolve(res.data)
       item.value = data.data
       reportReadEvent('detail_open')
     }

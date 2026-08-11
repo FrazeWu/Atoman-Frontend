@@ -11,14 +11,8 @@ describe('music module routes', () => {
     const children = musicRoot?.children || []
 
     const homeRoute = children.find((route) => route.path === '')
-    expect(homeRoute?.redirect).toBeTypeOf('function')
-    if (typeof homeRoute?.redirect === 'function') {
-      expect(homeRoute.redirect({ query: { editor: 'album-create' }, hash: '#create' } as never)).toEqual({
-        path: '/music/discover',
-        query: { editor: 'album-create' },
-        hash: '#create',
-      })
-    }
+    expect(homeRoute?.redirect).toBeUndefined()
+    expect(lazyImportPath(homeRoute?.component)).toContain('DiscoverView.vue')
 
     expect(children.find((route) => route.path === 'discover')).toBeTruthy()
     expect(lazyImportPath(children.find((route) => route.path === 'discover')?.component)).toContain('DiscoverView.vue')

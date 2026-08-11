@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import { useApiUrl } from '@/composables/useApi'
@@ -133,15 +133,15 @@ function formatDate(iso: string): string {
 async function load() {
   try {
     const [s, a] = await Promise.all([
-      apiRequest(`${base}/users/me/sessions`),
-      apiRequest(`${base}/users/me/security-activities`),
+      apiRequestResult(`${base}/users/me/sessions`),
+      apiRequestResult(`${base}/users/me/security-activities`),
     ])
     if (s.ok) {
-      const data = await s.json()
+      const data = s.data
       sessions.value = data.sessions || []
     }
     if (a.ok) {
-      const data = await a.json()
+      const data = a.data
       activities.value = data.activities || []
     }
   } catch {
@@ -152,7 +152,7 @@ async function load() {
 async function sendCode() {
   if (!nextEmail.value.trim()) return
   try {
-    const r = await apiRequest(`${base}/users/me/email/send-code`, {
+    const r = await apiRequestResult(`${base}/users/me/email/send-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: nextEmail.value.trim() }),
@@ -166,7 +166,7 @@ async function sendCode() {
 async function changeEmail() {
   if (!nextEmail.value.trim() || !code.value.trim()) return
   try {
-    const r = await apiRequest(`${base}/users/me/email`, {
+    const r = await apiRequestResult(`${base}/users/me/email`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -192,7 +192,7 @@ async function changeEmail() {
 
 async function revoke(id: string) {
   try {
-    await apiRequest(`${base}/users/me/sessions/${id}`, { method: 'DELETE' })
+    await apiRequestResult(`${base}/users/me/sessions/${id}`, { method: 'DELETE' })
     await load()
   } catch {
     // Ignore revoke errors

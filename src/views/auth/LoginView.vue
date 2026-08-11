@@ -210,7 +210,7 @@
 
 <script setup lang="ts">
 import { errorMessage } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -358,12 +358,12 @@ const checkEmailAvailability = async () => {
   const seq = ++emailCheckSeq.value
   emailAvailability.value = { status: 'checking', reason: '' }
   try {
-    const response = await apiRequest(api.auth.checkEmail, {
+    const response = await apiRequestResult(api.auth.checkEmail, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: normalizedEmail }),
     })
-    const data = await response.json()
+    const data = await Promise.resolve(response.data)
     if (seq !== emailCheckSeq.value) return false
     if (!response.ok) {
       emailAvailability.value = { status: 'idle', reason: '' }
@@ -402,12 +402,12 @@ const checkUsernameAvailability = async () => {
   const seq = ++usernameCheckSeq.value
   usernameAvailability.value = { status: 'checking', reason: '' }
   try {
-    const response = await apiRequest(api.auth.checkUsername, {
+    const response = await apiRequestResult(api.auth.checkUsername, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: normalizedUsername }),
     })
-    const data = await response.json()
+    const data = await Promise.resolve(response.data)
     if (seq !== usernameCheckSeq.value) return false
     if (!response.ok) {
       usernameAvailability.value = { status: 'idle', reason: '' }
@@ -440,12 +440,12 @@ const sendVerificationCode = async () => {
   if (!requireTurnstileToken()) return
   sendingCode.value = true
   try {
-    const response = await apiRequest(api.auth.sendVerification, {
+    const response = await apiRequestResult(api.auth.sendVerification, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, turnstile_token: turnstileToken.value }),
     })
-    const data = await response.json()
+    const data = await Promise.resolve(response.data)
     if (!response.ok) throw new Error(data.details || data.error || '发送验证码失败')
     codeSent.value = true
     startCountdown()

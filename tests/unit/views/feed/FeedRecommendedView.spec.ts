@@ -93,7 +93,7 @@ describe('FeedRecommendedView', () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining('/feed/explore/sources?page=1&limit=20'),
-      { headers: { Authorization: 'Bearer token' } },
+      { credentials: 'include', headers: { Authorization: 'Bearer token' } },
     )
     expect(routerReplace).toHaveBeenCalledWith(expect.objectContaining({ query: expect.objectContaining({ scope: 'external' }) }))
 
@@ -101,7 +101,7 @@ describe('FeedRecommendedView', () => {
     await flushPromises()
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining('q=open'),
-      { headers: { Authorization: 'Bearer token' } },
+      { credentials: 'include', headers: { Authorization: 'Bearer token' } },
     )
 
     await wrapper.get('[data-test="external-source-select-all"]').setValue(true)
@@ -113,7 +113,7 @@ describe('FeedRecommendedView', () => {
     await flushPromises()
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining('page=2'),
-      { headers: { Authorization: 'Bearer token' } },
+      { credentials: 'include', headers: { Authorization: 'Bearer token' } },
     )
   })
 

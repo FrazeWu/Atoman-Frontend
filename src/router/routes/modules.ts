@@ -44,14 +44,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
       component: () => import('@/views/music/MusicLayout.vue'),
       meta: { hasSidebar: true },
       children: [
-        {
-          path: '',
-          redirect: (to) => ({
-            path: '/music/discover',
-            query: to.query,
-            hash: to.hash,
-          }),
-        },
+        { path: '', component: () => import('@/views/music/DiscoverView.vue') },
         { path: 'discover', component: () => import('@/views/music/DiscoverView.vue') },
         { path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
         { path: 'songs', component: () => import('@/views/music/SongsView.vue') },

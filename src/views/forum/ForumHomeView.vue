@@ -123,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
@@ -263,11 +263,11 @@ const loadTopics = async (resetPage = true) => {
     })
     if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
     if (activeTag.value) query.set('tag', activeTag.value)
-    const res = await apiRequest(`${API_URL}/forum/topics?${query}`, {
+    const res = await apiRequestResult(`${API_URL}/forum/topics?${query}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!res.ok) return
-    const data: unknown = await res.json()
+    const data: unknown = await Promise.resolve(res.data)
     if (generation !== topicsGeneration) return
     if (!isTopicPageEnvelope(data, page.value)) return
     forumStore.topics = data.data
@@ -368,11 +368,11 @@ const loadMore = async () => {
     })
     if (activeCategoryId.value) query.set('category_id', activeCategoryId.value)
     if (activeTag.value) query.set('tag', activeTag.value)
-    const res = await apiRequest(`${API_URL}/forum/topics?${query}`, {
+    const res = await apiRequestResult(`${API_URL}/forum/topics?${query}`, {
       headers: authStore.isAuthenticated ? { Authorization: `Bearer ${authStore.token}` } : {},
     })
     if (!res.ok) return
-    const data: unknown = await res.json()
+    const data: unknown = await Promise.resolve(res.data)
     if (generation !== topicsGeneration) return
     if (!isTopicPageEnvelope(data, nextPage)) return
     const existingIDs = new Set(forumStore.topics.map(topic => topic.id))
@@ -453,7 +453,7 @@ const submitCategoryRequest = async () => {
     alert('请填写分区名称和申请理由')
     return
   }
-  const res = await apiRequest(`${API_URL}/forum/category-requests`, {
+  const res = await apiRequestResult(`${API_URL}/forum/category-requests`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -466,7 +466,7 @@ const submitCategoryRequest = async () => {
     catReqForm.value = { name: '', description: '', reason: '' }
     alert('申请已提交，请等待管理员审核')
   } else {
-    const d = await res.json()
+    const d = await Promise.resolve(res.data)
     alert(`提交失败: ${d.error || '未知错误'}`)
   }
 }

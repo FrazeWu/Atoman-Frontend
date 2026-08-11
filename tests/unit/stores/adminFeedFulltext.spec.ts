@@ -49,6 +49,7 @@ describe('admin feed fulltext store OPML', () => {
     expect(result.type).toBe('application/x-opml+xml')
     expect(await result.text()).toBe('opml')
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/feed/sources/opml/export', {
+      credentials: 'include',
       headers: { Authorization: 'Bearer admin-token' },
     })
   })

@@ -255,7 +255,7 @@
 
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { apiRequest } from '@/api/client'
+import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { LinkIcon, Pencil, Plus } from 'lucide-vue-next'
@@ -349,13 +349,13 @@ async function saveField(field: EditableField) {
   if (field === 'bio') body.bio = editBio.value.trim()
   if (field === 'website') body.website = editWebsite.value.trim()
   try {
-    const res = await apiRequest(api.users.settings, {
+    const res = await apiRequestResult(api.users.settings, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
       body: JSON.stringify(body),
     })
     if (res.ok) {
-      const data = (await res.json()).data
+      const data = (await Promise.resolve(res.data)).data
       profile.value = { ...profile.value!, ...data }
       if (authStore.user) authStore.user = { ...authStore.user, ...data }
       cancelEdit()
@@ -401,12 +401,12 @@ async function loadContent(page: number) {
   })
   try {
     const [postsRes, notesRes] = await Promise.all([
-      apiRequest(`${api.blog.posts}?${params}&status=published`),
-      apiRequest(`${api.blog.shortNotes}?${params}`),
+      apiRequestResult(`${api.blog.posts}?${params}&status=published`),
+      apiRequestResult(`${api.blog.shortNotes}?${params}`),
     ])
 
     if (postsRes.ok) {
-      const body = await postsRes.json()
+      const body = postsRes.data
       allPosts.value = body.data || []
       const meta = body.meta || {}
       // Use posts total as approximation; will be combined below
@@ -419,7 +419,7 @@ async function loadContent(page: number) {
     }
 
     if (notesRes.ok) {
-      const body = await notesRes.json()
+      const body = notesRes.data
       allNotes.value = body.data || []
       // Merge total from notes
       const meta = body.meta || {}
@@ -453,9 +453,9 @@ const isSelf = computed(() => authStore.user?.username === profile.value?.userna
 
 const resolveEntityContext = async () => {
   if (siteContext.value.type !== 'entity') return
-  const res = await apiRequest(api.site.resolve(siteContext.value.handle))
+  const res = await apiRequestResult(api.site.resolve(siteContext.value.handle))
   if (!res.ok) { resolvedUsername.value = siteContext.value.handle; return }
-  const payload = await res.json()
+  const payload = await Promise.resolve(res.data)
   const data = payload.data || {}
   if (data.type === 'channel' && data.slug) { resolvedChannelSlug.value = data.slug; return }
   if (data.type === 'user' && data.username) { resolvedUsername.value = data.username; return }
@@ -466,27 +466,27 @@ const fetchProfile = async () => {
   const handle = String(route.params.handle || username.value || '')
   if (!handle) { loading.value = false; return }
   try {
-    const res = await apiRequest(api.users.profile(handle))
-    if (res.ok) profile.value = (await res.json()).data || null
+    const res = await apiRequestResult(api.users.profile(handle))
+    if (res.ok) profile.value = (await Promise.resolve(res.data)).data || null
   } finally { loading.value = false }
 }
 
 const fetchChannels = async () => {
   if (!profile.value) return
   try {
-    const res = await apiRequest(`${api.blog.channels}?user_id=${profile.value.uuid}`)
-    if (res.ok) channels.value = (await res.json()).data || []
+    const res = await apiRequestResult(`${api.blog.channels}?user_id=${profile.value.uuid}`)
+    if (res.ok) channels.value = (await Promise.resolve(res.data)).data || []
   } catch (e) { reportError(e) }
 }
 
 const fetchFollowingState = async () => {
   if (!profile.value || !authStore.isAuthenticated || isSelf.value) return
   try {
-    const res = await apiRequest(api.users.following(authStore.user?.uuid || ''), {
+    const res = await apiRequestResult(api.users.following(authStore.user?.uuid || ''), {
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
     if (res.ok) {
-      const list = (await res.json()).data || []
+      const list = (await Promise.resolve(res.data)).data || []
       following.value = list.some((u: { uuid?: string }) => u.uuid === profile.value?.uuid)
     }
   } catch (e) { reportError(e) }
@@ -496,7 +496,7 @@ const toggleFollow = async () => {
   if (!profile.value) return
   const method = following.value ? 'DELETE' : 'POST'
   try {
-    const res = await apiRequest(api.users.follow(profile.value.uuid), {
+    const res = await apiRequestResult(api.users.follow(profile.value.uuid), {
       method,
       headers: { Authorization: `Bearer ${authStore.token}` },
     })
